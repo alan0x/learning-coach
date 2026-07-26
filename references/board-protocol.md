@@ -30,7 +30,7 @@ Use this top-level shape:
 ```json
 {
   "version": 1,
-  "lessonId": "stable-topic-id",
+  "lessonId": "stable learning session id",
   "turnId": "turn id from client context",
   "title": "short board title",
   "segments": [
@@ -49,12 +49,21 @@ field. Use unique IDs under 120 characters. Use world coordinates within
 
 ## Teaching rhythm
 
+A packet contains the actions contributed by the current turn. The client
+merges packets into one session-scoped infinite canvas in turn order. Use the
+same `lessonId` throughout the learning session.
+
 - Put one main teaching move in each segment.
+- Complete every step requested by the learner in the same packet unless
+  required source information is missing.
+- Do not pause for the learner between segments. Segments control writing and
+  narration order, not conversational turns.
 - Focus the relevant region before adding distant content.
 - Add only content mentioned by the matching speech segment.
 - Prefer a short derivation over an answer dump.
-- Use a checkpoint after explanation or demonstration.
 - Reuse stable element IDs when a follow-up refers to existing content.
+- Do not repeat the original problem on follow-up turns; append beside the
+  existing work described by `board_summary`.
 - Set `fromId`, `toId`, `targetId`, or `memberIds` only to known element IDs.
 
 ## Action allowlist
@@ -135,6 +144,8 @@ connections to express prerequisite, transformation, example, or consequence.
 
 ### Focus and checkpoint
 
+Use `focus` to guide the viewport during a continuous explanation:
+
 ```json
 {
   "id": "focus-derivation",
@@ -143,6 +154,9 @@ connections to express prerequisite, transformation, example, or consequence.
   "zoom": 0.9
 }
 ```
+
+Use a `checkpoint` only when the learner explicitly requests a quiz or
+interactive guided practice:
 
 ```json
 {
