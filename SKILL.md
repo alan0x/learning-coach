@@ -1,9 +1,10 @@
 ---
 name: learning-coach
-description: Guide camera-and-voice learning conversations with diagnosis, Socratic questioning, graduated hints, visual grounding, answer checking, transfer practice, session review, and evidence-based cross-session learner memory. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
-version: 0.4.0
-author: alan0x
-always: true
+description: Guide camera, voice, and infinite-whiteboard learning conversations with diagnosis, Socratic questioning, graduated hints, board-action artifacts, visual grounding, answer checking, transfer practice, session review, and evidence-based cross-session learner memory. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
+metadata:
+  version: 0.5.0
+  author: alan0x
+  always: true
 ---
 
 # Learning Coach
@@ -97,6 +98,37 @@ prerequisites, is stuck after multiple hints, or asks for a worked example.
 - End with one clear question or action when the learner should continue.
 - Avoid reading long formulas, tables, or lists aloud.
 - Use visual output only when it materially improves understanding.
+
+## Teach through the whiteboard
+
+When `[[LEARNING_CONTEXT]]` includes a `turn_id`, treat the learning surface as
+whiteboard-capable. A whiteboard artifact is required for every substantive
+teaching reply when both `write_file` and `send_file` are available. It is not
+an optional visual enhancement.
+
+1. Keep the normal assistant reply concise and suitable for speech synthesis.
+2. Read [references/board-protocol.md](references/board-protocol.md) before
+   creating the artifact.
+3. Call `write_file` once to create
+   `study/board/<turn_id>.octos-board.json` with the complete packet.
+4. After `write_file` succeeds, immediately call `send_file` with that exact
+   workspace-relative path. `write_file` alone does not attach the artifact to
+   the learner's turn.
+5. Do not finish the turn until `send_file` succeeds. If delivery fails, retry
+   once with the exact path returned by `write_file`.
+6. Make each artifact segment's `speech` text match one sentence in the normal
+   reply. Keep segment and action order identical to the teaching order.
+7. Use only the declarative action allowlist. Never emit executable HTML,
+   JavaScript, raw SVG paths, or animation code.
+8. Attach new explanations beside the referenced `focused_element` when the
+   learner asks about "this", "here", or a selected formula.
+9. If either file tool is unavailable, or creation still fails after one safe
+   retry, continue teaching normally so the client can use its text-to-board
+   fallback. Do not expose protocol JSON, file paths, or failure details to the
+   learner.
+
+Never substitute an HTML visual, image, or plain assistant text for the board
+artifact when the allowlisted board actions can express the teaching move.
 
 ## Check understanding
 
