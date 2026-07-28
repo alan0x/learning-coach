@@ -1,181 +1,174 @@
-# Whiteboard Artifact Protocol
+# OLL Whiteboard Artifact Protocol
 
-Load this reference before creating a `.octos-board.json` artifact.
+Use this protocol for every substantive whiteboard-capable teaching turn.
 
-## Output contract
+## Delivery contract
 
-Keep the learner-facing assistant reply as natural spoken teaching. Create and
-deliver one artifact for the same turn:
+Create exactly one OLL Authoring Profile document at:
 
 ```text
-study/board/<turn_id>.octos-board.json
+study/oll/<turn_id>.octos-lesson.json
 ```
 
-Use this exact tool sequence when both tools are available:
+Use this tool sequence:
 
-1. Call `write_file` with the path above and the complete JSON packet.
-2. Wait for `write_file` to succeed.
-3. Call `send_file` with the same workspace-relative path.
-4. Wait for `send_file` to succeed before completing the turn.
+1. Read `references/oll-authoring-v0.1.schema.json`.
+2. Call `write_file` once with the complete JSON object at the exact path above.
+3. Wait for `write_file` to succeed.
+4. Call `send_file` with the same workspace-relative path.
+5. Wait for `send_file` to succeed before completing the turn.
 
-`write_file` only persists the packet in the session workspace. It does not
-attach the packet to the assistant response, and the learning client cannot
-render a file that was not delivered through `send_file`.
+Do not put the JSON in Markdown or in the learner-facing reply. The reply stays
+short and conversational; the OLL Beat narration is the classroom explanation.
 
-Do not wrap the JSON in Markdown fences and do not paste protocol JSON into the
-normal assistant reply.
-
-Use this top-level shape:
+## Top-level document
 
 ```json
 {
-  "version": 1,
-  "lessonId": "stable learning session id",
-  "turnId": "turn id from client context",
-  "title": "short board title",
-  "segments": [
+  "dsl": "octos.lesson",
+  "version": "0.1",
+  "profile": "authoring",
+  "lesson": {
+    "mode": "explain",
+    "language": "zh-CN",
+    "title": "课程标题",
+    "goals": ["本轮要教会的具体知识"]
+  },
+  "steps": [],
+  "close": {
+    "summary": "本轮完成了什么",
+    "focus": ["summary"]
+  }
+}
+```
+
+Generate a complete continuous explanation in one turn. Do not insert a quiz,
+checkpoint, request for confirmation, or a pause for the learner unless source
+information is missing or unreadable.
+
+## Lesson rhythm
+
+- Organize the lesson as Step → Beat → Action.
+- Give every Step one auditable `purpose`.
+- Put one main teaching move in each Beat.
+- Make `say` directly usable as teacher speech and keep it aligned with that
+  Beat's visible actions.
+- Reveal the reasoning progressively; do not create the final answer before it
+  is explained.
+- Finish the requested scope in the same artifact.
+- End with a concise conclusion or knowledge structure and focus it.
+
+Example Beat:
+
+```json
+{
+  "key": "complete-square",
+  "say": "一次项系数六的一半是三，所以这里要构造 x 加三的平方。",
+  "delivery": "patient",
+  "actions": [
     {
-      "id": "unique-segment-id",
-      "speech": "One sentence copied exactly from the spoken reply.",
-      "actions": []
+      "do": "write",
+      "as": "half-coefficient",
+      "kind": "note",
+      "role": "derivation",
+      "content": {"title": "取一半", "items": ["6 ÷ 2 = 3"]},
+      "place": {"relation": "below", "anchor": "problem", "gap": "normal"}
+    },
+    {
+      "do": "focus",
+      "when": "after_speech",
+      "targets": ["half-coefficient"],
+      "intent": "current_step"
     }
   ]
 }
 ```
 
-Use at most 48 segments, 12 actions per segment, and 800 characters per text
-field. Use unique IDs under 120 characters. Use world coordinates within
-`-50000..50000`.
+## Aliases and references
 
-## Teaching rhythm
+Use lowercase local aliases matching `^[a-z][a-z0-9-]{0,63}$`. Define before
+use. `write as` creates a node, `connect as` creates a connection, and `group
+as` creates a group.
 
-A packet contains the actions contributed by the current turn. The client
-merges packets into one session-scoped infinite canvas in turn order. Use the
-same `lessonId` throughout the learning session.
+- `place.anchor`: node or group.
+- `emphasize.target` and `point.target`: node, `node#fragment`, connection, or
+  group.
+- `group.members[]`: node or group.
+- `focus.targets[]` and `close.focus[]`: node, group, or connection.
+- Use `node#fragment` only for an addressable fragment declared with `as`.
+- Never use asset IDs or region IDs directly as board references.
 
-- Put one main teaching move in each segment.
-- Complete every step requested by the learner in the same packet unless
-  required source information is missing.
-- Do not pause for the learner between segments. Segments control writing and
-  narration order, not conversational turns.
-- Focus the relevant region before adding distant content.
-- Add only content mentioned by the matching speech segment.
-- Prefer a short derivation over an answer dump.
-- Reuse stable element IDs when a follow-up refers to existing content.
-- Do not repeat the original problem on follow-up turns; append beside the
-  existing work described by `board_summary`.
-- Set `fromId`, `toId`, `targetId`, or `memberIds` only to known element IDs.
+Each delivered turn is normalized into the same classroom but owns its local
+aliases. On a follow-up, create only the additional explanation requested. Use
+the supplied board summary as context, but do not assume previous local aliases
+are available in the new artifact and do not repeat the entire original lesson.
 
-## Action allowlist
+## Actions
 
-### Write text
+Use only `write`, `revise`, `emphasize`, `connect`, `group`, `focus`, `point`,
+and `expression`. Use `when` only for `before_speech`, `during_speech`, or
+`after_speech`. Do not output coordinates, zoom, duration, HTML, SVG paths, or
+JavaScript.
 
-```json
-{
-  "id": "concept-title",
-  "type": "write_text",
-  "text": "配方法",
-  "at": { "x": 400, "y": 180 },
-  "tone": "accent",
-  "size": "lg",
-  "semanticLevel": "topic"
-}
-```
-
-Use `tone`: `ink`, `muted`, or `accent`; `size`: `sm`, `md`, `lg`, or `xl`;
-and `semanticLevel`: `detail`, `summary`, or `topic`.
-
-### Write formula
+Create content with `write`:
 
 ```json
 {
-  "id": "formula-vertex",
-  "type": "write_formula",
-  "latex": "y=(x-2)^2-1",
-  "at": { "x": 500, "y": 360 },
-  "tone": "accent",
-  "size": "lg",
-  "semanticLevel": "summary"
+  "do": "write",
+  "as": "result",
+  "kind": "math",
+  "role": "conclusion",
+  "content": {"latex": "y=(x+3)^2-4"},
+  "place": {
+    "relation": "below",
+    "anchor": "derivation",
+    "align": "start",
+    "gap": "normal"
+  }
 }
 ```
 
-Use plain KaTeX-compatible LaTeX. Do not include markup.
+Useful content forms:
 
-### Draw axes and a quadratic
+- `text`: `{"text":"..."}` or addressable `fragments`.
+- `math`: `{"latex":"..."}` or `fragments` containing `as` and `latex`.
+- `note`: `{"title":"...","items":["..."]}`.
+- `table`: `{"columns":["..."],"rows":[["..."]]}`.
+- `diagram`: semantic `elements`, `edges`, `points`, `guides`, or `regions`;
+  give addressable items an `as` alias and refer to those aliases inside the
+  same diagram.
+- `image`: only a controlled `asset_id`; map supplied regions through
+  `content.regions[]` entries containing `as` and the exact `source_region`.
+
+Use relative placement only: `new_region`, `below`, `above`, `left_of`,
+`right_of`, `near`, `inside`, or `overlay`. Except for `new_region`, include an
+existing node or group as `anchor`.
+
+Use `connect` for a visible relationship:
 
 ```json
 {
-  "id": "axes",
-  "type": "draw_axes",
-  "at": { "x": 900, "y": 220 },
-  "width": 500,
-  "height": 400,
-  "xDomain": [-1, 5],
-  "yDomain": [-2, 7]
+  "do": "connect",
+  "as": "reason-to-result",
+  "from": "reason",
+  "to": "result",
+  "relation": "therefore",
+  "label": "所以"
 }
 ```
 
-```json
-{
-  "id": "parabola",
-  "type": "plot_function",
-  "axesId": "axes",
-  "function": {
-    "kind": "quadratic",
-    "coefficients": [1, -4, 3]
-  },
-  "color": "blue"
-}
-```
+Use `group` for a named teaching section and `focus` to direct attention during
+the current Beat.
 
-Use `mark_point` with `axesId`, a numeric `[x,y]` point, and a short label.
+## Visual grounding
 
-### Relate and emphasize
+For an uploaded image, use only assets and regions explicitly listed in the
+session context. State uncertainty in the teaching reply when evidence is
+unclear. Never invent text, labels, coordinates, or image regions.
 
-Use:
+## Failure fallback
 
-- `highlight` with `targetId`, optional `label`, and `yellow`, `blue`, or
-  `coral`;
-- `connect` with `fromId`, `toId`, and an optional short label;
-- `group` with title, position, size, member IDs, and an optional summary.
-
-Groups create far-zoom knowledge nodes. Put durable concepts in groups and use
-connections to express prerequisite, transformation, example, or consequence.
-
-### Focus and checkpoint
-
-Use `focus` to guide the viewport during a continuous explanation:
-
-```json
-{
-  "id": "focus-derivation",
-  "type": "focus",
-  "at": { "x": 700, "y": 380 },
-  "zoom": 0.9
-}
-```
-
-Use a `checkpoint` only when the learner explicitly requests a quiz or
-interactive guided practice:
-
-```json
-{
-  "id": "check-1",
-  "type": "checkpoint",
-  "prompt": "y=x²+6x+5 的对称轴是多少？",
-  "at": { "x": 520, "y": 760 }
-}
-```
-
-## Fallbacks
-
-When the needed visual is outside the allowlist:
-
-1. use text and formula actions when sufficient;
-2. use basic relationships and groups to preserve structure;
-3. request an ordinary image/HTML visual through existing capabilities only
-   when it materially helps;
-4. never invent an unsupported action.
-
-If the source image is unclear, do not create a confident board
-representation. Ask the learner to improve the image first.
+If file tools are unavailable, teach normally so the client can use its legacy
+text fallback. If writing or delivery fails, retry once using the exact path
+returned by `write_file`. Never expose the artifact path or protocol JSON to the
+learner.

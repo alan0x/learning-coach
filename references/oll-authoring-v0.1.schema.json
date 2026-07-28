@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://octos.dev/schema/lesson/authoring/0.1",
+  "title": "OLL Authoring Profile 0.1 Exploration",
+  "type": "object",
+  "required": ["dsl", "version", "profile", "lesson", "steps", "close"],
+  "additionalProperties": false,
+  "properties": {
+    "dsl": {"const": "octos.lesson"},
+    "version": {"const": "0.1"},
+    "profile": {"const": "authoring"},
+    "lesson": {
+      "type": "object",
+      "required": ["mode", "language", "title", "goals"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {"const": "explain"},
+        "language": {"type": "string", "minLength": 2, "maxLength": 32},
+        "title": {"type": "string", "minLength": 1, "maxLength": 160},
+        "goals": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "string"}},
+        "adaptation": {
+          "type": "object",
+          "properties": {
+            "strategies": {"type": "array", "items": {"type": "string"}},
+            "context_refs": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 24,
+      "items": {"$ref": "#/$defs/step"}
+    },
+    "close": {
+      "type": "object",
+      "required": ["summary", "focus"],
+      "additionalProperties": false,
+      "properties": {
+        "summary": {"type": "string"},
+        "focus": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/alias"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "required": ["key", "purpose", "beats"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {"$ref": "#/$defs/alias"},
+        "purpose": {"type": "string", "minLength": 1, "maxLength": 240},
+        "beats": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {"$ref": "#/$defs/beat"}
+        }
+      }
+    },
+    "beat": {
+      "type": "object",
+      "required": ["key", "actions"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {"$ref": "#/$defs/alias"},
+        "say": {"type": "string", "maxLength": 1200},
+        "delivery": {"enum": ["neutral", "patient", "encouraging", "careful", "emphatic"]},
+        "actions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 24,
+          "items": {"$ref": "#/$defs/action"}
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": ["do"],
+      "additionalProperties": false,
+      "properties": {
+        "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression"]},
+        "when": {"enum": ["before_speech", "during_speech", "after_speech"]},
+        "as": {"$ref": "#/$defs/alias"},
+        "kind": {"enum": ["text", "math", "shape", "diagram", "plot", "image", "table", "note"]},
+        "role": {"type": "string"},
+        "content": {"type": "object"},
+        "place": {"$ref": "#/$defs/placement"},
+        "target": {"type": "string"},
+        "from": {"type": "string"},
+        "to": {"type": "string"},
+        "relation": {"type": "string"},
+        "label": {"type": "string"},
+        "emphasis": {"type": "string"},
+        "members": {"type": "array", "items": {"type": "string"}},
+        "targets": {"type": "array", "items": {"type": "string"}},
+        "intent": {"type": "string"},
+        "expression": {"type": "string"},
+        "reason": {"type": "string"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"do": {"const": "write"}}},
+          "then": {"required": ["as", "kind", "role", "content", "place"]}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "image"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/imageContent"}}}
+        },
+        {
+          "if": {"properties": {"do": {"const": "revise"}}},
+          "then": {"required": ["target", "content", "reason"]}
+        },
+        {
+          "if": {"properties": {"do": {"const": "emphasize"}}},
+          "then": {"required": ["target", "emphasis"]}
+        },
+        {
+          "if": {"properties": {"do": {"const": "connect"}}},
+          "then": {"required": ["as", "from", "to", "relation"]}
+        },
+        {
+          "if": {"properties": {"do": {"const": "group"}}},
+          "then": {"required": ["as", "role", "label", "members"]}
+        },
+        {
+          "if": {"properties": {"do": {"const": "focus"}}},
+          "then": {"required": ["targets", "intent"]}
+        },
+        {
+          "if": {"properties": {"do": {"const": "point"}}},
+          "then": {"required": ["target"]}
+        },
+        {
+          "if": {"properties": {"do": {"const": "expression"}}},
+          "then": {"required": ["expression"]}
+        }
+      ]
+    },
+    "imageContent": {
+      "type": "object",
+      "required": ["asset_id"],
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {"type": "string", "minLength": 1},
+        "alt": {"type": "string"},
+        "regions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/imageRegion"}
+        }
+      }
+    },
+    "imageRegion": {
+      "type": "object",
+      "required": ["as", "source_region"],
+      "additionalProperties": false,
+      "properties": {
+        "as": {"$ref": "#/$defs/alias"},
+        "source_region": {"type": "string", "minLength": 1},
+        "label": {"type": "string"},
+        "confidence": {"enum": ["low", "medium", "high", "uncertain"]}
+      }
+    },
+    "alias": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "placement": {
+      "type": "object",
+      "required": ["relation"],
+      "additionalProperties": false,
+      "properties": {
+        "relation": {"enum": ["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"]},
+        "anchor": {"$ref": "#/$defs/alias"},
+        "region_role": {"type": "string"},
+        "align": {"enum": ["start", "center", "end"]},
+        "gap": {"enum": ["compact", "normal", "spacious"]}
+      }
+    }
+  }
+}

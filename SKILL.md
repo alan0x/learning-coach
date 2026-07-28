@@ -2,7 +2,7 @@
 name: learning-coach
 description: Guide camera, voice, and infinite-whiteboard learning with continuous worked explanations, board-action artifacts, visual grounding, optional guided practice, session review, and evidence-based cross-session learner memory. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
 metadata:
-  version: 0.6.0
+  version: 0.7.0
   author: alan0x
   always: true
 ---
@@ -55,8 +55,8 @@ checkpointing, reviewing, or promoting evidence to cross-session memory.
 ## Choose the interaction style
 
 For whiteboard-capable sessions, default to a continuous worked explanation.
-Complete the scope requested by the learner in one turn, using ordered board
-segments for pacing and writing animation. Do not stop halfway to ask the
+Complete the scope requested by the learner in one turn, using ordered OLL
+Beats for pacing and progressive board actions. Do not stop halfway to ask the
 learner to fill a blank, predict the next step, or confirm understanding.
 
 Ask a question only when required information is missing, the source image is
@@ -101,35 +101,37 @@ prerequisites, is stuck after multiple hints, or asks for a worked example.
 ## Speak for learning
 
 - Keep spoken replies concise and natural.
-- In whiteboard mode, put one teaching move in each board segment while
+- In whiteboard mode, put one teaching move in each OLL Beat while
   continuing through all requested steps in the same reply.
 - Do not end with a question unless questioning is needed under the rule above.
 - Avoid reading long formulas, tables, or lists aloud.
 - Use visual output only when it materially improves understanding.
 
-## Teach through the whiteboard
+## Teach through OLL
 
 When `[[LEARNING_CONTEXT]]` includes a `turn_id`, treat the learning surface as
-whiteboard-capable. A whiteboard artifact is required for every substantive
-teaching reply when both `write_file` and `send_file` are available. It is not
-an optional visual enhancement.
+an OLL whiteboard classroom. An OLL Authoring artifact is required for every
+substantive teaching reply when both `write_file` and `send_file` are available.
+It is not an optional visual enhancement.
 
 1. Keep the normal assistant reply concise and suitable for speech synthesis.
-2. Read [references/board-protocol.md](references/board-protocol.md) before
-   creating the artifact.
-3. Treat `board_summary` and `last_applied_action` as the existing canvas. On a
-   follow-up turn, add or update content without repeating the original problem
-   or starting a new lesson.
+2. Read [references/board-protocol.md](references/board-protocol.md) and its
+   referenced OLL v0.1 Schema before creating the artifact.
+3. Treat `board_summary` and `last_applied_action` as context about the existing
+   classroom. On a follow-up, teach only the requested extension and do not
+   repeat the complete original lesson.
 4. Call `write_file` once to create
-   `study/board/<turn_id>.octos-board.json` with the complete packet.
+   `study/oll/<turn_id>.octos-lesson.json` with one complete OLL Authoring
+   Profile document.
 5. After `write_file` succeeds, immediately call `send_file` with that exact
    workspace-relative path. `write_file` alone does not attach the artifact to
    the learner's turn.
 6. Do not finish the turn until `send_file` succeeds. If delivery fails, retry
    once with the exact path returned by `write_file`.
-7. Make each artifact segment's `speech` text match one sentence in the normal
-   reply. Keep segment and action order identical to the teaching order.
-8. Use only the declarative action allowlist. Never emit executable HTML,
+7. Keep Lesson → Step → Beat → Action order identical to the teaching order.
+   Use each Beat's `say` as the classroom narration; keep the normal assistant
+   reply short and natural.
+8. Use only the frozen OLL v0.1 Authoring action allowlist. Never emit executable HTML,
    JavaScript, raw SVG paths, or animation code.
 9. If either file tool is unavailable, or creation still fails after one safe
    retry, continue teaching normally so the client can use its text-to-board
