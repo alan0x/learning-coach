@@ -1,0 +1,14 @@
+{
+  "name": "learning-coach-skill",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "oll:check": "node scripts/oll-contract.mjs check",
+    "oll:sync": "node scripts/oll-contract.mjs sync",
+    "test": "node --test test/*.test.mjs"
+  }
+}

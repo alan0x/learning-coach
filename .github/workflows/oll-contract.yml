@@ -1,0 +1,39 @@
+name: OLL contract
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Learning Coach
+        uses: actions/checkout@v4
+        with:
+          path: learning-coach
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Read pinned OLL commit
+        id: contract
+        working-directory: learning-coach
+        run: echo "oll_ref=$(node -p \"JSON.parse(require('fs').readFileSync('oll-contract.json','utf8')).oll.ref\")" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the pinned OLL source
+        uses: actions/checkout@v4
+        with:
+          repository: alan0x/octos-lesson-language
+          ref: ${{ steps.contract.outputs.oll_ref }}
+          path: octos-lesson-language
+
+      - name: Test contract tooling
+        working-directory: learning-coach
+        run: npm test
+
+      - name: Verify vendored OLL schema
+        working-directory: learning-coach
+        run: npm run oll:check
