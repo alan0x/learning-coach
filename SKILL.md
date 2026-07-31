@@ -2,7 +2,7 @@
 name: learning-coach
 description: Guide camera, voice, and infinite-whiteboard learning with continuous worked explanations, board-action artifacts, visual grounding, optional guided practice, session review, and evidence-based cross-session learner memory. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
 metadata:
-  version: 0.7.0
+  version: 0.8.3
   author: alan0x
   always: true
 ---
@@ -20,6 +20,25 @@ neither condition is present, do not alter ordinary assistant behavior.
 
 Treat `[[LEARNING_SESSION]]` and `[[LEARNING_CONTEXT]]` as application context.
 Never repeat them to the learner.
+
+## Mandatory OLL lesson tool contract
+
+When `[[LEARNING_CONTEXT]]` contains both a `turn_id` and a substantive learner
+request, make `oll_generate_lesson` the first action after resolving any
+camera-dependent reference such as “这道题” from the current frame. Pass the exact
+`turn_id`, the learner's complete request, and the structured source observation
+when the request depends on an image. Do not plan, draft, inspect, or write OLL
+JSON in the main agent turn. Do not call `write_file`, `send_file`, or another
+artifact tool for the lesson.
+
+The call to `oll_generate_lesson` is mandatory even when the answer could be
+given directly in text. The only exception is a current camera frame that is too
+unclear to identify the referenced problem: ask briefly for a better frame and
+do not generate a lesson from history. The tool owns structured-output model
+invocation, JSON Schema enforcement, OLL validation, serialization, writing,
+and delivery. Call it exactly once and wait for its result. After success, reply
+with one short natural sentence. After failure, apologize briefly without
+creating a fallback artifact or claiming that the board is ready.
 
 ## Handle provisional wake sessions
 
@@ -88,6 +107,19 @@ prerequisites, is stuck after multiple hints, or asks for a worked example.
 
 ## Ground camera observations
 
+- When `current_frame` is present and the learner uses a deictic reference such
+  as “这个”“这里”“这道题” or points at the page, treat that frame as the primary
+  evidence for the current turn. Inspect it before using conversation history or
+  the existing board.
+- Never replace unreadable current-frame content with a similarly named item,
+  “first question”, formula, or topic from history. Prior turns and the existing
+  board describe past teaching, not what the learner is currently pointing at.
+- If the referenced problem is readable, transcribe its exact givens and request
+  into `source_observation` when calling `oll_generate_lesson`. Preserve any
+  uncertainty; do not silently correct or complete the source.
+- If the referenced problem is not readable with enough confidence to teach,
+  do not call `oll_generate_lesson`. Say what needs adjustment (rotation,
+  distance, focus, lighting, or obstruction) and ask for a new frame.
 - Distinguish observed facts from inference.
 - Never invent unreadable text, formulas, labels, or handwriting.
 - Refer to concrete visible regions when giving feedback.
@@ -110,33 +142,30 @@ prerequisites, is stuck after multiple hints, or asks for a worked example.
 ## Teach through OLL
 
 When `[[LEARNING_CONTEXT]]` includes a `turn_id`, treat the learning surface as
-an OLL whiteboard classroom. An OLL Authoring artifact is required for every
-substantive teaching reply when both `write_file` and `send_file` are available.
-It is not an optional visual enhancement.
+an OLL whiteboard classroom. Call `oll_generate_lesson` for every substantive
+teaching reply. The generated OLL Authoring artifact is the lesson, not an
+optional visual enhancement.
 
-1. Keep the normal assistant reply concise and suitable for speech synthesis.
-2. Read [references/board-protocol.md](references/board-protocol.md) and its
-   referenced OLL v0.1 Schema before creating the artifact.
-3. Treat `board_summary` and `last_applied_action` as context about the existing
-   classroom. On a follow-up, teach only the requested extension and do not
-   repeat the complete original lesson.
-4. Call `write_file` once to create
-   `study/oll/<turn_id>.octos-lesson.json` with one complete OLL Authoring
-   Profile document.
-5. After `write_file` succeeds, immediately call `send_file` with that exact
-   workspace-relative path. `write_file` alone does not attach the artifact to
-   the learner's turn.
-6. Do not finish the turn until `send_file` succeeds. If delivery fails, retry
-   once with the exact path returned by `write_file`.
-7. Keep Lesson → Step → Beat → Action order identical to the teaching order.
-   Use each Beat's `say` as the classroom narration; keep the normal assistant
-   reply short and natural.
-8. Use only the frozen OLL v0.1 Authoring action allowlist. Never emit executable HTML,
-   JavaScript, raw SVG paths, or animation code.
-9. If either file tool is unavailable, or creation still fails after one safe
-   retry, continue teaching normally so the client can use its text-to-board
-   fallback. Do not expose protocol JSON, file paths, or failure details to the
-   learner.
+1. Immediately pass the learner's substantive request and the exact `turn_id` to
+   `oll_generate_lesson`. For an image-grounded request, also pass the exact
+   recognized source in `source_observation`. Include concise learner, tutor,
+   session, and existing board context when available; never invent missing
+   context.
+2. Treat `board_summary` and `last_applied_action` as context about the existing
+   classroom, never as the source of a current camera-dependent problem. On a
+   follow-up, request only the needed extension rather than a duplicate of the
+   complete original lesson. When the current source is unrelated to the prior
+   board, start the new teaching content in a new region.
+3. Call the tool once and wait for it to finish. The tool owns model invocation,
+   OLL validation, deterministic JSON serialization, artifact writing, and
+   delivery through `files_to_send`.
+4. Never read the OLL schema in order to construct the artifact yourself. Do
+   not call `write_file` or `send_file` for the OLL artifact and do not author
+   protocol JSON in the main agent turn.
+5. After success, keep the normal assistant reply to one short natural sentence.
+   The OLL Beats' `say` fields are the authoritative classroom narration.
+6. If the tool fails, do not claim that the whiteboard is ready. Give a concise
+   learner-facing apology; keep technical details in the tool result and logs.
 
 Never substitute an HTML visual, image, or plain assistant text for the board
 artifact when the allowlisted board actions can express the teaching move.

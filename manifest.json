@@ -1,0 +1,92 @@
+{
+  "name": "learning-coach",
+  "version": "0.8.3",
+  "author": "alan0x",
+  "description": "Generate validated OLL whiteboard lessons for learning sessions",
+  "timeout_secs": 300,
+  "requires_network": true,
+  "tools": [
+    {
+      "name": "oll_generate_lesson",
+      "description": "After resolving any current-image reference, the mandatory first action for a substantive [[LEARNING_SESSION]] turn with a turn_id. If the current image is unreadable, request a better frame instead of calling this tool or guessing from history. Otherwise generate, validate, save, and deliver the OLL lesson using the learner's actual request, source observation, and available context.",
+      "concurrency_class": "exclusive",
+      "env": [
+        "VERTEX_SA_JSON",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_LOCATION",
+        "VERTEX_BASE_URL",
+        "OLL_MODEL",
+        "OLL_TIMEOUT_MS",
+        "OLL_MAX_TOKENS",
+        "VERTEX_REQUEST_ATTEMPTS",
+        "OLL_GENERATION_ATTEMPTS",
+        "OLL_DEBUG_GENERATION",
+        "OCTOS_WORK_DIR"
+      ],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "turn_id": {
+            "type": "string",
+            "description": "Exact turn_id supplied by [[LEARNING_CONTEXT]]."
+          },
+          "learner_request": {
+            "type": "string",
+            "description": "The learner's complete substantive request for this turn."
+          },
+          "language": {
+            "type": "string",
+            "description": "Lesson language, normally zh-CN."
+          },
+          "tutor_context": {
+            "type": "string",
+            "description": "Concise teaching-persona or strategy context known for this turn."
+          },
+          "learner_context": {
+            "type": "string",
+            "description": "Tentative learner background relevant to the requested explanation."
+          },
+          "session_context": {
+            "type": "object",
+            "description": "Controlled OLL resource context, including only assets and regions supplied by the host."
+          },
+          "board_summary": {
+            "type": "string",
+            "description": "Summary of the existing board for a follow-up turn."
+          },
+          "last_applied_action": {
+            "type": "string",
+            "description": "Last committed board action supplied by the host."
+          },
+          "base_revision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Existing board revision when supplied by the host."
+          },
+          "source_observation": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Authoritative problem transcribed from the current image after visual grounding. Omit when the request is not image-dependent.",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["live_camera", "uploaded_image"]
+              },
+              "recognized_problem": {
+                "type": "string",
+                "description": "Exact readable problem statement, givens, and learner target from the current image."
+              },
+              "confidence": {
+                "type": "string",
+                "enum": ["high", "medium"]
+              }
+            },
+            "required": ["kind", "recognized_problem", "confidence"]
+          }
+        },
+        "required": ["turn_id", "learner_request"]
+      }
+    }
+  ]
+}

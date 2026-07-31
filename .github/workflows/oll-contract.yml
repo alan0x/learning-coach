@@ -30,6 +30,14 @@ jobs:
           ref: ${{ steps.contract.outputs.oll_ref }}
           path: octos-lesson-language
 
+      - name: Install OLL build dependencies
+        working-directory: octos-lesson-language
+        run: npm ci
+
+      - name: Install Learning Coach build dependencies
+        working-directory: learning-coach
+        run: npm ci
+
       - name: Test contract tooling
         working-directory: learning-coach
         run: npm test

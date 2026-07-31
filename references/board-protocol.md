@@ -4,22 +4,21 @@ Use this protocol for every substantive whiteboard-capable teaching turn.
 
 ## Delivery contract
 
-Create exactly one OLL Authoring Profile document at:
+Call `oll_generate_lesson` exactly once for a substantive learning turn. The
+tool creates one OLL Authoring Profile document at:
 
 ```text
 study/oll/<turn_id>.octos-lesson.json
 ```
 
-Use this tool sequence:
+Pass `turn_id`, `learner_request`, and any available learner, tutor, session, or
+existing-board context. The tool invokes the configured structured-output model,
+validates against the pinned OLL schema and semantic rules, serializes JSON, and
+returns the artifact through `files_to_send`.
 
-1. Read `references/oll-authoring-v0.1.schema.json`.
-2. Call `write_file` once with the complete JSON object at the exact path above.
-3. Wait for `write_file` to succeed.
-4. Call `send_file` with the same workspace-relative path.
-5. Wait for `send_file` to succeed before completing the turn.
-
-Do not put the JSON in Markdown or in the learner-facing reply. The reply stays
-short and conversational; the OLL Beat narration is the classroom explanation.
+Do not call `write_file` or `send_file` for this artifact. Do not put protocol
+JSON in Markdown or in the learner-facing reply. The reply stays short and
+conversational; the OLL Beat narration is the classroom explanation.
 
 ## Top-level document
 
@@ -168,7 +167,7 @@ unclear. Never invent text, labels, coordinates, or image regions.
 
 ## Failure fallback
 
-If file tools are unavailable, teach normally so the client can use its legacy
-text fallback. If writing or delivery fails, retry once using the exact path
-returned by `write_file`. Never expose the artifact path or protocol JSON to the
-learner.
+If `oll_generate_lesson` fails, do not claim that the board is ready and do not
+write a substitute OLL file manually. Give the learner a concise apology while
+leaving technical details in the tool result and logs. Never expose protocol
+JSON to the learner.
