@@ -76,6 +76,7 @@ async function runTool({ baseUrl, serviceAccount, workDirectory, input = {} }) {
   child.stdin.end(JSON.stringify({
     turn_id: "learn-e2e-001",
     learner_request: "请解释为什么负负得正",
+    request_source: "self_contained",
     language: "zh-CN",
     ...input,
   }));
@@ -147,8 +148,9 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
     assert.equal(requests[1].body.generationConfig.responseMimeType, "application/json");
     assert.equal(requests[1].body.generationConfig.temperature, 0);
     const generationPrompt = requests[1].body.contents[0].parts[0].text;
-    assert.match(generationPrompt, /source_observation/);
-    assert.match(generationPrompt, /existing_board 仅是历史板书上下文/);
+    assert.match(generationPrompt, /request_source 已经确定本轮题目的唯一来源/);
+    assert.match(generationPrompt, /"request_source": "self_contained"/);
+    assert.match(generationPrompt, /"existing_board": null/);
     const requestSchema = requests[1].body.generationConfig.responseJsonSchema;
     assert.equal(requests[1].body.generationConfig.responseSchema, undefined);
     assert.equal(requestSchema.type, "object");
@@ -176,7 +178,7 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
   }
 });
 
-test("tool gives the current image observation priority over old board context", async () => {
+test("tool isolates the current image observation from old board context", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-camera-"));
   const requests = [];
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -206,6 +208,7 @@ test("tool gives the current image observation priority over old board context",
       workDirectory,
       input: {
         learner_request: "这道题应该怎么写",
+        request_source: "current_image",
         board_summary: "旧课程：长方形周长应用题",
         source_observation: {
           kind: "live_camera",
@@ -218,8 +221,9 @@ test("tool gives the current image observation priority over old board context",
     const request = requests.find(Boolean);
     const prompt = request.contents[0].parts[0].text;
     assert.match(prompt, /试卷当前第一题：计算 \(-2\)\^3 的值/);
-    assert.match(prompt, /旧课程：长方形周长应用题/);
-    assert.ok(prompt.indexOf("source_observation") < prompt.indexOf("existing_board"));
+    assert.doesNotMatch(prompt, /旧课程：长方形周长应用题/);
+    assert.match(prompt, /"request_source": "current_image"/);
+    assert.match(prompt, /"existing_board": null/);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -235,6 +239,7 @@ test("tool refuses to substitute old board history for an unresolved image refer
       workDirectory,
       input: {
         learner_request: "老师，这个第一题应该怎么做？",
+        request_source: "current_image",
         board_summary: "旧课程：长方形周长应用题",
       },
     });
@@ -244,6 +249,145 @@ test("tool refuses to substitute old board history for an unresolved image refer
     const protocol = JSON.parse(result.stdout);
     assert.equal(protocol.success, false);
     assert.match(protocol.output, /inspect the current frame/);
+  } finally {
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("tool isolates a self-contained request from old board content", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-standalone-"));
+  const requests = [];
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    requests.push(request.url === "/token" ? null : JSON.parse(body));
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(request.url === "/token"
+      ? JSON.stringify({ access_token: "vertex-test-token" })
+      : JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(validLesson) }] } }] }));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const result = await runTool({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      input: {
+        learner_request: "请推导勾股定理",
+        request_source: "self_contained",
+        board_summary: "旧课程：长方形周长应用题",
+        last_applied_action: "旧课程最后一步：x = 6",
+      },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    const prompt = requests.find(Boolean).contents[0].parts[0].text;
+    assert.match(prompt, /请推导勾股定理/);
+    assert.doesNotMatch(prompt, /长方形周长|x = 6/);
+    assert.match(prompt, /"existing_board": null/);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("tool exposes old board content only for an explicit board follow-up", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-follow-up-"));
+  const requests = [];
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    requests.push(request.url === "/token" ? null : JSON.parse(body));
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(request.url === "/token"
+      ? JSON.stringify({ access_token: "vertex-test-token" })
+      : JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(validLesson) }] } }] }));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const result = await runTool({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      input: {
+        learner_request: "继续讲刚才白板上的长方形方程为什么要除以二",
+        request_source: "explicit_board_follow_up",
+        board_summary: "长方形周长方程：2(x + x + 4) = 32",
+        last_applied_action: "化简到 4x + 8 = 32",
+      },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    const prompt = requests.find(Boolean).contents[0].parts[0].text;
+    assert.match(prompt, /"request_source": "explicit_board_follow_up"/);
+    assert.match(prompt, /长方形周长方程：2\(x \+ x \+ 4\) = 32/);
+    assert.match(prompt, /化简到 4x \+ 8 = 32/);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("tool requires board context for an explicit board follow-up", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-missing-board-"));
+  try {
+    const result = await runTool({
+      baseUrl: "http://127.0.0.1:1",
+      serviceAccount: {},
+      workDirectory,
+      input: {
+        learner_request: "继续刚才那一步",
+        request_source: "explicit_board_follow_up",
+      },
+    });
+
+    assert.equal(result.exitCode, 1);
+    assert.match(result.stderr, /board_summary is required/);
+    const protocol = JSON.parse(result.stdout);
+    assert.equal(protocol.success, false);
+  } finally {
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("tool rejects calls that do not resolve an authoritative request source", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-missing-source-"));
+  try {
+    const result = await runTool({
+      baseUrl: "http://127.0.0.1:1",
+      serviceAccount: {},
+      workDirectory,
+      input: {
+        learner_request: "帮我讲一下",
+        request_source: undefined,
+        board_summary: "旧课程：长方形周长应用题",
+      },
+    });
+
+    assert.equal(result.exitCode, 1);
+    assert.match(result.stderr, /request_source must be a non-empty string/);
+    const protocol = JSON.parse(result.stdout);
+    assert.equal(protocol.success, false);
   } finally {
     await rm(workDirectory, { recursive: true, force: true });
   }

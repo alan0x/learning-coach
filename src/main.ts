@@ -20,12 +20,13 @@ const DEFAULT_MAX_TOKENS = 32_768;
 const DEFAULT_VERTEX_REQUEST_ATTEMPTS = 3;
 const MAX_CONTEXT_LENGTH = 24_000;
 const MAX_ERROR_BODY_LENGTH = 4_000;
-const SOURCE_DEPENDENT_REQUEST =
-  /(?:这(?:个|道)?题|这里|图(?:中|里|上)|画面|镜头|我(?:指|指着)|手指|试卷|第一题|this\s+(?:question|problem)|the\s+first\s+question)/i;
+
+type RequestSource = "self_contained" | "current_image" | "explicit_board_follow_up";
 
 interface ToolInput {
   turn_id: string;
   learner_request: string;
+  request_source: RequestSource;
   language?: string;
   tutor_context?: string;
   learner_context?: string;
@@ -151,21 +152,43 @@ function parseToolInput(raw: string): ToolInput {
     };
   }
   const learnerRequest = requireNonEmptyString(input.learner_request, "learner_request");
-  if (SOURCE_DEPENDENT_REQUEST.test(learnerRequest) && !sourceObservation) {
+  const requestSource = requireNonEmptyString(input.request_source, "request_source");
+  if (
+    requestSource !== "self_contained"
+    && requestSource !== "current_image"
+    && requestSource !== "explicit_board_follow_up"
+  ) {
     throw new Error(
-      "source_observation is required for a camera- or image-dependent learner_request; inspect the current frame instead of using existing board history",
+      "request_source must be self_contained, current_image, or explicit_board_follow_up",
+    );
+  }
+  if (requestSource === "current_image" && !sourceObservation) {
+    throw new Error(
+      "source_observation is required when request_source is current_image; inspect the current frame instead of using existing board history",
+    );
+  }
+  if (requestSource !== "current_image" && sourceObservation) {
+    throw new Error("source_observation is only allowed when request_source is current_image");
+  }
+  const boardSummary = typeof input.board_summary === "string"
+    ? truncate(input.board_summary)
+    : undefined;
+  if (requestSource === "explicit_board_follow_up" && !boardSummary?.trim()) {
+    throw new Error(
+      "board_summary is required when request_source is explicit_board_follow_up",
     );
   }
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: learnerRequest,
+    request_source: requestSource,
     ...(typeof input.language === "string" ? { language: truncate(input.language) } : {}),
     ...(typeof input.tutor_context === "string" ? { tutor_context: truncate(input.tutor_context) } : {}),
     ...(typeof input.learner_context === "string" ? { learner_context: truncate(input.learner_context) } : {}),
     ...(input.session_context && typeof input.session_context === "object" && !Array.isArray(input.session_context)
       ? { session_context: input.session_context as ResourceContext }
       : {}),
-    ...(typeof input.board_summary === "string" ? { board_summary: truncate(input.board_summary) } : {}),
+    ...(boardSummary ? { board_summary: boardSummary } : {}),
     ...(typeof input.last_applied_action === "string" ? { last_applied_action: truncate(input.last_applied_action) } : {}),
     ...(baseRevision !== undefined ? { base_revision: Number(baseRevision) } : {}),
     ...(sourceObservation ? { source_observation: sourceObservation } : {}),
@@ -309,20 +332,24 @@ function validateGeneratedLesson(raw: string, input: ToolInput): AuthoringLesson
 }
 
 function buildGenerationPrompt(input: ToolInput, correction?: string): string {
+  const mayUseExistingBoard = input.request_source === "explicit_board_follow_up";
   const context = {
     learner_request: input.learner_request,
+    request_source: input.request_source,
     source_observation: input.source_observation ?? null,
     language: input.language ?? "zh-CN",
     tutor_context: input.tutor_context ?? "耐心、具体、连续讲解",
     learner_context: input.learner_context ?? null,
     session_context: input.session_context ?? { assets: [] },
-    existing_board: {
-      summary: input.board_summary ?? null,
-      last_applied_action: input.last_applied_action ?? null,
-      base_revision: input.base_revision ?? 0,
-    },
+    existing_board: mayUseExistingBoard
+      ? {
+          summary: input.board_summary,
+          last_applied_action: input.last_applied_action ?? null,
+          base_revision: input.base_revision ?? 0,
+        }
+      : null,
   };
-  return `请根据以下课堂上下文生成本轮完整课程。只输出 OLL JSON。若 source_observation 非空，它是本轮题目的权威来源；existing_board 仅是历史板书上下文，不得用它替换、补全或改写当前题目。当前题目与旧白板无关时，从 new_region 开始。\n${JSON.stringify(context, null, 2)}${
+  return `请根据以下课堂上下文生成本轮完整课程。只输出 OLL JSON。request_source 已经确定本轮题目的唯一来源：self_contained 只使用 learner_request，current_image 以 source_observation 为权威题面，explicit_board_follow_up 才允许使用 existing_board。不得跨来源替换、补全或改写当前题目。existing_board 为 null 时，必须从 new_region 开始。\n${JSON.stringify(context, null, 2)}${
     correction ? `\n\n上一版无法执行：${correction}\n请重新生成完整对象并修复这些错误。` : ""
   }`;
 }

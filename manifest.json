@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -8,7 +8,7 @@
   "tools": [
     {
       "name": "oll_generate_lesson",
-      "description": "After resolving any current-image reference, the mandatory first action for a substantive [[LEARNING_SESSION]] turn with a turn_id. If the current image is unreadable, request a better frame instead of calling this tool or guessing from history. Otherwise generate, validate, save, and deliver the OLL lesson using the learner's actual request, source observation, and available context.",
+      "description": "After resolving the learner request to exactly one authoritative source, generate, validate, save, and deliver the OLL lesson. Use self_contained for a complete standalone request, current_image for a request grounded in the current frame, and explicit_board_follow_up only when the learner explicitly continues prior board work. Never use board history to fill an incomplete request.",
       "concurrency_class": "exclusive",
       "env": [
         "VERTEX_SA_JSON",
@@ -35,6 +35,11 @@
             "type": "string",
             "description": "The learner's complete substantive request for this turn."
           },
+          "request_source": {
+            "type": "string",
+            "enum": ["self_contained", "current_image", "explicit_board_follow_up"],
+            "description": "The single authoritative source resolved for this request. self_contained uses only learner_request; current_image requires source_observation; explicit_board_follow_up requires an explicit learner reference to prior board work and board_summary. If no source can be resolved safely, do not call the tool—ask the learner to clarify."
+          },
           "language": {
             "type": "string",
             "description": "Lesson language, normally zh-CN."
@@ -53,7 +58,7 @@
           },
           "board_summary": {
             "type": "string",
-            "description": "Summary of the existing board for a follow-up turn."
+            "description": "Summary of the existing board. It is exposed to lesson generation only for explicit_board_follow_up and must never fill missing content in another request source."
           },
           "last_applied_action": {
             "type": "string",
@@ -85,7 +90,7 @@
             "required": ["kind", "recognized_problem", "confidence"]
           }
         },
-        "required": ["turn_id", "learner_request"]
+        "required": ["turn_id", "learner_request", "request_source"]
       }
     }
   ]

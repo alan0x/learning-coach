@@ -8203,7 +8203,6 @@ var DEFAULT_MAX_TOKENS = 32768;
 var DEFAULT_VERTEX_REQUEST_ATTEMPTS = 3;
 var MAX_CONTEXT_LENGTH = 24e3;
 var MAX_ERROR_BODY_LENGTH = 4e3;
-var SOURCE_DEPENDENT_REQUEST = /(?:这(?:个|道)?题|这里|图(?:中|里|上)|画面|镜头|我(?:指|指着)|手指|试卷|第一题|this\s+(?:question|problem)|the\s+first\s+question)/i;
 var GeneratedLessonError = class extends Error {
   constructor(message, raw) {
     super(message);
@@ -8302,19 +8301,35 @@ function parseToolInput(raw) {
     };
   }
   const learnerRequest = requireNonEmptyString(input.learner_request, "learner_request");
-  if (SOURCE_DEPENDENT_REQUEST.test(learnerRequest) && !sourceObservation) {
+  const requestSource = requireNonEmptyString(input.request_source, "request_source");
+  if (requestSource !== "self_contained" && requestSource !== "current_image" && requestSource !== "explicit_board_follow_up") {
     throw new Error(
-      "source_observation is required for a camera- or image-dependent learner_request; inspect the current frame instead of using existing board history"
+      "request_source must be self_contained, current_image, or explicit_board_follow_up"
+    );
+  }
+  if (requestSource === "current_image" && !sourceObservation) {
+    throw new Error(
+      "source_observation is required when request_source is current_image; inspect the current frame instead of using existing board history"
+    );
+  }
+  if (requestSource !== "current_image" && sourceObservation) {
+    throw new Error("source_observation is only allowed when request_source is current_image");
+  }
+  const boardSummary = typeof input.board_summary === "string" ? truncate(input.board_summary) : void 0;
+  if (requestSource === "explicit_board_follow_up" && !boardSummary?.trim()) {
+    throw new Error(
+      "board_summary is required when request_source is explicit_board_follow_up"
     );
   }
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: learnerRequest,
+    request_source: requestSource,
     ...typeof input.language === "string" ? { language: truncate(input.language) } : {},
     ...typeof input.tutor_context === "string" ? { tutor_context: truncate(input.tutor_context) } : {},
     ...typeof input.learner_context === "string" ? { learner_context: truncate(input.learner_context) } : {},
     ...input.session_context && typeof input.session_context === "object" && !Array.isArray(input.session_context) ? { session_context: input.session_context } : {},
-    ...typeof input.board_summary === "string" ? { board_summary: truncate(input.board_summary) } : {},
+    ...boardSummary ? { board_summary: boardSummary } : {},
     ...typeof input.last_applied_action === "string" ? { last_applied_action: truncate(input.last_applied_action) } : {},
     ...baseRevision !== void 0 ? { base_revision: Number(baseRevision) } : {},
     ...sourceObservation ? { source_observation: sourceObservation } : {}
@@ -8450,20 +8465,22 @@ function validateGeneratedLesson(raw, input) {
   return document;
 }
 function buildGenerationPrompt(input, correction) {
+  const mayUseExistingBoard = input.request_source === "explicit_board_follow_up";
   const context = {
     learner_request: input.learner_request,
+    request_source: input.request_source,
     source_observation: input.source_observation ?? null,
     language: input.language ?? "zh-CN",
     tutor_context: input.tutor_context ?? "\u8010\u5FC3\u3001\u5177\u4F53\u3001\u8FDE\u7EED\u8BB2\u89E3",
     learner_context: input.learner_context ?? null,
     session_context: input.session_context ?? { assets: [] },
-    existing_board: {
-      summary: input.board_summary ?? null,
+    existing_board: mayUseExistingBoard ? {
+      summary: input.board_summary,
       last_applied_action: input.last_applied_action ?? null,
       base_revision: input.base_revision ?? 0
-    }
+    } : null
   };
-  return `\u8BF7\u6839\u636E\u4EE5\u4E0B\u8BFE\u5802\u4E0A\u4E0B\u6587\u751F\u6210\u672C\u8F6E\u5B8C\u6574\u8BFE\u7A0B\u3002\u53EA\u8F93\u51FA OLL JSON\u3002\u82E5 source_observation \u975E\u7A7A\uFF0C\u5B83\u662F\u672C\u8F6E\u9898\u76EE\u7684\u6743\u5A01\u6765\u6E90\uFF1Bexisting_board \u4EC5\u662F\u5386\u53F2\u677F\u4E66\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u5F97\u7528\u5B83\u66FF\u6362\u3001\u8865\u5168\u6216\u6539\u5199\u5F53\u524D\u9898\u76EE\u3002\u5F53\u524D\u9898\u76EE\u4E0E\u65E7\u767D\u677F\u65E0\u5173\u65F6\uFF0C\u4ECE new_region \u5F00\u59CB\u3002
+  return `\u8BF7\u6839\u636E\u4EE5\u4E0B\u8BFE\u5802\u4E0A\u4E0B\u6587\u751F\u6210\u672C\u8F6E\u5B8C\u6574\u8BFE\u7A0B\u3002\u53EA\u8F93\u51FA OLL JSON\u3002request_source \u5DF2\u7ECF\u786E\u5B9A\u672C\u8F6E\u9898\u76EE\u7684\u552F\u4E00\u6765\u6E90\uFF1Aself_contained \u53EA\u4F7F\u7528 learner_request\uFF0Ccurrent_image \u4EE5 source_observation \u4E3A\u6743\u5A01\u9898\u9762\uFF0Cexplicit_board_follow_up \u624D\u5141\u8BB8\u4F7F\u7528 existing_board\u3002\u4E0D\u5F97\u8DE8\u6765\u6E90\u66FF\u6362\u3001\u8865\u5168\u6216\u6539\u5199\u5F53\u524D\u9898\u76EE\u3002existing_board \u4E3A null \u65F6\uFF0C\u5FC5\u987B\u4ECE new_region \u5F00\u59CB\u3002
 ${JSON.stringify(context, null, 2)}${correction ? `
 
 \u4E0A\u4E00\u7248\u65E0\u6CD5\u6267\u884C\uFF1A${correction}
