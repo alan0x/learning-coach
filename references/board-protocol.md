@@ -139,6 +139,12 @@ Useful content forms:
 - `image`: only a controlled `asset_id`; map supplied regions through
   `content.regions[]` entries containing `as` and the exact `source_region`.
 
+For prose that contains short formulas, keep the node as `text` or `note` and
+delimit only the formula spans with `$...$` or `\\(...\\)`. Formula-first board
+work belongs in a `math` node with canonical `content.latex`. Beat `say` text is
+spoken by TTS, so express equations and operators in natural language there;
+never put raw LaTeX delimiters or commands in narration.
+
 Use relative placement only: `new_region`, `below`, `above`, `left_of`,
 `right_of`, `near`, `inside`, or `overlay`. Except for `new_region`, include an
 existing node or group as `anchor`.

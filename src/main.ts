@@ -78,6 +78,9 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 - 所有 key 与 as 都必须是小写英文别名，只能包含 a-z、0-9、连字符，且必须以字母开头。
 - write 必须包含 as、kind、role、content、place；content 必须是对象，place 至少包含 relation。
 - 每个 write.content 必须包含非空 text，写出学生在白板上实际能看到的内容；数学公式可同时用 latex，列表可同时用 items，流程可同时用 sequence。不得输出空 content。
+- 混合文字与公式的题干或解释使用 kind="text" 或 kind="note"，在 content.text 中只给公式片段加单美元符号（如 $\\sqrt{x-1}$）或 \\(...\\) 定界符；不得把裸 LaTeX 命令直接混入普通文字。
+- 以公式为主体的板书使用 kind="math" 并把规范公式写入 content.latex；content.text 只提供非空、可读的文字后备，不要复制带定界符的公式串。
+- 每个 Beat 的 say 必须使用适合 TTS 朗读的自然语言表达数学关系，不得包含美元符号、反斜杠命令或其他原始 LaTeX 标记。
 - revise 必须包含 target、content、reason；emphasize 必须包含 target、emphasis。
 - connect 必须包含 as、from、to、relation；group 必须包含 as、role、label、members。
 - focus 必须包含 targets、intent；point 必须包含 target；expression 必须包含 expression。

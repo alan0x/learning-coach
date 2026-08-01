@@ -147,6 +147,10 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
     assert.equal(requests[1].authorization, "Bearer vertex-test-token");
     assert.equal(requests[1].body.generationConfig.responseMimeType, "application/json");
     assert.equal(requests[1].body.generationConfig.temperature, 0);
+    const systemPrompt = requests[1].body.systemInstruction.parts[0].text;
+    assert.match(systemPrompt, /混合文字与公式/);
+    assert.match(systemPrompt, /kind="math".*content\.latex/);
+    assert.match(systemPrompt, /say.*自然语言.*LaTeX/);
     const generationPrompt = requests[1].body.contents[0].parts[0].text;
     assert.match(generationPrompt, /request_source 已经确定本轮题目的唯一来源/);
     assert.match(generationPrompt, /"request_source": "self_contained"/);
