@@ -151,6 +151,7 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
     assert.match(systemPrompt, /混合文字与公式/);
     assert.match(systemPrompt, /kind="math".*content\.latex/);
     assert.match(systemPrompt, /say.*自然语言.*LaTeX/);
+    assert.match(systemPrompt, /每个 Beat 必须包含.*after_speech.*focus/);
     const generationPrompt = requests[1].body.contents[0].parts[0].text;
     assert.match(generationPrompt, /request_source 已经确定本轮题目的唯一来源/);
     assert.match(generationPrompt, /"request_source": "self_contained"/);
@@ -176,6 +177,63 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
 
     const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
     assert.deepEqual(artifact, validLesson);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("tool retries a lesson whose beat does not hand off camera focus", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-focus-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const generationRequests = [];
+  const missingFocusLesson = structuredClone(validLesson);
+  missingFocusLesson.steps[0].beats[0].actions = missingFocusLesson.steps[0].beats[0].actions
+    .filter((action) => action.do !== "focus");
+  const responses = [missingFocusLesson, validLesson];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token", expires_in: 3600 }));
+      return;
+    }
+    generationRequests.push(JSON.parse(body));
+    const lesson = responses[generationRequests.length - 1];
+    response.end(JSON.stringify({
+      candidates: [{
+        finishReason: "STOP",
+        content: { parts: [{ text: JSON.stringify(lesson) }] },
+      }],
+    }));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const result = await runTool({
+      baseUrl,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `${baseUrl}/token`,
+      },
+      workDirectory,
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(generationRequests.length, 2);
+    assert.match(
+      generationRequests[1].contents[0].parts[0].text,
+      /OLL_MISSING_BEAT_FOCUS/,
+    );
+    const protocol = JSON.parse(result.stdout);
+    assert.deepEqual(JSON.parse(await readFile(protocol.files_to_send[0], "utf8")), validLesson);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });

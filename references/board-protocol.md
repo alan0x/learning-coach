@@ -54,6 +54,8 @@ information is missing or unreadable.
   Beat's visible actions.
 - Reveal the reasoning progressively; do not create the final answer before it
   is explained.
+- End every Beat with an `after_speech` `focus` action that names the current
+  teaching target. Do not rely on focus left by an earlier Beat or lesson.
 - Finish the requested scope in the same artifact.
 - End with a concise conclusion or knowledge structure and focus it.
 

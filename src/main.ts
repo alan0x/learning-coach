@@ -69,6 +69,7 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 8. 学生背景只用于选择讲法，不得编造画像或宣称学生已经掌握。
 9. close.focus 只能引用已经创建的 node、group 或 connection。
 10. 教学重点、推理顺序和最终结论必须清楚，Beat narration 可以直接作为教师课堂讲述。
+11. 每个 Beat 必须包含一个 when="after_speech" 的 focus 动作，聚焦该 Beat 结束后学生应继续看的当前教学目标；不得依赖上一 Beat 或上一课程遗留焦点。
 
 必须严格使用以下结构和字段名：
 - 根对象：dsl="octos.lesson"、version="0.1"、profile="authoring"、lesson、steps、close。
@@ -299,6 +300,23 @@ function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
 
 const vertexResponseJsonSchema = buildVertexResponseJsonSchema(authoringSchema as JsonSchema);
 
+function validateBeatTeachingFocus(document: AuthoringLesson): void {
+  document.steps.forEach((step, stepIndex) => {
+    step.beats.forEach((beat, beatIndex) => {
+      const hasTeachingFocus = beat.actions.some(
+        (action) => action.do === "focus" && action.when === "after_speech",
+      );
+      if (hasTeachingFocus) return;
+      const error = new Error(
+        `Beat ${beat.key} must include an after_speech focus action for its current teaching target`,
+      ) as Error & { code?: string; path?: string };
+      error.code = "OLL_MISSING_BEAT_FOCUS";
+      error.path = `/steps/${stepIndex}/beats/${beatIndex}/actions`;
+      throw error;
+    });
+  });
+}
+
 function validateGeneratedLesson(raw: string, input: ToolInput): AuthoringLesson {
   let document: unknown;
   try {
@@ -317,6 +335,7 @@ function validateGeneratedLesson(raw: string, input: ToolInput): AuthoringLesson
   }
 
   try {
+    validateBeatTeachingFocus(document as AuthoringLesson);
     validateAuthoringLesson(document as AuthoringLesson, input.session_context ?? { assets: [] });
     const events = normalizeAuthoringLesson(document as AuthoringLesson, {
       lessonId: input.turn_id,

@@ -8224,6 +8224,7 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 8. \u5B66\u751F\u80CC\u666F\u53EA\u7528\u4E8E\u9009\u62E9\u8BB2\u6CD5\uFF0C\u4E0D\u5F97\u7F16\u9020\u753B\u50CF\u6216\u5BA3\u79F0\u5B66\u751F\u5DF2\u7ECF\u638C\u63E1\u3002
 9. close.focus \u53EA\u80FD\u5F15\u7528\u5DF2\u7ECF\u521B\u5EFA\u7684 node\u3001group \u6216 connection\u3002
 10. \u6559\u5B66\u91CD\u70B9\u3001\u63A8\u7406\u987A\u5E8F\u548C\u6700\u7EC8\u7ED3\u8BBA\u5FC5\u987B\u6E05\u695A\uFF0CBeat narration \u53EF\u4EE5\u76F4\u63A5\u4F5C\u4E3A\u6559\u5E08\u8BFE\u5802\u8BB2\u8FF0\u3002
+11. \u6BCF\u4E2A Beat \u5FC5\u987B\u5305\u542B\u4E00\u4E2A when="after_speech" \u7684 focus \u52A8\u4F5C\uFF0C\u805A\u7126\u8BE5 Beat \u7ED3\u675F\u540E\u5B66\u751F\u5E94\u7EE7\u7EED\u770B\u7684\u5F53\u524D\u6559\u5B66\u76EE\u6807\uFF1B\u4E0D\u5F97\u4F9D\u8D56\u4E0A\u4E00 Beat \u6216\u4E0A\u4E00\u8BFE\u7A0B\u9057\u7559\u7126\u70B9\u3002
 
 \u5FC5\u987B\u4E25\u683C\u4F7F\u7528\u4EE5\u4E0B\u7ED3\u6784\u548C\u5B57\u6BB5\u540D\uFF1A
 - \u6839\u5BF9\u8C61\uFF1Adsl="octos.lesson"\u3001version="0.1"\u3001profile="authoring"\u3001lesson\u3001steps\u3001close\u3002
@@ -8438,6 +8439,22 @@ function buildVertexResponseJsonSchema(root) {
   return compact;
 }
 var vertexResponseJsonSchema = buildVertexResponseJsonSchema(oll_authoring_v0_1_schema_default);
+function validateBeatTeachingFocus(document) {
+  document.steps.forEach((step, stepIndex) => {
+    step.beats.forEach((beat, beatIndex) => {
+      const hasTeachingFocus = beat.actions.some(
+        (action) => action.do === "focus" && action.when === "after_speech"
+      );
+      if (hasTeachingFocus) return;
+      const error = new Error(
+        `Beat ${beat.key} must include an after_speech focus action for its current teaching target`
+      );
+      error.code = "OLL_MISSING_BEAT_FOCUS";
+      error.path = `/steps/${stepIndex}/beats/${beatIndex}/actions`;
+      throw error;
+    });
+  });
+}
 function validateGeneratedLesson(raw, input) {
   let document;
   try {
@@ -8451,6 +8468,7 @@ function validateGeneratedLesson(raw, input) {
     throw new GeneratedLessonError(`OLL schema validation failed: ${detail}`, raw);
   }
   try {
+    validateBeatTeachingFocus(document);
     validateAuthoringLesson(document, input.session_context ?? { assets: [] });
     const events = normalizeAuthoringLesson(document, {
       lessonId: input.turn_id,
