@@ -7175,6 +7175,12 @@ var oll_authoring_v0_1_schema_default = {
         language: { type: "string", minLength: 2, maxLength: 32 },
         title: { type: "string", minLength: 1, maxLength: 160 },
         goals: { type: "array", minItems: 1, maxItems: 8, items: { type: "string" } },
+        variables: {
+          type: "array",
+          minItems: 1,
+          maxItems: 16,
+          items: { $ref: "#/$defs/lessonVariable" }
+        },
         adaptation: {
           type: "object",
           properties: {
@@ -7241,10 +7247,10 @@ var oll_authoring_v0_1_schema_default = {
       required: ["do"],
       additionalProperties: false,
       properties: {
-        do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression"] },
+        do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "plot", "image", "table", "note"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7258,6 +7264,10 @@ var oll_authoring_v0_1_schema_default = {
         targets: { type: "array", items: { type: "string" } },
         intent: { type: "string" },
         expression: { type: "string" },
+        variable: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
+        value: { type: "number" },
+        easing: { enum: ["linear", "ease_in_out"] },
+        duration_intent: { enum: ["brief", "normal", "extended"] },
         reason: { type: "string" }
       },
       allOf: [
@@ -7271,6 +7281,20 @@ var oll_authoring_v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "image" } }
           },
           then: { properties: { content: { $ref: "#/$defs/imageContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "geometry" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/geometryContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "plot" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/plotContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -7299,8 +7323,160 @@ var oll_authoring_v0_1_schema_default = {
         {
           if: { properties: { do: { const: "expression" } } },
           then: { required: ["expression"] }
+        },
+        {
+          if: { properties: { do: { const: "animate" } } },
+          then: { required: ["variable", "value"] }
         }
       ]
+    },
+    geometryContent: {
+      type: "object",
+      required: ["axes", "points"],
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        caption: { type: "string" },
+        axes: {
+          type: "object",
+          required: ["x", "y", "equal_scale"],
+          additionalProperties: false,
+          properties: {
+            x: { $ref: "#/$defs/geometryAxis" },
+            y: { $ref: "#/$defs/geometryAxis" },
+            equal_scale: { const: true }
+          }
+        },
+        points: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            required: ["as", "x", "y"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              x: { type: "number" },
+              y: { type: "number" },
+              label: { type: "string" },
+              visible: { type: "boolean" },
+              interaction: {
+                type: "object",
+                required: ["kind", "variable", "center"],
+                additionalProperties: false,
+                properties: {
+                  kind: { const: "angle_control" },
+                  variable: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
+                  center: { $ref: "#/$defs/alias" }
+                }
+              }
+            }
+          }
+        },
+        circles: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["as", "center", "radius"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              center: { $ref: "#/$defs/alias" },
+              radius: { type: "number", exclusiveMinimum: 0 },
+              label: { type: "string" }
+            }
+          }
+        },
+        segments: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["as", "from", "to"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              from: { $ref: "#/$defs/alias" },
+              to: { $ref: "#/$defs/alias" },
+              label: { type: "string" },
+              style: { enum: ["solid", "dashed", "projection"] }
+            }
+          }
+        },
+        arcs: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["as", "center", "radius", "start_angle", "end_angle"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              center: { $ref: "#/$defs/alias" },
+              radius: { type: "number", exclusiveMinimum: 0 },
+              start_angle: { type: "number" },
+              end_angle: { type: "number" },
+              label: { type: "string" }
+            }
+          }
+        },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
+    lessonVariable: {
+      type: "object",
+      required: ["as", "initial", "min", "max"],
+      additionalProperties: false,
+      properties: {
+        as: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
+        initial: { type: "number" },
+        min: { type: "number" },
+        max: { type: "number" },
+        label: { type: "string", maxLength: 80 },
+        unit: { type: "string", maxLength: 32 },
+        control: {
+          type: "object",
+          required: ["kind"],
+          additionalProperties: false,
+          properties: {
+            kind: { const: "slider" },
+            step: { type: "number", exclusiveMinimum: 0 }
+          }
+        }
+      }
+    },
+    plotContent: {
+      type: "object",
+      properties: {
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
+    valueBinding: {
+      type: "object",
+      required: ["target", "expression"],
+      additionalProperties: false,
+      properties: {
+        target: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$" },
+        expression: { type: "string", minLength: 1, maxLength: 256 }
+      }
+    },
+    geometryAxis: {
+      type: "object",
+      required: ["min", "max"],
+      additionalProperties: false,
+      properties: {
+        min: { type: "number" },
+        max: { type: "number" },
+        label: { type: "string" }
+      }
     },
     imageContent: {
       type: "object",
@@ -7370,6 +7546,12 @@ var v0_1_schema_default = {
         language: { type: "string", minLength: 2, maxLength: 32 },
         title: { type: "string", minLength: 1, maxLength: 160 },
         goals: { type: "array", minItems: 1, maxItems: 8, items: { type: "string" } },
+        variables: {
+          type: "array",
+          minItems: 1,
+          maxItems: 16,
+          items: { $ref: "#/$defs/lessonVariable" }
+        },
         adaptation: {
           type: "object",
           properties: {
@@ -7436,10 +7618,10 @@ var v0_1_schema_default = {
       required: ["do"],
       additionalProperties: false,
       properties: {
-        do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression"] },
+        do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "plot", "image", "table", "note"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7453,6 +7635,10 @@ var v0_1_schema_default = {
         targets: { type: "array", items: { type: "string" } },
         intent: { type: "string" },
         expression: { type: "string" },
+        variable: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
+        value: { type: "number" },
+        easing: { enum: ["linear", "ease_in_out"] },
+        duration_intent: { enum: ["brief", "normal", "extended"] },
         reason: { type: "string" }
       },
       allOf: [
@@ -7466,6 +7652,20 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "image" } }
           },
           then: { properties: { content: { $ref: "#/$defs/imageContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "geometry" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/geometryContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "plot" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/plotContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -7494,8 +7694,160 @@ var v0_1_schema_default = {
         {
           if: { properties: { do: { const: "expression" } } },
           then: { required: ["expression"] }
+        },
+        {
+          if: { properties: { do: { const: "animate" } } },
+          then: { required: ["variable", "value"] }
         }
       ]
+    },
+    geometryContent: {
+      type: "object",
+      required: ["axes", "points"],
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        caption: { type: "string" },
+        axes: {
+          type: "object",
+          required: ["x", "y", "equal_scale"],
+          additionalProperties: false,
+          properties: {
+            x: { $ref: "#/$defs/geometryAxis" },
+            y: { $ref: "#/$defs/geometryAxis" },
+            equal_scale: { const: true }
+          }
+        },
+        points: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            required: ["as", "x", "y"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              x: { type: "number" },
+              y: { type: "number" },
+              label: { type: "string" },
+              visible: { type: "boolean" },
+              interaction: {
+                type: "object",
+                required: ["kind", "variable", "center"],
+                additionalProperties: false,
+                properties: {
+                  kind: { const: "angle_control" },
+                  variable: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
+                  center: { $ref: "#/$defs/alias" }
+                }
+              }
+            }
+          }
+        },
+        circles: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["as", "center", "radius"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              center: { $ref: "#/$defs/alias" },
+              radius: { type: "number", exclusiveMinimum: 0 },
+              label: { type: "string" }
+            }
+          }
+        },
+        segments: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["as", "from", "to"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              from: { $ref: "#/$defs/alias" },
+              to: { $ref: "#/$defs/alias" },
+              label: { type: "string" },
+              style: { enum: ["solid", "dashed", "projection"] }
+            }
+          }
+        },
+        arcs: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["as", "center", "radius", "start_angle", "end_angle"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              center: { $ref: "#/$defs/alias" },
+              radius: { type: "number", exclusiveMinimum: 0 },
+              start_angle: { type: "number" },
+              end_angle: { type: "number" },
+              label: { type: "string" }
+            }
+          }
+        },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
+    lessonVariable: {
+      type: "object",
+      required: ["as", "initial", "min", "max"],
+      additionalProperties: false,
+      properties: {
+        as: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
+        initial: { type: "number" },
+        min: { type: "number" },
+        max: { type: "number" },
+        label: { type: "string", maxLength: 80 },
+        unit: { type: "string", maxLength: 32 },
+        control: {
+          type: "object",
+          required: ["kind"],
+          additionalProperties: false,
+          properties: {
+            kind: { const: "slider" },
+            step: { type: "number", exclusiveMinimum: 0 }
+          }
+        }
+      }
+    },
+    plotContent: {
+      type: "object",
+      properties: {
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
+    valueBinding: {
+      type: "object",
+      required: ["target", "expression"],
+      additionalProperties: false,
+      properties: {
+        target: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$" },
+        expression: { type: "string", minLength: 1, maxLength: 256 }
+      }
+    },
+    geometryAxis: {
+      type: "object",
+      required: ["min", "max"],
+      additionalProperties: false,
+      properties: {
+        min: { type: "number" },
+        max: { type: "number" },
+        label: { type: "string" }
+      }
     },
     imageContent: {
       type: "object",
@@ -7541,10 +7893,188 @@ var v0_1_schema_default = {
   }
 };
 
+// ../octos-lesson-language/packages/core/src/math-expression.ts
+var FUNCTIONS = {
+  abs: Math.abs,
+  acos: Math.acos,
+  asin: Math.asin,
+  atan: Math.atan,
+  ceil: Math.ceil,
+  cos: Math.cos,
+  exp: Math.exp,
+  floor: Math.floor,
+  ln: Math.log,
+  log: Math.log,
+  round: Math.round,
+  sin: Math.sin,
+  sqrt: Math.sqrt,
+  tan: Math.tan
+};
+function normalizeExpression(expression) {
+  const normalized = expression.trim().replaceAll("\u03C0", "pi").replaceAll("\u2212", "-").replaceAll("\xD7", "*").replaceAll("\xF7", "/").trim();
+  if (!normalized) throw new Error("Expression is empty");
+  if (normalized.length > 256) throw new Error("Expression is too long");
+  return normalized;
+}
+function tokenize(expression) {
+  const result = [];
+  let cursor = 0;
+  while (cursor < expression.length) {
+    const remaining = expression.slice(cursor);
+    const whitespace = remaining.match(/^\s+/);
+    if (whitespace) {
+      cursor += whitespace[0].length;
+      continue;
+    }
+    const number = remaining.match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/i);
+    if (number) {
+      result.push({ kind: "number", value: number[0] });
+      cursor += number[0].length;
+      continue;
+    }
+    const identifier = remaining.match(/^[a-z][a-z0-9_]*/i);
+    if (identifier) {
+      result.push({ kind: "identifier", value: identifier[0].toLowerCase() });
+      cursor += identifier[0].length;
+      continue;
+    }
+    const symbol = remaining[0];
+    if ("+-*/^()".includes(symbol)) {
+      result.push({ kind: "symbol", value: symbol });
+      cursor += 1;
+      continue;
+    }
+    throw new Error(`Unsupported token '${symbol}'`);
+  }
+  result.push({ kind: "eof", value: "" });
+  return result;
+}
+var ExpressionParser = class {
+  constructor(tokens, allowedVariables) {
+    this.tokens = tokens;
+    this.allowedVariables = allowedVariables;
+  }
+  tokens;
+  allowedVariables;
+  cursor = 0;
+  parse() {
+    const expression = this.parseSum();
+    if (this.current().kind !== "eof") throw new Error(`Unexpected token '${this.current().value}'`);
+    return expression;
+  }
+  current() {
+    return this.tokens[this.cursor];
+  }
+  take(value) {
+    const token = this.current();
+    if (value !== void 0 && token.value !== value) throw new Error(`Expected '${value}'`);
+    this.cursor += 1;
+    return token;
+  }
+  parseSum() {
+    let left = this.parseProduct();
+    while (this.current().value === "+" || this.current().value === "-") {
+      const operator = this.take().value;
+      const right = this.parseProduct();
+      const prior = left;
+      left = operator === "+" ? (variables) => prior(variables) + right(variables) : (variables) => prior(variables) - right(variables);
+    }
+    return left;
+  }
+  parseProduct() {
+    let left = this.parseUnary();
+    while (this.current().value === "*" || this.current().value === "/") {
+      const operator = this.take().value;
+      const right = this.parseUnary();
+      const prior = left;
+      left = operator === "*" ? (variables) => prior(variables) * right(variables) : (variables) => prior(variables) / right(variables);
+    }
+    return left;
+  }
+  parseUnary() {
+    if (this.current().value === "+") {
+      this.take("+");
+      return this.parseUnary();
+    }
+    if (this.current().value === "-") {
+      this.take("-");
+      const operand = this.parseUnary();
+      return (variables) => -operand(variables);
+    }
+    return this.parsePower();
+  }
+  parsePower() {
+    const base = this.parsePrimary();
+    if (this.current().value !== "^") return base;
+    this.take("^");
+    const exponent = this.parseUnary();
+    return (variables) => base(variables) ** exponent(variables);
+  }
+  parsePrimary() {
+    const token = this.current();
+    if (token.kind === "number") {
+      this.take();
+      const value = Number(token.value);
+      return () => value;
+    }
+    if (token.value === "(") {
+      this.take("(");
+      const value = this.parseSum();
+      this.take(")");
+      return value;
+    }
+    if (token.kind !== "identifier") throw new Error("Expected a number, variable, or function");
+    const identifier = this.take().value;
+    if (identifier === "pi") return () => Math.PI;
+    if (identifier === "e") return () => Math.E;
+    if (this.allowedVariables.has(identifier)) {
+      return (variables) => {
+        const value = variables[identifier];
+        if (!Number.isFinite(value)) throw new Error(`Variable '${identifier}' has no finite value`);
+        return value;
+      };
+    }
+    const operation = FUNCTIONS[identifier];
+    if (!operation) throw new Error(`Unknown variable or function '${identifier}'`);
+    this.take("(");
+    const argument = this.parseSum();
+    this.take(")");
+    return (variables) => operation(argument(variables));
+  }
+};
+function compileMathExpression(expression, allowedVariables) {
+  const variables = new Set([...allowedVariables].map((value) => value.toLowerCase()));
+  return new ExpressionParser(tokenize(normalizeExpression(expression)), variables).parse();
+}
+function evaluateMathExpression(expression, variables) {
+  const result = compileMathExpression(expression, Object.keys(variables))(variables);
+  if (!Number.isFinite(result)) throw new Error("Expression result is not finite");
+  return result;
+}
+
 // ../octos-lesson-language/packages/core/src/index.ts
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
 var validateAuthoringDocument = ajv.compile(v0_1_schema_default);
 var ALIAS_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
+var VARIABLE_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
+var RESERVED_MATH_NAMES = /* @__PURE__ */ new Set([
+  "abs",
+  "acos",
+  "asin",
+  "atan",
+  "ceil",
+  "cos",
+  "e",
+  "exp",
+  "floor",
+  "ln",
+  "log",
+  "pi",
+  "round",
+  "sin",
+  "sqrt",
+  "tan"
+]);
 var ACTIONS = /* @__PURE__ */ new Set([
   "write",
   "revise",
@@ -7553,9 +8083,12 @@ var ACTIONS = /* @__PURE__ */ new Set([
   "group",
   "focus",
   "point",
-  "expression"
+  "expression",
+  "animate"
 ]);
 var PHASES = /* @__PURE__ */ new Set(["before_speech", "during_speech", "after_speech"]);
+var ANIMATION_EASINGS = /* @__PURE__ */ new Set(["linear", "ease_in_out"]);
+var ANIMATION_DURATION_INTENTS = /* @__PURE__ */ new Set(["brief", "normal", "extended"]);
 var PLACEMENT_RELATIONS = /* @__PURE__ */ new Set(["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"]);
 var ACTION_FIELDS = /* @__PURE__ */ new Set([
   "do",
@@ -7575,7 +8108,11 @@ var ACTION_FIELDS = /* @__PURE__ */ new Set([
   "targets",
   "intent",
   "expression",
-  "reason"
+  "reason",
+  "variable",
+  "value",
+  "easing",
+  "duration_intent"
 ]);
 var OllError = class extends Error {
   code;
@@ -7609,6 +8146,90 @@ function requireAlias(value, path) {
   if (typeof value !== "string" || !ALIAS_PATTERN.test(value)) {
     fail("OLL_INVALID_ALIAS", path, `Invalid local alias '${String(value)}'`);
   }
+}
+function requireVariableAlias(value, path) {
+  if (typeof value !== "string" || !VARIABLE_PATTERN.test(value)) {
+    fail("OLL_INVALID_VARIABLE", path, `Invalid variable alias '${String(value)}'`);
+  }
+}
+function validateLessonVariables(document) {
+  const values = /* @__PURE__ */ new Map();
+  for (const [index, variable] of (document.lesson.variables ?? []).entries()) {
+    const path = `/lesson/variables/${index}`;
+    requireObject(variable, path);
+    requireVariableAlias(variable.as, `${path}/as`);
+    if (RESERVED_MATH_NAMES.has(variable.as)) fail("OLL_INVALID_VARIABLE", `${path}/as`, `Variable '${variable.as}' uses a reserved math name`);
+    if (values.has(variable.as)) fail("OLL_DUPLICATE_ALIAS", `${path}/as`, `Variable '${variable.as}' is duplicated`);
+    const initial = requireFiniteNumber(variable.initial, `${path}/initial`);
+    const min = requireFiniteNumber(variable.min, `${path}/min`);
+    const max = requireFiniteNumber(variable.max, `${path}/max`);
+    if (max <= min) fail("OLL_INVALID_VARIABLE", path, "Variable max must be greater than min");
+    if (initial < min || initial > max) fail("OLL_INVALID_VARIABLE", `${path}/initial`, "Variable initial value is outside its range");
+    if (variable.control?.step !== void 0) {
+      const step = requireFiniteNumber(variable.control.step, `${path}/control/step`);
+      if (step <= 0 || step > max - min) fail("OLL_INVALID_VARIABLE", `${path}/control/step`, "Slider step must be greater than zero and no larger than the variable range");
+    }
+    values.set(variable.as, initial);
+  }
+  return values;
+}
+function splitBindingTarget(value, path) {
+  if (typeof value !== "string") fail("OLL_INVALID_BINDING", path, "Binding target must be a string");
+  const separator = value.lastIndexOf(".");
+  if (separator <= 0 || separator === value.length - 1) fail("OLL_INVALID_BINDING", path, `Invalid binding target '${value}'`);
+  const alias = value.slice(0, separator);
+  const property = value.slice(separator + 1);
+  requireAlias(alias, path);
+  if (!/^[a-z_][a-z0-9_]*$/.test(property)) fail("OLL_INVALID_BINDING", path, `Invalid binding property '${property}'`);
+  return { alias, property };
+}
+function bindableTargets(action) {
+  const targets = /* @__PURE__ */ new Map();
+  const add = (field, properties) => {
+    for (const item of Array.isArray(action.content[field]) ? action.content[field] : []) {
+      if (typeof item?.as === "string") targets.set(item.as, new Set(properties));
+    }
+  };
+  if (action.kind === "geometry") {
+    add("points", ["x", "y"]);
+    add("circles", ["radius"]);
+    add("arcs", ["radius", "start_angle", "end_angle"]);
+  } else if (action.kind === "plot") {
+    add("points", ["x", "y"]);
+    add("guides", ["value"]);
+  }
+  return targets;
+}
+function validateValueBindings(action, path, variables) {
+  if (action.content.bindings === void 0) return;
+  if (action.kind !== "geometry" && action.kind !== "plot") {
+    fail("OLL_INVALID_BINDING", `${path}/content/bindings`, "Bindings are only supported on geometry and plot nodes");
+  }
+  requireArray(action.content.bindings, `${path}/content/bindings`);
+  const targets = bindableTargets(action);
+  const seen = /* @__PURE__ */ new Set();
+  action.content.bindings.forEach((binding, index) => {
+    const bindingPath = `${path}/content/bindings/${index}`;
+    requireObject(binding, bindingPath);
+    for (const field of Object.keys(binding)) {
+      if (field !== "target" && field !== "expression") fail("OLL_INVALID_BINDING", `${bindingPath}/${field}`, `Unknown binding field '${field}'`);
+    }
+    const { alias, property } = splitBindingTarget(binding.target, `${bindingPath}/target`);
+    if (!targets.get(alias)?.has(property)) {
+      fail("OLL_REFERENCE_NOT_FOUND", `${bindingPath}/target`, `Binding target '${binding.target}' is not a supported numeric field`);
+    }
+    if (seen.has(binding.target)) fail("OLL_INVALID_BINDING", `${bindingPath}/target`, `Binding target '${binding.target}' is duplicated`);
+    seen.add(binding.target);
+    requireString(binding.expression, `${bindingPath}/expression`);
+    try {
+      const evaluate = compileMathExpression(binding.expression, variables.keys());
+      const result = evaluate(Object.fromEntries(variables));
+      if (!Number.isFinite(result)) throw new Error("result is not finite");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "invalid expression";
+      fail("OLL_INVALID_BINDING", `${bindingPath}/expression`, message);
+    }
+  });
 }
 function splitTarget(value, path) {
   if (typeof value !== "string") {
@@ -7646,7 +8267,7 @@ function validateContentFragments(content, path) {
 }
 function collectAddressableContent(content) {
   const result = validateContentFragments(content, "/content");
-  for (const field of ["curves", "points", "guides", "regions", "elements", "edges"]) {
+  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs"]) {
     if (!content?.[field]) continue;
     for (const item of content[field]) {
       if (item?.as) result.push(item.as);
@@ -7672,6 +8293,85 @@ function validateStructuredContent(content, path, addressable) {
           fail("OLL_REFERENCE_NOT_FOUND", `${path}/regions/${regionIndex}/members/${memberIndex}`, `Diagram element '${member}' is not defined`);
         }
       });
+    });
+  }
+}
+function requireFiniteNumber(value, path) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) fail("OLL_INVALID_OPERATION_PAYLOAD", path, "Expected a finite number");
+  return number;
+}
+function validateGeometryContent(action, path, variables) {
+  if (action.kind !== "geometry") return;
+  const content = action.content;
+  requireObject(content.axes, `${path}/content/axes`);
+  for (const axisName of ["x", "y"]) {
+    const axisPath = `${path}/content/axes/${axisName}`;
+    requireObject(content.axes[axisName], axisPath);
+    const min = requireFiniteNumber(content.axes[axisName].min, `${axisPath}/min`);
+    const max = requireFiniteNumber(content.axes[axisName].max, `${axisPath}/max`);
+    if (max <= min) fail("OLL_INVALID_OPERATION_PAYLOAD", axisPath, "Geometry axis max must be greater than min");
+  }
+  if (content.axes.equal_scale !== true) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/axes/equal_scale`, "Geometry requires equal_scale=true");
+  }
+  requireArray(content.points, `${path}/content/points`);
+  const pointAliases = /* @__PURE__ */ new Set();
+  content.points.forEach((point, index) => {
+    const pointPath = `${path}/content/points/${index}`;
+    requireObject(point, pointPath);
+    requireAlias(point.as, `${pointPath}/as`);
+    pointAliases.add(point.as);
+    requireFiniteNumber(point.x, `${pointPath}/x`);
+    requireFiniteNumber(point.y, `${pointPath}/y`);
+  });
+  content.points.forEach((point, index) => {
+    requireObject(point, `${path}/content/points/${index}`);
+    if (point.interaction === void 0) return;
+    const interactionPath = `${path}/content/points/${index}/interaction`;
+    requireObject(point.interaction, interactionPath);
+    if (point.interaction.kind !== "angle_control") {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${interactionPath}/kind`, "Geometry point interaction kind must be 'angle_control'");
+    }
+    requireVariableAlias(point.interaction.variable, `${interactionPath}/variable`);
+    if (!variables.has(point.interaction.variable)) {
+      fail("OLL_REFERENCE_NOT_FOUND", `${interactionPath}/variable`, `Lesson variable '${point.interaction.variable}' is not defined`);
+    }
+    requireAlias(point.interaction.center, `${interactionPath}/center`);
+    if (!pointAliases.has(point.interaction.center)) {
+      fail("OLL_REFERENCE_NOT_FOUND", `${interactionPath}/center`, `Geometry point '${point.interaction.center}' is not defined`);
+    }
+    if (point.interaction.center === point.as) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${interactionPath}/center`, "An angle control point cannot use itself as its center");
+    }
+  });
+  const requirePointReference = (value, referencePath) => {
+    requireAlias(value, referencePath);
+    if (!pointAliases.has(value)) {
+      fail("OLL_REFERENCE_NOT_FOUND", referencePath, `Geometry point '${value}' is not defined`);
+    }
+  };
+  for (const [field, references] of [
+    ["circles", ["center"]],
+    ["segments", ["from", "to"]],
+    ["arcs", ["center"]]
+  ]) {
+    if (content[field] === void 0) continue;
+    if (!Array.isArray(content[field])) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/${field}`, "Expected an array");
+    }
+    content[field].forEach((item, index) => {
+      const itemPath = `${path}/content/${field}/${index}`;
+      requireObject(item, itemPath);
+      for (const reference of references) requirePointReference(item[reference], `${itemPath}/${reference}`);
+      if (field === "circles" || field === "arcs") {
+        const radius = requireFiniteNumber(item.radius, `${itemPath}/radius`);
+        if (radius <= 0) fail("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/radius`, "Radius must be greater than zero");
+      }
+      if (field === "arcs") {
+        requireFiniteNumber(item.start_angle, `${itemPath}/start_angle`);
+        requireFiniteNumber(item.end_angle, `${itemPath}/end_angle`);
+      }
     });
   }
 }
@@ -7718,6 +8418,9 @@ function validateActionPayload(action, path) {
   } else if (action.do === "revise") {
     requireString(action.target, `${path}/target`);
     requireObject(action.content, `${path}/content`);
+    if (action.content.bindings !== void 0) {
+      fail("OLL_INVALID_BINDING", `${path}/content/bindings`, "Authoring bindings must be declared when a geometry or plot node is created");
+    }
     requireString(action.reason, `${path}/reason`);
   } else if (action.do === "emphasize") {
     requireString(action.target, `${path}/target`);
@@ -7739,6 +8442,15 @@ function validateActionPayload(action, path) {
     requireString(action.target, `${path}/target`);
   } else if (action.do === "expression") {
     requireString(action.expression, `${path}/expression`);
+  } else if (action.do === "animate") {
+    requireVariableAlias(action.variable, `${path}/variable`);
+    requireFiniteNumber(action.value, `${path}/value`);
+    if (action.easing !== void 0 && !ANIMATION_EASINGS.has(action.easing)) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/easing`, `Unknown animation easing '${action.easing}'`);
+    }
+    if (action.duration_intent !== void 0 && !ANIMATION_DURATION_INTENTS.has(action.duration_intent)) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/duration_intent`, `Unknown animation duration intent '${action.duration_intent}'`);
+    }
   }
 }
 function resolveLocal(registry, value, path, allowedTypes = null) {
@@ -7774,6 +8486,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
   }
   requireObject(document.lesson, "/lesson");
   requireArray(document.lesson.goals, "/lesson/goals");
+  const lessonVariables = validateLessonVariables(document);
   requireArray(document.steps, "/steps");
   requireObject(document.close, "/close");
   requireArray(document.close.focus, "/close/focus");
@@ -7814,7 +8527,17 @@ function validateAuthoringLesson(document, resourceContext = null) {
           }
           validateStructuredContent(action.content, `${actionPath}/content`, uniqueFragments);
           validateImageResource(action, actionPath, resourceContext);
+          validateGeometryContent(action, actionPath, lessonVariables);
+          validateValueBindings(action, actionPath, lessonVariables);
           register(registry, action.as, "node", `${actionPath}/as`, fragments);
+          return;
+        }
+        if (action.do === "animate") {
+          const variable = document.lesson.variables?.find((candidate) => candidate.as === action.variable);
+          if (!variable) fail("OLL_REFERENCE_NOT_FOUND", `${actionPath}/variable`, `Variable '${action.variable}' is not declared`);
+          if (action.value < variable.min || action.value > variable.max) {
+            fail("OLL_INVALID_VARIABLE", `${actionPath}/value`, `Animation target for '${action.variable}' is outside its range`);
+          }
           return;
         }
         if (["emphasize", "point"].includes(action.do)) {
@@ -7860,7 +8583,7 @@ function stableId(host, type, alias) {
 }
 function normalizeAddressableContent(_host, nodeId, content) {
   const clone = structuredClone(content);
-  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges"]) {
+  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs"]) {
     if (!Array.isArray(clone?.[field])) continue;
     clone[field] = clone[field].map((item) => {
       if (!item.as) return item;
@@ -7870,10 +8593,35 @@ function normalizeAddressableContent(_host, nodeId, content) {
         normalized.from = `${nodeId}:fragment:${item.from}`;
         normalized.to = `${nodeId}:fragment:${item.to}`;
       }
+      if (field === "circles") {
+        normalized.center = `${nodeId}:fragment:${item.center}`;
+      }
+      if (field === "segments") {
+        normalized.from = `${nodeId}:fragment:${item.from}`;
+        normalized.to = `${nodeId}:fragment:${item.to}`;
+      }
+      if (field === "arcs") {
+        normalized.center = `${nodeId}:fragment:${item.center}`;
+      }
+      if (field === "points" && item.interaction?.kind === "angle_control") {
+        normalized.interaction = {
+          ...structuredClone(item.interaction),
+          center: `${nodeId}:fragment:${item.interaction.center}`
+        };
+      }
       if (field === "regions" && Array.isArray(item.members)) {
         normalized.members = item.members.map((member) => `${nodeId}:fragment:${member}`);
       }
       return normalized;
+    });
+  }
+  if (Array.isArray(clone.bindings)) {
+    clone.bindings = clone.bindings.map((binding) => {
+      const { alias, property } = splitBindingTarget(binding.target, "content.bindings.target");
+      return {
+        target: `${nodeId}:fragment:${alias}.${property}`,
+        expression: binding.expression
+      };
     });
   }
   return clone;
@@ -7955,6 +8703,18 @@ function normalizeAction(action, context) {
   }
   if (action.do === "expression") {
     return { action_id: actionId, op: "teacher.expression", expression: action.expression };
+  }
+  if (action.do === "animate") {
+    return {
+      action_id: actionId,
+      op: "lesson.variable.animate",
+      animation: {
+        variable: action.variable,
+        to: action.value,
+        easing: action.easing ?? "linear",
+        duration_intent: action.duration_intent ?? "normal"
+      }
+    };
   }
   if (action.do === "connect") {
     return {
@@ -8083,6 +8843,18 @@ function normalizeAuthoringLesson(document, host) {
 function createSemanticBoardState(open) {
   if (open.event !== "lesson.open") fail("OLL_INVALID_EVENT", "/0/event", "First event must be lesson.open");
   if (!open.board) fail("OLL_INVALID_EVENT", "/0/board", "lesson.open must include board state");
+  const variables = Object.fromEntries((open.lesson?.variables ?? []).map((variable) => [
+    variable.as,
+    {
+      value: variable.initial,
+      initial: variable.initial,
+      min: variable.min,
+      max: variable.max,
+      ...variable.label ? { label: variable.label } : {},
+      ...variable.unit ? { unit: variable.unit } : {},
+      ...variable.control ? { control: structuredClone(variable.control) } : {}
+    }
+  ]));
   return {
     board_id: open.board.board_id,
     revision: open.board.base_revision,
@@ -8092,8 +8864,44 @@ function createSemanticBoardState(open) {
     focus: [],
     applied_lessons: [open.lesson_id],
     applied_steps: [],
-    applied_actions: []
+    applied_actions: [],
+    ...Object.keys(variables).length ? { variables } : {}
   };
+}
+function bindingValues(state) {
+  return Object.fromEntries(Object.entries(state.variables ?? {}).map(([alias, variable]) => [alias, variable.value]));
+}
+function bindingTarget(content, target) {
+  const separator = target.lastIndexOf(".");
+  if (separator <= 0) fail("OLL_INVALID_BINDING", "content.bindings.target", `Invalid canonical binding target '${target}'`);
+  const fragmentId = target.slice(0, separator);
+  const property = target.slice(separator + 1);
+  const fields = [
+    ["points", /* @__PURE__ */ new Set(["x", "y"])],
+    ["guides", /* @__PURE__ */ new Set(["value"])],
+    ["circles", /* @__PURE__ */ new Set(["radius"])],
+    ["arcs", /* @__PURE__ */ new Set(["radius", "start_angle", "end_angle"])]
+  ];
+  for (const [field, properties] of fields) {
+    const record = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
+    if (record && properties.has(property)) return { record, property };
+    if (record) fail("OLL_INVALID_BINDING", "content.bindings.target", `Property '${property}' cannot be bound on '${field}'`);
+  }
+  fail("OLL_REFERENCE_NOT_FOUND", "content.bindings.target", `Canonical binding target '${target}' was not found`);
+}
+function evaluateContentBindings(content, variables) {
+  const evaluated = structuredClone(content);
+  for (const binding of Array.isArray(evaluated.bindings) ? evaluated.bindings : []) {
+    const { record, property } = bindingTarget(evaluated, binding.target);
+    try {
+      record[property] = evaluateMathExpression(binding.expression, variables);
+      if (property === "radius" && record[property] <= 0) throw new Error("Bound radius must be greater than zero");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "binding evaluation failed";
+      fail("OLL_BINDING_EVALUATION_FAILED", "content.bindings.expression", message);
+    }
+  }
+  return evaluated;
 }
 function canonicalTargetExists(state, target) {
   if (!target) return false;
@@ -8109,7 +8917,9 @@ function applyCanonicalAction(state, action) {
     if (state.nodes[action.node.id]) fail("OLL_DUPLICATE_NODE_ID", "action.node.id", `Node '${action.node.id}' already exists`);
     const anchor = action.node.placement?.anchor;
     if (anchor && !state.nodes[anchor] && !state.groups[anchor]) fail("OLL_REFERENCE_NOT_FOUND", "action.node.placement.anchor", `Anchor '${anchor}' not found`);
-    state.nodes[action.node.id] = structuredClone(action.node);
+    const node = structuredClone(action.node);
+    node.content = evaluateContentBindings(node.content, bindingValues(state));
+    state.nodes[action.node.id] = node;
   } else if (action.op === "board.connect") {
     if (!action.connection) fail("OLL_INVALID_EVENT", "action.connection", "board.connect requires connection");
     if (state.connections[action.connection.id]) fail("OLL_DUPLICATE_CONNECTION_ID", "action.connection.id", `Connection '${action.connection.id}' already exists`);
@@ -8133,7 +8943,7 @@ function applyCanonicalAction(state, action) {
     if (!action.target?.node_id || !action.revision) fail("OLL_INVALID_EVENT", "action", "board.revise requires a node target and revision");
     const node = state.nodes[action.target.node_id];
     if (!node) fail("OLL_REFERENCE_NOT_FOUND", "action.target", `Node '${action.target.node_id}' not found`);
-    node.content = structuredClone(action.revision.content);
+    node.content = evaluateContentBindings(action.revision.content, bindingValues(state));
   } else if (action.op === "board.emphasize") {
     if (!action.target || !action.emphasis) fail("OLL_INVALID_EVENT", "action.target", "board.emphasize requires target and emphasis");
     const target = action.target.node_id ? state.nodes[action.target.node_id] : action.target.connection_id ? state.connections[action.target.connection_id] : action.target.group_id ? state.groups[action.target.group_id] : void 0;
@@ -8143,11 +8953,29 @@ function applyCanonicalAction(state, action) {
     if (!canonicalTargetExists(state, action.target)) fail("OLL_REFERENCE_NOT_FOUND", "action.target", "Point target not found");
   } else if (action.op === "teacher.expression") {
     if (!action.expression) fail("OLL_INVALID_EVENT", "action.expression", "teacher.expression requires expression");
+  } else if (action.op === "lesson.variable.animate") {
+    if (!action.animation) fail("OLL_INVALID_EVENT", "action.animation", "lesson.variable.animate requires animation");
+    const updated = setLessonVariable(state, action.animation.variable, action.animation.to);
+    Object.assign(state, updated);
   } else {
     fail("OLL_INVALID_OPERATION", "action.op", `Unknown canonical operation '${action.op}'`);
   }
   state.applied_actions.push(action.action_id);
   return true;
+}
+function setLessonVariable(state, alias, value) {
+  const variable = state.variables?.[alias];
+  if (!variable) fail("OLL_REFERENCE_NOT_FOUND", `variables/${alias}`, `Variable '${alias}' is not defined`);
+  if (!Number.isFinite(value) || value < variable.min || value > variable.max) {
+    fail("OLL_INVALID_VARIABLE", `variables/${alias}/value`, `Variable '${alias}' must be between ${variable.min} and ${variable.max}`);
+  }
+  const updated = structuredClone(state);
+  updated.variables[alias].value = value;
+  const values = bindingValues(updated);
+  for (const node of Object.values(updated.nodes)) {
+    node.content = evaluateContentBindings(node.content, values);
+  }
+  return updated;
 }
 function commitCanonicalStep(state, stepId) {
   if (state.applied_steps.includes(stepId)) return false;
@@ -8190,6 +9018,7 @@ function canonicalizeState(state) {
     nodes: sortObject(state.nodes),
     connections: sortObject(state.connections),
     groups: sortObject(state.groups),
+    ...state.variables ? { variables: sortObject(state.variables) } : {},
     applied_actions: [...state.applied_actions]
   };
 }
@@ -8204,13 +9033,48 @@ var DEFAULT_VERTEX_REQUEST_ATTEMPTS = 3;
 var MAX_CONTEXT_LENGTH = 24e3;
 var MAX_ERROR_BODY_LENGTH = 4e3;
 var GeneratedLessonError = class extends Error {
-  constructor(message, raw) {
+  constructor(message, raw, violations = []) {
     super(message);
     this.raw = raw;
+    this.violations = violations;
     this.name = "GeneratedLessonError";
   }
   raw;
+  violations;
 };
+var LESSON_BRIEF_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u5802\u9700\u6C42\u89C4\u5212\u5668\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E5F\u4E0D\u64B0\u5199\u8BFE\u7A0B\u6B63\u6587\u3002\u4F60\u7684\u4EFB\u52A1\u662F\u628A\u672C\u8F6E\u6743\u5A01\u8BF7\u6C42\u8F6C\u6362\u6210\u4E00\u4E2A\u53EF\u9A8C\u8BC1\u7684 Lesson Brief\u3002
+
+\u53EA\u63D0\u53D6\u8BF7\u6C42\u660E\u786E\u8981\u6C42\u3001\u6216\u5B8C\u6210\u8BF7\u6C42\u4E0D\u53EF\u7F3A\u5C11\u7684\u53EF\u89C1\u6559\u5B66\u8981\u6C42\u3002\u6BCF\u9879 evidence \u5FC5\u987B\u9010\u5B57\u5F15\u7528\u6743\u5A01\u8BF7\u6C42\u4E2D\u7684\u77ED\u8BED\uFF0C\u4E0D\u5F97\u5F15\u7528\u5386\u53F2\u4E2D\u88AB\u9694\u79BB\u7684\u5185\u5BB9\u3002
+\u6BCF\u4E2A visual_requirement.id \u5FC5\u987B\u662F\u552F\u4E00\u7684\u5C0F\u5199\u82F1\u6587\u522B\u540D\uFF0C\u53EA\u80FD\u5305\u542B a-z\u30010-9\u3001\u8FDE\u5B57\u7B26\u5E76\u4EE5\u5B57\u6BCD\u5F00\u5934\uFF1Bvisual_relationships \u7684 from/to \u53EA\u80FD\u5F15\u7528\u8FD9\u4E9B id\u3002expressions \u53EA\u7528\u4E8E plot\uFF0C\u5176\u4ED6 surface \u5FC5\u987B\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
+
+\u89C6\u89C9 surface\uFF1A
+- geometry\uFF1A\u7B49\u6BD4\u4F8B\u5EA6\u91CF\u51E0\u4F55\u4E0E\u5750\u6807\u51E0\u4F55\uFF1B
+- plot\uFF1A\u51FD\u6570\u5750\u6807\u56FE\uFF1B
+- diagram\uFF1A\u8BED\u4E49\u8282\u70B9\u5173\u7CFB\u56FE\uFF1B
+- image\uFF1A\u53D7\u63A7\u6765\u6E90\u56FE\u7247\uFF1B
+- table\uFF1A\u8868\u683C\u3002
+
+\u901A\u7528 feature \u7684\u542B\u4E49\uFF1A
+- coordinate_axes\uFF1A\u53EF\u8BFB\u7684\u6570\u503C\u5750\u6807\u8F74\uFF1Bequal_scale\uFF1A\u4E24\u4E2A\u5750\u6807\u65B9\u5411\u4FDD\u6301\u76F8\u540C\u6BD4\u4F8B\uFF1B
+- circle\uFF1A\u53EF\u5EA6\u91CF\u5706\uFF1Borigin_centered_circle\uFF1A\u5706\u5FC3\u786E\u5B9E\u4F4D\u4E8E\u5750\u6807\u539F\u70B9\uFF1Bunit_radius\uFF1A\u534A\u5F84\u6570\u503C\u786E\u5B9E\u4E3A\u4E00\uFF1B
+- point_on_circle\uFF1A\u70B9\u7684\u5750\u6807\u786E\u5B9E\u843D\u5728\u5706\u4E0A\uFF1Bradius_segment\uFF1A\u5706\u5FC3\u5230\u5706\u4E0A\u70B9\u7684\u7EBF\u6BB5\uFF1Bprojection_segment\uFF1A\u70B9\u5230\u5750\u6807\u8F74\u7684\u5B9E\u9645\u6295\u5F71\u7EBF\uFF1Bangle_arc\uFF1A\u975E\u96F6\u7684\u53EF\u89C1\u89D2\u5F27\uFF1B
+- function_curve\uFF1A\u5E26\u53EF\u6267\u884C\u8868\u8FBE\u5F0F\u7684\u51FD\u6570\u66F2\u7EBF\uFF1Bannotated_points\uFF1A\u6709\u6807\u7B7E\u7684\u6570\u636E\u70B9\uFF1Bguides\uFF1A\u6570\u503C\u8F85\u52A9\u7EBF\uFF1B
+- semantic_elements / semantic_edges\uFF1A\u8BED\u4E49\u8282\u70B9\u548C\u8BED\u4E49\u8FDE\u7EBF\uFF1Bsource_asset\uFF1A\u53D7\u63A7\u56FE\u7247\u8D44\u6E90\uFF1Btabular_values\uFF1A\u6709\u884C\u5217\u6570\u636E\u7684\u8868\u683C\u3002
+
+\u5982\u679C\u8BF7\u6C42\u70B9\u540D\u67D0\u4E2A\u89C6\u89C9\u5BF9\u8C61\uFF0C\u9009\u62E9\u80FD\u771F\u5B9E\u8868\u8FBE\u5B83\u7684 surface\uFF0C\u5E76\u5217\u51FA\u8BA9\u8BE5\u5BF9\u8C61\u548C\u6559\u5B66\u76EE\u7684\u5728\u753B\u9762\u4E0A\u6210\u7ACB\u6240\u4E0D\u53EF\u7F3A\u5C11\u7684\u6700\u5C0F features\u3002\u4E0D\u8981\u56E0\u4E3A\u67D0\u4E2A surface \u652F\u6301\u4E00\u9879 feature \u5C31\u81EA\u52A8\u8981\u6C42\u5B83\uFF1B\u4E5F\u4E0D\u8981\u7528\u6807\u9898\u3001\u8BB2\u8FF0\u6216\u6807\u7B7E\u4EE3\u66FF\u7ED3\u6784\u7279\u5F81\u3002
+
+\u5982\u679C\u8BF7\u6C42\u6D89\u53CA\u8FD0\u52A8\u3001\u6620\u5C04\u6216\u91CF\u7684\u8FDE\u7EED\u53D8\u5316\uFF0C\u89C4\u5212\u4E2D\u5FC5\u987B\u5305\u542B\u4F7F\u8FD9\u4E2A\u53D8\u5316\u53EF\u89C1\u7684\u7ED3\u6784\uFF1B\u4F8B\u5982\u201C\u65CB\u8F6C\u89D2\u5EA6\u201D\u9700\u8981\u771F\u5B9E\u7684\u89D2\u5EA6\u6807\u8BB0\uFF0C\u201C\u6295\u5F71/\u5750\u6807\u5BF9\u5E94\u201D\u9700\u8981\u5B9E\u9645\u6295\u5F71\u7ED3\u6784\uFF0C\u201C\u51FD\u6570\u56FE\u50CF\u201D\u9700\u8981\u5750\u6807\u8F74\u548C\u5E26\u8868\u8FBE\u5F0F\u7684\u66F2\u7EBF\u3002
+
+\u5982\u679C\u8BF7\u6C42\u8981\u6C42\u628A\u4E24\u4E2A\u89C6\u89C9\u5BF9\u8C61\u7ED3\u5408\u3001\u5BF9\u5E94\u3001\u6BD4\u8F83\u6216\u63A8\u5BFC\uFF0C\u5FC5\u987B\u5728 visual_relationships \u4E2D\u8868\u8FBE\uFF1B\u4E0D\u8981\u628A\u8FD9\u79CD\u5173\u7CFB\u9000\u5316\u6210\u4E24\u5F20\u4E92\u4E0D\u76F8\u5173\u7684\u56FE\u3002
+
+shared_variable_requirements \u7528\u6765\u89C4\u5212\u201C\u540C\u4E00\u4E2A\u91CF\u540C\u65F6\u9A71\u52A8\u591A\u4E2A\u89C6\u89C9\u5BF9\u8C61\u201D\u7684\u8BFE\u7A0B\uFF0C\u4E0D\u662F\u7ED9\u6BCF\u8282\u8BFE\u673A\u68B0\u6DFB\u52A0\u52A8\u753B\uFF1A
+- \u5F53\u8BF7\u6C42\u660E\u786E\u8981\u6C42\u52A8\u753B\u3001\u53EF\u4EA4\u4E92\u53D8\u5316\uFF0C\u6216\u6559\u5B66\u76EE\u6807\u672C\u8EAB\u662F\u8FDE\u7EED\u8FD0\u52A8/\u53D8\u5316\uFF08\u4F8B\u5982\u89D2\u5EA6\u65CB\u8F6C\u53D8\u6210\u5468\u671F\u6CE2\u52A8\uFF09\u65F6\uFF0C\u521B\u5EFA shared_variable_requirement\uFF1B\u5426\u5219\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
+- variable \u662F OLL \u53D8\u91CF\u540D\uFF1Binitial/min/max/slider_step/animate_to \u4F7F\u7528\u7B26\u5408\u5B66\u79D1\u542B\u4E49\u7684\u6570\u503C\u3002\u8F6C\u6EE1\u4E00\u5708\u7528 0 \u5230 6.283185307179586\uFF0C\u5355\u4F4D\u7528 rad\u3002
+- bound_visuals \u81F3\u5C11\u5217\u51FA\u6240\u6709\u88AB\u540C\u4E00\u53D8\u91CF\u9A71\u52A8\u7684 visual_requirement.id\uFF1B\u8DE8\u56FE\u5BF9\u5E94\u901A\u5E38\u81F3\u5C11\u6709\u4E24\u4E2A\u3002
+- direct_angle_geometry \u53EA\u5728\u67D0\u4E2A geometry \u91CC\u7684\u70B9\u9002\u5408\u7531\u5B66\u751F\u76F4\u63A5\u7ED5\u5706\u5FC3\u62D6\u52A8\u65F6\u586B\u5199\u8BE5 visual_requirement.id\uFF0C\u5426\u5219\u8FD4\u56DE\u7A7A\u5B57\u7B26\u4E32\u3002
+- evidence \u4ECD\u987B\u9010\u5B57\u5F15\u7528\u6743\u5A01\u8BF7\u6C42\uFF1B\u4E0D\u5F97\u56E0\u4E3A\u7CFB\u7EDF\u652F\u6301\u52A8\u753B\u5C31\u51ED\u7A7A\u89C4\u5212\u4E92\u52A8\u3002
+
+\u6CA1\u6709\u660E\u786E\u6216\u5FC5\u8981\u89C6\u89C9\u8981\u6C42\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u53EA\u8F93\u51FA\u7B26\u5408 JSON Schema \u7684 JSON \u5BF9\u8C61\u3002`;
 var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\u4F53\u3001\u5C0A\u91CD\u5B66\u751F\u7684\u5BB6\u5EAD\u6559\u5E08\u3002\u8BF7\u751F\u6210\u4E00\u5802\u5B8C\u6574\u3001\u8FDE\u7EED\u7684 OLL Authoring Profile \u8BFE\u7A0B\u3002
 
 \u786C\u6027\u8981\u6C42\uFF1A
@@ -8233,14 +9097,26 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 - actions[] \u4F7F\u7528\u5B57\u6BB5 do\uFF1B\u7981\u6B62\u4F7F\u7528 type\u3001create\u3001layout\u3001coordinates\u3002
 - \u6240\u6709 key \u4E0E as \u90FD\u5FC5\u987B\u662F\u5C0F\u5199\u82F1\u6587\u522B\u540D\uFF0C\u53EA\u80FD\u5305\u542B a-z\u30010-9\u3001\u8FDE\u5B57\u7B26\uFF0C\u4E14\u5FC5\u987B\u4EE5\u5B57\u6BCD\u5F00\u5934\u3002
 - write \u5FC5\u987B\u5305\u542B as\u3001kind\u3001role\u3001content\u3001place\uFF1Bcontent \u5FC5\u987B\u662F\u5BF9\u8C61\uFF0Cplace \u81F3\u5C11\u5305\u542B relation\u3002
-- \u6BCF\u4E2A write.content \u5FC5\u987B\u5305\u542B\u975E\u7A7A text\uFF0C\u5199\u51FA\u5B66\u751F\u5728\u767D\u677F\u4E0A\u5B9E\u9645\u80FD\u770B\u5230\u7684\u5185\u5BB9\uFF1B\u6570\u5B66\u516C\u5F0F\u53EF\u540C\u65F6\u7528 latex\uFF0C\u5217\u8868\u53EF\u540C\u65F6\u7528 items\uFF0C\u6D41\u7A0B\u53EF\u540C\u65F6\u7528 sequence\u3002\u4E0D\u5F97\u8F93\u51FA\u7A7A content\u3002
+- write.content \u5FC5\u987B\u5339\u914D kind\uFF1Atext/shape \u4F7F\u7528\u975E\u7A7A text\uFF1Bmath \u4F7F\u7528 latex\uFF1Bnote \u4F7F\u7528 title \u548C items\uFF1Btable \u4F7F\u7528 columns \u548C rows\uFF1Bdiagram \u4F7F\u7528 elements\uFF1Bgeometry \u4F7F\u7528 axes\u3001points \u548C\u51E0\u4F55\u539F\u8BED\uFF1Bplot \u4F7F\u7528 axes \u548C curves\uFF1Bimage \u4F7F\u7528\u53D7\u63A7 asset_id\u3002\u4E0D\u5F97\u7528\u65E0\u5173\u7684 text \u5B57\u6BB5\u4EE3\u66FF\u7ED3\u6784\u5316\u89C6\u89C9\u5185\u5BB9\u3002
 - \u6DF7\u5408\u6587\u5B57\u4E0E\u516C\u5F0F\u7684\u9898\u5E72\u6216\u89E3\u91CA\u4F7F\u7528 kind="text" \u6216 kind="note"\uFF0C\u5728 content.text \u4E2D\u53EA\u7ED9\u516C\u5F0F\u7247\u6BB5\u52A0\u5355\u7F8E\u5143\u7B26\u53F7\uFF08\u5982 $\\sqrt{x-1}$\uFF09\u6216 \\(...\\) \u5B9A\u754C\u7B26\uFF1B\u4E0D\u5F97\u628A\u88F8 LaTeX \u547D\u4EE4\u76F4\u63A5\u6DF7\u5165\u666E\u901A\u6587\u5B57\u3002
-- \u4EE5\u516C\u5F0F\u4E3A\u4E3B\u4F53\u7684\u677F\u4E66\u4F7F\u7528 kind="math" \u5E76\u628A\u89C4\u8303\u516C\u5F0F\u5199\u5165 content.latex\uFF1Bcontent.text \u53EA\u63D0\u4F9B\u975E\u7A7A\u3001\u53EF\u8BFB\u7684\u6587\u5B57\u540E\u5907\uFF0C\u4E0D\u8981\u590D\u5236\u5E26\u5B9A\u754C\u7B26\u7684\u516C\u5F0F\u4E32\u3002
+- \u4EE5\u516C\u5F0F\u4E3A\u4E3B\u4F53\u7684\u677F\u4E66\u4F7F\u7528 kind="math" \u5E76\u628A\u89C4\u8303\u516C\u5F0F\u5199\u5165 content.latex\uFF1Bcontent.text \u53EA\u4F5C\u4E3A\u53EF\u9009\u7684\u53EF\u8BFB\u540E\u5907\uFF0C\u4E0D\u8981\u590D\u5236\u5E26\u5B9A\u754C\u7B26\u7684\u516C\u5F0F\u4E32\u3002
+- diagram \u53EA\u7528\u4E8E\u8BED\u4E49\u5143\u7D20\u4E0E\u8FDE\u7EBF\uFF0C\u4E0D\u5F97\u8868\u793A\u5706\u3001\u89D2\u3001\u5750\u6807\u8F74\u3001\u6295\u5F71\u6216\u5176\u4ED6\u5EA6\u91CF\u51E0\u4F55\u3002geometry \u7528\u4E8E\u7B49\u6BD4\u4F8B\u5750\u6807\u7CFB\u4E2D\u7684\u5706\u3001\u70B9\u3001\u7EBF\u6BB5\u3001\u6295\u5F71\u548C\u89D2\u5F27\uFF1Baxes \u5FC5\u987B\u5305\u542B x/y \u6570\u503C\u8303\u56F4\u548C equal_scale=true\u3002
+- geometry.points[] \u6BCF\u9879\u5305\u542B as\u3001x\u3001y\uFF1Bcircles[] \u4F7F\u7528 center point alias \u548C\u6B63 radius\uFF1Bsegments[] \u4F7F\u7528 from/to point alias\uFF0C\u6295\u5F71\u7EBF\u4F7F\u7528 style="projection"\uFF1Barcs[] \u4F7F\u7528 center\u3001radius\u3001start_angle\u3001end_angle\uFF0C\u89D2\u5EA6\u4E3A\u5F27\u5EA6\u3002\u6A21\u578B\u4E0D\u5F97\u8F93\u51FA SVG \u6216\u50CF\u7D20\u5750\u6807\u3002
+- diagram \u7528\u4E8E\u8BED\u4E49\u5143\u7D20\u4E0E\u8FDE\u7EBF\uFF0C\u4E0D\u5F97\u5192\u5145\u51FD\u6570\u56FE\u50CF\u3002plot \u7528\u4E8E\u5750\u6807\u8F74\u4E0A\u7684\u51FD\u6570\u66F2\u7EBF\uFF1Bcontent.axes.x/y \u5404\u7ED9\u51FA\u6570\u503C min/max\uFF0Ccontent.curves[] \u6BCF\u9879\u5FC5\u987B\u5305\u542B as\u3001expression\uFF0C\u53EF\u5305\u542B label\u3002
+- plot.expression \u53EA\u5199\u53D7\u9650\u6570\u5B66\u8868\u8FBE\u5F0F\uFF0C\u4F8B\u5982 sin(x)\u3001cos(x)\u3001(x+3)^2-4\uFF1B\u652F\u6301 x\u3001pi\u3001e\u3001+ - * / ^\u3001\u62EC\u53F7\u4EE5\u53CA sin/cos/tan/sqrt/abs/exp/log\uFF0C\u4E0D\u5199 y=\u3001LaTeX\u3001\u4EE3\u7801\u6216 SVG\u3002
+- \u8F93\u5165\u4E2D\u7684 lesson_brief \u662F\u672C\u8F6E\u8BF7\u6C42\u7684\u53EF\u6267\u884C\u8981\u6C42\u5408\u540C\uFF1B\u6BCF\u4E2A visual_requirement \u548C visual_relationship \u90FD\u5FC5\u987B\u7531\u5B9E\u9645\u767D\u677F\u52A8\u4F5C\u6EE1\u8DB3\uFF0C\u6807\u9898\u3001goals\u3001\u8BB2\u8FF0\u6216\u6587\u5B57\u58F0\u660E\u4E0D\u80FD\u66FF\u4EE3\u8981\u6C42\u7684\u89C6\u89C9\u5185\u5BB9\u3002
+- lesson_brief.shared_variable_requirements \u975E\u7A7A\u65F6\uFF0C\u5FC5\u987B\u628A\u6BCF\u9879\u8981\u6C42\u5B8C\u6574\u843D\u5230 OLL\uFF1A\u5728 lesson.variables \u58F0\u660E\u552F\u4E00\u53D8\u91CF\u5E76\u63D0\u4F9B\u540C\u4E00\u4E2A slider\uFF1B\u5728 bound_visuals \u5BF9\u5E94\u7684 geometry/plot content.bindings \u4E2D\u5F15\u7528\u8BE5\u53D8\u91CF\uFF1B\u6DFB\u52A0\u4E00\u4E2A do="animate" \u52A8\u4F5C\uFF1Bdirect_angle_geometry \u975E\u7A7A\u65F6\uFF0C\u5728\u5BF9\u5E94 geometry \u7684\u53EF\u62D6\u52A8\u70B9\u4E0A\u58F0\u660E interaction={kind:"angle_control",variable,center}\u3002\u6ED1\u6746\u3001\u52A8\u753B\u3001\u76F4\u63A5\u62D6\u70B9\u5FC5\u987B\u5F15\u7528\u540C\u4E00\u4E2A\u53D8\u91CF\uFF0C\u7981\u6B62\u590D\u5236\u7B2C\u4E8C\u4EFD\u72B6\u6001\u3002
+- bindings.target \u4F7F\u7528\u201C\u5C40\u90E8\u5143\u7D20\u522B\u540D.\u6570\u503C\u5C5E\u6027\u201D\uFF0Cexpression \u4F7F\u7528\u53D7\u9650\u8868\u8FBE\u5F0F\u5E76\u76F4\u63A5\u5F15\u7528\u53D8\u91CF\u540D\u3002\u4F8B\u5982\u5355\u4F4D\u5706\u4E0E\u6B63\u5F26\u56FE\u5171\u4EAB theta\uFF1Apoint-p.x=cos(theta)\u3001point-p.y=sin(theta)\u3001foot.x=cos(theta)\u3001theta-arc.end_angle=theta\u3001current-angle.x=theta\u3001current-angle.y=sin(theta)\u3002
+- animate \u53EA\u63CF\u8FF0\u8BED\u4E49\u76EE\u6807\uFF0C\u5305\u542B variable\u3001value\uFF0C\u53EF\u5305\u542B easing \u548C duration_intent\uFF1B\u4E0D\u5F97\u751F\u6210\u6BEB\u79D2\u65F6\u957F\u3002\u5B66\u751F\u53EF\u5728 Runtime \u4E2D\u64AD\u653E\u3001\u6682\u505C\u3001\u62D6\u52A8\u3001\u590D\u4F4D\u548C\u91CD\u653E\u3002
+- geometry \u70B9\u53EA\u6709\u5728 lesson_brief \u6307\u5B9A direct_angle_geometry \u65F6\u624D\u6DFB\u52A0 angle_control\uFF1Bcenter \u5FC5\u987B\u5F15\u7528\u540C\u4E00 geometry \u4E2D\u5DF2\u7ECF\u5B9A\u4E49\u7684\u5706\u5FC3\u70B9\u3002
 - \u6BCF\u4E2A Beat \u7684 say \u5FC5\u987B\u4F7F\u7528\u9002\u5408 TTS \u6717\u8BFB\u7684\u81EA\u7136\u8BED\u8A00\u8868\u8FBE\u6570\u5B66\u5173\u7CFB\uFF0C\u4E0D\u5F97\u5305\u542B\u7F8E\u5143\u7B26\u53F7\u3001\u53CD\u659C\u6760\u547D\u4EE4\u6216\u5176\u4ED6\u539F\u59CB LaTeX \u6807\u8BB0\u3002
 - revise \u5FC5\u987B\u5305\u542B target\u3001content\u3001reason\uFF1Bemphasize \u5FC5\u987B\u5305\u542B target\u3001emphasis\u3002
 - connect \u5FC5\u987B\u5305\u542B as\u3001from\u3001to\u3001relation\uFF1Bgroup \u5FC5\u987B\u5305\u542B as\u3001role\u3001label\u3001members\u3002
 - focus \u5FC5\u987B\u5305\u542B targets\u3001intent\uFF1Bpoint \u5FC5\u987B\u5305\u542B target\uFF1Bexpression \u5FC5\u987B\u5305\u542B expression\u3002
 - \u5199\u677F\u4E66\u793A\u4F8B\uFF1A{"do":"write","as":"rule","kind":"note","role":"concept","content":{"title":"\u89C4\u5F8B","items":["\u5185\u5BB9"]},"place":{"relation":"new_region"}}\u3002
+- \u4E09\u89D2\u51FD\u6570\u56FE\u50CF\u793A\u4F8B\uFF1A{"do":"write","as":"trig-curves","kind":"plot","role":"diagram","content":{"axes":{"x":{"min":0,"max":6.283185307179586},"y":{"min":-1.2,"max":1.2}},"curves":[{"as":"sine-curve","expression":"sin(x)","label":"y = sin x"},{"as":"cosine-curve","expression":"cos(x)","label":"y = cos x"}]},"place":{"relation":"new_region"}}\u3002
+- \u5355\u4F4D\u5706\u793A\u4F8B\uFF1A{"do":"write","as":"unit-circle","kind":"geometry","role":"diagram","content":{"axes":{"x":{"min":-1.25,"max":1.25,"label":"x"},"y":{"min":-1.25,"max":1.25,"label":"y"},"equal_scale":true},"points":[{"as":"origin","x":0,"y":0,"label":"O"},{"as":"point-p","x":0.5,"y":0.8660254,"label":"P(cos \u03B8, sin \u03B8)"},{"as":"foot","x":0.5,"y":0}],"circles":[{"as":"circle","center":"origin","radius":1,"label":"r = 1"}],"segments":[{"as":"radius","from":"origin","to":"point-p","style":"solid"},{"as":"projection","from":"point-p","to":"foot","label":"sin \u03B8","style":"projection"}],"arcs":[{"as":"theta","center":"origin","radius":0.28,"start_angle":0,"end_angle":1.0471975512,"label":"\u03B8"}]},"place":{"relation":"new_region"}}\u3002
+- \u5171\u4EAB\u53D8\u91CF\u793A\u4F8B\uFF1Alesson.variables=[{"as":"theta","initial":0,"min":0,"max":6.283185307179586,"label":"\u65CB\u8F6C\u89D2 \u03B8","unit":"rad","control":{"kind":"slider","step":0.01}}]\uFF1B\u52A8\u753B\u52A8\u4F5C={"do":"animate","variable":"theta","value":6.283185307179586,"easing":"linear","duration_intent":"extended"}\u3002
 - \u805A\u7126\u793A\u4F8B\uFF1A{"do":"focus","when":"after_speech","targets":["rule"],"intent":"current_step"}\u3002`;
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -8368,77 +9244,731 @@ function buildVertexResponseJsonSchema(root) {
     return result;
   };
   const compact = convert(root);
-  const contentSchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["text"],
-    properties: {
-      title: { type: "string" },
-      text: { type: "string" },
-      latex: { type: "string" },
-      expression: { type: "string" },
-      statement: { type: "string" },
-      rule: { type: "string" },
-      derivation: { type: "string" },
-      result: { type: "string" },
-      caption: { type: "string" },
-      label: { type: "string" },
-      items: { type: "array", items: { type: "string" } },
-      details: { type: "array", items: { type: "string" } },
-      lines: { type: "array", items: { type: "string" } },
-      sequence: { type: "array", items: { type: "string" } },
-      columns: { type: "array", items: { type: "string" } },
-      rows: {
-        type: "array",
-        items: { type: "array", items: { type: "string" } }
-      },
-      fragments: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["as"],
-          properties: {
-            as: { type: "string" },
-            text: { type: "string" },
-            latex: { type: "string" }
-          }
-        }
-      }
-    }
-  };
   const definitions = compact.$defs;
   const action = definitions?.action;
   const actionProperties = action?.properties;
   if (definitions && actionProperties) {
+    const alias = { $ref: "#/$defs/alias" };
+    const stringArray = { type: "array", items: { type: "string" } };
+    const fragments = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as"],
+        properties: {
+          as: alias,
+          text: { type: "string" },
+          latex: { type: "string" }
+        }
+      }
+    };
+    const axisRange = {
+      type: "object",
+      additionalProperties: false,
+      required: ["min", "max"],
+      properties: { min: { type: "number" }, max: { type: "number" } }
+    };
+    const axes = {
+      type: "object",
+      additionalProperties: false,
+      required: ["x", "y"],
+      properties: { x: axisRange, y: axisRange }
+    };
+    const curves = {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "expression"],
+        properties: {
+          as: alias,
+          expression: { type: "string" },
+          label: { type: "string" }
+        }
+      }
+    };
+    const points = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "x", "y"],
+        properties: {
+          as: alias,
+          x: { type: "number" },
+          y: { type: "number" },
+          label: { type: "string" },
+          visible: { type: "boolean" }
+        }
+      }
+    };
+    const bindings = {
+      type: "array",
+      minItems: 1,
+      items: { $ref: "#/$defs/valueBinding" }
+    };
+    const guides = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "kind", "value"],
+        properties: {
+          as: alias,
+          kind: { enum: ["vertical_line", "horizontal_line"] },
+          value: { type: "number" },
+          label: { type: "string" }
+        }
+      }
+    };
+    const diagramElements = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "label"],
+        properties: {
+          as: alias,
+          label: { type: "string" },
+          semantic_position: {
+            enum: ["top", "top_left", "top_right", "left", "center", "right", "bottom_left", "bottom_center", "bottom_right", "bottom"]
+          }
+        }
+      }
+    };
+    const diagramEdges = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "from", "to"],
+        properties: {
+          as: alias,
+          from: alias,
+          to: alias,
+          label: { type: "string" }
+        }
+      }
+    };
+    const diagramRegions = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "members"],
+        properties: {
+          as: alias,
+          members: { type: "array", items: alias },
+          label: { type: "string" }
+        }
+      }
+    };
+    const geometryAxis = {
+      type: "object",
+      additionalProperties: false,
+      required: ["min", "max"],
+      properties: { min: { type: "number" }, max: { type: "number" }, label: { type: "string" } }
+    };
+    const geometryAxes = {
+      type: "object",
+      additionalProperties: false,
+      required: ["x", "y", "equal_scale"],
+      properties: { x: geometryAxis, y: geometryAxis, equal_scale: { enum: [true] } }
+    };
+    const geometryPoints = { ...structuredClone(points), minItems: 1 };
+    const geometryPointItems = geometryPoints.items;
+    const geometryPointProperties = geometryPointItems.properties;
+    geometryPointProperties.interaction = {
+      type: "object",
+      additionalProperties: false,
+      required: ["kind", "variable", "center"],
+      properties: {
+        kind: { enum: ["angle_control"] },
+        variable: { type: "string" },
+        center: alias
+      }
+    };
+    const geometryCircles = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "center", "radius"],
+        properties: {
+          as: alias,
+          center: alias,
+          radius: { type: "number" },
+          label: { type: "string" }
+        }
+      }
+    };
+    const geometrySegments = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "from", "to"],
+        properties: {
+          as: alias,
+          from: alias,
+          to: alias,
+          label: { type: "string" },
+          style: { enum: ["solid", "dashed", "projection"] }
+        }
+      }
+    };
+    const geometryArcs = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "center", "radius", "start_angle", "end_angle"],
+        properties: {
+          as: alias,
+          center: alias,
+          radius: { type: "number" },
+          start_angle: { type: "number" },
+          end_angle: { type: "number" },
+          label: { type: "string" }
+        }
+      }
+    };
+    const writeContentByKind = {
+      text: {
+        type: "object",
+        additionalProperties: false,
+        required: ["text"],
+        properties: { title: { type: "string" }, text: { type: "string" }, fragments, caption: { type: "string" } }
+      },
+      math: {
+        type: "object",
+        additionalProperties: false,
+        required: ["latex"],
+        properties: { title: { type: "string" }, latex: { type: "string" }, text: { type: "string" }, fragments, caption: { type: "string" } }
+      },
+      shape: {
+        type: "object",
+        additionalProperties: false,
+        required: ["text"],
+        properties: { title: { type: "string" }, text: { type: "string" }, caption: { type: "string" } }
+      },
+      diagram: {
+        type: "object",
+        additionalProperties: false,
+        required: ["elements"],
+        properties: { title: { type: "string" }, elements: diagramElements, edges: diagramEdges, regions: diagramRegions, caption: { type: "string" } }
+      },
+      geometry: {
+        type: "object",
+        additionalProperties: false,
+        required: ["axes", "points"],
+        properties: {
+          title: { type: "string" },
+          axes: geometryAxes,
+          points: geometryPoints,
+          circles: geometryCircles,
+          segments: geometrySegments,
+          arcs: geometryArcs,
+          bindings,
+          caption: { type: "string" }
+        }
+      },
+      plot: {
+        type: "object",
+        additionalProperties: false,
+        required: ["axes", "curves"],
+        properties: { title: { type: "string" }, axes, curves, points, guides, bindings, caption: { type: "string" } }
+      },
+      image: structuredClone(definitions.imageContent),
+      table: {
+        type: "object",
+        additionalProperties: false,
+        required: ["columns", "rows"],
+        properties: {
+          title: { type: "string" },
+          columns: stringArray,
+          rows: { type: "array", items: { type: "array", items: { type: "string" } } },
+          caption: { type: "string" }
+        }
+      },
+      note: {
+        type: "object",
+        additionalProperties: false,
+        required: ["title", "items"],
+        properties: { title: { type: "string" }, items: stringArray, text: { type: "string" }, caption: { type: "string" } }
+      }
+    };
+    const reviseContent = {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        text: { type: "string" },
+        latex: { type: "string" },
+        caption: { type: "string" },
+        items: stringArray,
+        columns: stringArray,
+        rows: { type: "array", items: { type: "array", items: { type: "string" } } },
+        fragments,
+        elements: diagramElements,
+        edges: diagramEdges,
+        regions: diagramRegions,
+        axes: { anyOf: [structuredClone(axes), structuredClone(geometryAxes)] },
+        curves,
+        points,
+        guides,
+        circles: geometryCircles,
+        segments: geometrySegments,
+        arcs: geometryArcs,
+        bindings
+      }
+    };
     const requiredByAction = {
-      write: ["as", "kind", "role", "content", "place"],
       revise: ["target", "content", "reason"],
       emphasize: ["target", "emphasis"],
       connect: ["as", "from", "to", "relation"],
       group: ["as", "role", "label", "members"],
       focus: ["targets", "intent"],
       point: ["target"],
-      expression: ["expression"]
+      expression: ["expression"],
+      animate: ["variable", "value"]
     };
     definitions.action = {
-      anyOf: Object.entries(requiredByAction).map(([actionName, requiredFields]) => {
-        const propertyNames = ["do", "when", ...requiredFields];
-        return {
+      anyOf: [
+        ...Object.entries(writeContentByKind).map(([kind, content]) => ({
           type: "object",
           additionalProperties: false,
-          required: ["do", ...requiredFields],
-          properties: Object.fromEntries(propertyNames.map((propertyName) => [
-            propertyName,
-            propertyName === "do" ? { enum: [actionName] } : propertyName === "content" ? structuredClone(contentSchema) : structuredClone(actionProperties[propertyName])
-          ]))
-        };
-      })
+          required: ["do", "as", "kind", "role", "content", "place"],
+          properties: {
+            do: { enum: ["write"] },
+            when: structuredClone(actionProperties.when),
+            as: structuredClone(actionProperties.as),
+            kind: { enum: [kind] },
+            role: structuredClone(actionProperties.role),
+            content,
+            place: structuredClone(actionProperties.place)
+          }
+        })),
+        ...Object.entries(requiredByAction).map(([actionName, requiredFields]) => {
+          const propertyNames = ["do", "when", ...requiredFields];
+          return {
+            type: "object",
+            additionalProperties: false,
+            required: ["do", ...requiredFields],
+            properties: Object.fromEntries(propertyNames.map((propertyName) => [
+              propertyName,
+              propertyName === "do" ? { enum: [actionName] } : propertyName === "content" ? structuredClone(reviseContent) : structuredClone(actionProperties[propertyName])
+            ]))
+          };
+        })
+      ]
     };
   }
   return compact;
 }
 var vertexResponseJsonSchema = buildVertexResponseJsonSchema(oll_authoring_v0_1_schema_default);
+function requireNonEmptyCollection(contentSchema, field) {
+  const required = Array.isArray(contentSchema.required) ? contentSchema.required : [];
+  if (!required.includes(field)) contentSchema.required = [...required, field];
+  const properties = contentSchema.properties;
+  const collection = properties?.[field];
+  if (collection?.type === "array") collection.minItems = 1;
+}
+function buildAuthoringResponseJsonSchema(brief) {
+  const schema = structuredClone(vertexResponseJsonSchema);
+  const definitions = schema.$defs;
+  const action = definitions?.action;
+  const variants = Array.isArray(action?.anyOf) ? action.anyOf : [];
+  const fieldsBySurface = {
+    geometry: /* @__PURE__ */ new Map([
+      ["circle", "circles"],
+      ["origin_centered_circle", "circles"],
+      ["unit_radius", "circles"],
+      ["radius_segment", "segments"],
+      ["projection_segment", "segments"],
+      ["angle_arc", "arcs"]
+    ]),
+    plot: /* @__PURE__ */ new Map([["annotated_points", "points"], ["guides", "guides"]]),
+    diagram: /* @__PURE__ */ new Map([["semantic_edges", "edges"]])
+  };
+  for (const surface of visualSurfaces) {
+    const requirements = brief.visual_requirements.filter((item) => item.surface === surface);
+    if (requirements.length === 0) continue;
+    const variant = variants.find((item) => {
+      const properties2 = item.properties;
+      const kind = properties2?.kind;
+      return Array.isArray(kind?.enum) && kind.enum[0] === surface;
+    });
+    const properties = variant?.properties;
+    const content = properties?.content;
+    if (!content) continue;
+    for (const requirement of requirements) {
+      for (const feature of requirement.required_features) {
+        const field = fieldsBySurface[surface]?.get(feature);
+        if (field) requireNonEmptyCollection(content, field);
+      }
+    }
+  }
+  if (brief.shared_variable_requirements.length > 0) {
+    const rootProperties = schema.properties;
+    const lesson = rootProperties.lesson;
+    const lessonRequired = Array.isArray(lesson.required) ? lesson.required : [];
+    if (!lessonRequired.includes("variables")) lesson.required = [...lessonRequired, "variables"];
+    const lessonProperties = lesson.properties;
+    const variables = lessonProperties.variables;
+    variables.minItems = brief.shared_variable_requirements.length;
+    const boundSurfaces = new Set(brief.shared_variable_requirements.flatMap((requirement) => requirement.bound_visuals.flatMap((id) => {
+      const visual = brief.visual_requirements.find((candidate) => candidate.id === id);
+      return visual ? [visual.surface] : [];
+    })));
+    for (const surface of ["geometry", "plot"]) {
+      if (!boundSurfaces.has(surface)) continue;
+      const variant = variants.find((item) => {
+        const properties = item.properties;
+        const kind = properties?.kind;
+        return Array.isArray(kind?.enum) && kind.enum[0] === surface;
+      });
+      const content = variant?.properties?.content;
+      if (content) requireNonEmptyCollection(content, "bindings");
+    }
+  }
+  return schema;
+}
+var visualSurfaces = ["geometry", "plot", "diagram", "image", "table"];
+var visualFeatures = [
+  "coordinate_axes",
+  "equal_scale",
+  "circle",
+  "origin_centered_circle",
+  "unit_radius",
+  "point_on_circle",
+  "radius_segment",
+  "projection_segment",
+  "angle_arc",
+  "function_curve",
+  "annotated_points",
+  "guides",
+  "semantic_elements",
+  "semantic_edges",
+  "source_asset",
+  "tabular_values"
+];
+var visualRelationships = [
+  "maps_to",
+  "compares_with",
+  "explains",
+  "derives"
+];
+var animationEasings = ["linear", "ease_in_out"];
+var animationDurationIntents = [
+  "brief",
+  "normal",
+  "extended"
+];
+var lessonBriefResponseJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "version",
+    "request_summary",
+    "visual_requirements",
+    "visual_relationships",
+    "shared_variable_requirements"
+  ],
+  properties: {
+    version: { enum: ["1"] },
+    request_summary: { type: "string" },
+    visual_requirements: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "surface", "purpose", "evidence", "required_features", "expressions"],
+        properties: {
+          id: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
+          surface: { enum: visualSurfaces },
+          purpose: { type: "string" },
+          evidence: { type: "string" },
+          required_features: { type: "array", items: { enum: visualFeatures } },
+          expressions: { type: "array", items: { type: "string" } }
+        }
+      }
+    },
+    visual_relationships: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["from", "to", "relation", "evidence"],
+        properties: {
+          from: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
+          to: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
+          relation: { enum: visualRelationships },
+          evidence: { type: "string" }
+        }
+      }
+    },
+    shared_variable_requirements: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "id",
+          "variable",
+          "purpose",
+          "evidence",
+          "initial",
+          "min",
+          "max",
+          "label",
+          "unit",
+          "slider_step",
+          "animate_to",
+          "easing",
+          "duration_intent",
+          "bound_visuals",
+          "direct_angle_geometry"
+        ],
+        properties: {
+          id: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
+          variable: { type: "string", pattern: "^[a-z][a-z0-9_]*$" },
+          purpose: { type: "string" },
+          evidence: { type: "string" },
+          initial: { type: "number" },
+          min: { type: "number" },
+          max: { type: "number" },
+          label: { type: "string" },
+          unit: { type: "string" },
+          slider_step: { type: "number" },
+          animate_to: { type: "number" },
+          easing: { enum: animationEasings },
+          duration_intent: { enum: animationDurationIntents },
+          bound_visuals: {
+            type: "array",
+            minItems: 1,
+            items: { type: "string", pattern: "^[a-z][a-z0-9-]*$" }
+          },
+          direct_angle_geometry: { type: "string" }
+        }
+      }
+    }
+  }
+};
+var featuresBySurface = {
+  geometry: /* @__PURE__ */ new Set([
+    "coordinate_axes",
+    "equal_scale",
+    "circle",
+    "origin_centered_circle",
+    "unit_radius",
+    "point_on_circle",
+    "radius_segment",
+    "projection_segment",
+    "angle_arc",
+    "annotated_points"
+  ]),
+  plot: /* @__PURE__ */ new Set(["coordinate_axes", "function_curve", "annotated_points", "guides"]),
+  diagram: /* @__PURE__ */ new Set(["semantic_elements", "semantic_edges"]),
+  image: /* @__PURE__ */ new Set(["source_asset"]),
+  table: /* @__PURE__ */ new Set(["tabular_values"])
+};
+function isRecord(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function normalizeEvidence(value) {
+  return value.normalize("NFKC").toLocaleLowerCase().replace(/[\\$]/gu, "").replace(/[（）()\[\]{}]/gu, "").replace(/\s+/gu, "");
+}
+function authoritativeRequestText(input) {
+  const sources = [input.learner_request];
+  if (input.request_source === "current_image" && input.source_observation) {
+    sources.push(input.source_observation.recognized_problem);
+  }
+  if (input.request_source === "explicit_board_follow_up" && input.board_summary) {
+    sources.push(input.board_summary);
+  }
+  return sources;
+}
+function briefViolation(code, path, message) {
+  return { stage: "brief", code, path, message };
+}
+function validateLessonBrief(candidate, input) {
+  const violations = [];
+  if (!isRecord(candidate)) {
+    throw new GeneratedLessonError("Lesson Brief must be a JSON object", void 0, [
+      briefViolation("BRIEF_INVALID_ROOT", "/", "Lesson Brief must be a JSON object")
+    ]);
+  }
+  if (candidate.version !== "1") {
+    violations.push(briefViolation("BRIEF_INVALID_VERSION", "/version", "version must be 1"));
+  }
+  if (typeof candidate.request_summary !== "string" || !candidate.request_summary.trim()) {
+    violations.push(briefViolation("BRIEF_MISSING_SUMMARY", "/request_summary", "request_summary is required"));
+  }
+  const requirements = Array.isArray(candidate.visual_requirements) ? candidate.visual_requirements : [];
+  if (!Array.isArray(candidate.visual_requirements)) {
+    violations.push(briefViolation("BRIEF_INVALID_REQUIREMENTS", "/visual_requirements", "visual_requirements must be an array"));
+  }
+  const relationships = Array.isArray(candidate.visual_relationships) ? candidate.visual_relationships : [];
+  if (!Array.isArray(candidate.visual_relationships)) {
+    violations.push(briefViolation("BRIEF_INVALID_RELATIONSHIPS", "/visual_relationships", "visual_relationships must be an array"));
+  }
+  const sharedVariables = Array.isArray(candidate.shared_variable_requirements) ? candidate.shared_variable_requirements : [];
+  if (!Array.isArray(candidate.shared_variable_requirements)) {
+    violations.push(briefViolation(
+      "BRIEF_INVALID_SHARED_VARIABLES",
+      "/shared_variable_requirements",
+      "shared_variable_requirements must be an array"
+    ));
+  }
+  const ids = /* @__PURE__ */ new Set();
+  const authoritative = authoritativeRequestText(input).map(normalizeEvidence);
+  const grounded = (evidence) => typeof evidence === "string" && normalizeEvidence(evidence).length > 0 && authoritative.some((source) => source.includes(normalizeEvidence(evidence)));
+  requirements.forEach((raw, index) => {
+    const path = `/visual_requirements/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUIREMENT", path, "requirement must be an object"));
+      return;
+    }
+    if (typeof raw.id !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.id) || ids.has(raw.id)) {
+      violations.push(briefViolation("BRIEF_INVALID_ID", `${path}/id`, "id must be a unique lowercase alias"));
+    } else {
+      ids.add(raw.id);
+    }
+    if (!visualSurfaces.includes(raw.surface)) {
+      violations.push(briefViolation("BRIEF_INVALID_SURFACE", `${path}/surface`, "surface is unsupported"));
+    }
+    if (typeof raw.purpose !== "string" || !raw.purpose.trim()) {
+      violations.push(briefViolation("BRIEF_MISSING_PURPOSE", `${path}/purpose`, "purpose is required"));
+    }
+    if (!grounded(raw.evidence)) {
+      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
+    }
+    if (!Array.isArray(raw.required_features)) {
+      violations.push(briefViolation("BRIEF_INVALID_FEATURES", `${path}/required_features`, "required_features must be an array"));
+    } else if (visualSurfaces.includes(raw.surface)) {
+      for (const feature of raw.required_features) {
+        if (!featuresBySurface[raw.surface].has(feature)) {
+          violations.push(briefViolation("BRIEF_INCOMPATIBLE_FEATURE", `${path}/required_features`, `${String(feature)} is not supported by ${String(raw.surface)}`));
+        }
+      }
+    }
+    if (!Array.isArray(raw.expressions) || raw.expressions.some((value) => typeof value !== "string" || !value.trim())) {
+      violations.push(briefViolation("BRIEF_INVALID_EXPRESSIONS", `${path}/expressions`, "expressions must contain only non-empty strings"));
+    } else if (raw.expressions.length > 0 && raw.surface !== "plot") {
+      violations.push(briefViolation("BRIEF_INCOMPATIBLE_EXPRESSIONS", `${path}/expressions`, "expressions are supported only by plot requirements"));
+    }
+  });
+  relationships.forEach((raw, index) => {
+    const path = `/visual_relationships/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_RELATIONSHIP", path, "relationship must be an object"));
+      return;
+    }
+    if (typeof raw.from !== "string" || !ids.has(raw.from)) {
+      violations.push(briefViolation("BRIEF_UNKNOWN_RELATION_SOURCE", `${path}/from`, "from must reference a visual requirement id"));
+    }
+    if (typeof raw.to !== "string" || !ids.has(raw.to)) {
+      violations.push(briefViolation("BRIEF_UNKNOWN_RELATION_TARGET", `${path}/to`, "to must reference a visual requirement id"));
+    }
+    if (!visualRelationships.includes(raw.relation)) {
+      violations.push(briefViolation("BRIEF_INVALID_RELATION", `${path}/relation`, "relation is unsupported"));
+    }
+    if (!grounded(raw.evidence)) {
+      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
+    }
+  });
+  const visualById = new Map(requirements.flatMap((raw) => isRecord(raw) && typeof raw.id === "string" ? [[raw.id, raw]] : []));
+  const sharedIds = /* @__PURE__ */ new Set();
+  const variableNames = /* @__PURE__ */ new Set();
+  sharedVariables.forEach((raw, index) => {
+    const path = `/shared_variable_requirements/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_SHARED_VARIABLE", path, "shared variable requirement must be an object"));
+      return;
+    }
+    if (typeof raw.id !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.id) || sharedIds.has(raw.id)) {
+      violations.push(briefViolation("BRIEF_INVALID_SHARED_VARIABLE_ID", `${path}/id`, "id must be a unique lowercase alias"));
+    } else {
+      sharedIds.add(raw.id);
+    }
+    if (typeof raw.variable !== "string" || !/^[a-z][a-z0-9_]{0,63}$/.test(raw.variable) || variableNames.has(raw.variable)) {
+      violations.push(briefViolation("BRIEF_INVALID_VARIABLE_NAME", `${path}/variable`, "variable must be a unique OLL variable alias"));
+    } else {
+      variableNames.add(raw.variable);
+    }
+    if (typeof raw.purpose !== "string" || !raw.purpose.trim()) {
+      violations.push(briefViolation("BRIEF_MISSING_VARIABLE_PURPOSE", `${path}/purpose`, "purpose is required"));
+    }
+    if (!grounded(raw.evidence)) {
+      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
+    }
+    const min = numberValue(raw.min);
+    const max = numberValue(raw.max);
+    const initial = numberValue(raw.initial);
+    const animateTo = numberValue(raw.animate_to);
+    const sliderStep = numberValue(raw.slider_step);
+    if (min === void 0 || max === void 0 || max <= min) {
+      violations.push(briefViolation("BRIEF_INVALID_VARIABLE_RANGE", path, "min and max must define an increasing finite range"));
+    } else {
+      if (initial === void 0 || initial < min || initial > max) {
+        violations.push(briefViolation("BRIEF_INVALID_VARIABLE_INITIAL", `${path}/initial`, "initial must be inside the variable range"));
+      }
+      if (animateTo === void 0 || animateTo < min || animateTo > max) {
+        violations.push(briefViolation("BRIEF_INVALID_ANIMATION_TARGET", `${path}/animate_to`, "animate_to must be inside the variable range"));
+      }
+    }
+    if (sliderStep === void 0 || sliderStep <= 0) {
+      violations.push(briefViolation("BRIEF_INVALID_SLIDER_STEP", `${path}/slider_step`, "slider_step must be positive"));
+    }
+    if (typeof raw.label !== "string" || !raw.label.trim()) {
+      violations.push(briefViolation("BRIEF_MISSING_VARIABLE_LABEL", `${path}/label`, "label is required"));
+    }
+    if (typeof raw.unit !== "string") {
+      violations.push(briefViolation("BRIEF_INVALID_VARIABLE_UNIT", `${path}/unit`, "unit must be a string"));
+    }
+    if (!animationEasings.includes(raw.easing)) {
+      violations.push(briefViolation("BRIEF_INVALID_ANIMATION_EASING", `${path}/easing`, "easing is unsupported"));
+    }
+    if (!animationDurationIntents.includes(raw.duration_intent)) {
+      violations.push(briefViolation("BRIEF_INVALID_ANIMATION_DURATION", `${path}/duration_intent`, "duration_intent is unsupported"));
+    }
+    if (!Array.isArray(raw.bound_visuals) || raw.bound_visuals.length === 0) {
+      violations.push(briefViolation("BRIEF_INVALID_BOUND_VISUALS", `${path}/bound_visuals`, "bound_visuals must contain at least one visual requirement id"));
+    } else {
+      const bound = /* @__PURE__ */ new Set();
+      for (const visualId of raw.bound_visuals) {
+        const visual = typeof visualId === "string" ? visualById.get(visualId) : void 0;
+        if (!visual || bound.has(String(visualId))) {
+          violations.push(briefViolation("BRIEF_INVALID_BOUND_VISUAL", `${path}/bound_visuals`, "bound_visuals must contain unique visual requirement ids"));
+          continue;
+        }
+        bound.add(String(visualId));
+        if (visual.surface !== "geometry" && visual.surface !== "plot") {
+          violations.push(briefViolation("BRIEF_UNSUPPORTED_BOUND_VISUAL", `${path}/bound_visuals`, "shared variables currently bind only geometry and plot visuals"));
+        }
+      }
+    }
+    if (typeof raw.direct_angle_geometry !== "string") {
+      violations.push(briefViolation("BRIEF_INVALID_DIRECT_CONTROL", `${path}/direct_angle_geometry`, "direct_angle_geometry must be a string"));
+    } else if (raw.direct_angle_geometry) {
+      const directVisual = visualById.get(raw.direct_angle_geometry);
+      if (!directVisual || directVisual.surface !== "geometry" || !Array.isArray(raw.bound_visuals) || !raw.bound_visuals.includes(raw.direct_angle_geometry)) {
+        violations.push(briefViolation(
+          "BRIEF_INVALID_DIRECT_CONTROL",
+          `${path}/direct_angle_geometry`,
+          "direct_angle_geometry must reference a bound geometry requirement"
+        ));
+      }
+    }
+  });
+  if (violations.length > 0) {
+    throw new GeneratedLessonError(`Lesson Brief validation failed: ${formatViolations(violations)}`, void 0, violations);
+  }
+  return candidate;
+}
 function validateBeatTeachingFocus(document) {
   document.steps.forEach((step, stepIndex) => {
     step.beats.forEach((beat, beatIndex) => {
@@ -8455,39 +9985,321 @@ function validateBeatTeachingFocus(document) {
     });
   });
 }
-function validateGeneratedLesson(raw, input) {
+function formatViolations(violations) {
+  return violations.map((violation) => {
+    const missingFeatures = violation.missing_features?.length ? ` missing_features=[${violation.missing_features.join(", ")}]` : "";
+    const missingExpressions = violation.missing_expressions?.length ? ` missing_expressions=[${violation.missing_expressions.join(", ")}]` : "";
+    return `${violation.code} at ${violation.path}: ${violation.message}${missingFeatures}${missingExpressions}`;
+  }).join("; ");
+}
+function semanticViolation(error) {
+  const candidate = error;
+  return {
+    stage: "semantic",
+    code: candidate.code || "OLL_SEMANTIC_VALIDATION_FAILED",
+    path: candidate.path || "/",
+    message: candidate.message || String(error)
+  };
+}
+function validRange(value) {
+  if (!isRecord(value)) return false;
+  const min = Number(value.min);
+  const max = Number(value.max);
+  return Number.isFinite(min) && Number.isFinite(max) && max > min;
+}
+function numberValue(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : void 0;
+}
+function referenceRoot(value) {
+  return typeof value === "string" ? value.split("#", 1)[0] : "";
+}
+function normalizeExpression2(value) {
+  return value.normalize("NFKC").toLocaleLowerCase().replace(/^y\s*=/u, "").replace(/\s+/gu, "");
+}
+function geometryInventory(alias, content) {
+  const tolerance = 1e-3;
+  const features = /* @__PURE__ */ new Set();
+  const axes = isRecord(content.axes) ? content.axes : void 0;
+  if (axes && validRange(axes.x) && validRange(axes.y)) features.add("coordinate_axes");
+  if (axes?.equal_scale === true) features.add("equal_scale");
+  const points = Array.isArray(content.points) ? content.points.filter(isRecord) : [];
+  const pointByAlias = /* @__PURE__ */ new Map();
+  for (const point of points) {
+    const x = numberValue(point.x);
+    const y = numberValue(point.y);
+    if (typeof point.as === "string" && x !== void 0 && y !== void 0) {
+      pointByAlias.set(point.as, { x, y });
+      if (typeof point.label === "string" && point.label.trim()) features.add("annotated_points");
+    }
+  }
+  const circles = Array.isArray(content.circles) ? content.circles.filter(isRecord) : [];
+  const validCircles = circles.flatMap((circle) => {
+    const center = typeof circle.center === "string" ? pointByAlias.get(circle.center) : void 0;
+    const radius = numberValue(circle.radius);
+    if (!center || radius === void 0 || radius <= 0 || typeof circle.center !== "string") return [];
+    return [{ centerAlias: circle.center, center, radius }];
+  });
+  if (validCircles.length > 0) features.add("circle");
+  if (validCircles.some(({ center }) => Math.abs(center.x) <= tolerance && Math.abs(center.y) <= tolerance)) {
+    features.add("origin_centered_circle");
+  }
+  if (validCircles.some(({ radius }) => Math.abs(radius - 1) <= tolerance)) features.add("unit_radius");
+  const circlePoints = /* @__PURE__ */ new Set();
+  for (const [pointAlias, point] of pointByAlias) {
+    if (validCircles.some(({ centerAlias, center, radius }) => pointAlias !== centerAlias && Math.abs(Math.hypot(point.x - center.x, point.y - center.y) - radius) <= tolerance)) {
+      circlePoints.add(pointAlias);
+    }
+  }
+  if (circlePoints.size > 0) features.add("point_on_circle");
+  const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
+  const hasRadius = segments.some((segment) => validCircles.some(({ centerAlias }) => {
+    const endpoint = segment.from === centerAlias ? segment.to : segment.to === centerAlias ? segment.from : void 0;
+    return typeof endpoint === "string" && circlePoints.has(endpoint);
+  }));
+  if (hasRadius) features.add("radius_segment");
+  const hasProjection = segments.some((segment) => {
+    if (segment.style !== "projection" || typeof segment.from !== "string" || typeof segment.to !== "string") return false;
+    const from = pointByAlias.get(segment.from);
+    const to = pointByAlias.get(segment.to);
+    if (!from || !to) return false;
+    const axisAligned = Math.abs(from.x - to.x) <= tolerance || Math.abs(from.y - to.y) <= tolerance;
+    const touchesAxis = Math.abs(from.x) <= tolerance || Math.abs(from.y) <= tolerance || Math.abs(to.x) <= tolerance || Math.abs(to.y) <= tolerance;
+    return axisAligned && touchesAxis;
+  });
+  if (hasProjection) features.add("projection_segment");
+  const arcs = Array.isArray(content.arcs) ? content.arcs.filter(isRecord) : [];
+  if (arcs.some((arc) => typeof arc.center === "string" && pointByAlias.has(arc.center) && (numberValue(arc.radius) ?? 0) > 0 && numberValue(arc.start_angle) !== void 0 && numberValue(arc.end_angle) !== void 0 && Math.abs(Number(arc.end_angle) - Number(arc.start_angle)) > tolerance)) {
+    features.add("angle_arc");
+  }
+  return { alias, surface: "geometry", features, expressions: [], content };
+}
+function inventoryWrite(action) {
+  if (action.do !== "write" || typeof action.as !== "string" || !isRecord(action.content)) return void 0;
+  const content = action.content;
+  if (action.kind === "geometry") return geometryInventory(action.as, content);
+  const features = /* @__PURE__ */ new Set();
+  if (action.kind === "plot") {
+    const axes = isRecord(content.axes) ? content.axes : void 0;
+    if (axes && validRange(axes.x) && validRange(axes.y)) features.add("coordinate_axes");
+    const curves = Array.isArray(content.curves) ? content.curves.filter(isRecord) : [];
+    const expressions = curves.flatMap((curve) => typeof curve.expression === "string" && curve.expression.trim() ? [curve.expression] : []);
+    if (expressions.length > 0) features.add("function_curve");
+    const points = Array.isArray(content.points) ? content.points.filter(isRecord) : [];
+    if (points.some((point) => typeof point.label === "string" && point.label.trim())) features.add("annotated_points");
+    if (Array.isArray(content.guides) && content.guides.length > 0) features.add("guides");
+    return { alias: action.as, surface: "plot", features, expressions, content };
+  }
+  if (action.kind === "diagram") {
+    if (Array.isArray(content.elements) && content.elements.length > 0) features.add("semantic_elements");
+    if (Array.isArray(content.edges) && content.edges.length > 0) features.add("semantic_edges");
+    return { alias: action.as, surface: "diagram", features, expressions: [], content };
+  }
+  if (action.kind === "image") {
+    if (typeof content.asset_id === "string" && content.asset_id.trim()) features.add("source_asset");
+    return { alias: action.as, surface: "image", features, expressions: [], content };
+  }
+  if (action.kind === "table") {
+    if (Array.isArray(content.columns) && content.columns.length > 0 && Array.isArray(content.rows) && content.rows.length > 0) features.add("tabular_values");
+    return { alias: action.as, surface: "table", features, expressions: [], content };
+  }
+  return void 0;
+}
+function buildVisualInventory(document) {
+  const nodes = [];
+  const connections = [];
+  for (const step of document.steps) {
+    for (const beat of step.beats) {
+      for (const rawAction of beat.actions) {
+        if (!isRecord(rawAction)) continue;
+        const node = inventoryWrite(rawAction);
+        if (node) nodes.push(node);
+        if (rawAction.do === "connect") {
+          const from = referenceRoot(rawAction.from);
+          const to = referenceRoot(rawAction.to);
+          if (from && to) connections.push({ from, to });
+        }
+      }
+    }
+  }
+  return { nodes, connections };
+}
+function allLessonActions(document) {
+  return document.steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions.filter(isRecord)));
+}
+function approximatelyEqual(left, right) {
+  const value = numberValue(left);
+  return value !== void 0 && Math.abs(value - right) <= 1e-8;
+}
+function expressionReferencesVariable(expression, variable) {
+  if (typeof expression !== "string") return false;
+  const tokens = expression.match(/[a-z][a-z0-9_]*/giu) ?? [];
+  return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
+}
+function validateBriefCoverage(document, brief) {
+  const inventory = buildVisualInventory(document);
+  const matched = /* @__PURE__ */ new Map();
+  const violations = [];
+  for (const requirement of brief.visual_requirements) {
+    const candidates = inventory.nodes.filter((node) => node.surface === requirement.surface);
+    const scored = candidates.map((node) => {
+      const missingFeatures = requirement.required_features.filter((feature) => !node.features.has(feature));
+      const actualExpressions = node.expressions.map(normalizeExpression2);
+      const missingExpressions = requirement.expressions.filter(
+        (expression) => !actualExpressions.includes(normalizeExpression2(expression))
+      );
+      return { node, missingFeatures, missingExpressions };
+    }).sort((left, right) => left.missingFeatures.length + left.missingExpressions.length - (right.missingFeatures.length + right.missingExpressions.length));
+    const best = scored[0];
+    if (best && best.missingFeatures.length === 0 && best.missingExpressions.length === 0) {
+      matched.set(requirement.id, best.node);
+      continue;
+    }
+    const nearest = best ? ` Closest ${requirement.surface} node is '${best.node.alias}'.` : "";
+    violations.push({
+      stage: "request_coverage",
+      code: "OLL_VISUAL_REQUIREMENT_UNSATISFIED",
+      path: "/steps",
+      requirement_id: requirement.id,
+      message: `Visual requirement '${requirement.id}' (${requirement.surface}) is not satisfied.${nearest}`,
+      missing_features: best?.missingFeatures ?? requirement.required_features,
+      missing_expressions: best?.missingExpressions ?? requirement.expressions
+    });
+  }
+  for (const [index, relationship] of brief.visual_relationships.entries()) {
+    const from = matched.get(relationship.from);
+    const to = matched.get(relationship.to);
+    if (!from || !to) continue;
+    const connected = inventory.connections.some((connection) => {
+      if (relationship.relation === "compares_with") {
+        return connection.from === from.alias && connection.to === to.alias || connection.from === to.alias && connection.to === from.alias;
+      }
+      return connection.from === from.alias && connection.to === to.alias;
+    });
+    if (!connected) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_VISUAL_RELATIONSHIP_UNSATISFIED",
+        path: `/visual_relationships/${index}`,
+        message: `Required ${relationship.relation} relationship from '${from.alias}' to '${to.alias}' needs an actual connect action`,
+        requirement_id: `${relationship.from}->${relationship.to}`
+      });
+    }
+  }
+  const actions = allLessonActions(document);
+  const lesson = document.lesson;
+  const declarations = Array.isArray(lesson.variables) ? lesson.variables.filter(isRecord) : [];
+  for (const [index, requirement] of brief.shared_variable_requirements.entries()) {
+    const declaration = declarations.find((candidate) => candidate.as === requirement.variable);
+    const control = declaration && isRecord(declaration.control) ? declaration.control : void 0;
+    const declarationMatches = declaration && approximatelyEqual(declaration.initial, requirement.initial) && approximatelyEqual(declaration.min, requirement.min) && approximatelyEqual(declaration.max, requirement.max) && declaration.label === requirement.label && declaration.unit === requirement.unit && control?.kind === "slider" && approximatelyEqual(control.step, requirement.slider_step);
+    if (!declarationMatches) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_SHARED_VARIABLE_DECLARATION_UNSATISFIED",
+        path: "/lesson/variables",
+        requirement_id: requirement.id,
+        message: `Shared variable '${requirement.variable}' must be declared once with the planned range, label, unit, and slider`
+      });
+    }
+    for (const visualId of requirement.bound_visuals) {
+      const visual = matched.get(visualId);
+      if (!visual) continue;
+      const bindings = Array.isArray(visual.content.bindings) ? visual.content.bindings.filter(isRecord) : [];
+      if (!bindings.some((binding) => typeof binding.target === "string" && expressionReferencesVariable(binding.expression, requirement.variable))) {
+        violations.push({
+          stage: "request_coverage",
+          code: "OLL_SHARED_VARIABLE_BINDING_UNSATISFIED",
+          path: "/steps",
+          requirement_id: requirement.id,
+          message: `Visual '${visual.alias}' must contain a numeric binding that references shared variable '${requirement.variable}'`
+        });
+      }
+    }
+    const animation = actions.find((action) => action.do === "animate" && action.variable === requirement.variable && approximatelyEqual(action.value, requirement.animate_to) && action.easing === requirement.easing && action.duration_intent === requirement.duration_intent);
+    if (!animation) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_SHARED_VARIABLE_ANIMATION_UNSATISFIED",
+        path: "/steps",
+        requirement_id: requirement.id,
+        message: `Shared variable '${requirement.variable}' needs the planned animate action`
+      });
+    }
+    if (requirement.direct_angle_geometry) {
+      const geometry = matched.get(requirement.direct_angle_geometry);
+      const points = geometry && Array.isArray(geometry.content.points) ? geometry.content.points.filter(isRecord) : [];
+      const hasDirectControl = points.some((point) => isRecord(point.interaction) && point.interaction.kind === "angle_control" && point.interaction.variable === requirement.variable && typeof point.interaction.center === "string");
+      if (!hasDirectControl) {
+        violations.push({
+          stage: "request_coverage",
+          code: "OLL_SHARED_VARIABLE_DIRECT_CONTROL_UNSATISFIED",
+          path: "/steps",
+          requirement_id: requirement.id,
+          message: `Geometry '${geometry?.alias ?? requirement.direct_angle_geometry}' needs an angle_control point for shared variable '${requirement.variable}'`
+        });
+      }
+    }
+  }
+  return violations;
+}
+function validateGeneratedLesson(raw, input, brief) {
   let document;
   try {
     document = JSON.parse(raw);
   } catch (error) {
-    throw new GeneratedLessonError(`JSON parse failed: ${error.message}`, raw);
+    const violations2 = [{
+      stage: "schema",
+      code: "OLL_INVALID_JSON",
+      path: "/",
+      message: `JSON parse failed: ${error.message}`
+    }];
+    throw new GeneratedLessonError(formatViolations(violations2), raw, violations2);
   }
   const schemaResult = validateAuthoringSchema(document);
   if (!schemaResult.valid) {
-    const detail = schemaResult.errors.slice(0, 8).map((item) => `${item.instancePath || "/"} ${item.message}`).join("; ");
-    throw new GeneratedLessonError(`OLL schema validation failed: ${detail}`, raw);
+    const violations2 = schemaResult.errors.slice(0, 8).map((item) => ({
+      stage: "schema",
+      code: "OLL_SCHEMA_VALIDATION_FAILED",
+      path: item.instancePath || "/",
+      message: item.message || "Schema validation failed"
+    }));
+    throw new GeneratedLessonError(`OLL schema validation failed: ${formatViolations(violations2)}`, raw, violations2);
+  }
+  const lesson = document;
+  const violations = [];
+  try {
+    validateAuthoringLesson(lesson, input.session_context ?? { assets: [] });
+  } catch (error) {
+    violations.push(semanticViolation(error));
   }
   try {
-    validateBeatTeachingFocus(document);
-    validateAuthoringLesson(document, input.session_context ?? { assets: [] });
-    const events = normalizeAuthoringLesson(document, {
-      lessonId: input.turn_id,
-      boardId: "learn-board",
-      baseRevision: input.base_revision ?? 0,
-      resourceContext: input.session_context ?? { assets: [] }
-    });
-    reduceCanonicalEvents(events);
+    validateBeatTeachingFocus(lesson);
   } catch (error) {
-    const candidate = error;
-    const location = candidate.path ? ` at ${candidate.path}` : "";
-    const code = candidate.code ? `${candidate.code}: ` : "";
-    throw new GeneratedLessonError(`OLL semantic validation failed: ${code}${candidate.message}${location}`, raw);
+    violations.push(semanticViolation(error));
   }
-  return document;
+  violations.push(...validateBriefCoverage(lesson, brief));
+  if (violations.length === 0) {
+    try {
+      const events = normalizeAuthoringLesson(lesson, {
+        lessonId: input.turn_id,
+        boardId: "learn-board",
+        baseRevision: input.base_revision ?? 0,
+        resourceContext: input.session_context ?? { assets: [] }
+      });
+      reduceCanonicalEvents(events);
+    } catch (error) {
+      violations.push(semanticViolation(error));
+    }
+  }
+  if (violations.length > 0) {
+    throw new GeneratedLessonError(`OLL validation failed: ${formatViolations(violations)}`, raw, violations);
+  }
+  return lesson;
 }
-function buildGenerationPrompt(input, correction) {
+function buildRequestContext(input) {
   const mayUseExistingBoard = input.request_source === "explicit_board_follow_up";
-  const context = {
+  return {
     learner_request: input.learner_request,
     request_source: input.request_source,
     source_observation: input.source_observation ?? null,
@@ -8501,11 +10313,41 @@ function buildGenerationPrompt(input, correction) {
       base_revision: input.base_revision ?? 0
     } : null
   };
-  return `\u8BF7\u6839\u636E\u4EE5\u4E0B\u8BFE\u5802\u4E0A\u4E0B\u6587\u751F\u6210\u672C\u8F6E\u5B8C\u6574\u8BFE\u7A0B\u3002\u53EA\u8F93\u51FA OLL JSON\u3002request_source \u5DF2\u7ECF\u786E\u5B9A\u672C\u8F6E\u9898\u76EE\u7684\u552F\u4E00\u6765\u6E90\uFF1Aself_contained \u53EA\u4F7F\u7528 learner_request\uFF0Ccurrent_image \u4EE5 source_observation \u4E3A\u6743\u5A01\u9898\u9762\uFF0Cexplicit_board_follow_up \u624D\u5141\u8BB8\u4F7F\u7528 existing_board\u3002\u4E0D\u5F97\u8DE8\u6765\u6E90\u66FF\u6362\u3001\u8865\u5168\u6216\u6539\u5199\u5F53\u524D\u9898\u76EE\u3002existing_board \u4E3A null \u65F6\uFF0C\u5FC5\u987B\u4ECE new_region \u5F00\u59CB\u3002
-${JSON.stringify(context, null, 2)}${correction ? `
+}
+function buildPlanningPrompt(input, previousBrief, violations = []) {
+  const repair = previousBrief ? `
 
-\u4E0A\u4E00\u7248\u65E0\u6CD5\u6267\u884C\uFF1A${correction}
-\u8BF7\u91CD\u65B0\u751F\u6210\u5B8C\u6574\u5BF9\u8C61\u5E76\u4FEE\u590D\u8FD9\u4E9B\u9519\u8BEF\u3002` : ""}`;
+\u4E0A\u4E00\u4EFD Lesson Brief\uFF1A
+${previousBrief}
+
+\u7CBE\u786E\u6821\u9A8C\u9519\u8BEF\uFF1A
+${JSON.stringify(violations, null, 2)}
+\u4FDD\u7559\u5DF2\u6B63\u786E\u4E14\u6709 evidence \u7684\u8981\u6C42\uFF0C\u53EA\u4FEE\u590D\u8FD9\u4E9B\u9519\u8BEF\u5E76\u8FD4\u56DE\u5B8C\u6574\u5BF9\u8C61\u3002` : "";
+  return `\u8BF7\u628A\u4EE5\u4E0B\u6743\u5A01\u8BFE\u5802\u8BF7\u6C42\u8F6C\u6362\u6210 Lesson Brief\u3002request_source \u51B3\u5B9A\u552F\u4E00\u9898\u76EE\u6765\u6E90\uFF1B\u4E0D\u5F97\u4F7F\u7528 existing_board \u4E3A self_contained \u6216 current_image \u8865\u9898\u3002
+${JSON.stringify(buildRequestContext(input), null, 2)}${repair}`;
+}
+function compactCandidate(raw) {
+  try {
+    return JSON.stringify(JSON.parse(raw));
+  } catch {
+    return raw;
+  }
+}
+function buildGenerationPrompt(input, brief, previousCandidate, violations = []) {
+  const repair = previousCandidate ? `
+
+\u4E0A\u4E00\u4EFD\u5019\u9009 OLL\uFF08\u5FC5\u987B\u4FDD\u7559\u5176\u4E2D\u5DF2\u6B63\u786E\u7684\u6559\u5B66\u5185\u5BB9\u4E0E\u767D\u677F\u52A8\u4F5C\uFF09\uFF1A
+${compactCandidate(previousCandidate)}
+
+\u7CBE\u786E\u6821\u9A8C\u9519\u8BEF\uFF1A
+${JSON.stringify(violations, null, 2)}
+\u53EA\u9488\u5BF9\u8FD9\u4E9B violation \u4FEE\u590D\uFF0C\u8FD4\u56DE\u5B8C\u6574 OLL \u5BF9\u8C61\u3002` : "";
+  return `\u8BF7\u6839\u636E\u4EE5\u4E0B\u8BFE\u5802\u4E0A\u4E0B\u6587\u548C Lesson Brief \u751F\u6210\u672C\u8F6E\u5B8C\u6574\u8BFE\u7A0B\u3002\u53EA\u8F93\u51FA OLL JSON\u3002request_source \u5DF2\u7ECF\u786E\u5B9A\u672C\u8F6E\u9898\u76EE\u7684\u552F\u4E00\u6765\u6E90\uFF1Aself_contained \u53EA\u4F7F\u7528 learner_request\uFF0Ccurrent_image \u4EE5 source_observation \u4E3A\u6743\u5A01\u9898\u9762\uFF0Cexplicit_board_follow_up \u624D\u5141\u8BB8\u4F7F\u7528 existing_board\u3002\u4E0D\u5F97\u8DE8\u6765\u6E90\u66FF\u6362\u3001\u8865\u5168\u6216\u6539\u5199\u5F53\u524D\u9898\u76EE\u3002existing_board \u4E3A null \u65F6\uFF0C\u5FC5\u987B\u4ECE new_region \u5F00\u59CB\u3002
+\u8BFE\u5802\u4E0A\u4E0B\u6587\uFF1A
+${JSON.stringify(buildRequestContext(input), null, 2)}
+
+lesson_brief\uFF1A
+${JSON.stringify(brief, null, 2)}${repair}`;
 }
 function parseServiceAccount() {
   const raw = requireNonEmptyString(process.env.VERTEX_SA_JSON, "VERTEX_SA_JSON");
@@ -8569,7 +10411,7 @@ function vertexResponseContent(payload) {
   if (!text) throw new Error(`Vertex response contains no JSON text (finishReason=${candidate.finishReason ?? "unknown"})`);
   return text;
 }
-async function callStructuredModel(prompt) {
+async function createVertexClient() {
   const account = parseServiceAccount();
   const model = process.env.OLL_MODEL?.trim() || DEFAULT_MODEL;
   const project = process.env.GOOGLE_CLOUD_PROJECT?.trim() || account.project_id;
@@ -8577,39 +10419,47 @@ async function callStructuredModel(prompt) {
   const timeoutMs = parsePositiveInteger(process.env.OLL_TIMEOUT_MS, DEFAULT_TIMEOUT_MS, "OLL_TIMEOUT_MS");
   const maxTokens = parsePositiveInteger(process.env.OLL_MAX_TOKENS, DEFAULT_MAX_TOKENS, "OLL_MAX_TOKENS");
   const accessToken = await vertexAccessToken(account, timeoutMs);
+  return {
+    endpoint: vertexEndpoint(project, location, model),
+    accessToken,
+    timeoutMs,
+    maxTokens,
+    requestAttempts: parsePositiveInteger(
+      process.env.VERTEX_REQUEST_ATTEMPTS,
+      DEFAULT_VERTEX_REQUEST_ATTEMPTS,
+      "VERTEX_REQUEST_ATTEMPTS"
+    )
+  };
+}
+async function callStructuredModel(client, request) {
   const requestBody = JSON.stringify({
-    systemInstruction: { parts: [{ text: AUTHORING_SYSTEM_PROMPT }] },
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    systemInstruction: { parts: [{ text: request.systemPrompt }] },
+    contents: [{ role: "user", parts: [{ text: request.prompt }] }],
     generationConfig: {
       temperature: 0,
-      maxOutputTokens: maxTokens,
+      maxOutputTokens: request.maxTokens ?? client.maxTokens,
       responseMimeType: "application/json",
-      responseJsonSchema: vertexResponseJsonSchema
+      responseJsonSchema: request.responseSchema
     }
   });
-  const requestAttempts = parsePositiveInteger(
-    process.env.VERTEX_REQUEST_ATTEMPTS,
-    DEFAULT_VERTEX_REQUEST_ATTEMPTS,
-    "VERTEX_REQUEST_ATTEMPTS"
-  );
   let body = "";
   let status = 0;
-  for (let requestAttempt = 1; requestAttempt <= requestAttempts; requestAttempt += 1) {
-    const response = await fetch(vertexEndpoint(project, location, model), {
+  for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
+    const response = await fetch(client.endpoint, {
       method: "POST",
       headers: {
-        authorization: `Bearer ${accessToken}`,
+        authorization: `Bearer ${client.accessToken}`,
         "content-type": "application/json"
       },
       body: requestBody,
-      signal: AbortSignal.timeout(timeoutMs)
+      signal: AbortSignal.timeout(client.timeoutMs)
     });
     status = response.status;
     body = await response.text();
     if (response.ok) break;
     const retryable = status === 429 || status >= 500;
-    if (!retryable || requestAttempt === requestAttempts) {
-      throw new Error(`Vertex generation failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
+    if (!retryable || requestAttempt === client.requestAttempts) {
+      throw new Error(`Vertex ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
     }
     const retryAfterSeconds = Number(response.headers.get("retry-after"));
     const delayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? Math.min(retryAfterSeconds * 1e3, 1e4) : Math.min(1e3 * 2 ** (requestAttempt - 1), 4e3);
@@ -8622,25 +10472,74 @@ async function callStructuredModel(prompt) {
     throw new Error(`Vertex returned a non-JSON API response: ${error.message}`);
   }
   if (process.env.OLL_DEBUG_GENERATION === "1") {
-    process.stderr.write(`learning-coach: raw Vertex payload: ${JSON.stringify(payload).slice(0, 16e3)}
+    process.stderr.write(`learning-coach: raw Vertex ${request.label} payload: ${JSON.stringify(payload).slice(0, 16e3)}
 `);
   }
   return vertexResponseContent(payload);
 }
-async function generateLesson(input) {
-  let firstFailure;
-  let correction;
+async function planLesson(client, input) {
+  const maxAttempts = parsePositiveInteger(
+    process.env.OLL_PLANNING_ATTEMPTS,
+    2,
+    "OLL_PLANNING_ATTEMPTS"
+  );
+  let previousBrief;
+  let violations = [];
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const raw = await callStructuredModel(client, {
+      label: "lesson-brief",
+      systemPrompt: LESSON_BRIEF_SYSTEM_PROMPT,
+      prompt: buildPlanningPrompt(input, previousBrief, violations),
+      responseSchema: lessonBriefResponseJsonSchema,
+      maxTokens: Math.min(client.maxTokens, 8192)
+    });
+    try {
+      let candidate;
+      try {
+        candidate = JSON.parse(raw);
+      } catch (error) {
+        const parseViolation = briefViolation("BRIEF_INVALID_JSON", "/", `JSON parse failed: ${error.message}`);
+        throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
+      }
+      return validateLessonBrief(candidate, input);
+    } catch (error) {
+      if (!(error instanceof GeneratedLessonError)) throw error;
+      process.stderr.write(`learning-coach: rejected lesson brief ${attempt}: ${formatViolations(error.violations)}
+`);
+      if (process.env.OLL_DEBUG_GENERATION === "1") {
+        process.stderr.write(`learning-coach: rejected lesson brief payload ${attempt}: ${raw.slice(0, 16e3)}
+`);
+      }
+      if (attempt === maxAttempts) {
+        throw new Error(`Lesson Brief failed validation after ${maxAttempts} attempt(s). Last error: ${error.message}`);
+      }
+      previousBrief = raw;
+      violations = error.violations;
+    }
+  }
+  throw new Error("Lesson Brief planning failed");
+}
+async function generateLesson(client, input, brief) {
+  let previousCandidate;
+  let violations = [];
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_GENERATION_ATTEMPTS,
     2,
     "OLL_GENERATION_ATTEMPTS"
   );
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const raw = await callStructuredModel(buildGenerationPrompt(input, correction));
+    const raw = await callStructuredModel(client, {
+      label: "lesson-authoring",
+      systemPrompt: AUTHORING_SYSTEM_PROMPT,
+      prompt: buildGenerationPrompt(input, brief, previousCandidate, violations),
+      responseSchema: buildAuthoringResponseJsonSchema(brief)
+    });
     try {
-      return validateGeneratedLesson(raw, input);
+      return { lesson: validateGeneratedLesson(raw, input, brief), attempts: attempt };
     } catch (error) {
       if (!(error instanceof GeneratedLessonError)) throw error;
+      process.stderr.write(`learning-coach: rejected lesson generation ${attempt}: ${formatViolations(error.violations)}
+`);
       if (process.env.OLL_DEBUG_GENERATION === "1") {
         process.stderr.write(`learning-coach: rejected generation ${attempt}: ${raw.slice(0, 16e3)}
 `);
@@ -8648,11 +10547,11 @@ async function generateLesson(input) {
       if (attempt === maxAttempts) {
         throw new Error(`OLL generation failed validation after ${maxAttempts} attempt(s). Last error: ${error.message}`);
       }
-      firstFailure = error;
-      correction = error.message;
+      previousCandidate = raw;
+      violations = error.violations;
     }
   }
-  throw firstFailure ?? new Error("OLL generation failed");
+  throw new Error("OLL generation failed");
 }
 function outputPath(input) {
   const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
@@ -8678,7 +10577,9 @@ async function main() {
     const chunks = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
     const input = parseToolInput(Buffer.concat(chunks).toString("utf8"));
-    const lesson = await generateLesson(input);
+    const client = await createVertexClient();
+    const brief = await planLesson(client, input);
+    const { lesson, attempts } = await generateLesson(client, input, brief);
     const artifactPath = outputPath(input);
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}
@@ -8686,7 +10587,10 @@ async function main() {
     emit({
       success: true,
       output: `Validated OLL lesson generated with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
-      files_to_send: [artifactPath]
+      files_to_send: [artifactPath],
+      generation_attempts: attempts,
+      visual_requirements: brief.visual_requirements.length,
+      visual_relationships: brief.visual_relationships.length
     });
   } catch (error) {
     const message = safeError(error);

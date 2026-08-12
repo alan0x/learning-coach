@@ -18,6 +18,12 @@
         "language": {"type": "string", "minLength": 2, "maxLength": 32},
         "title": {"type": "string", "minLength": 1, "maxLength": 160},
         "goals": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "string"}},
+        "variables": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/lessonVariable"}
+        },
         "adaptation": {
           "type": "object",
           "properties": {
@@ -84,10 +90,10 @@
       "required": ["do"],
       "additionalProperties": false,
       "properties": {
-        "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression"]},
+        "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate"]},
         "when": {"enum": ["before_speech", "during_speech", "after_speech"]},
         "as": {"$ref": "#/$defs/alias"},
-        "kind": {"enum": ["text", "math", "shape", "diagram", "plot", "image", "table", "note"]},
+        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note"]},
         "role": {"type": "string"},
         "content": {"type": "object"},
         "place": {"$ref": "#/$defs/placement"},
@@ -101,6 +107,10 @@
         "targets": {"type": "array", "items": {"type": "string"}},
         "intent": {"type": "string"},
         "expression": {"type": "string"},
+        "variable": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+        "value": {"type": "number"},
+        "easing": {"enum": ["linear", "ease_in_out"]},
+        "duration_intent": {"enum": ["brief", "normal", "extended"]},
         "reason": {"type": "string"}
       },
       "allOf": [
@@ -114,6 +124,20 @@
             "properties": {"do": {"const": "write"}, "kind": {"const": "image"}}
           },
           "then": {"properties": {"content": {"$ref": "#/$defs/imageContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "geometry"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/geometryContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "plot"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/plotContent"}}}
         },
         {
           "if": {"properties": {"do": {"const": "revise"}}},
@@ -142,8 +166,160 @@
         {
           "if": {"properties": {"do": {"const": "expression"}}},
           "then": {"required": ["expression"]}
+        },
+        {
+          "if": {"properties": {"do": {"const": "animate"}}},
+          "then": {"required": ["variable", "value"]}
         }
       ]
+    },
+    "geometryContent": {
+      "type": "object",
+      "required": ["axes", "points"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"type": "string"},
+        "caption": {"type": "string"},
+        "axes": {
+          "type": "object",
+          "required": ["x", "y", "equal_scale"],
+          "additionalProperties": false,
+          "properties": {
+            "x": {"$ref": "#/$defs/geometryAxis"},
+            "y": {"$ref": "#/$defs/geometryAxis"},
+            "equal_scale": {"const": true}
+          }
+        },
+        "points": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["as", "x", "y"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "x": {"type": "number"},
+              "y": {"type": "number"},
+              "label": {"type": "string"},
+              "visible": {"type": "boolean"},
+              "interaction": {
+                "type": "object",
+                "required": ["kind", "variable", "center"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "angle_control"},
+                  "variable": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+                  "center": {"$ref": "#/$defs/alias"}
+                }
+              }
+            }
+          }
+        },
+        "circles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["as", "center", "radius"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "center": {"$ref": "#/$defs/alias"},
+              "radius": {"type": "number", "exclusiveMinimum": 0},
+              "label": {"type": "string"}
+            }
+          }
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["as", "from", "to"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "from": {"$ref": "#/$defs/alias"},
+              "to": {"$ref": "#/$defs/alias"},
+              "label": {"type": "string"},
+              "style": {"enum": ["solid", "dashed", "projection"]}
+            }
+          }
+        },
+        "arcs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["as", "center", "radius", "start_angle", "end_angle"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "center": {"$ref": "#/$defs/alias"},
+              "radius": {"type": "number", "exclusiveMinimum": 0},
+              "start_angle": {"type": "number"},
+              "end_angle": {"type": "number"},
+              "label": {"type": "string"}
+            }
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
+    "lessonVariable": {
+      "type": "object",
+      "required": ["as", "initial", "min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "as": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+        "initial": {"type": "number"},
+        "min": {"type": "number"},
+        "max": {"type": "number"},
+        "label": {"type": "string", "maxLength": 80},
+        "unit": {"type": "string", "maxLength": 32},
+        "control": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "slider"},
+            "step": {"type": "number", "exclusiveMinimum": 0}
+          }
+        }
+      }
+    },
+    "plotContent": {
+      "type": "object",
+      "properties": {
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
+    "valueBinding": {
+      "type": "object",
+      "required": ["target", "expression"],
+      "additionalProperties": false,
+      "properties": {
+        "target": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$"},
+        "expression": {"type": "string", "minLength": 1, "maxLength": 256}
+      }
+    },
+    "geometryAxis": {
+      "type": "object",
+      "required": ["min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": {"type": "number"},
+        "max": {"type": "number"},
+        "label": {"type": "string"}
+      }
     },
     "imageContent": {
       "type": "object",

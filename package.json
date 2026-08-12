@@ -10,7 +10,8 @@
     "build": "node scripts/oll-contract.mjs check && esbuild src/main.ts --bundle --platform=node --format=esm --target=node20 --banner:js='#!/usr/bin/env node' --outfile=main && chmod +x main",
     "oll:check": "node scripts/oll-contract.mjs check",
     "oll:sync": "node scripts/oll-contract.mjs sync",
-    "test": "npm run build && node --test test/*.test.mjs"
+    "test": "npm run build && node --test test/*.test.mjs",
+    "eval:visual": "npm run build && node scripts/eval-visual-generation.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "unit-circle-to-sine",
+    "learner_request": "请结合单位圆和 y=sin x 的函数图像，解释角度旋转如何变成周期波动。",
+    "expected": {
+      "kinds": ["geometry", "plot"],
+      "geometry_fields": ["circles", "segments", "arcs"],
+      "plot_expressions": ["sin(x)"],
+      "requires_connect": true,
+      "shared_variable": {
+        "alias": "theta",
+        "bound_kinds": ["geometry", "plot"],
+        "animate": true,
+        "direct_angle_control": true
+      }
+    }
+  },
+  {
+    "id": "parabola-transform",
+    "learner_request": "请画出 y=(x+3)^2-4 的函数图像，并标出顶点，解释它从 y=x^2 怎样平移得到。",
+    "expected": {
+      "kinds": ["plot"],
+      "plot_expressions": ["(x+3)^2-4"]
+    }
+  },
+  {
+    "id": "generic-coordinate-circle",
+    "learner_request": "请在坐标系里画一个圆，并结合半径解释圆的定义。",
+    "expected": {
+      "kinds": ["geometry"],
+      "geometry_fields": ["circles", "segments"]
+    }
+  },
+  {
+    "id": "semantic-process",
+    "learner_request": "请用流程图解释一元一次方程移项、合并同类项和求解之间的顺序关系。",
+    "expected": {
+      "kinds": ["diagram"]
+    }
+  }
+]
