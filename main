@@ -9189,24 +9189,32 @@ request_items \u53EA\u8BB0\u5F55\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559
 \u6BCF\u4E2A visual_requirement.id \u5FC5\u987B\u662F\u552F\u4E00\u7684\u5C0F\u5199\u82F1\u6587\u522B\u540D\uFF0C\u53EA\u80FD\u5305\u542B a-z\u30010-9\u3001\u8FDE\u5B57\u7B26\u5E76\u4EE5\u5B57\u6BCD\u5F00\u5934\uFF1Bvisual_relationships \u7684 from/to \u53EA\u80FD\u5F15\u7528\u8FD9\u4E9B id\u3002expressions \u53EA\u7528\u4E8E plot\uFF0C\u5176\u4ED6 surface \u5FC5\u987B\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
 
 \u89C6\u89C9 surface\uFF1A
-- geometry\uFF1A\u7B49\u6BD4\u4F8B\u5EA6\u91CF\u51E0\u4F55\u4E0E\u5750\u6807\u51E0\u4F55\uFF1B
-- plot\uFF1A\u51FD\u6570\u5750\u6807\u56FE\uFF1B
-- diagram\uFF1A\u8BED\u4E49\u8282\u70B9\u5173\u7CFB\u56FE\uFF1B
+- geometry\uFF1A\u7531\u6709\u6570\u503C\u5750\u6807\u7684\u70B9\u3001\u7EBF\u6BB5\u3001\u5706\u548C\u89D2\u5F27\u7EC4\u6210\u7684\u7B49\u6BD4\u4F8B\u4E8C\u7EF4\u573A\u666F\u3002\u9664\u4E86\u5EA6\u91CF\u51E0\u4F55\u4E0E\u5750\u6807\u51E0\u4F55\uFF0C\u53EF\u7531\u6570\u503C\u70B9\u548C\u7EBF\u6BB5\u5FE0\u5B9E\u8868\u8FBE\u7684\u7B80\u5355\u4E8C\u7EF4\u7269\u4F53\u8FD0\u52A8\u4E5F\u4F7F\u7528 geometry\uFF0C\u4F8B\u5982\u79FB\u52A8\u8D28\u70B9\u3001\u632F\u5B50\u3001\u629B\u4F53\u6216\u6760\u6746\u7AEF\u70B9\uFF1B\u70B9\u5750\u6807\u548C\u89D2\u5F27\u53EF\u4EE5\u7531\u5171\u4EAB\u53D8\u91CF\u9A71\u52A8\uFF1B
+- plot\uFF1A\u51FD\u6570\u5750\u6807\u56FE\uFF1B\u66F2\u7EBF\u4F7F\u7528\u53EF\u6267\u884C\u8868\u8FBE\u5F0F\uFF0C\u6570\u636E\u70B9\u548C\u8F85\u52A9\u7EBF\u53EF\u4EE5\u968F\u5171\u4EAB\u53D8\u91CF\u53D8\u5316\uFF1B
+- diagram\uFF1A\u9759\u6001\u8BED\u4E49\u8282\u70B9\u5173\u7CFB\u56FE\uFF0C\u7528\u4E8E\u6D41\u7A0B\u3001\u5206\u7C7B\u548C\u6982\u5FF5\u5173\u7CFB\u3002diagram \u662F\u9759\u6001\u8BED\u4E49\u5173\u7CFB\u56FE\uFF0C\u4E0D\u80FD\u7531\u5171\u4EAB\u53D8\u91CF\u9A71\u52A8\uFF0C\u4E0D\u5F97\u7528\u5B83\u5192\u5145\u8FD0\u52A8\u4E2D\u7684\u7269\u4F53\uFF1B
 - image\uFF1A\u53D7\u63A7\u6765\u6E90\u56FE\u7247\uFF1B
 - table\uFF1A\u8868\u683C\u3002
+
+\u9009\u62E9 surface \u65F6\u5148\u5224\u65AD\u753B\u9762\u9700\u8981\u600E\u6837\u53D8\u5316\uFF0C\u800C\u4E0D\u662F\u6309\u5B66\u79D1\u540D\u8BCD\u5F52\u7C7B\u3002\u82E5\u4E3B\u4F53\u8FD0\u52A8\u80FD\u7531\u6709\u6807\u7B7E\u7684\u6570\u503C\u70B9\u3001\u7EBF\u6BB5\u3001\u5706\u6216\u89D2\u5F27\u5FE0\u5B9E\u8868\u8FBE\uFF0C\u5C31\u89C4\u5212\u4E3A geometry\uFF0C\u5E76\u628A\u5B83\u5217\u5165 shared_variable_requirements.bound_visuals\u3002\u82E5\u4E3B\u4F53\u9700\u8981\u8FDE\u7EED\u5F62\u53D8\u3001\u4E09\u7EF4\u8FD0\u52A8\u3001\u771F\u5B9E\u6750\u8D28\u6216\u73B0\u6709\u56FE\u5143\u65E0\u6CD5\u7528\u8FD9\u4E9B\u56FE\u5143\u5FE0\u5B9E\u8868\u8FBE\uFF0C\u5C06\u76F8\u5E94\u7528\u6237\u8981\u6C42\u8BB0\u4E3A unsupported_feature \u5E76\u653E\u5165 unhandled_request_items\uFF0C\u4E0D\u5F97\u6539\u6210\u9759\u6001 diagram \u540E\u5BA3\u79F0\u5DF2\u652F\u6301\u52A8\u753B\u3002
 
 \u901A\u7528 feature \u7684\u542B\u4E49\uFF1A
 - coordinate_axes\uFF1A\u53EF\u8BFB\u7684\u6570\u503C\u5750\u6807\u8F74\uFF1Bequal_scale\uFF1A\u4E24\u4E2A\u5750\u6807\u65B9\u5411\u4FDD\u6301\u76F8\u540C\u6BD4\u4F8B\uFF1B
 - circle\uFF1A\u53EF\u5EA6\u91CF\u5706\uFF1Borigin_centered_circle\uFF1A\u5706\u5FC3\u786E\u5B9E\u4F4D\u4E8E\u5750\u6807\u539F\u70B9\uFF1Bunit_radius\uFF1A\u534A\u5F84\u6570\u503C\u786E\u5B9E\u4E3A\u4E00\uFF1B
-- point_on_circle\uFF1A\u70B9\u7684\u5750\u6807\u786E\u5B9E\u843D\u5728\u5706\u4E0A\uFF1Bradius_segment\uFF1A\u5706\u5FC3\u5230\u5706\u4E0A\u70B9\u7684\u7EBF\u6BB5\uFF1Bprojection_segment\uFF1A\u70B9\u5230\u5750\u6807\u8F74\u7684\u5B9E\u9645\u6295\u5F71\u7EBF\uFF1Bangle_arc\uFF1A\u975E\u96F6\u7684\u53EF\u89C1\u89D2\u5F27\uFF1B
+- point_on_circle\uFF1A\u70B9\u7684\u5750\u6807\u786E\u5B9E\u843D\u5728\u5706\u4E0A\uFF1Bline_segments\uFF1A\u8FDE\u63A5\u6709\u5750\u6807\u70B9\u7684\u666E\u901A\u7EBF\u6BB5\uFF0C\u53EF\u8868\u793A\u5F39\u7C27\u3001\u6746\u3001\u8FDE\u6746\u6216\u8F68\u9053\u7247\u6BB5\uFF1Bradius_segment\uFF1A\u5706\u5FC3\u5230\u5706\u4E0A\u70B9\u7684\u7EBF\u6BB5\uFF1Bprojection_segment\uFF1A\u70B9\u5230\u5750\u6807\u8F74\u7684\u5B9E\u9645\u6295\u5F71\u7EBF\uFF1Bangle_arc\uFF1A\u975E\u96F6\u7684\u53EF\u89C1\u89D2\u5F27\uFF1B
 - function_curve\uFF1A\u5E26\u53EF\u6267\u884C\u8868\u8FBE\u5F0F\u7684\u51FD\u6570\u66F2\u7EBF\uFF1Bannotated_points\uFF1A\u6709\u6807\u7B7E\u7684\u6570\u636E\u70B9\uFF1Bguides\uFF1A\u6570\u503C\u8F85\u52A9\u7EBF\uFF1B
 - semantic_elements / semantic_edges\uFF1A\u8BED\u4E49\u8282\u70B9\u548C\u8BED\u4E49\u8FDE\u7EBF\uFF1Bsource_asset\uFF1A\u53D7\u63A7\u56FE\u7247\u8D44\u6E90\uFF1Btabular_values\uFF1A\u6709\u884C\u5217\u6570\u636E\u7684\u8868\u683C\u3002
 
-feature \u5FC5\u987B\u5C5E\u4E8E\u5BF9\u5E94 surface\uFF1Ageometry \u53EA\u4F7F\u7528 coordinate_axes\u3001equal_scale\u3001circle\u3001origin_centered_circle\u3001unit_radius\u3001point_on_circle\u3001radius_segment\u3001projection_segment\u3001angle_arc\u3001annotated_points\uFF1Bplot \u53EA\u4F7F\u7528 coordinate_axes\u3001function_curve\u3001annotated_points\u3001guides\uFF1Bdiagram \u53EA\u4F7F\u7528 semantic_elements\u3001semantic_edges\uFF1Bimage \u53EA\u4F7F\u7528 source_asset\uFF1Btable \u53EA\u4F7F\u7528 tabular_values\u3002\u5C24\u5176\u4E0D\u8981\u628A equal_scale \u5199\u8FDB plot\u3002
+feature \u5FC5\u987B\u5C5E\u4E8E\u5BF9\u5E94 surface\uFF1Ageometry \u53EA\u4F7F\u7528 coordinate_axes\u3001equal_scale\u3001circle\u3001origin_centered_circle\u3001unit_radius\u3001point_on_circle\u3001line_segments\u3001radius_segment\u3001projection_segment\u3001angle_arc\u3001annotated_points\uFF1Bplot \u53EA\u4F7F\u7528 coordinate_axes\u3001function_curve\u3001annotated_points\u3001guides\uFF1Bdiagram \u53EA\u4F7F\u7528 semantic_elements\u3001semantic_edges\uFF1Bimage \u53EA\u4F7F\u7528 source_asset\uFF1Btable \u53EA\u4F7F\u7528 tabular_values\u3002\u5C24\u5176\u4E0D\u8981\u628A equal_scale \u5199\u8FDB plot\u3002
 
 \u5982\u679C\u8BF7\u6C42\u70B9\u540D\u67D0\u4E2A\u89C6\u89C9\u5BF9\u8C61\uFF0C\u9009\u62E9\u80FD\u771F\u5B9E\u8868\u8FBE\u5B83\u7684 surface\uFF0C\u5E76\u5217\u51FA\u8BA9\u8BE5\u5BF9\u8C61\u548C\u6559\u5B66\u76EE\u7684\u5728\u753B\u9762\u4E0A\u6210\u7ACB\u6240\u4E0D\u53EF\u7F3A\u5C11\u7684\u6700\u5C0F features\u3002\u4E0D\u8981\u56E0\u4E3A\u67D0\u4E2A surface \u652F\u6301\u4E00\u9879 feature \u5C31\u81EA\u52A8\u8981\u6C42\u5B83\uFF1B\u4E5F\u4E0D\u8981\u7528\u6807\u9898\u3001\u8BB2\u8FF0\u6216\u6807\u7B7E\u4EE3\u66FF\u7ED3\u6784\u7279\u5F81\u3002
 
 \u5982\u679C\u8BF7\u6C42\u6D89\u53CA\u8FD0\u52A8\u3001\u6620\u5C04\u6216\u91CF\u7684\u8FDE\u7EED\u53D8\u5316\uFF0C\u89C4\u5212\u4E2D\u5FC5\u987B\u5305\u542B\u4F7F\u8FD9\u4E2A\u53D8\u5316\u53EF\u89C1\u7684\u7ED3\u6784\uFF1B\u4F8B\u5982\u201C\u65CB\u8F6C\u89D2\u5EA6\u201D\u9700\u8981\u771F\u5B9E\u7684\u89D2\u5EA6\u6807\u8BB0\uFF0C\u201C\u6295\u5F71/\u5750\u6807\u5BF9\u5E94\u201D\u9700\u8981\u5B9E\u9645\u6295\u5F71\u7ED3\u6784\uFF0C\u201C\u51FD\u6570\u56FE\u50CF\u201D\u9700\u8981\u5750\u6807\u8F74\u548C\u5E26\u8868\u8FBE\u5F0F\u7684\u66F2\u7EBF\u3002
+
+\u88AB shared_variable_requirements \u7ED1\u5B9A\u7684 geometry \u8FD8\u5FC5\u987B\u586B\u5199 motion_kind \u548C motion_subject\uFF1A
+- linear_point\uFF1A\u4E00\u4E2A\u4EE3\u8868\u4E3B\u4F53\u7684\u6709\u6807\u7B7E\u70B9\u53EA\u6CBF x \u6216 y \u4E00\u4E2A\u65B9\u5411\u53D8\u5316\uFF0C\u4F8B\u5982\u632F\u5B50\u3001\u5C0F\u8F66\uFF1B
+- angular_point\uFF1A\u4E00\u4E2A\u4EE3\u8868\u4E3B\u4F53\u7684\u6709\u6807\u7B7E\u70B9\u7ED5\u5706\u5FC3\u8F6C\u52A8\uFF0C\u4F8B\u5982\u5355\u4F4D\u5706\u4E0A\u7684\u70B9\u3001\u6446\u81C2\u7AEF\u70B9\uFF1B
+- planar_point\uFF1A\u4E00\u4E2A\u4EE3\u8868\u4E3B\u4F53\u7684\u6709\u6807\u7B7E\u70B9\u7684 x\u3001y \u540C\u65F6\u53D8\u5316\uFF0C\u4F8B\u5982\u5E73\u9762\u629B\u4F53\uFF1B
+- motion_subject \u662F\u8BE5\u8FD0\u52A8\u70B9\u5728\u753B\u9762\u4E0A\u5FC5\u987B\u660E\u786E\u663E\u793A\u7684\u4E3B\u4F53\u540D\u79F0\uFF0C\u4F8B\u5982\u201C\u632F\u5B50\u201D\u201C\u5C0F\u8F66\u201D\u201C\u5706\u4E0A\u70B9\u201D\uFF0C\u4E0D\u5F97\u586B\u5199 P\u3001A\u3001\u7269\u4F53\u7B49\u65E0\u6CD5\u8BF4\u660E\u7528\u6237\u6240\u95EE\u4E3B\u4F53\u7684\u6CDB\u79F0\u3002\u6CA1\u6709\u88AB\u5171\u4EAB\u53D8\u91CF\u7ED1\u5B9A\u7684 geometry\uFF0C\u4EE5\u53CA plot/diagram/image/table\uFF0C\u4E0D\u586B\u5199\u8FD9\u4E24\u4E2A\u5B57\u6BB5\u3002
 
 \u5982\u679C\u8BF7\u6C42\u8981\u6C42\u628A\u4E24\u4E2A\u89C6\u89C9\u5BF9\u8C61\u7ED3\u5408\u3001\u5BF9\u5E94\u3001\u6BD4\u8F83\u6216\u63A8\u5BFC\uFF0C\u5FC5\u987B\u5728 visual_relationships \u4E2D\u8868\u8FBE\uFF1B\u4E0D\u8981\u628A\u8FD9\u79CD\u5173\u7CFB\u9000\u5316\u6210\u4E24\u5F20\u4E92\u4E0D\u76F8\u5173\u7684\u56FE\u3002
 
@@ -9214,6 +9222,7 @@ shared_variable_requirements \u7528\u6765\u89C4\u5212\u201C\u540C\u4E00\u4E2A\u9
 - \u5F53\u8BF7\u6C42\u660E\u786E\u8981\u6C42\u52A8\u753B\u3001\u53EF\u4EA4\u4E92\u53D8\u5316\uFF0C\u6216\u6559\u5B66\u76EE\u6807\u672C\u8EAB\u662F\u8FDE\u7EED\u8FD0\u52A8/\u53D8\u5316\uFF08\u4F8B\u5982\u89D2\u5EA6\u65CB\u8F6C\u53D8\u6210\u5468\u671F\u6CE2\u52A8\uFF09\u65F6\uFF0C\u521B\u5EFA shared_variable_requirement\uFF1B\u5426\u5219\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
 - variable \u662F OLL \u53D8\u91CF\u540D\uFF1Binitial/min/max/slider_step/animate_to \u4F7F\u7528\u7B26\u5408\u5B66\u79D1\u542B\u4E49\u7684\u6570\u503C\u3002\u8F6C\u6EE1\u4E00\u5708\u7528 0 \u5230 6.283185307179586\uFF0C\u5355\u4F4D\u7528 rad\u3002
 - bound_visuals \u81F3\u5C11\u5217\u51FA\u6240\u6709\u88AB\u540C\u4E00\u53D8\u91CF\u9A71\u52A8\u7684 visual_requirement.id\uFF1B\u8DE8\u56FE\u5BF9\u5E94\u901A\u5E38\u81F3\u5C11\u6709\u4E24\u4E2A\u3002
+- bound_visuals \u76EE\u524D\u53EA\u80FD\u5F15\u7528 geometry \u6216 plot\u3002\u9700\u8981\u76F4\u63A5\u6F14\u793A\u7684\u7B80\u5355\u4E8C\u7EF4\u4E3B\u4F53\u82E5\u80FD\u7531\u70B9\u548C\u7EBF\u6BB5\u8868\u8FBE\uFF0C\u5FC5\u987B\u628A\u4E3B\u4F53\u89C4\u5212\u4E3A geometry \u540E\u518D\u7ED1\u5B9A\uFF1Bdiagram\u3001image \u548C table \u4E0D\u80FD\u7ED1\u5B9A\u3002
 - direct_angle_geometry \u53EA\u5728\u67D0\u4E2A geometry \u91CC\u7684\u70B9\u9002\u5408\u7531\u5B66\u751F\u76F4\u63A5\u7ED5\u5706\u5FC3\u62D6\u52A8\u65F6\u586B\u5199\u8BE5 visual_requirement.id\uFF0C\u5426\u5219\u8FD4\u56DE\u7A7A\u5B57\u7B26\u4E32\u3002
 - \u5F53\u524D\u5B66\u751F\u63A7\u5236\u53EA\u652F\u6301\u53D8\u91CF\u6ED1\u6746\uFF0C\u4EE5\u53CA\u5706\u4E0A\u70B9\u7ED5\u5706\u5FC3\u7684 angle_control\uFF1B\u4E0D\u652F\u6301\u4EFB\u610F\u7269\u4F53\u7684\u81EA\u7531\u62D6\u52A8\u6216\u6CBF\u76F4\u7EBF\u62D6\u52A8\u3002\u4E00\u822C\u6027\u7684\u201C\u8BA9\u6211\u81EA\u5DF1\u64CD\u4F5C\u201D\u6216\u6CA1\u6709\u70B9\u660E\u88AB\u62D6\u7269\u4F53\u7684\u201C\u62D6\u7740\u8BD5\u8BD5\u201D\u53EF\u4EE5\u7528\u62D6\u52A8\u6ED1\u6746\u6EE1\u8DB3\uFF1B\u53EA\u6709\u5706\u5468\u89D2\u5EA6\u786E\u5B9E\u662F\u5408\u9002\u7684\u6559\u5B66\u64CD\u4F5C\u65F6\u624D\u4F7F\u7528 direct_angle_geometry\u3002\u660E\u786E\u70B9\u540D\u8981\u62D6\u52A8\u5176\u4ED6\u7269\u4F53\u6216\u6CBF\u7279\u5B9A\u8DEF\u5F84\u62D6\u52A8\u65F6\u5FC5\u987B\u5217\u5165 unhandled_request_items\u3002
 
@@ -9227,7 +9236,7 @@ var BRIEF_VERIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u7528\u6237\u8981\u6C42\u89
 2. contradictions\uFF1A\u67D0\u4E2A\u5DF2\u6709 request_item \u4E0E\u5B83\u5F15\u7528\u7684\u7528\u6237\u539F\u6587\u76F8\u53CD\uFF0C\u6216\u628A\u660E\u786E\u4E0D\u652F\u6301\u7684\u80FD\u529B\u5192\u5145\u4E3A\u5DF2\u652F\u6301\uFF1B
 3. suggestions\uFF1A\u8BFE\u7A0B\u53EF\u4EE5\u600E\u6837\u6559\u5F97\u66F4\u597D\uFF0C\u4F46\u8FD9\u7C7B\u5EFA\u8BAE\u7EDD\u4E0D\u80FD\u653E\u8FDB missing \u6216 contradictions\u3002
 
-\u5982\u679C\u7528\u6237\u660E\u786E\u95EE\u201C\u4E3A\u4EC0\u4E48\u53D1\u751F\u201D\uFF0C\u9057\u6F0F\u56E0\u679C\u89E3\u91CA\u5C5E\u4E8E missing\uFF0C\u4E0D\u662F suggestions\u3002\u5982\u679C\u7528\u6237\u8981\u6C42\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\u7684\u53D8\u5316\uFF0C\u5374\u53EA\u89C4\u5212\u7C7B\u6BD4\u56FE\u800C\u6CA1\u6709\u76F4\u63A5\u8868\u73B0\u8BE5\u5BF9\u8C61\uFF0C\u4E5F\u5C5E\u4E8E missing\u3002\u53EA\u6709\u5728\u56E0\u679C\u76EE\u6807\u548C\u4E3B\u4F53\u6F14\u793A\u5DF2\u7ECF\u8986\u76D6\u540E\uFF0C\u53D7\u529B\u56FE\u3001\u901F\u5EA6\u56FE\u3001\u80FD\u91CF\u56FE\u7B49\u53EF\u9009\u8BB2\u6CD5\u624D\u5C5E\u4E8E suggestions\u3002\u6559\u5B66\u5EFA\u8BAE\u4E0D\u662F\u7528\u6237\u8981\u6C42\u3002\u6CA1\u6709\u53D1\u73B0\u5BF9\u5E94\u9879\u76EE\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002`;
+\u5982\u679C\u7528\u6237\u660E\u786E\u95EE\u201C\u4E3A\u4EC0\u4E48\u53D1\u751F\u201D\uFF0C\u9057\u6F0F\u56E0\u679C\u89E3\u91CA\u5C5E\u4E8E missing\uFF0C\u4E0D\u662F suggestions\u3002\u5982\u679C\u7528\u6237\u8981\u6C42\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\u7684\u53D8\u5316\uFF0C\u5374\u53EA\u89C4\u5212\u7C7B\u6BD4\u56FE\u800C\u6CA1\u6709\u76F4\u63A5\u8868\u73B0\u8BE5\u5BF9\u8C61\uFF0C\u4E5F\u5C5E\u4E8E missing\u3002\u590D\u6838\u8FD9\u7C7B\u8BF7\u6C42\u65F6\u5FC5\u987B\u68C0\u67E5\u88AB\u7ED1\u5B9A geometry \u7684 motion_subject \u548C motion_kind\uFF1Amotion_subject \u5FC5\u987B\u660E\u786E\u547D\u540D\u7528\u6237\u8981\u6C42\u89C2\u770B\u7684\u8FD0\u52A8\u4E3B\u4F53\uFF0Cmotion_kind \u5FC5\u987B\u63CF\u8FF0\u8BE5\u4E3B\u4F53\u672C\u8EAB\u7684\u8FD0\u52A8\uFF1B\u5706\u5468\u6295\u5F71\u3001\u51FD\u6570\u66F2\u7EBF\u6216\u5176\u4ED6\u7C7B\u6BD4\u5373\u4F7F\u6570\u5B66\u4E0A\u76F8\u5173\uFF0C\u4E5F\u4E0D\u80FD\u4F5C\u4E3A\u4E3B\u4F53\u6F14\u793A\u901A\u8FC7\u590D\u6838\u3002\u53EA\u6709\u5728\u56E0\u679C\u76EE\u6807\u548C\u4E3B\u4F53\u6F14\u793A\u5DF2\u7ECF\u8986\u76D6\u540E\uFF0C\u53D7\u529B\u56FE\u3001\u901F\u5EA6\u56FE\u3001\u80FD\u91CF\u56FE\u7B49\u53EF\u9009\u8BB2\u6CD5\u624D\u5C5E\u4E8E suggestions\u3002\u6559\u5B66\u5EFA\u8BAE\u4E0D\u662F\u7528\u6237\u8981\u6C42\u3002\u6CA1\u6709\u53D1\u73B0\u5BF9\u5E94\u9879\u76EE\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002`;
 var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\u4F53\u3001\u5C0A\u91CD\u5B66\u751F\u7684\u5BB6\u5EAD\u6559\u5E08\u3002\u8BF7\u751F\u6210\u4E00\u5802\u5B8C\u6574\u3001\u8FDE\u7EED\u7684 OLL Authoring Profile \u8BFE\u7A0B\u3002
 
 \u786C\u6027\u8981\u6C42\uFF1A
@@ -9259,7 +9268,9 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 - diagram \u7528\u4E8E\u8BED\u4E49\u5143\u7D20\u4E0E\u8FDE\u7EBF\uFF0C\u4E0D\u5F97\u5192\u5145\u51FD\u6570\u56FE\u50CF\u3002plot \u7528\u4E8E\u5750\u6807\u8F74\u4E0A\u7684\u51FD\u6570\u66F2\u7EBF\uFF1Bcontent.axes.x/y \u5404\u7ED9\u51FA\u6570\u503C min/max\uFF0Ccontent.curves[] \u6BCF\u9879\u5FC5\u987B\u5305\u542B as\u3001expression\uFF0C\u53EF\u5305\u542B label\u3002
 - plot.expression \u53EA\u5199\u53D7\u9650\u6570\u5B66\u8868\u8FBE\u5F0F\uFF0C\u4F8B\u5982 sin(x)\u3001cos(x)\u3001(x+3)^2-4\uFF1B\u652F\u6301 x\u3001pi\u3001e\u3001+ - * / ^\u3001\u62EC\u53F7\u4EE5\u53CA sin/cos/tan/sqrt/abs/exp/log\uFF0C\u4E0D\u5199 y=\u3001LaTeX\u3001\u4EE3\u7801\u6216 SVG\u3002
 - \u8F93\u5165\u4E2D\u7684\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u662F\u672C\u8F6E\u8BF7\u6C42\u7684\u53EF\u6267\u884C\u8981\u6C42\u5408\u540C\uFF1B\u6BCF\u4E2A visual_requirement \u548C visual_relationship \u90FD\u5FC5\u987B\u7531\u5B9E\u9645\u767D\u677F\u52A8\u4F5C\u6EE1\u8DB3\uFF0C\u6807\u9898\u3001goals\u3001\u8BB2\u8FF0\u6216\u6587\u5B57\u58F0\u660E\u4E0D\u80FD\u66FF\u4EE3\u8981\u6C42\u7684\u89C6\u89C9\u5185\u5BB9\u3002
+- \u6BCF\u4E2A visual_requirement.id \u5C31\u662F\u8BE5\u4E3B\u8981\u89C6\u89C9\u8282\u70B9\u5FC5\u987B\u4F7F\u7528\u7684 write.as\uFF1B\u4E00\u4E2A\u89C6\u89C9\u8282\u70B9\u53EF\u4EE5\u901A\u8FC7 request_item_ids \u670D\u52A1\u591A\u4E2A\u6559\u5B66\u76EE\u6807\u3002visual_relationships \u5BF9\u5E94\u7684 connect \u7531\u7CFB\u7EDF\u5728\u4E24\u4E2A\u8282\u70B9\u521B\u5EFA\u540E\u63D2\u5165\uFF0C\u6A21\u578B\u4E0D\u8981\u8F93\u51FA connect\u3002
 - \u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u4E2D\u7684 shared_variable_requirements \u975E\u7A7A\u65F6\uFF0C\u7CFB\u7EDF\u4F1A\u786E\u5B9A\u6027\u5199\u5165 lesson.variables \u548C\u53EF\u5224\u5B9A\u7684 angle_control\uFF1B\u6A21\u578B\u8D1F\u8D23\u5728 bound_visuals \u5BF9\u5E94\u7684 geometry/plot content.bindings \u4E2D\u5F15\u7528\u540C\u4E00\u4E2A\u53D8\u91CF\uFF0C\u5E76\u628A do="animate" \u52A8\u4F5C\u653E\u8FDB\u5408\u9002\u7684\u8BB2\u89E3\u8282\u62CD\u3002\u7981\u6B62\u590D\u5236\u7B2C\u4E8C\u4EFD\u72B6\u6001\u3002
+- geometry visual_requirement \u5305\u542B motion_kind/motion_subject \u65F6\uFF0C\u5FC5\u987B\u6709\u4E00\u4E2A label \u660E\u786E\u5305\u542B motion_subject \u7684\u70B9\u4EE3\u8868\u8FD0\u52A8\u4E3B\u4F53\u3002linear_point \u53EA\u7ED1\u5B9A\u8BE5\u70B9\u7684 x \u6216 y \u4E00\u4E2A\u5750\u6807\uFF1Bplanar_point \u540C\u65F6\u7ED1\u5B9A x/y\uFF1Bangular_point \u540C\u65F6\u7ED1\u5B9A x/y\uFF0C\u5E76\u901A\u8FC7\u534A\u5F84\u7EBF\u6216\u89D2\u63A7\u5236\u8868\u660E\u5B83\u7ED5\u56FA\u5B9A\u4E2D\u5FC3\u8FD0\u52A8\u3002\u5355\u4F4D\u5706\u6216\u5176\u4ED6\u7C7B\u6BD4\u56FE\u4E0D\u80FD\u5192\u5145\u7528\u6237\u8981\u6C42\u76F4\u63A5\u6F14\u793A\u7684\u4E3B\u4F53\u3002
 - bindings.target \u4F7F\u7528\u201C\u5C40\u90E8\u5143\u7D20\u522B\u540D.\u6570\u503C\u5C5E\u6027\u201D\uFF0Cexpression \u4F7F\u7528\u53D7\u9650\u8868\u8FBE\u5F0F\u5E76\u76F4\u63A5\u5F15\u7528\u53D8\u91CF\u540D\u3002\u4F8B\u5982\u5355\u4F4D\u5706\u4E0E\u6B63\u5F26\u56FE\u5171\u4EAB theta\uFF1Apoint-p.x=cos(theta)\u3001point-p.y=sin(theta)\u3001foot.x=cos(theta)\u3001theta-arc.end_angle=theta\u3001current-angle.x=theta\u3001current-angle.y=sin(theta)\u3002
 - animate \u53EA\u63CF\u8FF0\u8BED\u4E49\u76EE\u6807\uFF0C\u5305\u542B variable\u3001value\uFF0C\u53EF\u5305\u542B easing \u548C duration_intent\uFF1B\u4E0D\u5F97\u751F\u6210\u6BEB\u79D2\u65F6\u957F\u3002\u5B66\u751F\u53EF\u5728 Runtime \u4E2D\u64AD\u653E\u3001\u6682\u505C\u3001\u62D6\u52A8\u3001\u590D\u4F4D\u548C\u91CD\u653E\u3002
 - \u52A8\u753B\u5FC5\u987B\u5355\u72EC\u5360\u7528\u4E00\u4E2A\u7B80\u77ED Beat\uFF1A\u76F8\u5173 geometry/plot \u548C connect \u5FC5\u987B\u5728\u66F4\u65E9\u7684 Beat \u5DF2\u7ECF\u521B\u5EFA\uFF1B\u52A8\u753B Beat \u53EA\u5305\u542B\u4E00\u4E2A do="animate" \u548C\u672C Beat \u5FC5\u9700\u7684 after_speech focus\uFF0C\u4E0D\u5F97\u540C\u65F6 write\u3001connect\u3001group\u3001revise\u3001point \u6216 emphasize\u3002
@@ -9268,13 +9279,19 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 - geometry \u70B9\u53EA\u6709\u5728\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u6307\u5B9A direct_angle_geometry \u65F6\u624D\u5141\u8BB8 angle_control\uFF1B\u6A21\u578B\u5FC5\u987B\u63D0\u4F9B\u540C\u65F6\u9A71\u52A8\u5706\u4E0A\u70B9 x/y \u7684\u53D8\u91CF\u7ED1\u5B9A\uFF0C\u4EE5\u53CA\u8FDE\u63A5\u5706\u5FC3\u548C\u8BE5\u70B9\u7684\u534A\u5F84\u7EBF\uFF0C\u7CFB\u7EDF\u624D\u4F1A\u786E\u5B9A\u6027\u8865\u5165 interaction\u3002
 - \u6BCF\u4E2A Beat \u7684 say \u5FC5\u987B\u4F7F\u7528\u9002\u5408 TTS \u6717\u8BFB\u7684\u81EA\u7136\u8BED\u8A00\u8868\u8FBE\u6570\u5B66\u5173\u7CFB\uFF0C\u4E0D\u5F97\u5305\u542B\u7F8E\u5143\u7B26\u53F7\u3001\u53CD\u659C\u6760\u547D\u4EE4\u6216\u5176\u4ED6\u539F\u59CB LaTeX \u6807\u8BB0\u3002
 - revise \u5FC5\u987B\u5305\u542B target\u3001content\u3001reason\uFF1Bemphasize \u5FC5\u987B\u5305\u542B target\u3001emphasis\u3002
-- connect \u5FC5\u987B\u5305\u542B as\u3001from\u3001to\u3001relation\uFF1Bgroup \u5FC5\u987B\u5305\u542B as\u3001role\u3001label\u3001members\u3002
+- \u672C\u6B21\u8BFE\u7A0B\u7684 connect \u7531\u7CFB\u7EDF\u6839\u636E visual_relationships \u63D2\u5165\uFF0C\u6A21\u578B\u4E0D\u5F97\u8F93\u51FA connect\uFF1Bgroup \u5FC5\u987B\u5305\u542B as\u3001role\u3001label\u3001members\u3002
 - focus \u5FC5\u987B\u5305\u542B targets\u3001intent\uFF1Bpoint \u5FC5\u987B\u5305\u542B target\uFF1Bexpression \u5FC5\u987B\u5305\u542B expression\u3002
 - \u5199\u677F\u4E66\u793A\u4F8B\uFF1A{"do":"write","as":"rule","kind":"note","role":"concept","content":{"title":"\u89C4\u5F8B","items":["\u5185\u5BB9"]},"place":{"relation":"new_region"}}\u3002
 - \u4E09\u89D2\u51FD\u6570\u56FE\u50CF\u793A\u4F8B\uFF1A{"do":"write","as":"trig-curves","kind":"plot","role":"diagram","content":{"axes":{"x":{"min":0,"max":6.283185307179586},"y":{"min":-1.2,"max":1.2}},"curves":[{"as":"sine-curve","expression":"sin(x)","label":"y = sin x"},{"as":"cosine-curve","expression":"cos(x)","label":"y = cos x"}]},"place":{"relation":"new_region"}}\u3002
 - \u5355\u4F4D\u5706\u793A\u4F8B\uFF1A{"do":"write","as":"unit-circle","kind":"geometry","role":"diagram","content":{"axes":{"x":{"min":-1.25,"max":1.25,"label":"x"},"y":{"min":-1.25,"max":1.25,"label":"y"},"equal_scale":true},"points":[{"as":"origin","x":0,"y":0,"label":"O"},{"as":"point-p","x":0.5,"y":0.8660254,"label":"P(cos \u03B8, sin \u03B8)"},{"as":"foot","x":0.5,"y":0}],"circles":[{"as":"circle","center":"origin","radius":1,"label":"r = 1"}],"segments":[{"as":"radius","from":"origin","to":"point-p","style":"solid"},{"as":"projection","from":"point-p","to":"foot","label":"sin \u03B8","style":"projection"}],"arcs":[{"as":"theta","center":"origin","radius":0.28,"start_angle":0,"end_angle":1.0471975512,"label":"\u03B8"}]},"place":{"relation":"new_region"}}\u3002
 - \u5171\u4EAB\u53D8\u91CF\u52A8\u753B\u793A\u4F8B\uFF1A{"do":"animate","variable":"theta","value":6.283185307179586,"easing":"linear","duration_intent":"extended"}\u3002
 - \u805A\u7126\u793A\u4F8B\uFF1A{"do":"focus","when":"after_speech","targets":["rule"],"intent":"current_step"}\u3002`;
+var COMPONENT_REPAIR_SYSTEM_PROMPT = `\u4F60\u662F OLL \u5C40\u90E8\u89C6\u89C9\u5BF9\u8C61\u4FEE\u590D\u5668\u3002\u8F93\u5165\u4F1A\u7ED9\u51FA\u4E00\u4E2A\u5DF2\u7ECF\u5B58\u5728\u7684 write \u52A8\u4F5C\u3001\u5B83\u5FC5\u987B\u6EE1\u8DB3\u7684\u89C6\u89C9\u8981\u6C42\uFF0C\u4EE5\u53CA\u8BE5\u52A8\u4F5C\u5F53\u524D\u672A\u6EE1\u8DB3\u7684\u68C0\u67E5\u9879\u3002
+
+\u53EA\u8FD4\u56DE\u4FEE\u590D\u540E\u7684\u4E00\u4E2A\u5B8C\u6574 write \u52A8\u4F5C\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001Step\u3001Beat\u3001Markdown \u6216\u89E3\u91CA\u3002\u5FC5\u987B\u4FDD\u6301 do="write"\u3001write.as\u3001write.kind\u3001role \u548C place \u7684\u539F\u6709\u8BED\u4E49\uFF0C\u53EA\u4FEE\u6539\u8FD9\u4E2A\u89C6\u89C9\u5BF9\u8C61\u672C\u8EAB\u3002\u4E0D\u5F97\u521B\u5EFA\u5176\u4ED6\u8282\u70B9\u3001\u5173\u7CFB\u3001\u52A8\u753B\u3001\u65C1\u767D\u6216\u8BFE\u7A0B\u7ED3\u6784\u3002\u8F93\u51FA\u5FC5\u987B\u7B26\u5408\u6240\u9644 JSON Schema\u3002`;
+var BEAT_REPAIR_SYSTEM_PROMPT = `\u4F60\u662F OLL \u5C40\u90E8\u6559\u5B66\u8282\u62CD\u4FEE\u590D\u5668\u3002\u8F93\u5165\u4F1A\u7ED9\u51FA\u4E00\u4E2A\u51FA\u9519\u7684 Beat\u3001\u6B64\u524D\u5DF2\u7ECF\u5B58\u5728\u7684\u522B\u540D\uFF0C\u4EE5\u53CA\u8BE5 Beat \u7684\u7CBE\u786E\u6821\u9A8C\u9519\u8BEF\u3002
+
+\u53EA\u8FD4\u56DE\u4FEE\u590D\u540E\u7684\u4E00\u4E2A\u5B8C\u6574 Beat\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001Step\u3001Markdown \u6216\u89E3\u91CA\u3002\u4FDD\u6301 beat.key \u4E0D\u53D8\uFF0C\u53EA\u4FEE\u6539\u8FD9\u4E2A Beat \u7684 say\u3001delivery \u548C actions\u3002\u4E0D\u5F97\u91CD\u65B0\u521B\u5EFA existing_aliases \u4E2D\u7684\u8282\u70B9\u6216\u5173\u7CFB\uFF1B\u9700\u8981\u7EE7\u7EED\u8BB2\u89E3\u5DF2\u6709\u89C6\u89C9\u5BF9\u8C61\u65F6\u76F4\u63A5\u5F15\u7528\u5176\u522B\u540D\uFF0C\u6216\u7528\u65B0\u7684 text\u3001math\u3001note \u7B49\u8282\u70B9\u8865\u5145\u3002\u6BCF\u4E2A Beat \u5FC5\u987B\u5305\u542B\u4E00\u4E2A when="after_speech" \u7684 focus\u3002\u8F93\u51FA\u5FC5\u987B\u7B26\u5408\u6240\u9644 JSON Schema\u3002`;
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string`);
@@ -9959,10 +9976,26 @@ function buildAuthoringResponseJsonSchema(brief, plan) {
       if (content) writeContentByKind.set(identity.kind, structuredClone(content));
     }
   }
-  const variants = allVariants.filter((variant) => {
+  const allowedVariants = allVariants.filter((variant) => {
     const identity = actionVariantIdentity(variant);
     if (identity.action === "write") return !!identity.kind && plan.writeKinds.includes(identity.kind);
-    return !!identity.action && plan.actions.includes(identity.action);
+    return !!identity.action && identity.action !== "connect" && plan.actions.includes(identity.action);
+  });
+  const variants = allowedVariants.flatMap((variant) => {
+    const identity = actionVariantIdentity(variant);
+    if (identity.action !== "write" || !identity.kind || !visualSurfaces.includes(identity.kind)) {
+      return [variant];
+    }
+    const requirements = brief.visual_requirements.filter(
+      (requirement) => requirement.surface === identity.kind
+    );
+    if (requirements.length === 0) return [variant];
+    return requirements.map((requirement) => {
+      const exact = structuredClone(variant);
+      const properties = exact.properties;
+      properties.as = { enum: [requirement.id] };
+      return exact;
+    });
   });
   if (action) action.anyOf = variants;
   const reviseVariant = variants.find((variant) => actionVariantIdentity(variant).action === "revise");
@@ -10001,28 +10034,12 @@ function buildAuthoringResponseJsonSchema(brief, plan) {
   if (Array.isArray(lesson.required)) {
     lesson.required = lesson.required.filter((field) => field !== "variables");
   }
-  for (const variant of variants) {
-    const identity = actionVariantIdentity(variant);
-    if (identity.action !== "write") continue;
-    const properties = variant.properties;
-    const content = properties.content;
-    const contentProperties = content.properties;
-    if ((identity.kind === "geometry" || identity.kind === "plot") && !plan.bindingKinds.includes(identity.kind)) {
-      if (contentProperties) delete contentProperties.bindings;
-      if (Array.isArray(content.required)) content.required = content.required.filter((field) => field !== "bindings");
-    }
-    if (identity.kind === "geometry" && !plan.allowAngleControl) {
-      const points = contentProperties?.points;
-      const pointItems = points?.items;
-      const pointProperties = pointItems?.properties;
-      if (pointProperties) delete pointProperties.interaction;
-    }
-  }
   const fieldsBySurface = {
     geometry: /* @__PURE__ */ new Map([
       ["circle", "circles"],
       ["origin_centered_circle", "circles"],
       ["unit_radius", "circles"],
+      ["line_segments", "segments"],
       ["radius_segment", "segments"],
       ["projection_segment", "segments"],
       ["angle_arc", "arcs"]
@@ -10030,38 +10047,37 @@ function buildAuthoringResponseJsonSchema(brief, plan) {
     plot: /* @__PURE__ */ new Map([["annotated_points", "points"], ["guides", "guides"]]),
     diagram: /* @__PURE__ */ new Map([["semantic_edges", "edges"]])
   };
-  for (const surface of visualSurfaces) {
-    const requirements = brief.visual_requirements.filter((item) => item.surface === surface);
-    if (requirements.length === 0) continue;
-    const variant = variants.find((item) => {
-      const properties2 = item.properties;
-      const kind = properties2?.kind;
-      return Array.isArray(kind?.enum) && kind.enum[0] === surface;
-    });
-    const properties = variant?.properties;
-    const content = properties?.content;
-    if (!content) continue;
-    for (const requirement of requirements) {
-      for (const feature of requirement.required_features) {
-        const field = fieldsBySurface[surface]?.get(feature);
-        if (field) requireNonEmptyCollection(content, field);
+  for (const variant of variants) {
+    const identity = actionVariantIdentity(variant);
+    if (identity.action !== "write") continue;
+    const properties = variant.properties;
+    const content = properties.content;
+    const contentProperties = content.properties;
+    const exactAliasSchema = properties.as;
+    const exactAlias = Array.isArray(exactAliasSchema?.enum) && typeof exactAliasSchema.enum[0] === "string" ? exactAliasSchema.enum[0] : void 0;
+    const requirement = exactAlias ? brief.visual_requirements.find((candidate) => candidate.id === exactAlias) : void 0;
+    const requiresBindings = exactAlias !== void 0 && brief.shared_variable_requirements.some((variable) => variable.bound_visuals.includes(exactAlias));
+    if (identity.kind === "geometry" || identity.kind === "plot") {
+      if (requiresBindings) {
+        requireNonEmptyCollection(content, "bindings");
+      } else {
+        if (contentProperties) delete contentProperties.bindings;
+        if (Array.isArray(content.required)) {
+          content.required = content.required.filter((field) => field !== "bindings");
+        }
       }
     }
-  }
-  if (brief.shared_variable_requirements.length > 0) {
-    const boundSurfaces = new Set(brief.shared_variable_requirements.flatMap((requirement) => requirement.bound_visuals.flatMap((id) => {
-      const visual = brief.visual_requirements.find((candidate) => candidate.id === id);
-      return visual ? [visual.surface] : [];
-    })));
-    for (const surface of ["geometry", "plot"]) {
-      if (!boundSurfaces.has(surface)) continue;
-      const variant = variants.find((item) => {
-        const properties = item.properties;
-        const kind = properties?.kind;
-        return Array.isArray(kind?.enum) && kind.enum[0] === surface;
-      });
-      const content = variant?.properties?.content;
-      if (content) requireNonEmptyCollection(content, "bindings");
+    if (identity.kind === "geometry") {
+      const points = contentProperties?.points;
+      const pointItems = points?.items;
+      const pointProperties = pointItems?.properties;
+      if (pointProperties) delete pointProperties.interaction;
+    }
+    if (requirement) {
+      for (const feature of requirement.required_features) {
+        const field = fieldsBySurface[requirement.surface]?.get(feature);
+        if (field) requireNonEmptyCollection(content, field);
+      }
     }
   }
   const projected = pruneUnusedDefinitions(schema);
@@ -10076,6 +10092,7 @@ var visualFeatures = [
   "origin_centered_circle",
   "unit_radius",
   "point_on_circle",
+  "line_segments",
   "radius_segment",
   "projection_segment",
   "angle_arc",
@@ -10198,7 +10215,9 @@ var lessonBriefResponseJsonSchema = {
           purpose: { type: "string" },
           required_features: { type: "array", items: { enum: visualFeatures } },
           expressions: { type: "array", items: { type: "string" } },
-          request_item_ids: idArraySchema
+          request_item_ids: idArraySchema,
+          motion_kind: { enum: ["linear_point", "angular_point", "planar_point"] },
+          motion_subject: { type: "string" }
         }
       }
     },
@@ -10332,6 +10351,7 @@ var featuresBySurface = {
     "origin_centered_circle",
     "unit_radius",
     "point_on_circle",
+    "line_segments",
     "radius_segment",
     "projection_segment",
     "angle_arc",
@@ -10664,6 +10684,24 @@ function validateLessonBrief(candidate, input) {
         }
       });
     }
+    const hasMotionKind = raw.motion_kind !== void 0;
+    const hasMotionSubject = raw.motion_subject !== void 0;
+    if (hasMotionKind !== hasMotionSubject) {
+      violations.push(briefViolation(
+        "BRIEF_INCOMPLETE_VISUAL_MOTION",
+        path,
+        "motion_kind and motion_subject must be provided together"
+      ));
+    }
+    if (hasMotionKind && !["linear_point", "angular_point", "planar_point"].includes(String(raw.motion_kind))) {
+      violations.push(briefViolation("BRIEF_INVALID_VISUAL_MOTION", `${path}/motion_kind`, "motion_kind is unsupported"));
+    }
+    if (hasMotionSubject && (typeof raw.motion_subject !== "string" || !raw.motion_subject.trim())) {
+      violations.push(briefViolation("BRIEF_INVALID_VISUAL_MOTION_SUBJECT", `${path}/motion_subject`, "motion_subject must visibly name the moving subject"));
+    }
+    if ((hasMotionKind || hasMotionSubject) && raw.surface !== "geometry") {
+      violations.push(briefViolation("BRIEF_INCOMPATIBLE_VISUAL_MOTION", path, "visual motion metadata is supported only by geometry"));
+    }
   });
   relationships.forEach((raw, index) => {
     const path = `/visual_relationships/${index}`;
@@ -10678,6 +10716,13 @@ function validateLessonBrief(candidate, input) {
     }
     if (typeof raw.to !== "string" || !visualIds.has(raw.to)) {
       violations.push(briefViolation("BRIEF_UNKNOWN_RELATION_TARGET", `${path}/to`, "to must reference a visual requirement id"));
+    }
+    if (typeof raw.from === "string" && raw.from === raw.to) {
+      violations.push(briefViolation(
+        "BRIEF_SELF_RELATIONSHIP",
+        path,
+        "relationship endpoints must reference two different visual requirements"
+      ));
     }
     if (!visualRelationships.includes(raw.relation)) {
       violations.push(briefViolation("BRIEF_INVALID_RELATION", `${path}/relation`, "relation is unsupported"));
@@ -10748,7 +10793,26 @@ function validateLessonBrief(candidate, input) {
         }
         bound.add(String(visualId));
         if (visual.surface !== "geometry" && visual.surface !== "plot") {
-          violations.push(briefViolation("BRIEF_UNSUPPORTED_BOUND_VISUAL", `${path}/bound_visuals`, "shared variables currently bind only geometry and plot visuals"));
+          violations.push(briefViolation(
+            "BRIEF_UNSUPPORTED_BOUND_VISUAL",
+            `${path}/bound_visuals`,
+            "shared variables bind only geometry and plot visuals; represent a simple measurable 2D subject with geometry points/segments when faithful, otherwise mark the requested motion unsupported"
+          ));
+        } else if (visual.surface === "geometry") {
+          if (!["linear_point", "angular_point", "planar_point"].includes(String(visual.motion_kind))) {
+            violations.push(briefViolation(
+              "BRIEF_MISSING_VISUAL_MOTION",
+              `${path}/bound_visuals`,
+              `bound geometry '${String(visualId)}' must declare linear_point, angular_point, or planar_point motion`
+            ));
+          }
+          if (typeof visual.motion_subject !== "string" || !visual.motion_subject.trim()) {
+            violations.push(briefViolation(
+              "BRIEF_MISSING_VISUAL_MOTION_SUBJECT",
+              `${path}/bound_visuals`,
+              `bound geometry '${String(visualId)}' must visibly name its moving subject`
+            ));
+          }
         }
       }
     }
@@ -10761,6 +10825,12 @@ function validateLessonBrief(candidate, input) {
           "BRIEF_INVALID_DIRECT_CONTROL",
           `${path}/direct_angle_geometry`,
           "direct_angle_geometry must reference a bound geometry requirement"
+        ));
+      } else if (directVisual.motion_kind !== "angular_point") {
+        violations.push(briefViolation(
+          "BRIEF_INVALID_DIRECT_CONTROL_MOTION",
+          `${path}/direct_angle_geometry`,
+          "direct_angle_geometry must use angular_point motion"
         ));
       }
     }
@@ -10957,6 +11027,9 @@ function geometryInventory(alias, content) {
   }
   if (circlePoints.size > 0) features.add("point_on_circle");
   const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
+  if (segments.some((segment) => typeof segment.from === "string" && typeof segment.to === "string" && pointByAlias.has(segment.from) && pointByAlias.has(segment.to) && segment.from !== segment.to)) {
+    features.add("line_segments");
+  }
   const hasRadius = segments.some((segment) => validCircles.some(({ centerAlias }) => {
     const endpoint = segment.from === centerAlias ? segment.to : segment.to === centerAlias ? segment.from : void 0;
     return typeof endpoint === "string" && circlePoints.has(endpoint);
@@ -11040,32 +11113,89 @@ function expressionReferencesVariable(expression, variable) {
   const tokens = expression.match(/[a-z][a-z0-9_]*/giu) ?? [];
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
 }
+function geometryMotionSatisfied(content, requirement, variable) {
+  if (!requirement.motion_kind || !requirement.motion_subject) return true;
+  const subject = normalizeEvidence(requirement.motion_subject);
+  const points = Array.isArray(content.points) ? content.points.filter(isRecord) : [];
+  const pointByAlias = new Map(points.flatMap((point) => typeof point.as === "string" ? [[point.as, point]] : []));
+  const bindings = Array.isArray(content.bindings) ? content.bindings.filter(isRecord) : [];
+  const boundCoordinates = /* @__PURE__ */ new Map();
+  for (const binding of bindings) {
+    if (typeof binding.target !== "string" || !expressionReferencesVariable(binding.expression, variable)) continue;
+    const separator = binding.target.lastIndexOf(".");
+    if (separator <= 0) continue;
+    const alias = binding.target.slice(0, separator);
+    const property = binding.target.slice(separator + 1);
+    if (!pointByAlias.has(alias) || property !== "x" && property !== "y") continue;
+    const coordinates = boundCoordinates.get(alias) ?? /* @__PURE__ */ new Set();
+    coordinates.add(property);
+    boundCoordinates.set(alias, coordinates);
+  }
+  const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
+  return points.some((point) => {
+    if (typeof point.as !== "string" || typeof point.label !== "string") return false;
+    const label = normalizeEvidence(point.label);
+    if (!label.includes(subject)) return false;
+    const coordinates = boundCoordinates.get(point.as) ?? /* @__PURE__ */ new Set();
+    if (requirement.motion_kind === "linear_point") return coordinates.size === 1;
+    if (!coordinates.has("x") || !coordinates.has("y")) return false;
+    if (requirement.motion_kind === "planar_point") return true;
+    const interaction = isRecord(point.interaction) ? point.interaction : void 0;
+    const hasCenterConnection = segments.some((segment) => segment.from === point.as && typeof segment.to === "string" && pointByAlias.has(segment.to) || segment.to === point.as && typeof segment.from === "string" && pointByAlias.has(segment.from));
+    return interaction?.kind === "angle_control" || hasCenterConnection;
+  });
+}
 function lowerPlannedLessonFields(document, brief) {
   if (!isRecord(document) || !isRecord(document.lesson)) return document;
   document.lesson.goals = brief.teaching_goal_requirements.map((requirement) => requirement.goal);
-  if (brief.shared_variable_requirements.length === 0) {
-    delete document.lesson.variables;
-    return document;
+  if (brief.shared_variable_requirements.length === 0) delete document.lesson.variables;
+  else {
+    document.lesson.variables = brief.shared_variable_requirements.map((requirement) => ({
+      as: requirement.variable,
+      initial: requirement.initial,
+      min: requirement.min,
+      max: requirement.max,
+      label: requirement.label,
+      unit: requirement.unit,
+      control: { kind: "slider", step: requirement.slider_step }
+    }));
   }
-  document.lesson.variables = brief.shared_variable_requirements.map((requirement) => ({
-    as: requirement.variable,
-    initial: requirement.initial,
-    min: requirement.min,
-    max: requirement.max,
-    label: requirement.label,
-    unit: requirement.unit,
-    control: { kind: "slider", step: requirement.slider_step }
-  }));
-  const rawActions = [];
+  const rawBeats = [];
+  const writeBeatByAlias = /* @__PURE__ */ new Map();
+  let beatOrder = 0;
   if (Array.isArray(document.steps)) {
     for (const step of document.steps) {
       if (!isRecord(step) || !Array.isArray(step.beats)) continue;
       for (const beat of step.beats) {
         if (!isRecord(beat) || !Array.isArray(beat.actions)) continue;
-        rawActions.push(...beat.actions.filter(isRecord));
+        beat.actions = beat.actions.filter((action) => !isRecord(action) || action.do !== "connect");
+        rawBeats.push(beat);
+        for (const action of beat.actions) {
+          if (isRecord(action) && action.do === "write" && typeof action.as === "string") {
+            writeBeatByAlias.set(action.as, { beat, order: beatOrder });
+          }
+        }
+        beatOrder += 1;
       }
     }
   }
+  for (const relationship of brief.visual_relationships) {
+    const from = writeBeatByAlias.get(relationship.from);
+    const to = writeBeatByAlias.get(relationship.to);
+    if (!from || !to) continue;
+    const targetBeat = from.order > to.order ? from.beat : to.beat;
+    const actions = targetBeat.actions;
+    const focusIndex = actions.findIndex((action) => isRecord(action) && action.do === "focus");
+    actions.splice(focusIndex >= 0 ? focusIndex : actions.length, 0, {
+      do: "connect",
+      as: relationship.id,
+      from: relationship.from,
+      to: relationship.to,
+      relation: relationship.relation
+    });
+  }
+  const rawActions = [];
+  for (const beat of rawBeats) rawActions.push(...beat.actions.filter(isRecord));
   const animateActions = rawActions.filter((action) => action.do === "animate");
   for (const requirement of brief.shared_variable_requirements) {
     let matches = animateActions.filter((action) => action.variable === requirement.variable);
@@ -11086,12 +11216,9 @@ function lowerPlannedLessonFields(document, brief) {
     );
     if (!visualRequirement) continue;
     const geometryCandidates = rawActions.flatMap((action) => {
+      if (action.do !== "write" || action.as !== visualRequirement.id) return [];
       const inventory = inventoryWrite(action);
-      if (!inventory || inventory.surface !== "geometry") return [];
-      const missingFeatures = visualRequirement.required_features.filter(
-        (feature) => !inventory.features.has(feature)
-      );
-      return missingFeatures.length === 0 ? [{ action, inventory }] : [];
+      return inventory?.surface === "geometry" ? [{ action, inventory }] : [];
     });
     if (geometryCandidates.length !== 1) continue;
     const content = geometryCandidates[0].inventory.content;
@@ -11123,21 +11250,65 @@ function lowerPlannedLessonFields(document, brief) {
         const center2 = pointByAlias.get(circle.center);
         const centerX = numberValue(center2?.x);
         const centerY = numberValue(center2?.y);
-        const radius = numberValue(circle.radius);
-        if (!center2 || centerX === void 0 || centerY === void 0 || radius === void 0 || radius <= 0) continue;
-        const liesOnCircle = pointX !== void 0 && pointY !== void 0 && Math.abs(Math.hypot(pointX - centerX, pointY - centerY) - radius) <= tolerance;
+        const radius2 = numberValue(circle.radius);
+        if (!center2 || centerX === void 0 || centerY === void 0 || radius2 === void 0 || radius2 <= 0) continue;
+        const liesOnCircle = pointX !== void 0 && pointY !== void 0 && Math.abs(Math.hypot(pointX - centerX, pointY - centerY) - radius2) <= tolerance;
         const hasRadiusSegment = segments.some((segment) => segment.from === circle.center && segment.to === alias || segment.to === circle.center && segment.from === alias);
         if (!liesOnCircle && !hasRadiusSegment) continue;
-        pairs.set(`${alias}\0${circle.center}`, { point: point2, center: circle.center });
+        pairs.set(`${alias}\0${circle.center}`, { point: point2, center: circle.center, radius: radius2 });
       }
     }
     if (pairs.size !== 1) continue;
-    const [{ point, center }] = [...pairs.values()];
+    const [{ point, center, radius }] = [...pairs.values()];
     point.interaction = {
       kind: "angle_control",
       variable: variable.variable,
       center
     };
+    if (visualRequirement.required_features.includes("angle_arc")) {
+      const arcs = Array.isArray(content.arcs) ? content.arcs.filter(isRecord) : [];
+      const existingArcAliases = new Set(arcs.flatMap((candidate) => typeof candidate.as === "string" ? [candidate.as] : []));
+      for (let index = bindings.length - 1; index >= 0; index -= 1) {
+        const target = bindings[index].target;
+        if (typeof target !== "string" || !target.endsWith(".end_angle")) continue;
+        const alias = target.slice(0, -".end_angle".length);
+        if (!existingArcAliases.has(alias)) bindings.splice(index, 1);
+      }
+      const delta = Math.max(variable.slider_step, 0.05);
+      const seededEnd = variable.initial + delta <= variable.max ? variable.initial + delta : variable.initial - delta;
+      let arc = arcs.find((candidate) => candidate.center === center && (numberValue(candidate.radius) ?? 0) > 0);
+      if (!arc) {
+        const usedAliases = /* @__PURE__ */ new Set();
+        for (const field of ["points", "circles", "segments", "arcs"]) {
+          const items = Array.isArray(content[field]) ? content[field].filter(isRecord) : [];
+          for (const item of items) if (typeof item.as === "string") usedAliases.add(item.as);
+        }
+        const baseAlias = `${variable.variable}-angle`;
+        let alias = baseAlias;
+        let suffix = 2;
+        while (usedAliases.has(alias)) alias = `${baseAlias}-${suffix++}`;
+        arc = {
+          as: alias,
+          center,
+          radius: Math.max(radius * 0.28, 0.05),
+          start_angle: 0,
+          end_angle: seededEnd,
+          label: variable.label
+        };
+        arcs.push(arc);
+        content.arcs = arcs;
+      } else {
+        arc.start_angle = 0;
+        arc.end_angle = seededEnd;
+      }
+      if (typeof arc.as === "string") {
+        const target = `${arc.as}.end_angle`;
+        if (!bindings.some((binding) => binding.target === target)) {
+          bindings.push({ target, expression: variable.variable });
+        }
+      }
+      content.bindings = bindings;
+    }
   }
   return document;
 }
@@ -11159,30 +11330,50 @@ function validateBriefCoverage(document, brief) {
     }
   }
   for (const requirement of brief.visual_requirements) {
-    const candidates = inventory.nodes.filter((node) => node.surface === requirement.surface);
-    const scored = candidates.map((node) => {
-      const missingFeatures = requirement.required_features.filter((feature) => !node.features.has(feature));
-      const actualExpressions = node.expressions.map(normalizeExpression2);
-      const missingExpressions = requirement.expressions.filter(
-        (expression) => !actualExpressions.includes(normalizeExpression2(expression))
-      );
-      return { node, missingFeatures, missingExpressions };
-    }).sort((left, right) => left.missingFeatures.length + left.missingExpressions.length - (right.missingFeatures.length + right.missingExpressions.length));
-    const best = scored[0];
-    if (best && best.missingFeatures.length === 0 && best.missingExpressions.length === 0) {
-      matched.set(requirement.id, best.node);
+    const node = inventory.nodes.find((candidate) => candidate.alias === requirement.id);
+    if (!node) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_VISUAL_OBJECT_MISSING",
+        path: "/steps",
+        requirement_id: requirement.id,
+        message: `Planned visual object '${requirement.id}' must be created with write.as='${requirement.id}'`,
+        missing_features: requirement.required_features,
+        missing_expressions: requirement.expressions
+      });
       continue;
     }
-    const nearest = best ? ` Closest ${requirement.surface} node is '${best.node.alias}'.` : "";
-    violations.push({
-      stage: "request_coverage",
-      code: "OLL_VISUAL_REQUIREMENT_UNSATISFIED",
-      path: "/steps",
-      requirement_id: requirement.id,
-      message: `Visual requirement '${requirement.id}' (${requirement.surface}) is not satisfied.${nearest}`,
-      missing_features: best?.missingFeatures ?? requirement.required_features,
-      missing_expressions: best?.missingExpressions ?? requirement.expressions
-    });
+    const missingFeatures = node.surface === requirement.surface ? requirement.required_features.filter((feature) => !node.features.has(feature)) : requirement.required_features;
+    const actualExpressions = node.expressions.map(normalizeExpression2);
+    const missingExpressions = requirement.expressions.filter(
+      (expression) => !actualExpressions.includes(normalizeExpression2(expression))
+    );
+    const motionVariable = brief.shared_variable_requirements.find((variable) => variable.bound_visuals.includes(requirement.id));
+    const motionSatisfied = node.surface !== "geometry" || !motionVariable || geometryMotionSatisfied(node.content, requirement, motionVariable.variable);
+    if (node.surface === requirement.surface && missingFeatures.length === 0 && missingExpressions.length === 0 && motionSatisfied) {
+      matched.set(requirement.id, node);
+      continue;
+    }
+    if (node.surface !== requirement.surface || missingFeatures.length > 0 || missingExpressions.length > 0) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_VISUAL_REQUIREMENT_UNSATISFIED",
+        path: "/steps",
+        requirement_id: requirement.id,
+        message: `Planned visual object '${requirement.id}' must be a complete ${requirement.surface} node`,
+        missing_features: missingFeatures,
+        missing_expressions: missingExpressions
+      });
+    }
+    if (!motionSatisfied) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_VISUAL_MOTION_UNSATISFIED",
+        path: "/steps",
+        requirement_id: requirement.id,
+        message: `Visual '${requirement.id}' must show '${requirement.motion_subject}' with ${requirement.motion_kind} motion driven by '${motionVariable?.variable}'`
+      });
+    }
   }
   for (const [index, relationship] of brief.visual_relationships.entries()) {
     const from = matched.get(relationship.from);
@@ -11519,9 +11710,10 @@ ${JSON.stringify(violations, null, 2)}
 \u672C\u6B21\u5141\u8BB8\u4F7F\u7528\u7684 OLL \u80FD\u529B\u5982\u4E0B\uFF1B\u7CFB\u7EDF\u63D0\u793A\u8BCD\u4E2D\u63D0\u5230\u4F46\u672A\u5217\u5165\u8FD9\u91CC\u7684 kind \u6216 action\uFF0C\u672C\u6B21\u4E0D\u5F97\u4F7F\u7528\u3002\u9700\u8981\u5C55\u793A\u4E2D\u95F4\u53D8\u5316\u4F46 revise \u672A\u5F00\u653E\u65F6\uFF0C\u8BF7\u65B0\u5EFA\u4E0B\u4E00\u4E2A\u677F\u4E66\u8282\u70B9\uFF0C\u4E0D\u8981\u731C\u6D4B revise.target\uFF1A
 ${JSON.stringify({
     write_kinds: capabilityPlan.writeKinds,
-    actions: capabilityPlan.actions,
+    actions: capabilityPlan.actions.filter((action) => action !== "connect"),
     revise_kinds: capabilityPlan.reviseKinds,
     system_managed_variables: capabilityPlan.allowVariables,
+    system_managed_connections: brief.visual_relationships,
     bindings: capabilityPlan.bindingKinds,
     angle_control: capabilityPlan.allowAngleControl
   }, null, 2)}
@@ -11965,6 +12157,151 @@ async function generateLesson(client, input, brief) {
     definitions: diagnostics.definitions
   })}
 `);
+  const repairVisualComponent = async (rawLesson, generationViolations) => {
+    if (generationViolations.length === 0) return void 0;
+    const localVisualCodes = /* @__PURE__ */ new Set(["OLL_VISUAL_REQUIREMENT_UNSATISFIED", "OLL_VISUAL_MOTION_UNSATISFIED"]);
+    const requirementIds = new Set(generationViolations.flatMap((violation) => localVisualCodes.has(violation.code) && typeof violation.requirement_id === "string" ? [violation.requirement_id] : []));
+    if (requirementIds.size !== 1 || generationViolations.some((violation) => !localVisualCodes.has(violation.code))) return void 0;
+    const requirementId = [...requirementIds][0];
+    const requirement = brief.visual_requirements.find((candidate2) => candidate2.id === requirementId);
+    if (!requirement) return void 0;
+    let candidate;
+    try {
+      candidate = JSON.parse(rawLesson);
+    } catch {
+      return void 0;
+    }
+    if (!isRecord(candidate) || !Array.isArray(candidate.steps)) return void 0;
+    const matches = [];
+    for (const step of candidate.steps) {
+      if (!isRecord(step) || !Array.isArray(step.beats)) continue;
+      for (const beat of step.beats) {
+        if (!isRecord(beat) || !Array.isArray(beat.actions)) continue;
+        beat.actions.forEach((action, index) => {
+          if (isRecord(action) && action.do === "write" && action.as === requirementId) {
+            matches.push({ actions: beat.actions, index, action });
+          }
+        });
+      }
+    }
+    if (matches.length !== 1) return void 0;
+    const definitions = isRecord(responseSchema.$defs) ? responseSchema.$defs : {};
+    const actionDefinition = isRecord(definitions.action) ? definitions.action : {};
+    const variants = Array.isArray(actionDefinition.anyOf) ? actionDefinition.anyOf.filter(isRecord) : [];
+    const componentVariant = variants.find((variant) => {
+      const properties = isRecord(variant.properties) ? variant.properties : {};
+      const alias = isRecord(properties.as) && Array.isArray(properties.as.enum) ? properties.as.enum : [];
+      return alias.length === 1 && alias[0] === requirementId;
+    });
+    if (!componentVariant) return void 0;
+    const componentSchema = pruneUnusedDefinitions({
+      ...structuredClone(componentVariant),
+      $defs: structuredClone(definitions)
+    });
+    assertVertexSchemaCompatible(componentSchema);
+    const repairedRaw = await callStructuredModel(client, {
+      label: "lesson-component-repair",
+      turnId: input.turn_id,
+      systemPrompt: COMPONENT_REPAIR_SYSTEM_PROMPT,
+      prompt: JSON.stringify({
+        visual_requirement: requirement,
+        current_write_action: matches[0].action,
+        validation_errors: generationViolations
+      }, null, 2),
+      responseSchema: componentSchema,
+      maxTokens: Math.min(client.maxTokens, 8192)
+    });
+    let repairedAction;
+    try {
+      repairedAction = JSON.parse(repairedRaw);
+    } catch {
+      return void 0;
+    }
+    if (!isRecord(repairedAction) || repairedAction.do !== "write" || repairedAction.as !== requirementId || repairedAction.kind !== requirement.surface) return void 0;
+    matches[0].actions[matches[0].index] = {
+      ...matches[0].action,
+      content: repairedAction.content
+    };
+    return validateGeneratedLesson(JSON.stringify(candidate), input, brief, capabilityPlan);
+  };
+  const repairOneBeat = async (rawLesson, generationViolations) => {
+    const allowedCodes = /* @__PURE__ */ new Set(["OLL_DUPLICATE_ALIAS", "OLL_MISSING_BEAT_FOCUS"]);
+    if (!generationViolations.some((violation) => violation.code === "OLL_DUPLICATE_ALIAS") || generationViolations.some((violation) => !allowedCodes.has(violation.code))) return void 0;
+    const locations = generationViolations.flatMap((violation) => {
+      const match = /^\/steps\/(\d+)\/beats\/(\d+)(?:\/|$)/u.exec(violation.path);
+      return match ? [`${match[1]}:${match[2]}`] : [];
+    });
+    if (locations.length !== generationViolations.length || new Set(locations).size !== 1) return void 0;
+    const [stepIndex, beatIndex] = locations[0].split(":").map(Number);
+    let candidate;
+    try {
+      candidate = JSON.parse(rawLesson);
+    } catch {
+      return void 0;
+    }
+    if (!isRecord(candidate) || !Array.isArray(candidate.steps)) return void 0;
+    const targetStep = candidate.steps[stepIndex];
+    if (!isRecord(targetStep) || !Array.isArray(targetStep.beats)) return void 0;
+    const currentBeat = targetStep.beats[beatIndex];
+    if (!isRecord(currentBeat) || typeof currentBeat.key !== "string") return void 0;
+    const existingAliases = /* @__PURE__ */ new Set();
+    candidate.steps.forEach((step, candidateStepIndex) => {
+      if (!isRecord(step) || !Array.isArray(step.beats)) return;
+      step.beats.forEach((beat, candidateBeatIndex) => {
+        const beforeTarget = candidateStepIndex < stepIndex || candidateStepIndex === stepIndex && candidateBeatIndex < beatIndex;
+        if (!beforeTarget || !isRecord(beat) || !Array.isArray(beat.actions)) return;
+        for (const action of beat.actions) {
+          if (isRecord(action) && typeof action.as === "string") existingAliases.add(action.as);
+        }
+      });
+    });
+    const definitions = isRecord(responseSchema.$defs) ? structuredClone(responseSchema.$defs) : {};
+    const resolveDefinition = (schema) => {
+      if (!isRecord(schema)) return void 0;
+      if (typeof schema.$ref !== "string" || !schema.$ref.startsWith("#/$defs/")) return schema;
+      const name = schema.$ref.slice("#/$defs/".length).split("/", 1)[0];
+      return isRecord(definitions[name]) ? definitions[name] : void 0;
+    };
+    const rootProperties = isRecord(responseSchema.properties) ? responseSchema.properties : {};
+    const stepsSchema = isRecord(rootProperties.steps) ? rootProperties.steps : {};
+    const stepSchema = resolveDefinition(stepsSchema.items) ?? {};
+    const stepProperties = isRecord(stepSchema.properties) ? stepSchema.properties : {};
+    const beatsSchema = isRecord(stepProperties.beats) ? stepProperties.beats : {};
+    const beatTemplate = resolveDefinition(beatsSchema.items);
+    const actionDefinition = isRecord(definitions.action) ? definitions.action : void 0;
+    if (!beatTemplate || !actionDefinition || !Array.isArray(actionDefinition.anyOf)) return void 0;
+    actionDefinition.anyOf = actionDefinition.anyOf.filter((variant) => {
+      if (!isRecord(variant) || !isRecord(variant.properties) || !isRecord(variant.properties.as)) return true;
+      const aliases = variant.properties.as.enum;
+      return !Array.isArray(aliases) || aliases.length !== 1 || typeof aliases[0] !== "string" || !existingAliases.has(aliases[0]);
+    });
+    const beatSchema = pruneUnusedDefinitions({
+      ...structuredClone(beatTemplate),
+      $defs: definitions
+    });
+    assertVertexSchemaCompatible(beatSchema);
+    const repairedRaw = await callStructuredModel(client, {
+      label: "lesson-beat-repair",
+      turnId: input.turn_id,
+      systemPrompt: BEAT_REPAIR_SYSTEM_PROMPT,
+      prompt: JSON.stringify({
+        existing_aliases: [...existingAliases].sort(),
+        current_beat: currentBeat,
+        validation_errors: generationViolations
+      }, null, 2),
+      responseSchema: beatSchema,
+      maxTokens: Math.min(client.maxTokens, 12288)
+    });
+    let repairedBeat;
+    try {
+      repairedBeat = JSON.parse(repairedRaw);
+    } catch {
+      return void 0;
+    }
+    if (!isRecord(repairedBeat) || repairedBeat.key !== currentBeat.key) return void 0;
+    targetStep.beats[beatIndex] = repairedBeat;
+    return validateGeneratedLesson(JSON.stringify(candidate), input, brief, capabilityPlan);
+  };
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await callStructuredModel(client, {
       label: "lesson-authoring",
@@ -11986,6 +12323,34 @@ async function generateLesson(client, input, brief) {
 `);
       if (process.env.OLL_DEBUG_GENERATION === "1") {
         process.stderr.write(`learning-coach: rejected generation ${attempt}: ${raw.slice(0, 16e3)}
+`);
+      }
+      try {
+        const repairedLesson = await repairVisualComponent(raw, error.violations);
+        if (repairedLesson) {
+          process.stderr.write(`learning-coach: repaired one visual object after lesson generation ${attempt}
+`);
+          return {
+            lesson: repairedLesson,
+            attempts: attempt,
+            capabilityPlan,
+            schema: diagnostics
+          };
+        }
+        const repairedBeatLesson = await repairOneBeat(raw, error.violations);
+        if (repairedBeatLesson) {
+          process.stderr.write(`learning-coach: repaired one Beat after lesson generation ${attempt}
+`);
+          return {
+            lesson: repairedBeatLesson,
+            attempts: attempt,
+            capabilityPlan,
+            schema: diagnostics
+          };
+        }
+      } catch (repairError) {
+        const message = repairError instanceof GeneratedLessonError ? formatViolations(repairError.violations) : safeError(repairError);
+        process.stderr.write(`learning-coach: local visual repair did not validate: ${message}
 `);
       }
       if (attempt === maxAttempts) {

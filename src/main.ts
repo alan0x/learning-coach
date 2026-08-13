@@ -98,6 +98,7 @@ type VisualFeature =
   | "origin_centered_circle"
   | "unit_radius"
   | "point_on_circle"
+  | "line_segments"
   | "radius_segment"
   | "projection_segment"
   | "angle_arc"
@@ -108,6 +109,7 @@ type VisualFeature =
   | "semantic_edges"
   | "source_asset"
   | "tabular_values";
+type VisualMotionKind = "linear_point" | "angular_point" | "planar_point";
 
 interface VisualRequirement {
   id: string;
@@ -116,6 +118,8 @@ interface VisualRequirement {
   required_features: VisualFeature[];
   expressions: string[];
   request_item_ids: string[];
+  motion_kind?: VisualMotionKind;
+  motion_subject?: string;
 }
 
 interface VisualRelationshipRequirement {
@@ -246,7 +250,7 @@ interface VertexClient {
 }
 
 interface StructuredModelRequest {
-  label: "lesson-brief" | "lesson-brief-verification" | "lesson-authoring";
+  label: "lesson-brief" | "lesson-brief-verification" | "lesson-authoring" | "lesson-component-repair" | "lesson-beat-repair";
   turnId: string;
   systemPrompt: string;
   prompt: string;
@@ -300,24 +304,32 @@ request_items 只记录用户明确提出的教学目标、视觉对象、视觉
 每个 visual_requirement.id 必须是唯一的小写英文别名，只能包含 a-z、0-9、连字符并以字母开头；visual_relationships 的 from/to 只能引用这些 id。expressions 只用于 plot，其他 surface 必须返回空数组。
 
 视觉 surface：
-- geometry：等比例度量几何与坐标几何；
-- plot：函数坐标图；
-- diagram：语义节点关系图；
+- geometry：由有数值坐标的点、线段、圆和角弧组成的等比例二维场景。除了度量几何与坐标几何，可由数值点和线段忠实表达的简单二维物体运动也使用 geometry，例如移动质点、振子、抛体或杠杆端点；点坐标和角弧可以由共享变量驱动；
+- plot：函数坐标图；曲线使用可执行表达式，数据点和辅助线可以随共享变量变化；
+- diagram：静态语义节点关系图，用于流程、分类和概念关系。diagram 是静态语义关系图，不能由共享变量驱动，不得用它冒充运动中的物体；
 - image：受控来源图片；
 - table：表格。
+
+选择 surface 时先判断画面需要怎样变化，而不是按学科名词归类。若主体运动能由有标签的数值点、线段、圆或角弧忠实表达，就规划为 geometry，并把它列入 shared_variable_requirements.bound_visuals。若主体需要连续形变、三维运动、真实材质或现有图元无法用这些图元忠实表达，将相应用户要求记为 unsupported_feature 并放入 unhandled_request_items，不得改成静态 diagram 后宣称已支持动画。
 
 通用 feature 的含义：
 - coordinate_axes：可读的数值坐标轴；equal_scale：两个坐标方向保持相同比例；
 - circle：可度量圆；origin_centered_circle：圆心确实位于坐标原点；unit_radius：半径数值确实为一；
-- point_on_circle：点的坐标确实落在圆上；radius_segment：圆心到圆上点的线段；projection_segment：点到坐标轴的实际投影线；angle_arc：非零的可见角弧；
+- point_on_circle：点的坐标确实落在圆上；line_segments：连接有坐标点的普通线段，可表示弹簧、杆、连杆或轨道片段；radius_segment：圆心到圆上点的线段；projection_segment：点到坐标轴的实际投影线；angle_arc：非零的可见角弧；
 - function_curve：带可执行表达式的函数曲线；annotated_points：有标签的数据点；guides：数值辅助线；
 - semantic_elements / semantic_edges：语义节点和语义连线；source_asset：受控图片资源；tabular_values：有行列数据的表格。
 
-feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_scale、circle、origin_centered_circle、unit_radius、point_on_circle、radius_segment、projection_segment、angle_arc、annotated_points；plot 只使用 coordinate_axes、function_curve、annotated_points、guides；diagram 只使用 semantic_elements、semantic_edges；image 只使用 source_asset；table 只使用 tabular_values。尤其不要把 equal_scale 写进 plot。
+feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_scale、circle、origin_centered_circle、unit_radius、point_on_circle、line_segments、radius_segment、projection_segment、angle_arc、annotated_points；plot 只使用 coordinate_axes、function_curve、annotated_points、guides；diagram 只使用 semantic_elements、semantic_edges；image 只使用 source_asset；table 只使用 tabular_values。尤其不要把 equal_scale 写进 plot。
 
 如果请求点名某个视觉对象，选择能真实表达它的 surface，并列出让该对象和教学目的在画面上成立所不可缺少的最小 features。不要因为某个 surface 支持一项 feature 就自动要求它；也不要用标题、讲述或标签代替结构特征。
 
 如果请求涉及运动、映射或量的连续变化，规划中必须包含使这个变化可见的结构；例如“旋转角度”需要真实的角度标记，“投影/坐标对应”需要实际投影结构，“函数图像”需要坐标轴和带表达式的曲线。
+
+被 shared_variable_requirements 绑定的 geometry 还必须填写 motion_kind 和 motion_subject：
+- linear_point：一个代表主体的有标签点只沿 x 或 y 一个方向变化，例如振子、小车；
+- angular_point：一个代表主体的有标签点绕圆心转动，例如单位圆上的点、摆臂端点；
+- planar_point：一个代表主体的有标签点的 x、y 同时变化，例如平面抛体；
+- motion_subject 是该运动点在画面上必须明确显示的主体名称，例如“振子”“小车”“圆上点”，不得填写 P、A、物体等无法说明用户所问主体的泛称。没有被共享变量绑定的 geometry，以及 plot/diagram/image/table，不填写这两个字段。
 
 如果请求要求把两个视觉对象结合、对应、比较或推导，必须在 visual_relationships 中表达；不要把这种关系退化成两张互不相关的图。
 
@@ -325,6 +337,7 @@ shared_variable_requirements 用来规划“同一个量同时驱动多个视觉
 - 当请求明确要求动画、可交互变化，或教学目标本身是连续运动/变化（例如角度旋转变成周期波动）时，创建 shared_variable_requirement；否则返回空数组。
 - variable 是 OLL 变量名；initial/min/max/slider_step/animate_to 使用符合学科含义的数值。转满一圈用 0 到 6.283185307179586，单位用 rad。
 - bound_visuals 至少列出所有被同一变量驱动的 visual_requirement.id；跨图对应通常至少有两个。
+- bound_visuals 目前只能引用 geometry 或 plot。需要直接演示的简单二维主体若能由点和线段表达，必须把主体规划为 geometry 后再绑定；diagram、image 和 table 不能绑定。
 - direct_angle_geometry 只在某个 geometry 里的点适合由学生直接绕圆心拖动时填写该 visual_requirement.id，否则返回空字符串。
 - 当前学生控制只支持变量滑杆，以及圆上点绕圆心的 angle_control；不支持任意物体的自由拖动或沿直线拖动。一般性的“让我自己操作”或没有点明被拖物体的“拖着试试”可以用拖动滑杆满足；只有圆周角度确实是合适的教学操作时才使用 direct_angle_geometry。明确点名要拖动其他物体或沿特定路径拖动时必须列入 unhandled_request_items。
 
@@ -339,7 +352,7 @@ const BRIEF_VERIFICATION_SYSTEM_PROMPT = `你是用户要求覆盖复核器，�
 2. contradictions：某个已有 request_item 与它引用的用户原文相反，或把明确不支持的能力冒充为已支持；
 3. suggestions：课程可以怎样教得更好，但这类建议绝不能放进 missing 或 contradictions。
 
-如果用户明确问“为什么发生”，遗漏因果解释属于 missing，不是 suggestions。如果用户要求演示某个对象的变化，却只规划类比图而没有直接表现该对象，也属于 missing。只有在因果目标和主体演示已经覆盖后，受力图、速度图、能量图等可选讲法才属于 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
+如果用户明确问“为什么发生”，遗漏因果解释属于 missing，不是 suggestions。如果用户要求演示某个对象的变化，却只规划类比图而没有直接表现该对象，也属于 missing。复核这类请求时必须检查被绑定 geometry 的 motion_subject 和 motion_kind：motion_subject 必须明确命名用户要求观看的运动主体，motion_kind 必须描述该主体本身的运动；圆周投影、函数曲线或其他类比即使数学上相关，也不能作为主体演示通过复核。只有在因果目标和主体演示已经覆盖后，受力图、速度图、能量图等可选讲法才属于 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
 
 const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的家庭教师。请生成一堂完整、连续的 OLL Authoring Profile 课程。
 
@@ -372,7 +385,9 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 - diagram 用于语义元素与连线，不得冒充函数图像。plot 用于坐标轴上的函数曲线；content.axes.x/y 各给出数值 min/max，content.curves[] 每项必须包含 as、expression，可包含 label。
 - plot.expression 只写受限数学表达式，例如 sin(x)、cos(x)、(x+3)^2-4；支持 x、pi、e、+ - * / ^、括号以及 sin/cos/tan/sqrt/abs/exp/log，不写 y=、LaTeX、代码或 SVG。
 - 输入中的课程要求清单是本轮请求的可执行要求合同；每个 visual_requirement 和 visual_relationship 都必须由实际白板动作满足，标题、goals、讲述或文字声明不能替代要求的视觉内容。
+- 每个 visual_requirement.id 就是该主要视觉节点必须使用的 write.as；一个视觉节点可以通过 request_item_ids 服务多个教学目标。visual_relationships 对应的 connect 由系统在两个节点创建后插入，模型不要输出 connect。
 - 课程要求清单中的 shared_variable_requirements 非空时，系统会确定性写入 lesson.variables 和可判定的 angle_control；模型负责在 bound_visuals 对应的 geometry/plot content.bindings 中引用同一个变量，并把 do="animate" 动作放进合适的讲解节拍。禁止复制第二份状态。
+- geometry visual_requirement 包含 motion_kind/motion_subject 时，必须有一个 label 明确包含 motion_subject 的点代表运动主体。linear_point 只绑定该点的 x 或 y 一个坐标；planar_point 同时绑定 x/y；angular_point 同时绑定 x/y，并通过半径线或角控制表明它绕固定中心运动。单位圆或其他类比图不能冒充用户要求直接演示的主体。
 - bindings.target 使用“局部元素别名.数值属性”，expression 使用受限表达式并直接引用变量名。例如单位圆与正弦图共享 theta：point-p.x=cos(theta)、point-p.y=sin(theta)、foot.x=cos(theta)、theta-arc.end_angle=theta、current-angle.x=theta、current-angle.y=sin(theta)。
 - animate 只描述语义目标，包含 variable、value，可包含 easing 和 duration_intent；不得生成毫秒时长。学生可在 Runtime 中播放、暂停、拖动、复位和重放。
 - 动画必须单独占用一个简短 Beat：相关 geometry/plot 和 connect 必须在更早的 Beat 已经创建；动画 Beat 只包含一个 do="animate" 和本 Beat 必需的 after_speech focus，不得同时 write、connect、group、revise、point 或 emphasize。
@@ -381,13 +396,21 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 - geometry 点只有在课程要求清单指定 direct_angle_geometry 时才允许 angle_control；模型必须提供同时驱动圆上点 x/y 的变量绑定，以及连接圆心和该点的半径线，系统才会确定性补入 interaction。
 - 每个 Beat 的 say 必须使用适合 TTS 朗读的自然语言表达数学关系，不得包含美元符号、反斜杠命令或其他原始 LaTeX 标记。
 - revise 必须包含 target、content、reason；emphasize 必须包含 target、emphasis。
-- connect 必须包含 as、from、to、relation；group 必须包含 as、role、label、members。
+- 本次课程的 connect 由系统根据 visual_relationships 插入，模型不得输出 connect；group 必须包含 as、role、label、members。
 - focus 必须包含 targets、intent；point 必须包含 target；expression 必须包含 expression。
 - 写板书示例：{"do":"write","as":"rule","kind":"note","role":"concept","content":{"title":"规律","items":["内容"]},"place":{"relation":"new_region"}}。
 - 三角函数图像示例：{"do":"write","as":"trig-curves","kind":"plot","role":"diagram","content":{"axes":{"x":{"min":0,"max":6.283185307179586},"y":{"min":-1.2,"max":1.2}},"curves":[{"as":"sine-curve","expression":"sin(x)","label":"y = sin x"},{"as":"cosine-curve","expression":"cos(x)","label":"y = cos x"}]},"place":{"relation":"new_region"}}。
 - 单位圆示例：{"do":"write","as":"unit-circle","kind":"geometry","role":"diagram","content":{"axes":{"x":{"min":-1.25,"max":1.25,"label":"x"},"y":{"min":-1.25,"max":1.25,"label":"y"},"equal_scale":true},"points":[{"as":"origin","x":0,"y":0,"label":"O"},{"as":"point-p","x":0.5,"y":0.8660254,"label":"P(cos θ, sin θ)"},{"as":"foot","x":0.5,"y":0}],"circles":[{"as":"circle","center":"origin","radius":1,"label":"r = 1"}],"segments":[{"as":"radius","from":"origin","to":"point-p","style":"solid"},{"as":"projection","from":"point-p","to":"foot","label":"sin θ","style":"projection"}],"arcs":[{"as":"theta","center":"origin","radius":0.28,"start_angle":0,"end_angle":1.0471975512,"label":"θ"}]},"place":{"relation":"new_region"}}。
 - 共享变量动画示例：{"do":"animate","variable":"theta","value":6.283185307179586,"easing":"linear","duration_intent":"extended"}。
 - 聚焦示例：{"do":"focus","when":"after_speech","targets":["rule"],"intent":"current_step"}。`;
+
+const COMPONENT_REPAIR_SYSTEM_PROMPT = `你是 OLL 局部视觉对象修复器。输入会给出一个已经存在的 write 动作、它必须满足的视觉要求，以及该动作当前未满足的检查项。
+
+只返回修复后的一个完整 write 动作，不返回 Lesson、Step、Beat、Markdown 或解释。必须保持 do="write"、write.as、write.kind、role 和 place 的原有语义，只修改这个视觉对象本身。不得创建其他节点、关系、动画、旁白或课程结构。输出必须符合所附 JSON Schema。`;
+
+const BEAT_REPAIR_SYSTEM_PROMPT = `你是 OLL 局部教学节拍修复器。输入会给出一个出错的 Beat、此前已经存在的别名，以及该 Beat 的精确校验错误。
+
+只返回修复后的一个完整 Beat，不返回 Lesson、Step、Markdown 或解释。保持 beat.key 不变，只修改这个 Beat 的 say、delivery 和 actions。不得重新创建 existing_aliases 中的节点或关系；需要继续讲解已有视觉对象时直接引用其别名，或用新的 text、math、note 等节点补充。每个 Beat 必须包含一个 when="after_speech" 的 focus。输出必须符合所附 JSON Schema。`;
 
 function requireNonEmptyString(value: unknown, label: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -1065,10 +1088,29 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
       if (content) writeContentByKind.set(identity.kind, structuredClone(content));
     }
   }
-  const variants = allVariants.filter((variant) => {
+  const allowedVariants = allVariants.filter((variant) => {
     const identity = actionVariantIdentity(variant);
     if (identity.action === "write") return !!identity.kind && plan.writeKinds.includes(identity.kind as AuthoringWriteKind);
-    return !!identity.action && plan.actions.includes(identity.action as AuthoringActionName);
+    return !!identity.action
+      && identity.action !== "connect"
+      && plan.actions.includes(identity.action as AuthoringActionName);
+  });
+  const variants = allowedVariants.flatMap((variant) => {
+    const identity = actionVariantIdentity(variant);
+    if (identity.action !== "write" || !identity.kind
+      || !visualSurfaces.includes(identity.kind as VisualSurface)) {
+      return [variant];
+    }
+    const requirements = brief.visual_requirements.filter(
+      (requirement) => requirement.surface === identity.kind,
+    );
+    if (requirements.length === 0) return [variant];
+    return requirements.map((requirement) => {
+      const exact = structuredClone(variant);
+      const properties = exact.properties as JsonSchema;
+      properties.as = { enum: [requirement.id] };
+      return exact;
+    });
   });
   if (action) action.anyOf = variants;
 
@@ -1113,65 +1155,54 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
     lesson.required = lesson.required.filter((field) => field !== "variables");
   }
 
+  const fieldsBySurface: Partial<Record<VisualSurface, Map<VisualFeature, string>>> = {
+    geometry: new Map([
+      ["circle", "circles"], ["origin_centered_circle", "circles"], ["unit_radius", "circles"],
+      ["line_segments", "segments"],
+      ["radius_segment", "segments"], ["projection_segment", "segments"], ["angle_arc", "arcs"],
+    ]),
+    plot: new Map([["annotated_points", "points"], ["guides", "guides"]]),
+    diagram: new Map([["semantic_edges", "edges"]]),
+  };
   for (const variant of variants) {
     const identity = actionVariantIdentity(variant);
     if (identity.action !== "write") continue;
     const properties = variant.properties as JsonSchema;
     const content = properties.content as JsonSchema;
     const contentProperties = content.properties as JsonSchema | undefined;
-    if ((identity.kind === "geometry" || identity.kind === "plot")
-      && !plan.bindingKinds.includes(identity.kind)) {
-      if (contentProperties) delete contentProperties.bindings;
-      if (Array.isArray(content.required)) content.required = content.required.filter((field) => field !== "bindings");
+    const exactAliasSchema = properties.as as JsonSchema | undefined;
+    const exactAlias = Array.isArray(exactAliasSchema?.enum)
+      && typeof exactAliasSchema.enum[0] === "string"
+      ? exactAliasSchema.enum[0]
+      : undefined;
+    const requirement = exactAlias
+      ? brief.visual_requirements.find((candidate) => candidate.id === exactAlias)
+      : undefined;
+    const requiresBindings = exactAlias !== undefined
+      && brief.shared_variable_requirements.some((variable) => variable.bound_visuals.includes(exactAlias));
+    if (identity.kind === "geometry" || identity.kind === "plot") {
+      if (requiresBindings) {
+        requireNonEmptyCollection(content, "bindings");
+      } else {
+        if (contentProperties) delete contentProperties.bindings;
+        if (Array.isArray(content.required)) {
+          content.required = content.required.filter((field) => field !== "bindings");
+        }
+      }
     }
-    if (identity.kind === "geometry" && !plan.allowAngleControl) {
+    if (identity.kind === "geometry") {
       const points = contentProperties?.points as JsonSchema | undefined;
       const pointItems = points?.items as JsonSchema | undefined;
       const pointProperties = pointItems?.properties as JsonSchema | undefined;
+      // Direct-manipulation metadata belongs to the deterministic lowering
+      // step. The authoring model supplies the driven point and bindings.
       if (pointProperties) delete pointProperties.interaction;
     }
-  }
-  const fieldsBySurface: Partial<Record<VisualSurface, Map<VisualFeature, string>>> = {
-    geometry: new Map([
-      ["circle", "circles"], ["origin_centered_circle", "circles"], ["unit_radius", "circles"],
-      ["radius_segment", "segments"], ["projection_segment", "segments"], ["angle_arc", "arcs"],
-    ]),
-    plot: new Map([["annotated_points", "points"], ["guides", "guides"]]),
-    diagram: new Map([["semantic_edges", "edges"]]),
-  };
-  for (const surface of visualSurfaces) {
-    const requirements = brief.visual_requirements.filter((item) => item.surface === surface);
-    if (requirements.length === 0) continue;
-    const variant = variants.find((item) => {
-      const properties = item.properties as JsonSchema | undefined;
-      const kind = properties?.kind as JsonSchema | undefined;
-      return Array.isArray(kind?.enum) && kind.enum[0] === surface;
-    });
-    const properties = variant?.properties as JsonSchema | undefined;
-    const content = properties?.content as JsonSchema | undefined;
-    if (!content) continue;
-    for (const requirement of requirements) {
+    if (requirement) {
       for (const feature of requirement.required_features) {
-        const field = fieldsBySurface[surface]?.get(feature);
+        const field = fieldsBySurface[requirement.surface]?.get(feature);
         if (field) requireNonEmptyCollection(content, field);
       }
-    }
-  }
-  if (brief.shared_variable_requirements.length > 0) {
-    const boundSurfaces = new Set(brief.shared_variable_requirements.flatMap((requirement) =>
-      requirement.bound_visuals.flatMap((id) => {
-        const visual = brief.visual_requirements.find((candidate) => candidate.id === id);
-        return visual ? [visual.surface] : [];
-      })));
-    for (const surface of ["geometry", "plot"] as const) {
-      if (!boundSurfaces.has(surface)) continue;
-      const variant = variants.find((item) => {
-        const properties = item.properties as JsonSchema | undefined;
-        const kind = properties?.kind as JsonSchema | undefined;
-        return Array.isArray(kind?.enum) && kind.enum[0] === surface;
-      });
-      const content = (variant?.properties as JsonSchema | undefined)?.content as JsonSchema | undefined;
-      if (content) requireNonEmptyCollection(content, "bindings");
     }
   }
   const projected = pruneUnusedDefinitions(schema);
@@ -1182,7 +1213,7 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
 const visualSurfaces: VisualSurface[] = ["geometry", "plot", "diagram", "image", "table"];
 const visualFeatures: VisualFeature[] = [
   "coordinate_axes", "equal_scale", "circle", "origin_centered_circle", "unit_radius",
-  "point_on_circle", "radius_segment", "projection_segment", "angle_arc", "function_curve",
+  "point_on_circle", "line_segments", "radius_segment", "projection_segment", "angle_arc", "function_curve",
   "annotated_points", "guides", "semantic_elements", "semantic_edges", "source_asset",
   "tabular_values",
 ];
@@ -1280,6 +1311,8 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
           required_features: { type: "array", items: { enum: visualFeatures } },
           expressions: { type: "array", items: { type: "string" } },
           request_item_ids: idArraySchema,
+          motion_kind: { enum: ["linear_point", "angular_point", "planar_point"] },
+          motion_subject: { type: "string" },
         },
       },
     },
@@ -1398,7 +1431,7 @@ const briefVerificationResponseJsonSchema: JsonSchema = {
 const featuresBySurface: Record<VisualSurface, ReadonlySet<VisualFeature>> = {
   geometry: new Set([
     "coordinate_axes", "equal_scale", "circle", "origin_centered_circle", "unit_radius",
-    "point_on_circle", "radius_segment", "projection_segment", "angle_arc", "annotated_points",
+    "point_on_circle", "line_segments", "radius_segment", "projection_segment", "angle_arc", "annotated_points",
   ]),
   plot: new Set(["coordinate_axes", "function_curve", "annotated_points", "guides"]),
   diagram: new Set(["semantic_elements", "semantic_edges"]),
@@ -1784,6 +1817,24 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
         }
       });
     }
+    const hasMotionKind = raw.motion_kind !== undefined;
+    const hasMotionSubject = raw.motion_subject !== undefined;
+    if (hasMotionKind !== hasMotionSubject) {
+      violations.push(briefViolation(
+        "BRIEF_INCOMPLETE_VISUAL_MOTION",
+        path,
+        "motion_kind and motion_subject must be provided together",
+      ));
+    }
+    if (hasMotionKind && !["linear_point", "angular_point", "planar_point"].includes(String(raw.motion_kind))) {
+      violations.push(briefViolation("BRIEF_INVALID_VISUAL_MOTION", `${path}/motion_kind`, "motion_kind is unsupported"));
+    }
+    if (hasMotionSubject && (typeof raw.motion_subject !== "string" || !raw.motion_subject.trim())) {
+      violations.push(briefViolation("BRIEF_INVALID_VISUAL_MOTION_SUBJECT", `${path}/motion_subject`, "motion_subject must visibly name the moving subject"));
+    }
+    if ((hasMotionKind || hasMotionSubject) && raw.surface !== "geometry") {
+      violations.push(briefViolation("BRIEF_INCOMPATIBLE_VISUAL_MOTION", path, "visual motion metadata is supported only by geometry"));
+    }
   });
 
   relationships.forEach((raw, index) => {
@@ -1799,6 +1850,13 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     }
     if (typeof raw.to !== "string" || !visualIds.has(raw.to)) {
       violations.push(briefViolation("BRIEF_UNKNOWN_RELATION_TARGET", `${path}/to`, "to must reference a visual requirement id"));
+    }
+    if (typeof raw.from === "string" && raw.from === raw.to) {
+      violations.push(briefViolation(
+        "BRIEF_SELF_RELATIONSHIP",
+        path,
+        "relationship endpoints must reference two different visual requirements",
+      ));
     }
     if (!visualRelationships.includes(raw.relation as VisualRelationshipRequirement["relation"])) {
       violations.push(briefViolation("BRIEF_INVALID_RELATION", `${path}/relation`, "relation is unsupported"));
@@ -1873,7 +1931,26 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
         }
         bound.add(String(visualId));
         if (visual.surface !== "geometry" && visual.surface !== "plot") {
-          violations.push(briefViolation("BRIEF_UNSUPPORTED_BOUND_VISUAL", `${path}/bound_visuals`, "shared variables currently bind only geometry and plot visuals"));
+          violations.push(briefViolation(
+            "BRIEF_UNSUPPORTED_BOUND_VISUAL",
+            `${path}/bound_visuals`,
+            "shared variables bind only geometry and plot visuals; represent a simple measurable 2D subject with geometry points/segments when faithful, otherwise mark the requested motion unsupported",
+          ));
+        } else if (visual.surface === "geometry") {
+          if (!["linear_point", "angular_point", "planar_point"].includes(String(visual.motion_kind))) {
+            violations.push(briefViolation(
+              "BRIEF_MISSING_VISUAL_MOTION",
+              `${path}/bound_visuals`,
+              `bound geometry '${String(visualId)}' must declare linear_point, angular_point, or planar_point motion`,
+            ));
+          }
+          if (typeof visual.motion_subject !== "string" || !visual.motion_subject.trim()) {
+            violations.push(briefViolation(
+              "BRIEF_MISSING_VISUAL_MOTION_SUBJECT",
+              `${path}/bound_visuals`,
+              `bound geometry '${String(visualId)}' must visibly name its moving subject`,
+            ));
+          }
         }
       }
     }
@@ -1887,6 +1964,12 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
           "BRIEF_INVALID_DIRECT_CONTROL",
           `${path}/direct_angle_geometry`,
           "direct_angle_geometry must reference a bound geometry requirement",
+        ));
+      } else if (directVisual.motion_kind !== "angular_point") {
+        violations.push(briefViolation(
+          "BRIEF_INVALID_DIRECT_CONTROL_MOTION",
+          `${path}/direct_angle_geometry`,
+          "direct_angle_geometry must use angular_point motion",
         ));
       }
     }
@@ -2117,6 +2200,13 @@ function geometryInventory(alias: string, content: Record<string, unknown>): Vis
   if (circlePoints.size > 0) features.add("point_on_circle");
 
   const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
+  if (segments.some((segment) => typeof segment.from === "string"
+    && typeof segment.to === "string"
+    && pointByAlias.has(segment.from)
+    && pointByAlias.has(segment.to)
+    && segment.from !== segment.to)) {
+    features.add("line_segments");
+  }
   const hasRadius = segments.some((segment) => validCircles.some(({ centerAlias }) => {
     const endpoint = segment.from === centerAlias ? segment.to : segment.to === centerAlias ? segment.from : undefined;
     return typeof endpoint === "string" && circlePoints.has(endpoint);
@@ -2221,6 +2311,47 @@ function expressionReferencesVariable(expression: unknown, variable: string): bo
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
 }
 
+function geometryMotionSatisfied(
+  content: Record<string, unknown>,
+  requirement: VisualRequirement,
+  variable: string,
+): boolean {
+  if (!requirement.motion_kind || !requirement.motion_subject) return true;
+  const subject = normalizeEvidence(requirement.motion_subject);
+  const points = Array.isArray(content.points) ? content.points.filter(isRecord) : [];
+  const pointByAlias = new Map(points.flatMap((point) =>
+    typeof point.as === "string" ? [[point.as, point] as const] : []));
+  const bindings = Array.isArray(content.bindings) ? content.bindings.filter(isRecord) : [];
+  const boundCoordinates = new Map<string, Set<string>>();
+  for (const binding of bindings) {
+    if (typeof binding.target !== "string"
+      || !expressionReferencesVariable(binding.expression, variable)) continue;
+    const separator = binding.target.lastIndexOf(".");
+    if (separator <= 0) continue;
+    const alias = binding.target.slice(0, separator);
+    const property = binding.target.slice(separator + 1);
+    if (!pointByAlias.has(alias) || (property !== "x" && property !== "y")) continue;
+    const coordinates = boundCoordinates.get(alias) ?? new Set<string>();
+    coordinates.add(property);
+    boundCoordinates.set(alias, coordinates);
+  }
+  const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
+  return points.some((point) => {
+    if (typeof point.as !== "string" || typeof point.label !== "string") return false;
+    const label = normalizeEvidence(point.label);
+    if (!label.includes(subject)) return false;
+    const coordinates = boundCoordinates.get(point.as) ?? new Set<string>();
+    if (requirement.motion_kind === "linear_point") return coordinates.size === 1;
+    if (!coordinates.has("x") || !coordinates.has("y")) return false;
+    if (requirement.motion_kind === "planar_point") return true;
+    const interaction = isRecord(point.interaction) ? point.interaction : undefined;
+    const hasCenterConnection = segments.some((segment) =>
+      (segment.from === point.as && typeof segment.to === "string" && pointByAlias.has(segment.to))
+      || (segment.to === point.as && typeof segment.from === "string" && pointByAlias.has(segment.from)));
+    return interaction?.kind === "angle_control" || hasCenterConnection;
+  });
+}
+
 /** Insert fields that were already fixed by the validated request plan.
  * The authoring model still chooses teaching beats, board nodes, bindings, and
  * placement. This lowering step only copies plan-owned metadata and adds a
@@ -2230,30 +2361,59 @@ function lowerPlannedLessonFields(document: unknown, brief: LessonBrief): unknow
   if (!isRecord(document) || !isRecord(document.lesson)) return document;
 
   document.lesson.goals = brief.teaching_goal_requirements.map((requirement) => requirement.goal);
-  if (brief.shared_variable_requirements.length === 0) {
-    delete document.lesson.variables;
-    return document;
+  if (brief.shared_variable_requirements.length === 0) delete document.lesson.variables;
+  else {
+    document.lesson.variables = brief.shared_variable_requirements.map((requirement) => ({
+      as: requirement.variable,
+      initial: requirement.initial,
+      min: requirement.min,
+      max: requirement.max,
+      label: requirement.label,
+      unit: requirement.unit,
+      control: { kind: "slider", step: requirement.slider_step },
+    }));
   }
-  document.lesson.variables = brief.shared_variable_requirements.map((requirement) => ({
-    as: requirement.variable,
-    initial: requirement.initial,
-    min: requirement.min,
-    max: requirement.max,
-    label: requirement.label,
-    unit: requirement.unit,
-    control: { kind: "slider", step: requirement.slider_step },
-  }));
 
-  const rawActions: Record<string, unknown>[] = [];
+  const rawBeats: Record<string, unknown>[] = [];
+  const writeBeatByAlias = new Map<string, { beat: Record<string, unknown>; order: number }>();
+  let beatOrder = 0;
   if (Array.isArray(document.steps)) {
     for (const step of document.steps) {
       if (!isRecord(step) || !Array.isArray(step.beats)) continue;
       for (const beat of step.beats) {
         if (!isRecord(beat) || !Array.isArray(beat.actions)) continue;
-        rawActions.push(...beat.actions.filter(isRecord));
+        // Connections implement the validated visual plan and are therefore
+        // compiler-owned. Ignore model-authored connections instead of trying
+        // to reconcile two competing identities.
+        beat.actions = beat.actions.filter((action) => !isRecord(action) || action.do !== "connect");
+        rawBeats.push(beat);
+        for (const action of beat.actions) {
+          if (isRecord(action) && action.do === "write" && typeof action.as === "string") {
+            writeBeatByAlias.set(action.as, { beat, order: beatOrder });
+          }
+        }
+        beatOrder += 1;
       }
     }
   }
+  for (const relationship of brief.visual_relationships) {
+    const from = writeBeatByAlias.get(relationship.from);
+    const to = writeBeatByAlias.get(relationship.to);
+    if (!from || !to) continue;
+    const targetBeat = from.order > to.order ? from.beat : to.beat;
+    const actions = targetBeat.actions as unknown[];
+    const focusIndex = actions.findIndex((action) => isRecord(action) && action.do === "focus");
+    actions.splice(focusIndex >= 0 ? focusIndex : actions.length, 0, {
+      do: "connect",
+      as: relationship.id,
+      from: relationship.from,
+      to: relationship.to,
+      relation: relationship.relation,
+    });
+  }
+
+  const rawActions: Record<string, unknown>[] = [];
+  for (const beat of rawBeats) rawActions.push(...(beat.actions as unknown[]).filter(isRecord));
 
   const animateActions = rawActions.filter((action) => action.do === "animate");
   for (const requirement of brief.shared_variable_requirements) {
@@ -2278,12 +2438,9 @@ function lowerPlannedLessonFields(document: unknown, brief: LessonBrief): unknow
     );
     if (!visualRequirement) continue;
     const geometryCandidates = rawActions.flatMap((action) => {
+      if (action.do !== "write" || action.as !== visualRequirement.id) return [];
       const inventory = inventoryWrite(action);
-      if (!inventory || inventory.surface !== "geometry") return [];
-      const missingFeatures = visualRequirement.required_features.filter(
-        (feature) => !inventory.features.has(feature),
-      );
-      return missingFeatures.length === 0 ? [{ action, inventory }] : [];
+      return inventory?.surface === "geometry" ? [{ action, inventory }] : [];
     });
     if (geometryCandidates.length !== 1) continue;
 
@@ -2312,7 +2469,7 @@ function lowerPlannedLessonFields(document: unknown, brief: LessonBrief): unknow
     const circles = Array.isArray(content.circles) ? content.circles.filter(isRecord) : [];
     const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
     const tolerance = 1e-3;
-    const pairs = new Map<string, { point: Record<string, unknown>; center: string }>();
+    const pairs = new Map<string, { point: Record<string, unknown>; center: string; radius: number }>();
     for (const { alias, point } of drivenPoints) {
       const pointX = numberValue(point.x);
       const pointY = numberValue(point.y);
@@ -2329,16 +2486,63 @@ function lowerPlannedLessonFields(document: unknown, brief: LessonBrief): unknow
           (segment.from === circle.center && segment.to === alias)
           || (segment.to === circle.center && segment.from === alias));
         if (!liesOnCircle && !hasRadiusSegment) continue;
-        pairs.set(`${alias}\u0000${circle.center}`, { point, center: circle.center });
+        pairs.set(`${alias}\u0000${circle.center}`, { point, center: circle.center, radius });
       }
     }
     if (pairs.size !== 1) continue;
-    const [{ point, center }] = [...pairs.values()];
+    const [{ point, center, radius }] = [...pairs.values()];
     point.interaction = {
       kind: "angle_control",
       variable: variable.variable,
       center,
     };
+    if (visualRequirement.required_features.includes("angle_arc")) {
+      const arcs = Array.isArray(content.arcs) ? content.arcs.filter(isRecord) : [];
+      const existingArcAliases = new Set(arcs.flatMap((candidate) =>
+        typeof candidate.as === "string" ? [candidate.as] : []));
+      for (let index = bindings.length - 1; index >= 0; index -= 1) {
+        const target = bindings[index].target;
+        if (typeof target !== "string" || !target.endsWith(".end_angle")) continue;
+        const alias = target.slice(0, -".end_angle".length);
+        if (!existingArcAliases.has(alias)) bindings.splice(index, 1);
+      }
+      const delta = Math.max(variable.slider_step, 0.05);
+      const seededEnd = variable.initial + delta <= variable.max
+        ? variable.initial + delta
+        : variable.initial - delta;
+      let arc = arcs.find((candidate) => candidate.center === center && (numberValue(candidate.radius) ?? 0) > 0);
+      if (!arc) {
+        const usedAliases = new Set<string>();
+        for (const field of ["points", "circles", "segments", "arcs"] as const) {
+          const items = Array.isArray(content[field]) ? content[field].filter(isRecord) : [];
+          for (const item of items) if (typeof item.as === "string") usedAliases.add(item.as);
+        }
+        const baseAlias = `${variable.variable}-angle`;
+        let alias = baseAlias;
+        let suffix = 2;
+        while (usedAliases.has(alias)) alias = `${baseAlias}-${suffix++}`;
+        arc = {
+          as: alias,
+          center,
+          radius: Math.max(radius * 0.28, 0.05),
+          start_angle: 0,
+          end_angle: seededEnd,
+          label: variable.label,
+        };
+        arcs.push(arc);
+        content.arcs = arcs;
+      } else {
+        arc.start_angle = 0;
+        arc.end_angle = seededEnd;
+      }
+      if (typeof arc.as === "string") {
+        const target = `${arc.as}.end_angle`;
+        if (!bindings.some((binding) => binding.target === target)) {
+          bindings.push({ target, expression: variable.variable });
+        }
+      }
+      content.bindings = bindings;
+    }
   }
   return document;
 }
@@ -2361,31 +2565,60 @@ function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): G
     }
   }
   for (const requirement of brief.visual_requirements) {
-    const candidates = inventory.nodes.filter((node) => node.surface === requirement.surface);
-    const scored = candidates.map((node) => {
-      const missingFeatures = requirement.required_features.filter((feature) => !node.features.has(feature));
-      const actualExpressions = node.expressions.map(normalizeExpression);
-      const missingExpressions = requirement.expressions.filter(
-        (expression) => !actualExpressions.includes(normalizeExpression(expression)),
-      );
-      return { node, missingFeatures, missingExpressions };
-    }).sort((left, right) => (left.missingFeatures.length + left.missingExpressions.length)
-      - (right.missingFeatures.length + right.missingExpressions.length));
-    const best = scored[0];
-    if (best && best.missingFeatures.length === 0 && best.missingExpressions.length === 0) {
-      matched.set(requirement.id, best.node);
+    const node = inventory.nodes.find((candidate) => candidate.alias === requirement.id);
+    if (!node) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_VISUAL_OBJECT_MISSING",
+        path: "/steps",
+        requirement_id: requirement.id,
+        message: `Planned visual object '${requirement.id}' must be created with write.as='${requirement.id}'`,
+        missing_features: requirement.required_features,
+        missing_expressions: requirement.expressions,
+      });
       continue;
     }
-    const nearest = best ? ` Closest ${requirement.surface} node is '${best.node.alias}'.` : "";
-    violations.push({
-      stage: "request_coverage",
-      code: "OLL_VISUAL_REQUIREMENT_UNSATISFIED",
-      path: "/steps",
-      requirement_id: requirement.id,
-      message: `Visual requirement '${requirement.id}' (${requirement.surface}) is not satisfied.${nearest}`,
-      missing_features: best?.missingFeatures ?? requirement.required_features,
-      missing_expressions: best?.missingExpressions ?? requirement.expressions,
-    });
+    const missingFeatures = node.surface === requirement.surface
+      ? requirement.required_features.filter((feature) => !node.features.has(feature))
+      : requirement.required_features;
+    const actualExpressions = node.expressions.map(normalizeExpression);
+    const missingExpressions = requirement.expressions.filter(
+      (expression) => !actualExpressions.includes(normalizeExpression(expression)),
+    );
+    const motionVariable = brief.shared_variable_requirements.find((variable) =>
+      variable.bound_visuals.includes(requirement.id));
+    const motionSatisfied = node.surface !== "geometry"
+      || !motionVariable
+      || geometryMotionSatisfied(node.content, requirement, motionVariable.variable);
+    if (node.surface === requirement.surface
+      && missingFeatures.length === 0
+      && missingExpressions.length === 0
+      && motionSatisfied) {
+      matched.set(requirement.id, node);
+      continue;
+    }
+    if (node.surface !== requirement.surface
+      || missingFeatures.length > 0
+      || missingExpressions.length > 0) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_VISUAL_REQUIREMENT_UNSATISFIED",
+        path: "/steps",
+        requirement_id: requirement.id,
+        message: `Planned visual object '${requirement.id}' must be a complete ${requirement.surface} node`,
+        missing_features: missingFeatures,
+        missing_expressions: missingExpressions,
+      });
+    }
+    if (!motionSatisfied) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_VISUAL_MOTION_UNSATISFIED",
+        path: "/steps",
+        requirement_id: requirement.id,
+        message: `Visual '${requirement.id}' must show '${requirement.motion_subject}' with ${requirement.motion_kind} motion driven by '${motionVariable?.variable}'`,
+      });
+    }
   }
   for (const [index, relationship] of brief.visual_relationships.entries()) {
     const from = matched.get(relationship.from);
@@ -2774,9 +3007,10 @@ function buildGenerationPrompt(
 本次允许使用的 OLL 能力如下；系统提示词中提到但未列入这里的 kind 或 action，本次不得使用。需要展示中间变化但 revise 未开放时，请新建下一个板书节点，不要猜测 revise.target：
 ${JSON.stringify({
     write_kinds: capabilityPlan.writeKinds,
-    actions: capabilityPlan.actions,
+    actions: capabilityPlan.actions.filter((action) => action !== "connect"),
     revise_kinds: capabilityPlan.reviseKinds,
     system_managed_variables: capabilityPlan.allowVariables,
+    system_managed_connections: brief.visual_relationships,
     bindings: capabilityPlan.bindingKinds,
     angle_control: capabilityPlan.allowAngleControl,
   }, null, 2)}
@@ -3283,6 +3517,183 @@ async function generateLesson(
     definitions: diagnostics.definitions,
   })}\n`);
 
+  const repairVisualComponent = async (
+    rawLesson: string,
+    generationViolations: GenerationViolation[],
+  ): Promise<AuthoringLesson | undefined> => {
+    if (generationViolations.length === 0) return undefined;
+    const localVisualCodes = new Set(["OLL_VISUAL_REQUIREMENT_UNSATISFIED", "OLL_VISUAL_MOTION_UNSATISFIED"]);
+    const requirementIds = new Set(generationViolations.flatMap((violation) =>
+      localVisualCodes.has(violation.code)
+        && typeof violation.requirement_id === "string"
+        ? [violation.requirement_id]
+        : []));
+    if (requirementIds.size !== 1 || generationViolations.some((violation) =>
+      !localVisualCodes.has(violation.code))) return undefined;
+    const requirementId = [...requirementIds][0];
+    const requirement = brief.visual_requirements.find((candidate) => candidate.id === requirementId);
+    if (!requirement) return undefined;
+
+    let candidate: unknown;
+    try {
+      candidate = JSON.parse(rawLesson);
+    } catch {
+      return undefined;
+    }
+    if (!isRecord(candidate) || !Array.isArray(candidate.steps)) return undefined;
+    const matches: Array<{ actions: unknown[]; index: number; action: Record<string, unknown> }> = [];
+    for (const step of candidate.steps) {
+      if (!isRecord(step) || !Array.isArray(step.beats)) continue;
+      for (const beat of step.beats) {
+        if (!isRecord(beat) || !Array.isArray(beat.actions)) continue;
+        beat.actions.forEach((action, index) => {
+          if (isRecord(action) && action.do === "write" && action.as === requirementId) {
+            matches.push({ actions: beat.actions as unknown[], index, action });
+          }
+        });
+      }
+    }
+    if (matches.length !== 1) return undefined;
+
+    const definitions = isRecord(responseSchema.$defs) ? responseSchema.$defs : {};
+    const actionDefinition = isRecord(definitions.action) ? definitions.action : {};
+    const variants = Array.isArray(actionDefinition.anyOf) ? actionDefinition.anyOf.filter(isRecord) : [];
+    const componentVariant = variants.find((variant) => {
+      const properties = isRecord(variant.properties) ? variant.properties : {};
+      const alias = isRecord(properties.as) && Array.isArray(properties.as.enum) ? properties.as.enum : [];
+      return alias.length === 1 && alias[0] === requirementId;
+    });
+    if (!componentVariant) return undefined;
+    const componentSchema = pruneUnusedDefinitions({
+      ...structuredClone(componentVariant),
+      $defs: structuredClone(definitions),
+    });
+    assertVertexSchemaCompatible(componentSchema);
+
+    const repairedRaw = await callStructuredModel(client, {
+      label: "lesson-component-repair",
+      turnId: input.turn_id,
+      systemPrompt: COMPONENT_REPAIR_SYSTEM_PROMPT,
+      prompt: JSON.stringify({
+        visual_requirement: requirement,
+        current_write_action: matches[0].action,
+        validation_errors: generationViolations,
+      }, null, 2),
+      responseSchema: componentSchema,
+      maxTokens: Math.min(client.maxTokens, 8_192),
+    });
+    let repairedAction: unknown;
+    try {
+      repairedAction = JSON.parse(repairedRaw);
+    } catch {
+      return undefined;
+    }
+    if (!isRecord(repairedAction)
+      || repairedAction.do !== "write"
+      || repairedAction.as !== requirementId
+      || repairedAction.kind !== requirement.surface) return undefined;
+    // A local visual repair is allowed to replace only the node's structured
+    // content. Identity, teaching role, timing, and placement remain owned by
+    // the already-validated lesson structure even if the model returns
+    // different top-level values.
+    matches[0].actions[matches[0].index] = {
+      ...matches[0].action,
+      content: repairedAction.content,
+    };
+    return validateGeneratedLesson(JSON.stringify(candidate), input, brief, capabilityPlan);
+  };
+
+  const repairOneBeat = async (
+    rawLesson: string,
+    generationViolations: GenerationViolation[],
+  ): Promise<AuthoringLesson | undefined> => {
+    const allowedCodes = new Set(["OLL_DUPLICATE_ALIAS", "OLL_MISSING_BEAT_FOCUS"]);
+    if (!generationViolations.some((violation) => violation.code === "OLL_DUPLICATE_ALIAS")
+      || generationViolations.some((violation) => !allowedCodes.has(violation.code))) return undefined;
+    const locations = generationViolations.flatMap((violation) => {
+      const match = /^\/steps\/(\d+)\/beats\/(\d+)(?:\/|$)/u.exec(violation.path);
+      return match ? [`${match[1]}:${match[2]}`] : [];
+    });
+    if (locations.length !== generationViolations.length || new Set(locations).size !== 1) return undefined;
+    const [stepIndex, beatIndex] = locations[0].split(":").map(Number);
+
+    let candidate: unknown;
+    try {
+      candidate = JSON.parse(rawLesson);
+    } catch {
+      return undefined;
+    }
+    if (!isRecord(candidate) || !Array.isArray(candidate.steps)) return undefined;
+    const targetStep = candidate.steps[stepIndex];
+    if (!isRecord(targetStep) || !Array.isArray(targetStep.beats)) return undefined;
+    const currentBeat = targetStep.beats[beatIndex];
+    if (!isRecord(currentBeat) || typeof currentBeat.key !== "string") return undefined;
+
+    const existingAliases = new Set<string>();
+    candidate.steps.forEach((step, candidateStepIndex) => {
+      if (!isRecord(step) || !Array.isArray(step.beats)) return;
+      step.beats.forEach((beat, candidateBeatIndex) => {
+        const beforeTarget = candidateStepIndex < stepIndex
+          || (candidateStepIndex === stepIndex && candidateBeatIndex < beatIndex);
+        if (!beforeTarget || !isRecord(beat) || !Array.isArray(beat.actions)) return;
+        for (const action of beat.actions) {
+          if (isRecord(action) && typeof action.as === "string") existingAliases.add(action.as);
+        }
+      });
+    });
+
+    const definitions = isRecord(responseSchema.$defs) ? structuredClone(responseSchema.$defs) : {};
+    const resolveDefinition = (schema: unknown): Record<string, unknown> | undefined => {
+      if (!isRecord(schema)) return undefined;
+      if (typeof schema.$ref !== "string" || !schema.$ref.startsWith("#/$defs/")) return schema;
+      const name = schema.$ref.slice("#/$defs/".length).split("/", 1)[0];
+      return isRecord(definitions[name]) ? definitions[name] : undefined;
+    };
+    const rootProperties = isRecord(responseSchema.properties) ? responseSchema.properties : {};
+    const stepsSchema = isRecord(rootProperties.steps) ? rootProperties.steps : {};
+    const stepSchema = resolveDefinition(stepsSchema.items) ?? {};
+    const stepProperties = isRecord(stepSchema.properties) ? stepSchema.properties : {};
+    const beatsSchema = isRecord(stepProperties.beats) ? stepProperties.beats : {};
+    const beatTemplate = resolveDefinition(beatsSchema.items);
+    const actionDefinition = isRecord(definitions.action) ? definitions.action : undefined;
+    if (!beatTemplate || !actionDefinition || !Array.isArray(actionDefinition.anyOf)) return undefined;
+    actionDefinition.anyOf = actionDefinition.anyOf.filter((variant) => {
+      if (!isRecord(variant) || !isRecord(variant.properties) || !isRecord(variant.properties.as)) return true;
+      const aliases = variant.properties.as.enum;
+      return !Array.isArray(aliases)
+        || aliases.length !== 1
+        || typeof aliases[0] !== "string"
+        || !existingAliases.has(aliases[0]);
+    });
+    const beatSchema = pruneUnusedDefinitions({
+      ...structuredClone(beatTemplate),
+      $defs: definitions,
+    });
+    assertVertexSchemaCompatible(beatSchema);
+
+    const repairedRaw = await callStructuredModel(client, {
+      label: "lesson-beat-repair",
+      turnId: input.turn_id,
+      systemPrompt: BEAT_REPAIR_SYSTEM_PROMPT,
+      prompt: JSON.stringify({
+        existing_aliases: [...existingAliases].sort(),
+        current_beat: currentBeat,
+        validation_errors: generationViolations,
+      }, null, 2),
+      responseSchema: beatSchema,
+      maxTokens: Math.min(client.maxTokens, 12_288),
+    });
+    let repairedBeat: unknown;
+    try {
+      repairedBeat = JSON.parse(repairedRaw);
+    } catch {
+      return undefined;
+    }
+    if (!isRecord(repairedBeat) || repairedBeat.key !== currentBeat.key) return undefined;
+    targetStep.beats[beatIndex] = repairedBeat;
+    return validateGeneratedLesson(JSON.stringify(candidate), input, brief, capabilityPlan);
+  };
+
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await callStructuredModel(client, {
       label: "lesson-authoring",
@@ -3303,6 +3714,33 @@ async function generateLesson(
       process.stderr.write(`learning-coach: rejected lesson generation ${attempt}: ${formatViolations(error.violations)}\n`);
       if (process.env.OLL_DEBUG_GENERATION === "1") {
         process.stderr.write(`learning-coach: rejected generation ${attempt}: ${raw.slice(0, 16_000)}\n`);
+      }
+      try {
+        const repairedLesson = await repairVisualComponent(raw, error.violations);
+        if (repairedLesson) {
+          process.stderr.write(`learning-coach: repaired one visual object after lesson generation ${attempt}\n`);
+          return {
+            lesson: repairedLesson,
+            attempts: attempt,
+            capabilityPlan,
+            schema: diagnostics,
+          };
+        }
+        const repairedBeatLesson = await repairOneBeat(raw, error.violations);
+        if (repairedBeatLesson) {
+          process.stderr.write(`learning-coach: repaired one Beat after lesson generation ${attempt}\n`);
+          return {
+            lesson: repairedBeatLesson,
+            attempts: attempt,
+            capabilityPlan,
+            schema: diagnostics,
+          };
+        }
+      } catch (repairError) {
+        const message = repairError instanceof GeneratedLessonError
+          ? formatViolations(repairError.violations)
+          : safeError(repairError);
+        process.stderr.write(`learning-coach: local visual repair did not validate: ${message}\n`);
       }
       if (attempt === maxAttempts) {
         throw new Error(`OLL generation failed validation after ${maxAttempts} attempt(s). Last error: ${error.message}`);

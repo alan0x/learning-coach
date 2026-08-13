@@ -8,7 +8,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { probeVertexSchema } from "../main";
+import { buildVertexSchemaContract, probeVertexSchema } from "../main";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -100,7 +100,7 @@ validPlotLesson.lesson.goals = ["结合函数图像解释单位圆与三角函�
 validPlotLesson.steps[0].purpose = "画出正弦和余弦曲线并建立与单位圆坐标的联系";
 validPlotLesson.steps[0].beats[0].actions[0] = {
   do: "write",
-  as: "trig-curves",
+  as: "sine-plot",
   kind: "plot",
   role: "diagram",
   content: {
@@ -115,15 +115,15 @@ validPlotLesson.steps[0].beats[0].actions[0] = {
   },
   place: { relation: "new_region" },
 };
-validPlotLesson.steps[0].beats[0].actions[1].targets = ["trig-curves"];
+validPlotLesson.steps[0].beats[0].actions[1].targets = ["sine-plot"];
 validPlotLesson.close = {
   summary: "已经结合函数图像解释单位圆与三角函数的关系。",
-  focus: ["trig-curves"],
+  focus: ["sine-plot"],
 };
 
 const unitCircleGeometryAction = {
   do: "write",
-  as: "unit-circle",
+  as: "circle-geometry",
   kind: "geometry",
   role: "diagram",
   content: {
@@ -135,7 +135,7 @@ const unitCircleGeometryAction = {
     },
     points: [
       { as: "origin", x: 0, y: 0, label: "O" },
-      { as: "point-p", x: .5, y: .8660254, label: "P(cos θ, sin θ)" },
+      { as: "point-p", x: .5, y: .8660254, label: "圆上点 P(cos θ, sin θ)" },
       { as: "foot", x: .5, y: 0 },
     ],
     circles: [
@@ -185,8 +185,8 @@ validUnitCirclePlotLesson.steps[0].beats[0].actions.unshift(interactiveUnitCircl
 validUnitCirclePlotLesson.steps[0].beats[0].actions.splice(2, 0, {
   do: "connect",
   as: "rotation-to-wave",
-  from: "unit-circle",
-  to: "trig-curves",
+  from: "circle-geometry",
+  to: "sine-plot",
   relation: "纵坐标随角度展开",
 });
 const unitCircleAnimationAction = {
@@ -205,7 +205,7 @@ validUnitCirclePlotLesson.steps[0].beats.push({
     {
       do: "focus",
       when: "after_speech",
-      targets: ["unit-circle", "trig-curves"],
+      targets: ["circle-geometry", "sine-plot"],
       intent: "current_step",
     },
   ],
@@ -301,6 +301,8 @@ const unitCirclePlotBrief = {
       ],
       expressions: [],
       request_item_ids: ["show-unit-circle", "show-continuous-change"],
+      motion_kind: "angular_point",
+      motion_subject: "圆上点",
     },
     {
       id: "sine-plot",
@@ -372,9 +374,11 @@ const springOscillationBrief = {
       id: "spring-motion",
       surface: "geometry",
       purpose: "展示同一时刻弹簧端点相对平衡位置的位移",
-      required_features: ["coordinate_axes", "annotated_points"],
+      required_features: ["coordinate_axes", "annotated_points", "line_segments"],
       expressions: [],
       request_item_ids: ["explain-oscillation", "show-motion"],
+      motion_kind: "linear_point",
+      motion_subject: "振子",
     },
     {
       id: "cosine-displacement",
@@ -506,6 +510,49 @@ const genericCircleBrief = {
   unhandled_request_items: [],
 };
 
+const contractInput = {
+  turn_id: "contract-test-turn",
+  learner_request: "请结合单位圆和 y=sin x 的函数图像，解释角度旋转如何变成周期波动。",
+  request_source: "self_contained",
+  language: "zh-CN",
+};
+
+test("planning rejects a relationship from a visual object to itself", () => {
+  const brief = structuredClone(unitCirclePlotBrief);
+  brief.visual_relationships[0].to = brief.visual_relationships[0].from;
+  assert.throws(
+    () => buildVertexSchemaContract(contractInput, brief),
+    /relationship endpoints must reference two different visual requirements/,
+  );
+});
+
+test("authoring Schema gives every planned visual object an exact write alias", () => {
+  const brief = structuredClone(unitCirclePlotBrief);
+  brief.visual_requirements.splice(1, 0, {
+    id: "projection-geometry",
+    surface: "geometry",
+    purpose: "单独展示纵坐标投影",
+    required_features: ["coordinate_axes", "projection_segment"],
+    expressions: [],
+    request_item_ids: ["show-unit-circle"],
+  });
+  const { schema } = buildVertexSchemaContract(contractInput, brief);
+  const writeVariants = schema.$defs.action.anyOf.filter(
+    (variant) => variant.properties.do.enum[0] === "write",
+  );
+  const plannedAliases = writeVariants
+    .filter((variant) => variant.properties.as?.enum)
+    .map((variant) => variant.properties.as.enum[0]);
+  assert.deepEqual(
+    plannedAliases.sort(),
+    ["circle-geometry", "projection-geometry", "sine-plot"],
+  );
+  assert.equal(
+    writeVariants.filter((variant) => variant.properties.kind.enum[0] === "geometry").length,
+    2,
+  );
+});
+
 function isLessonBriefRequest(body) {
   return /课堂需求.*规划器/u.test(body.systemInstruction.parts[0].text);
 }
@@ -514,8 +561,19 @@ function isLessonBriefVerificationRequest(body) {
   return body.systemInstruction.parts[0].text.includes("要求覆盖复核器");
 }
 
+function isComponentRepairRequest(body) {
+  return body.systemInstruction.parts[0].text.includes("局部视觉对象修复器");
+}
+
+function isBeatRepairRequest(body) {
+  return body.systemInstruction.parts[0].text.includes("局部教学节拍修复器");
+}
+
 function isAuthoringRequest(body) {
-  return !isLessonBriefRequest(body) && !isLessonBriefVerificationRequest(body);
+  return !isLessonBriefRequest(body)
+    && !isLessonBriefVerificationRequest(body)
+    && !isComponentRepairRequest(body)
+    && !isBeatRepairRequest(body);
 }
 
 function sourceRefsFromPlanningRequest(body) {
@@ -665,7 +723,7 @@ test("tool shares one total deadline across model stages and reports the timed-o
       if (response.destroyed) return;
       response.writeHead(200, { "content-type": "application/json" });
       response.end(vertexPayload(emptyLessonBrief));
-    }, 120);
+    }, 1_200);
   });
 
   try {
@@ -682,7 +740,9 @@ test("tool shares one total deadline across model stages and reports the timed-o
       },
       workDirectory,
       environment: {
-        OLL_TOTAL_TIMEOUT_MS: "40",
+        // Leave enough room for process startup, RSA signing, and the local
+        // token exchange so this test deterministically reaches the model call.
+        OLL_TOTAL_TIMEOUT_MS: "500",
         OLL_TIMEOUT_MS: "1000",
         VERTEX_REQUEST_ATTEMPTS: "1",
       },
@@ -797,7 +857,7 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
     assert.equal(requestSchema.properties.lesson.properties.title.type, "string");
     assert.equal(requestSchema.properties.steps.type, "array");
     assert.equal(requestSchema.properties.steps.items.$ref, "#/$defs/step");
-    assert.equal(requestSchema.$defs.action.anyOf.length, 10);
+    assert.equal(requestSchema.$defs.action.anyOf.length, 9);
     const writeVariants = requestSchema.$defs.action.anyOf.filter(
       (variant) => variant.properties.do.enum[0] === "write",
     );
@@ -831,6 +891,146 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
 
     const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
     assert.deepEqual(artifact, validLesson);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("tool repairs one incomplete visual object without regenerating the lesson", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-component-repair-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const generationRequests = [];
+  const invalidLesson = structuredClone(validPlotLesson);
+  invalidLesson.steps[0].beats[0].actions[0].content.curves[0].expression = "x";
+  const repairedWrite = structuredClone(validPlotLesson.steps[0].beats[0].actions[0]);
+  repairedWrite.role = "example";
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token", expires_in: 3600 }));
+      return;
+    }
+    const parsedBody = JSON.parse(body);
+    generationRequests.push(parsedBody);
+    const value = isComponentRepairRequest(parsedBody)
+      ? repairedWrite
+      : modelValueForRequest(parsedBody, invalidLesson);
+    response.end(vertexPayload(value));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const result = await runTool({
+      baseUrl,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `${baseUrl}/token`,
+      },
+      workDirectory,
+      input: { learner_request: "请用正弦函数图像解释周期。" },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(generationRequests.filter(isAuthoringRequest).length, 1);
+    const repairRequests = generationRequests.filter(isComponentRepairRequest);
+    assert.equal(repairRequests.length, 1);
+    assert.deepEqual(repairRequests[0].generationConfig.responseJsonSchema.properties.as.enum, ["sine-plot"]);
+    assert.match(repairRequests[0].contents[0].parts[0].text, /OLL_VISUAL_REQUIREMENT_UNSATISFIED/);
+    const protocol = JSON.parse(result.stdout);
+    assert.deepEqual(JSON.parse(await readFile(protocol.files_to_send[0], "utf8")), validPlotLesson);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("tool repairs one invalid beat without regenerating the lesson", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-beat-repair-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const generationRequests = [];
+  const invalidLesson = structuredClone(validPlotLesson);
+  invalidLesson.steps[0].beats.push({
+    key: "explain-period",
+    say: "再用公式总结周期。",
+    delivery: "patient",
+    actions: [structuredClone(validPlotLesson.steps[0].beats[0].actions[0])],
+  });
+  const repairedBeat = {
+    key: "explain-period",
+    say: "再用公式总结周期。",
+    delivery: "patient",
+    actions: [
+      {
+        do: "write",
+        as: "period-law",
+        kind: "math",
+        role: "conclusion",
+        content: { latex: "T = 2\\pi" },
+        place: { relation: "below", anchor: "sine-plot" },
+      },
+      {
+        do: "focus",
+        when: "after_speech",
+        targets: ["period-law", "sine-plot"],
+        intent: "current_step",
+      },
+    ],
+  };
+  const expectedLesson = structuredClone(validPlotLesson);
+  expectedLesson.steps[0].beats.push(repairedBeat);
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token", expires_in: 3600 }));
+      return;
+    }
+    const parsedBody = JSON.parse(body);
+    generationRequests.push(parsedBody);
+    const value = isBeatRepairRequest(parsedBody)
+      ? repairedBeat
+      : modelValueForRequest(parsedBody, invalidLesson);
+    response.end(vertexPayload(value));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const result = await runTool({
+      baseUrl,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `${baseUrl}/token`,
+      },
+      workDirectory,
+      input: { learner_request: "请用正弦函数图像解释周期。" },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(generationRequests.filter(isAuthoringRequest).length, 1);
+    const repairRequests = generationRequests.filter(isBeatRepairRequest);
+    assert.equal(repairRequests.length, 1);
+    const repairVariants = repairRequests[0].generationConfig.responseJsonSchema.$defs.action.anyOf;
+    assert.equal(repairVariants.some((variant) => variant.properties.as?.enum?.[0] === "sine-plot"), false);
+    assert.match(repairRequests[0].contents[0].parts[0].text, /OLL_DUPLICATE_ALIAS/);
+    assert.match(repairRequests[0].contents[0].parts[0].text, /OLL_MISSING_BEAT_FOCUS/);
+    const protocol = JSON.parse(result.stdout);
+    assert.deepEqual(JSON.parse(await readFile(protocol.files_to_send[0], "utf8")), expectedLesson);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -1172,13 +1372,94 @@ test("a natural spring request keeps user requirements separate from optional te
       "learner_request:3",
     ]);
     assert.match(plannerRequest.contents[0].parts[0].text, /"teaching_advice"/);
+    const plannerInstructions = plannerRequest.systemInstruction.parts[0].text;
+    assert.match(plannerInstructions, /可由数值点和线段忠实表达的简单二维物体运动/u);
+    assert.match(plannerInstructions, /diagram 是静态语义关系图，不能由共享变量驱动/u);
+    assert.match(plannerInstructions, /无法用这些图元忠实表达.*unsupported_feature/u);
+    assert.match(plannerInstructions, /line_segments.*弹簧.*连杆/u);
+    const verifierInstructions = modelRequests.find(isLessonBriefVerificationRequest)
+      .systemInstruction.parts[0].text;
+    assert.match(verifierInstructions, /motion_subject.*用户要求观看的运动主体/u);
+    assert.match(verifierInstructions, /类比.*不能作为主体演示/u);
     assert.match(result.stderr, /lesson-brief-review-suggestions/);
     const protocol = JSON.parse(result.stdout);
     const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
     assert.equal(artifact.lesson.variables[0].as, "t");
     assert.equal(artifact.lesson.variables[0].control.kind, "slider");
     assert.equal(artifact.steps[0].beats[0].actions[0].as, "spring-motion");
+    assert.equal(artifact.steps[0].beats[0].actions[0].content.segments.length, 1);
     assert.equal(artifact.steps[0].beats[0].actions[1].content.curves[0].expression, "cos(x)");
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("a rotating-circle analogy cannot satisfy direct linear spring motion", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-spring-subject-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const invalidLesson = structuredClone(modelAuthoredSpringOscillationLesson);
+  const analogy = structuredClone(unitCircleGeometryAction);
+  analogy.as = "spring-motion";
+  analogy.content.bindings = [
+    { target: "point-p.x", expression: "cos(t)" },
+    { target: "point-p.y", expression: "sin(t)" },
+    { target: "foot.x", expression: "cos(t)" },
+  ];
+  invalidLesson.steps[0].beats[0].actions[0] = analogy;
+  const repairedWrite = structuredClone(modelAuthoredSpringOscillationLesson.steps[0].beats[0].actions[0]);
+  const modelRequests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    const parsedBody = JSON.parse(body);
+    modelRequests.push(parsedBody);
+    const value = isComponentRepairRequest(parsedBody)
+      ? repairedWrite
+      : isLessonBriefRequest(parsedBody)
+        ? springOscillationBrief
+        : isLessonBriefVerificationRequest(parsedBody)
+          ? { missing: [], contradictions: [], suggestions: [] }
+          : invalidLesson;
+    response.end(vertexPayload(value));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const result = await runTool({
+      baseUrl,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `${baseUrl}/token`,
+      },
+      workDirectory,
+      input: {
+        learner_request: "我还是不太明白弹簧为什么会来回运动，也不明白它为什么能用余弦函数表示。你能边演示边讲给我看吗？最好让我自己拖着试一试。",
+      },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
+    const repairRequests = modelRequests.filter(isComponentRepairRequest);
+    assert.equal(repairRequests.length, 1);
+    assert.match(repairRequests[0].contents[0].parts[0].text, /OLL_VISUAL_MOTION_UNSATISFIED/);
+    const protocol = JSON.parse(result.stdout);
+    const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    const geometry = artifact.steps.flatMap((step) => step.beats)
+      .flatMap((beat) => beat.actions)
+      .find((action) => action.do === "write" && action.as === "spring-motion");
+    assert.equal(geometry.content.points.some((point) => point.label === "振子"), true);
+    assert.equal(geometry.content.bindings.some((binding) => binding.target === "mass.x"), true);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -1453,7 +1734,7 @@ test("tool retries until an explicitly requested function image contains a real 
     assert.equal(authorRequests.length, 2);
     assert.match(
       authorRequests[1].contents[0].parts[0].text,
-      /OLL_VISUAL_REQUIREMENT_UNSATISFIED/,
+      /OLL_VISUAL_OBJECT_MISSING/,
     );
     assert.match(authorRequests[1].contents[0].parts[0].text, /function_curve/);
     const protocol = JSON.parse(result.stdout);
@@ -1518,7 +1799,7 @@ test("tool rejects a semantic node diagram that pretends to be a unit circle", a
     const authorRequests = generationRequests.filter(isAuthoringRequest);
     assert.equal(generationRequests.length, 4);
     assert.equal(authorRequests.length, 2);
-    assert.match(authorRequests[1].contents[0].parts[0].text, /OLL_VISUAL_REQUIREMENT_UNSATISFIED/);
+    assert.match(authorRequests[1].contents[0].parts[0].text, /OLL_VISUAL_OBJECT_MISSING/);
     assert.match(authorRequests[1].contents[0].parts[0].text, /circle-geometry/);
     const protocol = JSON.parse(result.stdout);
     const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
@@ -1553,6 +1834,86 @@ test("tool rejects a semantic node diagram that pretends to be a unit circle", a
       value: Math.PI * 2,
       easing: "linear",
       duration_intent: "extended",
+    });
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("tool deterministically lowers planned connections and circle controls", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-lowering-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const modelRequests = [];
+  const authoredLesson = structuredClone(modelAuthoredUnitCirclePlotLesson);
+  const authoredGeometry = authoredLesson.steps[0].beats[0].actions.find(
+    (action) => action.do === "write" && action.as === "circle-geometry",
+  );
+  authoredGeometry.content.arcs = [];
+  authoredGeometry.content.bindings = authoredGeometry.content.bindings.filter(
+    (binding) => !binding.target.endsWith(".end_angle"),
+  );
+  for (const beat of authoredLesson.steps[0].beats) {
+    beat.actions = beat.actions.filter((action) => action.do !== "connect");
+  }
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    const parsedBody = JSON.parse(body);
+    modelRequests.push(parsedBody);
+    response.end(vertexPayload(modelValueForRequest(parsedBody, authoredLesson)));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const result = await runTool({
+      baseUrl,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `${baseUrl}/token`,
+      },
+      workDirectory,
+      input: {
+        learner_request: "请结合单位圆和 y=sin x 的函数图像，解释角度旋转如何变成周期波动。",
+      },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
+    const authoringSchema = modelRequests.find(isAuthoringRequest)
+      .generationConfig.responseJsonSchema;
+    assert.equal(authoringSchema.$defs.action.anyOf.some(
+      (variant) => variant.properties.do.enum[0] === "connect",
+    ), false);
+    const protocol = JSON.parse(result.stdout);
+    const lesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    const actions = lesson.steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions));
+    assert.deepEqual(actions.find((action) => action.do === "connect"), {
+      do: "connect",
+      as: "circle-to-wave",
+      from: "circle-geometry",
+      to: "sine-plot",
+      relation: "maps_to",
+    });
+    const geometry = actions.find((action) => action.do === "write" && action.as === "circle-geometry");
+    assert.ok(geometry.content.arcs.length > 0);
+    assert.equal(geometry.content.bindings.some(
+      (binding) => binding.target.endsWith(".end_angle") && binding.expression === "theta",
+    ), true);
+    assert.deepEqual(geometry.content.points[1].interaction, {
+      kind: "angle_control",
+      variable: "theta",
+      center: "origin",
     });
   } finally {
     await new Promise((done) => server.close(done));
@@ -1738,7 +2099,7 @@ test("tool moves animation out of a busy explanation Beat", async () => {
   }
 });
 
-test("tool repairs only the missing angle arc while preserving a valid geometry candidate", async () => {
+test("tool lowers the planned angle arc without regenerating a valid lesson", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-angle-arc-"));
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const missingArcLesson = structuredClone(validUnitCirclePlotLesson);
@@ -1746,9 +2107,7 @@ test("tool repairs only the missing angle arc while preserving a valid geometry 
     (action) => action.do === "write" && action.kind === "geometry",
   );
   delete geometry.content.arcs;
-  const authorResponses = [missingArcLesson, validUnitCirclePlotLesson];
   const modelRequests = [];
-  let authorResponseIndex = 0;
   const server = createServer(async (request, response) => {
     let body = "";
     request.setEncoding("utf8");
@@ -1760,10 +2119,7 @@ test("tool repairs only the missing angle arc while preserving a valid geometry 
     }
     const parsedBody = JSON.parse(body);
     modelRequests.push(parsedBody);
-    response.end(vertexPayload(modelValueForRequest(
-      parsedBody,
-      isAuthoringRequest(parsedBody) ? authorResponses[authorResponseIndex++] : validLesson,
-    )));
+    response.end(vertexPayload(modelValueForRequest(parsedBody, missingArcLesson)));
   });
 
   try {
@@ -1787,22 +2143,15 @@ test("tool repairs only the missing angle arc while preserving a valid geometry 
 
     assert.equal(result.exitCode, 0, result.stderr);
     const authorRequests = modelRequests.filter(isAuthoringRequest);
-    assert.equal(authorRequests.length, 2);
+    assert.equal(authorRequests.length, 1);
     const responseSchema = authorRequests[0].generationConfig.responseJsonSchema;
     const geometryVariant = responseSchema.$defs.action.anyOf.find(
       (variant) => variant.properties.kind?.enum?.[0] === "geometry",
     );
     assert.ok(geometryVariant.properties.content.required.includes("arcs"));
     assert.equal(geometryVariant.properties.content.properties.arcs.minItems, 1);
-    const repairPrompt = authorRequests[1].contents[0].parts[0].text;
-    assert.match(repairPrompt, /上一份候选 OLL/);
-    assert.match(repairPrompt, /"as":"unit-circle"/);
-    const violationSection = repairPrompt.split("精确校验错误：")[1];
-    assert.match(violationSection, /OLL_VISUAL_REQUIREMENT_UNSATISFIED/);
-    assert.match(violationSection, /angle_arc/);
-    assert.doesNotMatch(violationSection, /projection_segment/);
     const protocol = JSON.parse(result.stdout);
-    assert.equal(protocol.generation_attempts, 2);
+    assert.equal(protocol.generation_attempts, 1);
     const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
     const repairedGeometry = artifact.steps[0].beats[0].actions.find(
       (action) => action.do === "write" && action.kind === "geometry",
@@ -1820,10 +2169,10 @@ test("tool does not impose an angle arc on a generic circle requirement", async 
   const genericCircleLesson = structuredClone(validLesson);
   const circleAction = structuredClone(unitCircleGeometryAction);
   delete circleAction.content.arcs;
-  circleAction.as = "coordinate-circle";
+  circleAction.as = "circle-geometry";
   genericCircleLesson.steps[0].beats[0].actions[0] = circleAction;
-  genericCircleLesson.steps[0].beats[0].actions[1].targets = ["coordinate-circle"];
-  genericCircleLesson.close.focus = ["coordinate-circle"];
+  genericCircleLesson.steps[0].beats[0].actions[1].targets = ["circle-geometry"];
+  genericCircleLesson.close.focus = ["circle-geometry"];
   const modelRequests = [];
   const server = createServer(async (request, response) => {
     let body = "";

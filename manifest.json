@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,

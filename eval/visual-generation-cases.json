@@ -32,7 +32,7 @@
       "kinds": ["geometry", "plot"],
       "geometry_fields": ["segments"],
       "geometry_text_any_groups": [["弹簧", "振子"]],
-      "lesson_text_any_groups": [["恢复力", "弹性力"], ["平衡位置", "平衡点"]],
+      "lesson_text_any_groups": [["回复力", "恢复力", "弹力", "弹性力"], ["平衡位置", "平衡点"]],
       "plot_expressions": ["cos(x)"],
       "requires_connect": true,
       "shared_variable": {
