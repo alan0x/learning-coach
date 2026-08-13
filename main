@@ -29,9 +29,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/codegen/code.js
+// node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -183,9 +183,9 @@ var require_code = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/codegen/scope.js
+// node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -328,9 +328,9 @@ var require_scope = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/codegen/index.js
+// node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -1048,9 +1048,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/util.js
+// node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/util.js"(exports) {
+  "node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1215,9 +1215,9 @@ var require_util = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/names.js
+// node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/names.js"(exports) {
+  "node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1254,9 +1254,9 @@ var require_names = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/errors.js
+// node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/errors.js"(exports) {
+  "node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1376,9 +1376,9 @@ var require_errors = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/boolSchema.js
+// node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1427,9 +1427,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/rules.js
+// node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/rules.js"(exports) {
+  "node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1458,9 +1458,9 @@ var require_rules = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/applicability.js
+// node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1481,9 +1481,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/dataType.js
+// node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1665,9 +1665,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/defaults.js
+// node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1702,9 +1702,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/code.js
+// node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1835,9 +1835,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/keyword.js
+// node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1953,9 +1953,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/subschema.js
+// node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2036,9 +2036,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/fast-deep-equal/index.js
+// node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "../octos-lesson-language/node_modules/fast-deep-equal/index.js"(exports, module) {
+  "node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2071,9 +2071,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/json-schema-traverse/index.js
+// node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "../octos-lesson-language/node_modules/json-schema-traverse/index.js"(exports, module) {
+  "node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2159,9 +2159,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/resolve.js
+// node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2315,9 +2315,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/index.js
+// node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2823,9 +2823,9 @@ var require_validate = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/runtime/validation_error.js
+// node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2839,9 +2839,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/ref_error.js
+// node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2856,9 +2856,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/compile/index.js
+// node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/compile/index.js"(exports) {
+  "node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3080,9 +3080,9 @@ var require_compile = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/refs/data.json
+// node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3099,9 +3099,9 @@ var require_data = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/fast-uri/lib/utils.js
+// node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "../octos-lesson-language/node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -3412,9 +3412,9 @@ var require_utils = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/fast-uri/lib/schemes.js
+// node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "../octos-lesson-language/node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
     var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
@@ -3622,9 +3622,9 @@ var require_schemes = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/fast-uri/index.js
+// node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "../octos-lesson-language/node_modules/fast-uri/index.js"(exports, module) {
+  "node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -3640,7 +3640,12 @@ var require_fast_uri = __commonJS({
     }
     function resolve2(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
-      const resolved = resolveComponent(parse(baseURI, schemelessOptions), parse(relativeURI, schemelessOptions), schemelessOptions, true);
+      const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
+      const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
+      if (baseMalformed || relativeMalformed) {
+        throw new Error(baseParsed.error || relativeParsed.error || "URI is malformed.");
+      }
+      const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true);
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
@@ -3766,6 +3771,7 @@ var require_fast_uri = __commonJS({
     }
     var URI_PARSE = /^(?:([^#/:?]+):)?(?:\/\/((?:([^#/?@]*)@)?(\[[^#/?\]]+\]|[^#/:?]*)(?::(\d*))?))?([^#?]*)(?:\?([^#]*))?(?:#((?:.|[\n\r])*))?/u;
     var AUTHORITY_PREFIX = /^(?:[^#/:?]+:)?\/\/([^/?#]*)/;
+    var AUTHORITY_INTRODUCER_REGION = /^(?:[^#/:?]+:)?([/\\\t\n\r]*)/;
     function getParseError(parsed, matches) {
       if (matches[2] !== void 0 && parsed.path && parsed.path[0] !== "/") {
         return 'URI path must start with "/" when authority is present.';
@@ -3799,6 +3805,20 @@ var require_fast_uri = __commonJS({
       if (authorityMatch !== null && authorityMatch[1].indexOf("\\") !== -1) {
         parsed.error = "URI authority must not contain a literal backslash.";
         malformedAuthorityOrPort = true;
+      }
+      const introducerMatch = uri.match(AUTHORITY_INTRODUCER_REGION);
+      if (introducerMatch !== null) {
+        const region = introducerMatch[1];
+        const normalizedRegion = region.replace(/[\t\n\r]/g, "");
+        if (normalizedRegion.length >= 2) {
+          if (normalizedRegion.slice(0, 2) !== "//") {
+            parsed.error = parsed.error || "URI authority must not contain a literal backslash.";
+            malformedAuthorityOrPort = true;
+          } else if (region.length !== normalizedRegion.length) {
+            parsed.error = parsed.error || "URI authority introducer must not contain whitespace.";
+            malformedAuthorityOrPort = true;
+          }
+        }
       }
       const matches = uri.match(URI_PARSE);
       if (matches) {
@@ -3914,9 +3934,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/runtime/uri.js
+// node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -3925,9 +3945,9 @@ var require_uri = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/core.js
+// node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/core.js"(exports) {
+  "node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4536,9 +4556,9 @@ var require_core = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/id.js
+// node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4551,9 +4571,9 @@ var require_id = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/ref.js
+// node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4673,9 +4693,9 @@ var require_ref = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/index.js
+// node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -4694,9 +4714,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4726,9 +4746,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4754,9 +4774,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/runtime/ucs2length.js
+// node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str) {
@@ -4780,9 +4800,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4812,9 +4832,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/pattern.js
+// node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4849,9 +4869,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4878,9 +4898,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/required.js
+// node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4960,9 +4980,9 @@ var require_required = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4989,9 +5009,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/runtime/equal.js
+// node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5000,9 +5020,9 @@ var require_equal = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5067,9 +5087,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/const.js
+// node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5096,9 +5116,9 @@ var require_const = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/enum.js
+// node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5145,9 +5165,9 @@ var require_enum = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/index.js
+// node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5183,9 +5203,9 @@ var require_validation = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5236,9 +5256,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/items.js
+// node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5293,9 +5313,9 @@ var require_items = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5310,9 +5330,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5345,9 +5365,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/contains.js
+// node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5439,9 +5459,9 @@ var require_contains = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5533,9 +5553,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5576,9 +5596,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5682,9 +5702,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/properties.js
+// node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -5740,9 +5760,9 @@ var require_properties = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5814,9 +5834,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/not.js
+// node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5845,9 +5865,9 @@ var require_not = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5862,9 +5882,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5920,9 +5940,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5947,9 +5967,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/if.js
+// node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6016,9 +6036,9 @@ var require_if = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6034,9 +6054,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/index.js
+// node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6082,9 +6102,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
 var require_dynamicAnchor = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicAnchor = void 0;
@@ -6117,9 +6137,9 @@ var require_dynamicAnchor = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
 var require_dynamicRef = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicRef = void 0;
@@ -6163,9 +6183,9 @@ var require_dynamicRef = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
 var require_recursiveAnchor = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6184,9 +6204,9 @@ var require_recursiveAnchor = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
 var require_recursiveRef = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicRef_1 = require_dynamicRef();
@@ -6199,9 +6219,9 @@ var require_recursiveRef = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/index.js
+// node_modules/ajv/dist/vocabularies/dynamic/index.js
 var require_dynamic = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6213,9 +6233,9 @@ var require_dynamic = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
+// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
 var require_dependentRequired = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6230,9 +6250,9 @@ var require_dependentRequired = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
+// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
 var require_dependentSchemas = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6246,9 +6266,9 @@ var require_dependentSchemas = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitContains.js
+// node_modules/ajv/dist/vocabularies/validation/limitContains.js
 var require_limitContains = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6266,9 +6286,9 @@ var require_limitContains = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/next.js
+// node_modules/ajv/dist/vocabularies/next.js
 var require_next = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/next.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependentRequired_1 = require_dependentRequired();
@@ -6279,9 +6299,9 @@ var require_next = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
 var require_unevaluatedProperties = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6345,9 +6365,9 @@ var require_unevaluatedProperties = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
 var require_unevaluatedItems = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6389,9 +6409,9 @@ var require_unevaluatedItems = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/index.js
+// node_modules/ajv/dist/vocabularies/unevaluated/index.js
 var require_unevaluated = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var unevaluatedProperties_1 = require_unevaluatedProperties();
@@ -6401,9 +6421,9 @@ var require_unevaluated = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/format/format.js
+// node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6491,9 +6511,9 @@ var require_format = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/format/index.js
+// node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6502,9 +6522,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/metadata.js
+// node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6525,9 +6545,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/draft2020.js
+// node_modules/ajv/dist/vocabularies/draft2020.js
 var require_draft2020 = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6553,9 +6573,9 @@ var require_draft2020 = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/discriminator/types.js
+// node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6567,9 +6587,9 @@ var require_types = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/discriminator/index.js
+// node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6672,9 +6692,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
 var require_schema = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/schema",
@@ -6732,9 +6752,9 @@ var require_schema = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
 var require_applicator2 = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/applicator",
@@ -6785,9 +6805,9 @@ var require_applicator2 = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
 var require_unevaluated2 = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
@@ -6805,9 +6825,9 @@ var require_unevaluated2 = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
 var require_content = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/content",
@@ -6826,9 +6846,9 @@ var require_content = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
 var require_core3 = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/core",
@@ -6882,9 +6902,9 @@ var require_core3 = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
 var require_format_annotation = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
@@ -6901,9 +6921,9 @@ var require_format_annotation = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
 var require_meta_data = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
@@ -6942,9 +6962,9 @@ var require_meta_data = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
 var require_validation2 = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/validation",
@@ -7037,9 +7057,9 @@ var require_validation2 = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/index.js
+// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
 var require_json_schema_2020_12 = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var metaSchema = require_schema();
@@ -7072,9 +7092,9 @@ var require_json_schema_2020_12 = __commonJS({
   }
 });
 
-// ../octos-lesson-language/node_modules/ajv/dist/2020.js
+// node_modules/ajv/dist/2020.js
 var require__ = __commonJS({
-  "../octos-lesson-language/node_modules/ajv/dist/2020.js"(exports, module) {
+  "node_modules/ajv/dist/2020.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
@@ -7152,7 +7172,8 @@ var require__ = __commonJS({
 // src/main.ts
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
-import { createSign } from "node:crypto";
+import { pathToFileURL } from "node:url";
+import { createHash, createSign } from "node:crypto";
 
 // references/oll-authoring-v0.1.schema.json
 var oll_authoring_v0_1_schema_default = {
@@ -7522,10 +7543,10 @@ var oll_authoring_v0_1_schema_default = {
   }
 };
 
-// ../octos-lesson-language/packages/core/src/index.ts
+// node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var import__ = __toESM(require__(), 1);
 
-// ../octos-lesson-language/schema/authoring/v0.1.schema.json
+// node_modules/octos-lesson-language/dist/schema/authoring/v0.1.schema.json
 var v0_1_schema_default = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://octos.dev/schema/lesson/authoring/0.1",
@@ -7893,7 +7914,7 @@ var v0_1_schema_default = {
   }
 };
 
-// ../octos-lesson-language/packages/core/src/math-expression.ts
+// node_modules/octos-lesson-language/dist/packages/core/src/math-expression.js
 var FUNCTIONS = {
   abs: Math.abs,
   acos: Math.acos,
@@ -7912,8 +7933,10 @@ var FUNCTIONS = {
 };
 function normalizeExpression(expression) {
   const normalized = expression.trim().replaceAll("\u03C0", "pi").replaceAll("\u2212", "-").replaceAll("\xD7", "*").replaceAll("\xF7", "/").trim();
-  if (!normalized) throw new Error("Expression is empty");
-  if (normalized.length > 256) throw new Error("Expression is too long");
+  if (!normalized)
+    throw new Error("Expression is empty");
+  if (normalized.length > 256)
+    throw new Error("Expression is too long");
   return normalized;
 }
 function tokenize(expression) {
@@ -7950,16 +7973,17 @@ function tokenize(expression) {
   return result;
 }
 var ExpressionParser = class {
+  tokens;
+  allowedVariables;
+  cursor = 0;
   constructor(tokens, allowedVariables) {
     this.tokens = tokens;
     this.allowedVariables = allowedVariables;
   }
-  tokens;
-  allowedVariables;
-  cursor = 0;
   parse() {
     const expression = this.parseSum();
-    if (this.current().kind !== "eof") throw new Error(`Unexpected token '${this.current().value}'`);
+    if (this.current().kind !== "eof")
+      throw new Error(`Unexpected token '${this.current().value}'`);
     return expression;
   }
   current() {
@@ -7967,7 +7991,8 @@ var ExpressionParser = class {
   }
   take(value) {
     const token = this.current();
-    if (value !== void 0 && token.value !== value) throw new Error(`Expected '${value}'`);
+    if (value !== void 0 && token.value !== value)
+      throw new Error(`Expected '${value}'`);
     this.cursor += 1;
     return token;
   }
@@ -8005,7 +8030,8 @@ var ExpressionParser = class {
   }
   parsePower() {
     const base = this.parsePrimary();
-    if (this.current().value !== "^") return base;
+    if (this.current().value !== "^")
+      return base;
     this.take("^");
     const exponent = this.parseUnary();
     return (variables) => base(variables) ** exponent(variables);
@@ -8023,19 +8049,24 @@ var ExpressionParser = class {
       this.take(")");
       return value;
     }
-    if (token.kind !== "identifier") throw new Error("Expected a number, variable, or function");
+    if (token.kind !== "identifier")
+      throw new Error("Expected a number, variable, or function");
     const identifier = this.take().value;
-    if (identifier === "pi") return () => Math.PI;
-    if (identifier === "e") return () => Math.E;
+    if (identifier === "pi")
+      return () => Math.PI;
+    if (identifier === "e")
+      return () => Math.E;
     if (this.allowedVariables.has(identifier)) {
       return (variables) => {
         const value = variables[identifier];
-        if (!Number.isFinite(value)) throw new Error(`Variable '${identifier}' has no finite value`);
+        if (!Number.isFinite(value))
+          throw new Error(`Variable '${identifier}' has no finite value`);
         return value;
       };
     }
     const operation = FUNCTIONS[identifier];
-    if (!operation) throw new Error(`Unknown variable or function '${identifier}'`);
+    if (!operation)
+      throw new Error(`Unknown variable or function '${identifier}'`);
     this.take("(");
     const argument = this.parseSum();
     this.take(")");
@@ -8048,11 +8079,12 @@ function compileMathExpression(expression, allowedVariables) {
 }
 function evaluateMathExpression(expression, variables) {
   const result = compileMathExpression(expression, Object.keys(variables))(variables);
-  if (!Number.isFinite(result)) throw new Error("Expression result is not finite");
+  if (!Number.isFinite(result))
+    throw new Error("Expression result is not finite");
   return result;
 }
 
-// ../octos-lesson-language/packages/core/src/index.ts
+// node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
 var validateAuthoringDocument = ajv.compile(v0_1_schema_default);
 var ALIAS_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
@@ -8158,36 +8190,45 @@ function validateLessonVariables(document) {
     const path = `/lesson/variables/${index}`;
     requireObject(variable, path);
     requireVariableAlias(variable.as, `${path}/as`);
-    if (RESERVED_MATH_NAMES.has(variable.as)) fail("OLL_INVALID_VARIABLE", `${path}/as`, `Variable '${variable.as}' uses a reserved math name`);
-    if (values.has(variable.as)) fail("OLL_DUPLICATE_ALIAS", `${path}/as`, `Variable '${variable.as}' is duplicated`);
+    if (RESERVED_MATH_NAMES.has(variable.as))
+      fail("OLL_INVALID_VARIABLE", `${path}/as`, `Variable '${variable.as}' uses a reserved math name`);
+    if (values.has(variable.as))
+      fail("OLL_DUPLICATE_ALIAS", `${path}/as`, `Variable '${variable.as}' is duplicated`);
     const initial = requireFiniteNumber(variable.initial, `${path}/initial`);
     const min = requireFiniteNumber(variable.min, `${path}/min`);
     const max = requireFiniteNumber(variable.max, `${path}/max`);
-    if (max <= min) fail("OLL_INVALID_VARIABLE", path, "Variable max must be greater than min");
-    if (initial < min || initial > max) fail("OLL_INVALID_VARIABLE", `${path}/initial`, "Variable initial value is outside its range");
+    if (max <= min)
+      fail("OLL_INVALID_VARIABLE", path, "Variable max must be greater than min");
+    if (initial < min || initial > max)
+      fail("OLL_INVALID_VARIABLE", `${path}/initial`, "Variable initial value is outside its range");
     if (variable.control?.step !== void 0) {
       const step = requireFiniteNumber(variable.control.step, `${path}/control/step`);
-      if (step <= 0 || step > max - min) fail("OLL_INVALID_VARIABLE", `${path}/control/step`, "Slider step must be greater than zero and no larger than the variable range");
+      if (step <= 0 || step > max - min)
+        fail("OLL_INVALID_VARIABLE", `${path}/control/step`, "Slider step must be greater than zero and no larger than the variable range");
     }
     values.set(variable.as, initial);
   }
   return values;
 }
 function splitBindingTarget(value, path) {
-  if (typeof value !== "string") fail("OLL_INVALID_BINDING", path, "Binding target must be a string");
+  if (typeof value !== "string")
+    fail("OLL_INVALID_BINDING", path, "Binding target must be a string");
   const separator = value.lastIndexOf(".");
-  if (separator <= 0 || separator === value.length - 1) fail("OLL_INVALID_BINDING", path, `Invalid binding target '${value}'`);
+  if (separator <= 0 || separator === value.length - 1)
+    fail("OLL_INVALID_BINDING", path, `Invalid binding target '${value}'`);
   const alias = value.slice(0, separator);
   const property = value.slice(separator + 1);
   requireAlias(alias, path);
-  if (!/^[a-z_][a-z0-9_]*$/.test(property)) fail("OLL_INVALID_BINDING", path, `Invalid binding property '${property}'`);
+  if (!/^[a-z_][a-z0-9_]*$/.test(property))
+    fail("OLL_INVALID_BINDING", path, `Invalid binding property '${property}'`);
   return { alias, property };
 }
 function bindableTargets(action) {
   const targets = /* @__PURE__ */ new Map();
   const add = (field, properties) => {
     for (const item of Array.isArray(action.content[field]) ? action.content[field] : []) {
-      if (typeof item?.as === "string") targets.set(item.as, new Set(properties));
+      if (typeof item?.as === "string")
+        targets.set(item.as, new Set(properties));
     }
   };
   if (action.kind === "geometry") {
@@ -8201,7 +8242,8 @@ function bindableTargets(action) {
   return targets;
 }
 function validateValueBindings(action, path, variables) {
-  if (action.content.bindings === void 0) return;
+  if (action.content.bindings === void 0)
+    return;
   if (action.kind !== "geometry" && action.kind !== "plot") {
     fail("OLL_INVALID_BINDING", `${path}/content/bindings`, "Bindings are only supported on geometry and plot nodes");
   }
@@ -8212,19 +8254,22 @@ function validateValueBindings(action, path, variables) {
     const bindingPath = `${path}/content/bindings/${index}`;
     requireObject(binding, bindingPath);
     for (const field of Object.keys(binding)) {
-      if (field !== "target" && field !== "expression") fail("OLL_INVALID_BINDING", `${bindingPath}/${field}`, `Unknown binding field '${field}'`);
+      if (field !== "target" && field !== "expression")
+        fail("OLL_INVALID_BINDING", `${bindingPath}/${field}`, `Unknown binding field '${field}'`);
     }
     const { alias, property } = splitBindingTarget(binding.target, `${bindingPath}/target`);
     if (!targets.get(alias)?.has(property)) {
       fail("OLL_REFERENCE_NOT_FOUND", `${bindingPath}/target`, `Binding target '${binding.target}' is not a supported numeric field`);
     }
-    if (seen.has(binding.target)) fail("OLL_INVALID_BINDING", `${bindingPath}/target`, `Binding target '${binding.target}' is duplicated`);
+    if (seen.has(binding.target))
+      fail("OLL_INVALID_BINDING", `${bindingPath}/target`, `Binding target '${binding.target}' is duplicated`);
     seen.add(binding.target);
     requireString(binding.expression, `${bindingPath}/expression`);
     try {
       const evaluate = compileMathExpression(binding.expression, variables.keys());
       const result = evaluate(Object.fromEntries(variables));
-      if (!Number.isFinite(result)) throw new Error("result is not finite");
+      if (!Number.isFinite(result))
+        throw new Error("result is not finite");
     } catch (error) {
       const message = error instanceof Error ? error.message : "invalid expression";
       fail("OLL_INVALID_BINDING", `${bindingPath}/expression`, message);
@@ -8240,7 +8285,8 @@ function splitTarget(value, path) {
   if (rest.length > 0 || fragment !== void 0 && !fragment) {
     fail("OLL_INVALID_REFERENCE", path, `Invalid reference '${value}'`);
   }
-  if (fragment !== void 0) requireAlias(fragment, path);
+  if (fragment !== void 0)
+    requireAlias(fragment, path);
   return { alias, fragment };
 }
 function register(registry, alias, type, path, fragments = []) {
@@ -8251,7 +8297,8 @@ function register(registry, alias, type, path, fragments = []) {
   registry.set(alias, { type, fragments: new Set(fragments) });
 }
 function validateContentFragments(content, path) {
-  if (!content?.fragments) return [];
+  if (!content?.fragments)
+    return [];
   requireArray(content.fragments, `${path}/fragments`);
   const seen = /* @__PURE__ */ new Set();
   return content.fragments.map((fragment, index) => {
@@ -8268,9 +8315,11 @@ function validateContentFragments(content, path) {
 function collectAddressableContent(content) {
   const result = validateContentFragments(content, "/content");
   for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs"]) {
-    if (!content?.[field]) continue;
+    if (!content?.[field])
+      continue;
     for (const item of content[field]) {
-      if (item?.as) result.push(item.as);
+      if (item?.as)
+        result.push(item.as);
     }
   }
   return result;
@@ -8287,7 +8336,8 @@ function validateStructuredContent(content, path, addressable) {
   }
   if (Array.isArray(content?.regions)) {
     content.regions.forEach((region, regionIndex) => {
-      if (!Array.isArray(region.members)) return;
+      if (!Array.isArray(region.members))
+        return;
       region.members.forEach((member, memberIndex) => {
         if (!addressable.has(member)) {
           fail("OLL_REFERENCE_NOT_FOUND", `${path}/regions/${regionIndex}/members/${memberIndex}`, `Diagram element '${member}' is not defined`);
@@ -8298,11 +8348,13 @@ function validateStructuredContent(content, path, addressable) {
 }
 function requireFiniteNumber(value, path) {
   const number = Number(value);
-  if (!Number.isFinite(number)) fail("OLL_INVALID_OPERATION_PAYLOAD", path, "Expected a finite number");
+  if (!Number.isFinite(number))
+    fail("OLL_INVALID_OPERATION_PAYLOAD", path, "Expected a finite number");
   return number;
 }
 function validateGeometryContent(action, path, variables) {
-  if (action.kind !== "geometry") return;
+  if (action.kind !== "geometry")
+    return;
   const content = action.content;
   requireObject(content.axes, `${path}/content/axes`);
   for (const axisName of ["x", "y"]) {
@@ -8310,7 +8362,8 @@ function validateGeometryContent(action, path, variables) {
     requireObject(content.axes[axisName], axisPath);
     const min = requireFiniteNumber(content.axes[axisName].min, `${axisPath}/min`);
     const max = requireFiniteNumber(content.axes[axisName].max, `${axisPath}/max`);
-    if (max <= min) fail("OLL_INVALID_OPERATION_PAYLOAD", axisPath, "Geometry axis max must be greater than min");
+    if (max <= min)
+      fail("OLL_INVALID_OPERATION_PAYLOAD", axisPath, "Geometry axis max must be greater than min");
   }
   if (content.axes.equal_scale !== true) {
     fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/axes/equal_scale`, "Geometry requires equal_scale=true");
@@ -8327,7 +8380,8 @@ function validateGeometryContent(action, path, variables) {
   });
   content.points.forEach((point, index) => {
     requireObject(point, `${path}/content/points/${index}`);
-    if (point.interaction === void 0) return;
+    if (point.interaction === void 0)
+      return;
     const interactionPath = `${path}/content/points/${index}/interaction`;
     requireObject(point.interaction, interactionPath);
     if (point.interaction.kind !== "angle_control") {
@@ -8356,17 +8410,20 @@ function validateGeometryContent(action, path, variables) {
     ["segments", ["from", "to"]],
     ["arcs", ["center"]]
   ]) {
-    if (content[field] === void 0) continue;
+    if (content[field] === void 0)
+      continue;
     if (!Array.isArray(content[field])) {
       fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/${field}`, "Expected an array");
     }
     content[field].forEach((item, index) => {
       const itemPath = `${path}/content/${field}/${index}`;
       requireObject(item, itemPath);
-      for (const reference of references) requirePointReference(item[reference], `${itemPath}/${reference}`);
+      for (const reference of references)
+        requirePointReference(item[reference], `${itemPath}/${reference}`);
       if (field === "circles" || field === "arcs") {
         const radius = requireFiniteNumber(item.radius, `${itemPath}/radius`);
-        if (radius <= 0) fail("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/radius`, "Radius must be greater than zero");
+        if (radius <= 0)
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/radius`, "Radius must be greater than zero");
       }
       if (field === "arcs") {
         requireFiniteNumber(item.start_angle, `${itemPath}/start_angle`);
@@ -8376,14 +8433,17 @@ function validateGeometryContent(action, path, variables) {
   }
 }
 function validateImageResource(action, path, resourceContext) {
-  if (action.kind !== "image") return;
+  if (action.kind !== "image")
+    return;
   const assetId = action.content?.asset_id;
   if (typeof assetId !== "string" || assetId.length === 0) {
     fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/asset_id`, "Image requires a controlled asset_id");
   }
-  if (!resourceContext) return;
+  if (!resourceContext)
+    return;
   const asset = resourceContext.assets?.find((candidate) => candidate.asset_id === assetId);
-  if (!asset) fail("OLL_RESOURCE_DENIED", `${path}/content/asset_id`, `Asset '${assetId}' is not available in Session Context`);
+  if (!asset)
+    fail("OLL_RESOURCE_DENIED", `${path}/content/asset_id`, `Asset '${assetId}' is not available in Session Context`);
   const allowedRegions = new Set((asset.regions ?? []).map((region) => region.region_id));
   (action.content.regions ?? []).forEach((region, index) => {
     if (!allowedRegions.has(region.source_region)) {
@@ -8397,17 +8457,20 @@ function validatePlacement(place, path, registry) {
     fail("OLL_INVALID_PLACEMENT", `${path}/relation`, `Unknown placement relation '${place.relation}'`);
   }
   for (const forbidden of ["x", "y", "width", "height", "zoom", "duration_ms"]) {
-    if (forbidden in place) fail("OLL_INVALID_PLACEMENT", `${path}/${forbidden}`, `Authoring Profile cannot set '${forbidden}'`);
+    if (forbidden in place)
+      fail("OLL_INVALID_PLACEMENT", `${path}/${forbidden}`, `Authoring Profile cannot set '${forbidden}'`);
   }
   if (place.relation === "new_region") {
-    if (place.anchor !== void 0) fail("OLL_INVALID_PLACEMENT", `${path}/anchor`, "new_region cannot use an anchor");
+    if (place.anchor !== void 0)
+      fail("OLL_INVALID_PLACEMENT", `${path}/anchor`, "new_region cannot use an anchor");
   } else {
     resolveLocal(registry, place.anchor, `${path}/anchor`, ["node", "group"]);
   }
 }
 function validateActionPayload(action, path) {
   for (const field of Object.keys(action)) {
-    if (!ACTION_FIELDS.has(field)) fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/${field}`, `Unknown action field '${field}'`);
+    if (!ACTION_FIELDS.has(field))
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/${field}`, `Unknown action field '${field}'`);
   }
   if (action.do === "write") {
     requireAlias(action.as, `${path}/as`);
@@ -8496,7 +8559,8 @@ function validateAuthoringLesson(document, resourceContext = null) {
     const stepPath = `/steps/${stepIndex}`;
     requireObject(step, stepPath);
     requireAlias(step.key, `${stepPath}/key`);
-    if (stepKeys.has(step.key)) fail("OLL_DUPLICATE_ALIAS", `${stepPath}/key`, `Step '${step.key}' is duplicated`);
+    if (stepKeys.has(step.key))
+      fail("OLL_DUPLICATE_ALIAS", `${stepPath}/key`, `Step '${step.key}' is duplicated`);
     stepKeys.add(step.key);
     requireArray(step.beats, `${stepPath}/beats`);
     const beatKeys = /* @__PURE__ */ new Set();
@@ -8504,16 +8568,19 @@ function validateAuthoringLesson(document, resourceContext = null) {
       const beatPath = `${stepPath}/beats/${beatIndex}`;
       requireObject(beat, beatPath);
       requireAlias(beat.key, `${beatPath}/key`);
-      if (beatKeys.has(beat.key)) fail("OLL_DUPLICATE_ALIAS", `${beatPath}/key`, `Beat '${beat.key}' is duplicated`);
+      if (beatKeys.has(beat.key))
+        fail("OLL_DUPLICATE_ALIAS", `${beatPath}/key`, `Beat '${beat.key}' is duplicated`);
       beatKeys.add(beat.key);
       requireArray(beat.actions, `${beatPath}/actions`);
       beat.actions.forEach((action, actionIndex) => {
         const actionPath = `${beatPath}/actions/${actionIndex}`;
         requireObject(action, actionPath);
-        if (!ACTIONS.has(action.do)) fail("OLL_INVALID_OPERATION", `${actionPath}/do`, `Unknown action '${action.do}'`);
+        if (!ACTIONS.has(action.do))
+          fail("OLL_INVALID_OPERATION", `${actionPath}/do`, `Unknown action '${action.do}'`);
         validateActionPayload(action, actionPath);
         const phase = action.when ?? "during_speech";
-        if (!PHASES.has(phase)) fail("OLL_INVALID_PHASE", `${actionPath}/when`, `Unknown phase '${phase}'`);
+        if (!PHASES.has(phase))
+          fail("OLL_INVALID_PHASE", `${actionPath}/when`, `Unknown phase '${phase}'`);
         if (action.do === "write") {
           requireAlias(action.as, `${actionPath}/as`);
           requireObject(action.content, `${actionPath}/content`);
@@ -8522,7 +8589,8 @@ function validateAuthoringLesson(document, resourceContext = null) {
           const uniqueFragments = /* @__PURE__ */ new Set();
           for (const fragment of fragments) {
             requireAlias(fragment, `${actionPath}/content`);
-            if (uniqueFragments.has(fragment)) fail("OLL_DUPLICATE_ALIAS", `${actionPath}/content`, `Fragment '${fragment}' is duplicated`);
+            if (uniqueFragments.has(fragment))
+              fail("OLL_DUPLICATE_ALIAS", `${actionPath}/content`, `Fragment '${fragment}' is duplicated`);
             uniqueFragments.add(fragment);
           }
           validateStructuredContent(action.content, `${actionPath}/content`, uniqueFragments);
@@ -8534,7 +8602,8 @@ function validateAuthoringLesson(document, resourceContext = null) {
         }
         if (action.do === "animate") {
           const variable = document.lesson.variables?.find((candidate) => candidate.as === action.variable);
-          if (!variable) fail("OLL_REFERENCE_NOT_FOUND", `${actionPath}/variable`, `Variable '${action.variable}' is not declared`);
+          if (!variable)
+            fail("OLL_REFERENCE_NOT_FOUND", `${actionPath}/variable`, `Variable '${action.variable}' is not declared`);
           if (action.value < variable.min || action.value > variable.max) {
             fail("OLL_INVALID_VARIABLE", `${actionPath}/value`, `Animation target for '${action.variable}' is outside its range`);
           }
@@ -8584,9 +8653,11 @@ function stableId(host, type, alias) {
 function normalizeAddressableContent(_host, nodeId, content) {
   const clone = structuredClone(content);
   for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs"]) {
-    if (!Array.isArray(clone?.[field])) continue;
+    if (!Array.isArray(clone?.[field]))
+      continue;
     clone[field] = clone[field].map((item) => {
-      if (!item.as) return item;
+      if (!item.as)
+        return item;
       const { as, ...rest } = item;
       const normalized = { id: `${nodeId}:fragment:${as}`, ...rest };
       if (field === "edges") {
@@ -8650,9 +8721,12 @@ function buildCanonicalRegistry(document, host) {
 function canonicalTarget(registry, value) {
   const { alias, fragment } = splitTarget(value, "target");
   const entry = registry.get(alias);
-  if (!entry) fail("OLL_REFERENCE_NOT_FOUND", "target", `Unknown alias '${alias}'`);
-  if (entry.type === "group") return { group_id: entry.id };
-  if (entry.type === "connection") return { connection_id: entry.id };
+  if (!entry)
+    fail("OLL_REFERENCE_NOT_FOUND", "target", `Unknown alias '${alias}'`);
+  if (entry.type === "group")
+    return { group_id: entry.id };
+  if (entry.type === "connection")
+    return { connection_id: entry.id };
   return {
     node_id: entry.id,
     ...fragment ? { fragment_id: `${entry.id}:fragment:${fragment}` } : {}
@@ -8660,12 +8734,14 @@ function canonicalTarget(registry, value) {
 }
 function requireRegistryId(registry, alias) {
   const id = registry.get(alias)?.id;
-  if (!id) fail("OLL_REFERENCE_NOT_FOUND", "target", `No canonical ID exists for alias '${alias}'`);
+  if (!id)
+    fail("OLL_REFERENCE_NOT_FOUND", "target", `No canonical ID exists for alias '${alias}'`);
   return id;
 }
 function requireCanonicalId(target) {
   const id = target.node_id ?? target.group_id ?? target.connection_id;
-  if (!id) fail("OLL_REFERENCE_NOT_FOUND", "target", "Canonical target has no addressable ID");
+  if (!id)
+    fail("OLL_REFERENCE_NOT_FOUND", "target", "Canonical target has no addressable ID");
   return id;
 }
 function normalizePlacement(registry, place) {
@@ -8774,7 +8850,8 @@ function normalizeAuthoringLesson(document, host) {
   validateAuthoringLesson(document, host?.resourceContext);
   requireObject(host, "host");
   for (const field of ["lessonId", "boardId", "baseRevision"]) {
-    if (host[field] === void 0 || host[field] === null) fail("OLL_MISSING_HOST_FIELD", `host/${field}`, `Missing host field '${field}'`);
+    if (host[field] === void 0 || host[field] === null)
+      fail("OLL_MISSING_HOST_FIELD", `host/${field}`, `Missing host field '${field}'`);
   }
   const registry = buildCanonicalRegistry(document, host);
   const events = [
@@ -8841,8 +8918,10 @@ function normalizeAuthoringLesson(document, host) {
   return events;
 }
 function createSemanticBoardState(open) {
-  if (open.event !== "lesson.open") fail("OLL_INVALID_EVENT", "/0/event", "First event must be lesson.open");
-  if (!open.board) fail("OLL_INVALID_EVENT", "/0/board", "lesson.open must include board state");
+  if (open.event !== "lesson.open")
+    fail("OLL_INVALID_EVENT", "/0/event", "First event must be lesson.open");
+  if (!open.board)
+    fail("OLL_INVALID_EVENT", "/0/board", "lesson.open must include board state");
   const variables = Object.fromEntries((open.lesson?.variables ?? []).map((variable) => [
     variable.as,
     {
@@ -8873,7 +8952,8 @@ function bindingValues(state) {
 }
 function bindingTarget(content, target) {
   const separator = target.lastIndexOf(".");
-  if (separator <= 0) fail("OLL_INVALID_BINDING", "content.bindings.target", `Invalid canonical binding target '${target}'`);
+  if (separator <= 0)
+    fail("OLL_INVALID_BINDING", "content.bindings.target", `Invalid canonical binding target '${target}'`);
   const fragmentId = target.slice(0, separator);
   const property = target.slice(separator + 1);
   const fields = [
@@ -8884,8 +8964,10 @@ function bindingTarget(content, target) {
   ];
   for (const [field, properties] of fields) {
     const record = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
-    if (record && properties.has(property)) return { record, property };
-    if (record) fail("OLL_INVALID_BINDING", "content.bindings.target", `Property '${property}' cannot be bound on '${field}'`);
+    if (record && properties.has(property))
+      return { record, property };
+    if (record)
+      fail("OLL_INVALID_BINDING", "content.bindings.target", `Property '${property}' cannot be bound on '${field}'`);
   }
   fail("OLL_REFERENCE_NOT_FOUND", "content.bindings.target", `Canonical binding target '${target}' was not found`);
 }
@@ -8895,7 +8977,8 @@ function evaluateContentBindings(content, variables) {
     const { record, property } = bindingTarget(evaluated, binding.target);
     try {
       record[property] = evaluateMathExpression(binding.expression, variables);
-      if (property === "radius" && record[property] <= 0) throw new Error("Bound radius must be greater than zero");
+      if (property === "radius" && record[property] <= 0)
+        throw new Error("Bound radius must be greater than zero");
     } catch (error) {
       const message = error instanceof Error ? error.message : "binding evaluation failed";
       fail("OLL_BINDING_EVALUATION_FAILED", "content.bindings.expression", message);
@@ -8904,57 +8987,81 @@ function evaluateContentBindings(content, variables) {
   return evaluated;
 }
 function canonicalTargetExists(state, target) {
-  if (!target) return false;
-  if (target.node_id) return Boolean(state.nodes[target.node_id]);
-  if (target.connection_id) return Boolean(state.connections[target.connection_id]);
-  if (target.group_id) return Boolean(state.groups[target.group_id]);
+  if (!target)
+    return false;
+  if (target.node_id)
+    return Boolean(state.nodes[target.node_id]);
+  if (target.connection_id)
+    return Boolean(state.connections[target.connection_id]);
+  if (target.group_id)
+    return Boolean(state.groups[target.group_id]);
   return false;
 }
 function applyCanonicalAction(state, action) {
-  if (state.applied_actions.includes(action.action_id)) return false;
+  if (state.applied_actions.includes(action.action_id))
+    return false;
   if (action.op === "board.create") {
-    if (!action.node) fail("OLL_INVALID_EVENT", "action.node", "board.create requires node");
-    if (state.nodes[action.node.id]) fail("OLL_DUPLICATE_NODE_ID", "action.node.id", `Node '${action.node.id}' already exists`);
+    if (!action.node)
+      fail("OLL_INVALID_EVENT", "action.node", "board.create requires node");
+    if (state.nodes[action.node.id])
+      fail("OLL_DUPLICATE_NODE_ID", "action.node.id", `Node '${action.node.id}' already exists`);
     const anchor = action.node.placement?.anchor;
-    if (anchor && !state.nodes[anchor] && !state.groups[anchor]) fail("OLL_REFERENCE_NOT_FOUND", "action.node.placement.anchor", `Anchor '${anchor}' not found`);
+    if (anchor && !state.nodes[anchor] && !state.groups[anchor])
+      fail("OLL_REFERENCE_NOT_FOUND", "action.node.placement.anchor", `Anchor '${anchor}' not found`);
     const node = structuredClone(action.node);
     node.content = evaluateContentBindings(node.content, bindingValues(state));
     state.nodes[action.node.id] = node;
   } else if (action.op === "board.connect") {
-    if (!action.connection) fail("OLL_INVALID_EVENT", "action.connection", "board.connect requires connection");
-    if (state.connections[action.connection.id]) fail("OLL_DUPLICATE_CONNECTION_ID", "action.connection.id", `Connection '${action.connection.id}' already exists`);
-    if (!canonicalTargetExists(state, action.connection.from)) fail("OLL_REFERENCE_NOT_FOUND", "action.connection.from", "Connection source not found");
-    if (!canonicalTargetExists(state, action.connection.to)) fail("OLL_REFERENCE_NOT_FOUND", "action.connection.to", "Connection target not found");
+    if (!action.connection)
+      fail("OLL_INVALID_EVENT", "action.connection", "board.connect requires connection");
+    if (state.connections[action.connection.id])
+      fail("OLL_DUPLICATE_CONNECTION_ID", "action.connection.id", `Connection '${action.connection.id}' already exists`);
+    if (!canonicalTargetExists(state, action.connection.from))
+      fail("OLL_REFERENCE_NOT_FOUND", "action.connection.from", "Connection source not found");
+    if (!canonicalTargetExists(state, action.connection.to))
+      fail("OLL_REFERENCE_NOT_FOUND", "action.connection.to", "Connection target not found");
     state.connections[action.connection.id] = structuredClone(action.connection);
   } else if (action.op === "board.group") {
-    if (!action.group) fail("OLL_INVALID_EVENT", "action.group", "board.group requires group");
-    if (state.groups[action.group.id]) fail("OLL_DUPLICATE_GROUP_ID", "action.group.id", `Group '${action.group.id}' already exists`);
+    if (!action.group)
+      fail("OLL_INVALID_EVENT", "action.group", "board.group requires group");
+    if (state.groups[action.group.id])
+      fail("OLL_DUPLICATE_GROUP_ID", "action.group.id", `Group '${action.group.id}' already exists`);
     for (const member of action.group.members ?? []) {
-      if (!state.nodes[member] && !state.groups[member]) fail("OLL_REFERENCE_NOT_FOUND", "action.group.members", `Group member '${member}' not found`);
+      if (!state.nodes[member] && !state.groups[member])
+        fail("OLL_REFERENCE_NOT_FOUND", "action.group.members", `Group member '${member}' not found`);
     }
     state.groups[action.group.id] = structuredClone(action.group);
   } else if (action.op === "board.focus") {
-    if (!action.focus) fail("OLL_INVALID_EVENT", "action.focus", "board.focus requires focus");
+    if (!action.focus)
+      fail("OLL_INVALID_EVENT", "action.focus", "board.focus requires focus");
     for (const target of action.focus.targets) {
-      if (!state.nodes[target] && !state.groups[target] && !state.connections[target]) fail("OLL_REFERENCE_NOT_FOUND", "action.focus.targets", `Focus target '${target}' not found`);
+      if (!state.nodes[target] && !state.groups[target] && !state.connections[target])
+        fail("OLL_REFERENCE_NOT_FOUND", "action.focus.targets", `Focus target '${target}' not found`);
     }
     state.focus = [...action.focus.targets];
   } else if (action.op === "board.revise") {
-    if (!action.target?.node_id || !action.revision) fail("OLL_INVALID_EVENT", "action", "board.revise requires a node target and revision");
+    if (!action.target?.node_id || !action.revision)
+      fail("OLL_INVALID_EVENT", "action", "board.revise requires a node target and revision");
     const node = state.nodes[action.target.node_id];
-    if (!node) fail("OLL_REFERENCE_NOT_FOUND", "action.target", `Node '${action.target.node_id}' not found`);
+    if (!node)
+      fail("OLL_REFERENCE_NOT_FOUND", "action.target", `Node '${action.target.node_id}' not found`);
     node.content = evaluateContentBindings(action.revision.content, bindingValues(state));
   } else if (action.op === "board.emphasize") {
-    if (!action.target || !action.emphasis) fail("OLL_INVALID_EVENT", "action.target", "board.emphasize requires target and emphasis");
+    if (!action.target || !action.emphasis)
+      fail("OLL_INVALID_EVENT", "action.target", "board.emphasize requires target and emphasis");
     const target = action.target.node_id ? state.nodes[action.target.node_id] : action.target.connection_id ? state.connections[action.target.connection_id] : action.target.group_id ? state.groups[action.target.group_id] : void 0;
-    if (!target) fail("OLL_REFERENCE_NOT_FOUND", "action.target", "Emphasis target not found");
+    if (!target)
+      fail("OLL_REFERENCE_NOT_FOUND", "action.target", "Emphasis target not found");
     target.emphasis = [...target.emphasis ?? [], { target: action.target, emphasis: action.emphasis }];
   } else if (action.op === "teacher.point") {
-    if (!canonicalTargetExists(state, action.target)) fail("OLL_REFERENCE_NOT_FOUND", "action.target", "Point target not found");
+    if (!canonicalTargetExists(state, action.target))
+      fail("OLL_REFERENCE_NOT_FOUND", "action.target", "Point target not found");
   } else if (action.op === "teacher.expression") {
-    if (!action.expression) fail("OLL_INVALID_EVENT", "action.expression", "teacher.expression requires expression");
+    if (!action.expression)
+      fail("OLL_INVALID_EVENT", "action.expression", "teacher.expression requires expression");
   } else if (action.op === "lesson.variable.animate") {
-    if (!action.animation) fail("OLL_INVALID_EVENT", "action.animation", "lesson.variable.animate requires animation");
+    if (!action.animation)
+      fail("OLL_INVALID_EVENT", "action.animation", "lesson.variable.animate requires animation");
     const updated = setLessonVariable(state, action.animation.variable, action.animation.to);
     Object.assign(state, updated);
   } else {
@@ -8965,7 +9072,8 @@ function applyCanonicalAction(state, action) {
 }
 function setLessonVariable(state, alias, value) {
   const variable = state.variables?.[alias];
-  if (!variable) fail("OLL_REFERENCE_NOT_FOUND", `variables/${alias}`, `Variable '${alias}' is not defined`);
+  if (!variable)
+    fail("OLL_REFERENCE_NOT_FOUND", `variables/${alias}`, `Variable '${alias}' is not defined`);
   if (!Number.isFinite(value) || value < variable.min || value > variable.max) {
     fail("OLL_INVALID_VARIABLE", `variables/${alias}/value`, `Variable '${alias}' must be between ${variable.min} and ${variable.max}`);
   }
@@ -8978,13 +9086,15 @@ function setLessonVariable(state, alias, value) {
   return updated;
 }
 function commitCanonicalStep(state, stepId) {
-  if (state.applied_steps.includes(stepId)) return false;
+  if (state.applied_steps.includes(stepId))
+    return false;
   state.applied_steps.push(stepId);
   state.revision += 1;
   return true;
 }
 function applyLessonClose(state, event) {
-  if (event.event !== "lesson.close") fail("OLL_INVALID_EVENT", "event", "Expected lesson.close");
+  if (event.event !== "lesson.close")
+    fail("OLL_INVALID_EVENT", "event", "Expected lesson.close");
   state.focus = [...event.result?.suggested_focus ?? state.focus];
 }
 function reduceCanonicalEvents(events) {
@@ -8996,10 +9106,13 @@ function reduceCanonicalEvents(events) {
       applyLessonClose(state, event);
       continue;
     }
-    if (event.event !== "lesson.step") fail("OLL_INVALID_EVENT", "event", `Unexpected event '${event.event}'`);
-    if (!event.step) fail("OLL_INVALID_EVENT", "event.step", "lesson.step must include a step");
+    if (event.event !== "lesson.step")
+      fail("OLL_INVALID_EVENT", "event", `Unexpected event '${event.event}'`);
+    if (!event.step)
+      fail("OLL_INVALID_EVENT", "event.step", "lesson.step must include a step");
     const step = event.step;
-    if (state.applied_steps.includes(step.id)) continue;
+    if (state.applied_steps.includes(step.id))
+      continue;
     for (const beat of step.beats) {
       for (const phase of ["before_speech", "during_speech", "after_speech"]) {
         for (const action of beat.stage[phase]) {
@@ -9042,7 +9155,23 @@ var GeneratedLessonError = class extends Error {
   raw;
   violations;
 };
-var LESSON_BRIEF_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u5802\u9700\u6C42\u89C4\u5212\u5668\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E5F\u4E0D\u64B0\u5199\u8BFE\u7A0B\u6B63\u6587\u3002\u4F60\u7684\u4EFB\u52A1\u662F\u628A\u672C\u8F6E\u6743\u5A01\u8BF7\u6C42\u8F6C\u6362\u6210\u4E00\u4E2A\u53EF\u9A8C\u8BC1\u7684 Lesson Brief\u3002
+var ToolExecutionError = class extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+    this.name = "ToolExecutionError";
+  }
+  code;
+};
+var LESSON_BRIEF_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u5802\u9700\u6C42\u89C4\u5212\u5668\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E5F\u4E0D\u64B0\u5199\u8BFE\u7A0B\u6B63\u6587\u3002\u4F60\u7684\u4EFB\u52A1\u662F\u628A\u672C\u8F6E\u6743\u5A01\u8BF7\u6C42\u8F6C\u6362\u6210\u4E00\u4E2A\u53EF\u9A8C\u8BC1\u7684\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u3002
+
+\u5148\u5728 request_items \u4E2D\u9010\u6761\u5217\u51FA\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u89C6\u89C9\u5173\u7CFB\u3001\u8FDE\u7EED\u53D8\u5316\u3001\u5B66\u751F\u63A7\u5236\u3001\u5BF9\u65E2\u6709\u767D\u677F\u7684\u4FEE\u6539\u3001\u5C55\u793A\u9650\u5236\u548C\u5F53\u524D\u7CFB\u7EDF\u4E0D\u652F\u6301\u7684\u529F\u80FD\uFF1A
+- evidence \u5FC5\u987B\u9010\u5B57\u5F15\u7528\u5BF9\u5E94 source \u7684\u539F\u6587\uFF0C\u4E0D\u5F97\u7528 request_summary \u4EE3\u66FF\u539F\u6587\u8BC1\u636E\uFF1B
+- polarity=require \u8868\u793A\u5FC5\u987B\u6EE1\u8DB3\uFF0Cpolarity=forbid \u8868\u793A\u660E\u786E\u7981\u6B62\uFF1B
+- \u4E0D\u5F97\u628A 3D\u3001\u5B66\u79D1\u6A21\u62DF\u6216\u672A\u5B9E\u73B0\u7684\u4EA4\u4E92\u5077\u6362\u6210 diagram \u6216\u666E\u901A\u6587\u5B57\uFF1B\u8FD9\u7C7B\u8981\u6C42\u4F7F\u7528 unsupported_feature\uFF0C\u5E76\u5728 unhandled_request_items \u4E2D\u8BF4\u660E\uFF1B
+- \u6BCF\u4E2A request_item \u5FC5\u987B\u901A\u8FC7 request_item_ids \u6620\u5C04\u5230\u4E00\u4E2A\u6216\u591A\u4E2A\u5177\u4F53\u8981\u6C42\uFF0C\u6216\u8005\u660E\u786E\u5217\u5165 unhandled_request_items\uFF0C\u4E0D\u80FD\u60AC\u7A7A\uFF1B
+- teaching_goal \u6620\u5C04\u5230 teaching_goal_requirements\uFF1Bvisual \u6620\u5C04\u5230 visual_requirements\uFF1Brelationship \u6620\u5C04\u5230 visual_relationships\uFF1Bcontinuous_change \u548C student_control \u6620\u5C04\u5230 shared_variable_requirements\uFF1Bpresentation_constraint \u6620\u5C04\u5230 presentation_constraints\uFF1B
+- \u76EE\u524D\u6CA1\u6709\u53EF\u5BFB\u5740\u7684\u65E2\u6709\u767D\u677F\u8282\u70B9\u6E05\u5355\uFF0C\u56E0\u6B64 existing_board_edit \u5FC5\u987B\u5217\u5165 unhandled_request_items\uFF0C\u4E0D\u80FD\u8BA9\u540E\u7EED\u6A21\u578B\u731C revise.target\u3002
 
 \u53EA\u63D0\u53D6\u8BF7\u6C42\u660E\u786E\u8981\u6C42\u3001\u6216\u5B8C\u6210\u8BF7\u6C42\u4E0D\u53EF\u7F3A\u5C11\u7684\u53EF\u89C1\u6559\u5B66\u8981\u6C42\u3002\u6BCF\u9879 evidence \u5FC5\u987B\u9010\u5B57\u5F15\u7528\u6743\u5A01\u8BF7\u6C42\u4E2D\u7684\u77ED\u8BED\uFF0C\u4E0D\u5F97\u5F15\u7528\u5386\u53F2\u4E2D\u88AB\u9694\u79BB\u7684\u5185\u5BB9\u3002
 \u6BCF\u4E2A visual_requirement.id \u5FC5\u987B\u662F\u552F\u4E00\u7684\u5C0F\u5199\u82F1\u6587\u522B\u540D\uFF0C\u53EA\u80FD\u5305\u542B a-z\u30010-9\u3001\u8FDE\u5B57\u7B26\u5E76\u4EE5\u5B57\u6BCD\u5F00\u5934\uFF1Bvisual_relationships \u7684 from/to \u53EA\u80FD\u5F15\u7528\u8FD9\u4E9B id\u3002expressions \u53EA\u7528\u4E8E plot\uFF0C\u5176\u4ED6 surface \u5FC5\u987B\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
@@ -9061,6 +9190,8 @@ var LESSON_BRIEF_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u5802\u9700\u6C42\u89C4\u52
 - function_curve\uFF1A\u5E26\u53EF\u6267\u884C\u8868\u8FBE\u5F0F\u7684\u51FD\u6570\u66F2\u7EBF\uFF1Bannotated_points\uFF1A\u6709\u6807\u7B7E\u7684\u6570\u636E\u70B9\uFF1Bguides\uFF1A\u6570\u503C\u8F85\u52A9\u7EBF\uFF1B
 - semantic_elements / semantic_edges\uFF1A\u8BED\u4E49\u8282\u70B9\u548C\u8BED\u4E49\u8FDE\u7EBF\uFF1Bsource_asset\uFF1A\u53D7\u63A7\u56FE\u7247\u8D44\u6E90\uFF1Btabular_values\uFF1A\u6709\u884C\u5217\u6570\u636E\u7684\u8868\u683C\u3002
 
+feature \u5FC5\u987B\u5C5E\u4E8E\u5BF9\u5E94 surface\uFF1Ageometry \u53EA\u4F7F\u7528 coordinate_axes\u3001equal_scale\u3001circle\u3001origin_centered_circle\u3001unit_radius\u3001point_on_circle\u3001radius_segment\u3001projection_segment\u3001angle_arc\u3001annotated_points\uFF1Bplot \u53EA\u4F7F\u7528 coordinate_axes\u3001function_curve\u3001annotated_points\u3001guides\uFF1Bdiagram \u53EA\u4F7F\u7528 semantic_elements\u3001semantic_edges\uFF1Bimage \u53EA\u4F7F\u7528 source_asset\uFF1Btable \u53EA\u4F7F\u7528 tabular_values\u3002\u5C24\u5176\u4E0D\u8981\u628A equal_scale \u5199\u8FDB plot\u3002
+
 \u5982\u679C\u8BF7\u6C42\u70B9\u540D\u67D0\u4E2A\u89C6\u89C9\u5BF9\u8C61\uFF0C\u9009\u62E9\u80FD\u771F\u5B9E\u8868\u8FBE\u5B83\u7684 surface\uFF0C\u5E76\u5217\u51FA\u8BA9\u8BE5\u5BF9\u8C61\u548C\u6559\u5B66\u76EE\u7684\u5728\u753B\u9762\u4E0A\u6210\u7ACB\u6240\u4E0D\u53EF\u7F3A\u5C11\u7684\u6700\u5C0F features\u3002\u4E0D\u8981\u56E0\u4E3A\u67D0\u4E2A surface \u652F\u6301\u4E00\u9879 feature \u5C31\u81EA\u52A8\u8981\u6C42\u5B83\uFF1B\u4E5F\u4E0D\u8981\u7528\u6807\u9898\u3001\u8BB2\u8FF0\u6216\u6807\u7B7E\u4EE3\u66FF\u7ED3\u6784\u7279\u5F81\u3002
 
 \u5982\u679C\u8BF7\u6C42\u6D89\u53CA\u8FD0\u52A8\u3001\u6620\u5C04\u6216\u91CF\u7684\u8FDE\u7EED\u53D8\u5316\uFF0C\u89C4\u5212\u4E2D\u5FC5\u987B\u5305\u542B\u4F7F\u8FD9\u4E2A\u53D8\u5316\u53EF\u89C1\u7684\u7ED3\u6784\uFF1B\u4F8B\u5982\u201C\u65CB\u8F6C\u89D2\u5EA6\u201D\u9700\u8981\u771F\u5B9E\u7684\u89D2\u5EA6\u6807\u8BB0\uFF0C\u201C\u6295\u5F71/\u5750\u6807\u5BF9\u5E94\u201D\u9700\u8981\u5B9E\u9645\u6295\u5F71\u7ED3\u6784\uFF0C\u201C\u51FD\u6570\u56FE\u50CF\u201D\u9700\u8981\u5750\u6807\u8F74\u548C\u5E26\u8868\u8FBE\u5F0F\u7684\u66F2\u7EBF\u3002
@@ -9074,7 +9205,14 @@ shared_variable_requirements \u7528\u6765\u89C4\u5212\u201C\u540C\u4E00\u4E2A\u9
 - direct_angle_geometry \u53EA\u5728\u67D0\u4E2A geometry \u91CC\u7684\u70B9\u9002\u5408\u7531\u5B66\u751F\u76F4\u63A5\u7ED5\u5706\u5FC3\u62D6\u52A8\u65F6\u586B\u5199\u8BE5 visual_requirement.id\uFF0C\u5426\u5219\u8FD4\u56DE\u7A7A\u5B57\u7B26\u4E32\u3002
 - evidence \u4ECD\u987B\u9010\u5B57\u5F15\u7528\u6743\u5A01\u8BF7\u6C42\uFF1B\u4E0D\u5F97\u56E0\u4E3A\u7CFB\u7EDF\u652F\u6301\u52A8\u753B\u5C31\u51ED\u7A7A\u89C4\u5212\u4E92\u52A8\u3002
 
-\u6CA1\u6709\u660E\u786E\u6216\u5FC5\u8981\u89C6\u89C9\u8981\u6C42\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u53EA\u8F93\u51FA\u7B26\u5408 JSON Schema \u7684 JSON \u5BF9\u8C61\u3002`;
+progressive_revision_kinds \u53EA\u8868\u793A\u672C\u8F6E\u65B0\u5EFA\u677F\u4E66\u662F\u5426\u9002\u5408\u7528 revise \u6E10\u8FDB\u66FF\u6362\uFF0C\u5141\u8BB8 text\u3001math\u3001shape\u3001diagram\u3001table\u3001note\uFF1B\u4E0D\u9700\u8981\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u5B83\u4E0D\u5141\u8BB8\u4FEE\u6539\u5386\u53F2\u767D\u677F\u8282\u70B9\uFF0C\u4E5F\u4E0D\u5F97\u5305\u542B geometry\u3001plot \u6216 image\u3002
+
+\u6CA1\u6709\u660E\u786E\u6216\u5FC5\u8981\u89C6\u89C9\u8981\u6C42\u65F6 visual_requirements \u53EF\u4EE5\u4E3A\u7A7A\uFF0C\u4F46 request_items \u548C teaching_goal_requirements \u4ECD\u987B\u8986\u76D6\u7528\u6237\u7684\u6559\u5B66\u8BF7\u6C42\u3002\u53EA\u8F93\u51FA\u7B26\u5408 JSON Schema \u7684 JSON \u5BF9\u8C61\u3002`;
+var BRIEF_VERIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u7A0B\u8981\u6C42\u590D\u6838\u5668\uFF0C\u4E0D\u751F\u6210\u8BFE\u4EF6\uFF0C\u4E5F\u4E0D\u6539\u5199\u8BFE\u7A0B\u8981\u6C42\u3002\u8BF7\u72EC\u7ACB\u6BD4\u8F83\u6743\u5A01\u7528\u6237\u539F\u6587\u548C\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\uFF0C\u53EA\u62A5\u544A\uFF1A
+1. \u7528\u6237\u660E\u786E\u63D0\u51FA\u3001\u4F46\u6E05\u5355\u6CA1\u6709\u8BB0\u5F55\u6216\u6CA1\u6709\u6B63\u786E\u6620\u5C04\u7684\u8981\u6C42\uFF1B
+2. \u6E05\u5355\u4E0E\u7528\u6237\u539F\u6587\u53D1\u751F\u7684\u77DB\u76FE\uFF0C\u5305\u62EC\u628A\u4E0D\u652F\u6301\u7684\u80FD\u529B\u5077\u6362\u6210\u8F83\u5F31\u80FD\u529B\u3002
+
+missing \u548C contradictions \u4E2D\u7684 evidence \u5FC5\u987B\u9010\u5B57\u5F15\u7528\u6307\u5B9A source \u7684\u539F\u6587\u3002\u6CA1\u6709\u53D1\u73B0\u95EE\u9898\u65F6\u8FD4\u56DE\u4E24\u4E2A\u7A7A\u6570\u7EC4\u3002\u4E0D\u8981\u53EA\u8FD4\u56DE\u201C\u68C0\u67E5\u901A\u8FC7\u201D\u4E4B\u7C7B\u6CA1\u6709\u8BC1\u636E\u7684\u7ED3\u8BBA\u3002`;
 var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\u4F53\u3001\u5C0A\u91CD\u5B66\u751F\u7684\u5BB6\u5EAD\u6559\u5E08\u3002\u8BF7\u751F\u6210\u4E00\u5802\u5B8C\u6574\u3001\u8FDE\u7EED\u7684 OLL Authoring Profile \u8BFE\u7A0B\u3002
 
 \u786C\u6027\u8981\u6C42\uFF1A
@@ -9104,11 +9242,14 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 - geometry.points[] \u6BCF\u9879\u5305\u542B as\u3001x\u3001y\uFF1Bcircles[] \u4F7F\u7528 center point alias \u548C\u6B63 radius\uFF1Bsegments[] \u4F7F\u7528 from/to point alias\uFF0C\u6295\u5F71\u7EBF\u4F7F\u7528 style="projection"\uFF1Barcs[] \u4F7F\u7528 center\u3001radius\u3001start_angle\u3001end_angle\uFF0C\u89D2\u5EA6\u4E3A\u5F27\u5EA6\u3002\u6A21\u578B\u4E0D\u5F97\u8F93\u51FA SVG \u6216\u50CF\u7D20\u5750\u6807\u3002
 - diagram \u7528\u4E8E\u8BED\u4E49\u5143\u7D20\u4E0E\u8FDE\u7EBF\uFF0C\u4E0D\u5F97\u5192\u5145\u51FD\u6570\u56FE\u50CF\u3002plot \u7528\u4E8E\u5750\u6807\u8F74\u4E0A\u7684\u51FD\u6570\u66F2\u7EBF\uFF1Bcontent.axes.x/y \u5404\u7ED9\u51FA\u6570\u503C min/max\uFF0Ccontent.curves[] \u6BCF\u9879\u5FC5\u987B\u5305\u542B as\u3001expression\uFF0C\u53EF\u5305\u542B label\u3002
 - plot.expression \u53EA\u5199\u53D7\u9650\u6570\u5B66\u8868\u8FBE\u5F0F\uFF0C\u4F8B\u5982 sin(x)\u3001cos(x)\u3001(x+3)^2-4\uFF1B\u652F\u6301 x\u3001pi\u3001e\u3001+ - * / ^\u3001\u62EC\u53F7\u4EE5\u53CA sin/cos/tan/sqrt/abs/exp/log\uFF0C\u4E0D\u5199 y=\u3001LaTeX\u3001\u4EE3\u7801\u6216 SVG\u3002
-- \u8F93\u5165\u4E2D\u7684 lesson_brief \u662F\u672C\u8F6E\u8BF7\u6C42\u7684\u53EF\u6267\u884C\u8981\u6C42\u5408\u540C\uFF1B\u6BCF\u4E2A visual_requirement \u548C visual_relationship \u90FD\u5FC5\u987B\u7531\u5B9E\u9645\u767D\u677F\u52A8\u4F5C\u6EE1\u8DB3\uFF0C\u6807\u9898\u3001goals\u3001\u8BB2\u8FF0\u6216\u6587\u5B57\u58F0\u660E\u4E0D\u80FD\u66FF\u4EE3\u8981\u6C42\u7684\u89C6\u89C9\u5185\u5BB9\u3002
-- lesson_brief.shared_variable_requirements \u975E\u7A7A\u65F6\uFF0C\u5FC5\u987B\u628A\u6BCF\u9879\u8981\u6C42\u5B8C\u6574\u843D\u5230 OLL\uFF1A\u5728 lesson.variables \u58F0\u660E\u552F\u4E00\u53D8\u91CF\u5E76\u63D0\u4F9B\u540C\u4E00\u4E2A slider\uFF1B\u5728 bound_visuals \u5BF9\u5E94\u7684 geometry/plot content.bindings \u4E2D\u5F15\u7528\u8BE5\u53D8\u91CF\uFF1B\u6DFB\u52A0\u4E00\u4E2A do="animate" \u52A8\u4F5C\uFF1Bdirect_angle_geometry \u975E\u7A7A\u65F6\uFF0C\u5728\u5BF9\u5E94 geometry \u7684\u53EF\u62D6\u52A8\u70B9\u4E0A\u58F0\u660E interaction={kind:"angle_control",variable,center}\u3002\u6ED1\u6746\u3001\u52A8\u753B\u3001\u76F4\u63A5\u62D6\u70B9\u5FC5\u987B\u5F15\u7528\u540C\u4E00\u4E2A\u53D8\u91CF\uFF0C\u7981\u6B62\u590D\u5236\u7B2C\u4E8C\u4EFD\u72B6\u6001\u3002
+- \u8F93\u5165\u4E2D\u7684\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u662F\u672C\u8F6E\u8BF7\u6C42\u7684\u53EF\u6267\u884C\u8981\u6C42\u5408\u540C\uFF1B\u6BCF\u4E2A visual_requirement \u548C visual_relationship \u90FD\u5FC5\u987B\u7531\u5B9E\u9645\u767D\u677F\u52A8\u4F5C\u6EE1\u8DB3\uFF0C\u6807\u9898\u3001goals\u3001\u8BB2\u8FF0\u6216\u6587\u5B57\u58F0\u660E\u4E0D\u80FD\u66FF\u4EE3\u8981\u6C42\u7684\u89C6\u89C9\u5185\u5BB9\u3002
+- \u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u4E2D\u7684 shared_variable_requirements \u975E\u7A7A\u65F6\uFF0C\u7CFB\u7EDF\u4F1A\u786E\u5B9A\u6027\u5199\u5165 lesson.variables \u548C\u53EF\u5224\u5B9A\u7684 angle_control\uFF1B\u6A21\u578B\u8D1F\u8D23\u5728 bound_visuals \u5BF9\u5E94\u7684 geometry/plot content.bindings \u4E2D\u5F15\u7528\u540C\u4E00\u4E2A\u53D8\u91CF\uFF0C\u5E76\u628A do="animate" \u52A8\u4F5C\u653E\u8FDB\u5408\u9002\u7684\u8BB2\u89E3\u8282\u62CD\u3002\u7981\u6B62\u590D\u5236\u7B2C\u4E8C\u4EFD\u72B6\u6001\u3002
 - bindings.target \u4F7F\u7528\u201C\u5C40\u90E8\u5143\u7D20\u522B\u540D.\u6570\u503C\u5C5E\u6027\u201D\uFF0Cexpression \u4F7F\u7528\u53D7\u9650\u8868\u8FBE\u5F0F\u5E76\u76F4\u63A5\u5F15\u7528\u53D8\u91CF\u540D\u3002\u4F8B\u5982\u5355\u4F4D\u5706\u4E0E\u6B63\u5F26\u56FE\u5171\u4EAB theta\uFF1Apoint-p.x=cos(theta)\u3001point-p.y=sin(theta)\u3001foot.x=cos(theta)\u3001theta-arc.end_angle=theta\u3001current-angle.x=theta\u3001current-angle.y=sin(theta)\u3002
 - animate \u53EA\u63CF\u8FF0\u8BED\u4E49\u76EE\u6807\uFF0C\u5305\u542B variable\u3001value\uFF0C\u53EF\u5305\u542B easing \u548C duration_intent\uFF1B\u4E0D\u5F97\u751F\u6210\u6BEB\u79D2\u65F6\u957F\u3002\u5B66\u751F\u53EF\u5728 Runtime \u4E2D\u64AD\u653E\u3001\u6682\u505C\u3001\u62D6\u52A8\u3001\u590D\u4F4D\u548C\u91CD\u653E\u3002
-- geometry \u70B9\u53EA\u6709\u5728 lesson_brief \u6307\u5B9A direct_angle_geometry \u65F6\u624D\u6DFB\u52A0 angle_control\uFF1Bcenter \u5FC5\u987B\u5F15\u7528\u540C\u4E00 geometry \u4E2D\u5DF2\u7ECF\u5B9A\u4E49\u7684\u5706\u5FC3\u70B9\u3002
+- \u52A8\u753B\u5FC5\u987B\u5355\u72EC\u5360\u7528\u4E00\u4E2A\u7B80\u77ED Beat\uFF1A\u76F8\u5173 geometry/plot \u548C connect \u5FC5\u987B\u5728\u66F4\u65E9\u7684 Beat \u5DF2\u7ECF\u521B\u5EFA\uFF1B\u52A8\u753B Beat \u53EA\u5305\u542B\u4E00\u4E2A do="animate" \u548C\u672C Beat \u5FC5\u9700\u7684 after_speech focus\uFF0C\u4E0D\u5F97\u540C\u65F6 write\u3001connect\u3001group\u3001revise\u3001point \u6216 emphasize\u3002
+- \u52A8\u753B Beat \u7684 say \u53EA\u8BF4\u4E00\u5230\u4E24\u53E5\u89C2\u5BDF\u63D0\u793A\uFF0C\u4E2D\u6587\u4E0D\u8D85\u8FC7 36 \u4E2A\u5B57\u7B26\uFF0C\u5176\u4ED6\u8BED\u8A00\u4E0D\u8D85\u8FC7 22 \u4E2A\u8BCD\u3002\u4E0D\u8981\u5728\u52A8\u753B\u64AD\u653E\u65F6\u8BB2\u5B8C\u6574\u63A8\u5BFC\uFF1B\u63A8\u5BFC\u548C\u7ED3\u8BBA\u653E\u5230\u524D\u540E\u76F8\u90BB Beat\u3002
+- animate \u5FC5\u987B\u4F7F\u7528 when="during_speech" \u6216\u7701\u7565 when \u4F7F\u7528\u9ED8\u8BA4\u503C\u3002Runtime \u4F1A\u5728\u65C1\u767D\u97F3\u9891\u771F\u6B63\u5F00\u59CB\u540E\u518D\u542F\u52A8\u52A8\u753B\uFF1B\u4E0D\u8981\u7528 before_speech \u6216 after_speech \u7ED5\u5F00\u8FD9\u4E00\u65F6\u5E8F\u3002
+- geometry \u70B9\u53EA\u6709\u5728\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u6307\u5B9A direct_angle_geometry \u65F6\u624D\u5141\u8BB8 angle_control\uFF1B\u6A21\u578B\u5FC5\u987B\u63D0\u4F9B\u540C\u65F6\u9A71\u52A8\u5706\u4E0A\u70B9 x/y \u7684\u53D8\u91CF\u7ED1\u5B9A\uFF0C\u4EE5\u53CA\u8FDE\u63A5\u5706\u5FC3\u548C\u8BE5\u70B9\u7684\u534A\u5F84\u7EBF\uFF0C\u7CFB\u7EDF\u624D\u4F1A\u786E\u5B9A\u6027\u8865\u5165 interaction\u3002
 - \u6BCF\u4E2A Beat \u7684 say \u5FC5\u987B\u4F7F\u7528\u9002\u5408 TTS \u6717\u8BFB\u7684\u81EA\u7136\u8BED\u8A00\u8868\u8FBE\u6570\u5B66\u5173\u7CFB\uFF0C\u4E0D\u5F97\u5305\u542B\u7F8E\u5143\u7B26\u53F7\u3001\u53CD\u659C\u6760\u547D\u4EE4\u6216\u5176\u4ED6\u539F\u59CB LaTeX \u6807\u8BB0\u3002
 - revise \u5FC5\u987B\u5305\u542B target\u3001content\u3001reason\uFF1Bemphasize \u5FC5\u987B\u5305\u542B target\u3001emphasis\u3002
 - connect \u5FC5\u987B\u5305\u542B as\u3001from\u3001to\u3001relation\uFF1Bgroup \u5FC5\u987B\u5305\u542B as\u3001role\u3001label\u3001members\u3002
@@ -9116,7 +9257,7 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 - \u5199\u677F\u4E66\u793A\u4F8B\uFF1A{"do":"write","as":"rule","kind":"note","role":"concept","content":{"title":"\u89C4\u5F8B","items":["\u5185\u5BB9"]},"place":{"relation":"new_region"}}\u3002
 - \u4E09\u89D2\u51FD\u6570\u56FE\u50CF\u793A\u4F8B\uFF1A{"do":"write","as":"trig-curves","kind":"plot","role":"diagram","content":{"axes":{"x":{"min":0,"max":6.283185307179586},"y":{"min":-1.2,"max":1.2}},"curves":[{"as":"sine-curve","expression":"sin(x)","label":"y = sin x"},{"as":"cosine-curve","expression":"cos(x)","label":"y = cos x"}]},"place":{"relation":"new_region"}}\u3002
 - \u5355\u4F4D\u5706\u793A\u4F8B\uFF1A{"do":"write","as":"unit-circle","kind":"geometry","role":"diagram","content":{"axes":{"x":{"min":-1.25,"max":1.25,"label":"x"},"y":{"min":-1.25,"max":1.25,"label":"y"},"equal_scale":true},"points":[{"as":"origin","x":0,"y":0,"label":"O"},{"as":"point-p","x":0.5,"y":0.8660254,"label":"P(cos \u03B8, sin \u03B8)"},{"as":"foot","x":0.5,"y":0}],"circles":[{"as":"circle","center":"origin","radius":1,"label":"r = 1"}],"segments":[{"as":"radius","from":"origin","to":"point-p","style":"solid"},{"as":"projection","from":"point-p","to":"foot","label":"sin \u03B8","style":"projection"}],"arcs":[{"as":"theta","center":"origin","radius":0.28,"start_angle":0,"end_angle":1.0471975512,"label":"\u03B8"}]},"place":{"relation":"new_region"}}\u3002
-- \u5171\u4EAB\u53D8\u91CF\u793A\u4F8B\uFF1Alesson.variables=[{"as":"theta","initial":0,"min":0,"max":6.283185307179586,"label":"\u65CB\u8F6C\u89D2 \u03B8","unit":"rad","control":{"kind":"slider","step":0.01}}]\uFF1B\u52A8\u753B\u52A8\u4F5C={"do":"animate","variable":"theta","value":6.283185307179586,"easing":"linear","duration_intent":"extended"}\u3002
+- \u5171\u4EAB\u53D8\u91CF\u52A8\u753B\u793A\u4F8B\uFF1A{"do":"animate","variable":"theta","value":6.283185307179586,"easing":"linear","duration_intent":"extended"}\u3002
 - \u805A\u7126\u793A\u4F8B\uFF1A{"do":"focus","when":"after_speech","targets":["rule"],"intent":"current_step"}\u3002`;
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -9226,7 +9367,11 @@ function buildVertexResponseJsonSchema(root) {
     "minimum",
     "maximum",
     "minItems",
-    "maxItems"
+    "maxItems",
+    "minLength",
+    "maxLength",
+    "exclusiveMinimum",
+    "exclusiveMaximum"
   ]);
   const convert = (raw) => {
     if (!raw || typeof raw !== "object") return raw;
@@ -9236,7 +9381,11 @@ function buildVertexResponseJsonSchema(root) {
     for (const [key, value] of Object.entries(source)) {
       if (omitted.has(key) && (value === null || typeof value !== "object")) continue;
       if (key === "const") {
-        result.enum = [value];
+        if (typeof value === "string" || typeof value === "number") {
+          result.enum = [value];
+        } else if (typeof value === "boolean") {
+          result.type = "boolean";
+        }
       } else {
         result[key] = convert(value);
       }
@@ -9375,7 +9524,7 @@ function buildVertexResponseJsonSchema(root) {
       type: "object",
       additionalProperties: false,
       required: ["x", "y", "equal_scale"],
-      properties: { x: geometryAxis, y: geometryAxis, equal_scale: { enum: [true] } }
+      properties: { x: geometryAxis, y: geometryAxis, equal_scale: { type: "boolean" } }
     };
     const geometryPoints = { ...structuredClone(points), minItems: 1 };
     const geometryPointItems = geometryPoints.items;
@@ -9500,30 +9649,14 @@ function buildVertexResponseJsonSchema(root) {
         properties: { title: { type: "string" }, items: stringArray, text: { type: "string" }, caption: { type: "string" } }
       }
     };
+    const reviseContentByKind = Object.fromEntries(
+      ["text", "math", "shape", "diagram", "table", "note"].map((kind) => [
+        kind,
+        structuredClone(writeContentByKind[kind])
+      ])
+    );
     const reviseContent = {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        title: { type: "string" },
-        text: { type: "string" },
-        latex: { type: "string" },
-        caption: { type: "string" },
-        items: stringArray,
-        columns: stringArray,
-        rows: { type: "array", items: { type: "array", items: { type: "string" } } },
-        fragments,
-        elements: diagramElements,
-        edges: diagramEdges,
-        regions: diagramRegions,
-        axes: { anyOf: [structuredClone(axes), structuredClone(geometryAxes)] },
-        curves,
-        points,
-        guides,
-        circles: geometryCircles,
-        segments: geometrySegments,
-        arcs: geometryArcs,
-        bindings
-      }
+      anyOf: Object.values(reviseContentByKind).map((content) => structuredClone(content))
     };
     const requiredByAction = {
       revise: ["target", "content", "reason"],
@@ -9569,6 +9702,224 @@ function buildVertexResponseJsonSchema(root) {
   return compact;
 }
 var vertexResponseJsonSchema = buildVertexResponseJsonSchema(oll_authoring_v0_1_schema_default);
+var baseWriteKinds = ["text", "math", "shape", "note"];
+var baseActionNames = [
+  "emphasize",
+  "connect",
+  "group",
+  "focus",
+  "point",
+  "expression"
+];
+var revisableNodeKinds = ["text", "math", "shape", "diagram", "table", "note"];
+var presentationCapabilities = [
+  "visual",
+  "text",
+  "math",
+  "shape",
+  "diagram",
+  "geometry",
+  "plot",
+  "image",
+  "table",
+  "note",
+  "animation",
+  "student_control",
+  "revise"
+];
+var visualWriteKinds = /* @__PURE__ */ new Set(["shape", "diagram", "geometry", "plot", "image", "table"]);
+function deriveAuthoringCapabilityPlan(input, brief) {
+  if (brief.unhandled_request_items.length > 0) {
+    const details = brief.unhandled_request_items.map((item) => `${item.request_item_id}: ${item.reason}`).join("; ");
+    throw new ToolExecutionError("UNSUPPORTED_REQUIREMENT", `The request contains unsupported or ambiguous requirements: ${details}`);
+  }
+  const writeKinds = new Set(baseWriteKinds);
+  for (const requirement of brief.visual_requirements) writeKinds.add(requirement.surface);
+  for (const kind of brief.progressive_revision_kinds) writeKinds.add(kind);
+  const actions = new Set(baseActionNames);
+  if (brief.shared_variable_requirements.length > 0) actions.add("animate");
+  if (brief.progressive_revision_kinds.length > 0) actions.add("revise");
+  const bindingKinds = /* @__PURE__ */ new Set();
+  const visualById = new Map(brief.visual_requirements.map((item) => [item.id, item]));
+  let allowAngleControl = false;
+  for (const variable of brief.shared_variable_requirements) {
+    for (const visualId of variable.bound_visuals) {
+      const visual = visualById.get(visualId);
+      if (visual?.surface === "geometry" || visual?.surface === "plot") bindingKinds.add(visual.surface);
+    }
+    if (variable.direct_angle_geometry) allowAngleControl = true;
+  }
+  const explicitlyRequiredSurfaces = new Set(brief.visual_requirements.map((item) => item.surface));
+  for (const constraint of brief.presentation_constraints) {
+    const capability = constraint.capability;
+    const forbid = constraint.polarity === "forbid";
+    if (capability === "visual") {
+      if (!forbid) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "A generic visual requirement must name a concrete supported surface");
+      }
+      if ([...explicitlyRequiredSurfaces].some((kind) => visualWriteKinds.has(kind))) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids visual output");
+      }
+      for (const kind of visualWriteKinds) writeKinds.delete(kind);
+      continue;
+    }
+    if (["text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note"].includes(capability)) {
+      const kind = capability;
+      if (forbid) {
+        if (explicitlyRequiredSurfaces.has(kind)) {
+          throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", `The request both requires and forbids ${kind}`);
+        }
+        writeKinds.delete(kind);
+      } else {
+        writeKinds.add(kind);
+      }
+      continue;
+    }
+    if (capability === "animation") {
+      if (forbid && brief.shared_variable_requirements.length > 0) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires continuous animation and forbids animation");
+      }
+      if (forbid) actions.delete("animate");
+      continue;
+    }
+    if (capability === "student_control") {
+      if (forbid && brief.shared_variable_requirements.some((item) => item.direct_angle_geometry)) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids direct student control");
+      }
+      if (forbid) allowAngleControl = false;
+      continue;
+    }
+    if (capability === "revise") {
+      if (forbid) {
+        actions.delete("revise");
+      } else if (brief.progressive_revision_kinds.length === 0) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "A requested progressive revision must name at least one supported node kind");
+      }
+    }
+  }
+  if (writeKinds.has("image") && !input.session_context?.assets?.length) {
+    throw new ToolExecutionError("BRIEF_IMAGE_RESOURCE_UNAVAILABLE", "The course requires an image, but no authorized image asset is available");
+  }
+  if (writeKinds.size === 0) {
+    throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request forbids every supported board-writing capability");
+  }
+  return {
+    writeKinds: [...writeKinds].sort(),
+    actions: [...actions].sort(),
+    reviseKinds: actions.has("revise") ? [...brief.progressive_revision_kinds].sort() : [],
+    allowVariables: brief.shared_variable_requirements.length > 0,
+    bindingKinds: [...bindingKinds].sort(),
+    allowAngleControl
+  };
+}
+function actionVariantIdentity(variant) {
+  const properties = variant.properties;
+  const action = properties?.do;
+  const kind = properties?.kind;
+  return {
+    action: Array.isArray(action?.enum) && typeof action.enum[0] === "string" ? action.enum[0] : void 0,
+    kind: Array.isArray(kind?.enum) && typeof kind.enum[0] === "string" ? kind.enum[0] : void 0
+  };
+}
+function pruneUnusedDefinitions(schema) {
+  const definitions = isRecord(schema.$defs) ? schema.$defs : {};
+  const retained = /* @__PURE__ */ new Set();
+  const queue = [];
+  const inspect = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(inspect);
+      return;
+    }
+    if (!isRecord(value)) return;
+    if (typeof value.$ref === "string" && value.$ref.startsWith("#/$defs/")) {
+      const name = value.$ref.slice("#/$defs/".length).split("/", 1)[0];
+      if (name && !retained.has(name)) queue.push(name);
+    }
+    for (const [key, child] of Object.entries(value)) {
+      if (key !== "$defs") inspect(child);
+    }
+  };
+  const rootWithoutDefinitions = structuredClone(schema);
+  delete rootWithoutDefinitions.$defs;
+  inspect(rootWithoutDefinitions);
+  while (queue.length > 0) {
+    const name = queue.shift();
+    if (retained.has(name)) continue;
+    const definition = definitions[name];
+    if (!definition) throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `Missing local Schema definition '${name}'`);
+    retained.add(name);
+    inspect(definition);
+  }
+  return {
+    ...rootWithoutDefinitions,
+    ...retained.size > 0 ? { $defs: Object.fromEntries([...retained].sort().map((name) => [name, structuredClone(definitions[name])])) } : {}
+  };
+}
+var supportedVertexSchemaKeywords = /* @__PURE__ */ new Set([
+  "type",
+  "properties",
+  "required",
+  "additionalProperties",
+  "items",
+  "enum",
+  "anyOf",
+  "$defs",
+  "$ref",
+  "minItems",
+  "maxItems"
+]);
+function assertVertexSchemaCompatible(schema) {
+  const visit = (value, path) => {
+    if (!isRecord(value)) return;
+    for (const [key, child] of Object.entries(value)) {
+      if (!supportedVertexSchemaKeywords.has(key)) {
+        throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `Unsupported Vertex Schema keyword at ${path}/${key}`);
+      }
+      if (key === "enum") {
+        if (!Array.isArray(child) || child.some((item) => typeof item !== "string" && typeof item !== "number")) {
+          throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `Vertex enum contains an unsupported value at ${path}/enum`);
+        }
+        continue;
+      }
+      if (key === "properties" || key === "$defs") {
+        if (!isRecord(child)) throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `${path}/${key} must be an object`);
+        for (const [name, nested] of Object.entries(child)) visit(nested, `${path}/${key}/${name}`);
+        continue;
+      }
+      if (key === "items") visit(child, `${path}/items`);
+      if (key === "anyOf") {
+        if (!Array.isArray(child)) throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `${path}/anyOf must be an array`);
+        child.forEach((nested, index) => visit(nested, `${path}/anyOf/${index}`));
+      }
+    }
+    if (typeof value.$ref === "string" && Object.keys(value).length !== 1) {
+      throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `$ref must not have sibling keywords at ${path}`);
+    }
+    if (Array.isArray(value.required) && isRecord(value.properties)) {
+      for (const requiredProperty of value.required) {
+        if (typeof requiredProperty !== "string" || !(requiredProperty in value.properties)) {
+          throw new ToolExecutionError(
+            "VERTEX_SCHEMA_INCOMPATIBLE",
+            `Required property '${String(requiredProperty)}' is not declared at ${path}/properties`
+          );
+        }
+      }
+    }
+  };
+  visit(schema, "");
+}
+function schemaDiagnostics(schema) {
+  const serialized = JSON.stringify(schema);
+  const definitions = isRecord(schema.$defs) ? schema.$defs : {};
+  const action = isRecord(definitions.action) ? definitions.action : {};
+  const branches = Array.isArray(action.anyOf) ? action.anyOf.length : 0;
+  return {
+    sha256: createHash("sha256").update(serialized).digest("hex"),
+    bytes: Buffer.byteLength(serialized),
+    action_branches: branches,
+    definitions: Object.keys(definitions).length
+  };
+}
 function requireNonEmptyCollection(contentSchema, field) {
   const required = Array.isArray(contentSchema.required) ? contentSchema.required : [];
   if (!required.includes(field)) contentSchema.required = [...required, field];
@@ -9576,11 +9927,78 @@ function requireNonEmptyCollection(contentSchema, field) {
   const collection = properties?.[field];
   if (collection?.type === "array") collection.minItems = 1;
 }
-function buildAuthoringResponseJsonSchema(brief) {
+function buildAuthoringResponseJsonSchema(brief, plan) {
   const schema = structuredClone(vertexResponseJsonSchema);
   const definitions = schema.$defs;
   const action = definitions?.action;
-  const variants = Array.isArray(action?.anyOf) ? action.anyOf : [];
+  const allVariants = Array.isArray(action?.anyOf) ? action.anyOf : [];
+  const writeContentByKind = /* @__PURE__ */ new Map();
+  for (const variant of allVariants) {
+    const identity = actionVariantIdentity(variant);
+    if (identity.action === "write" && identity.kind) {
+      const content = variant.properties?.content;
+      if (content) writeContentByKind.set(identity.kind, structuredClone(content));
+    }
+  }
+  const variants = allVariants.filter((variant) => {
+    const identity = actionVariantIdentity(variant);
+    if (identity.action === "write") return !!identity.kind && plan.writeKinds.includes(identity.kind);
+    return !!identity.action && plan.actions.includes(identity.action);
+  });
+  if (action) action.anyOf = variants;
+  const reviseVariant = variants.find((variant) => actionVariantIdentity(variant).action === "revise");
+  if (reviseVariant) {
+    const properties = reviseVariant.properties;
+    const revisionSchemas = plan.reviseKinds.map((kind) => {
+      const content = writeContentByKind.get(kind);
+      if (!content) throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `No revise content Schema is available for '${kind}'`);
+      return structuredClone(content);
+    });
+    properties.content = revisionSchemas.length === 1 ? revisionSchemas[0] : { anyOf: revisionSchemas };
+  }
+  if (brief.shared_variable_requirements.length > 0) {
+    const animateIndex = variants.findIndex((variant) => actionVariantIdentity(variant).action === "animate");
+    if (animateIndex < 0) {
+      throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", "Shared variables require an animate action variant");
+    }
+    const animateTemplate = variants[animateIndex];
+    const exactAnimateVariants = brief.shared_variable_requirements.map((requirement) => {
+      const exact = structuredClone(animateTemplate);
+      const properties = exact.properties;
+      properties.variable = { enum: [requirement.variable] };
+      properties.value = { type: "number", enum: [requirement.animate_to] };
+      properties.easing = { enum: [requirement.easing] };
+      properties.duration_intent = { enum: [requirement.duration_intent] };
+      const required = Array.isArray(exact.required) ? exact.required : [];
+      exact.required = [.../* @__PURE__ */ new Set([...required, "easing", "duration_intent"])];
+      return exact;
+    });
+    variants.splice(animateIndex, 1, ...exactAnimateVariants);
+  }
+  const rootProperties = schema.properties;
+  const lesson = rootProperties.lesson;
+  const lessonProperties = lesson.properties;
+  delete lessonProperties.variables;
+  if (Array.isArray(lesson.required)) {
+    lesson.required = lesson.required.filter((field) => field !== "variables");
+  }
+  for (const variant of variants) {
+    const identity = actionVariantIdentity(variant);
+    if (identity.action !== "write") continue;
+    const properties = variant.properties;
+    const content = properties.content;
+    const contentProperties = content.properties;
+    if ((identity.kind === "geometry" || identity.kind === "plot") && !plan.bindingKinds.includes(identity.kind)) {
+      if (contentProperties) delete contentProperties.bindings;
+      if (Array.isArray(content.required)) content.required = content.required.filter((field) => field !== "bindings");
+    }
+    if (identity.kind === "geometry" && !plan.allowAngleControl) {
+      const points = contentProperties?.points;
+      const pointItems = points?.items;
+      const pointProperties = pointItems?.properties;
+      if (pointProperties) delete pointProperties.interaction;
+    }
+  }
   const fieldsBySurface = {
     geometry: /* @__PURE__ */ new Map([
       ["circle", "circles"],
@@ -9612,13 +10030,6 @@ function buildAuthoringResponseJsonSchema(brief) {
     }
   }
   if (brief.shared_variable_requirements.length > 0) {
-    const rootProperties = schema.properties;
-    const lesson = rootProperties.lesson;
-    const lessonRequired = Array.isArray(lesson.required) ? lesson.required : [];
-    if (!lessonRequired.includes("variables")) lesson.required = [...lessonRequired, "variables"];
-    const lessonProperties = lesson.properties;
-    const variables = lessonProperties.variables;
-    variables.minItems = brief.shared_variable_requirements.length;
     const boundSurfaces = new Set(brief.shared_variable_requirements.flatMap((requirement) => requirement.bound_visuals.flatMap((id) => {
       const visual = brief.visual_requirements.find((candidate) => candidate.id === id);
       return visual ? [visual.surface] : [];
@@ -9634,7 +10045,9 @@ function buildAuthoringResponseJsonSchema(brief) {
       if (content) requireNonEmptyCollection(content, "bindings");
     }
   }
-  return schema;
+  const projected = pruneUnusedDefinitions(schema);
+  assertVertexSchemaCompatible(projected);
+  return projected;
 }
 var visualSurfaces = ["geometry", "plot", "diagram", "image", "table"];
 var visualFeatures = [
@@ -9667,32 +10080,96 @@ var animationDurationIntents = [
   "normal",
   "extended"
 ];
+var requestEvidenceSources = ["learner_request", "recognized_problem", "board_summary"];
+var requestItemKinds = [
+  "teaching_goal",
+  "visual",
+  "relationship",
+  "continuous_change",
+  "student_control",
+  "existing_board_edit",
+  "presentation_constraint",
+  "unsupported_feature"
+];
+var requestItemPolarities = ["require", "forbid"];
+var unhandledStatuses = ["unsupported", "ambiguous"];
+var idArraySchema = { type: "array", minItems: 1, items: { type: "string" } };
 var lessonBriefResponseJsonSchema = {
   type: "object",
   additionalProperties: false,
   required: [
     "version",
     "request_summary",
+    "request_items",
+    "teaching_goal_requirements",
+    "presentation_constraints",
     "visual_requirements",
     "visual_relationships",
-    "shared_variable_requirements"
+    "shared_variable_requirements",
+    "progressive_revision_kinds",
+    "unhandled_request_items"
   ],
   properties: {
     version: { enum: ["1"] },
     request_summary: { type: "string" },
+    request_items: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "source", "evidence", "kind", "polarity"],
+        properties: {
+          id: { type: "string" },
+          source: { enum: requestEvidenceSources },
+          evidence: { type: "string" },
+          kind: { enum: requestItemKinds },
+          polarity: { enum: requestItemPolarities }
+        }
+      }
+    },
+    teaching_goal_requirements: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "goal", "request_item_ids"],
+        properties: {
+          id: { type: "string" },
+          goal: { type: "string" },
+          request_item_ids: idArraySchema
+        }
+      }
+    },
+    presentation_constraints: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "capability", "polarity", "request_item_ids"],
+        properties: {
+          id: { type: "string" },
+          capability: { enum: presentationCapabilities },
+          polarity: { enum: requestItemPolarities },
+          request_item_ids: idArraySchema
+        }
+      }
+    },
     visual_requirements: {
       type: "array",
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "surface", "purpose", "evidence", "required_features", "expressions"],
+        required: ["id", "surface", "purpose", "evidence", "required_features", "expressions", "request_item_ids"],
         properties: {
-          id: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
+          id: { type: "string" },
           surface: { enum: visualSurfaces },
           purpose: { type: "string" },
           evidence: { type: "string" },
           required_features: { type: "array", items: { enum: visualFeatures } },
-          expressions: { type: "array", items: { type: "string" } }
+          expressions: { type: "array", items: { type: "string" } },
+          request_item_ids: idArraySchema
         }
       }
     },
@@ -9701,12 +10178,14 @@ var lessonBriefResponseJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["from", "to", "relation", "evidence"],
+        required: ["id", "from", "to", "relation", "evidence", "request_item_ids"],
         properties: {
-          from: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
-          to: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
+          id: { type: "string" },
+          from: { type: "string" },
+          to: { type: "string" },
           relation: { enum: visualRelationships },
-          evidence: { type: "string" }
+          evidence: { type: "string" },
+          request_item_ids: idArraySchema
         }
       }
     },
@@ -9730,11 +10209,12 @@ var lessonBriefResponseJsonSchema = {
           "easing",
           "duration_intent",
           "bound_visuals",
-          "direct_angle_geometry"
+          "direct_angle_geometry",
+          "request_item_ids"
         ],
         properties: {
-          id: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
-          variable: { type: "string", pattern: "^[a-z][a-z0-9_]*$" },
+          id: { type: "string" },
+          variable: { type: "string" },
           purpose: { type: "string" },
           evidence: { type: "string" },
           initial: { type: "number" },
@@ -9749,9 +10229,61 @@ var lessonBriefResponseJsonSchema = {
           bound_visuals: {
             type: "array",
             minItems: 1,
-            items: { type: "string", pattern: "^[a-z][a-z0-9-]*$" }
+            items: { type: "string" }
           },
-          direct_angle_geometry: { type: "string" }
+          direct_angle_geometry: { type: "string" },
+          request_item_ids: idArraySchema
+        }
+      }
+    },
+    progressive_revision_kinds: {
+      type: "array",
+      items: { enum: revisableNodeKinds }
+    },
+    unhandled_request_items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["request_item_id", "status", "reason"],
+        properties: {
+          request_item_id: { type: "string" },
+          status: { enum: unhandledStatuses },
+          reason: { type: "string" }
+        }
+      }
+    }
+  }
+};
+var briefVerificationResponseJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["missing", "contradictions"],
+  properties: {
+    missing: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source", "evidence", "kind", "reason"],
+        properties: {
+          source: { enum: requestEvidenceSources },
+          evidence: { type: "string" },
+          kind: { enum: requestItemKinds },
+          reason: { type: "string" }
+        }
+      }
+    },
+    contradictions: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source", "evidence", "reason"],
+        properties: {
+          source: { enum: requestEvidenceSources },
+          evidence: { type: "string" },
+          reason: { type: "string" }
         }
       }
     }
@@ -9781,18 +10313,63 @@ function isRecord(value) {
 function normalizeEvidence(value) {
   return value.normalize("NFKC").toLocaleLowerCase().replace(/[\\$]/gu, "").replace(/[（）()\[\]{}]/gu, "").replace(/\s+/gu, "");
 }
-function authoritativeRequestText(input) {
-  const sources = [input.learner_request];
+function authoritativeRequestSources(input) {
+  const sources = [
+    { source: "learner_request", text: input.learner_request }
+  ];
   if (input.request_source === "current_image" && input.source_observation) {
-    sources.push(input.source_observation.recognized_problem);
+    sources.push({ source: "recognized_problem", text: input.source_observation.recognized_problem });
   }
   if (input.request_source === "explicit_board_follow_up" && input.board_summary) {
-    sources.push(input.board_summary);
+    sources.push({ source: "board_summary", text: input.board_summary });
   }
   return sources;
 }
 function briefViolation(code, path, message) {
   return { stage: "brief", code, path, message };
+}
+function canonicalizeBriefAliases(candidate) {
+  if (!isRecord(candidate)) return candidate;
+  const brief = structuredClone(candidate);
+  const alias = (value) => typeof value === "string" ? value.replace(/_/gu, "-") : value;
+  const aliasArray = (value) => {
+    if (!Array.isArray(value)) return;
+    for (let index = 0; index < value.length; index += 1) value[index] = alias(value[index]);
+  };
+  const canonicalizeItems = (value) => {
+    if (!Array.isArray(value)) return;
+    for (const item of value) {
+      if (!isRecord(item)) continue;
+      item.id = alias(item.id);
+      aliasArray(item.request_item_ids);
+    }
+  };
+  canonicalizeItems(brief.request_items);
+  canonicalizeItems(brief.teaching_goal_requirements);
+  canonicalizeItems(brief.presentation_constraints);
+  canonicalizeItems(brief.visual_requirements);
+  canonicalizeItems(brief.visual_relationships);
+  canonicalizeItems(brief.shared_variable_requirements);
+  if (Array.isArray(brief.visual_relationships)) {
+    for (const relationship of brief.visual_relationships) {
+      if (!isRecord(relationship)) continue;
+      relationship.from = alias(relationship.from);
+      relationship.to = alias(relationship.to);
+    }
+  }
+  if (Array.isArray(brief.shared_variable_requirements)) {
+    for (const requirement of brief.shared_variable_requirements) {
+      if (!isRecord(requirement)) continue;
+      aliasArray(requirement.bound_visuals);
+      requirement.direct_angle_geometry = alias(requirement.direct_angle_geometry);
+    }
+  }
+  if (Array.isArray(brief.unhandled_request_items)) {
+    for (const item of brief.unhandled_request_items) {
+      if (isRecord(item)) item.request_item_id = alias(item.request_item_id);
+    }
+  }
+  return brief;
 }
 function validateLessonBrief(candidate, input) {
   const violations = [];
@@ -9806,6 +10383,18 @@ function validateLessonBrief(candidate, input) {
   }
   if (typeof candidate.request_summary !== "string" || !candidate.request_summary.trim()) {
     violations.push(briefViolation("BRIEF_MISSING_SUMMARY", "/request_summary", "request_summary is required"));
+  }
+  const requestItems = Array.isArray(candidate.request_items) ? candidate.request_items : [];
+  if (!Array.isArray(candidate.request_items) || candidate.request_items.length === 0) {
+    violations.push(briefViolation("BRIEF_MISSING_REQUEST_ITEMS", "/request_items", "request_items must contain the explicit requirements from the authoritative request"));
+  }
+  const teachingGoals = Array.isArray(candidate.teaching_goal_requirements) ? candidate.teaching_goal_requirements : [];
+  if (!Array.isArray(candidate.teaching_goal_requirements) || candidate.teaching_goal_requirements.length === 0) {
+    violations.push(briefViolation("BRIEF_MISSING_TEACHING_GOALS", "/teaching_goal_requirements", "teaching_goal_requirements must contain at least one goal"));
+  }
+  const presentationConstraints = Array.isArray(candidate.presentation_constraints) ? candidate.presentation_constraints : [];
+  if (!Array.isArray(candidate.presentation_constraints)) {
+    violations.push(briefViolation("BRIEF_INVALID_PRESENTATION_CONSTRAINTS", "/presentation_constraints", "presentation_constraints must be an array"));
   }
   const requirements = Array.isArray(candidate.visual_requirements) ? candidate.visual_requirements : [];
   if (!Array.isArray(candidate.visual_requirements)) {
@@ -9823,20 +10412,119 @@ function validateLessonBrief(candidate, input) {
       "shared_variable_requirements must be an array"
     ));
   }
-  const ids = /* @__PURE__ */ new Set();
-  const authoritative = authoritativeRequestText(input).map(normalizeEvidence);
-  const grounded = (evidence) => typeof evidence === "string" && normalizeEvidence(evidence).length > 0 && authoritative.some((source) => source.includes(normalizeEvidence(evidence)));
+  const revisionKinds = Array.isArray(candidate.progressive_revision_kinds) ? candidate.progressive_revision_kinds : [];
+  if (!Array.isArray(candidate.progressive_revision_kinds) || revisionKinds.some((kind) => !revisableNodeKinds.includes(kind)) || new Set(revisionKinds).size !== revisionKinds.length) {
+    violations.push(briefViolation("BRIEF_INVALID_REVISION_KINDS", "/progressive_revision_kinds", "progressive_revision_kinds must contain unique supported node kinds"));
+  }
+  const unhandledItems = Array.isArray(candidate.unhandled_request_items) ? candidate.unhandled_request_items : [];
+  if (!Array.isArray(candidate.unhandled_request_items)) {
+    violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_ITEMS", "/unhandled_request_items", "unhandled_request_items must be an array"));
+  }
+  const authoritative = authoritativeRequestSources(input);
+  const authoritativeBySource = new Map(authoritative.map((item) => [item.source, normalizeEvidence(item.text)]));
+  const grounded = (evidence, requestedSource) => {
+    if (typeof evidence !== "string" || normalizeEvidence(evidence).length === 0) return false;
+    if (typeof requestedSource === "string") {
+      const source = authoritativeBySource.get(requestedSource);
+      return !!source && source.includes(normalizeEvidence(evidence));
+    }
+    return authoritative.some((source) => normalizeEvidence(source.text).includes(normalizeEvidence(evidence)));
+  };
+  const requestItemById = /* @__PURE__ */ new Map();
+  requestItems.forEach((raw, index) => {
+    const path = `/request_items/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM", path, "request item must be an object"));
+      return;
+    }
+    if (typeof raw.id !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.id) || requestItemById.has(raw.id)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_ID", `${path}/id`, "request item id must be a unique lowercase alias"));
+    }
+    if (!requestEvidenceSources.includes(raw.source)) {
+      violations.push(briefViolation("BRIEF_INVALID_EVIDENCE_SOURCE", `${path}/source`, "request item source is not authoritative for this request"));
+    }
+    if (!grounded(raw.evidence, raw.source)) {
+      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "request item evidence must quote its named authoritative source"));
+    }
+    if (!requestItemKinds.includes(raw.kind)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_KIND", `${path}/kind`, "request item kind is unsupported"));
+    }
+    if (!requestItemPolarities.includes(raw.polarity)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_POLARITY", `${path}/polarity`, "request item polarity is unsupported"));
+    }
+    if (typeof raw.id === "string" && /^[a-z][a-z0-9-]*$/.test(raw.id) && !requestItemById.has(raw.id)) {
+      requestItemById.set(raw.id, raw);
+    }
+  });
+  const mappedDestinations = /* @__PURE__ */ new Map();
+  const mapRequestItems = (rawIds, path, destination, expectedPolarity = "require") => {
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      violations.push(briefViolation("BRIEF_MISSING_REQUEST_MAPPING", path, "request_item_ids must contain at least one request item id"));
+      return;
+    }
+    const seen = /* @__PURE__ */ new Set();
+    for (const id of rawIds) {
+      const item = typeof id === "string" ? requestItemById.get(id) : void 0;
+      if (!item || seen.has(String(id))) {
+        violations.push(briefViolation("BRIEF_INVALID_REQUEST_MAPPING", path, "request_item_ids must reference unique existing request items"));
+        continue;
+      }
+      seen.add(id);
+      if (item.polarity !== expectedPolarity) {
+        violations.push(briefViolation("BRIEF_INCOMPATIBLE_REQUEST_POLARITY", path, `${item.polarity} cannot be mapped to a ${expectedPolarity} ${destination}`));
+      }
+      const destinations = mappedDestinations.get(id) ?? /* @__PURE__ */ new Set();
+      destinations.add(destination);
+      mappedDestinations.set(id, destinations);
+    }
+  };
+  const requirementIds = /* @__PURE__ */ new Set();
+  const validateRequirementId = (value, path) => {
+    if (typeof value !== "string" || !/^[a-z][a-z0-9-]*$/.test(value) || requirementIds.has(value)) {
+      violations.push(briefViolation("BRIEF_INVALID_ID", path, "requirement id must be a unique lowercase alias"));
+    } else {
+      requirementIds.add(value);
+    }
+  };
+  teachingGoals.forEach((raw, index) => {
+    const path = `/teaching_goal_requirements/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_TEACHING_GOAL", path, "teaching goal must be an object"));
+      return;
+    }
+    validateRequirementId(raw.id, `${path}/id`);
+    if (typeof raw.goal !== "string" || !raw.goal.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_TEACHING_GOAL", `${path}/goal`, "goal must be a non-empty string"));
+    }
+    mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "teaching_goal");
+  });
+  presentationConstraints.forEach((raw, index) => {
+    const path = `/presentation_constraints/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_PRESENTATION_CONSTRAINT", path, "presentation constraint must be an object"));
+      return;
+    }
+    validateRequirementId(raw.id, `${path}/id`);
+    if (!presentationCapabilities.includes(raw.capability)) {
+      violations.push(briefViolation("BRIEF_INVALID_PRESENTATION_CAPABILITY", `${path}/capability`, "presentation capability is unsupported"));
+    }
+    if (!requestItemPolarities.includes(raw.polarity)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_POLARITY", `${path}/polarity`, "presentation constraint polarity is unsupported"));
+    }
+    mapRequestItems(
+      raw.request_item_ids,
+      `${path}/request_item_ids`,
+      "presentation_constraint",
+      raw.polarity
+    );
+  });
   requirements.forEach((raw, index) => {
     const path = `/visual_requirements/${index}`;
     if (!isRecord(raw)) {
       violations.push(briefViolation("BRIEF_INVALID_REQUIREMENT", path, "requirement must be an object"));
       return;
     }
-    if (typeof raw.id !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.id) || ids.has(raw.id)) {
-      violations.push(briefViolation("BRIEF_INVALID_ID", `${path}/id`, "id must be a unique lowercase alias"));
-    } else {
-      ids.add(raw.id);
-    }
+    validateRequirementId(raw.id, `${path}/id`);
     if (!visualSurfaces.includes(raw.surface)) {
       violations.push(briefViolation("BRIEF_INVALID_SURFACE", `${path}/surface`, "surface is unsupported"));
     }
@@ -9846,6 +10534,7 @@ function validateLessonBrief(candidate, input) {
     if (!grounded(raw.evidence)) {
       violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
     }
+    mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "visual");
     if (!Array.isArray(raw.required_features)) {
       violations.push(briefViolation("BRIEF_INVALID_FEATURES", `${path}/required_features`, "required_features must be an array"));
     } else if (visualSurfaces.includes(raw.surface)) {
@@ -9867,10 +10556,12 @@ function validateLessonBrief(candidate, input) {
       violations.push(briefViolation("BRIEF_INVALID_RELATIONSHIP", path, "relationship must be an object"));
       return;
     }
-    if (typeof raw.from !== "string" || !ids.has(raw.from)) {
+    validateRequirementId(raw.id, `${path}/id`);
+    const visualIds = new Set(requirements.flatMap((item) => isRecord(item) && typeof item.id === "string" ? [item.id] : []));
+    if (typeof raw.from !== "string" || !visualIds.has(raw.from)) {
       violations.push(briefViolation("BRIEF_UNKNOWN_RELATION_SOURCE", `${path}/from`, "from must reference a visual requirement id"));
     }
-    if (typeof raw.to !== "string" || !ids.has(raw.to)) {
+    if (typeof raw.to !== "string" || !visualIds.has(raw.to)) {
       violations.push(briefViolation("BRIEF_UNKNOWN_RELATION_TARGET", `${path}/to`, "to must reference a visual requirement id"));
     }
     if (!visualRelationships.includes(raw.relation)) {
@@ -9879,9 +10570,9 @@ function validateLessonBrief(candidate, input) {
     if (!grounded(raw.evidence)) {
       violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
     }
+    mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "relationship");
   });
   const visualById = new Map(requirements.flatMap((raw) => isRecord(raw) && typeof raw.id === "string" ? [[raw.id, raw]] : []));
-  const sharedIds = /* @__PURE__ */ new Set();
   const variableNames = /* @__PURE__ */ new Set();
   sharedVariables.forEach((raw, index) => {
     const path = `/shared_variable_requirements/${index}`;
@@ -9889,11 +10580,7 @@ function validateLessonBrief(candidate, input) {
       violations.push(briefViolation("BRIEF_INVALID_SHARED_VARIABLE", path, "shared variable requirement must be an object"));
       return;
     }
-    if (typeof raw.id !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.id) || sharedIds.has(raw.id)) {
-      violations.push(briefViolation("BRIEF_INVALID_SHARED_VARIABLE_ID", `${path}/id`, "id must be a unique lowercase alias"));
-    } else {
-      sharedIds.add(raw.id);
-    }
+    validateRequirementId(raw.id, `${path}/id`);
     if (typeof raw.variable !== "string" || !/^[a-z][a-z0-9_]{0,63}$/.test(raw.variable) || variableNames.has(raw.variable)) {
       violations.push(briefViolation("BRIEF_INVALID_VARIABLE_NAME", `${path}/variable`, "variable must be a unique OLL variable alias"));
     } else {
@@ -9905,6 +10592,11 @@ function validateLessonBrief(candidate, input) {
     if (!grounded(raw.evidence)) {
       violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
     }
+    mapRequestItems(
+      raw.request_item_ids,
+      `${path}/request_item_ids`,
+      "shared_variable"
+    );
     const min = numberValue(raw.min);
     const max = numberValue(raw.max);
     const initial = numberValue(raw.initial);
@@ -9964,6 +10656,86 @@ function validateLessonBrief(candidate, input) {
       }
     }
   });
+  const unhandledRequestIds = /* @__PURE__ */ new Set();
+  unhandledItems.forEach((raw, index) => {
+    const path = `/unhandled_request_items/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_ITEM", path, "unhandled request item must be an object"));
+      return;
+    }
+    const item = typeof raw.request_item_id === "string" ? requestItemById.get(raw.request_item_id) : void 0;
+    if (!item || unhandledRequestIds.has(String(raw.request_item_id))) {
+      violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_ITEM", `${path}/request_item_id`, "request_item_id must reference one unique request item"));
+    } else {
+      unhandledRequestIds.add(raw.request_item_id);
+    }
+    if (!unhandledStatuses.includes(raw.status)) {
+      violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_STATUS", `${path}/status`, "unhandled item status is unsupported"));
+    }
+    if (typeof raw.reason !== "string" || !raw.reason.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_REASON", `${path}/reason`, "unhandled item reason is required"));
+    }
+  });
+  const requiredDestinationByKind = {
+    teaching_goal: "teaching_goal",
+    visual: "visual",
+    relationship: "relationship",
+    continuous_change: "shared_variable",
+    student_control: "shared_variable",
+    presentation_constraint: "presentation_constraint"
+  };
+  for (const [id, item] of requestItemById) {
+    const destinations = mappedDestinations.get(id);
+    const isUnhandled = unhandledRequestIds.has(id);
+    if (isUnhandled && destinations?.size) {
+      violations.push(briefViolation("BRIEF_CONFLICTING_REQUEST_COVERAGE", "/unhandled_request_items", `request item '${id}' is both planned and unhandled`));
+    } else if (!isUnhandled && !destinations?.size) {
+      violations.push(briefViolation("BRIEF_UNMAPPED_REQUEST_ITEM", "/request_items", `request item '${id}' has no planned or unhandled destination`));
+    }
+    const requiredDestination = requiredDestinationByKind[item.kind];
+    if (!isUnhandled && requiredDestination && !destinations?.has(requiredDestination)) {
+      violations.push(briefViolation(
+        "BRIEF_INCOMPATIBLE_REQUEST_MAPPING",
+        "/request_items",
+        `request item '${id}' (${item.kind}) must map to at least one ${requiredDestination} requirement`
+      ));
+    }
+    if ((item.kind === "existing_board_edit" || item.kind === "unsupported_feature") && !isUnhandled) {
+      violations.push(briefViolation("BRIEF_UNSUPPORTED_ITEM_NOT_REPORTED", "/unhandled_request_items", `request item '${id}' must be reported as unsupported or ambiguous`));
+    }
+  }
+  const knownRequirementHints = [
+    { phrase: "\u51FD\u6570\u56FE\u50CF", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "\u5355\u4F4D\u5706", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "\u52A8\u753B", kinds: ["continuous_change", "presentation_constraint"] },
+    { phrase: "\u62D6\u52A8", kinds: ["student_control"] },
+    { phrase: "\u6ED1\u6746", kinds: ["student_control"] },
+    { phrase: "\u53EF\u4EA4\u4E92", kinds: ["student_control"] },
+    { phrase: "\u8868\u683C", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "\u56FE\u7247", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "\u4E09\u7EF4", kinds: ["unsupported_feature", "presentation_constraint"] },
+    { phrase: "3d", kinds: ["unsupported_feature", "presentation_constraint"] },
+    { phrase: "functiongraph", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "unitcircle", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "animation", kinds: ["continuous_change", "presentation_constraint"] },
+    { phrase: "drag", kinds: ["student_control"] },
+    { phrase: "slider", kinds: ["student_control"] },
+    { phrase: "interactive", kinds: ["student_control"] },
+    { phrase: "table", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "image", kinds: ["visual", "presentation_constraint"] }
+  ];
+  const combinedAuthoritative = normalizeEvidence(authoritative.map((item) => item.text).join(" "));
+  for (const hint of knownRequirementHints) {
+    const normalizedHint = normalizeEvidence(hint.phrase);
+    const recordedWithExpectedKind = requestItems.some((item) => isRecord(item) && typeof item.evidence === "string" && hint.kinds.includes(item.kind) && normalizeEvidence(item.evidence).includes(normalizedHint));
+    if (combinedAuthoritative.includes(normalizedHint) && !recordedWithExpectedKind) {
+      violations.push(briefViolation(
+        "BRIEF_SUSPECTED_OMISSION",
+        "/request_items",
+        `request_items did not record the explicit phrase '${hint.phrase}' as ${hint.kinds.join(" or ")}`
+      ));
+    }
+  }
   if (violations.length > 0) {
     throw new GeneratedLessonError(`Lesson Brief validation failed: ${formatViolations(violations)}`, void 0, violations);
   }
@@ -9984,6 +10756,58 @@ function validateBeatTeachingFocus(document) {
       throw error;
     });
   });
+}
+function validateAnimationBeatTiming(document) {
+  const violations = [];
+  document.steps.forEach((step, stepIndex) => {
+    step.beats.forEach((beat, beatIndex) => {
+      const animations = beat.actions.filter((action) => action.do === "animate");
+      if (animations.length === 0) return;
+      const path = `/steps/${stepIndex}/beats/${beatIndex}`;
+      if (animations.length !== 1) {
+        violations.push({
+          stage: "semantic",
+          code: "OLL_ANIMATION_BEAT_MULTIPLE_ANIMATIONS",
+          path: `${path}/actions`,
+          message: "An animation Beat must contain exactly one animate action"
+        });
+      }
+      const unrelated = beat.actions.filter(
+        (action) => action.do !== "animate" && action.do !== "focus"
+      );
+      if (unrelated.length > 0) {
+        violations.push({
+          stage: "semantic",
+          code: "OLL_ANIMATION_BEAT_NOT_ISOLATED",
+          path: `${path}/actions`,
+          message: `Move ${unrelated.map((action) => action.do).join(", ")} to a neighboring Beat; the animation Beat may contain only animate and after_speech focus`
+        });
+      }
+      for (const animation of animations) {
+        if (animation.when && animation.when !== "during_speech") {
+          violations.push({
+            stage: "semantic",
+            code: "OLL_ANIMATION_PHASE_INVALID",
+            path: `${path}/actions`,
+            message: "animate must run during_speech so Runtime can synchronize it with real narration playback"
+          });
+        }
+      }
+      const narration = beat.say.trim();
+      const language = document.lesson.language.toLowerCase();
+      const tooLong = language.startsWith("zh") ? Array.from(narration).length > 36 : narration.split(/\s+/u).filter(Boolean).length > 22;
+      const sentenceCount = narration.split(/[。！？!?]+/u).filter((part) => part.trim()).length;
+      if (tooLong || sentenceCount > 2) {
+        violations.push({
+          stage: "semantic",
+          code: "OLL_ANIMATION_BEAT_NARRATION_TOO_LONG",
+          path: `${path}/say`,
+          message: "Keep the animation Beat to one or two short observation sentences; move the full explanation to a neighboring Beat"
+        });
+      }
+    });
+  });
+  return violations;
 }
 function formatViolations(violations) {
   return violations.map((violation) => {
@@ -10136,10 +10960,124 @@ function expressionReferencesVariable(expression, variable) {
   const tokens = expression.match(/[a-z][a-z0-9_]*/giu) ?? [];
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
 }
+function lowerPlannedLessonFields(document, brief) {
+  if (!isRecord(document) || !isRecord(document.lesson)) return document;
+  document.lesson.goals = brief.teaching_goal_requirements.map((requirement) => requirement.goal);
+  if (brief.shared_variable_requirements.length === 0) {
+    delete document.lesson.variables;
+    return document;
+  }
+  document.lesson.variables = brief.shared_variable_requirements.map((requirement) => ({
+    as: requirement.variable,
+    initial: requirement.initial,
+    min: requirement.min,
+    max: requirement.max,
+    label: requirement.label,
+    unit: requirement.unit,
+    control: { kind: "slider", step: requirement.slider_step }
+  }));
+  const rawActions = [];
+  if (Array.isArray(document.steps)) {
+    for (const step of document.steps) {
+      if (!isRecord(step) || !Array.isArray(step.beats)) continue;
+      for (const beat of step.beats) {
+        if (!isRecord(beat) || !Array.isArray(beat.actions)) continue;
+        rawActions.push(...beat.actions.filter(isRecord));
+      }
+    }
+  }
+  const animateActions = rawActions.filter((action) => action.do === "animate");
+  for (const requirement of brief.shared_variable_requirements) {
+    let matches = animateActions.filter((action) => action.variable === requirement.variable);
+    if (matches.length === 0 && animateActions.length === 1 && brief.shared_variable_requirements.length === 1) {
+      matches = animateActions;
+    }
+    if (matches.length !== 1) continue;
+    const [animation] = matches;
+    animation.variable = requirement.variable;
+    animation.value = requirement.animate_to;
+    animation.easing = requirement.easing;
+    animation.duration_intent = requirement.duration_intent;
+  }
+  for (const variable of brief.shared_variable_requirements) {
+    if (!variable.direct_angle_geometry) continue;
+    const visualRequirement = brief.visual_requirements.find(
+      (requirement) => requirement.id === variable.direct_angle_geometry && requirement.surface === "geometry"
+    );
+    if (!visualRequirement) continue;
+    const geometryCandidates = rawActions.flatMap((action) => {
+      const inventory = inventoryWrite(action);
+      if (!inventory || inventory.surface !== "geometry") return [];
+      const missingFeatures = visualRequirement.required_features.filter(
+        (feature) => !inventory.features.has(feature)
+      );
+      return missingFeatures.length === 0 ? [{ action, inventory }] : [];
+    });
+    if (geometryCandidates.length !== 1) continue;
+    const content = geometryCandidates[0].inventory.content;
+    const points = Array.isArray(content.points) ? content.points.filter(isRecord) : [];
+    const pointByAlias = new Map(points.flatMap((point2) => typeof point2.as === "string" ? [[point2.as, point2]] : []));
+    const bindings = Array.isArray(content.bindings) ? content.bindings.filter(isRecord) : [];
+    const drivenCoordinates = /* @__PURE__ */ new Map();
+    for (const binding of bindings) {
+      if (typeof binding.target !== "string" || !expressionReferencesVariable(binding.expression, variable.variable)) continue;
+      const separator = binding.target.lastIndexOf(".");
+      if (separator <= 0) continue;
+      const alias = binding.target.slice(0, separator);
+      const property = binding.target.slice(separator + 1);
+      if (property !== "x" && property !== "y") continue;
+      const coordinates = drivenCoordinates.get(alias) ?? /* @__PURE__ */ new Set();
+      coordinates.add(property);
+      drivenCoordinates.set(alias, coordinates);
+    }
+    const drivenPoints = [...drivenCoordinates].filter(([, coordinates]) => coordinates.has("x") && coordinates.has("y")).flatMap(([alias]) => pointByAlias.has(alias) ? [{ alias, point: pointByAlias.get(alias) }] : []);
+    const circles = Array.isArray(content.circles) ? content.circles.filter(isRecord) : [];
+    const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
+    const tolerance = 1e-3;
+    const pairs = /* @__PURE__ */ new Map();
+    for (const { alias, point: point2 } of drivenPoints) {
+      const pointX = numberValue(point2.x);
+      const pointY = numberValue(point2.y);
+      for (const circle of circles) {
+        if (typeof circle.center !== "string") continue;
+        const center2 = pointByAlias.get(circle.center);
+        const centerX = numberValue(center2?.x);
+        const centerY = numberValue(center2?.y);
+        const radius = numberValue(circle.radius);
+        if (!center2 || centerX === void 0 || centerY === void 0 || radius === void 0 || radius <= 0) continue;
+        const liesOnCircle = pointX !== void 0 && pointY !== void 0 && Math.abs(Math.hypot(pointX - centerX, pointY - centerY) - radius) <= tolerance;
+        const hasRadiusSegment = segments.some((segment) => segment.from === circle.center && segment.to === alias || segment.to === circle.center && segment.from === alias);
+        if (!liesOnCircle && !hasRadiusSegment) continue;
+        pairs.set(`${alias}\0${circle.center}`, { point: point2, center: circle.center });
+      }
+    }
+    if (pairs.size !== 1) continue;
+    const [{ point, center }] = [...pairs.values()];
+    point.interaction = {
+      kind: "angle_control",
+      variable: variable.variable,
+      center
+    };
+  }
+  return document;
+}
 function validateBriefCoverage(document, brief) {
   const inventory = buildVisualInventory(document);
   const matched = /* @__PURE__ */ new Map();
   const violations = [];
+  const lessonGoals = document.lesson.goals.map((goal) => normalizeEvidence(goal));
+  for (const [index, requirement] of brief.teaching_goal_requirements.entries()) {
+    const expected = normalizeEvidence(requirement.goal);
+    if (!lessonGoals.some((goal) => goal.includes(expected) || expected.includes(goal))) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_TEACHING_GOAL_UNSATISFIED",
+        path: `/lesson/goals/${index}`,
+        requirement_id: requirement.id,
+        message: `Teaching goal '${requirement.goal}' must be represented in lesson.goals`
+      });
+    }
+  }
   for (const requirement of brief.visual_requirements) {
     const candidates = inventory.nodes.filter((node) => node.surface === requirement.surface);
     const scored = candidates.map((node) => {
@@ -10243,7 +11181,76 @@ function validateBriefCoverage(document, brief) {
   }
   return violations;
 }
-function validateGeneratedLesson(raw, input, brief) {
+function reviseContentMatchesKind(content, kind) {
+  if (kind === "text" || kind === "shape") return typeof content.text === "string" && content.text.trim().length > 0;
+  if (kind === "math") return typeof content.latex === "string" && content.latex.trim().length > 0;
+  if (kind === "note") {
+    return typeof content.title === "string" && content.title.trim().length > 0 && Array.isArray(content.items);
+  }
+  if (kind === "table") return Array.isArray(content.columns) && Array.isArray(content.rows);
+  if (kind === "diagram") return Array.isArray(content.elements);
+  return false;
+}
+function validateAllowedCapabilities(document, plan) {
+  const violations = [];
+  const nodeKindByAlias = /* @__PURE__ */ new Map();
+  for (const [stepIndex, step] of document.steps.entries()) {
+    for (const [beatIndex, beat] of step.beats.entries()) {
+      for (const [actionIndex, action] of beat.actions.entries()) {
+        const path = `/steps/${stepIndex}/beats/${beatIndex}/actions/${actionIndex}`;
+        if (action.do === "write") {
+          if (!plan.writeKinds.includes(action.kind)) {
+            violations.push({
+              stage: "semantic",
+              code: "OLL_CAPABILITY_NOT_ALLOWED",
+              path: `${path}/kind`,
+              message: `write:${action.kind} is not allowed by this request's capability plan`
+            });
+          }
+          nodeKindByAlias.set(action.as, action.kind);
+          continue;
+        }
+        if (!plan.actions.includes(action.do)) {
+          violations.push({
+            stage: "semantic",
+            code: "OLL_CAPABILITY_NOT_ALLOWED",
+            path: `${path}/do`,
+            message: `${action.do} is not allowed by this request's capability plan`
+          });
+          continue;
+        }
+        if (action.do === "revise") {
+          const targetAlias = referenceRoot(action.target);
+          const targetKind = nodeKindByAlias.get(targetAlias);
+          if (!targetKind) {
+            violations.push({
+              stage: "semantic",
+              code: "OLL_REVISE_TARGET_KIND_UNKNOWN",
+              path: `${path}/target`,
+              message: `revise target '${targetAlias}' was not created earlier in this generated lesson`
+            });
+          } else if (!plan.reviseKinds.includes(targetKind)) {
+            violations.push({
+              stage: "semantic",
+              code: "OLL_REVISE_KIND_NOT_ALLOWED",
+              path: `${path}/target`,
+              message: `revise is not allowed for ${targetKind} nodes in this request`
+            });
+          } else if (!reviseContentMatchesKind(action.content, targetKind)) {
+            violations.push({
+              stage: "semantic",
+              code: "OLL_REVISE_CONTENT_KIND_MISMATCH",
+              path: `${path}/content`,
+              message: `revise content must be a complete ${targetKind} replacement`
+            });
+          }
+        }
+      }
+    }
+  }
+  return violations;
+}
+function validateGeneratedLesson(raw, input, brief, capabilityPlan) {
   let document;
   try {
     document = JSON.parse(raw);
@@ -10256,6 +11263,7 @@ function validateGeneratedLesson(raw, input, brief) {
     }];
     throw new GeneratedLessonError(formatViolations(violations2), raw, violations2);
   }
+  document = lowerPlannedLessonFields(document, brief);
   const schemaResult = validateAuthoringSchema(document);
   if (!schemaResult.valid) {
     const violations2 = schemaResult.errors.slice(0, 8).map((item) => ({
@@ -10278,7 +11286,9 @@ function validateGeneratedLesson(raw, input, brief) {
   } catch (error) {
     violations.push(semanticViolation(error));
   }
+  violations.push(...validateAnimationBeatTiming(lesson));
   violations.push(...validateBriefCoverage(lesson, brief));
+  violations.push(...validateAllowedCapabilities(lesson, capabilityPlan));
   if (violations.length === 0) {
     try {
       const events = normalizeAuthoringLesson(lesson, {
@@ -10323,8 +11333,66 @@ ${previousBrief}
 \u7CBE\u786E\u6821\u9A8C\u9519\u8BEF\uFF1A
 ${JSON.stringify(violations, null, 2)}
 \u4FDD\u7559\u5DF2\u6B63\u786E\u4E14\u6709 evidence \u7684\u8981\u6C42\uFF0C\u53EA\u4FEE\u590D\u8FD9\u4E9B\u9519\u8BEF\u5E76\u8FD4\u56DE\u5B8C\u6574\u5BF9\u8C61\u3002` : "";
-  return `\u8BF7\u628A\u4EE5\u4E0B\u6743\u5A01\u8BFE\u5802\u8BF7\u6C42\u8F6C\u6362\u6210 Lesson Brief\u3002request_source \u51B3\u5B9A\u552F\u4E00\u9898\u76EE\u6765\u6E90\uFF1B\u4E0D\u5F97\u4F7F\u7528 existing_board \u4E3A self_contained \u6216 current_image \u8865\u9898\u3002
+  return `\u8BF7\u628A\u4EE5\u4E0B\u6743\u5A01\u8BFE\u5802\u8BF7\u6C42\u8F6C\u6362\u6210\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u3002request_source \u51B3\u5B9A\u552F\u4E00\u9898\u76EE\u6765\u6E90\uFF1B\u4E0D\u5F97\u4F7F\u7528 existing_board \u4E3A self_contained \u6216 current_image \u8865\u9898\u3002
 ${JSON.stringify(buildRequestContext(input), null, 2)}${repair}`;
+}
+function buildVerificationPrompt(input, brief) {
+  return `\u8BF7\u72EC\u7ACB\u590D\u6838\u8FD9\u4EFD\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u6709\u6CA1\u6709\u6F0F\u6389\u6216\u8BEF\u89E3\u6743\u5A01\u8BF7\u6C42\u3002
+\u6743\u5A01\u8BF7\u6C42\uFF1A
+${JSON.stringify(buildRequestContext(input), null, 2)}
+
+\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\uFF1A
+${JSON.stringify(brief, null, 2)}`;
+}
+function validateBriefVerification(candidate, input) {
+  if (!isRecord(candidate) || !Array.isArray(candidate.missing) || !Array.isArray(candidate.contradictions)) {
+    throw new GeneratedLessonError("Brief verification must contain missing and contradictions arrays", void 0, [
+      briefViolation("BRIEF_VERIFICATION_INVALID_ROOT", "/", "verification must contain missing and contradictions arrays")
+    ]);
+  }
+  const authoritativeBySource = new Map(authoritativeRequestSources(input).map((item) => [item.source, normalizeEvidence(item.text)]));
+  const violations = [];
+  const validateEvidence = (raw, path, requireKind) => {
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_ITEM", path, "verification item must be an object"));
+      return;
+    }
+    const source = requestEvidenceSources.includes(raw.source) ? raw.source : void 0;
+    if (!source || !authoritativeBySource.has(source)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_SOURCE", `${path}/source`, "verification source is not authoritative for this request"));
+    }
+    if (typeof raw.evidence !== "string" || !raw.evidence.trim() || !source || !authoritativeBySource.get(source)?.includes(normalizeEvidence(raw.evidence))) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_UNGROUNDED_EVIDENCE", `${path}/evidence`, "verification evidence must quote its named authoritative source"));
+    }
+    if (requireKind && !requestItemKinds.includes(raw.kind)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_KIND", `${path}/kind`, "verification kind is unsupported"));
+    }
+    if (typeof raw.reason !== "string" || !raw.reason.trim()) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REASON", `${path}/reason`, "verification reason is required"));
+    }
+  };
+  candidate.missing.forEach((raw, index) => validateEvidence(raw, `/missing/${index}`, true));
+  candidate.contradictions.forEach((raw, index) => validateEvidence(raw, `/contradictions/${index}`, false));
+  if (violations.length > 0) {
+    throw new GeneratedLessonError(`Brief verification failed validation: ${formatViolations(violations)}`, void 0, violations);
+  }
+  return candidate;
+}
+function briefVerificationViolations(verification) {
+  return [
+    ...verification.missing.map((item, index) => ({
+      stage: "brief",
+      code: "BRIEF_REQUIREMENT_MISSING",
+      path: `/verification/missing/${index}`,
+      message: `${item.evidence}: ${item.reason}`
+    })),
+    ...verification.contradictions.map((item, index) => ({
+      stage: "brief",
+      code: "BRIEF_REQUIREMENT_CONTRADICTION",
+      path: `/verification/contradictions/${index}`,
+      message: `${item.evidence}: ${item.reason}`
+    }))
+  ];
 }
 function compactCandidate(raw) {
   try {
@@ -10333,7 +11401,7 @@ function compactCandidate(raw) {
     return raw;
   }
 }
-function buildGenerationPrompt(input, brief, previousCandidate, violations = []) {
+function buildGenerationPrompt(input, brief, capabilityPlan, previousCandidate, violations = []) {
   const repair = previousCandidate ? `
 
 \u4E0A\u4E00\u4EFD\u5019\u9009 OLL\uFF08\u5FC5\u987B\u4FDD\u7559\u5176\u4E2D\u5DF2\u6B63\u786E\u7684\u6559\u5B66\u5185\u5BB9\u4E0E\u767D\u677F\u52A8\u4F5C\uFF09\uFF1A
@@ -10342,11 +11410,46 @@ ${compactCandidate(previousCandidate)}
 \u7CBE\u786E\u6821\u9A8C\u9519\u8BEF\uFF1A
 ${JSON.stringify(violations, null, 2)}
 \u53EA\u9488\u5BF9\u8FD9\u4E9B violation \u4FEE\u590D\uFF0C\u8FD4\u56DE\u5B8C\u6574 OLL \u5BF9\u8C61\u3002` : "";
-  return `\u8BF7\u6839\u636E\u4EE5\u4E0B\u8BFE\u5802\u4E0A\u4E0B\u6587\u548C Lesson Brief \u751F\u6210\u672C\u8F6E\u5B8C\u6574\u8BFE\u7A0B\u3002\u53EA\u8F93\u51FA OLL JSON\u3002request_source \u5DF2\u7ECF\u786E\u5B9A\u672C\u8F6E\u9898\u76EE\u7684\u552F\u4E00\u6765\u6E90\uFF1Aself_contained \u53EA\u4F7F\u7528 learner_request\uFF0Ccurrent_image \u4EE5 source_observation \u4E3A\u6743\u5A01\u9898\u9762\uFF0Cexplicit_board_follow_up \u624D\u5141\u8BB8\u4F7F\u7528 existing_board\u3002\u4E0D\u5F97\u8DE8\u6765\u6E90\u66FF\u6362\u3001\u8865\u5168\u6216\u6539\u5199\u5F53\u524D\u9898\u76EE\u3002existing_board \u4E3A null \u65F6\uFF0C\u5FC5\u987B\u4ECE new_region \u5F00\u59CB\u3002
+  return `\u8BF7\u6839\u636E\u4EE5\u4E0B\u8BFE\u5802\u4E0A\u4E0B\u6587\u548C\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u751F\u6210\u672C\u8F6E\u5B8C\u6574\u8BFE\u7A0B\u3002\u53EA\u8F93\u51FA OLL JSON\u3002request_source \u5DF2\u7ECF\u786E\u5B9A\u672C\u8F6E\u9898\u76EE\u7684\u552F\u4E00\u6765\u6E90\uFF1Aself_contained \u53EA\u4F7F\u7528 learner_request\uFF0Ccurrent_image \u4EE5 source_observation \u4E3A\u6743\u5A01\u9898\u9762\uFF0Cexplicit_board_follow_up \u624D\u5141\u8BB8\u4F7F\u7528 existing_board\u3002\u4E0D\u5F97\u8DE8\u6765\u6E90\u66FF\u6362\u3001\u8865\u5168\u6216\u6539\u5199\u5F53\u524D\u9898\u76EE\u3002existing_board \u4E3A null \u65F6\uFF0C\u5FC5\u987B\u4ECE new_region \u5F00\u59CB\u3002
+
+\u672C\u6B21\u5141\u8BB8\u4F7F\u7528\u7684 OLL \u80FD\u529B\u5982\u4E0B\uFF1B\u7CFB\u7EDF\u63D0\u793A\u8BCD\u4E2D\u63D0\u5230\u4F46\u672A\u5217\u5165\u8FD9\u91CC\u7684 kind \u6216 action\uFF0C\u672C\u6B21\u4E0D\u5F97\u4F7F\u7528\u3002\u9700\u8981\u5C55\u793A\u4E2D\u95F4\u53D8\u5316\u4F46 revise \u672A\u5F00\u653E\u65F6\uFF0C\u8BF7\u65B0\u5EFA\u4E0B\u4E00\u4E2A\u677F\u4E66\u8282\u70B9\uFF0C\u4E0D\u8981\u731C\u6D4B revise.target\uFF1A
+${JSON.stringify({
+    write_kinds: capabilityPlan.writeKinds,
+    actions: capabilityPlan.actions,
+    revise_kinds: capabilityPlan.reviseKinds,
+    system_managed_variables: capabilityPlan.allowVariables,
+    bindings: capabilityPlan.bindingKinds,
+    angle_control: capabilityPlan.allowAngleControl
+  }, null, 2)}
+
+\u5171\u4EAB\u53D8\u91CF\u786C\u6027\u843D\u5730\u6E05\u5355\uFF1A
+${JSON.stringify(brief.shared_variable_requirements.map((requirement) => ({
+    variable: requirement.variable,
+    system_inserted_slider: {
+      initial: requirement.initial,
+      min: requirement.min,
+      max: requirement.max,
+      label: requirement.label,
+      unit: requirement.unit,
+      step: requirement.slider_step
+    },
+    required_animation: {
+      variable: requirement.variable,
+      value: requirement.animate_to,
+      easing: requirement.easing,
+      duration_intent: requirement.duration_intent
+    },
+    required_bindings_on: requirement.bound_visuals,
+    required_direct_angle_control_on: requirement.direct_angle_geometry || null,
+    direct_control_input: requirement.direct_angle_geometry ? "\u8BE5 geometry \u5FC5\u987B\u5305\u542B\u540C\u4E00\u53D8\u91CF\u9A71\u52A8\u7684\u5706\u4E0A\u70B9 x/y bindings\uFF0C\u5E76\u7528\u534A\u5F84\u7EBF\u8FDE\u63A5\u8BE5\u70B9\u4E0E\u5706\u5FC3" : null
+  })), null, 2)}
+system_inserted_slider \u7531\u7CFB\u7EDF\u5199\u5165 lesson.variables\uFF0C\u6A21\u578B\u4E0D\u8981\u81EA\u884C\u590D\u5236\u3002required_direct_angle_control_on \u975E\u7A7A\u65F6\uFF0C\u6A21\u578B\u5FC5\u987B\u63D0\u4F9B\u53EF\u552F\u4E00\u8BC6\u522B\u7684\u5706\u5FC3\u3001\u5706\u4E0A\u70B9\u3001\u534A\u5F84\u7EBF\u548C\u8BE5\u70B9\u7684 x/y \u53D8\u91CF\u7ED1\u5B9A\uFF0C\u7CFB\u7EDF\u636E\u6B64\u8865\u5165 interaction\uFF1B\u627E\u4E0D\u5230\u552F\u4E00\u5BF9\u8C61\u4F1A\u6821\u9A8C\u5931\u8D25\u3002\u52A8\u753B\u5FC5\u987B\u9010\u5B57\u91C7\u7528 required_animation \u4E2D\u7684 variable\u3001value\u3001easing \u548C duration_intent\u3002
+\u6BCF\u4E2A required_animation \u5FC5\u987B\u653E\u5728\u72EC\u7ACB\u7684\u7B80\u77ED Beat\uFF1A\u56FE\u5F62\u548C\u8FDE\u63A5\u5148\u5728\u524D\u4E00 Beat \u521B\u5EFA\uFF1B\u52A8\u753B Beat \u53EA\u4FDD\u7559\u4E00\u4E2A animate \u548C after_speech focus\uFF0C\u5E76\u628A\u5B8C\u6574\u63A8\u5BFC\u653E\u5728\u76F8\u90BB Beat\u3002
+
 \u8BFE\u5802\u4E0A\u4E0B\u6587\uFF1A
 ${JSON.stringify(buildRequestContext(input), null, 2)}
 
-lesson_brief\uFF1A
+\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\uFF1A
 ${JSON.stringify(brief, null, 2)}${repair}`;
 }
 function parseServiceAccount() {
@@ -10431,6 +11534,63 @@ async function createVertexClient() {
     )
   };
 }
+function buildVertexSchemaContract(inputCandidate, briefCandidate) {
+  const input = parseToolInput(JSON.stringify(inputCandidate));
+  const brief = validateLessonBrief(briefCandidate, input);
+  const capabilityPlan = deriveAuthoringCapabilityPlan(input, brief);
+  const schema = buildAuthoringResponseJsonSchema(brief, capabilityPlan);
+  return { schema, capabilityPlan, diagnostics: schemaDiagnostics(schema) };
+}
+async function probeVertexSchema(client, schema) {
+  const requestBody = JSON.stringify({
+    systemInstruction: { parts: [{ text: "Return one JSON object matching the provided response schema." }] },
+    contents: [{ role: "user", parts: [{ text: "Generate a minimal valid object." }] }],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 32,
+      responseMimeType: "application/json",
+      responseJsonSchema: schema
+    }
+  });
+  let response;
+  let body = "";
+  for (let attempt = 1; attempt <= client.requestAttempts; attempt += 1) {
+    response = await fetch(client.endpoint, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${client.accessToken}`,
+        "content-type": "application/json"
+      },
+      body: requestBody,
+      signal: AbortSignal.timeout(client.timeoutMs)
+    });
+    body = await response.text();
+    if (response.ok || response.status !== 429 && response.status < 500 || attempt === client.requestAttempts) break;
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, Math.min(1e3 * 2 ** (attempt - 1), 4e3)));
+  }
+  if (!response) throw new Error("Vertex Schema probe did not make a request");
+  const requestId = response.headers.get("x-goog-request-id") ?? void 0;
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      error: body.slice(0, MAX_ERROR_BODY_LENGTH),
+      ...requestId ? { requestId } : {}
+    };
+  }
+  let finishReason;
+  try {
+    const payload = JSON.parse(body);
+    finishReason = payload.candidates?.[0]?.finishReason;
+  } catch {
+  }
+  return {
+    ok: true,
+    status: response.status,
+    ...finishReason ? { finishReason } : {},
+    ...requestId ? { requestId } : {}
+  };
+}
 async function callStructuredModel(client, request) {
   const requestBody = JSON.stringify({
     systemInstruction: { parts: [{ text: request.systemPrompt }] },
@@ -10459,7 +11619,8 @@ async function callStructuredModel(client, request) {
     if (response.ok) break;
     const retryable = status === 429 || status >= 500;
     if (!retryable || requestAttempt === client.requestAttempts) {
-      throw new Error(`Vertex ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
+      const code = status === 400 ? "VERTEX_SCHEMA_REJECTED" : "VERTEX_REQUEST_FAILED";
+      throw new ToolExecutionError(code, `Vertex ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
     }
     const retryAfterSeconds = Number(response.headers.get("retry-after"));
     const delayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? Math.min(retryAfterSeconds * 1e3, 1e4) : Math.min(1e3 * 2 ** (requestAttempt - 1), 4e3);
@@ -10480,7 +11641,7 @@ async function callStructuredModel(client, request) {
 async function planLesson(client, input) {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_PLANNING_ATTEMPTS,
-    2,
+    3,
     "OLL_PLANNING_ATTEMPTS"
   );
   let previousBrief;
@@ -10501,7 +11662,35 @@ async function planLesson(client, input) {
         const parseViolation = briefViolation("BRIEF_INVALID_JSON", "/", `JSON parse failed: ${error.message}`);
         throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
       }
-      return validateLessonBrief(candidate, input);
+      const brief = validateLessonBrief(canonicalizeBriefAliases(candidate), input);
+      const verificationRaw = await callStructuredModel(client, {
+        label: "lesson-brief-verification",
+        systemPrompt: BRIEF_VERIFICATION_SYSTEM_PROMPT,
+        prompt: buildVerificationPrompt(input, brief),
+        responseSchema: briefVerificationResponseJsonSchema,
+        maxTokens: Math.min(client.maxTokens, 4096)
+      });
+      let verificationCandidate;
+      try {
+        verificationCandidate = JSON.parse(verificationRaw);
+      } catch (error) {
+        const parseViolation = briefViolation(
+          "BRIEF_VERIFICATION_INVALID_JSON",
+          "/",
+          `JSON parse failed: ${error.message}`
+        );
+        throw new GeneratedLessonError(parseViolation.message, verificationRaw, [parseViolation]);
+      }
+      const verification = validateBriefVerification(verificationCandidate, input);
+      const coverageViolations = briefVerificationViolations(verification);
+      if (coverageViolations.length > 0) {
+        throw new GeneratedLessonError(
+          `Course requirements did not cover the authoritative request: ${formatViolations(coverageViolations)}`,
+          raw,
+          coverageViolations
+        );
+      }
+      return brief;
     } catch (error) {
       if (!(error instanceof GeneratedLessonError)) throw error;
       process.stderr.write(`learning-coach: rejected lesson brief ${attempt}: ${formatViolations(error.violations)}
@@ -10524,18 +11713,38 @@ async function generateLesson(client, input, brief) {
   let violations = [];
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_GENERATION_ATTEMPTS,
-    2,
+    3,
     "OLL_GENERATION_ATTEMPTS"
   );
+  const capabilityPlan = deriveAuthoringCapabilityPlan(input, brief);
+  const responseSchema = buildAuthoringResponseJsonSchema(brief, capabilityPlan);
+  const diagnostics = schemaDiagnostics(responseSchema);
+  process.stderr.write(`learning-coach: ${JSON.stringify({
+    stage: "lesson-authoring-schema",
+    turn_id: input.turn_id,
+    write_kinds: capabilityPlan.writeKinds,
+    actions: capabilityPlan.actions,
+    revise_kinds: capabilityPlan.reviseKinds,
+    schema_sha256: diagnostics.sha256,
+    schema_bytes: diagnostics.bytes,
+    action_branches: diagnostics.action_branches,
+    definitions: diagnostics.definitions
+  })}
+`);
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await callStructuredModel(client, {
       label: "lesson-authoring",
       systemPrompt: AUTHORING_SYSTEM_PROMPT,
-      prompt: buildGenerationPrompt(input, brief, previousCandidate, violations),
-      responseSchema: buildAuthoringResponseJsonSchema(brief)
+      prompt: buildGenerationPrompt(input, brief, capabilityPlan, previousCandidate, violations),
+      responseSchema
     });
     try {
-      return { lesson: validateGeneratedLesson(raw, input, brief), attempts: attempt };
+      return {
+        lesson: validateGeneratedLesson(raw, input, brief, capabilityPlan),
+        attempts: attempt,
+        capabilityPlan,
+        schema: diagnostics
+      };
     } catch (error) {
       if (!(error instanceof GeneratedLessonError)) throw error;
       process.stderr.write(`learning-coach: rejected lesson generation ${attempt}: ${formatViolations(error.violations)}
@@ -10579,7 +11788,7 @@ async function main() {
     const input = parseToolInput(Buffer.concat(chunks).toString("utf8"));
     const client = await createVertexClient();
     const brief = await planLesson(client, input);
-    const { lesson, attempts } = await generateLesson(client, input, brief);
+    const { lesson, attempts, capabilityPlan, schema } = await generateLesson(client, input, brief);
     const artifactPath = outputPath(input);
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}
@@ -10589,15 +11798,29 @@ async function main() {
       output: `Validated OLL lesson generated with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
       files_to_send: [artifactPath],
       generation_attempts: attempts,
+      requirement_items: brief.request_items.length,
       visual_requirements: brief.visual_requirements.length,
-      visual_relationships: brief.visual_relationships.length
+      visual_relationships: brief.visual_relationships.length,
+      capability_plan: capabilityPlan,
+      authoring_schema: schema
     });
   } catch (error) {
     const message = safeError(error);
     process.stderr.write(`learning-coach: ${message}
 `);
-    emit({ success: false, output: message });
+    emit({
+      success: false,
+      error_code: error instanceof ToolExecutionError ? error.code : "LESSON_GENERATION_FAILED",
+      output: message
+    });
     process.exitCode = 1;
   }
 }
-void main();
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  void main();
+}
+export {
+  buildVertexSchemaContract,
+  createVertexClient,
+  probeVertexSchema
+};

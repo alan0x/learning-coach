@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
-import { createSign } from "node:crypto";
+import { pathToFileURL } from "node:url";
+import { createHash, createSign } from "node:crypto";
 
 import authoringSchema from "../references/oll-authoring-v0.1.schema.json" with { type: "json" };
 import {
@@ -10,7 +11,7 @@ import {
   validateAuthoringSchema,
   type AuthoringLesson,
   type ResourceContext,
-} from "../../octos-lesson-language/packages/core/src/index.ts";
+} from "octos-lesson-language";
 
 const TOOL_NAME = "oll_generate_lesson";
 const DEFAULT_MODEL = "gemini-3.5-flash";
@@ -43,6 +44,51 @@ interface ToolInput {
 
 type JsonSchema = Record<string, unknown>;
 type VisualSurface = "geometry" | "plot" | "diagram" | "image" | "table";
+type RequestEvidenceSource = "learner_request" | "recognized_problem" | "board_summary";
+type RequestItemKind =
+  | "teaching_goal"
+  | "visual"
+  | "relationship"
+  | "continuous_change"
+  | "student_control"
+  | "existing_board_edit"
+  | "presentation_constraint"
+  | "unsupported_feature";
+type RequestItemPolarity = "require" | "forbid";
+type PresentationCapability =
+  | "visual"
+  | "text"
+  | "math"
+  | "shape"
+  | "diagram"
+  | "geometry"
+  | "plot"
+  | "image"
+  | "table"
+  | "note"
+  | "animation"
+  | "student_control"
+  | "revise";
+type RevisableNodeKind = "text" | "math" | "shape" | "diagram" | "table" | "note";
+type AuthoringWriteKind =
+  | "text"
+  | "math"
+  | "shape"
+  | "diagram"
+  | "geometry"
+  | "plot"
+  | "image"
+  | "table"
+  | "note";
+type AuthoringActionName =
+  | "revise"
+  | "emphasize"
+  | "connect"
+  | "group"
+  | "focus"
+  | "point"
+  | "expression"
+  | "animate";
 type VisualFeature =
   | "coordinate_axes"
   | "equal_scale"
@@ -68,13 +114,16 @@ interface VisualRequirement {
   evidence: string;
   required_features: VisualFeature[];
   expressions: string[];
+  request_item_ids: string[];
 }
 
 interface VisualRelationshipRequirement {
+  id: string;
   from: string;
   to: string;
   relation: "maps_to" | "compares_with" | "explains" | "derives";
   evidence: string;
+  request_item_ids: string[];
 }
 
 interface SharedVariableRequirement {
@@ -93,14 +142,70 @@ interface SharedVariableRequirement {
   duration_intent: "brief" | "normal" | "extended";
   bound_visuals: string[];
   direct_angle_geometry: string;
+  request_item_ids: string[];
+}
+
+interface RequestItem {
+  id: string;
+  source: RequestEvidenceSource;
+  evidence: string;
+  kind: RequestItemKind;
+  polarity: RequestItemPolarity;
+}
+
+interface TeachingGoalRequirement {
+  id: string;
+  goal: string;
+  request_item_ids: string[];
+}
+
+interface UnhandledRequestItem {
+  request_item_id: string;
+  status: "unsupported" | "ambiguous";
+  reason: string;
+}
+
+interface PresentationConstraint {
+  id: string;
+  capability: PresentationCapability;
+  polarity: RequestItemPolarity;
+  request_item_ids: string[];
 }
 
 interface LessonBrief {
   version: "1";
   request_summary: string;
+  request_items: RequestItem[];
+  teaching_goal_requirements: TeachingGoalRequirement[];
+  presentation_constraints: PresentationConstraint[];
   visual_requirements: VisualRequirement[];
   visual_relationships: VisualRelationshipRequirement[];
   shared_variable_requirements: SharedVariableRequirement[];
+  progressive_revision_kinds: RevisableNodeKind[];
+  unhandled_request_items: UnhandledRequestItem[];
+}
+
+interface BriefVerification {
+  missing: Array<{
+    source: RequestEvidenceSource;
+    evidence: string;
+    kind: RequestItemKind;
+    reason: string;
+  }>;
+  contradictions: Array<{
+    source: RequestEvidenceSource;
+    evidence: string;
+    reason: string;
+  }>;
+}
+
+interface AuthoringCapabilityPlan {
+  writeKinds: AuthoringWriteKind[];
+  actions: AuthoringActionName[];
+  reviseKinds: RevisableNodeKind[];
+  allowVariables: boolean;
+  bindingKinds: Array<"geometry" | "plot">;
+  allowAngleControl: boolean;
 }
 
 interface GenerationViolation {
@@ -129,7 +234,7 @@ interface VertexClient {
 }
 
 interface StructuredModelRequest {
-  label: "lesson-brief" | "lesson-authoring";
+  label: "lesson-brief" | "lesson-brief-verification" | "lesson-authoring";
   systemPrompt: string;
   prompt: string;
   responseSchema: JsonSchema;
@@ -147,7 +252,25 @@ class GeneratedLessonError extends Error {
   }
 }
 
-const LESSON_BRIEF_SYSTEM_PROMPT = `你是课堂需求规划器，不生成 OLL，也不撰写课程正文。你的任务是把本轮权威请求转换成一个可验证的 Lesson Brief。
+class ToolExecutionError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ToolExecutionError";
+  }
+}
+
+const LESSON_BRIEF_SYSTEM_PROMPT = `你是课堂需求规划器，不生成 OLL，也不撰写课程正文。你的任务是把本轮权威请求转换成一个可验证的课程要求清单。
+
+先在 request_items 中逐条列出用户明确提出的教学目标、视觉对象、视觉关系、连续变化、学生控制、对既有白板的修改、展示限制和当前系统不支持的功能：
+- evidence 必须逐字引用对应 source 的原文，不得用 request_summary 代替原文证据；
+- polarity=require 表示必须满足，polarity=forbid 表示明确禁止；
+- 不得把 3D、学科模拟或未实现的交互偷换成 diagram 或普通文字；这类要求使用 unsupported_feature，并在 unhandled_request_items 中说明；
+- 每个 request_item 必须通过 request_item_ids 映射到一个或多个具体要求，或者明确列入 unhandled_request_items，不能悬空；
+- teaching_goal 映射到 teaching_goal_requirements；visual 映射到 visual_requirements；relationship 映射到 visual_relationships；continuous_change 和 student_control 映射到 shared_variable_requirements；presentation_constraint 映射到 presentation_constraints；
+- 目前没有可寻址的既有白板节点清单，因此 existing_board_edit 必须列入 unhandled_request_items，不能让后续模型猜 revise.target。
 
 只提取请求明确要求、或完成请求不可缺少的可见教学要求。每项 evidence 必须逐字引用权威请求中的短语，不得引用历史中被隔离的内容。
 每个 visual_requirement.id 必须是唯一的小写英文别名，只能包含 a-z、0-9、连字符并以字母开头；visual_relationships 的 from/to 只能引用这些 id。expressions 只用于 plot，其他 surface 必须返回空数组。
@@ -166,6 +289,8 @@ const LESSON_BRIEF_SYSTEM_PROMPT = `你是课堂需求规划器，不生成 OLL�
 - function_curve：带可执行表达式的函数曲线；annotated_points：有标签的数据点；guides：数值辅助线；
 - semantic_elements / semantic_edges：语义节点和语义连线；source_asset：受控图片资源；tabular_values：有行列数据的表格。
 
+feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_scale、circle、origin_centered_circle、unit_radius、point_on_circle、radius_segment、projection_segment、angle_arc、annotated_points；plot 只使用 coordinate_axes、function_curve、annotated_points、guides；diagram 只使用 semantic_elements、semantic_edges；image 只使用 source_asset；table 只使用 tabular_values。尤其不要把 equal_scale 写进 plot。
+
 如果请求点名某个视觉对象，选择能真实表达它的 surface，并列出让该对象和教学目的在画面上成立所不可缺少的最小 features。不要因为某个 surface 支持一项 feature 就自动要求它；也不要用标题、讲述或标签代替结构特征。
 
 如果请求涉及运动、映射或量的连续变化，规划中必须包含使这个变化可见的结构；例如“旋转角度”需要真实的角度标记，“投影/坐标对应”需要实际投影结构，“函数图像”需要坐标轴和带表达式的曲线。
@@ -179,7 +304,15 @@ shared_variable_requirements 用来规划“同一个量同时驱动多个视觉
 - direct_angle_geometry 只在某个 geometry 里的点适合由学生直接绕圆心拖动时填写该 visual_requirement.id，否则返回空字符串。
 - evidence 仍须逐字引用权威请求；不得因为系统支持动画就凭空规划互动。
 
-没有明确或必要视觉要求时返回空数组。只输出符合 JSON Schema 的 JSON 对象。`;
+progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐进替换，允许 text、math、shape、diagram、table、note；不需要时返回空数组。它不允许修改历史白板节点，也不得包含 geometry、plot 或 image。
+
+没有明确或必要视觉要求时 visual_requirements 可以为空，但 request_items 和 teaching_goal_requirements 仍须覆盖用户的教学请求。只输出符合 JSON Schema 的 JSON 对象。`;
+
+const BRIEF_VERIFICATION_SYSTEM_PROMPT = `你是课程要求复核器，不生成课件，也不改写课程要求。请独立比较权威用户原文和课程要求清单，只报告：
+1. 用户明确提出、但清单没有记录或没有正确映射的要求；
+2. 清单与用户原文发生的矛盾，包括把不支持的能力偷换成较弱能力。
+
+missing 和 contradictions 中的 evidence 必须逐字引用指定 source 的原文。没有发现问题时返回两个空数组。不要只返回“检查通过”之类没有证据的结论。`;
 
 const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的家庭教师。请生成一堂完整、连续的 OLL Authoring Profile 课程。
 
@@ -210,11 +343,14 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 - geometry.points[] 每项包含 as、x、y；circles[] 使用 center point alias 和正 radius；segments[] 使用 from/to point alias，投影线使用 style="projection"；arcs[] 使用 center、radius、start_angle、end_angle，角度为弧度。模型不得输出 SVG 或像素坐标。
 - diagram 用于语义元素与连线，不得冒充函数图像。plot 用于坐标轴上的函数曲线；content.axes.x/y 各给出数值 min/max，content.curves[] 每项必须包含 as、expression，可包含 label。
 - plot.expression 只写受限数学表达式，例如 sin(x)、cos(x)、(x+3)^2-4；支持 x、pi、e、+ - * / ^、括号以及 sin/cos/tan/sqrt/abs/exp/log，不写 y=、LaTeX、代码或 SVG。
-- 输入中的 lesson_brief 是本轮请求的可执行要求合同；每个 visual_requirement 和 visual_relationship 都必须由实际白板动作满足，标题、goals、讲述或文字声明不能替代要求的视觉内容。
-- lesson_brief.shared_variable_requirements 非空时，必须把每项要求完整落到 OLL：在 lesson.variables 声明唯一变量并提供同一个 slider；在 bound_visuals 对应的 geometry/plot content.bindings 中引用该变量；添加一个 do="animate" 动作；direct_angle_geometry 非空时，在对应 geometry 的可拖动点上声明 interaction={kind:"angle_control",variable,center}。滑杆、动画、直接拖点必须引用同一个变量，禁止复制第二份状态。
+- 输入中的课程要求清单是本轮请求的可执行要求合同；每个 visual_requirement 和 visual_relationship 都必须由实际白板动作满足，标题、goals、讲述或文字声明不能替代要求的视觉内容。
+- 课程要求清单中的 shared_variable_requirements 非空时，系统会确定性写入 lesson.variables 和可判定的 angle_control；模型负责在 bound_visuals 对应的 geometry/plot content.bindings 中引用同一个变量，并把 do="animate" 动作放进合适的讲解节拍。禁止复制第二份状态。
 - bindings.target 使用“局部元素别名.数值属性”，expression 使用受限表达式并直接引用变量名。例如单位圆与正弦图共享 theta：point-p.x=cos(theta)、point-p.y=sin(theta)、foot.x=cos(theta)、theta-arc.end_angle=theta、current-angle.x=theta、current-angle.y=sin(theta)。
 - animate 只描述语义目标，包含 variable、value，可包含 easing 和 duration_intent；不得生成毫秒时长。学生可在 Runtime 中播放、暂停、拖动、复位和重放。
-- geometry 点只有在 lesson_brief 指定 direct_angle_geometry 时才添加 angle_control；center 必须引用同一 geometry 中已经定义的圆心点。
+- 动画必须单独占用一个简短 Beat：相关 geometry/plot 和 connect 必须在更早的 Beat 已经创建；动画 Beat 只包含一个 do="animate" 和本 Beat 必需的 after_speech focus，不得同时 write、connect、group、revise、point 或 emphasize。
+- 动画 Beat 的 say 只说一到两句观察提示，中文不超过 36 个字符，其他语言不超过 22 个词。不要在动画播放时讲完整推导；推导和结论放到前后相邻 Beat。
+- animate 必须使用 when="during_speech" 或省略 when 使用默认值。Runtime 会在旁白音频真正开始后再启动动画；不要用 before_speech 或 after_speech 绕开这一时序。
+- geometry 点只有在课程要求清单指定 direct_angle_geometry 时才允许 angle_control；模型必须提供同时驱动圆上点 x/y 的变量绑定，以及连接圆心和该点的半径线，系统才会确定性补入 interaction。
 - 每个 Beat 的 say 必须使用适合 TTS 朗读的自然语言表达数学关系，不得包含美元符号、反斜杠命令或其他原始 LaTeX 标记。
 - revise 必须包含 target、content、reason；emphasize 必须包含 target、emphasis。
 - connect 必须包含 as、from、to、relation；group 必须包含 as、role、label、members。
@@ -222,7 +358,7 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 - 写板书示例：{"do":"write","as":"rule","kind":"note","role":"concept","content":{"title":"规律","items":["内容"]},"place":{"relation":"new_region"}}。
 - 三角函数图像示例：{"do":"write","as":"trig-curves","kind":"plot","role":"diagram","content":{"axes":{"x":{"min":0,"max":6.283185307179586},"y":{"min":-1.2,"max":1.2}},"curves":[{"as":"sine-curve","expression":"sin(x)","label":"y = sin x"},{"as":"cosine-curve","expression":"cos(x)","label":"y = cos x"}]},"place":{"relation":"new_region"}}。
 - 单位圆示例：{"do":"write","as":"unit-circle","kind":"geometry","role":"diagram","content":{"axes":{"x":{"min":-1.25,"max":1.25,"label":"x"},"y":{"min":-1.25,"max":1.25,"label":"y"},"equal_scale":true},"points":[{"as":"origin","x":0,"y":0,"label":"O"},{"as":"point-p","x":0.5,"y":0.8660254,"label":"P(cos θ, sin θ)"},{"as":"foot","x":0.5,"y":0}],"circles":[{"as":"circle","center":"origin","radius":1,"label":"r = 1"}],"segments":[{"as":"radius","from":"origin","to":"point-p","style":"solid"},{"as":"projection","from":"point-p","to":"foot","label":"sin θ","style":"projection"}],"arcs":[{"as":"theta","center":"origin","radius":0.28,"start_angle":0,"end_angle":1.0471975512,"label":"θ"}]},"place":{"relation":"new_region"}}。
-- 共享变量示例：lesson.variables=[{"as":"theta","initial":0,"min":0,"max":6.283185307179586,"label":"旋转角 θ","unit":"rad","control":{"kind":"slider","step":0.01}}]；动画动作={"do":"animate","variable":"theta","value":6.283185307179586,"easing":"linear","duration_intent":"extended"}。
+- 共享变量动画示例：{"do":"animate","variable":"theta","value":6.283185307179586,"easing":"linear","duration_intent":"extended"}。
 - 聚焦示例：{"do":"focus","when":"after_speech","targets":["rule"],"intent":"current_step"}。`;
 
 function requireNonEmptyString(value: unknown, label: string): string {
@@ -342,7 +478,8 @@ function parseToolInput(raw: string): ToolInput {
 function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
   const omitted = new Set([
     "$schema", "$id", "title", "description", "pattern", "format",
-    "minimum", "maximum", "minItems", "maxItems",
+    "minimum", "maximum", "minItems", "maxItems", "minLength", "maxLength",
+    "exclusiveMinimum", "exclusiveMaximum",
   ]);
   const convert = (raw: unknown): unknown => {
     if (!raw || typeof raw !== "object") return raw;
@@ -352,7 +489,11 @@ function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
     for (const [key, value] of Object.entries(source)) {
       if (omitted.has(key) && (value === null || typeof value !== "object")) continue;
       if (key === "const") {
-        result.enum = [value];
+        if (typeof value === "string" || typeof value === "number") {
+          result.enum = [value];
+        } else if (typeof value === "boolean") {
+          result.type = "boolean";
+        }
       } else {
         result[key] = convert(value);
       }
@@ -491,7 +632,7 @@ function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
       type: "object",
       additionalProperties: false,
       required: ["x", "y", "equal_scale"],
-      properties: { x: geometryAxis, y: geometryAxis, equal_scale: { enum: [true] } },
+      properties: { x: geometryAxis, y: geometryAxis, equal_scale: { type: "boolean" } },
     };
     const geometryPoints = { ...structuredClone(points), minItems: 1 };
     const geometryPointItems = geometryPoints.items as JsonSchema;
@@ -596,19 +737,14 @@ function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
         properties: { title: { type: "string" }, items: stringArray, text: { type: "string" }, caption: { type: "string" } },
       },
     };
+    const reviseContentByKind = Object.fromEntries(
+      (["text", "math", "shape", "diagram", "table", "note"] as const).map((kind) => [
+        kind,
+        structuredClone(writeContentByKind[kind]),
+      ]),
+    );
     const reviseContent = {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        title: { type: "string" }, text: { type: "string" }, latex: { type: "string" },
-        caption: { type: "string" }, items: stringArray, columns: stringArray,
-        rows: { type: "array", items: { type: "array", items: { type: "string" } } },
-        fragments, elements: diagramElements, edges: diagramEdges, regions: diagramRegions,
-        axes: { anyOf: [structuredClone(axes), structuredClone(geometryAxes)] },
-        curves, points, guides,
-        circles: geometryCircles, segments: geometrySegments, arcs: geometryArcs,
-        bindings,
-      },
+      anyOf: Object.values(reviseContentByKind).map((content) => structuredClone(content)),
     };
     const requiredByAction: Record<string, string[]> = {
       revise: ["target", "content", "reason"],
@@ -660,6 +796,221 @@ function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
 
 const vertexResponseJsonSchema = buildVertexResponseJsonSchema(authoringSchema as JsonSchema);
 
+const baseWriteKinds: AuthoringWriteKind[] = ["text", "math", "shape", "note"];
+const baseActionNames: AuthoringActionName[] = [
+  "emphasize", "connect", "group", "focus", "point", "expression",
+];
+const revisableNodeKinds: RevisableNodeKind[] = ["text", "math", "shape", "diagram", "table", "note"];
+const presentationCapabilities: PresentationCapability[] = [
+  "visual", "text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note",
+  "animation", "student_control", "revise",
+];
+const visualWriteKinds = new Set<AuthoringWriteKind>(["shape", "diagram", "geometry", "plot", "image", "table"]);
+
+function deriveAuthoringCapabilityPlan(input: ToolInput, brief: LessonBrief): AuthoringCapabilityPlan {
+  if (brief.unhandled_request_items.length > 0) {
+    const details = brief.unhandled_request_items
+      .map((item) => `${item.request_item_id}: ${item.reason}`)
+      .join("; ");
+    throw new ToolExecutionError("UNSUPPORTED_REQUIREMENT", `The request contains unsupported or ambiguous requirements: ${details}`);
+  }
+
+  const writeKinds = new Set<AuthoringWriteKind>(baseWriteKinds);
+  for (const requirement of brief.visual_requirements) writeKinds.add(requirement.surface);
+  for (const kind of brief.progressive_revision_kinds) writeKinds.add(kind);
+
+  const actions = new Set<AuthoringActionName>(baseActionNames);
+  if (brief.shared_variable_requirements.length > 0) actions.add("animate");
+  if (brief.progressive_revision_kinds.length > 0) actions.add("revise");
+
+  const bindingKinds = new Set<"geometry" | "plot">();
+  const visualById = new Map(brief.visual_requirements.map((item) => [item.id, item] as const));
+  let allowAngleControl = false;
+  for (const variable of brief.shared_variable_requirements) {
+    for (const visualId of variable.bound_visuals) {
+      const visual = visualById.get(visualId);
+      if (visual?.surface === "geometry" || visual?.surface === "plot") bindingKinds.add(visual.surface);
+    }
+    if (variable.direct_angle_geometry) allowAngleControl = true;
+  }
+
+  const explicitlyRequiredSurfaces = new Set(brief.visual_requirements.map((item) => item.surface));
+  for (const constraint of brief.presentation_constraints) {
+    const capability = constraint.capability;
+    const forbid = constraint.polarity === "forbid";
+    if (capability === "visual") {
+      if (!forbid) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "A generic visual requirement must name a concrete supported surface");
+      }
+      if ([...explicitlyRequiredSurfaces].some((kind) => visualWriteKinds.has(kind))) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids visual output");
+      }
+      for (const kind of visualWriteKinds) writeKinds.delete(kind);
+      continue;
+    }
+    if ((["text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note"] as string[]).includes(capability)) {
+      const kind = capability as AuthoringWriteKind;
+      if (forbid) {
+        if (explicitlyRequiredSurfaces.has(kind as VisualSurface)) {
+          throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", `The request both requires and forbids ${kind}`);
+        }
+        writeKinds.delete(kind);
+      } else {
+        writeKinds.add(kind);
+      }
+      continue;
+    }
+    if (capability === "animation") {
+      if (forbid && brief.shared_variable_requirements.length > 0) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires continuous animation and forbids animation");
+      }
+      if (forbid) actions.delete("animate");
+      continue;
+    }
+    if (capability === "student_control") {
+      if (forbid && brief.shared_variable_requirements.some((item) => item.direct_angle_geometry)) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids direct student control");
+      }
+      if (forbid) allowAngleControl = false;
+      continue;
+    }
+    if (capability === "revise") {
+      if (forbid) {
+        actions.delete("revise");
+      } else if (brief.progressive_revision_kinds.length === 0) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "A requested progressive revision must name at least one supported node kind");
+      }
+    }
+  }
+
+  if (writeKinds.has("image") && !(input.session_context?.assets?.length)) {
+    throw new ToolExecutionError("BRIEF_IMAGE_RESOURCE_UNAVAILABLE", "The course requires an image, but no authorized image asset is available");
+  }
+  if (writeKinds.size === 0) {
+    throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request forbids every supported board-writing capability");
+  }
+
+  return {
+    writeKinds: [...writeKinds].sort(),
+    actions: [...actions].sort(),
+    reviseKinds: actions.has("revise") ? [...brief.progressive_revision_kinds].sort() : [],
+    allowVariables: brief.shared_variable_requirements.length > 0,
+    bindingKinds: [...bindingKinds].sort(),
+    allowAngleControl,
+  };
+}
+
+function actionVariantIdentity(variant: JsonSchema): { action?: string; kind?: string } {
+  const properties = variant.properties as JsonSchema | undefined;
+  const action = properties?.do as JsonSchema | undefined;
+  const kind = properties?.kind as JsonSchema | undefined;
+  return {
+    action: Array.isArray(action?.enum) && typeof action.enum[0] === "string" ? action.enum[0] : undefined,
+    kind: Array.isArray(kind?.enum) && typeof kind.enum[0] === "string" ? kind.enum[0] : undefined,
+  };
+}
+
+function pruneUnusedDefinitions(schema: JsonSchema): JsonSchema {
+  const definitions = isRecord(schema.$defs) ? schema.$defs : {};
+  const retained = new Set<string>();
+  const queue: string[] = [];
+  const inspect = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(inspect);
+      return;
+    }
+    if (!isRecord(value)) return;
+    if (typeof value.$ref === "string" && value.$ref.startsWith("#/$defs/")) {
+      const name = value.$ref.slice("#/$defs/".length).split("/", 1)[0];
+      if (name && !retained.has(name)) queue.push(name);
+    }
+    for (const [key, child] of Object.entries(value)) {
+      if (key !== "$defs") inspect(child);
+    }
+  };
+  const rootWithoutDefinitions = structuredClone(schema);
+  delete rootWithoutDefinitions.$defs;
+  inspect(rootWithoutDefinitions);
+  while (queue.length > 0) {
+    const name = queue.shift() as string;
+    if (retained.has(name)) continue;
+    const definition = definitions[name];
+    if (!definition) throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `Missing local Schema definition '${name}'`);
+    retained.add(name);
+    inspect(definition);
+  }
+  return {
+    ...rootWithoutDefinitions,
+    ...(retained.size > 0
+      ? { $defs: Object.fromEntries([...retained].sort().map((name) => [name, structuredClone(definitions[name])])) }
+      : {}),
+  };
+}
+
+const supportedVertexSchemaKeywords = new Set([
+  "type", "properties", "required", "additionalProperties", "items", "enum", "anyOf", "$defs", "$ref",
+  "minItems", "maxItems",
+]);
+
+function assertVertexSchemaCompatible(schema: JsonSchema): void {
+  const visit = (value: unknown, path: string): void => {
+    if (!isRecord(value)) return;
+    for (const [key, child] of Object.entries(value)) {
+      if (!supportedVertexSchemaKeywords.has(key)) {
+        throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `Unsupported Vertex Schema keyword at ${path}/${key}`);
+      }
+      if (key === "enum") {
+        if (!Array.isArray(child) || child.some((item) => typeof item !== "string" && typeof item !== "number")) {
+          throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `Vertex enum contains an unsupported value at ${path}/enum`);
+        }
+        continue;
+      }
+      if (key === "properties" || key === "$defs") {
+        if (!isRecord(child)) throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `${path}/${key} must be an object`);
+        for (const [name, nested] of Object.entries(child)) visit(nested, `${path}/${key}/${name}`);
+        continue;
+      }
+      if (key === "items") visit(child, `${path}/items`);
+      if (key === "anyOf") {
+        if (!Array.isArray(child)) throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `${path}/anyOf must be an array`);
+        child.forEach((nested, index) => visit(nested, `${path}/anyOf/${index}`));
+      }
+    }
+    if (typeof value.$ref === "string" && Object.keys(value).length !== 1) {
+      throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `$ref must not have sibling keywords at ${path}`);
+    }
+    if (Array.isArray(value.required) && isRecord(value.properties)) {
+      for (const requiredProperty of value.required) {
+        if (typeof requiredProperty !== "string" || !(requiredProperty in value.properties)) {
+          throw new ToolExecutionError(
+            "VERTEX_SCHEMA_INCOMPATIBLE",
+            `Required property '${String(requiredProperty)}' is not declared at ${path}/properties`,
+          );
+        }
+      }
+    }
+  };
+  visit(schema, "");
+}
+
+function schemaDiagnostics(schema: JsonSchema): {
+  sha256: string;
+  bytes: number;
+  action_branches: number;
+  definitions: number;
+} {
+  const serialized = JSON.stringify(schema);
+  const definitions = isRecord(schema.$defs) ? schema.$defs : {};
+  const action = isRecord(definitions.action) ? definitions.action : {};
+  const branches = Array.isArray(action.anyOf) ? action.anyOf.length : 0;
+  return {
+    sha256: createHash("sha256").update(serialized).digest("hex"),
+    bytes: Buffer.byteLength(serialized),
+    action_branches: branches,
+    definitions: Object.keys(definitions).length,
+  };
+}
+
 function requireNonEmptyCollection(contentSchema: JsonSchema, field: string): void {
   const required = Array.isArray(contentSchema.required) ? contentSchema.required as string[] : [];
   if (!required.includes(field)) contentSchema.required = [...required, field];
@@ -670,11 +1021,85 @@ function requireNonEmptyCollection(contentSchema: JsonSchema, field: string): vo
 
 /** Lower the generic Lesson Brief feature contract into this request's controlled-decoding schema.
  * This remains topic-agnostic: it only maps OLL capabilities to the collections that realize them. */
-function buildAuthoringResponseJsonSchema(brief: LessonBrief): JsonSchema {
+function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCapabilityPlan): JsonSchema {
   const schema = structuredClone(vertexResponseJsonSchema);
   const definitions = schema.$defs as JsonSchema | undefined;
   const action = definitions?.action as JsonSchema | undefined;
-  const variants = Array.isArray(action?.anyOf) ? action.anyOf as JsonSchema[] : [];
+  const allVariants = Array.isArray(action?.anyOf) ? action.anyOf as JsonSchema[] : [];
+  const writeContentByKind = new Map<string, JsonSchema>();
+  for (const variant of allVariants) {
+    const identity = actionVariantIdentity(variant);
+    if (identity.action === "write" && identity.kind) {
+      const content = (variant.properties as JsonSchema | undefined)?.content as JsonSchema | undefined;
+      if (content) writeContentByKind.set(identity.kind, structuredClone(content));
+    }
+  }
+  const variants = allVariants.filter((variant) => {
+    const identity = actionVariantIdentity(variant);
+    if (identity.action === "write") return !!identity.kind && plan.writeKinds.includes(identity.kind as AuthoringWriteKind);
+    return !!identity.action && plan.actions.includes(identity.action as AuthoringActionName);
+  });
+  if (action) action.anyOf = variants;
+
+  const reviseVariant = variants.find((variant) => actionVariantIdentity(variant).action === "revise");
+  if (reviseVariant) {
+    const properties = reviseVariant.properties as JsonSchema;
+    const revisionSchemas = plan.reviseKinds.map((kind) => {
+      const content = writeContentByKind.get(kind);
+      if (!content) throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", `No revise content Schema is available for '${kind}'`);
+      return structuredClone(content);
+    });
+    properties.content = revisionSchemas.length === 1 ? revisionSchemas[0] : { anyOf: revisionSchemas };
+  }
+  if (brief.shared_variable_requirements.length > 0) {
+    const animateIndex = variants.findIndex((variant) => actionVariantIdentity(variant).action === "animate");
+    if (animateIndex < 0) {
+      throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", "Shared variables require an animate action variant");
+    }
+    const animateTemplate = variants[animateIndex];
+    const exactAnimateVariants = brief.shared_variable_requirements.map((requirement) => {
+      const exact = structuredClone(animateTemplate);
+      const properties = exact.properties as JsonSchema;
+      properties.variable = { enum: [requirement.variable] };
+      properties.value = { type: "number", enum: [requirement.animate_to] };
+      properties.easing = { enum: [requirement.easing] };
+      properties.duration_intent = { enum: [requirement.duration_intent] };
+      const required = Array.isArray(exact.required) ? exact.required as string[] : [];
+      exact.required = [...new Set([...required, "easing", "duration_intent"])];
+      return exact;
+    });
+    variants.splice(animateIndex, 1, ...exactAnimateVariants);
+  }
+
+  const rootProperties = schema.properties as JsonSchema;
+  const lesson = rootProperties.lesson as JsonSchema;
+  const lessonProperties = lesson.properties as JsonSchema;
+  // The planner has already fixed variable aliases, ranges, labels, and slider
+  // settings. Do not ask the authoring model to copy those mechanical fields.
+  // They are lowered into the candidate before full OLL validation.
+  delete lessonProperties.variables;
+  if (Array.isArray(lesson.required)) {
+    lesson.required = lesson.required.filter((field) => field !== "variables");
+  }
+
+  for (const variant of variants) {
+    const identity = actionVariantIdentity(variant);
+    if (identity.action !== "write") continue;
+    const properties = variant.properties as JsonSchema;
+    const content = properties.content as JsonSchema;
+    const contentProperties = content.properties as JsonSchema | undefined;
+    if ((identity.kind === "geometry" || identity.kind === "plot")
+      && !plan.bindingKinds.includes(identity.kind)) {
+      if (contentProperties) delete contentProperties.bindings;
+      if (Array.isArray(content.required)) content.required = content.required.filter((field) => field !== "bindings");
+    }
+    if (identity.kind === "geometry" && !plan.allowAngleControl) {
+      const points = contentProperties?.points as JsonSchema | undefined;
+      const pointItems = points?.items as JsonSchema | undefined;
+      const pointProperties = pointItems?.properties as JsonSchema | undefined;
+      if (pointProperties) delete pointProperties.interaction;
+    }
+  }
   const fieldsBySurface: Partial<Record<VisualSurface, Map<VisualFeature, string>>> = {
     geometry: new Map([
       ["circle", "circles"], ["origin_centered_circle", "circles"], ["unit_radius", "circles"],
@@ -702,14 +1127,6 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief): JsonSchema {
     }
   }
   if (brief.shared_variable_requirements.length > 0) {
-    const rootProperties = schema.properties as JsonSchema;
-    const lesson = rootProperties.lesson as JsonSchema;
-    const lessonRequired = Array.isArray(lesson.required) ? lesson.required as string[] : [];
-    if (!lessonRequired.includes("variables")) lesson.required = [...lessonRequired, "variables"];
-    const lessonProperties = lesson.properties as JsonSchema;
-    const variables = lessonProperties.variables as JsonSchema;
-    variables.minItems = brief.shared_variable_requirements.length;
-
     const boundSurfaces = new Set(brief.shared_variable_requirements.flatMap((requirement) =>
       requirement.bound_visuals.flatMap((id) => {
         const visual = brief.visual_requirements.find((candidate) => candidate.id === id);
@@ -726,7 +1143,9 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief): JsonSchema {
       if (content) requireNonEmptyCollection(content, "bindings");
     }
   }
-  return schema;
+  const projected = pruneUnusedDefinitions(schema);
+  assertVertexSchemaCompatible(projected);
+  return projected;
 }
 
 const visualSurfaces: VisualSurface[] = ["geometry", "plot", "diagram", "image", "table"];
@@ -743,30 +1162,84 @@ const animationEasings: SharedVariableRequirement["easing"][] = ["linear", "ease
 const animationDurationIntents: SharedVariableRequirement["duration_intent"][] = [
   "brief", "normal", "extended",
 ];
+const requestEvidenceSources: RequestEvidenceSource[] = ["learner_request", "recognized_problem", "board_summary"];
+const requestItemKinds: RequestItemKind[] = [
+  "teaching_goal", "visual", "relationship", "continuous_change", "student_control",
+  "existing_board_edit", "presentation_constraint", "unsupported_feature",
+];
+const requestItemPolarities: RequestItemPolarity[] = ["require", "forbid"];
+const unhandledStatuses: UnhandledRequestItem["status"][] = ["unsupported", "ambiguous"];
+const idArraySchema: JsonSchema = { type: "array", minItems: 1, items: { type: "string" } };
 
 const lessonBriefResponseJsonSchema: JsonSchema = {
   type: "object",
   additionalProperties: false,
   required: [
-    "version", "request_summary", "visual_requirements", "visual_relationships",
-    "shared_variable_requirements",
+    "version", "request_summary", "request_items", "teaching_goal_requirements",
+    "presentation_constraints", "visual_requirements", "visual_relationships",
+    "shared_variable_requirements", "progressive_revision_kinds", "unhandled_request_items",
   ],
   properties: {
     version: { enum: ["1"] },
     request_summary: { type: "string" },
+    request_items: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "source", "evidence", "kind", "polarity"],
+        properties: {
+          id: { type: "string" },
+          source: { enum: requestEvidenceSources },
+          evidence: { type: "string" },
+          kind: { enum: requestItemKinds },
+          polarity: { enum: requestItemPolarities },
+        },
+      },
+    },
+    teaching_goal_requirements: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "goal", "request_item_ids"],
+        properties: {
+          id: { type: "string" },
+          goal: { type: "string" },
+          request_item_ids: idArraySchema,
+        },
+      },
+    },
+    presentation_constraints: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "capability", "polarity", "request_item_ids"],
+        properties: {
+          id: { type: "string" },
+          capability: { enum: presentationCapabilities },
+          polarity: { enum: requestItemPolarities },
+          request_item_ids: idArraySchema,
+        },
+      },
+    },
     visual_requirements: {
       type: "array",
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "surface", "purpose", "evidence", "required_features", "expressions"],
+        required: ["id", "surface", "purpose", "evidence", "required_features", "expressions", "request_item_ids"],
         properties: {
-          id: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
+          id: { type: "string" },
           surface: { enum: visualSurfaces },
           purpose: { type: "string" },
           evidence: { type: "string" },
           required_features: { type: "array", items: { enum: visualFeatures } },
           expressions: { type: "array", items: { type: "string" } },
+          request_item_ids: idArraySchema,
         },
       },
     },
@@ -775,12 +1248,14 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["from", "to", "relation", "evidence"],
+        required: ["id", "from", "to", "relation", "evidence", "request_item_ids"],
         properties: {
-          from: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
-          to: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
+          id: { type: "string" },
+          from: { type: "string" },
+          to: { type: "string" },
           relation: { enum: visualRelationships },
           evidence: { type: "string" },
+          request_item_ids: idArraySchema,
         },
       },
     },
@@ -792,11 +1267,11 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
         required: [
           "id", "variable", "purpose", "evidence", "initial", "min", "max", "label", "unit",
           "slider_step", "animate_to", "easing", "duration_intent", "bound_visuals",
-          "direct_angle_geometry",
+          "direct_angle_geometry", "request_item_ids",
         ],
         properties: {
-          id: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
-          variable: { type: "string", pattern: "^[a-z][a-z0-9_]*$" },
+          id: { type: "string" },
+          variable: { type: "string" },
           purpose: { type: "string" },
           evidence: { type: "string" },
           initial: { type: "number" },
@@ -811,9 +1286,62 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
           bound_visuals: {
             type: "array",
             minItems: 1,
-            items: { type: "string", pattern: "^[a-z][a-z0-9-]*$" },
+            items: { type: "string" },
           },
           direct_angle_geometry: { type: "string" },
+          request_item_ids: idArraySchema,
+        },
+      },
+    },
+    progressive_revision_kinds: {
+      type: "array",
+      items: { enum: revisableNodeKinds },
+    },
+    unhandled_request_items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["request_item_id", "status", "reason"],
+        properties: {
+          request_item_id: { type: "string" },
+          status: { enum: unhandledStatuses },
+          reason: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+const briefVerificationResponseJsonSchema: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["missing", "contradictions"],
+  properties: {
+    missing: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source", "evidence", "kind", "reason"],
+        properties: {
+          source: { enum: requestEvidenceSources },
+          evidence: { type: "string" },
+          kind: { enum: requestItemKinds },
+          reason: { type: "string" },
+        },
+      },
+    },
+    contradictions: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source", "evidence", "reason"],
+        properties: {
+          source: { enum: requestEvidenceSources },
+          evidence: { type: "string" },
+          reason: { type: "string" },
         },
       },
     },
@@ -855,19 +1383,65 @@ function normalizeEvidence(value: string): string {
     .replace(/\s+/gu, "");
 }
 
-function authoritativeRequestText(input: ToolInput): string[] {
-  const sources = [input.learner_request];
+function authoritativeRequestSources(input: ToolInput): Array<{ source: RequestEvidenceSource; text: string }> {
+  const sources: Array<{ source: RequestEvidenceSource; text: string }> = [
+    { source: "learner_request", text: input.learner_request },
+  ];
   if (input.request_source === "current_image" && input.source_observation) {
-    sources.push(input.source_observation.recognized_problem);
+    sources.push({ source: "recognized_problem", text: input.source_observation.recognized_problem });
   }
   if (input.request_source === "explicit_board_follow_up" && input.board_summary) {
-    sources.push(input.board_summary);
+    sources.push({ source: "board_summary", text: input.board_summary });
   }
   return sources;
 }
 
 function briefViolation(code: string, path: string, message: string): GenerationViolation {
   return { stage: "brief", code, path, message };
+}
+
+function canonicalizeBriefAliases(candidate: unknown): unknown {
+  if (!isRecord(candidate)) return candidate;
+  const brief = structuredClone(candidate);
+  const alias = (value: unknown): unknown => typeof value === "string" ? value.replace(/_/gu, "-") : value;
+  const aliasArray = (value: unknown): void => {
+    if (!Array.isArray(value)) return;
+    for (let index = 0; index < value.length; index += 1) value[index] = alias(value[index]);
+  };
+  const canonicalizeItems = (value: unknown): void => {
+    if (!Array.isArray(value)) return;
+    for (const item of value) {
+      if (!isRecord(item)) continue;
+      item.id = alias(item.id);
+      aliasArray(item.request_item_ids);
+    }
+  };
+  canonicalizeItems(brief.request_items);
+  canonicalizeItems(brief.teaching_goal_requirements);
+  canonicalizeItems(brief.presentation_constraints);
+  canonicalizeItems(brief.visual_requirements);
+  canonicalizeItems(brief.visual_relationships);
+  canonicalizeItems(brief.shared_variable_requirements);
+  if (Array.isArray(brief.visual_relationships)) {
+    for (const relationship of brief.visual_relationships) {
+      if (!isRecord(relationship)) continue;
+      relationship.from = alias(relationship.from);
+      relationship.to = alias(relationship.to);
+    }
+  }
+  if (Array.isArray(brief.shared_variable_requirements)) {
+    for (const requirement of brief.shared_variable_requirements) {
+      if (!isRecord(requirement)) continue;
+      aliasArray(requirement.bound_visuals);
+      requirement.direct_angle_geometry = alias(requirement.direct_angle_geometry);
+    }
+  }
+  if (Array.isArray(brief.unhandled_request_items)) {
+    for (const item of brief.unhandled_request_items) {
+      if (isRecord(item)) item.request_item_id = alias(item.request_item_id);
+    }
+  }
+  return brief;
 }
 
 function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief {
@@ -882,6 +1456,22 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
   }
   if (typeof candidate.request_summary !== "string" || !candidate.request_summary.trim()) {
     violations.push(briefViolation("BRIEF_MISSING_SUMMARY", "/request_summary", "request_summary is required"));
+  }
+  const requestItems = Array.isArray(candidate.request_items) ? candidate.request_items : [];
+  if (!Array.isArray(candidate.request_items) || candidate.request_items.length === 0) {
+    violations.push(briefViolation("BRIEF_MISSING_REQUEST_ITEMS", "/request_items", "request_items must contain the explicit requirements from the authoritative request"));
+  }
+  const teachingGoals = Array.isArray(candidate.teaching_goal_requirements)
+    ? candidate.teaching_goal_requirements
+    : [];
+  if (!Array.isArray(candidate.teaching_goal_requirements) || candidate.teaching_goal_requirements.length === 0) {
+    violations.push(briefViolation("BRIEF_MISSING_TEACHING_GOALS", "/teaching_goal_requirements", "teaching_goal_requirements must contain at least one goal"));
+  }
+  const presentationConstraints = Array.isArray(candidate.presentation_constraints)
+    ? candidate.presentation_constraints
+    : [];
+  if (!Array.isArray(candidate.presentation_constraints)) {
+    violations.push(briefViolation("BRIEF_INVALID_PRESENTATION_CONSTRAINTS", "/presentation_constraints", "presentation_constraints must be an array"));
   }
   const requirements = Array.isArray(candidate.visual_requirements) ? candidate.visual_requirements : [];
   if (!Array.isArray(candidate.visual_requirements)) {
@@ -901,11 +1491,128 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
       "shared_variable_requirements must be an array",
     ));
   }
-  const ids = new Set<string>();
-  const authoritative = authoritativeRequestText(input).map(normalizeEvidence);
-  const grounded = (evidence: unknown) => typeof evidence === "string"
-    && normalizeEvidence(evidence).length > 0
-    && authoritative.some((source) => source.includes(normalizeEvidence(evidence)));
+  const revisionKinds = Array.isArray(candidate.progressive_revision_kinds)
+    ? candidate.progressive_revision_kinds
+    : [];
+  if (!Array.isArray(candidate.progressive_revision_kinds)
+    || revisionKinds.some((kind) => !revisableNodeKinds.includes(kind as RevisableNodeKind))
+    || new Set(revisionKinds).size !== revisionKinds.length) {
+    violations.push(briefViolation("BRIEF_INVALID_REVISION_KINDS", "/progressive_revision_kinds", "progressive_revision_kinds must contain unique supported node kinds"));
+  }
+  const unhandledItems = Array.isArray(candidate.unhandled_request_items)
+    ? candidate.unhandled_request_items
+    : [];
+  if (!Array.isArray(candidate.unhandled_request_items)) {
+    violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_ITEMS", "/unhandled_request_items", "unhandled_request_items must be an array"));
+  }
+
+  const authoritative = authoritativeRequestSources(input);
+  const authoritativeBySource = new Map(authoritative.map((item) => [item.source, normalizeEvidence(item.text)] as const));
+  const grounded = (evidence: unknown, requestedSource?: unknown) => {
+    if (typeof evidence !== "string" || normalizeEvidence(evidence).length === 0) return false;
+    if (typeof requestedSource === "string") {
+      const source = authoritativeBySource.get(requestedSource as RequestEvidenceSource);
+      return !!source && source.includes(normalizeEvidence(evidence));
+    }
+    return authoritative.some((source) => normalizeEvidence(source.text).includes(normalizeEvidence(evidence)));
+  };
+  const requestItemById = new Map<string, RequestItem>();
+  requestItems.forEach((raw, index) => {
+    const path = `/request_items/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM", path, "request item must be an object"));
+      return;
+    }
+    if (typeof raw.id !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.id) || requestItemById.has(raw.id)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_ID", `${path}/id`, "request item id must be a unique lowercase alias"));
+    }
+    if (!requestEvidenceSources.includes(raw.source as RequestEvidenceSource)) {
+      violations.push(briefViolation("BRIEF_INVALID_EVIDENCE_SOURCE", `${path}/source`, "request item source is not authoritative for this request"));
+    }
+    if (!grounded(raw.evidence, raw.source)) {
+      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "request item evidence must quote its named authoritative source"));
+    }
+    if (!requestItemKinds.includes(raw.kind as RequestItemKind)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_KIND", `${path}/kind`, "request item kind is unsupported"));
+    }
+    if (!requestItemPolarities.includes(raw.polarity as RequestItemPolarity)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_POLARITY", `${path}/polarity`, "request item polarity is unsupported"));
+    }
+    if (typeof raw.id === "string" && /^[a-z][a-z0-9-]*$/.test(raw.id) && !requestItemById.has(raw.id)) {
+      requestItemById.set(raw.id, raw as unknown as RequestItem);
+    }
+  });
+
+  const mappedDestinations = new Map<string, Set<string>>();
+  const mapRequestItems = (
+    rawIds: unknown,
+    path: string,
+    destination: string,
+    expectedPolarity: RequestItemPolarity = "require",
+  ): void => {
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      violations.push(briefViolation("BRIEF_MISSING_REQUEST_MAPPING", path, "request_item_ids must contain at least one request item id"));
+      return;
+    }
+    const seen = new Set<string>();
+    for (const id of rawIds) {
+      const item = typeof id === "string" ? requestItemById.get(id) : undefined;
+      if (!item || seen.has(String(id))) {
+        violations.push(briefViolation("BRIEF_INVALID_REQUEST_MAPPING", path, "request_item_ids must reference unique existing request items"));
+        continue;
+      }
+      seen.add(id as string);
+      if (item.polarity !== expectedPolarity) {
+        violations.push(briefViolation("BRIEF_INCOMPATIBLE_REQUEST_POLARITY", path, `${item.polarity} cannot be mapped to a ${expectedPolarity} ${destination}`));
+      }
+      const destinations = mappedDestinations.get(id as string) ?? new Set<string>();
+      destinations.add(destination);
+      mappedDestinations.set(id as string, destinations);
+    }
+  };
+
+  const requirementIds = new Set<string>();
+  const validateRequirementId = (value: unknown, path: string): void => {
+    if (typeof value !== "string" || !/^[a-z][a-z0-9-]*$/.test(value) || requirementIds.has(value)) {
+      violations.push(briefViolation("BRIEF_INVALID_ID", path, "requirement id must be a unique lowercase alias"));
+    } else {
+      requirementIds.add(value);
+    }
+  };
+
+  teachingGoals.forEach((raw, index) => {
+    const path = `/teaching_goal_requirements/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_TEACHING_GOAL", path, "teaching goal must be an object"));
+      return;
+    }
+    validateRequirementId(raw.id, `${path}/id`);
+    if (typeof raw.goal !== "string" || !raw.goal.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_TEACHING_GOAL", `${path}/goal`, "goal must be a non-empty string"));
+    }
+    mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "teaching_goal");
+  });
+
+  presentationConstraints.forEach((raw, index) => {
+    const path = `/presentation_constraints/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_PRESENTATION_CONSTRAINT", path, "presentation constraint must be an object"));
+      return;
+    }
+    validateRequirementId(raw.id, `${path}/id`);
+    if (!presentationCapabilities.includes(raw.capability as PresentationCapability)) {
+      violations.push(briefViolation("BRIEF_INVALID_PRESENTATION_CAPABILITY", `${path}/capability`, "presentation capability is unsupported"));
+    }
+    if (!requestItemPolarities.includes(raw.polarity as RequestItemPolarity)) {
+      violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_POLARITY", `${path}/polarity`, "presentation constraint polarity is unsupported"));
+    }
+    mapRequestItems(
+      raw.request_item_ids,
+      `${path}/request_item_ids`,
+      "presentation_constraint",
+      raw.polarity as RequestItemPolarity,
+    );
+  });
 
   requirements.forEach((raw, index) => {
     const path = `/visual_requirements/${index}`;
@@ -913,11 +1620,7 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
       violations.push(briefViolation("BRIEF_INVALID_REQUIREMENT", path, "requirement must be an object"));
       return;
     }
-    if (typeof raw.id !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.id) || ids.has(raw.id)) {
-      violations.push(briefViolation("BRIEF_INVALID_ID", `${path}/id`, "id must be a unique lowercase alias"));
-    } else {
-      ids.add(raw.id);
-    }
+    validateRequirementId(raw.id, `${path}/id`);
     if (!visualSurfaces.includes(raw.surface as VisualSurface)) {
       violations.push(briefViolation("BRIEF_INVALID_SURFACE", `${path}/surface`, "surface is unsupported"));
     }
@@ -927,6 +1630,7 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     if (!grounded(raw.evidence)) {
       violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
     }
+    mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "visual");
     if (!Array.isArray(raw.required_features)) {
       violations.push(briefViolation("BRIEF_INVALID_FEATURES", `${path}/required_features`, "required_features must be an array"));
     } else if (visualSurfaces.includes(raw.surface as VisualSurface)) {
@@ -949,10 +1653,12 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
       violations.push(briefViolation("BRIEF_INVALID_RELATIONSHIP", path, "relationship must be an object"));
       return;
     }
-    if (typeof raw.from !== "string" || !ids.has(raw.from)) {
+    validateRequirementId(raw.id, `${path}/id`);
+    const visualIds = new Set(requirements.flatMap((item) => isRecord(item) && typeof item.id === "string" ? [item.id] : []));
+    if (typeof raw.from !== "string" || !visualIds.has(raw.from)) {
       violations.push(briefViolation("BRIEF_UNKNOWN_RELATION_SOURCE", `${path}/from`, "from must reference a visual requirement id"));
     }
-    if (typeof raw.to !== "string" || !ids.has(raw.to)) {
+    if (typeof raw.to !== "string" || !visualIds.has(raw.to)) {
       violations.push(briefViolation("BRIEF_UNKNOWN_RELATION_TARGET", `${path}/to`, "to must reference a visual requirement id"));
     }
     if (!visualRelationships.includes(raw.relation as VisualRelationshipRequirement["relation"])) {
@@ -961,12 +1667,12 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     if (!grounded(raw.evidence)) {
       violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
     }
+    mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "relationship");
   });
 
   const visualById = new Map(requirements.flatMap((raw) => isRecord(raw) && typeof raw.id === "string"
     ? [[raw.id, raw] as const]
     : []));
-  const sharedIds = new Set<string>();
   const variableNames = new Set<string>();
   sharedVariables.forEach((raw, index) => {
     const path = `/shared_variable_requirements/${index}`;
@@ -974,11 +1680,7 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
       violations.push(briefViolation("BRIEF_INVALID_SHARED_VARIABLE", path, "shared variable requirement must be an object"));
       return;
     }
-    if (typeof raw.id !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.id) || sharedIds.has(raw.id)) {
-      violations.push(briefViolation("BRIEF_INVALID_SHARED_VARIABLE_ID", `${path}/id`, "id must be a unique lowercase alias"));
-    } else {
-      sharedIds.add(raw.id);
-    }
+    validateRequirementId(raw.id, `${path}/id`);
     if (typeof raw.variable !== "string" || !/^[a-z][a-z0-9_]{0,63}$/.test(raw.variable)
       || variableNames.has(raw.variable)) {
       violations.push(briefViolation("BRIEF_INVALID_VARIABLE_NAME", `${path}/variable`, "variable must be a unique OLL variable alias"));
@@ -991,6 +1693,11 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     if (!grounded(raw.evidence)) {
       violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
     }
+    mapRequestItems(
+      raw.request_item_ids,
+      `${path}/request_item_ids`,
+      "shared_variable",
+    );
     const min = numberValue(raw.min);
     const max = numberValue(raw.max);
     const initial = numberValue(raw.initial);
@@ -1052,6 +1759,93 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     }
   });
 
+  const unhandledRequestIds = new Set<string>();
+  unhandledItems.forEach((raw, index) => {
+    const path = `/unhandled_request_items/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_ITEM", path, "unhandled request item must be an object"));
+      return;
+    }
+    const item = typeof raw.request_item_id === "string" ? requestItemById.get(raw.request_item_id) : undefined;
+    if (!item || unhandledRequestIds.has(String(raw.request_item_id))) {
+      violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_ITEM", `${path}/request_item_id`, "request_item_id must reference one unique request item"));
+    } else {
+      unhandledRequestIds.add(raw.request_item_id as string);
+    }
+    if (!unhandledStatuses.includes(raw.status as UnhandledRequestItem["status"])) {
+      violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_STATUS", `${path}/status`, "unhandled item status is unsupported"));
+    }
+    if (typeof raw.reason !== "string" || !raw.reason.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_REASON", `${path}/reason`, "unhandled item reason is required"));
+    }
+  });
+
+  const requiredDestinationByKind: Partial<Record<RequestItemKind, string>> = {
+    teaching_goal: "teaching_goal",
+    visual: "visual",
+    relationship: "relationship",
+    continuous_change: "shared_variable",
+    student_control: "shared_variable",
+    presentation_constraint: "presentation_constraint",
+  };
+  for (const [id, item] of requestItemById) {
+    const destinations = mappedDestinations.get(id);
+    const isUnhandled = unhandledRequestIds.has(id);
+    if (isUnhandled && destinations?.size) {
+      violations.push(briefViolation("BRIEF_CONFLICTING_REQUEST_COVERAGE", "/unhandled_request_items", `request item '${id}' is both planned and unhandled`));
+    } else if (!isUnhandled && !destinations?.size) {
+      violations.push(briefViolation("BRIEF_UNMAPPED_REQUEST_ITEM", "/request_items", `request item '${id}' has no planned or unhandled destination`));
+    }
+    const requiredDestination = requiredDestinationByKind[item.kind];
+    if (!isUnhandled && requiredDestination && !destinations?.has(requiredDestination)) {
+      violations.push(briefViolation(
+        "BRIEF_INCOMPATIBLE_REQUEST_MAPPING",
+        "/request_items",
+        `request item '${id}' (${item.kind}) must map to at least one ${requiredDestination} requirement`,
+      ));
+    }
+    if ((item.kind === "existing_board_edit" || item.kind === "unsupported_feature") && !isUnhandled) {
+      violations.push(briefViolation("BRIEF_UNSUPPORTED_ITEM_NOT_REPORTED", "/unhandled_request_items", `request item '${id}' must be reported as unsupported or ambiguous`));
+    }
+  }
+
+  const knownRequirementHints: Array<{ phrase: string; kinds: RequestItemKind[] }> = [
+    { phrase: "函数图像", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "单位圆", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "动画", kinds: ["continuous_change", "presentation_constraint"] },
+    { phrase: "拖动", kinds: ["student_control"] },
+    { phrase: "滑杆", kinds: ["student_control"] },
+    { phrase: "可交互", kinds: ["student_control"] },
+    { phrase: "表格", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "图片", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "三维", kinds: ["unsupported_feature", "presentation_constraint"] },
+    { phrase: "3d", kinds: ["unsupported_feature", "presentation_constraint"] },
+    { phrase: "functiongraph", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "unitcircle", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "animation", kinds: ["continuous_change", "presentation_constraint"] },
+    { phrase: "drag", kinds: ["student_control"] },
+    { phrase: "slider", kinds: ["student_control"] },
+    { phrase: "interactive", kinds: ["student_control"] },
+    { phrase: "table", kinds: ["visual", "presentation_constraint"] },
+    { phrase: "image", kinds: ["visual", "presentation_constraint"] },
+  ];
+  const combinedAuthoritative = normalizeEvidence(authoritative.map((item) => item.text).join(" "));
+  for (const hint of knownRequirementHints) {
+    const normalizedHint = normalizeEvidence(hint.phrase);
+    const recordedWithExpectedKind = requestItems.some((item) => isRecord(item)
+      && typeof item.evidence === "string"
+      && hint.kinds.includes(item.kind as RequestItemKind)
+      && normalizeEvidence(item.evidence).includes(normalizedHint));
+    if (combinedAuthoritative.includes(normalizedHint)
+      && !recordedWithExpectedKind) {
+      violations.push(briefViolation(
+        "BRIEF_SUSPECTED_OMISSION",
+        "/request_items",
+        `request_items did not record the explicit phrase '${hint.phrase}' as ${hint.kinds.join(" or ")}`,
+      ));
+    }
+  }
+
   if (violations.length > 0) {
     throw new GeneratedLessonError(`Lesson Brief validation failed: ${formatViolations(violations)}`, undefined, violations);
   }
@@ -1073,6 +1867,61 @@ function validateBeatTeachingFocus(document: AuthoringLesson): void {
       throw error;
     });
   });
+}
+
+function validateAnimationBeatTiming(document: AuthoringLesson): GenerationViolation[] {
+  const violations: GenerationViolation[] = [];
+  document.steps.forEach((step, stepIndex) => {
+    step.beats.forEach((beat, beatIndex) => {
+      const animations = beat.actions.filter((action) => action.do === "animate");
+      if (animations.length === 0) return;
+      const path = `/steps/${stepIndex}/beats/${beatIndex}`;
+      if (animations.length !== 1) {
+        violations.push({
+          stage: "semantic",
+          code: "OLL_ANIMATION_BEAT_MULTIPLE_ANIMATIONS",
+          path: `${path}/actions`,
+          message: "An animation Beat must contain exactly one animate action",
+        });
+      }
+      const unrelated = beat.actions.filter(
+        (action) => action.do !== "animate" && action.do !== "focus",
+      );
+      if (unrelated.length > 0) {
+        violations.push({
+          stage: "semantic",
+          code: "OLL_ANIMATION_BEAT_NOT_ISOLATED",
+          path: `${path}/actions`,
+          message: `Move ${unrelated.map((action) => action.do).join(", ")} to a neighboring Beat; the animation Beat may contain only animate and after_speech focus`,
+        });
+      }
+      for (const animation of animations) {
+        if (animation.when && animation.when !== "during_speech") {
+          violations.push({
+            stage: "semantic",
+            code: "OLL_ANIMATION_PHASE_INVALID",
+            path: `${path}/actions`,
+            message: "animate must run during_speech so Runtime can synchronize it with real narration playback",
+          });
+        }
+      }
+      const narration = beat.say.trim();
+      const language = document.lesson.language.toLowerCase();
+      const tooLong = language.startsWith("zh")
+        ? Array.from(narration).length > 36
+        : narration.split(/\s+/u).filter(Boolean).length > 22;
+      const sentenceCount = narration.split(/[。！？!?]+/u).filter((part) => part.trim()).length;
+      if (tooLong || sentenceCount > 2) {
+        violations.push({
+          stage: "semantic",
+          code: "OLL_ANIMATION_BEAT_NARRATION_TOO_LONG",
+          path: `${path}/say`,
+          message: "Keep the animation Beat to one or two short observation sentences; move the full explanation to a neighboring Beat",
+        });
+      }
+    });
+  });
+  return violations;
 }
 
 function formatViolations(violations: GenerationViolation[]): string {
@@ -1264,10 +2113,145 @@ function expressionReferencesVariable(expression: unknown, variable: string): bo
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
 }
 
+/** Insert fields that were already fixed by the validated request plan.
+ * The authoring model still chooses teaching beats, board nodes, bindings, and
+ * placement. This lowering step only copies plan-owned metadata and adds a
+ * direct manipulation marker when the generated geometry identifies exactly
+ * one variable-driven point and one matching circle center. */
+function lowerPlannedLessonFields(document: unknown, brief: LessonBrief): unknown {
+  if (!isRecord(document) || !isRecord(document.lesson)) return document;
+
+  document.lesson.goals = brief.teaching_goal_requirements.map((requirement) => requirement.goal);
+  if (brief.shared_variable_requirements.length === 0) {
+    delete document.lesson.variables;
+    return document;
+  }
+  document.lesson.variables = brief.shared_variable_requirements.map((requirement) => ({
+    as: requirement.variable,
+    initial: requirement.initial,
+    min: requirement.min,
+    max: requirement.max,
+    label: requirement.label,
+    unit: requirement.unit,
+    control: { kind: "slider", step: requirement.slider_step },
+  }));
+
+  const rawActions: Record<string, unknown>[] = [];
+  if (Array.isArray(document.steps)) {
+    for (const step of document.steps) {
+      if (!isRecord(step) || !Array.isArray(step.beats)) continue;
+      for (const beat of step.beats) {
+        if (!isRecord(beat) || !Array.isArray(beat.actions)) continue;
+        rawActions.push(...beat.actions.filter(isRecord));
+      }
+    }
+  }
+
+  const animateActions = rawActions.filter((action) => action.do === "animate");
+  for (const requirement of brief.shared_variable_requirements) {
+    let matches = animateActions.filter((action) => action.variable === requirement.variable);
+    if (matches.length === 0
+      && animateActions.length === 1
+      && brief.shared_variable_requirements.length === 1) {
+      matches = animateActions;
+    }
+    if (matches.length !== 1) continue;
+    const [animation] = matches;
+    animation.variable = requirement.variable;
+    animation.value = requirement.animate_to;
+    animation.easing = requirement.easing;
+    animation.duration_intent = requirement.duration_intent;
+  }
+
+  for (const variable of brief.shared_variable_requirements) {
+    if (!variable.direct_angle_geometry) continue;
+    const visualRequirement = brief.visual_requirements.find(
+      (requirement) => requirement.id === variable.direct_angle_geometry && requirement.surface === "geometry",
+    );
+    if (!visualRequirement) continue;
+    const geometryCandidates = rawActions.flatMap((action) => {
+      const inventory = inventoryWrite(action);
+      if (!inventory || inventory.surface !== "geometry") return [];
+      const missingFeatures = visualRequirement.required_features.filter(
+        (feature) => !inventory.features.has(feature),
+      );
+      return missingFeatures.length === 0 ? [{ action, inventory }] : [];
+    });
+    if (geometryCandidates.length !== 1) continue;
+
+    const content = geometryCandidates[0].inventory.content;
+    const points = Array.isArray(content.points) ? content.points.filter(isRecord) : [];
+    const pointByAlias = new Map(points.flatMap((point) =>
+      typeof point.as === "string" ? [[point.as, point] as const] : []));
+    const bindings = Array.isArray(content.bindings) ? content.bindings.filter(isRecord) : [];
+    const drivenCoordinates = new Map<string, Set<string>>();
+    for (const binding of bindings) {
+      if (typeof binding.target !== "string"
+        || !expressionReferencesVariable(binding.expression, variable.variable)) continue;
+      const separator = binding.target.lastIndexOf(".");
+      if (separator <= 0) continue;
+      const alias = binding.target.slice(0, separator);
+      const property = binding.target.slice(separator + 1);
+      if (property !== "x" && property !== "y") continue;
+      const coordinates = drivenCoordinates.get(alias) ?? new Set<string>();
+      coordinates.add(property);
+      drivenCoordinates.set(alias, coordinates);
+    }
+    const drivenPoints = [...drivenCoordinates]
+      .filter(([, coordinates]) => coordinates.has("x") && coordinates.has("y"))
+      .flatMap(([alias]) => pointByAlias.has(alias) ? [{ alias, point: pointByAlias.get(alias) as Record<string, unknown> }] : []);
+
+    const circles = Array.isArray(content.circles) ? content.circles.filter(isRecord) : [];
+    const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
+    const tolerance = 1e-3;
+    const pairs = new Map<string, { point: Record<string, unknown>; center: string }>();
+    for (const { alias, point } of drivenPoints) {
+      const pointX = numberValue(point.x);
+      const pointY = numberValue(point.y);
+      for (const circle of circles) {
+        if (typeof circle.center !== "string") continue;
+        const center = pointByAlias.get(circle.center);
+        const centerX = numberValue(center?.x);
+        const centerY = numberValue(center?.y);
+        const radius = numberValue(circle.radius);
+        if (!center || centerX === undefined || centerY === undefined || radius === undefined || radius <= 0) continue;
+        const liesOnCircle = pointX !== undefined && pointY !== undefined
+          && Math.abs(Math.hypot(pointX - centerX, pointY - centerY) - radius) <= tolerance;
+        const hasRadiusSegment = segments.some((segment) =>
+          (segment.from === circle.center && segment.to === alias)
+          || (segment.to === circle.center && segment.from === alias));
+        if (!liesOnCircle && !hasRadiusSegment) continue;
+        pairs.set(`${alias}\u0000${circle.center}`, { point, center: circle.center });
+      }
+    }
+    if (pairs.size !== 1) continue;
+    const [{ point, center }] = [...pairs.values()];
+    point.interaction = {
+      kind: "angle_control",
+      variable: variable.variable,
+      center,
+    };
+  }
+  return document;
+}
+
 function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): GenerationViolation[] {
   const inventory = buildVisualInventory(document);
   const matched = new Map<string, VisualInventoryEntry>();
   const violations: GenerationViolation[] = [];
+  const lessonGoals = document.lesson.goals.map((goal) => normalizeEvidence(goal));
+  for (const [index, requirement] of brief.teaching_goal_requirements.entries()) {
+    const expected = normalizeEvidence(requirement.goal);
+    if (!lessonGoals.some((goal) => goal.includes(expected) || expected.includes(goal))) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_TEACHING_GOAL_UNSATISFIED",
+        path: `/lesson/goals/${index}`,
+        requirement_id: requirement.id,
+        message: `Teaching goal '${requirement.goal}' must be represented in lesson.goals`,
+      });
+    }
+  }
   for (const requirement of brief.visual_requirements) {
     const candidates = inventory.nodes.filter((node) => node.surface === requirement.surface);
     const scored = candidates.map((node) => {
@@ -1396,7 +2380,87 @@ function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): G
   return violations;
 }
 
-function validateGeneratedLesson(raw: string, input: ToolInput, brief: LessonBrief): AuthoringLesson {
+function reviseContentMatchesKind(content: Record<string, unknown>, kind: RevisableNodeKind): boolean {
+  if (kind === "text" || kind === "shape") return typeof content.text === "string" && content.text.trim().length > 0;
+  if (kind === "math") return typeof content.latex === "string" && content.latex.trim().length > 0;
+  if (kind === "note") {
+    return typeof content.title === "string" && content.title.trim().length > 0
+      && Array.isArray(content.items);
+  }
+  if (kind === "table") return Array.isArray(content.columns) && Array.isArray(content.rows);
+  if (kind === "diagram") return Array.isArray(content.elements);
+  return false;
+}
+
+function validateAllowedCapabilities(
+  document: AuthoringLesson,
+  plan: AuthoringCapabilityPlan,
+): GenerationViolation[] {
+  const violations: GenerationViolation[] = [];
+  const nodeKindByAlias = new Map<string, AuthoringWriteKind>();
+  for (const [stepIndex, step] of document.steps.entries()) {
+    for (const [beatIndex, beat] of step.beats.entries()) {
+      for (const [actionIndex, action] of beat.actions.entries()) {
+        const path = `/steps/${stepIndex}/beats/${beatIndex}/actions/${actionIndex}`;
+        if (action.do === "write") {
+          if (!plan.writeKinds.includes(action.kind)) {
+            violations.push({
+              stage: "semantic",
+              code: "OLL_CAPABILITY_NOT_ALLOWED",
+              path: `${path}/kind`,
+              message: `write:${action.kind} is not allowed by this request's capability plan`,
+            });
+          }
+          nodeKindByAlias.set(action.as, action.kind);
+          continue;
+        }
+        if (!plan.actions.includes(action.do)) {
+          violations.push({
+            stage: "semantic",
+            code: "OLL_CAPABILITY_NOT_ALLOWED",
+            path: `${path}/do`,
+            message: `${action.do} is not allowed by this request's capability plan`,
+          });
+          continue;
+        }
+        if (action.do === "revise") {
+          const targetAlias = referenceRoot(action.target);
+          const targetKind = nodeKindByAlias.get(targetAlias);
+          if (!targetKind) {
+            violations.push({
+              stage: "semantic",
+              code: "OLL_REVISE_TARGET_KIND_UNKNOWN",
+              path: `${path}/target`,
+              message: `revise target '${targetAlias}' was not created earlier in this generated lesson`,
+            });
+          } else if (!plan.reviseKinds.includes(targetKind as RevisableNodeKind)) {
+            violations.push({
+              stage: "semantic",
+              code: "OLL_REVISE_KIND_NOT_ALLOWED",
+              path: `${path}/target`,
+              message: `revise is not allowed for ${targetKind} nodes in this request`,
+            });
+          } else if (!reviseContentMatchesKind(action.content, targetKind as RevisableNodeKind)) {
+            violations.push({
+              stage: "semantic",
+              code: "OLL_REVISE_CONTENT_KIND_MISMATCH",
+              path: `${path}/content`,
+              message: `revise content must be a complete ${targetKind} replacement`,
+            });
+          }
+        }
+      }
+    }
+  }
+  return violations;
+}
+
+function validateGeneratedLesson(
+  raw: string,
+  input: ToolInput,
+  brief: LessonBrief,
+  capabilityPlan: AuthoringCapabilityPlan,
+): AuthoringLesson {
   let document: unknown;
   try {
     document = JSON.parse(raw);
@@ -1409,6 +2473,8 @@ function validateGeneratedLesson(raw: string, input: ToolInput, brief: LessonBri
     }];
     throw new GeneratedLessonError(formatViolations(violations), raw, violations);
   }
+
+  document = lowerPlannedLessonFields(document, brief);
 
   const schemaResult = validateAuthoringSchema(document);
   if (!schemaResult.valid) {
@@ -1433,7 +2499,9 @@ function validateGeneratedLesson(raw: string, input: ToolInput, brief: LessonBri
   } catch (error) {
     violations.push(semanticViolation(error));
   }
+  violations.push(...validateAnimationBeatTiming(lesson));
   violations.push(...validateBriefCoverage(lesson, brief));
+  violations.push(...validateAllowedCapabilities(lesson, capabilityPlan));
   if (violations.length === 0) {
     try {
       const events = normalizeAuthoringLesson(lesson, {
@@ -1481,7 +2549,67 @@ function buildPlanningPrompt(
   const repair = previousBrief
     ? `\n\n上一份 Lesson Brief：\n${previousBrief}\n\n精确校验错误：\n${JSON.stringify(violations, null, 2)}\n保留已正确且有 evidence 的要求，只修复这些错误并返回完整对象。`
     : "";
-  return `请把以下权威课堂请求转换成 Lesson Brief。request_source 决定唯一题目来源；不得使用 existing_board 为 self_contained 或 current_image 补题。\n${JSON.stringify(buildRequestContext(input), null, 2)}${repair}`;
+  return `请把以下权威课堂请求转换成课程要求清单。request_source 决定唯一题目来源；不得使用 existing_board 为 self_contained 或 current_image 补题。\n${JSON.stringify(buildRequestContext(input), null, 2)}${repair}`;
+}
+
+function buildVerificationPrompt(input: ToolInput, brief: LessonBrief): string {
+  return `请独立复核这份课程要求清单有没有漏掉或误解权威请求。\n权威请求：\n${JSON.stringify(buildRequestContext(input), null, 2)}\n\n课程要求清单：\n${JSON.stringify(brief, null, 2)}`;
+}
+
+function validateBriefVerification(candidate: unknown, input: ToolInput): BriefVerification {
+  if (!isRecord(candidate) || !Array.isArray(candidate.missing) || !Array.isArray(candidate.contradictions)) {
+    throw new GeneratedLessonError("Brief verification must contain missing and contradictions arrays", undefined, [
+      briefViolation("BRIEF_VERIFICATION_INVALID_ROOT", "/", "verification must contain missing and contradictions arrays"),
+    ]);
+  }
+  const authoritativeBySource = new Map(authoritativeRequestSources(input)
+    .map((item) => [item.source, normalizeEvidence(item.text)] as const));
+  const violations: GenerationViolation[] = [];
+  const validateEvidence = (raw: unknown, path: string, requireKind: boolean): void => {
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_ITEM", path, "verification item must be an object"));
+      return;
+    }
+    const source = requestEvidenceSources.includes(raw.source as RequestEvidenceSource)
+      ? raw.source as RequestEvidenceSource
+      : undefined;
+    if (!source || !authoritativeBySource.has(source)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_SOURCE", `${path}/source`, "verification source is not authoritative for this request"));
+    }
+    if (typeof raw.evidence !== "string" || !raw.evidence.trim()
+      || !source || !authoritativeBySource.get(source)?.includes(normalizeEvidence(raw.evidence))) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_UNGROUNDED_EVIDENCE", `${path}/evidence`, "verification evidence must quote its named authoritative source"));
+    }
+    if (requireKind && !requestItemKinds.includes(raw.kind as RequestItemKind)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_KIND", `${path}/kind`, "verification kind is unsupported"));
+    }
+    if (typeof raw.reason !== "string" || !raw.reason.trim()) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REASON", `${path}/reason`, "verification reason is required"));
+    }
+  };
+  candidate.missing.forEach((raw, index) => validateEvidence(raw, `/missing/${index}`, true));
+  candidate.contradictions.forEach((raw, index) => validateEvidence(raw, `/contradictions/${index}`, false));
+  if (violations.length > 0) {
+    throw new GeneratedLessonError(`Brief verification failed validation: ${formatViolations(violations)}`, undefined, violations);
+  }
+  return candidate as unknown as BriefVerification;
+}
+
+function briefVerificationViolations(verification: BriefVerification): GenerationViolation[] {
+  return [
+    ...verification.missing.map((item, index): GenerationViolation => ({
+      stage: "brief",
+      code: "BRIEF_REQUIREMENT_MISSING",
+      path: `/verification/missing/${index}`,
+      message: `${item.evidence}: ${item.reason}`,
+    })),
+    ...verification.contradictions.map((item, index): GenerationViolation => ({
+      stage: "brief",
+      code: "BRIEF_REQUIREMENT_CONTRADICTION",
+      path: `/verification/contradictions/${index}`,
+      message: `${item.evidence}: ${item.reason}`,
+    })),
+  ];
 }
 
 function compactCandidate(raw: string): string {
@@ -1495,13 +2623,56 @@ function compactCandidate(raw: string): string {
 function buildGenerationPrompt(
   input: ToolInput,
   brief: LessonBrief,
+  capabilityPlan: AuthoringCapabilityPlan,
   previousCandidate?: string,
   violations: GenerationViolation[] = [],
 ): string {
   const repair = previousCandidate
     ? `\n\n上一份候选 OLL（必须保留其中已正确的教学内容与白板动作）：\n${compactCandidate(previousCandidate)}\n\n精确校验错误：\n${JSON.stringify(violations, null, 2)}\n只针对这些 violation 修复，返回完整 OLL 对象。`
     : "";
-  return `请根据以下课堂上下文和 Lesson Brief 生成本轮完整课程。只输出 OLL JSON。request_source 已经确定本轮题目的唯一来源：self_contained 只使用 learner_request，current_image 以 source_observation 为权威题面，explicit_board_follow_up 才允许使用 existing_board。不得跨来源替换、补全或改写当前题目。existing_board 为 null 时，必须从 new_region 开始。\n课堂上下文：\n${JSON.stringify(buildRequestContext(input), null, 2)}\n\nlesson_brief：\n${JSON.stringify(brief, null, 2)}${repair}`;
+  return `请根据以下课堂上下文和课程要求清单生成本轮完整课程。只输出 OLL JSON。request_source 已经确定本轮题目的唯一来源：self_contained 只使用 learner_request，current_image 以 source_observation 为权威题面，explicit_board_follow_up 才允许使用 existing_board。不得跨来源替换、补全或改写当前题目。existing_board 为 null 时，必须从 new_region 开始。
+
+本次允许使用的 OLL 能力如下；系统提示词中提到但未列入这里的 kind 或 action，本次不得使用。需要展示中间变化但 revise 未开放时，请新建下一个板书节点，不要猜测 revise.target：
+${JSON.stringify({
+    write_kinds: capabilityPlan.writeKinds,
+    actions: capabilityPlan.actions,
+    revise_kinds: capabilityPlan.reviseKinds,
+    system_managed_variables: capabilityPlan.allowVariables,
+    bindings: capabilityPlan.bindingKinds,
+    angle_control: capabilityPlan.allowAngleControl,
+  }, null, 2)}
+
+共享变量硬性落地清单：
+${JSON.stringify(brief.shared_variable_requirements.map((requirement) => ({
+    variable: requirement.variable,
+    system_inserted_slider: {
+      initial: requirement.initial,
+      min: requirement.min,
+      max: requirement.max,
+      label: requirement.label,
+      unit: requirement.unit,
+      step: requirement.slider_step,
+    },
+    required_animation: {
+      variable: requirement.variable,
+      value: requirement.animate_to,
+      easing: requirement.easing,
+      duration_intent: requirement.duration_intent,
+    },
+    required_bindings_on: requirement.bound_visuals,
+    required_direct_angle_control_on: requirement.direct_angle_geometry || null,
+    direct_control_input: requirement.direct_angle_geometry
+      ? "该 geometry 必须包含同一变量驱动的圆上点 x/y bindings，并用半径线连接该点与圆心"
+      : null,
+  })), null, 2)}
+system_inserted_slider 由系统写入 lesson.variables，模型不要自行复制。required_direct_angle_control_on 非空时，模型必须提供可唯一识别的圆心、圆上点、半径线和该点的 x/y 变量绑定，系统据此补入 interaction；找不到唯一对象会校验失败。动画必须逐字采用 required_animation 中的 variable、value、easing 和 duration_intent。
+每个 required_animation 必须放在独立的简短 Beat：图形和连接先在前一 Beat 创建；动画 Beat 只保留一个 animate 和 after_speech focus，并把完整推导放在相邻 Beat。
+
+课堂上下文：
+${JSON.stringify(buildRequestContext(input), null, 2)}
+
+课程要求清单：
+${JSON.stringify(brief, null, 2)}${repair}`;
 }
 
 function parseServiceAccount(): VertexServiceAccount {
@@ -1580,7 +2751,7 @@ function vertexResponseContent(payload: unknown): string {
   return text;
 }
 
-async function createVertexClient(): Promise<VertexClient> {
+export async function createVertexClient(): Promise<VertexClient> {
   const account = parseServiceAccount();
   const model = process.env.OLL_MODEL?.trim() || DEFAULT_MODEL;
   const project = process.env.GOOGLE_CLOUD_PROJECT?.trim() || account.project_id;
@@ -1598,6 +2769,82 @@ async function createVertexClient(): Promise<VertexClient> {
       DEFAULT_VERTEX_REQUEST_ATTEMPTS,
       "VERTEX_REQUEST_ATTEMPTS",
     ),
+  };
+}
+
+export function buildVertexSchemaContract(
+  inputCandidate: Record<string, unknown>,
+  briefCandidate: unknown,
+): {
+  schema: JsonSchema;
+  capabilityPlan: AuthoringCapabilityPlan;
+  diagnostics: ReturnType<typeof schemaDiagnostics>;
+} {
+  const input = parseToolInput(JSON.stringify(inputCandidate));
+  const brief = validateLessonBrief(briefCandidate, input);
+  const capabilityPlan = deriveAuthoringCapabilityPlan(input, brief);
+  const schema = buildAuthoringResponseJsonSchema(brief, capabilityPlan);
+  return { schema, capabilityPlan, diagnostics: schemaDiagnostics(schema) };
+}
+
+export async function probeVertexSchema(
+  client: VertexClient,
+  schema: JsonSchema,
+): Promise<{
+  ok: boolean;
+  status: number;
+  finishReason?: string;
+  error?: string;
+  requestId?: string;
+}> {
+  const requestBody = JSON.stringify({
+    systemInstruction: { parts: [{ text: "Return one JSON object matching the provided response schema." }] },
+    contents: [{ role: "user", parts: [{ text: "Generate a minimal valid object." }] }],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 32,
+      responseMimeType: "application/json",
+      responseJsonSchema: schema,
+    },
+  });
+  let response: Response | undefined;
+  let body = "";
+  for (let attempt = 1; attempt <= client.requestAttempts; attempt += 1) {
+    response = await fetch(client.endpoint, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${client.accessToken}`,
+        "content-type": "application/json",
+      },
+      body: requestBody,
+      signal: AbortSignal.timeout(client.timeoutMs),
+    });
+    body = await response.text();
+    if (response.ok || (response.status !== 429 && response.status < 500) || attempt === client.requestAttempts) break;
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, Math.min(1_000 * 2 ** (attempt - 1), 4_000)));
+  }
+  if (!response) throw new Error("Vertex Schema probe did not make a request");
+  const requestId = response.headers.get("x-goog-request-id") ?? undefined;
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      error: body.slice(0, MAX_ERROR_BODY_LENGTH),
+      ...(requestId ? { requestId } : {}),
+    };
+  }
+  let finishReason: string | undefined;
+  try {
+    const payload = JSON.parse(body) as { candidates?: Array<{ finishReason?: string }> };
+    finishReason = payload.candidates?.[0]?.finishReason;
+  } catch {
+    // A 2xx response is sufficient for this provider-Schema contract probe.
+  }
+  return {
+    ok: true,
+    status: response.status,
+    ...(finishReason ? { finishReason } : {}),
+    ...(requestId ? { requestId } : {}),
   };
 }
 
@@ -1629,7 +2876,8 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
     if (response.ok) break;
     const retryable = status === 429 || status >= 500;
     if (!retryable || requestAttempt === client.requestAttempts) {
-      throw new Error(`Vertex ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
+      const code = status === 400 ? "VERTEX_SCHEMA_REJECTED" : "VERTEX_REQUEST_FAILED";
+      throw new ToolExecutionError(code, `Vertex ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
     }
     const retryAfterSeconds = Number(response.headers.get("retry-after"));
     const delayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
@@ -1652,7 +2900,7 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
 async function planLesson(client: VertexClient, input: ToolInput): Promise<LessonBrief> {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_PLANNING_ATTEMPTS,
-    2,
+    3,
     "OLL_PLANNING_ATTEMPTS",
   );
   let previousBrief: string | undefined;
@@ -1673,7 +2921,35 @@ async function planLesson(client: VertexClient, input: ToolInput): Promise<Lesso
         const parseViolation = briefViolation("BRIEF_INVALID_JSON", "/", `JSON parse failed: ${(error as Error).message}`);
         throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
       }
-      return validateLessonBrief(candidate, input);
+      const brief = validateLessonBrief(canonicalizeBriefAliases(candidate), input);
+      const verificationRaw = await callStructuredModel(client, {
+        label: "lesson-brief-verification",
+        systemPrompt: BRIEF_VERIFICATION_SYSTEM_PROMPT,
+        prompt: buildVerificationPrompt(input, brief),
+        responseSchema: briefVerificationResponseJsonSchema,
+        maxTokens: Math.min(client.maxTokens, 4_096),
+      });
+      let verificationCandidate: unknown;
+      try {
+        verificationCandidate = JSON.parse(verificationRaw);
+      } catch (error) {
+        const parseViolation = briefViolation(
+          "BRIEF_VERIFICATION_INVALID_JSON",
+          "/",
+          `JSON parse failed: ${(error as Error).message}`,
+        );
+        throw new GeneratedLessonError(parseViolation.message, verificationRaw, [parseViolation]);
+      }
+      const verification = validateBriefVerification(verificationCandidate, input);
+      const coverageViolations = briefVerificationViolations(verification);
+      if (coverageViolations.length > 0) {
+        throw new GeneratedLessonError(
+          `Course requirements did not cover the authoritative request: ${formatViolations(coverageViolations)}`,
+          raw,
+          coverageViolations,
+        );
+      }
+      return brief;
     } catch (error) {
       if (!(error instanceof GeneratedLessonError)) throw error;
       process.stderr.write(`learning-coach: rejected lesson brief ${attempt}: ${formatViolations(error.violations)}\n`);
@@ -1694,24 +2970,48 @@ async function generateLesson(
   client: VertexClient,
   input: ToolInput,
   brief: LessonBrief,
-): Promise<{ lesson: AuthoringLesson; attempts: number }> {
+): Promise<{
+  lesson: AuthoringLesson;
+  attempts: number;
+  capabilityPlan: AuthoringCapabilityPlan;
+  schema: ReturnType<typeof schemaDiagnostics>;
+}> {
   let previousCandidate: string | undefined;
   let violations: GenerationViolation[] = [];
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_GENERATION_ATTEMPTS,
-    2,
+    3,
     "OLL_GENERATION_ATTEMPTS",
   );
+  const capabilityPlan = deriveAuthoringCapabilityPlan(input, brief);
+  const responseSchema = buildAuthoringResponseJsonSchema(brief, capabilityPlan);
+  const diagnostics = schemaDiagnostics(responseSchema);
+  process.stderr.write(`learning-coach: ${JSON.stringify({
+    stage: "lesson-authoring-schema",
+    turn_id: input.turn_id,
+    write_kinds: capabilityPlan.writeKinds,
+    actions: capabilityPlan.actions,
+    revise_kinds: capabilityPlan.reviseKinds,
+    schema_sha256: diagnostics.sha256,
+    schema_bytes: diagnostics.bytes,
+    action_branches: diagnostics.action_branches,
+    definitions: diagnostics.definitions,
+  })}\n`);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await callStructuredModel(client, {
       label: "lesson-authoring",
       systemPrompt: AUTHORING_SYSTEM_PROMPT,
-      prompt: buildGenerationPrompt(input, brief, previousCandidate, violations),
-      responseSchema: buildAuthoringResponseJsonSchema(brief),
+      prompt: buildGenerationPrompt(input, brief, capabilityPlan, previousCandidate, violations),
+      responseSchema,
     });
     try {
-      return { lesson: validateGeneratedLesson(raw, input, brief), attempts: attempt };
+      return {
+        lesson: validateGeneratedLesson(raw, input, brief, capabilityPlan),
+        attempts: attempt,
+        capabilityPlan,
+        schema: diagnostics,
+      };
     } catch (error) {
       if (!(error instanceof GeneratedLessonError)) throw error;
       process.stderr.write(`learning-coach: rejected lesson generation ${attempt}: ${formatViolations(error.violations)}\n`);
@@ -1756,7 +3056,7 @@ async function main(): Promise<void> {
     const input = parseToolInput(Buffer.concat(chunks).toString("utf8"));
     const client = await createVertexClient();
     const brief = await planLesson(client, input);
-    const { lesson, attempts } = await generateLesson(client, input, brief);
+    const { lesson, attempts, capabilityPlan, schema } = await generateLesson(client, input, brief);
     const artifactPath = outputPath(input);
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}\n`, "utf8");
@@ -1765,15 +3065,24 @@ async function main(): Promise<void> {
       output: `Validated OLL lesson generated with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
       files_to_send: [artifactPath],
       generation_attempts: attempts,
+      requirement_items: brief.request_items.length,
       visual_requirements: brief.visual_requirements.length,
       visual_relationships: brief.visual_relationships.length,
+      capability_plan: capabilityPlan,
+      authoring_schema: schema,
     });
   } catch (error) {
     const message = safeError(error);
     process.stderr.write(`learning-coach: ${message}\n`);
-    emit({ success: false, output: message });
+    emit({
+      success: false,
+      error_code: error instanceof ToolExecutionError ? error.code : "LESSON_GENERATION_FAILED",
+      output: message,
+    });
     process.exitCode = 1;
   }
 }
 
-void main();
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  void main();
+}

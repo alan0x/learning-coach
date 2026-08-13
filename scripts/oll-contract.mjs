@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-// OLL is the schema source of truth. Use `npm run oll:check` for a read-only
-// verification. To upgrade, first commit and validate OLL, check out that exact
-// commit in the sibling repository, then run `npm run oll:sync`, `npm test`, and
-// `npm run oll:check`. Sync refuses to vendor an uncommitted canonical schema.
+// OLL is the schema source of truth. `check` verifies the exact installed OLL
+// package, lockfile, and vendored Schema without depending on a sibling checkout.
+// `sync` alone reads an explicit OLL source worktree to upgrade the pinned commit.
 
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -131,12 +130,50 @@ function inspectSource(contract, ollDirectory) {
   };
 }
 
+function expectedDependencySpec(contract) {
+  return `git+https://github.com/${contract.oll.repository}.git#${contract.oll.ref}`;
+}
+
+function inspectInstalled(contract, skillDirectory) {
+  const skillPackage = readJson(join(skillDirectory, "package.json"), "learning-coach package metadata");
+  const lock = readJson(join(skillDirectory, "package-lock.json"), "learning-coach package lock");
+  const expectedSpec = expectedDependencySpec(contract);
+  if (skillPackage.dependencies?.["octos-lesson-language"] !== expectedSpec) {
+    fail(`OLL dependency mismatch: expected ${expectedSpec}`);
+  }
+  if (lock.packages?.[""]?.dependencies?.["octos-lesson-language"] !== expectedSpec) {
+    fail("package-lock does not pin the declared OLL dependency");
+  }
+  const lockedPackage = lock.packages?.["node_modules/octos-lesson-language"];
+  const lockedSource = lockedPackage?.resolved;
+  if (typeof lockedSource !== "string"
+    || (!lockedSource.endsWith(`#${contract.oll.ref}`) && !lockedSource.endsWith(`/${contract.oll.ref}`))) {
+    fail(`package-lock does not resolve OLL commit ${contract.oll.ref}`);
+  }
+
+  const installedRoot = join(skillDirectory, "node_modules", "octos-lesson-language");
+  const installedPackage = readJson(join(installedRoot, "package.json"), "installed OLL package metadata");
+  if (installedPackage.version !== contract.oll.package_version) {
+    fail(`Installed OLL package version mismatch: expected ${contract.oll.package_version}, got ${installedPackage.version}`);
+  }
+  const installedSchema = readFileSync(join(installedRoot, "dist", contract.profile.source));
+  return {
+    source: installedSchema,
+    sourceHash: sha256(installedSchema),
+    packageVersion: installedPackage.version,
+    head: contract.oll.ref,
+    packaged: true,
+  };
+}
+
 export function checkContract({
   skillDirectory = defaultSkillDirectory,
-  ollDirectory = resolve(skillDirectory, "../octos-lesson-language"),
+  ollDirectory,
 } = {}) {
   const { contract } = loadContract(skillDirectory);
-  const source = inspectSource(contract, ollDirectory);
+  const source = ollDirectory
+    ? inspectSource(contract, ollDirectory)
+    : inspectInstalled(contract, skillDirectory);
   const vendoredPath = resolveContractPath(
     skillDirectory,
     contract.profile.vendored,
@@ -153,7 +190,7 @@ export function checkContract({
       `OLL package version mismatch: expected ${contract.oll.package_version}, got ${source.packageVersion}`,
     );
   }
-  if (source.sourceHash !== contract.profile.sha256) {
+  if (!source.packaged && source.sourceHash !== contract.profile.sha256) {
     fail(
       `Canonical schema hash mismatch: expected ${contract.profile.sha256}, got ${source.sourceHash}`,
     );
@@ -163,7 +200,13 @@ export function checkContract({
       `Vendored schema hash mismatch: expected ${contract.profile.sha256}, got ${vendoredHash}`,
     );
   }
-  if (!source.source.equals(vendored)) {
+  if (source.packaged) {
+    const installedCanonical = JSON.stringify(JSON.parse(source.source.toString("utf8")));
+    const vendoredCanonical = JSON.stringify(JSON.parse(vendored.toString("utf8")));
+    if (installedCanonical !== vendoredCanonical) {
+      fail("Installed OLL Schema differs structurally from the vendored canonical Schema");
+    }
+  } else if (!source.source.equals(vendored)) {
     fail("Vendored schema differs byte-for-byte from the canonical OLL schema");
   }
 
@@ -171,7 +214,7 @@ export function checkContract({
     ollRef: source.head,
     packageVersion: source.packageVersion,
     profile: `${contract.profile.name}/v${contract.profile.dsl_version}`,
-    schemaHash: source.sourceHash,
+    schemaHash: contract.profile.sha256,
   };
 }
 
@@ -227,7 +270,9 @@ function parseArguments(argv) {
     fail("Usage: node scripts/oll-contract.mjs <check|sync> [--oll-dir PATH]");
   }
 
-  let ollDirectory = resolve(defaultSkillDirectory, "../octos-lesson-language");
+  let ollDirectory = command === "sync"
+    ? resolve(defaultSkillDirectory, "../octos-lesson-language")
+    : undefined;
   for (let index = 0; index < rest.length; index += 1) {
     if (rest[index] !== "--oll-dir" || !rest[index + 1]) {
       fail(`Unknown or incomplete argument: ${rest[index]}`);

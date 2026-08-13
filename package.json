@@ -1,6 +1,6 @@
 {
   "name": "learning-coach-skill",
-  "version": "0.8.4",
+  "version": "0.8.6",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,7 +11,11 @@
     "oll:check": "node scripts/oll-contract.mjs check",
     "oll:sync": "node scripts/oll-contract.mjs sync",
     "test": "npm run build && node --test test/*.test.mjs",
+    "contract:vertex": "npm run build && node scripts/check-vertex-schema-contract.mjs",
     "eval:visual": "npm run build && node scripts/eval-visual-generation.mjs"
+  },
+  "dependencies": {
+    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#ebef19ca486f36c92105c13d587386106b3376c7"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"

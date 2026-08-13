@@ -71,6 +71,37 @@ function makeFixture() {
   return { root, skillDirectory, ollDirectory };
 }
 
+function installFixtureDependency(fixture) {
+  const contract = JSON.parse(readFileSync(join(fixture.skillDirectory, "oll-contract.json"), "utf8"));
+  const spec = `git+https://github.com/${contract.oll.repository}.git#${contract.oll.ref}`;
+  const installedRoot = join(fixture.skillDirectory, "node_modules", "octos-lesson-language");
+  mkdirSync(join(installedRoot, "dist", "schema", "authoring"), { recursive: true });
+  writeFileSync(
+    join(fixture.skillDirectory, "package.json"),
+    `${JSON.stringify({ dependencies: { "octos-lesson-language": spec } }, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(fixture.skillDirectory, "package-lock.json"),
+    `${JSON.stringify({
+      packages: {
+        "": { dependencies: { "octos-lesson-language": spec } },
+        "node_modules/octos-lesson-language": {
+          version: contract.oll.package_version,
+          resolved: `git+https://github.com/${contract.oll.repository}.git#${contract.oll.ref}`,
+        },
+      },
+    }, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(installedRoot, "package.json"),
+    `${JSON.stringify({ name: "octos-lesson-language", version: contract.oll.package_version }, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(installedRoot, "dist", "schema", "authoring", "v0.1.schema.json"),
+    readFileSync(join(fixture.skillDirectory, "references", "oll-authoring-v0.1.schema.json")),
+  );
+}
+
 test("sync pins the exact OLL commit and check accepts the synchronized contract", () => {
   const fixture = makeFixture();
   try {
@@ -100,6 +131,26 @@ test("check rejects a manually changed vendored schema", () => {
     assert.throws(
       () => checkContract(fixture),
       /Vendored schema hash mismatch/,
+    );
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("check uses the exact installed OLL dependency without a sibling checkout", () => {
+  const fixture = makeFixture();
+  try {
+    syncContract(fixture);
+    installFixtureDependency(fixture);
+    const result = checkContract({ skillDirectory: fixture.skillDirectory });
+    assert.equal(result.ollRef, git(fixture.ollDirectory, ["rev-parse", "HEAD"]));
+
+    const packageJson = JSON.parse(readFileSync(join(fixture.skillDirectory, "package.json"), "utf8"));
+    packageJson.dependencies["octos-lesson-language"] = "git+https://github.com/example/octos-lesson-language.git#deadbeef";
+    writeFileSync(join(fixture.skillDirectory, "package.json"), `${JSON.stringify(packageJson, null, 2)}\n`);
+    assert.throws(
+      () => checkContract({ skillDirectory: fixture.skillDirectory }),
+      /OLL dependency mismatch/,
     );
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
