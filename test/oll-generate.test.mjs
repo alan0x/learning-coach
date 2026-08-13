@@ -264,7 +264,7 @@ const plotLessonBrief = {
     surface: "plot",
     purpose: "展示正弦函数的周期波动",
     required_features: ["coordinate_axes", "function_curve"],
-    expressions: ["sin(x)"],
+    expressions: ["y = \\sin(x)"],
     request_item_ids: ["show-sine-plot"],
   }],
   visual_relationships: [],
@@ -361,7 +361,12 @@ const springOscillationBrief = {
       request_item_ids: ["explain-cosine"],
     },
   ],
-  presentation_constraints: [],
+  presentation_constraints: [{
+    id: "show-visually",
+    capability: "visual",
+    polarity: "require",
+    request_item_ids: ["show-motion"],
+  }],
   visual_requirements: [
     {
       id: "spring-motion",
@@ -986,7 +991,6 @@ test("tool rejects a planner omission before authoring and repairs the requireme
           ? {
               missing: [{
                 source_ref: "learner_request:1",
-                kind: "visual",
                 reason: "同一句中的函数图像要求没有被记录",
               }],
               contradictions: [],
@@ -1031,14 +1035,26 @@ test("pedagogical suggestions do not reject a plan whose explicit request is alr
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-verifier-"));
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const modelRequests = [];
-  const verifierResponse = {
-    missing: [],
-    contradictions: [],
-    suggestions: [{
-      request_item_id: "explain-request-1",
-      suggestion: "可以增加数轴作为辅助讲法",
-    }],
-  };
+  let verifierRequestIndex = 0;
+  let verifierResponseIndex = 0;
+  const verifierResponses = [
+    {
+      missing: [{
+        source_ref: "learner_request:999",
+        reason: "错误地引用了不存在的原文分句",
+      }],
+      contradictions: [],
+      suggestions: [],
+    },
+    {
+      missing: [],
+      contradictions: [],
+      suggestions: [{
+        request_item_id: "explain-request-1",
+        suggestion: "可以增加数轴作为辅助讲法",
+      }],
+    },
+  ];
   const server = createServer(async (request, response) => {
     let body = "";
     request.setEncoding("utf8");
@@ -1050,10 +1066,14 @@ test("pedagogical suggestions do not reject a plan whose explicit request is alr
     }
     const parsedBody = JSON.parse(body);
     modelRequests.push(parsedBody);
+    if (isLessonBriefVerificationRequest(parsedBody) && verifierRequestIndex++ === 0) {
+      response.end(JSON.stringify({ candidates: [{ finishReason: "MAX_TOKENS" }] }));
+      return;
+    }
     const value = isLessonBriefRequest(parsedBody)
       ? plannedBrief(parsedBody)
       : isLessonBriefVerificationRequest(parsedBody)
-        ? verifierResponse
+        ? verifierResponses[verifierResponseIndex++]
         : validLesson;
     response.end(vertexPayload(value));
   });
@@ -1075,8 +1095,15 @@ test("pedagogical suggestions do not reject a plan whose explicit request is alr
 
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(modelRequests.filter(isLessonBriefRequest).length, 1);
-    assert.equal(modelRequests.filter(isLessonBriefVerificationRequest).length, 1);
+    assert.equal(modelRequests.filter(isLessonBriefVerificationRequest).length, 3);
     assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
+    const verificationRequests = modelRequests.filter(isLessonBriefVerificationRequest);
+    assert.equal(verificationRequests[0].generationConfig.maxOutputTokens, 4_096);
+    assert.equal(verificationRequests[1].generationConfig.maxOutputTokens, 8_192);
+    const verificationRepairPrompt = verificationRequests[2]
+      .contents[0].parts[0].text;
+    assert.match(verificationRepairPrompt, /BRIEF_VERIFICATION_INVALID_SOURCE_REF/);
+    assert.match(verificationRepairPrompt, /课程规划没有变化/);
     assert.match(result.stderr, /lesson-brief-review-suggestions/);
   } finally {
     await new Promise((done) => server.close(done));

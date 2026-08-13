@@ -9,6 +9,7 @@ import {
   reduceCanonicalEvents,
   validateAuthoringLesson,
   validateAuthoringSchema,
+  compileMathExpression,
   type AuthoringLesson,
   type ResourceContext,
 } from "octos-lesson-language";
@@ -197,7 +198,6 @@ interface LessonBrief {
 interface BriefVerification {
   missing: Array<{
     source_ref: string;
-    kind: RequestItemKind;
     reason: string;
   }>;
   contradictions: Array<{
@@ -291,6 +291,11 @@ request_items 只记录用户明确提出的教学目标、视觉对象、视觉
 
 第二部分 teaching_goal_requirements、visual_requirements、visual_relationships 和 shared_variable_requirements 是教学设计。它们可以根据用户目标增加合理的图形、讲解步骤和互动方式，但必须通过 request_item_ids 说明服务于哪项用户要求。不要把教学建议或你偏好的讲法伪装成用户原话，也不要因为用户没说出“恢复力箭头”之类具体教法就拒绝合理的教学设计。
 
+教学目标和演示对象必须完整：
+- 用户问某个现象“为什么发生”时，解释产生该现象的原因本身是硬教学目标；只描述周期、规律、结果或数学拟合不能替代因果解释；
+- 用户要求演示某个对象或系统如何变化时，至少一个参与变化的 visual_requirement 必须直接表现该对象或系统；单位圆、函数图、能量图等类比或解释工具可以增加，但不能顶替被演示的主体；
+- 同一句中有多个可独立回答的“为什么、是什么、如何变化、让我操作”等要求时，分别建立 request_item，并可共享同一个 source_ref。
+
 只把原文分句中确实表达了要求的内容写入 request_items。寒暄、语气词和没有可执行要求的背景描述写入 non_requirement_clauses；教学建议只能影响 purpose、goal 和具体设计，不得成为新的 request_item。
 每个 visual_requirement.id 必须是唯一的小写英文别名，只能包含 a-z、0-9、连字符并以字母开头；visual_relationships 的 from/to 只能引用这些 id。expressions 只用于 plot，其他 surface 必须返回空数组。
 
@@ -330,11 +335,11 @@ progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐
 const BRIEF_VERIFICATION_SYSTEM_PROMPT = `你是用户要求覆盖复核器，不生成课件，也不决定应该采用哪一种教法。
 
 只做三件事：
-1. missing：用户原文中的某一项明确要求没有被 request_items 记录。一个 source_ref 可能同时要求解释、画图和操作；即使其中一项已记录，另一项漏掉仍应报告，并用 kind 说明漏掉哪一类；
+1. missing：用户原文中的某一项明确要求没有被 request_items 记录。一个 source_ref 可能同时要求解释、画图和操作；即使其中一项已记录，另一项漏掉仍应报告，并在 reason 中明确说明漏了什么；
 2. contradictions：某个已有 request_item 与它引用的用户原文相反，或把明确不支持的能力冒充为已支持；
 3. suggestions：课程可以怎样教得更好，但这类建议绝不能放进 missing 或 contradictions。
 
-如果某个 source_ref 已经被 request_item 正确记录为教学目标，就不能因为你更喜欢受力图、速度图、能量图或其他具体教法而报告 missing；这些只能写进 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
+如果用户明确问“为什么发生”，遗漏因果解释属于 missing，不是 suggestions。如果用户要求演示某个对象的变化，却只规划类比图而没有直接表现该对象，也属于 missing。只有在因果目标和主体演示已经覆盖后，受力图、速度图、能量图等可选讲法才属于 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
 
 const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的家庭教师。请生成一堂完整、连续的 OLL Authoring Profile 课程。
 
@@ -350,6 +355,7 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 9. close.focus 只能引用已经创建的 node、group 或 connection。
 10. 教学重点、推理顺序和最终结论必须清楚，Beat narration 可以直接作为教师课堂讲述。
 11. 每个 Beat 必须包含一个 when="after_speech" 的 focus 动作，聚焦该 Beat 结束后学生应继续看的当前教学目标；不得依赖上一 Beat 或上一课程遗留焦点。
+12. 用户问现象原因时必须实际讲清原因，不能只给规律或公式；用户要求演示某个对象的变化时，动态白板必须直接表现该对象，类比图只能作为辅助。
 
 必须严格使用以下结构和字段名：
 - 根对象：dsl="octos.lesson"、version="0.1"、profile="authoring"、lesson、steps、close。
@@ -862,7 +868,10 @@ function deriveAuthoringCapabilityPlan(input: ToolInput, brief: LessonBrief): Au
     const forbid = constraint.polarity === "forbid";
     if (capability === "visual") {
       if (!forbid) {
-        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "A generic visual requirement must name a concrete supported surface");
+        if (explicitlyRequiredSurfaces.size === 0) {
+          throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "A generic visual requirement must name a concrete supported surface");
+        }
+        continue;
       }
       if ([...explicitlyRequiredSurfaces].some((kind) => visualWriteKinds.has(kind))) {
         throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids visual output");
@@ -1223,10 +1232,9 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["source_ref", "kind", "reason"],
+        required: ["source_ref", "reason"],
         properties: {
           source_ref: { type: "string" },
-          kind: { enum: requestItemKinds },
           reason: { type: "string" },
         },
       },
@@ -1505,6 +1513,13 @@ function canonicalizeBriefAliases(candidate: unknown): unknown {
   canonicalizeItems(brief.visual_requirements);
   canonicalizeItems(brief.visual_relationships);
   canonicalizeItems(brief.shared_variable_requirements);
+  if (Array.isArray(brief.visual_requirements)) {
+    for (const requirement of brief.visual_requirements) {
+      if (!isRecord(requirement) || !Array.isArray(requirement.expressions)) continue;
+      requirement.expressions = requirement.expressions.map((expression) =>
+        typeof expression === "string" ? canonicalPlotExpression(expression) : expression);
+    }
+  }
   if (Array.isArray(brief.visual_relationships)) {
     for (const relationship of brief.visual_relationships) {
       if (!isRecord(relationship)) continue;
@@ -1756,6 +1771,18 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
       violations.push(briefViolation("BRIEF_INVALID_EXPRESSIONS", `${path}/expressions`, "expressions must contain only non-empty strings"));
     } else if (raw.expressions.length > 0 && raw.surface !== "plot") {
       violations.push(briefViolation("BRIEF_INCOMPATIBLE_EXPRESSIONS", `${path}/expressions`, "expressions are supported only by plot requirements"));
+    } else if (raw.surface === "plot") {
+      raw.expressions.forEach((expression, expressionIndex) => {
+        try {
+          compileMathExpression(expression as string, ["x"]);
+        } catch (error) {
+          violations.push(briefViolation(
+            "BRIEF_INVALID_PLOT_EXPRESSION",
+            `${path}/expressions/${expressionIndex}`,
+            `expression must use the Runtime math syntax: ${(error as Error).message}`,
+          ));
+        }
+      });
     }
   });
 
@@ -2032,9 +2059,21 @@ function referenceRoot(value: unknown): string {
 }
 
 function normalizeExpression(value: string): string {
-  return value.normalize("NFKC").toLocaleLowerCase()
-    .replace(/^y\s*=/u, "")
+  return canonicalPlotExpression(value).toLocaleLowerCase()
     .replace(/\s+/gu, "");
+}
+
+function canonicalPlotExpression(value: string): string {
+  return value.normalize("NFKC")
+    .trim()
+    .replace(/^y\s*=\s*/iu, "")
+    .replace(/\\(?:left|right)\b/gu, "")
+    .replace(/\\(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|ln|log|floor|ceil|round)\s*\{/giu, "$1(")
+    .replace(/\\(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|ln|log|floor|ceil|round)\b/giu, "$1")
+    .replace(/\\pi\b/giu, "pi")
+    .replaceAll("{", "(")
+    .replaceAll("}", ")")
+    .trim();
 }
 
 function geometryInventory(alias: string, content: Record<string, unknown>): VisualInventoryEntry {
@@ -2625,8 +2664,16 @@ function buildPlanningPrompt(
   return `请先用 source_ref 记录 authoritative_request.clauses 中的用户明确要求，再为这些要求设计可执行课程。teaching_advice 不是用户要求，不能建立 request_item。request_source 决定唯一题目来源；不得使用 existing_board 为 self_contained 或 current_image 补题。\n${JSON.stringify(buildRequestContext(input), null, 2)}${repair}`;
 }
 
-function buildVerificationPrompt(input: ToolInput, brief: LessonBrief): string {
-  return `请独立复核用户明确要求是否被记录。只有 authoritative_request.clauses 是用户要求；teaching_advice 不是。不要用自己偏好的教法否决已覆盖的用户目标。\n课堂输入：\n${JSON.stringify(buildRequestContext(input), null, 2)}\n\n课程要求与教学设计：\n${JSON.stringify(brief, null, 2)}`;
+function buildVerificationPrompt(
+  input: ToolInput,
+  brief: LessonBrief,
+  previousVerification?: string,
+  violations: GenerationViolation[] = [],
+): string {
+  const repair = previousVerification
+    ? `\n\n上一份复核结果：\n${previousVerification}\n\n复核结果自身的格式错误：\n${JSON.stringify(violations, null, 2)}\n课程规划没有变化；只修复复核结果并返回完整对象。`
+    : "";
+  return `请独立复核用户明确要求是否被记录。只有 authoritative_request.clauses 是用户要求；teaching_advice 不是。不要用自己偏好的教法否决已覆盖的用户目标。\n课堂输入：\n${JSON.stringify(buildRequestContext(input), null, 2)}\n\n课程要求与教学设计：\n${JSON.stringify(brief, null, 2)}${repair}`;
 }
 
 function validateBriefVerification(candidate: unknown, input: ToolInput, brief: LessonBrief): BriefVerification {
@@ -2646,9 +2693,6 @@ function validateBriefVerification(candidate: unknown, input: ToolInput, brief: 
     }
     if (typeof raw.source_ref !== "string" || !clauseRefs.has(raw.source_ref)) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_SOURCE_REF", `${path}/source_ref`, "source_ref must reference one supplied authoritative request clause"));
-    }
-    if (!requestItemKinds.includes(raw.kind as RequestItemKind)) {
-      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_KIND", `${path}/kind`, "kind must identify the omitted request type"));
     }
     if (typeof raw.reason !== "string" || !raw.reason.trim()) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REASON", `${path}/reason`, "verification reason is required"));
@@ -2695,7 +2739,7 @@ function briefVerificationViolations(
         stage: "brief",
         code: "BRIEF_REQUIREMENT_MISSING",
         path: `/verification/missing/${index}`,
-        message: `${clause?.text ?? item.source_ref} (${item.kind}): ${item.reason}`,
+        message: `${clause?.text ?? item.source_ref}: ${item.reason}`,
       };
     }),
     ...verification.contradictions.map((item, index): GenerationViolation => ({
@@ -2837,7 +2881,9 @@ function vertexResponseContent(payload: unknown): string {
   };
   const candidate = root?.candidates?.[0];
   if (!candidate) throw new Error("Vertex response contains no candidates");
-  if (candidate.finishReason === "MAX_TOKENS") throw new Error("Vertex response was truncated at maxOutputTokens");
+  if (candidate.finishReason === "MAX_TOKENS") {
+    throw new ToolExecutionError("VERTEX_RESPONSE_TRUNCATED", "Vertex response was truncated at maxOutputTokens");
+  }
   const text = candidate.content?.parts
     ?.map((part) => typeof part.text === "string" ? part.text : "")
     .join("")
@@ -3085,6 +3131,66 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
   }
 }
 
+async function verifyLessonBrief(
+  client: VertexClient,
+  input: ToolInput,
+  brief: LessonBrief,
+): Promise<BriefVerification> {
+  const maxAttempts = parsePositiveInteger(
+    process.env.OLL_VERIFICATION_ATTEMPTS,
+    3,
+    "OLL_VERIFICATION_ATTEMPTS",
+  );
+  let previousVerification: string | undefined;
+  let violations: GenerationViolation[] = [];
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let raw = "";
+    try {
+      raw = await callStructuredModel(client, {
+        label: "lesson-brief-verification",
+        turnId: input.turn_id,
+        systemPrompt: BRIEF_VERIFICATION_SYSTEM_PROMPT,
+        prompt: buildVerificationPrompt(input, brief, previousVerification, violations),
+        responseSchema: buildBriefVerificationResponseJsonSchema(input, brief),
+        maxTokens: Math.min(client.maxTokens, attempt === 1 ? 4_096 : 8_192),
+      });
+      let candidate: unknown;
+      try {
+        candidate = JSON.parse(raw);
+      } catch (error) {
+        const parseViolation = briefViolation(
+          "BRIEF_VERIFICATION_INVALID_JSON",
+          "/",
+          `JSON parse failed: ${(error as Error).message}`,
+        );
+        throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
+      }
+      return validateBriefVerification(candidate, input, brief);
+    } catch (error) {
+      const generatedError = error instanceof GeneratedLessonError
+        ? error
+        : error instanceof ToolExecutionError && error.code === "VERTEX_RESPONSE_TRUNCATED"
+          ? new GeneratedLessonError(error.message, raw, [briefViolation(
+              "BRIEF_VERIFICATION_TRUNCATED",
+              "/",
+              "verification output exceeded its controlled-output budget",
+            )])
+          : undefined;
+      if (!generatedError) throw error;
+      process.stderr.write(`learning-coach: rejected lesson brief verification ${attempt}: ${formatViolations(generatedError.violations)}\n`);
+      if (raw && process.env.OLL_DEBUG_GENERATION === "1") {
+        process.stderr.write(`learning-coach: rejected lesson brief verification payload ${attempt}: ${raw.slice(0, 16_000)}\n`);
+      }
+      if (attempt === maxAttempts) {
+        throw new Error(`Lesson Brief verification failed after ${maxAttempts} attempt(s). Last error: ${generatedError.message}`);
+      }
+      previousVerification = raw || undefined;
+      violations = generatedError.violations;
+    }
+  }
+  throw new Error("Lesson Brief verification failed");
+}
+
 async function planLesson(client: VertexClient, input: ToolInput): Promise<LessonBrief> {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_PLANNING_ATTEMPTS,
@@ -3111,26 +3217,7 @@ async function planLesson(client: VertexClient, input: ToolInput): Promise<Lesso
         throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
       }
       const brief = validateLessonBrief(canonicalizeBriefAliases(candidate), input);
-      const verificationRaw = await callStructuredModel(client, {
-        label: "lesson-brief-verification",
-        turnId: input.turn_id,
-        systemPrompt: BRIEF_VERIFICATION_SYSTEM_PROMPT,
-        prompt: buildVerificationPrompt(input, brief),
-        responseSchema: buildBriefVerificationResponseJsonSchema(input, brief),
-        maxTokens: Math.min(client.maxTokens, 4_096),
-      });
-      let verificationCandidate: unknown;
-      try {
-        verificationCandidate = JSON.parse(verificationRaw);
-      } catch (error) {
-        const parseViolation = briefViolation(
-          "BRIEF_VERIFICATION_INVALID_JSON",
-          "/",
-          `JSON parse failed: ${(error as Error).message}`,
-        );
-        throw new GeneratedLessonError(parseViolation.message, verificationRaw, [parseViolation]);
-      }
-      const verification = validateBriefVerification(verificationCandidate, input, brief);
+      const verification = await verifyLessonBrief(client, input, brief);
       const coverageViolations = briefVerificationViolations(verification, input, brief);
       if (coverageViolations.length > 0) {
         throw new GeneratedLessonError(

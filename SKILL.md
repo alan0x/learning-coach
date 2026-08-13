@@ -2,7 +2,7 @@
 name: learning-coach
 description: Guide camera, voice, and infinite-whiteboard learning with continuous worked explanations, board-action artifacts, visual grounding, optional guided practice, session review, and evidence-based cross-session learner memory. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
 metadata:
-  version: 0.8.7
+  version: 0.8.8
   author: alan0x
   always: true
 ---

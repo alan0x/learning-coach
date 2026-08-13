@@ -61,6 +61,18 @@ async function runCase(item) {
     for (const field of item.expected.geometry_fields ?? []) {
       assert.ok(geometries.some((action) => Array.isArray(action.content[field]) && action.content[field].length > 0), `missing geometry.${field}`);
     }
+    for (const terms of item.expected.geometry_text_any_groups ?? []) {
+      assert.ok(
+        geometries.some((action) => terms.some((term) => JSON.stringify(action.content).includes(term))),
+        `geometry does not visibly represent one of: ${terms.join(", ")}`,
+      );
+    }
+    for (const terms of item.expected.lesson_text_any_groups ?? []) {
+      assert.ok(
+        terms.some((term) => JSON.stringify(lesson).includes(term)),
+        `lesson does not explain one of: ${terms.join(", ")}`,
+      );
+    }
     const actualExpressions = writes.filter((action) => action.kind === "plot")
       .flatMap((action) => action.content.curves ?? [])
       .map((curve) => normalizeExpression(curve.expression));

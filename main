@@ -9180,6 +9180,11 @@ request_items \u53EA\u8BB0\u5F55\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559
 
 \u7B2C\u4E8C\u90E8\u5206 teaching_goal_requirements\u3001visual_requirements\u3001visual_relationships \u548C shared_variable_requirements \u662F\u6559\u5B66\u8BBE\u8BA1\u3002\u5B83\u4EEC\u53EF\u4EE5\u6839\u636E\u7528\u6237\u76EE\u6807\u589E\u52A0\u5408\u7406\u7684\u56FE\u5F62\u3001\u8BB2\u89E3\u6B65\u9AA4\u548C\u4E92\u52A8\u65B9\u5F0F\uFF0C\u4F46\u5FC5\u987B\u901A\u8FC7 request_item_ids \u8BF4\u660E\u670D\u52A1\u4E8E\u54EA\u9879\u7528\u6237\u8981\u6C42\u3002\u4E0D\u8981\u628A\u6559\u5B66\u5EFA\u8BAE\u6216\u4F60\u504F\u597D\u7684\u8BB2\u6CD5\u4F2A\u88C5\u6210\u7528\u6237\u539F\u8BDD\uFF0C\u4E5F\u4E0D\u8981\u56E0\u4E3A\u7528\u6237\u6CA1\u8BF4\u51FA\u201C\u6062\u590D\u529B\u7BAD\u5934\u201D\u4E4B\u7C7B\u5177\u4F53\u6559\u6CD5\u5C31\u62D2\u7EDD\u5408\u7406\u7684\u6559\u5B66\u8BBE\u8BA1\u3002
 
+\u6559\u5B66\u76EE\u6807\u548C\u6F14\u793A\u5BF9\u8C61\u5FC5\u987B\u5B8C\u6574\uFF1A
+- \u7528\u6237\u95EE\u67D0\u4E2A\u73B0\u8C61\u201C\u4E3A\u4EC0\u4E48\u53D1\u751F\u201D\u65F6\uFF0C\u89E3\u91CA\u4EA7\u751F\u8BE5\u73B0\u8C61\u7684\u539F\u56E0\u672C\u8EAB\u662F\u786C\u6559\u5B66\u76EE\u6807\uFF1B\u53EA\u63CF\u8FF0\u5468\u671F\u3001\u89C4\u5F8B\u3001\u7ED3\u679C\u6216\u6570\u5B66\u62DF\u5408\u4E0D\u80FD\u66FF\u4EE3\u56E0\u679C\u89E3\u91CA\uFF1B
+- \u7528\u6237\u8981\u6C42\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\u6216\u7CFB\u7EDF\u5982\u4F55\u53D8\u5316\u65F6\uFF0C\u81F3\u5C11\u4E00\u4E2A\u53C2\u4E0E\u53D8\u5316\u7684 visual_requirement \u5FC5\u987B\u76F4\u63A5\u8868\u73B0\u8BE5\u5BF9\u8C61\u6216\u7CFB\u7EDF\uFF1B\u5355\u4F4D\u5706\u3001\u51FD\u6570\u56FE\u3001\u80FD\u91CF\u56FE\u7B49\u7C7B\u6BD4\u6216\u89E3\u91CA\u5DE5\u5177\u53EF\u4EE5\u589E\u52A0\uFF0C\u4F46\u4E0D\u80FD\u9876\u66FF\u88AB\u6F14\u793A\u7684\u4E3B\u4F53\uFF1B
+- \u540C\u4E00\u53E5\u4E2D\u6709\u591A\u4E2A\u53EF\u72EC\u7ACB\u56DE\u7B54\u7684\u201C\u4E3A\u4EC0\u4E48\u3001\u662F\u4EC0\u4E48\u3001\u5982\u4F55\u53D8\u5316\u3001\u8BA9\u6211\u64CD\u4F5C\u201D\u7B49\u8981\u6C42\u65F6\uFF0C\u5206\u522B\u5EFA\u7ACB request_item\uFF0C\u5E76\u53EF\u5171\u4EAB\u540C\u4E00\u4E2A source_ref\u3002
+
 \u53EA\u628A\u539F\u6587\u5206\u53E5\u4E2D\u786E\u5B9E\u8868\u8FBE\u4E86\u8981\u6C42\u7684\u5185\u5BB9\u5199\u5165 request_items\u3002\u5BD2\u6684\u3001\u8BED\u6C14\u8BCD\u548C\u6CA1\u6709\u53EF\u6267\u884C\u8981\u6C42\u7684\u80CC\u666F\u63CF\u8FF0\u5199\u5165 non_requirement_clauses\uFF1B\u6559\u5B66\u5EFA\u8BAE\u53EA\u80FD\u5F71\u54CD purpose\u3001goal \u548C\u5177\u4F53\u8BBE\u8BA1\uFF0C\u4E0D\u5F97\u6210\u4E3A\u65B0\u7684 request_item\u3002
 \u6BCF\u4E2A visual_requirement.id \u5FC5\u987B\u662F\u552F\u4E00\u7684\u5C0F\u5199\u82F1\u6587\u522B\u540D\uFF0C\u53EA\u80FD\u5305\u542B a-z\u30010-9\u3001\u8FDE\u5B57\u7B26\u5E76\u4EE5\u5B57\u6BCD\u5F00\u5934\uFF1Bvisual_relationships \u7684 from/to \u53EA\u80FD\u5F15\u7528\u8FD9\u4E9B id\u3002expressions \u53EA\u7528\u4E8E plot\uFF0C\u5176\u4ED6 surface \u5FC5\u987B\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
 
@@ -9218,11 +9223,11 @@ progressive_revision_kinds \u53EA\u8868\u793A\u672C\u8F6E\u65B0\u5EFA\u677F\u4E6
 var BRIEF_VERIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u7528\u6237\u8981\u6C42\u8986\u76D6\u590D\u6838\u5668\uFF0C\u4E0D\u751F\u6210\u8BFE\u4EF6\uFF0C\u4E5F\u4E0D\u51B3\u5B9A\u5E94\u8BE5\u91C7\u7528\u54EA\u4E00\u79CD\u6559\u6CD5\u3002
 
 \u53EA\u505A\u4E09\u4EF6\u4E8B\uFF1A
-1. missing\uFF1A\u7528\u6237\u539F\u6587\u4E2D\u7684\u67D0\u4E00\u9879\u660E\u786E\u8981\u6C42\u6CA1\u6709\u88AB request_items \u8BB0\u5F55\u3002\u4E00\u4E2A source_ref \u53EF\u80FD\u540C\u65F6\u8981\u6C42\u89E3\u91CA\u3001\u753B\u56FE\u548C\u64CD\u4F5C\uFF1B\u5373\u4F7F\u5176\u4E2D\u4E00\u9879\u5DF2\u8BB0\u5F55\uFF0C\u53E6\u4E00\u9879\u6F0F\u6389\u4ECD\u5E94\u62A5\u544A\uFF0C\u5E76\u7528 kind \u8BF4\u660E\u6F0F\u6389\u54EA\u4E00\u7C7B\uFF1B
+1. missing\uFF1A\u7528\u6237\u539F\u6587\u4E2D\u7684\u67D0\u4E00\u9879\u660E\u786E\u8981\u6C42\u6CA1\u6709\u88AB request_items \u8BB0\u5F55\u3002\u4E00\u4E2A source_ref \u53EF\u80FD\u540C\u65F6\u8981\u6C42\u89E3\u91CA\u3001\u753B\u56FE\u548C\u64CD\u4F5C\uFF1B\u5373\u4F7F\u5176\u4E2D\u4E00\u9879\u5DF2\u8BB0\u5F55\uFF0C\u53E6\u4E00\u9879\u6F0F\u6389\u4ECD\u5E94\u62A5\u544A\uFF0C\u5E76\u5728 reason \u4E2D\u660E\u786E\u8BF4\u660E\u6F0F\u4E86\u4EC0\u4E48\uFF1B
 2. contradictions\uFF1A\u67D0\u4E2A\u5DF2\u6709 request_item \u4E0E\u5B83\u5F15\u7528\u7684\u7528\u6237\u539F\u6587\u76F8\u53CD\uFF0C\u6216\u628A\u660E\u786E\u4E0D\u652F\u6301\u7684\u80FD\u529B\u5192\u5145\u4E3A\u5DF2\u652F\u6301\uFF1B
 3. suggestions\uFF1A\u8BFE\u7A0B\u53EF\u4EE5\u600E\u6837\u6559\u5F97\u66F4\u597D\uFF0C\u4F46\u8FD9\u7C7B\u5EFA\u8BAE\u7EDD\u4E0D\u80FD\u653E\u8FDB missing \u6216 contradictions\u3002
 
-\u5982\u679C\u67D0\u4E2A source_ref \u5DF2\u7ECF\u88AB request_item \u6B63\u786E\u8BB0\u5F55\u4E3A\u6559\u5B66\u76EE\u6807\uFF0C\u5C31\u4E0D\u80FD\u56E0\u4E3A\u4F60\u66F4\u559C\u6B22\u53D7\u529B\u56FE\u3001\u901F\u5EA6\u56FE\u3001\u80FD\u91CF\u56FE\u6216\u5176\u4ED6\u5177\u4F53\u6559\u6CD5\u800C\u62A5\u544A missing\uFF1B\u8FD9\u4E9B\u53EA\u80FD\u5199\u8FDB suggestions\u3002\u6559\u5B66\u5EFA\u8BAE\u4E0D\u662F\u7528\u6237\u8981\u6C42\u3002\u6CA1\u6709\u53D1\u73B0\u5BF9\u5E94\u9879\u76EE\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002`;
+\u5982\u679C\u7528\u6237\u660E\u786E\u95EE\u201C\u4E3A\u4EC0\u4E48\u53D1\u751F\u201D\uFF0C\u9057\u6F0F\u56E0\u679C\u89E3\u91CA\u5C5E\u4E8E missing\uFF0C\u4E0D\u662F suggestions\u3002\u5982\u679C\u7528\u6237\u8981\u6C42\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\u7684\u53D8\u5316\uFF0C\u5374\u53EA\u89C4\u5212\u7C7B\u6BD4\u56FE\u800C\u6CA1\u6709\u76F4\u63A5\u8868\u73B0\u8BE5\u5BF9\u8C61\uFF0C\u4E5F\u5C5E\u4E8E missing\u3002\u53EA\u6709\u5728\u56E0\u679C\u76EE\u6807\u548C\u4E3B\u4F53\u6F14\u793A\u5DF2\u7ECF\u8986\u76D6\u540E\uFF0C\u53D7\u529B\u56FE\u3001\u901F\u5EA6\u56FE\u3001\u80FD\u91CF\u56FE\u7B49\u53EF\u9009\u8BB2\u6CD5\u624D\u5C5E\u4E8E suggestions\u3002\u6559\u5B66\u5EFA\u8BAE\u4E0D\u662F\u7528\u6237\u8981\u6C42\u3002\u6CA1\u6709\u53D1\u73B0\u5BF9\u5E94\u9879\u76EE\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002`;
 var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\u4F53\u3001\u5C0A\u91CD\u5B66\u751F\u7684\u5BB6\u5EAD\u6559\u5E08\u3002\u8BF7\u751F\u6210\u4E00\u5802\u5B8C\u6574\u3001\u8FDE\u7EED\u7684 OLL Authoring Profile \u8BFE\u7A0B\u3002
 
 \u786C\u6027\u8981\u6C42\uFF1A
@@ -9237,6 +9242,7 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 9. close.focus \u53EA\u80FD\u5F15\u7528\u5DF2\u7ECF\u521B\u5EFA\u7684 node\u3001group \u6216 connection\u3002
 10. \u6559\u5B66\u91CD\u70B9\u3001\u63A8\u7406\u987A\u5E8F\u548C\u6700\u7EC8\u7ED3\u8BBA\u5FC5\u987B\u6E05\u695A\uFF0CBeat narration \u53EF\u4EE5\u76F4\u63A5\u4F5C\u4E3A\u6559\u5E08\u8BFE\u5802\u8BB2\u8FF0\u3002
 11. \u6BCF\u4E2A Beat \u5FC5\u987B\u5305\u542B\u4E00\u4E2A when="after_speech" \u7684 focus \u52A8\u4F5C\uFF0C\u805A\u7126\u8BE5 Beat \u7ED3\u675F\u540E\u5B66\u751F\u5E94\u7EE7\u7EED\u770B\u7684\u5F53\u524D\u6559\u5B66\u76EE\u6807\uFF1B\u4E0D\u5F97\u4F9D\u8D56\u4E0A\u4E00 Beat \u6216\u4E0A\u4E00\u8BFE\u7A0B\u9057\u7559\u7126\u70B9\u3002
+12. \u7528\u6237\u95EE\u73B0\u8C61\u539F\u56E0\u65F6\u5FC5\u987B\u5B9E\u9645\u8BB2\u6E05\u539F\u56E0\uFF0C\u4E0D\u80FD\u53EA\u7ED9\u89C4\u5F8B\u6216\u516C\u5F0F\uFF1B\u7528\u6237\u8981\u6C42\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\u7684\u53D8\u5316\u65F6\uFF0C\u52A8\u6001\u767D\u677F\u5FC5\u987B\u76F4\u63A5\u8868\u73B0\u8BE5\u5BF9\u8C61\uFF0C\u7C7B\u6BD4\u56FE\u53EA\u80FD\u4F5C\u4E3A\u8F85\u52A9\u3002
 
 \u5FC5\u987B\u4E25\u683C\u4F7F\u7528\u4EE5\u4E0B\u7ED3\u6784\u548C\u5B57\u6BB5\u540D\uFF1A
 - \u6839\u5BF9\u8C61\uFF1Adsl="octos.lesson"\u3001version="0.1"\u3001profile="authoring"\u3001lesson\u3001steps\u3001close\u3002
@@ -9765,7 +9771,10 @@ function deriveAuthoringCapabilityPlan(input, brief) {
     const forbid = constraint.polarity === "forbid";
     if (capability === "visual") {
       if (!forbid) {
-        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "A generic visual requirement must name a concrete supported surface");
+        if (explicitlyRequiredSurfaces.size === 0) {
+          throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "A generic visual requirement must name a concrete supported surface");
+        }
+        continue;
       }
       if ([...explicitlyRequiredSurfaces].some((kind) => visualWriteKinds.has(kind))) {
         throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids visual output");
@@ -10142,10 +10151,9 @@ var lessonBriefResponseJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["source_ref", "kind", "reason"],
+        required: ["source_ref", "reason"],
         properties: {
           source_ref: { type: "string" },
-          kind: { enum: requestItemKinds },
           reason: { type: "string" }
         }
       }
@@ -10414,6 +10422,12 @@ function canonicalizeBriefAliases(candidate) {
   canonicalizeItems(brief.visual_requirements);
   canonicalizeItems(brief.visual_relationships);
   canonicalizeItems(brief.shared_variable_requirements);
+  if (Array.isArray(brief.visual_requirements)) {
+    for (const requirement of brief.visual_requirements) {
+      if (!isRecord(requirement) || !Array.isArray(requirement.expressions)) continue;
+      requirement.expressions = requirement.expressions.map((expression) => typeof expression === "string" ? canonicalPlotExpression(expression) : expression);
+    }
+  }
   if (Array.isArray(brief.visual_relationships)) {
     for (const relationship of brief.visual_relationships) {
       if (!isRecord(relationship)) continue;
@@ -10637,6 +10651,18 @@ function validateLessonBrief(candidate, input) {
       violations.push(briefViolation("BRIEF_INVALID_EXPRESSIONS", `${path}/expressions`, "expressions must contain only non-empty strings"));
     } else if (raw.expressions.length > 0 && raw.surface !== "plot") {
       violations.push(briefViolation("BRIEF_INCOMPATIBLE_EXPRESSIONS", `${path}/expressions`, "expressions are supported only by plot requirements"));
+    } else if (raw.surface === "plot") {
+      raw.expressions.forEach((expression, expressionIndex) => {
+        try {
+          compileMathExpression(expression, ["x"]);
+        } catch (error) {
+          violations.push(briefViolation(
+            "BRIEF_INVALID_PLOT_EXPRESSION",
+            `${path}/expressions/${expressionIndex}`,
+            `expression must use the Runtime math syntax: ${error.message}`
+          ));
+        }
+      });
     }
   });
   relationships.forEach((raw, index) => {
@@ -10890,7 +10916,10 @@ function referenceRoot(value) {
   return typeof value === "string" ? value.split("#", 1)[0] : "";
 }
 function normalizeExpression2(value) {
-  return value.normalize("NFKC").toLocaleLowerCase().replace(/^y\s*=/u, "").replace(/\s+/gu, "");
+  return canonicalPlotExpression(value).toLocaleLowerCase().replace(/\s+/gu, "");
+}
+function canonicalPlotExpression(value) {
+  return value.normalize("NFKC").trim().replace(/^y\s*=\s*/iu, "").replace(/\\(?:left|right)\b/gu, "").replace(/\\(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|ln|log|floor|ceil|round)\s*\{/giu, "$1(").replace(/\\(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|ln|log|floor|ceil|round)\b/giu, "$1").replace(/\\pi\b/giu, "pi").replaceAll("{", "(").replaceAll("}", ")").trim();
 }
 function geometryInventory(alias, content) {
   const tolerance = 1e-3;
@@ -11391,13 +11420,21 @@ ${JSON.stringify(violations, null, 2)}
   return `\u8BF7\u5148\u7528 source_ref \u8BB0\u5F55 authoritative_request.clauses \u4E2D\u7684\u7528\u6237\u660E\u786E\u8981\u6C42\uFF0C\u518D\u4E3A\u8FD9\u4E9B\u8981\u6C42\u8BBE\u8BA1\u53EF\u6267\u884C\u8BFE\u7A0B\u3002teaching_advice \u4E0D\u662F\u7528\u6237\u8981\u6C42\uFF0C\u4E0D\u80FD\u5EFA\u7ACB request_item\u3002request_source \u51B3\u5B9A\u552F\u4E00\u9898\u76EE\u6765\u6E90\uFF1B\u4E0D\u5F97\u4F7F\u7528 existing_board \u4E3A self_contained \u6216 current_image \u8865\u9898\u3002
 ${JSON.stringify(buildRequestContext(input), null, 2)}${repair}`;
 }
-function buildVerificationPrompt(input, brief) {
+function buildVerificationPrompt(input, brief, previousVerification, violations = []) {
+  const repair = previousVerification ? `
+
+\u4E0A\u4E00\u4EFD\u590D\u6838\u7ED3\u679C\uFF1A
+${previousVerification}
+
+\u590D\u6838\u7ED3\u679C\u81EA\u8EAB\u7684\u683C\u5F0F\u9519\u8BEF\uFF1A
+${JSON.stringify(violations, null, 2)}
+\u8BFE\u7A0B\u89C4\u5212\u6CA1\u6709\u53D8\u5316\uFF1B\u53EA\u4FEE\u590D\u590D\u6838\u7ED3\u679C\u5E76\u8FD4\u56DE\u5B8C\u6574\u5BF9\u8C61\u3002` : "";
   return `\u8BF7\u72EC\u7ACB\u590D\u6838\u7528\u6237\u660E\u786E\u8981\u6C42\u662F\u5426\u88AB\u8BB0\u5F55\u3002\u53EA\u6709 authoritative_request.clauses \u662F\u7528\u6237\u8981\u6C42\uFF1Bteaching_advice \u4E0D\u662F\u3002\u4E0D\u8981\u7528\u81EA\u5DF1\u504F\u597D\u7684\u6559\u6CD5\u5426\u51B3\u5DF2\u8986\u76D6\u7684\u7528\u6237\u76EE\u6807\u3002
 \u8BFE\u5802\u8F93\u5165\uFF1A
 ${JSON.stringify(buildRequestContext(input), null, 2)}
 
 \u8BFE\u7A0B\u8981\u6C42\u4E0E\u6559\u5B66\u8BBE\u8BA1\uFF1A
-${JSON.stringify(brief, null, 2)}`;
+${JSON.stringify(brief, null, 2)}${repair}`;
 }
 function validateBriefVerification(candidate, input, brief) {
   if (!isRecord(candidate) || !Array.isArray(candidate.missing) || !Array.isArray(candidate.contradictions) || !Array.isArray(candidate.suggestions)) {
@@ -11415,9 +11452,6 @@ function validateBriefVerification(candidate, input, brief) {
     }
     if (typeof raw.source_ref !== "string" || !clauseRefs.has(raw.source_ref)) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_SOURCE_REF", `${path}/source_ref`, "source_ref must reference one supplied authoritative request clause"));
-    }
-    if (!requestItemKinds.includes(raw.kind)) {
-      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_KIND", `${path}/kind`, "kind must identify the omitted request type"));
     }
     if (typeof raw.reason !== "string" || !raw.reason.trim()) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REASON", `${path}/reason`, "verification reason is required"));
@@ -11453,7 +11487,7 @@ function briefVerificationViolations(verification, input, brief) {
         stage: "brief",
         code: "BRIEF_REQUIREMENT_MISSING",
         path: `/verification/missing/${index}`,
-        message: `${clause?.text ?? item.source_ref} (${item.kind}): ${item.reason}`
+        message: `${clause?.text ?? item.source_ref}: ${item.reason}`
       };
     }),
     ...verification.contradictions.map((item, index) => ({
@@ -11579,7 +11613,9 @@ function vertexResponseContent(payload) {
   const root = payload;
   const candidate = root?.candidates?.[0];
   if (!candidate) throw new Error("Vertex response contains no candidates");
-  if (candidate.finishReason === "MAX_TOKENS") throw new Error("Vertex response was truncated at maxOutputTokens");
+  if (candidate.finishReason === "MAX_TOKENS") {
+    throw new ToolExecutionError("VERTEX_RESPONSE_TRUNCATED", "Vertex response was truncated at maxOutputTokens");
+  }
   const text = candidate.content?.parts?.map((part) => typeof part.text === "string" ? part.text : "").join("").trim();
   if (!text) throw new Error(`Vertex response contains no JSON text (finishReason=${candidate.finishReason ?? "unknown"})`);
   return text;
@@ -11791,6 +11827,59 @@ async function callStructuredModel(client, request) {
     throw surfacedError;
   }
 }
+async function verifyLessonBrief(client, input, brief) {
+  const maxAttempts = parsePositiveInteger(
+    process.env.OLL_VERIFICATION_ATTEMPTS,
+    3,
+    "OLL_VERIFICATION_ATTEMPTS"
+  );
+  let previousVerification;
+  let violations = [];
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let raw = "";
+    try {
+      raw = await callStructuredModel(client, {
+        label: "lesson-brief-verification",
+        turnId: input.turn_id,
+        systemPrompt: BRIEF_VERIFICATION_SYSTEM_PROMPT,
+        prompt: buildVerificationPrompt(input, brief, previousVerification, violations),
+        responseSchema: buildBriefVerificationResponseJsonSchema(input, brief),
+        maxTokens: Math.min(client.maxTokens, attempt === 1 ? 4096 : 8192)
+      });
+      let candidate;
+      try {
+        candidate = JSON.parse(raw);
+      } catch (error) {
+        const parseViolation = briefViolation(
+          "BRIEF_VERIFICATION_INVALID_JSON",
+          "/",
+          `JSON parse failed: ${error.message}`
+        );
+        throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
+      }
+      return validateBriefVerification(candidate, input, brief);
+    } catch (error) {
+      const generatedError = error instanceof GeneratedLessonError ? error : error instanceof ToolExecutionError && error.code === "VERTEX_RESPONSE_TRUNCATED" ? new GeneratedLessonError(error.message, raw, [briefViolation(
+        "BRIEF_VERIFICATION_TRUNCATED",
+        "/",
+        "verification output exceeded its controlled-output budget"
+      )]) : void 0;
+      if (!generatedError) throw error;
+      process.stderr.write(`learning-coach: rejected lesson brief verification ${attempt}: ${formatViolations(generatedError.violations)}
+`);
+      if (raw && process.env.OLL_DEBUG_GENERATION === "1") {
+        process.stderr.write(`learning-coach: rejected lesson brief verification payload ${attempt}: ${raw.slice(0, 16e3)}
+`);
+      }
+      if (attempt === maxAttempts) {
+        throw new Error(`Lesson Brief verification failed after ${maxAttempts} attempt(s). Last error: ${generatedError.message}`);
+      }
+      previousVerification = raw || void 0;
+      violations = generatedError.violations;
+    }
+  }
+  throw new Error("Lesson Brief verification failed");
+}
 async function planLesson(client, input) {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_PLANNING_ATTEMPTS,
@@ -11817,26 +11906,7 @@ async function planLesson(client, input) {
         throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
       }
       const brief = validateLessonBrief(canonicalizeBriefAliases(candidate), input);
-      const verificationRaw = await callStructuredModel(client, {
-        label: "lesson-brief-verification",
-        turnId: input.turn_id,
-        systemPrompt: BRIEF_VERIFICATION_SYSTEM_PROMPT,
-        prompt: buildVerificationPrompt(input, brief),
-        responseSchema: buildBriefVerificationResponseJsonSchema(input, brief),
-        maxTokens: Math.min(client.maxTokens, 4096)
-      });
-      let verificationCandidate;
-      try {
-        verificationCandidate = JSON.parse(verificationRaw);
-      } catch (error) {
-        const parseViolation = briefViolation(
-          "BRIEF_VERIFICATION_INVALID_JSON",
-          "/",
-          `JSON parse failed: ${error.message}`
-        );
-        throw new GeneratedLessonError(parseViolation.message, verificationRaw, [parseViolation]);
-      }
-      const verification = validateBriefVerification(verificationCandidate, input, brief);
+      const verification = await verifyLessonBrief(client, input, brief);
       const coverageViolations = briefVerificationViolations(verification, input, brief);
       if (coverageViolations.length > 0) {
         throw new GeneratedLessonError(
