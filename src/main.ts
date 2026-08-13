@@ -14,9 +14,10 @@ import {
 } from "octos-lesson-language";
 
 const TOOL_NAME = "oll_generate_lesson";
-const DEFAULT_MODEL = "gemini-3.5-flash";
+const DEFAULT_MODEL = "gemini-3.6-flash";
 const DEFAULT_VERTEX_LOCATION = "global";
 const DEFAULT_TIMEOUT_MS = 180_000;
+const DEFAULT_TOTAL_TIMEOUT_MS = 270_000;
 const DEFAULT_MAX_TOKENS = 32_768;
 const DEFAULT_VERTEX_REQUEST_ATTEMPTS = 3;
 const MAX_CONTEXT_LENGTH = 24_000;
@@ -111,7 +112,6 @@ interface VisualRequirement {
   id: string;
   surface: VisualSurface;
   purpose: string;
-  evidence: string;
   required_features: VisualFeature[];
   expressions: string[];
   request_item_ids: string[];
@@ -122,7 +122,6 @@ interface VisualRelationshipRequirement {
   from: string;
   to: string;
   relation: "maps_to" | "compares_with" | "explains" | "derives";
-  evidence: string;
   request_item_ids: string[];
 }
 
@@ -130,7 +129,6 @@ interface SharedVariableRequirement {
   id: string;
   variable: string;
   purpose: string;
-  evidence: string;
   initial: number;
   min: number;
   max: number;
@@ -147,10 +145,20 @@ interface SharedVariableRequirement {
 
 interface RequestItem {
   id: string;
-  source: RequestEvidenceSource;
-  evidence: string;
+  source_ref: string;
   kind: RequestItemKind;
   polarity: RequestItemPolarity;
+}
+
+interface NonRequirementClause {
+  source_ref: string;
+  reason: string;
+}
+
+interface AuthoritativeRequestClause {
+  ref: string;
+  source: RequestEvidenceSource;
+  text: string;
 }
 
 interface TeachingGoalRequirement {
@@ -176,6 +184,7 @@ interface LessonBrief {
   version: "1";
   request_summary: string;
   request_items: RequestItem[];
+  non_requirement_clauses: NonRequirementClause[];
   teaching_goal_requirements: TeachingGoalRequirement[];
   presentation_constraints: PresentationConstraint[];
   visual_requirements: VisualRequirement[];
@@ -187,15 +196,17 @@ interface LessonBrief {
 
 interface BriefVerification {
   missing: Array<{
-    source: RequestEvidenceSource;
-    evidence: string;
+    source_ref: string;
     kind: RequestItemKind;
     reason: string;
   }>;
   contradictions: Array<{
-    source: RequestEvidenceSource;
-    evidence: string;
+    request_item_id: string;
     reason: string;
+  }>;
+  suggestions: Array<{
+    request_item_id: string;
+    suggestion: string;
   }>;
 }
 
@@ -231,10 +242,12 @@ interface VertexClient {
   timeoutMs: number;
   maxTokens: number;
   requestAttempts: number;
+  deadlineAt?: number;
 }
 
 interface StructuredModelRequest {
   label: "lesson-brief" | "lesson-brief-verification" | "lesson-authoring";
+  turnId: string;
   systemPrompt: string;
   prompt: string;
   responseSchema: JsonSchema;
@@ -262,17 +275,23 @@ class ToolExecutionError extends Error {
   }
 }
 
-const LESSON_BRIEF_SYSTEM_PROMPT = `你是课堂需求规划器，不生成 OLL，也不撰写课程正文。你的任务是把本轮权威请求转换成一个可验证的课程要求清单。
+const LESSON_BRIEF_SYSTEM_PROMPT = `你是课堂需求与教学设计规划器，不生成 OLL，也不撰写课程正文。输入明确分成两部分：必须忠实满足的用户原话，以及只能辅助选择讲法、不能升级成用户要求的教学建议。
 
-先在 request_items 中逐条列出用户明确提出的教学目标、视觉对象、视觉关系、连续变化、学生控制、对既有白板的修改、展示限制和当前系统不支持的功能：
-- evidence 必须逐字引用对应 source 的原文，不得用 request_summary 代替原文证据；
+第一部分先逐条处理 authoritative_request.clauses：
+- 每个 source_ref 必须二选一：如果分句表达了实际要求，就建立一个或多个 request_item；如果只是寒暄、语气词或没有可执行要求，就写入 non_requirement_clauses 并说明原因；不能遗漏，也不能同时出现在两边；
+- non_requirement_clauses 不是逃避要求的地方。只要分句要求解释、展示、比较、演示、控制、修改或限制表现形式，就必须建立 request_item；
+
+request_items 只记录用户明确提出的教学目标、视觉对象、视觉关系、连续变化、学生控制、对既有白板的修改、展示限制和当前系统不支持的功能：
+- 每项使用 source_ref 引用输入提供的原文分句编号，不要复制、改写或自造原文；
 - polarity=require 表示必须满足，polarity=forbid 表示明确禁止；
 - 不得把 3D、学科模拟或未实现的交互偷换成 diagram 或普通文字；这类要求使用 unsupported_feature，并在 unhandled_request_items 中说明；
 - 每个 request_item 必须通过 request_item_ids 映射到一个或多个具体要求，或者明确列入 unhandled_request_items，不能悬空；
 - teaching_goal 映射到 teaching_goal_requirements；visual 映射到 visual_requirements；relationship 映射到 visual_relationships；continuous_change 和 student_control 映射到 shared_variable_requirements；presentation_constraint 映射到 presentation_constraints；
 - 目前没有可寻址的既有白板节点清单，因此 existing_board_edit 必须列入 unhandled_request_items，不能让后续模型猜 revise.target。
 
-只提取请求明确要求、或完成请求不可缺少的可见教学要求。每项 evidence 必须逐字引用权威请求中的短语，不得引用历史中被隔离的内容。
+第二部分 teaching_goal_requirements、visual_requirements、visual_relationships 和 shared_variable_requirements 是教学设计。它们可以根据用户目标增加合理的图形、讲解步骤和互动方式，但必须通过 request_item_ids 说明服务于哪项用户要求。不要把教学建议或你偏好的讲法伪装成用户原话，也不要因为用户没说出“恢复力箭头”之类具体教法就拒绝合理的教学设计。
+
+只把原文分句中确实表达了要求的内容写入 request_items。寒暄、语气词和没有可执行要求的背景描述写入 non_requirement_clauses；教学建议只能影响 purpose、goal 和具体设计，不得成为新的 request_item。
 每个 visual_requirement.id 必须是唯一的小写英文别名，只能包含 a-z、0-9、连字符并以字母开头；visual_relationships 的 from/to 只能引用这些 id。expressions 只用于 plot，其他 surface 必须返回空数组。
 
 视觉 surface：
@@ -302,17 +321,20 @@ shared_variable_requirements 用来规划“同一个量同时驱动多个视觉
 - variable 是 OLL 变量名；initial/min/max/slider_step/animate_to 使用符合学科含义的数值。转满一圈用 0 到 6.283185307179586，单位用 rad。
 - bound_visuals 至少列出所有被同一变量驱动的 visual_requirement.id；跨图对应通常至少有两个。
 - direct_angle_geometry 只在某个 geometry 里的点适合由学生直接绕圆心拖动时填写该 visual_requirement.id，否则返回空字符串。
-- evidence 仍须逐字引用权威请求；不得因为系统支持动画就凭空规划互动。
+- 当前学生控制只支持变量滑杆，以及圆上点绕圆心的 angle_control；不支持任意物体的自由拖动或沿直线拖动。一般性的“让我自己操作”或没有点明被拖物体的“拖着试试”可以用拖动滑杆满足；只有圆周角度确实是合适的教学操作时才使用 direct_angle_geometry。明确点名要拖动其他物体或沿特定路径拖动时必须列入 unhandled_request_items。
 
 progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐进替换，允许 text、math、shape、diagram、table、note；不需要时返回空数组。它不允许修改历史白板节点，也不得包含 geometry、plot 或 image。
 
 没有明确或必要视觉要求时 visual_requirements 可以为空，但 request_items 和 teaching_goal_requirements 仍须覆盖用户的教学请求。只输出符合 JSON Schema 的 JSON 对象。`;
 
-const BRIEF_VERIFICATION_SYSTEM_PROMPT = `你是课程要求复核器，不生成课件，也不改写课程要求。请独立比较权威用户原文和课程要求清单，只报告：
-1. 用户明确提出、但清单没有记录或没有正确映射的要求；
-2. 清单与用户原文发生的矛盾，包括把不支持的能力偷换成较弱能力。
+const BRIEF_VERIFICATION_SYSTEM_PROMPT = `你是用户要求覆盖复核器，不生成课件，也不决定应该采用哪一种教法。
 
-missing 和 contradictions 中的 evidence 必须逐字引用指定 source 的原文。没有发现问题时返回两个空数组。不要只返回“检查通过”之类没有证据的结论。`;
+只做三件事：
+1. missing：用户原文中的某一项明确要求没有被 request_items 记录。一个 source_ref 可能同时要求解释、画图和操作；即使其中一项已记录，另一项漏掉仍应报告，并用 kind 说明漏掉哪一类；
+2. contradictions：某个已有 request_item 与它引用的用户原文相反，或把明确不支持的能力冒充为已支持；
+3. suggestions：课程可以怎样教得更好，但这类建议绝不能放进 missing 或 contradictions。
+
+如果某个 source_ref 已经被 request_item 正确记录为教学目标，就不能因为你更喜欢受力图、速度图、能量图或其他具体教法而报告 missing；这些只能写进 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
 
 const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的家庭教师。请生成一堂完整、连续的 OLL Authoring Profile 课程。
 
@@ -1162,7 +1184,6 @@ const animationEasings: SharedVariableRequirement["easing"][] = ["linear", "ease
 const animationDurationIntents: SharedVariableRequirement["duration_intent"][] = [
   "brief", "normal", "extended",
 ];
-const requestEvidenceSources: RequestEvidenceSource[] = ["learner_request", "recognized_problem", "board_summary"];
 const requestItemKinds: RequestItemKind[] = [
   "teaching_goal", "visual", "relationship", "continuous_change", "student_control",
   "existing_board_edit", "presentation_constraint", "unsupported_feature",
@@ -1175,7 +1196,7 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
   type: "object",
   additionalProperties: false,
   required: [
-    "version", "request_summary", "request_items", "teaching_goal_requirements",
+    "version", "request_summary", "request_items", "non_requirement_clauses", "teaching_goal_requirements",
     "presentation_constraints", "visual_requirements", "visual_relationships",
     "shared_variable_requirements", "progressive_revision_kinds", "unhandled_request_items",
   ],
@@ -1188,13 +1209,25 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "source", "evidence", "kind", "polarity"],
+        required: ["id", "source_ref", "kind", "polarity"],
         properties: {
           id: { type: "string" },
-          source: { enum: requestEvidenceSources },
-          evidence: { type: "string" },
+          source_ref: { type: "string" },
           kind: { enum: requestItemKinds },
           polarity: { enum: requestItemPolarities },
+        },
+      },
+    },
+    non_requirement_clauses: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source_ref", "kind", "reason"],
+        properties: {
+          source_ref: { type: "string" },
+          kind: { enum: requestItemKinds },
+          reason: { type: "string" },
         },
       },
     },
@@ -1231,12 +1264,11 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "surface", "purpose", "evidence", "required_features", "expressions", "request_item_ids"],
+        required: ["id", "surface", "purpose", "required_features", "expressions", "request_item_ids"],
         properties: {
           id: { type: "string" },
           surface: { enum: visualSurfaces },
           purpose: { type: "string" },
-          evidence: { type: "string" },
           required_features: { type: "array", items: { enum: visualFeatures } },
           expressions: { type: "array", items: { type: "string" } },
           request_item_ids: idArraySchema,
@@ -1248,13 +1280,12 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "from", "to", "relation", "evidence", "request_item_ids"],
+        required: ["id", "from", "to", "relation", "request_item_ids"],
         properties: {
           id: { type: "string" },
           from: { type: "string" },
           to: { type: "string" },
           relation: { enum: visualRelationships },
-          evidence: { type: "string" },
           request_item_ids: idArraySchema,
         },
       },
@@ -1265,7 +1296,7 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
         type: "object",
         additionalProperties: false,
         required: [
-          "id", "variable", "purpose", "evidence", "initial", "min", "max", "label", "unit",
+          "id", "variable", "purpose", "initial", "min", "max", "label", "unit",
           "slider_step", "animate_to", "easing", "duration_intent", "bound_visuals",
           "direct_angle_geometry", "request_item_ids",
         ],
@@ -1273,7 +1304,6 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
           id: { type: "string" },
           variable: { type: "string" },
           purpose: { type: "string" },
-          evidence: { type: "string" },
           initial: { type: "number" },
           min: { type: "number" },
           max: { type: "number" },
@@ -1316,18 +1346,16 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
 const briefVerificationResponseJsonSchema: JsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["missing", "contradictions"],
+  required: ["missing", "contradictions", "suggestions"],
   properties: {
     missing: {
       type: "array",
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["source", "evidence", "kind", "reason"],
+        required: ["source_ref", "reason"],
         properties: {
-          source: { enum: requestEvidenceSources },
-          evidence: { type: "string" },
-          kind: { enum: requestItemKinds },
+          source_ref: { type: "string" },
           reason: { type: "string" },
         },
       },
@@ -1337,11 +1365,22 @@ const briefVerificationResponseJsonSchema: JsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["source", "evidence", "reason"],
+        required: ["request_item_id", "reason"],
         properties: {
-          source: { enum: requestEvidenceSources },
-          evidence: { type: "string" },
+          request_item_id: { type: "string" },
           reason: { type: "string" },
+        },
+      },
+    },
+    suggestions: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["request_item_id", "suggestion"],
+        properties: {
+          request_item_id: { type: "string" },
+          suggestion: { type: "string" },
         },
       },
     },
@@ -1394,6 +1433,50 @@ function authoritativeRequestSources(input: ToolInput): Array<{ source: RequestE
     sources.push({ source: "board_summary", text: input.board_summary });
   }
   return sources;
+}
+
+function splitAuthoritativeText(text: string): string[] {
+  const clauses = text
+    .split(/[。！？；!?;]+/u)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return clauses.length > 0 ? clauses : [text.trim()].filter(Boolean);
+}
+
+function authoritativeRequestClauses(input: ToolInput): AuthoritativeRequestClause[] {
+  return authoritativeRequestSources(input).flatMap(({ source, text }) =>
+    splitAuthoritativeText(text).map((clause, index) => ({
+      ref: `${source}:${index + 1}`,
+      source,
+      text: clause,
+    }))
+  );
+}
+
+function buildLessonBriefResponseJsonSchema(input: ToolInput): JsonSchema {
+  const schema = structuredClone(lessonBriefResponseJsonSchema);
+  const properties = schema.properties as Record<string, JsonSchema>;
+  const sourceRefs = authoritativeRequestClauses(input).map((clause) => clause.ref);
+  const requestItems = properties.request_items;
+  const itemProperties = (requestItems.items as JsonSchema).properties as Record<string, JsonSchema>;
+  itemProperties.source_ref = { enum: sourceRefs };
+  const nonRequirements = properties.non_requirement_clauses;
+  const nonRequirementProperties = (nonRequirements.items as JsonSchema).properties as Record<string, JsonSchema>;
+  nonRequirementProperties.source_ref = { enum: sourceRefs };
+  return schema;
+}
+
+function buildBriefVerificationResponseJsonSchema(input: ToolInput, brief: LessonBrief): JsonSchema {
+  const schema = structuredClone(briefVerificationResponseJsonSchema);
+  const properties = schema.properties as Record<string, JsonSchema>;
+  const missingProperties = ((properties.missing.items as JsonSchema).properties) as Record<string, JsonSchema>;
+  missingProperties.source_ref = { enum: authoritativeRequestClauses(input).map((clause) => clause.ref) };
+  const requestItemIds = brief.request_items.map((item) => item.id);
+  const contradictionProperties = ((properties.contradictions.items as JsonSchema).properties) as Record<string, JsonSchema>;
+  contradictionProperties.request_item_id = { enum: requestItemIds };
+  const suggestionProperties = ((properties.suggestions.items as JsonSchema).properties) as Record<string, JsonSchema>;
+  suggestionProperties.request_item_id = { enum: requestItemIds };
+  return schema;
 }
 
 function briefViolation(code: string, path: string, message: string): GenerationViolation {
@@ -1461,6 +1544,16 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
   if (!Array.isArray(candidate.request_items) || candidate.request_items.length === 0) {
     violations.push(briefViolation("BRIEF_MISSING_REQUEST_ITEMS", "/request_items", "request_items must contain the explicit requirements from the authoritative request"));
   }
+  const nonRequirementClauses = Array.isArray(candidate.non_requirement_clauses)
+    ? candidate.non_requirement_clauses
+    : [];
+  if (!Array.isArray(candidate.non_requirement_clauses)) {
+    violations.push(briefViolation(
+      "BRIEF_INVALID_NON_REQUIREMENT_CLAUSES",
+      "/non_requirement_clauses",
+      "non_requirement_clauses must be an array",
+    ));
+  }
   const teachingGoals = Array.isArray(candidate.teaching_goal_requirements)
     ? candidate.teaching_goal_requirements
     : [];
@@ -1506,16 +1599,8 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_ITEMS", "/unhandled_request_items", "unhandled_request_items must be an array"));
   }
 
-  const authoritative = authoritativeRequestSources(input);
-  const authoritativeBySource = new Map(authoritative.map((item) => [item.source, normalizeEvidence(item.text)] as const));
-  const grounded = (evidence: unknown, requestedSource?: unknown) => {
-    if (typeof evidence !== "string" || normalizeEvidence(evidence).length === 0) return false;
-    if (typeof requestedSource === "string") {
-      const source = authoritativeBySource.get(requestedSource as RequestEvidenceSource);
-      return !!source && source.includes(normalizeEvidence(evidence));
-    }
-    return authoritative.some((source) => normalizeEvidence(source.text).includes(normalizeEvidence(evidence)));
-  };
+  const authoritativeClauses = authoritativeRequestClauses(input);
+  const authoritativeClauseByRef = new Map(authoritativeClauses.map((clause) => [clause.ref, clause] as const));
   const requestItemById = new Map<string, RequestItem>();
   requestItems.forEach((raw, index) => {
     const path = `/request_items/${index}`;
@@ -1526,11 +1611,8 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     if (typeof raw.id !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.id) || requestItemById.has(raw.id)) {
       violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_ID", `${path}/id`, "request item id must be a unique lowercase alias"));
     }
-    if (!requestEvidenceSources.includes(raw.source as RequestEvidenceSource)) {
-      violations.push(briefViolation("BRIEF_INVALID_EVIDENCE_SOURCE", `${path}/source`, "request item source is not authoritative for this request"));
-    }
-    if (!grounded(raw.evidence, raw.source)) {
-      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "request item evidence must quote its named authoritative source"));
+    if (typeof raw.source_ref !== "string" || !authoritativeClauseByRef.has(raw.source_ref)) {
+      violations.push(briefViolation("BRIEF_INVALID_SOURCE_REF", `${path}/source_ref`, "source_ref must reference one supplied authoritative request clause"));
     }
     if (!requestItemKinds.includes(raw.kind as RequestItemKind)) {
       violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_KIND", `${path}/kind`, "request item kind is unsupported"));
@@ -1542,6 +1624,39 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
       requestItemById.set(raw.id, raw as unknown as RequestItem);
     }
   });
+
+  const requestSourceRefs = new Set(requestItems.flatMap((item) =>
+    isRecord(item) && typeof item.source_ref === "string" ? [item.source_ref] : []));
+  const nonRequirementSourceRefs = new Set<string>();
+  nonRequirementClauses.forEach((raw, index) => {
+    const path = `/non_requirement_clauses/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_NON_REQUIREMENT_CLAUSE", path, "non-requirement clause must be an object"));
+      return;
+    }
+    if (typeof raw.source_ref !== "string" || !authoritativeClauseByRef.has(raw.source_ref)) {
+      violations.push(briefViolation("BRIEF_INVALID_SOURCE_REF", `${path}/source_ref`, "source_ref must reference one supplied authoritative request clause"));
+    } else if (nonRequirementSourceRefs.has(raw.source_ref)) {
+      violations.push(briefViolation("BRIEF_DUPLICATE_SOURCE_DISPOSITION", `${path}/source_ref`, "source_ref may appear only once in non_requirement_clauses"));
+    } else {
+      nonRequirementSourceRefs.add(raw.source_ref);
+      if (requestSourceRefs.has(raw.source_ref)) {
+        violations.push(briefViolation("BRIEF_CONFLICTING_SOURCE_DISPOSITION", `${path}/source_ref`, "source_ref cannot be both a request item and a non-requirement clause"));
+      }
+    }
+    if (typeof raw.reason !== "string" || !raw.reason.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_NON_REQUIREMENT_REASON", `${path}/reason`, "reason is required"));
+    }
+  });
+  for (const clause of authoritativeClauses) {
+    if (!requestSourceRefs.has(clause.ref) && !nonRequirementSourceRefs.has(clause.ref)) {
+      violations.push(briefViolation(
+        "BRIEF_SOURCE_CLAUSE_UNCLASSIFIED",
+        "/request_items",
+        `source clause '${clause.ref}' must be classified as a request item or a non-requirement clause`,
+      ));
+    }
+  }
 
   const mappedDestinations = new Map<string, Set<string>>();
   const mapRequestItems = (
@@ -1627,9 +1742,6 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     if (typeof raw.purpose !== "string" || !raw.purpose.trim()) {
       violations.push(briefViolation("BRIEF_MISSING_PURPOSE", `${path}/purpose`, "purpose is required"));
     }
-    if (!grounded(raw.evidence)) {
-      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
-    }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "visual");
     if (!Array.isArray(raw.required_features)) {
       violations.push(briefViolation("BRIEF_INVALID_FEATURES", `${path}/required_features`, "required_features must be an array"));
@@ -1664,9 +1776,6 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     if (!visualRelationships.includes(raw.relation as VisualRelationshipRequirement["relation"])) {
       violations.push(briefViolation("BRIEF_INVALID_RELATION", `${path}/relation`, "relation is unsupported"));
     }
-    if (!grounded(raw.evidence)) {
-      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
-    }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "relationship");
   });
 
@@ -1689,9 +1798,6 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     }
     if (typeof raw.purpose !== "string" || !raw.purpose.trim()) {
       violations.push(briefViolation("BRIEF_MISSING_VARIABLE_PURPOSE", `${path}/purpose`, "purpose is required"));
-    }
-    if (!grounded(raw.evidence)) {
-      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
     }
     mapRequestItems(
       raw.request_item_ids,
@@ -1806,43 +1912,6 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     }
     if ((item.kind === "existing_board_edit" || item.kind === "unsupported_feature") && !isUnhandled) {
       violations.push(briefViolation("BRIEF_UNSUPPORTED_ITEM_NOT_REPORTED", "/unhandled_request_items", `request item '${id}' must be reported as unsupported or ambiguous`));
-    }
-  }
-
-  const knownRequirementHints: Array<{ phrase: string; kinds: RequestItemKind[] }> = [
-    { phrase: "函数图像", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "单位圆", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "动画", kinds: ["continuous_change", "presentation_constraint"] },
-    { phrase: "拖动", kinds: ["student_control"] },
-    { phrase: "滑杆", kinds: ["student_control"] },
-    { phrase: "可交互", kinds: ["student_control"] },
-    { phrase: "表格", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "图片", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "三维", kinds: ["unsupported_feature", "presentation_constraint"] },
-    { phrase: "3d", kinds: ["unsupported_feature", "presentation_constraint"] },
-    { phrase: "functiongraph", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "unitcircle", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "animation", kinds: ["continuous_change", "presentation_constraint"] },
-    { phrase: "drag", kinds: ["student_control"] },
-    { phrase: "slider", kinds: ["student_control"] },
-    { phrase: "interactive", kinds: ["student_control"] },
-    { phrase: "table", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "image", kinds: ["visual", "presentation_constraint"] },
-  ];
-  const combinedAuthoritative = normalizeEvidence(authoritative.map((item) => item.text).join(" "));
-  for (const hint of knownRequirementHints) {
-    const normalizedHint = normalizeEvidence(hint.phrase);
-    const recordedWithExpectedKind = requestItems.some((item) => isRecord(item)
-      && typeof item.evidence === "string"
-      && hint.kinds.includes(item.kind as RequestItemKind)
-      && normalizeEvidence(item.evidence).includes(normalizedHint));
-    if (combinedAuthoritative.includes(normalizedHint)
-      && !recordedWithExpectedKind) {
-      violations.push(briefViolation(
-        "BRIEF_SUSPECTED_OMISSION",
-        "/request_items",
-        `request_items did not record the explicit phrase '${hint.phrase}' as ${hint.kinds.join(" or ")}`,
-      ));
     }
   }
 
@@ -2524,12 +2593,16 @@ function validateGeneratedLesson(
 function buildRequestContext(input: ToolInput): Record<string, unknown> {
   const mayUseExistingBoard = input.request_source === "explicit_board_follow_up";
   return {
-    learner_request: input.learner_request,
     request_source: input.request_source,
-    source_observation: input.source_observation ?? null,
+    authoritative_request: {
+      clauses: authoritativeRequestClauses(input),
+    },
     language: input.language ?? "zh-CN",
-    tutor_context: input.tutor_context ?? "耐心、具体、连续讲解",
-    learner_context: input.learner_context ?? null,
+    teaching_advice: {
+      tutor_context: input.tutor_context ?? "耐心、具体、连续讲解",
+      learner_context: input.learner_context ?? null,
+      rule: "只用于选择讲法，不能增加、删除或否决用户要求",
+    },
     session_context: input.session_context ?? { assets: [] },
     existing_board: mayUseExistingBoard
       ? {
@@ -2547,67 +2620,89 @@ function buildPlanningPrompt(
   violations: GenerationViolation[] = [],
 ): string {
   const repair = previousBrief
-    ? `\n\n上一份 Lesson Brief：\n${previousBrief}\n\n精确校验错误：\n${JSON.stringify(violations, null, 2)}\n保留已正确且有 evidence 的要求，只修复这些错误并返回完整对象。`
+    ? `\n\n上一份课程要求与教学设计：\n${previousBrief}\n\n精确校验错误：\n${JSON.stringify(violations, null, 2)}\n保留已正确的用户要求引用和教学设计，只修复这些错误并返回完整对象。`
     : "";
-  return `请把以下权威课堂请求转换成课程要求清单。request_source 决定唯一题目来源；不得使用 existing_board 为 self_contained 或 current_image 补题。\n${JSON.stringify(buildRequestContext(input), null, 2)}${repair}`;
+  return `请先用 source_ref 记录 authoritative_request.clauses 中的用户明确要求，再为这些要求设计可执行课程。teaching_advice 不是用户要求，不能建立 request_item。request_source 决定唯一题目来源；不得使用 existing_board 为 self_contained 或 current_image 补题。\n${JSON.stringify(buildRequestContext(input), null, 2)}${repair}`;
 }
 
 function buildVerificationPrompt(input: ToolInput, brief: LessonBrief): string {
-  return `请独立复核这份课程要求清单有没有漏掉或误解权威请求。\n权威请求：\n${JSON.stringify(buildRequestContext(input), null, 2)}\n\n课程要求清单：\n${JSON.stringify(brief, null, 2)}`;
+  return `请独立复核用户明确要求是否被记录。只有 authoritative_request.clauses 是用户要求；teaching_advice 不是。不要用自己偏好的教法否决已覆盖的用户目标。\n课堂输入：\n${JSON.stringify(buildRequestContext(input), null, 2)}\n\n课程要求与教学设计：\n${JSON.stringify(brief, null, 2)}`;
 }
 
-function validateBriefVerification(candidate: unknown, input: ToolInput): BriefVerification {
-  if (!isRecord(candidate) || !Array.isArray(candidate.missing) || !Array.isArray(candidate.contradictions)) {
-    throw new GeneratedLessonError("Brief verification must contain missing and contradictions arrays", undefined, [
-      briefViolation("BRIEF_VERIFICATION_INVALID_ROOT", "/", "verification must contain missing and contradictions arrays"),
+function validateBriefVerification(candidate: unknown, input: ToolInput, brief: LessonBrief): BriefVerification {
+  if (!isRecord(candidate) || !Array.isArray(candidate.missing)
+    || !Array.isArray(candidate.contradictions) || !Array.isArray(candidate.suggestions)) {
+    throw new GeneratedLessonError("Brief verification must contain missing, contradictions, and suggestions arrays", undefined, [
+      briefViolation("BRIEF_VERIFICATION_INVALID_ROOT", "/", "verification must contain missing, contradictions, and suggestions arrays"),
     ]);
   }
-  const authoritativeBySource = new Map(authoritativeRequestSources(input)
-    .map((item) => [item.source, normalizeEvidence(item.text)] as const));
+  const clauseRefs = new Set(authoritativeRequestClauses(input).map((clause) => clause.ref));
+  const requestItemIds = new Set(brief.request_items.map((item) => item.id));
   const violations: GenerationViolation[] = [];
-  const validateEvidence = (raw: unknown, path: string, requireKind: boolean): void => {
+  const validateMissing = (raw: unknown, path: string): void => {
     if (!isRecord(raw)) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_ITEM", path, "verification item must be an object"));
       return;
     }
-    const source = requestEvidenceSources.includes(raw.source as RequestEvidenceSource)
-      ? raw.source as RequestEvidenceSource
-      : undefined;
-    if (!source || !authoritativeBySource.has(source)) {
-      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_SOURCE", `${path}/source`, "verification source is not authoritative for this request"));
+    if (typeof raw.source_ref !== "string" || !clauseRefs.has(raw.source_ref)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_SOURCE_REF", `${path}/source_ref`, "source_ref must reference one supplied authoritative request clause"));
     }
-    if (typeof raw.evidence !== "string" || !raw.evidence.trim()
-      || !source || !authoritativeBySource.get(source)?.includes(normalizeEvidence(raw.evidence))) {
-      violations.push(briefViolation("BRIEF_VERIFICATION_UNGROUNDED_EVIDENCE", `${path}/evidence`, "verification evidence must quote its named authoritative source"));
-    }
-    if (requireKind && !requestItemKinds.includes(raw.kind as RequestItemKind)) {
-      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_KIND", `${path}/kind`, "verification kind is unsupported"));
+    if (!requestItemKinds.includes(raw.kind as RequestItemKind)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_KIND", `${path}/kind`, "kind must identify the omitted request type"));
     }
     if (typeof raw.reason !== "string" || !raw.reason.trim()) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REASON", `${path}/reason`, "verification reason is required"));
     }
   };
-  candidate.missing.forEach((raw, index) => validateEvidence(raw, `/missing/${index}`, true));
-  candidate.contradictions.forEach((raw, index) => validateEvidence(raw, `/contradictions/${index}`, false));
+  const validateRequestItemReference = (
+    raw: unknown,
+    path: string,
+    textField: "reason" | "suggestion",
+  ): void => {
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_ITEM", path, "verification item must be an object"));
+      return;
+    }
+    if (typeof raw.request_item_id !== "string" || !requestItemIds.has(raw.request_item_id)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REQUEST_ITEM", `${path}/request_item_id`, "request_item_id must reference one request item"));
+    }
+    if (typeof raw[textField] !== "string" || !raw[textField].trim()) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REASON", `${path}/${textField}`, `${textField} is required`));
+    }
+  };
+  candidate.missing.forEach((raw, index) => validateMissing(raw, `/missing/${index}`));
+  candidate.contradictions.forEach((raw, index) =>
+    validateRequestItemReference(raw, `/contradictions/${index}`, "reason"));
+  candidate.suggestions.forEach((raw, index) =>
+    validateRequestItemReference(raw, `/suggestions/${index}`, "suggestion"));
   if (violations.length > 0) {
     throw new GeneratedLessonError(`Brief verification failed validation: ${formatViolations(violations)}`, undefined, violations);
   }
   return candidate as unknown as BriefVerification;
 }
 
-function briefVerificationViolations(verification: BriefVerification): GenerationViolation[] {
+function briefVerificationViolations(
+  verification: BriefVerification,
+  input: ToolInput,
+  brief: LessonBrief,
+): GenerationViolation[] {
+  const clauseByRef = new Map(authoritativeRequestClauses(input).map((clause) => [clause.ref, clause] as const));
+  const requestItemById = new Map(brief.request_items.map((item) => [item.id, item] as const));
   return [
-    ...verification.missing.map((item, index): GenerationViolation => ({
-      stage: "brief",
-      code: "BRIEF_REQUIREMENT_MISSING",
-      path: `/verification/missing/${index}`,
-      message: `${item.evidence}: ${item.reason}`,
-    })),
+    ...verification.missing.map((item, index): GenerationViolation => {
+      const clause = clauseByRef.get(item.source_ref);
+      return {
+        stage: "brief",
+        code: "BRIEF_REQUIREMENT_MISSING",
+        path: `/verification/missing/${index}`,
+        message: `${clause?.text ?? item.source_ref} (${item.kind}): ${item.reason}`,
+      };
+    }),
     ...verification.contradictions.map((item, index): GenerationViolation => ({
       stage: "brief",
       code: "BRIEF_REQUIREMENT_CONTRADICTION",
       path: `/verification/contradictions/${index}`,
-      message: `${item.evidence}: ${item.reason}`,
+      message: `${requestItemById.get(item.request_item_id)?.id ?? item.request_item_id}: ${item.reason}`,
     })),
   ];
 }
@@ -2757,19 +2852,71 @@ export async function createVertexClient(): Promise<VertexClient> {
   const project = process.env.GOOGLE_CLOUD_PROJECT?.trim() || account.project_id;
   const location = process.env.GOOGLE_CLOUD_LOCATION?.trim() || DEFAULT_VERTEX_LOCATION;
   const timeoutMs = parsePositiveInteger(process.env.OLL_TIMEOUT_MS, DEFAULT_TIMEOUT_MS, "OLL_TIMEOUT_MS");
+  const totalTimeoutMs = parsePositiveInteger(
+    process.env.OLL_TOTAL_TIMEOUT_MS,
+    DEFAULT_TOTAL_TIMEOUT_MS,
+    "OLL_TOTAL_TIMEOUT_MS",
+  );
   const maxTokens = parsePositiveInteger(process.env.OLL_MAX_TOKENS, DEFAULT_MAX_TOKENS, "OLL_MAX_TOKENS");
-  const accessToken = await vertexAccessToken(account, timeoutMs);
+  const deadlineAt = Date.now() + totalTimeoutMs;
+  const authStartedAt = Date.now();
+  stageLog({ stage: "vertex-auth", status: "started" });
+  let accessToken: string;
+  try {
+    accessToken = await vertexAccessToken(account, Math.min(timeoutMs, totalTimeoutMs));
+    stageLog({
+      stage: "vertex-auth",
+      status: "completed",
+      elapsed_ms: Date.now() - authStartedAt,
+    });
+  } catch (error) {
+    const timeoutError = error instanceof Error
+      && (error.name === "TimeoutError" || error.name === "AbortError");
+    stageLog({
+      stage: "vertex-auth",
+      status: "failed",
+      elapsed_ms: Date.now() - authStartedAt,
+      error_code: timeoutError ? "VERTEX_AUTH_TIMEOUT" : "VERTEX_AUTH_FAILED",
+    });
+    if (timeoutError) {
+      throw new ToolExecutionError("VERTEX_AUTH_TIMEOUT", "Vertex authentication exceeded its timeout");
+    }
+    throw error;
+  }
   return {
     endpoint: vertexEndpoint(project, location, model),
     accessToken,
     timeoutMs,
     maxTokens,
+    deadlineAt,
     requestAttempts: parsePositiveInteger(
       process.env.VERTEX_REQUEST_ATTEMPTS,
       DEFAULT_VERTEX_REQUEST_ATTEMPTS,
       "VERTEX_REQUEST_ATTEMPTS",
     ),
   };
+}
+
+function requestDeadline(client: VertexClient): number {
+  return Math.min(
+    Date.now() + client.timeoutMs,
+    client.deadlineAt ?? Number.POSITIVE_INFINITY,
+  );
+}
+
+function timeoutUntil(deadlineAt: number, label: string): number {
+  const remaining = Math.floor(deadlineAt - Date.now());
+  if (remaining <= 0) {
+    throw new ToolExecutionError(
+      "LESSON_GENERATION_TIMEOUT",
+      `The lesson generation time budget was exhausted during ${label}`,
+    );
+  }
+  return remaining;
+}
+
+function stageLog(payload: Record<string, unknown>): void {
+  process.stderr.write(`learning-coach: ${JSON.stringify(payload)}\n`);
 }
 
 export function buildVertexSchemaContract(
@@ -2849,6 +2996,9 @@ export async function probeVertexSchema(
 }
 
 async function callStructuredModel(client: VertexClient, request: StructuredModelRequest): Promise<string> {
+  const startedAt = Date.now();
+  const deadlineAt = requestDeadline(client);
+  stageLog({ stage: "model-call", turn_id: request.turnId, label: request.label, status: "started" });
   const requestBody = JSON.stringify({
     systemInstruction: { parts: [{ text: request.systemPrompt }] },
     contents: [{ role: "user", parts: [{ text: request.prompt }] }],
@@ -2861,40 +3011,78 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
   });
   let body = "";
   let status = 0;
-  for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
-    const response = await fetch(client.endpoint, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${client.accessToken}`,
-        "content-type": "application/json",
-      },
-      body: requestBody,
-      signal: AbortSignal.timeout(client.timeoutMs),
-    });
-    status = response.status;
-    body = await response.text();
-    if (response.ok) break;
-    const retryable = status === 429 || status >= 500;
-    if (!retryable || requestAttempt === client.requestAttempts) {
-      const code = status === 400 ? "VERTEX_SCHEMA_REJECTED" : "VERTEX_REQUEST_FAILED";
-      throw new ToolExecutionError(code, `Vertex ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
-    }
-    const retryAfterSeconds = Number(response.headers.get("retry-after"));
-    const delayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
-      ? Math.min(retryAfterSeconds * 1000, 10_000)
-      : Math.min(1_000 * 2 ** (requestAttempt - 1), 4_000);
-    await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs));
-  }
-  let payload: unknown;
   try {
-    payload = JSON.parse(body);
+    let usedAttempts = 0;
+    for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
+      usedAttempts = requestAttempt;
+      const response = await fetch(client.endpoint, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${client.accessToken}`,
+          "content-type": "application/json",
+        },
+        body: requestBody,
+        signal: AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
+      });
+      status = response.status;
+      body = await response.text();
+      if (response.ok) break;
+      const retryable = status === 429 || status >= 500;
+      if (!retryable || requestAttempt === client.requestAttempts) {
+        const code = status === 400 ? "VERTEX_SCHEMA_REJECTED" : "VERTEX_REQUEST_FAILED";
+        throw new ToolExecutionError(code, `Vertex ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
+      }
+      const retryAfterSeconds = Number(response.headers.get("retry-after"));
+      const requestedDelayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+        ? Math.min(retryAfterSeconds * 1000, 10_000)
+        : Math.min(1_000 * 2 ** (requestAttempt - 1), 4_000);
+      const delayMs = Math.min(requestedDelayMs, timeoutUntil(deadlineAt, request.label));
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs));
+    }
+    let payload: unknown;
+    try {
+      payload = JSON.parse(body);
+    } catch (error) {
+      throw new Error(`Vertex returned a non-JSON API response: ${(error as Error).message}`);
+    }
+    if (process.env.OLL_DEBUG_GENERATION === "1") {
+      process.stderr.write(`learning-coach: raw Vertex ${request.label} payload: ${JSON.stringify(payload).slice(0, 16_000)}\n`);
+    }
+    const content = vertexResponseContent(payload);
+    stageLog({
+      stage: "model-call",
+      turn_id: request.turnId,
+      label: request.label,
+      status: "completed",
+      http_status: status,
+      request_attempts: usedAttempts,
+      elapsed_ms: Date.now() - startedAt,
+    });
+    return content;
   } catch (error) {
-    throw new Error(`Vertex returned a non-JSON API response: ${(error as Error).message}`);
+    const timeoutError = error instanceof Error
+      && (error.name === "TimeoutError" || error.name === "AbortError");
+    const surfacedError = timeoutError
+      ? new ToolExecutionError(
+          client.deadlineAt !== undefined && Date.now() >= client.deadlineAt
+            ? "LESSON_GENERATION_TIMEOUT"
+            : "VERTEX_REQUEST_TIMEOUT",
+          client.deadlineAt !== undefined && Date.now() >= client.deadlineAt
+            ? `The lesson generation time budget was exhausted during ${request.label}`
+            : `Vertex ${request.label} exceeded its request timeout`,
+        )
+      : error;
+    stageLog({
+      stage: "model-call",
+      turn_id: request.turnId,
+      label: request.label,
+      status: "failed",
+      http_status: status || null,
+      elapsed_ms: Date.now() - startedAt,
+      error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED",
+    });
+    throw surfacedError;
   }
-  if (process.env.OLL_DEBUG_GENERATION === "1") {
-    process.stderr.write(`learning-coach: raw Vertex ${request.label} payload: ${JSON.stringify(payload).slice(0, 16_000)}\n`);
-  }
-  return vertexResponseContent(payload);
 }
 
 async function planLesson(client: VertexClient, input: ToolInput): Promise<LessonBrief> {
@@ -2908,9 +3096,10 @@ async function planLesson(client: VertexClient, input: ToolInput): Promise<Lesso
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await callStructuredModel(client, {
       label: "lesson-brief",
+      turnId: input.turn_id,
       systemPrompt: LESSON_BRIEF_SYSTEM_PROMPT,
       prompt: buildPlanningPrompt(input, previousBrief, violations),
-      responseSchema: lessonBriefResponseJsonSchema,
+      responseSchema: buildLessonBriefResponseJsonSchema(input),
       maxTokens: Math.min(client.maxTokens, 8_192),
     });
     try {
@@ -2924,9 +3113,10 @@ async function planLesson(client: VertexClient, input: ToolInput): Promise<Lesso
       const brief = validateLessonBrief(canonicalizeBriefAliases(candidate), input);
       const verificationRaw = await callStructuredModel(client, {
         label: "lesson-brief-verification",
+        turnId: input.turn_id,
         systemPrompt: BRIEF_VERIFICATION_SYSTEM_PROMPT,
         prompt: buildVerificationPrompt(input, brief),
-        responseSchema: briefVerificationResponseJsonSchema,
+        responseSchema: buildBriefVerificationResponseJsonSchema(input, brief),
         maxTokens: Math.min(client.maxTokens, 4_096),
       });
       let verificationCandidate: unknown;
@@ -2940,14 +3130,22 @@ async function planLesson(client: VertexClient, input: ToolInput): Promise<Lesso
         );
         throw new GeneratedLessonError(parseViolation.message, verificationRaw, [parseViolation]);
       }
-      const verification = validateBriefVerification(verificationCandidate, input);
-      const coverageViolations = briefVerificationViolations(verification);
+      const verification = validateBriefVerification(verificationCandidate, input, brief);
+      const coverageViolations = briefVerificationViolations(verification, input, brief);
       if (coverageViolations.length > 0) {
         throw new GeneratedLessonError(
           `Course requirements did not cover the authoritative request: ${formatViolations(coverageViolations)}`,
           raw,
           coverageViolations,
         );
+      }
+      if (verification.suggestions.length > 0) {
+        process.stderr.write(`learning-coach: ${JSON.stringify({
+          stage: "lesson-brief-review-suggestions",
+          turn_id: input.turn_id,
+          suggestion_count: verification.suggestions.length,
+          request_item_ids: [...new Set(verification.suggestions.map((item) => item.request_item_id))],
+        })}\n`);
       }
       return brief;
     } catch (error) {
@@ -3001,6 +3199,7 @@ async function generateLesson(
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await callStructuredModel(client, {
       label: "lesson-authoring",
+      turnId: input.turn_id,
       systemPrompt: AUTHORING_SYSTEM_PROMPT,
       prompt: buildGenerationPrompt(input, brief, capabilityPlan, previousCandidate, violations),
       responseSchema,
@@ -3047,6 +3246,7 @@ function emit(payload: Record<string, unknown>): void {
 }
 
 async function main(): Promise<void> {
+  const startedAt = Date.now();
   try {
     if (process.argv[2] !== TOOL_NAME) {
       throw new Error(`Unknown tool '${process.argv[2] ?? ""}'. Expected '${TOOL_NAME}'`);
@@ -3060,6 +3260,12 @@ async function main(): Promise<void> {
     const artifactPath = outputPath(input);
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}\n`, "utf8");
+    stageLog({
+      stage: "lesson-generation",
+      turn_id: input.turn_id,
+      status: "completed",
+      elapsed_ms: Date.now() - startedAt,
+    });
     emit({
       success: true,
       output: `Validated OLL lesson generated with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
@@ -3073,6 +3279,12 @@ async function main(): Promise<void> {
     });
   } catch (error) {
     const message = safeError(error);
+    stageLog({
+      stage: "lesson-generation",
+      status: "failed",
+      elapsed_ms: Date.now() - startedAt,
+      error_code: error instanceof ToolExecutionError ? error.code : "LESSON_GENERATION_FAILED",
+    });
     process.stderr.write(`learning-coach: ${message}\n`);
     emit({
       success: false,

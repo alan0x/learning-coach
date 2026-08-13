@@ -227,11 +227,11 @@ const emptyLessonBrief = {
   request_summary: "解释学习者当前请求",
   request_items: [{
     id: "explain-request",
-    source: "learner_request",
-    evidence: "请解释为什么负负得正",
+    source_ref: "learner_request:1",
     kind: "teaching_goal",
     polarity: "require",
   }],
+  non_requirement_clauses: [],
   teaching_goal_requirements: [{
     id: "explain-core-concept",
     goal: "解释核心概念",
@@ -249,9 +249,10 @@ const plotLessonBrief = {
   version: "1",
   request_summary: "用正弦函数图像解释周期",
   request_items: [
-    { id: "explain-period", source: "learner_request", evidence: "请结合正弦函数图像解释周期", kind: "teaching_goal", polarity: "require" },
-    { id: "show-sine-plot", source: "learner_request", evidence: "正弦函数图像", kind: "visual", polarity: "require" },
+    { id: "explain-period", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
+    { id: "show-sine-plot", source_ref: "learner_request:1", kind: "visual", polarity: "require" },
   ],
+  non_requirement_clauses: [],
   teaching_goal_requirements: [{
     id: "explain-trig-relation",
     goal: "结合函数图像解释单位圆与三角函数的关系",
@@ -262,7 +263,6 @@ const plotLessonBrief = {
     id: "sine-plot",
     surface: "plot",
     purpose: "展示正弦函数的周期波动",
-    evidence: "正弦函数图像",
     required_features: ["coordinate_axes", "function_curve"],
     expressions: ["sin(x)"],
     request_item_ids: ["show-sine-plot"],
@@ -277,12 +277,13 @@ const unitCirclePlotBrief = {
   version: "1",
   request_summary: "结合单位圆和正弦图像解释旋转到波动",
   request_items: [
-    { id: "explain-rotation-wave", source: "learner_request", evidence: "解释角度旋转如何变成周期波动", kind: "teaching_goal", polarity: "require" },
-    { id: "show-unit-circle", source: "learner_request", evidence: "单位圆", kind: "visual", polarity: "require" },
-    { id: "show-sine-plot", source: "learner_request", evidence: "函数图像", kind: "visual", polarity: "require" },
-    { id: "relate-visuals", source: "learner_request", evidence: "结合", kind: "relationship", polarity: "require" },
-    { id: "show-continuous-change", source: "learner_request", evidence: "角度旋转如何变成周期波动", kind: "continuous_change", polarity: "require" },
+    { id: "explain-rotation-wave", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
+    { id: "show-unit-circle", source_ref: "learner_request:1", kind: "visual", polarity: "require" },
+    { id: "show-sine-plot", source_ref: "learner_request:1", kind: "visual", polarity: "require" },
+    { id: "relate-visuals", source_ref: "learner_request:1", kind: "relationship", polarity: "require" },
+    { id: "show-continuous-change", source_ref: "learner_request:1", kind: "continuous_change", polarity: "require" },
   ],
+  non_requirement_clauses: [],
   teaching_goal_requirements: [{
     id: "explain-trig-relation",
     goal: "结合函数图像解释单位圆与三角函数的关系",
@@ -294,7 +295,6 @@ const unitCirclePlotBrief = {
       id: "circle-geometry",
       surface: "geometry",
       purpose: "展示角度旋转及纵坐标投影",
-      evidence: "单位圆",
       required_features: [
         "coordinate_axes", "equal_scale", "circle", "origin_centered_circle", "unit_radius",
         "point_on_circle", "radius_segment", "projection_segment", "angle_arc",
@@ -306,7 +306,6 @@ const unitCirclePlotBrief = {
       id: "sine-plot",
       surface: "plot",
       purpose: "展示纵坐标随角度形成正弦波",
-      evidence: "函数图像",
       required_features: ["coordinate_axes", "function_curve"],
       expressions: ["sin(x)"],
       request_item_ids: ["show-sine-plot", "show-continuous-change"],
@@ -317,14 +316,12 @@ const unitCirclePlotBrief = {
     from: "circle-geometry",
     to: "sine-plot",
     relation: "maps_to",
-    evidence: "结合",
     request_item_ids: ["relate-visuals", "explain-rotation-wave", "show-unit-circle", "show-sine-plot"],
   }],
   shared_variable_requirements: [{
     id: "rotation-angle",
     variable: "theta",
     purpose: "让同一个旋转角同步驱动单位圆和正弦图",
-    evidence: "角度旋转",
     initial: 0,
     min: 0,
     max: Math.PI * 2,
@@ -342,20 +339,158 @@ const unitCirclePlotBrief = {
   unhandled_request_items: [],
 };
 
+const springOscillationBrief = {
+  version: "1",
+  request_summary: "演示弹簧振子为什么往复运动以及位移和余弦函数的关系",
+  request_items: [
+    { id: "explain-oscillation", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
+    { id: "explain-cosine", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
+    { id: "show-motion", source_ref: "learner_request:2", kind: "continuous_change", polarity: "require" },
+    { id: "control-motion", source_ref: "learner_request:3", kind: "student_control", polarity: "require" },
+  ],
+  non_requirement_clauses: [],
+  teaching_goal_requirements: [
+    {
+      id: "explain-spring-oscillation",
+      goal: "解释弹簧恢复作用如何产生往复运动",
+      request_item_ids: ["explain-oscillation"],
+    },
+    {
+      id: "explain-cosine-model",
+      goal: "解释弹簧位移为什么可以用余弦函数表示",
+      request_item_ids: ["explain-cosine"],
+    },
+  ],
+  presentation_constraints: [],
+  visual_requirements: [
+    {
+      id: "spring-motion",
+      surface: "geometry",
+      purpose: "展示同一时刻弹簧端点相对平衡位置的位移",
+      required_features: ["coordinate_axes", "annotated_points"],
+      expressions: [],
+      request_item_ids: ["explain-oscillation", "show-motion"],
+    },
+    {
+      id: "cosine-displacement",
+      surface: "plot",
+      purpose: "展示位移随时间按余弦规律变化",
+      required_features: ["coordinate_axes", "function_curve", "annotated_points"],
+      expressions: ["cos(x)"],
+      request_item_ids: ["explain-cosine", "show-motion"],
+    },
+  ],
+  visual_relationships: [{
+    id: "motion-to-curve",
+    from: "spring-motion",
+    to: "cosine-displacement",
+    relation: "maps_to",
+    request_item_ids: ["explain-cosine", "show-motion"],
+  }],
+  shared_variable_requirements: [{
+    id: "time-phase",
+    variable: "t",
+    purpose: "让弹簧端点和余弦曲线上的当前点由同一个时间相位驱动",
+    initial: 0,
+    min: 0,
+    max: Math.PI * 2,
+    label: "时间相位 t",
+    unit: "rad",
+    slider_step: 0.01,
+    animate_to: Math.PI * 2,
+    easing: "linear",
+    duration_intent: "extended",
+    bound_visuals: ["spring-motion", "cosine-displacement"],
+    direct_angle_geometry: "",
+    request_item_ids: ["show-motion", "control-motion"],
+  }],
+  progressive_revision_kinds: [],
+  unhandled_request_items: [],
+};
+
+const modelAuthoredSpringOscillationLesson = structuredClone(modelAuthoredUnitCirclePlotLesson);
+modelAuthoredSpringOscillationLesson.lesson.title = "弹簧振子与余弦函数";
+modelAuthoredSpringOscillationLesson.close = {
+  summary: "弹簧振子的位移会随时间按余弦规律往复变化。",
+  focus: ["spring-motion", "cosine-displacement"],
+};
+const springActions = modelAuthoredSpringOscillationLesson.steps[0].beats[0].actions;
+springActions[0] = {
+  do: "write",
+  as: "spring-motion",
+  kind: "geometry",
+  role: "diagram",
+  content: {
+    title: "弹簧端点的往复运动",
+    axes: {
+      x: { min: -1.25, max: 1.25, label: "位移" },
+      y: { min: -0.5, max: 0.5 },
+      equal_scale: true,
+    },
+    points: [
+      { as: "anchor", x: -1, y: 0, label: "固定端" },
+      { as: "equilibrium", x: 0, y: 0, label: "平衡位置" },
+      { as: "mass", x: 1, y: 0, label: "振子" },
+    ],
+    segments: [{ as: "spring", from: "anchor", to: "mass", style: "solid" }],
+    bindings: [{ target: "mass.x", expression: "cos(t)" }],
+  },
+  place: { relation: "new_region" },
+};
+springActions[1] = {
+  do: "write",
+  as: "cosine-displacement",
+  kind: "plot",
+  role: "diagram",
+  content: {
+    title: "位移随时间的变化",
+    axes: {
+      x: { min: 0, max: Math.PI * 2, label: "t" },
+      y: { min: -1.2, max: 1.2, label: "x" },
+    },
+    curves: [{ as: "cosine-curve", expression: "cos(x)", label: "x = cos t" }],
+    points: [{ as: "current-state", x: 0, y: 1, label: "当前状态" }],
+    bindings: [
+      { target: "current-state.x", expression: "t" },
+      { target: "current-state.y", expression: "cos(t)" },
+    ],
+  },
+  place: { relation: "new_region" },
+};
+springActions[2] = {
+  do: "connect",
+  as: "motion-to-curve",
+  from: "spring-motion",
+  to: "cosine-displacement",
+  relation: "同一时刻的位移",
+};
+springActions[3].targets = ["spring-motion", "cosine-displacement"];
+const springAnimation = modelAuthoredSpringOscillationLesson.steps[0].beats.flatMap(
+  (beat) => beat.actions,
+).find((action) => action.do === "animate");
+springAnimation.variable = "t";
+springAnimation.value = 999;
+springAnimation.easing = "ease_in_out";
+springAnimation.duration_intent = "brief";
+modelAuthoredSpringOscillationLesson.steps[0].beats[1].actions[1].targets = [
+  "spring-motion",
+  "cosine-displacement",
+];
+
 const genericCircleBrief = {
   version: "1",
   request_summary: "在坐标系里画圆",
   request_items: [
-    { id: "explain-radius", source: "learner_request", evidence: "解释半径", kind: "teaching_goal", polarity: "require" },
-    { id: "show-circle", source: "learner_request", evidence: "圆", kind: "visual", polarity: "require" },
+    { id: "explain-radius", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
+    { id: "show-circle", source_ref: "learner_request:1", kind: "visual", polarity: "require" },
   ],
+  non_requirement_clauses: [],
   teaching_goal_requirements: [{ id: "explain-core-concept", goal: "解释核心概念", request_item_ids: ["explain-radius"] }],
   presentation_constraints: [],
   visual_requirements: [{
     id: "circle-geometry",
     surface: "geometry",
     purpose: "展示一个圆",
-    evidence: "圆",
     required_features: ["coordinate_axes", "equal_scale", "circle"],
     expressions: [],
     request_item_ids: ["show-circle"],
@@ -367,40 +502,51 @@ const genericCircleBrief = {
 };
 
 function isLessonBriefRequest(body) {
-  return body.systemInstruction.parts[0].text.includes("课堂需求规划器");
+  return /课堂需求.*规划器/u.test(body.systemInstruction.parts[0].text);
 }
 
 function isLessonBriefVerificationRequest(body) {
-  return body.systemInstruction.parts[0].text.includes("课程要求复核器");
+  return body.systemInstruction.parts[0].text.includes("要求覆盖复核器");
 }
 
 function isAuthoringRequest(body) {
   return !isLessonBriefRequest(body) && !isLessonBriefVerificationRequest(body);
 }
 
-function learnerRequestFromPlanningPrompt(body) {
-  const prompt = body.contents[0].parts[0].text;
-  const match = prompt.match(/"learner_request":\s*("(?:\\.|[^"\\])*")/u);
-  return match ? JSON.parse(match[1]) : "";
+function sourceRefsFromPlanningRequest(body) {
+  return body.generationConfig.responseJsonSchema.properties.request_items
+    .items.properties.source_ref.enum;
 }
 
 function plannedBrief(body) {
   const prompt = body.contents[0].parts[0].text;
+  if (prompt.includes("弹簧为什么会来回运动")) return springOscillationBrief;
   if (prompt.includes("角度旋转如何变成周期波动")) return unitCirclePlotBrief;
   if (prompt.includes("正弦函数图像")) {
     const brief = structuredClone(plotLessonBrief);
-    brief.request_items[0].evidence = learnerRequestFromPlanningPrompt(body);
+    const sourceRefs = sourceRefsFromPlanningRequest(body);
+    brief.non_requirement_clauses = sourceRefs.slice(1).map((sourceRef) => ({
+      source_ref: sourceRef,
+      reason: "这是学习背景，不是新增的展示要求",
+    }));
     return brief;
   }
   if (prompt.includes("在坐标系里画一个圆")) return genericCircleBrief;
   const brief = structuredClone(emptyLessonBrief);
-  brief.request_items[0].evidence = learnerRequestFromPlanningPrompt(body);
+  const sourceRefs = sourceRefsFromPlanningRequest(body);
+  brief.request_items = sourceRefs.map((sourceRef, index) => ({
+    id: `explain-request-${index + 1}`,
+    source_ref: sourceRef,
+    kind: "teaching_goal",
+    polarity: "require",
+  }));
+  brief.teaching_goal_requirements[0].request_item_ids = brief.request_items.map((item) => item.id);
   return brief;
 }
 
 function modelValueForRequest(body, authorValue) {
   if (isLessonBriefRequest(body)) return plannedBrief(body);
-  if (isLessonBriefVerificationRequest(body)) return { missing: [], contradictions: [] };
+  if (isLessonBriefVerificationRequest(body)) return { missing: [], contradictions: [], suggestions: [] };
   return authorValue;
 }
 
@@ -465,15 +611,16 @@ meaninglessUnitCircleDiagramLesson.steps[0].beats[0].actions.unshift({
   place: { relation: "new_region" },
 });
 
-async function runTool({ baseUrl, serviceAccount, workDirectory, input = {} }) {
+async function runTool({ baseUrl, serviceAccount, workDirectory, input = {}, environment = {} }) {
   const child = spawn(resolve(root, "main"), ["oll_generate_lesson"], {
     cwd: root,
     env: {
       ...process.env,
       VERTEX_SA_JSON: JSON.stringify(serviceAccount),
       VERTEX_BASE_URL: `${baseUrl}/v1`,
-      OLL_MODEL: "gemini-3.5-flash",
+      OLL_MODEL: "gemini-3.6-flash",
       OCTOS_WORK_DIR: workDirectory,
+      ...environment,
     },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -496,6 +643,56 @@ async function runTool({ baseUrl, serviceAccount, workDirectory, input = {} }) {
   });
   return { exitCode, stdout, stderr };
 }
+
+test("tool shares one total deadline across model stages and reports the timed-out stage", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-total-timeout-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    if (request.url === "/token") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    setTimeout(() => {
+      if (response.destroyed) return;
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(vertexPayload(emptyLessonBrief));
+    }, 120);
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const result = await runTool({
+      baseUrl,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `${baseUrl}/token`,
+      },
+      workDirectory,
+      environment: {
+        OLL_TOTAL_TIMEOUT_MS: "40",
+        OLL_TIMEOUT_MS: "1000",
+        VERTEX_REQUEST_ATTEMPTS: "1",
+      },
+    });
+
+    assert.equal(result.exitCode, 1);
+    const protocol = JSON.parse(result.stdout);
+    assert.equal(protocol.error_code, "LESSON_GENERATION_TIMEOUT");
+    assert.match(result.stderr, /"stage":"model-call".*"label":"lesson-brief","status":"started"/);
+    assert.match(result.stderr, /"label":"lesson-brief","status":"failed".*"error_code":"LESSON_GENERATION_TIMEOUT"/);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
 
 test("tool requests Vertex structured output, validates OLL, and returns a deliverable", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-tool-"));
@@ -535,6 +732,7 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
         token_uri: `${baseUrl}/token`,
       },
       workDirectory,
+      input: { learner_request: "请解释点 A(1,2) 的坐标含义" },
     });
 
     assert.equal(result.exitCode, 0, result.stderr);
@@ -547,7 +745,7 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
     assert.equal(requests[0].body.grant_type, "urn:ietf:params:oauth:grant-type:jwt-bearer");
     assert.equal(
       requests[3].url,
-      "/v1/projects/test-project/locations/global/publishers/google/models/gemini-3.5-flash:generateContent",
+      "/v1/projects/test-project/locations/global/publishers/google/models/gemini-3.6-flash:generateContent",
     );
     assert.equal(requests[1].authorization, "Bearer vertex-test-token");
     assert.equal(requests[2].authorization, "Bearer vertex-test-token");
@@ -557,14 +755,19 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
     assert.equal(requests[3].body.generationConfig.responseMimeType, "application/json");
     assert.equal(requests[3].body.generationConfig.temperature, 0);
     const plannerSystemPrompt = requests[1].body.systemInstruction.parts[0].text;
-    assert.match(plannerSystemPrompt, /课程要求清单/);
+    assert.match(plannerSystemPrompt, /课堂需求与教学设计规划器/);
     assert.match(plannerSystemPrompt, /geometry.*plot.*diagram.*image.*table/s);
     const plannerSchema = requests[1].body.generationConfig.responseJsonSchema;
+    assert.deepEqual(
+      plannerSchema.properties.request_items.items.properties.source_ref.enum,
+      ["learner_request:1"],
+    );
     assert.ok(plannerSchema.required.includes("request_items"));
+    assert.ok(plannerSchema.required.includes("non_requirement_clauses"));
     assert.ok(plannerSchema.required.includes("teaching_goal_requirements"));
     assert.ok(plannerSchema.required.includes("unhandled_request_items"));
     const verifierSystemPrompt = requests[2].body.systemInstruction.parts[0].text;
-    assert.match(verifierSystemPrompt, /课程要求复核器/);
+    assert.match(verifierSystemPrompt, /用户要求覆盖复核器/);
     const systemPrompt = requests[3].body.systemInstruction.parts[0].text;
     assert.match(systemPrompt, /混合文字与公式/);
     assert.match(systemPrompt, /kind="math".*content\.latex/);
@@ -698,7 +901,6 @@ test("tool repairs an invalid Lesson Brief before authoring", async () => {
       id: "bad_id",
       surface: "geometry",
       purpose: "错误的视觉规划",
-      evidence: "解释",
       required_features: ["coordinate_axes"],
       expressions: ["x"],
     }],
@@ -744,7 +946,7 @@ test("tool repairs an invalid Lesson Brief before authoring", async () => {
     const plannerRequests = modelRequests.filter(isLessonBriefRequest);
     assert.equal(plannerRequests.length, 2);
     const repairPrompt = plannerRequests[1].contents[0].parts[0].text;
-    assert.match(repairPrompt, /上一份 Lesson Brief/);
+    assert.match(repairPrompt, /上一份课程要求与教学设计/);
     assert.match(repairPrompt, /BRIEF_MISSING_REQUEST_ITEMS/);
     assert.match(repairPrompt, /BRIEF_INCOMPATIBLE_EXPRESSIONS/);
   } finally {
@@ -758,9 +960,11 @@ test("tool rejects a planner omission before authoring and repairs the requireme
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const learnerRequest = "请画出正弦函数图像并解释周期";
   const omittedBrief = structuredClone(emptyLessonBrief);
-  omittedBrief.request_items[0].evidence = learnerRequest;
+  omittedBrief.request_items[0].source_ref = "learner_request:1";
+  omittedBrief.non_requirement_clauses = [];
   const completeBrief = structuredClone(plotLessonBrief);
-  completeBrief.request_items[0].evidence = learnerRequest;
+  completeBrief.request_items[0].source_ref = "learner_request:1";
+  completeBrief.request_items[1].source_ref = "learner_request:1";
   const plannerResponses = [omittedBrief, completeBrief];
   const modelRequests = [];
   let plannerResponseIndex = 0;
@@ -778,7 +982,17 @@ test("tool rejects a planner omission before authoring and repairs the requireme
     const value = isLessonBriefRequest(parsedBody)
       ? plannerResponses[plannerResponseIndex++]
       : isLessonBriefVerificationRequest(parsedBody)
-        ? { missing: [], contradictions: [] }
+        ? plannerResponseIndex === 1
+          ? {
+              missing: [{
+                source_ref: "learner_request:1",
+                kind: "visual",
+                reason: "同一句中的函数图像要求没有被记录",
+              }],
+              contradictions: [],
+              suggestions: [],
+            }
+          : { missing: [], contradictions: [], suggestions: [] }
         : validPlotLesson;
     response.end(vertexPayload(value));
   });
@@ -801,11 +1015,11 @@ test("tool rejects a planner omission before authoring and repairs the requireme
 
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(modelRequests.filter(isLessonBriefRequest).length, 2);
-    assert.equal(modelRequests.filter(isLessonBriefVerificationRequest).length, 1);
+    assert.equal(modelRequests.filter(isLessonBriefVerificationRequest).length, 2);
     assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
     assert.match(
       modelRequests.filter(isLessonBriefRequest)[1].contents[0].parts[0].text,
-      /BRIEF_SUSPECTED_OMISSION/,
+      /BRIEF_REQUIREMENT_MISSING/,
     );
   } finally {
     await new Promise((done) => server.close(done));
@@ -813,23 +1027,18 @@ test("tool rejects a planner omission before authoring and repairs the requireme
   }
 });
 
-test("tool uses independent request verification to repair an otherwise valid but disputed plan", async () => {
+test("pedagogical suggestions do not reject a plan whose explicit request is already covered", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-verifier-"));
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const modelRequests = [];
-  let verifierResponseIndex = 0;
-  const verifierResponses = [
-    {
-      missing: [{
-        source: "learner_request",
-        evidence: "负负得正",
-        kind: "teaching_goal",
-        reason: "需要明确覆盖这个解释目标",
-      }],
-      contradictions: [],
-    },
-    { missing: [], contradictions: [] },
-  ];
+  const verifierResponse = {
+    missing: [],
+    contradictions: [],
+    suggestions: [{
+      request_item_id: "explain-request-1",
+      suggestion: "可以增加数轴作为辅助讲法",
+    }],
+  };
   const server = createServer(async (request, response) => {
     let body = "";
     request.setEncoding("utf8");
@@ -844,7 +1053,7 @@ test("tool uses independent request verification to repair an otherwise valid bu
     const value = isLessonBriefRequest(parsedBody)
       ? plannedBrief(parsedBody)
       : isLessonBriefVerificationRequest(parsedBody)
-        ? verifierResponses[verifierResponseIndex++]
+        ? verifierResponse
         : validLesson;
     response.end(vertexPayload(value));
   });
@@ -865,13 +1074,84 @@ test("tool uses independent request verification to repair an otherwise valid bu
     });
 
     assert.equal(result.exitCode, 0, result.stderr);
-    assert.equal(modelRequests.filter(isLessonBriefRequest).length, 2);
-    assert.equal(modelRequests.filter(isLessonBriefVerificationRequest).length, 2);
+    assert.equal(modelRequests.filter(isLessonBriefRequest).length, 1);
+    assert.equal(modelRequests.filter(isLessonBriefVerificationRequest).length, 1);
     assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
-    assert.match(
-      modelRequests.filter(isLessonBriefRequest)[1].contents[0].parts[0].text,
-      /BRIEF_REQUIREMENT_MISSING.*负负得正/s,
-    );
+    assert.match(result.stderr, /lesson-brief-review-suggestions/);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("a natural spring request keeps user requirements separate from optional teaching advice", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-natural-spring-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const modelRequests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    const parsedBody = JSON.parse(body);
+    modelRequests.push(parsedBody);
+    const value = isLessonBriefRequest(parsedBody)
+      ? springOscillationBrief
+      : isLessonBriefVerificationRequest(parsedBody)
+        ? {
+            missing: [],
+            contradictions: [],
+            suggestions: [{
+              request_item_id: "explain-oscillation",
+              suggestion: "可以补充恢复力箭头帮助理解",
+            }],
+          }
+        : modelAuthoredSpringOscillationLesson;
+    response.end(vertexPayload(value));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const result = await runTool({
+      baseUrl,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `${baseUrl}/token`,
+      },
+      workDirectory,
+      input: {
+        learner_request: "我还是不太明白弹簧为什么会来回运动，也不明白它为什么能用余弦函数表示。你能边演示边讲给我看吗？最好让我自己拖着试一试。",
+        tutor_context: "建议使用恢复力箭头和能量图作为讲解辅助。",
+        learner_context: "学习者刚接触简谐运动。",
+      },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(modelRequests.filter(isLessonBriefRequest).length, 1);
+    assert.equal(modelRequests.filter(isLessonBriefVerificationRequest).length, 1);
+    assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
+    const plannerRequest = modelRequests.find(isLessonBriefRequest);
+    assert.deepEqual(sourceRefsFromPlanningRequest(plannerRequest), [
+      "learner_request:1",
+      "learner_request:2",
+      "learner_request:3",
+    ]);
+    assert.match(plannerRequest.contents[0].parts[0].text, /"teaching_advice"/);
+    assert.match(result.stderr, /lesson-brief-review-suggestions/);
+    const protocol = JSON.parse(result.stdout);
+    const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    assert.equal(artifact.lesson.variables[0].as, "t");
+    assert.equal(artifact.lesson.variables[0].control.kind, "slider");
+    assert.equal(artifact.steps[0].beats[0].actions[0].as, "spring-motion");
+    assert.equal(artifact.steps[0].beats[0].actions[1].content.curves[0].expression, "cos(x)");
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -885,9 +1165,10 @@ test("tool reports unsupported 3D instead of silently replacing it with a 2D dia
     version: "1",
     request_summary: "用 3D 展示可旋转立方体",
     request_items: [
-      { id: "explain-cube", source: "learner_request", evidence: "请用3D展示一个可以旋转的立方体", kind: "teaching_goal", polarity: "require" },
-      { id: "need-3d", source: "learner_request", evidence: "3D", kind: "unsupported_feature", polarity: "require" },
+      { id: "explain-cube", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
+      { id: "need-3d", source_ref: "learner_request:1", kind: "unsupported_feature", polarity: "require" },
     ],
+    non_requirement_clauses: [],
     teaching_goal_requirements: [{ id: "explain-cube-goal", goal: "展示可旋转立方体", request_item_ids: ["explain-cube"] }],
     presentation_constraints: [],
     visual_requirements: [],
@@ -910,7 +1191,7 @@ test("tool reports unsupported 3D instead of silently replacing it with a 2D dia
     modelRequests.push(parsedBody);
     response.end(vertexPayload(isLessonBriefRequest(parsedBody)
       ? unsupportedBrief
-      : { missing: [], contradictions: [] }));
+      : { missing: [], contradictions: [], suggestions: [] }));
   });
 
   try {
@@ -947,16 +1228,16 @@ test("tool refuses an image requirement when no authorized image asset exists", 
     version: "1",
     request_summary: "用图片解释叶片结构",
     request_items: [
-      { id: "explain-leaf", source: "learner_request", evidence: "请用图片解释叶片结构", kind: "teaching_goal", polarity: "require" },
-      { id: "show-image", source: "learner_request", evidence: "图片", kind: "visual", polarity: "require" },
+      { id: "explain-leaf", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
+      { id: "show-image", source_ref: "learner_request:1", kind: "visual", polarity: "require" },
     ],
+    non_requirement_clauses: [],
     teaching_goal_requirements: [{ id: "leaf-goal", goal: "解释叶片结构", request_item_ids: ["explain-leaf"] }],
     presentation_constraints: [],
     visual_requirements: [{
       id: "leaf-image",
       surface: "image",
       purpose: "展示叶片结构",
-      evidence: "图片",
       required_features: ["source_asset"],
       expressions: [],
       request_item_ids: ["show-image"],
@@ -980,7 +1261,7 @@ test("tool refuses an image requirement when no authorized image asset exists", 
     modelRequests.push(parsedBody);
     response.end(vertexPayload(isLessonBriefRequest(parsedBody)
       ? imageBrief
-      : { missing: [], contradictions: [] }));
+      : { missing: [], contradictions: [], suggestions: [] }));
   });
 
   try {
@@ -1016,11 +1297,11 @@ test("tool keeps revise as a typed per-kind capability instead of a universal co
     request_summary: "逐步解释等式变形",
     request_items: [{
       id: "explain-equation",
-      source: "learner_request",
-      evidence: "请逐步解释等式变形",
+      source_ref: "learner_request:1",
       kind: "teaching_goal",
       polarity: "require",
     }],
+    non_requirement_clauses: [],
     teaching_goal_requirements: [{ id: "equation-goal", goal: "解释等式变形", request_item_ids: ["explain-equation"] }],
     presentation_constraints: [],
     visual_requirements: [],
@@ -1064,7 +1345,7 @@ test("tool keeps revise as a typed per-kind capability instead of a universal co
     response.end(vertexPayload(isLessonBriefRequest(parsedBody)
       ? reviseBrief
       : isLessonBriefVerificationRequest(parsedBody)
-        ? { missing: [], contradictions: [] }
+        ? { missing: [], contradictions: [], suggestions: [] }
         : reviseLesson));
   });
 

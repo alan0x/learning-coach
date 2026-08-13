@@ -35,6 +35,7 @@ async function runCase(item) {
     learner_request: item.learner_request,
     request_source: "self_contained",
     language: "zh-CN",
+    ...(item.tutor_context ? { tutor_context: item.tutor_context } : {}),
   }));
   const exitCode = await new Promise((done, reject) => {
     const timeout = setTimeout(() => {
@@ -71,22 +72,25 @@ async function runCase(item) {
     }
     if (item.expected.shared_variable) {
       const expectation = item.expected.shared_variable;
-      const variable = lesson.lesson.variables?.find((candidate) => candidate.as === expectation.alias);
-      assert.ok(variable, `missing shared variable ${expectation.alias}`);
-      assert.equal(variable.control?.kind, "slider", `shared variable ${expectation.alias} is not student-controllable`);
+      const variable = expectation.alias
+        ? lesson.lesson.variables?.find((candidate) => candidate.as === expectation.alias)
+        : lesson.lesson.variables?.[0];
+      assert.ok(variable, `missing shared variable${expectation.alias ? ` ${expectation.alias}` : ""}`);
+      const variableAlias = variable.as;
+      assert.equal(variable.control?.kind, "slider", `shared variable ${variableAlias} is not student-controllable`);
       for (const kind of expectation.bound_kinds ?? []) {
         const bound = writes.some((action) => action.kind === kind
-          && action.content.bindings?.some((binding) => new RegExp(`\\b${expectation.alias}\\b`, "u").test(binding.expression)));
-        assert.ok(bound, `missing ${kind} binding to ${expectation.alias}`);
+          && action.content.bindings?.some((binding) => new RegExp(`\\b${variableAlias}\\b`, "u").test(binding.expression)));
+        assert.ok(bound, `missing ${kind} binding to ${variableAlias}`);
       }
       if (expectation.animate) {
-        assert.ok(actions.some((action) => action.do === "animate" && action.variable === expectation.alias),
-          `missing animation for ${expectation.alias}`);
+        assert.ok(actions.some((action) => action.do === "animate" && action.variable === variableAlias),
+          `missing animation for ${variableAlias}`);
       }
       if (expectation.direct_angle_control) {
         const directControl = geometries.some((action) => action.content.points?.some((point) =>
-          point.interaction?.kind === "angle_control" && point.interaction.variable === expectation.alias));
-        assert.ok(directControl, `missing direct angle control for ${expectation.alias}`);
+          point.interaction?.kind === "angle_control" && point.interaction.variable === variableAlias));
+        assert.ok(directControl, `missing direct angle control for ${variableAlias}`);
       }
     }
     return { attempts: protocol.generation_attempts, writes: writes.map((action) => action.kind) };

@@ -24,6 +24,22 @@
     }
   },
   {
+    "id": "natural-spring-oscillation",
+    "learner_request": "我还是不太明白弹簧为什么会来回运动，也不明白它为什么能用余弦函数表示。你能边演示边讲给我看吗？最好让我自己拖着试一试。",
+    "tutor_context": "可以考虑恢复力箭头、平衡位置和位移曲线，但这些只是讲法建议，不是用户逐字提出的硬要求。",
+    "timeout_ms": 285000,
+    "expected": {
+      "kinds": ["geometry", "plot"],
+      "geometry_fields": ["segments"],
+      "plot_expressions": ["cos(x)"],
+      "requires_connect": true,
+      "shared_variable": {
+        "bound_kinds": ["geometry", "plot"],
+        "animate": true
+      }
+    }
+  },
+  {
     "id": "generic-coordinate-circle",
     "learner_request": "请在坐标系里画一个圆，并结合半径解释圆的定义。",
     "expected": {

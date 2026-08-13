@@ -9138,9 +9138,10 @@ function canonicalizeState(state) {
 
 // src/main.ts
 var TOOL_NAME = "oll_generate_lesson";
-var DEFAULT_MODEL = "gemini-3.5-flash";
+var DEFAULT_MODEL = "gemini-3.6-flash";
 var DEFAULT_VERTEX_LOCATION = "global";
 var DEFAULT_TIMEOUT_MS = 18e4;
+var DEFAULT_TOTAL_TIMEOUT_MS = 27e4;
 var DEFAULT_MAX_TOKENS = 32768;
 var DEFAULT_VERTEX_REQUEST_ATTEMPTS = 3;
 var MAX_CONTEXT_LENGTH = 24e3;
@@ -9163,17 +9164,23 @@ var ToolExecutionError = class extends Error {
   }
   code;
 };
-var LESSON_BRIEF_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u5802\u9700\u6C42\u89C4\u5212\u5668\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E5F\u4E0D\u64B0\u5199\u8BFE\u7A0B\u6B63\u6587\u3002\u4F60\u7684\u4EFB\u52A1\u662F\u628A\u672C\u8F6E\u6743\u5A01\u8BF7\u6C42\u8F6C\u6362\u6210\u4E00\u4E2A\u53EF\u9A8C\u8BC1\u7684\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u3002
+var LESSON_BRIEF_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u5802\u9700\u6C42\u4E0E\u6559\u5B66\u8BBE\u8BA1\u89C4\u5212\u5668\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E5F\u4E0D\u64B0\u5199\u8BFE\u7A0B\u6B63\u6587\u3002\u8F93\u5165\u660E\u786E\u5206\u6210\u4E24\u90E8\u5206\uFF1A\u5FC5\u987B\u5FE0\u5B9E\u6EE1\u8DB3\u7684\u7528\u6237\u539F\u8BDD\uFF0C\u4EE5\u53CA\u53EA\u80FD\u8F85\u52A9\u9009\u62E9\u8BB2\u6CD5\u3001\u4E0D\u80FD\u5347\u7EA7\u6210\u7528\u6237\u8981\u6C42\u7684\u6559\u5B66\u5EFA\u8BAE\u3002
 
-\u5148\u5728 request_items \u4E2D\u9010\u6761\u5217\u51FA\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u89C6\u89C9\u5173\u7CFB\u3001\u8FDE\u7EED\u53D8\u5316\u3001\u5B66\u751F\u63A7\u5236\u3001\u5BF9\u65E2\u6709\u767D\u677F\u7684\u4FEE\u6539\u3001\u5C55\u793A\u9650\u5236\u548C\u5F53\u524D\u7CFB\u7EDF\u4E0D\u652F\u6301\u7684\u529F\u80FD\uFF1A
-- evidence \u5FC5\u987B\u9010\u5B57\u5F15\u7528\u5BF9\u5E94 source \u7684\u539F\u6587\uFF0C\u4E0D\u5F97\u7528 request_summary \u4EE3\u66FF\u539F\u6587\u8BC1\u636E\uFF1B
+\u7B2C\u4E00\u90E8\u5206\u5148\u9010\u6761\u5904\u7406 authoritative_request.clauses\uFF1A
+- \u6BCF\u4E2A source_ref \u5FC5\u987B\u4E8C\u9009\u4E00\uFF1A\u5982\u679C\u5206\u53E5\u8868\u8FBE\u4E86\u5B9E\u9645\u8981\u6C42\uFF0C\u5C31\u5EFA\u7ACB\u4E00\u4E2A\u6216\u591A\u4E2A request_item\uFF1B\u5982\u679C\u53EA\u662F\u5BD2\u6684\u3001\u8BED\u6C14\u8BCD\u6216\u6CA1\u6709\u53EF\u6267\u884C\u8981\u6C42\uFF0C\u5C31\u5199\u5165 non_requirement_clauses \u5E76\u8BF4\u660E\u539F\u56E0\uFF1B\u4E0D\u80FD\u9057\u6F0F\uFF0C\u4E5F\u4E0D\u80FD\u540C\u65F6\u51FA\u73B0\u5728\u4E24\u8FB9\uFF1B
+- non_requirement_clauses \u4E0D\u662F\u9003\u907F\u8981\u6C42\u7684\u5730\u65B9\u3002\u53EA\u8981\u5206\u53E5\u8981\u6C42\u89E3\u91CA\u3001\u5C55\u793A\u3001\u6BD4\u8F83\u3001\u6F14\u793A\u3001\u63A7\u5236\u3001\u4FEE\u6539\u6216\u9650\u5236\u8868\u73B0\u5F62\u5F0F\uFF0C\u5C31\u5FC5\u987B\u5EFA\u7ACB request_item\uFF1B
+
+request_items \u53EA\u8BB0\u5F55\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u89C6\u89C9\u5173\u7CFB\u3001\u8FDE\u7EED\u53D8\u5316\u3001\u5B66\u751F\u63A7\u5236\u3001\u5BF9\u65E2\u6709\u767D\u677F\u7684\u4FEE\u6539\u3001\u5C55\u793A\u9650\u5236\u548C\u5F53\u524D\u7CFB\u7EDF\u4E0D\u652F\u6301\u7684\u529F\u80FD\uFF1A
+- \u6BCF\u9879\u4F7F\u7528 source_ref \u5F15\u7528\u8F93\u5165\u63D0\u4F9B\u7684\u539F\u6587\u5206\u53E5\u7F16\u53F7\uFF0C\u4E0D\u8981\u590D\u5236\u3001\u6539\u5199\u6216\u81EA\u9020\u539F\u6587\uFF1B
 - polarity=require \u8868\u793A\u5FC5\u987B\u6EE1\u8DB3\uFF0Cpolarity=forbid \u8868\u793A\u660E\u786E\u7981\u6B62\uFF1B
 - \u4E0D\u5F97\u628A 3D\u3001\u5B66\u79D1\u6A21\u62DF\u6216\u672A\u5B9E\u73B0\u7684\u4EA4\u4E92\u5077\u6362\u6210 diagram \u6216\u666E\u901A\u6587\u5B57\uFF1B\u8FD9\u7C7B\u8981\u6C42\u4F7F\u7528 unsupported_feature\uFF0C\u5E76\u5728 unhandled_request_items \u4E2D\u8BF4\u660E\uFF1B
 - \u6BCF\u4E2A request_item \u5FC5\u987B\u901A\u8FC7 request_item_ids \u6620\u5C04\u5230\u4E00\u4E2A\u6216\u591A\u4E2A\u5177\u4F53\u8981\u6C42\uFF0C\u6216\u8005\u660E\u786E\u5217\u5165 unhandled_request_items\uFF0C\u4E0D\u80FD\u60AC\u7A7A\uFF1B
 - teaching_goal \u6620\u5C04\u5230 teaching_goal_requirements\uFF1Bvisual \u6620\u5C04\u5230 visual_requirements\uFF1Brelationship \u6620\u5C04\u5230 visual_relationships\uFF1Bcontinuous_change \u548C student_control \u6620\u5C04\u5230 shared_variable_requirements\uFF1Bpresentation_constraint \u6620\u5C04\u5230 presentation_constraints\uFF1B
 - \u76EE\u524D\u6CA1\u6709\u53EF\u5BFB\u5740\u7684\u65E2\u6709\u767D\u677F\u8282\u70B9\u6E05\u5355\uFF0C\u56E0\u6B64 existing_board_edit \u5FC5\u987B\u5217\u5165 unhandled_request_items\uFF0C\u4E0D\u80FD\u8BA9\u540E\u7EED\u6A21\u578B\u731C revise.target\u3002
 
-\u53EA\u63D0\u53D6\u8BF7\u6C42\u660E\u786E\u8981\u6C42\u3001\u6216\u5B8C\u6210\u8BF7\u6C42\u4E0D\u53EF\u7F3A\u5C11\u7684\u53EF\u89C1\u6559\u5B66\u8981\u6C42\u3002\u6BCF\u9879 evidence \u5FC5\u987B\u9010\u5B57\u5F15\u7528\u6743\u5A01\u8BF7\u6C42\u4E2D\u7684\u77ED\u8BED\uFF0C\u4E0D\u5F97\u5F15\u7528\u5386\u53F2\u4E2D\u88AB\u9694\u79BB\u7684\u5185\u5BB9\u3002
+\u7B2C\u4E8C\u90E8\u5206 teaching_goal_requirements\u3001visual_requirements\u3001visual_relationships \u548C shared_variable_requirements \u662F\u6559\u5B66\u8BBE\u8BA1\u3002\u5B83\u4EEC\u53EF\u4EE5\u6839\u636E\u7528\u6237\u76EE\u6807\u589E\u52A0\u5408\u7406\u7684\u56FE\u5F62\u3001\u8BB2\u89E3\u6B65\u9AA4\u548C\u4E92\u52A8\u65B9\u5F0F\uFF0C\u4F46\u5FC5\u987B\u901A\u8FC7 request_item_ids \u8BF4\u660E\u670D\u52A1\u4E8E\u54EA\u9879\u7528\u6237\u8981\u6C42\u3002\u4E0D\u8981\u628A\u6559\u5B66\u5EFA\u8BAE\u6216\u4F60\u504F\u597D\u7684\u8BB2\u6CD5\u4F2A\u88C5\u6210\u7528\u6237\u539F\u8BDD\uFF0C\u4E5F\u4E0D\u8981\u56E0\u4E3A\u7528\u6237\u6CA1\u8BF4\u51FA\u201C\u6062\u590D\u529B\u7BAD\u5934\u201D\u4E4B\u7C7B\u5177\u4F53\u6559\u6CD5\u5C31\u62D2\u7EDD\u5408\u7406\u7684\u6559\u5B66\u8BBE\u8BA1\u3002
+
+\u53EA\u628A\u539F\u6587\u5206\u53E5\u4E2D\u786E\u5B9E\u8868\u8FBE\u4E86\u8981\u6C42\u7684\u5185\u5BB9\u5199\u5165 request_items\u3002\u5BD2\u6684\u3001\u8BED\u6C14\u8BCD\u548C\u6CA1\u6709\u53EF\u6267\u884C\u8981\u6C42\u7684\u80CC\u666F\u63CF\u8FF0\u5199\u5165 non_requirement_clauses\uFF1B\u6559\u5B66\u5EFA\u8BAE\u53EA\u80FD\u5F71\u54CD purpose\u3001goal \u548C\u5177\u4F53\u8BBE\u8BA1\uFF0C\u4E0D\u5F97\u6210\u4E3A\u65B0\u7684 request_item\u3002
 \u6BCF\u4E2A visual_requirement.id \u5FC5\u987B\u662F\u552F\u4E00\u7684\u5C0F\u5199\u82F1\u6587\u522B\u540D\uFF0C\u53EA\u80FD\u5305\u542B a-z\u30010-9\u3001\u8FDE\u5B57\u7B26\u5E76\u4EE5\u5B57\u6BCD\u5F00\u5934\uFF1Bvisual_relationships \u7684 from/to \u53EA\u80FD\u5F15\u7528\u8FD9\u4E9B id\u3002expressions \u53EA\u7528\u4E8E plot\uFF0C\u5176\u4ED6 surface \u5FC5\u987B\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
 
 \u89C6\u89C9 surface\uFF1A
@@ -9203,16 +9210,19 @@ shared_variable_requirements \u7528\u6765\u89C4\u5212\u201C\u540C\u4E00\u4E2A\u9
 - variable \u662F OLL \u53D8\u91CF\u540D\uFF1Binitial/min/max/slider_step/animate_to \u4F7F\u7528\u7B26\u5408\u5B66\u79D1\u542B\u4E49\u7684\u6570\u503C\u3002\u8F6C\u6EE1\u4E00\u5708\u7528 0 \u5230 6.283185307179586\uFF0C\u5355\u4F4D\u7528 rad\u3002
 - bound_visuals \u81F3\u5C11\u5217\u51FA\u6240\u6709\u88AB\u540C\u4E00\u53D8\u91CF\u9A71\u52A8\u7684 visual_requirement.id\uFF1B\u8DE8\u56FE\u5BF9\u5E94\u901A\u5E38\u81F3\u5C11\u6709\u4E24\u4E2A\u3002
 - direct_angle_geometry \u53EA\u5728\u67D0\u4E2A geometry \u91CC\u7684\u70B9\u9002\u5408\u7531\u5B66\u751F\u76F4\u63A5\u7ED5\u5706\u5FC3\u62D6\u52A8\u65F6\u586B\u5199\u8BE5 visual_requirement.id\uFF0C\u5426\u5219\u8FD4\u56DE\u7A7A\u5B57\u7B26\u4E32\u3002
-- evidence \u4ECD\u987B\u9010\u5B57\u5F15\u7528\u6743\u5A01\u8BF7\u6C42\uFF1B\u4E0D\u5F97\u56E0\u4E3A\u7CFB\u7EDF\u652F\u6301\u52A8\u753B\u5C31\u51ED\u7A7A\u89C4\u5212\u4E92\u52A8\u3002
+- \u5F53\u524D\u5B66\u751F\u63A7\u5236\u53EA\u652F\u6301\u53D8\u91CF\u6ED1\u6746\uFF0C\u4EE5\u53CA\u5706\u4E0A\u70B9\u7ED5\u5706\u5FC3\u7684 angle_control\uFF1B\u4E0D\u652F\u6301\u4EFB\u610F\u7269\u4F53\u7684\u81EA\u7531\u62D6\u52A8\u6216\u6CBF\u76F4\u7EBF\u62D6\u52A8\u3002\u4E00\u822C\u6027\u7684\u201C\u8BA9\u6211\u81EA\u5DF1\u64CD\u4F5C\u201D\u6216\u6CA1\u6709\u70B9\u660E\u88AB\u62D6\u7269\u4F53\u7684\u201C\u62D6\u7740\u8BD5\u8BD5\u201D\u53EF\u4EE5\u7528\u62D6\u52A8\u6ED1\u6746\u6EE1\u8DB3\uFF1B\u53EA\u6709\u5706\u5468\u89D2\u5EA6\u786E\u5B9E\u662F\u5408\u9002\u7684\u6559\u5B66\u64CD\u4F5C\u65F6\u624D\u4F7F\u7528 direct_angle_geometry\u3002\u660E\u786E\u70B9\u540D\u8981\u62D6\u52A8\u5176\u4ED6\u7269\u4F53\u6216\u6CBF\u7279\u5B9A\u8DEF\u5F84\u62D6\u52A8\u65F6\u5FC5\u987B\u5217\u5165 unhandled_request_items\u3002
 
 progressive_revision_kinds \u53EA\u8868\u793A\u672C\u8F6E\u65B0\u5EFA\u677F\u4E66\u662F\u5426\u9002\u5408\u7528 revise \u6E10\u8FDB\u66FF\u6362\uFF0C\u5141\u8BB8 text\u3001math\u3001shape\u3001diagram\u3001table\u3001note\uFF1B\u4E0D\u9700\u8981\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u5B83\u4E0D\u5141\u8BB8\u4FEE\u6539\u5386\u53F2\u767D\u677F\u8282\u70B9\uFF0C\u4E5F\u4E0D\u5F97\u5305\u542B geometry\u3001plot \u6216 image\u3002
 
 \u6CA1\u6709\u660E\u786E\u6216\u5FC5\u8981\u89C6\u89C9\u8981\u6C42\u65F6 visual_requirements \u53EF\u4EE5\u4E3A\u7A7A\uFF0C\u4F46 request_items \u548C teaching_goal_requirements \u4ECD\u987B\u8986\u76D6\u7528\u6237\u7684\u6559\u5B66\u8BF7\u6C42\u3002\u53EA\u8F93\u51FA\u7B26\u5408 JSON Schema \u7684 JSON \u5BF9\u8C61\u3002`;
-var BRIEF_VERIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u7A0B\u8981\u6C42\u590D\u6838\u5668\uFF0C\u4E0D\u751F\u6210\u8BFE\u4EF6\uFF0C\u4E5F\u4E0D\u6539\u5199\u8BFE\u7A0B\u8981\u6C42\u3002\u8BF7\u72EC\u7ACB\u6BD4\u8F83\u6743\u5A01\u7528\u6237\u539F\u6587\u548C\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\uFF0C\u53EA\u62A5\u544A\uFF1A
-1. \u7528\u6237\u660E\u786E\u63D0\u51FA\u3001\u4F46\u6E05\u5355\u6CA1\u6709\u8BB0\u5F55\u6216\u6CA1\u6709\u6B63\u786E\u6620\u5C04\u7684\u8981\u6C42\uFF1B
-2. \u6E05\u5355\u4E0E\u7528\u6237\u539F\u6587\u53D1\u751F\u7684\u77DB\u76FE\uFF0C\u5305\u62EC\u628A\u4E0D\u652F\u6301\u7684\u80FD\u529B\u5077\u6362\u6210\u8F83\u5F31\u80FD\u529B\u3002
+var BRIEF_VERIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u7528\u6237\u8981\u6C42\u8986\u76D6\u590D\u6838\u5668\uFF0C\u4E0D\u751F\u6210\u8BFE\u4EF6\uFF0C\u4E5F\u4E0D\u51B3\u5B9A\u5E94\u8BE5\u91C7\u7528\u54EA\u4E00\u79CD\u6559\u6CD5\u3002
 
-missing \u548C contradictions \u4E2D\u7684 evidence \u5FC5\u987B\u9010\u5B57\u5F15\u7528\u6307\u5B9A source \u7684\u539F\u6587\u3002\u6CA1\u6709\u53D1\u73B0\u95EE\u9898\u65F6\u8FD4\u56DE\u4E24\u4E2A\u7A7A\u6570\u7EC4\u3002\u4E0D\u8981\u53EA\u8FD4\u56DE\u201C\u68C0\u67E5\u901A\u8FC7\u201D\u4E4B\u7C7B\u6CA1\u6709\u8BC1\u636E\u7684\u7ED3\u8BBA\u3002`;
+\u53EA\u505A\u4E09\u4EF6\u4E8B\uFF1A
+1. missing\uFF1A\u7528\u6237\u539F\u6587\u4E2D\u7684\u67D0\u4E00\u9879\u660E\u786E\u8981\u6C42\u6CA1\u6709\u88AB request_items \u8BB0\u5F55\u3002\u4E00\u4E2A source_ref \u53EF\u80FD\u540C\u65F6\u8981\u6C42\u89E3\u91CA\u3001\u753B\u56FE\u548C\u64CD\u4F5C\uFF1B\u5373\u4F7F\u5176\u4E2D\u4E00\u9879\u5DF2\u8BB0\u5F55\uFF0C\u53E6\u4E00\u9879\u6F0F\u6389\u4ECD\u5E94\u62A5\u544A\uFF0C\u5E76\u7528 kind \u8BF4\u660E\u6F0F\u6389\u54EA\u4E00\u7C7B\uFF1B
+2. contradictions\uFF1A\u67D0\u4E2A\u5DF2\u6709 request_item \u4E0E\u5B83\u5F15\u7528\u7684\u7528\u6237\u539F\u6587\u76F8\u53CD\uFF0C\u6216\u628A\u660E\u786E\u4E0D\u652F\u6301\u7684\u80FD\u529B\u5192\u5145\u4E3A\u5DF2\u652F\u6301\uFF1B
+3. suggestions\uFF1A\u8BFE\u7A0B\u53EF\u4EE5\u600E\u6837\u6559\u5F97\u66F4\u597D\uFF0C\u4F46\u8FD9\u7C7B\u5EFA\u8BAE\u7EDD\u4E0D\u80FD\u653E\u8FDB missing \u6216 contradictions\u3002
+
+\u5982\u679C\u67D0\u4E2A source_ref \u5DF2\u7ECF\u88AB request_item \u6B63\u786E\u8BB0\u5F55\u4E3A\u6559\u5B66\u76EE\u6807\uFF0C\u5C31\u4E0D\u80FD\u56E0\u4E3A\u4F60\u66F4\u559C\u6B22\u53D7\u529B\u56FE\u3001\u901F\u5EA6\u56FE\u3001\u80FD\u91CF\u56FE\u6216\u5176\u4ED6\u5177\u4F53\u6559\u6CD5\u800C\u62A5\u544A missing\uFF1B\u8FD9\u4E9B\u53EA\u80FD\u5199\u8FDB suggestions\u3002\u6559\u5B66\u5EFA\u8BAE\u4E0D\u662F\u7528\u6237\u8981\u6C42\u3002\u6CA1\u6709\u53D1\u73B0\u5BF9\u5E94\u9879\u76EE\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002`;
 var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\u4F53\u3001\u5C0A\u91CD\u5B66\u751F\u7684\u5BB6\u5EAD\u6559\u5E08\u3002\u8BF7\u751F\u6210\u4E00\u5802\u5B8C\u6574\u3001\u8FDE\u7EED\u7684 OLL Authoring Profile \u8BFE\u7A0B\u3002
 
 \u786C\u6027\u8981\u6C42\uFF1A
@@ -10080,7 +10090,6 @@ var animationDurationIntents = [
   "normal",
   "extended"
 ];
-var requestEvidenceSources = ["learner_request", "recognized_problem", "board_summary"];
 var requestItemKinds = [
   "teaching_goal",
   "visual",
@@ -10101,6 +10110,7 @@ var lessonBriefResponseJsonSchema = {
     "version",
     "request_summary",
     "request_items",
+    "non_requirement_clauses",
     "teaching_goal_requirements",
     "presentation_constraints",
     "visual_requirements",
@@ -10118,13 +10128,25 @@ var lessonBriefResponseJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "source", "evidence", "kind", "polarity"],
+        required: ["id", "source_ref", "kind", "polarity"],
         properties: {
           id: { type: "string" },
-          source: { enum: requestEvidenceSources },
-          evidence: { type: "string" },
+          source_ref: { type: "string" },
           kind: { enum: requestItemKinds },
           polarity: { enum: requestItemPolarities }
+        }
+      }
+    },
+    non_requirement_clauses: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source_ref", "kind", "reason"],
+        properties: {
+          source_ref: { type: "string" },
+          kind: { enum: requestItemKinds },
+          reason: { type: "string" }
         }
       }
     },
@@ -10161,12 +10183,11 @@ var lessonBriefResponseJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "surface", "purpose", "evidence", "required_features", "expressions", "request_item_ids"],
+        required: ["id", "surface", "purpose", "required_features", "expressions", "request_item_ids"],
         properties: {
           id: { type: "string" },
           surface: { enum: visualSurfaces },
           purpose: { type: "string" },
-          evidence: { type: "string" },
           required_features: { type: "array", items: { enum: visualFeatures } },
           expressions: { type: "array", items: { type: "string" } },
           request_item_ids: idArraySchema
@@ -10178,13 +10199,12 @@ var lessonBriefResponseJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "from", "to", "relation", "evidence", "request_item_ids"],
+        required: ["id", "from", "to", "relation", "request_item_ids"],
         properties: {
           id: { type: "string" },
           from: { type: "string" },
           to: { type: "string" },
           relation: { enum: visualRelationships },
-          evidence: { type: "string" },
           request_item_ids: idArraySchema
         }
       }
@@ -10198,7 +10218,6 @@ var lessonBriefResponseJsonSchema = {
           "id",
           "variable",
           "purpose",
-          "evidence",
           "initial",
           "min",
           "max",
@@ -10216,7 +10235,6 @@ var lessonBriefResponseJsonSchema = {
           id: { type: "string" },
           variable: { type: "string" },
           purpose: { type: "string" },
-          evidence: { type: "string" },
           initial: { type: "number" },
           min: { type: "number" },
           max: { type: "number" },
@@ -10258,18 +10276,16 @@ var lessonBriefResponseJsonSchema = {
 var briefVerificationResponseJsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["missing", "contradictions"],
+  required: ["missing", "contradictions", "suggestions"],
   properties: {
     missing: {
       type: "array",
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["source", "evidence", "kind", "reason"],
+        required: ["source_ref", "reason"],
         properties: {
-          source: { enum: requestEvidenceSources },
-          evidence: { type: "string" },
-          kind: { enum: requestItemKinds },
+          source_ref: { type: "string" },
           reason: { type: "string" }
         }
       }
@@ -10279,11 +10295,22 @@ var briefVerificationResponseJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["source", "evidence", "reason"],
+        required: ["request_item_id", "reason"],
         properties: {
-          source: { enum: requestEvidenceSources },
-          evidence: { type: "string" },
+          request_item_id: { type: "string" },
           reason: { type: "string" }
+        }
+      }
+    },
+    suggestions: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["request_item_id", "suggestion"],
+        properties: {
+          request_item_id: { type: "string" },
+          suggestion: { type: "string" }
         }
       }
     }
@@ -10324,6 +10351,43 @@ function authoritativeRequestSources(input) {
     sources.push({ source: "board_summary", text: input.board_summary });
   }
   return sources;
+}
+function splitAuthoritativeText(text) {
+  const clauses = text.split(/[。！？；!?;]+/u).map((part) => part.trim()).filter(Boolean);
+  return clauses.length > 0 ? clauses : [text.trim()].filter(Boolean);
+}
+function authoritativeRequestClauses(input) {
+  return authoritativeRequestSources(input).flatMap(
+    ({ source, text }) => splitAuthoritativeText(text).map((clause, index) => ({
+      ref: `${source}:${index + 1}`,
+      source,
+      text: clause
+    }))
+  );
+}
+function buildLessonBriefResponseJsonSchema(input) {
+  const schema = structuredClone(lessonBriefResponseJsonSchema);
+  const properties = schema.properties;
+  const sourceRefs = authoritativeRequestClauses(input).map((clause) => clause.ref);
+  const requestItems = properties.request_items;
+  const itemProperties = requestItems.items.properties;
+  itemProperties.source_ref = { enum: sourceRefs };
+  const nonRequirements = properties.non_requirement_clauses;
+  const nonRequirementProperties = nonRequirements.items.properties;
+  nonRequirementProperties.source_ref = { enum: sourceRefs };
+  return schema;
+}
+function buildBriefVerificationResponseJsonSchema(input, brief) {
+  const schema = structuredClone(briefVerificationResponseJsonSchema);
+  const properties = schema.properties;
+  const missingProperties = properties.missing.items.properties;
+  missingProperties.source_ref = { enum: authoritativeRequestClauses(input).map((clause) => clause.ref) };
+  const requestItemIds = brief.request_items.map((item) => item.id);
+  const contradictionProperties = properties.contradictions.items.properties;
+  contradictionProperties.request_item_id = { enum: requestItemIds };
+  const suggestionProperties = properties.suggestions.items.properties;
+  suggestionProperties.request_item_id = { enum: requestItemIds };
+  return schema;
 }
 function briefViolation(code, path, message) {
   return { stage: "brief", code, path, message };
@@ -10388,6 +10452,14 @@ function validateLessonBrief(candidate, input) {
   if (!Array.isArray(candidate.request_items) || candidate.request_items.length === 0) {
     violations.push(briefViolation("BRIEF_MISSING_REQUEST_ITEMS", "/request_items", "request_items must contain the explicit requirements from the authoritative request"));
   }
+  const nonRequirementClauses = Array.isArray(candidate.non_requirement_clauses) ? candidate.non_requirement_clauses : [];
+  if (!Array.isArray(candidate.non_requirement_clauses)) {
+    violations.push(briefViolation(
+      "BRIEF_INVALID_NON_REQUIREMENT_CLAUSES",
+      "/non_requirement_clauses",
+      "non_requirement_clauses must be an array"
+    ));
+  }
   const teachingGoals = Array.isArray(candidate.teaching_goal_requirements) ? candidate.teaching_goal_requirements : [];
   if (!Array.isArray(candidate.teaching_goal_requirements) || candidate.teaching_goal_requirements.length === 0) {
     violations.push(briefViolation("BRIEF_MISSING_TEACHING_GOALS", "/teaching_goal_requirements", "teaching_goal_requirements must contain at least one goal"));
@@ -10420,16 +10492,8 @@ function validateLessonBrief(candidate, input) {
   if (!Array.isArray(candidate.unhandled_request_items)) {
     violations.push(briefViolation("BRIEF_INVALID_UNHANDLED_ITEMS", "/unhandled_request_items", "unhandled_request_items must be an array"));
   }
-  const authoritative = authoritativeRequestSources(input);
-  const authoritativeBySource = new Map(authoritative.map((item) => [item.source, normalizeEvidence(item.text)]));
-  const grounded = (evidence, requestedSource) => {
-    if (typeof evidence !== "string" || normalizeEvidence(evidence).length === 0) return false;
-    if (typeof requestedSource === "string") {
-      const source = authoritativeBySource.get(requestedSource);
-      return !!source && source.includes(normalizeEvidence(evidence));
-    }
-    return authoritative.some((source) => normalizeEvidence(source.text).includes(normalizeEvidence(evidence)));
-  };
+  const authoritativeClauses = authoritativeRequestClauses(input);
+  const authoritativeClauseByRef = new Map(authoritativeClauses.map((clause) => [clause.ref, clause]));
   const requestItemById = /* @__PURE__ */ new Map();
   requestItems.forEach((raw, index) => {
     const path = `/request_items/${index}`;
@@ -10440,11 +10504,8 @@ function validateLessonBrief(candidate, input) {
     if (typeof raw.id !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.id) || requestItemById.has(raw.id)) {
       violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_ID", `${path}/id`, "request item id must be a unique lowercase alias"));
     }
-    if (!requestEvidenceSources.includes(raw.source)) {
-      violations.push(briefViolation("BRIEF_INVALID_EVIDENCE_SOURCE", `${path}/source`, "request item source is not authoritative for this request"));
-    }
-    if (!grounded(raw.evidence, raw.source)) {
-      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "request item evidence must quote its named authoritative source"));
+    if (typeof raw.source_ref !== "string" || !authoritativeClauseByRef.has(raw.source_ref)) {
+      violations.push(briefViolation("BRIEF_INVALID_SOURCE_REF", `${path}/source_ref`, "source_ref must reference one supplied authoritative request clause"));
     }
     if (!requestItemKinds.includes(raw.kind)) {
       violations.push(briefViolation("BRIEF_INVALID_REQUEST_ITEM_KIND", `${path}/kind`, "request item kind is unsupported"));
@@ -10456,6 +10517,37 @@ function validateLessonBrief(candidate, input) {
       requestItemById.set(raw.id, raw);
     }
   });
+  const requestSourceRefs = new Set(requestItems.flatMap((item) => isRecord(item) && typeof item.source_ref === "string" ? [item.source_ref] : []));
+  const nonRequirementSourceRefs = /* @__PURE__ */ new Set();
+  nonRequirementClauses.forEach((raw, index) => {
+    const path = `/non_requirement_clauses/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_NON_REQUIREMENT_CLAUSE", path, "non-requirement clause must be an object"));
+      return;
+    }
+    if (typeof raw.source_ref !== "string" || !authoritativeClauseByRef.has(raw.source_ref)) {
+      violations.push(briefViolation("BRIEF_INVALID_SOURCE_REF", `${path}/source_ref`, "source_ref must reference one supplied authoritative request clause"));
+    } else if (nonRequirementSourceRefs.has(raw.source_ref)) {
+      violations.push(briefViolation("BRIEF_DUPLICATE_SOURCE_DISPOSITION", `${path}/source_ref`, "source_ref may appear only once in non_requirement_clauses"));
+    } else {
+      nonRequirementSourceRefs.add(raw.source_ref);
+      if (requestSourceRefs.has(raw.source_ref)) {
+        violations.push(briefViolation("BRIEF_CONFLICTING_SOURCE_DISPOSITION", `${path}/source_ref`, "source_ref cannot be both a request item and a non-requirement clause"));
+      }
+    }
+    if (typeof raw.reason !== "string" || !raw.reason.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_NON_REQUIREMENT_REASON", `${path}/reason`, "reason is required"));
+    }
+  });
+  for (const clause of authoritativeClauses) {
+    if (!requestSourceRefs.has(clause.ref) && !nonRequirementSourceRefs.has(clause.ref)) {
+      violations.push(briefViolation(
+        "BRIEF_SOURCE_CLAUSE_UNCLASSIFIED",
+        "/request_items",
+        `source clause '${clause.ref}' must be classified as a request item or a non-requirement clause`
+      ));
+    }
+  }
   const mappedDestinations = /* @__PURE__ */ new Map();
   const mapRequestItems = (rawIds, path, destination, expectedPolarity = "require") => {
     if (!Array.isArray(rawIds) || rawIds.length === 0) {
@@ -10531,9 +10623,6 @@ function validateLessonBrief(candidate, input) {
     if (typeof raw.purpose !== "string" || !raw.purpose.trim()) {
       violations.push(briefViolation("BRIEF_MISSING_PURPOSE", `${path}/purpose`, "purpose is required"));
     }
-    if (!grounded(raw.evidence)) {
-      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
-    }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "visual");
     if (!Array.isArray(raw.required_features)) {
       violations.push(briefViolation("BRIEF_INVALID_FEATURES", `${path}/required_features`, "required_features must be an array"));
@@ -10567,9 +10656,6 @@ function validateLessonBrief(candidate, input) {
     if (!visualRelationships.includes(raw.relation)) {
       violations.push(briefViolation("BRIEF_INVALID_RELATION", `${path}/relation`, "relation is unsupported"));
     }
-    if (!grounded(raw.evidence)) {
-      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
-    }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "relationship");
   });
   const visualById = new Map(requirements.flatMap((raw) => isRecord(raw) && typeof raw.id === "string" ? [[raw.id, raw]] : []));
@@ -10588,9 +10674,6 @@ function validateLessonBrief(candidate, input) {
     }
     if (typeof raw.purpose !== "string" || !raw.purpose.trim()) {
       violations.push(briefViolation("BRIEF_MISSING_VARIABLE_PURPOSE", `${path}/purpose`, "purpose is required"));
-    }
-    if (!grounded(raw.evidence)) {
-      violations.push(briefViolation("BRIEF_UNGROUNDED_EVIDENCE", `${path}/evidence`, "evidence must quote an authoritative request source"));
     }
     mapRequestItems(
       raw.request_item_ids,
@@ -10702,38 +10785,6 @@ function validateLessonBrief(candidate, input) {
     }
     if ((item.kind === "existing_board_edit" || item.kind === "unsupported_feature") && !isUnhandled) {
       violations.push(briefViolation("BRIEF_UNSUPPORTED_ITEM_NOT_REPORTED", "/unhandled_request_items", `request item '${id}' must be reported as unsupported or ambiguous`));
-    }
-  }
-  const knownRequirementHints = [
-    { phrase: "\u51FD\u6570\u56FE\u50CF", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "\u5355\u4F4D\u5706", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "\u52A8\u753B", kinds: ["continuous_change", "presentation_constraint"] },
-    { phrase: "\u62D6\u52A8", kinds: ["student_control"] },
-    { phrase: "\u6ED1\u6746", kinds: ["student_control"] },
-    { phrase: "\u53EF\u4EA4\u4E92", kinds: ["student_control"] },
-    { phrase: "\u8868\u683C", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "\u56FE\u7247", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "\u4E09\u7EF4", kinds: ["unsupported_feature", "presentation_constraint"] },
-    { phrase: "3d", kinds: ["unsupported_feature", "presentation_constraint"] },
-    { phrase: "functiongraph", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "unitcircle", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "animation", kinds: ["continuous_change", "presentation_constraint"] },
-    { phrase: "drag", kinds: ["student_control"] },
-    { phrase: "slider", kinds: ["student_control"] },
-    { phrase: "interactive", kinds: ["student_control"] },
-    { phrase: "table", kinds: ["visual", "presentation_constraint"] },
-    { phrase: "image", kinds: ["visual", "presentation_constraint"] }
-  ];
-  const combinedAuthoritative = normalizeEvidence(authoritative.map((item) => item.text).join(" "));
-  for (const hint of knownRequirementHints) {
-    const normalizedHint = normalizeEvidence(hint.phrase);
-    const recordedWithExpectedKind = requestItems.some((item) => isRecord(item) && typeof item.evidence === "string" && hint.kinds.includes(item.kind) && normalizeEvidence(item.evidence).includes(normalizedHint));
-    if (combinedAuthoritative.includes(normalizedHint) && !recordedWithExpectedKind) {
-      violations.push(briefViolation(
-        "BRIEF_SUSPECTED_OMISSION",
-        "/request_items",
-        `request_items did not record the explicit phrase '${hint.phrase}' as ${hint.kinds.join(" or ")}`
-      ));
     }
   }
   if (violations.length > 0) {
@@ -11310,12 +11361,16 @@ function validateGeneratedLesson(raw, input, brief, capabilityPlan) {
 function buildRequestContext(input) {
   const mayUseExistingBoard = input.request_source === "explicit_board_follow_up";
   return {
-    learner_request: input.learner_request,
     request_source: input.request_source,
-    source_observation: input.source_observation ?? null,
+    authoritative_request: {
+      clauses: authoritativeRequestClauses(input)
+    },
     language: input.language ?? "zh-CN",
-    tutor_context: input.tutor_context ?? "\u8010\u5FC3\u3001\u5177\u4F53\u3001\u8FDE\u7EED\u8BB2\u89E3",
-    learner_context: input.learner_context ?? null,
+    teaching_advice: {
+      tutor_context: input.tutor_context ?? "\u8010\u5FC3\u3001\u5177\u4F53\u3001\u8FDE\u7EED\u8BB2\u89E3",
+      learner_context: input.learner_context ?? null,
+      rule: "\u53EA\u7528\u4E8E\u9009\u62E9\u8BB2\u6CD5\uFF0C\u4E0D\u80FD\u589E\u52A0\u3001\u5220\u9664\u6216\u5426\u51B3\u7528\u6237\u8981\u6C42"
+    },
     session_context: input.session_context ?? { assets: [] },
     existing_board: mayUseExistingBoard ? {
       summary: input.board_summary,
@@ -11327,70 +11382,85 @@ function buildRequestContext(input) {
 function buildPlanningPrompt(input, previousBrief, violations = []) {
   const repair = previousBrief ? `
 
-\u4E0A\u4E00\u4EFD Lesson Brief\uFF1A
+\u4E0A\u4E00\u4EFD\u8BFE\u7A0B\u8981\u6C42\u4E0E\u6559\u5B66\u8BBE\u8BA1\uFF1A
 ${previousBrief}
 
 \u7CBE\u786E\u6821\u9A8C\u9519\u8BEF\uFF1A
 ${JSON.stringify(violations, null, 2)}
-\u4FDD\u7559\u5DF2\u6B63\u786E\u4E14\u6709 evidence \u7684\u8981\u6C42\uFF0C\u53EA\u4FEE\u590D\u8FD9\u4E9B\u9519\u8BEF\u5E76\u8FD4\u56DE\u5B8C\u6574\u5BF9\u8C61\u3002` : "";
-  return `\u8BF7\u628A\u4EE5\u4E0B\u6743\u5A01\u8BFE\u5802\u8BF7\u6C42\u8F6C\u6362\u6210\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u3002request_source \u51B3\u5B9A\u552F\u4E00\u9898\u76EE\u6765\u6E90\uFF1B\u4E0D\u5F97\u4F7F\u7528 existing_board \u4E3A self_contained \u6216 current_image \u8865\u9898\u3002
+\u4FDD\u7559\u5DF2\u6B63\u786E\u7684\u7528\u6237\u8981\u6C42\u5F15\u7528\u548C\u6559\u5B66\u8BBE\u8BA1\uFF0C\u53EA\u4FEE\u590D\u8FD9\u4E9B\u9519\u8BEF\u5E76\u8FD4\u56DE\u5B8C\u6574\u5BF9\u8C61\u3002` : "";
+  return `\u8BF7\u5148\u7528 source_ref \u8BB0\u5F55 authoritative_request.clauses \u4E2D\u7684\u7528\u6237\u660E\u786E\u8981\u6C42\uFF0C\u518D\u4E3A\u8FD9\u4E9B\u8981\u6C42\u8BBE\u8BA1\u53EF\u6267\u884C\u8BFE\u7A0B\u3002teaching_advice \u4E0D\u662F\u7528\u6237\u8981\u6C42\uFF0C\u4E0D\u80FD\u5EFA\u7ACB request_item\u3002request_source \u51B3\u5B9A\u552F\u4E00\u9898\u76EE\u6765\u6E90\uFF1B\u4E0D\u5F97\u4F7F\u7528 existing_board \u4E3A self_contained \u6216 current_image \u8865\u9898\u3002
 ${JSON.stringify(buildRequestContext(input), null, 2)}${repair}`;
 }
 function buildVerificationPrompt(input, brief) {
-  return `\u8BF7\u72EC\u7ACB\u590D\u6838\u8FD9\u4EFD\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u6709\u6CA1\u6709\u6F0F\u6389\u6216\u8BEF\u89E3\u6743\u5A01\u8BF7\u6C42\u3002
-\u6743\u5A01\u8BF7\u6C42\uFF1A
+  return `\u8BF7\u72EC\u7ACB\u590D\u6838\u7528\u6237\u660E\u786E\u8981\u6C42\u662F\u5426\u88AB\u8BB0\u5F55\u3002\u53EA\u6709 authoritative_request.clauses \u662F\u7528\u6237\u8981\u6C42\uFF1Bteaching_advice \u4E0D\u662F\u3002\u4E0D\u8981\u7528\u81EA\u5DF1\u504F\u597D\u7684\u6559\u6CD5\u5426\u51B3\u5DF2\u8986\u76D6\u7684\u7528\u6237\u76EE\u6807\u3002
+\u8BFE\u5802\u8F93\u5165\uFF1A
 ${JSON.stringify(buildRequestContext(input), null, 2)}
 
-\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\uFF1A
+\u8BFE\u7A0B\u8981\u6C42\u4E0E\u6559\u5B66\u8BBE\u8BA1\uFF1A
 ${JSON.stringify(brief, null, 2)}`;
 }
-function validateBriefVerification(candidate, input) {
-  if (!isRecord(candidate) || !Array.isArray(candidate.missing) || !Array.isArray(candidate.contradictions)) {
-    throw new GeneratedLessonError("Brief verification must contain missing and contradictions arrays", void 0, [
-      briefViolation("BRIEF_VERIFICATION_INVALID_ROOT", "/", "verification must contain missing and contradictions arrays")
+function validateBriefVerification(candidate, input, brief) {
+  if (!isRecord(candidate) || !Array.isArray(candidate.missing) || !Array.isArray(candidate.contradictions) || !Array.isArray(candidate.suggestions)) {
+    throw new GeneratedLessonError("Brief verification must contain missing, contradictions, and suggestions arrays", void 0, [
+      briefViolation("BRIEF_VERIFICATION_INVALID_ROOT", "/", "verification must contain missing, contradictions, and suggestions arrays")
     ]);
   }
-  const authoritativeBySource = new Map(authoritativeRequestSources(input).map((item) => [item.source, normalizeEvidence(item.text)]));
+  const clauseRefs = new Set(authoritativeRequestClauses(input).map((clause) => clause.ref));
+  const requestItemIds = new Set(brief.request_items.map((item) => item.id));
   const violations = [];
-  const validateEvidence = (raw, path, requireKind) => {
+  const validateMissing = (raw, path) => {
     if (!isRecord(raw)) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_ITEM", path, "verification item must be an object"));
       return;
     }
-    const source = requestEvidenceSources.includes(raw.source) ? raw.source : void 0;
-    if (!source || !authoritativeBySource.has(source)) {
-      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_SOURCE", `${path}/source`, "verification source is not authoritative for this request"));
+    if (typeof raw.source_ref !== "string" || !clauseRefs.has(raw.source_ref)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_SOURCE_REF", `${path}/source_ref`, "source_ref must reference one supplied authoritative request clause"));
     }
-    if (typeof raw.evidence !== "string" || !raw.evidence.trim() || !source || !authoritativeBySource.get(source)?.includes(normalizeEvidence(raw.evidence))) {
-      violations.push(briefViolation("BRIEF_VERIFICATION_UNGROUNDED_EVIDENCE", `${path}/evidence`, "verification evidence must quote its named authoritative source"));
-    }
-    if (requireKind && !requestItemKinds.includes(raw.kind)) {
-      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_KIND", `${path}/kind`, "verification kind is unsupported"));
+    if (!requestItemKinds.includes(raw.kind)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_KIND", `${path}/kind`, "kind must identify the omitted request type"));
     }
     if (typeof raw.reason !== "string" || !raw.reason.trim()) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REASON", `${path}/reason`, "verification reason is required"));
     }
   };
-  candidate.missing.forEach((raw, index) => validateEvidence(raw, `/missing/${index}`, true));
-  candidate.contradictions.forEach((raw, index) => validateEvidence(raw, `/contradictions/${index}`, false));
+  const validateRequestItemReference = (raw, path, textField) => {
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_ITEM", path, "verification item must be an object"));
+      return;
+    }
+    if (typeof raw.request_item_id !== "string" || !requestItemIds.has(raw.request_item_id)) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REQUEST_ITEM", `${path}/request_item_id`, "request_item_id must reference one request item"));
+    }
+    if (typeof raw[textField] !== "string" || !raw[textField].trim()) {
+      violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REASON", `${path}/${textField}`, `${textField} is required`));
+    }
+  };
+  candidate.missing.forEach((raw, index) => validateMissing(raw, `/missing/${index}`));
+  candidate.contradictions.forEach((raw, index) => validateRequestItemReference(raw, `/contradictions/${index}`, "reason"));
+  candidate.suggestions.forEach((raw, index) => validateRequestItemReference(raw, `/suggestions/${index}`, "suggestion"));
   if (violations.length > 0) {
     throw new GeneratedLessonError(`Brief verification failed validation: ${formatViolations(violations)}`, void 0, violations);
   }
   return candidate;
 }
-function briefVerificationViolations(verification) {
+function briefVerificationViolations(verification, input, brief) {
+  const clauseByRef = new Map(authoritativeRequestClauses(input).map((clause) => [clause.ref, clause]));
+  const requestItemById = new Map(brief.request_items.map((item) => [item.id, item]));
   return [
-    ...verification.missing.map((item, index) => ({
-      stage: "brief",
-      code: "BRIEF_REQUIREMENT_MISSING",
-      path: `/verification/missing/${index}`,
-      message: `${item.evidence}: ${item.reason}`
-    })),
+    ...verification.missing.map((item, index) => {
+      const clause = clauseByRef.get(item.source_ref);
+      return {
+        stage: "brief",
+        code: "BRIEF_REQUIREMENT_MISSING",
+        path: `/verification/missing/${index}`,
+        message: `${clause?.text ?? item.source_ref} (${item.kind}): ${item.reason}`
+      };
+    }),
     ...verification.contradictions.map((item, index) => ({
       stage: "brief",
       code: "BRIEF_REQUIREMENT_CONTRADICTION",
       path: `/verification/contradictions/${index}`,
-      message: `${item.evidence}: ${item.reason}`
+      message: `${requestItemById.get(item.request_item_id)?.id ?? item.request_item_id}: ${item.reason}`
     }))
   ];
 }
@@ -11520,19 +11590,68 @@ async function createVertexClient() {
   const project = process.env.GOOGLE_CLOUD_PROJECT?.trim() || account.project_id;
   const location = process.env.GOOGLE_CLOUD_LOCATION?.trim() || DEFAULT_VERTEX_LOCATION;
   const timeoutMs = parsePositiveInteger(process.env.OLL_TIMEOUT_MS, DEFAULT_TIMEOUT_MS, "OLL_TIMEOUT_MS");
+  const totalTimeoutMs = parsePositiveInteger(
+    process.env.OLL_TOTAL_TIMEOUT_MS,
+    DEFAULT_TOTAL_TIMEOUT_MS,
+    "OLL_TOTAL_TIMEOUT_MS"
+  );
   const maxTokens = parsePositiveInteger(process.env.OLL_MAX_TOKENS, DEFAULT_MAX_TOKENS, "OLL_MAX_TOKENS");
-  const accessToken = await vertexAccessToken(account, timeoutMs);
+  const deadlineAt = Date.now() + totalTimeoutMs;
+  const authStartedAt = Date.now();
+  stageLog({ stage: "vertex-auth", status: "started" });
+  let accessToken;
+  try {
+    accessToken = await vertexAccessToken(account, Math.min(timeoutMs, totalTimeoutMs));
+    stageLog({
+      stage: "vertex-auth",
+      status: "completed",
+      elapsed_ms: Date.now() - authStartedAt
+    });
+  } catch (error) {
+    const timeoutError = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    stageLog({
+      stage: "vertex-auth",
+      status: "failed",
+      elapsed_ms: Date.now() - authStartedAt,
+      error_code: timeoutError ? "VERTEX_AUTH_TIMEOUT" : "VERTEX_AUTH_FAILED"
+    });
+    if (timeoutError) {
+      throw new ToolExecutionError("VERTEX_AUTH_TIMEOUT", "Vertex authentication exceeded its timeout");
+    }
+    throw error;
+  }
   return {
     endpoint: vertexEndpoint(project, location, model),
     accessToken,
     timeoutMs,
     maxTokens,
+    deadlineAt,
     requestAttempts: parsePositiveInteger(
       process.env.VERTEX_REQUEST_ATTEMPTS,
       DEFAULT_VERTEX_REQUEST_ATTEMPTS,
       "VERTEX_REQUEST_ATTEMPTS"
     )
   };
+}
+function requestDeadline(client) {
+  return Math.min(
+    Date.now() + client.timeoutMs,
+    client.deadlineAt ?? Number.POSITIVE_INFINITY
+  );
+}
+function timeoutUntil(deadlineAt, label) {
+  const remaining = Math.floor(deadlineAt - Date.now());
+  if (remaining <= 0) {
+    throw new ToolExecutionError(
+      "LESSON_GENERATION_TIMEOUT",
+      `The lesson generation time budget was exhausted during ${label}`
+    );
+  }
+  return remaining;
+}
+function stageLog(payload) {
+  process.stderr.write(`learning-coach: ${JSON.stringify(payload)}
+`);
 }
 function buildVertexSchemaContract(inputCandidate, briefCandidate) {
   const input = parseToolInput(JSON.stringify(inputCandidate));
@@ -11592,6 +11711,9 @@ async function probeVertexSchema(client, schema) {
   };
 }
 async function callStructuredModel(client, request) {
+  const startedAt = Date.now();
+  const deadlineAt = requestDeadline(client);
+  stageLog({ stage: "model-call", turn_id: request.turnId, label: request.label, status: "started" });
   const requestBody = JSON.stringify({
     systemInstruction: { parts: [{ text: request.systemPrompt }] },
     contents: [{ role: "user", parts: [{ text: request.prompt }] }],
@@ -11604,39 +11726,70 @@ async function callStructuredModel(client, request) {
   });
   let body = "";
   let status = 0;
-  for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
-    const response = await fetch(client.endpoint, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${client.accessToken}`,
-        "content-type": "application/json"
-      },
-      body: requestBody,
-      signal: AbortSignal.timeout(client.timeoutMs)
-    });
-    status = response.status;
-    body = await response.text();
-    if (response.ok) break;
-    const retryable = status === 429 || status >= 500;
-    if (!retryable || requestAttempt === client.requestAttempts) {
-      const code = status === 400 ? "VERTEX_SCHEMA_REJECTED" : "VERTEX_REQUEST_FAILED";
-      throw new ToolExecutionError(code, `Vertex ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
-    }
-    const retryAfterSeconds = Number(response.headers.get("retry-after"));
-    const delayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? Math.min(retryAfterSeconds * 1e3, 1e4) : Math.min(1e3 * 2 ** (requestAttempt - 1), 4e3);
-    await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs));
-  }
-  let payload;
   try {
-    payload = JSON.parse(body);
-  } catch (error) {
-    throw new Error(`Vertex returned a non-JSON API response: ${error.message}`);
-  }
-  if (process.env.OLL_DEBUG_GENERATION === "1") {
-    process.stderr.write(`learning-coach: raw Vertex ${request.label} payload: ${JSON.stringify(payload).slice(0, 16e3)}
+    let usedAttempts = 0;
+    for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
+      usedAttempts = requestAttempt;
+      const response = await fetch(client.endpoint, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${client.accessToken}`,
+          "content-type": "application/json"
+        },
+        body: requestBody,
+        signal: AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
+      });
+      status = response.status;
+      body = await response.text();
+      if (response.ok) break;
+      const retryable = status === 429 || status >= 500;
+      if (!retryable || requestAttempt === client.requestAttempts) {
+        const code = status === 400 ? "VERTEX_SCHEMA_REJECTED" : "VERTEX_REQUEST_FAILED";
+        throw new ToolExecutionError(code, `Vertex ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
+      }
+      const retryAfterSeconds = Number(response.headers.get("retry-after"));
+      const requestedDelayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? Math.min(retryAfterSeconds * 1e3, 1e4) : Math.min(1e3 * 2 ** (requestAttempt - 1), 4e3);
+      const delayMs = Math.min(requestedDelayMs, timeoutUntil(deadlineAt, request.label));
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs));
+    }
+    let payload;
+    try {
+      payload = JSON.parse(body);
+    } catch (error) {
+      throw new Error(`Vertex returned a non-JSON API response: ${error.message}`);
+    }
+    if (process.env.OLL_DEBUG_GENERATION === "1") {
+      process.stderr.write(`learning-coach: raw Vertex ${request.label} payload: ${JSON.stringify(payload).slice(0, 16e3)}
 `);
+    }
+    const content = vertexResponseContent(payload);
+    stageLog({
+      stage: "model-call",
+      turn_id: request.turnId,
+      label: request.label,
+      status: "completed",
+      http_status: status,
+      request_attempts: usedAttempts,
+      elapsed_ms: Date.now() - startedAt
+    });
+    return content;
+  } catch (error) {
+    const timeoutError = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    const surfacedError = timeoutError ? new ToolExecutionError(
+      client.deadlineAt !== void 0 && Date.now() >= client.deadlineAt ? "LESSON_GENERATION_TIMEOUT" : "VERTEX_REQUEST_TIMEOUT",
+      client.deadlineAt !== void 0 && Date.now() >= client.deadlineAt ? `The lesson generation time budget was exhausted during ${request.label}` : `Vertex ${request.label} exceeded its request timeout`
+    ) : error;
+    stageLog({
+      stage: "model-call",
+      turn_id: request.turnId,
+      label: request.label,
+      status: "failed",
+      http_status: status || null,
+      elapsed_ms: Date.now() - startedAt,
+      error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED"
+    });
+    throw surfacedError;
   }
-  return vertexResponseContent(payload);
 }
 async function planLesson(client, input) {
   const maxAttempts = parsePositiveInteger(
@@ -11649,9 +11802,10 @@ async function planLesson(client, input) {
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await callStructuredModel(client, {
       label: "lesson-brief",
+      turnId: input.turn_id,
       systemPrompt: LESSON_BRIEF_SYSTEM_PROMPT,
       prompt: buildPlanningPrompt(input, previousBrief, violations),
-      responseSchema: lessonBriefResponseJsonSchema,
+      responseSchema: buildLessonBriefResponseJsonSchema(input),
       maxTokens: Math.min(client.maxTokens, 8192)
     });
     try {
@@ -11665,9 +11819,10 @@ async function planLesson(client, input) {
       const brief = validateLessonBrief(canonicalizeBriefAliases(candidate), input);
       const verificationRaw = await callStructuredModel(client, {
         label: "lesson-brief-verification",
+        turnId: input.turn_id,
         systemPrompt: BRIEF_VERIFICATION_SYSTEM_PROMPT,
         prompt: buildVerificationPrompt(input, brief),
-        responseSchema: briefVerificationResponseJsonSchema,
+        responseSchema: buildBriefVerificationResponseJsonSchema(input, brief),
         maxTokens: Math.min(client.maxTokens, 4096)
       });
       let verificationCandidate;
@@ -11681,14 +11836,23 @@ async function planLesson(client, input) {
         );
         throw new GeneratedLessonError(parseViolation.message, verificationRaw, [parseViolation]);
       }
-      const verification = validateBriefVerification(verificationCandidate, input);
-      const coverageViolations = briefVerificationViolations(verification);
+      const verification = validateBriefVerification(verificationCandidate, input, brief);
+      const coverageViolations = briefVerificationViolations(verification, input, brief);
       if (coverageViolations.length > 0) {
         throw new GeneratedLessonError(
           `Course requirements did not cover the authoritative request: ${formatViolations(coverageViolations)}`,
           raw,
           coverageViolations
         );
+      }
+      if (verification.suggestions.length > 0) {
+        process.stderr.write(`learning-coach: ${JSON.stringify({
+          stage: "lesson-brief-review-suggestions",
+          turn_id: input.turn_id,
+          suggestion_count: verification.suggestions.length,
+          request_item_ids: [...new Set(verification.suggestions.map((item) => item.request_item_id))]
+        })}
+`);
       }
       return brief;
     } catch (error) {
@@ -11734,6 +11898,7 @@ async function generateLesson(client, input, brief) {
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await callStructuredModel(client, {
       label: "lesson-authoring",
+      turnId: input.turn_id,
       systemPrompt: AUTHORING_SYSTEM_PROMPT,
       prompt: buildGenerationPrompt(input, brief, capabilityPlan, previousCandidate, violations),
       responseSchema
@@ -11779,6 +11944,7 @@ function emit(payload) {
 `);
 }
 async function main() {
+  const startedAt = Date.now();
   try {
     if (process.argv[2] !== TOOL_NAME) {
       throw new Error(`Unknown tool '${process.argv[2] ?? ""}'. Expected '${TOOL_NAME}'`);
@@ -11793,6 +11959,12 @@ async function main() {
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}
 `, "utf8");
+    stageLog({
+      stage: "lesson-generation",
+      turn_id: input.turn_id,
+      status: "completed",
+      elapsed_ms: Date.now() - startedAt
+    });
     emit({
       success: true,
       output: `Validated OLL lesson generated with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
@@ -11806,6 +11978,12 @@ async function main() {
     });
   } catch (error) {
     const message = safeError(error);
+    stageLog({
+      stage: "lesson-generation",
+      status: "failed",
+      elapsed_ms: Date.now() - startedAt,
+      error_code: error instanceof ToolExecutionError ? error.code : "LESSON_GENERATION_FAILED"
+    });
     process.stderr.write(`learning-coach: ${message}
 `);
     emit({
