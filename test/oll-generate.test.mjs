@@ -1170,6 +1170,9 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
     token_uri: "unused",
   };
+  let visualComponentRequests = 0;
+  let plannerSystemPrompt = "";
+  let visualComponentSystemPrompt = "";
   const server = createServer(async (request, response) => {
     let body = "";
     request.setEncoding("utf8");
@@ -1181,6 +1184,7 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     }
     const parsed = JSON.parse(body);
     if (isLessonBriefRequest(parsed)) {
+      plannerSystemPrompt = parsed.systemInstruction.parts[0].text;
       response.end(vertexPayload(cube3dBrief));
       return;
     }
@@ -1189,6 +1193,38 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
       return;
     }
     if (isVisualComponentRequest(parsed)) {
+      visualComponentSystemPrompt = parsed.systemInstruction.parts[0].text;
+      visualComponentRequests += 1;
+      if (visualComponentRequests === 1) {
+        response.end(JSON.stringify({
+          candidates: [{
+            finishReason: "MAX_TOKENS",
+            content: { parts: [{ text: "{\"do\":\"write\"" }] },
+          }],
+        }));
+        return;
+      }
+      if (visualComponentRequests === 2) {
+        const retryPrompt = JSON.parse(parsed.contents[0].parts[0].text);
+        assert.equal(
+          retryPrompt.validation_errors.some(
+            (violation) => violation.code === "VERTEX_RESPONSE_TRUNCATED",
+          ),
+          true,
+        );
+        const invalidCamera = structuredClone(validCube3dLesson.steps[0].beats[0].actions[0]);
+        invalidCamera.content.camera.pitch = 2;
+        response.end(vertexPayload(invalidCamera));
+        return;
+      }
+      const repairPrompt = JSON.parse(parsed.contents[0].parts[0].text);
+      assert.equal(
+        repairPrompt.validation_errors.some(
+          (violation) => violation.code === "OLL_INVALID_OPERATION_PAYLOAD"
+            && violation.path.includes("/content/camera/pitch"),
+        ),
+        true,
+      );
       response.end(vertexPayload(validCube3dLesson.steps[0].beats[0].actions[0]));
       return;
     }
@@ -1226,6 +1262,11 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     });
 
     assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(visualComponentRequests, 3);
+    assert.match(plannerSystemPrompt, /scene3d.*角度.*弧度/s);
+    assert.match(plannerSystemPrompt, /target_pitch.*-π\/2.*π\/2/s);
+    assert.match(visualComponentSystemPrompt, /scene3d\.camera.*角度.*弧度/s);
+    assert.match(visualComponentSystemPrompt, /camera\.pitch.*-π\/2.*π\/2/s);
     const protocol = JSON.parse(result.stdout);
     const lesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
     assert.equal(lesson.steps[0].beats[0].actions.some(

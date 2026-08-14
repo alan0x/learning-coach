@@ -451,7 +451,7 @@ student_task_requirements 用来规划讲解结束后真正交给学生完成的
 - completion_expression 使用 Runtime 数学表达式，只能读取这个 variable；completion_value 是期望结果，tolerance 是允许误差。初始值不能已经满足完成条件。任务必须依据学生最终提交的一次操作判定，不能依靠模型阅读学生意图。
 - prompt 必须像老师给学生的自然指令，说明要达到的可见目标，不要暴露内部变量名或实现术语。hints 从观察方向到更具体操作逐步给出；success_message 解释学生刚才的操作为什么正确。
 - 任务按数组顺序依次开放。通常只规划一个；只有多个操作确实对应不同教学目标时才规划多个。
-- scene3d_task_requirements 专门描述“把三维场景转到某个视角”的任务。visual 必须引用带 orbit_control 的 scene3d；target_yaw、target_pitch、target_zoom 是目标相机，angular_tolerance 和 zoom_tolerance 是判定容差。不要把视角任务伪装成 lesson variable。用户明确要求从某个方向观察、转到正视/俯视，或要求学生通过旋转完成任务时使用它；普通变量任务仍放在 student_task_requirements。
+- scene3d_task_requirements 专门描述“把三维场景转到某个视角”的任务。visual 必须引用带 orbit_control 的 scene3d；target_yaw、target_pitch、target_zoom 是目标相机，angular_tolerance 和 zoom_tolerance 是判定容差。scene3d 的所有角度和角度容差都必须使用弧度，绝不能填写角度制数值：target_yaw 必须是有限弧度值，target_pitch 必须在 -π/2 到 π/2 之间，angular_tolerance 必须大于 0 且不超过 π；target_zoom 必须在 0.2 到 5 之间，zoom_tolerance 必须大于 0 且不超过 4.8。不要把视角任务伪装成 lesson variable。用户明确要求从某个方向观察、转到正视/俯视，或要求学生通过旋转完成任务时使用它；普通变量任务仍放在 student_task_requirements。
 - 若 presentation_constraints 明确禁止 student_control 或 student_task，student_task_requirements 和 scene3d_task_requirements 都必须为空。
 
 progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐进替换，允许 text、math、shape、diagram、table、note；不需要时返回空数组。它不允许修改历史白板节点，也不得包含 geometry、plot、scene3d 或 image。
@@ -497,7 +497,7 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 - geometry.points[] 每项包含 as、x、y；circles[] 使用 center point alias 和正 radius；segments[] 使用 from/to point alias，投影线使用 style="projection"；arcs[] 使用 center、radius、start_angle、end_angle，角度为弧度。模型不得输出 SVG 或像素坐标。
 - diagram 用于语义元素与连线，不得冒充函数图像。plot 用于坐标轴上的函数曲线；content.axes.x/y 各给出数值 min/max，content.curves[] 每项必须包含 as、expression，可包含 label。
 - plot.expression 只写受限数学表达式，例如 sin(x)、cos(x)、(x+3)^2-4；支持 x、pi、e、+ - * / ^、括号以及 sin/cos/tan/sqrt/abs/exp/log，不写 y=、LaTeX、代码或 SVG。
-- scene3d.camera 包含 yaw、pitch、zoom；fallback 必须用一句话说明交互不可用时学生仍应看懂的空间关系；objects[] 只使用 box、sphere、cylinder、cone、surface。box 给 center 和 size；球给 center/radius；圆柱和圆锥再给 height；surface 给 z=f(x,y) 的 expression、x_range、y_range 和 4 到 24 的 samples。sections[] 使用 as、axis=x/y/z、value。highlights[] 使用 as、kind=point/edge/face、明确的三维 points、可选 label/color，不能使用含糊的“第一个面”。场景天然支持视角旋转、缩放、等轴/正视/俯视和复位，不要输出这些交互的脚本。
+- scene3d.camera 包含 yaw、pitch、zoom；scene3d.camera 的所有角度都使用弧度，camera.yaw 必须是有限弧度值，camera.pitch 必须在 -π/2 到 π/2 之间，camera.zoom 必须在 0.2 到 5 之间，绝不能把角度制数值直接填入相机字段。fallback 必须用一句话说明交互不可用时学生仍应看懂的空间关系；objects[] 只使用 box、sphere、cylinder、cone、surface。box 给 center 和 size；球给 center/radius；圆柱和圆锥再给 height；surface 给 z=f(x,y) 的 expression、x_range、y_range 和 4 到 24 的 samples。sections[] 使用 as、axis=x/y/z、value。highlights[] 使用 as、kind=point/edge/face、明确的三维 points、可选 label/color，不能使用含糊的“第一个面”。场景天然支持视角旋转、缩放、等轴/正视/俯视和复位，不要输出这些交互的脚本。
 - 输入中的课程要求清单是本轮请求的可执行要求合同；每个 visual_requirement 和 visual_relationship 都必须由实际白板动作满足，标题、goals、讲述或文字声明不能替代要求的视觉内容。
 - 每个 visual_requirement.id 就是该主要视觉节点必须使用的 write.as；一个视觉节点可以通过 request_item_ids 服务多个教学目标。visual_relationships 对应的 connect 由系统在两个节点创建后插入，模型不要输出 connect。
 - 课程要求清单中的 shared_variable_requirements 非空时，系统会确定性写入 lesson.variables 和可判定的 angle_control；模型负责在 bound_visuals 对应的 geometry/plot/scene3d content.bindings 中引用同一个变量，并把 do="animate" 动作放进合适的讲解节拍。scene3d 绑定目标目前只允许 section.value。禁止复制第二份状态。
@@ -532,9 +532,9 @@ const PARALLEL_SECTION_SYSTEM_PROMPT = `你是独立课程分段编写器。你�
 
 const VISUAL_COMPONENT_SYSTEM_PROMPT = `你是独立视觉组件编写器。你只生成课程要求中指定的一个主要视觉对象，其他视觉对象和课程讲解会同时生成，最后由程序组装。
 
-只返回一个完整 write 动作，不返回 Lesson、Step、Beat、close、Markdown 或解释。必须保持 do="write"、as 与 visual_requirement.id 完全相同、kind 与 visual_requirement.surface 完全相同，并实现 required_features、expressions、运动主体和共享变量绑定。不得创建其他节点、connect、animate、旁白或教学任务。输出必须符合所附 JSON Schema。
+只返回一个完整 write 动作，不返回 Lesson、Step、Beat、close、Markdown 或解释。必须保持 do="write"、as 与 visual_requirement.id 完全相同、kind 与 visual_requirement.surface 完全相同，并实现 required_features、expressions、运动主体和共享变量绑定。不得创建其他节点、connect、animate、旁白或教学任务。输出必须符合所附 JSON Schema。只写满足要求的最小充分内容，不要枚举没有被要求的额外元素，也不要填充无关可选字段。
 
-geometry 用于坐标轴、点、圆、线段、投影和角弧，不得用 diagram 冒充度量几何。visual_requirement.motion_subject 非空时，代表运动主体的 point.label 必须包含这段 motion_subject 原文，让学生能看出是谁在运动；linear_point 只绑定该点的 x 或 y，planar_point 同时绑定 x/y，angular_point 同时绑定 x/y 并用半径线连接固定中心。共享角变量要直接绑定这个点。plot 的曲线 expression 只写 Runtime 表达式，例如 sin(x)、cos(x)，不得写 y=、LaTeX、代码或 SVG。scene3d 的 camera、objects、sections、highlights 必须使用结构化字段，surface.expression 使用 z=f(x,y) 的受限表达式。diagram 只用于语义元素和关系。image 只能引用 session_context 中明确给出的 asset_id。bindings.target 使用“局部元素别名.数值属性”，expression 直接引用 shared_variables 中的变量。不得输出像素坐标、HTML、SVG 路径或脚本。所有局部别名只能使用小写英文字母、数字和连字符。`;
+geometry 用于坐标轴、点、圆、线段、投影和角弧，不得用 diagram 冒充度量几何。visual_requirement.motion_subject 非空时，代表运动主体的 point.label 必须包含这段 motion_subject 原文，让学生能看出是谁在运动；linear_point 只绑定该点的 x 或 y，planar_point 同时绑定 x/y，angular_point 同时绑定 x/y 并用半径线连接固定中心。共享角变量要直接绑定这个点。plot 的曲线 expression 只写 Runtime 表达式，例如 sin(x)、cos(x)，不得写 y=、LaTeX、代码或 SVG。scene3d 的 camera、objects、sections、highlights 必须使用结构化字段，surface.expression 使用 z=f(x,y) 的受限表达式。scene3d.camera 的所有角度都使用弧度；camera.yaw 必须是有限弧度值，camera.pitch 必须在 -π/2 到 π/2 之间，camera.zoom 必须在 0.2 到 5 之间，绝不能把角度制数值直接填入相机字段。diagram 只用于语义元素和关系。image 只能引用 session_context 中明确给出的 asset_id。bindings.target 使用“局部元素别名.数值属性”，expression 直接引用 shared_variables 中的变量。不得输出像素坐标、HTML、SVG 路径或脚本。所有局部别名只能使用小写英文字母、数字和连字符。`;
 
 function requireNonEmptyString(value: unknown, label: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -4435,6 +4435,62 @@ async function generateParallelSection(
   );
 }
 
+function visualComponentSemanticViolations(
+  action: Record<string, unknown>,
+  input: ToolInput,
+  brief: LessonBrief,
+  requirement: VisualRequirement,
+): GenerationViolation[] {
+  const componentBrief = structuredClone(brief);
+  componentBrief.visual_requirements = [structuredClone(requirement)];
+  componentBrief.visual_relationships = [];
+  componentBrief.shared_variable_requirements = componentBrief.shared_variable_requirements
+    .filter((variable) => variable.bound_visuals.includes(requirement.id))
+    .map((variable) => ({
+      ...variable,
+      bound_visuals: [requirement.id],
+      direct_angle_geometry: variable.direct_angle_geometry === requirement.id
+        ? requirement.id
+        : "",
+    }));
+  componentBrief.student_task_requirements = [];
+  componentBrief.scene3d_task_requirements = [];
+
+  const step: AuthoringLesson["steps"][number] = {
+    key: "validate-component",
+    purpose: requirement.purpose,
+    beats: [{
+      key: "validate-component-beat",
+      say: "检查这个视觉组件。",
+      actions: [
+        structuredClone(action) as AuthoringLesson["steps"][number]["beats"][number]["actions"][number],
+        {
+          do: "focus",
+          when: "after_speech",
+          targets: [requirement.id],
+          intent: "current_step",
+        },
+      ],
+    }],
+  };
+  try {
+    validateGeneratedLessonDocument(
+      assembleParallelLesson(input, componentBrief, [step]),
+      input,
+      componentBrief,
+      deriveAuthoringCapabilityPlan(input, componentBrief),
+      false,
+    );
+    return [];
+  } catch (error) {
+    if (!(error instanceof GeneratedLessonError)) throw error;
+    return error.violations.map((violation) => ({
+      ...violation,
+      requirement_id: requirement.id,
+    }));
+  }
+}
+
 async function generateVisualComponent(
   client: VertexClient,
   input: ToolInput,
@@ -4452,21 +4508,44 @@ async function generateVisualComponent(
   let previousComponent: unknown;
   let violations: GenerationViolation[] = [];
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const raw = await callStructuredModel(client, {
-      label: "lesson-visual-component",
-      turnId: input.turn_id,
-      systemPrompt: VISUAL_COMPONENT_SYSTEM_PROMPT,
-      prompt: JSON.stringify({
-        visual_requirement: requirement,
-        shared_variables: sharedVariables,
-        session_context: input.session_context ?? { assets: [] },
-        ...(previousComponent === undefined
-          ? {}
-          : { previous_component: previousComponent, validation_errors: violations }),
-      }, null, 2),
-      responseSchema,
-      maxTokens: Math.min(client.maxTokens, 8_192),
-    });
+    let raw: string;
+    try {
+      raw = await callStructuredModel(client, {
+        label: "lesson-visual-component",
+        turnId: input.turn_id,
+        systemPrompt: VISUAL_COMPONENT_SYSTEM_PROMPT,
+        prompt: JSON.stringify({
+          visual_requirement: requirement,
+          shared_variables: sharedVariables,
+          session_context: input.session_context ?? { assets: [] },
+          ...(previousComponent === undefined && violations.length === 0
+            ? {}
+            : {
+                ...(previousComponent === undefined ? {} : { previous_component: previousComponent }),
+                validation_errors: violations,
+              }),
+        }, null, 2),
+        responseSchema,
+        maxTokens: Math.min(client.maxTokens, 8_192),
+      });
+    } catch (error) {
+      if (!(error instanceof ToolExecutionError)
+        || error.code !== "VERTEX_RESPONSE_TRUNCATED") throw error;
+      violations = [{
+        stage: "schema",
+        code: error.code,
+        path: "/",
+        requirement_id: requirement.id,
+        message: `${error.message}; return only the minimum fields and elements required for this visual component`,
+      }];
+      process.stderr.write(`learning-coach: rejected visual component '${requirement.id}' ${attempt}: ${formatViolations(violations)}\n`);
+      if (attempt < maxAttempts) continue;
+      throw new GeneratedLessonError(
+        `Visual component '${requirement.id}' failed after ${maxAttempts} attempt(s)`,
+        undefined,
+        violations,
+      );
+    }
     let action: unknown;
     try {
       action = JSON.parse(raw);
@@ -4555,6 +4634,14 @@ async function generateVisualComponent(
           requirement_id: requirement.id,
           message: `Visual component '${requirement.id}' needs one variable-driven point whose label contains motion_subject '${requirement.motion_subject ?? ""}' and whose bound coordinates match motion_kind '${requirement.motion_kind ?? ""}'`,
         });
+      }
+      if (violations.length === 0) {
+        violations.push(...visualComponentSemanticViolations(
+          action,
+          input,
+          brief,
+          requirement,
+        ));
       }
     }
     if (violations.length === 0) return action as Record<string, unknown>;
