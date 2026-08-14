@@ -154,7 +154,7 @@
         "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate"]},
         "when": {"enum": ["before_speech", "during_speech", "after_speech"]},
         "as": {"$ref": "#/$defs/alias"},
-        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note"]},
+        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note"]},
         "role": {"type": "string"},
         "content": {"type": "object"},
         "place": {"$ref": "#/$defs/placement"},
@@ -199,6 +199,13 @@
             "properties": {"do": {"const": "write"}, "kind": {"const": "plot"}}
           },
           "then": {"properties": {"content": {"$ref": "#/$defs/plotContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "scene3d"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/scene3dContent"}}}
         },
         {
           "if": {"properties": {"do": {"const": "revise"}}},
@@ -361,6 +368,101 @@
           "maxItems": 64,
           "items": {"$ref": "#/$defs/valueBinding"}
         }
+      }
+    },
+    "scene3dContent": {
+      "type": "object",
+      "required": ["objects", "camera"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"type": "string"},
+        "caption": {"type": "string"},
+        "axes": {"type": "boolean"},
+        "camera": {
+          "type": "object",
+          "required": ["yaw", "pitch", "zoom"],
+          "additionalProperties": false,
+          "properties": {
+            "yaw": {"type": "number"},
+            "pitch": {"type": "number"},
+            "zoom": {"type": "number", "exclusiveMinimum": 0}
+          }
+        },
+        "objects": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "required": ["as", "kind"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "kind": {"enum": ["box", "sphere", "cylinder", "cone", "surface"]},
+              "label": {"type": "string"},
+              "color": {"type": "string"},
+              "center": {"$ref": "#/$defs/point3d"},
+              "size": {"$ref": "#/$defs/size3d"},
+              "radius": {"type": "number", "exclusiveMinimum": 0},
+              "height": {"type": "number", "exclusiveMinimum": 0},
+              "expression": {"type": "string", "minLength": 1, "maxLength": 256},
+              "x_range": {"$ref": "#/$defs/range3d"},
+              "y_range": {"$ref": "#/$defs/range3d"},
+              "samples": {"type": "integer", "minimum": 4, "maximum": 24}
+            }
+          }
+        },
+        "sections": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "required": ["as", "axis", "value"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "axis": {"enum": ["x", "y", "z"]},
+              "value": {"type": "number"},
+              "label": {"type": "string"},
+              "color": {"type": "string"}
+            }
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
+    "point3d": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {"type": "number"},
+        "y": {"type": "number"},
+        "z": {"type": "number"}
+      }
+    },
+    "size3d": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {"type": "number", "exclusiveMinimum": 0},
+        "y": {"type": "number", "exclusiveMinimum": 0},
+        "z": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "range3d": {
+      "type": "object",
+      "required": ["min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": {"type": "number"},
+        "max": {"type": "number"}
       }
     },
     "valueBinding": {

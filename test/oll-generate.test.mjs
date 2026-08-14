@@ -356,6 +356,72 @@ const unitCirclePlotBrief = {
   unhandled_request_items: [],
 };
 
+const cube3dBrief = {
+  version: "1",
+  request_summary: "用可旋转三维场景展示立方体",
+  request_items: [
+    { id: "explain-cube", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
+    { id: "show-cube-3d", source_ref: "learner_request:1", kind: "visual", polarity: "require" },
+    { id: "control-cube-view", source_ref: "learner_request:1", kind: "student_control", polarity: "require" },
+  ],
+  non_requirement_clauses: [],
+  teaching_goal_requirements: [{
+    id: "explain-cube-structure",
+    goal: "从不同方向观察立方体的面、棱和空间关系",
+    request_item_ids: ["explain-cube"],
+  }],
+  presentation_constraints: [{
+    id: "use-three-dimensional-view",
+    capability: "scene3d",
+    polarity: "require",
+    request_item_ids: ["show-cube-3d"],
+  }],
+  visual_requirements: [{
+    id: "cube-scene",
+    surface: "scene3d",
+    purpose: "展示一个可以旋转和缩放观察的立方体",
+    required_features: ["spatial_axes", "solid_primitives", "orbit_control"],
+    expressions: [],
+    request_item_ids: ["show-cube-3d", "control-cube-view"],
+  }],
+  visual_relationships: [],
+  shared_variable_requirements: [],
+  student_task_requirements: [],
+  progressive_revision_kinds: [],
+  unhandled_request_items: [],
+};
+
+const validCube3dLesson = structuredClone(validLesson);
+validCube3dLesson.lesson.title = "从不同方向观察立方体";
+validCube3dLesson.lesson.goals = ["观察立方体的面、棱和空间关系"];
+validCube3dLesson.steps[0].purpose = "建立可旋转的立方体三维场景";
+validCube3dLesson.steps[0].beats[0].say = "拖动立方体，从不同方向观察它的六个面和十二条棱。";
+validCube3dLesson.steps[0].beats[0].actions[0] = {
+  do: "write",
+  as: "cube-scene",
+  kind: "scene3d",
+  role: "diagram",
+  content: {
+    title: "可旋转立方体",
+    axes: true,
+    camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
+    objects: [{
+      as: "cube",
+      kind: "box",
+      label: "立方体",
+      color: "teal",
+      center: { x: 0, y: 0, z: 0 },
+      size: { x: 2, y: 2, z: 2 },
+    }],
+  },
+  place: { relation: "new_region" },
+};
+validCube3dLesson.steps[0].beats[0].actions[1].targets = ["cube-scene"];
+validCube3dLesson.close = {
+  summary: "已经从多个视角观察立方体的空间结构。",
+  focus: ["cube-scene"],
+};
+
 const springOscillationBrief = {
   version: "1",
   request_summary: "演示弹簧振子为什么往复运动以及位移和余弦函数的关系",
@@ -646,6 +712,7 @@ function sourceRefsFromPlanningRequest(body) {
 
 function plannedBrief(body) {
   const prompt = body.contents[0].parts[0].text;
+  if (prompt.includes("3D展示") || prompt.includes("三维场景展示")) return cube3dBrief;
   if (prompt.includes("弹簧为什么会来回运动")) return springOscillationBrief;
   if (prompt.includes("角度旋转如何变成周期波动")) return unitCirclePlotBrief;
   if (prompt.includes("正弦函数图像")) {
@@ -737,8 +804,8 @@ meaninglessUnitCircleDiagramLesson.steps[0].beats[0].actions.unshift({
   place: { relation: "new_region" },
 });
 
-async function runTool({ baseUrl, serviceAccount, workDirectory, input = {}, environment = {} }) {
-  const child = spawn(resolve(root, "main"), ["oll_generate_lesson"], {
+async function runTool({ baseUrl, serviceAccount, workDirectory, input = {}, environment = {}, tool = "oll_generate_lesson" }) {
+  const child = spawn(resolve(root, "main"), [tool], {
     cwd: root,
     env: {
       ...process.env,
@@ -769,6 +836,88 @@ async function runTool({ baseUrl, serviceAccount, workDirectory, input = {}, env
   });
   return { exitCode, stdout, stderr };
 }
+
+test("selection tool writes a source-linked artifact without producing a lesson", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-selection-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    requests.push(JSON.parse(body));
+    response.end(vertexPayload({
+      interpretation_kind: "math",
+      interpretation_content: "y = x^2",
+      interpretation_confidence: "high",
+      response_kind: "plot",
+      title: "二次函数图像",
+      text: "这是所选公式对应的函数图像，原稿保持不变。",
+      items: [],
+      expression: "x^2",
+      x_min: -4,
+      x_max: 4,
+      y_min: -1,
+      y_max: 16,
+    }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const checksum = "a".repeat(64);
+    const result = await runTool({
+      tool: "oll_enhance_selection",
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      input: {
+        learner_request: "请为我选中的公式生成函数图像",
+        source: {
+          source_id: "selection-1",
+          document_id: "ink-1",
+          document_version: 7,
+          bounds: { x: 120, y: 80, width: 240, height: 90 },
+          checksum: { algorithm: "sha-256", value: checksum },
+        },
+        content_hint: "math",
+        recognized_content: "y = x^2",
+        recognition_confidence: "high",
+      },
+    });
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(requests.length, 1);
+    assert.equal(
+      requests[0].generationConfig.responseJsonSchema.properties.response_kind.enum[1],
+      "plot",
+    );
+    const protocol = JSON.parse(result.stdout);
+    assert.equal(protocol.success, true);
+    assert.equal(protocol.files_to_send.length, 1);
+    assert.match(protocol.files_to_send[0], /\.octos-selection-enhancement\.json$/);
+    const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    assert.equal(artifact.profile, "octos.selection-enhancement");
+    assert.equal(artifact.source.checksum.value, checksum);
+    assert.equal(artifact.response.kind, "plot");
+    assert.equal(artifact.response.expression, "x^2");
+    await assert.rejects(
+      readFile(join(workDirectory, "study", "oll", "learn-e2e-001.octos-lesson.json")),
+    );
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
 
 test("tool shares one total deadline across model stages and reports the timed-out stage", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-total-timeout-"));
@@ -1440,7 +1589,7 @@ test("a natural spring request keeps user requirements separate from optional te
     const plannerInstructions = plannerRequest.systemInstruction.parts[0].text;
     assert.match(plannerInstructions, /可由数值点和线段忠实表达的简单二维物体运动/u);
     assert.match(plannerInstructions, /diagram 是静态语义关系图，不能由共享变量驱动/u);
-    assert.match(plannerInstructions, /无法用这些图元忠实表达.*unsupported_feature/u);
+    assert.match(plannerInstructions, /真实材质、碰撞、复杂连续形变.*unsupported_feature/u);
     assert.match(plannerInstructions, /line_segments.*弹簧.*连杆/u);
     const verifierInstructions = modelRequests.find(isLessonBriefVerificationRequest)
       .systemInstruction.parts[0].text;
@@ -1531,26 +1680,9 @@ test("a rotating-circle analogy cannot satisfy direct linear spring motion", asy
   }
 });
 
-test("tool reports unsupported 3D instead of silently replacing it with a 2D diagram", async () => {
-  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-unsupported-"));
+test("tool plans and generates a rotatable 3D cube instead of replacing it with a 2D diagram", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-scene3d-"));
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
-  const unsupportedBrief = {
-    version: "1",
-    request_summary: "用 3D 展示可旋转立方体",
-    request_items: [
-      { id: "explain-cube", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
-      { id: "need-3d", source_ref: "learner_request:1", kind: "unsupported_feature", polarity: "require" },
-    ],
-    non_requirement_clauses: [],
-    teaching_goal_requirements: [{ id: "explain-cube-goal", goal: "展示可旋转立方体", request_item_ids: ["explain-cube"] }],
-    presentation_constraints: [],
-    visual_requirements: [],
-    visual_relationships: [],
-    shared_variable_requirements: [],
-    student_task_requirements: [],
-    progressive_revision_kinds: [],
-    unhandled_request_items: [{ request_item_id: "need-3d", status: "unsupported", reason: "当前 OLL 没有 3D 语法" }],
-  };
   const modelRequests = [];
   const server = createServer(async (request, response) => {
     let body = "";
@@ -1563,9 +1695,7 @@ test("tool reports unsupported 3D instead of silently replacing it with a 2D dia
     }
     const parsedBody = JSON.parse(body);
     modelRequests.push(parsedBody);
-    response.end(vertexPayload(isLessonBriefRequest(parsedBody)
-      ? unsupportedBrief
-      : { missing: [], contradictions: [], suggestions: [] }));
+    response.end(vertexPayload(modelValueForRequest(parsedBody, validCube3dLesson)));
   });
 
   try {
@@ -1584,11 +1714,24 @@ test("tool reports unsupported 3D instead of silently replacing it with a 2D dia
       input: { learner_request: "请用3D展示一个可以旋转的立方体" },
     });
 
-    assert.equal(result.exitCode, 1);
+    assert.equal(result.exitCode, 0, result.stderr);
     const protocol = JSON.parse(result.stdout);
-    assert.equal(protocol.error_code, "UNSUPPORTED_REQUIREMENT");
-    assert.equal(modelRequests.filter(isAuthoringRequest).length, 0);
-    assert.match(protocol.output, /当前 OLL 没有 3D 语法/);
+    assert.equal(protocol.success, true);
+    assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
+    const authoringRequest = modelRequests.find(isAuthoringRequest);
+    const writeVariants = authoringRequest.generationConfig.responseJsonSchema.$defs.action.anyOf
+      .filter((variant) => variant.properties.do.enum[0] === "write");
+    const sceneVariant = writeVariants.find(
+      (variant) => variant.properties.kind.enum[0] === "scene3d",
+    );
+    assert.ok(sceneVariant);
+    assert.deepEqual(sceneVariant.properties.as.enum, ["cube-scene"]);
+    assert.equal(writeVariants.some(
+      (variant) => variant.properties.kind.enum[0] === "diagram",
+    ), false);
+    const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    assert.equal(artifact.steps[0].beats[0].actions[0].kind, "scene3d");
+    assert.equal(artifact.steps[0].beats[0].actions[0].content.objects[0].kind, "box");
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });

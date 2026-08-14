@@ -16,6 +16,7 @@ import {
 } from "octos-lesson-language";
 
 const TOOL_NAME = "oll_generate_lesson";
+const SELECTION_TOOL_NAME = "oll_enhance_selection";
 const DEFAULT_MODEL = "gemini-3.6-flash";
 const DEFAULT_VERTEX_LOCATION = "global";
 const DEFAULT_TIMEOUT_MS = 180_000;
@@ -45,8 +46,50 @@ interface ToolInput {
   };
 }
 
+type SelectionContentKind = "text" | "math" | "geometry" | "data" | "unknown";
+
+interface SelectionToolInput {
+  turn_id: string;
+  learner_request: string;
+  source: {
+    source_id: string;
+    document_id: string;
+    document_version: number;
+    bounds: { x: number; y: number; width: number; height: number };
+    checksum: { algorithm: "sha-256"; value: string };
+  };
+  content_hint: SelectionContentKind;
+  recognized_content: string;
+  recognition_confidence: "high" | "medium" | "low";
+  lesson_title?: string;
+  board_summary?: string;
+}
+
+interface SelectionEnhancementArtifact {
+  profile: "octos.selection-enhancement";
+  version: "0.1";
+  turn_id: string;
+  created_at: string;
+  source: SelectionToolInput["source"];
+  interpretation: {
+    kind: SelectionContentKind;
+    content: string;
+    confidence: "high" | "medium" | "low";
+  };
+  response:
+    | { kind: "explanation"; title: string; text: string; items?: string[] }
+    | {
+        kind: "plot";
+        title: string;
+        text: string;
+        expression: string;
+        x_range: { min: number; max: number };
+        y_range: { min: number; max: number };
+      };
+}
+
 type JsonSchema = Record<string, unknown>;
-type VisualSurface = "geometry" | "plot" | "diagram" | "image" | "table";
+type VisualSurface = "geometry" | "plot" | "scene3d" | "diagram" | "image" | "table";
 type RequestEvidenceSource = "learner_request" | "recognized_problem" | "board_summary";
 type RequestItemKind =
   | "teaching_goal"
@@ -67,6 +110,7 @@ type PresentationCapability =
   | "diagram"
   | "geometry"
   | "plot"
+  | "scene3d"
   | "image"
   | "table"
   | "note"
@@ -82,6 +126,7 @@ type AuthoringWriteKind =
   | "diagram"
   | "geometry"
   | "plot"
+  | "scene3d"
   | "image"
   | "table"
   | "note";
@@ -111,7 +156,12 @@ type VisualFeature =
   | "semantic_elements"
   | "semantic_edges"
   | "source_asset"
-  | "tabular_values";
+  | "tabular_values"
+  | "spatial_axes"
+  | "solid_primitives"
+  | "function_surface"
+  | "cross_section"
+  | "orbit_control";
 type VisualMotionKind = "linear_point" | "angular_point" | "planar_point";
 
 interface VisualRequirement {
@@ -237,7 +287,7 @@ interface AuthoringCapabilityPlan {
   actions: AuthoringActionName[];
   reviseKinds: RevisableNodeKind[];
   allowVariables: boolean;
-  bindingKinds: Array<"geometry" | "plot">;
+  bindingKinds: Array<"geometry" | "plot" | "scene3d">;
   allowAngleControl: boolean;
 }
 
@@ -268,7 +318,13 @@ interface VertexClient {
 }
 
 interface StructuredModelRequest {
-  label: "lesson-brief" | "lesson-brief-verification" | "lesson-authoring" | "lesson-component-repair" | "lesson-beat-repair";
+  label:
+    | "lesson-brief"
+    | "lesson-brief-verification"
+    | "lesson-authoring"
+    | "lesson-component-repair"
+    | "lesson-beat-repair"
+    | "selection-enhancement";
   turnId: string;
   systemPrompt: string;
   prompt: string;
@@ -306,9 +362,9 @@ const LESSON_BRIEF_SYSTEM_PROMPT = `你是课堂需求与教学设计规划器�
 request_items 只记录用户明确提出的教学目标、视觉对象、视觉关系、连续变化、学生控制、课后动手任务、对既有白板的修改、展示限制和当前系统不支持的功能：
 - 每项使用 source_ref 引用输入提供的原文分句编号，不要复制、改写或自造原文；
 - polarity=require 表示必须满足，polarity=forbid 表示明确禁止；
-- 不得把 3D、学科模拟或未实现的交互偷换成 diagram 或普通文字；这类要求使用 unsupported_feature，并在 unhandled_request_items 中说明；
+- 不得把学科模拟或未实现的交互偷换成 diagram 或普通文字。scene3d 已支持受约束的立体、二元函数曲面、截面和视角旋转，不应标记为不支持；需要碰撞、真实材质或复杂形变时才使用 unsupported_feature；
 - 每个 request_item 必须通过 request_item_ids 映射到一个或多个具体要求，或者明确列入 unhandled_request_items，不能悬空；
-- teaching_goal 映射到 teaching_goal_requirements；visual 映射到 visual_requirements；relationship 映射到 visual_relationships；continuous_change 和 student_control 映射到 shared_variable_requirements；student_task 映射到 student_task_requirements；presentation_constraint 映射到 presentation_constraints；
+- teaching_goal 映射到 teaching_goal_requirements；visual 映射到 visual_requirements；relationship 映射到 visual_relationships；continuous_change 映射到 shared_variable_requirements；普通数值或几何 student_control 映射到 shared_variable_requirements，但三维视角旋转/缩放映射到带 orbit_control 的 scene3d visual_requirement；student_task 映射到 student_task_requirements；presentation_constraint 映射到 presentation_constraints；
 - 目前没有可寻址的既有白板节点清单，因此 existing_board_edit 必须列入 unhandled_request_items，不能让后续模型猜 revise.target。
 
 第二部分 teaching_goal_requirements、visual_requirements、visual_relationships、shared_variable_requirements 和 student_task_requirements 是教学设计。它们可以根据用户目标增加合理的图形、讲解步骤和互动方式，但必须通过 request_item_ids 说明服务于哪项用户要求。不要把教学建议或你偏好的讲法伪装成用户原话，也不要因为用户没说出“恢复力箭头”之类具体教法就拒绝合理的教学设计。
@@ -319,16 +375,17 @@ request_items 只记录用户明确提出的教学目标、视觉对象、视觉
 - 同一句中有多个可独立回答的“为什么、是什么、如何变化、让我操作”等要求时，分别建立 request_item，并可共享同一个 source_ref。
 
 只把原文分句中确实表达了要求的内容写入 request_items。寒暄、语气词和没有可执行要求的背景描述写入 non_requirement_clauses；教学建议只能影响 purpose、goal 和具体设计，不得成为新的 request_item。
-每个 visual_requirement.id 必须是唯一的小写英文别名，只能包含 a-z、0-9、连字符并以字母开头；visual_relationships 的 from/to 只能引用这些 id。expressions 只用于 plot，其他 surface 必须返回空数组。
+每个 visual_requirement.id 必须是唯一的小写英文别名，只能包含 a-z、0-9、连字符并以字母开头；visual_relationships 的 from/to 只能引用这些 id。expressions 用于 plot 的 y=f(x) 曲线或 scene3d 的 z=f(x,y) 曲面，其他 surface 必须返回空数组。
 
 视觉 surface：
 - geometry：由有数值坐标的点、线段、圆和角弧组成的等比例二维场景。除了度量几何与坐标几何，可由数值点和线段忠实表达的简单二维物体运动也使用 geometry，例如移动质点、振子、抛体或杠杆端点；点坐标和角弧可以由共享变量驱动；
 - plot：函数坐标图；曲线使用可执行表达式，数据点和辅助线可以随共享变量变化；
+- scene3d：可旋转、可缩放的受约束三维场景，可包含长方体、球、圆柱、圆锥、z=f(x,y) 曲面以及 x/y/z 截面；用于空间几何、三维函数和二维截面联动，不得输出脚本、网格文件或着色器；
 - diagram：静态语义节点关系图，用于流程、分类和概念关系。diagram 是静态语义关系图，不能由共享变量驱动，不得用它冒充运动中的物体；
 - image：受控来源图片；
 - table：表格。
 
-选择 surface 时先判断画面需要怎样变化，而不是按学科名词归类。若主体运动能由有标签的数值点、线段、圆或角弧忠实表达，就规划为 geometry，并把它列入 shared_variable_requirements.bound_visuals。若主体需要连续形变、三维运动、真实材质或现有图元无法用这些图元忠实表达，将相应用户要求记为 unsupported_feature 并放入 unhandled_request_items，不得改成静态 diagram 后宣称已支持动画。
+选择 surface 时先判断画面需要怎样变化，而不是按学科名词归类。若主体运动能由有标签的数值点、线段、圆或角弧忠实表达，就规划为 geometry。若请求明确需要立体、空间视角、三维函数或截面，就规划 scene3d。需要真实材质、碰撞、复杂连续形变或超出受约束图元的模拟时，才将相应要求记为 unsupported_feature。
 
 通用 feature 的含义：
 - coordinate_axes：可读的数值坐标轴；equal_scale：两个坐标方向保持相同比例；
@@ -336,8 +393,9 @@ request_items 只记录用户明确提出的教学目标、视觉对象、视觉
 - point_on_circle：点的坐标确实落在圆上；line_segments：连接有坐标点的普通线段，可表示弹簧、杆、连杆或轨道片段；radius_segment：圆心到圆上点的线段；projection_segment：点到坐标轴的实际投影线；angle_arc：非零的可见角弧；
 - function_curve：带可执行表达式的函数曲线；annotated_points：有标签的数据点；guides：数值辅助线；
 - semantic_elements / semantic_edges：语义节点和语义连线；source_asset：受控图片资源；tabular_values：有行列数据的表格。
+- spatial_axes：三维坐标轴；solid_primitives：至少一个受支持实体；function_surface：可执行的 z=f(x,y) 曲面；cross_section：x/y/z 截面；orbit_control：学生能旋转、缩放和复位场景视角。
 
-feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_scale、circle、origin_centered_circle、unit_radius、point_on_circle、line_segments、radius_segment、projection_segment、angle_arc、annotated_points；plot 只使用 coordinate_axes、function_curve、annotated_points、guides；diagram 只使用 semantic_elements、semantic_edges；image 只使用 source_asset；table 只使用 tabular_values。尤其不要把 equal_scale 写进 plot。
+feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_scale、circle、origin_centered_circle、unit_radius、point_on_circle、line_segments、radius_segment、projection_segment、angle_arc、annotated_points；plot 只使用 coordinate_axes、function_curve、annotated_points、guides；scene3d 只使用 spatial_axes、solid_primitives、function_surface、cross_section、orbit_control；diagram 只使用 semantic_elements、semantic_edges；image 只使用 source_asset；table 只使用 tabular_values。
 
 如果请求点名某个视觉对象，选择能真实表达它的 surface，并列出让该对象和教学目的在画面上成立所不可缺少的最小 features。不要因为某个 surface 支持一项 feature 就自动要求它；也不要用标题、讲述或标签代替结构特征。
 
@@ -347,7 +405,7 @@ feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_
 - linear_point：一个代表主体的有标签点只沿 x 或 y 一个方向变化，例如振子、小车；
 - angular_point：一个代表主体的有标签点绕圆心转动，例如单位圆上的点、摆臂端点；
 - planar_point：一个代表主体的有标签点的 x、y 同时变化，例如平面抛体；
-- motion_subject 是该运动点在画面上必须明确显示的主体名称，例如“振子”“小车”“圆上点”，不得填写 P、A、物体等无法说明用户所问主体的泛称。没有被共享变量绑定的 geometry，以及 plot/diagram/image/table，不填写这两个字段。
+- motion_subject 是该运动点在画面上必须明确显示的主体名称，例如“振子”“小车”“圆上点”，不得填写 P、A、物体等无法说明用户所问主体的泛称。只有被共享变量绑定的 geometry 填写这两个字段；plot/scene3d/diagram/image/table 不填写。
 
 如果请求要求把两个视觉对象结合、对应、比较或推导，必须在 visual_relationships 中表达；不要把这种关系退化成两张互不相关的图。
 
@@ -355,9 +413,9 @@ shared_variable_requirements 用来规划“同一个量同时驱动多个视觉
 - 当请求明确要求动画、可交互变化，或教学目标本身是连续运动/变化（例如角度旋转变成周期波动）时，创建 shared_variable_requirement；否则返回空数组。
 - variable 是 OLL 变量名；initial/min/max/slider_step/animate_to 使用符合学科含义的数值。转满一圈用 0 到 6.283185307179586，单位用 rad。
 - bound_visuals 至少列出所有被同一变量驱动的 visual_requirement.id；跨图对应通常至少有两个。
-- bound_visuals 目前只能引用 geometry 或 plot。需要直接演示的简单二维主体若能由点和线段表达，必须把主体规划为 geometry 后再绑定；diagram、image 和 table 不能绑定。
+- bound_visuals 可以引用 geometry、plot 或 scene3d。scene3d 目前通过 section.value 与共享变量联动；场景视角旋转本身是学生操作，不是课程变量。diagram、image 和 table 不能绑定。
 - direct_angle_geometry 只在某个 geometry 里的点适合由学生直接绕圆心拖动时填写该 visual_requirement.id，否则返回空字符串。
-- 当前学生控制只支持变量滑杆，以及圆上点绕圆心的 angle_control；不支持任意物体的自由拖动或沿直线拖动。一般性的“让我自己操作”或没有点明被拖物体的“拖着试试”可以用拖动滑杆满足；只有圆周角度确实是合适的教学操作时才使用 direct_angle_geometry。明确点名要拖动其他物体或沿特定路径拖动时必须列入 unhandled_request_items。
+- 当前学生控制支持变量滑杆、圆上点绕圆心的 angle_control，以及 scene3d 视角的旋转、缩放、预设和复位；三维视角控制由 scene3d 的 orbit_control 表达，不要为它伪造 shared variable。不支持任意物体的自由拖动或沿直线拖动。一般性的“让我自己操作”或没有点明被拖物体的“拖着试试”可以用拖动滑杆满足；只有圆周角度确实是合适的教学操作时才使用 direct_angle_geometry。明确点名要拖动其他物体或沿特定路径拖动时必须列入 unhandled_request_items。
 
 student_task_requirements 用来规划讲解结束后真正交给学生完成的短任务，不是旁白中的提问：
 - 只有已经存在 shared_variable_requirement 时才能创建任务；任务必须让学生通过该变量已有的滑杆，或已有的圆周 angle_control 完成，不得规划新的交互方式。
@@ -368,7 +426,7 @@ student_task_requirements 用来规划讲解结束后真正交给学生完成的
 - 任务按数组顺序依次开放。通常只规划一个；只有多个操作确实对应不同教学目标时才规划多个。
 - 若 presentation_constraints 明确禁止 student_control 或 student_task，student_task_requirements 必须为空。
 
-progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐进替换，允许 text、math、shape、diagram、table、note；不需要时返回空数组。它不允许修改历史白板节点，也不得包含 geometry、plot 或 image。
+progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐进替换，允许 text、math、shape、diagram、table、note；不需要时返回空数组。它不允许修改历史白板节点，也不得包含 geometry、plot、scene3d 或 image。
 
 没有明确或必要视觉要求时 visual_requirements 可以为空，但 request_items 和 teaching_goal_requirements 仍须覆盖用户的教学请求。只输出符合 JSON Schema 的 JSON 对象。`;
 
@@ -404,16 +462,17 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 - actions[] 使用字段 do；禁止使用 type、create、layout、coordinates。
 - 所有 key 与 as 都必须是小写英文别名，只能包含 a-z、0-9、连字符，且必须以字母开头。
 - write 必须包含 as、kind、role、content、place；content 必须是对象，place 至少包含 relation。
-- write.content 必须匹配 kind：text/shape 使用非空 text；math 使用 latex；note 使用 title 和 items；table 使用 columns 和 rows；diagram 使用 elements；geometry 使用 axes、points 和几何原语；plot 使用 axes 和 curves；image 使用受控 asset_id。不得用无关的 text 字段代替结构化视觉内容。
+- write.content 必须匹配 kind：text/shape 使用非空 text；math 使用 latex；note 使用 title 和 items；table 使用 columns 和 rows；diagram 使用 elements；geometry 使用 axes、points 和几何原语；plot 使用 axes 和 curves；scene3d 使用 camera 和 objects；image 使用受控 asset_id。不得用无关的 text 字段代替结构化视觉内容。
 - 混合文字与公式的题干或解释使用 kind="text" 或 kind="note"，在 content.text 中只给公式片段加单美元符号（如 $\\sqrt{x-1}$）或 \\(...\\) 定界符；不得把裸 LaTeX 命令直接混入普通文字。
 - 以公式为主体的板书使用 kind="math" 并把规范公式写入 content.latex；content.text 只作为可选的可读后备，不要复制带定界符的公式串。
 - diagram 只用于语义元素与连线，不得表示圆、角、坐标轴、投影或其他度量几何。geometry 用于等比例坐标系中的圆、点、线段、投影和角弧；axes 必须包含 x/y 数值范围和 equal_scale=true。
 - geometry.points[] 每项包含 as、x、y；circles[] 使用 center point alias 和正 radius；segments[] 使用 from/to point alias，投影线使用 style="projection"；arcs[] 使用 center、radius、start_angle、end_angle，角度为弧度。模型不得输出 SVG 或像素坐标。
 - diagram 用于语义元素与连线，不得冒充函数图像。plot 用于坐标轴上的函数曲线；content.axes.x/y 各给出数值 min/max，content.curves[] 每项必须包含 as、expression，可包含 label。
 - plot.expression 只写受限数学表达式，例如 sin(x)、cos(x)、(x+3)^2-4；支持 x、pi、e、+ - * / ^、括号以及 sin/cos/tan/sqrt/abs/exp/log，不写 y=、LaTeX、代码或 SVG。
+- scene3d.camera 包含 yaw、pitch、zoom；objects[] 只使用 box、sphere、cylinder、cone、surface。box 给 center 和 size；球给 center/radius；圆柱和圆锥再给 height；surface 给 z=f(x,y) 的 expression、x_range、y_range 和 4 到 24 的 samples。sections[] 使用 as、axis=x/y/z、value。场景天然支持视角旋转、缩放、等轴/正视/俯视和复位，不要输出这些交互的脚本。
 - 输入中的课程要求清单是本轮请求的可执行要求合同；每个 visual_requirement 和 visual_relationship 都必须由实际白板动作满足，标题、goals、讲述或文字声明不能替代要求的视觉内容。
 - 每个 visual_requirement.id 就是该主要视觉节点必须使用的 write.as；一个视觉节点可以通过 request_item_ids 服务多个教学目标。visual_relationships 对应的 connect 由系统在两个节点创建后插入，模型不要输出 connect。
-- 课程要求清单中的 shared_variable_requirements 非空时，系统会确定性写入 lesson.variables 和可判定的 angle_control；模型负责在 bound_visuals 对应的 geometry/plot content.bindings 中引用同一个变量，并把 do="animate" 动作放进合适的讲解节拍。禁止复制第二份状态。
+- 课程要求清单中的 shared_variable_requirements 非空时，系统会确定性写入 lesson.variables 和可判定的 angle_control；模型负责在 bound_visuals 对应的 geometry/plot/scene3d content.bindings 中引用同一个变量，并把 do="animate" 动作放进合适的讲解节拍。scene3d 绑定目标目前只允许 section.value。禁止复制第二份状态。
 - geometry visual_requirement 包含 motion_kind/motion_subject 时，必须有一个 label 明确包含 motion_subject 的点代表运动主体。linear_point 只绑定该点的 x 或 y 一个坐标；planar_point 同时绑定 x/y；angular_point 同时绑定 x/y，并通过半径线或角控制表明它绕固定中心运动。单位圆或其他类比图不能冒充用户要求直接演示的主体。
 - bindings.target 使用“局部元素别名.数值属性”，expression 使用受限表达式并直接引用变量名。例如单位圆与正弦图共享 theta：point-p.x=cos(theta)、point-p.y=sin(theta)、foot.x=cos(theta)、theta-arc.end_angle=theta、current-angle.x=theta、current-angle.y=sin(theta)。
 - animate 只描述语义目标，包含 variable、value，可包含 easing 和 duration_intent；不得生成毫秒时长。学生可在 Runtime 中播放、暂停、拖动、复位和重放。
@@ -547,6 +606,87 @@ function parseToolInput(raw: string): ToolInput {
     ...(typeof input.last_applied_action === "string" ? { last_applied_action: truncate(input.last_applied_action) } : {}),
     ...(baseRevision !== undefined ? { base_revision: Number(baseRevision) } : {}),
     ...(sourceObservation ? { source_observation: sourceObservation } : {}),
+  };
+}
+
+function parseSelectionToolInput(raw: string): SelectionToolInput {
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Tool input is not valid JSON: ${(error as Error).message}`);
+  }
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    throw new Error("Selection tool input must be a JSON object");
+  }
+  const input = candidate as Record<string, unknown>;
+  const sourceValue = input.source;
+  if (!sourceValue || typeof sourceValue !== "object" || Array.isArray(sourceValue)) {
+    throw new Error("source must be an object");
+  }
+  const source = sourceValue as Record<string, unknown>;
+  const boundsValue = source.bounds;
+  if (!boundsValue || typeof boundsValue !== "object" || Array.isArray(boundsValue)) {
+    throw new Error("source.bounds must be an object");
+  }
+  const bounds = boundsValue as Record<string, unknown>;
+  const finite = (value: unknown, label: string): number => {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new Error(`${label} must be finite`);
+    }
+    return value;
+  };
+  const width = finite(bounds.width, "source.bounds.width");
+  const height = finite(bounds.height, "source.bounds.height");
+  if (width <= 0 || height <= 0) throw new Error("source bounds must have positive size");
+  const checksumValue = source.checksum;
+  if (!checksumValue || typeof checksumValue !== "object" || Array.isArray(checksumValue)) {
+    throw new Error("source.checksum must be an object");
+  }
+  const checksum = checksumValue as Record<string, unknown>;
+  if (checksum.algorithm !== "sha-256" || typeof checksum.value !== "string"
+    || !/^[a-f0-9]{64}$/.test(checksum.value)) {
+    throw new Error("source.checksum must be a sha-256 checksum");
+  }
+  const documentVersion = source.document_version;
+  if (!Number.isSafeInteger(documentVersion) || Number(documentVersion) < 0) {
+    throw new Error("source.document_version must be a non-negative integer");
+  }
+  const contentHint = input.content_hint;
+  if (!["text", "math", "geometry", "data", "unknown"].includes(String(contentHint))) {
+    throw new Error("content_hint is invalid");
+  }
+  const confidence = input.recognition_confidence;
+  if (!["high", "medium", "low"].includes(String(confidence))) {
+    throw new Error("recognition_confidence is invalid");
+  }
+  return {
+    turn_id: validateTurnId(input.turn_id),
+    learner_request: truncate(requireNonEmptyString(input.learner_request, "learner_request"))!,
+    source: {
+      source_id: requireNonEmptyString(source.source_id, "source.source_id"),
+      document_id: requireNonEmptyString(source.document_id, "source.document_id"),
+      document_version: Number(documentVersion),
+      bounds: {
+        x: finite(bounds.x, "source.bounds.x"),
+        y: finite(bounds.y, "source.bounds.y"),
+        width,
+        height,
+      },
+      checksum: { algorithm: "sha-256", value: checksum.value },
+    },
+    content_hint: contentHint as SelectionContentKind,
+    recognized_content: truncate(requireNonEmptyString(
+      input.recognized_content,
+      "recognized_content",
+    ))!,
+    recognition_confidence: confidence as "high" | "medium" | "low",
+    ...(typeof input.lesson_title === "string"
+      ? { lesson_title: truncate(input.lesson_title) }
+      : {}),
+    ...(typeof input.board_summary === "string"
+      ? { board_summary: truncate(input.board_summary) }
+      : {}),
   };
 }
 
@@ -770,6 +910,63 @@ function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
         },
       },
     };
+    const point3d = {
+      type: "object",
+      additionalProperties: false,
+      required: ["x", "y", "z"],
+      properties: { x: { type: "number" }, y: { type: "number" }, z: { type: "number" } },
+    };
+    const size3d = structuredClone(point3d);
+    const range3d = {
+      type: "object",
+      additionalProperties: false,
+      required: ["min", "max"],
+      properties: { min: { type: "number" }, max: { type: "number" } },
+    };
+    const scene3dObjects = {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "kind"],
+        properties: {
+          as: alias,
+          kind: { enum: ["box", "sphere", "cylinder", "cone", "surface"] },
+          label: { type: "string" },
+          color: { enum: ["teal", "blue", "purple", "orange", "red", "gray"] },
+          center: point3d,
+          size: size3d,
+          radius: { type: "number" },
+          height: { type: "number" },
+          expression: { type: "string" },
+          x_range: range3d,
+          y_range: range3d,
+          samples: { type: "integer" },
+        },
+      },
+    };
+    const scene3dSections = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "axis", "value"],
+        properties: {
+          as: alias,
+          axis: { enum: ["x", "y", "z"] },
+          value: { type: "number" },
+          label: { type: "string" },
+          color: { enum: ["teal", "blue", "purple", "orange", "red", "gray"] },
+        },
+      },
+    };
+    const scene3dCamera = {
+      type: "object",
+      additionalProperties: false,
+      required: ["yaw", "pitch", "zoom"],
+      properties: { yaw: { type: "number" }, pitch: { type: "number" }, zoom: { type: "number" } },
+    };
     const writeContentByKind: Record<string, JsonSchema> = {
       text: {
         type: "object", additionalProperties: false, required: ["text"],
@@ -799,6 +996,18 @@ function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
       plot: {
         type: "object", additionalProperties: false, required: ["axes", "curves"],
         properties: { title: { type: "string" }, axes, curves, points, guides, bindings, caption: { type: "string" } },
+      },
+      scene3d: {
+        type: "object", additionalProperties: false, required: ["objects", "camera"],
+        properties: {
+          title: { type: "string" },
+          caption: { type: "string" },
+          axes: { type: "boolean" },
+          camera: scene3dCamera,
+          objects: scene3dObjects,
+          sections: scene3dSections,
+          bindings,
+        },
       },
       image: structuredClone(definitions.imageContent),
       table: {
@@ -880,10 +1089,10 @@ const baseActionNames: AuthoringActionName[] = [
 ];
 const revisableNodeKinds: RevisableNodeKind[] = ["text", "math", "shape", "diagram", "table", "note"];
 const presentationCapabilities: PresentationCapability[] = [
-  "visual", "text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note",
+  "visual", "text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note",
   "animation", "student_control", "student_task", "revise",
 ];
-const visualWriteKinds = new Set<AuthoringWriteKind>(["shape", "diagram", "geometry", "plot", "image", "table"]);
+const visualWriteKinds = new Set<AuthoringWriteKind>(["shape", "diagram", "geometry", "plot", "scene3d", "image", "table"]);
 
 function deriveAuthoringCapabilityPlan(input: ToolInput, brief: LessonBrief): AuthoringCapabilityPlan {
   if (brief.unhandled_request_items.length > 0) {
@@ -901,18 +1110,21 @@ function deriveAuthoringCapabilityPlan(input: ToolInput, brief: LessonBrief): Au
   if (brief.shared_variable_requirements.length > 0) actions.add("animate");
   if (brief.progressive_revision_kinds.length > 0) actions.add("revise");
 
-  const bindingKinds = new Set<"geometry" | "plot">();
+  const bindingKinds = new Set<"geometry" | "plot" | "scene3d">();
   const visualById = new Map(brief.visual_requirements.map((item) => [item.id, item] as const));
   let allowAngleControl = false;
   for (const variable of brief.shared_variable_requirements) {
     for (const visualId of variable.bound_visuals) {
       const visual = visualById.get(visualId);
-      if (visual?.surface === "geometry" || visual?.surface === "plot") bindingKinds.add(visual.surface);
+      if (visual?.surface === "geometry" || visual?.surface === "plot" || visual?.surface === "scene3d") bindingKinds.add(visual.surface);
     }
     if (variable.direct_angle_geometry) allowAngleControl = true;
   }
 
   const explicitlyRequiredSurfaces = new Set(brief.visual_requirements.map((item) => item.surface));
+  const hasScene3dViewControl = brief.visual_requirements.some(
+    (item) => item.surface === "scene3d" && item.required_features.includes("orbit_control"),
+  );
   for (const constraint of brief.presentation_constraints) {
     const capability = constraint.capability;
     const forbid = constraint.polarity === "forbid";
@@ -929,7 +1141,7 @@ function deriveAuthoringCapabilityPlan(input: ToolInput, brief: LessonBrief): Au
       for (const kind of visualWriteKinds) writeKinds.delete(kind);
       continue;
     }
-    if ((["text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note"] as string[]).includes(capability)) {
+    if ((["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note"] as string[]).includes(capability)) {
       const kind = capability as AuthoringWriteKind;
       if (forbid) {
         if (explicitlyRequiredSurfaces.has(kind as VisualSurface)) {
@@ -949,8 +1161,8 @@ function deriveAuthoringCapabilityPlan(input: ToolInput, brief: LessonBrief): Au
       continue;
     }
     if (capability === "student_control") {
-      if (forbid && brief.shared_variable_requirements.length > 0) {
-        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires a student-controllable variable and forbids student control");
+      if (forbid && (brief.shared_variable_requirements.length > 0 || hasScene3dViewControl)) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids student control");
       }
       if (forbid) allowAngleControl = false;
       continue;
@@ -1199,6 +1411,11 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
       ["radius_segment", "segments"], ["projection_segment", "segments"], ["angle_arc", "arcs"],
     ]),
     plot: new Map([["annotated_points", "points"], ["guides", "guides"]]),
+    scene3d: new Map([
+      ["solid_primitives", "objects"],
+      ["function_surface", "objects"],
+      ["cross_section", "sections"],
+    ]),
     diagram: new Map([["semantic_edges", "edges"]]),
   };
   for (const variant of variants) {
@@ -1217,7 +1434,7 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
       : undefined;
     const requiresBindings = exactAlias !== undefined
       && brief.shared_variable_requirements.some((variable) => variable.bound_visuals.includes(exactAlias));
-    if (identity.kind === "geometry" || identity.kind === "plot") {
+    if (identity.kind === "geometry" || identity.kind === "plot" || identity.kind === "scene3d") {
       if (requiresBindings) {
         requireNonEmptyCollection(content, "bindings");
       } else {
@@ -1247,12 +1464,13 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
   return projected;
 }
 
-const visualSurfaces: VisualSurface[] = ["geometry", "plot", "diagram", "image", "table"];
+const visualSurfaces: VisualSurface[] = ["geometry", "plot", "scene3d", "diagram", "image", "table"];
 const visualFeatures: VisualFeature[] = [
   "coordinate_axes", "equal_scale", "circle", "origin_centered_circle", "unit_radius",
   "point_on_circle", "line_segments", "radius_segment", "projection_segment", "angle_arc", "function_curve",
   "annotated_points", "guides", "semantic_elements", "semantic_edges", "source_asset",
   "tabular_values",
+  "spatial_axes", "solid_primitives", "function_surface", "cross_section", "orbit_control",
 ];
 const visualRelationships: VisualRelationshipRequirement["relation"][] = [
   "maps_to", "compares_with", "explains", "derives",
@@ -1506,6 +1724,7 @@ const featuresBySurface: Record<VisualSurface, ReadonlySet<VisualFeature>> = {
     "point_on_circle", "line_segments", "radius_segment", "projection_segment", "angle_arc", "annotated_points",
   ]),
   plot: new Set(["coordinate_axes", "function_curve", "annotated_points", "guides"]),
+  scene3d: new Set(["spatial_axes", "solid_primitives", "function_surface", "cross_section", "orbit_control"]),
   diagram: new Set(["semantic_elements", "semantic_edges"]),
   image: new Set(["source_asset"]),
   table: new Set(["tabular_values"]),
@@ -1885,15 +2104,15 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     }
     if (!Array.isArray(raw.expressions) || raw.expressions.some((value) => typeof value !== "string" || !value.trim())) {
       violations.push(briefViolation("BRIEF_INVALID_EXPRESSIONS", `${path}/expressions`, "expressions must contain only non-empty strings"));
-    } else if (raw.expressions.length > 0 && raw.surface !== "plot") {
-      violations.push(briefViolation("BRIEF_INCOMPATIBLE_EXPRESSIONS", `${path}/expressions`, "expressions are supported only by plot requirements"));
-    } else if (raw.surface === "plot") {
+    } else if (raw.expressions.length > 0 && raw.surface !== "plot" && raw.surface !== "scene3d") {
+      violations.push(briefViolation("BRIEF_INCOMPATIBLE_EXPRESSIONS", `${path}/expressions`, "expressions are supported only by plot and scene3d requirements"));
+    } else if (raw.surface === "plot" || raw.surface === "scene3d") {
       raw.expressions.forEach((expression, expressionIndex) => {
         try {
-          compileMathExpression(expression as string, ["x"]);
+          compileMathExpression(expression as string, raw.surface === "scene3d" ? ["x", "y"] : ["x"]);
         } catch (error) {
           violations.push(briefViolation(
-            "BRIEF_INVALID_PLOT_EXPRESSION",
+            raw.surface === "scene3d" ? "BRIEF_INVALID_SURFACE_EXPRESSION" : "BRIEF_INVALID_PLOT_EXPRESSION",
             `${path}/expressions/${expressionIndex}`,
             `expression must use the Runtime math syntax: ${(error as Error).message}`,
           ));
@@ -2013,11 +2232,11 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
           continue;
         }
         bound.add(String(visualId));
-        if (visual.surface !== "geometry" && visual.surface !== "plot") {
+        if (visual.surface !== "geometry" && visual.surface !== "plot" && visual.surface !== "scene3d") {
           violations.push(briefViolation(
             "BRIEF_UNSUPPORTED_BOUND_VISUAL",
             `${path}/bound_visuals`,
-            "shared variables bind only geometry and plot visuals; represent a simple measurable 2D subject with geometry points/segments when faithful, otherwise mark the requested motion unsupported",
+            "shared variables bind only geometry, plot, and scene3d visuals",
           ));
         } else if (visual.surface === "geometry") {
           if (!["linear_point", "angular_point", "planar_point"].includes(String(visual.motion_kind))) {
@@ -2199,7 +2418,6 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     visual: "visual",
     relationship: "relationship",
     continuous_change: "shared_variable",
-    student_control: "shared_variable",
     student_task: "student_task",
     presentation_constraint: "presentation_constraint",
   };
@@ -2218,6 +2436,22 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
         "/request_items",
         `request item '${id}' (${item.kind}) must map to at least one ${requiredDestination} requirement`,
       ));
+    }
+    if (!isUnhandled && item.kind === "student_control") {
+      const mapsToScene3dView = requirements.some((raw) =>
+        isRecord(raw)
+        && raw.surface === "scene3d"
+        && Array.isArray(raw.required_features)
+        && raw.required_features.includes("orbit_control")
+        && Array.isArray(raw.request_item_ids)
+        && raw.request_item_ids.includes(id));
+      if (!destinations?.has("shared_variable") && !mapsToScene3dView) {
+        violations.push(briefViolation(
+          "BRIEF_INCOMPATIBLE_REQUEST_MAPPING",
+          "/request_items",
+          `request item '${id}' (student_control) must map to a shared variable or a scene3d orbit_control requirement`,
+        ));
+      }
     }
     if ((item.kind === "existing_board_edit" || item.kind === "unsupported_feature") && !isUnhandled) {
       violations.push(briefViolation("BRIEF_UNSUPPORTED_ITEM_NOT_REPORTED", "/unhandled_request_items", `request item '${id}' must be reported as unsupported or ambiguous`));
@@ -2453,6 +2687,21 @@ function inventoryWrite(action: Record<string, unknown>): VisualInventoryEntry |
     if (points.some((point) => typeof point.label === "string" && point.label.trim())) features.add("annotated_points");
     if (Array.isArray(content.guides) && content.guides.length > 0) features.add("guides");
     return { alias: action.as, surface: "plot", features, expressions, content };
+  }
+  if (action.kind === "scene3d") {
+    if (content.axes === true) features.add("spatial_axes");
+    features.add("orbit_control");
+    const objects = Array.isArray(content.objects) ? content.objects.filter(isRecord) : [];
+    if (objects.some((object) => ["box", "sphere", "cylinder", "cone"].includes(String(object.kind)))) {
+      features.add("solid_primitives");
+    }
+    const expressions = objects.flatMap((object) =>
+      object.kind === "surface" && typeof object.expression === "string" && object.expression.trim()
+        ? [object.expression]
+        : []);
+    if (expressions.length > 0) features.add("function_surface");
+    if (Array.isArray(content.sections) && content.sections.length > 0) features.add("cross_section");
+    return { alias: action.as, surface: "scene3d", features, expressions, content };
   }
   if (action.kind === "diagram") {
     if (Array.isArray(content.elements) && content.elements.length > 0) features.add("semantic_elements");
@@ -4009,6 +4258,159 @@ async function generateLesson(
   throw new Error("OLL generation failed");
 }
 
+const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    interpretation_kind: {
+      type: "string",
+      enum: ["text", "math", "geometry", "data", "unknown"],
+    },
+    interpretation_content: { type: "string" },
+    interpretation_confidence: {
+      type: "string",
+      enum: ["high", "medium", "low"],
+    },
+    response_kind: { type: "string", enum: ["explanation", "plot"] },
+    title: { type: "string" },
+    text: { type: "string" },
+    items: { type: "array", items: { type: "string" } },
+    expression: { type: "string" },
+    x_min: { type: "number" },
+    x_max: { type: "number" },
+    y_min: { type: "number" },
+    y_max: { type: "number" },
+  },
+  required: [
+    "interpretation_kind",
+    "interpretation_content",
+    "interpretation_confidence",
+    "response_kind",
+    "title",
+    "text",
+    "items",
+    "expression",
+    "x_min",
+    "x_max",
+    "y_min",
+    "y_max",
+  ],
+};
+
+function selectionOutputPath(input: SelectionToolInput): string {
+  const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
+  const path = resolve(
+    workDirectory,
+    "study",
+    "selections",
+    `${input.turn_id}.octos-selection-enhancement.json`,
+  );
+  if (!path.startsWith(`${workDirectory}${sep}`) || !isAbsolute(path)) {
+    throw new Error("Resolved selection output path escapes OCTOS_WORK_DIR");
+  }
+  return path;
+}
+
+function parseSelectionModelResponse(
+  raw: string,
+  input: SelectionToolInput,
+): SelectionEnhancementArtifact {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Selection enhancement is not JSON: ${(error as Error).message}`);
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Selection enhancement must be an object");
+  }
+  const output = value as Record<string, unknown>;
+  const nonEmpty = (name: string) => requireNonEmptyString(output[name], name);
+  const kind = nonEmpty("interpretation_kind") as SelectionContentKind;
+  if (!["text", "math", "geometry", "data", "unknown"].includes(kind)) {
+    throw new Error("interpretation_kind is invalid");
+  }
+  const confidence = nonEmpty("interpretation_confidence") as "high" | "medium" | "low";
+  if (!["high", "medium", "low"].includes(confidence)) {
+    throw new Error("interpretation_confidence is invalid");
+  }
+  const title = nonEmpty("title");
+  const text = nonEmpty("text");
+  const items = Array.isArray(output.items)
+    ? output.items.map((item, index) => requireNonEmptyString(item, `items[${index}]`))
+    : [];
+  let response: SelectionEnhancementArtifact["response"];
+  if (output.response_kind === "plot") {
+    const expression = nonEmpty("expression");
+    const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
+    if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
+      throw new Error("Plot ranges must be finite numbers");
+    }
+    const [xMin, xMax, yMin, yMax] = numbers as number[];
+    if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
+    const evaluate = compileMathExpression(expression, ["x"]);
+    for (let index = 0; index <= 40; index += 1) {
+      const x = xMin + (xMax - xMin) * index / 40;
+      const y = evaluate({ x });
+      if (typeof y !== "number" || !Number.isFinite(y)) {
+        throw new Error("Plot expression is not finite across its range");
+      }
+    }
+    response = {
+      kind: "plot",
+      title,
+      text,
+      expression,
+      x_range: { min: xMin, max: xMax },
+      y_range: { min: yMin, max: yMax },
+    };
+  } else if (output.response_kind === "explanation") {
+    response = {
+      kind: "explanation",
+      title,
+      text,
+      ...(items.length > 0 ? { items } : {}),
+    };
+  } else {
+    throw new Error("response_kind is invalid");
+  }
+  return {
+    profile: "octos.selection-enhancement",
+    version: "0.1",
+    turn_id: input.turn_id,
+    created_at: new Date().toISOString(),
+    source: structuredClone(input.source),
+    interpretation: {
+      kind,
+      content: nonEmpty("interpretation_content"),
+      confidence,
+    },
+    response,
+  };
+}
+
+async function generateSelectionEnhancement(
+  client: VertexClient,
+  input: SelectionToolInput,
+): Promise<SelectionEnhancementArtifact> {
+  const raw = await callStructuredModel(client, {
+    label: "selection-enhancement",
+    turnId: input.turn_id,
+    maxTokens: Math.min(client.maxTokens, 4_096),
+    responseSchema: SELECTION_RESPONSE_SCHEMA,
+    systemPrompt: `你是白板选区辅助工具。只解释用户框选的原稿，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。recognized_content 是上游视觉模型对选区图片的观察，不是绝对事实；置信度不足时必须明确说明不确定性。只有识别出明确的单变量 y=f(x) 且用户要求函数图像时，response_kind 才能使用 plot，expression 必须是仅含 x 的安全数学表达式。其他情况使用 explanation。不要声称看到了选区以外的白板。`,
+    prompt: JSON.stringify({
+      learner_request: input.learner_request,
+      selected_content_hint: input.content_hint,
+      recognized_selected_content: input.recognized_content,
+      recognition_confidence: input.recognition_confidence,
+      lesson_title: input.lesson_title ?? null,
+      board_summary: input.board_summary ?? null,
+    }, null, 2),
+  });
+  return parseSelectionModelResponse(raw, input);
+}
+
 function outputPath(input: ToolInput): string {
   const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
   const path = resolve(workDirectory, "study", "oll", `${input.turn_id}.octos-lesson.json`);
@@ -4029,13 +4431,37 @@ function emit(payload: Record<string, unknown>): void {
 
 async function main(): Promise<void> {
   const startedAt = Date.now();
+  const invokedTool = process.argv[2];
   try {
-    if (process.argv[2] !== TOOL_NAME) {
-      throw new Error(`Unknown tool '${process.argv[2] ?? ""}'. Expected '${TOOL_NAME}'`);
+    if (invokedTool !== TOOL_NAME && invokedTool !== SELECTION_TOOL_NAME) {
+      throw new Error(
+        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}' or '${SELECTION_TOOL_NAME}'`,
+      );
     }
     const chunks: Buffer[] = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
-    const input = parseToolInput(Buffer.concat(chunks).toString("utf8"));
+    const rawInput = Buffer.concat(chunks).toString("utf8");
+    if (invokedTool === SELECTION_TOOL_NAME) {
+      const input = parseSelectionToolInput(rawInput);
+      const client = await createVertexClient();
+      const artifact = await generateSelectionEnhancement(client, input);
+      const artifactPath = selectionOutputPath(input);
+      await mkdir(dirname(artifactPath), { recursive: true });
+      await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
+      stageLog({
+        stage: "selection-enhancement",
+        turn_id: input.turn_id,
+        status: "completed",
+        elapsed_ms: Date.now() - startedAt,
+      });
+      emit({
+        success: true,
+        output: "Selection enhancement generated without modifying the source ink.",
+        files_to_send: [artifactPath],
+      });
+      return;
+    }
+    const input = parseToolInput(rawInput);
     const client = await createVertexClient();
     const brief = await planLesson(client, input);
     const { lesson, attempts, capabilityPlan, schema } = await generateLesson(client, input, brief);
@@ -4043,7 +4469,9 @@ async function main(): Promise<void> {
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}\n`, "utf8");
     stageLog({
-      stage: "lesson-generation",
+      stage: invokedTool === SELECTION_TOOL_NAME
+        ? "selection-enhancement"
+        : "lesson-generation",
       turn_id: input.turn_id,
       status: "completed",
       elapsed_ms: Date.now() - startedAt,
@@ -4066,12 +4494,20 @@ async function main(): Promise<void> {
       stage: "lesson-generation",
       status: "failed",
       elapsed_ms: Date.now() - startedAt,
-      error_code: error instanceof ToolExecutionError ? error.code : "LESSON_GENERATION_FAILED",
+      error_code: error instanceof ToolExecutionError
+        ? error.code
+        : invokedTool === SELECTION_TOOL_NAME
+          ? "SELECTION_ENHANCEMENT_FAILED"
+          : "LESSON_GENERATION_FAILED",
     });
     process.stderr.write(`learning-coach: ${message}\n`);
     emit({
       success: false,
-      error_code: error instanceof ToolExecutionError ? error.code : "LESSON_GENERATION_FAILED",
+      error_code: error instanceof ToolExecutionError
+        ? error.code
+        : invokedTool === SELECTION_TOOL_NAME
+          ? "SELECTION_ENHANCEMENT_FAILED"
+          : "LESSON_GENERATION_FAILED",
       output: message,
     });
     process.exitCode = 1;

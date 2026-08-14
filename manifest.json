@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -94,6 +94,89 @@
           }
         },
         "required": ["turn_id", "learner_request", "request_source"]
+      }
+    },
+    {
+      "name": "oll_enhance_selection",
+      "description": "Create a separate explanation, annotation, or safe 2D function plot beside an immutable student-ink selection. Use only when [[LEARNING_SELECTION]] requires this exact tool. Copy the source identity fields exactly, describe only the selected image, and never rewrite or replace the source ink.",
+      "concurrency_class": "exclusive",
+      "env": [
+        "VERTEX_SA_JSON",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_LOCATION",
+        "VERTEX_BASE_URL",
+        "OLL_MODEL",
+        "OLL_TIMEOUT_MS",
+        "OLL_TOTAL_TIMEOUT_MS",
+        "OLL_MAX_TOKENS",
+        "VERTEX_REQUEST_ATTEMPTS",
+        "OCTOS_WORK_DIR"
+      ],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "turn_id": { "type": "string" },
+          "learner_request": { "type": "string" },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "source_id": { "type": "string" },
+              "document_id": { "type": "string" },
+              "document_version": { "type": "integer", "minimum": 0 },
+              "bounds": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "x": { "type": "number" },
+                  "y": { "type": "number" },
+                  "width": { "type": "number", "exclusiveMinimum": 0 },
+                  "height": { "type": "number", "exclusiveMinimum": 0 }
+                },
+                "required": ["x", "y", "width", "height"]
+              },
+              "checksum": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "algorithm": { "type": "string", "enum": ["sha-256"] },
+                  "value": { "type": "string" }
+                },
+                "required": ["algorithm", "value"]
+              }
+            },
+            "required": [
+              "source_id",
+              "document_id",
+              "document_version",
+              "bounds",
+              "checksum"
+            ]
+          },
+          "content_hint": {
+            "type": "string",
+            "enum": ["text", "math", "geometry", "data", "unknown"]
+          },
+          "recognized_content": {
+            "type": "string",
+            "description": "Only what is visible in the selected image; do not use the rest of the board. State uncertainty in recognition_confidence."
+          },
+          "recognition_confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "lesson_title": { "type": "string" },
+          "board_summary": { "type": "string" }
+        },
+        "required": [
+          "turn_id",
+          "learner_request",
+          "source",
+          "content_hint",
+          "recognized_content",
+          "recognition_confidence"
+        ]
       }
     }
   ]

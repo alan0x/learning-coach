@@ -7332,7 +7332,7 @@ var oll_authoring_v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7377,6 +7377,13 @@ var oll_authoring_v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "plot" } }
           },
           then: { properties: { content: { $ref: "#/$defs/plotContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "scene3d" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/scene3dContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -7539,6 +7546,101 @@ var oll_authoring_v0_1_schema_default = {
           maxItems: 64,
           items: { $ref: "#/$defs/valueBinding" }
         }
+      }
+    },
+    scene3dContent: {
+      type: "object",
+      required: ["objects", "camera"],
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        caption: { type: "string" },
+        axes: { type: "boolean" },
+        camera: {
+          type: "object",
+          required: ["yaw", "pitch", "zoom"],
+          additionalProperties: false,
+          properties: {
+            yaw: { type: "number" },
+            pitch: { type: "number" },
+            zoom: { type: "number", exclusiveMinimum: 0 }
+          }
+        },
+        objects: {
+          type: "array",
+          minItems: 1,
+          maxItems: 24,
+          items: {
+            type: "object",
+            required: ["as", "kind"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              kind: { enum: ["box", "sphere", "cylinder", "cone", "surface"] },
+              label: { type: "string" },
+              color: { type: "string" },
+              center: { $ref: "#/$defs/point3d" },
+              size: { $ref: "#/$defs/size3d" },
+              radius: { type: "number", exclusiveMinimum: 0 },
+              height: { type: "number", exclusiveMinimum: 0 },
+              expression: { type: "string", minLength: 1, maxLength: 256 },
+              x_range: { $ref: "#/$defs/range3d" },
+              y_range: { $ref: "#/$defs/range3d" },
+              samples: { type: "integer", minimum: 4, maximum: 24 }
+            }
+          }
+        },
+        sections: {
+          type: "array",
+          maxItems: 8,
+          items: {
+            type: "object",
+            required: ["as", "axis", "value"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              axis: { enum: ["x", "y", "z"] },
+              value: { type: "number" },
+              label: { type: "string" },
+              color: { type: "string" }
+            }
+          }
+        },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
+    point3d: {
+      type: "object",
+      required: ["x", "y", "z"],
+      additionalProperties: false,
+      properties: {
+        x: { type: "number" },
+        y: { type: "number" },
+        z: { type: "number" }
+      }
+    },
+    size3d: {
+      type: "object",
+      required: ["x", "y", "z"],
+      additionalProperties: false,
+      properties: {
+        x: { type: "number", exclusiveMinimum: 0 },
+        y: { type: "number", exclusiveMinimum: 0 },
+        z: { type: "number", exclusiveMinimum: 0 }
+      }
+    },
+    range3d: {
+      type: "object",
+      required: ["min", "max"],
+      additionalProperties: false,
+      properties: {
+        min: { type: "number" },
+        max: { type: "number" }
       }
     },
     valueBinding: {
@@ -7764,7 +7866,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7809,6 +7911,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "plot" } }
           },
           then: { properties: { content: { $ref: "#/$defs/plotContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "scene3d" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/scene3dContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -7971,6 +8080,101 @@ var v0_1_schema_default = {
           maxItems: 64,
           items: { $ref: "#/$defs/valueBinding" }
         }
+      }
+    },
+    scene3dContent: {
+      type: "object",
+      required: ["objects", "camera"],
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        caption: { type: "string" },
+        axes: { type: "boolean" },
+        camera: {
+          type: "object",
+          required: ["yaw", "pitch", "zoom"],
+          additionalProperties: false,
+          properties: {
+            yaw: { type: "number" },
+            pitch: { type: "number" },
+            zoom: { type: "number", exclusiveMinimum: 0 }
+          }
+        },
+        objects: {
+          type: "array",
+          minItems: 1,
+          maxItems: 24,
+          items: {
+            type: "object",
+            required: ["as", "kind"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              kind: { enum: ["box", "sphere", "cylinder", "cone", "surface"] },
+              label: { type: "string" },
+              color: { type: "string" },
+              center: { $ref: "#/$defs/point3d" },
+              size: { $ref: "#/$defs/size3d" },
+              radius: { type: "number", exclusiveMinimum: 0 },
+              height: { type: "number", exclusiveMinimum: 0 },
+              expression: { type: "string", minLength: 1, maxLength: 256 },
+              x_range: { $ref: "#/$defs/range3d" },
+              y_range: { $ref: "#/$defs/range3d" },
+              samples: { type: "integer", minimum: 4, maximum: 24 }
+            }
+          }
+        },
+        sections: {
+          type: "array",
+          maxItems: 8,
+          items: {
+            type: "object",
+            required: ["as", "axis", "value"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              axis: { enum: ["x", "y", "z"] },
+              value: { type: "number" },
+              label: { type: "string" },
+              color: { type: "string" }
+            }
+          }
+        },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
+    point3d: {
+      type: "object",
+      required: ["x", "y", "z"],
+      additionalProperties: false,
+      properties: {
+        x: { type: "number" },
+        y: { type: "number" },
+        z: { type: "number" }
+      }
+    },
+    size3d: {
+      type: "object",
+      required: ["x", "y", "z"],
+      additionalProperties: false,
+      properties: {
+        x: { type: "number", exclusiveMinimum: 0 },
+        y: { type: "number", exclusiveMinimum: 0 },
+        z: { type: "number", exclusiveMinimum: 0 }
+      }
+    },
+    range3d: {
+      type: "object",
+      required: ["min", "max"],
+      additionalProperties: false,
+      properties: {
+        min: { type: "number" },
+        max: { type: "number" }
       }
     },
     valueBinding: {
@@ -8489,14 +8693,16 @@ function bindableTargets(action) {
   } else if (action.kind === "plot") {
     add("points", ["x", "y"]);
     add("guides", ["value"]);
+  } else if (action.kind === "scene3d") {
+    add("sections", ["value"]);
   }
   return targets;
 }
 function validateValueBindings(action, path, variables) {
   if (action.content.bindings === void 0)
     return;
-  if (action.kind !== "geometry" && action.kind !== "plot") {
-    fail("OLL_INVALID_BINDING", `${path}/content/bindings`, "Bindings are only supported on geometry and plot nodes");
+  if (action.kind !== "geometry" && action.kind !== "plot" && action.kind !== "scene3d") {
+    fail("OLL_INVALID_BINDING", `${path}/content/bindings`, "Bindings are only supported on geometry, plot, and scene3d nodes");
   }
   requireArray(action.content.bindings, `${path}/content/bindings`);
   const targets = bindableTargets(action);
@@ -8565,7 +8771,7 @@ function validateContentFragments(content, path) {
 }
 function collectAddressableContent(content) {
   const result = validateContentFragments(content, "/content");
-  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs"]) {
+  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs", "objects", "sections"]) {
     if (!content?.[field])
       continue;
     for (const item of content[field]) {
@@ -8680,6 +8886,115 @@ function validateGeometryContent(action, path, variables) {
         requireFiniteNumber(item.start_angle, `${itemPath}/start_angle`);
         requireFiniteNumber(item.end_angle, `${itemPath}/end_angle`);
       }
+    });
+  }
+}
+function validateScene3dContent(action, path, variables) {
+  if (action.kind !== "scene3d")
+    return;
+  const content = action.content;
+  requireObject(content.camera, `${path}/content/camera`);
+  requireFiniteNumber(content.camera.yaw, `${path}/content/camera/yaw`);
+  const pitch = requireFiniteNumber(content.camera.pitch, `${path}/content/camera/pitch`);
+  const zoom = requireFiniteNumber(content.camera.zoom, `${path}/content/camera/zoom`);
+  if (pitch < -Math.PI / 2 || pitch > Math.PI / 2) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/camera/pitch`, "3D camera pitch must be between -pi/2 and pi/2");
+  }
+  if (zoom < 0.2 || zoom > 5) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/camera/zoom`, "3D camera zoom must be from 0.2 to 5");
+  }
+  requireArray(content.objects, `${path}/content/objects`);
+  if (content.objects.length === 0 || content.objects.length > 24) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/objects`, "A 3D scene requires 1 to 24 objects");
+  }
+  const aliases = /* @__PURE__ */ new Set();
+  const point = (value, pointPath) => {
+    requireObject(value, pointPath);
+    for (const axis of ["x", "y", "z"]) {
+      requireFiniteNumber(value[axis], `${pointPath}/${axis}`);
+    }
+  };
+  const size = (value, sizePath) => {
+    requireObject(value, sizePath);
+    for (const axis of ["x", "y", "z"]) {
+      if (requireFiniteNumber(value[axis], `${sizePath}/${axis}`) <= 0)
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${sizePath}/${axis}`, "3D size must be greater than zero");
+    }
+  };
+  const range = (value, rangePath) => {
+    requireObject(value, rangePath);
+    const min = requireFiniteNumber(value.min, `${rangePath}/min`);
+    const max = requireFiniteNumber(value.max, `${rangePath}/max`);
+    if (max <= min)
+      fail("OLL_INVALID_OPERATION_PAYLOAD", rangePath, "3D range max must be greater than min");
+    return { min, max };
+  };
+  content.objects.forEach((rawObject, index) => {
+    const objectPath = `${path}/content/objects/${index}`;
+    requireObject(rawObject, objectPath);
+    const object = rawObject;
+    requireAlias(object.as, `${objectPath}/as`);
+    if (aliases.has(object.as))
+      fail("OLL_DUPLICATE_ALIAS", `${objectPath}/as`, `3D object '${object.as}' is duplicated`);
+    aliases.add(object.as);
+    const objectKind = String(object.kind);
+    if (!["box", "sphere", "cylinder", "cone", "surface"].includes(objectKind)) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/kind`, `Unknown 3D object kind '${object.kind}'`);
+    }
+    if (object.color !== void 0 && (typeof object.color !== "string" || !/^(#[0-9a-fA-F]{6}|teal|blue|purple|orange|red|gray)$/.test(object.color))) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/color`, "3D colors must use a safe palette name or six-digit hex value");
+    }
+    if (objectKind === "box") {
+      point(object.center, `${objectPath}/center`);
+      size(object.size, `${objectPath}/size`);
+    } else if (["sphere", "cylinder", "cone"].includes(objectKind)) {
+      point(object.center, `${objectPath}/center`);
+      const radius = requireFiniteNumber(object.radius, `${objectPath}/radius`);
+      if (radius <= 0)
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/radius`, "3D radius must be greater than zero");
+      if (objectKind !== "sphere") {
+        const height = requireFiniteNumber(object.height, `${objectPath}/height`);
+        if (height <= 0)
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/height`, "3D height must be greater than zero");
+      }
+    } else {
+      requireString(object.expression, `${objectPath}/expression`);
+      const xRange = range(object.x_range, `${objectPath}/x_range`);
+      const yRange = range(object.y_range, `${objectPath}/y_range`);
+      const sampleCount = Number(object.samples ?? 12);
+      if (!Number.isInteger(sampleCount) || sampleCount < 4 || sampleCount > 24) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/samples`, "3D surface samples must be an integer from 4 to 24");
+      }
+      try {
+        const variableNames = ["x", "y", ...variables.keys()];
+        const evaluate = compileMathExpression(object.expression, variableNames);
+        const values = Object.fromEntries(variables);
+        for (const x of [xRange.min, (xRange.min + xRange.max) / 2, xRange.max]) {
+          for (const y of [yRange.min, (yRange.min + yRange.max) / 2, yRange.max]) {
+            if (!Number.isFinite(evaluate({ ...values, x, y })))
+              throw new Error("surface is not finite");
+          }
+        }
+      } catch (error) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/expression`, `Invalid 3D surface expression: ${error.message}`);
+      }
+    }
+  });
+  if (content.sections !== void 0) {
+    requireArray(content.sections, `${path}/content/sections`);
+    if (content.sections.length > 8)
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/sections`, "A 3D scene supports at most 8 sections");
+    content.sections.forEach((rawSection, index) => {
+      const sectionPath = `${path}/content/sections/${index}`;
+      requireObject(rawSection, sectionPath);
+      const section = rawSection;
+      requireAlias(section.as, `${sectionPath}/as`);
+      if (aliases.has(section.as))
+        fail("OLL_DUPLICATE_ALIAS", `${sectionPath}/as`, `3D element '${section.as}' is duplicated`);
+      aliases.add(section.as);
+      if (!["x", "y", "z"].includes(String(section.axis)))
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${sectionPath}/axis`, "3D section axis must be x, y, or z");
+      requireFiniteNumber(section.value, `${sectionPath}/value`);
     });
   }
 }
@@ -8853,6 +9168,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
           validateStructuredContent(action.content, `${actionPath}/content`, uniqueFragments);
           validateImageResource(action, actionPath, resourceContext);
           validateGeometryContent(action, actionPath, lessonVariables);
+          validateScene3dContent(action, actionPath, lessonVariables);
           if (action.kind === "geometry" && Array.isArray(action.content.points)) {
             for (const point of action.content.points) {
               const interaction = point?.interaction;
@@ -8920,7 +9236,7 @@ function stableId(host, type, alias) {
 }
 function normalizeAddressableContent(_host, nodeId, content) {
   const clone = structuredClone(content);
-  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs"]) {
+  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs", "objects", "sections"]) {
     if (!Array.isArray(clone?.[field]))
       continue;
     clone[field] = clone[field].map((item) => {
@@ -9228,7 +9544,8 @@ function bindingTarget(content, target) {
     ["points", /* @__PURE__ */ new Set(["x", "y"])],
     ["guides", /* @__PURE__ */ new Set(["value"])],
     ["circles", /* @__PURE__ */ new Set(["radius"])],
-    ["arcs", /* @__PURE__ */ new Set(["radius", "start_angle", "end_angle"])]
+    ["arcs", /* @__PURE__ */ new Set(["radius", "start_angle", "end_angle"])],
+    ["sections", /* @__PURE__ */ new Set(["value"])]
   ];
   for (const [field, properties] of fields) {
     const record = (Array.isArray(content[field]) ? content[field] : []).find((item) => item.id === fragmentId);
@@ -9406,6 +9723,7 @@ function canonicalizeState(state) {
 
 // src/main.ts
 var TOOL_NAME = "oll_generate_lesson";
+var SELECTION_TOOL_NAME = "oll_enhance_selection";
 var DEFAULT_MODEL = "gemini-3.6-flash";
 var DEFAULT_VERTEX_LOCATION = "global";
 var DEFAULT_TIMEOUT_MS = 18e4;
@@ -9441,9 +9759,9 @@ var LESSON_BRIEF_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u5802\u9700\u6C42\u4E0E\u65
 request_items \u53EA\u8BB0\u5F55\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u89C6\u89C9\u5173\u7CFB\u3001\u8FDE\u7EED\u53D8\u5316\u3001\u5B66\u751F\u63A7\u5236\u3001\u8BFE\u540E\u52A8\u624B\u4EFB\u52A1\u3001\u5BF9\u65E2\u6709\u767D\u677F\u7684\u4FEE\u6539\u3001\u5C55\u793A\u9650\u5236\u548C\u5F53\u524D\u7CFB\u7EDF\u4E0D\u652F\u6301\u7684\u529F\u80FD\uFF1A
 - \u6BCF\u9879\u4F7F\u7528 source_ref \u5F15\u7528\u8F93\u5165\u63D0\u4F9B\u7684\u539F\u6587\u5206\u53E5\u7F16\u53F7\uFF0C\u4E0D\u8981\u590D\u5236\u3001\u6539\u5199\u6216\u81EA\u9020\u539F\u6587\uFF1B
 - polarity=require \u8868\u793A\u5FC5\u987B\u6EE1\u8DB3\uFF0Cpolarity=forbid \u8868\u793A\u660E\u786E\u7981\u6B62\uFF1B
-- \u4E0D\u5F97\u628A 3D\u3001\u5B66\u79D1\u6A21\u62DF\u6216\u672A\u5B9E\u73B0\u7684\u4EA4\u4E92\u5077\u6362\u6210 diagram \u6216\u666E\u901A\u6587\u5B57\uFF1B\u8FD9\u7C7B\u8981\u6C42\u4F7F\u7528 unsupported_feature\uFF0C\u5E76\u5728 unhandled_request_items \u4E2D\u8BF4\u660E\uFF1B
+- \u4E0D\u5F97\u628A\u5B66\u79D1\u6A21\u62DF\u6216\u672A\u5B9E\u73B0\u7684\u4EA4\u4E92\u5077\u6362\u6210 diagram \u6216\u666E\u901A\u6587\u5B57\u3002scene3d \u5DF2\u652F\u6301\u53D7\u7EA6\u675F\u7684\u7ACB\u4F53\u3001\u4E8C\u5143\u51FD\u6570\u66F2\u9762\u3001\u622A\u9762\u548C\u89C6\u89D2\u65CB\u8F6C\uFF0C\u4E0D\u5E94\u6807\u8BB0\u4E3A\u4E0D\u652F\u6301\uFF1B\u9700\u8981\u78B0\u649E\u3001\u771F\u5B9E\u6750\u8D28\u6216\u590D\u6742\u5F62\u53D8\u65F6\u624D\u4F7F\u7528 unsupported_feature\uFF1B
 - \u6BCF\u4E2A request_item \u5FC5\u987B\u901A\u8FC7 request_item_ids \u6620\u5C04\u5230\u4E00\u4E2A\u6216\u591A\u4E2A\u5177\u4F53\u8981\u6C42\uFF0C\u6216\u8005\u660E\u786E\u5217\u5165 unhandled_request_items\uFF0C\u4E0D\u80FD\u60AC\u7A7A\uFF1B
-- teaching_goal \u6620\u5C04\u5230 teaching_goal_requirements\uFF1Bvisual \u6620\u5C04\u5230 visual_requirements\uFF1Brelationship \u6620\u5C04\u5230 visual_relationships\uFF1Bcontinuous_change \u548C student_control \u6620\u5C04\u5230 shared_variable_requirements\uFF1Bstudent_task \u6620\u5C04\u5230 student_task_requirements\uFF1Bpresentation_constraint \u6620\u5C04\u5230 presentation_constraints\uFF1B
+- teaching_goal \u6620\u5C04\u5230 teaching_goal_requirements\uFF1Bvisual \u6620\u5C04\u5230 visual_requirements\uFF1Brelationship \u6620\u5C04\u5230 visual_relationships\uFF1Bcontinuous_change \u6620\u5C04\u5230 shared_variable_requirements\uFF1B\u666E\u901A\u6570\u503C\u6216\u51E0\u4F55 student_control \u6620\u5C04\u5230 shared_variable_requirements\uFF0C\u4F46\u4E09\u7EF4\u89C6\u89D2\u65CB\u8F6C/\u7F29\u653E\u6620\u5C04\u5230\u5E26 orbit_control \u7684 scene3d visual_requirement\uFF1Bstudent_task \u6620\u5C04\u5230 student_task_requirements\uFF1Bpresentation_constraint \u6620\u5C04\u5230 presentation_constraints\uFF1B
 - \u76EE\u524D\u6CA1\u6709\u53EF\u5BFB\u5740\u7684\u65E2\u6709\u767D\u677F\u8282\u70B9\u6E05\u5355\uFF0C\u56E0\u6B64 existing_board_edit \u5FC5\u987B\u5217\u5165 unhandled_request_items\uFF0C\u4E0D\u80FD\u8BA9\u540E\u7EED\u6A21\u578B\u731C revise.target\u3002
 
 \u7B2C\u4E8C\u90E8\u5206 teaching_goal_requirements\u3001visual_requirements\u3001visual_relationships\u3001shared_variable_requirements \u548C student_task_requirements \u662F\u6559\u5B66\u8BBE\u8BA1\u3002\u5B83\u4EEC\u53EF\u4EE5\u6839\u636E\u7528\u6237\u76EE\u6807\u589E\u52A0\u5408\u7406\u7684\u56FE\u5F62\u3001\u8BB2\u89E3\u6B65\u9AA4\u548C\u4E92\u52A8\u65B9\u5F0F\uFF0C\u4F46\u5FC5\u987B\u901A\u8FC7 request_item_ids \u8BF4\u660E\u670D\u52A1\u4E8E\u54EA\u9879\u7528\u6237\u8981\u6C42\u3002\u4E0D\u8981\u628A\u6559\u5B66\u5EFA\u8BAE\u6216\u4F60\u504F\u597D\u7684\u8BB2\u6CD5\u4F2A\u88C5\u6210\u7528\u6237\u539F\u8BDD\uFF0C\u4E5F\u4E0D\u8981\u56E0\u4E3A\u7528\u6237\u6CA1\u8BF4\u51FA\u201C\u6062\u590D\u529B\u7BAD\u5934\u201D\u4E4B\u7C7B\u5177\u4F53\u6559\u6CD5\u5C31\u62D2\u7EDD\u5408\u7406\u7684\u6559\u5B66\u8BBE\u8BA1\u3002
@@ -9454,16 +9772,17 @@ request_items \u53EA\u8BB0\u5F55\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559
 - \u540C\u4E00\u53E5\u4E2D\u6709\u591A\u4E2A\u53EF\u72EC\u7ACB\u56DE\u7B54\u7684\u201C\u4E3A\u4EC0\u4E48\u3001\u662F\u4EC0\u4E48\u3001\u5982\u4F55\u53D8\u5316\u3001\u8BA9\u6211\u64CD\u4F5C\u201D\u7B49\u8981\u6C42\u65F6\uFF0C\u5206\u522B\u5EFA\u7ACB request_item\uFF0C\u5E76\u53EF\u5171\u4EAB\u540C\u4E00\u4E2A source_ref\u3002
 
 \u53EA\u628A\u539F\u6587\u5206\u53E5\u4E2D\u786E\u5B9E\u8868\u8FBE\u4E86\u8981\u6C42\u7684\u5185\u5BB9\u5199\u5165 request_items\u3002\u5BD2\u6684\u3001\u8BED\u6C14\u8BCD\u548C\u6CA1\u6709\u53EF\u6267\u884C\u8981\u6C42\u7684\u80CC\u666F\u63CF\u8FF0\u5199\u5165 non_requirement_clauses\uFF1B\u6559\u5B66\u5EFA\u8BAE\u53EA\u80FD\u5F71\u54CD purpose\u3001goal \u548C\u5177\u4F53\u8BBE\u8BA1\uFF0C\u4E0D\u5F97\u6210\u4E3A\u65B0\u7684 request_item\u3002
-\u6BCF\u4E2A visual_requirement.id \u5FC5\u987B\u662F\u552F\u4E00\u7684\u5C0F\u5199\u82F1\u6587\u522B\u540D\uFF0C\u53EA\u80FD\u5305\u542B a-z\u30010-9\u3001\u8FDE\u5B57\u7B26\u5E76\u4EE5\u5B57\u6BCD\u5F00\u5934\uFF1Bvisual_relationships \u7684 from/to \u53EA\u80FD\u5F15\u7528\u8FD9\u4E9B id\u3002expressions \u53EA\u7528\u4E8E plot\uFF0C\u5176\u4ED6 surface \u5FC5\u987B\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
+\u6BCF\u4E2A visual_requirement.id \u5FC5\u987B\u662F\u552F\u4E00\u7684\u5C0F\u5199\u82F1\u6587\u522B\u540D\uFF0C\u53EA\u80FD\u5305\u542B a-z\u30010-9\u3001\u8FDE\u5B57\u7B26\u5E76\u4EE5\u5B57\u6BCD\u5F00\u5934\uFF1Bvisual_relationships \u7684 from/to \u53EA\u80FD\u5F15\u7528\u8FD9\u4E9B id\u3002expressions \u7528\u4E8E plot \u7684 y=f(x) \u66F2\u7EBF\u6216 scene3d \u7684 z=f(x,y) \u66F2\u9762\uFF0C\u5176\u4ED6 surface \u5FC5\u987B\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
 
 \u89C6\u89C9 surface\uFF1A
 - geometry\uFF1A\u7531\u6709\u6570\u503C\u5750\u6807\u7684\u70B9\u3001\u7EBF\u6BB5\u3001\u5706\u548C\u89D2\u5F27\u7EC4\u6210\u7684\u7B49\u6BD4\u4F8B\u4E8C\u7EF4\u573A\u666F\u3002\u9664\u4E86\u5EA6\u91CF\u51E0\u4F55\u4E0E\u5750\u6807\u51E0\u4F55\uFF0C\u53EF\u7531\u6570\u503C\u70B9\u548C\u7EBF\u6BB5\u5FE0\u5B9E\u8868\u8FBE\u7684\u7B80\u5355\u4E8C\u7EF4\u7269\u4F53\u8FD0\u52A8\u4E5F\u4F7F\u7528 geometry\uFF0C\u4F8B\u5982\u79FB\u52A8\u8D28\u70B9\u3001\u632F\u5B50\u3001\u629B\u4F53\u6216\u6760\u6746\u7AEF\u70B9\uFF1B\u70B9\u5750\u6807\u548C\u89D2\u5F27\u53EF\u4EE5\u7531\u5171\u4EAB\u53D8\u91CF\u9A71\u52A8\uFF1B
 - plot\uFF1A\u51FD\u6570\u5750\u6807\u56FE\uFF1B\u66F2\u7EBF\u4F7F\u7528\u53EF\u6267\u884C\u8868\u8FBE\u5F0F\uFF0C\u6570\u636E\u70B9\u548C\u8F85\u52A9\u7EBF\u53EF\u4EE5\u968F\u5171\u4EAB\u53D8\u91CF\u53D8\u5316\uFF1B
+- scene3d\uFF1A\u53EF\u65CB\u8F6C\u3001\u53EF\u7F29\u653E\u7684\u53D7\u7EA6\u675F\u4E09\u7EF4\u573A\u666F\uFF0C\u53EF\u5305\u542B\u957F\u65B9\u4F53\u3001\u7403\u3001\u5706\u67F1\u3001\u5706\u9525\u3001z=f(x,y) \u66F2\u9762\u4EE5\u53CA x/y/z \u622A\u9762\uFF1B\u7528\u4E8E\u7A7A\u95F4\u51E0\u4F55\u3001\u4E09\u7EF4\u51FD\u6570\u548C\u4E8C\u7EF4\u622A\u9762\u8054\u52A8\uFF0C\u4E0D\u5F97\u8F93\u51FA\u811A\u672C\u3001\u7F51\u683C\u6587\u4EF6\u6216\u7740\u8272\u5668\uFF1B
 - diagram\uFF1A\u9759\u6001\u8BED\u4E49\u8282\u70B9\u5173\u7CFB\u56FE\uFF0C\u7528\u4E8E\u6D41\u7A0B\u3001\u5206\u7C7B\u548C\u6982\u5FF5\u5173\u7CFB\u3002diagram \u662F\u9759\u6001\u8BED\u4E49\u5173\u7CFB\u56FE\uFF0C\u4E0D\u80FD\u7531\u5171\u4EAB\u53D8\u91CF\u9A71\u52A8\uFF0C\u4E0D\u5F97\u7528\u5B83\u5192\u5145\u8FD0\u52A8\u4E2D\u7684\u7269\u4F53\uFF1B
 - image\uFF1A\u53D7\u63A7\u6765\u6E90\u56FE\u7247\uFF1B
 - table\uFF1A\u8868\u683C\u3002
 
-\u9009\u62E9 surface \u65F6\u5148\u5224\u65AD\u753B\u9762\u9700\u8981\u600E\u6837\u53D8\u5316\uFF0C\u800C\u4E0D\u662F\u6309\u5B66\u79D1\u540D\u8BCD\u5F52\u7C7B\u3002\u82E5\u4E3B\u4F53\u8FD0\u52A8\u80FD\u7531\u6709\u6807\u7B7E\u7684\u6570\u503C\u70B9\u3001\u7EBF\u6BB5\u3001\u5706\u6216\u89D2\u5F27\u5FE0\u5B9E\u8868\u8FBE\uFF0C\u5C31\u89C4\u5212\u4E3A geometry\uFF0C\u5E76\u628A\u5B83\u5217\u5165 shared_variable_requirements.bound_visuals\u3002\u82E5\u4E3B\u4F53\u9700\u8981\u8FDE\u7EED\u5F62\u53D8\u3001\u4E09\u7EF4\u8FD0\u52A8\u3001\u771F\u5B9E\u6750\u8D28\u6216\u73B0\u6709\u56FE\u5143\u65E0\u6CD5\u7528\u8FD9\u4E9B\u56FE\u5143\u5FE0\u5B9E\u8868\u8FBE\uFF0C\u5C06\u76F8\u5E94\u7528\u6237\u8981\u6C42\u8BB0\u4E3A unsupported_feature \u5E76\u653E\u5165 unhandled_request_items\uFF0C\u4E0D\u5F97\u6539\u6210\u9759\u6001 diagram \u540E\u5BA3\u79F0\u5DF2\u652F\u6301\u52A8\u753B\u3002
+\u9009\u62E9 surface \u65F6\u5148\u5224\u65AD\u753B\u9762\u9700\u8981\u600E\u6837\u53D8\u5316\uFF0C\u800C\u4E0D\u662F\u6309\u5B66\u79D1\u540D\u8BCD\u5F52\u7C7B\u3002\u82E5\u4E3B\u4F53\u8FD0\u52A8\u80FD\u7531\u6709\u6807\u7B7E\u7684\u6570\u503C\u70B9\u3001\u7EBF\u6BB5\u3001\u5706\u6216\u89D2\u5F27\u5FE0\u5B9E\u8868\u8FBE\uFF0C\u5C31\u89C4\u5212\u4E3A geometry\u3002\u82E5\u8BF7\u6C42\u660E\u786E\u9700\u8981\u7ACB\u4F53\u3001\u7A7A\u95F4\u89C6\u89D2\u3001\u4E09\u7EF4\u51FD\u6570\u6216\u622A\u9762\uFF0C\u5C31\u89C4\u5212 scene3d\u3002\u9700\u8981\u771F\u5B9E\u6750\u8D28\u3001\u78B0\u649E\u3001\u590D\u6742\u8FDE\u7EED\u5F62\u53D8\u6216\u8D85\u51FA\u53D7\u7EA6\u675F\u56FE\u5143\u7684\u6A21\u62DF\u65F6\uFF0C\u624D\u5C06\u76F8\u5E94\u8981\u6C42\u8BB0\u4E3A unsupported_feature\u3002
 
 \u901A\u7528 feature \u7684\u542B\u4E49\uFF1A
 - coordinate_axes\uFF1A\u53EF\u8BFB\u7684\u6570\u503C\u5750\u6807\u8F74\uFF1Bequal_scale\uFF1A\u4E24\u4E2A\u5750\u6807\u65B9\u5411\u4FDD\u6301\u76F8\u540C\u6BD4\u4F8B\uFF1B
@@ -9471,8 +9790,9 @@ request_items \u53EA\u8BB0\u5F55\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559
 - point_on_circle\uFF1A\u70B9\u7684\u5750\u6807\u786E\u5B9E\u843D\u5728\u5706\u4E0A\uFF1Bline_segments\uFF1A\u8FDE\u63A5\u6709\u5750\u6807\u70B9\u7684\u666E\u901A\u7EBF\u6BB5\uFF0C\u53EF\u8868\u793A\u5F39\u7C27\u3001\u6746\u3001\u8FDE\u6746\u6216\u8F68\u9053\u7247\u6BB5\uFF1Bradius_segment\uFF1A\u5706\u5FC3\u5230\u5706\u4E0A\u70B9\u7684\u7EBF\u6BB5\uFF1Bprojection_segment\uFF1A\u70B9\u5230\u5750\u6807\u8F74\u7684\u5B9E\u9645\u6295\u5F71\u7EBF\uFF1Bangle_arc\uFF1A\u975E\u96F6\u7684\u53EF\u89C1\u89D2\u5F27\uFF1B
 - function_curve\uFF1A\u5E26\u53EF\u6267\u884C\u8868\u8FBE\u5F0F\u7684\u51FD\u6570\u66F2\u7EBF\uFF1Bannotated_points\uFF1A\u6709\u6807\u7B7E\u7684\u6570\u636E\u70B9\uFF1Bguides\uFF1A\u6570\u503C\u8F85\u52A9\u7EBF\uFF1B
 - semantic_elements / semantic_edges\uFF1A\u8BED\u4E49\u8282\u70B9\u548C\u8BED\u4E49\u8FDE\u7EBF\uFF1Bsource_asset\uFF1A\u53D7\u63A7\u56FE\u7247\u8D44\u6E90\uFF1Btabular_values\uFF1A\u6709\u884C\u5217\u6570\u636E\u7684\u8868\u683C\u3002
+- spatial_axes\uFF1A\u4E09\u7EF4\u5750\u6807\u8F74\uFF1Bsolid_primitives\uFF1A\u81F3\u5C11\u4E00\u4E2A\u53D7\u652F\u6301\u5B9E\u4F53\uFF1Bfunction_surface\uFF1A\u53EF\u6267\u884C\u7684 z=f(x,y) \u66F2\u9762\uFF1Bcross_section\uFF1Ax/y/z \u622A\u9762\uFF1Borbit_control\uFF1A\u5B66\u751F\u80FD\u65CB\u8F6C\u3001\u7F29\u653E\u548C\u590D\u4F4D\u573A\u666F\u89C6\u89D2\u3002
 
-feature \u5FC5\u987B\u5C5E\u4E8E\u5BF9\u5E94 surface\uFF1Ageometry \u53EA\u4F7F\u7528 coordinate_axes\u3001equal_scale\u3001circle\u3001origin_centered_circle\u3001unit_radius\u3001point_on_circle\u3001line_segments\u3001radius_segment\u3001projection_segment\u3001angle_arc\u3001annotated_points\uFF1Bplot \u53EA\u4F7F\u7528 coordinate_axes\u3001function_curve\u3001annotated_points\u3001guides\uFF1Bdiagram \u53EA\u4F7F\u7528 semantic_elements\u3001semantic_edges\uFF1Bimage \u53EA\u4F7F\u7528 source_asset\uFF1Btable \u53EA\u4F7F\u7528 tabular_values\u3002\u5C24\u5176\u4E0D\u8981\u628A equal_scale \u5199\u8FDB plot\u3002
+feature \u5FC5\u987B\u5C5E\u4E8E\u5BF9\u5E94 surface\uFF1Ageometry \u53EA\u4F7F\u7528 coordinate_axes\u3001equal_scale\u3001circle\u3001origin_centered_circle\u3001unit_radius\u3001point_on_circle\u3001line_segments\u3001radius_segment\u3001projection_segment\u3001angle_arc\u3001annotated_points\uFF1Bplot \u53EA\u4F7F\u7528 coordinate_axes\u3001function_curve\u3001annotated_points\u3001guides\uFF1Bscene3d \u53EA\u4F7F\u7528 spatial_axes\u3001solid_primitives\u3001function_surface\u3001cross_section\u3001orbit_control\uFF1Bdiagram \u53EA\u4F7F\u7528 semantic_elements\u3001semantic_edges\uFF1Bimage \u53EA\u4F7F\u7528 source_asset\uFF1Btable \u53EA\u4F7F\u7528 tabular_values\u3002
 
 \u5982\u679C\u8BF7\u6C42\u70B9\u540D\u67D0\u4E2A\u89C6\u89C9\u5BF9\u8C61\uFF0C\u9009\u62E9\u80FD\u771F\u5B9E\u8868\u8FBE\u5B83\u7684 surface\uFF0C\u5E76\u5217\u51FA\u8BA9\u8BE5\u5BF9\u8C61\u548C\u6559\u5B66\u76EE\u7684\u5728\u753B\u9762\u4E0A\u6210\u7ACB\u6240\u4E0D\u53EF\u7F3A\u5C11\u7684\u6700\u5C0F features\u3002\u4E0D\u8981\u56E0\u4E3A\u67D0\u4E2A surface \u652F\u6301\u4E00\u9879 feature \u5C31\u81EA\u52A8\u8981\u6C42\u5B83\uFF1B\u4E5F\u4E0D\u8981\u7528\u6807\u9898\u3001\u8BB2\u8FF0\u6216\u6807\u7B7E\u4EE3\u66FF\u7ED3\u6784\u7279\u5F81\u3002
 
@@ -9482,7 +9802,7 @@ feature \u5FC5\u987B\u5C5E\u4E8E\u5BF9\u5E94 surface\uFF1Ageometry \u53EA\u4F7F\
 - linear_point\uFF1A\u4E00\u4E2A\u4EE3\u8868\u4E3B\u4F53\u7684\u6709\u6807\u7B7E\u70B9\u53EA\u6CBF x \u6216 y \u4E00\u4E2A\u65B9\u5411\u53D8\u5316\uFF0C\u4F8B\u5982\u632F\u5B50\u3001\u5C0F\u8F66\uFF1B
 - angular_point\uFF1A\u4E00\u4E2A\u4EE3\u8868\u4E3B\u4F53\u7684\u6709\u6807\u7B7E\u70B9\u7ED5\u5706\u5FC3\u8F6C\u52A8\uFF0C\u4F8B\u5982\u5355\u4F4D\u5706\u4E0A\u7684\u70B9\u3001\u6446\u81C2\u7AEF\u70B9\uFF1B
 - planar_point\uFF1A\u4E00\u4E2A\u4EE3\u8868\u4E3B\u4F53\u7684\u6709\u6807\u7B7E\u70B9\u7684 x\u3001y \u540C\u65F6\u53D8\u5316\uFF0C\u4F8B\u5982\u5E73\u9762\u629B\u4F53\uFF1B
-- motion_subject \u662F\u8BE5\u8FD0\u52A8\u70B9\u5728\u753B\u9762\u4E0A\u5FC5\u987B\u660E\u786E\u663E\u793A\u7684\u4E3B\u4F53\u540D\u79F0\uFF0C\u4F8B\u5982\u201C\u632F\u5B50\u201D\u201C\u5C0F\u8F66\u201D\u201C\u5706\u4E0A\u70B9\u201D\uFF0C\u4E0D\u5F97\u586B\u5199 P\u3001A\u3001\u7269\u4F53\u7B49\u65E0\u6CD5\u8BF4\u660E\u7528\u6237\u6240\u95EE\u4E3B\u4F53\u7684\u6CDB\u79F0\u3002\u6CA1\u6709\u88AB\u5171\u4EAB\u53D8\u91CF\u7ED1\u5B9A\u7684 geometry\uFF0C\u4EE5\u53CA plot/diagram/image/table\uFF0C\u4E0D\u586B\u5199\u8FD9\u4E24\u4E2A\u5B57\u6BB5\u3002
+- motion_subject \u662F\u8BE5\u8FD0\u52A8\u70B9\u5728\u753B\u9762\u4E0A\u5FC5\u987B\u660E\u786E\u663E\u793A\u7684\u4E3B\u4F53\u540D\u79F0\uFF0C\u4F8B\u5982\u201C\u632F\u5B50\u201D\u201C\u5C0F\u8F66\u201D\u201C\u5706\u4E0A\u70B9\u201D\uFF0C\u4E0D\u5F97\u586B\u5199 P\u3001A\u3001\u7269\u4F53\u7B49\u65E0\u6CD5\u8BF4\u660E\u7528\u6237\u6240\u95EE\u4E3B\u4F53\u7684\u6CDB\u79F0\u3002\u53EA\u6709\u88AB\u5171\u4EAB\u53D8\u91CF\u7ED1\u5B9A\u7684 geometry \u586B\u5199\u8FD9\u4E24\u4E2A\u5B57\u6BB5\uFF1Bplot/scene3d/diagram/image/table \u4E0D\u586B\u5199\u3002
 
 \u5982\u679C\u8BF7\u6C42\u8981\u6C42\u628A\u4E24\u4E2A\u89C6\u89C9\u5BF9\u8C61\u7ED3\u5408\u3001\u5BF9\u5E94\u3001\u6BD4\u8F83\u6216\u63A8\u5BFC\uFF0C\u5FC5\u987B\u5728 visual_relationships \u4E2D\u8868\u8FBE\uFF1B\u4E0D\u8981\u628A\u8FD9\u79CD\u5173\u7CFB\u9000\u5316\u6210\u4E24\u5F20\u4E92\u4E0D\u76F8\u5173\u7684\u56FE\u3002
 
@@ -9490,9 +9810,9 @@ shared_variable_requirements \u7528\u6765\u89C4\u5212\u201C\u540C\u4E00\u4E2A\u9
 - \u5F53\u8BF7\u6C42\u660E\u786E\u8981\u6C42\u52A8\u753B\u3001\u53EF\u4EA4\u4E92\u53D8\u5316\uFF0C\u6216\u6559\u5B66\u76EE\u6807\u672C\u8EAB\u662F\u8FDE\u7EED\u8FD0\u52A8/\u53D8\u5316\uFF08\u4F8B\u5982\u89D2\u5EA6\u65CB\u8F6C\u53D8\u6210\u5468\u671F\u6CE2\u52A8\uFF09\u65F6\uFF0C\u521B\u5EFA shared_variable_requirement\uFF1B\u5426\u5219\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
 - variable \u662F OLL \u53D8\u91CF\u540D\uFF1Binitial/min/max/slider_step/animate_to \u4F7F\u7528\u7B26\u5408\u5B66\u79D1\u542B\u4E49\u7684\u6570\u503C\u3002\u8F6C\u6EE1\u4E00\u5708\u7528 0 \u5230 6.283185307179586\uFF0C\u5355\u4F4D\u7528 rad\u3002
 - bound_visuals \u81F3\u5C11\u5217\u51FA\u6240\u6709\u88AB\u540C\u4E00\u53D8\u91CF\u9A71\u52A8\u7684 visual_requirement.id\uFF1B\u8DE8\u56FE\u5BF9\u5E94\u901A\u5E38\u81F3\u5C11\u6709\u4E24\u4E2A\u3002
-- bound_visuals \u76EE\u524D\u53EA\u80FD\u5F15\u7528 geometry \u6216 plot\u3002\u9700\u8981\u76F4\u63A5\u6F14\u793A\u7684\u7B80\u5355\u4E8C\u7EF4\u4E3B\u4F53\u82E5\u80FD\u7531\u70B9\u548C\u7EBF\u6BB5\u8868\u8FBE\uFF0C\u5FC5\u987B\u628A\u4E3B\u4F53\u89C4\u5212\u4E3A geometry \u540E\u518D\u7ED1\u5B9A\uFF1Bdiagram\u3001image \u548C table \u4E0D\u80FD\u7ED1\u5B9A\u3002
+- bound_visuals \u53EF\u4EE5\u5F15\u7528 geometry\u3001plot \u6216 scene3d\u3002scene3d \u76EE\u524D\u901A\u8FC7 section.value \u4E0E\u5171\u4EAB\u53D8\u91CF\u8054\u52A8\uFF1B\u573A\u666F\u89C6\u89D2\u65CB\u8F6C\u672C\u8EAB\u662F\u5B66\u751F\u64CD\u4F5C\uFF0C\u4E0D\u662F\u8BFE\u7A0B\u53D8\u91CF\u3002diagram\u3001image \u548C table \u4E0D\u80FD\u7ED1\u5B9A\u3002
 - direct_angle_geometry \u53EA\u5728\u67D0\u4E2A geometry \u91CC\u7684\u70B9\u9002\u5408\u7531\u5B66\u751F\u76F4\u63A5\u7ED5\u5706\u5FC3\u62D6\u52A8\u65F6\u586B\u5199\u8BE5 visual_requirement.id\uFF0C\u5426\u5219\u8FD4\u56DE\u7A7A\u5B57\u7B26\u4E32\u3002
-- \u5F53\u524D\u5B66\u751F\u63A7\u5236\u53EA\u652F\u6301\u53D8\u91CF\u6ED1\u6746\uFF0C\u4EE5\u53CA\u5706\u4E0A\u70B9\u7ED5\u5706\u5FC3\u7684 angle_control\uFF1B\u4E0D\u652F\u6301\u4EFB\u610F\u7269\u4F53\u7684\u81EA\u7531\u62D6\u52A8\u6216\u6CBF\u76F4\u7EBF\u62D6\u52A8\u3002\u4E00\u822C\u6027\u7684\u201C\u8BA9\u6211\u81EA\u5DF1\u64CD\u4F5C\u201D\u6216\u6CA1\u6709\u70B9\u660E\u88AB\u62D6\u7269\u4F53\u7684\u201C\u62D6\u7740\u8BD5\u8BD5\u201D\u53EF\u4EE5\u7528\u62D6\u52A8\u6ED1\u6746\u6EE1\u8DB3\uFF1B\u53EA\u6709\u5706\u5468\u89D2\u5EA6\u786E\u5B9E\u662F\u5408\u9002\u7684\u6559\u5B66\u64CD\u4F5C\u65F6\u624D\u4F7F\u7528 direct_angle_geometry\u3002\u660E\u786E\u70B9\u540D\u8981\u62D6\u52A8\u5176\u4ED6\u7269\u4F53\u6216\u6CBF\u7279\u5B9A\u8DEF\u5F84\u62D6\u52A8\u65F6\u5FC5\u987B\u5217\u5165 unhandled_request_items\u3002
+- \u5F53\u524D\u5B66\u751F\u63A7\u5236\u652F\u6301\u53D8\u91CF\u6ED1\u6746\u3001\u5706\u4E0A\u70B9\u7ED5\u5706\u5FC3\u7684 angle_control\uFF0C\u4EE5\u53CA scene3d \u89C6\u89D2\u7684\u65CB\u8F6C\u3001\u7F29\u653E\u3001\u9884\u8BBE\u548C\u590D\u4F4D\uFF1B\u4E09\u7EF4\u89C6\u89D2\u63A7\u5236\u7531 scene3d \u7684 orbit_control \u8868\u8FBE\uFF0C\u4E0D\u8981\u4E3A\u5B83\u4F2A\u9020 shared variable\u3002\u4E0D\u652F\u6301\u4EFB\u610F\u7269\u4F53\u7684\u81EA\u7531\u62D6\u52A8\u6216\u6CBF\u76F4\u7EBF\u62D6\u52A8\u3002\u4E00\u822C\u6027\u7684\u201C\u8BA9\u6211\u81EA\u5DF1\u64CD\u4F5C\u201D\u6216\u6CA1\u6709\u70B9\u660E\u88AB\u62D6\u7269\u4F53\u7684\u201C\u62D6\u7740\u8BD5\u8BD5\u201D\u53EF\u4EE5\u7528\u62D6\u52A8\u6ED1\u6746\u6EE1\u8DB3\uFF1B\u53EA\u6709\u5706\u5468\u89D2\u5EA6\u786E\u5B9E\u662F\u5408\u9002\u7684\u6559\u5B66\u64CD\u4F5C\u65F6\u624D\u4F7F\u7528 direct_angle_geometry\u3002\u660E\u786E\u70B9\u540D\u8981\u62D6\u52A8\u5176\u4ED6\u7269\u4F53\u6216\u6CBF\u7279\u5B9A\u8DEF\u5F84\u62D6\u52A8\u65F6\u5FC5\u987B\u5217\u5165 unhandled_request_items\u3002
 
 student_task_requirements \u7528\u6765\u89C4\u5212\u8BB2\u89E3\u7ED3\u675F\u540E\u771F\u6B63\u4EA4\u7ED9\u5B66\u751F\u5B8C\u6210\u7684\u77ED\u4EFB\u52A1\uFF0C\u4E0D\u662F\u65C1\u767D\u4E2D\u7684\u63D0\u95EE\uFF1A
 - \u53EA\u6709\u5DF2\u7ECF\u5B58\u5728 shared_variable_requirement \u65F6\u624D\u80FD\u521B\u5EFA\u4EFB\u52A1\uFF1B\u4EFB\u52A1\u5FC5\u987B\u8BA9\u5B66\u751F\u901A\u8FC7\u8BE5\u53D8\u91CF\u5DF2\u6709\u7684\u6ED1\u6746\uFF0C\u6216\u5DF2\u6709\u7684\u5706\u5468 angle_control \u5B8C\u6210\uFF0C\u4E0D\u5F97\u89C4\u5212\u65B0\u7684\u4EA4\u4E92\u65B9\u5F0F\u3002
@@ -9503,7 +9823,7 @@ student_task_requirements \u7528\u6765\u89C4\u5212\u8BB2\u89E3\u7ED3\u675F\u540E
 - \u4EFB\u52A1\u6309\u6570\u7EC4\u987A\u5E8F\u4F9D\u6B21\u5F00\u653E\u3002\u901A\u5E38\u53EA\u89C4\u5212\u4E00\u4E2A\uFF1B\u53EA\u6709\u591A\u4E2A\u64CD\u4F5C\u786E\u5B9E\u5BF9\u5E94\u4E0D\u540C\u6559\u5B66\u76EE\u6807\u65F6\u624D\u89C4\u5212\u591A\u4E2A\u3002
 - \u82E5 presentation_constraints \u660E\u786E\u7981\u6B62 student_control \u6216 student_task\uFF0Cstudent_task_requirements \u5FC5\u987B\u4E3A\u7A7A\u3002
 
-progressive_revision_kinds \u53EA\u8868\u793A\u672C\u8F6E\u65B0\u5EFA\u677F\u4E66\u662F\u5426\u9002\u5408\u7528 revise \u6E10\u8FDB\u66FF\u6362\uFF0C\u5141\u8BB8 text\u3001math\u3001shape\u3001diagram\u3001table\u3001note\uFF1B\u4E0D\u9700\u8981\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u5B83\u4E0D\u5141\u8BB8\u4FEE\u6539\u5386\u53F2\u767D\u677F\u8282\u70B9\uFF0C\u4E5F\u4E0D\u5F97\u5305\u542B geometry\u3001plot \u6216 image\u3002
+progressive_revision_kinds \u53EA\u8868\u793A\u672C\u8F6E\u65B0\u5EFA\u677F\u4E66\u662F\u5426\u9002\u5408\u7528 revise \u6E10\u8FDB\u66FF\u6362\uFF0C\u5141\u8BB8 text\u3001math\u3001shape\u3001diagram\u3001table\u3001note\uFF1B\u4E0D\u9700\u8981\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u5B83\u4E0D\u5141\u8BB8\u4FEE\u6539\u5386\u53F2\u767D\u677F\u8282\u70B9\uFF0C\u4E5F\u4E0D\u5F97\u5305\u542B geometry\u3001plot\u3001scene3d \u6216 image\u3002
 
 \u6CA1\u6709\u660E\u786E\u6216\u5FC5\u8981\u89C6\u89C9\u8981\u6C42\u65F6 visual_requirements \u53EF\u4EE5\u4E3A\u7A7A\uFF0C\u4F46 request_items \u548C teaching_goal_requirements \u4ECD\u987B\u8986\u76D6\u7528\u6237\u7684\u6559\u5B66\u8BF7\u6C42\u3002\u53EA\u8F93\u51FA\u7B26\u5408 JSON Schema \u7684 JSON \u5BF9\u8C61\u3002`;
 var BRIEF_VERIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u7528\u6237\u8981\u6C42\u8986\u76D6\u590D\u6838\u5668\uFF0C\u4E0D\u751F\u6210\u8BFE\u4EF6\uFF0C\u4E5F\u4E0D\u51B3\u5B9A\u5E94\u8BE5\u91C7\u7528\u54EA\u4E00\u79CD\u6559\u6CD5\u3002
@@ -9537,16 +9857,17 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 - actions[] \u4F7F\u7528\u5B57\u6BB5 do\uFF1B\u7981\u6B62\u4F7F\u7528 type\u3001create\u3001layout\u3001coordinates\u3002
 - \u6240\u6709 key \u4E0E as \u90FD\u5FC5\u987B\u662F\u5C0F\u5199\u82F1\u6587\u522B\u540D\uFF0C\u53EA\u80FD\u5305\u542B a-z\u30010-9\u3001\u8FDE\u5B57\u7B26\uFF0C\u4E14\u5FC5\u987B\u4EE5\u5B57\u6BCD\u5F00\u5934\u3002
 - write \u5FC5\u987B\u5305\u542B as\u3001kind\u3001role\u3001content\u3001place\uFF1Bcontent \u5FC5\u987B\u662F\u5BF9\u8C61\uFF0Cplace \u81F3\u5C11\u5305\u542B relation\u3002
-- write.content \u5FC5\u987B\u5339\u914D kind\uFF1Atext/shape \u4F7F\u7528\u975E\u7A7A text\uFF1Bmath \u4F7F\u7528 latex\uFF1Bnote \u4F7F\u7528 title \u548C items\uFF1Btable \u4F7F\u7528 columns \u548C rows\uFF1Bdiagram \u4F7F\u7528 elements\uFF1Bgeometry \u4F7F\u7528 axes\u3001points \u548C\u51E0\u4F55\u539F\u8BED\uFF1Bplot \u4F7F\u7528 axes \u548C curves\uFF1Bimage \u4F7F\u7528\u53D7\u63A7 asset_id\u3002\u4E0D\u5F97\u7528\u65E0\u5173\u7684 text \u5B57\u6BB5\u4EE3\u66FF\u7ED3\u6784\u5316\u89C6\u89C9\u5185\u5BB9\u3002
+- write.content \u5FC5\u987B\u5339\u914D kind\uFF1Atext/shape \u4F7F\u7528\u975E\u7A7A text\uFF1Bmath \u4F7F\u7528 latex\uFF1Bnote \u4F7F\u7528 title \u548C items\uFF1Btable \u4F7F\u7528 columns \u548C rows\uFF1Bdiagram \u4F7F\u7528 elements\uFF1Bgeometry \u4F7F\u7528 axes\u3001points \u548C\u51E0\u4F55\u539F\u8BED\uFF1Bplot \u4F7F\u7528 axes \u548C curves\uFF1Bscene3d \u4F7F\u7528 camera \u548C objects\uFF1Bimage \u4F7F\u7528\u53D7\u63A7 asset_id\u3002\u4E0D\u5F97\u7528\u65E0\u5173\u7684 text \u5B57\u6BB5\u4EE3\u66FF\u7ED3\u6784\u5316\u89C6\u89C9\u5185\u5BB9\u3002
 - \u6DF7\u5408\u6587\u5B57\u4E0E\u516C\u5F0F\u7684\u9898\u5E72\u6216\u89E3\u91CA\u4F7F\u7528 kind="text" \u6216 kind="note"\uFF0C\u5728 content.text \u4E2D\u53EA\u7ED9\u516C\u5F0F\u7247\u6BB5\u52A0\u5355\u7F8E\u5143\u7B26\u53F7\uFF08\u5982 $\\sqrt{x-1}$\uFF09\u6216 \\(...\\) \u5B9A\u754C\u7B26\uFF1B\u4E0D\u5F97\u628A\u88F8 LaTeX \u547D\u4EE4\u76F4\u63A5\u6DF7\u5165\u666E\u901A\u6587\u5B57\u3002
 - \u4EE5\u516C\u5F0F\u4E3A\u4E3B\u4F53\u7684\u677F\u4E66\u4F7F\u7528 kind="math" \u5E76\u628A\u89C4\u8303\u516C\u5F0F\u5199\u5165 content.latex\uFF1Bcontent.text \u53EA\u4F5C\u4E3A\u53EF\u9009\u7684\u53EF\u8BFB\u540E\u5907\uFF0C\u4E0D\u8981\u590D\u5236\u5E26\u5B9A\u754C\u7B26\u7684\u516C\u5F0F\u4E32\u3002
 - diagram \u53EA\u7528\u4E8E\u8BED\u4E49\u5143\u7D20\u4E0E\u8FDE\u7EBF\uFF0C\u4E0D\u5F97\u8868\u793A\u5706\u3001\u89D2\u3001\u5750\u6807\u8F74\u3001\u6295\u5F71\u6216\u5176\u4ED6\u5EA6\u91CF\u51E0\u4F55\u3002geometry \u7528\u4E8E\u7B49\u6BD4\u4F8B\u5750\u6807\u7CFB\u4E2D\u7684\u5706\u3001\u70B9\u3001\u7EBF\u6BB5\u3001\u6295\u5F71\u548C\u89D2\u5F27\uFF1Baxes \u5FC5\u987B\u5305\u542B x/y \u6570\u503C\u8303\u56F4\u548C equal_scale=true\u3002
 - geometry.points[] \u6BCF\u9879\u5305\u542B as\u3001x\u3001y\uFF1Bcircles[] \u4F7F\u7528 center point alias \u548C\u6B63 radius\uFF1Bsegments[] \u4F7F\u7528 from/to point alias\uFF0C\u6295\u5F71\u7EBF\u4F7F\u7528 style="projection"\uFF1Barcs[] \u4F7F\u7528 center\u3001radius\u3001start_angle\u3001end_angle\uFF0C\u89D2\u5EA6\u4E3A\u5F27\u5EA6\u3002\u6A21\u578B\u4E0D\u5F97\u8F93\u51FA SVG \u6216\u50CF\u7D20\u5750\u6807\u3002
 - diagram \u7528\u4E8E\u8BED\u4E49\u5143\u7D20\u4E0E\u8FDE\u7EBF\uFF0C\u4E0D\u5F97\u5192\u5145\u51FD\u6570\u56FE\u50CF\u3002plot \u7528\u4E8E\u5750\u6807\u8F74\u4E0A\u7684\u51FD\u6570\u66F2\u7EBF\uFF1Bcontent.axes.x/y \u5404\u7ED9\u51FA\u6570\u503C min/max\uFF0Ccontent.curves[] \u6BCF\u9879\u5FC5\u987B\u5305\u542B as\u3001expression\uFF0C\u53EF\u5305\u542B label\u3002
 - plot.expression \u53EA\u5199\u53D7\u9650\u6570\u5B66\u8868\u8FBE\u5F0F\uFF0C\u4F8B\u5982 sin(x)\u3001cos(x)\u3001(x+3)^2-4\uFF1B\u652F\u6301 x\u3001pi\u3001e\u3001+ - * / ^\u3001\u62EC\u53F7\u4EE5\u53CA sin/cos/tan/sqrt/abs/exp/log\uFF0C\u4E0D\u5199 y=\u3001LaTeX\u3001\u4EE3\u7801\u6216 SVG\u3002
+- scene3d.camera \u5305\u542B yaw\u3001pitch\u3001zoom\uFF1Bobjects[] \u53EA\u4F7F\u7528 box\u3001sphere\u3001cylinder\u3001cone\u3001surface\u3002box \u7ED9 center \u548C size\uFF1B\u7403\u7ED9 center/radius\uFF1B\u5706\u67F1\u548C\u5706\u9525\u518D\u7ED9 height\uFF1Bsurface \u7ED9 z=f(x,y) \u7684 expression\u3001x_range\u3001y_range \u548C 4 \u5230 24 \u7684 samples\u3002sections[] \u4F7F\u7528 as\u3001axis=x/y/z\u3001value\u3002\u573A\u666F\u5929\u7136\u652F\u6301\u89C6\u89D2\u65CB\u8F6C\u3001\u7F29\u653E\u3001\u7B49\u8F74/\u6B63\u89C6/\u4FEF\u89C6\u548C\u590D\u4F4D\uFF0C\u4E0D\u8981\u8F93\u51FA\u8FD9\u4E9B\u4EA4\u4E92\u7684\u811A\u672C\u3002
 - \u8F93\u5165\u4E2D\u7684\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u662F\u672C\u8F6E\u8BF7\u6C42\u7684\u53EF\u6267\u884C\u8981\u6C42\u5408\u540C\uFF1B\u6BCF\u4E2A visual_requirement \u548C visual_relationship \u90FD\u5FC5\u987B\u7531\u5B9E\u9645\u767D\u677F\u52A8\u4F5C\u6EE1\u8DB3\uFF0C\u6807\u9898\u3001goals\u3001\u8BB2\u8FF0\u6216\u6587\u5B57\u58F0\u660E\u4E0D\u80FD\u66FF\u4EE3\u8981\u6C42\u7684\u89C6\u89C9\u5185\u5BB9\u3002
 - \u6BCF\u4E2A visual_requirement.id \u5C31\u662F\u8BE5\u4E3B\u8981\u89C6\u89C9\u8282\u70B9\u5FC5\u987B\u4F7F\u7528\u7684 write.as\uFF1B\u4E00\u4E2A\u89C6\u89C9\u8282\u70B9\u53EF\u4EE5\u901A\u8FC7 request_item_ids \u670D\u52A1\u591A\u4E2A\u6559\u5B66\u76EE\u6807\u3002visual_relationships \u5BF9\u5E94\u7684 connect \u7531\u7CFB\u7EDF\u5728\u4E24\u4E2A\u8282\u70B9\u521B\u5EFA\u540E\u63D2\u5165\uFF0C\u6A21\u578B\u4E0D\u8981\u8F93\u51FA connect\u3002
-- \u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u4E2D\u7684 shared_variable_requirements \u975E\u7A7A\u65F6\uFF0C\u7CFB\u7EDF\u4F1A\u786E\u5B9A\u6027\u5199\u5165 lesson.variables \u548C\u53EF\u5224\u5B9A\u7684 angle_control\uFF1B\u6A21\u578B\u8D1F\u8D23\u5728 bound_visuals \u5BF9\u5E94\u7684 geometry/plot content.bindings \u4E2D\u5F15\u7528\u540C\u4E00\u4E2A\u53D8\u91CF\uFF0C\u5E76\u628A do="animate" \u52A8\u4F5C\u653E\u8FDB\u5408\u9002\u7684\u8BB2\u89E3\u8282\u62CD\u3002\u7981\u6B62\u590D\u5236\u7B2C\u4E8C\u4EFD\u72B6\u6001\u3002
+- \u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u4E2D\u7684 shared_variable_requirements \u975E\u7A7A\u65F6\uFF0C\u7CFB\u7EDF\u4F1A\u786E\u5B9A\u6027\u5199\u5165 lesson.variables \u548C\u53EF\u5224\u5B9A\u7684 angle_control\uFF1B\u6A21\u578B\u8D1F\u8D23\u5728 bound_visuals \u5BF9\u5E94\u7684 geometry/plot/scene3d content.bindings \u4E2D\u5F15\u7528\u540C\u4E00\u4E2A\u53D8\u91CF\uFF0C\u5E76\u628A do="animate" \u52A8\u4F5C\u653E\u8FDB\u5408\u9002\u7684\u8BB2\u89E3\u8282\u62CD\u3002scene3d \u7ED1\u5B9A\u76EE\u6807\u76EE\u524D\u53EA\u5141\u8BB8 section.value\u3002\u7981\u6B62\u590D\u5236\u7B2C\u4E8C\u4EFD\u72B6\u6001\u3002
 - geometry visual_requirement \u5305\u542B motion_kind/motion_subject \u65F6\uFF0C\u5FC5\u987B\u6709\u4E00\u4E2A label \u660E\u786E\u5305\u542B motion_subject \u7684\u70B9\u4EE3\u8868\u8FD0\u52A8\u4E3B\u4F53\u3002linear_point \u53EA\u7ED1\u5B9A\u8BE5\u70B9\u7684 x \u6216 y \u4E00\u4E2A\u5750\u6807\uFF1Bplanar_point \u540C\u65F6\u7ED1\u5B9A x/y\uFF1Bangular_point \u540C\u65F6\u7ED1\u5B9A x/y\uFF0C\u5E76\u901A\u8FC7\u534A\u5F84\u7EBF\u6216\u89D2\u63A7\u5236\u8868\u660E\u5B83\u7ED5\u56FA\u5B9A\u4E2D\u5FC3\u8FD0\u52A8\u3002\u5355\u4F4D\u5706\u6216\u5176\u4ED6\u7C7B\u6BD4\u56FE\u4E0D\u80FD\u5192\u5145\u7528\u6237\u8981\u6C42\u76F4\u63A5\u6F14\u793A\u7684\u4E3B\u4F53\u3002
 - bindings.target \u4F7F\u7528\u201C\u5C40\u90E8\u5143\u7D20\u522B\u540D.\u6570\u503C\u5C5E\u6027\u201D\uFF0Cexpression \u4F7F\u7528\u53D7\u9650\u8868\u8FBE\u5F0F\u5E76\u76F4\u63A5\u5F15\u7528\u53D8\u91CF\u540D\u3002\u4F8B\u5982\u5355\u4F4D\u5706\u4E0E\u6B63\u5F26\u56FE\u5171\u4EAB theta\uFF1Apoint-p.x=cos(theta)\u3001point-p.y=sin(theta)\u3001foot.x=cos(theta)\u3001theta-arc.end_angle=theta\u3001current-angle.x=theta\u3001current-angle.y=sin(theta)\u3002
 - animate \u53EA\u63CF\u8FF0\u8BED\u4E49\u76EE\u6807\uFF0C\u5305\u542B variable\u3001value\uFF0C\u53EF\u5305\u542B easing \u548C duration_intent\uFF1B\u4E0D\u5F97\u751F\u6210\u6BEB\u79D2\u65F6\u957F\u3002\u5B66\u751F\u53EF\u5728 Runtime \u4E2D\u64AD\u653E\u3001\u6682\u505C\u3001\u62D6\u52A8\u3001\u590D\u4F4D\u548C\u91CD\u653E\u3002
@@ -9664,6 +9985,81 @@ function parseToolInput(raw) {
     ...typeof input.last_applied_action === "string" ? { last_applied_action: truncate(input.last_applied_action) } : {},
     ...baseRevision !== void 0 ? { base_revision: Number(baseRevision) } : {},
     ...sourceObservation ? { source_observation: sourceObservation } : {}
+  };
+}
+function parseSelectionToolInput(raw) {
+  let candidate;
+  try {
+    candidate = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Tool input is not valid JSON: ${error.message}`);
+  }
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    throw new Error("Selection tool input must be a JSON object");
+  }
+  const input = candidate;
+  const sourceValue = input.source;
+  if (!sourceValue || typeof sourceValue !== "object" || Array.isArray(sourceValue)) {
+    throw new Error("source must be an object");
+  }
+  const source = sourceValue;
+  const boundsValue = source.bounds;
+  if (!boundsValue || typeof boundsValue !== "object" || Array.isArray(boundsValue)) {
+    throw new Error("source.bounds must be an object");
+  }
+  const bounds = boundsValue;
+  const finite = (value, label) => {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new Error(`${label} must be finite`);
+    }
+    return value;
+  };
+  const width = finite(bounds.width, "source.bounds.width");
+  const height = finite(bounds.height, "source.bounds.height");
+  if (width <= 0 || height <= 0) throw new Error("source bounds must have positive size");
+  const checksumValue = source.checksum;
+  if (!checksumValue || typeof checksumValue !== "object" || Array.isArray(checksumValue)) {
+    throw new Error("source.checksum must be an object");
+  }
+  const checksum = checksumValue;
+  if (checksum.algorithm !== "sha-256" || typeof checksum.value !== "string" || !/^[a-f0-9]{64}$/.test(checksum.value)) {
+    throw new Error("source.checksum must be a sha-256 checksum");
+  }
+  const documentVersion = source.document_version;
+  if (!Number.isSafeInteger(documentVersion) || Number(documentVersion) < 0) {
+    throw new Error("source.document_version must be a non-negative integer");
+  }
+  const contentHint = input.content_hint;
+  if (!["text", "math", "geometry", "data", "unknown"].includes(String(contentHint))) {
+    throw new Error("content_hint is invalid");
+  }
+  const confidence = input.recognition_confidence;
+  if (!["high", "medium", "low"].includes(String(confidence))) {
+    throw new Error("recognition_confidence is invalid");
+  }
+  return {
+    turn_id: validateTurnId(input.turn_id),
+    learner_request: truncate(requireNonEmptyString(input.learner_request, "learner_request")),
+    source: {
+      source_id: requireNonEmptyString(source.source_id, "source.source_id"),
+      document_id: requireNonEmptyString(source.document_id, "source.document_id"),
+      document_version: Number(documentVersion),
+      bounds: {
+        x: finite(bounds.x, "source.bounds.x"),
+        y: finite(bounds.y, "source.bounds.y"),
+        width,
+        height
+      },
+      checksum: { algorithm: "sha-256", value: checksum.value }
+    },
+    content_hint: contentHint,
+    recognized_content: truncate(requireNonEmptyString(
+      input.recognized_content,
+      "recognized_content"
+    )),
+    recognition_confidence: confidence,
+    ...typeof input.lesson_title === "string" ? { lesson_title: truncate(input.lesson_title) } : {},
+    ...typeof input.board_summary === "string" ? { board_summary: truncate(input.board_summary) } : {}
   };
 }
 function buildVertexResponseJsonSchema(root) {
@@ -9894,6 +10290,63 @@ function buildVertexResponseJsonSchema(root) {
         }
       }
     };
+    const point3d = {
+      type: "object",
+      additionalProperties: false,
+      required: ["x", "y", "z"],
+      properties: { x: { type: "number" }, y: { type: "number" }, z: { type: "number" } }
+    };
+    const size3d = structuredClone(point3d);
+    const range3d = {
+      type: "object",
+      additionalProperties: false,
+      required: ["min", "max"],
+      properties: { min: { type: "number" }, max: { type: "number" } }
+    };
+    const scene3dObjects = {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "kind"],
+        properties: {
+          as: alias,
+          kind: { enum: ["box", "sphere", "cylinder", "cone", "surface"] },
+          label: { type: "string" },
+          color: { enum: ["teal", "blue", "purple", "orange", "red", "gray"] },
+          center: point3d,
+          size: size3d,
+          radius: { type: "number" },
+          height: { type: "number" },
+          expression: { type: "string" },
+          x_range: range3d,
+          y_range: range3d,
+          samples: { type: "integer" }
+        }
+      }
+    };
+    const scene3dSections = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "axis", "value"],
+        properties: {
+          as: alias,
+          axis: { enum: ["x", "y", "z"] },
+          value: { type: "number" },
+          label: { type: "string" },
+          color: { enum: ["teal", "blue", "purple", "orange", "red", "gray"] }
+        }
+      }
+    };
+    const scene3dCamera = {
+      type: "object",
+      additionalProperties: false,
+      required: ["yaw", "pitch", "zoom"],
+      properties: { yaw: { type: "number" }, pitch: { type: "number" }, zoom: { type: "number" } }
+    };
     const writeContentByKind = {
       text: {
         type: "object",
@@ -9939,6 +10392,20 @@ function buildVertexResponseJsonSchema(root) {
         additionalProperties: false,
         required: ["axes", "curves"],
         properties: { title: { type: "string" }, axes, curves, points, guides, bindings, caption: { type: "string" } }
+      },
+      scene3d: {
+        type: "object",
+        additionalProperties: false,
+        required: ["objects", "camera"],
+        properties: {
+          title: { type: "string" },
+          caption: { type: "string" },
+          axes: { type: "boolean" },
+          camera: scene3dCamera,
+          objects: scene3dObjects,
+          sections: scene3dSections,
+          bindings
+        }
       },
       image: structuredClone(definitions.imageContent),
       table: {
@@ -10030,6 +10497,7 @@ var presentationCapabilities = [
   "diagram",
   "geometry",
   "plot",
+  "scene3d",
   "image",
   "table",
   "note",
@@ -10038,7 +10506,7 @@ var presentationCapabilities = [
   "student_task",
   "revise"
 ];
-var visualWriteKinds = /* @__PURE__ */ new Set(["shape", "diagram", "geometry", "plot", "image", "table"]);
+var visualWriteKinds = /* @__PURE__ */ new Set(["shape", "diagram", "geometry", "plot", "scene3d", "image", "table"]);
 function deriveAuthoringCapabilityPlan(input, brief) {
   if (brief.unhandled_request_items.length > 0) {
     const details = brief.unhandled_request_items.map((item) => `${item.request_item_id}: ${item.reason}`).join("; ");
@@ -10056,11 +10524,14 @@ function deriveAuthoringCapabilityPlan(input, brief) {
   for (const variable of brief.shared_variable_requirements) {
     for (const visualId of variable.bound_visuals) {
       const visual = visualById.get(visualId);
-      if (visual?.surface === "geometry" || visual?.surface === "plot") bindingKinds.add(visual.surface);
+      if (visual?.surface === "geometry" || visual?.surface === "plot" || visual?.surface === "scene3d") bindingKinds.add(visual.surface);
     }
     if (variable.direct_angle_geometry) allowAngleControl = true;
   }
   const explicitlyRequiredSurfaces = new Set(brief.visual_requirements.map((item) => item.surface));
+  const hasScene3dViewControl = brief.visual_requirements.some(
+    (item) => item.surface === "scene3d" && item.required_features.includes("orbit_control")
+  );
   for (const constraint of brief.presentation_constraints) {
     const capability = constraint.capability;
     const forbid = constraint.polarity === "forbid";
@@ -10077,7 +10548,7 @@ function deriveAuthoringCapabilityPlan(input, brief) {
       for (const kind of visualWriteKinds) writeKinds.delete(kind);
       continue;
     }
-    if (["text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note"].includes(capability)) {
+    if (["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note"].includes(capability)) {
       const kind = capability;
       if (forbid) {
         if (explicitlyRequiredSurfaces.has(kind)) {
@@ -10097,8 +10568,8 @@ function deriveAuthoringCapabilityPlan(input, brief) {
       continue;
     }
     if (capability === "student_control") {
-      if (forbid && brief.shared_variable_requirements.length > 0) {
-        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires a student-controllable variable and forbids student control");
+      if (forbid && (brief.shared_variable_requirements.length > 0 || hasScene3dViewControl)) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids student control");
       }
       if (forbid) allowAngleControl = false;
       continue;
@@ -10333,6 +10804,11 @@ function buildAuthoringResponseJsonSchema(brief, plan) {
       ["angle_arc", "arcs"]
     ]),
     plot: /* @__PURE__ */ new Map([["annotated_points", "points"], ["guides", "guides"]]),
+    scene3d: /* @__PURE__ */ new Map([
+      ["solid_primitives", "objects"],
+      ["function_surface", "objects"],
+      ["cross_section", "sections"]
+    ]),
     diagram: /* @__PURE__ */ new Map([["semantic_edges", "edges"]])
   };
   for (const variant of variants) {
@@ -10345,7 +10821,7 @@ function buildAuthoringResponseJsonSchema(brief, plan) {
     const exactAlias = Array.isArray(exactAliasSchema?.enum) && typeof exactAliasSchema.enum[0] === "string" ? exactAliasSchema.enum[0] : void 0;
     const requirement = exactAlias ? brief.visual_requirements.find((candidate) => candidate.id === exactAlias) : void 0;
     const requiresBindings = exactAlias !== void 0 && brief.shared_variable_requirements.some((variable) => variable.bound_visuals.includes(exactAlias));
-    if (identity.kind === "geometry" || identity.kind === "plot") {
+    if (identity.kind === "geometry" || identity.kind === "plot" || identity.kind === "scene3d") {
       if (requiresBindings) {
         requireNonEmptyCollection(content, "bindings");
       } else {
@@ -10372,7 +10848,7 @@ function buildAuthoringResponseJsonSchema(brief, plan) {
   assertVertexSchemaCompatible(projected);
   return projected;
 }
-var visualSurfaces = ["geometry", "plot", "diagram", "image", "table"];
+var visualSurfaces = ["geometry", "plot", "scene3d", "diagram", "image", "table"];
 var visualFeatures = [
   "coordinate_axes",
   "equal_scale",
@@ -10390,7 +10866,12 @@ var visualFeatures = [
   "semantic_elements",
   "semantic_edges",
   "source_asset",
-  "tabular_values"
+  "tabular_values",
+  "spatial_axes",
+  "solid_primitives",
+  "function_surface",
+  "cross_section",
+  "orbit_control"
 ];
 var visualRelationships = [
   "maps_to",
@@ -10691,6 +11172,7 @@ var featuresBySurface = {
     "annotated_points"
   ]),
   plot: /* @__PURE__ */ new Set(["coordinate_axes", "function_curve", "annotated_points", "guides"]),
+  scene3d: /* @__PURE__ */ new Set(["spatial_axes", "solid_primitives", "function_surface", "cross_section", "orbit_control"]),
   diagram: /* @__PURE__ */ new Set(["semantic_elements", "semantic_edges"]),
   image: /* @__PURE__ */ new Set(["source_asset"]),
   table: /* @__PURE__ */ new Set(["tabular_values"])
@@ -11011,15 +11493,15 @@ function validateLessonBrief(candidate, input) {
     }
     if (!Array.isArray(raw.expressions) || raw.expressions.some((value) => typeof value !== "string" || !value.trim())) {
       violations.push(briefViolation("BRIEF_INVALID_EXPRESSIONS", `${path}/expressions`, "expressions must contain only non-empty strings"));
-    } else if (raw.expressions.length > 0 && raw.surface !== "plot") {
-      violations.push(briefViolation("BRIEF_INCOMPATIBLE_EXPRESSIONS", `${path}/expressions`, "expressions are supported only by plot requirements"));
-    } else if (raw.surface === "plot") {
+    } else if (raw.expressions.length > 0 && raw.surface !== "plot" && raw.surface !== "scene3d") {
+      violations.push(briefViolation("BRIEF_INCOMPATIBLE_EXPRESSIONS", `${path}/expressions`, "expressions are supported only by plot and scene3d requirements"));
+    } else if (raw.surface === "plot" || raw.surface === "scene3d") {
       raw.expressions.forEach((expression, expressionIndex) => {
         try {
-          compileMathExpression(expression, ["x"]);
+          compileMathExpression(expression, raw.surface === "scene3d" ? ["x", "y"] : ["x"]);
         } catch (error) {
           violations.push(briefViolation(
-            "BRIEF_INVALID_PLOT_EXPRESSION",
+            raw.surface === "scene3d" ? "BRIEF_INVALID_SURFACE_EXPRESSION" : "BRIEF_INVALID_PLOT_EXPRESSION",
             `${path}/expressions/${expressionIndex}`,
             `expression must use the Runtime math syntax: ${error.message}`
           ));
@@ -11134,11 +11616,11 @@ function validateLessonBrief(candidate, input) {
           continue;
         }
         bound.add(String(visualId));
-        if (visual.surface !== "geometry" && visual.surface !== "plot") {
+        if (visual.surface !== "geometry" && visual.surface !== "plot" && visual.surface !== "scene3d") {
           violations.push(briefViolation(
             "BRIEF_UNSUPPORTED_BOUND_VISUAL",
             `${path}/bound_visuals`,
-            "shared variables bind only geometry and plot visuals; represent a simple measurable 2D subject with geometry points/segments when faithful, otherwise mark the requested motion unsupported"
+            "shared variables bind only geometry, plot, and scene3d visuals"
           ));
         } else if (visual.surface === "geometry") {
           if (!["linear_point", "angular_point", "planar_point"].includes(String(visual.motion_kind))) {
@@ -11303,7 +11785,6 @@ function validateLessonBrief(candidate, input) {
     visual: "visual",
     relationship: "relationship",
     continuous_change: "shared_variable",
-    student_control: "shared_variable",
     student_task: "student_task",
     presentation_constraint: "presentation_constraint"
   };
@@ -11322,6 +11803,16 @@ function validateLessonBrief(candidate, input) {
         "/request_items",
         `request item '${id}' (${item.kind}) must map to at least one ${requiredDestination} requirement`
       ));
+    }
+    if (!isUnhandled && item.kind === "student_control") {
+      const mapsToScene3dView = requirements.some((raw) => isRecord(raw) && raw.surface === "scene3d" && Array.isArray(raw.required_features) && raw.required_features.includes("orbit_control") && Array.isArray(raw.request_item_ids) && raw.request_item_ids.includes(id));
+      if (!destinations?.has("shared_variable") && !mapsToScene3dView) {
+        violations.push(briefViolation(
+          "BRIEF_INCOMPATIBLE_REQUEST_MAPPING",
+          "/request_items",
+          `request item '${id}' (student_control) must map to a shared variable or a scene3d orbit_control requirement`
+        ));
+      }
     }
     if ((item.kind === "existing_board_edit" || item.kind === "unsupported_feature") && !isUnhandled) {
       violations.push(briefViolation("BRIEF_UNSUPPORTED_ITEM_NOT_REPORTED", "/unhandled_request_items", `request item '${id}' must be reported as unsupported or ambiguous`));
@@ -11510,6 +12001,18 @@ function inventoryWrite(action) {
     if (points.some((point) => typeof point.label === "string" && point.label.trim())) features.add("annotated_points");
     if (Array.isArray(content.guides) && content.guides.length > 0) features.add("guides");
     return { alias: action.as, surface: "plot", features, expressions, content };
+  }
+  if (action.kind === "scene3d") {
+    if (content.axes === true) features.add("spatial_axes");
+    features.add("orbit_control");
+    const objects = Array.isArray(content.objects) ? content.objects.filter(isRecord) : [];
+    if (objects.some((object) => ["box", "sphere", "cylinder", "cone"].includes(String(object.kind)))) {
+      features.add("solid_primitives");
+    }
+    const expressions = objects.flatMap((object) => object.kind === "surface" && typeof object.expression === "string" && object.expression.trim() ? [object.expression] : []);
+    if (expressions.length > 0) features.add("function_surface");
+    if (Array.isArray(content.sections) && content.sections.length > 0) features.add("cross_section");
+    return { alias: action.as, surface: "scene3d", features, expressions, content };
   }
   if (action.kind === "diagram") {
     if (Array.isArray(content.elements) && content.elements.length > 0) features.add("semantic_elements");
@@ -12847,6 +13350,147 @@ async function generateLesson(client, input, brief) {
   }
   throw new Error("OLL generation failed");
 }
+var SELECTION_RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    interpretation_kind: {
+      type: "string",
+      enum: ["text", "math", "geometry", "data", "unknown"]
+    },
+    interpretation_content: { type: "string" },
+    interpretation_confidence: {
+      type: "string",
+      enum: ["high", "medium", "low"]
+    },
+    response_kind: { type: "string", enum: ["explanation", "plot"] },
+    title: { type: "string" },
+    text: { type: "string" },
+    items: { type: "array", items: { type: "string" } },
+    expression: { type: "string" },
+    x_min: { type: "number" },
+    x_max: { type: "number" },
+    y_min: { type: "number" },
+    y_max: { type: "number" }
+  },
+  required: [
+    "interpretation_kind",
+    "interpretation_content",
+    "interpretation_confidence",
+    "response_kind",
+    "title",
+    "text",
+    "items",
+    "expression",
+    "x_min",
+    "x_max",
+    "y_min",
+    "y_max"
+  ]
+};
+function selectionOutputPath(input) {
+  const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
+  const path = resolve(
+    workDirectory,
+    "study",
+    "selections",
+    `${input.turn_id}.octos-selection-enhancement.json`
+  );
+  if (!path.startsWith(`${workDirectory}${sep}`) || !isAbsolute(path)) {
+    throw new Error("Resolved selection output path escapes OCTOS_WORK_DIR");
+  }
+  return path;
+}
+function parseSelectionModelResponse(raw, input) {
+  let value;
+  try {
+    value = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Selection enhancement is not JSON: ${error.message}`);
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Selection enhancement must be an object");
+  }
+  const output = value;
+  const nonEmpty = (name) => requireNonEmptyString(output[name], name);
+  const kind = nonEmpty("interpretation_kind");
+  if (!["text", "math", "geometry", "data", "unknown"].includes(kind)) {
+    throw new Error("interpretation_kind is invalid");
+  }
+  const confidence = nonEmpty("interpretation_confidence");
+  if (!["high", "medium", "low"].includes(confidence)) {
+    throw new Error("interpretation_confidence is invalid");
+  }
+  const title = nonEmpty("title");
+  const text = nonEmpty("text");
+  const items = Array.isArray(output.items) ? output.items.map((item, index) => requireNonEmptyString(item, `items[${index}]`)) : [];
+  let response;
+  if (output.response_kind === "plot") {
+    const expression = nonEmpty("expression");
+    const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
+    if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
+      throw new Error("Plot ranges must be finite numbers");
+    }
+    const [xMin, xMax, yMin, yMax] = numbers;
+    if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
+    const evaluate = compileMathExpression(expression, ["x"]);
+    for (let index = 0; index <= 40; index += 1) {
+      const x = xMin + (xMax - xMin) * index / 40;
+      const y = evaluate({ x });
+      if (typeof y !== "number" || !Number.isFinite(y)) {
+        throw new Error("Plot expression is not finite across its range");
+      }
+    }
+    response = {
+      kind: "plot",
+      title,
+      text,
+      expression,
+      x_range: { min: xMin, max: xMax },
+      y_range: { min: yMin, max: yMax }
+    };
+  } else if (output.response_kind === "explanation") {
+    response = {
+      kind: "explanation",
+      title,
+      text,
+      ...items.length > 0 ? { items } : {}
+    };
+  } else {
+    throw new Error("response_kind is invalid");
+  }
+  return {
+    profile: "octos.selection-enhancement",
+    version: "0.1",
+    turn_id: input.turn_id,
+    created_at: (/* @__PURE__ */ new Date()).toISOString(),
+    source: structuredClone(input.source),
+    interpretation: {
+      kind,
+      content: nonEmpty("interpretation_content"),
+      confidence
+    },
+    response
+  };
+}
+async function generateSelectionEnhancement(client, input) {
+  const raw = await callStructuredModel(client, {
+    label: "selection-enhancement",
+    turnId: input.turn_id,
+    maxTokens: Math.min(client.maxTokens, 4096),
+    responseSchema: SELECTION_RESPONSE_SCHEMA,
+    systemPrompt: `\u4F60\u662F\u767D\u677F\u9009\u533A\u8F85\u52A9\u5DE5\u5177\u3002\u53EA\u89E3\u91CA\u7528\u6237\u6846\u9009\u7684\u539F\u7A3F\uFF0C\u5E76\u5728\u539F\u7A3F\u65C1\u8FB9\u751F\u6210\u72EC\u7ACB\u8F85\u52A9\u5185\u5BB9\uFF1B\u7EDD\u4E0D\u91CD\u5199\u3001\u7EA0\u6B63\u6216\u66FF\u6362\u539F\u7A3F\u3002recognized_content \u662F\u4E0A\u6E38\u89C6\u89C9\u6A21\u578B\u5BF9\u9009\u533A\u56FE\u7247\u7684\u89C2\u5BDF\uFF0C\u4E0D\u662F\u7EDD\u5BF9\u4E8B\u5B9E\uFF1B\u7F6E\u4FE1\u5EA6\u4E0D\u8DB3\u65F6\u5FC5\u987B\u660E\u786E\u8BF4\u660E\u4E0D\u786E\u5B9A\u6027\u3002\u53EA\u6709\u8BC6\u522B\u51FA\u660E\u786E\u7684\u5355\u53D8\u91CF y=f(x) \u4E14\u7528\u6237\u8981\u6C42\u51FD\u6570\u56FE\u50CF\u65F6\uFF0Cresponse_kind \u624D\u80FD\u4F7F\u7528 plot\uFF0Cexpression \u5FC5\u987B\u662F\u4EC5\u542B x \u7684\u5B89\u5168\u6570\u5B66\u8868\u8FBE\u5F0F\u3002\u5176\u4ED6\u60C5\u51B5\u4F7F\u7528 explanation\u3002\u4E0D\u8981\u58F0\u79F0\u770B\u5230\u4E86\u9009\u533A\u4EE5\u5916\u7684\u767D\u677F\u3002`,
+    prompt: JSON.stringify({
+      learner_request: input.learner_request,
+      selected_content_hint: input.content_hint,
+      recognized_selected_content: input.recognized_content,
+      recognition_confidence: input.recognition_confidence,
+      lesson_title: input.lesson_title ?? null,
+      board_summary: input.board_summary ?? null
+    }, null, 2)
+  });
+  return parseSelectionModelResponse(raw, input);
+}
 function outputPath(input) {
   const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
   const path = resolve(workDirectory, "study", "oll", `${input.turn_id}.octos-lesson.json`);
@@ -12865,13 +13509,38 @@ function emit(payload) {
 }
 async function main() {
   const startedAt = Date.now();
+  const invokedTool = process.argv[2];
   try {
-    if (process.argv[2] !== TOOL_NAME) {
-      throw new Error(`Unknown tool '${process.argv[2] ?? ""}'. Expected '${TOOL_NAME}'`);
+    if (invokedTool !== TOOL_NAME && invokedTool !== SELECTION_TOOL_NAME) {
+      throw new Error(
+        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}' or '${SELECTION_TOOL_NAME}'`
+      );
     }
     const chunks = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
-    const input = parseToolInput(Buffer.concat(chunks).toString("utf8"));
+    const rawInput = Buffer.concat(chunks).toString("utf8");
+    if (invokedTool === SELECTION_TOOL_NAME) {
+      const input2 = parseSelectionToolInput(rawInput);
+      const client2 = await createVertexClient();
+      const artifact = await generateSelectionEnhancement(client2, input2);
+      const artifactPath2 = selectionOutputPath(input2);
+      await mkdir(dirname(artifactPath2), { recursive: true });
+      await writeFile(artifactPath2, `${JSON.stringify(artifact, null, 2)}
+`, "utf8");
+      stageLog({
+        stage: "selection-enhancement",
+        turn_id: input2.turn_id,
+        status: "completed",
+        elapsed_ms: Date.now() - startedAt
+      });
+      emit({
+        success: true,
+        output: "Selection enhancement generated without modifying the source ink.",
+        files_to_send: [artifactPath2]
+      });
+      return;
+    }
+    const input = parseToolInput(rawInput);
     const client = await createVertexClient();
     const brief = await planLesson(client, input);
     const { lesson, attempts, capabilityPlan, schema } = await generateLesson(client, input, brief);
@@ -12880,7 +13549,7 @@ async function main() {
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}
 `, "utf8");
     stageLog({
-      stage: "lesson-generation",
+      stage: invokedTool === SELECTION_TOOL_NAME ? "selection-enhancement" : "lesson-generation",
       turn_id: input.turn_id,
       status: "completed",
       elapsed_ms: Date.now() - startedAt
@@ -12903,13 +13572,13 @@ async function main() {
       stage: "lesson-generation",
       status: "failed",
       elapsed_ms: Date.now() - startedAt,
-      error_code: error instanceof ToolExecutionError ? error.code : "LESSON_GENERATION_FAILED"
+      error_code: error instanceof ToolExecutionError ? error.code : invokedTool === SELECTION_TOOL_NAME ? "SELECTION_ENHANCEMENT_FAILED" : "LESSON_GENERATION_FAILED"
     });
     process.stderr.write(`learning-coach: ${message}
 `);
     emit({
       success: false,
-      error_code: error instanceof ToolExecutionError ? error.code : "LESSON_GENERATION_FAILED",
+      error_code: error instanceof ToolExecutionError ? error.code : invokedTool === SELECTION_TOOL_NAME ? "SELECTION_ENHANCEMENT_FAILED" : "LESSON_GENERATION_FAILED",
       output: message
     });
     process.exitCode = 1;
