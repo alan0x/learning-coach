@@ -105,6 +105,18 @@ async function runCase(item) {
         assert.ok(directControl, `missing direct angle control for ${variableAlias}`);
       }
     }
+    if (item.expected.student_task) {
+      const task = lesson.lesson.tasks?.[0];
+      assert.ok(task, "missing after-lesson student task");
+      assert.equal(task.availability?.kind, "after_lesson");
+      assert.ok(task.prompt?.trim(), "student task prompt is empty");
+      assert.ok(task.allowed_operations?.some((operation) =>
+        operation.kind === "variable_change" && operation.controls?.length > 0),
+      "student task has no usable variable control");
+      assert.equal(task.completion?.kind, "expression_target");
+      assert.ok(task.hints?.length > 0, "student task has no hints");
+      assert.ok(task.success_message?.trim(), "student task has no success feedback");
+    }
     return { attempts: protocol.generation_attempts, writes: writes.map((action) => action.kind) };
   } finally {
     if (process.env.OLL_KEEP_EVAL_ARTIFACTS !== "1") {

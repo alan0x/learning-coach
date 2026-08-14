@@ -7202,6 +7202,12 @@ var oll_authoring_v0_1_schema_default = {
           maxItems: 16,
           items: { $ref: "#/$defs/lessonVariable" }
         },
+        tasks: {
+          type: "array",
+          minItems: 1,
+          maxItems: 16,
+          items: { $ref: "#/$defs/studentTask" }
+        },
         adaptation: {
           type: "object",
           properties: {
@@ -7232,6 +7238,61 @@ var oll_authoring_v0_1_schema_default = {
     }
   },
   $defs: {
+    studentTask: {
+      type: "object",
+      required: ["as", "prompt", "availability", "allowed_operations", "completion", "hints"],
+      additionalProperties: false,
+      properties: {
+        as: { $ref: "#/$defs/alias" },
+        prompt: { type: "string", minLength: 1, maxLength: 480 },
+        availability: {
+          type: "object",
+          required: ["kind"],
+          additionalProperties: false,
+          properties: {
+            kind: { const: "after_lesson" }
+          }
+        },
+        allowed_operations: {
+          type: "array",
+          minItems: 1,
+          maxItems: 16,
+          items: {
+            type: "object",
+            required: ["kind", "variable", "controls"],
+            additionalProperties: false,
+            properties: {
+              kind: { const: "variable_change" },
+              variable: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
+              controls: {
+                type: "array",
+                minItems: 1,
+                items: { enum: ["slider", "geometry_point"] }
+              }
+            }
+          }
+        },
+        completion: {
+          type: "object",
+          required: ["kind", "expression", "value", "tolerance"],
+          additionalProperties: false,
+          properties: {
+            kind: { const: "expression_target" },
+            expression: { type: "string", minLength: 1, maxLength: 256 },
+            value: { type: "number" },
+            tolerance: { type: "number", exclusiveMinimum: 0 }
+          }
+        },
+        hints: {
+          type: "array",
+          minItems: 1,
+          maxItems: 8,
+          items: { type: "string", minLength: 1, maxLength: 480 }
+        },
+        hint_after_attempts: { type: "integer", minimum: 1, maximum: 20 },
+        success_message: { type: "string", minLength: 1, maxLength: 480 }
+      }
+    },
     step: {
       type: "object",
       required: ["key", "purpose", "beats"],
@@ -7573,6 +7634,12 @@ var v0_1_schema_default = {
           maxItems: 16,
           items: { $ref: "#/$defs/lessonVariable" }
         },
+        tasks: {
+          type: "array",
+          minItems: 1,
+          maxItems: 16,
+          items: { $ref: "#/$defs/studentTask" }
+        },
         adaptation: {
           type: "object",
           properties: {
@@ -7603,6 +7670,61 @@ var v0_1_schema_default = {
     }
   },
   $defs: {
+    studentTask: {
+      type: "object",
+      required: ["as", "prompt", "availability", "allowed_operations", "completion", "hints"],
+      additionalProperties: false,
+      properties: {
+        as: { $ref: "#/$defs/alias" },
+        prompt: { type: "string", minLength: 1, maxLength: 480 },
+        availability: {
+          type: "object",
+          required: ["kind"],
+          additionalProperties: false,
+          properties: {
+            kind: { const: "after_lesson" }
+          }
+        },
+        allowed_operations: {
+          type: "array",
+          minItems: 1,
+          maxItems: 16,
+          items: {
+            type: "object",
+            required: ["kind", "variable", "controls"],
+            additionalProperties: false,
+            properties: {
+              kind: { const: "variable_change" },
+              variable: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
+              controls: {
+                type: "array",
+                minItems: 1,
+                items: { enum: ["slider", "geometry_point"] }
+              }
+            }
+          }
+        },
+        completion: {
+          type: "object",
+          required: ["kind", "expression", "value", "tolerance"],
+          additionalProperties: false,
+          properties: {
+            kind: { const: "expression_target" },
+            expression: { type: "string", minLength: 1, maxLength: 256 },
+            value: { type: "number" },
+            tolerance: { type: "number", exclusiveMinimum: 0 }
+          }
+        },
+        hints: {
+          type: "array",
+          minItems: 1,
+          maxItems: 8,
+          items: { type: "string", minLength: 1, maxLength: 480 }
+        },
+        hint_after_attempts: { type: "integer", minimum: 1, maximum: 20 },
+        success_message: { type: "string", minLength: 1, maxLength: 480 }
+      }
+    },
     step: {
       type: "object",
       required: ["key", "purpose", "beats"],
@@ -8077,6 +8199,10 @@ function compileMathExpression(expression, allowedVariables) {
   const variables = new Set([...allowedVariables].map((value) => value.toLowerCase()));
   return new ExpressionParser(tokenize(normalizeExpression(expression)), variables).parse();
 }
+function referencedMathVariables(expression, allowedVariables) {
+  const allowed = new Set([...allowedVariables].map((value) => value.toLowerCase()));
+  return [...new Set(tokenize(normalizeExpression(expression)).filter((token) => token.kind === "identifier" && allowed.has(token.value)).map((token) => token.value))];
+}
 function evaluateMathExpression(expression, variables) {
   const result = compileMathExpression(expression, Object.keys(variables))(variables);
   if (!Number.isFinite(result))
@@ -8209,6 +8335,131 @@ function validateLessonVariables(document) {
     values.set(variable.as, initial);
   }
   return values;
+}
+function validateStudentTasks(document, variables, availableControls) {
+  const taskAliases = /* @__PURE__ */ new Set();
+  for (const [index, task] of (document.lesson.tasks ?? []).entries()) {
+    const path = `/lesson/tasks/${index}`;
+    requireObject(task, path);
+    requireAlias(task.as, `${path}/as`);
+    if (taskAliases.has(task.as))
+      fail("OLL_DUPLICATE_ALIAS", `${path}/as`, `Student task '${task.as}' is duplicated`);
+    taskAliases.add(task.as);
+    if (typeof task.prompt !== "string" || !task.prompt.trim()) {
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/prompt`, "Student task prompt must not be empty");
+    }
+    requireObject(task.availability, `${path}/availability`);
+    if (task.availability.kind !== "after_lesson") {
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/availability/kind`, `Unsupported task availability '${String(task.availability.kind)}'`);
+    }
+    requireArray(task.allowed_operations, `${path}/allowed_operations`);
+    const allowedVariables = /* @__PURE__ */ new Set();
+    task.allowed_operations.forEach((operation, operationIndex) => {
+      const operationPath = `${path}/allowed_operations/${operationIndex}`;
+      requireObject(operation, operationPath);
+      if (operation.kind !== "variable_change") {
+        fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/kind`, `Unsupported student task operation '${String(operation.kind)}'`);
+      }
+      requireVariableAlias(operation.variable, `${operationPath}/variable`);
+      if (!variables.has(operation.variable)) {
+        fail("OLL_REFERENCE_NOT_FOUND", `${operationPath}/variable`, `Variable '${operation.variable}' is not declared`);
+      }
+      if (allowedVariables.has(operation.variable)) {
+        fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/variable`, `Variable '${operation.variable}' has duplicate allowed-operation entries`);
+      }
+      allowedVariables.add(operation.variable);
+      requireArray(operation.controls, `${operationPath}/controls`);
+      const controls = /* @__PURE__ */ new Set();
+      operation.controls.forEach((control, controlIndex) => {
+        if (control !== "slider" && control !== "geometry_point") {
+          fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Unsupported task control '${String(control)}'`);
+        }
+        if (controls.has(control)) {
+          fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Task control '${control}' is duplicated`);
+        }
+        if (!availableControls.get(operation.variable)?.has(control)) {
+          fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Task control '${control}' is not available for variable '${operation.variable}' in this lesson`);
+        }
+        controls.add(control);
+      });
+    });
+    requireObject(task.completion, `${path}/completion`);
+    if (task.completion.kind !== "expression_target") {
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/kind`, `Unsupported completion kind '${String(task.completion.kind)}'`);
+    }
+    const target = requireFiniteNumber(task.completion.value, `${path}/completion/value`);
+    const tolerance = requireFiniteNumber(task.completion.tolerance, `${path}/completion/tolerance`);
+    if (tolerance <= 0)
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/tolerance`, "Task tolerance must be greater than zero");
+    try {
+      const evaluate = compileMathExpression(task.completion.expression, variables.keys());
+      const initial = evaluate(Object.fromEntries(variables));
+      if (!Number.isFinite(initial) || !Number.isFinite(target))
+        throw new Error("Task completion result is not finite");
+      const referenced = new Set(referencedMathVariables(task.completion.expression, variables.keys()));
+      if (referenced.size === 0)
+        throw new Error("Task completion expression must read an allowed lesson variable");
+      for (const variable of referenced) {
+        if (!allowedVariables.has(variable)) {
+          throw new Error(`Task completion expression reads '${variable}', but students are not allowed to change it`);
+        }
+      }
+      for (const variable of allowedVariables) {
+        if (!referenced.has(variable)) {
+          throw new Error(`Allowed variable '${variable}' does not affect the task completion expression`);
+        }
+      }
+      if (Math.abs(initial - target) <= tolerance) {
+        throw new Error("Task completion condition is already satisfied by the lesson's initial values");
+      }
+      if (allowedVariables.size === 1) {
+        const [variableAlias] = allowedVariables;
+        const declaration = document.lesson.variables?.find((variable) => variable.as === variableAlias);
+        if (declaration) {
+          let reachable = false;
+          const check = (value) => {
+            if (reachable)
+              return;
+            const actual = evaluate({ [variableAlias]: value });
+            if (Number.isFinite(actual) && Math.abs(actual - target) <= tolerance) {
+              reachable = true;
+            }
+          };
+          const allowed = task.allowed_operations.find((operation) => operation.variable === variableAlias);
+          const exactSliderSteps = declaration.control?.step ? Math.floor((declaration.max - declaration.min) / declaration.control.step + 1e-12) : -1;
+          if (allowed?.controls.includes("slider") && exactSliderSteps > 2e4 && !allowed.controls.includes("geometry_point")) {
+            throw new Error("Task slider has too many discrete steps to verify reachability");
+          }
+          if (allowed?.controls.includes("slider") && exactSliderSteps >= 0 && exactSliderSteps <= 2e4) {
+            for (let sample = 0; sample <= exactSliderSteps && !reachable; sample += 1) {
+              check(declaration.min + sample * declaration.control.step);
+            }
+          }
+          if (!reachable && allowed?.controls.includes("geometry_point")) {
+            const sampleCount = 2e4;
+            for (let sample = 0; sample <= sampleCount && !reachable; sample += 1) {
+              check(declaration.min + (declaration.max - declaration.min) * sample / sampleCount);
+            }
+          }
+          if (!reachable) {
+            throw new Error("No reachable value in the lesson variable range satisfies the task completion condition");
+          }
+        }
+      }
+    } catch (error) {
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/expression`, `Invalid task completion expression: ${error.message}`);
+    }
+    requireArray(task.hints, `${path}/hints`);
+    if (task.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/hints`, "Task hints must not be empty");
+    }
+    if (task.hint_after_attempts !== void 0 && (!Number.isInteger(task.hint_after_attempts) || task.hint_after_attempts < 1 || task.hint_after_attempts > 20)) {
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20");
+    }
+    if (task.success_message !== void 0 && (typeof task.success_message !== "string" || !task.success_message.trim())) {
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/success_message`, "Task success_message must not be empty");
+    }
+  }
 }
 function splitBindingTarget(value, path) {
   if (typeof value !== "string")
@@ -8550,6 +8801,12 @@ function validateAuthoringLesson(document, resourceContext = null) {
   requireObject(document.lesson, "/lesson");
   requireArray(document.lesson.goals, "/lesson/goals");
   const lessonVariables = validateLessonVariables(document);
+  const availableStudentControls = /* @__PURE__ */ new Map();
+  for (const variable of document.lesson.variables ?? []) {
+    if (variable.control?.kind === "slider") {
+      availableStudentControls.set(variable.as, /* @__PURE__ */ new Set(["slider"]));
+    }
+  }
   requireArray(document.steps, "/steps");
   requireObject(document.close, "/close");
   requireArray(document.close.focus, "/close/focus");
@@ -8596,6 +8853,16 @@ function validateAuthoringLesson(document, resourceContext = null) {
           validateStructuredContent(action.content, `${actionPath}/content`, uniqueFragments);
           validateImageResource(action, actionPath, resourceContext);
           validateGeometryContent(action, actionPath, lessonVariables);
+          if (action.kind === "geometry" && Array.isArray(action.content.points)) {
+            for (const point of action.content.points) {
+              const interaction = point?.interaction;
+              if (interaction?.kind !== "angle_control" || typeof interaction.variable !== "string")
+                continue;
+              const controls = availableStudentControls.get(interaction.variable) ?? /* @__PURE__ */ new Set();
+              controls.add("geometry_point");
+              availableStudentControls.set(interaction.variable, controls);
+            }
+          }
           validateValueBindings(action, actionPath, lessonVariables);
           register(registry, action.as, "node", `${actionPath}/as`, fragments);
           return;
@@ -8640,6 +8907,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
       });
     });
   });
+  validateStudentTasks(document, lessonVariables, availableStudentControls);
   if (document.close?.focus) {
     for (let index = 0; index < document.close.focus.length; index += 1) {
       resolveLocal(registry, document.close.focus[index], `/close/focus/${index}`, ["node", "group", "connection"]);
@@ -9170,15 +9438,15 @@ var LESSON_BRIEF_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u5802\u9700\u6C42\u4E0E\u65
 - \u6BCF\u4E2A source_ref \u5FC5\u987B\u4E8C\u9009\u4E00\uFF1A\u5982\u679C\u5206\u53E5\u8868\u8FBE\u4E86\u5B9E\u9645\u8981\u6C42\uFF0C\u5C31\u5EFA\u7ACB\u4E00\u4E2A\u6216\u591A\u4E2A request_item\uFF1B\u5982\u679C\u53EA\u662F\u5BD2\u6684\u3001\u8BED\u6C14\u8BCD\u6216\u6CA1\u6709\u53EF\u6267\u884C\u8981\u6C42\uFF0C\u5C31\u5199\u5165 non_requirement_clauses \u5E76\u8BF4\u660E\u539F\u56E0\uFF1B\u4E0D\u80FD\u9057\u6F0F\uFF0C\u4E5F\u4E0D\u80FD\u540C\u65F6\u51FA\u73B0\u5728\u4E24\u8FB9\uFF1B
 - non_requirement_clauses \u4E0D\u662F\u9003\u907F\u8981\u6C42\u7684\u5730\u65B9\u3002\u53EA\u8981\u5206\u53E5\u8981\u6C42\u89E3\u91CA\u3001\u5C55\u793A\u3001\u6BD4\u8F83\u3001\u6F14\u793A\u3001\u63A7\u5236\u3001\u4FEE\u6539\u6216\u9650\u5236\u8868\u73B0\u5F62\u5F0F\uFF0C\u5C31\u5FC5\u987B\u5EFA\u7ACB request_item\uFF1B
 
-request_items \u53EA\u8BB0\u5F55\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u89C6\u89C9\u5173\u7CFB\u3001\u8FDE\u7EED\u53D8\u5316\u3001\u5B66\u751F\u63A7\u5236\u3001\u5BF9\u65E2\u6709\u767D\u677F\u7684\u4FEE\u6539\u3001\u5C55\u793A\u9650\u5236\u548C\u5F53\u524D\u7CFB\u7EDF\u4E0D\u652F\u6301\u7684\u529F\u80FD\uFF1A
+request_items \u53EA\u8BB0\u5F55\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u89C6\u89C9\u5173\u7CFB\u3001\u8FDE\u7EED\u53D8\u5316\u3001\u5B66\u751F\u63A7\u5236\u3001\u8BFE\u540E\u52A8\u624B\u4EFB\u52A1\u3001\u5BF9\u65E2\u6709\u767D\u677F\u7684\u4FEE\u6539\u3001\u5C55\u793A\u9650\u5236\u548C\u5F53\u524D\u7CFB\u7EDF\u4E0D\u652F\u6301\u7684\u529F\u80FD\uFF1A
 - \u6BCF\u9879\u4F7F\u7528 source_ref \u5F15\u7528\u8F93\u5165\u63D0\u4F9B\u7684\u539F\u6587\u5206\u53E5\u7F16\u53F7\uFF0C\u4E0D\u8981\u590D\u5236\u3001\u6539\u5199\u6216\u81EA\u9020\u539F\u6587\uFF1B
 - polarity=require \u8868\u793A\u5FC5\u987B\u6EE1\u8DB3\uFF0Cpolarity=forbid \u8868\u793A\u660E\u786E\u7981\u6B62\uFF1B
 - \u4E0D\u5F97\u628A 3D\u3001\u5B66\u79D1\u6A21\u62DF\u6216\u672A\u5B9E\u73B0\u7684\u4EA4\u4E92\u5077\u6362\u6210 diagram \u6216\u666E\u901A\u6587\u5B57\uFF1B\u8FD9\u7C7B\u8981\u6C42\u4F7F\u7528 unsupported_feature\uFF0C\u5E76\u5728 unhandled_request_items \u4E2D\u8BF4\u660E\uFF1B
 - \u6BCF\u4E2A request_item \u5FC5\u987B\u901A\u8FC7 request_item_ids \u6620\u5C04\u5230\u4E00\u4E2A\u6216\u591A\u4E2A\u5177\u4F53\u8981\u6C42\uFF0C\u6216\u8005\u660E\u786E\u5217\u5165 unhandled_request_items\uFF0C\u4E0D\u80FD\u60AC\u7A7A\uFF1B
-- teaching_goal \u6620\u5C04\u5230 teaching_goal_requirements\uFF1Bvisual \u6620\u5C04\u5230 visual_requirements\uFF1Brelationship \u6620\u5C04\u5230 visual_relationships\uFF1Bcontinuous_change \u548C student_control \u6620\u5C04\u5230 shared_variable_requirements\uFF1Bpresentation_constraint \u6620\u5C04\u5230 presentation_constraints\uFF1B
+- teaching_goal \u6620\u5C04\u5230 teaching_goal_requirements\uFF1Bvisual \u6620\u5C04\u5230 visual_requirements\uFF1Brelationship \u6620\u5C04\u5230 visual_relationships\uFF1Bcontinuous_change \u548C student_control \u6620\u5C04\u5230 shared_variable_requirements\uFF1Bstudent_task \u6620\u5C04\u5230 student_task_requirements\uFF1Bpresentation_constraint \u6620\u5C04\u5230 presentation_constraints\uFF1B
 - \u76EE\u524D\u6CA1\u6709\u53EF\u5BFB\u5740\u7684\u65E2\u6709\u767D\u677F\u8282\u70B9\u6E05\u5355\uFF0C\u56E0\u6B64 existing_board_edit \u5FC5\u987B\u5217\u5165 unhandled_request_items\uFF0C\u4E0D\u80FD\u8BA9\u540E\u7EED\u6A21\u578B\u731C revise.target\u3002
 
-\u7B2C\u4E8C\u90E8\u5206 teaching_goal_requirements\u3001visual_requirements\u3001visual_relationships \u548C shared_variable_requirements \u662F\u6559\u5B66\u8BBE\u8BA1\u3002\u5B83\u4EEC\u53EF\u4EE5\u6839\u636E\u7528\u6237\u76EE\u6807\u589E\u52A0\u5408\u7406\u7684\u56FE\u5F62\u3001\u8BB2\u89E3\u6B65\u9AA4\u548C\u4E92\u52A8\u65B9\u5F0F\uFF0C\u4F46\u5FC5\u987B\u901A\u8FC7 request_item_ids \u8BF4\u660E\u670D\u52A1\u4E8E\u54EA\u9879\u7528\u6237\u8981\u6C42\u3002\u4E0D\u8981\u628A\u6559\u5B66\u5EFA\u8BAE\u6216\u4F60\u504F\u597D\u7684\u8BB2\u6CD5\u4F2A\u88C5\u6210\u7528\u6237\u539F\u8BDD\uFF0C\u4E5F\u4E0D\u8981\u56E0\u4E3A\u7528\u6237\u6CA1\u8BF4\u51FA\u201C\u6062\u590D\u529B\u7BAD\u5934\u201D\u4E4B\u7C7B\u5177\u4F53\u6559\u6CD5\u5C31\u62D2\u7EDD\u5408\u7406\u7684\u6559\u5B66\u8BBE\u8BA1\u3002
+\u7B2C\u4E8C\u90E8\u5206 teaching_goal_requirements\u3001visual_requirements\u3001visual_relationships\u3001shared_variable_requirements \u548C student_task_requirements \u662F\u6559\u5B66\u8BBE\u8BA1\u3002\u5B83\u4EEC\u53EF\u4EE5\u6839\u636E\u7528\u6237\u76EE\u6807\u589E\u52A0\u5408\u7406\u7684\u56FE\u5F62\u3001\u8BB2\u89E3\u6B65\u9AA4\u548C\u4E92\u52A8\u65B9\u5F0F\uFF0C\u4F46\u5FC5\u987B\u901A\u8FC7 request_item_ids \u8BF4\u660E\u670D\u52A1\u4E8E\u54EA\u9879\u7528\u6237\u8981\u6C42\u3002\u4E0D\u8981\u628A\u6559\u5B66\u5EFA\u8BAE\u6216\u4F60\u504F\u597D\u7684\u8BB2\u6CD5\u4F2A\u88C5\u6210\u7528\u6237\u539F\u8BDD\uFF0C\u4E5F\u4E0D\u8981\u56E0\u4E3A\u7528\u6237\u6CA1\u8BF4\u51FA\u201C\u6062\u590D\u529B\u7BAD\u5934\u201D\u4E4B\u7C7B\u5177\u4F53\u6559\u6CD5\u5C31\u62D2\u7EDD\u5408\u7406\u7684\u6559\u5B66\u8BBE\u8BA1\u3002
 
 \u6559\u5B66\u76EE\u6807\u548C\u6F14\u793A\u5BF9\u8C61\u5FC5\u987B\u5B8C\u6574\uFF1A
 - \u7528\u6237\u95EE\u67D0\u4E2A\u73B0\u8C61\u201C\u4E3A\u4EC0\u4E48\u53D1\u751F\u201D\u65F6\uFF0C\u89E3\u91CA\u4EA7\u751F\u8BE5\u73B0\u8C61\u7684\u539F\u56E0\u672C\u8EAB\u662F\u786C\u6559\u5B66\u76EE\u6807\uFF1B\u53EA\u63CF\u8FF0\u5468\u671F\u3001\u89C4\u5F8B\u3001\u7ED3\u679C\u6216\u6570\u5B66\u62DF\u5408\u4E0D\u80FD\u66FF\u4EE3\u56E0\u679C\u89E3\u91CA\uFF1B
@@ -9225,6 +9493,15 @@ shared_variable_requirements \u7528\u6765\u89C4\u5212\u201C\u540C\u4E00\u4E2A\u9
 - bound_visuals \u76EE\u524D\u53EA\u80FD\u5F15\u7528 geometry \u6216 plot\u3002\u9700\u8981\u76F4\u63A5\u6F14\u793A\u7684\u7B80\u5355\u4E8C\u7EF4\u4E3B\u4F53\u82E5\u80FD\u7531\u70B9\u548C\u7EBF\u6BB5\u8868\u8FBE\uFF0C\u5FC5\u987B\u628A\u4E3B\u4F53\u89C4\u5212\u4E3A geometry \u540E\u518D\u7ED1\u5B9A\uFF1Bdiagram\u3001image \u548C table \u4E0D\u80FD\u7ED1\u5B9A\u3002
 - direct_angle_geometry \u53EA\u5728\u67D0\u4E2A geometry \u91CC\u7684\u70B9\u9002\u5408\u7531\u5B66\u751F\u76F4\u63A5\u7ED5\u5706\u5FC3\u62D6\u52A8\u65F6\u586B\u5199\u8BE5 visual_requirement.id\uFF0C\u5426\u5219\u8FD4\u56DE\u7A7A\u5B57\u7B26\u4E32\u3002
 - \u5F53\u524D\u5B66\u751F\u63A7\u5236\u53EA\u652F\u6301\u53D8\u91CF\u6ED1\u6746\uFF0C\u4EE5\u53CA\u5706\u4E0A\u70B9\u7ED5\u5706\u5FC3\u7684 angle_control\uFF1B\u4E0D\u652F\u6301\u4EFB\u610F\u7269\u4F53\u7684\u81EA\u7531\u62D6\u52A8\u6216\u6CBF\u76F4\u7EBF\u62D6\u52A8\u3002\u4E00\u822C\u6027\u7684\u201C\u8BA9\u6211\u81EA\u5DF1\u64CD\u4F5C\u201D\u6216\u6CA1\u6709\u70B9\u660E\u88AB\u62D6\u7269\u4F53\u7684\u201C\u62D6\u7740\u8BD5\u8BD5\u201D\u53EF\u4EE5\u7528\u62D6\u52A8\u6ED1\u6746\u6EE1\u8DB3\uFF1B\u53EA\u6709\u5706\u5468\u89D2\u5EA6\u786E\u5B9E\u662F\u5408\u9002\u7684\u6559\u5B66\u64CD\u4F5C\u65F6\u624D\u4F7F\u7528 direct_angle_geometry\u3002\u660E\u786E\u70B9\u540D\u8981\u62D6\u52A8\u5176\u4ED6\u7269\u4F53\u6216\u6CBF\u7279\u5B9A\u8DEF\u5F84\u62D6\u52A8\u65F6\u5FC5\u987B\u5217\u5165 unhandled_request_items\u3002
+
+student_task_requirements \u7528\u6765\u89C4\u5212\u8BB2\u89E3\u7ED3\u675F\u540E\u771F\u6B63\u4EA4\u7ED9\u5B66\u751F\u5B8C\u6210\u7684\u77ED\u4EFB\u52A1\uFF0C\u4E0D\u662F\u65C1\u767D\u4E2D\u7684\u63D0\u95EE\uFF1A
+- \u53EA\u6709\u5DF2\u7ECF\u5B58\u5728 shared_variable_requirement \u65F6\u624D\u80FD\u521B\u5EFA\u4EFB\u52A1\uFF1B\u4EFB\u52A1\u5FC5\u987B\u8BA9\u5B66\u751F\u901A\u8FC7\u8BE5\u53D8\u91CF\u5DF2\u6709\u7684\u6ED1\u6746\uFF0C\u6216\u5DF2\u6709\u7684\u5706\u5468 angle_control \u5B8C\u6210\uFF0C\u4E0D\u5F97\u89C4\u5212\u65B0\u7684\u4EA4\u4E92\u65B9\u5F0F\u3002
+- \u5F53\u7528\u6237\u660E\u786E\u8981\u6C42\u201C\u8BA9\u6211\u52A8\u624B\u8BD5\u3001\u7ED9\u6211\u4E00\u4E2A\u4E92\u52A8\u4EFB\u52A1\u3001\u8BB2\u5B8C\u540E\u8BA9\u6211\u64CD\u4F5C\u201D\u65F6\u5FC5\u987B\u521B\u5EFA student_task request_item \u548C\u5BF9\u5E94\u4EFB\u52A1\u3002\u53EA\u8981\u8BFE\u7A0B\u5DF2\u7ECF\u89C4\u5212\u5171\u4EAB\u53D8\u91CF\u4E14\u7528\u6237\u6CA1\u6709\u7981\u6B62\u5B66\u751F\u63A7\u5236\u6216\u4EFB\u52A1\uFF0C\u5C31\u5FC5\u987B\u81F3\u5C11\u8BBE\u8BA1\u4E00\u4E2A\u80FD\u68C0\u9A8C\u672C\u8BFE\u6838\u5FC3\u76EE\u6807\u7684\u77ED\u4EFB\u52A1\uFF1B\u8FD9\u5C5E\u4E8E\u6559\u5B66\u8BBE\u8BA1\uFF0C\u53EF\u4EE5\u5F15\u7528\u5B83\u6240\u670D\u52A1\u7684 teaching_goal \u6216 continuous_change request_item\u3002
+- variable \u5FC5\u987B\u5F15\u7528\u4E00\u4E2A shared_variable_requirement.variable\u3002controls \u81F3\u5C11\u5305\u542B slider\uFF1B\u53EA\u6709\u8BE5\u53D8\u91CF\u7684 direct_angle_geometry \u975E\u7A7A\u65F6\u624D\u80FD\u589E\u52A0 geometry_point\u3002
+- completion_expression \u4F7F\u7528 Runtime \u6570\u5B66\u8868\u8FBE\u5F0F\uFF0C\u53EA\u80FD\u8BFB\u53D6\u8FD9\u4E2A variable\uFF1Bcompletion_value \u662F\u671F\u671B\u7ED3\u679C\uFF0Ctolerance \u662F\u5141\u8BB8\u8BEF\u5DEE\u3002\u521D\u59CB\u503C\u4E0D\u80FD\u5DF2\u7ECF\u6EE1\u8DB3\u5B8C\u6210\u6761\u4EF6\u3002\u4EFB\u52A1\u5FC5\u987B\u4F9D\u636E\u5B66\u751F\u6700\u7EC8\u63D0\u4EA4\u7684\u4E00\u6B21\u64CD\u4F5C\u5224\u5B9A\uFF0C\u4E0D\u80FD\u4F9D\u9760\u6A21\u578B\u9605\u8BFB\u5B66\u751F\u610F\u56FE\u3002
+- prompt \u5FC5\u987B\u50CF\u8001\u5E08\u7ED9\u5B66\u751F\u7684\u81EA\u7136\u6307\u4EE4\uFF0C\u8BF4\u660E\u8981\u8FBE\u5230\u7684\u53EF\u89C1\u76EE\u6807\uFF0C\u4E0D\u8981\u66B4\u9732\u5185\u90E8\u53D8\u91CF\u540D\u6216\u5B9E\u73B0\u672F\u8BED\u3002hints \u4ECE\u89C2\u5BDF\u65B9\u5411\u5230\u66F4\u5177\u4F53\u64CD\u4F5C\u9010\u6B65\u7ED9\u51FA\uFF1Bsuccess_message \u89E3\u91CA\u5B66\u751F\u521A\u624D\u7684\u64CD\u4F5C\u4E3A\u4EC0\u4E48\u6B63\u786E\u3002
+- \u4EFB\u52A1\u6309\u6570\u7EC4\u987A\u5E8F\u4F9D\u6B21\u5F00\u653E\u3002\u901A\u5E38\u53EA\u89C4\u5212\u4E00\u4E2A\uFF1B\u53EA\u6709\u591A\u4E2A\u64CD\u4F5C\u786E\u5B9E\u5BF9\u5E94\u4E0D\u540C\u6559\u5B66\u76EE\u6807\u65F6\u624D\u89C4\u5212\u591A\u4E2A\u3002
+- \u82E5 presentation_constraints \u660E\u786E\u7981\u6B62 student_control \u6216 student_task\uFF0Cstudent_task_requirements \u5FC5\u987B\u4E3A\u7A7A\u3002
 
 progressive_revision_kinds \u53EA\u8868\u793A\u672C\u8F6E\u65B0\u5EFA\u677F\u4E66\u662F\u5426\u9002\u5408\u7528 revise \u6E10\u8FDB\u66FF\u6362\uFF0C\u5141\u8BB8 text\u3001math\u3001shape\u3001diagram\u3001table\u3001note\uFF1B\u4E0D\u9700\u8981\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u5B83\u4E0D\u5141\u8BB8\u4FEE\u6539\u5386\u53F2\u767D\u677F\u8282\u70B9\uFF0C\u4E5F\u4E0D\u5F97\u5305\u542B geometry\u3001plot \u6216 image\u3002
 
@@ -9758,6 +10035,7 @@ var presentationCapabilities = [
   "note",
   "animation",
   "student_control",
+  "student_task",
   "revise"
 ];
 var visualWriteKinds = /* @__PURE__ */ new Set(["shape", "diagram", "geometry", "plot", "image", "table"]);
@@ -9819,10 +10097,19 @@ function deriveAuthoringCapabilityPlan(input, brief) {
       continue;
     }
     if (capability === "student_control") {
-      if (forbid && brief.shared_variable_requirements.some((item) => item.direct_angle_geometry)) {
-        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids direct student control");
+      if (forbid && brief.shared_variable_requirements.length > 0) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires a student-controllable variable and forbids student control");
       }
       if (forbid) allowAngleControl = false;
+      continue;
+    }
+    if (capability === "student_task") {
+      if (forbid && brief.student_task_requirements.length > 0) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids an after-lesson student task");
+      }
+      if (!forbid && brief.student_task_requirements.length === 0) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request requires an after-lesson student task, but none was planned");
+      }
       continue;
     }
     if (capability === "revise") {
@@ -10031,8 +10318,9 @@ function buildAuthoringResponseJsonSchema(brief, plan) {
   const lesson = rootProperties.lesson;
   const lessonProperties = lesson.properties;
   delete lessonProperties.variables;
+  delete lessonProperties.tasks;
   if (Array.isArray(lesson.required)) {
-    lesson.required = lesson.required.filter((field) => field !== "variables");
+    lesson.required = lesson.required.filter((field) => field !== "variables" && field !== "tasks");
   }
   const fieldsBySurface = {
     geometry: /* @__PURE__ */ new Map([
@@ -10122,6 +10410,7 @@ var requestItemKinds = [
   "relationship",
   "continuous_change",
   "student_control",
+  "student_task",
   "existing_board_edit",
   "presentation_constraint",
   "unsupported_feature"
@@ -10142,6 +10431,7 @@ var lessonBriefResponseJsonSchema = {
     "visual_requirements",
     "visual_relationships",
     "shared_variable_requirements",
+    "student_task_requirements",
     "progressive_revision_kinds",
     "unhandled_request_items"
   ],
@@ -10277,6 +10567,49 @@ var lessonBriefResponseJsonSchema = {
             items: { type: "string" }
           },
           direct_angle_geometry: { type: "string" },
+          request_item_ids: idArraySchema
+        }
+      }
+    },
+    student_task_requirements: {
+      type: "array",
+      maxItems: 4,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "id",
+          "prompt",
+          "variable",
+          "controls",
+          "completion_expression",
+          "completion_value",
+          "tolerance",
+          "hints",
+          "hint_after_attempts",
+          "success_message",
+          "request_item_ids"
+        ],
+        properties: {
+          id: { type: "string" },
+          prompt: { type: "string" },
+          variable: { type: "string" },
+          controls: {
+            type: "array",
+            minItems: 1,
+            items: { enum: ["slider", "geometry_point"] }
+          },
+          completion_expression: { type: "string" },
+          completion_value: { type: "number" },
+          tolerance: { type: "number" },
+          hints: {
+            type: "array",
+            minItems: 1,
+            maxItems: 4,
+            items: { type: "string" }
+          },
+          hint_after_attempts: { type: "integer" },
+          success_message: { type: "string" },
           request_item_ids: idArraySchema
         }
       }
@@ -10442,6 +10775,7 @@ function canonicalizeBriefAliases(candidate) {
   canonicalizeItems(brief.visual_requirements);
   canonicalizeItems(brief.visual_relationships);
   canonicalizeItems(brief.shared_variable_requirements);
+  canonicalizeItems(brief.student_task_requirements);
   if (Array.isArray(brief.visual_requirements)) {
     for (const requirement of brief.visual_requirements) {
       if (!isRecord(requirement) || !Array.isArray(requirement.expressions)) continue;
@@ -10516,6 +10850,14 @@ function validateLessonBrief(candidate, input) {
       "BRIEF_INVALID_SHARED_VARIABLES",
       "/shared_variable_requirements",
       "shared_variable_requirements must be an array"
+    ));
+  }
+  const studentTasks = Array.isArray(candidate.student_task_requirements) ? candidate.student_task_requirements : [];
+  if (!Array.isArray(candidate.student_task_requirements)) {
+    violations.push(briefViolation(
+      "BRIEF_INVALID_STUDENT_TASKS",
+      "/student_task_requirements",
+      "student_task_requirements must be an array"
     ));
   }
   const revisionKinds = Array.isArray(candidate.progressive_revision_kinds) ? candidate.progressive_revision_kinds : [];
@@ -10835,6 +11177,107 @@ function validateLessonBrief(candidate, input) {
       }
     }
   });
+  const sharedVariableByName = new Map(sharedVariables.flatMap((raw) => isRecord(raw) && typeof raw.variable === "string" ? [[raw.variable, raw]] : []));
+  studentTasks.forEach((raw, index) => {
+    const path = `/student_task_requirements/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK", path, "student task requirement must be an object"));
+      return;
+    }
+    validateRequirementId(raw.id, `${path}/id`);
+    if (typeof raw.prompt !== "string" || !raw.prompt.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_PROMPT", `${path}/prompt`, "prompt must be a non-empty student instruction"));
+    }
+    const variable = typeof raw.variable === "string" ? sharedVariableByName.get(raw.variable) : void 0;
+    if (!variable) {
+      violations.push(briefViolation("BRIEF_UNKNOWN_STUDENT_TASK_VARIABLE", `${path}/variable`, "variable must reference one shared_variable_requirement.variable"));
+    }
+    const controls = Array.isArray(raw.controls) ? raw.controls : [];
+    if (controls.length === 0 || !controls.includes("slider") || controls.some((control) => control !== "slider" && control !== "geometry_point") || new Set(controls).size !== controls.length) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_CONTROLS", `${path}/controls`, "controls must include slider and contain only unique supported controls"));
+    }
+    if (controls.includes("geometry_point") && (!variable || !variable.direct_angle_geometry)) {
+      violations.push(briefViolation("BRIEF_UNAVAILABLE_STUDENT_TASK_CONTROL", `${path}/controls`, "geometry_point requires the shared variable to declare direct_angle_geometry"));
+    }
+    if (typeof raw.completion_expression !== "string" || !raw.completion_expression.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_EXPRESSION", `${path}/completion_expression`, "completion_expression is required"));
+    }
+    const target = numberValue(raw.completion_value);
+    const tolerance = numberValue(raw.tolerance);
+    if (target === void 0) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_TARGET", `${path}/completion_value`, "completion_value must be finite"));
+    }
+    if (tolerance === void 0 || tolerance <= 0) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_TOLERANCE", `${path}/tolerance`, "tolerance must be a positive finite number"));
+    }
+    if (variable && typeof raw.completion_expression === "string" && target !== void 0 && tolerance !== void 0 && tolerance > 0) {
+      try {
+        const evaluate = compileMathExpression(raw.completion_expression, [raw.variable]);
+        const referenced = referencedMathVariables(raw.completion_expression, [raw.variable]);
+        if (referenced.length !== 1 || referenced[0] !== raw.variable) {
+          throw new Error("completion_expression must read the task variable");
+        }
+        const initial = numberValue(variable.initial);
+        const min = numberValue(variable.min);
+        const max = numberValue(variable.max);
+        const sliderStep = numberValue(variable.slider_step);
+        if (initial === void 0 || min === void 0 || max === void 0 || sliderStep === void 0) {
+          throw new Error("shared variable range is incomplete");
+        }
+        const initialResult = evaluate({ [raw.variable]: initial });
+        if (Math.abs(initialResult - target) <= tolerance) {
+          throw new Error("the task is already complete at the initial value");
+        }
+        let reachable = false;
+        const check = (value) => {
+          if (reachable) return;
+          const actual = evaluate({ [raw.variable]: value });
+          if (Number.isFinite(actual) && Math.abs(actual - target) <= tolerance) {
+            reachable = true;
+          }
+        };
+        const exactSliderSteps = Math.floor((max - min) / sliderStep + 1e-12);
+        if (exactSliderSteps > 2e4 && !controls.includes("geometry_point")) {
+          throw new Error("task slider has too many discrete steps to verify reachability");
+        }
+        if (exactSliderSteps <= 2e4) {
+          for (let sample = 0; sample <= exactSliderSteps && !reachable; sample += 1) {
+            check(min + sample * sliderStep);
+          }
+        }
+        if (!reachable && controls.includes("geometry_point")) {
+          const sampleCount = 2e4;
+          for (let sample = 0; sample <= sampleCount && !reachable; sample += 1) {
+            check(min + (max - min) * sample / sampleCount);
+          }
+        }
+        if (!reachable) throw new Error("no reachable value in the planned variable range satisfies the task");
+      } catch (error) {
+        violations.push(briefViolation(
+          "BRIEF_INVALID_STUDENT_TASK_EXPRESSION",
+          `${path}/completion_expression`,
+          `completion condition is invalid: ${error.message}`
+        ));
+      }
+    }
+    if (!Array.isArray(raw.hints) || raw.hints.length === 0 || raw.hints.length > 4 || raw.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_HINTS", `${path}/hints`, "hints must contain one to four non-empty hints"));
+    }
+    if (!Number.isInteger(raw.hint_after_attempts) || raw.hint_after_attempts < 1 || raw.hint_after_attempts > 20) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_HINT_THRESHOLD", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20"));
+    }
+    if (typeof raw.success_message !== "string" || !raw.success_message.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_SUCCESS", `${path}/success_message`, "success_message must be non-empty"));
+    }
+    mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
+  });
+  const tasksForbidden = presentationConstraints.some((constraint) => isRecord(constraint) && constraint.polarity === "forbid" && (constraint.capability === "student_task" || constraint.capability === "student_control"));
+  if (tasksForbidden && studentTasks.length > 0) {
+    violations.push(briefViolation("BRIEF_FORBIDDEN_STUDENT_TASK", "/student_task_requirements", "student tasks cannot be planned when the request forbids tasks or student control"));
+  }
+  if (!tasksForbidden && sharedVariables.length > 0 && studentTasks.length === 0) {
+    violations.push(briefViolation("BRIEF_MISSING_STUDENT_TASK", "/student_task_requirements", "a lesson with a shared student-controllable variable must include at least one after-lesson task"));
+  }
   const unhandledRequestIds = /* @__PURE__ */ new Set();
   unhandledItems.forEach((raw, index) => {
     const path = `/unhandled_request_items/${index}`;
@@ -10861,6 +11304,7 @@ function validateLessonBrief(candidate, input) {
     relationship: "relationship",
     continuous_change: "shared_variable",
     student_control: "shared_variable",
+    student_task: "student_task",
     presentation_constraint: "presentation_constraint"
   };
   for (const [id, item] of requestItemById) {
@@ -11160,6 +11604,28 @@ function lowerPlannedLessonFields(document, brief) {
       control: { kind: "slider", step: requirement.slider_step }
     }));
   }
+  if (brief.student_task_requirements.length === 0) delete document.lesson.tasks;
+  else {
+    document.lesson.tasks = brief.student_task_requirements.map((requirement) => ({
+      as: requirement.id,
+      prompt: requirement.prompt,
+      availability: { kind: "after_lesson" },
+      allowed_operations: [{
+        kind: "variable_change",
+        variable: requirement.variable,
+        controls: [...requirement.controls]
+      }],
+      completion: {
+        kind: "expression_target",
+        expression: requirement.completion_expression,
+        value: requirement.completion_value,
+        tolerance: requirement.tolerance
+      },
+      hints: [...requirement.hints],
+      hint_after_attempts: requirement.hint_after_attempts,
+      success_message: requirement.success_message
+    }));
+  }
   const rawBeats = [];
   const writeBeatByAlias = /* @__PURE__ */ new Map();
   let beatOrder = 0;
@@ -11448,6 +11914,25 @@ function validateBriefCoverage(document, brief) {
           message: `Geometry '${geometry?.alias ?? requirement.direct_angle_geometry}' needs an angle_control point for shared variable '${requirement.variable}'`
         });
       }
+    }
+  }
+  const tasks = Array.isArray(lesson.tasks) ? lesson.tasks.filter(isRecord) : [];
+  for (const [index, requirement] of brief.student_task_requirements.entries()) {
+    const task = tasks.find((candidate) => candidate.as === requirement.id);
+    const availability = task && isRecord(task.availability) ? task.availability : void 0;
+    const allowedOperations = task && Array.isArray(task.allowed_operations) ? task.allowed_operations.filter(isRecord) : [];
+    const allowed = allowedOperations.find((operation) => operation.kind === "variable_change" && operation.variable === requirement.variable);
+    const controls = allowed && Array.isArray(allowed.controls) ? allowed.controls : [];
+    const completion = task && isRecord(task.completion) ? task.completion : void 0;
+    const taskMatches = task && task.prompt === requirement.prompt && availability?.kind === "after_lesson" && allowedOperations.length === 1 && controls.length === requirement.controls.length && requirement.controls.every((control) => controls.includes(control)) && completion?.kind === "expression_target" && completion.expression === requirement.completion_expression && approximatelyEqual(completion.value, requirement.completion_value) && approximatelyEqual(completion.tolerance, requirement.tolerance) && Array.isArray(task.hints) && task.hints.length === requirement.hints.length && requirement.hints.every((hint, hintIndex) => task.hints?.[hintIndex] === hint) && task.hint_after_attempts === requirement.hint_after_attempts && task.success_message === requirement.success_message;
+    if (!taskMatches) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_STUDENT_TASK_UNSATISFIED",
+        path: `/lesson/tasks/${index}`,
+        requirement_id: requirement.id,
+        message: `Student task '${requirement.id}' must preserve the planned prompt, controls, completion condition, hints, and feedback`
+      });
     }
   }
   return violations;
@@ -11739,7 +12224,7 @@ ${JSON.stringify(brief.shared_variable_requirements.map((requirement) => ({
     required_direct_angle_control_on: requirement.direct_angle_geometry || null,
     direct_control_input: requirement.direct_angle_geometry ? "\u8BE5 geometry \u5FC5\u987B\u5305\u542B\u540C\u4E00\u53D8\u91CF\u9A71\u52A8\u7684\u5706\u4E0A\u70B9 x/y bindings\uFF0C\u5E76\u7528\u534A\u5F84\u7EBF\u8FDE\u63A5\u8BE5\u70B9\u4E0E\u5706\u5FC3" : null
   })), null, 2)}
-system_inserted_slider \u7531\u7CFB\u7EDF\u5199\u5165 lesson.variables\uFF0C\u6A21\u578B\u4E0D\u8981\u81EA\u884C\u590D\u5236\u3002required_direct_angle_control_on \u975E\u7A7A\u65F6\uFF0C\u6A21\u578B\u5FC5\u987B\u63D0\u4F9B\u53EF\u552F\u4E00\u8BC6\u522B\u7684\u5706\u5FC3\u3001\u5706\u4E0A\u70B9\u3001\u534A\u5F84\u7EBF\u548C\u8BE5\u70B9\u7684 x/y \u53D8\u91CF\u7ED1\u5B9A\uFF0C\u7CFB\u7EDF\u636E\u6B64\u8865\u5165 interaction\uFF1B\u627E\u4E0D\u5230\u552F\u4E00\u5BF9\u8C61\u4F1A\u6821\u9A8C\u5931\u8D25\u3002\u52A8\u753B\u5FC5\u987B\u9010\u5B57\u91C7\u7528 required_animation \u4E2D\u7684 variable\u3001value\u3001easing \u548C duration_intent\u3002
+system_inserted_slider \u7531\u7CFB\u7EDF\u5199\u5165 lesson.variables\uFF0Cstudent_task_requirements \u7531\u7CFB\u7EDF\u5199\u5165 lesson.tasks\uFF0C\u6A21\u578B\u90FD\u4E0D\u8981\u81EA\u884C\u590D\u5236\u3002required_direct_angle_control_on \u975E\u7A7A\u65F6\uFF0C\u6A21\u578B\u5FC5\u987B\u63D0\u4F9B\u53EF\u552F\u4E00\u8BC6\u522B\u7684\u5706\u5FC3\u3001\u5706\u4E0A\u70B9\u3001\u534A\u5F84\u7EBF\u548C\u8BE5\u70B9\u7684 x/y \u53D8\u91CF\u7ED1\u5B9A\uFF0C\u7CFB\u7EDF\u636E\u6B64\u8865\u5165 interaction\uFF1B\u627E\u4E0D\u5230\u552F\u4E00\u5BF9\u8C61\u4F1A\u6821\u9A8C\u5931\u8D25\u3002\u52A8\u753B\u5FC5\u987B\u9010\u5B57\u91C7\u7528 required_animation \u4E2D\u7684 variable\u3001value\u3001easing \u548C duration_intent\u3002
 \u6BCF\u4E2A required_animation \u5FC5\u987B\u653E\u5728\u72EC\u7ACB\u7684\u7B80\u77ED Beat\uFF1A\u56FE\u5F62\u548C\u8FDE\u63A5\u5148\u5728\u524D\u4E00 Beat \u521B\u5EFA\uFF1B\u52A8\u753B Beat \u53EA\u4FDD\u7559\u4E00\u4E2A animate \u548C after_speech focus\uFF0C\u5E76\u628A\u5B8C\u6574\u63A8\u5BFC\u653E\u5728\u76F8\u90BB Beat\u3002
 
 \u8BFE\u5802\u4E0A\u4E0B\u6587\uFF1A
@@ -12408,6 +12893,7 @@ async function main() {
       requirement_items: brief.request_items.length,
       visual_requirements: brief.visual_requirements.length,
       visual_relationships: brief.visual_relationships.length,
+      student_tasks: brief.student_task_requirements.length,
       capability_plan: capabilityPlan,
       authoring_schema: schema
     });

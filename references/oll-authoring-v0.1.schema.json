@@ -24,6 +24,12 @@
           "maxItems": 16,
           "items": {"$ref": "#/$defs/lessonVariable"}
         },
+        "tasks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/studentTask"}
+        },
         "adaptation": {
           "type": "object",
           "properties": {
@@ -54,6 +60,61 @@
     }
   },
   "$defs": {
+    "studentTask": {
+      "type": "object",
+      "required": ["as", "prompt", "availability", "allowed_operations", "completion", "hints"],
+      "additionalProperties": false,
+      "properties": {
+        "as": {"$ref": "#/$defs/alias"},
+        "prompt": {"type": "string", "minLength": 1, "maxLength": 480},
+        "availability": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "after_lesson"}
+          }
+        },
+        "allowed_operations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "required": ["kind", "variable", "controls"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {"const": "variable_change"},
+              "variable": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+              "controls": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"enum": ["slider", "geometry_point"]}
+              }
+            }
+          }
+        },
+        "completion": {
+          "type": "object",
+          "required": ["kind", "expression", "value", "tolerance"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "expression_target"},
+            "expression": {"type": "string", "minLength": 1, "maxLength": 256},
+            "value": {"type": "number"},
+            "tolerance": {"type": "number", "exclusiveMinimum": 0}
+          }
+        },
+        "hints": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {"type": "string", "minLength": 1, "maxLength": 480}
+        },
+        "hint_after_attempts": {"type": "integer", "minimum": 1, "maximum": 20},
+        "success_message": {"type": "string", "minLength": 1, "maxLength": 480}
+      }
+    },
     "step": {
       "type": "object",
       "required": ["key", "purpose", "beats"],

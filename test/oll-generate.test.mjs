@@ -241,6 +241,7 @@ const emptyLessonBrief = {
   visual_requirements: [],
   visual_relationships: [],
   shared_variable_requirements: [],
+  student_task_requirements: [],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
 };
@@ -269,6 +270,7 @@ const plotLessonBrief = {
   }],
   visual_relationships: [],
   shared_variable_requirements: [],
+  student_task_requirements: [],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
 };
@@ -336,6 +338,19 @@ const unitCirclePlotBrief = {
     bound_visuals: ["circle-geometry", "sine-plot"],
     direct_angle_geometry: "circle-geometry",
     request_item_ids: ["show-continuous-change"],
+  }],
+  student_task_requirements: [{
+    id: "reach-sine-maximum",
+    prompt: "把圆周点拖到 sin θ = 1",
+    variable: "theta",
+    controls: ["slider", "geometry_point"],
+    completion_expression: "sin(theta)",
+    completion_value: 1,
+    tolerance: 0.01,
+    hints: ["观察圆周点的纵坐标怎样随 θ 变化。", "尝试把圆周点拖到单位圆的最高点。"],
+    hint_after_attempts: 2,
+    success_message: "正确，圆周点在最高点时 sin θ = 1。",
+    request_item_ids: ["explain-rotation-wave", "show-continuous-change"],
   }],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
@@ -412,6 +427,19 @@ const springOscillationBrief = {
     bound_visuals: ["spring-motion", "cosine-displacement"],
     direct_angle_geometry: "",
     request_item_ids: ["show-motion", "control-motion"],
+  }],
+  student_task_requirements: [{
+    id: "reach-left-extreme",
+    prompt: "拖动时间相位，让振子移动到最左端",
+    variable: "t",
+    controls: ["slider"],
+    completion_expression: "cos(t)",
+    completion_value: -1,
+    tolerance: 0.01,
+    hints: ["观察余弦曲线最低点对应的相位。", "把时间相位调到 π 附近。"],
+    hint_after_attempts: 2,
+    success_message: "正确，相位为 π 时余弦位移达到最小值，振子位于最左端。",
+    request_item_ids: ["explain-cosine", "control-motion"],
   }],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
@@ -506,6 +534,7 @@ const genericCircleBrief = {
   }],
   visual_relationships: [],
   shared_variable_requirements: [],
+  student_task_requirements: [],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
 };
@@ -523,6 +552,40 @@ test("planning rejects a relationship from a visual object to itself", () => {
   assert.throws(
     () => buildVertexSchemaContract(contractInput, brief),
     /relationship endpoints must reference two different visual requirements/,
+  );
+});
+
+test("planning rejects a student task that cannot be completed by its declared variable", () => {
+  const missingTask = structuredClone(unitCirclePlotBrief);
+  missingTask.student_task_requirements = [];
+  assert.throws(
+    () => buildVertexSchemaContract(contractInput, missingTask),
+    /must include at least one after-lesson task/,
+  );
+
+  const unknownVariable = structuredClone(unitCirclePlotBrief);
+  unknownVariable.student_task_requirements[0].variable = "missing";
+  assert.throws(
+    () => buildVertexSchemaContract(contractInput, unknownVariable),
+    /variable must reference one shared_variable_requirement\.variable/,
+  );
+
+  const unreachable = structuredClone(unitCirclePlotBrief);
+  unreachable.student_task_requirements[0].completion_value = 2;
+  assert.throws(
+    () => buildVertexSchemaContract(contractInput, unreachable),
+    /no reachable value.*satisfies the task/,
+  );
+
+  const sliderCannotReachRangeMaximum = structuredClone(unitCirclePlotBrief);
+  sliderCannotReachRangeMaximum.shared_variable_requirements[0].slider_step = 2;
+  sliderCannotReachRangeMaximum.student_task_requirements[0].controls = ["slider"];
+  sliderCannotReachRangeMaximum.student_task_requirements[0].completion_expression = "theta";
+  sliderCannotReachRangeMaximum.student_task_requirements[0].completion_value = Math.PI * 2;
+  sliderCannotReachRangeMaximum.student_task_requirements[0].tolerance = 1e-6;
+  assert.throws(
+    () => buildVertexSchemaContract(contractInput, sliderCannotReachRangeMaximum),
+    /no reachable value.*satisfies the task/,
   );
 });
 
@@ -830,6 +893,7 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
     assert.ok(plannerSchema.required.includes("request_items"));
     assert.ok(plannerSchema.required.includes("non_requirement_clauses"));
     assert.ok(plannerSchema.required.includes("teaching_goal_requirements"));
+    assert.ok(plannerSchema.required.includes("student_task_requirements"));
     assert.ok(plannerSchema.required.includes("unhandled_request_items"));
     const verifierSystemPrompt = requests[2].body.systemInstruction.parts[0].text;
     assert.match(verifierSystemPrompt, /用户要求覆盖复核器/);
@@ -855,6 +919,7 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
     assert.deepEqual(requestSchema.properties.dsl.enum, ["octos.lesson"]);
     assert.equal(requestSchema.properties.dsl.type, undefined);
     assert.equal(requestSchema.properties.lesson.properties.title.type, "string");
+    assert.equal("tasks" in requestSchema.properties.lesson.properties, false);
     assert.equal(requestSchema.properties.steps.type, "array");
     assert.equal(requestSchema.properties.steps.items.$ref, "#/$defs/step");
     assert.equal(requestSchema.$defs.action.anyOf.length, 9);
@@ -1482,6 +1547,7 @@ test("tool reports unsupported 3D instead of silently replacing it with a 2D dia
     visual_requirements: [],
     visual_relationships: [],
     shared_variable_requirements: [],
+    student_task_requirements: [],
     progressive_revision_kinds: [],
     unhandled_request_items: [{ request_item_id: "need-3d", status: "unsupported", reason: "当前 OLL 没有 3D 语法" }],
   };
@@ -1552,6 +1618,7 @@ test("tool refuses an image requirement when no authorized image asset exists", 
     }],
     visual_relationships: [],
     shared_variable_requirements: [],
+    student_task_requirements: [],
     progressive_revision_kinds: [],
     unhandled_request_items: [],
   };
@@ -1615,6 +1682,7 @@ test("tool keeps revise as a typed per-kind capability instead of a universal co
     visual_requirements: [],
     visual_relationships: [],
     shared_variable_requirements: [],
+    student_task_requirements: [],
     progressive_revision_kinds: ["math"],
     unhandled_request_items: [],
   };
@@ -1892,6 +1960,7 @@ test("tool deterministically lowers planned connections and circle controls", as
     assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
     const authoringSchema = modelRequests.find(isAuthoringRequest)
       .generationConfig.responseJsonSchema;
+    assert.equal("tasks" in authoringSchema.properties.lesson.properties, false);
     assert.equal(authoringSchema.$defs.action.anyOf.some(
       (variant) => variant.properties.do.enum[0] === "connect",
     ), false);
@@ -1915,6 +1984,25 @@ test("tool deterministically lowers planned connections and circle controls", as
       variable: "theta",
       center: "origin",
     });
+    assert.deepEqual(lesson.lesson.tasks, [{
+      as: "reach-sine-maximum",
+      prompt: "把圆周点拖到 sin θ = 1",
+      availability: { kind: "after_lesson" },
+      allowed_operations: [{
+        kind: "variable_change",
+        variable: "theta",
+        controls: ["slider", "geometry_point"],
+      }],
+      completion: {
+        kind: "expression_target",
+        expression: "sin(theta)",
+        value: 1,
+        tolerance: 0.01,
+      },
+      hints: ["观察圆周点的纵坐标怎样随 θ 变化。", "尝试把圆周点拖到单位圆的最高点。"],
+      hint_after_attempts: 2,
+      success_message: "正确，圆周点在最高点时 sin θ = 1。",
+    }]);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });

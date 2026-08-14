@@ -10,6 +10,7 @@ import {
   validateAuthoringLesson,
   validateAuthoringSchema,
   compileMathExpression,
+  referencedMathVariables,
   type AuthoringLesson,
   type ResourceContext,
 } from "octos-lesson-language";
@@ -53,6 +54,7 @@ type RequestItemKind =
   | "relationship"
   | "continuous_change"
   | "student_control"
+  | "student_task"
   | "existing_board_edit"
   | "presentation_constraint"
   | "unsupported_feature";
@@ -70,6 +72,7 @@ type PresentationCapability =
   | "note"
   | "animation"
   | "student_control"
+  | "student_task"
   | "revise";
 type RevisableNodeKind = "text" | "math" | "shape" | "diagram" | "table" | "note";
 type AuthoringWriteKind =
@@ -148,6 +151,20 @@ interface SharedVariableRequirement {
   request_item_ids: string[];
 }
 
+interface StudentTaskRequirement {
+  id: string;
+  prompt: string;
+  variable: string;
+  controls: Array<"slider" | "geometry_point">;
+  completion_expression: string;
+  completion_value: number;
+  tolerance: number;
+  hints: string[];
+  hint_after_attempts: number;
+  success_message: string;
+  request_item_ids: string[];
+}
+
 interface RequestItem {
   id: string;
   source_ref: string;
@@ -195,6 +212,7 @@ interface LessonBrief {
   visual_requirements: VisualRequirement[];
   visual_relationships: VisualRelationshipRequirement[];
   shared_variable_requirements: SharedVariableRequirement[];
+  student_task_requirements: StudentTaskRequirement[];
   progressive_revision_kinds: RevisableNodeKind[];
   unhandled_request_items: UnhandledRequestItem[];
 }
@@ -285,15 +303,15 @@ const LESSON_BRIEF_SYSTEM_PROMPT = `你是课堂需求与教学设计规划器�
 - 每个 source_ref 必须二选一：如果分句表达了实际要求，就建立一个或多个 request_item；如果只是寒暄、语气词或没有可执行要求，就写入 non_requirement_clauses 并说明原因；不能遗漏，也不能同时出现在两边；
 - non_requirement_clauses 不是逃避要求的地方。只要分句要求解释、展示、比较、演示、控制、修改或限制表现形式，就必须建立 request_item；
 
-request_items 只记录用户明确提出的教学目标、视觉对象、视觉关系、连续变化、学生控制、对既有白板的修改、展示限制和当前系统不支持的功能：
+request_items 只记录用户明确提出的教学目标、视觉对象、视觉关系、连续变化、学生控制、课后动手任务、对既有白板的修改、展示限制和当前系统不支持的功能：
 - 每项使用 source_ref 引用输入提供的原文分句编号，不要复制、改写或自造原文；
 - polarity=require 表示必须满足，polarity=forbid 表示明确禁止；
 - 不得把 3D、学科模拟或未实现的交互偷换成 diagram 或普通文字；这类要求使用 unsupported_feature，并在 unhandled_request_items 中说明；
 - 每个 request_item 必须通过 request_item_ids 映射到一个或多个具体要求，或者明确列入 unhandled_request_items，不能悬空；
-- teaching_goal 映射到 teaching_goal_requirements；visual 映射到 visual_requirements；relationship 映射到 visual_relationships；continuous_change 和 student_control 映射到 shared_variable_requirements；presentation_constraint 映射到 presentation_constraints；
+- teaching_goal 映射到 teaching_goal_requirements；visual 映射到 visual_requirements；relationship 映射到 visual_relationships；continuous_change 和 student_control 映射到 shared_variable_requirements；student_task 映射到 student_task_requirements；presentation_constraint 映射到 presentation_constraints；
 - 目前没有可寻址的既有白板节点清单，因此 existing_board_edit 必须列入 unhandled_request_items，不能让后续模型猜 revise.target。
 
-第二部分 teaching_goal_requirements、visual_requirements、visual_relationships 和 shared_variable_requirements 是教学设计。它们可以根据用户目标增加合理的图形、讲解步骤和互动方式，但必须通过 request_item_ids 说明服务于哪项用户要求。不要把教学建议或你偏好的讲法伪装成用户原话，也不要因为用户没说出“恢复力箭头”之类具体教法就拒绝合理的教学设计。
+第二部分 teaching_goal_requirements、visual_requirements、visual_relationships、shared_variable_requirements 和 student_task_requirements 是教学设计。它们可以根据用户目标增加合理的图形、讲解步骤和互动方式，但必须通过 request_item_ids 说明服务于哪项用户要求。不要把教学建议或你偏好的讲法伪装成用户原话，也不要因为用户没说出“恢复力箭头”之类具体教法就拒绝合理的教学设计。
 
 教学目标和演示对象必须完整：
 - 用户问某个现象“为什么发生”时，解释产生该现象的原因本身是硬教学目标；只描述周期、规律、结果或数学拟合不能替代因果解释；
@@ -340,6 +358,15 @@ shared_variable_requirements 用来规划“同一个量同时驱动多个视觉
 - bound_visuals 目前只能引用 geometry 或 plot。需要直接演示的简单二维主体若能由点和线段表达，必须把主体规划为 geometry 后再绑定；diagram、image 和 table 不能绑定。
 - direct_angle_geometry 只在某个 geometry 里的点适合由学生直接绕圆心拖动时填写该 visual_requirement.id，否则返回空字符串。
 - 当前学生控制只支持变量滑杆，以及圆上点绕圆心的 angle_control；不支持任意物体的自由拖动或沿直线拖动。一般性的“让我自己操作”或没有点明被拖物体的“拖着试试”可以用拖动滑杆满足；只有圆周角度确实是合适的教学操作时才使用 direct_angle_geometry。明确点名要拖动其他物体或沿特定路径拖动时必须列入 unhandled_request_items。
+
+student_task_requirements 用来规划讲解结束后真正交给学生完成的短任务，不是旁白中的提问：
+- 只有已经存在 shared_variable_requirement 时才能创建任务；任务必须让学生通过该变量已有的滑杆，或已有的圆周 angle_control 完成，不得规划新的交互方式。
+- 当用户明确要求“让我动手试、给我一个互动任务、讲完后让我操作”时必须创建 student_task request_item 和对应任务。只要课程已经规划共享变量且用户没有禁止学生控制或任务，就必须至少设计一个能检验本课核心目标的短任务；这属于教学设计，可以引用它所服务的 teaching_goal 或 continuous_change request_item。
+- variable 必须引用一个 shared_variable_requirement.variable。controls 至少包含 slider；只有该变量的 direct_angle_geometry 非空时才能增加 geometry_point。
+- completion_expression 使用 Runtime 数学表达式，只能读取这个 variable；completion_value 是期望结果，tolerance 是允许误差。初始值不能已经满足完成条件。任务必须依据学生最终提交的一次操作判定，不能依靠模型阅读学生意图。
+- prompt 必须像老师给学生的自然指令，说明要达到的可见目标，不要暴露内部变量名或实现术语。hints 从观察方向到更具体操作逐步给出；success_message 解释学生刚才的操作为什么正确。
+- 任务按数组顺序依次开放。通常只规划一个；只有多个操作确实对应不同教学目标时才规划多个。
+- 若 presentation_constraints 明确禁止 student_control 或 student_task，student_task_requirements 必须为空。
 
 progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐进替换，允许 text、math、shape、diagram、table、note；不需要时返回空数组。它不允许修改历史白板节点，也不得包含 geometry、plot 或 image。
 
@@ -854,7 +881,7 @@ const baseActionNames: AuthoringActionName[] = [
 const revisableNodeKinds: RevisableNodeKind[] = ["text", "math", "shape", "diagram", "table", "note"];
 const presentationCapabilities: PresentationCapability[] = [
   "visual", "text", "math", "shape", "diagram", "geometry", "plot", "image", "table", "note",
-  "animation", "student_control", "revise",
+  "animation", "student_control", "student_task", "revise",
 ];
 const visualWriteKinds = new Set<AuthoringWriteKind>(["shape", "diagram", "geometry", "plot", "image", "table"]);
 
@@ -922,10 +949,19 @@ function deriveAuthoringCapabilityPlan(input: ToolInput, brief: LessonBrief): Au
       continue;
     }
     if (capability === "student_control") {
-      if (forbid && brief.shared_variable_requirements.some((item) => item.direct_angle_geometry)) {
-        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids direct student control");
+      if (forbid && brief.shared_variable_requirements.length > 0) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires a student-controllable variable and forbids student control");
       }
       if (forbid) allowAngleControl = false;
+      continue;
+    }
+    if (capability === "student_task") {
+      if (forbid && brief.student_task_requirements.length > 0) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids an after-lesson student task");
+      }
+      if (!forbid && brief.student_task_requirements.length === 0) {
+        throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request requires an after-lesson student task, but none was planned");
+      }
       continue;
     }
     if (capability === "revise") {
@@ -1151,8 +1187,9 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
   // settings. Do not ask the authoring model to copy those mechanical fields.
   // They are lowered into the candidate before full OLL validation.
   delete lessonProperties.variables;
+  delete lessonProperties.tasks;
   if (Array.isArray(lesson.required)) {
-    lesson.required = lesson.required.filter((field) => field !== "variables");
+    lesson.required = lesson.required.filter((field) => field !== "variables" && field !== "tasks");
   }
 
   const fieldsBySurface: Partial<Record<VisualSurface, Map<VisualFeature, string>>> = {
@@ -1225,7 +1262,7 @@ const animationDurationIntents: SharedVariableRequirement["duration_intent"][] =
   "brief", "normal", "extended",
 ];
 const requestItemKinds: RequestItemKind[] = [
-  "teaching_goal", "visual", "relationship", "continuous_change", "student_control",
+  "teaching_goal", "visual", "relationship", "continuous_change", "student_control", "student_task",
   "existing_board_edit", "presentation_constraint", "unsupported_feature",
 ];
 const requestItemPolarities: RequestItemPolarity[] = ["require", "forbid"];
@@ -1238,7 +1275,7 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
   required: [
     "version", "request_summary", "request_items", "non_requirement_clauses", "teaching_goal_requirements",
     "presentation_constraints", "visual_requirements", "visual_relationships",
-    "shared_variable_requirements", "progressive_revision_kinds", "unhandled_request_items",
+    "shared_variable_requirements", "student_task_requirements", "progressive_revision_kinds", "unhandled_request_items",
   ],
   properties: {
     version: { enum: ["1"] },
@@ -1360,6 +1397,41 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
             items: { type: "string" },
           },
           direct_angle_geometry: { type: "string" },
+          request_item_ids: idArraySchema,
+        },
+      },
+    },
+    student_task_requirements: {
+      type: "array",
+      maxItems: 4,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "id", "prompt", "variable", "controls", "completion_expression",
+          "completion_value", "tolerance", "hints", "hint_after_attempts",
+          "success_message", "request_item_ids",
+        ],
+        properties: {
+          id: { type: "string" },
+          prompt: { type: "string" },
+          variable: { type: "string" },
+          controls: {
+            type: "array",
+            minItems: 1,
+            items: { enum: ["slider", "geometry_point"] },
+          },
+          completion_expression: { type: "string" },
+          completion_value: { type: "number" },
+          tolerance: { type: "number" },
+          hints: {
+            type: "array",
+            minItems: 1,
+            maxItems: 4,
+            items: { type: "string" },
+          },
+          hint_after_attempts: { type: "integer" },
+          success_message: { type: "string" },
           request_item_ids: idArraySchema,
         },
       },
@@ -1546,6 +1618,7 @@ function canonicalizeBriefAliases(candidate: unknown): unknown {
   canonicalizeItems(brief.visual_requirements);
   canonicalizeItems(brief.visual_relationships);
   canonicalizeItems(brief.shared_variable_requirements);
+  canonicalizeItems(brief.student_task_requirements);
   if (Array.isArray(brief.visual_requirements)) {
     for (const requirement of brief.visual_requirements) {
       if (!isRecord(requirement) || !Array.isArray(requirement.expressions)) continue;
@@ -1630,6 +1703,16 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
       "BRIEF_INVALID_SHARED_VARIABLES",
       "/shared_variable_requirements",
       "shared_variable_requirements must be an array",
+    ));
+  }
+  const studentTasks = Array.isArray(candidate.student_task_requirements)
+    ? candidate.student_task_requirements
+    : [];
+  if (!Array.isArray(candidate.student_task_requirements)) {
+    violations.push(briefViolation(
+      "BRIEF_INVALID_STUDENT_TASKS",
+      "/student_task_requirements",
+      "student_task_requirements must be an array",
     ));
   }
   const revisionKinds = Array.isArray(candidate.progressive_revision_kinds)
@@ -1975,6 +2058,121 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     }
   });
 
+  const sharedVariableByName = new Map(sharedVariables.flatMap((raw) =>
+    isRecord(raw) && typeof raw.variable === "string"
+      ? [[raw.variable, raw] as const]
+      : []));
+  studentTasks.forEach((raw, index) => {
+    const path = `/student_task_requirements/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK", path, "student task requirement must be an object"));
+      return;
+    }
+    validateRequirementId(raw.id, `${path}/id`);
+    if (typeof raw.prompt !== "string" || !raw.prompt.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_PROMPT", `${path}/prompt`, "prompt must be a non-empty student instruction"));
+    }
+    const variable = typeof raw.variable === "string" ? sharedVariableByName.get(raw.variable) : undefined;
+    if (!variable) {
+      violations.push(briefViolation("BRIEF_UNKNOWN_STUDENT_TASK_VARIABLE", `${path}/variable`, "variable must reference one shared_variable_requirement.variable"));
+    }
+    const controls = Array.isArray(raw.controls) ? raw.controls : [];
+    if (controls.length === 0
+      || !controls.includes("slider")
+      || controls.some((control) => control !== "slider" && control !== "geometry_point")
+      || new Set(controls).size !== controls.length) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_CONTROLS", `${path}/controls`, "controls must include slider and contain only unique supported controls"));
+    }
+    if (controls.includes("geometry_point") && (!variable || !variable.direct_angle_geometry)) {
+      violations.push(briefViolation("BRIEF_UNAVAILABLE_STUDENT_TASK_CONTROL", `${path}/controls`, "geometry_point requires the shared variable to declare direct_angle_geometry"));
+    }
+    if (typeof raw.completion_expression !== "string" || !raw.completion_expression.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_EXPRESSION", `${path}/completion_expression`, "completion_expression is required"));
+    }
+    const target = numberValue(raw.completion_value);
+    const tolerance = numberValue(raw.tolerance);
+    if (target === undefined) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_TARGET", `${path}/completion_value`, "completion_value must be finite"));
+    }
+    if (tolerance === undefined || tolerance <= 0) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_TOLERANCE", `${path}/tolerance`, "tolerance must be a positive finite number"));
+    }
+    if (variable && typeof raw.completion_expression === "string" && target !== undefined && tolerance !== undefined && tolerance > 0) {
+      try {
+        const evaluate = compileMathExpression(raw.completion_expression, [raw.variable as string]);
+        const referenced = referencedMathVariables(raw.completion_expression, [raw.variable as string]);
+        if (referenced.length !== 1 || referenced[0] !== raw.variable) {
+          throw new Error("completion_expression must read the task variable");
+        }
+        const initial = numberValue(variable.initial);
+        const min = numberValue(variable.min);
+        const max = numberValue(variable.max);
+        const sliderStep = numberValue(variable.slider_step);
+        if (initial === undefined || min === undefined || max === undefined || sliderStep === undefined) {
+          throw new Error("shared variable range is incomplete");
+        }
+        const initialResult = evaluate({ [raw.variable as string]: initial });
+        if (Math.abs(initialResult - target) <= tolerance) {
+          throw new Error("the task is already complete at the initial value");
+        }
+        let reachable = false;
+        const check = (value: number): void => {
+          if (reachable) return;
+          const actual = evaluate({ [raw.variable as string]: value });
+          if (Number.isFinite(actual) && Math.abs(actual - target) <= tolerance) {
+            reachable = true;
+          }
+        };
+        const exactSliderSteps = Math.floor((max - min) / sliderStep + 1e-12);
+        if (exactSliderSteps > 20_000 && !controls.includes("geometry_point")) {
+          throw new Error("task slider has too many discrete steps to verify reachability");
+        }
+        if (exactSliderSteps <= 20_000) {
+          for (let sample = 0; sample <= exactSliderSteps && !reachable; sample += 1) {
+            check(min + sample * sliderStep);
+          }
+        }
+        if (!reachable && controls.includes("geometry_point")) {
+          const sampleCount = 20_000;
+          for (let sample = 0; sample <= sampleCount && !reachable; sample += 1) {
+            check(min + (max - min) * sample / sampleCount);
+          }
+        }
+        if (!reachable) throw new Error("no reachable value in the planned variable range satisfies the task");
+      } catch (error) {
+        violations.push(briefViolation(
+          "BRIEF_INVALID_STUDENT_TASK_EXPRESSION",
+          `${path}/completion_expression`,
+          `completion condition is invalid: ${(error as Error).message}`,
+        ));
+      }
+    }
+    if (!Array.isArray(raw.hints) || raw.hints.length === 0 || raw.hints.length > 4
+      || raw.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_HINTS", `${path}/hints`, "hints must contain one to four non-empty hints"));
+    }
+    if (!Number.isInteger(raw.hint_after_attempts)
+      || (raw.hint_after_attempts as number) < 1
+      || (raw.hint_after_attempts as number) > 20) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_HINT_THRESHOLD", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20"));
+    }
+    if (typeof raw.success_message !== "string" || !raw.success_message.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_SUCCESS", `${path}/success_message`, "success_message must be non-empty"));
+    }
+    mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
+  });
+
+  const tasksForbidden = presentationConstraints.some((constraint) =>
+    isRecord(constraint)
+    && constraint.polarity === "forbid"
+    && (constraint.capability === "student_task" || constraint.capability === "student_control"));
+  if (tasksForbidden && studentTasks.length > 0) {
+    violations.push(briefViolation("BRIEF_FORBIDDEN_STUDENT_TASK", "/student_task_requirements", "student tasks cannot be planned when the request forbids tasks or student control"));
+  }
+  if (!tasksForbidden && sharedVariables.length > 0 && studentTasks.length === 0) {
+    violations.push(briefViolation("BRIEF_MISSING_STUDENT_TASK", "/student_task_requirements", "a lesson with a shared student-controllable variable must include at least one after-lesson task"));
+  }
+
   const unhandledRequestIds = new Set<string>();
   unhandledItems.forEach((raw, index) => {
     const path = `/unhandled_request_items/${index}`;
@@ -2002,6 +2200,7 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     relationship: "relationship",
     continuous_change: "shared_variable",
     student_control: "shared_variable",
+    student_task: "student_task",
     presentation_constraint: "presentation_constraint",
   };
   for (const [id, item] of requestItemById) {
@@ -2373,6 +2572,28 @@ function lowerPlannedLessonFields(document: unknown, brief: LessonBrief): unknow
       control: { kind: "slider", step: requirement.slider_step },
     }));
   }
+  if (brief.student_task_requirements.length === 0) delete document.lesson.tasks;
+  else {
+    document.lesson.tasks = brief.student_task_requirements.map((requirement) => ({
+      as: requirement.id,
+      prompt: requirement.prompt,
+      availability: { kind: "after_lesson" },
+      allowed_operations: [{
+        kind: "variable_change",
+        variable: requirement.variable,
+        controls: [...requirement.controls],
+      }],
+      completion: {
+        kind: "expression_target",
+        expression: requirement.completion_expression,
+        value: requirement.completion_value,
+        tolerance: requirement.tolerance,
+      },
+      hints: [...requirement.hints],
+      hint_after_attempts: requirement.hint_after_attempts,
+      success_message: requirement.success_message,
+    }));
+  }
 
   const rawBeats: Record<string, unknown>[] = [];
   const writeBeatByAlias = new Map<string, { beat: Record<string, unknown>; order: number }>();
@@ -2718,6 +2939,42 @@ function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): G
       }
     }
   }
+  const tasks = Array.isArray(lesson.tasks) ? lesson.tasks.filter(isRecord) : [];
+  for (const [index, requirement] of brief.student_task_requirements.entries()) {
+    const task = tasks.find((candidate) => candidate.as === requirement.id);
+    const availability = task && isRecord(task.availability) ? task.availability : undefined;
+    const allowedOperations = task && Array.isArray(task.allowed_operations)
+      ? task.allowed_operations.filter(isRecord)
+      : [];
+    const allowed = allowedOperations.find((operation) =>
+      operation.kind === "variable_change" && operation.variable === requirement.variable);
+    const controls = allowed && Array.isArray(allowed.controls) ? allowed.controls : [];
+    const completion = task && isRecord(task.completion) ? task.completion : undefined;
+    const taskMatches = task
+      && task.prompt === requirement.prompt
+      && availability?.kind === "after_lesson"
+      && allowedOperations.length === 1
+      && controls.length === requirement.controls.length
+      && requirement.controls.every((control) => controls.includes(control))
+      && completion?.kind === "expression_target"
+      && completion.expression === requirement.completion_expression
+      && approximatelyEqual(completion.value, requirement.completion_value)
+      && approximatelyEqual(completion.tolerance, requirement.tolerance)
+      && Array.isArray(task.hints)
+      && task.hints.length === requirement.hints.length
+      && requirement.hints.every((hint, hintIndex) => task.hints?.[hintIndex] === hint)
+      && task.hint_after_attempts === requirement.hint_after_attempts
+      && task.success_message === requirement.success_message;
+    if (!taskMatches) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_STUDENT_TASK_UNSATISFIED",
+        path: `/lesson/tasks/${index}`,
+        requirement_id: requirement.id,
+        message: `Student task '${requirement.id}' must preserve the planned prompt, controls, completion condition, hints, and feedback`,
+      });
+    }
+  }
   return violations;
 }
 
@@ -3038,7 +3295,7 @@ ${JSON.stringify(brief.shared_variable_requirements.map((requirement) => ({
       ? "该 geometry 必须包含同一变量驱动的圆上点 x/y bindings，并用半径线连接该点与圆心"
       : null,
   })), null, 2)}
-system_inserted_slider 由系统写入 lesson.variables，模型不要自行复制。required_direct_angle_control_on 非空时，模型必须提供可唯一识别的圆心、圆上点、半径线和该点的 x/y 变量绑定，系统据此补入 interaction；找不到唯一对象会校验失败。动画必须逐字采用 required_animation 中的 variable、value、easing 和 duration_intent。
+system_inserted_slider 由系统写入 lesson.variables，student_task_requirements 由系统写入 lesson.tasks，模型都不要自行复制。required_direct_angle_control_on 非空时，模型必须提供可唯一识别的圆心、圆上点、半径线和该点的 x/y 变量绑定，系统据此补入 interaction；找不到唯一对象会校验失败。动画必须逐字采用 required_animation 中的 variable、value、easing 和 duration_intent。
 每个 required_animation 必须放在独立的简短 Beat：图形和连接先在前一 Beat 创建；动画 Beat 只保留一个 animate 和 after_speech focus，并把完整推导放在相邻 Beat。
 
 课堂上下文：
@@ -3799,6 +4056,7 @@ async function main(): Promise<void> {
       requirement_items: brief.request_items.length,
       visual_requirements: brief.visual_requirements.length,
       visual_relationships: brief.visual_relationships.length,
+      student_tasks: brief.student_task_requirements.length,
       capability_plan: capabilityPlan,
       authoring_schema: schema,
     });

@@ -12,7 +12,8 @@
         "bound_kinds": ["geometry", "plot"],
         "animate": true,
         "direct_angle_control": true
-      }
+      },
+      "student_task": true
     }
   },
   {
@@ -38,7 +39,8 @@
       "shared_variable": {
         "bound_kinds": ["geometry", "plot"],
         "animate": true
-      }
+      },
+      "student_task": true
     }
   },
   {
