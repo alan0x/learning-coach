@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -23,6 +23,7 @@
         "OLL_PLANNING_ATTEMPTS",
         "OLL_VERIFICATION_ATTEMPTS",
         "OLL_GENERATION_ATTEMPTS",
+        "OLL_AUTHORING_STRATEGY",
         "OLL_DEBUG_GENERATION",
         "OCTOS_WORK_DIR"
       ],

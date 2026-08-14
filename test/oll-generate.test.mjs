@@ -741,11 +741,21 @@ function isBeatRepairRequest(body) {
   return body.systemInstruction.parts[0].text.includes("局部教学节拍修复器");
 }
 
+function isParallelSectionRequest(body) {
+  return body.systemInstruction.parts[0].text.includes("独立课程分段编写器");
+}
+
+function isVisualComponentRequest(body) {
+  return body.systemInstruction.parts[0].text.includes("独立视觉组件编写器");
+}
+
 function isAuthoringRequest(body) {
   return !isLessonBriefRequest(body)
     && !isLessonBriefVerificationRequest(body)
     && !isComponentRepairRequest(body)
-    && !isBeatRepairRequest(body);
+    && !isBeatRepairRequest(body)
+    && !isParallelSectionRequest(body)
+    && !isVisualComponentRequest(body);
 }
 
 function sourceRefsFromPlanningRequest(body) {
@@ -855,6 +865,7 @@ async function runTool({ baseUrl, serviceAccount, workDirectory, input = {}, env
       VERTEX_SA_JSON: JSON.stringify(serviceAccount),
       VERTEX_BASE_URL: `${baseUrl}/v1`,
       OLL_MODEL: "gemini-3.6-flash",
+      OLL_AUTHORING_STRATEGY: "monolithic",
       OCTOS_WORK_DIR: workDirectory,
       ...environment,
     },
@@ -879,6 +890,353 @@ async function runTool({ baseUrl, serviceAccount, workDirectory, input = {}, env
   });
   return { exitCode, stdout, stderr };
 }
+
+test("parallel authoring overlaps independent work, publishes a playable prefix, and assembles one validated lesson", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-parallel-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const serviceAccount = {
+    project_id: "test-project",
+    client_email: "test@example.com",
+    private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+    token_uri: "unused",
+  };
+  let activeParallelRequests = 0;
+  let maxParallelRequests = 0;
+  const requestKinds = [];
+  const sectionSteps = [
+    {
+      key: "observe",
+      purpose: "先看清正弦函数图像",
+      beats: [{
+        key: "show-plot",
+        say: "先看横轴上的角度怎样对应正弦曲线。",
+        delivery: "patient",
+        actions: [{
+          do: "focus",
+          when: "after_speech",
+          targets: ["sine-plot"],
+          intent: "current_step",
+        }],
+      }],
+    },
+    {
+      key: "explain-1",
+      purpose: "解释正弦函数的周期",
+      beats: [{
+        key: "explain-period",
+        say: "每增加二派，曲线会重复同样的起伏。",
+        delivery: "patient",
+        actions: [
+          {
+            do: "write",
+            as: "period-note",
+            kind: "note",
+            role: "concept",
+            content: { title: "周期", items: ["sin(x + 2π) = sin x"] },
+            place: { relation: "below", anchor: "sine-plot" },
+          },
+          {
+            do: "focus",
+            when: "after_speech",
+            targets: ["period-note", "sine-plot"],
+            intent: "current_step",
+          },
+        ],
+      }],
+    },
+  ];
+  const sectionStepById = new Map(sectionSteps.map((step) => [step.key, step]));
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    const parsed = JSON.parse(body);
+    if (isLessonBriefRequest(parsed)) {
+      requestKinds.push("brief");
+      response.end(vertexPayload(plotLessonBrief));
+      return;
+    }
+    if (isLessonBriefVerificationRequest(parsed)) {
+      requestKinds.push("verification");
+      response.end(vertexPayload({ missing: [], contradictions: [], suggestions: [] }));
+      return;
+    }
+    const isSection = isParallelSectionRequest(parsed);
+    const isComponent = isVisualComponentRequest(parsed);
+    assert.equal(isSection || isComponent, true, "parallel mode must not send the monolithic lesson schema");
+    requestKinds.push(isSection ? "section" : "component");
+    activeParallelRequests += 1;
+    maxParallelRequests = Math.max(maxParallelRequests, activeParallelRequests);
+    const sectionId = isSection
+      ? JSON.parse(parsed.contents[0].parts[0].text).section.id
+      : undefined;
+    await new Promise((done) => setTimeout(done, sectionId === "explain-1" ? 100 : 50));
+    activeParallelRequests -= 1;
+    if (isComponent) {
+      response.end(vertexPayload(validPlotLesson.steps[0].beats[0].actions[0]));
+      return;
+    }
+    response.end(vertexPayload(sectionStepById.get(sectionId)));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    serviceAccount.token_uri = `http://127.0.0.1:${address.port}/token`;
+    const result = await runTool({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount,
+      workDirectory,
+      input: {
+        learner_request: "请用正弦函数图像解释周期。",
+      },
+      environment: { OLL_AUTHORING_STRATEGY: "parallel" },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.ok(maxParallelRequests >= 2, `expected overlapping section/component requests, got ${maxParallelRequests}`);
+    assert.equal(requestKinds.filter((kind) => kind === "section").length, 2);
+    assert.equal(requestKinds.filter((kind) => kind === "component").length, 1);
+    assert.match(
+      result.stderr,
+      /"stage":"lesson-requirements".*"status":"completed".*"elapsed_ms":\d+/,
+    );
+    assert.match(result.stderr, /"type":"artifact".*"kind":"oll_lesson_part".*"message":"part=0 elapsed_ms=\d+"/);
+    const partialPath = join(workDirectory, "study", "oll", "learn-e2e-001.part-000.octos-lesson.json");
+    const partial = JSON.parse(await readFile(partialPath, "utf8"));
+    assert.equal(partial.steps.length, 1);
+    assert.equal(partial.steps[0].beats[0].actions.some((action) => action.as === "sine-plot"), true);
+    const protocol = JSON.parse(result.stdout);
+    const finalLesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    assert.equal(finalLesson.steps.length, 2);
+    assert.equal(finalLesson.steps[0].beats[0].actions.some((action) => action.as === "sine-plot"), true);
+    assert.equal(finalLesson.steps[1].beats[0].actions.some(
+      (action) => action.as === "explain-1-period-note",
+    ), true);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("parallel authoring preserves shared controls, relationships, tasks, and animation", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-parallel-interactive-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const serviceAccount = {
+    project_id: "test-project",
+    client_email: "test@example.com",
+    private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+    token_uri: "unused",
+  };
+  const sectionSteps = new Map([
+    ["observe", {
+      key: "observe",
+      purpose: "观察单位圆与正弦图",
+      beats: [{
+        key: "show-linked-visuals",
+        say: "先同时观察单位圆和正弦曲线。",
+        delivery: "patient",
+        actions: [{
+          do: "focus",
+          when: "after_speech",
+          targets: ["circle-geometry", "sine-plot"],
+          intent: "current_step",
+        }],
+      }],
+    }],
+    ["explain-1", {
+      key: "explain-1",
+      purpose: "解释旋转如何映射为波动",
+      beats: [{
+        key: "explain-mapping",
+        say: "圆上点的纵坐标，就是曲线在当前角度的高度。",
+        delivery: "patient",
+        actions: [
+          {
+            do: "write",
+            as: "rotation-wave-note",
+            kind: "note",
+            role: "concept",
+            content: { title: "同一个角度", items: ["纵坐标 y = sin θ"] },
+            place: { relation: "below", anchor: "sine-plot" },
+          },
+          {
+            do: "focus",
+            when: "after_speech",
+            targets: ["rotation-wave-note", "circle-geometry", "sine-plot"],
+            intent: "current_step",
+          },
+        ],
+      }],
+    }],
+  ]);
+  const geometryComponent = structuredClone(modelAuthoredUnitCirclePlotLesson.steps[0].beats[0].actions[0]);
+  const incompleteGeometryComponent = structuredClone(geometryComponent);
+  incompleteGeometryComponent.content.points[1].label = "P";
+  const plotComponent = structuredClone(modelAuthoredUnitCirclePlotLesson.steps[0].beats[0].actions[1]);
+  let geometryRequests = 0;
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    const parsed = JSON.parse(body);
+    if (isLessonBriefRequest(parsed)) {
+      response.end(vertexPayload(unitCirclePlotBrief));
+      return;
+    }
+    if (isLessonBriefVerificationRequest(parsed)) {
+      response.end(vertexPayload({ missing: [], contradictions: [], suggestions: [] }));
+      return;
+    }
+    if (isParallelSectionRequest(parsed)) {
+      const sectionId = JSON.parse(parsed.contents[0].parts[0].text).section.id;
+      response.end(vertexPayload(sectionSteps.get(sectionId)));
+      return;
+    }
+    assert.equal(isVisualComponentRequest(parsed), true);
+    const alias = parsed.generationConfig.responseJsonSchema.properties.as.enum[0];
+    if (alias === "circle-geometry") geometryRequests += 1;
+    response.end(vertexPayload(alias === "circle-geometry"
+      ? geometryRequests === 1 ? incompleteGeometryComponent : geometryComponent
+      : plotComponent));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    serviceAccount.token_uri = `http://127.0.0.1:${address.port}/token`;
+    const result = await runTool({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount,
+      workDirectory,
+      input: {
+        learner_request: "请结合单位圆和 y=sin x 的函数图像，解释角度旋转如何变成周期波动。",
+      },
+      environment: { OLL_AUTHORING_STRATEGY: "parallel" },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(geometryRequests, 2);
+    const partial = JSON.parse(await readFile(
+      join(workDirectory, "study", "oll", "learn-e2e-001.part-000.octos-lesson.json"),
+      "utf8",
+    ));
+    assert.equal(partial.steps.length, 1);
+    assert.deepEqual(partial.lesson.variables.map((variable) => variable.as), ["theta"]);
+    assert.deepEqual(partial.lesson.tasks.map((task) => task.as), ["reach-sine-maximum"]);
+    assert.equal(
+      partial.steps[0].beats[0].actions.some((action) => action.do === "connect"),
+      true,
+    );
+    const partialGeometry = partial.steps[0].beats[0].actions.find(
+      (action) => action.as === "circle-geometry",
+    );
+    assert.equal(
+      partialGeometry.content.points.some((point) => point.interaction?.kind === "angle_control"),
+      true,
+    );
+
+    const protocol = JSON.parse(result.stdout);
+    const finalLesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    assert.equal(finalLesson.steps.length, 3);
+    assert.equal(
+      finalLesson.steps.flatMap((step) => step.beats)
+        .flatMap((beat) => beat.actions)
+        .some((action) => action.do === "animate" && action.variable === "theta"),
+      true,
+    );
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("parallel authoring keeps a controllable 3D scene and its view task", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-parallel-3d-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const serviceAccount = {
+    project_id: "test-project",
+    client_email: "test@example.com",
+    private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+    token_uri: "unused",
+  };
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    const parsed = JSON.parse(body);
+    if (isLessonBriefRequest(parsed)) {
+      response.end(vertexPayload(cube3dBrief));
+      return;
+    }
+    if (isLessonBriefVerificationRequest(parsed)) {
+      response.end(vertexPayload({ missing: [], contradictions: [], suggestions: [] }));
+      return;
+    }
+    if (isVisualComponentRequest(parsed)) {
+      response.end(vertexPayload(validCube3dLesson.steps[0].beats[0].actions[0]));
+      return;
+    }
+    assert.equal(isParallelSectionRequest(parsed), true);
+    const sectionId = JSON.parse(parsed.contents[0].parts[0].text).section.id;
+    response.end(vertexPayload({
+      key: sectionId,
+      purpose: "观察立方体",
+      beats: [{
+        key: "inspect-cube",
+        say: sectionId === "observe"
+          ? "先拖动立方体，观察面和棱的空间关系。"
+          : "从正面观察时，立方体投影为正方形。",
+        delivery: "patient",
+        actions: [{
+          do: "focus",
+          when: "after_speech",
+          targets: ["cube-scene"],
+          intent: "current_step",
+        }],
+      }],
+    }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    serviceAccount.token_uri = `http://127.0.0.1:${address.port}/token`;
+    const result = await runTool({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount,
+      workDirectory,
+      input: { learner_request: "请用3D展示一个立方体，让我旋转观察并把它转到正视图。" },
+      environment: { OLL_AUTHORING_STRATEGY: "parallel" },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    const protocol = JSON.parse(result.stdout);
+    const lesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    assert.equal(lesson.steps[0].beats[0].actions.some(
+      (action) => action.do === "write" && action.as === "cube-scene" && action.kind === "scene3d",
+    ), true);
+    assert.deepEqual(lesson.lesson.tasks.map((task) => task.as), ["find-front-view"]);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
 
 test("selection tool writes a source-linked artifact without producing a lesson", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-selection-"));

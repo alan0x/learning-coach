@@ -10120,6 +10120,14 @@ var COMPONENT_REPAIR_SYSTEM_PROMPT = `\u4F60\u662F OLL \u5C40\u90E8\u89C6\u89C9\
 var BEAT_REPAIR_SYSTEM_PROMPT = `\u4F60\u662F OLL \u5C40\u90E8\u6559\u5B66\u8282\u62CD\u4FEE\u590D\u5668\u3002\u8F93\u5165\u4F1A\u7ED9\u51FA\u4E00\u4E2A\u51FA\u9519\u7684 Beat\u3001\u6B64\u524D\u5DF2\u7ECF\u5B58\u5728\u7684\u522B\u540D\uFF0C\u4EE5\u53CA\u8BE5 Beat \u7684\u7CBE\u786E\u6821\u9A8C\u9519\u8BEF\u3002
 
 \u53EA\u8FD4\u56DE\u4FEE\u590D\u540E\u7684\u4E00\u4E2A\u5B8C\u6574 Beat\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001Step\u3001Markdown \u6216\u89E3\u91CA\u3002\u4FDD\u6301 beat.key \u4E0D\u53D8\uFF0C\u53EA\u4FEE\u6539\u8FD9\u4E2A Beat \u7684 say\u3001delivery \u548C actions\u3002\u4E0D\u5F97\u91CD\u65B0\u521B\u5EFA existing_aliases \u4E2D\u7684\u8282\u70B9\u6216\u5173\u7CFB\uFF1B\u9700\u8981\u7EE7\u7EED\u8BB2\u89E3\u5DF2\u6709\u89C6\u89C9\u5BF9\u8C61\u65F6\u76F4\u63A5\u5F15\u7528\u5176\u522B\u540D\uFF0C\u6216\u7528\u65B0\u7684 text\u3001math\u3001note \u7B49\u8282\u70B9\u8865\u5145\u3002\u6BCF\u4E2A Beat \u5FC5\u987B\u5305\u542B\u4E00\u4E2A when="after_speech" \u7684 focus\u3002\u8F93\u51FA\u5FC5\u987B\u7B26\u5408\u6240\u9644 JSON Schema\u3002`;
+var PARALLEL_SECTION_SYSTEM_PROMPT = `\u4F60\u662F\u72EC\u7ACB\u8BFE\u7A0B\u5206\u6BB5\u7F16\u5199\u5668\u3002\u4F60\u53EA\u7F16\u5199\u4E00\u6BB5\u8BFE\u7A0B\u7684\u4E00\u4E2A\u5B8C\u6574 Step\uFF0C\u5176\u4ED6\u5206\u6BB5\u4F1A\u540C\u65F6\u7531\u5176\u4ED6\u7F16\u5199\u5668\u5B8C\u6210\uFF0C\u6700\u540E\u7531\u7A0B\u5E8F\u6309\u987A\u5E8F\u7EC4\u88C5\u3002
+
+\u53EA\u8FD4\u56DE\u4E00\u4E2A\u7B26\u5408\u6240\u9644 JSON Schema \u7684 Step \u5BF9\u8C61\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001close\u3001Markdown \u6216\u89E3\u91CA\u3002\u53EA\u8BB2\u8F93\u5165 section.purpose \u6307\u5B9A\u7684\u5185\u5BB9\uFF0C\u4E0D\u91CD\u590D\u5B8C\u6574\u8BFE\u7A0B\u3002\u4E3B\u8981 geometry\u3001plot\u3001scene3d\u3001diagram\u3001image\u3001table \u89C6\u89C9\u5BF9\u8C61\u7531\u7A0B\u5E8F\u53E6\u884C\u751F\u6210\u548C\u63D2\u5165\uFF1B\u4F60\u4E0D\u5F97\u521B\u5EFA\u8FD9\u4E9B\u4E3B\u8981\u89C6\u89C9\u5BF9\u8C61\u3002\u4F60\u53EA\u80FD\u7528 text\u3001math\u3001note \u6216 shape \u5199\u5FC5\u8981\u677F\u4E66\uFF0C\u5E76\u7528 focus \u5F15\u7528\u672C\u6BB5\u65B0\u5EFA\u8282\u70B9\u6216 available_visuals \u4E2D\u7684\u7A33\u5B9A\u522B\u540D\u3002\u4E0D\u8981\u5F15\u7528\u5176\u4ED6\u5206\u6BB5\u53EF\u80FD\u521B\u5EFA\u7684\u6587\u5B57\u8282\u70B9\uFF0C\u56E0\u4E3A\u8FD9\u4E9B\u5206\u6BB5\u6B63\u5728\u5E76\u884C\u751F\u6210\u3002\u6BCF\u4E2A Beat \u5FC5\u987B\u5305\u542B\u4E00\u4E2A when="after_speech" \u7684 focus\uFF0Csay \u5FC5\u987B\u662F\u9002\u5408 TTS \u7684\u81EA\u7136\u8BED\u8A00\uFF0C\u4E0D\u5305\u542B Markdown \u6216 LaTeX \u5B9A\u754C\u7B26\u3002write.content \u5FC5\u987B\u5339\u914D kind\uFF1Atext/shape \u4F7F\u7528\u975E\u7A7A text\uFF0Cmath \u4F7F\u7528 latex\uFF0Cnote \u4F7F\u7528 title \u548C items\u3002\u6240\u6709 key \u4E0E as \u53EA\u80FD\u4F7F\u7528\u5C0F\u5199\u82F1\u6587\u5B57\u6BCD\u3001\u6570\u5B57\u548C\u8FDE\u5B57\u7B26\u3002`;
+var VISUAL_COMPONENT_SYSTEM_PROMPT = `\u4F60\u662F\u72EC\u7ACB\u89C6\u89C9\u7EC4\u4EF6\u7F16\u5199\u5668\u3002\u4F60\u53EA\u751F\u6210\u8BFE\u7A0B\u8981\u6C42\u4E2D\u6307\u5B9A\u7684\u4E00\u4E2A\u4E3B\u8981\u89C6\u89C9\u5BF9\u8C61\uFF0C\u5176\u4ED6\u89C6\u89C9\u5BF9\u8C61\u548C\u8BFE\u7A0B\u8BB2\u89E3\u4F1A\u540C\u65F6\u751F\u6210\uFF0C\u6700\u540E\u7531\u7A0B\u5E8F\u7EC4\u88C5\u3002
+
+\u53EA\u8FD4\u56DE\u4E00\u4E2A\u5B8C\u6574 write \u52A8\u4F5C\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001Step\u3001Beat\u3001close\u3001Markdown \u6216\u89E3\u91CA\u3002\u5FC5\u987B\u4FDD\u6301 do="write"\u3001as \u4E0E visual_requirement.id \u5B8C\u5168\u76F8\u540C\u3001kind \u4E0E visual_requirement.surface \u5B8C\u5168\u76F8\u540C\uFF0C\u5E76\u5B9E\u73B0 required_features\u3001expressions\u3001\u8FD0\u52A8\u4E3B\u4F53\u548C\u5171\u4EAB\u53D8\u91CF\u7ED1\u5B9A\u3002\u4E0D\u5F97\u521B\u5EFA\u5176\u4ED6\u8282\u70B9\u3001connect\u3001animate\u3001\u65C1\u767D\u6216\u6559\u5B66\u4EFB\u52A1\u3002\u8F93\u51FA\u5FC5\u987B\u7B26\u5408\u6240\u9644 JSON Schema\u3002
+
+geometry \u7528\u4E8E\u5750\u6807\u8F74\u3001\u70B9\u3001\u5706\u3001\u7EBF\u6BB5\u3001\u6295\u5F71\u548C\u89D2\u5F27\uFF0C\u4E0D\u5F97\u7528 diagram \u5192\u5145\u5EA6\u91CF\u51E0\u4F55\u3002visual_requirement.motion_subject \u975E\u7A7A\u65F6\uFF0C\u4EE3\u8868\u8FD0\u52A8\u4E3B\u4F53\u7684 point.label \u5FC5\u987B\u5305\u542B\u8FD9\u6BB5 motion_subject \u539F\u6587\uFF0C\u8BA9\u5B66\u751F\u80FD\u770B\u51FA\u662F\u8C01\u5728\u8FD0\u52A8\uFF1Blinear_point \u53EA\u7ED1\u5B9A\u8BE5\u70B9\u7684 x \u6216 y\uFF0Cplanar_point \u540C\u65F6\u7ED1\u5B9A x/y\uFF0Cangular_point \u540C\u65F6\u7ED1\u5B9A x/y \u5E76\u7528\u534A\u5F84\u7EBF\u8FDE\u63A5\u56FA\u5B9A\u4E2D\u5FC3\u3002\u5171\u4EAB\u89D2\u53D8\u91CF\u8981\u76F4\u63A5\u7ED1\u5B9A\u8FD9\u4E2A\u70B9\u3002plot \u7684\u66F2\u7EBF expression \u53EA\u5199 Runtime \u8868\u8FBE\u5F0F\uFF0C\u4F8B\u5982 sin(x)\u3001cos(x)\uFF0C\u4E0D\u5F97\u5199 y=\u3001LaTeX\u3001\u4EE3\u7801\u6216 SVG\u3002scene3d \u7684 camera\u3001objects\u3001sections\u3001highlights \u5FC5\u987B\u4F7F\u7528\u7ED3\u6784\u5316\u5B57\u6BB5\uFF0Csurface.expression \u4F7F\u7528 z=f(x,y) \u7684\u53D7\u9650\u8868\u8FBE\u5F0F\u3002diagram \u53EA\u7528\u4E8E\u8BED\u4E49\u5143\u7D20\u548C\u5173\u7CFB\u3002image \u53EA\u80FD\u5F15\u7528 session_context \u4E2D\u660E\u786E\u7ED9\u51FA\u7684 asset_id\u3002bindings.target \u4F7F\u7528\u201C\u5C40\u90E8\u5143\u7D20\u522B\u540D.\u6570\u503C\u5C5E\u6027\u201D\uFF0Cexpression \u76F4\u63A5\u5F15\u7528 shared_variables \u4E2D\u7684\u53D8\u91CF\u3002\u4E0D\u5F97\u8F93\u51FA\u50CF\u7D20\u5750\u6807\u3001HTML\u3001SVG \u8DEF\u5F84\u6216\u811A\u672C\u3002\u6240\u6709\u5C40\u90E8\u522B\u540D\u53EA\u80FD\u4F7F\u7528\u5C0F\u5199\u82F1\u6587\u5B57\u6BCD\u3001\u6570\u5B57\u548C\u8FDE\u5B57\u7B26\u3002`;
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string`);
@@ -12905,20 +12913,8 @@ function validateAllowedCapabilities(document, plan) {
   }
   return violations;
 }
-function validateGeneratedLesson(raw, input, brief, capabilityPlan) {
-  let document;
-  try {
-    document = JSON.parse(raw);
-  } catch (error) {
-    const violations2 = [{
-      stage: "schema",
-      code: "OLL_INVALID_JSON",
-      path: "/",
-      message: `JSON parse failed: ${error.message}`
-    }];
-    throw new GeneratedLessonError(formatViolations(violations2), raw, violations2);
-  }
-  document = lowerPlannedLessonFields(document, brief);
+function validateGeneratedLessonDocument(candidate, input, brief, capabilityPlan, requireCoverage = true) {
+  const document = lowerPlannedLessonFields(structuredClone(candidate), brief);
   const schemaResult = validateAuthoringSchema(document);
   if (!schemaResult.valid) {
     const violations2 = schemaResult.errors.slice(0, 8).map((item) => ({
@@ -12927,7 +12923,7 @@ function validateGeneratedLesson(raw, input, brief, capabilityPlan) {
       path: item.instancePath || "/",
       message: item.message || "Schema validation failed"
     }));
-    throw new GeneratedLessonError(`OLL schema validation failed: ${formatViolations(violations2)}`, raw, violations2);
+    throw new GeneratedLessonError(`OLL schema validation failed: ${formatViolations(violations2)}`, void 0, violations2);
   }
   const lesson = document;
   const violations = [];
@@ -12942,7 +12938,7 @@ function validateGeneratedLesson(raw, input, brief, capabilityPlan) {
     violations.push(semanticViolation(error));
   }
   violations.push(...validateAnimationBeatTiming(lesson));
-  violations.push(...validateBriefCoverage(lesson, brief));
+  if (requireCoverage) violations.push(...validateBriefCoverage(lesson, brief));
   violations.push(...validateAllowedCapabilities(lesson, capabilityPlan));
   if (violations.length === 0) {
     try {
@@ -12958,9 +12954,29 @@ function validateGeneratedLesson(raw, input, brief, capabilityPlan) {
     }
   }
   if (violations.length > 0) {
-    throw new GeneratedLessonError(`OLL validation failed: ${formatViolations(violations)}`, raw, violations);
+    throw new GeneratedLessonError(`OLL validation failed: ${formatViolations(violations)}`, void 0, violations);
   }
   return lesson;
+}
+function validateGeneratedLesson(raw, input, brief, capabilityPlan) {
+  let document;
+  try {
+    document = JSON.parse(raw);
+  } catch (error) {
+    const violations = [{
+      stage: "schema",
+      code: "OLL_INVALID_JSON",
+      path: "/",
+      message: `JSON parse failed: ${error.message}`
+    }];
+    throw new GeneratedLessonError(formatViolations(violations), raw, violations);
+  }
+  try {
+    return validateGeneratedLessonDocument(document, input, brief, capabilityPlan);
+  } catch (error) {
+    if (!(error instanceof GeneratedLessonError)) throw error;
+    throw new GeneratedLessonError(error.message, raw, error.violations);
+  }
 }
 function buildRequestContext(input) {
   const mayUseExistingBoard = input.request_source === "explicit_board_follow_up";
@@ -13518,6 +13534,424 @@ async function planLesson(client, input) {
   }
   throw new Error("Lesson Brief planning failed");
 }
+function deriveParallelLessonSections(brief) {
+  const sections = [];
+  if (brief.visual_requirements.length > 0) {
+    sections.push({
+      id: "observe",
+      title: "\u5148\u770B\u6E05\u5BF9\u8C61",
+      purpose: brief.visual_requirements.map((requirement) => requirement.purpose).join("\uFF1B"),
+      visualRequirementIds: brief.visual_requirements.map((requirement) => requirement.id)
+    });
+  }
+  const goalGroupSize = Math.max(
+    1,
+    Math.ceil(brief.teaching_goal_requirements.length / 4)
+  );
+  for (let start = 0; start < brief.teaching_goal_requirements.length; start += goalGroupSize) {
+    const index = Math.floor(start / goalGroupSize);
+    const requirements = brief.teaching_goal_requirements.slice(start, start + goalGroupSize);
+    sections.push({
+      id: `explain-${index + 1}`,
+      title: `\u7406\u89E3\u5173\u952E\u70B9 ${index + 1}`,
+      purpose: requirements.map((requirement) => requirement.goal).join("\uFF1B"),
+      visualRequirementIds: []
+    });
+  }
+  if (sections.length === 0) {
+    sections.push({
+      id: "explain-1",
+      title: "\u7406\u89E3\u6838\u5FC3\u95EE\u9898",
+      purpose: brief.request_summary,
+      visualRequirementIds: []
+    });
+  }
+  if (sections.length === 1) {
+    sections.push({
+      id: "consolidate",
+      title: "\u68B3\u7406\u7ED3\u8BBA",
+      purpose: `\u7528\u7B80\u77ED\u7ED3\u8BBA\u548C\u4F8B\u5B50\u5DE9\u56FA\uFF1A${sections[0].purpose}`,
+      visualRequirementIds: []
+    });
+  }
+  return sections;
+}
+function exactVisualComponentSchema(responseSchema, requirement) {
+  const definitions = isRecord(responseSchema.$defs) ? structuredClone(responseSchema.$defs) : {};
+  const action = isRecord(definitions.action) ? definitions.action : {};
+  const variants = Array.isArray(action.anyOf) ? action.anyOf.filter(isRecord) : [];
+  const variant = variants.find((candidate) => {
+    const properties = isRecord(candidate.properties) ? candidate.properties : {};
+    const aliases = isRecord(properties.as) && Array.isArray(properties.as.enum) ? properties.as.enum : [];
+    return aliases.length === 1 && aliases[0] === requirement.id;
+  });
+  if (!variant) {
+    throw new ToolExecutionError(
+      "VERTEX_SCHEMA_INCOMPATIBLE",
+      `No exact visual component Schema is available for '${requirement.id}'`
+    );
+  }
+  const schema = pruneUnusedDefinitions({
+    ...structuredClone(variant),
+    $defs: definitions
+  });
+  assertVertexSchemaCompatible(schema);
+  return schema;
+}
+function parallelSectionSchema(responseSchema) {
+  const definitions = isRecord(responseSchema.$defs) ? structuredClone(responseSchema.$defs) : {};
+  const action = isRecord(definitions.action) ? definitions.action : {};
+  const variants = Array.isArray(action.anyOf) ? action.anyOf.filter(isRecord) : [];
+  action.anyOf = variants.filter((variant) => {
+    const identity = actionVariantIdentity(variant);
+    if (identity.action === "write") {
+      return identity.kind === "text" || identity.kind === "math" || identity.kind === "note" || identity.kind === "shape";
+    }
+    return identity.action === "focus";
+  });
+  const step = isRecord(definitions.step) ? definitions.step : void 0;
+  if (!step || !Array.isArray(action.anyOf) || action.anyOf.length === 0) {
+    throw new ToolExecutionError("VERTEX_SCHEMA_INCOMPATIBLE", "No Step Schema is available for parallel authoring");
+  }
+  const schema = pruneUnusedDefinitions({
+    ...structuredClone(step),
+    $defs: definitions
+  });
+  assertVertexSchemaCompatible(schema);
+  return schema;
+}
+function parseParallelStep(raw, section, visualAliases) {
+  let candidate;
+  try {
+    candidate = JSON.parse(raw);
+  } catch (error) {
+    throw new GeneratedLessonError(`Parallel section is not JSON: ${error.message}`, raw);
+  }
+  if (!isRecord(candidate) || !Array.isArray(candidate.beats) || candidate.beats.length === 0) {
+    throw new GeneratedLessonError("Parallel section must be one non-empty Step", raw);
+  }
+  candidate.key = section.id;
+  candidate.purpose = section.purpose;
+  const renamedAliases = /* @__PURE__ */ new Map();
+  for (const [beatIndex, beat] of candidate.beats.entries()) {
+    if (!isRecord(beat) || !Array.isArray(beat.actions)) {
+      throw new GeneratedLessonError("Parallel section contains an invalid Beat", raw);
+    }
+    const originalKey = typeof beat.key === "string" ? beat.key : `beat-${beatIndex + 1}`;
+    beat.key = originalKey.startsWith(`${section.id}-`) ? originalKey : `${section.id}-${originalKey}`;
+    for (const action of beat.actions) {
+      if (!isRecord(action) || action.do !== "write" || typeof action.as !== "string") continue;
+      if (renamedAliases.has(action.as)) {
+        throw new GeneratedLessonError(`Parallel section repeats alias '${action.as}'`, raw);
+      }
+      renamedAliases.set(
+        action.as,
+        action.as.startsWith(`${section.id}-`) ? action.as : `${section.id}-${action.as}`
+      );
+    }
+  }
+  const knownAliases = new Set(visualAliases);
+  for (const beat of candidate.beats) {
+    const actions = beat.actions;
+    for (const action of actions) {
+      if (!isRecord(action) || action.do !== "write" || typeof action.as !== "string") continue;
+      action.as = renamedAliases.get(action.as) ?? action.as;
+      if (isRecord(action.place) && typeof action.place.anchor === "string") {
+        action.place.anchor = renamedAliases.get(action.place.anchor) ?? action.place.anchor;
+      }
+      knownAliases.add(action.as);
+    }
+    for (const action of actions) {
+      if (!isRecord(action) || action.do !== "focus" || !Array.isArray(action.targets)) continue;
+      action.targets = action.targets.map((target) => typeof target === "string" ? renamedAliases.get(target) ?? target : target).filter((target) => typeof target === "string" && knownAliases.has(target));
+    }
+    const hasAfterSpeechFocus = actions.some((action) => isRecord(action) && action.do === "focus" && action.when === "after_speech" && Array.isArray(action.targets) && action.targets.length > 0);
+    if (!hasAfterSpeechFocus) {
+      const target = [...knownAliases].at(-1);
+      if (!target) {
+        throw new GeneratedLessonError("Parallel section Beat has nothing to focus", raw);
+      }
+      actions.push({
+        do: "focus",
+        when: "after_speech",
+        targets: [target],
+        intent: "current_step"
+      });
+    }
+  }
+  return candidate;
+}
+async function generateParallelSection(client, input, brief, section, responseSchema) {
+  const raw = await callStructuredModel(client, {
+    label: "lesson-section",
+    turnId: input.turn_id,
+    systemPrompt: PARALLEL_SECTION_SYSTEM_PROMPT,
+    prompt: JSON.stringify({
+      section,
+      available_visuals: brief.visual_requirements.map((requirement) => ({
+        id: requirement.id,
+        surface: requirement.surface,
+        purpose: requirement.purpose
+      })),
+      teaching_goals: brief.teaching_goal_requirements,
+      learner_context: input.learner_context ?? null,
+      language: input.language ?? "zh-CN"
+    }, null, 2),
+    responseSchema,
+    maxTokens: Math.min(client.maxTokens, 8192)
+  });
+  return parseParallelStep(
+    raw,
+    section,
+    brief.visual_requirements.map((requirement) => requirement.id)
+  );
+}
+async function generateVisualComponent(client, input, brief, requirement, responseSchema) {
+  const maxAttempts = parsePositiveInteger(
+    process.env.OLL_GENERATION_ATTEMPTS,
+    3,
+    "OLL_GENERATION_ATTEMPTS"
+  );
+  const sharedVariables = brief.shared_variable_requirements.filter((variable) => variable.bound_visuals.includes(requirement.id));
+  let previousComponent;
+  let violations = [];
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const raw = await callStructuredModel(client, {
+      label: "lesson-visual-component",
+      turnId: input.turn_id,
+      systemPrompt: VISUAL_COMPONENT_SYSTEM_PROMPT,
+      prompt: JSON.stringify({
+        visual_requirement: requirement,
+        shared_variables: sharedVariables,
+        session_context: input.session_context ?? { assets: [] },
+        ...previousComponent === void 0 ? {} : { previous_component: previousComponent, validation_errors: violations }
+      }, null, 2),
+      responseSchema,
+      maxTokens: Math.min(client.maxTokens, 8192)
+    });
+    let action;
+    try {
+      action = JSON.parse(raw);
+    } catch (error) {
+      violations = [{
+        stage: "schema",
+        code: "OLL_INVALID_JSON",
+        path: "/",
+        requirement_id: requirement.id,
+        message: `Visual component is not JSON: ${error.message}`
+      }];
+      previousComponent = raw;
+      if (attempt < maxAttempts) continue;
+      throw new GeneratedLessonError(violations[0].message, raw, violations);
+    }
+    if (!isRecord(action) || action.do !== "write" || action.as !== requirement.id || action.kind !== requirement.surface) {
+      violations = [{
+        stage: "request_coverage",
+        code: "OLL_VISUAL_IDENTITY_MISMATCH",
+        path: "/",
+        requirement_id: requirement.id,
+        message: `Visual component '${requirement.id}' changed its planned identity`
+      }];
+    } else {
+      const loweredComponent = lowerPlannedLessonFields({
+        lesson: { goals: [] },
+        steps: [{ beats: [{ actions: [structuredClone(action)] }] }]
+      }, brief);
+      const loweredSteps = isRecord(loweredComponent) && Array.isArray(loweredComponent.steps) ? loweredComponent.steps : [];
+      const loweredStep = loweredSteps[0];
+      const loweredBeats = isRecord(loweredStep) && Array.isArray(loweredStep.beats) ? loweredStep.beats : [];
+      const loweredBeat = loweredBeats[0];
+      const loweredActions = isRecord(loweredBeat) && Array.isArray(loweredBeat.actions) ? loweredBeat.actions : [];
+      const loweredAction = loweredActions.find((candidate) => isRecord(candidate) && candidate.do === "write" && candidate.as === requirement.id);
+      const node = isRecord(loweredAction) ? inventoryWrite(loweredAction) : void 0;
+      const missingFeatures = node ? requirement.required_features.filter((feature) => !node.features.has(feature)) : requirement.required_features;
+      const actualExpressions = node?.expressions.map(normalizeExpression2) ?? [];
+      const missingExpressions = requirement.expressions.filter(
+        (expression) => !actualExpressions.includes(normalizeExpression2(expression))
+      );
+      violations = [];
+      if (!node || node.surface !== requirement.surface || missingFeatures.length > 0 || missingExpressions.length > 0) {
+        violations.push({
+          stage: "request_coverage",
+          code: "OLL_VISUAL_REQUIREMENT_UNSATISFIED",
+          path: "/content",
+          requirement_id: requirement.id,
+          message: `Visual component '${requirement.id}' is incomplete`,
+          missing_features: missingFeatures,
+          missing_expressions: missingExpressions
+        });
+      }
+      if (node && sharedVariables.some((variable) => !Array.isArray(node.content.bindings) || !node.content.bindings.some((binding) => isRecord(binding) && typeof binding.target === "string" && expressionReferencesVariable(binding.expression, variable.variable)))) {
+        violations.push({
+          stage: "request_coverage",
+          code: "OLL_SHARED_VARIABLE_BINDING_UNSATISFIED",
+          path: "/content/bindings",
+          requirement_id: requirement.id,
+          message: `Visual component '${requirement.id}' must bind every planned shared variable`
+        });
+      }
+      const motionVariable = sharedVariables[0];
+      if (node?.surface === "geometry" && motionVariable && !geometryMotionSatisfied(node.content, requirement, motionVariable.variable)) {
+        violations.push({
+          stage: "request_coverage",
+          code: "OLL_VISUAL_MOTION_UNSATISFIED",
+          path: "/content",
+          requirement_id: requirement.id,
+          message: `Visual component '${requirement.id}' needs one variable-driven point whose label contains motion_subject '${requirement.motion_subject ?? ""}' and whose bound coordinates match motion_kind '${requirement.motion_kind ?? ""}'`
+        });
+      }
+    }
+    if (violations.length === 0) return action;
+    previousComponent = action;
+    process.stderr.write(`learning-coach: rejected visual component '${requirement.id}' ${attempt}: ${formatViolations(violations)}
+`);
+    if (attempt === maxAttempts) {
+      throw new GeneratedLessonError(
+        `Visual component '${requirement.id}' failed after ${maxAttempts} attempt(s)`,
+        raw,
+        violations
+      );
+    }
+  }
+  throw new GeneratedLessonError(`Visual component '${requirement.id}' failed`);
+}
+function injectVisualComponents(step, components) {
+  const firstBeat = step.beats[0];
+  if (!Array.isArray(firstBeat.actions)) {
+    throw new GeneratedLessonError("The first parallel section Beat has no actions");
+  }
+  let previousAlias;
+  for (const [index, component] of components.entries()) {
+    component.place = index === 0 || !previousAlias ? { relation: "new_region" } : { relation: index % 2 === 1 ? "right_of" : "below", anchor: previousAlias, gap: "normal" };
+    previousAlias = typeof component.as === "string" ? component.as : previousAlias;
+  }
+  const focusIndex = firstBeat.actions.findIndex((action) => isRecord(action) && action.do === "focus");
+  firstBeat.actions.splice(focusIndex >= 0 ? focusIndex : firstBeat.actions.length, 0, ...components);
+  const focus = firstBeat.actions.find((action) => isRecord(action) && action.do === "focus");
+  if (isRecord(focus) && Array.isArray(focus.targets)) {
+    focus.targets = [.../* @__PURE__ */ new Set([
+      ...components.flatMap((component) => typeof component.as === "string" ? [component.as] : []),
+      ...focus.targets.filter((target) => typeof target === "string")
+    ])];
+  }
+}
+function deterministicAnimationStep(brief) {
+  if (brief.shared_variable_requirements.length === 0) return void 0;
+  return {
+    key: "observe-change",
+    purpose: "\u89C2\u5BDF\u5171\u4EAB\u53D8\u91CF\u9A71\u52A8\u7684\u8FDE\u7EED\u53D8\u5316",
+    beats: brief.shared_variable_requirements.map((requirement, index) => ({
+      key: `animate-${requirement.variable.replaceAll("_", "-")}-${index + 1}`,
+      say: `\u73B0\u5728\u8BA9${requirement.label}\u81EA\u52A8\u53D8\u5316\uFF0C\u89C2\u5BDF\u753B\u9762\u600E\u6837\u540C\u6B65\u6539\u53D8\u3002`,
+      delivery: "patient",
+      actions: [
+        {
+          do: "animate",
+          variable: requirement.variable,
+          value: requirement.animate_to,
+          easing: requirement.easing,
+          duration_intent: requirement.duration_intent
+        },
+        {
+          do: "focus",
+          when: "after_speech",
+          targets: [...requirement.bound_visuals],
+          intent: "current_step"
+        }
+      ]
+    }))
+  };
+}
+function lessonFocus(steps) {
+  for (const step of [...steps].reverse()) {
+    for (const beat of [...step.beats].reverse()) {
+      for (const action of [...beat.actions].reverse()) {
+        if (action.do === "focus" && Array.isArray(action.targets) && action.targets.length > 0) {
+          return [...action.targets];
+        }
+        if ((action.do === "write" || action.do === "group") && typeof action.as === "string") {
+          return [action.as];
+        }
+      }
+    }
+  }
+  throw new GeneratedLessonError("Parallel lesson has no focusable board object");
+}
+function assembleParallelLesson(input, brief, steps) {
+  const goals = brief.teaching_goal_requirements.map((requirement) => requirement.goal);
+  return {
+    dsl: "octos.lesson",
+    version: "0.1",
+    profile: "authoring",
+    lesson: {
+      mode: "explain",
+      language: input.language ?? "zh-CN",
+      title: [...brief.request_summary].slice(0, 160).join(""),
+      goals: goals.length > 0 ? goals : [brief.request_summary]
+    },
+    steps: structuredClone(steps),
+    close: {
+      summary: goals.length > 0 ? goals.join("\uFF1B") : brief.request_summary,
+      focus: lessonFocus(steps)
+    }
+  };
+}
+async function generateLessonInParallel(client, input, brief, onPrefix) {
+  const capabilityPlan = deriveAuthoringCapabilityPlan(input, brief);
+  const responseSchema = buildAuthoringResponseJsonSchema(brief, capabilityPlan);
+  const diagnostics = schemaDiagnostics(responseSchema);
+  const sections = deriveParallelLessonSections(brief);
+  const sectionResponseSchema = parallelSectionSchema(responseSchema);
+  process.stderr.write(`learning-coach: ${JSON.stringify({
+    stage: "lesson-parallel-authoring",
+    turn_id: input.turn_id,
+    status: "started",
+    sections: sections.length,
+    visual_components: brief.visual_requirements.length
+  })}
+`);
+  const sectionPromises = sections.map((section) => generateParallelSection(client, input, brief, section, sectionResponseSchema));
+  const componentPromises = brief.visual_requirements.map((requirement) => generateVisualComponent(
+    client,
+    input,
+    brief,
+    requirement,
+    exactVisualComponentSchema(responseSchema, requirement)
+  ));
+  const components = await Promise.all(componentPromises);
+  const assembledSteps = [];
+  for (const [index, sectionPromise] of sectionPromises.entries()) {
+    const step = await sectionPromise;
+    if (index === 0) injectVisualComponents(step, components);
+    assembledSteps.push(step);
+    if (index < sectionPromises.length - 1) {
+      const prefix = validateGeneratedLessonDocument(
+        assembleParallelLesson(input, brief, assembledSteps),
+        input,
+        brief,
+        capabilityPlan,
+        false
+      );
+      await onPrefix(prefix, index);
+    }
+  }
+  const animationStep = deterministicAnimationStep(brief);
+  if (animationStep) assembledSteps.push(animationStep);
+  const lesson = validateGeneratedLessonDocument(
+    assembleParallelLesson(input, brief, assembledSteps),
+    input,
+    brief,
+    capabilityPlan
+  );
+  process.stderr.write(`learning-coach: ${JSON.stringify({
+    stage: "lesson-parallel-authoring",
+    turn_id: input.turn_id,
+    status: "completed",
+    sections: assembledSteps.length
+  })}
+`);
+  return { lesson, attempts: 1, capabilityPlan, schema: diagnostics };
+}
 async function generateLesson(client, input, brief) {
   let previousCandidate;
   let violations = [];
@@ -13895,12 +14329,30 @@ function outputPath(input) {
   }
   return path;
 }
+function partialOutputPath(input, part) {
+  const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
+  const suffix = String(part).padStart(3, "0");
+  const path = resolve(
+    workDirectory,
+    "study",
+    "oll",
+    `${input.turn_id}.part-${suffix}.octos-lesson.json`
+  );
+  if (!path.startsWith(`${workDirectory}${sep}`) || !isAbsolute(path)) {
+    throw new Error("Resolved partial OLL output path escapes OCTOS_WORK_DIR");
+  }
+  return path;
+}
 function safeError(error) {
   if (error instanceof Error) return error.message.slice(0, MAX_ERROR_BODY_LENGTH);
   return String(error).slice(0, MAX_ERROR_BODY_LENGTH);
 }
 function emit(payload) {
   process.stdout.write(`${JSON.stringify(payload)}
+`);
+}
+function emitArtifactProgress(path, kind, message) {
+  process.stderr.write(`${JSON.stringify({ type: "artifact", path, kind, message })}
 `);
 }
 async function main() {
@@ -13939,7 +14391,29 @@ async function main() {
     const input = parseToolInput(rawInput);
     const client = await createVertexClient();
     const brief = await planLesson(client, input);
-    const { lesson, attempts, capabilityPlan, schema } = await generateLesson(client, input, brief);
+    stageLog({
+      stage: "lesson-requirements",
+      turn_id: input.turn_id,
+      status: "completed",
+      elapsed_ms: Date.now() - startedAt
+    });
+    const authoringStrategy = process.env.OLL_AUTHORING_STRATEGY?.trim() || "parallel";
+    if (authoringStrategy !== "parallel" && authoringStrategy !== "monolithic") {
+      throw new Error(`Unknown OLL_AUTHORING_STRATEGY '${authoringStrategy}'`);
+    }
+    let publishedParts = 0;
+    const { lesson, attempts, capabilityPlan, schema } = authoringStrategy === "parallel" ? await generateLessonInParallel(client, input, brief, async (prefix, part) => {
+      const artifactPath2 = partialOutputPath(input, part);
+      await mkdir(dirname(artifactPath2), { recursive: true });
+      await writeFile(artifactPath2, `${JSON.stringify(prefix, null, 2)}
+`, "utf8");
+      publishedParts += 1;
+      emitArtifactProgress(
+        artifactPath2,
+        "oll_lesson_part",
+        `part=${part} elapsed_ms=${Date.now() - startedAt}`
+      );
+    }) : await generateLesson(client, input, brief);
     const artifactPath = outputPath(input);
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}
@@ -13960,7 +14434,9 @@ async function main() {
       visual_relationships: brief.visual_relationships.length,
       student_tasks: brief.student_task_requirements.length + brief.scene3d_task_requirements.length,
       capability_plan: capabilityPlan,
-      authoring_schema: schema
+      authoring_schema: schema,
+      authoring_strategy: authoringStrategy,
+      published_parts: publishedParts
     });
   } catch (error) {
     const message = safeError(error);

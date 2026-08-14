@@ -148,7 +148,24 @@ async function runCase(item) {
       assert.ok(task.hints?.length > 0, "3D view task has no hints");
       assert.ok(task.success_message?.trim(), "3D view task has no success feedback");
     }
-    return { attempts: protocol.generation_attempts, writes: writes.map((action) => action.kind) };
+    const requirementsMatch = stderr.match(
+      /"stage":"lesson-requirements"[^\n]*"status":"completed","elapsed_ms":(\d+)/u,
+    );
+    const firstPartMatch = stderr.match(
+      /"kind":"oll_lesson_part","message":"part=0 elapsed_ms=(\d+)"/u,
+    );
+    const completedMatches = [...stderr.matchAll(
+      /"stage":"lesson-generation"[^\n]*"status":"completed","elapsed_ms":(\d+)/gu,
+    )];
+    return {
+      attempts: protocol.generation_attempts,
+      writes: writes.map((action) => action.kind),
+      requirementsMs: requirementsMatch ? Number(requirementsMatch[1]) : undefined,
+      firstPartMs: firstPartMatch ? Number(firstPartMatch[1]) : undefined,
+      completedMs: completedMatches.length > 0
+        ? Number(completedMatches.at(-1)[1])
+        : undefined,
+    };
   } finally {
     if (process.env.OLL_KEEP_EVAL_ARTIFACTS !== "1") {
       await rm(workDirectory, { recursive: true, force: true });
@@ -160,7 +177,9 @@ let failures = 0;
 for (const item of selected) {
   try {
     const result = await runCase(item);
-    process.stdout.write(`PASS ${item.id} attempts=${result.attempts} writes=${result.writes.join(",")}\n`);
+    process.stdout.write(
+      `PASS ${item.id} attempts=${result.attempts} requirements_ms=${result.requirementsMs ?? "n/a"} first_part_ms=${result.firstPartMs ?? "n/a"} completed_ms=${result.completedMs ?? "n/a"} writes=${result.writes.join(",")}\n`,
+    );
   } catch (error) {
     failures += 1;
     process.stderr.write(`FAIL ${item.id}: ${error.message}\n`);
