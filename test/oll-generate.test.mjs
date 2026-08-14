@@ -242,6 +242,7 @@ const emptyLessonBrief = {
   visual_relationships: [],
   shared_variable_requirements: [],
   student_task_requirements: [],
+  scene3d_task_requirements: [],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
 };
@@ -271,6 +272,7 @@ const plotLessonBrief = {
   visual_relationships: [],
   shared_variable_requirements: [],
   student_task_requirements: [],
+  scene3d_task_requirements: [],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
 };
@@ -352,6 +354,7 @@ const unitCirclePlotBrief = {
     success_message: "正确，圆周点在最高点时 sin θ = 1。",
     request_item_ids: ["explain-rotation-wave", "show-continuous-change"],
   }],
+  scene3d_task_requirements: [],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
 };
@@ -363,6 +366,7 @@ const cube3dBrief = {
     { id: "explain-cube", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
     { id: "show-cube-3d", source_ref: "learner_request:1", kind: "visual", polarity: "require" },
     { id: "control-cube-view", source_ref: "learner_request:1", kind: "student_control", polarity: "require" },
+    { id: "complete-view-task", source_ref: "learner_request:1", kind: "student_task", polarity: "require" },
   ],
   non_requirement_clauses: [],
   teaching_goal_requirements: [{
@@ -380,13 +384,28 @@ const cube3dBrief = {
     id: "cube-scene",
     surface: "scene3d",
     purpose: "展示一个可以旋转和缩放观察的立方体",
-    required_features: ["spatial_axes", "solid_primitives", "orbit_control"],
+    required_features: ["spatial_axes", "solid_primitives", "spatial_highlights", "orbit_control"],
     expressions: [],
     request_item_ids: ["show-cube-3d", "control-cube-view"],
   }],
   visual_relationships: [],
   shared_variable_requirements: [],
   student_task_requirements: [],
+  scene3d_task_requirements: [{
+    id: "find-front-view",
+    prompt: "把立方体转到正视图",
+    visual: "cube-scene",
+    controls: ["orbit", "preset", "reset"],
+    target_yaw: 0,
+    target_pitch: 0,
+    target_zoom: 1,
+    angular_tolerance: 0.04,
+    zoom_tolerance: 0.04,
+    hints: ["可以使用正视按钮，或拖动到正前方。"],
+    hint_after_attempts: 2,
+    success_message: "正确，这是立方体的正视图。",
+    request_item_ids: ["complete-view-task"],
+  }],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
 };
@@ -403,6 +422,7 @@ validCube3dLesson.steps[0].beats[0].actions[0] = {
   role: "diagram",
   content: {
     title: "可旋转立方体",
+    fallback: "一个中心在原点、边长为 2 的立方体，标出了顶点 A、棱 AB 和顶面。",
     axes: true,
     camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
     objects: [{
@@ -413,6 +433,11 @@ validCube3dLesson.steps[0].beats[0].actions[0] = {
       center: { x: 0, y: 0, z: 0 },
       size: { x: 2, y: 2, z: 2 },
     }],
+    highlights: [
+      { as: "vertex-a", kind: "point", points: [{ x: -1, y: -1, z: 1 }], label: "顶点 A", color: "red" },
+      { as: "edge-ab", kind: "edge", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }], label: "棱 AB", color: "orange" },
+      { as: "top-face", kind: "face", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 }], label: "顶面", color: "purple" },
+    ],
   },
   place: { relation: "new_region" },
 };
@@ -507,6 +532,7 @@ const springOscillationBrief = {
     success_message: "正确，相位为 π 时余弦位移达到最小值，振子位于最左端。",
     request_item_ids: ["explain-cosine", "control-motion"],
   }],
+  scene3d_task_requirements: [],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
 };
@@ -601,6 +627,7 @@ const genericCircleBrief = {
   visual_relationships: [],
   shared_variable_requirements: [],
   student_task_requirements: [],
+  scene3d_task_requirements: [],
   progressive_revision_kinds: [],
   unhandled_request_items: [],
 };
@@ -652,6 +679,22 @@ test("planning rejects a student task that cannot be completed by its declared v
   assert.throws(
     () => buildVertexSchemaContract(contractInput, sliderCannotReachRangeMaximum),
     /no reachable value.*satisfies the task/,
+  );
+});
+
+test("planning rejects a 3D view task without a matching controllable scene", () => {
+  const missingScene = structuredClone(cube3dBrief);
+  missingScene.scene3d_task_requirements[0].visual = "missing-scene";
+  assert.throws(
+    () => buildVertexSchemaContract(contractInput, missingScene),
+    /visual must reference a scene3d requirement with orbit_control/,
+  );
+
+  const unavailableControl = structuredClone(cube3dBrief);
+  unavailableControl.visual_requirements[0].required_features = ["spatial_axes", "solid_primitives"];
+  assert.throws(
+    () => buildVertexSchemaContract(contractInput, unavailableControl),
+    /visual must reference a scene3d requirement with orbit_control/,
   );
 });
 
@@ -1043,6 +1086,7 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
     assert.ok(plannerSchema.required.includes("non_requirement_clauses"));
     assert.ok(plannerSchema.required.includes("teaching_goal_requirements"));
     assert.ok(plannerSchema.required.includes("student_task_requirements"));
+    assert.ok(plannerSchema.required.includes("scene3d_task_requirements"));
     assert.ok(plannerSchema.required.includes("unhandled_request_items"));
     const verifierSystemPrompt = requests[2].body.systemInstruction.parts[0].text;
     assert.match(verifierSystemPrompt, /用户要求覆盖复核器/);
@@ -1711,7 +1755,7 @@ test("tool plans and generates a rotatable 3D cube instead of replacing it with 
         token_uri: `${baseUrl}/token`,
       },
       workDirectory,
-      input: { learner_request: "请用3D展示一个可以旋转的立方体" },
+      input: { learner_request: "请用3D展示一个可以旋转的立方体，并让我把它转到正视图" },
     });
 
     assert.equal(result.exitCode, 0, result.stderr);
@@ -1726,12 +1770,41 @@ test("tool plans and generates a rotatable 3D cube instead of replacing it with 
     );
     assert.ok(sceneVariant);
     assert.deepEqual(sceneVariant.properties.as.enum, ["cube-scene"]);
+    assert.ok(sceneVariant.properties.content.required.includes("fallback"));
+    assert.ok(sceneVariant.properties.content.required.includes("highlights"));
+    assert.equal(sceneVariant.properties.content.properties.highlights.minItems, 1);
     assert.equal(writeVariants.some(
       (variant) => variant.properties.kind.enum[0] === "diagram",
     ), false);
     const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
     assert.equal(artifact.steps[0].beats[0].actions[0].kind, "scene3d");
     assert.equal(artifact.steps[0].beats[0].actions[0].content.objects[0].kind, "box");
+    assert.deepEqual(
+      artifact.steps[0].beats[0].actions[0].content.highlights.map((highlight) => highlight.kind),
+      ["point", "edge", "face"],
+    );
+    assert.deepEqual(artifact.lesson.tasks, [{
+      as: "find-front-view",
+      prompt: "把立方体转到正视图",
+      availability: { kind: "after_lesson" },
+      allowed_operations: [{
+        kind: "scene3d_view",
+        node: "cube-scene",
+        controls: ["orbit", "preset", "reset"],
+      }],
+      completion: {
+        kind: "scene3d_view_target",
+        node: "cube-scene",
+        yaw: 0,
+        pitch: 0,
+        zoom: 1,
+        angular_tolerance: 0.04,
+        zoom_tolerance: 0.04,
+      },
+      hints: ["可以使用正视按钮，或拖动到正前方。"],
+      hint_after_attempts: 2,
+      success_message: "正确，这是立方体的正视图。",
+    }]);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -1762,6 +1835,7 @@ test("tool refuses an image requirement when no authorized image asset exists", 
     visual_relationships: [],
     shared_variable_requirements: [],
     student_task_requirements: [],
+    scene3d_task_requirements: [],
     progressive_revision_kinds: [],
     unhandled_request_items: [],
   };
@@ -1826,6 +1900,7 @@ test("tool keeps revise as a typed per-kind capability instead of a universal co
     visual_relationships: [],
     shared_variable_requirements: [],
     student_task_requirements: [],
+    scene3d_task_requirements: [],
     progressive_revision_kinds: ["math"],
     unhandled_request_items: [],
   };

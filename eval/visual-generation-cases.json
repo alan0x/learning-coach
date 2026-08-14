@@ -57,5 +57,16 @@
     "expected": {
       "kinds": ["diagram"]
     }
+  },
+  {
+    "id": "interactive-cube-view-task",
+    "learner_request": "请用可以拖动旋转视角的三维场景讲解立方体，明确标出一个顶点、一条棱和一个面。讲解后，请让我把立方体转到正视图。",
+    "expected": {
+      "kinds": ["scene3d"],
+      "scene3d_fields": ["objects", "highlights"],
+      "scene3d_highlight_kinds": ["point", "edge", "face"],
+      "scene3d_fallback": true,
+      "scene3d_view_task": true
+    }
   }
 ]

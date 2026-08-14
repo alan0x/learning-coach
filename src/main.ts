@@ -161,6 +161,7 @@ type VisualFeature =
   | "solid_primitives"
   | "function_surface"
   | "cross_section"
+  | "spatial_highlights"
   | "orbit_control";
 type VisualMotionKind = "linear_point" | "angular_point" | "planar_point";
 
@@ -215,6 +216,22 @@ interface StudentTaskRequirement {
   request_item_ids: string[];
 }
 
+interface Scene3dTaskRequirement {
+  id: string;
+  prompt: string;
+  visual: string;
+  controls: Array<"orbit" | "zoom" | "preset" | "reset">;
+  target_yaw: number;
+  target_pitch: number;
+  target_zoom: number;
+  angular_tolerance: number;
+  zoom_tolerance: number;
+  hints: string[];
+  hint_after_attempts: number;
+  success_message: string;
+  request_item_ids: string[];
+}
+
 interface RequestItem {
   id: string;
   source_ref: string;
@@ -263,6 +280,7 @@ interface LessonBrief {
   visual_relationships: VisualRelationshipRequirement[];
   shared_variable_requirements: SharedVariableRequirement[];
   student_task_requirements: StudentTaskRequirement[];
+  scene3d_task_requirements: Scene3dTaskRequirement[];
   progressive_revision_kinds: RevisableNodeKind[];
   unhandled_request_items: UnhandledRequestItem[];
 }
@@ -364,10 +382,10 @@ request_items 只记录用户明确提出的教学目标、视觉对象、视觉
 - polarity=require 表示必须满足，polarity=forbid 表示明确禁止；
 - 不得把学科模拟或未实现的交互偷换成 diagram 或普通文字。scene3d 已支持受约束的立体、二元函数曲面、截面和视角旋转，不应标记为不支持；需要碰撞、真实材质或复杂形变时才使用 unsupported_feature；
 - 每个 request_item 必须通过 request_item_ids 映射到一个或多个具体要求，或者明确列入 unhandled_request_items，不能悬空；
-- teaching_goal 映射到 teaching_goal_requirements；visual 映射到 visual_requirements；relationship 映射到 visual_relationships；continuous_change 映射到 shared_variable_requirements；普通数值或几何 student_control 映射到 shared_variable_requirements，但三维视角旋转/缩放映射到带 orbit_control 的 scene3d visual_requirement；student_task 映射到 student_task_requirements；presentation_constraint 映射到 presentation_constraints；
+- teaching_goal 映射到 teaching_goal_requirements；visual 映射到 visual_requirements；relationship 映射到 visual_relationships；continuous_change 映射到 shared_variable_requirements；普通数值或几何 student_control 映射到 shared_variable_requirements，但三维视角旋转/缩放映射到带 orbit_control 的 scene3d visual_requirement；普通变量 student_task 映射到 student_task_requirements，目标视角任务映射到 scene3d_task_requirements；presentation_constraint 映射到 presentation_constraints；
 - 目前没有可寻址的既有白板节点清单，因此 existing_board_edit 必须列入 unhandled_request_items，不能让后续模型猜 revise.target。
 
-第二部分 teaching_goal_requirements、visual_requirements、visual_relationships、shared_variable_requirements 和 student_task_requirements 是教学设计。它们可以根据用户目标增加合理的图形、讲解步骤和互动方式，但必须通过 request_item_ids 说明服务于哪项用户要求。不要把教学建议或你偏好的讲法伪装成用户原话，也不要因为用户没说出“恢复力箭头”之类具体教法就拒绝合理的教学设计。
+第二部分 teaching_goal_requirements、visual_requirements、visual_relationships、shared_variable_requirements、student_task_requirements 和 scene3d_task_requirements 是教学设计。它们可以根据用户目标增加合理的图形、讲解步骤和互动方式，但必须通过 request_item_ids 说明服务于哪项用户要求。不要把教学建议或你偏好的讲法伪装成用户原话，也不要因为用户没说出“恢复力箭头”之类具体教法就拒绝合理的教学设计。
 
 教学目标和演示对象必须完整：
 - 用户问某个现象“为什么发生”时，解释产生该现象的原因本身是硬教学目标；只描述周期、规律、结果或数学拟合不能替代因果解释；
@@ -395,7 +413,7 @@ request_items 只记录用户明确提出的教学目标、视觉对象、视觉
 - semantic_elements / semantic_edges：语义节点和语义连线；source_asset：受控图片资源；tabular_values：有行列数据的表格。
 - spatial_axes：三维坐标轴；solid_primitives：至少一个受支持实体；function_surface：可执行的 z=f(x,y) 曲面；cross_section：x/y/z 截面；orbit_control：学生能旋转、缩放和复位场景视角。
 
-feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_scale、circle、origin_centered_circle、unit_radius、point_on_circle、line_segments、radius_segment、projection_segment、angle_arc、annotated_points；plot 只使用 coordinate_axes、function_curve、annotated_points、guides；scene3d 只使用 spatial_axes、solid_primitives、function_surface、cross_section、orbit_control；diagram 只使用 semantic_elements、semantic_edges；image 只使用 source_asset；table 只使用 tabular_values。
+feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_scale、circle、origin_centered_circle、unit_radius、point_on_circle、line_segments、radius_segment、projection_segment、angle_arc、annotated_points；plot 只使用 coordinate_axes、function_curve、annotated_points、guides；scene3d 只使用 spatial_axes、solid_primitives、function_surface、cross_section、spatial_highlights、orbit_control；diagram 只使用 semantic_elements、semantic_edges；image 只使用 source_asset；table 只使用 tabular_values。用户要求指出三维对象的具体顶点、棱或面时，scene3d 必须包含 spatial_highlights。
 
 如果请求点名某个视觉对象，选择能真实表达它的 surface，并列出让该对象和教学目的在画面上成立所不可缺少的最小 features。不要因为某个 surface 支持一项 feature 就自动要求它；也不要用标题、讲述或标签代替结构特征。
 
@@ -424,7 +442,8 @@ student_task_requirements 用来规划讲解结束后真正交给学生完成的
 - completion_expression 使用 Runtime 数学表达式，只能读取这个 variable；completion_value 是期望结果，tolerance 是允许误差。初始值不能已经满足完成条件。任务必须依据学生最终提交的一次操作判定，不能依靠模型阅读学生意图。
 - prompt 必须像老师给学生的自然指令，说明要达到的可见目标，不要暴露内部变量名或实现术语。hints 从观察方向到更具体操作逐步给出；success_message 解释学生刚才的操作为什么正确。
 - 任务按数组顺序依次开放。通常只规划一个；只有多个操作确实对应不同教学目标时才规划多个。
-- 若 presentation_constraints 明确禁止 student_control 或 student_task，student_task_requirements 必须为空。
+- scene3d_task_requirements 专门描述“把三维场景转到某个视角”的任务。visual 必须引用带 orbit_control 的 scene3d；target_yaw、target_pitch、target_zoom 是目标相机，angular_tolerance 和 zoom_tolerance 是判定容差。不要把视角任务伪装成 lesson variable。用户明确要求从某个方向观察、转到正视/俯视，或要求学生通过旋转完成任务时使用它；普通变量任务仍放在 student_task_requirements。
+- 若 presentation_constraints 明确禁止 student_control 或 student_task，student_task_requirements 和 scene3d_task_requirements 都必须为空。
 
 progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐进替换，允许 text、math、shape、diagram、table、note；不需要时返回空数组。它不允许修改历史白板节点，也不得包含 geometry、plot、scene3d 或 image。
 
@@ -469,7 +488,7 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 - geometry.points[] 每项包含 as、x、y；circles[] 使用 center point alias 和正 radius；segments[] 使用 from/to point alias，投影线使用 style="projection"；arcs[] 使用 center、radius、start_angle、end_angle，角度为弧度。模型不得输出 SVG 或像素坐标。
 - diagram 用于语义元素与连线，不得冒充函数图像。plot 用于坐标轴上的函数曲线；content.axes.x/y 各给出数值 min/max，content.curves[] 每项必须包含 as、expression，可包含 label。
 - plot.expression 只写受限数学表达式，例如 sin(x)、cos(x)、(x+3)^2-4；支持 x、pi、e、+ - * / ^、括号以及 sin/cos/tan/sqrt/abs/exp/log，不写 y=、LaTeX、代码或 SVG。
-- scene3d.camera 包含 yaw、pitch、zoom；objects[] 只使用 box、sphere、cylinder、cone、surface。box 给 center 和 size；球给 center/radius；圆柱和圆锥再给 height；surface 给 z=f(x,y) 的 expression、x_range、y_range 和 4 到 24 的 samples。sections[] 使用 as、axis=x/y/z、value。场景天然支持视角旋转、缩放、等轴/正视/俯视和复位，不要输出这些交互的脚本。
+- scene3d.camera 包含 yaw、pitch、zoom；fallback 必须用一句话说明交互不可用时学生仍应看懂的空间关系；objects[] 只使用 box、sphere、cylinder、cone、surface。box 给 center 和 size；球给 center/radius；圆柱和圆锥再给 height；surface 给 z=f(x,y) 的 expression、x_range、y_range 和 4 到 24 的 samples。sections[] 使用 as、axis=x/y/z、value。highlights[] 使用 as、kind=point/edge/face、明确的三维 points、可选 label/color，不能使用含糊的“第一个面”。场景天然支持视角旋转、缩放、等轴/正视/俯视和复位，不要输出这些交互的脚本。
 - 输入中的课程要求清单是本轮请求的可执行要求合同；每个 visual_requirement 和 visual_relationship 都必须由实际白板动作满足，标题、goals、讲述或文字声明不能替代要求的视觉内容。
 - 每个 visual_requirement.id 就是该主要视觉节点必须使用的 write.as；一个视觉节点可以通过 request_item_ids 服务多个教学目标。visual_relationships 对应的 connect 由系统在两个节点创建后插入，模型不要输出 connect。
 - 课程要求清单中的 shared_variable_requirements 非空时，系统会确定性写入 lesson.variables 和可判定的 angle_control；模型负责在 bound_visuals 对应的 geometry/plot/scene3d content.bindings 中引用同一个变量，并把 do="animate" 动作放进合适的讲解节拍。scene3d 绑定目标目前只允许 section.value。禁止复制第二份状态。
@@ -967,6 +986,21 @@ function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
       required: ["yaw", "pitch", "zoom"],
       properties: { yaw: { type: "number" }, pitch: { type: "number" }, zoom: { type: "number" } },
     };
+    const scene3dHighlights = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "kind", "points"],
+        properties: {
+          as: alias,
+          kind: { enum: ["point", "edge", "face"] },
+          points: { type: "array", minItems: 1, items: point3d },
+          label: { type: "string" },
+          color: { enum: ["teal", "blue", "purple", "orange", "red", "gray"] },
+        },
+      },
+    };
     const writeContentByKind: Record<string, JsonSchema> = {
       text: {
         type: "object", additionalProperties: false, required: ["text"],
@@ -998,14 +1032,16 @@ function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
         properties: { title: { type: "string" }, axes, curves, points, guides, bindings, caption: { type: "string" } },
       },
       scene3d: {
-        type: "object", additionalProperties: false, required: ["objects", "camera"],
+        type: "object", additionalProperties: false, required: ["objects", "camera", "fallback"],
         properties: {
           title: { type: "string" },
           caption: { type: "string" },
+          fallback: { type: "string" },
           axes: { type: "boolean" },
           camera: scene3dCamera,
           objects: scene3dObjects,
           sections: scene3dSections,
+          highlights: scene3dHighlights,
           bindings,
         },
       },
@@ -1168,10 +1204,12 @@ function deriveAuthoringCapabilityPlan(input: ToolInput, brief: LessonBrief): Au
       continue;
     }
     if (capability === "student_task") {
-      if (forbid && brief.student_task_requirements.length > 0) {
+      const taskCount = brief.student_task_requirements.length
+        + brief.scene3d_task_requirements.length;
+      if (forbid && taskCount > 0) {
         throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids an after-lesson student task");
       }
-      if (!forbid && brief.student_task_requirements.length === 0) {
+      if (!forbid && taskCount === 0) {
         throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request requires an after-lesson student task, but none was planned");
       }
       continue;
@@ -1415,6 +1453,7 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
       ["solid_primitives", "objects"],
       ["function_surface", "objects"],
       ["cross_section", "sections"],
+      ["spatial_highlights", "highlights"],
     ]),
     diagram: new Map([["semantic_edges", "edges"]]),
   };
@@ -1470,7 +1509,7 @@ const visualFeatures: VisualFeature[] = [
   "point_on_circle", "line_segments", "radius_segment", "projection_segment", "angle_arc", "function_curve",
   "annotated_points", "guides", "semantic_elements", "semantic_edges", "source_asset",
   "tabular_values",
-  "spatial_axes", "solid_primitives", "function_surface", "cross_section", "orbit_control",
+  "spatial_axes", "solid_primitives", "function_surface", "cross_section", "spatial_highlights", "orbit_control",
 ];
 const visualRelationships: VisualRelationshipRequirement["relation"][] = [
   "maps_to", "compares_with", "explains", "derives",
@@ -1493,7 +1532,7 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
   required: [
     "version", "request_summary", "request_items", "non_requirement_clauses", "teaching_goal_requirements",
     "presentation_constraints", "visual_requirements", "visual_relationships",
-    "shared_variable_requirements", "student_task_requirements", "progressive_revision_kinds", "unhandled_request_items",
+    "shared_variable_requirements", "student_task_requirements", "scene3d_task_requirements", "progressive_revision_kinds", "unhandled_request_items",
   ],
   properties: {
     version: { enum: ["1"] },
@@ -1654,6 +1693,43 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
         },
       },
     },
+    scene3d_task_requirements: {
+      type: "array",
+      maxItems: 4,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "id", "prompt", "visual", "controls", "target_yaw", "target_pitch",
+          "target_zoom", "angular_tolerance", "zoom_tolerance", "hints",
+          "hint_after_attempts", "success_message", "request_item_ids",
+        ],
+        properties: {
+          id: { type: "string" },
+          prompt: { type: "string" },
+          visual: { type: "string" },
+          controls: {
+            type: "array",
+            minItems: 1,
+            items: { enum: ["orbit", "zoom", "preset", "reset"] },
+          },
+          target_yaw: { type: "number" },
+          target_pitch: { type: "number" },
+          target_zoom: { type: "number" },
+          angular_tolerance: { type: "number" },
+          zoom_tolerance: { type: "number" },
+          hints: {
+            type: "array",
+            minItems: 1,
+            maxItems: 4,
+            items: { type: "string" },
+          },
+          hint_after_attempts: { type: "integer" },
+          success_message: { type: "string" },
+          request_item_ids: idArraySchema,
+        },
+      },
+    },
     progressive_revision_kinds: {
       type: "array",
       items: { enum: revisableNodeKinds },
@@ -1724,7 +1800,7 @@ const featuresBySurface: Record<VisualSurface, ReadonlySet<VisualFeature>> = {
     "point_on_circle", "line_segments", "radius_segment", "projection_segment", "angle_arc", "annotated_points",
   ]),
   plot: new Set(["coordinate_axes", "function_curve", "annotated_points", "guides"]),
-  scene3d: new Set(["spatial_axes", "solid_primitives", "function_surface", "cross_section", "orbit_control"]),
+  scene3d: new Set(["spatial_axes", "solid_primitives", "function_surface", "cross_section", "spatial_highlights", "orbit_control"]),
   diagram: new Set(["semantic_elements", "semantic_edges"]),
   image: new Set(["source_asset"]),
   table: new Set(["tabular_values"]),
@@ -1838,6 +1914,7 @@ function canonicalizeBriefAliases(candidate: unknown): unknown {
   canonicalizeItems(brief.visual_relationships);
   canonicalizeItems(brief.shared_variable_requirements);
   canonicalizeItems(brief.student_task_requirements);
+  canonicalizeItems(brief.scene3d_task_requirements);
   if (Array.isArray(brief.visual_requirements)) {
     for (const requirement of brief.visual_requirements) {
       if (!isRecord(requirement) || !Array.isArray(requirement.expressions)) continue;
@@ -1857,6 +1934,11 @@ function canonicalizeBriefAliases(candidate: unknown): unknown {
       if (!isRecord(requirement)) continue;
       aliasArray(requirement.bound_visuals);
       requirement.direct_angle_geometry = alias(requirement.direct_angle_geometry);
+    }
+  }
+  if (Array.isArray(brief.scene3d_task_requirements)) {
+    for (const requirement of brief.scene3d_task_requirements) {
+      if (isRecord(requirement)) requirement.visual = alias(requirement.visual);
     }
   }
   if (Array.isArray(brief.unhandled_request_items)) {
@@ -1932,6 +2014,16 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
       "BRIEF_INVALID_STUDENT_TASKS",
       "/student_task_requirements",
       "student_task_requirements must be an array",
+    ));
+  }
+  const scene3dTasks = Array.isArray(candidate.scene3d_task_requirements)
+    ? candidate.scene3d_task_requirements
+    : [];
+  if (!Array.isArray(candidate.scene3d_task_requirements)) {
+    violations.push(briefViolation(
+      "BRIEF_INVALID_SCENE3D_TASKS",
+      "/scene3d_task_requirements",
+      "scene3d_task_requirements must be an array",
     ));
   }
   const revisionKinds = Array.isArray(candidate.progressive_revision_kinds)
@@ -2381,11 +2473,64 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
   });
 
+  scene3dTasks.forEach((raw, index) => {
+    const path = `/scene3d_task_requirements/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK", path, "scene3d task requirement must be an object"));
+      return;
+    }
+    validateRequirementId(raw.id, `${path}/id`);
+    if (typeof raw.prompt !== "string" || !raw.prompt.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_PROMPT", `${path}/prompt`, "prompt must be a non-empty student instruction"));
+    }
+    const visual = typeof raw.visual === "string" ? visualById.get(raw.visual) : undefined;
+    if (!visual || visual.surface !== "scene3d"
+      || !Array.isArray(visual.required_features)
+      || !visual.required_features.includes("orbit_control")) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_VISUAL", `${path}/visual`, "visual must reference a scene3d requirement with orbit_control"));
+    }
+    const controls = Array.isArray(raw.controls) ? raw.controls : [];
+    if (controls.length === 0
+      || controls.some((control) => !["orbit", "zoom", "preset", "reset"].includes(String(control)))
+      || new Set(controls).size !== controls.length) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_CONTROLS", `${path}/controls`, "controls must contain unique supported 3D view controls"));
+    }
+    const target = {
+      yaw: numberValue(raw.target_yaw),
+      pitch: numberValue(raw.target_pitch),
+      zoom: numberValue(raw.target_zoom),
+    };
+    const angularTolerance = numberValue(raw.angular_tolerance);
+    const zoomTolerance = numberValue(raw.zoom_tolerance);
+    if (target.yaw === undefined || target.pitch === undefined || target.zoom === undefined
+      || target.pitch < -Math.PI / 2 || target.pitch > Math.PI / 2
+      || target.zoom < .2 || target.zoom > 5) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_TARGET", `${path}/target_yaw`, "target camera must be finite and inside the supported pitch/zoom range"));
+    }
+    if (angularTolerance === undefined || angularTolerance <= 0 || angularTolerance > Math.PI
+      || zoomTolerance === undefined || zoomTolerance <= 0 || zoomTolerance > 4.8) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_TOLERANCE", `${path}/angular_tolerance`, "3D view tolerances must be positive and within the camera range"));
+    }
+    if (!Array.isArray(raw.hints) || raw.hints.length === 0 || raw.hints.length > 4
+      || raw.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_HINTS", `${path}/hints`, "hints must contain one to four non-empty hints"));
+    }
+    if (!Number.isInteger(raw.hint_after_attempts)
+      || (raw.hint_after_attempts as number) < 1
+      || (raw.hint_after_attempts as number) > 20) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_HINT_THRESHOLD", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20"));
+    }
+    if (typeof raw.success_message !== "string" || !raw.success_message.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_SUCCESS", `${path}/success_message`, "success_message must be non-empty"));
+    }
+    mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
+  });
+
   const tasksForbidden = presentationConstraints.some((constraint) =>
     isRecord(constraint)
     && constraint.polarity === "forbid"
     && (constraint.capability === "student_task" || constraint.capability === "student_control"));
-  if (tasksForbidden && studentTasks.length > 0) {
+  if (tasksForbidden && (studentTasks.length > 0 || scene3dTasks.length > 0)) {
     violations.push(briefViolation("BRIEF_FORBIDDEN_STUDENT_TASK", "/student_task_requirements", "student tasks cannot be planned when the request forbids tasks or student control"));
   }
   if (!tasksForbidden && sharedVariables.length > 0 && studentTasks.length === 0) {
@@ -2701,6 +2846,7 @@ function inventoryWrite(action: Record<string, unknown>): VisualInventoryEntry |
         : []);
     if (expressions.length > 0) features.add("function_surface");
     if (Array.isArray(content.sections) && content.sections.length > 0) features.add("cross_section");
+    if (Array.isArray(content.highlights) && content.highlights.length > 0) features.add("spatial_highlights");
     return { alias: action.as, surface: "scene3d", features, expressions, content };
   }
   if (action.kind === "diagram") {
@@ -2821,9 +2967,10 @@ function lowerPlannedLessonFields(document: unknown, brief: LessonBrief): unknow
       control: { kind: "slider", step: requirement.slider_step },
     }));
   }
-  if (brief.student_task_requirements.length === 0) delete document.lesson.tasks;
+  if (brief.student_task_requirements.length === 0
+    && brief.scene3d_task_requirements.length === 0) delete document.lesson.tasks;
   else {
-    document.lesson.tasks = brief.student_task_requirements.map((requirement) => ({
+    const variableTasks = brief.student_task_requirements.map((requirement) => ({
       as: requirement.id,
       prompt: requirement.prompt,
       availability: { kind: "after_lesson" },
@@ -2842,6 +2989,29 @@ function lowerPlannedLessonFields(document: unknown, brief: LessonBrief): unknow
       hint_after_attempts: requirement.hint_after_attempts,
       success_message: requirement.success_message,
     }));
+    const scene3dTasks = brief.scene3d_task_requirements.map((requirement) => ({
+      as: requirement.id,
+      prompt: requirement.prompt,
+      availability: { kind: "after_lesson" },
+      allowed_operations: [{
+        kind: "scene3d_view",
+        node: requirement.visual,
+        controls: [...requirement.controls],
+      }],
+      completion: {
+        kind: "scene3d_view_target",
+        node: requirement.visual,
+        yaw: requirement.target_yaw,
+        pitch: requirement.target_pitch,
+        zoom: requirement.target_zoom,
+        angular_tolerance: requirement.angular_tolerance,
+        zoom_tolerance: requirement.zoom_tolerance,
+      },
+      hints: [...requirement.hints],
+      hint_after_attempts: requirement.hint_after_attempts,
+      success_message: requirement.success_message,
+    }));
+    document.lesson.tasks = [...variableTasks, ...scene3dTasks];
   }
 
   const rawBeats: Record<string, unknown>[] = [];
@@ -3224,6 +3394,44 @@ function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): G
       });
     }
   }
+  for (const [index, requirement] of brief.scene3d_task_requirements.entries()) {
+    const task = tasks.find((candidate) => candidate.as === requirement.id);
+    const availability = task && isRecord(task.availability) ? task.availability : undefined;
+    const allowedOperations = task && Array.isArray(task.allowed_operations)
+      ? task.allowed_operations.filter(isRecord)
+      : [];
+    const allowed = allowedOperations.find((operation) =>
+      operation.kind === "scene3d_view" && operation.node === requirement.visual);
+    const controls = allowed && Array.isArray(allowed.controls) ? allowed.controls : [];
+    const completion = task && isRecord(task.completion) ? task.completion : undefined;
+    const taskMatches = task
+      && task.prompt === requirement.prompt
+      && availability?.kind === "after_lesson"
+      && allowedOperations.length === 1
+      && controls.length === requirement.controls.length
+      && requirement.controls.every((control) => controls.includes(control))
+      && completion?.kind === "scene3d_view_target"
+      && completion.node === requirement.visual
+      && approximatelyEqual(completion.yaw, requirement.target_yaw)
+      && approximatelyEqual(completion.pitch, requirement.target_pitch)
+      && approximatelyEqual(completion.zoom, requirement.target_zoom)
+      && approximatelyEqual(completion.angular_tolerance, requirement.angular_tolerance)
+      && approximatelyEqual(completion.zoom_tolerance, requirement.zoom_tolerance)
+      && Array.isArray(task.hints)
+      && task.hints.length === requirement.hints.length
+      && requirement.hints.every((hint, hintIndex) => task.hints?.[hintIndex] === hint)
+      && task.hint_after_attempts === requirement.hint_after_attempts
+      && task.success_message === requirement.success_message;
+    if (!taskMatches) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_SCENE3D_TASK_UNSATISFIED",
+        path: `/lesson/tasks/${brief.student_task_requirements.length + index}`,
+        requirement_id: requirement.id,
+        message: `3D student task '${requirement.id}' must preserve its scene, controls, target view, tolerances, hints, and feedback`,
+      });
+    }
+  }
   return violations;
 }
 
@@ -3544,7 +3752,7 @@ ${JSON.stringify(brief.shared_variable_requirements.map((requirement) => ({
       ? "该 geometry 必须包含同一变量驱动的圆上点 x/y bindings，并用半径线连接该点与圆心"
       : null,
   })), null, 2)}
-system_inserted_slider 由系统写入 lesson.variables，student_task_requirements 由系统写入 lesson.tasks，模型都不要自行复制。required_direct_angle_control_on 非空时，模型必须提供可唯一识别的圆心、圆上点、半径线和该点的 x/y 变量绑定，系统据此补入 interaction；找不到唯一对象会校验失败。动画必须逐字采用 required_animation 中的 variable、value、easing 和 duration_intent。
+system_inserted_slider 由系统写入 lesson.variables，student_task_requirements 和 scene3d_task_requirements 由系统写入 lesson.tasks，模型都不要自行复制。required_direct_angle_control_on 非空时，模型必须提供可唯一识别的圆心、圆上点、半径线和该点的 x/y 变量绑定，系统据此补入 interaction；找不到唯一对象会校验失败。动画必须逐字采用 required_animation 中的 variable、value、easing 和 duration_intent。
 每个 required_animation 必须放在独立的简短 Beat：图形和连接先在前一 Beat 创建；动画 Beat 只保留一个 animate 和 after_speech focus，并把完整推导放在相邻 Beat。
 
 课堂上下文：
@@ -4484,7 +4692,8 @@ async function main(): Promise<void> {
       requirement_items: brief.request_items.length,
       visual_requirements: brief.visual_requirements.length,
       visual_relationships: brief.visual_relationships.length,
-      student_tasks: brief.student_task_requirements.length,
+      student_tasks: brief.student_task_requirements.length
+        + brief.scene3d_task_requirements.length,
       capability_plan: capabilityPlan,
       authoring_schema: schema,
     });

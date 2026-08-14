@@ -80,30 +80,66 @@
           "minItems": 1,
           "maxItems": 16,
           "items": {
-            "type": "object",
-            "required": ["kind", "variable", "controls"],
-            "additionalProperties": false,
-            "properties": {
-              "kind": {"const": "variable_change"},
-              "variable": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
-              "controls": {
-                "type": "array",
-                "minItems": 1,
-                "items": {"enum": ["slider", "geometry_point"]}
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["kind", "variable", "controls"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "variable_change"},
+                  "variable": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+                  "controls": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"enum": ["slider", "geometry_point"]}
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["kind", "node", "controls"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "scene3d_view"},
+                  "node": {"$ref": "#/$defs/alias"},
+                  "controls": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"enum": ["orbit", "zoom", "preset", "reset"]}
+                  }
+                }
               }
-            }
+            ]
           }
         },
         "completion": {
-          "type": "object",
-          "required": ["kind", "expression", "value", "tolerance"],
-          "additionalProperties": false,
-          "properties": {
-            "kind": {"const": "expression_target"},
-            "expression": {"type": "string", "minLength": 1, "maxLength": 256},
-            "value": {"type": "number"},
-            "tolerance": {"type": "number", "exclusiveMinimum": 0}
-          }
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["kind", "expression", "value", "tolerance"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {"const": "expression_target"},
+                "expression": {"type": "string", "minLength": 1, "maxLength": 256},
+                "value": {"type": "number"},
+                "tolerance": {"type": "number", "exclusiveMinimum": 0}
+              }
+            },
+            {
+              "type": "object",
+              "required": ["kind", "node", "yaw", "pitch", "zoom", "angular_tolerance", "zoom_tolerance"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {"const": "scene3d_view_target"},
+                "node": {"$ref": "#/$defs/alias"},
+                "yaw": {"type": "number"},
+                "pitch": {"type": "number", "minimum": -1.5707963267948966, "maximum": 1.5707963267948966},
+                "zoom": {"type": "number", "minimum": 0.2, "maximum": 5},
+                "angular_tolerance": {"type": "number", "exclusiveMinimum": 0},
+                "zoom_tolerance": {"type": "number", "exclusiveMinimum": 0}
+              }
+            }
+          ]
         },
         "hints": {
           "type": "array",
@@ -372,11 +408,12 @@
     },
     "scene3dContent": {
       "type": "object",
-      "required": ["objects", "camera"],
+      "required": ["objects", "camera", "fallback"],
       "additionalProperties": false,
       "properties": {
         "title": {"type": "string"},
         "caption": {"type": "string"},
+        "fallback": {"type": "string", "minLength": 1, "maxLength": 480},
         "axes": {"type": "boolean"},
         "camera": {
           "type": "object",
@@ -423,6 +460,27 @@
               "as": {"$ref": "#/$defs/alias"},
               "axis": {"enum": ["x", "y", "z"]},
               "value": {"type": "number"},
+              "label": {"type": "string"},
+              "color": {"type": "string"}
+            }
+          }
+        },
+        "highlights": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "required": ["as", "kind", "points"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "kind": {"enum": ["point", "edge", "face"]},
+              "points": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": {"$ref": "#/$defs/point3d"}
+              },
               "label": {"type": "string"},
               "color": {"type": "string"}
             }

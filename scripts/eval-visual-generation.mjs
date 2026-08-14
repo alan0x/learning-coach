@@ -67,6 +67,25 @@ async function runCase(item) {
         `geometry does not visibly represent one of: ${terms.join(", ")}`,
       );
     }
+    const scenes3d = writes.filter((action) => action.kind === "scene3d");
+    for (const field of item.expected.scene3d_fields ?? []) {
+      assert.ok(
+        scenes3d.some((action) => Array.isArray(action.content[field]) && action.content[field].length > 0),
+        `missing scene3d.${field}`,
+      );
+    }
+    for (const kind of item.expected.scene3d_highlight_kinds ?? []) {
+      assert.ok(
+        scenes3d.some((action) => action.content.highlights?.some((highlight) => highlight.kind === kind)),
+        `missing scene3d highlight kind=${kind}`,
+      );
+    }
+    if (item.expected.scene3d_fallback) {
+      assert.ok(
+        scenes3d.some((action) => action.content.fallback?.trim()),
+        "missing visible scene3d fallback explanation",
+      );
+    }
     for (const terms of item.expected.lesson_text_any_groups ?? []) {
       assert.ok(
         terms.some((term) => JSON.stringify(lesson).includes(term)),
@@ -116,6 +135,18 @@ async function runCase(item) {
       assert.equal(task.completion?.kind, "expression_target");
       assert.ok(task.hints?.length > 0, "student task has no hints");
       assert.ok(task.success_message?.trim(), "student task has no success feedback");
+    }
+    if (item.expected.scene3d_view_task) {
+      const task = lesson.lesson.tasks?.find((candidate) =>
+        candidate.completion?.kind === "scene3d_view_target");
+      assert.ok(task, "missing after-lesson 3D view task");
+      assert.equal(task.availability?.kind, "after_lesson");
+      assert.ok(task.prompt?.trim(), "3D view task prompt is empty");
+      assert.ok(task.allowed_operations?.some((operation) =>
+        operation.kind === "scene3d_view" && operation.controls?.length > 0),
+      "3D view task has no usable scene control");
+      assert.ok(task.hints?.length > 0, "3D view task has no hints");
+      assert.ok(task.success_message?.trim(), "3D view task has no success feedback");
     }
     return { attempts: protocol.generation_attempts, writes: writes.map((action) => action.kind) };
   } finally {

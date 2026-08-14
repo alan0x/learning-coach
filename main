@@ -7258,30 +7258,66 @@ var oll_authoring_v0_1_schema_default = {
           minItems: 1,
           maxItems: 16,
           items: {
-            type: "object",
-            required: ["kind", "variable", "controls"],
-            additionalProperties: false,
-            properties: {
-              kind: { const: "variable_change" },
-              variable: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
-              controls: {
-                type: "array",
-                minItems: 1,
-                items: { enum: ["slider", "geometry_point"] }
+            oneOf: [
+              {
+                type: "object",
+                required: ["kind", "variable", "controls"],
+                additionalProperties: false,
+                properties: {
+                  kind: { const: "variable_change" },
+                  variable: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
+                  controls: {
+                    type: "array",
+                    minItems: 1,
+                    items: { enum: ["slider", "geometry_point"] }
+                  }
+                }
+              },
+              {
+                type: "object",
+                required: ["kind", "node", "controls"],
+                additionalProperties: false,
+                properties: {
+                  kind: { const: "scene3d_view" },
+                  node: { $ref: "#/$defs/alias" },
+                  controls: {
+                    type: "array",
+                    minItems: 1,
+                    items: { enum: ["orbit", "zoom", "preset", "reset"] }
+                  }
+                }
               }
-            }
+            ]
           }
         },
         completion: {
-          type: "object",
-          required: ["kind", "expression", "value", "tolerance"],
-          additionalProperties: false,
-          properties: {
-            kind: { const: "expression_target" },
-            expression: { type: "string", minLength: 1, maxLength: 256 },
-            value: { type: "number" },
-            tolerance: { type: "number", exclusiveMinimum: 0 }
-          }
+          oneOf: [
+            {
+              type: "object",
+              required: ["kind", "expression", "value", "tolerance"],
+              additionalProperties: false,
+              properties: {
+                kind: { const: "expression_target" },
+                expression: { type: "string", minLength: 1, maxLength: 256 },
+                value: { type: "number" },
+                tolerance: { type: "number", exclusiveMinimum: 0 }
+              }
+            },
+            {
+              type: "object",
+              required: ["kind", "node", "yaw", "pitch", "zoom", "angular_tolerance", "zoom_tolerance"],
+              additionalProperties: false,
+              properties: {
+                kind: { const: "scene3d_view_target" },
+                node: { $ref: "#/$defs/alias" },
+                yaw: { type: "number" },
+                pitch: { type: "number", minimum: -1.5707963267948966, maximum: 1.5707963267948966 },
+                zoom: { type: "number", minimum: 0.2, maximum: 5 },
+                angular_tolerance: { type: "number", exclusiveMinimum: 0 },
+                zoom_tolerance: { type: "number", exclusiveMinimum: 0 }
+              }
+            }
+          ]
         },
         hints: {
           type: "array",
@@ -7550,11 +7586,12 @@ var oll_authoring_v0_1_schema_default = {
     },
     scene3dContent: {
       type: "object",
-      required: ["objects", "camera"],
+      required: ["objects", "camera", "fallback"],
       additionalProperties: false,
       properties: {
         title: { type: "string" },
         caption: { type: "string" },
+        fallback: { type: "string", minLength: 1, maxLength: 480 },
         axes: { type: "boolean" },
         camera: {
           type: "object",
@@ -7601,6 +7638,27 @@ var oll_authoring_v0_1_schema_default = {
               as: { $ref: "#/$defs/alias" },
               axis: { enum: ["x", "y", "z"] },
               value: { type: "number" },
+              label: { type: "string" },
+              color: { type: "string" }
+            }
+          }
+        },
+        highlights: {
+          type: "array",
+          maxItems: 24,
+          items: {
+            type: "object",
+            required: ["as", "kind", "points"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              kind: { enum: ["point", "edge", "face"] },
+              points: {
+                type: "array",
+                minItems: 1,
+                maxItems: 12,
+                items: { $ref: "#/$defs/point3d" }
+              },
               label: { type: "string" },
               color: { type: "string" }
             }
@@ -7792,30 +7850,66 @@ var v0_1_schema_default = {
           minItems: 1,
           maxItems: 16,
           items: {
-            type: "object",
-            required: ["kind", "variable", "controls"],
-            additionalProperties: false,
-            properties: {
-              kind: { const: "variable_change" },
-              variable: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
-              controls: {
-                type: "array",
-                minItems: 1,
-                items: { enum: ["slider", "geometry_point"] }
+            oneOf: [
+              {
+                type: "object",
+                required: ["kind", "variable", "controls"],
+                additionalProperties: false,
+                properties: {
+                  kind: { const: "variable_change" },
+                  variable: { type: "string", pattern: "^[a-z][a-z0-9_]{0,63}$" },
+                  controls: {
+                    type: "array",
+                    minItems: 1,
+                    items: { enum: ["slider", "geometry_point"] }
+                  }
+                }
+              },
+              {
+                type: "object",
+                required: ["kind", "node", "controls"],
+                additionalProperties: false,
+                properties: {
+                  kind: { const: "scene3d_view" },
+                  node: { $ref: "#/$defs/alias" },
+                  controls: {
+                    type: "array",
+                    minItems: 1,
+                    items: { enum: ["orbit", "zoom", "preset", "reset"] }
+                  }
+                }
               }
-            }
+            ]
           }
         },
         completion: {
-          type: "object",
-          required: ["kind", "expression", "value", "tolerance"],
-          additionalProperties: false,
-          properties: {
-            kind: { const: "expression_target" },
-            expression: { type: "string", minLength: 1, maxLength: 256 },
-            value: { type: "number" },
-            tolerance: { type: "number", exclusiveMinimum: 0 }
-          }
+          oneOf: [
+            {
+              type: "object",
+              required: ["kind", "expression", "value", "tolerance"],
+              additionalProperties: false,
+              properties: {
+                kind: { const: "expression_target" },
+                expression: { type: "string", minLength: 1, maxLength: 256 },
+                value: { type: "number" },
+                tolerance: { type: "number", exclusiveMinimum: 0 }
+              }
+            },
+            {
+              type: "object",
+              required: ["kind", "node", "yaw", "pitch", "zoom", "angular_tolerance", "zoom_tolerance"],
+              additionalProperties: false,
+              properties: {
+                kind: { const: "scene3d_view_target" },
+                node: { $ref: "#/$defs/alias" },
+                yaw: { type: "number" },
+                pitch: { type: "number", minimum: -1.5707963267948966, maximum: 1.5707963267948966 },
+                zoom: { type: "number", minimum: 0.2, maximum: 5 },
+                angular_tolerance: { type: "number", exclusiveMinimum: 0 },
+                zoom_tolerance: { type: "number", exclusiveMinimum: 0 }
+              }
+            }
+          ]
         },
         hints: {
           type: "array",
@@ -8084,11 +8178,12 @@ var v0_1_schema_default = {
     },
     scene3dContent: {
       type: "object",
-      required: ["objects", "camera"],
+      required: ["objects", "camera", "fallback"],
       additionalProperties: false,
       properties: {
         title: { type: "string" },
         caption: { type: "string" },
+        fallback: { type: "string", minLength: 1, maxLength: 480 },
         axes: { type: "boolean" },
         camera: {
           type: "object",
@@ -8135,6 +8230,27 @@ var v0_1_schema_default = {
               as: { $ref: "#/$defs/alias" },
               axis: { enum: ["x", "y", "z"] },
               value: { type: "number" },
+              label: { type: "string" },
+              color: { type: "string" }
+            }
+          }
+        },
+        highlights: {
+          type: "array",
+          maxItems: 24,
+          items: {
+            type: "object",
+            required: ["as", "kind", "points"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              kind: { enum: ["point", "edge", "face"] },
+              points: {
+                type: "array",
+                minItems: 1,
+                maxItems: 12,
+                items: { $ref: "#/$defs/point3d" }
+              },
               label: { type: "string" },
               color: { type: "string" }
             }
@@ -8540,7 +8656,74 @@ function validateLessonVariables(document) {
   }
   return values;
 }
-function validateStudentTasks(document, variables, availableControls) {
+function scene3dTaskScore(view, target, angularTolerance, zoomTolerance) {
+  const yawDistance = Math.abs(Math.atan2(Math.sin(view.yaw - target.yaw), Math.cos(view.yaw - target.yaw)));
+  return Math.max(yawDistance / angularTolerance, Math.abs(view.pitch - target.pitch) / angularTolerance, Math.abs(view.zoom - target.zoom) / zoomTolerance);
+}
+function validateScene3dStudentTask(task, path, scene3dCameras) {
+  const completion = task.completion;
+  requireAlias(completion.node, `${path}/completion/node`);
+  const initial = scene3dCameras.get(completion.node);
+  if (!initial)
+    fail("OLL_REFERENCE_NOT_FOUND", `${path}/completion/node`, `3D scene '${completion.node}' is not declared`);
+  const target = {
+    yaw: requireFiniteNumber(completion.yaw, `${path}/completion/yaw`),
+    pitch: requireFiniteNumber(completion.pitch, `${path}/completion/pitch`),
+    zoom: requireFiniteNumber(completion.zoom, `${path}/completion/zoom`)
+  };
+  const angularTolerance = requireFiniteNumber(completion.angular_tolerance, `${path}/completion/angular_tolerance`);
+  const zoomTolerance = requireFiniteNumber(completion.zoom_tolerance, `${path}/completion/zoom_tolerance`);
+  if (target.pitch < -Math.PI / 2 || target.pitch > Math.PI / 2 || target.zoom < 0.2 || target.zoom > 5) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion`, "3D target view is outside the supported camera range");
+  }
+  if (angularTolerance <= 0 || angularTolerance > Math.PI || zoomTolerance <= 0 || zoomTolerance > 4.8) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion`, "3D task tolerances must be positive and within the camera range");
+  }
+  requireArray(task.allowed_operations, `${path}/allowed_operations`);
+  const controls = /* @__PURE__ */ new Set();
+  task.allowed_operations.forEach((operation, operationIndex) => {
+    const operationPath = `${path}/allowed_operations/${operationIndex}`;
+    requireObject(operation, operationPath);
+    if (operation.kind !== "scene3d_view" || operation.node !== completion.node) {
+      fail("OLL_INVALID_STUDENT_TASK", operationPath, "3D view tasks must reference the completion scene");
+    }
+    requireArray(operation.controls, `${operationPath}/controls`);
+    operation.controls.forEach((control, controlIndex) => {
+      if (!["orbit", "zoom", "preset", "reset"].includes(String(control))) {
+        fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Unsupported 3D task control '${String(control)}'`);
+      }
+      if (controls.has(String(control))) {
+        fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `3D task control '${String(control)}' is duplicated`);
+      }
+      controls.add(String(control));
+    });
+  });
+  if (scene3dTaskScore(initial, target, angularTolerance, zoomTolerance) <= 1) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion`, "3D task is already complete at the initial camera view");
+  }
+  const presets = [
+    { yaw: 0.72, pitch: 0.55, zoom: 1 },
+    { yaw: 0, pitch: 0, zoom: 1 },
+    { yaw: 0, pitch: Math.PI / 2, zoom: 1 }
+  ];
+  const presetReachable = controls.has("preset") && presets.some((preset) => scene3dTaskScore(preset, target, angularTolerance, zoomTolerance) <= 1);
+  const orbitReachable = controls.has("orbit") && (Math.abs(initial.zoom - target.zoom) <= zoomTolerance || controls.has("zoom"));
+  const zoomOnlyReachable = controls.has("zoom") && scene3dTaskScore({ ...initial, zoom: target.zoom }, target, angularTolerance, zoomTolerance) <= 1;
+  if (!presetReachable && !orbitReachable && !zoomOnlyReachable) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/allowed_operations`, "No allowed 3D control can reach the target view");
+  }
+  requireArray(task.hints, `${path}/hints`);
+  if (task.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/hints`, "Task hints must not be empty");
+  }
+  if (task.hint_after_attempts !== void 0 && (!Number.isInteger(task.hint_after_attempts) || task.hint_after_attempts < 1 || task.hint_after_attempts > 20)) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20");
+  }
+  if (task.success_message !== void 0 && (typeof task.success_message !== "string" || !task.success_message.trim())) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/success_message`, "Task success_message must not be empty");
+  }
+}
+function validateStudentTasks(document, variables, availableControls, scene3dCameras) {
   const taskAliases = /* @__PURE__ */ new Set();
   for (const [index, task] of (document.lesson.tasks ?? []).entries()) {
     const path = `/lesson/tasks/${index}`;
@@ -8556,9 +8739,15 @@ function validateStudentTasks(document, variables, availableControls) {
     if (task.availability.kind !== "after_lesson") {
       fail("OLL_INVALID_STUDENT_TASK", `${path}/availability/kind`, `Unsupported task availability '${String(task.availability.kind)}'`);
     }
-    requireArray(task.allowed_operations, `${path}/allowed_operations`);
+    requireObject(task.completion, `${path}/completion`);
+    if (task.completion.kind === "scene3d_view_target") {
+      validateScene3dStudentTask(task, path, scene3dCameras);
+      continue;
+    }
+    const expressionTask = task;
+    requireArray(expressionTask.allowed_operations, `${path}/allowed_operations`);
     const allowedVariables = /* @__PURE__ */ new Set();
-    task.allowed_operations.forEach((operation, operationIndex) => {
+    expressionTask.allowed_operations.forEach((operation, operationIndex) => {
       const operationPath = `${path}/allowed_operations/${operationIndex}`;
       requireObject(operation, operationPath);
       if (operation.kind !== "variable_change") {
@@ -8587,20 +8776,16 @@ function validateStudentTasks(document, variables, availableControls) {
         controls.add(control);
       });
     });
-    requireObject(task.completion, `${path}/completion`);
-    if (task.completion.kind !== "expression_target") {
-      fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/kind`, `Unsupported completion kind '${String(task.completion.kind)}'`);
-    }
-    const target = requireFiniteNumber(task.completion.value, `${path}/completion/value`);
-    const tolerance = requireFiniteNumber(task.completion.tolerance, `${path}/completion/tolerance`);
+    const target = requireFiniteNumber(expressionTask.completion.value, `${path}/completion/value`);
+    const tolerance = requireFiniteNumber(expressionTask.completion.tolerance, `${path}/completion/tolerance`);
     if (tolerance <= 0)
       fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/tolerance`, "Task tolerance must be greater than zero");
     try {
-      const evaluate = compileMathExpression(task.completion.expression, variables.keys());
+      const evaluate = compileMathExpression(expressionTask.completion.expression, variables.keys());
       const initial = evaluate(Object.fromEntries(variables));
       if (!Number.isFinite(initial) || !Number.isFinite(target))
         throw new Error("Task completion result is not finite");
-      const referenced = new Set(referencedMathVariables(task.completion.expression, variables.keys()));
+      const referenced = new Set(referencedMathVariables(expressionTask.completion.expression, variables.keys()));
       if (referenced.size === 0)
         throw new Error("Task completion expression must read an allowed lesson variable");
       for (const variable of referenced) {
@@ -8629,7 +8814,7 @@ function validateStudentTasks(document, variables, availableControls) {
               reachable = true;
             }
           };
-          const allowed = task.allowed_operations.find((operation) => operation.variable === variableAlias);
+          const allowed = expressionTask.allowed_operations.find((operation) => operation.variable === variableAlias);
           const exactSliderSteps = declaration.control?.step ? Math.floor((declaration.max - declaration.min) / declaration.control.step + 1e-12) : -1;
           if (allowed?.controls.includes("slider") && exactSliderSteps > 2e4 && !allowed.controls.includes("geometry_point")) {
             throw new Error("Task slider has too many discrete steps to verify reachability");
@@ -8771,7 +8956,7 @@ function validateContentFragments(content, path) {
 }
 function collectAddressableContent(content) {
   const result = validateContentFragments(content, "/content");
-  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs", "objects", "sections"]) {
+  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
     if (!content?.[field])
       continue;
     for (const item of content[field]) {
@@ -8893,6 +9078,7 @@ function validateScene3dContent(action, path, variables) {
   if (action.kind !== "scene3d")
     return;
   const content = action.content;
+  requireString(content.fallback, `${path}/content/fallback`);
   requireObject(content.camera, `${path}/content/camera`);
   requireFiniteNumber(content.camera.yaw, `${path}/content/camera/yaw`);
   const pitch = requireFiniteNumber(content.camera.pitch, `${path}/content/camera/pitch`);
@@ -8995,6 +9181,30 @@ function validateScene3dContent(action, path, variables) {
       if (!["x", "y", "z"].includes(String(section.axis)))
         fail("OLL_INVALID_OPERATION_PAYLOAD", `${sectionPath}/axis`, "3D section axis must be x, y, or z");
       requireFiniteNumber(section.value, `${sectionPath}/value`);
+    });
+  }
+  if (content.highlights !== void 0) {
+    requireArray(content.highlights, `${path}/content/highlights`);
+    if (content.highlights.length > 24) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/highlights`, "A 3D scene supports at most 24 highlights");
+    }
+    content.highlights.forEach((rawHighlight, index) => {
+      const highlightPath = `${path}/content/highlights/${index}`;
+      requireObject(rawHighlight, highlightPath);
+      const highlight = rawHighlight;
+      requireAlias(highlight.as, `${highlightPath}/as`);
+      if (aliases.has(highlight.as))
+        fail("OLL_DUPLICATE_ALIAS", `${highlightPath}/as`, `3D element '${highlight.as}' is duplicated`);
+      aliases.add(highlight.as);
+      if (!["point", "edge", "face"].includes(String(highlight.kind))) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${highlightPath}/kind`, `Unknown 3D highlight kind '${String(highlight.kind)}'`);
+      }
+      requireArray(highlight.points, `${highlightPath}/points`);
+      const requiredCount = highlight.kind === "point" ? 1 : highlight.kind === "edge" ? 2 : 3;
+      if (highlight.points.length < requiredCount || highlight.kind !== "face" && highlight.points.length !== requiredCount || highlight.points.length > 12) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${highlightPath}/points`, `3D ${String(highlight.kind)} highlight has an invalid point count`);
+      }
+      highlight.points.forEach((rawPoint, pointIndex) => point(rawPoint, `${highlightPath}/points/${pointIndex}`));
     });
   }
 }
@@ -9117,6 +9327,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
   requireArray(document.lesson.goals, "/lesson/goals");
   const lessonVariables = validateLessonVariables(document);
   const availableStudentControls = /* @__PURE__ */ new Map();
+  const scene3dCameras = /* @__PURE__ */ new Map();
   for (const variable of document.lesson.variables ?? []) {
     if (variable.control?.kind === "slider") {
       availableStudentControls.set(variable.as, /* @__PURE__ */ new Set(["slider"]));
@@ -9169,6 +9380,14 @@ function validateAuthoringLesson(document, resourceContext = null) {
           validateImageResource(action, actionPath, resourceContext);
           validateGeometryContent(action, actionPath, lessonVariables);
           validateScene3dContent(action, actionPath, lessonVariables);
+          if (action.kind === "scene3d") {
+            const camera = action.content.camera;
+            scene3dCameras.set(action.as, {
+              yaw: camera.yaw,
+              pitch: camera.pitch,
+              zoom: camera.zoom
+            });
+          }
           if (action.kind === "geometry" && Array.isArray(action.content.points)) {
             for (const point of action.content.points) {
               const interaction = point?.interaction;
@@ -9223,7 +9442,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
       });
     });
   });
-  validateStudentTasks(document, lessonVariables, availableStudentControls);
+  validateStudentTasks(document, lessonVariables, availableStudentControls, scene3dCameras);
   if (document.close?.focus) {
     for (let index = 0; index < document.close.focus.length; index += 1) {
       resolveLocal(registry, document.close.focus[index], `/close/focus/${index}`, ["node", "group", "connection"]);
@@ -9236,7 +9455,7 @@ function stableId(host, type, alias) {
 }
 function normalizeAddressableContent(_host, nodeId, content) {
   const clone = structuredClone(content);
-  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs", "objects", "sections"]) {
+  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
     if (!Array.isArray(clone?.[field]))
       continue;
     clone[field] = clone[field].map((item) => {
@@ -9438,6 +9657,16 @@ function normalizeAuthoringLesson(document, host) {
       fail("OLL_MISSING_HOST_FIELD", `host/${field}`, `Missing host field '${field}'`);
   }
   const registry = buildCanonicalRegistry(document, host);
+  const canonicalLesson = structuredClone(document.lesson);
+  for (const candidate of canonicalLesson.tasks ?? []) {
+    const task = candidate;
+    if (task.completion.kind !== "scene3d_view_target")
+      continue;
+    task.completion.node = requireRegistryId(registry, task.completion.node);
+    for (const operation of task.allowed_operations) {
+      operation.node = requireRegistryId(registry, operation.node);
+    }
+  }
   const events = [
     {
       dsl: "octos.lesson",
@@ -9452,7 +9681,7 @@ function normalizeAuthoringLesson(document, host) {
         region_intent: host.regionIntent ?? "new_topic",
         ...host.regionId ? { region_id: host.regionId } : {}
       },
-      lesson: structuredClone(document.lesson)
+      lesson: canonicalLesson
     }
   ];
   document.steps.forEach((step, stepIndex) => {
@@ -9761,10 +9990,10 @@ request_items \u53EA\u8BB0\u5F55\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559
 - polarity=require \u8868\u793A\u5FC5\u987B\u6EE1\u8DB3\uFF0Cpolarity=forbid \u8868\u793A\u660E\u786E\u7981\u6B62\uFF1B
 - \u4E0D\u5F97\u628A\u5B66\u79D1\u6A21\u62DF\u6216\u672A\u5B9E\u73B0\u7684\u4EA4\u4E92\u5077\u6362\u6210 diagram \u6216\u666E\u901A\u6587\u5B57\u3002scene3d \u5DF2\u652F\u6301\u53D7\u7EA6\u675F\u7684\u7ACB\u4F53\u3001\u4E8C\u5143\u51FD\u6570\u66F2\u9762\u3001\u622A\u9762\u548C\u89C6\u89D2\u65CB\u8F6C\uFF0C\u4E0D\u5E94\u6807\u8BB0\u4E3A\u4E0D\u652F\u6301\uFF1B\u9700\u8981\u78B0\u649E\u3001\u771F\u5B9E\u6750\u8D28\u6216\u590D\u6742\u5F62\u53D8\u65F6\u624D\u4F7F\u7528 unsupported_feature\uFF1B
 - \u6BCF\u4E2A request_item \u5FC5\u987B\u901A\u8FC7 request_item_ids \u6620\u5C04\u5230\u4E00\u4E2A\u6216\u591A\u4E2A\u5177\u4F53\u8981\u6C42\uFF0C\u6216\u8005\u660E\u786E\u5217\u5165 unhandled_request_items\uFF0C\u4E0D\u80FD\u60AC\u7A7A\uFF1B
-- teaching_goal \u6620\u5C04\u5230 teaching_goal_requirements\uFF1Bvisual \u6620\u5C04\u5230 visual_requirements\uFF1Brelationship \u6620\u5C04\u5230 visual_relationships\uFF1Bcontinuous_change \u6620\u5C04\u5230 shared_variable_requirements\uFF1B\u666E\u901A\u6570\u503C\u6216\u51E0\u4F55 student_control \u6620\u5C04\u5230 shared_variable_requirements\uFF0C\u4F46\u4E09\u7EF4\u89C6\u89D2\u65CB\u8F6C/\u7F29\u653E\u6620\u5C04\u5230\u5E26 orbit_control \u7684 scene3d visual_requirement\uFF1Bstudent_task \u6620\u5C04\u5230 student_task_requirements\uFF1Bpresentation_constraint \u6620\u5C04\u5230 presentation_constraints\uFF1B
+- teaching_goal \u6620\u5C04\u5230 teaching_goal_requirements\uFF1Bvisual \u6620\u5C04\u5230 visual_requirements\uFF1Brelationship \u6620\u5C04\u5230 visual_relationships\uFF1Bcontinuous_change \u6620\u5C04\u5230 shared_variable_requirements\uFF1B\u666E\u901A\u6570\u503C\u6216\u51E0\u4F55 student_control \u6620\u5C04\u5230 shared_variable_requirements\uFF0C\u4F46\u4E09\u7EF4\u89C6\u89D2\u65CB\u8F6C/\u7F29\u653E\u6620\u5C04\u5230\u5E26 orbit_control \u7684 scene3d visual_requirement\uFF1B\u666E\u901A\u53D8\u91CF student_task \u6620\u5C04\u5230 student_task_requirements\uFF0C\u76EE\u6807\u89C6\u89D2\u4EFB\u52A1\u6620\u5C04\u5230 scene3d_task_requirements\uFF1Bpresentation_constraint \u6620\u5C04\u5230 presentation_constraints\uFF1B
 - \u76EE\u524D\u6CA1\u6709\u53EF\u5BFB\u5740\u7684\u65E2\u6709\u767D\u677F\u8282\u70B9\u6E05\u5355\uFF0C\u56E0\u6B64 existing_board_edit \u5FC5\u987B\u5217\u5165 unhandled_request_items\uFF0C\u4E0D\u80FD\u8BA9\u540E\u7EED\u6A21\u578B\u731C revise.target\u3002
 
-\u7B2C\u4E8C\u90E8\u5206 teaching_goal_requirements\u3001visual_requirements\u3001visual_relationships\u3001shared_variable_requirements \u548C student_task_requirements \u662F\u6559\u5B66\u8BBE\u8BA1\u3002\u5B83\u4EEC\u53EF\u4EE5\u6839\u636E\u7528\u6237\u76EE\u6807\u589E\u52A0\u5408\u7406\u7684\u56FE\u5F62\u3001\u8BB2\u89E3\u6B65\u9AA4\u548C\u4E92\u52A8\u65B9\u5F0F\uFF0C\u4F46\u5FC5\u987B\u901A\u8FC7 request_item_ids \u8BF4\u660E\u670D\u52A1\u4E8E\u54EA\u9879\u7528\u6237\u8981\u6C42\u3002\u4E0D\u8981\u628A\u6559\u5B66\u5EFA\u8BAE\u6216\u4F60\u504F\u597D\u7684\u8BB2\u6CD5\u4F2A\u88C5\u6210\u7528\u6237\u539F\u8BDD\uFF0C\u4E5F\u4E0D\u8981\u56E0\u4E3A\u7528\u6237\u6CA1\u8BF4\u51FA\u201C\u6062\u590D\u529B\u7BAD\u5934\u201D\u4E4B\u7C7B\u5177\u4F53\u6559\u6CD5\u5C31\u62D2\u7EDD\u5408\u7406\u7684\u6559\u5B66\u8BBE\u8BA1\u3002
+\u7B2C\u4E8C\u90E8\u5206 teaching_goal_requirements\u3001visual_requirements\u3001visual_relationships\u3001shared_variable_requirements\u3001student_task_requirements \u548C scene3d_task_requirements \u662F\u6559\u5B66\u8BBE\u8BA1\u3002\u5B83\u4EEC\u53EF\u4EE5\u6839\u636E\u7528\u6237\u76EE\u6807\u589E\u52A0\u5408\u7406\u7684\u56FE\u5F62\u3001\u8BB2\u89E3\u6B65\u9AA4\u548C\u4E92\u52A8\u65B9\u5F0F\uFF0C\u4F46\u5FC5\u987B\u901A\u8FC7 request_item_ids \u8BF4\u660E\u670D\u52A1\u4E8E\u54EA\u9879\u7528\u6237\u8981\u6C42\u3002\u4E0D\u8981\u628A\u6559\u5B66\u5EFA\u8BAE\u6216\u4F60\u504F\u597D\u7684\u8BB2\u6CD5\u4F2A\u88C5\u6210\u7528\u6237\u539F\u8BDD\uFF0C\u4E5F\u4E0D\u8981\u56E0\u4E3A\u7528\u6237\u6CA1\u8BF4\u51FA\u201C\u6062\u590D\u529B\u7BAD\u5934\u201D\u4E4B\u7C7B\u5177\u4F53\u6559\u6CD5\u5C31\u62D2\u7EDD\u5408\u7406\u7684\u6559\u5B66\u8BBE\u8BA1\u3002
 
 \u6559\u5B66\u76EE\u6807\u548C\u6F14\u793A\u5BF9\u8C61\u5FC5\u987B\u5B8C\u6574\uFF1A
 - \u7528\u6237\u95EE\u67D0\u4E2A\u73B0\u8C61\u201C\u4E3A\u4EC0\u4E48\u53D1\u751F\u201D\u65F6\uFF0C\u89E3\u91CA\u4EA7\u751F\u8BE5\u73B0\u8C61\u7684\u539F\u56E0\u672C\u8EAB\u662F\u786C\u6559\u5B66\u76EE\u6807\uFF1B\u53EA\u63CF\u8FF0\u5468\u671F\u3001\u89C4\u5F8B\u3001\u7ED3\u679C\u6216\u6570\u5B66\u62DF\u5408\u4E0D\u80FD\u66FF\u4EE3\u56E0\u679C\u89E3\u91CA\uFF1B
@@ -9792,7 +10021,7 @@ request_items \u53EA\u8BB0\u5F55\u7528\u6237\u660E\u786E\u63D0\u51FA\u7684\u6559
 - semantic_elements / semantic_edges\uFF1A\u8BED\u4E49\u8282\u70B9\u548C\u8BED\u4E49\u8FDE\u7EBF\uFF1Bsource_asset\uFF1A\u53D7\u63A7\u56FE\u7247\u8D44\u6E90\uFF1Btabular_values\uFF1A\u6709\u884C\u5217\u6570\u636E\u7684\u8868\u683C\u3002
 - spatial_axes\uFF1A\u4E09\u7EF4\u5750\u6807\u8F74\uFF1Bsolid_primitives\uFF1A\u81F3\u5C11\u4E00\u4E2A\u53D7\u652F\u6301\u5B9E\u4F53\uFF1Bfunction_surface\uFF1A\u53EF\u6267\u884C\u7684 z=f(x,y) \u66F2\u9762\uFF1Bcross_section\uFF1Ax/y/z \u622A\u9762\uFF1Borbit_control\uFF1A\u5B66\u751F\u80FD\u65CB\u8F6C\u3001\u7F29\u653E\u548C\u590D\u4F4D\u573A\u666F\u89C6\u89D2\u3002
 
-feature \u5FC5\u987B\u5C5E\u4E8E\u5BF9\u5E94 surface\uFF1Ageometry \u53EA\u4F7F\u7528 coordinate_axes\u3001equal_scale\u3001circle\u3001origin_centered_circle\u3001unit_radius\u3001point_on_circle\u3001line_segments\u3001radius_segment\u3001projection_segment\u3001angle_arc\u3001annotated_points\uFF1Bplot \u53EA\u4F7F\u7528 coordinate_axes\u3001function_curve\u3001annotated_points\u3001guides\uFF1Bscene3d \u53EA\u4F7F\u7528 spatial_axes\u3001solid_primitives\u3001function_surface\u3001cross_section\u3001orbit_control\uFF1Bdiagram \u53EA\u4F7F\u7528 semantic_elements\u3001semantic_edges\uFF1Bimage \u53EA\u4F7F\u7528 source_asset\uFF1Btable \u53EA\u4F7F\u7528 tabular_values\u3002
+feature \u5FC5\u987B\u5C5E\u4E8E\u5BF9\u5E94 surface\uFF1Ageometry \u53EA\u4F7F\u7528 coordinate_axes\u3001equal_scale\u3001circle\u3001origin_centered_circle\u3001unit_radius\u3001point_on_circle\u3001line_segments\u3001radius_segment\u3001projection_segment\u3001angle_arc\u3001annotated_points\uFF1Bplot \u53EA\u4F7F\u7528 coordinate_axes\u3001function_curve\u3001annotated_points\u3001guides\uFF1Bscene3d \u53EA\u4F7F\u7528 spatial_axes\u3001solid_primitives\u3001function_surface\u3001cross_section\u3001spatial_highlights\u3001orbit_control\uFF1Bdiagram \u53EA\u4F7F\u7528 semantic_elements\u3001semantic_edges\uFF1Bimage \u53EA\u4F7F\u7528 source_asset\uFF1Btable \u53EA\u4F7F\u7528 tabular_values\u3002\u7528\u6237\u8981\u6C42\u6307\u51FA\u4E09\u7EF4\u5BF9\u8C61\u7684\u5177\u4F53\u9876\u70B9\u3001\u68F1\u6216\u9762\u65F6\uFF0Cscene3d \u5FC5\u987B\u5305\u542B spatial_highlights\u3002
 
 \u5982\u679C\u8BF7\u6C42\u70B9\u540D\u67D0\u4E2A\u89C6\u89C9\u5BF9\u8C61\uFF0C\u9009\u62E9\u80FD\u771F\u5B9E\u8868\u8FBE\u5B83\u7684 surface\uFF0C\u5E76\u5217\u51FA\u8BA9\u8BE5\u5BF9\u8C61\u548C\u6559\u5B66\u76EE\u7684\u5728\u753B\u9762\u4E0A\u6210\u7ACB\u6240\u4E0D\u53EF\u7F3A\u5C11\u7684\u6700\u5C0F features\u3002\u4E0D\u8981\u56E0\u4E3A\u67D0\u4E2A surface \u652F\u6301\u4E00\u9879 feature \u5C31\u81EA\u52A8\u8981\u6C42\u5B83\uFF1B\u4E5F\u4E0D\u8981\u7528\u6807\u9898\u3001\u8BB2\u8FF0\u6216\u6807\u7B7E\u4EE3\u66FF\u7ED3\u6784\u7279\u5F81\u3002
 
@@ -9821,7 +10050,8 @@ student_task_requirements \u7528\u6765\u89C4\u5212\u8BB2\u89E3\u7ED3\u675F\u540E
 - completion_expression \u4F7F\u7528 Runtime \u6570\u5B66\u8868\u8FBE\u5F0F\uFF0C\u53EA\u80FD\u8BFB\u53D6\u8FD9\u4E2A variable\uFF1Bcompletion_value \u662F\u671F\u671B\u7ED3\u679C\uFF0Ctolerance \u662F\u5141\u8BB8\u8BEF\u5DEE\u3002\u521D\u59CB\u503C\u4E0D\u80FD\u5DF2\u7ECF\u6EE1\u8DB3\u5B8C\u6210\u6761\u4EF6\u3002\u4EFB\u52A1\u5FC5\u987B\u4F9D\u636E\u5B66\u751F\u6700\u7EC8\u63D0\u4EA4\u7684\u4E00\u6B21\u64CD\u4F5C\u5224\u5B9A\uFF0C\u4E0D\u80FD\u4F9D\u9760\u6A21\u578B\u9605\u8BFB\u5B66\u751F\u610F\u56FE\u3002
 - prompt \u5FC5\u987B\u50CF\u8001\u5E08\u7ED9\u5B66\u751F\u7684\u81EA\u7136\u6307\u4EE4\uFF0C\u8BF4\u660E\u8981\u8FBE\u5230\u7684\u53EF\u89C1\u76EE\u6807\uFF0C\u4E0D\u8981\u66B4\u9732\u5185\u90E8\u53D8\u91CF\u540D\u6216\u5B9E\u73B0\u672F\u8BED\u3002hints \u4ECE\u89C2\u5BDF\u65B9\u5411\u5230\u66F4\u5177\u4F53\u64CD\u4F5C\u9010\u6B65\u7ED9\u51FA\uFF1Bsuccess_message \u89E3\u91CA\u5B66\u751F\u521A\u624D\u7684\u64CD\u4F5C\u4E3A\u4EC0\u4E48\u6B63\u786E\u3002
 - \u4EFB\u52A1\u6309\u6570\u7EC4\u987A\u5E8F\u4F9D\u6B21\u5F00\u653E\u3002\u901A\u5E38\u53EA\u89C4\u5212\u4E00\u4E2A\uFF1B\u53EA\u6709\u591A\u4E2A\u64CD\u4F5C\u786E\u5B9E\u5BF9\u5E94\u4E0D\u540C\u6559\u5B66\u76EE\u6807\u65F6\u624D\u89C4\u5212\u591A\u4E2A\u3002
-- \u82E5 presentation_constraints \u660E\u786E\u7981\u6B62 student_control \u6216 student_task\uFF0Cstudent_task_requirements \u5FC5\u987B\u4E3A\u7A7A\u3002
+- scene3d_task_requirements \u4E13\u95E8\u63CF\u8FF0\u201C\u628A\u4E09\u7EF4\u573A\u666F\u8F6C\u5230\u67D0\u4E2A\u89C6\u89D2\u201D\u7684\u4EFB\u52A1\u3002visual \u5FC5\u987B\u5F15\u7528\u5E26 orbit_control \u7684 scene3d\uFF1Btarget_yaw\u3001target_pitch\u3001target_zoom \u662F\u76EE\u6807\u76F8\u673A\uFF0Cangular_tolerance \u548C zoom_tolerance \u662F\u5224\u5B9A\u5BB9\u5DEE\u3002\u4E0D\u8981\u628A\u89C6\u89D2\u4EFB\u52A1\u4F2A\u88C5\u6210 lesson variable\u3002\u7528\u6237\u660E\u786E\u8981\u6C42\u4ECE\u67D0\u4E2A\u65B9\u5411\u89C2\u5BDF\u3001\u8F6C\u5230\u6B63\u89C6/\u4FEF\u89C6\uFF0C\u6216\u8981\u6C42\u5B66\u751F\u901A\u8FC7\u65CB\u8F6C\u5B8C\u6210\u4EFB\u52A1\u65F6\u4F7F\u7528\u5B83\uFF1B\u666E\u901A\u53D8\u91CF\u4EFB\u52A1\u4ECD\u653E\u5728 student_task_requirements\u3002
+- \u82E5 presentation_constraints \u660E\u786E\u7981\u6B62 student_control \u6216 student_task\uFF0Cstudent_task_requirements \u548C scene3d_task_requirements \u90FD\u5FC5\u987B\u4E3A\u7A7A\u3002
 
 progressive_revision_kinds \u53EA\u8868\u793A\u672C\u8F6E\u65B0\u5EFA\u677F\u4E66\u662F\u5426\u9002\u5408\u7528 revise \u6E10\u8FDB\u66FF\u6362\uFF0C\u5141\u8BB8 text\u3001math\u3001shape\u3001diagram\u3001table\u3001note\uFF1B\u4E0D\u9700\u8981\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u5B83\u4E0D\u5141\u8BB8\u4FEE\u6539\u5386\u53F2\u767D\u677F\u8282\u70B9\uFF0C\u4E5F\u4E0D\u5F97\u5305\u542B geometry\u3001plot\u3001scene3d \u6216 image\u3002
 
@@ -9864,7 +10094,7 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 - geometry.points[] \u6BCF\u9879\u5305\u542B as\u3001x\u3001y\uFF1Bcircles[] \u4F7F\u7528 center point alias \u548C\u6B63 radius\uFF1Bsegments[] \u4F7F\u7528 from/to point alias\uFF0C\u6295\u5F71\u7EBF\u4F7F\u7528 style="projection"\uFF1Barcs[] \u4F7F\u7528 center\u3001radius\u3001start_angle\u3001end_angle\uFF0C\u89D2\u5EA6\u4E3A\u5F27\u5EA6\u3002\u6A21\u578B\u4E0D\u5F97\u8F93\u51FA SVG \u6216\u50CF\u7D20\u5750\u6807\u3002
 - diagram \u7528\u4E8E\u8BED\u4E49\u5143\u7D20\u4E0E\u8FDE\u7EBF\uFF0C\u4E0D\u5F97\u5192\u5145\u51FD\u6570\u56FE\u50CF\u3002plot \u7528\u4E8E\u5750\u6807\u8F74\u4E0A\u7684\u51FD\u6570\u66F2\u7EBF\uFF1Bcontent.axes.x/y \u5404\u7ED9\u51FA\u6570\u503C min/max\uFF0Ccontent.curves[] \u6BCF\u9879\u5FC5\u987B\u5305\u542B as\u3001expression\uFF0C\u53EF\u5305\u542B label\u3002
 - plot.expression \u53EA\u5199\u53D7\u9650\u6570\u5B66\u8868\u8FBE\u5F0F\uFF0C\u4F8B\u5982 sin(x)\u3001cos(x)\u3001(x+3)^2-4\uFF1B\u652F\u6301 x\u3001pi\u3001e\u3001+ - * / ^\u3001\u62EC\u53F7\u4EE5\u53CA sin/cos/tan/sqrt/abs/exp/log\uFF0C\u4E0D\u5199 y=\u3001LaTeX\u3001\u4EE3\u7801\u6216 SVG\u3002
-- scene3d.camera \u5305\u542B yaw\u3001pitch\u3001zoom\uFF1Bobjects[] \u53EA\u4F7F\u7528 box\u3001sphere\u3001cylinder\u3001cone\u3001surface\u3002box \u7ED9 center \u548C size\uFF1B\u7403\u7ED9 center/radius\uFF1B\u5706\u67F1\u548C\u5706\u9525\u518D\u7ED9 height\uFF1Bsurface \u7ED9 z=f(x,y) \u7684 expression\u3001x_range\u3001y_range \u548C 4 \u5230 24 \u7684 samples\u3002sections[] \u4F7F\u7528 as\u3001axis=x/y/z\u3001value\u3002\u573A\u666F\u5929\u7136\u652F\u6301\u89C6\u89D2\u65CB\u8F6C\u3001\u7F29\u653E\u3001\u7B49\u8F74/\u6B63\u89C6/\u4FEF\u89C6\u548C\u590D\u4F4D\uFF0C\u4E0D\u8981\u8F93\u51FA\u8FD9\u4E9B\u4EA4\u4E92\u7684\u811A\u672C\u3002
+- scene3d.camera \u5305\u542B yaw\u3001pitch\u3001zoom\uFF1Bfallback \u5FC5\u987B\u7528\u4E00\u53E5\u8BDD\u8BF4\u660E\u4EA4\u4E92\u4E0D\u53EF\u7528\u65F6\u5B66\u751F\u4ECD\u5E94\u770B\u61C2\u7684\u7A7A\u95F4\u5173\u7CFB\uFF1Bobjects[] \u53EA\u4F7F\u7528 box\u3001sphere\u3001cylinder\u3001cone\u3001surface\u3002box \u7ED9 center \u548C size\uFF1B\u7403\u7ED9 center/radius\uFF1B\u5706\u67F1\u548C\u5706\u9525\u518D\u7ED9 height\uFF1Bsurface \u7ED9 z=f(x,y) \u7684 expression\u3001x_range\u3001y_range \u548C 4 \u5230 24 \u7684 samples\u3002sections[] \u4F7F\u7528 as\u3001axis=x/y/z\u3001value\u3002highlights[] \u4F7F\u7528 as\u3001kind=point/edge/face\u3001\u660E\u786E\u7684\u4E09\u7EF4 points\u3001\u53EF\u9009 label/color\uFF0C\u4E0D\u80FD\u4F7F\u7528\u542B\u7CCA\u7684\u201C\u7B2C\u4E00\u4E2A\u9762\u201D\u3002\u573A\u666F\u5929\u7136\u652F\u6301\u89C6\u89D2\u65CB\u8F6C\u3001\u7F29\u653E\u3001\u7B49\u8F74/\u6B63\u89C6/\u4FEF\u89C6\u548C\u590D\u4F4D\uFF0C\u4E0D\u8981\u8F93\u51FA\u8FD9\u4E9B\u4EA4\u4E92\u7684\u811A\u672C\u3002
 - \u8F93\u5165\u4E2D\u7684\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u662F\u672C\u8F6E\u8BF7\u6C42\u7684\u53EF\u6267\u884C\u8981\u6C42\u5408\u540C\uFF1B\u6BCF\u4E2A visual_requirement \u548C visual_relationship \u90FD\u5FC5\u987B\u7531\u5B9E\u9645\u767D\u677F\u52A8\u4F5C\u6EE1\u8DB3\uFF0C\u6807\u9898\u3001goals\u3001\u8BB2\u8FF0\u6216\u6587\u5B57\u58F0\u660E\u4E0D\u80FD\u66FF\u4EE3\u8981\u6C42\u7684\u89C6\u89C9\u5185\u5BB9\u3002
 - \u6BCF\u4E2A visual_requirement.id \u5C31\u662F\u8BE5\u4E3B\u8981\u89C6\u89C9\u8282\u70B9\u5FC5\u987B\u4F7F\u7528\u7684 write.as\uFF1B\u4E00\u4E2A\u89C6\u89C9\u8282\u70B9\u53EF\u4EE5\u901A\u8FC7 request_item_ids \u670D\u52A1\u591A\u4E2A\u6559\u5B66\u76EE\u6807\u3002visual_relationships \u5BF9\u5E94\u7684 connect \u7531\u7CFB\u7EDF\u5728\u4E24\u4E2A\u8282\u70B9\u521B\u5EFA\u540E\u63D2\u5165\uFF0C\u6A21\u578B\u4E0D\u8981\u8F93\u51FA connect\u3002
 - \u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u4E2D\u7684 shared_variable_requirements \u975E\u7A7A\u65F6\uFF0C\u7CFB\u7EDF\u4F1A\u786E\u5B9A\u6027\u5199\u5165 lesson.variables \u548C\u53EF\u5224\u5B9A\u7684 angle_control\uFF1B\u6A21\u578B\u8D1F\u8D23\u5728 bound_visuals \u5BF9\u5E94\u7684 geometry/plot/scene3d content.bindings \u4E2D\u5F15\u7528\u540C\u4E00\u4E2A\u53D8\u91CF\uFF0C\u5E76\u628A do="animate" \u52A8\u4F5C\u653E\u8FDB\u5408\u9002\u7684\u8BB2\u89E3\u8282\u62CD\u3002scene3d \u7ED1\u5B9A\u76EE\u6807\u76EE\u524D\u53EA\u5141\u8BB8 section.value\u3002\u7981\u6B62\u590D\u5236\u7B2C\u4E8C\u4EFD\u72B6\u6001\u3002
@@ -10347,6 +10577,21 @@ function buildVertexResponseJsonSchema(root) {
       required: ["yaw", "pitch", "zoom"],
       properties: { yaw: { type: "number" }, pitch: { type: "number" }, zoom: { type: "number" } }
     };
+    const scene3dHighlights = {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["as", "kind", "points"],
+        properties: {
+          as: alias,
+          kind: { enum: ["point", "edge", "face"] },
+          points: { type: "array", minItems: 1, items: point3d },
+          label: { type: "string" },
+          color: { enum: ["teal", "blue", "purple", "orange", "red", "gray"] }
+        }
+      }
+    };
     const writeContentByKind = {
       text: {
         type: "object",
@@ -10396,14 +10641,16 @@ function buildVertexResponseJsonSchema(root) {
       scene3d: {
         type: "object",
         additionalProperties: false,
-        required: ["objects", "camera"],
+        required: ["objects", "camera", "fallback"],
         properties: {
           title: { type: "string" },
           caption: { type: "string" },
+          fallback: { type: "string" },
           axes: { type: "boolean" },
           camera: scene3dCamera,
           objects: scene3dObjects,
           sections: scene3dSections,
+          highlights: scene3dHighlights,
           bindings
         }
       },
@@ -10575,10 +10822,11 @@ function deriveAuthoringCapabilityPlan(input, brief) {
       continue;
     }
     if (capability === "student_task") {
-      if (forbid && brief.student_task_requirements.length > 0) {
+      const taskCount = brief.student_task_requirements.length + brief.scene3d_task_requirements.length;
+      if (forbid && taskCount > 0) {
         throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids an after-lesson student task");
       }
-      if (!forbid && brief.student_task_requirements.length === 0) {
+      if (!forbid && taskCount === 0) {
         throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request requires an after-lesson student task, but none was planned");
       }
       continue;
@@ -10807,7 +11055,8 @@ function buildAuthoringResponseJsonSchema(brief, plan) {
     scene3d: /* @__PURE__ */ new Map([
       ["solid_primitives", "objects"],
       ["function_surface", "objects"],
-      ["cross_section", "sections"]
+      ["cross_section", "sections"],
+      ["spatial_highlights", "highlights"]
     ]),
     diagram: /* @__PURE__ */ new Map([["semantic_edges", "edges"]])
   };
@@ -10871,6 +11120,7 @@ var visualFeatures = [
   "solid_primitives",
   "function_surface",
   "cross_section",
+  "spatial_highlights",
   "orbit_control"
 ];
 var visualRelationships = [
@@ -10913,6 +11163,7 @@ var lessonBriefResponseJsonSchema = {
     "visual_relationships",
     "shared_variable_requirements",
     "student_task_requirements",
+    "scene3d_task_requirements",
     "progressive_revision_kinds",
     "unhandled_request_items"
   ],
@@ -11095,6 +11346,53 @@ var lessonBriefResponseJsonSchema = {
         }
       }
     },
+    scene3d_task_requirements: {
+      type: "array",
+      maxItems: 4,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "id",
+          "prompt",
+          "visual",
+          "controls",
+          "target_yaw",
+          "target_pitch",
+          "target_zoom",
+          "angular_tolerance",
+          "zoom_tolerance",
+          "hints",
+          "hint_after_attempts",
+          "success_message",
+          "request_item_ids"
+        ],
+        properties: {
+          id: { type: "string" },
+          prompt: { type: "string" },
+          visual: { type: "string" },
+          controls: {
+            type: "array",
+            minItems: 1,
+            items: { enum: ["orbit", "zoom", "preset", "reset"] }
+          },
+          target_yaw: { type: "number" },
+          target_pitch: { type: "number" },
+          target_zoom: { type: "number" },
+          angular_tolerance: { type: "number" },
+          zoom_tolerance: { type: "number" },
+          hints: {
+            type: "array",
+            minItems: 1,
+            maxItems: 4,
+            items: { type: "string" }
+          },
+          hint_after_attempts: { type: "integer" },
+          success_message: { type: "string" },
+          request_item_ids: idArraySchema
+        }
+      }
+    },
     progressive_revision_kinds: {
       type: "array",
       items: { enum: revisableNodeKinds }
@@ -11172,7 +11470,7 @@ var featuresBySurface = {
     "annotated_points"
   ]),
   plot: /* @__PURE__ */ new Set(["coordinate_axes", "function_curve", "annotated_points", "guides"]),
-  scene3d: /* @__PURE__ */ new Set(["spatial_axes", "solid_primitives", "function_surface", "cross_section", "orbit_control"]),
+  scene3d: /* @__PURE__ */ new Set(["spatial_axes", "solid_primitives", "function_surface", "cross_section", "spatial_highlights", "orbit_control"]),
   diagram: /* @__PURE__ */ new Set(["semantic_elements", "semantic_edges"]),
   image: /* @__PURE__ */ new Set(["source_asset"]),
   table: /* @__PURE__ */ new Set(["tabular_values"])
@@ -11258,6 +11556,7 @@ function canonicalizeBriefAliases(candidate) {
   canonicalizeItems(brief.visual_relationships);
   canonicalizeItems(brief.shared_variable_requirements);
   canonicalizeItems(brief.student_task_requirements);
+  canonicalizeItems(brief.scene3d_task_requirements);
   if (Array.isArray(brief.visual_requirements)) {
     for (const requirement of brief.visual_requirements) {
       if (!isRecord(requirement) || !Array.isArray(requirement.expressions)) continue;
@@ -11276,6 +11575,11 @@ function canonicalizeBriefAliases(candidate) {
       if (!isRecord(requirement)) continue;
       aliasArray(requirement.bound_visuals);
       requirement.direct_angle_geometry = alias(requirement.direct_angle_geometry);
+    }
+  }
+  if (Array.isArray(brief.scene3d_task_requirements)) {
+    for (const requirement of brief.scene3d_task_requirements) {
+      if (isRecord(requirement)) requirement.visual = alias(requirement.visual);
     }
   }
   if (Array.isArray(brief.unhandled_request_items)) {
@@ -11340,6 +11644,14 @@ function validateLessonBrief(candidate, input) {
       "BRIEF_INVALID_STUDENT_TASKS",
       "/student_task_requirements",
       "student_task_requirements must be an array"
+    ));
+  }
+  const scene3dTasks = Array.isArray(candidate.scene3d_task_requirements) ? candidate.scene3d_task_requirements : [];
+  if (!Array.isArray(candidate.scene3d_task_requirements)) {
+    violations.push(briefViolation(
+      "BRIEF_INVALID_SCENE3D_TASKS",
+      "/scene3d_task_requirements",
+      "scene3d_task_requirements must be an array"
     ));
   }
   const revisionKinds = Array.isArray(candidate.progressive_revision_kinds) ? candidate.progressive_revision_kinds : [];
@@ -11753,8 +12065,50 @@ function validateLessonBrief(candidate, input) {
     }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
   });
+  scene3dTasks.forEach((raw, index) => {
+    const path = `/scene3d_task_requirements/${index}`;
+    if (!isRecord(raw)) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK", path, "scene3d task requirement must be an object"));
+      return;
+    }
+    validateRequirementId(raw.id, `${path}/id`);
+    if (typeof raw.prompt !== "string" || !raw.prompt.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_PROMPT", `${path}/prompt`, "prompt must be a non-empty student instruction"));
+    }
+    const visual = typeof raw.visual === "string" ? visualById.get(raw.visual) : void 0;
+    if (!visual || visual.surface !== "scene3d" || !Array.isArray(visual.required_features) || !visual.required_features.includes("orbit_control")) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_VISUAL", `${path}/visual`, "visual must reference a scene3d requirement with orbit_control"));
+    }
+    const controls = Array.isArray(raw.controls) ? raw.controls : [];
+    if (controls.length === 0 || controls.some((control) => !["orbit", "zoom", "preset", "reset"].includes(String(control))) || new Set(controls).size !== controls.length) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_CONTROLS", `${path}/controls`, "controls must contain unique supported 3D view controls"));
+    }
+    const target = {
+      yaw: numberValue(raw.target_yaw),
+      pitch: numberValue(raw.target_pitch),
+      zoom: numberValue(raw.target_zoom)
+    };
+    const angularTolerance = numberValue(raw.angular_tolerance);
+    const zoomTolerance = numberValue(raw.zoom_tolerance);
+    if (target.yaw === void 0 || target.pitch === void 0 || target.zoom === void 0 || target.pitch < -Math.PI / 2 || target.pitch > Math.PI / 2 || target.zoom < 0.2 || target.zoom > 5) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_TARGET", `${path}/target_yaw`, "target camera must be finite and inside the supported pitch/zoom range"));
+    }
+    if (angularTolerance === void 0 || angularTolerance <= 0 || angularTolerance > Math.PI || zoomTolerance === void 0 || zoomTolerance <= 0 || zoomTolerance > 4.8) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_TOLERANCE", `${path}/angular_tolerance`, "3D view tolerances must be positive and within the camera range"));
+    }
+    if (!Array.isArray(raw.hints) || raw.hints.length === 0 || raw.hints.length > 4 || raw.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_HINTS", `${path}/hints`, "hints must contain one to four non-empty hints"));
+    }
+    if (!Number.isInteger(raw.hint_after_attempts) || raw.hint_after_attempts < 1 || raw.hint_after_attempts > 20) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_HINT_THRESHOLD", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20"));
+    }
+    if (typeof raw.success_message !== "string" || !raw.success_message.trim()) {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_SUCCESS", `${path}/success_message`, "success_message must be non-empty"));
+    }
+    mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
+  });
   const tasksForbidden = presentationConstraints.some((constraint) => isRecord(constraint) && constraint.polarity === "forbid" && (constraint.capability === "student_task" || constraint.capability === "student_control"));
-  if (tasksForbidden && studentTasks.length > 0) {
+  if (tasksForbidden && (studentTasks.length > 0 || scene3dTasks.length > 0)) {
     violations.push(briefViolation("BRIEF_FORBIDDEN_STUDENT_TASK", "/student_task_requirements", "student tasks cannot be planned when the request forbids tasks or student control"));
   }
   if (!tasksForbidden && sharedVariables.length > 0 && studentTasks.length === 0) {
@@ -12012,6 +12366,7 @@ function inventoryWrite(action) {
     const expressions = objects.flatMap((object) => object.kind === "surface" && typeof object.expression === "string" && object.expression.trim() ? [object.expression] : []);
     if (expressions.length > 0) features.add("function_surface");
     if (Array.isArray(content.sections) && content.sections.length > 0) features.add("cross_section");
+    if (Array.isArray(content.highlights) && content.highlights.length > 0) features.add("spatial_highlights");
     return { alias: action.as, surface: "scene3d", features, expressions, content };
   }
   if (action.kind === "diagram") {
@@ -12107,9 +12462,9 @@ function lowerPlannedLessonFields(document, brief) {
       control: { kind: "slider", step: requirement.slider_step }
     }));
   }
-  if (brief.student_task_requirements.length === 0) delete document.lesson.tasks;
+  if (brief.student_task_requirements.length === 0 && brief.scene3d_task_requirements.length === 0) delete document.lesson.tasks;
   else {
-    document.lesson.tasks = brief.student_task_requirements.map((requirement) => ({
+    const variableTasks = brief.student_task_requirements.map((requirement) => ({
       as: requirement.id,
       prompt: requirement.prompt,
       availability: { kind: "after_lesson" },
@@ -12128,6 +12483,29 @@ function lowerPlannedLessonFields(document, brief) {
       hint_after_attempts: requirement.hint_after_attempts,
       success_message: requirement.success_message
     }));
+    const scene3dTasks = brief.scene3d_task_requirements.map((requirement) => ({
+      as: requirement.id,
+      prompt: requirement.prompt,
+      availability: { kind: "after_lesson" },
+      allowed_operations: [{
+        kind: "scene3d_view",
+        node: requirement.visual,
+        controls: [...requirement.controls]
+      }],
+      completion: {
+        kind: "scene3d_view_target",
+        node: requirement.visual,
+        yaw: requirement.target_yaw,
+        pitch: requirement.target_pitch,
+        zoom: requirement.target_zoom,
+        angular_tolerance: requirement.angular_tolerance,
+        zoom_tolerance: requirement.zoom_tolerance
+      },
+      hints: [...requirement.hints],
+      hint_after_attempts: requirement.hint_after_attempts,
+      success_message: requirement.success_message
+    }));
+    document.lesson.tasks = [...variableTasks, ...scene3dTasks];
   }
   const rawBeats = [];
   const writeBeatByAlias = /* @__PURE__ */ new Map();
@@ -12438,6 +12816,24 @@ function validateBriefCoverage(document, brief) {
       });
     }
   }
+  for (const [index, requirement] of brief.scene3d_task_requirements.entries()) {
+    const task = tasks.find((candidate) => candidate.as === requirement.id);
+    const availability = task && isRecord(task.availability) ? task.availability : void 0;
+    const allowedOperations = task && Array.isArray(task.allowed_operations) ? task.allowed_operations.filter(isRecord) : [];
+    const allowed = allowedOperations.find((operation) => operation.kind === "scene3d_view" && operation.node === requirement.visual);
+    const controls = allowed && Array.isArray(allowed.controls) ? allowed.controls : [];
+    const completion = task && isRecord(task.completion) ? task.completion : void 0;
+    const taskMatches = task && task.prompt === requirement.prompt && availability?.kind === "after_lesson" && allowedOperations.length === 1 && controls.length === requirement.controls.length && requirement.controls.every((control) => controls.includes(control)) && completion?.kind === "scene3d_view_target" && completion.node === requirement.visual && approximatelyEqual(completion.yaw, requirement.target_yaw) && approximatelyEqual(completion.pitch, requirement.target_pitch) && approximatelyEqual(completion.zoom, requirement.target_zoom) && approximatelyEqual(completion.angular_tolerance, requirement.angular_tolerance) && approximatelyEqual(completion.zoom_tolerance, requirement.zoom_tolerance) && Array.isArray(task.hints) && task.hints.length === requirement.hints.length && requirement.hints.every((hint, hintIndex) => task.hints?.[hintIndex] === hint) && task.hint_after_attempts === requirement.hint_after_attempts && task.success_message === requirement.success_message;
+    if (!taskMatches) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_SCENE3D_TASK_UNSATISFIED",
+        path: `/lesson/tasks/${brief.student_task_requirements.length + index}`,
+        requirement_id: requirement.id,
+        message: `3D student task '${requirement.id}' must preserve its scene, controls, target view, tolerances, hints, and feedback`
+      });
+    }
+  }
   return violations;
 }
 function reviseContentMatchesKind(content, kind) {
@@ -12727,7 +13123,7 @@ ${JSON.stringify(brief.shared_variable_requirements.map((requirement) => ({
     required_direct_angle_control_on: requirement.direct_angle_geometry || null,
     direct_control_input: requirement.direct_angle_geometry ? "\u8BE5 geometry \u5FC5\u987B\u5305\u542B\u540C\u4E00\u53D8\u91CF\u9A71\u52A8\u7684\u5706\u4E0A\u70B9 x/y bindings\uFF0C\u5E76\u7528\u534A\u5F84\u7EBF\u8FDE\u63A5\u8BE5\u70B9\u4E0E\u5706\u5FC3" : null
   })), null, 2)}
-system_inserted_slider \u7531\u7CFB\u7EDF\u5199\u5165 lesson.variables\uFF0Cstudent_task_requirements \u7531\u7CFB\u7EDF\u5199\u5165 lesson.tasks\uFF0C\u6A21\u578B\u90FD\u4E0D\u8981\u81EA\u884C\u590D\u5236\u3002required_direct_angle_control_on \u975E\u7A7A\u65F6\uFF0C\u6A21\u578B\u5FC5\u987B\u63D0\u4F9B\u53EF\u552F\u4E00\u8BC6\u522B\u7684\u5706\u5FC3\u3001\u5706\u4E0A\u70B9\u3001\u534A\u5F84\u7EBF\u548C\u8BE5\u70B9\u7684 x/y \u53D8\u91CF\u7ED1\u5B9A\uFF0C\u7CFB\u7EDF\u636E\u6B64\u8865\u5165 interaction\uFF1B\u627E\u4E0D\u5230\u552F\u4E00\u5BF9\u8C61\u4F1A\u6821\u9A8C\u5931\u8D25\u3002\u52A8\u753B\u5FC5\u987B\u9010\u5B57\u91C7\u7528 required_animation \u4E2D\u7684 variable\u3001value\u3001easing \u548C duration_intent\u3002
+system_inserted_slider \u7531\u7CFB\u7EDF\u5199\u5165 lesson.variables\uFF0Cstudent_task_requirements \u548C scene3d_task_requirements \u7531\u7CFB\u7EDF\u5199\u5165 lesson.tasks\uFF0C\u6A21\u578B\u90FD\u4E0D\u8981\u81EA\u884C\u590D\u5236\u3002required_direct_angle_control_on \u975E\u7A7A\u65F6\uFF0C\u6A21\u578B\u5FC5\u987B\u63D0\u4F9B\u53EF\u552F\u4E00\u8BC6\u522B\u7684\u5706\u5FC3\u3001\u5706\u4E0A\u70B9\u3001\u534A\u5F84\u7EBF\u548C\u8BE5\u70B9\u7684 x/y \u53D8\u91CF\u7ED1\u5B9A\uFF0C\u7CFB\u7EDF\u636E\u6B64\u8865\u5165 interaction\uFF1B\u627E\u4E0D\u5230\u552F\u4E00\u5BF9\u8C61\u4F1A\u6821\u9A8C\u5931\u8D25\u3002\u52A8\u753B\u5FC5\u987B\u9010\u5B57\u91C7\u7528 required_animation \u4E2D\u7684 variable\u3001value\u3001easing \u548C duration_intent\u3002
 \u6BCF\u4E2A required_animation \u5FC5\u987B\u653E\u5728\u72EC\u7ACB\u7684\u7B80\u77ED Beat\uFF1A\u56FE\u5F62\u548C\u8FDE\u63A5\u5148\u5728\u524D\u4E00 Beat \u521B\u5EFA\uFF1B\u52A8\u753B Beat \u53EA\u4FDD\u7559\u4E00\u4E2A animate \u548C after_speech focus\uFF0C\u5E76\u628A\u5B8C\u6574\u63A8\u5BFC\u653E\u5728\u76F8\u90BB Beat\u3002
 
 \u8BFE\u5802\u4E0A\u4E0B\u6587\uFF1A
@@ -13562,7 +13958,7 @@ async function main() {
       requirement_items: brief.request_items.length,
       visual_requirements: brief.visual_requirements.length,
       visual_relationships: brief.visual_relationships.length,
-      student_tasks: brief.student_task_requirements.length,
+      student_tasks: brief.student_task_requirements.length + brief.scene3d_task_requirements.length,
       capability_plan: capabilityPlan,
       authoring_schema: schema
     });
