@@ -733,6 +733,10 @@ function isLessonBriefVerificationRequest(body) {
   return body.systemInstruction.parts[0].text.includes("要求覆盖复核器");
 }
 
+function isLessonTaskPlanningRequest(body) {
+  return body.systemInstruction.parts[0].text.includes("课后互动任务设计器");
+}
+
 function isComponentRepairRequest(body) {
   return body.systemInstruction.parts[0].text.includes("局部视觉对象修复器");
 }
@@ -752,6 +756,7 @@ function isVisualComponentRequest(body) {
 function isAuthoringRequest(body) {
   return !isLessonBriefRequest(body)
     && !isLessonBriefVerificationRequest(body)
+    && !isLessonTaskPlanningRequest(body)
     && !isComponentRepairRequest(body)
     && !isBeatRepairRequest(body)
     && !isParallelSectionRequest(body)
@@ -826,12 +831,13 @@ function assertProviderSchemaCompatible(schema) {
   visit(schema);
 }
 
-function vertexPayload(value) {
+function vertexPayload(value, usageMetadata) {
   return JSON.stringify({
     candidates: [{
       finishReason: "STOP",
       content: { parts: [{ text: JSON.stringify(value) }] },
     }],
+    ...(usageMetadata ? { usageMetadata } : {}),
   });
 }
 
@@ -902,7 +908,10 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
   };
   let activeParallelRequests = 0;
   let maxParallelRequests = 0;
+  let verificationInFlight = false;
+  let generationStartedBeforeVerification = false;
   const requestKinds = [];
+  const generationRequestOrder = [];
   const sectionSteps = [
     {
       key: "observe",
@@ -950,7 +959,10 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
     let body = "";
     request.setEncoding("utf8");
     for await (const chunk of request) body += chunk;
-    response.writeHead(200, { "content-type": "application/json" });
+    response.writeHead(200, {
+      "content-type": "application/json",
+      "x-goog-request-id": "parallel-metrics-request",
+    });
     if (request.url === "/token") {
       response.end(JSON.stringify({ access_token: "vertex-test-token" }));
       return;
@@ -963,6 +975,10 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
     }
     if (isLessonBriefVerificationRequest(parsed)) {
       requestKinds.push("verification");
+      assert.deepEqual(parsed.generationConfig.thinkingConfig, { thinkingLevel: "LOW" });
+      verificationInFlight = true;
+      await new Promise((done) => setTimeout(done, 120));
+      verificationInFlight = false;
       response.end(vertexPayload({ missing: [], contradictions: [], suggestions: [] }));
       return;
     }
@@ -970,15 +986,24 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
     const isComponent = isVisualComponentRequest(parsed);
     assert.equal(isSection || isComponent, true, "parallel mode must not send the monolithic lesson schema");
     requestKinds.push(isSection ? "section" : "component");
+    generationStartedBeforeVerification ||= verificationInFlight;
     activeParallelRequests += 1;
     maxParallelRequests = Math.max(maxParallelRequests, activeParallelRequests);
     const sectionId = isSection
       ? JSON.parse(parsed.contents[0].parts[0].text).section.id
       : undefined;
+    generationRequestOrder.push(isSection ? `section:${sectionId}` : "component:sine-plot");
     await new Promise((done) => setTimeout(done, sectionId === "explain-1" ? 100 : 50));
     activeParallelRequests -= 1;
     if (isComponent) {
-      response.end(vertexPayload(validPlotLesson.steps[0].beats[0].actions[0]));
+      assert.deepEqual(parsed.generationConfig.thinkingConfig, { thinkingLevel: "LOW" });
+      response.end(vertexPayload(validPlotLesson.steps[0].beats[0].actions[0], {
+        promptTokenCount: 321,
+        candidatesTokenCount: 123,
+        thoughtsTokenCount: 45,
+        totalTokenCount: 489,
+        trafficType: "ON_DEMAND",
+      }));
       return;
     }
     response.end(vertexPayload(sectionStepById.get(sectionId)));
@@ -995,18 +1020,41 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
       input: {
         learner_request: "请用正弦函数图像解释周期。",
       },
-      environment: { OLL_AUTHORING_STRATEGY: "parallel" },
+      environment: {
+        OLL_AUTHORING_STRATEGY: "parallel",
+        OLL_PARALLELISM: "2",
+        OLL_VISUAL_THINKING_LEVEL: "LOW",
+      },
     });
 
     assert.equal(result.exitCode, 0, result.stderr);
     assert.ok(maxParallelRequests >= 2, `expected overlapping section/component requests, got ${maxParallelRequests}`);
-    assert.equal(requestKinds.filter((kind) => kind === "section").length, 2);
+    assert.ok(maxParallelRequests <= 2, `parallel authoring exceeded its configured limit: ${maxParallelRequests}`);
+    assert.deepEqual(
+      new Set(generationRequestOrder.slice(0, 2)),
+      new Set(["component:sine-plot", "section:explain-1"]),
+    );
+    assert.equal(generationStartedBeforeVerification, true);
+    assert.equal(requestKinds.filter((kind) => kind === "section").length, 1);
     assert.equal(requestKinds.filter((kind) => kind === "component").length, 1);
     assert.match(
       result.stderr,
       /"stage":"lesson-requirements".*"status":"completed".*"elapsed_ms":\d+/,
     );
+    assert.match(
+      result.stderr,
+      /"label":"lesson-visual-component".*"status":"started".*"model":"gemini-3\.6-flash".*"thinking_level":"LOW".*"schema_sha256":"[a-f0-9]{64}".*"schema_bytes":\d+.*"prompt_bytes":\d+.*"request_bytes":\d+/,
+    );
+    assert.match(
+      result.stderr,
+      /"label":"lesson-visual-component".*"status":"completed".*"request_id":"parallel-metrics-request".*"finish_reason":"STOP".*"prompt_tokens":321.*"candidate_tokens":123.*"thought_tokens":45.*"total_tokens":489.*"traffic_type":"ON_DEMAND".*"response_bytes":\d+/,
+    );
     assert.match(result.stderr, /"type":"artifact".*"kind":"oll_lesson_part".*"message":"part=0 elapsed_ms=\d+"/);
+    assert.ok(
+      result.stderr.indexOf('"label":"lesson-brief-verification","status":"completed"')
+        < result.stderr.indexOf('"kind":"oll_lesson_part"'),
+      "a partial lesson must not be published before requirement verification passes",
+    );
     const partialPath = join(workDirectory, "study", "oll", "learn-e2e-001.part-000.octos-lesson.json");
     const partial = JSON.parse(await readFile(partialPath, "utf8"));
     assert.equal(partial.steps.length, 1);
@@ -1018,6 +1066,116 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
     assert.equal(finalLesson.steps[1].beats[0].actions.some(
       (action) => action.as === "explain-1-period-note",
     ), true);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("parallel authoring cancels speculative requests when requirement verification rejects the plan", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-parallel-cancel-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const serviceAccount = {
+    project_id: "test-project",
+    client_email: "test@example.com",
+    private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+    token_uri: "unused",
+  };
+  let plannerRequests = 0;
+  let verificationRequests = 0;
+  let cancelledGenerationRequests = 0;
+  const sectionStep = (body) => {
+    const section = JSON.parse(body.contents[0].parts[0].text).section;
+    return {
+      key: section.id,
+      purpose: section.purpose,
+      beats: [{
+        key: "explain",
+        say: "我们用一个简短结论解释这个问题。",
+        delivery: "patient",
+        actions: [
+          {
+            do: "write",
+            as: "conclusion",
+            kind: "note",
+            role: "concept",
+            content: { title: "结论", items: ["两个负号表示方向反转两次。"] },
+            place: { relation: "new_region" },
+          },
+          {
+            do: "focus",
+            when: "after_speech",
+            targets: ["conclusion"],
+            intent: "current_step",
+          },
+        ],
+      }],
+    };
+  };
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    if (request.url === "/token") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    const parsed = JSON.parse(body);
+    if (isLessonBriefRequest(parsed)) {
+      plannerRequests += 1;
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(vertexPayload(plannedBrief(parsed)));
+      return;
+    }
+    if (isLessonBriefVerificationRequest(parsed)) {
+      verificationRequests += 1;
+      if (verificationRequests === 1) {
+        await new Promise((done) => setTimeout(done, 60));
+      }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(vertexPayload(verificationRequests === 1
+        ? {
+            missing: [{
+              source_ref: "learner_request:1",
+              reason: "第一次计划仍遗漏了用户要求的一部分",
+            }],
+            contradictions: [],
+            suggestions: [],
+          }
+        : { missing: [], contradictions: [], suggestions: [] }));
+      return;
+    }
+    assert.equal(isParallelSectionRequest(parsed), true);
+    const belongsToRejectedPlan = plannerRequests === 1;
+    if (belongsToRejectedPlan) {
+      response.once("close", () => {
+        if (!response.writableEnded) cancelledGenerationRequests += 1;
+      });
+      await new Promise((done) => setTimeout(done, 500));
+      if (response.destroyed) return;
+    }
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(vertexPayload(sectionStep(parsed)));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    serviceAccount.token_uri = `http://127.0.0.1:${address.port}/token`;
+    const result = await runTool({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount,
+      workDirectory,
+      environment: { OLL_AUTHORING_STRATEGY: "parallel" },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(plannerRequests, 2);
+    assert.equal(verificationRequests, 2);
+    assert.ok(cancelledGenerationRequests > 0, "rejected speculative generation must be cancelled");
+    assert.equal((result.stderr.match(/"kind":"oll_lesson_part"/g) ?? []).length, 1);
+    assert.match(result.stderr, /MODEL_REQUEST_CANCELLED/);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -1036,15 +1194,30 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
   const sectionSteps = new Map([
     ["observe", {
       key: "observe",
-      purpose: "观察单位圆与正弦图",
+      purpose: "观察单位圆",
       beats: [{
-        key: "show-linked-visuals",
-        say: "先同时观察单位圆和正弦曲线。",
+        key: "show-circle",
+        say: "先观察单位圆上的旋转点。",
         delivery: "patient",
         actions: [{
           do: "focus",
           when: "after_speech",
-          targets: ["circle-geometry", "sine-plot"],
+          targets: ["circle-geometry"],
+          intent: "current_step",
+        }],
+      }],
+    }],
+    ["observe-2", {
+      key: "observe-2",
+      purpose: "观察正弦图",
+      beats: [{
+        key: "show-plot",
+        say: "再观察正弦曲线怎样随角度起伏。",
+        delivery: "patient",
+        actions: [{
+          do: "focus",
+          when: "after_speech",
+          targets: ["sine-plot"],
           intent: "current_step",
         }],
       }],
@@ -1080,6 +1253,11 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
   incompleteGeometryComponent.content.points[1].label = "P";
   const plotComponent = structuredClone(modelAuthoredUnitCirclePlotLesson.steps[0].beats[0].actions[1]);
   let geometryRequests = 0;
+  let firstPartExistedBeforePlotCompleted = false;
+  let taskPlanningRequests = 0;
+  let firstPartExistedBeforeTaskCompleted = false;
+  const coreBrief = structuredClone(unitCirclePlotBrief);
+  coreBrief.student_task_requirements = [];
   const server = createServer(async (request, response) => {
     let body = "";
     request.setEncoding("utf8");
@@ -1091,11 +1269,36 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
     }
     const parsed = JSON.parse(body);
     if (isLessonBriefRequest(parsed)) {
-      response.end(vertexPayload(unitCirclePlotBrief));
+      assert.equal(
+        parsed.generationConfig.responseJsonSchema.properties.student_task_requirements.maxItems,
+        0,
+      );
+      response.end(vertexPayload(coreBrief));
       return;
     }
     if (isLessonBriefVerificationRequest(parsed)) {
       response.end(vertexPayload({ missing: [], contradictions: [], suggestions: [] }));
+      return;
+    }
+    if (isLessonTaskPlanningRequest(parsed)) {
+      taskPlanningRequests += 1;
+      assert.deepEqual(parsed.generationConfig.thinkingConfig, { thinkingLevel: "LOW" });
+      await new Promise((done) => setTimeout(done, 250));
+      try {
+        await readFile(join(
+          workDirectory,
+          "study",
+          "oll",
+          "learn-e2e-001.part-000.octos-lesson.json",
+        ));
+        firstPartExistedBeforeTaskCompleted = true;
+      } catch {
+        // The assertion below requires task elaboration not to block first content.
+      }
+      response.end(vertexPayload({
+        student_task_requirements: unitCirclePlotBrief.student_task_requirements,
+        scene3d_task_requirements: [],
+      }));
       return;
     }
     if (isParallelSectionRequest(parsed)) {
@@ -1104,8 +1307,23 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
       return;
     }
     assert.equal(isVisualComponentRequest(parsed), true);
+    assert.deepEqual(parsed.generationConfig.thinkingConfig, { thinkingLevel: "LOW" });
     const alias = parsed.generationConfig.responseJsonSchema.properties.as.enum[0];
     if (alias === "circle-geometry") geometryRequests += 1;
+    if (alias === "sine-plot") {
+      await new Promise((done) => setTimeout(done, 150));
+      try {
+        await readFile(join(
+          workDirectory,
+          "study",
+          "oll",
+          "learn-e2e-001.part-000.octos-lesson.json",
+        ));
+        firstPartExistedBeforePlotCompleted = true;
+      } catch {
+        // The assertion below requires the first independent part to exist.
+      }
+    }
     response.end(vertexPayload(alias === "circle-geometry"
       ? geometryRequests === 1 ? incompleteGeometryComponent : geometryComponent
       : plotComponent));
@@ -1127,16 +1345,24 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
 
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(geometryRequests, 2);
+    assert.equal(firstPartExistedBeforePlotCompleted, true);
+    assert.equal(taskPlanningRequests, 1);
+    assert.equal(firstPartExistedBeforeTaskCompleted, true);
+    assert.match(result.stderr, /"stage":"lesson-parallel-authoring".*"parallelism":1/);
     const partial = JSON.parse(await readFile(
       join(workDirectory, "study", "oll", "learn-e2e-001.part-000.octos-lesson.json"),
       "utf8",
     ));
     assert.equal(partial.steps.length, 1);
     assert.deepEqual(partial.lesson.variables.map((variable) => variable.as), ["theta"]);
-    assert.deepEqual(partial.lesson.tasks.map((task) => task.as), ["reach-sine-maximum"]);
+    assert.equal(partial.lesson.tasks, undefined);
     assert.equal(
       partial.steps[0].beats[0].actions.some((action) => action.do === "connect"),
-      true,
+      false,
+    );
+    assert.equal(
+      partial.steps[0].beats[0].actions.some((action) => action.as === "sine-plot"),
+      false,
     );
     const partialGeometry = partial.steps[0].beats[0].actions.find(
       (action) => action.as === "circle-geometry",
@@ -1148,7 +1374,8 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
 
     const protocol = JSON.parse(result.stdout);
     const finalLesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
-    assert.equal(finalLesson.steps.length, 3);
+    assert.equal(finalLesson.steps.length, 4);
+    assert.deepEqual(finalLesson.lesson.tasks.map((task) => task.as), ["reach-sine-maximum"]);
     assert.equal(
       finalLesson.steps.flatMap((step) => step.beats)
         .flatMap((beat) => beat.actions)
@@ -1172,7 +1399,10 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
   };
   let visualComponentRequests = 0;
   let plannerSystemPrompt = "";
+  let taskSystemPrompt = "";
   let visualComponentSystemPrompt = "";
+  const coreCubeBrief = structuredClone(cube3dBrief);
+  coreCubeBrief.scene3d_task_requirements = [];
   const server = createServer(async (request, response) => {
     let body = "";
     request.setEncoding("utf8");
@@ -1185,11 +1415,19 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     const parsed = JSON.parse(body);
     if (isLessonBriefRequest(parsed)) {
       plannerSystemPrompt = parsed.systemInstruction.parts[0].text;
-      response.end(vertexPayload(cube3dBrief));
+      response.end(vertexPayload(coreCubeBrief));
       return;
     }
     if (isLessonBriefVerificationRequest(parsed)) {
       response.end(vertexPayload({ missing: [], contradictions: [], suggestions: [] }));
+      return;
+    }
+    if (isLessonTaskPlanningRequest(parsed)) {
+      taskSystemPrompt = parsed.systemInstruction.parts[0].text;
+      response.end(vertexPayload({
+        student_task_requirements: [],
+        scene3d_task_requirements: cube3dBrief.scene3d_task_requirements,
+      }));
       return;
     }
     if (isVisualComponentRequest(parsed)) {
@@ -1264,7 +1502,7 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(visualComponentRequests, 3);
     assert.match(plannerSystemPrompt, /scene3d.*角度.*弧度/s);
-    assert.match(plannerSystemPrompt, /target_pitch.*-π\/2.*π\/2/s);
+    assert.match(taskSystemPrompt, /target_pitch.*-π\/2.*π\/2/s);
     assert.match(visualComponentSystemPrompt, /scene3d\.camera.*角度.*弧度/s);
     assert.match(visualComponentSystemPrompt, /camera\.pitch.*-π\/2.*π\/2/s);
     const protocol = JSON.parse(result.stdout);
@@ -1846,10 +2084,11 @@ test("tool rejects a planner omission before authoring and repairs the requireme
       : isLessonBriefVerificationRequest(parsedBody)
         ? plannerResponseIndex === 1
           ? {
-              missing: [{
+              request_item_kinds: [{
                 source_ref: "learner_request:1",
-                reason: "同一句中的函数图像要求没有被记录",
+                kinds: ["teaching_goal", "visual"],
               }],
+              missing: [],
               contradictions: [],
               suggestions: [],
             }
@@ -1880,7 +2119,7 @@ test("tool rejects a planner omission before authoring and repairs the requireme
     assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
     assert.match(
       modelRequests.filter(isLessonBriefRequest)[1].contents[0].parts[0].text,
-      /BRIEF_REQUIREMENT_MISSING/,
+      /BRIEF_REQUIREMENT_KIND_MISSING/,
     );
   } finally {
     await new Promise((done) => server.close(done));

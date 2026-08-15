@@ -17,6 +17,19 @@ function normalizeExpression(value) {
   return value.normalize("NFKC").toLowerCase().replace(/^y\s*=/u, "").replace(/\s+/gu, "");
 }
 
+function completedModelCalls(stderr) {
+  return stderr.split("\n").flatMap((line) => {
+    const prefix = "learning-coach: ";
+    if (!line.startsWith(prefix)) return [];
+    try {
+      const event = JSON.parse(line.slice(prefix.length));
+      return event.stage === "model-call" && event.status === "completed" ? [event] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+
 async function runCase(item) {
   const workDirectory = join(tmpdir(), `learning-coach-eval-${item.id}-${Date.now()}`);
   const child = spawn(join(root, "main"), ["oll_generate_lesson"], {
@@ -157,6 +170,14 @@ async function runCase(item) {
     const completedMatches = [...stderr.matchAll(
       /"stage":"lesson-generation"[^\n]*"status":"completed","elapsed_ms":(\d+)/gu,
     )];
+    const modelCalls = completedModelCalls(stderr);
+    const rejections = stderr.split("\n")
+      .filter((line) => line.startsWith("learning-coach: rejected "))
+      .map((line) => line.slice("learning-coach: ".length));
+    const sumMetric = (name) => modelCalls.reduce(
+      (total, call) => total + (typeof call[name] === "number" ? call[name] : 0),
+      0,
+    );
     return {
       attempts: protocol.generation_attempts,
       writes: writes.map((action) => action.kind),
@@ -165,6 +186,22 @@ async function runCase(item) {
       completedMs: completedMatches.length > 0
         ? Number(completedMatches.at(-1)[1])
         : undefined,
+      modelCalls: modelCalls.length,
+      requestRetries: modelCalls.reduce(
+        (total, call) => total + Math.max(0, (call.request_attempts ?? 1) - 1),
+        0,
+      ),
+      promptTokens: sumMetric("prompt_tokens"),
+      candidateTokens: sumMetric("candidate_tokens"),
+      thoughtTokens: sumMetric("thought_tokens"),
+      callTimings: modelCalls.map((call, index) => ({
+        index: index + 1,
+        label: call.label ?? "unknown",
+        elapsedMs: call.elapsed_ms,
+        thoughtTokens: call.thought_tokens,
+        finishReason: call.finish_reason,
+      })),
+      rejections,
     };
   } finally {
     if (process.env.OLL_KEEP_EVAL_ARTIFACTS !== "1") {
@@ -178,7 +215,14 @@ for (const item of selected) {
   try {
     const result = await runCase(item);
     process.stdout.write(
-      `PASS ${item.id} attempts=${result.attempts} requirements_ms=${result.requirementsMs ?? "n/a"} first_part_ms=${result.firstPartMs ?? "n/a"} completed_ms=${result.completedMs ?? "n/a"} writes=${result.writes.join(",")}\n`,
+      `PASS ${item.id} attempts=${result.attempts} requirements_ms=${result.requirementsMs ?? "n/a"} first_part_ms=${result.firstPartMs ?? "n/a"} completed_ms=${result.completedMs ?? "n/a"} writes=${result.writes.join(",")}\n`
+      + `MODEL_METRICS ${item.id} calls=${result.modelCalls} retries=${result.requestRetries} prompt_tokens=${result.promptTokens} candidate_tokens=${result.candidateTokens} thought_tokens=${result.thoughtTokens}\n`
+      + `CALL_TIMINGS ${item.id} ${result.callTimings.map((call) =>
+        `${call.index}:${call.label}=${call.elapsedMs ?? "n/a"}ms/thought=${call.thoughtTokens ?? "n/a"}/finish=${call.finishReason ?? "n/a"}`
+      ).join(" ")}\n`
+      + (result.rejections.length > 0
+        ? `REJECTIONS ${item.id} ${result.rejections.join(" | ")}\n`
+        : ""),
     );
   } catch (error) {
     failures += 1;

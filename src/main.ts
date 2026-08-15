@@ -286,6 +286,10 @@ interface LessonBrief {
 }
 
 interface BriefVerification {
+  request_item_kinds?: Array<{
+    source_ref: string;
+    kinds: RequestItemKind[];
+  }>;
   missing: Array<{
     source_ref: string;
     reason: string;
@@ -335,6 +339,7 @@ interface VertexServiceAccount {
 
 interface VertexClient {
   endpoint: string;
+  model: string;
   accessToken: string;
   timeoutMs: number;
   maxTokens: number;
@@ -342,10 +347,13 @@ interface VertexClient {
   deadlineAt?: number;
 }
 
+type ThinkingLevel = "MINIMAL" | "LOW" | "MEDIUM" | "HIGH";
+
 interface StructuredModelRequest {
   label:
     | "lesson-brief"
     | "lesson-brief-verification"
+    | "lesson-task-planning"
     | "lesson-authoring"
     | "lesson-section"
     | "lesson-visual-component"
@@ -357,6 +365,8 @@ interface StructuredModelRequest {
   prompt: string;
   responseSchema: JsonSchema;
   maxTokens?: number;
+  thinkingLevel?: ThinkingLevel;
+  signal?: AbortSignal;
 }
 
 class GeneratedLessonError extends Error {
@@ -444,15 +454,7 @@ shared_variable_requirements 用来规划“同一个量同时驱动多个视觉
 - direct_angle_geometry 只在某个 geometry 里的点适合由学生直接绕圆心拖动时填写该 visual_requirement.id，否则返回空字符串。
 - 当前学生控制支持变量滑杆、圆上点绕圆心的 angle_control，以及 scene3d 视角的旋转、缩放、预设和复位；三维视角控制由 scene3d 的 orbit_control 表达，不要为它伪造 shared variable。不支持任意物体的自由拖动或沿直线拖动。一般性的“让我自己操作”或没有点明被拖物体的“拖着试试”可以用拖动滑杆满足；只有圆周角度确实是合适的教学操作时才使用 direct_angle_geometry。明确点名要拖动其他物体或沿特定路径拖动时必须列入 unhandled_request_items。
 
-student_task_requirements 用来规划讲解结束后真正交给学生完成的短任务，不是旁白中的提问：
-- 只有已经存在 shared_variable_requirement 时才能创建任务；任务必须让学生通过该变量已有的滑杆，或已有的圆周 angle_control 完成，不得规划新的交互方式。
-- 当用户明确要求“让我动手试、给我一个互动任务、讲完后让我操作”时必须创建 student_task request_item 和对应任务。只要课程已经规划共享变量且用户没有禁止学生控制或任务，就必须至少设计一个能检验本课核心目标的短任务；这属于教学设计，可以引用它所服务的 teaching_goal 或 continuous_change request_item。
-- variable 必须引用一个 shared_variable_requirement.variable。controls 至少包含 slider；只有该变量的 direct_angle_geometry 非空时才能增加 geometry_point。
-- completion_expression 使用 Runtime 数学表达式，只能读取这个 variable；completion_value 是期望结果，tolerance 是允许误差。初始值不能已经满足完成条件。任务必须依据学生最终提交的一次操作判定，不能依靠模型阅读学生意图。
-- prompt 必须像老师给学生的自然指令，说明要达到的可见目标，不要暴露内部变量名或实现术语。hints 从观察方向到更具体操作逐步给出；success_message 解释学生刚才的操作为什么正确。
-- 任务按数组顺序依次开放。通常只规划一个；只有多个操作确实对应不同教学目标时才规划多个。
-- scene3d_task_requirements 专门描述“把三维场景转到某个视角”的任务。visual 必须引用带 orbit_control 的 scene3d；target_yaw、target_pitch、target_zoom 是目标相机，angular_tolerance 和 zoom_tolerance 是判定容差。scene3d 的所有角度和角度容差都必须使用弧度，绝不能填写角度制数值：target_yaw 必须是有限弧度值，target_pitch 必须在 -π/2 到 π/2 之间，angular_tolerance 必须大于 0 且不超过 π；target_zoom 必须在 0.2 到 5 之间，zoom_tolerance 必须大于 0 且不超过 4.8。不要把视角任务伪装成 lesson variable。用户明确要求从某个方向观察、转到正视/俯视，或要求学生通过旋转完成任务时使用它；普通变量任务仍放在 student_task_requirements。
-- 若 presentation_constraints 明确禁止 student_control 或 student_task，student_task_requirements 和 scene3d_task_requirements 都必须为空。
+本阶段不设计课后互动任务的目标值、提示语和成功反馈；这些细节会在首段课件开始生成后由独立步骤补齐。你仍须在 request_items 中忠实记录用户明确要求的 student_task，并规划它依赖的 shared variable 或带 orbit_control 的 scene3d；scene3d 视角任务的所有角度由后续阶段以弧度填写。student_task_requirements 和 scene3d_task_requirements 在本阶段必须始终返回空数组。
 
 progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐进替换，允许 text、math、shape、diagram、table、note；不需要时返回空数组。它不允许修改历史白板节点，也不得包含 geometry、plot、scene3d 或 image。
 
@@ -460,12 +462,39 @@ progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐
 
 const BRIEF_VERIFICATION_SYSTEM_PROMPT = `你是用户要求覆盖复核器，不生成课件，也不决定应该采用哪一种教法。
 
-只做三件事：
+先逐条审核 authoritative_request.clauses。request_item_kinds 必须为每个 source_ref 恰好返回一项，并列出该原文分句中明确包含的所有要求类别。一个分句可以同时包含多类要求，不能因为已经记录其中一类就忽略其他类别：
+- teaching_goal：要求解释、理解、比较或回答原因；
+- visual：明确要求画出、展示或演示某个对象；
+- relationship：要求结合、对应、比较、推导或说明两个对象之间的联系；
+- continuous_change：要求看到旋转、运动、周期变化、动画过程，或一个量怎样连续变成另一个量；
+- student_control：要求学生拖动、旋转、缩放、调节或亲自操作；
+- student_task：要求讲解后完成一个有目标、可判断结果的动手任务；
+- existing_board_edit：要求修改已经存在的白板内容；
+- presentation_constraint：明确要求或禁止某种展示方式；
+- unsupported_feature：明确要求当前系统不能真实实现的能力。
+没有要求的寒暄或背景句返回空 kinds。
+
+再做三件事：
 1. missing：用户原文中的某一项明确要求没有被 request_items 记录。一个 source_ref 可能同时要求解释、画图和操作；即使其中一项已记录，另一项漏掉仍应报告，并在 reason 中明确说明漏了什么；
 2. contradictions：某个已有 request_item 与它引用的用户原文相反，或把明确不支持的能力冒充为已支持；
 3. suggestions：课程可以怎样教得更好，但这类建议绝不能放进 missing 或 contradictions。
 
 如果用户明确问“为什么发生”，遗漏因果解释属于 missing，不是 suggestions。如果用户要求演示某个对象的变化，却只规划类比图而没有直接表现该对象，也属于 missing。复核这类请求时必须检查被绑定 geometry 的 motion_subject 和 motion_kind：motion_subject 必须明确命名用户要求观看的运动主体，motion_kind 必须描述该主体本身的运动；圆周投影、函数曲线或其他类比即使数学上相关，也不能作为主体演示通过复核。只有在因果目标和主体演示已经覆盖后，受力图、速度图、能量图等可选讲法才属于 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
+
+const LESSON_TASK_PLANNING_SYSTEM_PROMPT = `你是课后互动任务设计器。课程的教学目标、视觉对象、共享变量和三维视角能力已经确定；你只补充讲解结束后交给学生完成的短任务，不修改课程规划。
+
+普通变量任务：
+- 只使用已有 shared_variable_requirements 中的变量和控制方式。controls 必须包含 slider；仅当 direct_angle_geometry 非空时才可增加 geometry_point。
+- 每个共享变量在没有禁止学生任务时通常设计一个任务。用户明确要求动手操作时必须覆盖对应 request_item；没有明确要求时，任务可引用它所检验的 teaching_goal 或 continuous_change request_item。
+- completion_expression 只能读取该任务的 variable；目标必须在变量范围内可达，而且初始值不能已经满足目标。
+- prompt 使用自然的学生指令，描述可见目标，不暴露内部实现；hints 由观察提示逐步过渡到具体操作；success_message 解释操作为什么正确。
+
+三维视角任务：
+- 仅当用户明确要求完成某个观察视角时生成，并引用带 orbit_control 的 scene3d visual。
+- target_yaw、target_pitch 和 angular_tolerance 使用弧度。pitch 在 -π/2 到 π/2；zoom 在 0.2 到 5；angular_tolerance 在 0 到 π；zoom_tolerance 在 0 到 4.8。
+- controls 只能使用 orbit、zoom、preset、reset。
+
+如果课程明确禁止 student_control 或 student_task，两类任务都返回空数组。只输出符合 JSON Schema 的 JSON 对象。`;
 
 const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的家庭教师。请生成一堂完整、连续的 OLL Authoring Profile 课程。
 
@@ -550,6 +579,44 @@ function parsePositiveInteger(value: string | undefined, fallback: number, label
     throw new Error(`${label} must be a positive integer`);
   }
   return parsed;
+}
+
+function parseThinkingLevel(value: string | undefined, label: string): ThinkingLevel | undefined {
+  if (!value?.trim()) return undefined;
+  const level = value.trim().toUpperCase();
+  if (level !== "MINIMAL" && level !== "LOW" && level !== "MEDIUM" && level !== "HIGH") {
+    throw new Error(`${label} must be MINIMAL, LOW, MEDIUM, or HIGH`);
+  }
+  return level;
+}
+
+function configuredThinkingLevel(
+  label: StructuredModelRequest["label"],
+): ThinkingLevel | undefined {
+  const environmentName = label === "lesson-brief"
+    ? "OLL_PLANNING_THINKING_LEVEL"
+    : label === "lesson-brief-verification"
+      ? "OLL_VERIFICATION_THINKING_LEVEL"
+      : label === "lesson-task-planning"
+        ? "OLL_TASK_THINKING_LEVEL"
+        : label === "lesson-section"
+          ? "OLL_SECTION_THINKING_LEVEL"
+          : label === "lesson-visual-component"
+            ? "OLL_VISUAL_THINKING_LEVEL"
+            : label === "selection-enhancement"
+              ? "OLL_SELECTION_THINKING_LEVEL"
+              : label === "lesson-component-repair" || label === "lesson-beat-repair"
+                ? "OLL_REPAIR_THINKING_LEVEL"
+                : "OLL_AUTHORING_THINKING_LEVEL";
+  const safeDefault = label === "lesson-brief-verification"
+    || label === "lesson-task-planning"
+    || label === "lesson-section"
+    || label === "lesson-visual-component"
+    ? "LOW"
+    : undefined;
+  return parseThinkingLevel(process.env[environmentName], environmentName)
+    ?? parseThinkingLevel(process.env.OLL_THINKING_LEVEL, "OLL_THINKING_LEVEL")
+    ?? safeDefault;
 }
 
 function validateTurnId(value: unknown): string {
@@ -1772,8 +1839,24 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
 const briefVerificationResponseJsonSchema: JsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["missing", "contradictions", "suggestions"],
+  required: ["request_item_kinds", "missing", "contradictions", "suggestions"],
   properties: {
+    request_item_kinds: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source_ref", "kinds"],
+        properties: {
+          source_ref: { type: "string" },
+          kinds: {
+            type: "array",
+            items: { enum: requestItemKinds },
+          },
+        },
+      },
+    },
     missing: {
       type: "array",
       items: {
@@ -1883,6 +1966,16 @@ function authoritativeRequestClauses(input: ToolInput): AuthoritativeRequestClau
 function buildLessonBriefResponseJsonSchema(input: ToolInput): JsonSchema {
   const schema = structuredClone(lessonBriefResponseJsonSchema);
   const properties = schema.properties as Record<string, JsonSchema>;
+  properties.student_task_requirements = {
+    type: "array",
+    maxItems: 0,
+    items: { type: "string" },
+  };
+  properties.scene3d_task_requirements = {
+    type: "array",
+    maxItems: 0,
+    items: { type: "string" },
+  };
   const sourceRefs = authoritativeRequestClauses(input).map((clause) => clause.ref);
   const requestItems = properties.request_items;
   const itemProperties = (requestItems.items as JsonSchema).properties as Record<string, JsonSchema>;
@@ -1893,11 +1986,52 @@ function buildLessonBriefResponseJsonSchema(input: ToolInput): JsonSchema {
   return schema;
 }
 
+function buildLessonTaskPlanResponseJsonSchema(brief: LessonBrief): JsonSchema {
+  const briefProperties = lessonBriefResponseJsonSchema.properties as Record<string, JsonSchema>;
+  const schema: JsonSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["student_task_requirements", "scene3d_task_requirements"],
+    properties: {
+      student_task_requirements: structuredClone(briefProperties.student_task_requirements),
+      scene3d_task_requirements: structuredClone(briefProperties.scene3d_task_requirements),
+    },
+  };
+  const properties = schema.properties as Record<string, JsonSchema>;
+  const taskItem = properties.student_task_requirements.items as JsonSchema;
+  const taskProperties = taskItem.properties as Record<string, JsonSchema>;
+  const variables = brief.shared_variable_requirements.map((requirement) => requirement.variable);
+  if (variables.length === 0) properties.student_task_requirements.maxItems = 0;
+  else taskProperties.variable = { enum: variables };
+  const sceneItem = properties.scene3d_task_requirements.items as JsonSchema;
+  const sceneProperties = sceneItem.properties as Record<string, JsonSchema>;
+  const controllableScenes = brief.visual_requirements
+    .filter((requirement) => requirement.surface === "scene3d"
+      && requirement.required_features.includes("orbit_control"))
+    .map((requirement) => requirement.id);
+  if (controllableScenes.length === 0) properties.scene3d_task_requirements.maxItems = 0;
+  else sceneProperties.visual = { enum: controllableScenes };
+  const requestItemIds = brief.request_items.map((item) => item.id);
+  taskProperties.request_item_ids = {
+    type: "array",
+    minItems: 1,
+    items: { enum: requestItemIds },
+  };
+  sceneProperties.request_item_ids = structuredClone(taskProperties.request_item_ids);
+  return schema;
+}
+
 function buildBriefVerificationResponseJsonSchema(input: ToolInput, brief: LessonBrief): JsonSchema {
   const schema = structuredClone(briefVerificationResponseJsonSchema);
   const properties = schema.properties as Record<string, JsonSchema>;
+  const sourceRefs = authoritativeRequestClauses(input).map((clause) => clause.ref);
+  const kindReviews = properties.request_item_kinds;
+  kindReviews.minItems = sourceRefs.length;
+  kindReviews.maxItems = sourceRefs.length;
+  const kindReviewProperties = (kindReviews.items as JsonSchema).properties as Record<string, JsonSchema>;
+  kindReviewProperties.source_ref = { enum: sourceRefs };
   const missingProperties = ((properties.missing.items as JsonSchema).properties) as Record<string, JsonSchema>;
-  missingProperties.source_ref = { enum: authoritativeRequestClauses(input).map((clause) => clause.ref) };
+  missingProperties.source_ref = { enum: sourceRefs };
   const requestItemIds = brief.request_items.map((item) => item.id);
   const contradictionProperties = ((properties.contradictions.items as JsonSchema).properties) as Record<string, JsonSchema>;
   contradictionProperties.request_item_id = { enum: requestItemIds };
@@ -1968,7 +2102,11 @@ function canonicalizeBriefAliases(candidate: unknown): unknown {
   return brief;
 }
 
-function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief {
+function validateLessonBrief(
+  candidate: unknown,
+  input: ToolInput,
+  options: { allowDeferredTasks?: boolean } = {},
+): LessonBrief {
   const violations: GenerationViolation[] = [];
   if (!isRecord(candidate)) {
     throw new GeneratedLessonError("Lesson Brief must be a JSON object", undefined, [
@@ -2552,7 +2690,8 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
   if (tasksForbidden && (studentTasks.length > 0 || scene3dTasks.length > 0)) {
     violations.push(briefViolation("BRIEF_FORBIDDEN_STUDENT_TASK", "/student_task_requirements", "student tasks cannot be planned when the request forbids tasks or student control"));
   }
-  if (!tasksForbidden && sharedVariables.length > 0 && studentTasks.length === 0) {
+  if (!options.allowDeferredTasks
+    && !tasksForbidden && sharedVariables.length > 0 && studentTasks.length === 0) {
     violations.push(briefViolation("BRIEF_MISSING_STUDENT_TASK", "/student_task_requirements", "a lesson with a shared student-controllable variable must include at least one after-lesson task"));
   }
 
@@ -2588,13 +2727,14 @@ function validateLessonBrief(candidate: unknown, input: ToolInput): LessonBrief 
   for (const [id, item] of requestItemById) {
     const destinations = mappedDestinations.get(id);
     const isUnhandled = unhandledRequestIds.has(id);
+    const isDeferredTask = options.allowDeferredTasks && item.kind === "student_task";
     if (isUnhandled && destinations?.size) {
       violations.push(briefViolation("BRIEF_CONFLICTING_REQUEST_COVERAGE", "/unhandled_request_items", `request item '${id}' is both planned and unhandled`));
-    } else if (!isUnhandled && !destinations?.size) {
+    } else if (!isUnhandled && !isDeferredTask && !destinations?.size) {
       violations.push(briefViolation("BRIEF_UNMAPPED_REQUEST_ITEM", "/request_items", `request item '${id}' has no planned or unhandled destination`));
     }
     const requiredDestination = requiredDestinationByKind[item.kind];
-    if (!isUnhandled && requiredDestination && !destinations?.has(requiredDestination)) {
+    if (!isUnhandled && !isDeferredTask && requiredDestination && !destinations?.has(requiredDestination)) {
       violations.push(briefViolation(
         "BRIEF_INCOMPATIBLE_REQUEST_MAPPING",
         "/request_items",
@@ -3666,6 +3806,50 @@ function validateBriefVerification(candidate: unknown, input: ToolInput, brief: 
   const clauseRefs = new Set(authoritativeRequestClauses(input).map((clause) => clause.ref));
   const requestItemIds = new Set(brief.request_items.map((item) => item.id));
   const violations: GenerationViolation[] = [];
+  if (candidate.request_item_kinds !== undefined) {
+    if (!Array.isArray(candidate.request_item_kinds)) {
+      violations.push(briefViolation(
+        "BRIEF_VERIFICATION_INVALID_KIND_AUDIT",
+        "/request_item_kinds",
+        "request_item_kinds must be an array",
+      ));
+    } else {
+      const auditedRefs = new Set<string>();
+      candidate.request_item_kinds.forEach((raw, index) => {
+        const path = `/request_item_kinds/${index}`;
+        if (!isRecord(raw)
+          || typeof raw.source_ref !== "string"
+          || !clauseRefs.has(raw.source_ref)
+          || auditedRefs.has(raw.source_ref)) {
+          violations.push(briefViolation(
+            "BRIEF_VERIFICATION_INVALID_KIND_AUDIT",
+            path,
+            "each source_ref must be audited exactly once",
+          ));
+          return;
+        }
+        auditedRefs.add(raw.source_ref);
+        if (!Array.isArray(raw.kinds)
+          || raw.kinds.some((kind) => !requestItemKinds.includes(kind as RequestItemKind))
+          || new Set(raw.kinds).size !== raw.kinds.length) {
+          violations.push(briefViolation(
+            "BRIEF_VERIFICATION_INVALID_KIND_AUDIT",
+            `${path}/kinds`,
+            "kinds must contain unique supported request item kinds",
+          ));
+        }
+      });
+      for (const sourceRef of clauseRefs) {
+        if (!auditedRefs.has(sourceRef)) {
+          violations.push(briefViolation(
+            "BRIEF_VERIFICATION_MISSING_KIND_AUDIT",
+            "/request_item_kinds",
+            `source clause '${sourceRef}' was not audited`,
+          ));
+        }
+      }
+    }
+  }
   const validateMissing = (raw: unknown, path: string): void => {
     if (!isRecord(raw)) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_ITEM", path, "verification item must be an object"));
@@ -3712,7 +3896,24 @@ function briefVerificationViolations(
 ): GenerationViolation[] {
   const clauseByRef = new Map(authoritativeRequestClauses(input).map((clause) => [clause.ref, clause] as const));
   const requestItemById = new Map(brief.request_items.map((item) => [item.id, item] as const));
+  const plannedKindsBySource = new Map<string, Set<RequestItemKind>>();
+  for (const item of brief.request_items) {
+    const kinds = plannedKindsBySource.get(item.source_ref) ?? new Set<RequestItemKind>();
+    kinds.add(item.kind);
+    plannedKindsBySource.set(item.source_ref, kinds);
+  }
   return [
+    ...(verification.request_item_kinds ?? []).flatMap((audit, auditIndex) =>
+      audit.kinds.flatMap((kind, kindIndex): GenerationViolation[] =>
+        plannedKindsBySource.get(audit.source_ref)?.has(kind)
+          ? []
+          : [{
+              stage: "brief",
+              code: "BRIEF_REQUIREMENT_KIND_MISSING",
+              path: `/verification/request_item_kinds/${auditIndex}/kinds/${kindIndex}`,
+              message: `${clauseByRef.get(audit.source_ref)?.text ?? audit.source_ref}: missing ${kind}`,
+            }]),
+    ),
     ...verification.missing.map((item, index): GenerationViolation => {
       const clause = clauseByRef.get(item.source_ref);
       return {
@@ -3912,6 +4113,7 @@ export async function createVertexClient(): Promise<VertexClient> {
   }
   return {
     endpoint: vertexEndpoint(project, location, model),
+    model,
     accessToken,
     timeoutMs,
     maxTokens,
@@ -4025,7 +4227,7 @@ export async function probeVertexSchema(
 async function callStructuredModel(client: VertexClient, request: StructuredModelRequest): Promise<string> {
   const startedAt = Date.now();
   const deadlineAt = requestDeadline(client);
-  stageLog({ stage: "model-call", turn_id: request.turnId, label: request.label, status: "started" });
+  const thinkingLevel = request.thinkingLevel ?? configuredThinkingLevel(request.label);
   const requestBody = JSON.stringify({
     systemInstruction: { parts: [{ text: request.systemPrompt }] },
     contents: [{ role: "user", parts: [{ text: request.prompt }] }],
@@ -4034,10 +4236,29 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
       maxOutputTokens: request.maxTokens ?? client.maxTokens,
       responseMimeType: "application/json",
       responseJsonSchema: request.responseSchema,
+      ...(thinkingLevel
+        ? { thinkingConfig: { thinkingLevel } }
+        : {}),
     },
+  });
+  const diagnostics = schemaDiagnostics(request.responseSchema);
+  stageLog({
+    stage: "model-call",
+    turn_id: request.turnId,
+    label: request.label,
+    status: "started",
+    model: client.model,
+    thinking_level: thinkingLevel ?? "UNSPECIFIED",
+    schema_sha256: diagnostics.sha256,
+    schema_bytes: diagnostics.bytes,
+    prompt_bytes: Buffer.byteLength(request.prompt),
+    system_prompt_bytes: Buffer.byteLength(request.systemPrompt),
+    request_bytes: Buffer.byteLength(requestBody),
+    max_output_tokens: request.maxTokens ?? client.maxTokens,
   });
   let body = "";
   let status = 0;
+  let requestId: string | undefined;
   try {
     let usedAttempts = 0;
     for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
@@ -4049,9 +4270,15 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
           "content-type": "application/json",
         },
         body: requestBody,
-        signal: AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
+        signal: request.signal
+          ? AbortSignal.any([
+              request.signal,
+              AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
+            ])
+          : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
       });
       status = response.status;
+      requestId = response.headers.get("x-goog-request-id") ?? requestId;
       body = await response.text();
       if (response.ok) break;
       const retryable = status === 429 || status >= 500;
@@ -4076,6 +4303,14 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
       process.stderr.write(`learning-coach: raw Vertex ${request.label} payload: ${JSON.stringify(payload).slice(0, 16_000)}\n`);
     }
     const content = vertexResponseContent(payload);
+    const root = isRecord(payload) ? payload : {};
+    const candidates = Array.isArray(root.candidates) ? root.candidates : [];
+    const firstCandidate = isRecord(candidates[0]) ? candidates[0] : {};
+    const usage = isRecord(root.usageMetadata) ? root.usageMetadata : {};
+    const metric = (name: string): number | undefined => {
+      const value = usage[name];
+      return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+    };
     stageLog({
       stage: "model-call",
       turn_id: request.turnId,
@@ -4083,13 +4318,37 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
       status: "completed",
       http_status: status,
       request_attempts: usedAttempts,
+      ...(requestId ? { request_id: requestId } : {}),
+      ...(typeof firstCandidate.finishReason === "string"
+        ? { finish_reason: firstCandidate.finishReason }
+        : {}),
+      ...(metric("promptTokenCount") === undefined
+        ? {}
+        : { prompt_tokens: metric("promptTokenCount") }),
+      ...(metric("candidatesTokenCount") === undefined
+        ? {}
+        : { candidate_tokens: metric("candidatesTokenCount") }),
+      ...(metric("thoughtsTokenCount") === undefined
+        ? {}
+        : { thought_tokens: metric("thoughtsTokenCount") }),
+      ...(metric("totalTokenCount") === undefined
+        ? {}
+        : { total_tokens: metric("totalTokenCount") }),
+      ...(typeof usage.trafficType === "string" ? { traffic_type: usage.trafficType } : {}),
+      response_bytes: Buffer.byteLength(body),
       elapsed_ms: Date.now() - startedAt,
     });
     return content;
   } catch (error) {
+    const cancelled = request.signal?.aborted === true;
     const timeoutError = error instanceof Error
       && (error.name === "TimeoutError" || error.name === "AbortError");
-    const surfacedError = timeoutError
+    const surfacedError = cancelled
+      ? new ToolExecutionError(
+          "MODEL_REQUEST_CANCELLED",
+          `Vertex ${request.label} was cancelled because its lesson plan was rejected`,
+        )
+      : timeoutError
       ? new ToolExecutionError(
           client.deadlineAt !== undefined && Date.now() >= client.deadlineAt
             ? "LESSON_GENERATION_TIMEOUT"
@@ -4172,6 +4431,183 @@ async function verifyLessonBrief(
   throw new Error("Lesson Brief verification failed");
 }
 
+async function generateLessonBriefCandidate(
+  client: VertexClient,
+  input: ToolInput,
+  previousBrief: string | undefined,
+  violations: GenerationViolation[],
+): Promise<{ brief: LessonBrief; raw: string }> {
+  const raw = await callStructuredModel(client, {
+    label: "lesson-brief",
+    turnId: input.turn_id,
+    systemPrompt: LESSON_BRIEF_SYSTEM_PROMPT,
+    prompt: buildPlanningPrompt(input, previousBrief, violations),
+    responseSchema: buildLessonBriefResponseJsonSchema(input),
+    maxTokens: Math.min(client.maxTokens, 8_192),
+  });
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(raw);
+  } catch (error) {
+    const parseViolation = briefViolation(
+      "BRIEF_INVALID_JSON",
+      "/",
+      `JSON parse failed: ${(error as Error).message}`,
+    );
+    throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
+  }
+  try {
+    return {
+      brief: validateLessonBrief(canonicalizeBriefAliases(candidate), input, {
+        allowDeferredTasks: true,
+      }),
+      raw,
+    };
+  } catch (error) {
+    if (error instanceof GeneratedLessonError && error.raw === undefined) {
+      throw new GeneratedLessonError(error.message, raw, error.violations);
+    }
+    throw error;
+  }
+}
+
+function taskPlanningNeeded(brief: LessonBrief): boolean {
+  if (brief.student_task_requirements.length > 0 || brief.scene3d_task_requirements.length > 0) {
+    return false;
+  }
+  const tasksForbidden = brief.presentation_constraints.some((constraint) =>
+    constraint.polarity === "forbid"
+    && (constraint.capability === "student_task" || constraint.capability === "student_control"));
+  if (tasksForbidden) return false;
+  return brief.shared_variable_requirements.length > 0
+    || brief.request_items.some((item) => item.kind === "student_task" && item.polarity === "require");
+}
+
+function buildTaskPlanningPrompt(
+  input: ToolInput,
+  brief: LessonBrief,
+  previousPlan?: string,
+  violations: GenerationViolation[] = [],
+): string {
+  const repair = previousPlan
+    ? `\n\n上一份任务设计：\n${previousPlan}\n\n精确校验错误：\n${JSON.stringify(violations, null, 2)}\n只修复这些错误并返回完整任务对象。`
+    : "";
+  return `请只设计课后互动任务。不得修改已经确定的课程目标、视觉对象、共享变量和控制方式。\n${JSON.stringify({
+    learner_request: input.learner_request,
+    teaching_goals: brief.teaching_goal_requirements,
+    request_items: brief.request_items,
+    presentation_constraints: brief.presentation_constraints,
+    shared_variables: brief.shared_variable_requirements,
+    controllable_3d_visuals: brief.visual_requirements.filter((requirement) =>
+      requirement.surface === "scene3d" && requirement.required_features.includes("orbit_control")),
+  }, null, 2)}${repair}`;
+}
+
+async function completeLessonTasks(
+  client: VertexClient,
+  input: ToolInput,
+  coreBrief: LessonBrief,
+): Promise<LessonBrief> {
+  if (!taskPlanningNeeded(coreBrief)) return validateLessonBrief(coreBrief, input);
+  const maxAttempts = parsePositiveInteger(
+    process.env.OLL_TASK_PLANNING_ATTEMPTS,
+    3,
+    "OLL_TASK_PLANNING_ATTEMPTS",
+  );
+  let previousPlan: string | undefined;
+  let violations: GenerationViolation[] = [];
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let raw = "";
+    try {
+      raw = await callStructuredModel(client, {
+        label: "lesson-task-planning",
+        turnId: input.turn_id,
+        systemPrompt: LESSON_TASK_PLANNING_SYSTEM_PROMPT,
+        prompt: buildTaskPlanningPrompt(input, coreBrief, previousPlan, violations),
+        responseSchema: buildLessonTaskPlanResponseJsonSchema(coreBrief),
+        maxTokens: Math.min(client.maxTokens, 4_096),
+      });
+      let taskPlan: unknown;
+      try {
+        taskPlan = JSON.parse(raw);
+      } catch (error) {
+        throw new GeneratedLessonError(
+          `Task plan JSON parse failed: ${(error as Error).message}`,
+          raw,
+          [briefViolation("BRIEF_TASK_PLAN_INVALID_JSON", "/", "task plan must be valid JSON")],
+        );
+      }
+      if (!isRecord(taskPlan)) {
+        throw new GeneratedLessonError(
+          "Task plan must be an object",
+          raw,
+          [briefViolation("BRIEF_TASK_PLAN_INVALID_ROOT", "/", "task plan must be an object")],
+        );
+      }
+      const merged = canonicalizeBriefAliases({
+        ...structuredClone(coreBrief),
+        student_task_requirements: taskPlan.student_task_requirements,
+        scene3d_task_requirements: taskPlan.scene3d_task_requirements,
+      });
+      return validateLessonBrief(merged, input);
+    } catch (error) {
+      const generatedError = error instanceof GeneratedLessonError
+        ? error
+        : error instanceof ToolExecutionError && error.code === "VERTEX_RESPONSE_TRUNCATED"
+          ? new GeneratedLessonError(error.message, raw, [briefViolation(
+              "BRIEF_TASK_PLAN_TRUNCATED",
+              "/",
+              "task plan exceeded its controlled-output budget",
+            )])
+          : undefined;
+      if (!generatedError) throw error;
+      process.stderr.write(`learning-coach: rejected lesson task plan ${attempt}: ${formatViolations(generatedError.violations)}\n`);
+      if (attempt === maxAttempts) {
+        throw new Error(`Lesson task planning failed after ${maxAttempts} attempt(s). Last error: ${generatedError.message}`);
+      }
+      previousPlan = generatedError.raw ?? raw;
+      violations = generatedError.violations;
+    }
+  }
+  throw new Error("Lesson task planning failed");
+}
+
+async function verifyLessonRequirements(
+  client: VertexClient,
+  input: ToolInput,
+  brief: LessonBrief,
+  raw: string,
+): Promise<void> {
+  const verification = await verifyLessonBrief(client, input, brief);
+  const coverageViolations = briefVerificationViolations(verification, input, brief);
+  if (coverageViolations.length > 0) {
+    throw new GeneratedLessonError(
+      `Course requirements did not cover the authoritative request: ${formatViolations(coverageViolations)}`,
+      raw,
+      coverageViolations,
+    );
+  }
+  if (verification.suggestions.length > 0) {
+    process.stderr.write(`learning-coach: ${JSON.stringify({
+      stage: "lesson-brief-review-suggestions",
+      turn_id: input.turn_id,
+      suggestion_count: verification.suggestions.length,
+      request_item_ids: [...new Set(verification.suggestions.map((item) => item.request_item_id))],
+    })}\n`);
+  }
+}
+
+function reportRejectedLessonBrief(
+  attempt: number,
+  raw: string,
+  error: GeneratedLessonError,
+): void {
+  process.stderr.write(`learning-coach: rejected lesson brief ${attempt}: ${formatViolations(error.violations)}\n`);
+  if (process.env.OLL_DEBUG_GENERATION === "1") {
+    process.stderr.write(`learning-coach: rejected lesson brief payload ${attempt}: ${raw.slice(0, 16_000)}\n`);
+  }
+}
+
 async function planLesson(client: VertexClient, input: ToolInput): Promise<LessonBrief> {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_PLANNING_ATTEMPTS,
@@ -4181,51 +4617,27 @@ async function planLesson(client: VertexClient, input: ToolInput): Promise<Lesso
   let previousBrief: string | undefined;
   let violations: GenerationViolation[] = [];
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const raw = await callStructuredModel(client, {
-      label: "lesson-brief",
-      turnId: input.turn_id,
-      systemPrompt: LESSON_BRIEF_SYSTEM_PROMPT,
-      prompt: buildPlanningPrompt(input, previousBrief, violations),
-      responseSchema: buildLessonBriefResponseJsonSchema(input),
-      maxTokens: Math.min(client.maxTokens, 8_192),
-    });
+    let raw = "";
     try {
-      let candidate: unknown;
-      try {
-        candidate = JSON.parse(raw);
-      } catch (error) {
-        const parseViolation = briefViolation("BRIEF_INVALID_JSON", "/", `JSON parse failed: ${(error as Error).message}`);
-        throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
-      }
-      const brief = validateLessonBrief(canonicalizeBriefAliases(candidate), input);
-      const verification = await verifyLessonBrief(client, input, brief);
-      const coverageViolations = briefVerificationViolations(verification, input, brief);
-      if (coverageViolations.length > 0) {
-        throw new GeneratedLessonError(
-          `Course requirements did not cover the authoritative request: ${formatViolations(coverageViolations)}`,
-          raw,
-          coverageViolations,
-        );
-      }
-      if (verification.suggestions.length > 0) {
-        process.stderr.write(`learning-coach: ${JSON.stringify({
-          stage: "lesson-brief-review-suggestions",
-          turn_id: input.turn_id,
-          suggestion_count: verification.suggestions.length,
-          request_item_ids: [...new Set(verification.suggestions.map((item) => item.request_item_id))],
-        })}\n`);
-      }
-      return brief;
+      const candidate = await generateLessonBriefCandidate(
+        client,
+        input,
+        previousBrief,
+        violations,
+      );
+      raw = candidate.raw;
+      const [completedBrief] = await Promise.all([
+        completeLessonTasks(client, input, candidate.brief),
+        verifyLessonRequirements(client, input, candidate.brief, raw),
+      ]);
+      return completedBrief;
     } catch (error) {
       if (!(error instanceof GeneratedLessonError)) throw error;
-      process.stderr.write(`learning-coach: rejected lesson brief ${attempt}: ${formatViolations(error.violations)}\n`);
-      if (process.env.OLL_DEBUG_GENERATION === "1") {
-        process.stderr.write(`learning-coach: rejected lesson brief payload ${attempt}: ${raw.slice(0, 16_000)}\n`);
-      }
+      reportRejectedLessonBrief(attempt, error.raw ?? raw, error);
       if (attempt === maxAttempts) {
         throw new Error(`Lesson Brief failed validation after ${maxAttempts} attempt(s). Last error: ${error.message}`);
       }
-      previousBrief = raw;
+      previousBrief = error.raw ?? raw;
       violations = error.violations;
     }
   }
@@ -4234,12 +4646,12 @@ async function planLesson(client: VertexClient, input: ToolInput): Promise<Lesso
 
 function deriveParallelLessonSections(brief: LessonBrief): ParallelLessonSectionPlan[] {
   const sections: ParallelLessonSectionPlan[] = [];
-  if (brief.visual_requirements.length > 0) {
+  for (const [index, requirement] of brief.visual_requirements.entries()) {
     sections.push({
-      id: "observe",
-      title: "先看清对象",
-      purpose: brief.visual_requirements.map((requirement) => requirement.purpose).join("；"),
-      visualRequirementIds: brief.visual_requirements.map((requirement) => requirement.id),
+      id: index === 0 ? "observe" : `observe-${index + 1}`,
+      title: index === 0 ? "先看清第一个对象" : `继续观察对象 ${index + 1}`,
+      purpose: requirement.purpose,
+      visualRequirementIds: [requirement.id],
     });
   }
   const goalGroupSize = Math.max(
@@ -4273,6 +4685,32 @@ function deriveParallelLessonSections(brief: LessonBrief): ParallelLessonSection
     });
   }
   return sections;
+}
+
+function deterministicVisualObservationSection(
+  section: ParallelLessonSectionPlan,
+  brief: LessonBrief,
+): AuthoringLesson["steps"][number] | undefined {
+  if (section.visualRequirementIds.length !== 1) return undefined;
+  const visual = brief.visual_requirements.find(
+    (requirement) => requirement.id === section.visualRequirementIds[0],
+  );
+  if (!visual) return undefined;
+  return {
+    key: section.id,
+    purpose: section.purpose,
+    beats: [{
+      key: `show-${visual.id}`,
+      say: `先观察白板上的内容，重点看它如何${visual.purpose}。`,
+      delivery: "patient",
+      actions: [{
+        do: "focus",
+        when: "after_speech",
+        targets: [visual.id],
+        intent: "current_step",
+      }],
+    }],
+  } as AuthoringLesson["steps"][number];
 }
 
 function exactVisualComponentSchema(
@@ -4409,14 +4847,19 @@ async function generateParallelSection(
   brief: LessonBrief,
   section: ParallelLessonSectionPlan,
   responseSchema: JsonSchema,
+  signal?: AbortSignal,
 ): Promise<AuthoringLesson["steps"][number]> {
+  const availableRequirements = section.visualRequirementIds.length > 0
+    ? brief.visual_requirements.filter((requirement) =>
+        section.visualRequirementIds.includes(requirement.id))
+    : brief.visual_requirements;
   const raw = await callStructuredModel(client, {
     label: "lesson-section",
     turnId: input.turn_id,
     systemPrompt: PARALLEL_SECTION_SYSTEM_PROMPT,
     prompt: JSON.stringify({
       section,
-      available_visuals: brief.visual_requirements.map((requirement) => ({
+      available_visuals: availableRequirements.map((requirement) => ({
         id: requirement.id,
         surface: requirement.surface,
         purpose: requirement.purpose,
@@ -4427,11 +4870,12 @@ async function generateParallelSection(
     }, null, 2),
     responseSchema,
     maxTokens: Math.min(client.maxTokens, 8_192),
+    signal,
   });
   return parseParallelStep(
     raw,
     section,
-    brief.visual_requirements.map((requirement) => requirement.id),
+    availableRequirements.map((requirement) => requirement.id),
   );
 }
 
@@ -4497,6 +4941,7 @@ async function generateVisualComponent(
   brief: LessonBrief,
   requirement: VisualRequirement,
   responseSchema: JsonSchema,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_GENERATION_ATTEMPTS,
@@ -4527,6 +4972,7 @@ async function generateVisualComponent(
         }, null, 2),
         responseSchema,
         maxTokens: Math.min(client.maxTokens, 8_192),
+        signal,
       });
     } catch (error) {
       if (!(error instanceof ToolExecutionError)
@@ -4752,11 +5198,87 @@ function assembleParallelLesson(
   };
 }
 
+function briefForPublishedVisuals(
+  brief: LessonBrief,
+  publishedVisuals: Set<string>,
+): LessonBrief {
+  const scoped = structuredClone(brief);
+  scoped.visual_requirements = scoped.visual_requirements.filter((requirement) =>
+    publishedVisuals.has(requirement.id));
+  scoped.visual_relationships = scoped.visual_relationships.filter((relationship) =>
+    publishedVisuals.has(relationship.from) && publishedVisuals.has(relationship.to));
+  scoped.shared_variable_requirements = scoped.shared_variable_requirements
+    .map((requirement) => ({
+      ...requirement,
+      bound_visuals: requirement.bound_visuals.filter((visual) => publishedVisuals.has(visual)),
+      direct_angle_geometry: publishedVisuals.has(requirement.direct_angle_geometry)
+        ? requirement.direct_angle_geometry
+        : "",
+    }))
+    .filter((requirement) => requirement.bound_visuals.length > 0);
+  // A cumulative prefix is still an in-progress lesson. After-lesson tasks
+  // must not appear until the final artifact contains every required control.
+  scoped.student_task_requirements = [];
+  scoped.scene3d_task_requirements = [];
+  return scoped;
+}
+
+function createLimitedTaskScheduler(
+  limit: number,
+  signal?: AbortSignal,
+): <T>(task: () => Promise<T>) => Promise<T> {
+  type PendingTask = {
+    run: () => Promise<unknown>;
+    resolve: (value: unknown) => void;
+    reject: (error: unknown) => void;
+  };
+  const pending: PendingTask[] = [];
+  let active = 0;
+  const cancellationError = (): ToolExecutionError => new ToolExecutionError(
+    "MODEL_REQUEST_CANCELLED",
+    "Parallel authoring was cancelled because its lesson plan was rejected",
+  );
+  const rejectPending = (): void => {
+    while (pending.length > 0) pending.shift()?.reject(cancellationError());
+  };
+  const pump = (): void => {
+    if (signal?.aborted) {
+      rejectPending();
+      return;
+    }
+    while (active < limit && pending.length > 0) {
+      const next = pending.shift();
+      if (!next) break;
+      active += 1;
+      void next.run()
+        .then(next.resolve, next.reject)
+        .finally(() => {
+          active -= 1;
+          pump();
+        });
+    }
+  };
+  signal?.addEventListener("abort", rejectPending, { once: true });
+  return <T>(task: () => Promise<T>): Promise<T> => new Promise<T>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(cancellationError());
+      return;
+    }
+    pending.push({
+      run: task,
+      resolve: (value) => resolve(value as T),
+      reject,
+    });
+    pump();
+  });
+}
+
 async function generateLessonInParallel(
   client: VertexClient,
   input: ToolInput,
   brief: LessonBrief,
   onPrefix: (lesson: AuthoringLesson, part: number) => Promise<void>,
+  signal?: AbortSignal,
 ): Promise<{
   lesson: AuthoringLesson;
   attempts: number;
@@ -4768,37 +5290,81 @@ async function generateLessonInParallel(
   const diagnostics = schemaDiagnostics(responseSchema);
   const sections = deriveParallelLessonSections(brief);
   const sectionResponseSchema = parallelSectionSchema(responseSchema);
+  const parallelism = parsePositiveInteger(
+    process.env.OLL_PARALLELISM,
+    1,
+    "OLL_PARALLELISM",
+  );
   process.stderr.write(`learning-coach: ${JSON.stringify({
     stage: "lesson-parallel-authoring",
     turn_id: input.turn_id,
     status: "started",
     sections: sections.length,
     visual_components: brief.visual_requirements.length,
+    parallelism,
   })}\n`);
 
-  const sectionPromises = sections.map((section) =>
-    generateParallelSection(client, input, brief, section, sectionResponseSchema));
-  const componentPromises = brief.visual_requirements.map((requirement) =>
-    generateVisualComponent(
-      client,
-      input,
-      brief,
-      requirement,
-      exactVisualComponentSchema(responseSchema, requirement),
-    ));
-
-  const components = await Promise.all(componentPromises);
-  const assembledSteps: AuthoringLesson["steps"] = [];
-  for (const [index, sectionPromise] of sectionPromises.entries()) {
-    const step = await sectionPromise;
-    if (index === 0) injectVisualComponents(step, components);
-    assembledSteps.push(step);
-    if (index < sectionPromises.length - 1) {
-      const prefix = validateGeneratedLessonDocument(
-        assembleParallelLesson(input, brief, assembledSteps),
+  const schedule = createLimitedTaskScheduler(parallelism, signal);
+  const sectionPromises: Array<Promise<AuthoringLesson["steps"][number]>> = [];
+  const componentPromises = new Map<string, Promise<Record<string, unknown>>>();
+  const requirementById = new Map(brief.visual_requirements.map((requirement) =>
+    [requirement.id, requirement] as const));
+  for (const section of sections) {
+    const deterministicSection = deterministicVisualObservationSection(section, brief);
+    const sectionPromise = deterministicSection
+      ? Promise.resolve(deterministicSection)
+      : schedule(() =>
+          generateParallelSection(client, input, brief, section, sectionResponseSchema, signal));
+    void sectionPromise.catch(() => undefined);
+    sectionPromises.push(sectionPromise);
+    for (const requirementId of section.visualRequirementIds) {
+      if (componentPromises.has(requirementId)) continue;
+      const requirement = requirementById.get(requirementId);
+      if (!requirement) {
+        throw new GeneratedLessonError(
+          `Parallel section '${section.id}' references unknown visual '${requirementId}'`,
+        );
+      }
+      const componentPromise = schedule(() => generateVisualComponent(
+        client,
         input,
         brief,
-        capabilityPlan,
+        requirement,
+        exactVisualComponentSchema(responseSchema, requirement),
+        signal,
+      ));
+      void componentPromise.catch(() => undefined);
+      componentPromises.set(requirementId, componentPromise);
+    }
+  }
+
+  const assembledSteps: AuthoringLesson["steps"] = [];
+  const publishedVisuals = new Set<string>();
+  for (const [index, sectionPromise] of sectionPromises.entries()) {
+    const step = await sectionPromise;
+    const section = sections[index];
+    const componentDependencies = section.visualRequirementIds.map((requirementId) => {
+      const dependency = componentPromises.get(requirementId);
+      if (!dependency) {
+        throw new GeneratedLessonError(
+          `Parallel section '${section.id}' references unknown visual '${requirementId}'`,
+        );
+      }
+      return dependency;
+    });
+    const components = await Promise.all(componentDependencies);
+    if (components.length > 0) injectVisualComponents(step, components);
+    for (const requirementId of section.visualRequirementIds) {
+      publishedVisuals.add(requirementId);
+    }
+    assembledSteps.push(step);
+    if (index < sectionPromises.length - 1) {
+      const prefixBrief = briefForPublishedVisuals(brief, publishedVisuals);
+      const prefix = validateGeneratedLessonDocument(
+        assembleParallelLesson(input, prefixBrief, assembledSteps),
+        input,
+        prefixBrief,
+        deriveAuthoringCapabilityPlan(input, prefixBrief),
         false,
       );
       await onPrefix(prefix, index);
@@ -4819,6 +5385,100 @@ async function generateLessonInParallel(
     sections: assembledSteps.length,
   })}\n`);
   return { lesson, attempts: 1, capabilityPlan, schema: diagnostics };
+}
+
+async function planAndGenerateLessonInParallel(
+  client: VertexClient,
+  input: ToolInput,
+  onRequirementsVerified: () => void,
+  onPrefix: (lesson: AuthoringLesson, part: number) => Promise<void>,
+): Promise<{
+  brief: LessonBrief;
+  lesson: AuthoringLesson;
+  attempts: number;
+  capabilityPlan: AuthoringCapabilityPlan;
+  schema: ReturnType<typeof schemaDiagnostics>;
+}> {
+  const maxAttempts = parsePositiveInteger(
+    process.env.OLL_PLANNING_ATTEMPTS,
+    3,
+    "OLL_PLANNING_ATTEMPTS",
+  );
+  let previousBrief: string | undefined;
+  let violations: GenerationViolation[] = [];
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let candidate: { brief: LessonBrief; raw: string };
+    try {
+      candidate = await generateLessonBriefCandidate(
+        client,
+        input,
+        previousBrief,
+        violations,
+      );
+    } catch (error) {
+      if (!(error instanceof GeneratedLessonError)) throw error;
+      reportRejectedLessonBrief(attempt, error.raw ?? "", error);
+      if (attempt === maxAttempts) {
+        throw new Error(`Lesson Brief failed validation after ${maxAttempts} attempt(s). Last error: ${error.message}`);
+      }
+      previousBrief = error.raw;
+      violations = error.violations;
+      continue;
+    }
+
+    const authoringController = new AbortController();
+    const verificationPromise = verifyLessonRequirements(
+      client,
+      input,
+      candidate.brief,
+      candidate.raw,
+    );
+    const generationPromise = generateLessonInParallel(
+      client,
+      input,
+      candidate.brief,
+      async (prefix, part) => {
+        await verificationPromise;
+        await onPrefix(prefix, part);
+      },
+      authoringController.signal,
+    );
+    void generationPromise.catch(() => undefined);
+
+    try {
+      await verificationPromise;
+    } catch (error) {
+      authoringController.abort();
+      await generationPromise.catch(() => undefined);
+      if (!(error instanceof GeneratedLessonError)) throw error;
+      reportRejectedLessonBrief(attempt, candidate.raw, error);
+      if (attempt === maxAttempts) {
+        throw new Error(`Lesson Brief failed validation after ${maxAttempts} attempt(s). Last error: ${error.message}`);
+      }
+      previousBrief = candidate.raw;
+      violations = error.violations;
+      continue;
+    }
+
+    onRequirementsVerified();
+    const taskPlanningPromise = completeLessonTasks(client, input, candidate.brief);
+    const [completedBrief, generated] = await Promise.all([
+      taskPlanningPromise,
+      generationPromise,
+    ]);
+    const lesson = validateGeneratedLessonDocument(
+      generated.lesson,
+      input,
+      completedBrief,
+      generated.capabilityPlan,
+    );
+    return {
+      brief: completedBrief,
+      ...generated,
+      lesson,
+    };
+  }
+  throw new Error("Lesson Brief planning failed");
 }
 
 async function generateLesson(
@@ -5312,31 +5972,45 @@ async function main(): Promise<void> {
     }
     const input = parseToolInput(rawInput);
     const client = await createVertexClient();
-    const brief = await planLesson(client, input);
-    stageLog({
-      stage: "lesson-requirements",
-      turn_id: input.turn_id,
-      status: "completed",
-      elapsed_ms: Date.now() - startedAt,
-    });
     const authoringStrategy = process.env.OLL_AUTHORING_STRATEGY?.trim() || "parallel";
     if (authoringStrategy !== "parallel" && authoringStrategy !== "monolithic") {
       throw new Error(`Unknown OLL_AUTHORING_STRATEGY '${authoringStrategy}'`);
     }
     let publishedParts = 0;
-    const { lesson, attempts, capabilityPlan, schema } = authoringStrategy === "parallel"
-      ? await generateLessonInParallel(client, input, brief, async (prefix, part) => {
-          const artifactPath = partialOutputPath(input, part);
-          await mkdir(dirname(artifactPath), { recursive: true });
-          await writeFile(artifactPath, `${JSON.stringify(prefix, null, 2)}\n`, "utf8");
-          publishedParts += 1;
-          emitArtifactProgress(
-            artifactPath,
-            "oll_lesson_part",
-            `part=${part} elapsed_ms=${Date.now() - startedAt}`,
-          );
-        })
-      : await generateLesson(client, input, brief);
+    const reportRequirementsVerified = (): void => stageLog({
+      stage: "lesson-requirements",
+      turn_id: input.turn_id,
+      status: "completed",
+      elapsed_ms: Date.now() - startedAt,
+    });
+    const publishPrefix = async (prefix: AuthoringLesson, part: number): Promise<void> => {
+      const artifactPath = partialOutputPath(input, part);
+      await mkdir(dirname(artifactPath), { recursive: true });
+      await writeFile(artifactPath, `${JSON.stringify(prefix, null, 2)}\n`, "utf8");
+      publishedParts += 1;
+      emitArtifactProgress(
+        artifactPath,
+        "oll_lesson_part",
+        `part=${part} elapsed_ms=${Date.now() - startedAt}`,
+      );
+    };
+    let brief: LessonBrief;
+    let generated: Awaited<ReturnType<typeof generateLesson>>;
+    if (authoringStrategy === "parallel") {
+      const planned = await planAndGenerateLessonInParallel(
+        client,
+        input,
+        reportRequirementsVerified,
+        publishPrefix,
+      );
+      brief = planned.brief;
+      generated = planned;
+    } else {
+      brief = await planLesson(client, input);
+      reportRequirementsVerified();
+      generated = await generateLesson(client, input, brief);
+    }
+    const { lesson, attempts, capabilityPlan, schema } = generated;
     const artifactPath = outputPath(input);
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}\n`, "utf8");

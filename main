@@ -10043,27 +10043,45 @@ shared_variable_requirements \u7528\u6765\u89C4\u5212\u201C\u540C\u4E00\u4E2A\u9
 - direct_angle_geometry \u53EA\u5728\u67D0\u4E2A geometry \u91CC\u7684\u70B9\u9002\u5408\u7531\u5B66\u751F\u76F4\u63A5\u7ED5\u5706\u5FC3\u62D6\u52A8\u65F6\u586B\u5199\u8BE5 visual_requirement.id\uFF0C\u5426\u5219\u8FD4\u56DE\u7A7A\u5B57\u7B26\u4E32\u3002
 - \u5F53\u524D\u5B66\u751F\u63A7\u5236\u652F\u6301\u53D8\u91CF\u6ED1\u6746\u3001\u5706\u4E0A\u70B9\u7ED5\u5706\u5FC3\u7684 angle_control\uFF0C\u4EE5\u53CA scene3d \u89C6\u89D2\u7684\u65CB\u8F6C\u3001\u7F29\u653E\u3001\u9884\u8BBE\u548C\u590D\u4F4D\uFF1B\u4E09\u7EF4\u89C6\u89D2\u63A7\u5236\u7531 scene3d \u7684 orbit_control \u8868\u8FBE\uFF0C\u4E0D\u8981\u4E3A\u5B83\u4F2A\u9020 shared variable\u3002\u4E0D\u652F\u6301\u4EFB\u610F\u7269\u4F53\u7684\u81EA\u7531\u62D6\u52A8\u6216\u6CBF\u76F4\u7EBF\u62D6\u52A8\u3002\u4E00\u822C\u6027\u7684\u201C\u8BA9\u6211\u81EA\u5DF1\u64CD\u4F5C\u201D\u6216\u6CA1\u6709\u70B9\u660E\u88AB\u62D6\u7269\u4F53\u7684\u201C\u62D6\u7740\u8BD5\u8BD5\u201D\u53EF\u4EE5\u7528\u62D6\u52A8\u6ED1\u6746\u6EE1\u8DB3\uFF1B\u53EA\u6709\u5706\u5468\u89D2\u5EA6\u786E\u5B9E\u662F\u5408\u9002\u7684\u6559\u5B66\u64CD\u4F5C\u65F6\u624D\u4F7F\u7528 direct_angle_geometry\u3002\u660E\u786E\u70B9\u540D\u8981\u62D6\u52A8\u5176\u4ED6\u7269\u4F53\u6216\u6CBF\u7279\u5B9A\u8DEF\u5F84\u62D6\u52A8\u65F6\u5FC5\u987B\u5217\u5165 unhandled_request_items\u3002
 
-student_task_requirements \u7528\u6765\u89C4\u5212\u8BB2\u89E3\u7ED3\u675F\u540E\u771F\u6B63\u4EA4\u7ED9\u5B66\u751F\u5B8C\u6210\u7684\u77ED\u4EFB\u52A1\uFF0C\u4E0D\u662F\u65C1\u767D\u4E2D\u7684\u63D0\u95EE\uFF1A
-- \u53EA\u6709\u5DF2\u7ECF\u5B58\u5728 shared_variable_requirement \u65F6\u624D\u80FD\u521B\u5EFA\u4EFB\u52A1\uFF1B\u4EFB\u52A1\u5FC5\u987B\u8BA9\u5B66\u751F\u901A\u8FC7\u8BE5\u53D8\u91CF\u5DF2\u6709\u7684\u6ED1\u6746\uFF0C\u6216\u5DF2\u6709\u7684\u5706\u5468 angle_control \u5B8C\u6210\uFF0C\u4E0D\u5F97\u89C4\u5212\u65B0\u7684\u4EA4\u4E92\u65B9\u5F0F\u3002
-- \u5F53\u7528\u6237\u660E\u786E\u8981\u6C42\u201C\u8BA9\u6211\u52A8\u624B\u8BD5\u3001\u7ED9\u6211\u4E00\u4E2A\u4E92\u52A8\u4EFB\u52A1\u3001\u8BB2\u5B8C\u540E\u8BA9\u6211\u64CD\u4F5C\u201D\u65F6\u5FC5\u987B\u521B\u5EFA student_task request_item \u548C\u5BF9\u5E94\u4EFB\u52A1\u3002\u53EA\u8981\u8BFE\u7A0B\u5DF2\u7ECF\u89C4\u5212\u5171\u4EAB\u53D8\u91CF\u4E14\u7528\u6237\u6CA1\u6709\u7981\u6B62\u5B66\u751F\u63A7\u5236\u6216\u4EFB\u52A1\uFF0C\u5C31\u5FC5\u987B\u81F3\u5C11\u8BBE\u8BA1\u4E00\u4E2A\u80FD\u68C0\u9A8C\u672C\u8BFE\u6838\u5FC3\u76EE\u6807\u7684\u77ED\u4EFB\u52A1\uFF1B\u8FD9\u5C5E\u4E8E\u6559\u5B66\u8BBE\u8BA1\uFF0C\u53EF\u4EE5\u5F15\u7528\u5B83\u6240\u670D\u52A1\u7684 teaching_goal \u6216 continuous_change request_item\u3002
-- variable \u5FC5\u987B\u5F15\u7528\u4E00\u4E2A shared_variable_requirement.variable\u3002controls \u81F3\u5C11\u5305\u542B slider\uFF1B\u53EA\u6709\u8BE5\u53D8\u91CF\u7684 direct_angle_geometry \u975E\u7A7A\u65F6\u624D\u80FD\u589E\u52A0 geometry_point\u3002
-- completion_expression \u4F7F\u7528 Runtime \u6570\u5B66\u8868\u8FBE\u5F0F\uFF0C\u53EA\u80FD\u8BFB\u53D6\u8FD9\u4E2A variable\uFF1Bcompletion_value \u662F\u671F\u671B\u7ED3\u679C\uFF0Ctolerance \u662F\u5141\u8BB8\u8BEF\u5DEE\u3002\u521D\u59CB\u503C\u4E0D\u80FD\u5DF2\u7ECF\u6EE1\u8DB3\u5B8C\u6210\u6761\u4EF6\u3002\u4EFB\u52A1\u5FC5\u987B\u4F9D\u636E\u5B66\u751F\u6700\u7EC8\u63D0\u4EA4\u7684\u4E00\u6B21\u64CD\u4F5C\u5224\u5B9A\uFF0C\u4E0D\u80FD\u4F9D\u9760\u6A21\u578B\u9605\u8BFB\u5B66\u751F\u610F\u56FE\u3002
-- prompt \u5FC5\u987B\u50CF\u8001\u5E08\u7ED9\u5B66\u751F\u7684\u81EA\u7136\u6307\u4EE4\uFF0C\u8BF4\u660E\u8981\u8FBE\u5230\u7684\u53EF\u89C1\u76EE\u6807\uFF0C\u4E0D\u8981\u66B4\u9732\u5185\u90E8\u53D8\u91CF\u540D\u6216\u5B9E\u73B0\u672F\u8BED\u3002hints \u4ECE\u89C2\u5BDF\u65B9\u5411\u5230\u66F4\u5177\u4F53\u64CD\u4F5C\u9010\u6B65\u7ED9\u51FA\uFF1Bsuccess_message \u89E3\u91CA\u5B66\u751F\u521A\u624D\u7684\u64CD\u4F5C\u4E3A\u4EC0\u4E48\u6B63\u786E\u3002
-- \u4EFB\u52A1\u6309\u6570\u7EC4\u987A\u5E8F\u4F9D\u6B21\u5F00\u653E\u3002\u901A\u5E38\u53EA\u89C4\u5212\u4E00\u4E2A\uFF1B\u53EA\u6709\u591A\u4E2A\u64CD\u4F5C\u786E\u5B9E\u5BF9\u5E94\u4E0D\u540C\u6559\u5B66\u76EE\u6807\u65F6\u624D\u89C4\u5212\u591A\u4E2A\u3002
-- scene3d_task_requirements \u4E13\u95E8\u63CF\u8FF0\u201C\u628A\u4E09\u7EF4\u573A\u666F\u8F6C\u5230\u67D0\u4E2A\u89C6\u89D2\u201D\u7684\u4EFB\u52A1\u3002visual \u5FC5\u987B\u5F15\u7528\u5E26 orbit_control \u7684 scene3d\uFF1Btarget_yaw\u3001target_pitch\u3001target_zoom \u662F\u76EE\u6807\u76F8\u673A\uFF0Cangular_tolerance \u548C zoom_tolerance \u662F\u5224\u5B9A\u5BB9\u5DEE\u3002scene3d \u7684\u6240\u6709\u89D2\u5EA6\u548C\u89D2\u5EA6\u5BB9\u5DEE\u90FD\u5FC5\u987B\u4F7F\u7528\u5F27\u5EA6\uFF0C\u7EDD\u4E0D\u80FD\u586B\u5199\u89D2\u5EA6\u5236\u6570\u503C\uFF1Atarget_yaw \u5FC5\u987B\u662F\u6709\u9650\u5F27\u5EA6\u503C\uFF0Ctarget_pitch \u5FC5\u987B\u5728 -\u03C0/2 \u5230 \u03C0/2 \u4E4B\u95F4\uFF0Cangular_tolerance \u5FC5\u987B\u5927\u4E8E 0 \u4E14\u4E0D\u8D85\u8FC7 \u03C0\uFF1Btarget_zoom \u5FC5\u987B\u5728 0.2 \u5230 5 \u4E4B\u95F4\uFF0Czoom_tolerance \u5FC5\u987B\u5927\u4E8E 0 \u4E14\u4E0D\u8D85\u8FC7 4.8\u3002\u4E0D\u8981\u628A\u89C6\u89D2\u4EFB\u52A1\u4F2A\u88C5\u6210 lesson variable\u3002\u7528\u6237\u660E\u786E\u8981\u6C42\u4ECE\u67D0\u4E2A\u65B9\u5411\u89C2\u5BDF\u3001\u8F6C\u5230\u6B63\u89C6/\u4FEF\u89C6\uFF0C\u6216\u8981\u6C42\u5B66\u751F\u901A\u8FC7\u65CB\u8F6C\u5B8C\u6210\u4EFB\u52A1\u65F6\u4F7F\u7528\u5B83\uFF1B\u666E\u901A\u53D8\u91CF\u4EFB\u52A1\u4ECD\u653E\u5728 student_task_requirements\u3002
-- \u82E5 presentation_constraints \u660E\u786E\u7981\u6B62 student_control \u6216 student_task\uFF0Cstudent_task_requirements \u548C scene3d_task_requirements \u90FD\u5FC5\u987B\u4E3A\u7A7A\u3002
+\u672C\u9636\u6BB5\u4E0D\u8BBE\u8BA1\u8BFE\u540E\u4E92\u52A8\u4EFB\u52A1\u7684\u76EE\u6807\u503C\u3001\u63D0\u793A\u8BED\u548C\u6210\u529F\u53CD\u9988\uFF1B\u8FD9\u4E9B\u7EC6\u8282\u4F1A\u5728\u9996\u6BB5\u8BFE\u4EF6\u5F00\u59CB\u751F\u6210\u540E\u7531\u72EC\u7ACB\u6B65\u9AA4\u8865\u9F50\u3002\u4F60\u4ECD\u987B\u5728 request_items \u4E2D\u5FE0\u5B9E\u8BB0\u5F55\u7528\u6237\u660E\u786E\u8981\u6C42\u7684 student_task\uFF0C\u5E76\u89C4\u5212\u5B83\u4F9D\u8D56\u7684 shared variable \u6216\u5E26 orbit_control \u7684 scene3d\uFF1Bscene3d \u89C6\u89D2\u4EFB\u52A1\u7684\u6240\u6709\u89D2\u5EA6\u7531\u540E\u7EED\u9636\u6BB5\u4EE5\u5F27\u5EA6\u586B\u5199\u3002student_task_requirements \u548C scene3d_task_requirements \u5728\u672C\u9636\u6BB5\u5FC5\u987B\u59CB\u7EC8\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
 
 progressive_revision_kinds \u53EA\u8868\u793A\u672C\u8F6E\u65B0\u5EFA\u677F\u4E66\u662F\u5426\u9002\u5408\u7528 revise \u6E10\u8FDB\u66FF\u6362\uFF0C\u5141\u8BB8 text\u3001math\u3001shape\u3001diagram\u3001table\u3001note\uFF1B\u4E0D\u9700\u8981\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u5B83\u4E0D\u5141\u8BB8\u4FEE\u6539\u5386\u53F2\u767D\u677F\u8282\u70B9\uFF0C\u4E5F\u4E0D\u5F97\u5305\u542B geometry\u3001plot\u3001scene3d \u6216 image\u3002
 
 \u6CA1\u6709\u660E\u786E\u6216\u5FC5\u8981\u89C6\u89C9\u8981\u6C42\u65F6 visual_requirements \u53EF\u4EE5\u4E3A\u7A7A\uFF0C\u4F46 request_items \u548C teaching_goal_requirements \u4ECD\u987B\u8986\u76D6\u7528\u6237\u7684\u6559\u5B66\u8BF7\u6C42\u3002\u53EA\u8F93\u51FA\u7B26\u5408 JSON Schema \u7684 JSON \u5BF9\u8C61\u3002`;
 var BRIEF_VERIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u7528\u6237\u8981\u6C42\u8986\u76D6\u590D\u6838\u5668\uFF0C\u4E0D\u751F\u6210\u8BFE\u4EF6\uFF0C\u4E5F\u4E0D\u51B3\u5B9A\u5E94\u8BE5\u91C7\u7528\u54EA\u4E00\u79CD\u6559\u6CD5\u3002
 
-\u53EA\u505A\u4E09\u4EF6\u4E8B\uFF1A
+\u5148\u9010\u6761\u5BA1\u6838 authoritative_request.clauses\u3002request_item_kinds \u5FC5\u987B\u4E3A\u6BCF\u4E2A source_ref \u6070\u597D\u8FD4\u56DE\u4E00\u9879\uFF0C\u5E76\u5217\u51FA\u8BE5\u539F\u6587\u5206\u53E5\u4E2D\u660E\u786E\u5305\u542B\u7684\u6240\u6709\u8981\u6C42\u7C7B\u522B\u3002\u4E00\u4E2A\u5206\u53E5\u53EF\u4EE5\u540C\u65F6\u5305\u542B\u591A\u7C7B\u8981\u6C42\uFF0C\u4E0D\u80FD\u56E0\u4E3A\u5DF2\u7ECF\u8BB0\u5F55\u5176\u4E2D\u4E00\u7C7B\u5C31\u5FFD\u7565\u5176\u4ED6\u7C7B\u522B\uFF1A
+- teaching_goal\uFF1A\u8981\u6C42\u89E3\u91CA\u3001\u7406\u89E3\u3001\u6BD4\u8F83\u6216\u56DE\u7B54\u539F\u56E0\uFF1B
+- visual\uFF1A\u660E\u786E\u8981\u6C42\u753B\u51FA\u3001\u5C55\u793A\u6216\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\uFF1B
+- relationship\uFF1A\u8981\u6C42\u7ED3\u5408\u3001\u5BF9\u5E94\u3001\u6BD4\u8F83\u3001\u63A8\u5BFC\u6216\u8BF4\u660E\u4E24\u4E2A\u5BF9\u8C61\u4E4B\u95F4\u7684\u8054\u7CFB\uFF1B
+- continuous_change\uFF1A\u8981\u6C42\u770B\u5230\u65CB\u8F6C\u3001\u8FD0\u52A8\u3001\u5468\u671F\u53D8\u5316\u3001\u52A8\u753B\u8FC7\u7A0B\uFF0C\u6216\u4E00\u4E2A\u91CF\u600E\u6837\u8FDE\u7EED\u53D8\u6210\u53E6\u4E00\u4E2A\u91CF\uFF1B
+- student_control\uFF1A\u8981\u6C42\u5B66\u751F\u62D6\u52A8\u3001\u65CB\u8F6C\u3001\u7F29\u653E\u3001\u8C03\u8282\u6216\u4EB2\u81EA\u64CD\u4F5C\uFF1B
+- student_task\uFF1A\u8981\u6C42\u8BB2\u89E3\u540E\u5B8C\u6210\u4E00\u4E2A\u6709\u76EE\u6807\u3001\u53EF\u5224\u65AD\u7ED3\u679C\u7684\u52A8\u624B\u4EFB\u52A1\uFF1B
+- existing_board_edit\uFF1A\u8981\u6C42\u4FEE\u6539\u5DF2\u7ECF\u5B58\u5728\u7684\u767D\u677F\u5185\u5BB9\uFF1B
+- presentation_constraint\uFF1A\u660E\u786E\u8981\u6C42\u6216\u7981\u6B62\u67D0\u79CD\u5C55\u793A\u65B9\u5F0F\uFF1B
+- unsupported_feature\uFF1A\u660E\u786E\u8981\u6C42\u5F53\u524D\u7CFB\u7EDF\u4E0D\u80FD\u771F\u5B9E\u5B9E\u73B0\u7684\u80FD\u529B\u3002
+\u6CA1\u6709\u8981\u6C42\u7684\u5BD2\u6684\u6216\u80CC\u666F\u53E5\u8FD4\u56DE\u7A7A kinds\u3002
+
+\u518D\u505A\u4E09\u4EF6\u4E8B\uFF1A
 1. missing\uFF1A\u7528\u6237\u539F\u6587\u4E2D\u7684\u67D0\u4E00\u9879\u660E\u786E\u8981\u6C42\u6CA1\u6709\u88AB request_items \u8BB0\u5F55\u3002\u4E00\u4E2A source_ref \u53EF\u80FD\u540C\u65F6\u8981\u6C42\u89E3\u91CA\u3001\u753B\u56FE\u548C\u64CD\u4F5C\uFF1B\u5373\u4F7F\u5176\u4E2D\u4E00\u9879\u5DF2\u8BB0\u5F55\uFF0C\u53E6\u4E00\u9879\u6F0F\u6389\u4ECD\u5E94\u62A5\u544A\uFF0C\u5E76\u5728 reason \u4E2D\u660E\u786E\u8BF4\u660E\u6F0F\u4E86\u4EC0\u4E48\uFF1B
 2. contradictions\uFF1A\u67D0\u4E2A\u5DF2\u6709 request_item \u4E0E\u5B83\u5F15\u7528\u7684\u7528\u6237\u539F\u6587\u76F8\u53CD\uFF0C\u6216\u628A\u660E\u786E\u4E0D\u652F\u6301\u7684\u80FD\u529B\u5192\u5145\u4E3A\u5DF2\u652F\u6301\uFF1B
 3. suggestions\uFF1A\u8BFE\u7A0B\u53EF\u4EE5\u600E\u6837\u6559\u5F97\u66F4\u597D\uFF0C\u4F46\u8FD9\u7C7B\u5EFA\u8BAE\u7EDD\u4E0D\u80FD\u653E\u8FDB missing \u6216 contradictions\u3002
 
 \u5982\u679C\u7528\u6237\u660E\u786E\u95EE\u201C\u4E3A\u4EC0\u4E48\u53D1\u751F\u201D\uFF0C\u9057\u6F0F\u56E0\u679C\u89E3\u91CA\u5C5E\u4E8E missing\uFF0C\u4E0D\u662F suggestions\u3002\u5982\u679C\u7528\u6237\u8981\u6C42\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\u7684\u53D8\u5316\uFF0C\u5374\u53EA\u89C4\u5212\u7C7B\u6BD4\u56FE\u800C\u6CA1\u6709\u76F4\u63A5\u8868\u73B0\u8BE5\u5BF9\u8C61\uFF0C\u4E5F\u5C5E\u4E8E missing\u3002\u590D\u6838\u8FD9\u7C7B\u8BF7\u6C42\u65F6\u5FC5\u987B\u68C0\u67E5\u88AB\u7ED1\u5B9A geometry \u7684 motion_subject \u548C motion_kind\uFF1Amotion_subject \u5FC5\u987B\u660E\u786E\u547D\u540D\u7528\u6237\u8981\u6C42\u89C2\u770B\u7684\u8FD0\u52A8\u4E3B\u4F53\uFF0Cmotion_kind \u5FC5\u987B\u63CF\u8FF0\u8BE5\u4E3B\u4F53\u672C\u8EAB\u7684\u8FD0\u52A8\uFF1B\u5706\u5468\u6295\u5F71\u3001\u51FD\u6570\u66F2\u7EBF\u6216\u5176\u4ED6\u7C7B\u6BD4\u5373\u4F7F\u6570\u5B66\u4E0A\u76F8\u5173\uFF0C\u4E5F\u4E0D\u80FD\u4F5C\u4E3A\u4E3B\u4F53\u6F14\u793A\u901A\u8FC7\u590D\u6838\u3002\u53EA\u6709\u5728\u56E0\u679C\u76EE\u6807\u548C\u4E3B\u4F53\u6F14\u793A\u5DF2\u7ECF\u8986\u76D6\u540E\uFF0C\u53D7\u529B\u56FE\u3001\u901F\u5EA6\u56FE\u3001\u80FD\u91CF\u56FE\u7B49\u53EF\u9009\u8BB2\u6CD5\u624D\u5C5E\u4E8E suggestions\u3002\u6559\u5B66\u5EFA\u8BAE\u4E0D\u662F\u7528\u6237\u8981\u6C42\u3002\u6CA1\u6709\u53D1\u73B0\u5BF9\u5E94\u9879\u76EE\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002`;
+var LESSON_TASK_PLANNING_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u540E\u4E92\u52A8\u4EFB\u52A1\u8BBE\u8BA1\u5668\u3002\u8BFE\u7A0B\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u5171\u4EAB\u53D8\u91CF\u548C\u4E09\u7EF4\u89C6\u89D2\u80FD\u529B\u5DF2\u7ECF\u786E\u5B9A\uFF1B\u4F60\u53EA\u8865\u5145\u8BB2\u89E3\u7ED3\u675F\u540E\u4EA4\u7ED9\u5B66\u751F\u5B8C\u6210\u7684\u77ED\u4EFB\u52A1\uFF0C\u4E0D\u4FEE\u6539\u8BFE\u7A0B\u89C4\u5212\u3002
+
+\u666E\u901A\u53D8\u91CF\u4EFB\u52A1\uFF1A
+- \u53EA\u4F7F\u7528\u5DF2\u6709 shared_variable_requirements \u4E2D\u7684\u53D8\u91CF\u548C\u63A7\u5236\u65B9\u5F0F\u3002controls \u5FC5\u987B\u5305\u542B slider\uFF1B\u4EC5\u5F53 direct_angle_geometry \u975E\u7A7A\u65F6\u624D\u53EF\u589E\u52A0 geometry_point\u3002
+- \u6BCF\u4E2A\u5171\u4EAB\u53D8\u91CF\u5728\u6CA1\u6709\u7981\u6B62\u5B66\u751F\u4EFB\u52A1\u65F6\u901A\u5E38\u8BBE\u8BA1\u4E00\u4E2A\u4EFB\u52A1\u3002\u7528\u6237\u660E\u786E\u8981\u6C42\u52A8\u624B\u64CD\u4F5C\u65F6\u5FC5\u987B\u8986\u76D6\u5BF9\u5E94 request_item\uFF1B\u6CA1\u6709\u660E\u786E\u8981\u6C42\u65F6\uFF0C\u4EFB\u52A1\u53EF\u5F15\u7528\u5B83\u6240\u68C0\u9A8C\u7684 teaching_goal \u6216 continuous_change request_item\u3002
+- completion_expression \u53EA\u80FD\u8BFB\u53D6\u8BE5\u4EFB\u52A1\u7684 variable\uFF1B\u76EE\u6807\u5FC5\u987B\u5728\u53D8\u91CF\u8303\u56F4\u5185\u53EF\u8FBE\uFF0C\u800C\u4E14\u521D\u59CB\u503C\u4E0D\u80FD\u5DF2\u7ECF\u6EE1\u8DB3\u76EE\u6807\u3002
+- prompt \u4F7F\u7528\u81EA\u7136\u7684\u5B66\u751F\u6307\u4EE4\uFF0C\u63CF\u8FF0\u53EF\u89C1\u76EE\u6807\uFF0C\u4E0D\u66B4\u9732\u5185\u90E8\u5B9E\u73B0\uFF1Bhints \u7531\u89C2\u5BDF\u63D0\u793A\u9010\u6B65\u8FC7\u6E21\u5230\u5177\u4F53\u64CD\u4F5C\uFF1Bsuccess_message \u89E3\u91CA\u64CD\u4F5C\u4E3A\u4EC0\u4E48\u6B63\u786E\u3002
+
+\u4E09\u7EF4\u89C6\u89D2\u4EFB\u52A1\uFF1A
+- \u4EC5\u5F53\u7528\u6237\u660E\u786E\u8981\u6C42\u5B8C\u6210\u67D0\u4E2A\u89C2\u5BDF\u89C6\u89D2\u65F6\u751F\u6210\uFF0C\u5E76\u5F15\u7528\u5E26 orbit_control \u7684 scene3d visual\u3002
+- target_yaw\u3001target_pitch \u548C angular_tolerance \u4F7F\u7528\u5F27\u5EA6\u3002pitch \u5728 -\u03C0/2 \u5230 \u03C0/2\uFF1Bzoom \u5728 0.2 \u5230 5\uFF1Bangular_tolerance \u5728 0 \u5230 \u03C0\uFF1Bzoom_tolerance \u5728 0 \u5230 4.8\u3002
+- controls \u53EA\u80FD\u4F7F\u7528 orbit\u3001zoom\u3001preset\u3001reset\u3002
+
+\u5982\u679C\u8BFE\u7A0B\u660E\u786E\u7981\u6B62 student_control \u6216 student_task\uFF0C\u4E24\u7C7B\u4EFB\u52A1\u90FD\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u53EA\u8F93\u51FA\u7B26\u5408 JSON Schema \u7684 JSON \u5BF9\u8C61\u3002`;
 var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\u4F53\u3001\u5C0A\u91CD\u5B66\u751F\u7684\u5BB6\u5EAD\u6559\u5E08\u3002\u8BF7\u751F\u6210\u4E00\u5802\u5B8C\u6574\u3001\u8FDE\u7EED\u7684 OLL Authoring Profile \u8BFE\u7A0B\u3002
 
 \u786C\u6027\u8981\u6C42\uFF1A
@@ -10141,6 +10159,19 @@ function parsePositiveInteger(value, fallback, label) {
     throw new Error(`${label} must be a positive integer`);
   }
   return parsed;
+}
+function parseThinkingLevel(value, label) {
+  if (!value?.trim()) return void 0;
+  const level = value.trim().toUpperCase();
+  if (level !== "MINIMAL" && level !== "LOW" && level !== "MEDIUM" && level !== "HIGH") {
+    throw new Error(`${label} must be MINIMAL, LOW, MEDIUM, or HIGH`);
+  }
+  return level;
+}
+function configuredThinkingLevel(label) {
+  const environmentName = label === "lesson-brief" ? "OLL_PLANNING_THINKING_LEVEL" : label === "lesson-brief-verification" ? "OLL_VERIFICATION_THINKING_LEVEL" : label === "lesson-task-planning" ? "OLL_TASK_THINKING_LEVEL" : label === "lesson-section" ? "OLL_SECTION_THINKING_LEVEL" : label === "lesson-visual-component" ? "OLL_VISUAL_THINKING_LEVEL" : label === "selection-enhancement" ? "OLL_SELECTION_THINKING_LEVEL" : label === "lesson-component-repair" || label === "lesson-beat-repair" ? "OLL_REPAIR_THINKING_LEVEL" : "OLL_AUTHORING_THINKING_LEVEL";
+  const safeDefault = label === "lesson-brief-verification" || label === "lesson-task-planning" || label === "lesson-section" || label === "lesson-visual-component" ? "LOW" : void 0;
+  return parseThinkingLevel(process.env[environmentName], environmentName) ?? parseThinkingLevel(process.env.OLL_THINKING_LEVEL, "OLL_THINKING_LEVEL") ?? safeDefault;
 }
 function validateTurnId(value) {
   const turnId = requireNonEmptyString(value, "turn_id");
@@ -11423,8 +11454,24 @@ var lessonBriefResponseJsonSchema = {
 var briefVerificationResponseJsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["missing", "contradictions", "suggestions"],
+  required: ["request_item_kinds", "missing", "contradictions", "suggestions"],
   properties: {
+    request_item_kinds: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source_ref", "kinds"],
+        properties: {
+          source_ref: { type: "string" },
+          kinds: {
+            type: "array",
+            items: { enum: requestItemKinds }
+          }
+        }
+      }
+    },
     missing: {
       type: "array",
       items: {
@@ -11517,6 +11564,16 @@ function authoritativeRequestClauses(input) {
 function buildLessonBriefResponseJsonSchema(input) {
   const schema = structuredClone(lessonBriefResponseJsonSchema);
   const properties = schema.properties;
+  properties.student_task_requirements = {
+    type: "array",
+    maxItems: 0,
+    items: { type: "string" }
+  };
+  properties.scene3d_task_requirements = {
+    type: "array",
+    maxItems: 0,
+    items: { type: "string" }
+  };
   const sourceRefs = authoritativeRequestClauses(input).map((clause) => clause.ref);
   const requestItems = properties.request_items;
   const itemProperties = requestItems.items.properties;
@@ -11526,11 +11583,48 @@ function buildLessonBriefResponseJsonSchema(input) {
   nonRequirementProperties.source_ref = { enum: sourceRefs };
   return schema;
 }
+function buildLessonTaskPlanResponseJsonSchema(brief) {
+  const briefProperties = lessonBriefResponseJsonSchema.properties;
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["student_task_requirements", "scene3d_task_requirements"],
+    properties: {
+      student_task_requirements: structuredClone(briefProperties.student_task_requirements),
+      scene3d_task_requirements: structuredClone(briefProperties.scene3d_task_requirements)
+    }
+  };
+  const properties = schema.properties;
+  const taskItem = properties.student_task_requirements.items;
+  const taskProperties = taskItem.properties;
+  const variables = brief.shared_variable_requirements.map((requirement) => requirement.variable);
+  if (variables.length === 0) properties.student_task_requirements.maxItems = 0;
+  else taskProperties.variable = { enum: variables };
+  const sceneItem = properties.scene3d_task_requirements.items;
+  const sceneProperties = sceneItem.properties;
+  const controllableScenes = brief.visual_requirements.filter((requirement) => requirement.surface === "scene3d" && requirement.required_features.includes("orbit_control")).map((requirement) => requirement.id);
+  if (controllableScenes.length === 0) properties.scene3d_task_requirements.maxItems = 0;
+  else sceneProperties.visual = { enum: controllableScenes };
+  const requestItemIds = brief.request_items.map((item) => item.id);
+  taskProperties.request_item_ids = {
+    type: "array",
+    minItems: 1,
+    items: { enum: requestItemIds }
+  };
+  sceneProperties.request_item_ids = structuredClone(taskProperties.request_item_ids);
+  return schema;
+}
 function buildBriefVerificationResponseJsonSchema(input, brief) {
   const schema = structuredClone(briefVerificationResponseJsonSchema);
   const properties = schema.properties;
+  const sourceRefs = authoritativeRequestClauses(input).map((clause) => clause.ref);
+  const kindReviews = properties.request_item_kinds;
+  kindReviews.minItems = sourceRefs.length;
+  kindReviews.maxItems = sourceRefs.length;
+  const kindReviewProperties = kindReviews.items.properties;
+  kindReviewProperties.source_ref = { enum: sourceRefs };
   const missingProperties = properties.missing.items.properties;
-  missingProperties.source_ref = { enum: authoritativeRequestClauses(input).map((clause) => clause.ref) };
+  missingProperties.source_ref = { enum: sourceRefs };
   const requestItemIds = brief.request_items.map((item) => item.id);
   const contradictionProperties = properties.contradictions.items.properties;
   contradictionProperties.request_item_id = { enum: requestItemIds };
@@ -11597,7 +11691,7 @@ function canonicalizeBriefAliases(candidate) {
   }
   return brief;
 }
-function validateLessonBrief(candidate, input) {
+function validateLessonBrief(candidate, input, options = {}) {
   const violations = [];
   if (!isRecord(candidate)) {
     throw new GeneratedLessonError("Lesson Brief must be a JSON object", void 0, [
@@ -12119,7 +12213,7 @@ function validateLessonBrief(candidate, input) {
   if (tasksForbidden && (studentTasks.length > 0 || scene3dTasks.length > 0)) {
     violations.push(briefViolation("BRIEF_FORBIDDEN_STUDENT_TASK", "/student_task_requirements", "student tasks cannot be planned when the request forbids tasks or student control"));
   }
-  if (!tasksForbidden && sharedVariables.length > 0 && studentTasks.length === 0) {
+  if (!options.allowDeferredTasks && !tasksForbidden && sharedVariables.length > 0 && studentTasks.length === 0) {
     violations.push(briefViolation("BRIEF_MISSING_STUDENT_TASK", "/student_task_requirements", "a lesson with a shared student-controllable variable must include at least one after-lesson task"));
   }
   const unhandledRequestIds = /* @__PURE__ */ new Set();
@@ -12153,13 +12247,14 @@ function validateLessonBrief(candidate, input) {
   for (const [id, item] of requestItemById) {
     const destinations = mappedDestinations.get(id);
     const isUnhandled = unhandledRequestIds.has(id);
+    const isDeferredTask = options.allowDeferredTasks && item.kind === "student_task";
     if (isUnhandled && destinations?.size) {
       violations.push(briefViolation("BRIEF_CONFLICTING_REQUEST_COVERAGE", "/unhandled_request_items", `request item '${id}' is both planned and unhandled`));
-    } else if (!isUnhandled && !destinations?.size) {
+    } else if (!isUnhandled && !isDeferredTask && !destinations?.size) {
       violations.push(briefViolation("BRIEF_UNMAPPED_REQUEST_ITEM", "/request_items", `request item '${id}' has no planned or unhandled destination`));
     }
     const requiredDestination = requiredDestinationByKind[item.kind];
-    if (!isUnhandled && requiredDestination && !destinations?.has(requiredDestination)) {
+    if (!isUnhandled && !isDeferredTask && requiredDestination && !destinations?.has(requiredDestination)) {
       violations.push(briefViolation(
         "BRIEF_INCOMPATIBLE_REQUEST_MAPPING",
         "/request_items",
@@ -13036,6 +13131,45 @@ function validateBriefVerification(candidate, input, brief) {
   const clauseRefs = new Set(authoritativeRequestClauses(input).map((clause) => clause.ref));
   const requestItemIds = new Set(brief.request_items.map((item) => item.id));
   const violations = [];
+  if (candidate.request_item_kinds !== void 0) {
+    if (!Array.isArray(candidate.request_item_kinds)) {
+      violations.push(briefViolation(
+        "BRIEF_VERIFICATION_INVALID_KIND_AUDIT",
+        "/request_item_kinds",
+        "request_item_kinds must be an array"
+      ));
+    } else {
+      const auditedRefs = /* @__PURE__ */ new Set();
+      candidate.request_item_kinds.forEach((raw, index) => {
+        const path = `/request_item_kinds/${index}`;
+        if (!isRecord(raw) || typeof raw.source_ref !== "string" || !clauseRefs.has(raw.source_ref) || auditedRefs.has(raw.source_ref)) {
+          violations.push(briefViolation(
+            "BRIEF_VERIFICATION_INVALID_KIND_AUDIT",
+            path,
+            "each source_ref must be audited exactly once"
+          ));
+          return;
+        }
+        auditedRefs.add(raw.source_ref);
+        if (!Array.isArray(raw.kinds) || raw.kinds.some((kind) => !requestItemKinds.includes(kind)) || new Set(raw.kinds).size !== raw.kinds.length) {
+          violations.push(briefViolation(
+            "BRIEF_VERIFICATION_INVALID_KIND_AUDIT",
+            `${path}/kinds`,
+            "kinds must contain unique supported request item kinds"
+          ));
+        }
+      });
+      for (const sourceRef of clauseRefs) {
+        if (!auditedRefs.has(sourceRef)) {
+          violations.push(briefViolation(
+            "BRIEF_VERIFICATION_MISSING_KIND_AUDIT",
+            "/request_item_kinds",
+            `source clause '${sourceRef}' was not audited`
+          ));
+        }
+      }
+    }
+  }
   const validateMissing = (raw, path) => {
     if (!isRecord(raw)) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_ITEM", path, "verification item must be an object"));
@@ -13071,7 +13205,21 @@ function validateBriefVerification(candidate, input, brief) {
 function briefVerificationViolations(verification, input, brief) {
   const clauseByRef = new Map(authoritativeRequestClauses(input).map((clause) => [clause.ref, clause]));
   const requestItemById = new Map(brief.request_items.map((item) => [item.id, item]));
+  const plannedKindsBySource = /* @__PURE__ */ new Map();
+  for (const item of brief.request_items) {
+    const kinds = plannedKindsBySource.get(item.source_ref) ?? /* @__PURE__ */ new Set();
+    kinds.add(item.kind);
+    plannedKindsBySource.set(item.source_ref, kinds);
+  }
   return [
+    ...(verification.request_item_kinds ?? []).flatMap(
+      (audit, auditIndex) => audit.kinds.flatMap((kind, kindIndex) => plannedKindsBySource.get(audit.source_ref)?.has(kind) ? [] : [{
+        stage: "brief",
+        code: "BRIEF_REQUIREMENT_KIND_MISSING",
+        path: `/verification/request_item_kinds/${auditIndex}/kinds/${kindIndex}`,
+        message: `${clauseByRef.get(audit.source_ref)?.text ?? audit.source_ref}: missing ${kind}`
+      }])
+    ),
     ...verification.missing.map((item, index) => {
       const clause = clauseByRef.get(item.source_ref);
       return {
@@ -13250,6 +13398,7 @@ async function createVertexClient() {
   }
   return {
     endpoint: vertexEndpoint(project, location, model),
+    model,
     accessToken,
     timeoutMs,
     maxTokens,
@@ -13341,7 +13490,7 @@ async function probeVertexSchema(client, schema) {
 async function callStructuredModel(client, request) {
   const startedAt = Date.now();
   const deadlineAt = requestDeadline(client);
-  stageLog({ stage: "model-call", turn_id: request.turnId, label: request.label, status: "started" });
+  const thinkingLevel = request.thinkingLevel ?? configuredThinkingLevel(request.label);
   const requestBody = JSON.stringify({
     systemInstruction: { parts: [{ text: request.systemPrompt }] },
     contents: [{ role: "user", parts: [{ text: request.prompt }] }],
@@ -13349,11 +13498,28 @@ async function callStructuredModel(client, request) {
       temperature: 0,
       maxOutputTokens: request.maxTokens ?? client.maxTokens,
       responseMimeType: "application/json",
-      responseJsonSchema: request.responseSchema
+      responseJsonSchema: request.responseSchema,
+      ...thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}
     }
+  });
+  const diagnostics = schemaDiagnostics(request.responseSchema);
+  stageLog({
+    stage: "model-call",
+    turn_id: request.turnId,
+    label: request.label,
+    status: "started",
+    model: client.model,
+    thinking_level: thinkingLevel ?? "UNSPECIFIED",
+    schema_sha256: diagnostics.sha256,
+    schema_bytes: diagnostics.bytes,
+    prompt_bytes: Buffer.byteLength(request.prompt),
+    system_prompt_bytes: Buffer.byteLength(request.systemPrompt),
+    request_bytes: Buffer.byteLength(requestBody),
+    max_output_tokens: request.maxTokens ?? client.maxTokens
   });
   let body = "";
   let status = 0;
+  let requestId;
   try {
     let usedAttempts = 0;
     for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
@@ -13365,9 +13531,13 @@ async function callStructuredModel(client, request) {
           "content-type": "application/json"
         },
         body: requestBody,
-        signal: AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
+        signal: request.signal ? AbortSignal.any([
+          request.signal,
+          AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
+        ]) : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
       });
       status = response.status;
+      requestId = response.headers.get("x-goog-request-id") ?? requestId;
       body = await response.text();
       if (response.ok) break;
       const retryable = status === 429 || status >= 500;
@@ -13391,6 +13561,14 @@ async function callStructuredModel(client, request) {
 `);
     }
     const content = vertexResponseContent(payload);
+    const root = isRecord(payload) ? payload : {};
+    const candidates = Array.isArray(root.candidates) ? root.candidates : [];
+    const firstCandidate = isRecord(candidates[0]) ? candidates[0] : {};
+    const usage = isRecord(root.usageMetadata) ? root.usageMetadata : {};
+    const metric = (name) => {
+      const value = usage[name];
+      return typeof value === "number" && Number.isFinite(value) ? value : void 0;
+    };
     stageLog({
       stage: "model-call",
       turn_id: request.turnId,
@@ -13398,12 +13576,24 @@ async function callStructuredModel(client, request) {
       status: "completed",
       http_status: status,
       request_attempts: usedAttempts,
+      ...requestId ? { request_id: requestId } : {},
+      ...typeof firstCandidate.finishReason === "string" ? { finish_reason: firstCandidate.finishReason } : {},
+      ...metric("promptTokenCount") === void 0 ? {} : { prompt_tokens: metric("promptTokenCount") },
+      ...metric("candidatesTokenCount") === void 0 ? {} : { candidate_tokens: metric("candidatesTokenCount") },
+      ...metric("thoughtsTokenCount") === void 0 ? {} : { thought_tokens: metric("thoughtsTokenCount") },
+      ...metric("totalTokenCount") === void 0 ? {} : { total_tokens: metric("totalTokenCount") },
+      ...typeof usage.trafficType === "string" ? { traffic_type: usage.trafficType } : {},
+      response_bytes: Buffer.byteLength(body),
       elapsed_ms: Date.now() - startedAt
     });
     return content;
   } catch (error) {
+    const cancelled = request.signal?.aborted === true;
     const timeoutError = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
-    const surfacedError = timeoutError ? new ToolExecutionError(
+    const surfacedError = cancelled ? new ToolExecutionError(
+      "MODEL_REQUEST_CANCELLED",
+      `Vertex ${request.label} was cancelled because its lesson plan was rejected`
+    ) : timeoutError ? new ToolExecutionError(
       client.deadlineAt !== void 0 && Date.now() >= client.deadlineAt ? "LESSON_GENERATION_TIMEOUT" : "VERTEX_REQUEST_TIMEOUT",
       client.deadlineAt !== void 0 && Date.now() >= client.deadlineAt ? `The lesson generation time budget was exhausted during ${request.label}` : `Vertex ${request.label} exceeded its request timeout`
     ) : error;
@@ -13472,6 +13662,156 @@ async function verifyLessonBrief(client, input, brief) {
   }
   throw new Error("Lesson Brief verification failed");
 }
+async function generateLessonBriefCandidate(client, input, previousBrief, violations) {
+  const raw = await callStructuredModel(client, {
+    label: "lesson-brief",
+    turnId: input.turn_id,
+    systemPrompt: LESSON_BRIEF_SYSTEM_PROMPT,
+    prompt: buildPlanningPrompt(input, previousBrief, violations),
+    responseSchema: buildLessonBriefResponseJsonSchema(input),
+    maxTokens: Math.min(client.maxTokens, 8192)
+  });
+  let candidate;
+  try {
+    candidate = JSON.parse(raw);
+  } catch (error) {
+    const parseViolation = briefViolation(
+      "BRIEF_INVALID_JSON",
+      "/",
+      `JSON parse failed: ${error.message}`
+    );
+    throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
+  }
+  try {
+    return {
+      brief: validateLessonBrief(canonicalizeBriefAliases(candidate), input, {
+        allowDeferredTasks: true
+      }),
+      raw
+    };
+  } catch (error) {
+    if (error instanceof GeneratedLessonError && error.raw === void 0) {
+      throw new GeneratedLessonError(error.message, raw, error.violations);
+    }
+    throw error;
+  }
+}
+function taskPlanningNeeded(brief) {
+  if (brief.student_task_requirements.length > 0 || brief.scene3d_task_requirements.length > 0) {
+    return false;
+  }
+  const tasksForbidden = brief.presentation_constraints.some((constraint) => constraint.polarity === "forbid" && (constraint.capability === "student_task" || constraint.capability === "student_control"));
+  if (tasksForbidden) return false;
+  return brief.shared_variable_requirements.length > 0 || brief.request_items.some((item) => item.kind === "student_task" && item.polarity === "require");
+}
+function buildTaskPlanningPrompt(input, brief, previousPlan, violations = []) {
+  const repair = previousPlan ? `
+
+\u4E0A\u4E00\u4EFD\u4EFB\u52A1\u8BBE\u8BA1\uFF1A
+${previousPlan}
+
+\u7CBE\u786E\u6821\u9A8C\u9519\u8BEF\uFF1A
+${JSON.stringify(violations, null, 2)}
+\u53EA\u4FEE\u590D\u8FD9\u4E9B\u9519\u8BEF\u5E76\u8FD4\u56DE\u5B8C\u6574\u4EFB\u52A1\u5BF9\u8C61\u3002` : "";
+  return `\u8BF7\u53EA\u8BBE\u8BA1\u8BFE\u540E\u4E92\u52A8\u4EFB\u52A1\u3002\u4E0D\u5F97\u4FEE\u6539\u5DF2\u7ECF\u786E\u5B9A\u7684\u8BFE\u7A0B\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u5171\u4EAB\u53D8\u91CF\u548C\u63A7\u5236\u65B9\u5F0F\u3002
+${JSON.stringify({
+    learner_request: input.learner_request,
+    teaching_goals: brief.teaching_goal_requirements,
+    request_items: brief.request_items,
+    presentation_constraints: brief.presentation_constraints,
+    shared_variables: brief.shared_variable_requirements,
+    controllable_3d_visuals: brief.visual_requirements.filter((requirement) => requirement.surface === "scene3d" && requirement.required_features.includes("orbit_control"))
+  }, null, 2)}${repair}`;
+}
+async function completeLessonTasks(client, input, coreBrief) {
+  if (!taskPlanningNeeded(coreBrief)) return validateLessonBrief(coreBrief, input);
+  const maxAttempts = parsePositiveInteger(
+    process.env.OLL_TASK_PLANNING_ATTEMPTS,
+    3,
+    "OLL_TASK_PLANNING_ATTEMPTS"
+  );
+  let previousPlan;
+  let violations = [];
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let raw = "";
+    try {
+      raw = await callStructuredModel(client, {
+        label: "lesson-task-planning",
+        turnId: input.turn_id,
+        systemPrompt: LESSON_TASK_PLANNING_SYSTEM_PROMPT,
+        prompt: buildTaskPlanningPrompt(input, coreBrief, previousPlan, violations),
+        responseSchema: buildLessonTaskPlanResponseJsonSchema(coreBrief),
+        maxTokens: Math.min(client.maxTokens, 4096)
+      });
+      let taskPlan;
+      try {
+        taskPlan = JSON.parse(raw);
+      } catch (error) {
+        throw new GeneratedLessonError(
+          `Task plan JSON parse failed: ${error.message}`,
+          raw,
+          [briefViolation("BRIEF_TASK_PLAN_INVALID_JSON", "/", "task plan must be valid JSON")]
+        );
+      }
+      if (!isRecord(taskPlan)) {
+        throw new GeneratedLessonError(
+          "Task plan must be an object",
+          raw,
+          [briefViolation("BRIEF_TASK_PLAN_INVALID_ROOT", "/", "task plan must be an object")]
+        );
+      }
+      const merged = canonicalizeBriefAliases({
+        ...structuredClone(coreBrief),
+        student_task_requirements: taskPlan.student_task_requirements,
+        scene3d_task_requirements: taskPlan.scene3d_task_requirements
+      });
+      return validateLessonBrief(merged, input);
+    } catch (error) {
+      const generatedError = error instanceof GeneratedLessonError ? error : error instanceof ToolExecutionError && error.code === "VERTEX_RESPONSE_TRUNCATED" ? new GeneratedLessonError(error.message, raw, [briefViolation(
+        "BRIEF_TASK_PLAN_TRUNCATED",
+        "/",
+        "task plan exceeded its controlled-output budget"
+      )]) : void 0;
+      if (!generatedError) throw error;
+      process.stderr.write(`learning-coach: rejected lesson task plan ${attempt}: ${formatViolations(generatedError.violations)}
+`);
+      if (attempt === maxAttempts) {
+        throw new Error(`Lesson task planning failed after ${maxAttempts} attempt(s). Last error: ${generatedError.message}`);
+      }
+      previousPlan = generatedError.raw ?? raw;
+      violations = generatedError.violations;
+    }
+  }
+  throw new Error("Lesson task planning failed");
+}
+async function verifyLessonRequirements(client, input, brief, raw) {
+  const verification = await verifyLessonBrief(client, input, brief);
+  const coverageViolations = briefVerificationViolations(verification, input, brief);
+  if (coverageViolations.length > 0) {
+    throw new GeneratedLessonError(
+      `Course requirements did not cover the authoritative request: ${formatViolations(coverageViolations)}`,
+      raw,
+      coverageViolations
+    );
+  }
+  if (verification.suggestions.length > 0) {
+    process.stderr.write(`learning-coach: ${JSON.stringify({
+      stage: "lesson-brief-review-suggestions",
+      turn_id: input.turn_id,
+      suggestion_count: verification.suggestions.length,
+      request_item_ids: [...new Set(verification.suggestions.map((item) => item.request_item_id))]
+    })}
+`);
+  }
+}
+function reportRejectedLessonBrief(attempt, raw, error) {
+  process.stderr.write(`learning-coach: rejected lesson brief ${attempt}: ${formatViolations(error.violations)}
+`);
+  if (process.env.OLL_DEBUG_GENERATION === "1") {
+    process.stderr.write(`learning-coach: rejected lesson brief payload ${attempt}: ${raw.slice(0, 16e3)}
+`);
+  }
+}
 async function planLesson(client, input) {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_PLANNING_ATTEMPTS,
@@ -13481,54 +13821,27 @@ async function planLesson(client, input) {
   let previousBrief;
   let violations = [];
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const raw = await callStructuredModel(client, {
-      label: "lesson-brief",
-      turnId: input.turn_id,
-      systemPrompt: LESSON_BRIEF_SYSTEM_PROMPT,
-      prompt: buildPlanningPrompt(input, previousBrief, violations),
-      responseSchema: buildLessonBriefResponseJsonSchema(input),
-      maxTokens: Math.min(client.maxTokens, 8192)
-    });
+    let raw = "";
     try {
-      let candidate;
-      try {
-        candidate = JSON.parse(raw);
-      } catch (error) {
-        const parseViolation = briefViolation("BRIEF_INVALID_JSON", "/", `JSON parse failed: ${error.message}`);
-        throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
-      }
-      const brief = validateLessonBrief(canonicalizeBriefAliases(candidate), input);
-      const verification = await verifyLessonBrief(client, input, brief);
-      const coverageViolations = briefVerificationViolations(verification, input, brief);
-      if (coverageViolations.length > 0) {
-        throw new GeneratedLessonError(
-          `Course requirements did not cover the authoritative request: ${formatViolations(coverageViolations)}`,
-          raw,
-          coverageViolations
-        );
-      }
-      if (verification.suggestions.length > 0) {
-        process.stderr.write(`learning-coach: ${JSON.stringify({
-          stage: "lesson-brief-review-suggestions",
-          turn_id: input.turn_id,
-          suggestion_count: verification.suggestions.length,
-          request_item_ids: [...new Set(verification.suggestions.map((item) => item.request_item_id))]
-        })}
-`);
-      }
-      return brief;
+      const candidate = await generateLessonBriefCandidate(
+        client,
+        input,
+        previousBrief,
+        violations
+      );
+      raw = candidate.raw;
+      const [completedBrief] = await Promise.all([
+        completeLessonTasks(client, input, candidate.brief),
+        verifyLessonRequirements(client, input, candidate.brief, raw)
+      ]);
+      return completedBrief;
     } catch (error) {
       if (!(error instanceof GeneratedLessonError)) throw error;
-      process.stderr.write(`learning-coach: rejected lesson brief ${attempt}: ${formatViolations(error.violations)}
-`);
-      if (process.env.OLL_DEBUG_GENERATION === "1") {
-        process.stderr.write(`learning-coach: rejected lesson brief payload ${attempt}: ${raw.slice(0, 16e3)}
-`);
-      }
+      reportRejectedLessonBrief(attempt, error.raw ?? raw, error);
       if (attempt === maxAttempts) {
         throw new Error(`Lesson Brief failed validation after ${maxAttempts} attempt(s). Last error: ${error.message}`);
       }
-      previousBrief = raw;
+      previousBrief = error.raw ?? raw;
       violations = error.violations;
     }
   }
@@ -13536,12 +13849,12 @@ async function planLesson(client, input) {
 }
 function deriveParallelLessonSections(brief) {
   const sections = [];
-  if (brief.visual_requirements.length > 0) {
+  for (const [index, requirement] of brief.visual_requirements.entries()) {
     sections.push({
-      id: "observe",
-      title: "\u5148\u770B\u6E05\u5BF9\u8C61",
-      purpose: brief.visual_requirements.map((requirement) => requirement.purpose).join("\uFF1B"),
-      visualRequirementIds: brief.visual_requirements.map((requirement) => requirement.id)
+      id: index === 0 ? "observe" : `observe-${index + 1}`,
+      title: index === 0 ? "\u5148\u770B\u6E05\u7B2C\u4E00\u4E2A\u5BF9\u8C61" : `\u7EE7\u7EED\u89C2\u5BDF\u5BF9\u8C61 ${index + 1}`,
+      purpose: requirement.purpose,
+      visualRequirementIds: [requirement.id]
     });
   }
   const goalGroupSize = Math.max(
@@ -13575,6 +13888,28 @@ function deriveParallelLessonSections(brief) {
     });
   }
   return sections;
+}
+function deterministicVisualObservationSection(section, brief) {
+  if (section.visualRequirementIds.length !== 1) return void 0;
+  const visual = brief.visual_requirements.find(
+    (requirement) => requirement.id === section.visualRequirementIds[0]
+  );
+  if (!visual) return void 0;
+  return {
+    key: section.id,
+    purpose: section.purpose,
+    beats: [{
+      key: `show-${visual.id}`,
+      say: `\u5148\u89C2\u5BDF\u767D\u677F\u4E0A\u7684\u5185\u5BB9\uFF0C\u91CD\u70B9\u770B\u5B83\u5982\u4F55${visual.purpose}\u3002`,
+      delivery: "patient",
+      actions: [{
+        do: "focus",
+        when: "after_speech",
+        targets: [visual.id],
+        intent: "current_step"
+      }]
+    }]
+  };
 }
 function exactVisualComponentSchema(responseSchema, requirement) {
   const definitions = isRecord(responseSchema.$defs) ? structuredClone(responseSchema.$defs) : {};
@@ -13681,14 +14016,15 @@ function parseParallelStep(raw, section, visualAliases) {
   }
   return candidate;
 }
-async function generateParallelSection(client, input, brief, section, responseSchema) {
+async function generateParallelSection(client, input, brief, section, responseSchema, signal) {
+  const availableRequirements = section.visualRequirementIds.length > 0 ? brief.visual_requirements.filter((requirement) => section.visualRequirementIds.includes(requirement.id)) : brief.visual_requirements;
   const raw = await callStructuredModel(client, {
     label: "lesson-section",
     turnId: input.turn_id,
     systemPrompt: PARALLEL_SECTION_SYSTEM_PROMPT,
     prompt: JSON.stringify({
       section,
-      available_visuals: brief.visual_requirements.map((requirement) => ({
+      available_visuals: availableRequirements.map((requirement) => ({
         id: requirement.id,
         surface: requirement.surface,
         purpose: requirement.purpose
@@ -13698,12 +14034,13 @@ async function generateParallelSection(client, input, brief, section, responseSc
       language: input.language ?? "zh-CN"
     }, null, 2),
     responseSchema,
-    maxTokens: Math.min(client.maxTokens, 8192)
+    maxTokens: Math.min(client.maxTokens, 8192),
+    signal
   });
   return parseParallelStep(
     raw,
     section,
-    brief.visual_requirements.map((requirement) => requirement.id)
+    availableRequirements.map((requirement) => requirement.id)
   );
 }
 function visualComponentSemanticViolations(action, input, brief, requirement) {
@@ -13751,7 +14088,7 @@ function visualComponentSemanticViolations(action, input, brief, requirement) {
     }));
   }
 }
-async function generateVisualComponent(client, input, brief, requirement, responseSchema) {
+async function generateVisualComponent(client, input, brief, requirement, responseSchema, signal) {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_GENERATION_ATTEMPTS,
     3,
@@ -13777,7 +14114,8 @@ async function generateVisualComponent(client, input, brief, requirement, respon
           }
         }, null, 2),
         responseSchema,
-        maxTokens: Math.min(client.maxTokens, 8192)
+        maxTokens: Math.min(client.maxTokens, 8192),
+        signal
       });
     } catch (error) {
       if (!(error instanceof ToolExecutionError) || error.code !== "VERTEX_RESPONSE_TRUNCATED") throw error;
@@ -13972,40 +14310,134 @@ function assembleParallelLesson(input, brief, steps) {
     }
   };
 }
-async function generateLessonInParallel(client, input, brief, onPrefix) {
+function briefForPublishedVisuals(brief, publishedVisuals) {
+  const scoped = structuredClone(brief);
+  scoped.visual_requirements = scoped.visual_requirements.filter((requirement) => publishedVisuals.has(requirement.id));
+  scoped.visual_relationships = scoped.visual_relationships.filter((relationship) => publishedVisuals.has(relationship.from) && publishedVisuals.has(relationship.to));
+  scoped.shared_variable_requirements = scoped.shared_variable_requirements.map((requirement) => ({
+    ...requirement,
+    bound_visuals: requirement.bound_visuals.filter((visual) => publishedVisuals.has(visual)),
+    direct_angle_geometry: publishedVisuals.has(requirement.direct_angle_geometry) ? requirement.direct_angle_geometry : ""
+  })).filter((requirement) => requirement.bound_visuals.length > 0);
+  scoped.student_task_requirements = [];
+  scoped.scene3d_task_requirements = [];
+  return scoped;
+}
+function createLimitedTaskScheduler(limit, signal) {
+  const pending = [];
+  let active = 0;
+  const cancellationError = () => new ToolExecutionError(
+    "MODEL_REQUEST_CANCELLED",
+    "Parallel authoring was cancelled because its lesson plan was rejected"
+  );
+  const rejectPending = () => {
+    while (pending.length > 0) pending.shift()?.reject(cancellationError());
+  };
+  const pump = () => {
+    if (signal?.aborted) {
+      rejectPending();
+      return;
+    }
+    while (active < limit && pending.length > 0) {
+      const next = pending.shift();
+      if (!next) break;
+      active += 1;
+      void next.run().then(next.resolve, next.reject).finally(() => {
+        active -= 1;
+        pump();
+      });
+    }
+  };
+  signal?.addEventListener("abort", rejectPending, { once: true });
+  return (task) => new Promise((resolve2, reject) => {
+    if (signal?.aborted) {
+      reject(cancellationError());
+      return;
+    }
+    pending.push({
+      run: task,
+      resolve: (value) => resolve2(value),
+      reject
+    });
+    pump();
+  });
+}
+async function generateLessonInParallel(client, input, brief, onPrefix, signal) {
   const capabilityPlan = deriveAuthoringCapabilityPlan(input, brief);
   const responseSchema = buildAuthoringResponseJsonSchema(brief, capabilityPlan);
   const diagnostics = schemaDiagnostics(responseSchema);
   const sections = deriveParallelLessonSections(brief);
   const sectionResponseSchema = parallelSectionSchema(responseSchema);
+  const parallelism = parsePositiveInteger(
+    process.env.OLL_PARALLELISM,
+    1,
+    "OLL_PARALLELISM"
+  );
   process.stderr.write(`learning-coach: ${JSON.stringify({
     stage: "lesson-parallel-authoring",
     turn_id: input.turn_id,
     status: "started",
     sections: sections.length,
-    visual_components: brief.visual_requirements.length
+    visual_components: brief.visual_requirements.length,
+    parallelism
   })}
 `);
-  const sectionPromises = sections.map((section) => generateParallelSection(client, input, brief, section, sectionResponseSchema));
-  const componentPromises = brief.visual_requirements.map((requirement) => generateVisualComponent(
-    client,
-    input,
-    brief,
-    requirement,
-    exactVisualComponentSchema(responseSchema, requirement)
-  ));
-  const components = await Promise.all(componentPromises);
-  const assembledSteps = [];
-  for (const [index, sectionPromise] of sectionPromises.entries()) {
-    const step = await sectionPromise;
-    if (index === 0) injectVisualComponents(step, components);
-    assembledSteps.push(step);
-    if (index < sectionPromises.length - 1) {
-      const prefix = validateGeneratedLessonDocument(
-        assembleParallelLesson(input, brief, assembledSteps),
+  const schedule = createLimitedTaskScheduler(parallelism, signal);
+  const sectionPromises = [];
+  const componentPromises = /* @__PURE__ */ new Map();
+  const requirementById = new Map(brief.visual_requirements.map((requirement) => [requirement.id, requirement]));
+  for (const section of sections) {
+    const deterministicSection = deterministicVisualObservationSection(section, brief);
+    const sectionPromise = deterministicSection ? Promise.resolve(deterministicSection) : schedule(() => generateParallelSection(client, input, brief, section, sectionResponseSchema, signal));
+    void sectionPromise.catch(() => void 0);
+    sectionPromises.push(sectionPromise);
+    for (const requirementId of section.visualRequirementIds) {
+      if (componentPromises.has(requirementId)) continue;
+      const requirement = requirementById.get(requirementId);
+      if (!requirement) {
+        throw new GeneratedLessonError(
+          `Parallel section '${section.id}' references unknown visual '${requirementId}'`
+        );
+      }
+      const componentPromise = schedule(() => generateVisualComponent(
+        client,
         input,
         brief,
-        capabilityPlan,
+        requirement,
+        exactVisualComponentSchema(responseSchema, requirement),
+        signal
+      ));
+      void componentPromise.catch(() => void 0);
+      componentPromises.set(requirementId, componentPromise);
+    }
+  }
+  const assembledSteps = [];
+  const publishedVisuals = /* @__PURE__ */ new Set();
+  for (const [index, sectionPromise] of sectionPromises.entries()) {
+    const step = await sectionPromise;
+    const section = sections[index];
+    const componentDependencies = section.visualRequirementIds.map((requirementId) => {
+      const dependency = componentPromises.get(requirementId);
+      if (!dependency) {
+        throw new GeneratedLessonError(
+          `Parallel section '${section.id}' references unknown visual '${requirementId}'`
+        );
+      }
+      return dependency;
+    });
+    const components = await Promise.all(componentDependencies);
+    if (components.length > 0) injectVisualComponents(step, components);
+    for (const requirementId of section.visualRequirementIds) {
+      publishedVisuals.add(requirementId);
+    }
+    assembledSteps.push(step);
+    if (index < sectionPromises.length - 1) {
+      const prefixBrief = briefForPublishedVisuals(brief, publishedVisuals);
+      const prefix = validateGeneratedLessonDocument(
+        assembleParallelLesson(input, prefixBrief, assembledSteps),
+        input,
+        prefixBrief,
+        deriveAuthoringCapabilityPlan(input, prefixBrief),
         false
       );
       await onPrefix(prefix, index);
@@ -14027,6 +14459,85 @@ async function generateLessonInParallel(client, input, brief, onPrefix) {
   })}
 `);
   return { lesson, attempts: 1, capabilityPlan, schema: diagnostics };
+}
+async function planAndGenerateLessonInParallel(client, input, onRequirementsVerified, onPrefix) {
+  const maxAttempts = parsePositiveInteger(
+    process.env.OLL_PLANNING_ATTEMPTS,
+    3,
+    "OLL_PLANNING_ATTEMPTS"
+  );
+  let previousBrief;
+  let violations = [];
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let candidate;
+    try {
+      candidate = await generateLessonBriefCandidate(
+        client,
+        input,
+        previousBrief,
+        violations
+      );
+    } catch (error) {
+      if (!(error instanceof GeneratedLessonError)) throw error;
+      reportRejectedLessonBrief(attempt, error.raw ?? "", error);
+      if (attempt === maxAttempts) {
+        throw new Error(`Lesson Brief failed validation after ${maxAttempts} attempt(s). Last error: ${error.message}`);
+      }
+      previousBrief = error.raw;
+      violations = error.violations;
+      continue;
+    }
+    const authoringController = new AbortController();
+    const verificationPromise = verifyLessonRequirements(
+      client,
+      input,
+      candidate.brief,
+      candidate.raw
+    );
+    const generationPromise = generateLessonInParallel(
+      client,
+      input,
+      candidate.brief,
+      async (prefix, part) => {
+        await verificationPromise;
+        await onPrefix(prefix, part);
+      },
+      authoringController.signal
+    );
+    void generationPromise.catch(() => void 0);
+    try {
+      await verificationPromise;
+    } catch (error) {
+      authoringController.abort();
+      await generationPromise.catch(() => void 0);
+      if (!(error instanceof GeneratedLessonError)) throw error;
+      reportRejectedLessonBrief(attempt, candidate.raw, error);
+      if (attempt === maxAttempts) {
+        throw new Error(`Lesson Brief failed validation after ${maxAttempts} attempt(s). Last error: ${error.message}`);
+      }
+      previousBrief = candidate.raw;
+      violations = error.violations;
+      continue;
+    }
+    onRequirementsVerified();
+    const taskPlanningPromise = completeLessonTasks(client, input, candidate.brief);
+    const [completedBrief, generated] = await Promise.all([
+      taskPlanningPromise,
+      generationPromise
+    ]);
+    const lesson = validateGeneratedLessonDocument(
+      generated.lesson,
+      input,
+      completedBrief,
+      generated.capabilityPlan
+    );
+    return {
+      brief: completedBrief,
+      ...generated,
+      lesson
+    };
+  }
+  throw new Error("Lesson Brief planning failed");
 }
 async function generateLesson(client, input, brief) {
   let previousCandidate;
@@ -14466,19 +14977,18 @@ async function main() {
     }
     const input = parseToolInput(rawInput);
     const client = await createVertexClient();
-    const brief = await planLesson(client, input);
-    stageLog({
-      stage: "lesson-requirements",
-      turn_id: input.turn_id,
-      status: "completed",
-      elapsed_ms: Date.now() - startedAt
-    });
     const authoringStrategy = process.env.OLL_AUTHORING_STRATEGY?.trim() || "parallel";
     if (authoringStrategy !== "parallel" && authoringStrategy !== "monolithic") {
       throw new Error(`Unknown OLL_AUTHORING_STRATEGY '${authoringStrategy}'`);
     }
     let publishedParts = 0;
-    const { lesson, attempts, capabilityPlan, schema } = authoringStrategy === "parallel" ? await generateLessonInParallel(client, input, brief, async (prefix, part) => {
+    const reportRequirementsVerified = () => stageLog({
+      stage: "lesson-requirements",
+      turn_id: input.turn_id,
+      status: "completed",
+      elapsed_ms: Date.now() - startedAt
+    });
+    const publishPrefix = async (prefix, part) => {
       const artifactPath2 = partialOutputPath(input, part);
       await mkdir(dirname(artifactPath2), { recursive: true });
       await writeFile(artifactPath2, `${JSON.stringify(prefix, null, 2)}
@@ -14489,7 +14999,24 @@ async function main() {
         "oll_lesson_part",
         `part=${part} elapsed_ms=${Date.now() - startedAt}`
       );
-    }) : await generateLesson(client, input, brief);
+    };
+    let brief;
+    let generated;
+    if (authoringStrategy === "parallel") {
+      const planned = await planAndGenerateLessonInParallel(
+        client,
+        input,
+        reportRequirementsVerified,
+        publishPrefix
+      );
+      brief = planned.brief;
+      generated = planned;
+    } else {
+      brief = await planLesson(client, input);
+      reportRequirementsVerified();
+      generated = await generateLesson(client, input, brief);
+    }
+    const { lesson, attempts, capabilityPlan, schema } = generated;
     const artifactPath = outputPath(input);
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}
