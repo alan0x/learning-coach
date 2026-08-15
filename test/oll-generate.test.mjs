@@ -942,12 +942,12 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
             kind: "note",
             role: "concept",
             content: { title: "周期", items: ["sin(x + 2π) = sin x"] },
-            place: { relation: "below", anchor: "sine-plot" },
+            place: { relation: "new_region" },
           },
           {
             do: "focus",
             when: "after_speech",
-            targets: ["period-note", "sine-plot"],
+            targets: ["period-note"],
             intent: "current_step",
           },
         ],
@@ -989,9 +989,15 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
     generationStartedBeforeVerification ||= verificationInFlight;
     activeParallelRequests += 1;
     maxParallelRequests = Math.max(maxParallelRequests, activeParallelRequests);
-    const sectionId = isSection
-      ? JSON.parse(parsed.contents[0].parts[0].text).section.id
+    const sectionPrompt = isSection
+      ? JSON.parse(parsed.contents[0].parts[0].text)
       : undefined;
+    const sectionId = sectionPrompt?.section.id;
+    if (sectionId === "explain-1") {
+      assert.deepEqual(sectionPrompt.section.contextVisualIds, ["sine-plot"]);
+      assert.deepEqual(sectionPrompt.available_visuals.map((visual) => visual.id), ["sine-plot"]);
+      assert.deepEqual(sectionPrompt.teaching_goals.map((goal) => goal.id), ["explain-trig-relation"]);
+    }
     generationRequestOrder.push(isSection ? `section:${sectionId}` : "component:sine-plot");
     await new Promise((done) => setTimeout(done, sectionId === "explain-1" ? 100 : 50));
     activeParallelRequests -= 1;
@@ -1066,6 +1072,18 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
     assert.equal(finalLesson.steps[1].beats[0].actions.some(
       (action) => action.as === "explain-1-period-note",
     ), true);
+    const explanationActions = finalLesson.steps[1].beats[0].actions;
+    const periodNote = explanationActions.find((action) => action.as === "explain-1-period-note");
+    assert.deepEqual(periodNote.place, {
+      relation: "below",
+      anchor: "sine-plot",
+      gap: "normal",
+      align: "start",
+    });
+    assert.deepEqual(
+      explanationActions.find((action) => action.do === "focus").targets,
+      ["sine-plot", "explain-1-period-note"],
+    );
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -1236,12 +1254,12 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
             kind: "note",
             role: "concept",
             content: { title: "同一个角度", items: ["纵坐标 y = sin θ"] },
-            place: { relation: "below", anchor: "sine-plot" },
+            place: { relation: "new_region" },
           },
           {
             do: "focus",
             when: "after_speech",
-            targets: ["rotation-wave-note", "circle-geometry", "sine-plot"],
+            targets: ["rotation-wave-note"],
             intent: "current_step",
           },
         ],
@@ -1382,6 +1400,20 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
         .some((action) => action.do === "animate" && action.variable === "theta"),
       true,
     );
+    const explanationActions = finalLesson.steps[2].beats[0].actions;
+    const explanationNote = explanationActions.find(
+      (action) => action.as === "explain-1-rotation-wave-note",
+    );
+    assert.deepEqual(explanationNote.place, {
+      relation: "below",
+      anchor: "circle-geometry",
+      gap: "normal",
+      align: "start",
+    });
+    assert.deepEqual(
+      explanationActions.find((action) => action.do === "focus").targets,
+      ["circle-geometry", "sine-plot", "explain-1-rotation-wave-note"],
+    );
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -1403,6 +1435,17 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
   let visualComponentSystemPrompt = "";
   const coreCubeBrief = structuredClone(cube3dBrief);
   coreCubeBrief.scene3d_task_requirements = [];
+  coreCubeBrief.visual_requirements[0].required_features.push("cross_section");
+  const cubeWithSection = structuredClone(validCube3dLesson.steps[0].beats[0].actions[0]);
+  cubeWithSection.content.sections = [{
+    as: "horizontal-section",
+    axis: "z",
+    value: 0,
+    targets: ["cube"],
+    display: "plane_and_intersection",
+    label: "水平截面",
+    color: "orange",
+  }];
   const server = createServer(async (request, response) => {
     let body = "";
     request.setEncoding("utf8");
@@ -1432,6 +1475,11 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     }
     if (isVisualComponentRequest(parsed)) {
       visualComponentSystemPrompt = parsed.systemInstruction.parts[0].text;
+      const sectionSchema = parsed.generationConfig.responseJsonSchema
+        .properties.content.properties.sections.items.properties;
+      assert.deepEqual(sectionSchema.display.enum, ["plane", "intersection", "plane_and_intersection"]);
+      assert.equal(sectionSchema.targets.minItems, 1);
+      assert.equal(sectionSchema.targets.items.$ref, "#/$defs/alias");
       visualComponentRequests += 1;
       if (visualComponentRequests === 1) {
         response.end(JSON.stringify({
@@ -1450,7 +1498,7 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
           ),
           true,
         );
-        const invalidCamera = structuredClone(validCube3dLesson.steps[0].beats[0].actions[0]);
+        const invalidCamera = structuredClone(cubeWithSection);
         invalidCamera.content.camera.pitch = 2;
         response.end(vertexPayload(invalidCamera));
         return;
@@ -1463,7 +1511,7 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
         ),
         true,
       );
-      response.end(vertexPayload(validCube3dLesson.steps[0].beats[0].actions[0]));
+      response.end(vertexPayload(cubeWithSection));
       return;
     }
     assert.equal(isParallelSectionRequest(parsed), true);
@@ -1495,7 +1543,7 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
       baseUrl: `http://127.0.0.1:${address.port}`,
       serviceAccount,
       workDirectory,
-      input: { learner_request: "请用3D展示一个立方体，让我旋转观察并把它转到正视图。" },
+      input: { learner_request: "请用3D展示一个立方体和水平截面，让我旋转观察并把它转到正视图。" },
       environment: { OLL_AUTHORING_STRATEGY: "parallel" },
     });
 
@@ -1505,11 +1553,15 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     assert.match(taskSystemPrompt, /target_pitch.*-π\/2.*π\/2/s);
     assert.match(visualComponentSystemPrompt, /scene3d\.camera.*角度.*弧度/s);
     assert.match(visualComponentSystemPrompt, /camera\.pitch.*-π\/2.*π\/2/s);
+    assert.match(visualComponentSystemPrompt, /section\.targets.*section\.display.*plane_and_intersection/s);
     const protocol = JSON.parse(result.stdout);
     const lesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
     assert.equal(lesson.steps[0].beats[0].actions.some(
       (action) => action.do === "write" && action.as === "cube-scene" && action.kind === "scene3d",
     ), true);
+    const scene = lesson.steps[0].beats[0].actions.find((action) => action.as === "cube-scene");
+    assert.deepEqual(scene.content.sections[0].targets, ["cube"]);
+    assert.equal(scene.content.sections[0].display, "plane_and_intersection");
     assert.deepEqual(lesson.lesson.tasks.map((task) => task.as), ["find-front-view"]);
   } finally {
     await new Promise((done) => server.close(done));

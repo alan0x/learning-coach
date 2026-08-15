@@ -318,6 +318,8 @@ interface ParallelLessonSectionPlan {
   title: string;
   purpose: string;
   visualRequirementIds: string[];
+  teachingGoalIds: string[];
+  contextVisualIds: string[];
 }
 
 interface GenerationViolation {
@@ -430,7 +432,7 @@ request_items 只记录用户明确提出的教学目标、视觉对象、视觉
 - point_on_circle：点的坐标确实落在圆上；line_segments：连接有坐标点的普通线段，可表示弹簧、杆、连杆或轨道片段；radius_segment：圆心到圆上点的线段；projection_segment：点到坐标轴的实际投影线；angle_arc：非零的可见角弧；
 - function_curve：带可执行表达式的函数曲线；annotated_points：有标签的数据点；guides：数值辅助线；
 - semantic_elements / semantic_edges：语义节点和语义连线；source_asset：受控图片资源；tabular_values：有行列数据的表格。
-- spatial_axes：三维坐标轴；solid_primitives：至少一个受支持实体；function_surface：可执行的 z=f(x,y) 曲面；cross_section：x/y/z 截面；orbit_control：学生能旋转、缩放和复位场景视角。
+- spatial_axes：三维坐标轴；solid_primitives：至少一个受支持实体；function_surface：可执行的 z=f(x,y) 曲面；cross_section：用 x/y/z 平面切中指定对象后，真实显示交线或截面区域，不能只显示一张穿过场景的半透明平面；orbit_control：学生能旋转、缩放和复位场景视角。
 
 feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_scale、circle、origin_centered_circle、unit_radius、point_on_circle、line_segments、radius_segment、projection_segment、angle_arc、annotated_points；plot 只使用 coordinate_axes、function_curve、annotated_points、guides；scene3d 只使用 spatial_axes、solid_primitives、function_surface、cross_section、spatial_highlights、orbit_control；diagram 只使用 semantic_elements、semantic_edges；image 只使用 source_asset；table 只使用 tabular_values。用户要求指出三维对象的具体顶点、棱或面时，scene3d 必须包含 spatial_highlights。
 
@@ -557,13 +559,13 @@ const BEAT_REPAIR_SYSTEM_PROMPT = `你是 OLL 局部教学节拍修复器。输�
 
 const PARALLEL_SECTION_SYSTEM_PROMPT = `你是独立课程分段编写器。你只编写一段课程的一个完整 Step，其他分段会同时由其他编写器完成，最后由程序按顺序组装。
 
-只返回一个符合所附 JSON Schema 的 Step 对象，不返回 Lesson、close、Markdown 或解释。只讲输入 section.purpose 指定的内容，不重复完整课程。主要 geometry、plot、scene3d、diagram、image、table 视觉对象由程序另行生成和插入；你不得创建这些主要视觉对象。你只能用 text、math、note 或 shape 写必要板书，并用 focus 引用本段新建节点或 available_visuals 中的稳定别名。不要引用其他分段可能创建的文字节点，因为这些分段正在并行生成。每个 Beat 必须包含一个 when="after_speech" 的 focus，say 必须是适合 TTS 的自然语言，不包含 Markdown 或 LaTeX 定界符。write.content 必须匹配 kind：text/shape 使用非空 text，math 使用 latex，note 使用 title 和 items。所有 key 与 as 只能使用小写英文字母、数字和连字符。`;
+只返回一个符合所附 JSON Schema 的 Step 对象，不返回 Lesson、close、Markdown 或解释。只讲输入 section.purpose 和 teaching_goals 指定的内容，不重复完整课程。主要 geometry、plot、scene3d、diagram、image、table 视觉对象由程序另行生成和插入；你不得创建这些主要视觉对象。available_visuals 是本段讲解必须保持在视野中的上下文；你只能用 text、math、note 或 shape 写必要板书，并让每个 focus 同时引用本段新建节点和相关 available_visuals。不要引用其他分段可能创建的文字节点，因为这些分段正在并行生成。每个 Beat 必须包含一个 when="after_speech" 的 focus，say 必须是适合 TTS 的自然语言，不包含 Markdown 或 LaTeX 定界符。write.content 必须匹配 kind：text/shape 使用非空 text，math 使用 latex，note 使用 title 和 items。所有 key 与 as 只能使用小写英文字母、数字和连字符。`;
 
 const VISUAL_COMPONENT_SYSTEM_PROMPT = `你是独立视觉组件编写器。你只生成课程要求中指定的一个主要视觉对象，其他视觉对象和课程讲解会同时生成，最后由程序组装。
 
 只返回一个完整 write 动作，不返回 Lesson、Step、Beat、close、Markdown 或解释。必须保持 do="write"、as 与 visual_requirement.id 完全相同、kind 与 visual_requirement.surface 完全相同，并实现 required_features、expressions、运动主体和共享变量绑定。不得创建其他节点、connect、animate、旁白或教学任务。输出必须符合所附 JSON Schema。只写满足要求的最小充分内容，不要枚举没有被要求的额外元素，也不要填充无关可选字段。
 
-geometry 用于坐标轴、点、圆、线段、投影和角弧，不得用 diagram 冒充度量几何。visual_requirement.motion_subject 非空时，代表运动主体的 point.label 必须包含这段 motion_subject 原文，让学生能看出是谁在运动；linear_point 只绑定该点的 x 或 y，planar_point 同时绑定 x/y，angular_point 同时绑定 x/y 并用半径线连接固定中心。共享角变量要直接绑定这个点。plot 的曲线 expression 只写 Runtime 表达式，例如 sin(x)、cos(x)，不得写 y=、LaTeX、代码或 SVG。scene3d 的 camera、objects、sections、highlights 必须使用结构化字段，surface.expression 使用 z=f(x,y) 的受限表达式。scene3d.camera 的所有角度都使用弧度；camera.yaw 必须是有限弧度值，camera.pitch 必须在 -π/2 到 π/2 之间，camera.zoom 必须在 0.2 到 5 之间，绝不能把角度制数值直接填入相机字段。diagram 只用于语义元素和关系。image 只能引用 session_context 中明确给出的 asset_id。bindings.target 使用“局部元素别名.数值属性”，expression 直接引用 shared_variables 中的变量。不得输出像素坐标、HTML、SVG 路径或脚本。所有局部别名只能使用小写英文字母、数字和连字符。`;
+geometry 用于坐标轴、点、圆、线段、投影和角弧，不得用 diagram 冒充度量几何。visual_requirement.motion_subject 非空时，代表运动主体的 point.label 必须包含这段 motion_subject 原文，让学生能看出是谁在运动；linear_point 只绑定该点的 x 或 y，planar_point 同时绑定 x/y，angular_point 同时绑定 x/y 并用半径线连接固定中心。共享角变量要直接绑定这个点。plot 的曲线 expression 只写 Runtime 表达式，例如 sin(x)、cos(x)，不得写 y=、LaTeX、代码或 SVG。scene3d 的 camera、objects、sections、highlights 必须使用结构化字段，surface.expression 使用 z=f(x,y) 的受限表达式。要求 cross_section 时，section.targets 必须引用被切对象的局部别名，section.display 必须为 plane_and_intersection，让切割平面和真实交线或截面同时显示。scene3d.camera 的所有角度都使用弧度；camera.yaw 必须是有限弧度值，camera.pitch 必须在 -π/2 到 π/2 之间，camera.zoom 必须在 0.2 到 5 之间，绝不能把角度制数值直接填入相机字段。diagram 只用于语义元素和关系。image 只能引用 session_context 中明确给出的 asset_id。bindings.target 使用“局部元素别名.数值属性”，expression 直接引用 shared_variables 中的变量。不得输出像素坐标、HTML、SVG 路径或脚本。所有局部别名只能使用小写英文字母、数字和连字符。`;
 
 function requireNonEmptyString(value: unknown, label: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -1061,6 +1063,13 @@ function buildVertexResponseJsonSchema(root: JsonSchema): JsonSchema {
           as: alias,
           axis: { enum: ["x", "y", "z"] },
           value: { type: "number" },
+          targets: {
+            type: "array",
+            minItems: 1,
+            maxItems: 24,
+            items: alias,
+          },
+          display: { enum: ["plane", "intersection", "plane_and_intersection"] },
           label: { type: "string" },
           color: { enum: ["teal", "blue", "purple", "orange", "red", "gray"] },
         },
@@ -3004,7 +3013,15 @@ function inventoryWrite(action: Record<string, unknown>): VisualInventoryEntry |
         ? [object.expression]
         : []);
     if (expressions.length > 0) features.add("function_surface");
-    if (Array.isArray(content.sections) && content.sections.length > 0) features.add("cross_section");
+    const objectAliases = new Set(objects.flatMap((object) =>
+      typeof object.as === "string" ? [object.as] : []));
+    const sections = Array.isArray(content.sections) ? content.sections.filter(isRecord) : [];
+    if (sections.some((section) =>
+      (section.display === "intersection" || section.display === "plane_and_intersection")
+      && Array.isArray(section.targets)
+      && section.targets.some((target) => typeof target === "string" && objectAliases.has(target)))) {
+      features.add("cross_section");
+    }
     if (Array.isArray(content.highlights) && content.highlights.length > 0) features.add("spatial_highlights");
     return { alias: action.as, surface: "scene3d", features, expressions, content };
   }
@@ -4644,6 +4661,62 @@ async function planLesson(client: VertexClient, input: ToolInput): Promise<Lesso
   throw new Error("Lesson Brief planning failed");
 }
 
+function contextVisualsForTeachingGoals(
+  brief: LessonBrief,
+  teachingGoalIds: string[],
+): string[] {
+  const goals = brief.teaching_goal_requirements.filter((requirement) =>
+    teachingGoalIds.includes(requirement.id));
+  if (goals.length === 0 || brief.visual_requirements.length === 0) return [];
+  const goalRequestItems = new Set(goals.flatMap((requirement) => requirement.request_item_ids));
+  const sourceRefByRequestItem = new Map(brief.request_items.map((item) => [item.id, item.source_ref]));
+  const goalSourceRefs = new Set([...goalRequestItems].flatMap((itemId) => {
+    const sourceRef = sourceRefByRequestItem.get(itemId);
+    return sourceRef ? [sourceRef] : [];
+  }));
+  const overlapsGoal = (requestItemIds: string[]): boolean => requestItemIds.some((id) =>
+    goalRequestItems.has(id));
+  const sharesSource = (requestItemIds: string[]): boolean => requestItemIds.some((id) => {
+    const sourceRef = sourceRefByRequestItem.get(id);
+    return sourceRef !== undefined && goalSourceRefs.has(sourceRef);
+  });
+  const scores = new Map(brief.visual_requirements.map((requirement) => [requirement.id, 0]));
+  const addScore = (visualId: string, score: number): void => {
+    if (scores.has(visualId)) scores.set(visualId, (scores.get(visualId) ?? 0) + score);
+  };
+  for (const visual of brief.visual_requirements) {
+    if (overlapsGoal(visual.request_item_ids)) addScore(visual.id, 100);
+    if (sharesSource(visual.request_item_ids)) addScore(visual.id, 20);
+  }
+  for (const relationship of brief.visual_relationships) {
+    if (overlapsGoal(relationship.request_item_ids)) {
+      addScore(relationship.from, 80);
+      addScore(relationship.to, 80);
+    } else if (sharesSource(relationship.request_item_ids)) {
+      addScore(relationship.from, 15);
+      addScore(relationship.to, 15);
+    }
+  }
+  for (const variable of brief.shared_variable_requirements) {
+    if (overlapsGoal(variable.request_item_ids)) {
+      for (const visualId of variable.bound_visuals) addScore(visualId, 60);
+    } else if (sharesSource(variable.request_item_ids)) {
+      for (const visualId of variable.bound_visuals) addScore(visualId, 10);
+    }
+  }
+  const strongestScore = Math.max(0, ...scores.values());
+  const minimumScore = strongestScore >= 60 ? 60 : 1;
+  const ranked = brief.visual_requirements
+    .map((requirement, index) => ({ id: requirement.id, index, score: scores.get(requirement.id) ?? 0 }))
+    .filter(({ score }) => score >= minimumScore)
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map(({ id }) => id);
+  // A planner may keep teaching and visual clauses separate without a shared
+  // request item or relationship. Falling back to all planned visuals is safer
+  // than letting an explanation silently lose the only available illustration.
+  return ranked.length > 0 ? ranked : brief.visual_requirements.map((requirement) => requirement.id);
+}
+
 function deriveParallelLessonSections(brief: LessonBrief): ParallelLessonSectionPlan[] {
   const sections: ParallelLessonSectionPlan[] = [];
   for (const [index, requirement] of brief.visual_requirements.entries()) {
@@ -4652,6 +4725,8 @@ function deriveParallelLessonSections(brief: LessonBrief): ParallelLessonSection
       title: index === 0 ? "先看清第一个对象" : `继续观察对象 ${index + 1}`,
       purpose: requirement.purpose,
       visualRequirementIds: [requirement.id],
+      teachingGoalIds: [],
+      contextVisualIds: [requirement.id],
     });
   }
   const goalGroupSize = Math.max(
@@ -4666,6 +4741,11 @@ function deriveParallelLessonSections(brief: LessonBrief): ParallelLessonSection
       title: `理解关键点 ${index + 1}`,
       purpose: requirements.map((requirement) => requirement.goal).join("；"),
       visualRequirementIds: [],
+      teachingGoalIds: requirements.map((requirement) => requirement.id),
+      contextVisualIds: contextVisualsForTeachingGoals(
+        brief,
+        requirements.map((requirement) => requirement.id),
+      ),
     });
   }
   if (sections.length === 0) {
@@ -4674,6 +4754,8 @@ function deriveParallelLessonSections(brief: LessonBrief): ParallelLessonSection
       title: "理解核心问题",
       purpose: brief.request_summary,
       visualRequirementIds: [],
+      teachingGoalIds: [],
+      contextVisualIds: brief.visual_requirements.map((requirement) => requirement.id),
     });
   }
   if (sections.length === 1) {
@@ -4682,6 +4764,8 @@ function deriveParallelLessonSections(brief: LessonBrief): ParallelLessonSection
       title: "梳理结论",
       purpose: `用简短结论和例子巩固：${sections[0].purpose}`,
       visualRequirementIds: [],
+      teachingGoalIds: [],
+      contextVisualIds: brief.visual_requirements.map((requirement) => requirement.id),
     });
   }
   return sections;
@@ -4849,10 +4933,13 @@ async function generateParallelSection(
   responseSchema: JsonSchema,
   signal?: AbortSignal,
 ): Promise<AuthoringLesson["steps"][number]> {
-  const availableRequirements = section.visualRequirementIds.length > 0
-    ? brief.visual_requirements.filter((requirement) =>
-        section.visualRequirementIds.includes(requirement.id))
-    : brief.visual_requirements;
+  const availableVisualIds = section.visualRequirementIds.length > 0
+    ? section.visualRequirementIds
+    : section.contextVisualIds;
+  const availableRequirements = brief.visual_requirements.filter((requirement) =>
+    availableVisualIds.includes(requirement.id));
+  const teachingGoals = brief.teaching_goal_requirements.filter((requirement) =>
+    section.teachingGoalIds.includes(requirement.id));
   const raw = await callStructuredModel(client, {
     label: "lesson-section",
     turnId: input.turn_id,
@@ -4864,7 +4951,7 @@ async function generateParallelSection(
         surface: requirement.surface,
         purpose: requirement.purpose,
       })),
-      teaching_goals: brief.teaching_goal_requirements,
+      teaching_goals: teachingGoals,
       learner_context: input.learner_context ?? null,
       language: input.language ?? "zh-CN",
     }, null, 2),
@@ -4877,6 +4964,65 @@ async function generateParallelSection(
     section,
     availableRequirements.map((requirement) => requirement.id),
   );
+}
+
+interface ParallelAnnotationLayout {
+  rowLeft: string;
+  hasRows: boolean;
+  placeAtRight: boolean;
+}
+
+function composeParallelSectionWithVisualContext(
+  step: AuthoringLesson["steps"][number],
+  section: ParallelLessonSectionPlan,
+  layouts: Map<string, ParallelAnnotationLayout>,
+): void {
+  if (section.visualRequirementIds.length > 0 || section.contextVisualIds.length === 0) return;
+  const primaryVisual = section.contextVisualIds[0]!;
+  const layout = layouts.get(primaryVisual) ?? {
+    rowLeft: primaryVisual,
+    hasRows: false,
+    placeAtRight: false,
+  };
+  for (const beat of step.beats) {
+    for (const action of beat.actions as unknown[]) {
+      if (!isRecord(action)) continue;
+      if (action.do === "write" && typeof action.as === "string" && isRecord(action.place)) {
+        if (action.place.relation === "new_region") {
+          if (!layout.hasRows || !layout.placeAtRight) {
+            action.place = {
+              relation: "below",
+              anchor: layout.rowLeft,
+              gap: "normal",
+              align: "start",
+            };
+            layout.rowLeft = action.as;
+            layout.hasRows = true;
+            layout.placeAtRight = true;
+          } else {
+            action.place = {
+              relation: "right_of",
+              anchor: layout.rowLeft,
+              gap: "normal",
+              align: "start",
+            };
+            layout.placeAtRight = false;
+          }
+        } else if (action.place.anchor === primaryVisual) {
+          layout.rowLeft = action.as;
+          layout.hasRows = true;
+          layout.placeAtRight = true;
+        }
+      }
+      if (action.do === "focus" && Array.isArray(action.targets)) {
+        action.targets = [...new Set([
+          ...section.contextVisualIds,
+          ...action.targets.filter((target) => typeof target === "string"),
+        ])];
+      }
+    }
+  }
+  layouts.set(primaryVisual, layout);
 }
 
 function visualComponentSemanticViolations(
@@ -5340,6 +5486,7 @@ async function generateLessonInParallel(
 
   const assembledSteps: AuthoringLesson["steps"] = [];
   const publishedVisuals = new Set<string>();
+  const annotationLayouts = new Map<string, ParallelAnnotationLayout>();
   for (const [index, sectionPromise] of sectionPromises.entries()) {
     const step = await sectionPromise;
     const section = sections[index];
@@ -5354,6 +5501,7 @@ async function generateLessonInParallel(
     });
     const components = await Promise.all(componentDependencies);
     if (components.length > 0) injectVisualComponents(step, components);
+    composeParallelSectionWithVisualContext(step, section, annotationLayouts);
     for (const requirementId of section.visualRequirementIds) {
       publishedVisuals.add(requirementId);
     }
