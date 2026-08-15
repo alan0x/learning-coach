@@ -9,6 +9,20 @@
     "dsl": {"const": "octos.lesson"},
     "version": {"const": "0.1"},
     "profile": {"const": "authoring"},
+    "board_context": {
+      "type": "object",
+      "required": ["board_id", "revision", "references"],
+      "additionalProperties": false,
+      "properties": {
+        "board_id": {"type": "string", "minLength": 1},
+        "revision": {"type": "integer", "minimum": 0},
+        "references": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {"$ref": "#/$defs/externalBoardReference"}
+        }
+      }
+    },
     "lesson": {
       "type": "object",
       "required": ["mode", "language", "title", "goals"],
@@ -60,6 +74,30 @@
     }
   },
   "$defs": {
+    "externalBoardReference": {
+      "type": "object",
+      "required": ["as", "type", "target_id", "fragments"],
+      "additionalProperties": false,
+      "properties": {
+        "as": {"$ref": "#/$defs/alias"},
+        "type": {"enum": ["node", "group", "connection"]},
+        "target_id": {"type": "string", "minLength": 1},
+        "label": {"type": "string"},
+        "fragments": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "required": ["as", "target_id"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "target_id": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
     "studentTask": {
       "type": "object",
       "required": ["as", "prompt", "availability", "allowed_operations", "completion", "hints"],

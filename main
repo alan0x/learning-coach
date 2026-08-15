@@ -29,9 +29,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/codegen/code.js
+// node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -183,9 +183,9 @@ var require_code = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/codegen/scope.js
+// node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -328,9 +328,9 @@ var require_scope = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/codegen/index.js
+// node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -1048,9 +1048,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/util.js
+// node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/util.js"(exports) {
+  "node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1215,9 +1215,9 @@ var require_util = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/names.js
+// node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/names.js"(exports) {
+  "node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1254,9 +1254,9 @@ var require_names = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/errors.js
+// node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/errors.js"(exports) {
+  "node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1376,9 +1376,9 @@ var require_errors = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/boolSchema.js
+// node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1427,9 +1427,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/rules.js
+// node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/rules.js"(exports) {
+  "node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1458,9 +1458,9 @@ var require_rules = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/applicability.js
+// node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1481,9 +1481,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/dataType.js
+// node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1665,9 +1665,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/defaults.js
+// node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1702,9 +1702,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/code.js
+// node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1835,9 +1835,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/keyword.js
+// node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1953,9 +1953,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/subschema.js
+// node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2036,9 +2036,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/fast-deep-equal/index.js
+// node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/fast-deep-equal/index.js"(exports, module) {
+  "node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2071,9 +2071,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/json-schema-traverse/index.js
+// node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/json-schema-traverse/index.js"(exports, module) {
+  "node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2159,9 +2159,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/resolve.js
+// node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2315,9 +2315,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/index.js
+// node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2823,9 +2823,9 @@ var require_validate = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/runtime/validation_error.js
+// node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2839,9 +2839,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/ref_error.js
+// node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2856,9 +2856,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/index.js
+// node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/compile/index.js"(exports) {
+  "node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3080,9 +3080,9 @@ var require_compile = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/data.json
+// node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3099,9 +3099,9 @@ var require_data = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/fast-uri/lib/utils.js
+// node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -3412,9 +3412,9 @@ var require_utils = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/fast-uri/lib/schemes.js
+// node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
     var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
@@ -3622,9 +3622,9 @@ var require_schemes = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/fast-uri/index.js
+// node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/fast-uri/index.js"(exports, module) {
+  "node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -3640,7 +3640,12 @@ var require_fast_uri = __commonJS({
     }
     function resolve2(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
-      const resolved = resolveComponent(parse(baseURI, schemelessOptions), parse(relativeURI, schemelessOptions), schemelessOptions, true);
+      const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
+      const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
+      if (baseMalformed || relativeMalformed) {
+        throw new Error(baseParsed.error || relativeParsed.error || "URI is malformed.");
+      }
+      const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true);
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
@@ -3766,6 +3771,7 @@ var require_fast_uri = __commonJS({
     }
     var URI_PARSE = /^(?:([^#/:?]+):)?(?:\/\/((?:([^#/?@]*)@)?(\[[^#/?\]]+\]|[^#/:?]*)(?::(\d*))?))?([^#?]*)(?:\?([^#]*))?(?:#((?:.|[\n\r])*))?/u;
     var AUTHORITY_PREFIX = /^(?:[^#/:?]+:)?\/\/([^/?#]*)/;
+    var AUTHORITY_INTRODUCER_REGION = /^(?:[^#/:?]+:)?([/\\\t\n\r]*)/;
     function getParseError(parsed, matches) {
       if (matches[2] !== void 0 && parsed.path && parsed.path[0] !== "/") {
         return 'URI path must start with "/" when authority is present.';
@@ -3799,6 +3805,20 @@ var require_fast_uri = __commonJS({
       if (authorityMatch !== null && authorityMatch[1].indexOf("\\") !== -1) {
         parsed.error = "URI authority must not contain a literal backslash.";
         malformedAuthorityOrPort = true;
+      }
+      const introducerMatch = uri.match(AUTHORITY_INTRODUCER_REGION);
+      if (introducerMatch !== null) {
+        const region = introducerMatch[1];
+        const normalizedRegion = region.replace(/[\t\n\r]/g, "");
+        if (normalizedRegion.length >= 2) {
+          if (normalizedRegion.slice(0, 2) !== "//") {
+            parsed.error = parsed.error || "URI authority must not contain a literal backslash.";
+            malformedAuthorityOrPort = true;
+          } else if (region.length !== normalizedRegion.length) {
+            parsed.error = parsed.error || "URI authority introducer must not contain whitespace.";
+            malformedAuthorityOrPort = true;
+          }
+        }
       }
       const matches = uri.match(URI_PARSE);
       if (matches) {
@@ -3914,9 +3934,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/runtime/uri.js
+// node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -3925,9 +3945,9 @@ var require_uri = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/core.js
+// node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/core.js"(exports) {
+  "node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4536,9 +4556,9 @@ var require_core = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/core/id.js
+// node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4551,9 +4571,9 @@ var require_id = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/core/ref.js
+// node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4673,9 +4693,9 @@ var require_ref = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/core/index.js
+// node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -4694,9 +4714,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4726,9 +4746,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4754,9 +4774,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/runtime/ucs2length.js
+// node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str) {
@@ -4780,9 +4800,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4812,9 +4832,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/pattern.js
+// node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4849,9 +4869,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4878,9 +4898,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/required.js
+// node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4960,9 +4980,9 @@ var require_required = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4989,9 +5009,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/runtime/equal.js
+// node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5000,9 +5020,9 @@ var require_equal = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5067,9 +5087,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/const.js
+// node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5096,9 +5116,9 @@ var require_const = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/enum.js
+// node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5145,9 +5165,9 @@ var require_enum = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/index.js
+// node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5183,9 +5203,9 @@ var require_validation = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5236,9 +5256,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/items.js
+// node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5293,9 +5313,9 @@ var require_items = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5310,9 +5330,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5345,9 +5365,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/contains.js
+// node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5439,9 +5459,9 @@ var require_contains = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5533,9 +5553,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5576,9 +5596,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5682,9 +5702,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/properties.js
+// node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -5740,9 +5760,9 @@ var require_properties = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5814,9 +5834,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/not.js
+// node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5845,9 +5865,9 @@ var require_not = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5862,9 +5882,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5920,9 +5940,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5947,9 +5967,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/if.js
+// node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6016,9 +6036,9 @@ var require_if = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6034,9 +6054,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/index.js
+// node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6082,9 +6102,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
 var require_dynamicAnchor = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicAnchor = void 0;
@@ -6117,9 +6137,9 @@ var require_dynamicAnchor = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
 var require_dynamicRef = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicRef = void 0;
@@ -6163,9 +6183,9 @@ var require_dynamicRef = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
 var require_recursiveAnchor = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6184,9 +6204,9 @@ var require_recursiveAnchor = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
 var require_recursiveRef = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicRef_1 = require_dynamicRef();
@@ -6199,9 +6219,9 @@ var require_recursiveRef = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/dynamic/index.js
+// node_modules/ajv/dist/vocabularies/dynamic/index.js
 var require_dynamic = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6213,9 +6233,9 @@ var require_dynamic = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
+// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
 var require_dependentRequired = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6230,9 +6250,9 @@ var require_dependentRequired = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
+// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
 var require_dependentSchemas = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6246,9 +6266,9 @@ var require_dependentSchemas = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/limitContains.js
+// node_modules/ajv/dist/vocabularies/validation/limitContains.js
 var require_limitContains = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6266,9 +6286,9 @@ var require_limitContains = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/next.js
+// node_modules/ajv/dist/vocabularies/next.js
 var require_next = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/next.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependentRequired_1 = require_dependentRequired();
@@ -6279,9 +6299,9 @@ var require_next = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
 var require_unevaluatedProperties = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6345,9 +6365,9 @@ var require_unevaluatedProperties = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
 var require_unevaluatedItems = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6389,9 +6409,9 @@ var require_unevaluatedItems = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/unevaluated/index.js
+// node_modules/ajv/dist/vocabularies/unevaluated/index.js
 var require_unevaluated = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var unevaluatedProperties_1 = require_unevaluatedProperties();
@@ -6401,9 +6421,9 @@ var require_unevaluated = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/format/format.js
+// node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6491,9 +6511,9 @@ var require_format = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/format/index.js
+// node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6502,9 +6522,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/metadata.js
+// node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6525,9 +6545,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/draft2020.js
+// node_modules/ajv/dist/vocabularies/draft2020.js
 var require_draft2020 = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6553,9 +6573,9 @@ var require_draft2020 = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/discriminator/types.js
+// node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6567,9 +6587,9 @@ var require_types = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/discriminator/index.js
+// node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6672,9 +6692,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
 var require_schema = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/schema",
@@ -6732,9 +6752,9 @@ var require_schema = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
 var require_applicator2 = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/applicator",
@@ -6785,9 +6805,9 @@ var require_applicator2 = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
 var require_unevaluated2 = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
@@ -6805,9 +6825,9 @@ var require_unevaluated2 = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
 var require_content = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/content",
@@ -6826,9 +6846,9 @@ var require_content = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
 var require_core3 = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/core",
@@ -6882,9 +6902,9 @@ var require_core3 = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
 var require_format_annotation = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
@@ -6901,9 +6921,9 @@ var require_format_annotation = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
 var require_meta_data = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
@@ -6942,9 +6962,9 @@ var require_meta_data = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
 var require_validation2 = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/validation",
@@ -7037,9 +7057,9 @@ var require_validation2 = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/index.js
+// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
 var require_json_schema_2020_12 = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var metaSchema = require_schema();
@@ -7072,9 +7092,9 @@ var require_json_schema_2020_12 = __commonJS({
   }
 });
 
-// ../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/2020.js
+// node_modules/ajv/dist/2020.js
 var require__ = __commonJS({
-  "../../../../../private/tmp/oll-runtime-ink-spike/node_modules/ajv/dist/2020.js"(exports, module) {
+  "node_modules/ajv/dist/2020.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
@@ -7167,6 +7187,20 @@ var oll_authoring_v0_1_schema_default = {
     dsl: { const: "octos.lesson" },
     version: { const: "0.1" },
     profile: { const: "authoring" },
+    board_context: {
+      type: "object",
+      required: ["board_id", "revision", "references"],
+      additionalProperties: false,
+      properties: {
+        board_id: { type: "string", minLength: 1 },
+        revision: { type: "integer", minimum: 0 },
+        references: {
+          type: "array",
+          maxItems: 12,
+          items: { $ref: "#/$defs/externalBoardReference" }
+        }
+      }
+    },
     lesson: {
       type: "object",
       required: ["mode", "language", "title", "goals"],
@@ -7218,6 +7252,30 @@ var oll_authoring_v0_1_schema_default = {
     }
   },
   $defs: {
+    externalBoardReference: {
+      type: "object",
+      required: ["as", "type", "target_id", "fragments"],
+      additionalProperties: false,
+      properties: {
+        as: { $ref: "#/$defs/alias" },
+        type: { enum: ["node", "group", "connection"] },
+        target_id: { type: "string", minLength: 1 },
+        label: { type: "string" },
+        fragments: {
+          type: "array",
+          maxItems: 24,
+          items: {
+            type: "object",
+            required: ["as", "target_id"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              target_id: { type: "string", minLength: 1 }
+            }
+          }
+        }
+      }
+    },
     studentTask: {
       type: "object",
       required: ["as", "prompt", "availability", "allowed_operations", "completion", "hints"],
@@ -7752,10 +7810,10 @@ var oll_authoring_v0_1_schema_default = {
   }
 };
 
-// ../../../../../private/tmp/oll-interactive-learning-tasks/dist/packages/core/src/index.js
+// node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var import__ = __toESM(require__(), 1);
 
-// ../../../../../private/tmp/oll-interactive-learning-tasks/dist/schema/authoring/v0.1.schema.json
+// node_modules/octos-lesson-language/dist/schema/authoring/v0.1.schema.json
 var v0_1_schema_default = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://octos.dev/schema/lesson/authoring/0.1",
@@ -7767,6 +7825,20 @@ var v0_1_schema_default = {
     dsl: { const: "octos.lesson" },
     version: { const: "0.1" },
     profile: { const: "authoring" },
+    board_context: {
+      type: "object",
+      required: ["board_id", "revision", "references"],
+      additionalProperties: false,
+      properties: {
+        board_id: { type: "string", minLength: 1 },
+        revision: { type: "integer", minimum: 0 },
+        references: {
+          type: "array",
+          maxItems: 12,
+          items: { $ref: "#/$defs/externalBoardReference" }
+        }
+      }
+    },
     lesson: {
       type: "object",
       required: ["mode", "language", "title", "goals"],
@@ -7818,6 +7890,30 @@ var v0_1_schema_default = {
     }
   },
   $defs: {
+    externalBoardReference: {
+      type: "object",
+      required: ["as", "type", "target_id", "fragments"],
+      additionalProperties: false,
+      properties: {
+        as: { $ref: "#/$defs/alias" },
+        type: { enum: ["node", "group", "connection"] },
+        target_id: { type: "string", minLength: 1 },
+        label: { type: "string" },
+        fragments: {
+          type: "array",
+          maxItems: 24,
+          items: {
+            type: "object",
+            required: ["as", "target_id"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              target_id: { type: "string", minLength: 1 }
+            }
+          }
+        }
+      }
+    },
     studentTask: {
       type: "object",
       required: ["as", "prompt", "availability", "allowed_operations", "completion", "hints"],
@@ -8352,7 +8448,7 @@ var v0_1_schema_default = {
   }
 };
 
-// ../../../../../private/tmp/oll-interactive-learning-tasks/dist/packages/core/src/math-expression.js
+// node_modules/octos-lesson-language/dist/packages/core/src/math-expression.js
 var FUNCTIONS = {
   abs: Math.abs,
   acos: Math.acos,
@@ -8526,7 +8622,7 @@ function evaluateMathExpression(expression, variables) {
   return result;
 }
 
-// ../../../../../private/tmp/oll-interactive-learning-tasks/dist/packages/core/src/index.js
+// node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
 var validateAuthoringDocument = ajv.compile(v0_1_schema_default);
 var ALIAS_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
@@ -9358,6 +9454,49 @@ function validateAuthoringLesson(document, resourceContext = null) {
   requireObject(document.close, "/close");
   requireArray(document.close.focus, "/close/focus");
   const registry = /* @__PURE__ */ new Map();
+  if (document.board_context) {
+    requireString(document.board_context.board_id, "/board_context/board_id");
+    if (!Number.isSafeInteger(document.board_context.revision) || document.board_context.revision < 0) {
+      fail("OLL_INVALID_REFERENCE", "/board_context/revision", "Board revision must be a non-negative integer");
+    }
+    if (!Array.isArray(document.board_context.references)) {
+      fail("OLL_INVALID_REFERENCE", "/board_context/references", "Board references must be an array");
+    }
+    document.board_context.references.forEach((reference, index) => {
+      const path = `/board_context/references/${index}`;
+      requireAlias(reference.as, `${path}/as`);
+      if (registry.has(reference.as)) {
+        fail("OLL_DUPLICATE_ALIAS", `${path}/as`, `Alias '${reference.as}' is already defined`);
+      }
+      if (!["node", "group", "connection"].includes(reference.type)) {
+        fail("OLL_INVALID_REFERENCE", `${path}/type`, `Unknown reference type '${reference.type}'`);
+      }
+      requireString(reference.target_id, `${path}/target_id`);
+      if (!Array.isArray(reference.fragments)) {
+        fail("OLL_INVALID_REFERENCE", `${path}/fragments`, "Reference fragments must be an array");
+      }
+      const fragmentIds = /* @__PURE__ */ new Map();
+      reference.fragments.forEach((fragment, fragmentIndex) => {
+        const fragmentPath = `${path}/fragments/${fragmentIndex}`;
+        requireAlias(fragment.as, `${fragmentPath}/as`);
+        requireString(fragment.target_id, `${fragmentPath}/target_id`);
+        if (fragmentIds.has(fragment.as)) {
+          fail("OLL_DUPLICATE_ALIAS", `${fragmentPath}/as`, `Fragment '${fragment.as}' is duplicated`);
+        }
+        fragmentIds.set(fragment.as, fragment.target_id);
+      });
+      if (reference.type !== "node" && fragmentIds.size > 0) {
+        fail("OLL_INVALID_REFERENCE", `${path}/fragments`, "Only node references can expose fragments");
+      }
+      registry.set(reference.as, {
+        type: reference.type,
+        id: reference.target_id,
+        fragments: new Set(fragmentIds.keys()),
+        fragmentIds,
+        external: true
+      });
+    });
+  }
   const stepKeys = /* @__PURE__ */ new Set();
   document.steps.forEach((step, stepIndex) => {
     const stepPath = `/steps/${stepIndex}`;
@@ -9437,7 +9576,10 @@ function validateAuthoringLesson(document, resourceContext = null) {
           return;
         }
         if (action.do === "revise") {
-          resolveLocal(registry, action.target, `${actionPath}/target`, ["node"]);
+          const resolved = resolveLocal(registry, action.target, `${actionPath}/target`, ["node"]);
+          if (registry.get(resolved.alias)?.external) {
+            fail("OLL_INVALID_REFERENCE", `${actionPath}/target`, "External board references are read-only");
+          }
           return;
         }
         if (action.do === "connect") {
@@ -9526,6 +9668,18 @@ function normalizeAddressableContent(_host, nodeId, content) {
 }
 function buildCanonicalRegistry(document, host) {
   const registry = /* @__PURE__ */ new Map();
+  for (const reference of document.board_context?.references ?? []) {
+    registry.set(reference.as, {
+      type: reference.type,
+      id: reference.target_id,
+      fragments: new Set(reference.fragments.map((fragment) => fragment.as)),
+      fragmentIds: new Map(reference.fragments.map((fragment) => [
+        fragment.as,
+        fragment.target_id
+      ])),
+      external: true
+    });
+  }
   for (const step of document.steps) {
     for (const beat of step.beats) {
       for (const action of beat.actions) {
@@ -9556,7 +9710,9 @@ function canonicalTarget(registry, value) {
     return { connection_id: entry.id };
   return {
     node_id: entry.id,
-    ...fragment ? { fragment_id: `${entry.id}:fragment:${fragment}` } : {}
+    ...fragment ? {
+      fragment_id: entry.fragmentIds?.get(fragment) ?? `${entry.id}:fragment:${fragment}`
+    } : {}
   };
 }
 function requireRegistryId(registry, alias) {
@@ -9679,6 +9835,14 @@ function normalizeAuthoringLesson(document, host) {
   for (const field of ["lessonId", "boardId", "baseRevision"]) {
     if (host[field] === void 0 || host[field] === null)
       fail("OLL_MISSING_HOST_FIELD", `host/${field}`, `Missing host field '${field}'`);
+  }
+  if (document.board_context) {
+    if (document.board_context.board_id !== host.boardId) {
+      fail("OLL_INVALID_REFERENCE", "/board_context/board_id", "Board context does not match the host board");
+    }
+    if (document.board_context.revision !== host.baseRevision) {
+      fail("OLL_INVALID_REFERENCE", "/board_context/revision", "Board context revision does not match the host revision");
+    }
   }
   const registry = buildCanonicalRegistry(document, host);
   const canonicalLesson = structuredClone(document.lesson);
@@ -10005,6 +10169,8 @@ var ToolExecutionError = class extends Error {
 };
 var LESSON_BRIEF_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u5802\u9700\u6C42\u4E0E\u6559\u5B66\u8BBE\u8BA1\u89C4\u5212\u5668\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E5F\u4E0D\u64B0\u5199\u8BFE\u7A0B\u6B63\u6587\u3002\u8F93\u5165\u660E\u786E\u5206\u6210\u4E24\u90E8\u5206\uFF1A\u5FC5\u987B\u5FE0\u5B9E\u6EE1\u8DB3\u7684\u7528\u6237\u539F\u8BDD\uFF0C\u4EE5\u53CA\u53EA\u80FD\u8F85\u52A9\u9009\u62E9\u8BB2\u6CD5\u3001\u4E0D\u80FD\u5347\u7EA7\u6210\u7528\u6237\u8981\u6C42\u7684\u6559\u5B66\u5EFA\u8BAE\u3002
 
+request_summary\u3001visual_requirements.purpose \u7B49 summary/purpose \u5B57\u6BB5\u662F\u5185\u90E8\u89C4\u5212\u8BF4\u660E\uFF0C\u4E0D\u5F97\u88AB\u540E\u7EED\u7A0B\u5E8F\u76F4\u63A5\u590D\u5236\u6210\u6807\u9898\u3001\u65C1\u767D\u6216\u677F\u4E66\u3002teaching_goal_requirements.goal \u4F1A\u76F4\u63A5\u5C55\u793A\u7ED9\u5F53\u524D\u5B66\u4E60\u8005\uFF0C\u5FC5\u987B\u4F7F\u7528\u201C\u4F60\u201D\u201C\u6211\u4EEC\u201D\u6216\u4E2D\u6027\u8868\u8FF0\uFF0C\u4E0D\u5F97\u5199\u6210\u201C\u5E2E\u52A9\u5B66\u751F\u2026\u2026\u201D\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u201C\u652F\u6301\u5B66\u4E60\u8005\u2026\u2026\u201D\u7B49\u7ED9\u8BFE\u7A0B\u8BBE\u8BA1\u8005\u770B\u7684\u7B2C\u4E09\u4EBA\u79F0\u8BF4\u660E\u3002
+
 \u7B2C\u4E00\u90E8\u5206\u5148\u9010\u6761\u5904\u7406 authoritative_request.clauses\uFF1A
 - \u6BCF\u4E2A source_ref \u5FC5\u987B\u4E8C\u9009\u4E00\uFF1A\u5982\u679C\u5206\u53E5\u8868\u8FBE\u4E86\u5B9E\u9645\u8981\u6C42\uFF0C\u5C31\u5EFA\u7ACB\u4E00\u4E2A\u6216\u591A\u4E2A request_item\uFF1B\u5982\u679C\u53EA\u662F\u5BD2\u6684\u3001\u8BED\u6C14\u8BCD\u6216\u6CA1\u6709\u53EF\u6267\u884C\u8981\u6C42\uFF0C\u5C31\u5199\u5165 non_requirement_clauses \u5E76\u8BF4\u660E\u539F\u56E0\uFF1B\u4E0D\u80FD\u9057\u6F0F\uFF0C\u4E5F\u4E0D\u80FD\u540C\u65F6\u51FA\u73B0\u5728\u4E24\u8FB9\uFF1B
 - non_requirement_clauses \u4E0D\u662F\u9003\u907F\u8981\u6C42\u7684\u5730\u65B9\u3002\u53EA\u8981\u5206\u53E5\u8981\u6C42\u89E3\u91CA\u3001\u5C55\u793A\u3001\u6BD4\u8F83\u3001\u6F14\u793A\u3001\u63A7\u5236\u3001\u4FEE\u6539\u6216\u9650\u5236\u8868\u73B0\u5F62\u5F0F\uFF0C\u5C31\u5FC5\u987B\u5EFA\u7ACB request_item\uFF1B
@@ -10074,6 +10240,8 @@ progressive_revision_kinds \u53EA\u8868\u793A\u672C\u8F6E\u65B0\u5EFA\u677F\u4E6
 \u6CA1\u6709\u660E\u786E\u6216\u5FC5\u8981\u89C6\u89C9\u8981\u6C42\u65F6 visual_requirements \u53EF\u4EE5\u4E3A\u7A7A\uFF0C\u4F46 request_items \u548C teaching_goal_requirements \u4ECD\u987B\u8986\u76D6\u7528\u6237\u7684\u6559\u5B66\u8BF7\u6C42\u3002\u53EA\u8F93\u51FA\u7B26\u5408 JSON Schema \u7684 JSON \u5BF9\u8C61\u3002`;
 var BRIEF_VERIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u7528\u6237\u8981\u6C42\u8986\u76D6\u590D\u6838\u5668\uFF0C\u4E0D\u751F\u6210\u8BFE\u4EF6\uFF0C\u4E5F\u4E0D\u51B3\u5B9A\u5E94\u8BE5\u91C7\u7528\u54EA\u4E00\u79CD\u6559\u6CD5\u3002
 
+\u4F60\u73B0\u5728\u590D\u6838\u7684\u662F\u201C\u8BFE\u7A0B\u9AA8\u67B6\u201D\uFF0C\u4E0D\u662F\u6700\u7EC8\u8BFE\u4EF6\u3002\u8BFE\u540E\u4E92\u52A8\u4EFB\u52A1\u7684\u76EE\u6807\u503C\u3001\u63D0\u793A\u8BED\u548C\u6210\u529F\u53CD\u9988\u7531\u4E0B\u4E00\u9636\u6BB5\u751F\u6210\uFF0C\u56E0\u6B64\u8F93\u5165\u4E2D\u4E0D\u4F1A\u51FA\u73B0 student_task_requirements \u6216 scene3d_task_requirements\u3002\u4E0D\u5F97\u56E0\u4E3A\u8FD9\u4E9B\u5EF6\u540E\u5B57\u6BB5\u5C1A\u672A\u51FA\u73B0\u800C\u62A5\u544A missing \u6216 contradiction\u3002
+
 \u5148\u9010\u6761\u5BA1\u6838 authoritative_request.clauses\u3002request_item_kinds \u5FC5\u987B\u4E3A\u6BCF\u4E2A source_ref \u6070\u597D\u8FD4\u56DE\u4E00\u9879\uFF0C\u5E76\u5217\u51FA\u8BE5\u539F\u6587\u5206\u53E5\u4E2D\u660E\u786E\u5305\u542B\u7684\u6240\u6709\u8981\u6C42\u7C7B\u522B\u3002\u4E00\u4E2A\u5206\u53E5\u53EF\u4EE5\u540C\u65F6\u5305\u542B\u591A\u7C7B\u8981\u6C42\uFF0C\u4E0D\u80FD\u56E0\u4E3A\u5DF2\u7ECF\u8BB0\u5F55\u5176\u4E2D\u4E00\u7C7B\u5C31\u5FFD\u7565\u5176\u4ED6\u7C7B\u522B\uFF1A
 - teaching_goal\uFF1A\u8981\u6C42\u89E3\u91CA\u3001\u7406\u89E3\u3001\u6BD4\u8F83\u6216\u56DE\u7B54\u539F\u56E0\uFF1B
 - visual\uFF1A\u660E\u786E\u8981\u6C42\u753B\u51FA\u3001\u5C55\u793A\u6216\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\uFF1B
@@ -10086,10 +10254,11 @@ var BRIEF_VERIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u7528\u6237\u8981\u6C42\u89
 - unsupported_feature\uFF1A\u660E\u786E\u8981\u6C42\u5F53\u524D\u7CFB\u7EDF\u4E0D\u80FD\u771F\u5B9E\u5B9E\u73B0\u7684\u80FD\u529B\u3002
 \u6CA1\u6709\u8981\u6C42\u7684\u5BD2\u6684\u6216\u80CC\u666F\u53E5\u8FD4\u56DE\u7A7A kinds\u3002
 
-\u518D\u505A\u4E09\u4EF6\u4E8B\uFF1A
-1. missing\uFF1A\u7528\u6237\u539F\u6587\u4E2D\u7684\u67D0\u4E00\u9879\u660E\u786E\u8981\u6C42\u6CA1\u6709\u88AB request_items \u8BB0\u5F55\u3002\u4E00\u4E2A source_ref \u53EF\u80FD\u540C\u65F6\u8981\u6C42\u89E3\u91CA\u3001\u753B\u56FE\u548C\u64CD\u4F5C\uFF1B\u5373\u4F7F\u5176\u4E2D\u4E00\u9879\u5DF2\u8BB0\u5F55\uFF0C\u53E6\u4E00\u9879\u6F0F\u6389\u4ECD\u5E94\u62A5\u544A\uFF0C\u5E76\u5728 reason \u4E2D\u660E\u786E\u8BF4\u660E\u6F0F\u4E86\u4EC0\u4E48\uFF1B
-2. contradictions\uFF1A\u67D0\u4E2A\u5DF2\u6709 request_item \u4E0E\u5B83\u5F15\u7528\u7684\u7528\u6237\u539F\u6587\u76F8\u53CD\uFF0C\u6216\u628A\u660E\u786E\u4E0D\u652F\u6301\u7684\u80FD\u529B\u5192\u5145\u4E3A\u5DF2\u652F\u6301\uFF1B
-3. suggestions\uFF1A\u8BFE\u7A0B\u53EF\u4EE5\u600E\u6837\u6559\u5F97\u66F4\u597D\uFF0C\u4F46\u8FD9\u7C7B\u5EFA\u8BAE\u7EDD\u4E0D\u80FD\u653E\u8FDB missing \u6216 contradictions\u3002
+\u518D\u505A\u4E24\u4EF6\u4E8B\uFF1A
+1. contradictions\uFF1A\u67D0\u4E2A\u5DF2\u6709 request_item \u4E0E\u5B83\u5F15\u7528\u7684\u7528\u6237\u539F\u6587\u76F8\u53CD\uFF0C\u6216\u628A\u660E\u786E\u4E0D\u652F\u6301\u7684\u80FD\u529B\u5192\u5145\u4E3A\u5DF2\u652F\u6301\uFF1B
+2. suggestions\uFF1A\u8BFE\u7A0B\u53EF\u4EE5\u600E\u6837\u6559\u5F97\u66F4\u597D\uFF0C\u4F46\u8FD9\u7C7B\u5EFA\u8BAE\u7EDD\u4E0D\u80FD\u653E\u8FDB contradictions\u3002
+
+missing \u53EA\u62A5\u544A\u8BFE\u7A0B\u9AA8\u67B6\u81EA\u8EAB\u9057\u6F0F\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u5173\u7CFB\u3001\u8FDE\u7EED\u53D8\u5316\u3001\u5B66\u751F\u63A7\u5236\u3001\u65E2\u6709\u767D\u677F\u4FEE\u6539\u3001\u5C55\u793A\u9650\u5236\u6216\u4E0D\u652F\u6301\u80FD\u529B\uFF0C\u5E76\u5FC5\u987B\u586B\u5199\u5BF9\u5E94 kind\u3002\u7528\u6237\u8981\u6C42\u7C7B\u522B\u82E5\u672A\u88AB request_items \u8BB0\u5F55\uFF0C\u4F18\u5148\u5728 request_item_kinds \u4E2D\u5982\u5B9E\u5217\u51FA\uFF0C\u7531\u672C\u5730\u7A0B\u5E8F\u8FDB\u884C\u5DEE\u96C6\u68C0\u67E5\u3002student_task \u7684\u5177\u4F53\u4EFB\u52A1\u7531\u4E0B\u4E00\u9636\u6BB5\u751F\u6210\uFF0C\u7EDD\u4E0D\u80FD\u653E\u8FDB missing\u3002
 
 \u5982\u679C\u7528\u6237\u660E\u786E\u95EE\u201C\u4E3A\u4EC0\u4E48\u53D1\u751F\u201D\uFF0C\u9057\u6F0F\u56E0\u679C\u89E3\u91CA\u5C5E\u4E8E missing\uFF0C\u4E0D\u662F suggestions\u3002\u5982\u679C\u7528\u6237\u8981\u6C42\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\u7684\u53D8\u5316\uFF0C\u5374\u53EA\u89C4\u5212\u7C7B\u6BD4\u56FE\u800C\u6CA1\u6709\u76F4\u63A5\u8868\u73B0\u8BE5\u5BF9\u8C61\uFF0C\u4E5F\u5C5E\u4E8E missing\u3002\u590D\u6838\u8FD9\u7C7B\u8BF7\u6C42\u65F6\u5FC5\u987B\u68C0\u67E5\u88AB\u7ED1\u5B9A geometry \u7684 motion_subject \u548C motion_kind\uFF1Amotion_subject \u5FC5\u987B\u660E\u786E\u547D\u540D\u7528\u6237\u8981\u6C42\u89C2\u770B\u7684\u8FD0\u52A8\u4E3B\u4F53\uFF0Cmotion_kind \u5FC5\u987B\u63CF\u8FF0\u8BE5\u4E3B\u4F53\u672C\u8EAB\u7684\u8FD0\u52A8\uFF1B\u5706\u5468\u6295\u5F71\u3001\u51FD\u6570\u66F2\u7EBF\u6216\u5176\u4ED6\u7C7B\u6BD4\u5373\u4F7F\u6570\u5B66\u4E0A\u76F8\u5173\uFF0C\u4E5F\u4E0D\u80FD\u4F5C\u4E3A\u4E3B\u4F53\u6F14\u793A\u901A\u8FC7\u590D\u6838\u3002\u53EA\u6709\u5728\u56E0\u679C\u76EE\u6807\u548C\u4E3B\u4F53\u6F14\u793A\u5DF2\u7ECF\u8986\u76D6\u540E\uFF0C\u53D7\u529B\u56FE\u3001\u901F\u5EA6\u56FE\u3001\u80FD\u91CF\u56FE\u7B49\u53EF\u9009\u8BB2\u6CD5\u624D\u5C5E\u4E8E suggestions\u3002\u6559\u5B66\u5EFA\u8BAE\u4E0D\u662F\u7528\u6237\u8981\u6C42\u3002\u6CA1\u6709\u53D1\u73B0\u5BF9\u5E94\u9879\u76EE\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002`;
 var LESSON_TASK_PLANNING_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u540E\u4E92\u52A8\u4EFB\u52A1\u8BBE\u8BA1\u5668\u3002\u8BFE\u7A0B\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u5171\u4EAB\u53D8\u91CF\u548C\u4E09\u7EF4\u89C6\u89D2\u80FD\u529B\u5DF2\u7ECF\u786E\u5B9A\uFF1B\u4F60\u53EA\u8865\u5145\u8BB2\u89E3\u7ED3\u675F\u540E\u4EA4\u7ED9\u5B66\u751F\u5B8C\u6210\u7684\u77ED\u4EFB\u52A1\uFF0C\u4E0D\u4FEE\u6539\u8BFE\u7A0B\u89C4\u5212\u3002
@@ -10099,6 +10268,7 @@ var LESSON_TASK_PLANNING_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u540E\u4E92\u52A8\u
 - \u6BCF\u4E2A\u5171\u4EAB\u53D8\u91CF\u5728\u6CA1\u6709\u7981\u6B62\u5B66\u751F\u4EFB\u52A1\u65F6\u901A\u5E38\u8BBE\u8BA1\u4E00\u4E2A\u4EFB\u52A1\u3002\u7528\u6237\u660E\u786E\u8981\u6C42\u52A8\u624B\u64CD\u4F5C\u65F6\u5FC5\u987B\u8986\u76D6\u5BF9\u5E94 request_item\uFF1B\u6CA1\u6709\u660E\u786E\u8981\u6C42\u65F6\uFF0C\u4EFB\u52A1\u53EF\u5F15\u7528\u5B83\u6240\u68C0\u9A8C\u7684 teaching_goal \u6216 continuous_change request_item\u3002
 - completion_expression \u53EA\u80FD\u8BFB\u53D6\u8BE5\u4EFB\u52A1\u7684 variable\uFF1B\u76EE\u6807\u5FC5\u987B\u5728\u53D8\u91CF\u8303\u56F4\u5185\u53EF\u8FBE\uFF0C\u800C\u4E14\u521D\u59CB\u503C\u4E0D\u80FD\u5DF2\u7ECF\u6EE1\u8DB3\u76EE\u6807\u3002
 - prompt \u4F7F\u7528\u81EA\u7136\u7684\u5B66\u751F\u6307\u4EE4\uFF0C\u63CF\u8FF0\u53EF\u89C1\u76EE\u6807\uFF0C\u4E0D\u66B4\u9732\u5185\u90E8\u5B9E\u73B0\uFF1Bhints \u7531\u89C2\u5BDF\u63D0\u793A\u9010\u6B65\u8FC7\u6E21\u5230\u5177\u4F53\u64CD\u4F5C\uFF1Bsuccess_message \u89E3\u91CA\u64CD\u4F5C\u4E3A\u4EC0\u4E48\u6B63\u786E\u3002
+- prompt\u3001hints \u548C success_message \u4F1A\u76F4\u63A5\u5C55\u793A\u7ED9\u5F53\u524D\u5B66\u4E60\u8005\uFF0C\u5FC5\u987B\u76F4\u63A5\u4F7F\u7528\u201C\u4F60\u201D\u6216\u4E2D\u6027\u7948\u4F7F\u53E5\uFF0C\u4E0D\u5F97\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u201C\u5F15\u5BFC\u5B66\u4E60\u8005\u2026\u2026\u201D\u7B49\u8BFE\u7A0B\u8BBE\u8BA1\u8BF4\u660E\u3002
 
 \u4E09\u7EF4\u89C6\u89D2\u4EFB\u52A1\uFF1A
 - \u4EC5\u5F53\u7528\u6237\u660E\u786E\u8981\u6C42\u5B8C\u6210\u67D0\u4E2A\u89C2\u5BDF\u89C6\u89D2\u65F6\u751F\u6210\uFF0C\u5E76\u5F15\u7528\u5E26 orbit_control \u7684 scene3d visual\u3002
@@ -10121,6 +10291,7 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 10. \u6559\u5B66\u91CD\u70B9\u3001\u63A8\u7406\u987A\u5E8F\u548C\u6700\u7EC8\u7ED3\u8BBA\u5FC5\u987B\u6E05\u695A\uFF0CBeat narration \u53EF\u4EE5\u76F4\u63A5\u4F5C\u4E3A\u6559\u5E08\u8BFE\u5802\u8BB2\u8FF0\u3002
 11. \u6BCF\u4E2A Beat \u5FC5\u987B\u5305\u542B\u4E00\u4E2A when="after_speech" \u7684 focus \u52A8\u4F5C\uFF0C\u805A\u7126\u8BE5 Beat \u7ED3\u675F\u540E\u5B66\u751F\u5E94\u7EE7\u7EED\u770B\u7684\u5F53\u524D\u6559\u5B66\u76EE\u6807\uFF1B\u4E0D\u5F97\u4F9D\u8D56\u4E0A\u4E00 Beat \u6216\u4E0A\u4E00\u8BFE\u7A0B\u9057\u7559\u7126\u70B9\u3002
 12. \u7528\u6237\u95EE\u73B0\u8C61\u539F\u56E0\u65F6\u5FC5\u987B\u5B9E\u9645\u8BB2\u6E05\u539F\u56E0\uFF0C\u4E0D\u80FD\u53EA\u7ED9\u89C4\u5F8B\u6216\u516C\u5F0F\uFF1B\u7528\u6237\u8981\u6C42\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\u7684\u53D8\u5316\u65F6\uFF0C\u52A8\u6001\u767D\u677F\u5FC5\u987B\u76F4\u63A5\u8868\u73B0\u8BE5\u5BF9\u8C61\uFF0C\u7C7B\u6BD4\u56FE\u53EA\u80FD\u4F5C\u4E3A\u8F85\u52A9\u3002
+13. lesson.title\u3001lesson.goals\u3001Beat say\u3001\u677F\u4E66\u6587\u5B57\u548C\u4EFB\u52A1\u6587\u6848\u90FD\u76F4\u63A5\u9762\u5411\u5F53\u524D\u5B66\u4E60\u8005\uFF1B\u4F7F\u7528\u201C\u4F60\u201D\u201C\u6211\u4EEC\u201D\u6216\u4E2D\u6027\u8868\u8FBE\uFF0C\u4E0D\u5F97\u51FA\u73B0\u201C\u5E2E\u52A9\u5B66\u751F\u2026\u2026\u201D\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u201C\u5F15\u5BFC\u5B66\u4E60\u8005\u2026\u2026\u201D\u7B49\u5185\u90E8\u8BFE\u7A0B\u8BBE\u8BA1\u53E3\u543B\u3002
 
 \u5FC5\u987B\u4E25\u683C\u4F7F\u7528\u4EE5\u4E0B\u7ED3\u6784\u548C\u5B57\u6BB5\u540D\uFF1A
 - \u6839\u5BF9\u8C61\uFF1Adsl="octos.lesson"\u3001version="0.1"\u3001profile="authoring"\u3001lesson\u3001steps\u3001close\u3002
@@ -10164,7 +10335,7 @@ var BEAT_REPAIR_SYSTEM_PROMPT = `\u4F60\u662F OLL \u5C40\u90E8\u6559\u5B66\u8282
 \u53EA\u8FD4\u56DE\u4FEE\u590D\u540E\u7684\u4E00\u4E2A\u5B8C\u6574 Beat\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001Step\u3001Markdown \u6216\u89E3\u91CA\u3002\u4FDD\u6301 beat.key \u4E0D\u53D8\uFF0C\u53EA\u4FEE\u6539\u8FD9\u4E2A Beat \u7684 say\u3001delivery \u548C actions\u3002\u4E0D\u5F97\u91CD\u65B0\u521B\u5EFA existing_aliases \u4E2D\u7684\u8282\u70B9\u6216\u5173\u7CFB\uFF1B\u9700\u8981\u7EE7\u7EED\u8BB2\u89E3\u5DF2\u6709\u89C6\u89C9\u5BF9\u8C61\u65F6\u76F4\u63A5\u5F15\u7528\u5176\u522B\u540D\uFF0C\u6216\u7528\u65B0\u7684 text\u3001math\u3001note \u7B49\u8282\u70B9\u8865\u5145\u3002\u6BCF\u4E2A Beat \u5FC5\u987B\u5305\u542B\u4E00\u4E2A when="after_speech" \u7684 focus\u3002\u8F93\u51FA\u5FC5\u987B\u7B26\u5408\u6240\u9644 JSON Schema\u3002`;
 var PARALLEL_SECTION_SYSTEM_PROMPT = `\u4F60\u662F\u72EC\u7ACB\u8BFE\u7A0B\u5206\u6BB5\u7F16\u5199\u5668\u3002\u4F60\u53EA\u7F16\u5199\u4E00\u6BB5\u8BFE\u7A0B\u7684\u4E00\u4E2A\u5B8C\u6574 Step\uFF0C\u5176\u4ED6\u5206\u6BB5\u4F1A\u540C\u65F6\u7531\u5176\u4ED6\u7F16\u5199\u5668\u5B8C\u6210\uFF0C\u6700\u540E\u7531\u7A0B\u5E8F\u6309\u987A\u5E8F\u7EC4\u88C5\u3002
 
-\u53EA\u8FD4\u56DE\u4E00\u4E2A\u7B26\u5408\u6240\u9644 JSON Schema \u7684 Step \u5BF9\u8C61\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001close\u3001Markdown \u6216\u89E3\u91CA\u3002\u53EA\u8BB2\u8F93\u5165 section.purpose \u548C teaching_goals \u6307\u5B9A\u7684\u5185\u5BB9\uFF0C\u4E0D\u91CD\u590D\u5B8C\u6574\u8BFE\u7A0B\u3002\u4E3B\u8981 geometry\u3001plot\u3001scene3d\u3001diagram\u3001image\u3001table \u89C6\u89C9\u5BF9\u8C61\u7531\u7A0B\u5E8F\u53E6\u884C\u751F\u6210\u548C\u63D2\u5165\uFF1B\u4F60\u4E0D\u5F97\u521B\u5EFA\u8FD9\u4E9B\u4E3B\u8981\u89C6\u89C9\u5BF9\u8C61\u3002available_visuals \u662F\u672C\u6BB5\u8BB2\u89E3\u5FC5\u987B\u4FDD\u6301\u5728\u89C6\u91CE\u4E2D\u7684\u4E0A\u4E0B\u6587\uFF1B\u4F60\u53EA\u80FD\u7528 text\u3001math\u3001note \u6216 shape \u5199\u5FC5\u8981\u677F\u4E66\uFF0C\u5E76\u8BA9\u6BCF\u4E2A focus \u540C\u65F6\u5F15\u7528\u672C\u6BB5\u65B0\u5EFA\u8282\u70B9\u548C\u76F8\u5173 available_visuals\u3002\u4E0D\u8981\u5F15\u7528\u5176\u4ED6\u5206\u6BB5\u53EF\u80FD\u521B\u5EFA\u7684\u6587\u5B57\u8282\u70B9\uFF0C\u56E0\u4E3A\u8FD9\u4E9B\u5206\u6BB5\u6B63\u5728\u5E76\u884C\u751F\u6210\u3002\u6BCF\u4E2A Beat \u5FC5\u987B\u5305\u542B\u4E00\u4E2A when="after_speech" \u7684 focus\uFF0Csay \u5FC5\u987B\u662F\u9002\u5408 TTS \u7684\u81EA\u7136\u8BED\u8A00\uFF0C\u4E0D\u5305\u542B Markdown \u6216 LaTeX \u5B9A\u754C\u7B26\u3002write.content \u5FC5\u987B\u5339\u914D kind\uFF1Atext/shape \u4F7F\u7528\u975E\u7A7A text\uFF0Cmath \u4F7F\u7528 latex\uFF0Cnote \u4F7F\u7528 title \u548C items\u3002\u6240\u6709 key \u4E0E as \u53EA\u80FD\u4F7F\u7528\u5C0F\u5199\u82F1\u6587\u5B57\u6BCD\u3001\u6570\u5B57\u548C\u8FDE\u5B57\u7B26\u3002`;
+\u53EA\u8FD4\u56DE\u4E00\u4E2A\u7B26\u5408\u6240\u9644 JSON Schema \u7684 Step \u5BF9\u8C61\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001close\u3001Markdown \u6216\u89E3\u91CA\u3002\u53EA\u8BB2\u8F93\u5165 section.purpose \u548C teaching_goals \u6307\u5B9A\u7684\u5185\u5BB9\uFF0C\u4E0D\u91CD\u590D\u5B8C\u6574\u8BFE\u7A0B\u3002section.purpose \u662F\u7ED9\u7F16\u5199\u5668\u770B\u7684\u5185\u90E8\u8BF4\u660E\uFF0C\u4E0D\u5F97\u9010\u5B57\u590D\u5236\u8FDB say \u6216\u677F\u4E66\u3002\u4E3B\u8981 geometry\u3001plot\u3001scene3d\u3001diagram\u3001image\u3001table \u89C6\u89C9\u5BF9\u8C61\u7531\u7A0B\u5E8F\u53E6\u884C\u751F\u6210\u548C\u63D2\u5165\uFF1B\u4F60\u4E0D\u5F97\u521B\u5EFA\u8FD9\u4E9B\u4E3B\u8981\u89C6\u89C9\u5BF9\u8C61\u3002available_visuals \u662F\u672C\u6BB5\u8BB2\u89E3\u5FC5\u987B\u4FDD\u6301\u5728\u89C6\u91CE\u4E2D\u7684\u4E0A\u4E0B\u6587\uFF1B\u4F60\u53EA\u80FD\u7528 text\u3001math\u3001note \u6216 shape \u5199\u5FC5\u8981\u677F\u4E66\uFF0C\u5E76\u8BA9\u6BCF\u4E2A focus \u540C\u65F6\u5F15\u7528\u672C\u6BB5\u65B0\u5EFA\u8282\u70B9\u548C\u76F8\u5173 available_visuals\u3002\u4E0D\u8981\u5F15\u7528\u5176\u4ED6\u5206\u6BB5\u53EF\u80FD\u521B\u5EFA\u7684\u6587\u5B57\u8282\u70B9\uFF0C\u56E0\u4E3A\u8FD9\u4E9B\u5206\u6BB5\u6B63\u5728\u5E76\u884C\u751F\u6210\u3002\u6BCF\u4E2A Beat \u5FC5\u987B\u5305\u542B\u4E00\u4E2A when="after_speech" \u7684 focus\uFF0Csay \u548C\u677F\u4E66\u76F4\u63A5\u9762\u5411\u5F53\u524D\u5B66\u4E60\u8005\uFF0C\u4F7F\u7528\u201C\u4F60\u201D\u201C\u6211\u4EEC\u201D\u6216\u4E2D\u6027\u8868\u8FBE\uFF0C\u4E0D\u5F97\u5199\u201C\u5E2E\u52A9\u5B66\u751F\u201D\u201C\u8BA9\u5B66\u751F\u201D\u201C\u5F15\u5BFC\u5B66\u4E60\u8005\u201D\u7B49\u5185\u90E8\u8BFE\u7A0B\u8BBE\u8BA1\u53E3\u543B\u3002say \u5FC5\u987B\u662F\u9002\u5408 TTS \u7684\u81EA\u7136\u8BED\u8A00\uFF0C\u4E0D\u5305\u542B Markdown \u6216 LaTeX \u5B9A\u754C\u7B26\u3002write.content \u5FC5\u987B\u5339\u914D kind\uFF1Atext/shape \u4F7F\u7528\u975E\u7A7A text\uFF0Cmath \u4F7F\u7528 latex\uFF0Cnote \u4F7F\u7528 title \u548C items\u3002\u6240\u6709 key \u4E0E as \u53EA\u80FD\u4F7F\u7528\u5C0F\u5199\u82F1\u6587\u5B57\u6BCD\u3001\u6570\u5B57\u548C\u8FDE\u5B57\u7B26\u3002`;
 var VISUAL_COMPONENT_SYSTEM_PROMPT = `\u4F60\u662F\u72EC\u7ACB\u89C6\u89C9\u7EC4\u4EF6\u7F16\u5199\u5668\u3002\u4F60\u53EA\u751F\u6210\u8BFE\u7A0B\u8981\u6C42\u4E2D\u6307\u5B9A\u7684\u4E00\u4E2A\u4E3B\u8981\u89C6\u89C9\u5BF9\u8C61\uFF0C\u5176\u4ED6\u89C6\u89C9\u5BF9\u8C61\u548C\u8BFE\u7A0B\u8BB2\u89E3\u4F1A\u540C\u65F6\u751F\u6210\uFF0C\u6700\u540E\u7531\u7A0B\u5E8F\u7EC4\u88C5\u3002
 
 \u53EA\u8FD4\u56DE\u4E00\u4E2A\u5B8C\u6574 write \u52A8\u4F5C\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001Step\u3001Beat\u3001close\u3001Markdown \u6216\u89E3\u91CA\u3002\u5FC5\u987B\u4FDD\u6301 do="write"\u3001as \u4E0E visual_requirement.id \u5B8C\u5168\u76F8\u540C\u3001kind \u4E0E visual_requirement.surface \u5B8C\u5168\u76F8\u540C\uFF0C\u5E76\u5B9E\u73B0 required_features\u3001expressions\u3001\u8FD0\u52A8\u4E3B\u4F53\u548C\u5171\u4EAB\u53D8\u91CF\u7ED1\u5B9A\u3002\u4E0D\u5F97\u521B\u5EFA\u5176\u4ED6\u8282\u70B9\u3001connect\u3001animate\u3001\u65C1\u767D\u6216\u6559\u5B66\u4EFB\u52A1\u3002\u8F93\u51FA\u5FC5\u987B\u7B26\u5408\u6240\u9644 JSON Schema\u3002\u53EA\u5199\u6EE1\u8DB3\u8981\u6C42\u7684\u6700\u5C0F\u5145\u5206\u5185\u5BB9\uFF0C\u4E0D\u8981\u679A\u4E3E\u6CA1\u6709\u88AB\u8981\u6C42\u7684\u989D\u5916\u5143\u7D20\uFF0C\u4E5F\u4E0D\u8981\u586B\u5145\u65E0\u5173\u53EF\u9009\u5B57\u6BB5\u3002
@@ -10266,6 +10437,85 @@ function parseToolInput(raw) {
       "board_summary is required when request_source is explicit_board_follow_up"
     );
   }
+  let boardContext;
+  if (input.board_context !== void 0) {
+    if (requestSource !== "explicit_board_follow_up") {
+      throw new Error("board_context is only allowed for explicit_board_follow_up");
+    }
+    if (!input.board_context || typeof input.board_context !== "object" || Array.isArray(input.board_context)) {
+      throw new Error("board_context must be an object");
+    }
+    const context = input.board_context;
+    if (!Number.isSafeInteger(context.revision) || Number(context.revision) < 0) {
+      throw new Error("board_context.revision must be a non-negative integer");
+    }
+    if (baseRevision !== void 0 && Number(baseRevision) !== Number(context.revision)) {
+      throw new Error("base_revision must match board_context.revision");
+    }
+    if (!Array.isArray(context.references) || context.references.length > 12) {
+      throw new Error("board_context.references must contain at most 12 references");
+    }
+    const aliases = /* @__PURE__ */ new Set();
+    const referenceAlias = (value, label) => {
+      const alias = requireNonEmptyString(value, label);
+      if (!/^[a-z][a-z0-9-]{0,63}$/.test(alias)) {
+        throw new Error(`${label} must be an OLL alias`);
+      }
+      return alias;
+    };
+    const references = context.references.map((value, index) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new Error(`board_context.references[${index}] must be an object`);
+      }
+      const reference = value;
+      const alias = referenceAlias(reference.as, `board_context.references[${index}].as`);
+      if (aliases.has(alias)) throw new Error("board_context reference aliases must be unique");
+      aliases.add(alias);
+      if (!["node", "group", "connection"].includes(String(reference.type))) {
+        throw new Error(`board_context.references[${index}].type is invalid`);
+      }
+      if (!Array.isArray(reference.fragments) || reference.fragments.length > 24) {
+        throw new Error(`board_context.references[${index}].fragments is invalid`);
+      }
+      const fragmentAliases = /* @__PURE__ */ new Set();
+      const fragments = reference.fragments.map((fragmentValue, fragmentIndex) => {
+        if (!fragmentValue || typeof fragmentValue !== "object" || Array.isArray(fragmentValue)) {
+          throw new Error(`board_context reference fragment ${fragmentIndex} is invalid`);
+        }
+        const fragment = fragmentValue;
+        const fragmentAlias = referenceAlias(
+          fragment.as,
+          `board_context.references[${index}].fragments[${fragmentIndex}].as`
+        );
+        if (fragmentAliases.has(fragmentAlias)) {
+          throw new Error("board_context fragment aliases must be unique per reference");
+        }
+        fragmentAliases.add(fragmentAlias);
+        return {
+          as: fragmentAlias,
+          target_id: requireNonEmptyString(
+            fragment.target_id,
+            `board_context.references[${index}].fragments[${fragmentIndex}].target_id`
+          )
+        };
+      });
+      return {
+        as: alias,
+        type: reference.type,
+        target_id: requireNonEmptyString(
+          reference.target_id,
+          `board_context.references[${index}].target_id`
+        ),
+        ...typeof reference.label === "string" && reference.label.trim() ? { label: truncate(reference.label) } : {},
+        fragments
+      };
+    });
+    boardContext = {
+      board_id: requireNonEmptyString(context.board_id, "board_context.board_id"),
+      revision: Number(context.revision),
+      references
+    };
+  }
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: learnerRequest,
@@ -10277,6 +10527,10 @@ function parseToolInput(raw) {
     ...boardSummary ? { board_summary: boardSummary } : {},
     ...typeof input.last_applied_action === "string" ? { last_applied_action: truncate(input.last_applied_action) } : {},
     ...baseRevision !== void 0 ? { base_revision: Number(baseRevision) } : {},
+    ...boardContext ? {
+      board_context: boardContext,
+      base_revision: boardContext.revision
+    } : {},
     ...sourceObservation ? { source_observation: sourceObservation } : {}
   };
 }
@@ -10330,6 +10584,93 @@ function parseSelectionToolInput(raw) {
   if (!["high", "medium", "low"].includes(String(confidence))) {
     throw new Error("recognition_confidence is invalid");
   }
+  const toolId = input.tool_id;
+  if (!["explain", "check-and-suggest", "generate-plot", "custom-question"].includes(
+    String(toolId)
+  )) {
+    throw new Error("tool_id is invalid");
+  }
+  if (toolId === "generate-plot" && contentHint !== "math") {
+    throw new Error("generate-plot requires content_hint=math");
+  }
+  const boardValue = input.board;
+  if (!boardValue || typeof boardValue !== "object" || Array.isArray(boardValue)) {
+    throw new Error("board must be an object");
+  }
+  const board = boardValue;
+  const revision = board.revision;
+  if (!Number.isSafeInteger(revision) || Number(revision) < 0) {
+    throw new Error("board.revision must be a non-negative integer");
+  }
+  if (!Array.isArray(board.targets) || board.targets.length > 6) {
+    throw new Error("board.targets must contain at most 6 targets");
+  }
+  const targetIds = /* @__PURE__ */ new Set();
+  const targets = board.targets.map((value, index) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error(`board.targets[${index}] must be an object`);
+    }
+    const target = value;
+    const targetId = requireNonEmptyString(
+      target.target_id,
+      `board.targets[${index}].target_id`
+    );
+    if (targetIds.has(targetId)) throw new Error("board.targets contains duplicate target_id");
+    targetIds.add(targetId);
+    if (!target.world_bounds || typeof target.world_bounds !== "object" || Array.isArray(target.world_bounds)) {
+      throw new Error(`board.targets[${index}].world_bounds must be an object`);
+    }
+    const worldBounds = target.world_bounds;
+    const worldWidth = finite(worldBounds.width, `board.targets[${index}].world_bounds.width`);
+    const worldHeight = finite(worldBounds.height, `board.targets[${index}].world_bounds.height`);
+    if (worldWidth <= 0 || worldHeight <= 0) {
+      throw new Error(`board.targets[${index}].world_bounds must have positive dimensions`);
+    }
+    const overlap = finite(target.overlap, `board.targets[${index}].overlap`);
+    if (overlap < 0 || overlap > 1) {
+      throw new Error(`board.targets[${index}].overlap must be between 0 and 1`);
+    }
+    const distance = finite(target.distance, `board.targets[${index}].distance`);
+    if (distance < 0) throw new Error(`board.targets[${index}].distance must be non-negative`);
+    if (!Number.isSafeInteger(target.z_index)) {
+      throw new Error(`board.targets[${index}].z_index must be an integer`);
+    }
+    let structuredValue;
+    if (target.value_json !== void 0) {
+      const valueJson = requireNonEmptyString(
+        target.value_json,
+        `board.targets[${index}].value_json`
+      );
+      if (valueJson.length > 2e3) {
+        throw new Error(`board.targets[${index}].value_json is too long`);
+      }
+      try {
+        structuredValue = JSON.parse(valueJson);
+      } catch {
+        throw new Error(`board.targets[${index}].value_json must be valid JSON`);
+      }
+    }
+    return {
+      target_id: targetId,
+      node_id: requireNonEmptyString(
+        target.node_id,
+        `board.targets[${index}].node_id`
+      ),
+      ...typeof target.element_id === "string" && target.element_id.trim() ? { element_id: target.element_id.trim() } : {},
+      kind: requireNonEmptyString(target.kind, `board.targets[${index}].kind`),
+      ...typeof target.label === "string" && target.label.trim() ? { label: truncate(target.label) } : {},
+      ...structuredValue === void 0 ? {} : { value: structuredValue },
+      world_bounds: {
+        x: finite(worldBounds.x, `board.targets[${index}].world_bounds.x`),
+        y: finite(worldBounds.y, `board.targets[${index}].world_bounds.y`),
+        width: worldWidth,
+        height: worldHeight
+      },
+      overlap,
+      distance,
+      z_index: Number(target.z_index)
+    };
+  });
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: truncate(requireNonEmptyString(input.learner_request, "learner_request")),
@@ -10346,6 +10687,12 @@ function parseSelectionToolInput(raw) {
       checksum: { algorithm: "sha-256", value: checksum.value }
     },
     content_hint: contentHint,
+    tool_id: toolId,
+    board: {
+      board_id: requireNonEmptyString(board.board_id, "board.board_id"),
+      revision: Number(revision),
+      targets
+    },
     recognized_content: truncate(requireNonEmptyString(
       input.recognized_content,
       "recognized_content"
@@ -11104,6 +11451,10 @@ function buildAuthoringResponseJsonSchema(brief, plan) {
     variants.splice(animateIndex, 1, ...exactAnimateVariants);
   }
   const rootProperties = schema.properties;
+  delete rootProperties.board_context;
+  if (Array.isArray(schema.required)) {
+    schema.required = schema.required.filter((field) => field !== "board_context");
+  }
   const lesson = rootProperties.lesson;
   const lessonProperties = lesson.properties;
   delete lessonProperties.variables;
@@ -11216,6 +11567,9 @@ var requestItemKinds = [
   "presentation_constraint",
   "unsupported_feature"
 ];
+var coreVerificationMissingKinds = requestItemKinds.filter(
+  (kind) => kind !== "student_task"
+);
 var requestItemPolarities = ["require", "forbid"];
 var unhandledStatuses = ["unsupported", "ambiguous"];
 var idArraySchema = { type: "array", minItems: 1, items: { type: "string" } };
@@ -11508,9 +11862,10 @@ var briefVerificationResponseJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["source_ref", "reason"],
+        required: ["source_ref", "kind", "reason"],
         properties: {
           source_ref: { type: "string" },
+          kind: { enum: coreVerificationMissingKinds },
           reason: { type: "string" }
         }
       }
@@ -11566,6 +11921,34 @@ function isRecord(value) {
 }
 function normalizeEvidence(value) {
   return value.normalize("NFKC").toLocaleLowerCase().replace(/[\\$]/gu, "").replace(/[（）()\[\]{}]/gu, "").replace(/\s+/gu, "");
+}
+var learnerAudienceMetaPatterns = [
+  /(?<!老师)(?<!教师)(?:帮助|让|引导|支持|供)(?:当前)?(?:学生|学习者)/u,
+  /(?:help|guide|allow|enable|ask)(?:\s+the)?\s+(?:student|learner)s?\b/iu
+];
+function containsLearnerAudienceMetaLanguage(value) {
+  return learnerAudienceMetaPatterns.some((pattern) => pattern.test(value));
+}
+function appendLearnerFacingLanguageViolations(value, path, violations) {
+  if (typeof value === "string") {
+    if (containsLearnerAudienceMetaLanguage(value)) {
+      violations.push({
+        stage: "semantic",
+        code: "OLL_LEARNER_FACING_LANGUAGE",
+        path,
+        message: "Learner-visible text must address the learner directly or use neutral language; internal authoring phrases about students or learners must not be exposed"
+      });
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => appendLearnerFacingLanguageViolations(item, `${path}/${index}`, violations));
+    return;
+  }
+  if (!isRecord(value)) return;
+  for (const [key, item] of Object.entries(value)) {
+    appendLearnerFacingLanguageViolations(item, `${path}/${key}`, violations);
+  }
 }
 function authoritativeRequestSources(input) {
   const sources = [
@@ -11645,7 +12028,7 @@ function buildLessonTaskPlanResponseJsonSchema(brief) {
   sceneProperties.request_item_ids = structuredClone(taskProperties.request_item_ids);
   return schema;
 }
-function buildBriefVerificationResponseJsonSchema(input, brief) {
+function buildBriefVerificationResponseJsonSchema(input, brief, scope) {
   const schema = structuredClone(briefVerificationResponseJsonSchema);
   const properties = schema.properties;
   const sourceRefs = authoritativeRequestClauses(input).map((clause) => clause.ref);
@@ -11656,6 +12039,7 @@ function buildBriefVerificationResponseJsonSchema(input, brief) {
   kindReviewProperties.source_ref = { enum: sourceRefs };
   const missingProperties = properties.missing.items.properties;
   missingProperties.source_ref = { enum: sourceRefs };
+  if (scope === "core") missingProperties.kind = { enum: coreVerificationMissingKinds };
   const requestItemIds = brief.request_items.map((item) => item.id);
   const contradictionProperties = properties.contradictions.items.properties;
   contradictionProperties.request_item_id = { enum: requestItemIds };
@@ -11890,6 +12274,12 @@ function validateLessonBrief(candidate, input, options = {}) {
     validateRequirementId(raw.id, `${path}/id`);
     if (typeof raw.goal !== "string" || !raw.goal.trim()) {
       violations.push(briefViolation("BRIEF_INVALID_TEACHING_GOAL", `${path}/goal`, "goal must be a non-empty string"));
+    } else if (containsLearnerAudienceMetaLanguage(raw.goal)) {
+      violations.push(briefViolation(
+        "BRIEF_LEARNER_FACING_LANGUAGE",
+        `${path}/goal`,
+        "teaching goals are shown to the learner and must use direct or neutral language"
+      ));
     }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "teaching_goal");
   });
@@ -12114,6 +12504,8 @@ function validateLessonBrief(candidate, input, options = {}) {
     validateRequirementId(raw.id, `${path}/id`);
     if (typeof raw.prompt !== "string" || !raw.prompt.trim()) {
       violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_PROMPT", `${path}/prompt`, "prompt must be a non-empty student instruction"));
+    } else if (containsLearnerAudienceMetaLanguage(raw.prompt)) {
+      violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/prompt`, "task prompts must address the learner directly"));
     }
     const variable = typeof raw.variable === "string" ? sharedVariableByName.get(raw.variable) : void 0;
     if (!variable) {
@@ -12189,12 +12581,20 @@ function validateLessonBrief(candidate, input, options = {}) {
     }
     if (!Array.isArray(raw.hints) || raw.hints.length === 0 || raw.hints.length > 4 || raw.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
       violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_HINTS", `${path}/hints`, "hints must contain one to four non-empty hints"));
+    } else {
+      raw.hints.forEach((hint, hintIndex) => {
+        if (containsLearnerAudienceMetaLanguage(hint)) {
+          violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/hints/${hintIndex}`, "task hints must address the learner directly"));
+        }
+      });
     }
     if (!Number.isInteger(raw.hint_after_attempts) || raw.hint_after_attempts < 1 || raw.hint_after_attempts > 20) {
       violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_HINT_THRESHOLD", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20"));
     }
     if (typeof raw.success_message !== "string" || !raw.success_message.trim()) {
       violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_SUCCESS", `${path}/success_message`, "success_message must be non-empty"));
+    } else if (containsLearnerAudienceMetaLanguage(raw.success_message)) {
+      violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/success_message`, "task feedback must address the learner directly"));
     }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
   });
@@ -12207,6 +12607,8 @@ function validateLessonBrief(candidate, input, options = {}) {
     validateRequirementId(raw.id, `${path}/id`);
     if (typeof raw.prompt !== "string" || !raw.prompt.trim()) {
       violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_PROMPT", `${path}/prompt`, "prompt must be a non-empty student instruction"));
+    } else if (containsLearnerAudienceMetaLanguage(raw.prompt)) {
+      violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/prompt`, "3D task prompts must address the learner directly"));
     }
     const visual = typeof raw.visual === "string" ? visualById.get(raw.visual) : void 0;
     if (!visual || visual.surface !== "scene3d" || !Array.isArray(visual.required_features) || !visual.required_features.includes("orbit_control")) {
@@ -12231,12 +12633,20 @@ function validateLessonBrief(candidate, input, options = {}) {
     }
     if (!Array.isArray(raw.hints) || raw.hints.length === 0 || raw.hints.length > 4 || raw.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
       violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_HINTS", `${path}/hints`, "hints must contain one to four non-empty hints"));
+    } else {
+      raw.hints.forEach((hint, hintIndex) => {
+        if (containsLearnerAudienceMetaLanguage(hint)) {
+          violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/hints/${hintIndex}`, "3D task hints must address the learner directly"));
+        }
+      });
     }
     if (!Number.isInteger(raw.hint_after_attempts) || raw.hint_after_attempts < 1 || raw.hint_after_attempts > 20) {
       violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_HINT_THRESHOLD", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20"));
     }
     if (typeof raw.success_message !== "string" || !raw.success_message.trim()) {
       violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_SUCCESS", `${path}/success_message`, "success_message must be non-empty"));
+    } else if (containsLearnerAudienceMetaLanguage(raw.success_message)) {
+      violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/success_message`, "3D task feedback must address the learner directly"));
     }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
   });
@@ -12375,6 +12785,32 @@ function validateAnimationBeatTiming(document) {
           message: "Keep the animation Beat to one or two short observation sentences; move the full explanation to a neighboring Beat"
         });
       }
+    });
+  });
+  return violations;
+}
+function validateLearnerFacingLanguage(document) {
+  const violations = [];
+  appendLearnerFacingLanguageViolations(document.lesson.title, "/lesson/title", violations);
+  appendLearnerFacingLanguageViolations(document.lesson.goals, "/lesson/goals", violations);
+  appendLearnerFacingLanguageViolations(document.lesson.tasks, "/lesson/tasks", violations);
+  appendLearnerFacingLanguageViolations(document.close.summary, "/close/summary", violations);
+  document.steps.forEach((step, stepIndex) => {
+    step.beats.forEach((beat, beatIndex) => {
+      appendLearnerFacingLanguageViolations(
+        beat.say,
+        `/steps/${stepIndex}/beats/${beatIndex}/say`,
+        violations
+      );
+      beat.actions.forEach((action, actionIndex) => {
+        if (action.do === "write" || action.do === "revise") {
+          appendLearnerFacingLanguageViolations(
+            action.content,
+            `/steps/${stepIndex}/beats/${beatIndex}/actions/${actionIndex}/content`,
+            violations
+          );
+        }
+      });
     });
   });
   return violations;
@@ -13044,7 +13480,38 @@ function validateAllowedCapabilities(document, plan) {
   return violations;
 }
 function validateGeneratedLessonDocument(candidate, input, brief, capabilityPlan, requireCoverage = true) {
-  const document = lowerPlannedLessonFields(structuredClone(candidate), brief);
+  const document = lowerPlannedLessonFields(
+    structuredClone(candidate),
+    brief
+  );
+  if (input.board_context) {
+    document.board_context = structuredClone(input.board_context);
+    const firstReference = input.board_context.references.find(
+      (reference) => reference.type === "node" || reference.type === "group"
+    );
+    const steps = Array.isArray(document.steps) ? document.steps : [];
+    const firstStep = steps.find(isRecord);
+    if (firstReference && firstStep && Array.isArray(firstStep.beats)) {
+      let anchored = false;
+      for (const beatValue of firstStep.beats) {
+        if (!isRecord(beatValue) || !Array.isArray(beatValue.actions)) continue;
+        for (const actionValue of beatValue.actions) {
+          if (!isRecord(actionValue)) continue;
+          if (!anchored && actionValue.do === "write" && isRecord(actionValue.place) && actionValue.place.relation === "new_region") {
+            actionValue.place = {
+              relation: "near",
+              anchor: firstReference.as,
+              gap: "normal"
+            };
+            anchored = true;
+          }
+          if (actionValue.do === "focus" && Array.isArray(actionValue.targets) && !actionValue.targets.includes(firstReference.as)) {
+            actionValue.targets.unshift(firstReference.as);
+          }
+        }
+      }
+    }
+  }
   const schemaResult = validateAuthoringSchema(document);
   if (!schemaResult.valid) {
     const violations2 = schemaResult.errors.slice(0, 8).map((item) => ({
@@ -13068,17 +13535,18 @@ function validateGeneratedLessonDocument(candidate, input, brief, capabilityPlan
     violations.push(semanticViolation(error));
   }
   violations.push(...validateAnimationBeatTiming(lesson));
+  violations.push(...validateLearnerFacingLanguage(lesson));
   if (requireCoverage) violations.push(...validateBriefCoverage(lesson, brief));
   violations.push(...validateAllowedCapabilities(lesson, capabilityPlan));
   if (violations.length === 0) {
     try {
       const events = normalizeAuthoringLesson(lesson, {
         lessonId: input.turn_id,
-        boardId: "learn-board",
-        baseRevision: input.base_revision ?? 0,
+        boardId: input.board_context?.board_id ?? "learn-board",
+        baseRevision: input.board_context?.revision ?? input.base_revision ?? 0,
         resourceContext: input.session_context ?? { assets: [] }
       });
-      reduceCanonicalEvents(events);
+      if (!input.board_context?.references.length) reduceCanonicalEvents(events);
     } catch (error) {
       violations.push(semanticViolation(error));
     }
@@ -13125,7 +13593,9 @@ function buildRequestContext(input) {
     existing_board: mayUseExistingBoard ? {
       summary: input.board_summary,
       last_applied_action: input.last_applied_action ?? null,
-      base_revision: input.base_revision ?? 0
+      base_revision: input.base_revision ?? 0,
+      explicit_references: input.board_context?.references ?? [],
+      reference_rule: "\u8FD9\u4E9B\u5BF9\u8C61\u7531\u5BBF\u4E3B\u63D0\u4F9B\u7A33\u5B9A ID\uFF0C\u53EA\u8BFB\uFF1B\u65B0\u5185\u5BB9\u53EF\u4EE5\u56F4\u7ED5\u5B83\u4EEC\u8BB2\u89E3\u3001\u805A\u7126\u6216\u8FDE\u63A5\uFF0C\u4E0D\u80FD\u6539\u5199\u539F\u5BF9\u8C61"
     } : null
   };
 }
@@ -13141,7 +13611,7 @@ ${JSON.stringify(violations, null, 2)}
   return `\u8BF7\u5148\u7528 source_ref \u8BB0\u5F55 authoritative_request.clauses \u4E2D\u7684\u7528\u6237\u660E\u786E\u8981\u6C42\uFF0C\u518D\u4E3A\u8FD9\u4E9B\u8981\u6C42\u8BBE\u8BA1\u53EF\u6267\u884C\u8BFE\u7A0B\u3002teaching_advice \u4E0D\u662F\u7528\u6237\u8981\u6C42\uFF0C\u4E0D\u80FD\u5EFA\u7ACB request_item\u3002request_source \u51B3\u5B9A\u552F\u4E00\u9898\u76EE\u6765\u6E90\uFF1B\u4E0D\u5F97\u4F7F\u7528 existing_board \u4E3A self_contained \u6216 current_image \u8865\u9898\u3002
 ${JSON.stringify(buildRequestContext(input), null, 2)}${repair}`;
 }
-function buildVerificationPrompt(input, brief, previousVerification, violations = []) {
+function buildVerificationPrompt(input, brief, scope, previousVerification, violations = []) {
   const repair = previousVerification ? `
 
 \u4E0A\u4E00\u4EFD\u590D\u6838\u7ED3\u679C\uFF1A
@@ -13150,17 +13620,25 @@ ${previousVerification}
 \u590D\u6838\u7ED3\u679C\u81EA\u8EAB\u7684\u683C\u5F0F\u9519\u8BEF\uFF1A
 ${JSON.stringify(violations, null, 2)}
 \u8BFE\u7A0B\u89C4\u5212\u6CA1\u6709\u53D8\u5316\uFF1B\u53EA\u4FEE\u590D\u590D\u6838\u7ED3\u679C\u5E76\u8FD4\u56DE\u5B8C\u6574\u5BF9\u8C61\u3002` : "";
+  const reviewBrief = structuredClone(brief);
+  delete reviewBrief.student_task_requirements;
+  delete reviewBrief.scene3d_task_requirements;
+  const deferredTaskRequestItemIds = brief.request_items.filter((item) => item.kind === "student_task").map((item) => item.id);
   return `\u8BF7\u72EC\u7ACB\u590D\u6838\u7528\u6237\u660E\u786E\u8981\u6C42\u662F\u5426\u88AB\u8BB0\u5F55\u3002\u53EA\u6709 authoritative_request.clauses \u662F\u7528\u6237\u8981\u6C42\uFF1Bteaching_advice \u4E0D\u662F\u3002\u4E0D\u8981\u7528\u81EA\u5DF1\u504F\u597D\u7684\u6559\u6CD5\u5426\u51B3\u5DF2\u8986\u76D6\u7684\u7528\u6237\u76EE\u6807\u3002
+\u590D\u6838\u9636\u6BB5\uFF1A${scope}
+\u9636\u6BB5\u5951\u7EA6\uFF1A\u5F53\u524D\u8F93\u5165\u662F\u8BFE\u7A0B\u9AA8\u67B6\uFF0C\u5177\u4F53\u8BFE\u540E\u4EFB\u52A1\u5C1A\u672A\u751F\u6210\u3002student_task \u7C7B\u578B\u53EA\u68C0\u67E5 request_item_kinds \u548C request_items \u662F\u5426\u8BB0\u5F55\uFF0C\u4E0D\u68C0\u67E5\u5EF6\u540E\u751F\u6210\u7684\u4EFB\u52A1\u5BF9\u8C61\uFF0C\u4E5F\u4E0D\u5F97\u628A\u5EF6\u540E\u7684\u5177\u4F53\u4EFB\u52A1\u5199\u8FDB missing\u3002missing \u4ECD\u53EF\u62A5\u544A\u5176\u4ED6\u8BFE\u7A0B\u9AA8\u67B6\u5185\u5BB9\u7684\u5B9E\u9645\u9057\u6F0F\uFF0C\u5E76\u5FC5\u987B\u586B\u5199\u975E student_task \u7684 kind\u3002
+\u5EF6\u540E\u751F\u6210\u5177\u4F53\u5185\u5BB9\u7684\u4EFB\u52A1 request_item\uFF1A
+${JSON.stringify(deferredTaskRequestItemIds, null, 2)}
 \u8BFE\u5802\u8F93\u5165\uFF1A
 ${JSON.stringify(buildRequestContext(input), null, 2)}
 
 \u8BFE\u7A0B\u8981\u6C42\u4E0E\u6559\u5B66\u8BBE\u8BA1\uFF1A
-${JSON.stringify(brief, null, 2)}${repair}`;
+${JSON.stringify(reviewBrief, null, 2)}${repair}`;
 }
-function validateBriefVerification(candidate, input, brief) {
-  if (!isRecord(candidate) || !Array.isArray(candidate.missing) || !Array.isArray(candidate.contradictions) || !Array.isArray(candidate.suggestions)) {
-    throw new GeneratedLessonError("Brief verification must contain missing, contradictions, and suggestions arrays", void 0, [
-      briefViolation("BRIEF_VERIFICATION_INVALID_ROOT", "/", "verification must contain missing, contradictions, and suggestions arrays")
+function validateBriefVerification(candidate, input, brief, scope) {
+  if (!isRecord(candidate) || !Array.isArray(candidate.request_item_kinds) || !Array.isArray(candidate.missing) || !Array.isArray(candidate.contradictions) || !Array.isArray(candidate.suggestions)) {
+    throw new GeneratedLessonError("Brief verification must contain request_item_kinds, missing, contradictions, and suggestions arrays", void 0, [
+      briefViolation("BRIEF_VERIFICATION_INVALID_ROOT", "/", "verification must contain request_item_kinds, missing, contradictions, and suggestions arrays")
     ]);
   }
   const clauseRefs = new Set(authoritativeRequestClauses(input).map((clause) => clause.ref));
@@ -13212,6 +13690,13 @@ function validateBriefVerification(candidate, input, brief) {
     }
     if (typeof raw.source_ref !== "string" || !clauseRefs.has(raw.source_ref)) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_SOURCE_REF", `${path}/source_ref`, "source_ref must reference one supplied authoritative request clause"));
+    }
+    if (!coreVerificationMissingKinds.includes(raw.kind)) {
+      violations.push(briefViolation(
+        "BRIEF_VERIFICATION_OUT_OF_SCOPE",
+        `${path}/kind`,
+        "core verification missing.kind must describe a non-task course requirement"
+      ));
     }
     if (typeof raw.reason !== "string" || !raw.reason.trim()) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REASON", `${path}/reason`, "verification reason is required"));
@@ -13644,7 +14129,7 @@ async function callStructuredModel(client, request) {
     throw surfacedError;
   }
 }
-async function verifyLessonBrief(client, input, brief) {
+async function verifyLessonBrief(client, input, brief, scope) {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_VERIFICATION_ATTEMPTS,
     3,
@@ -13659,8 +14144,8 @@ async function verifyLessonBrief(client, input, brief) {
         label: "lesson-brief-verification",
         turnId: input.turn_id,
         systemPrompt: BRIEF_VERIFICATION_SYSTEM_PROMPT,
-        prompt: buildVerificationPrompt(input, brief, previousVerification, violations),
-        responseSchema: buildBriefVerificationResponseJsonSchema(input, brief),
+        prompt: buildVerificationPrompt(input, brief, scope, previousVerification, violations),
+        responseSchema: buildBriefVerificationResponseJsonSchema(input, brief, scope),
         maxTokens: Math.min(client.maxTokens, attempt === 1 ? 4096 : 8192)
       });
       let candidate;
@@ -13674,7 +14159,7 @@ async function verifyLessonBrief(client, input, brief) {
         );
         throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
       }
-      return validateBriefVerification(candidate, input, brief);
+      return validateBriefVerification(candidate, input, brief, scope);
     } catch (error) {
       const generatedError = error instanceof GeneratedLessonError ? error : error instanceof ToolExecutionError && error.code === "VERTEX_RESPONSE_TRUNCATED" ? new GeneratedLessonError(error.message, raw, [briefViolation(
         "BRIEF_VERIFICATION_TRUNCATED",
@@ -13820,7 +14305,7 @@ async function completeLessonTasks(client, input, coreBrief) {
   throw new Error("Lesson task planning failed");
 }
 async function verifyLessonRequirements(client, input, brief, raw) {
-  const verification = await verifyLessonBrief(client, input, brief);
+  const verification = await verifyLessonBrief(client, input, brief, "core");
   const coverageViolations = briefVerificationViolations(verification, input, brief);
   if (coverageViolations.length > 0) {
     throw new GeneratedLessonError(
@@ -13978,7 +14463,23 @@ function deriveParallelLessonSections(brief) {
   }
   return sections;
 }
-function deterministicVisualObservationSection(section, brief) {
+function deterministicVisualObservationNarration(visual, language) {
+  if (language.toLocaleLowerCase().startsWith("en")) {
+    if (visual.surface === "scene3d") return "Drag the 3D scene to inspect it from different angles. Scroll to zoom.";
+    if (visual.surface === "plot") return "First inspect the function plot, including its axes, curve, and marked points.";
+    if (visual.surface === "geometry") return "First inspect the geometry, including its positions, measurements, and labels.";
+    if (visual.surface === "table") return "First inspect how the values are organized by rows and columns.";
+    if (visual.surface === "diagram") return "First inspect the parts of the diagram and how they are connected.";
+    if (visual.surface === "image") return "First inspect the important details marked in the image.";
+  }
+  if (visual.surface === "scene3d") return "\u5148\u62D6\u52A8\u767D\u677F\u4E0A\u7684\u4E09\u7EF4\u573A\u666F\uFF0C\u4ECE\u4E0D\u540C\u89D2\u5EA6\u89C2\u5BDF\uFF1B\u6EDA\u52A8\u53EF\u4EE5\u7F29\u653E\u753B\u9762\u3002";
+  if (visual.surface === "plot") return "\u5148\u89C2\u5BDF\u767D\u677F\u4E0A\u7684\u51FD\u6570\u56FE\u50CF\uFF0C\u7559\u610F\u5750\u6807\u8F74\u3001\u66F2\u7EBF\u548C\u6807\u8BB0\u70B9\u3002";
+  if (visual.surface === "geometry") return "\u5148\u89C2\u5BDF\u767D\u677F\u4E0A\u7684\u51E0\u4F55\u56FE\uFF0C\u7559\u610F\u4F4D\u7F6E\u3001\u5EA6\u91CF\u548C\u6807\u8BB0\u3002";
+  if (visual.surface === "table") return "\u5148\u89C2\u5BDF\u767D\u677F\u4E0A\u7684\u8868\u683C\uFF0C\u7559\u610F\u5404\u884C\u5404\u5217\u4E4B\u95F4\u7684\u5BF9\u5E94\u5173\u7CFB\u3002";
+  if (visual.surface === "diagram") return "\u5148\u89C2\u5BDF\u767D\u677F\u4E0A\u7684\u793A\u610F\u56FE\uFF0C\u7559\u610F\u5404\u90E8\u5206\u4EE5\u53CA\u5B83\u4EEC\u4E4B\u95F4\u7684\u8054\u7CFB\u3002";
+  return "\u5148\u89C2\u5BDF\u767D\u677F\u4E0A\u7684\u56FE\u7247\uFF0C\u7559\u610F\u5176\u4E2D\u6807\u51FA\u7684\u5173\u952E\u7EC6\u8282\u3002";
+}
+function deterministicVisualObservationSection(section, brief, language) {
   if (section.visualRequirementIds.length !== 1) return void 0;
   const visual = brief.visual_requirements.find(
     (requirement) => requirement.id === section.visualRequirementIds[0]
@@ -13989,7 +14490,7 @@ function deterministicVisualObservationSection(section, brief) {
     purpose: section.purpose,
     beats: [{
       key: `show-${visual.id}`,
-      say: `\u5148\u89C2\u5BDF\u767D\u677F\u4E0A\u7684\u5185\u5BB9\uFF0C\u91CD\u70B9\u770B\u5B83\u5982\u4F55${visual.purpose}\u3002`,
+      say: deterministicVisualObservationNarration(visual, language),
       delivery: "patient",
       actions: [{
         do: "focus",
@@ -13999,6 +14500,24 @@ function deterministicVisualObservationSection(section, brief) {
       }]
     }]
   };
+}
+function compactLearnerFacingTitle(value) {
+  const firstLine = value.replace(/\s+/gu, " ").trim().split(/\r?\n/u)[0] ?? "";
+  const withoutTerminalPunctuation = firstLine.replace(/[。！？.!?]+$/gu, "");
+  return [...withoutTerminalPunctuation].slice(0, 72).join("").trim();
+}
+function learnerFacingLessonTitle(input, brief) {
+  const candidates = [
+    ...brief.teaching_goal_requirements.map((requirement) => requirement.goal),
+    brief.request_summary
+  ];
+  for (const candidate of candidates) {
+    if (!candidate.trim() || containsLearnerAudienceMetaLanguage(candidate)) continue;
+    const title = compactLearnerFacingTitle(candidate);
+    if (title) return title;
+  }
+  const requestTitle = compactLearnerFacingTitle(input.learner_request);
+  return requestTitle && !containsLearnerAudienceMetaLanguage(requestTitle) ? requestTitle : (input.language ?? "zh-CN").toLocaleLowerCase().startsWith("en") ? "Explore the core idea" : "\u7406\u89E3\u8FD9\u8282\u8BFE\u7684\u6838\u5FC3\u95EE\u9898";
 }
 function exactVisualComponentSchema(responseSchema, requirement) {
   const definitions = isRecord(responseSchema.$defs) ? structuredClone(responseSchema.$defs) : {};
@@ -14105,33 +14624,69 @@ function parseParallelStep(raw, section, visualAliases) {
   }
   return candidate;
 }
+function parallelStepAudienceViolations(step) {
+  const violations = [];
+  step.beats.forEach((beat, beatIndex) => {
+    appendLearnerFacingLanguageViolations(beat.say, `/beats/${beatIndex}/say`, violations);
+    beat.actions.forEach((action, actionIndex) => {
+      if (action.do === "write" || action.do === "revise") {
+        appendLearnerFacingLanguageViolations(
+          action.content,
+          `/beats/${beatIndex}/actions/${actionIndex}/content`,
+          violations
+        );
+      }
+    });
+  });
+  return violations;
+}
 async function generateParallelSection(client, input, brief, section, responseSchema, signal) {
   const availableVisualIds = section.visualRequirementIds.length > 0 ? section.visualRequirementIds : section.contextVisualIds;
   const availableRequirements = brief.visual_requirements.filter((requirement) => availableVisualIds.includes(requirement.id));
   const teachingGoals = brief.teaching_goal_requirements.filter((requirement) => section.teachingGoalIds.includes(requirement.id));
-  const raw = await callStructuredModel(client, {
-    label: "lesson-section",
-    turnId: input.turn_id,
-    systemPrompt: PARALLEL_SECTION_SYSTEM_PROMPT,
-    prompt: JSON.stringify({
+  const maxAttempts = parsePositiveInteger(
+    process.env.OLL_GENERATION_ATTEMPTS,
+    3,
+    "OLL_GENERATION_ATTEMPTS"
+  );
+  let previousStep;
+  let violations = [];
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const raw = await callStructuredModel(client, {
+      label: "lesson-section",
+      turnId: input.turn_id,
+      systemPrompt: PARALLEL_SECTION_SYSTEM_PROMPT,
+      prompt: JSON.stringify({
+        section,
+        available_visuals: availableRequirements.map((requirement) => ({
+          id: requirement.id,
+          surface: requirement.surface,
+          purpose: requirement.purpose
+        })),
+        teaching_goals: teachingGoals,
+        learner_context: input.learner_context ?? null,
+        language: input.language ?? "zh-CN",
+        ...previousStep ? { previous_step: previousStep, validation_errors: violations } : {}
+      }, null, 2),
+      responseSchema,
+      maxTokens: Math.min(client.maxTokens, 8192),
+      signal
+    });
+    const step = parseParallelStep(
+      raw,
       section,
-      available_visuals: availableRequirements.map((requirement) => ({
-        id: requirement.id,
-        surface: requirement.surface,
-        purpose: requirement.purpose
-      })),
-      teaching_goals: teachingGoals,
-      learner_context: input.learner_context ?? null,
-      language: input.language ?? "zh-CN"
-    }, null, 2),
-    responseSchema,
-    maxTokens: Math.min(client.maxTokens, 8192),
-    signal
-  });
-  return parseParallelStep(
-    raw,
-    section,
-    availableRequirements.map((requirement) => requirement.id)
+      availableRequirements.map((requirement) => requirement.id)
+    );
+    violations = parallelStepAudienceViolations(step);
+    if (violations.length === 0) return step;
+    previousStep = step;
+    process.stderr.write(`learning-coach: rejected lesson section '${section.id}' ${attempt}: ${formatViolations(violations)}
+`);
+  }
+  throw new GeneratedLessonError(
+    `Lesson section '${section.id}' failed learner-facing language validation after ${maxAttempts} attempt(s)`,
+    void 0,
+    violations
   );
 }
 function composeParallelSectionWithVisualContext(step, section, layouts) {
@@ -14439,7 +14994,7 @@ function assembleParallelLesson(input, brief, steps) {
     lesson: {
       mode: "explain",
       language: input.language ?? "zh-CN",
-      title: [...brief.request_summary].slice(0, 160).join(""),
+      title: learnerFacingLessonTitle(input, brief),
       goals: goals.length > 0 ? goals : [brief.request_summary]
     },
     steps: structuredClone(steps),
@@ -14526,7 +15081,11 @@ async function generateLessonInParallel(client, input, brief, onPrefix, signal) 
   const componentPromises = /* @__PURE__ */ new Map();
   const requirementById = new Map(brief.visual_requirements.map((requirement) => [requirement.id, requirement]));
   for (const section of sections) {
-    const deterministicSection = deterministicVisualObservationSection(section, brief);
+    const deterministicSection = deterministicVisualObservationSection(
+      section,
+      brief,
+      input.language ?? "zh-CN"
+    );
     const sectionPromise = deterministicSection ? Promise.resolve(deterministicSection) : schedule(() => generateParallelSection(client, input, brief, section, sectionResponseSchema, signal));
     void sectionPromise.catch(() => void 0);
     sectionPromises.push(sectionPromise);
@@ -14984,6 +15543,9 @@ function parseSelectionModelResponse(raw, input) {
   const items = Array.isArray(output.items) ? output.items.map((item, index) => requireNonEmptyString(item, `items[${index}]`)) : [];
   let response;
   if (output.response_kind === "plot") {
+    if (input.tool_id !== "generate-plot" && input.tool_id !== "custom-question") {
+      throw new Error(`${input.tool_id} cannot return a plot response`);
+    }
     const expression = nonEmpty("expression");
     const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
     if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
@@ -15019,10 +15581,12 @@ function parseSelectionModelResponse(raw, input) {
   }
   return {
     profile: "octos.selection-enhancement",
-    version: "0.1",
+    version: "0.2",
     turn_id: input.turn_id,
     created_at: (/* @__PURE__ */ new Date()).toISOString(),
     source: structuredClone(input.source),
+    board: structuredClone(input.board),
+    tool_id: input.tool_id,
     interpretation: {
       kind,
       content: nonEmpty("interpretation_content"),
@@ -15037,14 +15601,18 @@ async function generateSelectionEnhancement(client, input) {
     turnId: input.turn_id,
     maxTokens: Math.min(client.maxTokens, 4096),
     responseSchema: SELECTION_RESPONSE_SCHEMA,
-    systemPrompt: `\u4F60\u662F\u767D\u677F\u9009\u533A\u8F85\u52A9\u5DE5\u5177\u3002\u53EA\u89E3\u91CA\u7528\u6237\u6846\u9009\u7684\u539F\u7A3F\uFF0C\u5E76\u5728\u539F\u7A3F\u65C1\u8FB9\u751F\u6210\u72EC\u7ACB\u8F85\u52A9\u5185\u5BB9\uFF1B\u7EDD\u4E0D\u91CD\u5199\u3001\u7EA0\u6B63\u6216\u66FF\u6362\u539F\u7A3F\u3002recognized_content \u662F\u4E0A\u6E38\u89C6\u89C9\u6A21\u578B\u5BF9\u9009\u533A\u56FE\u7247\u7684\u89C2\u5BDF\uFF0C\u4E0D\u662F\u7EDD\u5BF9\u4E8B\u5B9E\uFF1B\u7F6E\u4FE1\u5EA6\u4E0D\u8DB3\u65F6\u5FC5\u987B\u660E\u786E\u8BF4\u660E\u4E0D\u786E\u5B9A\u6027\u3002\u53EA\u6709\u8BC6\u522B\u51FA\u660E\u786E\u7684\u5355\u53D8\u91CF y=f(x) \u4E14\u7528\u6237\u8981\u6C42\u51FD\u6570\u56FE\u50CF\u65F6\uFF0Cresponse_kind \u624D\u80FD\u4F7F\u7528 plot\uFF0Cexpression \u5FC5\u987B\u662F\u4EC5\u542B x \u7684\u5B89\u5168\u6570\u5B66\u8868\u8FBE\u5F0F\u3002\u5176\u4ED6\u60C5\u51B5\u4F7F\u7528 explanation\u3002\u4E0D\u8981\u58F0\u79F0\u770B\u5230\u4E86\u9009\u533A\u4EE5\u5916\u7684\u767D\u677F\u3002`,
+    systemPrompt: `\u4F60\u662F\u767D\u677F\u9009\u533A\u8F85\u52A9\u5DE5\u5177\u3002\u53EA\u89E3\u91CA\u7528\u6237\u6846\u9009\u7684\u539F\u7A3F\u548C\u7528\u6237\u660E\u786E\u9009\u4E2D\u7684\u5C40\u90E8\u767D\u677F\u5BF9\u8C61\uFF0C\u5E76\u5728\u539F\u7A3F\u65C1\u8FB9\u751F\u6210\u72EC\u7ACB\u8F85\u52A9\u5185\u5BB9\uFF1B\u7EDD\u4E0D\u91CD\u5199\u3001\u7EA0\u6B63\u6216\u66FF\u6362\u539F\u7A3F\u3002recognized_content \u662F\u4E0A\u6E38\u89C6\u89C9\u6A21\u578B\u5BF9\u5C40\u90E8\u4E0A\u4E0B\u6587\u56FE\u7247\u7684\u89C2\u5BDF\uFF0C\u4E0D\u662F\u7EDD\u5BF9\u4E8B\u5B9E\uFF1B\u7F6E\u4FE1\u5EA6\u4E0D\u8DB3\u65F6\u5FC5\u987B\u660E\u786E\u8BF4\u660E\u4E0D\u786E\u5B9A\u6027\u3002board_targets \u662F Runtime \u63D0\u4F9B\u7684\u7A33\u5B9A\u5F15\u7528\uFF0C\u53EA\u80FD\u7528\u4E8E\u7406\u89E3\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u80FD\u81EA\u884C\u589E\u5220\u6216\u6539\u5199\u3002\u53EA\u6709 tool_id \u4E3A generate-plot \u6216 custom-question\u3001\u8BC6\u522B\u51FA\u660E\u786E\u7684\u5355\u53D8\u91CF y=f(x) \u4E14\u7528\u6237\u8981\u6C42\u51FD\u6570\u56FE\u50CF\u65F6\uFF0Cresponse_kind \u624D\u80FD\u4F7F\u7528 plot\uFF0Cexpression \u5FC5\u987B\u662F\u4EC5\u542B x \u7684\u5B89\u5168\u6570\u5B66\u8868\u8FBE\u5F0F\u3002\u5176\u4ED6\u60C5\u51B5\u4F7F\u7528 explanation\u3002\u4E0D\u8981\u58F0\u79F0\u770B\u5230\u4E86\u5C40\u90E8\u56FE\u7247\u4EE5\u5916\u7684\u767D\u677F\u3002`,
     prompt: JSON.stringify({
       learner_request: input.learner_request,
+      tool_id: input.tool_id,
       selected_content_hint: input.content_hint,
       recognized_selected_content: input.recognized_content,
       recognition_confidence: input.recognition_confidence,
       lesson_title: input.lesson_title ?? null,
-      board_summary: input.board_summary ?? null
+      board_summary: input.board_summary ?? null,
+      board_id: input.board.board_id,
+      board_revision: input.board.revision,
+      board_targets: input.board.targets
     }, null, 2)
   });
   return parseSelectionModelResponse(raw, input);

@@ -725,6 +725,36 @@ test("authoring Schema gives every planned visual object an exact write alias", 
   );
 });
 
+test("explicit board references do not change the authoring response schema", () => {
+  const baseline = buildVertexSchemaContract(contractInput, unitCirclePlotBrief);
+  const referencedBrief = structuredClone(unitCirclePlotBrief);
+  referencedBrief.non_requirement_clauses.push({
+    source_ref: "board_summary:1",
+    reason: "The board summary identifies the referenced source but adds no course requirement.",
+  });
+  const referenced = buildVertexSchemaContract({
+    ...contractInput,
+    request_source: "explicit_board_follow_up",
+    board_summary: "用户明确引用了上一节课的单位圆。",
+    base_revision: 7,
+    board_context: {
+      board_id: "learning-board-session-1",
+      revision: 7,
+      references: [{
+        as: "board-ref-1-1",
+        type: "node",
+        target_id: "prior-lesson:node:unit-circle",
+        label: "上一节课的单位圆",
+        fragments: [],
+      }],
+    },
+  }, referencedBrief);
+
+  assert.equal(referenced.diagnostics.sha256, baseline.diagnostics.sha256);
+  assert.equal(referenced.diagnostics.bytes, baseline.diagnostics.bytes);
+  assert.deepEqual(referenced.schema, baseline.schema);
+});
+
 function isLessonBriefRequest(body) {
   return /课堂需求.*规划器/u.test(body.systemInstruction.parts[0].text);
 }
@@ -768,6 +798,43 @@ function sourceRefsFromPlanningRequest(body) {
     .items.properties.source_ref.enum;
 }
 
+function matchingBriefVerification(body, overrides = {}) {
+  const sourceRefs = body.generationConfig.responseJsonSchema.properties.request_item_kinds
+    .items.properties.source_ref.enum;
+  const kindsBySourceRef = new Map(sourceRefs.map((sourceRef) => [sourceRef, new Set()]));
+  const prompt = body.contents[0].parts[0].text;
+  const requestItemPattern = /"source_ref":\s*"([^"]+)"\s*,\s*"kind":\s*"([^"]+)"/gu;
+  for (const match of prompt.matchAll(requestItemPattern)) {
+    if (kindsBySourceRef.has(match[1])) kindsBySourceRef.get(match[1]).add(match[2]);
+  }
+  return {
+    request_item_kinds: sourceRefs.map((sourceRef) => ({
+      source_ref: sourceRef,
+      kinds: [...kindsBySourceRef.get(sourceRef)],
+    })),
+    missing: [],
+    contradictions: [],
+    suggestions: [],
+    ...overrides,
+  };
+}
+
+function expectedBriefVerification(body, expectedKindsBySourceRef, overrides = {}) {
+  const sourceRefs = body.generationConfig.responseJsonSchema.properties.request_item_kinds
+    .items.properties.source_ref.enum;
+  assert.deepEqual(Object.keys(expectedKindsBySourceRef), sourceRefs);
+  return {
+    request_item_kinds: sourceRefs.map((sourceRef) => ({
+      source_ref: sourceRef,
+      kinds: expectedKindsBySourceRef[sourceRef],
+    })),
+    missing: [],
+    contradictions: [],
+    suggestions: [],
+    ...overrides,
+  };
+}
+
 function plannedBrief(body) {
   const prompt = body.contents[0].parts[0].text;
   if (prompt.includes("3D展示") || prompt.includes("三维场景展示")) return cube3dBrief;
@@ -797,7 +864,7 @@ function plannedBrief(body) {
 
 function modelValueForRequest(body, authorValue) {
   if (isLessonBriefRequest(body)) return plannedBrief(body);
-  if (isLessonBriefVerificationRequest(body)) return { missing: [], contradictions: [], suggestions: [] };
+  if (isLessonBriefVerificationRequest(body)) return matchingBriefVerification(body);
   return authorValue;
 }
 
@@ -979,7 +1046,7 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
       verificationInFlight = true;
       await new Promise((done) => setTimeout(done, 120));
       verificationInFlight = false;
-      response.end(vertexPayload({ missing: [], contradictions: [], suggestions: [] }));
+      response.end(vertexPayload(matchingBriefVerification(parsed)));
       return;
     }
     const isSection = isParallelSectionRequest(parsed);
@@ -1151,17 +1218,12 @@ test("parallel authoring cancels speculative requests when requirement verificat
       if (verificationRequests === 1) {
         await new Promise((done) => setTimeout(done, 60));
       }
+      const verification = matchingBriefVerification(parsed);
+      if (verificationRequests === 1) {
+        verification.request_item_kinds[0].kinds.push("visual");
+      }
       response.writeHead(200, { "content-type": "application/json" });
-      response.end(vertexPayload(verificationRequests === 1
-        ? {
-            missing: [{
-              source_ref: "learner_request:1",
-              reason: "第一次计划仍遗漏了用户要求的一部分",
-            }],
-            contradictions: [],
-            suggestions: [],
-          }
-        : { missing: [], contradictions: [], suggestions: [] }));
+      response.end(vertexPayload(verification));
       return;
     }
     assert.equal(isParallelSectionRequest(parsed), true);
@@ -1295,7 +1357,7 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
       return;
     }
     if (isLessonBriefVerificationRequest(parsed)) {
-      response.end(vertexPayload({ missing: [], contradictions: [], suggestions: [] }));
+      response.end(vertexPayload(matchingBriefVerification(parsed)));
       return;
     }
     if (isLessonTaskPlanningRequest(parsed)) {
@@ -1432,10 +1494,38 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
   let visualComponentRequests = 0;
   let plannerSystemPrompt = "";
   let taskSystemPrompt = "";
+  let taskRepairPrompt = "";
+  let taskPlanningRequests = 0;
+  let verificationRequests = 0;
+  let plannerRequests = 0;
+  let sectionRequests = 0;
+  let sectionRepairPrompt = "";
   let visualComponentSystemPrompt = "";
   const coreCubeBrief = structuredClone(cube3dBrief);
+  coreCubeBrief.request_summary = "用可旋转正方体解释顶点、棱和面，展示水平截面，最后让学生转到俯视方向";
+  coreCubeBrief.request_items = [
+    { id: "explain-cube", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
+    { id: "show-cube-3d", source_ref: "learner_request:1", kind: "visual", polarity: "require" },
+    { id: "show-horizontal-section", source_ref: "learner_request:2", kind: "visual", polarity: "require" },
+    { id: "control-cube-view", source_ref: "learner_request:2", kind: "student_control", polarity: "require" },
+    { id: "complete-view-task", source_ref: "learner_request:2", kind: "student_task", polarity: "require" },
+  ];
+  coreCubeBrief.visual_requirements[0].request_item_ids = [
+    "show-cube-3d",
+    "show-horizontal-section",
+    "control-cube-view",
+  ];
   coreCubeBrief.scene3d_task_requirements = [];
   coreCubeBrief.visual_requirements[0].required_features.push("cross_section");
+  coreCubeBrief.visual_requirements[0].purpose = "帮助学生从多个角度观察正方体并完成俯视任务";
+  const topViewTask = {
+    ...structuredClone(cube3dBrief.scene3d_task_requirements[0]),
+    id: "find-top-view",
+    prompt: "把正方体转到俯视方向",
+    target_pitch: Math.PI / 2,
+    hints: ["可以使用俯视按钮，或拖动到正上方。"],
+    success_message: "正确，这是正方体的俯视方向。",
+  };
   const cubeWithSection = structuredClone(validCube3dLesson.steps[0].beats[0].actions[0]);
   cubeWithSection.content.sections = [{
     as: "horizontal-section",
@@ -1458,18 +1548,38 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     const parsed = JSON.parse(body);
     if (isLessonBriefRequest(parsed)) {
       plannerSystemPrompt = parsed.systemInstruction.parts[0].text;
+      plannerRequests += 1;
       response.end(vertexPayload(coreCubeBrief));
       return;
     }
     if (isLessonBriefVerificationRequest(parsed)) {
-      response.end(vertexPayload({ missing: [], contradictions: [], suggestions: [] }));
+      verificationRequests += 1;
+      const verificationPrompt = parsed.contents[0].parts[0].text;
+      assert.match(verificationPrompt, /当前输入是课程骨架.*具体课后任务尚未生成/su);
+      assert.match(verificationPrompt, /"complete-view-task"/u);
+      assert.doesNotMatch(verificationPrompt, /"scene3d_task_requirements"/u);
+      assert.equal(
+        parsed.generationConfig.responseJsonSchema.properties.missing.items
+          .properties.kind.enum.includes("student_task"),
+        false,
+      );
+      assert.deepEqual(
+        parsed.generationConfig.responseJsonSchema.properties.missing.items.required,
+        ["source_ref", "kind", "reason"],
+      );
+      response.end(vertexPayload(expectedBriefVerification(parsed, {
+        "learner_request:1": ["teaching_goal", "visual"],
+        "learner_request:2": ["visual", "student_control", "student_task"],
+      })));
       return;
     }
     if (isLessonTaskPlanningRequest(parsed)) {
+      taskPlanningRequests += 1;
       taskSystemPrompt = parsed.systemInstruction.parts[0].text;
+      if (taskPlanningRequests > 1) taskRepairPrompt = parsed.contents[0].parts[0].text;
       response.end(vertexPayload({
         student_task_requirements: [],
-        scene3d_task_requirements: cube3dBrief.scene3d_task_requirements,
+        scene3d_task_requirements: taskPlanningRequests === 1 ? [] : [topViewTask],
       }));
       return;
     }
@@ -1515,15 +1625,17 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
       return;
     }
     assert.equal(isParallelSectionRequest(parsed), true);
+    sectionRequests += 1;
+    if (sectionRequests > 1) sectionRepairPrompt = parsed.contents[0].parts[0].text;
     const sectionId = JSON.parse(parsed.contents[0].parts[0].text).section.id;
     response.end(vertexPayload({
       key: sectionId,
       purpose: "观察立方体",
       beats: [{
         key: "inspect-cube",
-        say: sectionId === "observe"
-          ? "先拖动立方体，观察面和棱的空间关系。"
-          : "从正面观察时，立方体投影为正方形。",
+        say: sectionRequests === 1
+          ? "帮助学生理解从正面观察时立方体为什么投影为正方形。"
+          : "从正面观察时，你会看到立方体投影为正方形。",
         delivery: "patient",
         actions: [{
           do: "focus",
@@ -1543,12 +1655,20 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
       baseUrl: `http://127.0.0.1:${address.port}`,
       serviceAccount,
       workDirectory,
-      input: { learner_request: "请用3D展示一个立方体和水平截面，让我旋转观察并把它转到正视图。" },
+      input: {
+        learner_request: "我空间想象能力不太好，请用一个可以旋转的正方体，帮我理解顶点、棱和面之间的关系。再展示一个水平截面，让我从不同角度观察，最后让我自己把它转到俯视方向。",
+      },
       environment: { OLL_AUTHORING_STRATEGY: "parallel" },
     });
 
     assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(plannerRequests, 1);
+    assert.equal(verificationRequests, 1);
+    assert.equal(taskPlanningRequests, 2);
+    assert.match(taskRepairPrompt, /BRIEF_UNMAPPED_REQUEST_ITEM|BRIEF_INCOMPATIBLE_REQUEST_MAPPING/u);
     assert.equal(visualComponentRequests, 3);
+    assert.equal(sectionRequests, 2);
+    assert.match(sectionRepairPrompt, /previous_step.*OLL_LEARNER_FACING_LANGUAGE/su);
     assert.match(plannerSystemPrompt, /scene3d.*角度.*弧度/s);
     assert.match(taskSystemPrompt, /target_pitch.*-π\/2.*π\/2/s);
     assert.match(visualComponentSystemPrompt, /scene3d\.camera.*角度.*弧度/s);
@@ -1556,13 +1676,20 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     assert.match(visualComponentSystemPrompt, /section\.targets.*section\.display.*plane_and_intersection/s);
     const protocol = JSON.parse(result.stdout);
     const lesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    assert.equal(lesson.lesson.title, "从不同方向观察立方体的面、棱和空间关系");
+    assert.equal(lesson.steps[0].beats[0].say, "先拖动白板上的三维场景，从不同角度观察；滚动可以缩放画面。");
+    assert.doesNotMatch(
+      [lesson.lesson.title, ...lesson.steps.flatMap((step) => step.beats.map((beat) => beat.say))].join("\n"),
+      /(?:学生|学习者)/u,
+    );
     assert.equal(lesson.steps[0].beats[0].actions.some(
       (action) => action.do === "write" && action.as === "cube-scene" && action.kind === "scene3d",
     ), true);
     const scene = lesson.steps[0].beats[0].actions.find((action) => action.as === "cube-scene");
     assert.deepEqual(scene.content.sections[0].targets, ["cube"]);
     assert.equal(scene.content.sections[0].display, "plane_and_intersection");
-    assert.deepEqual(lesson.lesson.tasks.map((task) => task.as), ["find-front-view"]);
+    assert.deepEqual(lesson.lesson.tasks.map((task) => task.as), ["find-top-view"]);
+    assert.equal(lesson.lesson.tasks[0].completion.pitch, Math.PI / 2);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -1623,6 +1750,23 @@ test("selection tool writes a source-linked artifact without producing a lesson"
           checksum: { algorithm: "sha-256", value: checksum },
         },
         content_hint: "math",
+        tool_id: "generate-plot",
+        board: {
+          board_id: "learning-board-session-1",
+          revision: 12,
+          targets: [{
+            target_id: "formula-node:formula-fragment",
+            node_id: "formula-node",
+            element_id: "formula-fragment",
+            kind: "math-fragment",
+            label: "y = x^2",
+            value_json: JSON.stringify({ latex: "y=x^2" }),
+            world_bounds: { x: 118, y: 78, width: 244, height: 94 },
+            overlap: 0.91,
+            distance: 0,
+            z_index: 4,
+          }],
+        },
         recognized_content: "y = x^2",
         recognition_confidence: "high",
       },
@@ -1639,7 +1783,16 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     assert.match(protocol.files_to_send[0], /\.octos-selection-enhancement\.json$/);
     const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
     assert.equal(artifact.profile, "octos.selection-enhancement");
+    assert.equal(artifact.version, "0.2");
     assert.equal(artifact.source.checksum.value, checksum);
+    assert.equal(artifact.tool_id, "generate-plot");
+    assert.equal(artifact.board.targets[0].target_id, "formula-node:formula-fragment");
+    assert.deepEqual(artifact.board.targets[0].value, { latex: "y=x^2" });
+    assert.equal(artifact.board.targets[0].overlap, 0.91);
+    assert.deepEqual(
+      artifact.board.targets[0].world_bounds,
+      { x: 118, y: 78, width: 244, height: 94 },
+    );
     assert.equal(artifact.response.kind, "plot");
     assert.equal(artifact.response.expression, "x^2");
     await assert.rejects(
@@ -1777,6 +1930,10 @@ test("tool requests Vertex structured output, validates OLL, and returns a deliv
     assert.ok(plannerSchema.required.includes("student_task_requirements"));
     assert.ok(plannerSchema.required.includes("scene3d_task_requirements"));
     assert.ok(plannerSchema.required.includes("unhandled_request_items"));
+    assert.deepEqual(
+      plannerSchema.properties.non_requirement_clauses.items.required,
+      ["source_ref", "reason"],
+    );
     const verifierSystemPrompt = requests[2].body.systemInstruction.parts[0].text;
     assert.match(verifierSystemPrompt, /用户要求覆盖复核器/);
     const systemPrompt = requests[3].body.systemInstruction.parts[0].text;
@@ -2144,7 +2301,7 @@ test("tool rejects a planner omission before authoring and repairs the requireme
               contradictions: [],
               suggestions: [],
             }
-          : { missing: [], contradictions: [], suggestions: [] }
+          : matchingBriefVerification(parsedBody)
         : validPlotLesson;
     response.end(vertexPayload(value));
   });
@@ -2179,6 +2336,68 @@ test("tool rejects a planner omission before authoring and repairs the requireme
   }
 });
 
+test("verifier cannot bypass requirement auditing with empty success arrays", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-verifier-contract-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  let verificationRequests = 0;
+  let authoringRequests = 0;
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    const parsedBody = JSON.parse(body);
+    if (isLessonBriefRequest(parsedBody)) {
+      response.end(vertexPayload(plannedBrief(parsedBody)));
+      return;
+    }
+    if (isLessonBriefVerificationRequest(parsedBody)) {
+      verificationRequests += 1;
+      response.end(vertexPayload({
+        missing: [],
+        contradictions: [],
+        suggestions: [],
+      }));
+      return;
+    }
+    authoringRequests += 1;
+    response.end(vertexPayload(validLesson));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const result = await runTool({
+      baseUrl,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `${baseUrl}/token`,
+      },
+      workDirectory,
+      environment: {
+        OLL_PLANNING_ATTEMPTS: "1",
+        OLL_VERIFICATION_ATTEMPTS: "3",
+      },
+    });
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(verificationRequests, 3);
+    assert.equal(authoringRequests, 0);
+    assert.match(result.stdout, /request_item_kinds/);
+    assert.match(result.stderr, /BRIEF_VERIFICATION_INVALID_ROOT/);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
 test("pedagogical suggestions do not reject a plan whose explicit request is already covered", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-verifier-"));
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -2189,6 +2408,7 @@ test("pedagogical suggestions do not reject a plan whose explicit request is alr
     {
       missing: [{
         source_ref: "learner_request:999",
+        kind: "visual",
         reason: "错误地引用了不存在的原文分句",
       }],
       contradictions: [],
@@ -2221,7 +2441,7 @@ test("pedagogical suggestions do not reject a plan whose explicit request is alr
     const value = isLessonBriefRequest(parsedBody)
       ? plannedBrief(parsedBody)
       : isLessonBriefVerificationRequest(parsedBody)
-        ? verifierResponses[verifierResponseIndex++]
+        ? matchingBriefVerification(parsedBody, verifierResponses[verifierResponseIndex++])
         : validLesson;
     response.end(vertexPayload(value));
   });
@@ -2277,14 +2497,12 @@ test("a natural spring request keeps user requirements separate from optional te
     const value = isLessonBriefRequest(parsedBody)
       ? springOscillationBrief
       : isLessonBriefVerificationRequest(parsedBody)
-        ? {
-            missing: [],
-            contradictions: [],
+        ? matchingBriefVerification(parsedBody, {
             suggestions: [{
               request_item_id: "explain-oscillation",
               suggestion: "可以补充恢复力箭头帮助理解",
             }],
-          }
+          })
         : modelAuthoredSpringOscillationLesson;
     response.end(vertexPayload(value));
   });
@@ -2373,7 +2591,7 @@ test("a rotating-circle analogy cannot satisfy direct linear spring motion", asy
       : isLessonBriefRequest(parsedBody)
         ? springOscillationBrief
         : isLessonBriefVerificationRequest(parsedBody)
-          ? { missing: [], contradictions: [], suggestions: [] }
+          ? matchingBriefVerification(parsedBody)
           : invalidLesson;
     response.end(vertexPayload(value));
   });
@@ -2543,7 +2761,7 @@ test("tool refuses an image requirement when no authorized image asset exists", 
     modelRequests.push(parsedBody);
     response.end(vertexPayload(isLessonBriefRequest(parsedBody)
       ? imageBrief
-      : { missing: [], contradictions: [], suggestions: [] }));
+      : matchingBriefVerification(parsedBody)));
   });
 
   try {
@@ -2629,7 +2847,7 @@ test("tool keeps revise as a typed per-kind capability instead of a universal co
     response.end(vertexPayload(isLessonBriefRequest(parsedBody)
       ? reviseBrief
       : isLessonBriefVerificationRequest(parsedBody)
-        ? { missing: [], contradictions: [], suggestions: [] }
+        ? matchingBriefVerification(parsedBody)
         : reviseLesson));
   });
 
@@ -3375,14 +3593,46 @@ test("tool exposes old board content only for an explicit board follow-up", asyn
         request_source: "explicit_board_follow_up",
         board_summary: "长方形周长方程：2(x + x + 4) = 32",
         last_applied_action: "化简到 4x + 8 = 32",
+        base_revision: 7,
+        board_context: {
+          board_id: "learning-board-session-1",
+          revision: 7,
+          references: [{
+            as: "board-ref-1-1",
+            type: "node",
+            target_id: "prior-lesson:node:rectangle-equation",
+            label: "长方形周长方程",
+            fragments: [{
+              as: "selected-part",
+              target_id: "prior-lesson:node:rectangle-equation:fragment:equation",
+            }],
+          }],
+        },
       },
     });
 
     assert.equal(result.exitCode, 0, result.stderr);
-    const prompt = requests.find((candidate) => candidate && isAuthoringRequest(candidate)).contents[0].parts[0].text;
+    const authoringRequest = requests.find((candidate) => candidate && isAuthoringRequest(candidate));
+    const prompt = authoringRequest.contents[0].parts[0].text;
     assert.match(prompt, /"request_source": "explicit_board_follow_up"/);
     assert.match(prompt, /长方形周长方程：2\(x \+ x \+ 4\) = 32/);
     assert.match(prompt, /化简到 4x \+ 8 = 32/);
+    assert.match(prompt, /prior-lesson:node:rectangle-equation/);
+    assert.equal(
+      authoringRequest.generationConfig.responseJsonSchema.properties.board_context,
+      undefined,
+      "host-owned board references must not enlarge the model generation schema",
+    );
+    const protocol = JSON.parse(result.stdout);
+    const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    assert.equal(artifact.board_context.board_id, "learning-board-session-1");
+    assert.equal(artifact.board_context.revision, 7);
+    assert.equal(artifact.board_context.references[0].target_id, "prior-lesson:node:rectangle-equation");
+    const firstWrite = artifact.steps.flatMap((step) => step.beats)
+      .flatMap((beat) => beat.actions)
+      .find((action) => action.do === "write");
+    assert.equal(firstWrite.place.relation, "near");
+    assert.equal(firstWrite.place.anchor, "board-ref-1-1");
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -3406,6 +3656,39 @@ test("tool requires board context for an explicit board follow-up", async () => 
     assert.match(result.stderr, /board_summary is required/);
     const protocol = JSON.parse(result.stdout);
     assert.equal(protocol.success, false);
+  } finally {
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("tool rejects stale or malformed explicit board references before model generation", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-stale-board-ref-"));
+  try {
+    const result = await runTool({
+      baseUrl: "http://127.0.0.1:1",
+      serviceAccount: {},
+      workDirectory,
+      input: {
+        learner_request: "围绕我选中的公式讲一课",
+        request_source: "explicit_board_follow_up",
+        board_summary: "已明确选择一个公式",
+        base_revision: 9,
+        board_context: {
+          board_id: "learning-board-session-1",
+          revision: 8,
+          references: [{
+            as: "board-ref-1-1",
+            type: "node",
+            target_id: "prior:node:formula",
+            fragments: [],
+          }],
+        },
+      },
+    });
+
+    assert.equal(result.exitCode, 1);
+    assert.match(result.stderr, /base_revision must match board_context.revision/);
+    assert.equal(JSON.parse(result.stdout).success, false);
   } finally {
     await rm(workDirectory, { recursive: true, force: true });
   }

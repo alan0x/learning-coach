@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -73,6 +73,44 @@
             "minimum": 0,
             "description": "Existing board revision when supplied by the host."
           },
+          "board_context": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Stable, read-only board references explicitly attached by the learner. Only valid for explicit_board_follow_up.",
+            "properties": {
+              "board_id": { "type": "string" },
+              "revision": { "type": "integer", "minimum": 0 },
+              "references": {
+                "type": "array",
+                "maxItems": 12,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "as": { "type": "string" },
+                    "type": { "type": "string", "enum": ["node", "group", "connection"] },
+                    "target_id": { "type": "string" },
+                    "label": { "type": "string" },
+                    "fragments": {
+                      "type": "array",
+                      "maxItems": 24,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "as": { "type": "string" },
+                          "target_id": { "type": "string" }
+                        },
+                        "required": ["as", "target_id"]
+                      }
+                    }
+                  },
+                  "required": ["as", "type", "target_id", "fragments"]
+                }
+              }
+            },
+            "required": ["board_id", "revision", "references"]
+          },
           "source_observation": {
             "type": "object",
             "additionalProperties": false,
@@ -132,8 +170,8 @@
                 "properties": {
                   "x": { "type": "number" },
                   "y": { "type": "number" },
-                  "width": { "type": "number", "exclusiveMinimum": 0 },
-                  "height": { "type": "number", "exclusiveMinimum": 0 }
+                  "width": { "type": "number", "minimum": 0 },
+                  "height": { "type": "number", "minimum": 0 }
                 },
                 "required": ["x", "y", "width", "height"]
               },
@@ -159,6 +197,61 @@
             "type": "string",
             "enum": ["text", "math", "geometry", "data", "unknown"]
           },
+          "tool_id": {
+            "type": "string",
+            "enum": ["explain", "check-and-suggest", "generate-plot", "custom-question"]
+          },
+          "board": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "board_id": { "type": "string" },
+              "revision": { "type": "integer", "minimum": 0 },
+              "targets": {
+                "type": "array",
+                "maxItems": 6,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "target_id": { "type": "string" },
+                    "node_id": { "type": "string" },
+                    "element_id": { "type": "string" },
+                    "kind": { "type": "string" },
+                    "label": { "type": "string" },
+                    "value_json": {
+                      "type": "string",
+                      "description": "Optional compact JSON value supplied by the Runtime for the exact target."
+                    },
+                    "world_bounds": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "x": { "type": "number" },
+                        "y": { "type": "number" },
+                        "width": { "type": "number", "minimum": 0 },
+                        "height": { "type": "number", "minimum": 0 }
+                      },
+                      "required": ["x", "y", "width", "height"]
+                    },
+                    "overlap": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "distance": { "type": "number", "minimum": 0 },
+                    "z_index": { "type": "integer" }
+                  },
+                  "required": [
+                    "target_id",
+                    "node_id",
+                    "kind",
+                    "world_bounds",
+                    "overlap",
+                    "distance",
+                    "z_index"
+                  ]
+                }
+              }
+            },
+            "required": ["board_id", "revision", "targets"]
+          },
           "recognized_content": {
             "type": "string",
             "description": "Only what is visible in the selected image; do not use the rest of the board. State uncertainty in recognition_confidence."
@@ -175,6 +268,8 @@
           "learner_request",
           "source",
           "content_hint",
+          "tool_id",
+          "board",
           "recognized_content",
           "recognition_confidence"
         ]

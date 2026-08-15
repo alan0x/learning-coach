@@ -39,6 +39,17 @@ interface ToolInput {
   board_summary?: string;
   last_applied_action?: string;
   base_revision?: number;
+  board_context?: {
+    board_id: string;
+    revision: number;
+    references: Array<{
+      as: string;
+      type: "node" | "group" | "connection";
+      target_id: string;
+      label?: string;
+      fragments: Array<{ as: string; target_id: string }>;
+    }>;
+  };
   source_observation?: {
     kind: "live_camera" | "uploaded_image";
     recognized_problem: string;
@@ -47,6 +58,20 @@ interface ToolInput {
 }
 
 type SelectionContentKind = "text" | "math" | "geometry" | "data" | "unknown";
+type SelectionToolId = "explain" | "check-and-suggest" | "generate-plot" | "custom-question";
+
+interface SelectionBoardTargetRef {
+  target_id: string;
+  node_id: string;
+  element_id?: string;
+  kind: string;
+  label?: string;
+  value?: unknown;
+  world_bounds: { x: number; y: number; width: number; height: number };
+  overlap: number;
+  distance: number;
+  z_index: number;
+}
 
 interface SelectionToolInput {
   turn_id: string;
@@ -59,6 +84,12 @@ interface SelectionToolInput {
     checksum: { algorithm: "sha-256"; value: string };
   };
   content_hint: SelectionContentKind;
+  tool_id: SelectionToolId;
+  board: {
+    board_id: string;
+    revision: number;
+    targets: SelectionBoardTargetRef[];
+  };
   recognized_content: string;
   recognition_confidence: "high" | "medium" | "low";
   lesson_title?: string;
@@ -67,10 +98,12 @@ interface SelectionToolInput {
 
 interface SelectionEnhancementArtifact {
   profile: "octos.selection-enhancement";
-  version: "0.1";
+  version: "0.2";
   turn_id: string;
   created_at: string;
   source: SelectionToolInput["source"];
+  board: SelectionToolInput["board"];
+  tool_id: SelectionToolId;
   interpretation: {
     kind: SelectionContentKind;
     content: string;
@@ -292,6 +325,7 @@ interface BriefVerification {
   }>;
   missing: Array<{
     source_ref: string;
+    kind: Exclude<RequestItemKind, "student_task">;
     reason: string;
   }>;
   contradictions: Array<{
@@ -303,6 +337,8 @@ interface BriefVerification {
     suggestion: string;
   }>;
 }
+
+type BriefVerificationScope = "core";
 
 interface AuthoringCapabilityPlan {
   writeKinds: AuthoringWriteKind[];
@@ -394,6 +430,8 @@ class ToolExecutionError extends Error {
 
 const LESSON_BRIEF_SYSTEM_PROMPT = `你是课堂需求与教学设计规划器，不生成 OLL，也不撰写课程正文。输入明确分成两部分：必须忠实满足的用户原话，以及只能辅助选择讲法、不能升级成用户要求的教学建议。
 
+request_summary、visual_requirements.purpose 等 summary/purpose 字段是内部规划说明，不得被后续程序直接复制成标题、旁白或板书。teaching_goal_requirements.goal 会直接展示给当前学习者，必须使用“你”“我们”或中性表述，不得写成“帮助学生……”“让学生……”“支持学习者……”等给课程设计者看的第三人称说明。
+
 第一部分先逐条处理 authoritative_request.clauses：
 - 每个 source_ref 必须二选一：如果分句表达了实际要求，就建立一个或多个 request_item；如果只是寒暄、语气词或没有可执行要求，就写入 non_requirement_clauses 并说明原因；不能遗漏，也不能同时出现在两边；
 - non_requirement_clauses 不是逃避要求的地方。只要分句要求解释、展示、比较、演示、控制、修改或限制表现形式，就必须建立 request_item；
@@ -464,6 +502,8 @@ progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐
 
 const BRIEF_VERIFICATION_SYSTEM_PROMPT = `你是用户要求覆盖复核器，不生成课件，也不决定应该采用哪一种教法。
 
+你现在复核的是“课程骨架”，不是最终课件。课后互动任务的目标值、提示语和成功反馈由下一阶段生成，因此输入中不会出现 student_task_requirements 或 scene3d_task_requirements。不得因为这些延后字段尚未出现而报告 missing 或 contradiction。
+
 先逐条审核 authoritative_request.clauses。request_item_kinds 必须为每个 source_ref 恰好返回一项，并列出该原文分句中明确包含的所有要求类别。一个分句可以同时包含多类要求，不能因为已经记录其中一类就忽略其他类别：
 - teaching_goal：要求解释、理解、比较或回答原因；
 - visual：明确要求画出、展示或演示某个对象；
@@ -476,10 +516,11 @@ const BRIEF_VERIFICATION_SYSTEM_PROMPT = `你是用户要求覆盖复核器，�
 - unsupported_feature：明确要求当前系统不能真实实现的能力。
 没有要求的寒暄或背景句返回空 kinds。
 
-再做三件事：
-1. missing：用户原文中的某一项明确要求没有被 request_items 记录。一个 source_ref 可能同时要求解释、画图和操作；即使其中一项已记录，另一项漏掉仍应报告，并在 reason 中明确说明漏了什么；
-2. contradictions：某个已有 request_item 与它引用的用户原文相反，或把明确不支持的能力冒充为已支持；
-3. suggestions：课程可以怎样教得更好，但这类建议绝不能放进 missing 或 contradictions。
+再做两件事：
+1. contradictions：某个已有 request_item 与它引用的用户原文相反，或把明确不支持的能力冒充为已支持；
+2. suggestions：课程可以怎样教得更好，但这类建议绝不能放进 contradictions。
+
+missing 只报告课程骨架自身遗漏的教学目标、视觉对象、关系、连续变化、学生控制、既有白板修改、展示限制或不支持能力，并必须填写对应 kind。用户要求类别若未被 request_items 记录，优先在 request_item_kinds 中如实列出，由本地程序进行差集检查。student_task 的具体任务由下一阶段生成，绝不能放进 missing。
 
 如果用户明确问“为什么发生”，遗漏因果解释属于 missing，不是 suggestions。如果用户要求演示某个对象的变化，却只规划类比图而没有直接表现该对象，也属于 missing。复核这类请求时必须检查被绑定 geometry 的 motion_subject 和 motion_kind：motion_subject 必须明确命名用户要求观看的运动主体，motion_kind 必须描述该主体本身的运动；圆周投影、函数曲线或其他类比即使数学上相关，也不能作为主体演示通过复核。只有在因果目标和主体演示已经覆盖后，受力图、速度图、能量图等可选讲法才属于 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
 
@@ -490,6 +531,7 @@ const LESSON_TASK_PLANNING_SYSTEM_PROMPT = `你是课后互动任务设计器。
 - 每个共享变量在没有禁止学生任务时通常设计一个任务。用户明确要求动手操作时必须覆盖对应 request_item；没有明确要求时，任务可引用它所检验的 teaching_goal 或 continuous_change request_item。
 - completion_expression 只能读取该任务的 variable；目标必须在变量范围内可达，而且初始值不能已经满足目标。
 - prompt 使用自然的学生指令，描述可见目标，不暴露内部实现；hints 由观察提示逐步过渡到具体操作；success_message 解释操作为什么正确。
+- prompt、hints 和 success_message 会直接展示给当前学习者，必须直接使用“你”或中性祈使句，不得写“让学生……”“引导学习者……”等课程设计说明。
 
 三维视角任务：
 - 仅当用户明确要求完成某个观察视角时生成，并引用带 orbit_control 的 scene3d visual。
@@ -513,6 +555,7 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 10. 教学重点、推理顺序和最终结论必须清楚，Beat narration 可以直接作为教师课堂讲述。
 11. 每个 Beat 必须包含一个 when="after_speech" 的 focus 动作，聚焦该 Beat 结束后学生应继续看的当前教学目标；不得依赖上一 Beat 或上一课程遗留焦点。
 12. 用户问现象原因时必须实际讲清原因，不能只给规律或公式；用户要求演示某个对象的变化时，动态白板必须直接表现该对象，类比图只能作为辅助。
+13. lesson.title、lesson.goals、Beat say、板书文字和任务文案都直接面向当前学习者；使用“你”“我们”或中性表达，不得出现“帮助学生……”“让学生……”“引导学习者……”等内部课程设计口吻。
 
 必须严格使用以下结构和字段名：
 - 根对象：dsl="octos.lesson"、version="0.1"、profile="authoring"、lesson、steps、close。
@@ -559,7 +602,7 @@ const BEAT_REPAIR_SYSTEM_PROMPT = `你是 OLL 局部教学节拍修复器。输�
 
 const PARALLEL_SECTION_SYSTEM_PROMPT = `你是独立课程分段编写器。你只编写一段课程的一个完整 Step，其他分段会同时由其他编写器完成，最后由程序按顺序组装。
 
-只返回一个符合所附 JSON Schema 的 Step 对象，不返回 Lesson、close、Markdown 或解释。只讲输入 section.purpose 和 teaching_goals 指定的内容，不重复完整课程。主要 geometry、plot、scene3d、diagram、image、table 视觉对象由程序另行生成和插入；你不得创建这些主要视觉对象。available_visuals 是本段讲解必须保持在视野中的上下文；你只能用 text、math、note 或 shape 写必要板书，并让每个 focus 同时引用本段新建节点和相关 available_visuals。不要引用其他分段可能创建的文字节点，因为这些分段正在并行生成。每个 Beat 必须包含一个 when="after_speech" 的 focus，say 必须是适合 TTS 的自然语言，不包含 Markdown 或 LaTeX 定界符。write.content 必须匹配 kind：text/shape 使用非空 text，math 使用 latex，note 使用 title 和 items。所有 key 与 as 只能使用小写英文字母、数字和连字符。`;
+只返回一个符合所附 JSON Schema 的 Step 对象，不返回 Lesson、close、Markdown 或解释。只讲输入 section.purpose 和 teaching_goals 指定的内容，不重复完整课程。section.purpose 是给编写器看的内部说明，不得逐字复制进 say 或板书。主要 geometry、plot、scene3d、diagram、image、table 视觉对象由程序另行生成和插入；你不得创建这些主要视觉对象。available_visuals 是本段讲解必须保持在视野中的上下文；你只能用 text、math、note 或 shape 写必要板书，并让每个 focus 同时引用本段新建节点和相关 available_visuals。不要引用其他分段可能创建的文字节点，因为这些分段正在并行生成。每个 Beat 必须包含一个 when="after_speech" 的 focus，say 和板书直接面向当前学习者，使用“你”“我们”或中性表达，不得写“帮助学生”“让学生”“引导学习者”等内部课程设计口吻。say 必须是适合 TTS 的自然语言，不包含 Markdown 或 LaTeX 定界符。write.content 必须匹配 kind：text/shape 使用非空 text，math 使用 latex，note 使用 title 和 items。所有 key 与 as 只能使用小写英文字母、数字和连字符。`;
 
 const VISUAL_COMPONENT_SYSTEM_PROMPT = `你是独立视觉组件编写器。你只生成课程要求中指定的一个主要视觉对象，其他视觉对象和课程讲解会同时生成，最后由程序组装。
 
@@ -699,6 +742,88 @@ function parseToolInput(raw: string): ToolInput {
       "board_summary is required when request_source is explicit_board_follow_up",
     );
   }
+  let boardContext: ToolInput["board_context"];
+  if (input.board_context !== undefined) {
+    if (requestSource !== "explicit_board_follow_up") {
+      throw new Error("board_context is only allowed for explicit_board_follow_up");
+    }
+    if (!input.board_context || typeof input.board_context !== "object"
+      || Array.isArray(input.board_context)) {
+      throw new Error("board_context must be an object");
+    }
+    const context = input.board_context as Record<string, unknown>;
+    if (!Number.isSafeInteger(context.revision) || Number(context.revision) < 0) {
+      throw new Error("board_context.revision must be a non-negative integer");
+    }
+    if (baseRevision !== undefined && Number(baseRevision) !== Number(context.revision)) {
+      throw new Error("base_revision must match board_context.revision");
+    }
+    if (!Array.isArray(context.references) || context.references.length > 12) {
+      throw new Error("board_context.references must contain at most 12 references");
+    }
+    const aliases = new Set<string>();
+    const referenceAlias = (value: unknown, label: string): string => {
+      const alias = requireNonEmptyString(value, label);
+      if (!/^[a-z][a-z0-9-]{0,63}$/.test(alias)) {
+        throw new Error(`${label} must be an OLL alias`);
+      }
+      return alias;
+    };
+    const references = context.references.map((value, index) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new Error(`board_context.references[${index}] must be an object`);
+      }
+      const reference = value as Record<string, unknown>;
+      const alias = referenceAlias(reference.as, `board_context.references[${index}].as`);
+      if (aliases.has(alias)) throw new Error("board_context reference aliases must be unique");
+      aliases.add(alias);
+      if (!["node", "group", "connection"].includes(String(reference.type))) {
+        throw new Error(`board_context.references[${index}].type is invalid`);
+      }
+      if (!Array.isArray(reference.fragments) || reference.fragments.length > 24) {
+        throw new Error(`board_context.references[${index}].fragments is invalid`);
+      }
+      const fragmentAliases = new Set<string>();
+      const fragments = reference.fragments.map((fragmentValue, fragmentIndex) => {
+        if (!fragmentValue || typeof fragmentValue !== "object" || Array.isArray(fragmentValue)) {
+          throw new Error(`board_context reference fragment ${fragmentIndex} is invalid`);
+        }
+        const fragment = fragmentValue as Record<string, unknown>;
+        const fragmentAlias = referenceAlias(
+          fragment.as,
+          `board_context.references[${index}].fragments[${fragmentIndex}].as`,
+        );
+        if (fragmentAliases.has(fragmentAlias)) {
+          throw new Error("board_context fragment aliases must be unique per reference");
+        }
+        fragmentAliases.add(fragmentAlias);
+        return {
+          as: fragmentAlias,
+          target_id: requireNonEmptyString(
+            fragment.target_id,
+            `board_context.references[${index}].fragments[${fragmentIndex}].target_id`,
+          ),
+        };
+      });
+      return {
+        as: alias,
+        type: reference.type as "node" | "group" | "connection",
+        target_id: requireNonEmptyString(
+          reference.target_id,
+          `board_context.references[${index}].target_id`,
+        ),
+        ...(typeof reference.label === "string" && reference.label.trim()
+          ? { label: truncate(reference.label)! }
+          : {}),
+        fragments,
+      };
+    });
+    boardContext = {
+      board_id: requireNonEmptyString(context.board_id, "board_context.board_id"),
+      revision: Number(context.revision),
+      references,
+    };
+  }
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: learnerRequest,
@@ -712,6 +837,10 @@ function parseToolInput(raw: string): ToolInput {
     ...(boardSummary ? { board_summary: boardSummary } : {}),
     ...(typeof input.last_applied_action === "string" ? { last_applied_action: truncate(input.last_applied_action) } : {}),
     ...(baseRevision !== undefined ? { base_revision: Number(baseRevision) } : {}),
+    ...(boardContext ? {
+      board_context: boardContext,
+      base_revision: boardContext.revision,
+    } : {}),
     ...(sourceObservation ? { source_observation: sourceObservation } : {}),
   };
 }
@@ -767,6 +896,98 @@ function parseSelectionToolInput(raw: string): SelectionToolInput {
   if (!["high", "medium", "low"].includes(String(confidence))) {
     throw new Error("recognition_confidence is invalid");
   }
+  const toolId = input.tool_id;
+  if (!["explain", "check-and-suggest", "generate-plot", "custom-question"].includes(
+    String(toolId),
+  )) {
+    throw new Error("tool_id is invalid");
+  }
+  if (toolId === "generate-plot" && contentHint !== "math") {
+    throw new Error("generate-plot requires content_hint=math");
+  }
+  const boardValue = input.board;
+  if (!boardValue || typeof boardValue !== "object" || Array.isArray(boardValue)) {
+    throw new Error("board must be an object");
+  }
+  const board = boardValue as Record<string, unknown>;
+  const revision = board.revision;
+  if (!Number.isSafeInteger(revision) || Number(revision) < 0) {
+    throw new Error("board.revision must be a non-negative integer");
+  }
+  if (!Array.isArray(board.targets) || board.targets.length > 6) {
+    throw new Error("board.targets must contain at most 6 targets");
+  }
+  const targetIds = new Set<string>();
+  const targets = board.targets.map((value, index): SelectionBoardTargetRef => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error(`board.targets[${index}] must be an object`);
+    }
+    const target = value as Record<string, unknown>;
+    const targetId = requireNonEmptyString(
+      target.target_id,
+      `board.targets[${index}].target_id`,
+    );
+    if (targetIds.has(targetId)) throw new Error("board.targets contains duplicate target_id");
+    targetIds.add(targetId);
+    if (!target.world_bounds || typeof target.world_bounds !== "object"
+      || Array.isArray(target.world_bounds)) {
+      throw new Error(`board.targets[${index}].world_bounds must be an object`);
+    }
+    const worldBounds = target.world_bounds as Record<string, unknown>;
+    const worldWidth = finite(worldBounds.width, `board.targets[${index}].world_bounds.width`);
+    const worldHeight = finite(worldBounds.height, `board.targets[${index}].world_bounds.height`);
+    if (worldWidth <= 0 || worldHeight <= 0) {
+      throw new Error(`board.targets[${index}].world_bounds must have positive dimensions`);
+    }
+    const overlap = finite(target.overlap, `board.targets[${index}].overlap`);
+    if (overlap < 0 || overlap > 1) {
+      throw new Error(`board.targets[${index}].overlap must be between 0 and 1`);
+    }
+    const distance = finite(target.distance, `board.targets[${index}].distance`);
+    if (distance < 0) throw new Error(`board.targets[${index}].distance must be non-negative`);
+    if (!Number.isSafeInteger(target.z_index)) {
+      throw new Error(`board.targets[${index}].z_index must be an integer`);
+    }
+    let structuredValue: unknown;
+    if (target.value_json !== undefined) {
+      const valueJson = requireNonEmptyString(
+        target.value_json,
+        `board.targets[${index}].value_json`,
+      );
+      if (valueJson.length > 2_000) {
+        throw new Error(`board.targets[${index}].value_json is too long`);
+      }
+      try {
+        structuredValue = JSON.parse(valueJson);
+      } catch {
+        throw new Error(`board.targets[${index}].value_json must be valid JSON`);
+      }
+    }
+    return {
+      target_id: targetId,
+      node_id: requireNonEmptyString(
+        target.node_id,
+        `board.targets[${index}].node_id`,
+      ),
+      ...(typeof target.element_id === "string" && target.element_id.trim()
+        ? { element_id: target.element_id.trim() }
+        : {}),
+      kind: requireNonEmptyString(target.kind, `board.targets[${index}].kind`),
+      ...(typeof target.label === "string" && target.label.trim()
+        ? { label: truncate(target.label)! }
+        : {}),
+      ...(structuredValue === undefined ? {} : { value: structuredValue }),
+      world_bounds: {
+        x: finite(worldBounds.x, `board.targets[${index}].world_bounds.x`),
+        y: finite(worldBounds.y, `board.targets[${index}].world_bounds.y`),
+        width: worldWidth,
+        height: worldHeight,
+      },
+      overlap,
+      distance,
+      z_index: Number(target.z_index),
+    };
+  });
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: truncate(requireNonEmptyString(input.learner_request, "learner_request"))!,
@@ -783,6 +1004,12 @@ function parseSelectionToolInput(raw: string): SelectionToolInput {
       checksum: { algorithm: "sha-256", value: checksum.value },
     },
     content_hint: contentHint as SelectionContentKind,
+    tool_id: toolId as SelectionToolId,
+    board: {
+      board_id: requireNonEmptyString(board.board_id, "board.board_id"),
+      revision: Number(revision),
+      targets,
+    },
     recognized_content: truncate(requireNonEmptyString(
       input.recognized_content,
       "recognized_content",
@@ -1526,6 +1753,14 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
   }
 
   const rootProperties = schema.properties as JsonSchema;
+  // board_context is supplied and validated by the host, then attached after
+  // model generation. Keeping it in Vertex's response schema would ask the
+  // model to reproduce read-only references and would enlarge every authoring
+  // request, including ordinary self-contained lessons.
+  delete rootProperties.board_context;
+  if (Array.isArray(schema.required)) {
+    schema.required = schema.required.filter((field) => field !== "board_context");
+  }
   const lesson = rootProperties.lesson as JsonSchema;
   const lessonProperties = lesson.properties as JsonSchema;
   // The planner has already fixed variable aliases, ranges, labels, and slider
@@ -1617,6 +1852,9 @@ const requestItemKinds: RequestItemKind[] = [
   "teaching_goal", "visual", "relationship", "continuous_change", "student_control", "student_task",
   "existing_board_edit", "presentation_constraint", "unsupported_feature",
 ];
+const coreVerificationMissingKinds = requestItemKinds.filter(
+  (kind): kind is Exclude<RequestItemKind, "student_task"> => kind !== "student_task",
+);
 const requestItemPolarities: RequestItemPolarity[] = ["require", "forbid"];
 const unhandledStatuses: UnhandledRequestItem["status"][] = ["unsupported", "ambiguous"];
 const idArraySchema: JsonSchema = { type: "array", minItems: 1, items: { type: "string" } };
@@ -1871,9 +2109,10 @@ const briefVerificationResponseJsonSchema: JsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["source_ref", "reason"],
+        required: ["source_ref", "kind", "reason"],
         properties: {
           source_ref: { type: "string" },
+          kind: { enum: coreVerificationMissingKinds },
           reason: { type: "string" },
         },
       },
@@ -1939,6 +2178,41 @@ function normalizeEvidence(value: string): string {
     .replace(/[\\$]/gu, "")
     .replace(/[（）()\[\]{}]/gu, "")
     .replace(/\s+/gu, "");
+}
+
+const learnerAudienceMetaPatterns = [
+  /(?<!老师)(?<!教师)(?:帮助|让|引导|支持|供)(?:当前)?(?:学生|学习者)/u,
+  /(?:help|guide|allow|enable|ask)(?:\s+the)?\s+(?:student|learner)s?\b/iu,
+];
+
+function containsLearnerAudienceMetaLanguage(value: string): boolean {
+  return learnerAudienceMetaPatterns.some((pattern) => pattern.test(value));
+}
+
+function appendLearnerFacingLanguageViolations(
+  value: unknown,
+  path: string,
+  violations: GenerationViolation[],
+): void {
+  if (typeof value === "string") {
+    if (containsLearnerAudienceMetaLanguage(value)) {
+      violations.push({
+        stage: "semantic",
+        code: "OLL_LEARNER_FACING_LANGUAGE",
+        path,
+        message: "Learner-visible text must address the learner directly or use neutral language; internal authoring phrases about students or learners must not be exposed",
+      });
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => appendLearnerFacingLanguageViolations(item, `${path}/${index}`, violations));
+    return;
+  }
+  if (!isRecord(value)) return;
+  for (const [key, item] of Object.entries(value)) {
+    appendLearnerFacingLanguageViolations(item, `${path}/${key}`, violations);
+  }
 }
 
 function authoritativeRequestSources(input: ToolInput): Array<{ source: RequestEvidenceSource; text: string }> {
@@ -2030,7 +2304,11 @@ function buildLessonTaskPlanResponseJsonSchema(brief: LessonBrief): JsonSchema {
   return schema;
 }
 
-function buildBriefVerificationResponseJsonSchema(input: ToolInput, brief: LessonBrief): JsonSchema {
+function buildBriefVerificationResponseJsonSchema(
+  input: ToolInput,
+  brief: LessonBrief,
+  scope: BriefVerificationScope,
+): JsonSchema {
   const schema = structuredClone(briefVerificationResponseJsonSchema);
   const properties = schema.properties as Record<string, JsonSchema>;
   const sourceRefs = authoritativeRequestClauses(input).map((clause) => clause.ref);
@@ -2041,6 +2319,7 @@ function buildBriefVerificationResponseJsonSchema(input: ToolInput, brief: Lesso
   kindReviewProperties.source_ref = { enum: sourceRefs };
   const missingProperties = ((properties.missing.items as JsonSchema).properties) as Record<string, JsonSchema>;
   missingProperties.source_ref = { enum: sourceRefs };
+  if (scope === "core") missingProperties.kind = { enum: coreVerificationMissingKinds };
   const requestItemIds = brief.request_items.map((item) => item.id);
   const contradictionProperties = ((properties.contradictions.items as JsonSchema).properties) as Record<string, JsonSchema>;
   contradictionProperties.request_item_id = { enum: requestItemIds };
@@ -2312,6 +2591,12 @@ function validateLessonBrief(
     validateRequirementId(raw.id, `${path}/id`);
     if (typeof raw.goal !== "string" || !raw.goal.trim()) {
       violations.push(briefViolation("BRIEF_INVALID_TEACHING_GOAL", `${path}/goal`, "goal must be a non-empty string"));
+    } else if (containsLearnerAudienceMetaLanguage(raw.goal)) {
+      violations.push(briefViolation(
+        "BRIEF_LEARNER_FACING_LANGUAGE",
+        `${path}/goal`,
+        "teaching goals are shown to the learner and must use direct or neutral language",
+      ));
     }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "teaching_goal");
   });
@@ -2548,6 +2833,8 @@ function validateLessonBrief(
     validateRequirementId(raw.id, `${path}/id`);
     if (typeof raw.prompt !== "string" || !raw.prompt.trim()) {
       violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_PROMPT", `${path}/prompt`, "prompt must be a non-empty student instruction"));
+    } else if (containsLearnerAudienceMetaLanguage(raw.prompt)) {
+      violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/prompt`, "task prompts must address the learner directly"));
     }
     const variable = typeof raw.variable === "string" ? sharedVariableByName.get(raw.variable) : undefined;
     if (!variable) {
@@ -2627,6 +2914,12 @@ function validateLessonBrief(
     if (!Array.isArray(raw.hints) || raw.hints.length === 0 || raw.hints.length > 4
       || raw.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
       violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_HINTS", `${path}/hints`, "hints must contain one to four non-empty hints"));
+    } else {
+      raw.hints.forEach((hint, hintIndex) => {
+        if (containsLearnerAudienceMetaLanguage(hint as string)) {
+          violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/hints/${hintIndex}`, "task hints must address the learner directly"));
+        }
+      });
     }
     if (!Number.isInteger(raw.hint_after_attempts)
       || (raw.hint_after_attempts as number) < 1
@@ -2635,6 +2928,8 @@ function validateLessonBrief(
     }
     if (typeof raw.success_message !== "string" || !raw.success_message.trim()) {
       violations.push(briefViolation("BRIEF_INVALID_STUDENT_TASK_SUCCESS", `${path}/success_message`, "success_message must be non-empty"));
+    } else if (containsLearnerAudienceMetaLanguage(raw.success_message)) {
+      violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/success_message`, "task feedback must address the learner directly"));
     }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
   });
@@ -2648,6 +2943,8 @@ function validateLessonBrief(
     validateRequirementId(raw.id, `${path}/id`);
     if (typeof raw.prompt !== "string" || !raw.prompt.trim()) {
       violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_PROMPT", `${path}/prompt`, "prompt must be a non-empty student instruction"));
+    } else if (containsLearnerAudienceMetaLanguage(raw.prompt)) {
+      violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/prompt`, "3D task prompts must address the learner directly"));
     }
     const visual = typeof raw.visual === "string" ? visualById.get(raw.visual) : undefined;
     if (!visual || visual.surface !== "scene3d"
@@ -2680,6 +2977,12 @@ function validateLessonBrief(
     if (!Array.isArray(raw.hints) || raw.hints.length === 0 || raw.hints.length > 4
       || raw.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
       violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_HINTS", `${path}/hints`, "hints must contain one to four non-empty hints"));
+    } else {
+      raw.hints.forEach((hint, hintIndex) => {
+        if (containsLearnerAudienceMetaLanguage(hint as string)) {
+          violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/hints/${hintIndex}`, "3D task hints must address the learner directly"));
+        }
+      });
     }
     if (!Number.isInteger(raw.hint_after_attempts)
       || (raw.hint_after_attempts as number) < 1
@@ -2688,6 +2991,8 @@ function validateLessonBrief(
     }
     if (typeof raw.success_message !== "string" || !raw.success_message.trim()) {
       violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_SUCCESS", `${path}/success_message`, "success_message must be non-empty"));
+    } else if (containsLearnerAudienceMetaLanguage(raw.success_message)) {
+      violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/success_message`, "3D task feedback must address the learner directly"));
     }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
   });
@@ -2844,6 +3149,33 @@ function validateAnimationBeatTiming(document: AuthoringLesson): GenerationViola
           message: "Keep the animation Beat to one or two short observation sentences; move the full explanation to a neighboring Beat",
         });
       }
+    });
+  });
+  return violations;
+}
+
+function validateLearnerFacingLanguage(document: AuthoringLesson): GenerationViolation[] {
+  const violations: GenerationViolation[] = [];
+  appendLearnerFacingLanguageViolations(document.lesson.title, "/lesson/title", violations);
+  appendLearnerFacingLanguageViolations(document.lesson.goals, "/lesson/goals", violations);
+  appendLearnerFacingLanguageViolations(document.lesson.tasks, "/lesson/tasks", violations);
+  appendLearnerFacingLanguageViolations(document.close.summary, "/close/summary", violations);
+  document.steps.forEach((step, stepIndex) => {
+    step.beats.forEach((beat, beatIndex) => {
+      appendLearnerFacingLanguageViolations(
+        beat.say,
+        `/steps/${stepIndex}/beats/${beatIndex}/say`,
+        violations,
+      );
+      beat.actions.forEach((action, actionIndex) => {
+        if (action.do === "write" || action.do === "revise") {
+          appendLearnerFacingLanguageViolations(
+            action.content,
+            `/steps/${stepIndex}/beats/${beatIndex}/actions/${actionIndex}/content`,
+            violations,
+          );
+        }
+      });
     });
   });
   return violations;
@@ -3693,7 +4025,40 @@ function validateGeneratedLessonDocument(
   capabilityPlan: AuthoringCapabilityPlan,
   requireCoverage = true,
 ): AuthoringLesson {
-  const document = lowerPlannedLessonFields(structuredClone(candidate), brief);
+  const document = lowerPlannedLessonFields(
+    structuredClone(candidate),
+    brief,
+  ) as Record<string, unknown>;
+  if (input.board_context) {
+    document.board_context = structuredClone(input.board_context);
+    const firstReference = input.board_context.references.find((reference) =>
+      reference.type === "node" || reference.type === "group",
+    );
+    const steps = Array.isArray(document.steps) ? document.steps : [];
+    const firstStep = steps.find(isRecord);
+    if (firstReference && firstStep && Array.isArray(firstStep.beats)) {
+      let anchored = false;
+      for (const beatValue of firstStep.beats) {
+        if (!isRecord(beatValue) || !Array.isArray(beatValue.actions)) continue;
+        for (const actionValue of beatValue.actions) {
+          if (!isRecord(actionValue)) continue;
+          if (!anchored && actionValue.do === "write" && isRecord(actionValue.place)
+            && actionValue.place.relation === "new_region") {
+            actionValue.place = {
+              relation: "near",
+              anchor: firstReference.as,
+              gap: "normal",
+            };
+            anchored = true;
+          }
+          if (actionValue.do === "focus" && Array.isArray(actionValue.targets)
+            && !actionValue.targets.includes(firstReference.as)) {
+            actionValue.targets.unshift(firstReference.as);
+          }
+        }
+      }
+    }
+  }
 
   const schemaResult = validateAuthoringSchema(document);
   if (!schemaResult.valid) {
@@ -3719,17 +4084,18 @@ function validateGeneratedLessonDocument(
     violations.push(semanticViolation(error));
   }
   violations.push(...validateAnimationBeatTiming(lesson));
+  violations.push(...validateLearnerFacingLanguage(lesson));
   if (requireCoverage) violations.push(...validateBriefCoverage(lesson, brief));
   violations.push(...validateAllowedCapabilities(lesson, capabilityPlan));
   if (violations.length === 0) {
     try {
       const events = normalizeAuthoringLesson(lesson, {
       lessonId: input.turn_id,
-      boardId: "learn-board",
-      baseRevision: input.base_revision ?? 0,
+      boardId: input.board_context?.board_id ?? "learn-board",
+      baseRevision: input.board_context?.revision ?? input.base_revision ?? 0,
       resourceContext: input.session_context ?? { assets: [] },
       });
-      reduceCanonicalEvents(events);
+      if (!input.board_context?.references.length) reduceCanonicalEvents(events);
     } catch (error) {
       violations.push(semanticViolation(error));
     }
@@ -3785,6 +4151,8 @@ function buildRequestContext(input: ToolInput): Record<string, unknown> {
           summary: input.board_summary,
           last_applied_action: input.last_applied_action ?? null,
           base_revision: input.base_revision ?? 0,
+          explicit_references: input.board_context?.references ?? [],
+          reference_rule: "这些对象由宿主提供稳定 ID，只读；新内容可以围绕它们讲解、聚焦或连接，不能改写原对象",
         }
       : null,
   };
@@ -3804,20 +4172,33 @@ function buildPlanningPrompt(
 function buildVerificationPrompt(
   input: ToolInput,
   brief: LessonBrief,
+  scope: BriefVerificationScope,
   previousVerification?: string,
   violations: GenerationViolation[] = [],
 ): string {
   const repair = previousVerification
     ? `\n\n上一份复核结果：\n${previousVerification}\n\n复核结果自身的格式错误：\n${JSON.stringify(violations, null, 2)}\n课程规划没有变化；只修复复核结果并返回完整对象。`
     : "";
-  return `请独立复核用户明确要求是否被记录。只有 authoritative_request.clauses 是用户要求；teaching_advice 不是。不要用自己偏好的教法否决已覆盖的用户目标。\n课堂输入：\n${JSON.stringify(buildRequestContext(input), null, 2)}\n\n课程要求与教学设计：\n${JSON.stringify(brief, null, 2)}${repair}`;
+  const reviewBrief = structuredClone(brief) as unknown as Record<string, unknown>;
+  delete reviewBrief.student_task_requirements;
+  delete reviewBrief.scene3d_task_requirements;
+  const deferredTaskRequestItemIds = brief.request_items
+    .filter((item) => item.kind === "student_task")
+    .map((item) => item.id);
+  return `请独立复核用户明确要求是否被记录。只有 authoritative_request.clauses 是用户要求；teaching_advice 不是。不要用自己偏好的教法否决已覆盖的用户目标。\n复核阶段：${scope}\n阶段契约：当前输入是课程骨架，具体课后任务尚未生成。student_task 类型只检查 request_item_kinds 和 request_items 是否记录，不检查延后生成的任务对象，也不得把延后的具体任务写进 missing。missing 仍可报告其他课程骨架内容的实际遗漏，并必须填写非 student_task 的 kind。\n延后生成具体内容的任务 request_item：\n${JSON.stringify(deferredTaskRequestItemIds, null, 2)}\n课堂输入：\n${JSON.stringify(buildRequestContext(input), null, 2)}\n\n课程要求与教学设计：\n${JSON.stringify(reviewBrief, null, 2)}${repair}`;
 }
 
-function validateBriefVerification(candidate: unknown, input: ToolInput, brief: LessonBrief): BriefVerification {
-  if (!isRecord(candidate) || !Array.isArray(candidate.missing)
+function validateBriefVerification(
+  candidate: unknown,
+  input: ToolInput,
+  brief: LessonBrief,
+  scope: BriefVerificationScope,
+): BriefVerification {
+  if (!isRecord(candidate) || !Array.isArray(candidate.request_item_kinds)
+    || !Array.isArray(candidate.missing)
     || !Array.isArray(candidate.contradictions) || !Array.isArray(candidate.suggestions)) {
-    throw new GeneratedLessonError("Brief verification must contain missing, contradictions, and suggestions arrays", undefined, [
-      briefViolation("BRIEF_VERIFICATION_INVALID_ROOT", "/", "verification must contain missing, contradictions, and suggestions arrays"),
+    throw new GeneratedLessonError("Brief verification must contain request_item_kinds, missing, contradictions, and suggestions arrays", undefined, [
+      briefViolation("BRIEF_VERIFICATION_INVALID_ROOT", "/", "verification must contain request_item_kinds, missing, contradictions, and suggestions arrays"),
     ]);
   }
   const clauseRefs = new Set(authoritativeRequestClauses(input).map((clause) => clause.ref));
@@ -3874,6 +4255,13 @@ function validateBriefVerification(candidate: unknown, input: ToolInput, brief: 
     }
     if (typeof raw.source_ref !== "string" || !clauseRefs.has(raw.source_ref)) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_SOURCE_REF", `${path}/source_ref`, "source_ref must reference one supplied authoritative request clause"));
+    }
+    if (!coreVerificationMissingKinds.includes(raw.kind as Exclude<RequestItemKind, "student_task">)) {
+      violations.push(briefViolation(
+        "BRIEF_VERIFICATION_OUT_OF_SCOPE",
+        `${path}/kind`,
+        "core verification missing.kind must describe a non-task course requirement",
+      ));
     }
     if (typeof raw.reason !== "string" || !raw.reason.trim()) {
       violations.push(briefViolation("BRIEF_VERIFICATION_INVALID_REASON", `${path}/reason`, "verification reason is required"));
@@ -4392,6 +4780,7 @@ async function verifyLessonBrief(
   client: VertexClient,
   input: ToolInput,
   brief: LessonBrief,
+  scope: BriefVerificationScope,
 ): Promise<BriefVerification> {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_VERIFICATION_ATTEMPTS,
@@ -4407,8 +4796,8 @@ async function verifyLessonBrief(
         label: "lesson-brief-verification",
         turnId: input.turn_id,
         systemPrompt: BRIEF_VERIFICATION_SYSTEM_PROMPT,
-        prompt: buildVerificationPrompt(input, brief, previousVerification, violations),
-        responseSchema: buildBriefVerificationResponseJsonSchema(input, brief),
+        prompt: buildVerificationPrompt(input, brief, scope, previousVerification, violations),
+        responseSchema: buildBriefVerificationResponseJsonSchema(input, brief, scope),
         maxTokens: Math.min(client.maxTokens, attempt === 1 ? 4_096 : 8_192),
       });
       let candidate: unknown;
@@ -4422,7 +4811,7 @@ async function verifyLessonBrief(
         );
         throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
       }
-      return validateBriefVerification(candidate, input, brief);
+      return validateBriefVerification(candidate, input, brief, scope);
     } catch (error) {
       const generatedError = error instanceof GeneratedLessonError
         ? error
@@ -4595,7 +4984,7 @@ async function verifyLessonRequirements(
   brief: LessonBrief,
   raw: string,
 ): Promise<void> {
-  const verification = await verifyLessonBrief(client, input, brief);
+  const verification = await verifyLessonBrief(client, input, brief, "core");
   const coverageViolations = briefVerificationViolations(verification, input, brief);
   if (coverageViolations.length > 0) {
     throw new GeneratedLessonError(
@@ -4771,9 +5160,30 @@ function deriveParallelLessonSections(brief: LessonBrief): ParallelLessonSection
   return sections;
 }
 
+function deterministicVisualObservationNarration(
+  visual: VisualRequirement,
+  language: string,
+): string {
+  if (language.toLocaleLowerCase().startsWith("en")) {
+    if (visual.surface === "scene3d") return "Drag the 3D scene to inspect it from different angles. Scroll to zoom.";
+    if (visual.surface === "plot") return "First inspect the function plot, including its axes, curve, and marked points.";
+    if (visual.surface === "geometry") return "First inspect the geometry, including its positions, measurements, and labels.";
+    if (visual.surface === "table") return "First inspect how the values are organized by rows and columns.";
+    if (visual.surface === "diagram") return "First inspect the parts of the diagram and how they are connected.";
+    if (visual.surface === "image") return "First inspect the important details marked in the image.";
+  }
+  if (visual.surface === "scene3d") return "先拖动白板上的三维场景，从不同角度观察；滚动可以缩放画面。";
+  if (visual.surface === "plot") return "先观察白板上的函数图像，留意坐标轴、曲线和标记点。";
+  if (visual.surface === "geometry") return "先观察白板上的几何图，留意位置、度量和标记。";
+  if (visual.surface === "table") return "先观察白板上的表格，留意各行各列之间的对应关系。";
+  if (visual.surface === "diagram") return "先观察白板上的示意图，留意各部分以及它们之间的联系。";
+  return "先观察白板上的图片，留意其中标出的关键细节。";
+}
+
 function deterministicVisualObservationSection(
   section: ParallelLessonSectionPlan,
   brief: LessonBrief,
+  language: string,
 ): AuthoringLesson["steps"][number] | undefined {
   if (section.visualRequirementIds.length !== 1) return undefined;
   const visual = brief.visual_requirements.find(
@@ -4785,7 +5195,7 @@ function deterministicVisualObservationSection(
     purpose: section.purpose,
     beats: [{
       key: `show-${visual.id}`,
-      say: `先观察白板上的内容，重点看它如何${visual.purpose}。`,
+      say: deterministicVisualObservationNarration(visual, language),
       delivery: "patient",
       actions: [{
         do: "focus",
@@ -4795,6 +5205,30 @@ function deterministicVisualObservationSection(
       }],
     }],
   } as AuthoringLesson["steps"][number];
+}
+
+function compactLearnerFacingTitle(value: string): string {
+  const firstLine = value.replace(/\s+/gu, " ").trim().split(/\r?\n/u)[0] ?? "";
+  const withoutTerminalPunctuation = firstLine.replace(/[。！？.!?]+$/gu, "");
+  return [...withoutTerminalPunctuation].slice(0, 72).join("").trim();
+}
+
+function learnerFacingLessonTitle(input: ToolInput, brief: LessonBrief): string {
+  const candidates = [
+    ...brief.teaching_goal_requirements.map((requirement) => requirement.goal),
+    brief.request_summary,
+  ];
+  for (const candidate of candidates) {
+    if (!candidate.trim() || containsLearnerAudienceMetaLanguage(candidate)) continue;
+    const title = compactLearnerFacingTitle(candidate);
+    if (title) return title;
+  }
+  const requestTitle = compactLearnerFacingTitle(input.learner_request);
+  return requestTitle && !containsLearnerAudienceMetaLanguage(requestTitle)
+    ? requestTitle
+    : (input.language ?? "zh-CN").toLocaleLowerCase().startsWith("en")
+      ? "Explore the core idea"
+      : "理解这节课的核心问题";
 }
 
 function exactVisualComponentSchema(
@@ -4925,6 +5359,25 @@ function parseParallelStep(
   return candidate as unknown as AuthoringLesson["steps"][number];
 }
 
+function parallelStepAudienceViolations(
+  step: AuthoringLesson["steps"][number],
+): GenerationViolation[] {
+  const violations: GenerationViolation[] = [];
+  step.beats.forEach((beat, beatIndex) => {
+    appendLearnerFacingLanguageViolations(beat.say, `/beats/${beatIndex}/say`, violations);
+    beat.actions.forEach((action, actionIndex) => {
+      if (action.do === "write" || action.do === "revise") {
+        appendLearnerFacingLanguageViolations(
+          action.content,
+          `/beats/${beatIndex}/actions/${actionIndex}/content`,
+          violations,
+        );
+      }
+    });
+  });
+  return violations;
+}
+
 async function generateParallelSection(
   client: VertexClient,
   input: ToolInput,
@@ -4940,29 +5393,48 @@ async function generateParallelSection(
     availableVisualIds.includes(requirement.id));
   const teachingGoals = brief.teaching_goal_requirements.filter((requirement) =>
     section.teachingGoalIds.includes(requirement.id));
-  const raw = await callStructuredModel(client, {
-    label: "lesson-section",
-    turnId: input.turn_id,
-    systemPrompt: PARALLEL_SECTION_SYSTEM_PROMPT,
-    prompt: JSON.stringify({
+  const maxAttempts = parsePositiveInteger(
+    process.env.OLL_GENERATION_ATTEMPTS,
+    3,
+    "OLL_GENERATION_ATTEMPTS",
+  );
+  let previousStep: AuthoringLesson["steps"][number] | undefined;
+  let violations: GenerationViolation[] = [];
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const raw = await callStructuredModel(client, {
+      label: "lesson-section",
+      turnId: input.turn_id,
+      systemPrompt: PARALLEL_SECTION_SYSTEM_PROMPT,
+      prompt: JSON.stringify({
+        section,
+        available_visuals: availableRequirements.map((requirement) => ({
+          id: requirement.id,
+          surface: requirement.surface,
+          purpose: requirement.purpose,
+        })),
+        teaching_goals: teachingGoals,
+        learner_context: input.learner_context ?? null,
+        language: input.language ?? "zh-CN",
+        ...(previousStep ? { previous_step: previousStep, validation_errors: violations } : {}),
+      }, null, 2),
+      responseSchema,
+      maxTokens: Math.min(client.maxTokens, 8_192),
+      signal,
+    });
+    const step = parseParallelStep(
+      raw,
       section,
-      available_visuals: availableRequirements.map((requirement) => ({
-        id: requirement.id,
-        surface: requirement.surface,
-        purpose: requirement.purpose,
-      })),
-      teaching_goals: teachingGoals,
-      learner_context: input.learner_context ?? null,
-      language: input.language ?? "zh-CN",
-    }, null, 2),
-    responseSchema,
-    maxTokens: Math.min(client.maxTokens, 8_192),
-    signal,
-  });
-  return parseParallelStep(
-    raw,
-    section,
-    availableRequirements.map((requirement) => requirement.id),
+      availableRequirements.map((requirement) => requirement.id),
+    );
+    violations = parallelStepAudienceViolations(step);
+    if (violations.length === 0) return step;
+    previousStep = step;
+    process.stderr.write(`learning-coach: rejected lesson section '${section.id}' ${attempt}: ${formatViolations(violations)}\n`);
+  }
+  throw new GeneratedLessonError(
+    `Lesson section '${section.id}' failed learner-facing language validation after ${maxAttempts} attempt(s)`,
+    undefined,
+    violations,
   );
 }
 
@@ -5333,7 +5805,7 @@ function assembleParallelLesson(
     lesson: {
       mode: "explain",
       language: input.language ?? "zh-CN",
-      title: [...brief.request_summary].slice(0, 160).join(""),
+      title: learnerFacingLessonTitle(input, brief),
       goals: goals.length > 0 ? goals : [brief.request_summary],
     },
     steps: structuredClone(steps),
@@ -5456,7 +5928,11 @@ async function generateLessonInParallel(
   const requirementById = new Map(brief.visual_requirements.map((requirement) =>
     [requirement.id, requirement] as const));
   for (const section of sections) {
-    const deterministicSection = deterministicVisualObservationSection(section, brief);
+    const deterministicSection = deterministicVisualObservationSection(
+      section,
+      brief,
+      input.language ?? "zh-CN",
+    );
     const sectionPromise = deterministicSection
       ? Promise.resolve(deterministicSection)
       : schedule(() =>
@@ -5979,6 +6455,9 @@ function parseSelectionModelResponse(
     : [];
   let response: SelectionEnhancementArtifact["response"];
   if (output.response_kind === "plot") {
+    if (input.tool_id !== "generate-plot" && input.tool_id !== "custom-question") {
+      throw new Error(`${input.tool_id} cannot return a plot response`);
+    }
     const expression = nonEmpty("expression");
     const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
     if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
@@ -6014,10 +6493,12 @@ function parseSelectionModelResponse(
   }
   return {
     profile: "octos.selection-enhancement",
-    version: "0.1",
+    version: "0.2",
     turn_id: input.turn_id,
     created_at: new Date().toISOString(),
     source: structuredClone(input.source),
+    board: structuredClone(input.board),
+    tool_id: input.tool_id,
     interpretation: {
       kind,
       content: nonEmpty("interpretation_content"),
@@ -6036,14 +6517,18 @@ async function generateSelectionEnhancement(
     turnId: input.turn_id,
     maxTokens: Math.min(client.maxTokens, 4_096),
     responseSchema: SELECTION_RESPONSE_SCHEMA,
-    systemPrompt: `你是白板选区辅助工具。只解释用户框选的原稿，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。recognized_content 是上游视觉模型对选区图片的观察，不是绝对事实；置信度不足时必须明确说明不确定性。只有识别出明确的单变量 y=f(x) 且用户要求函数图像时，response_kind 才能使用 plot，expression 必须是仅含 x 的安全数学表达式。其他情况使用 explanation。不要声称看到了选区以外的白板。`,
+    systemPrompt: `你是白板选区辅助工具。只解释用户框选的原稿和用户明确选中的局部白板对象，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。recognized_content 是上游视觉模型对局部上下文图片的观察，不是绝对事实；置信度不足时必须明确说明不确定性。board_targets 是 Runtime 提供的稳定引用，只能用于理解上下文，不能自行增删或改写。只有 tool_id 为 generate-plot 或 custom-question、识别出明确的单变量 y=f(x) 且用户要求函数图像时，response_kind 才能使用 plot，expression 必须是仅含 x 的安全数学表达式。其他情况使用 explanation。不要声称看到了局部图片以外的白板。`,
     prompt: JSON.stringify({
       learner_request: input.learner_request,
+      tool_id: input.tool_id,
       selected_content_hint: input.content_hint,
       recognized_selected_content: input.recognized_content,
       recognition_confidence: input.recognition_confidence,
       lesson_title: input.lesson_title ?? null,
       board_summary: input.board_summary ?? null,
+      board_id: input.board.board_id,
+      board_revision: input.board.revision,
+      board_targets: input.board.targets,
     }, null, 2),
   });
   return parseSelectionModelResponse(raw, input);
