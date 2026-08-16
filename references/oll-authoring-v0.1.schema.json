@@ -170,6 +170,7 @@
               "properties": {
                 "kind": {"const": "scene3d_view_target"},
                 "node": {"$ref": "#/$defs/alias"},
+                "match": {"enum": ["view_direction", "camera_pose"]},
                 "yaw": {"type": "number"},
                 "pitch": {"type": "number", "minimum": -1.5707963267948966, "maximum": 1.5707963267948966},
                 "zoom": {"type": "number", "minimum": 0.2, "maximum": 5},

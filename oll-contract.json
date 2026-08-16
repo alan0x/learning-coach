@@ -2,7 +2,7 @@
   "contract_version": 1,
   "oll": {
     "repository": "alan0x/octos-lesson-language",
-    "ref": "cc4ad8c4e489cc0f512d7fe245d29415aadcec23",
+    "ref": "220fd95ee88dc7d920f6ff2388f5fe0f3b174e38",
     "package_version": "0.1.0-rc.1"
   },
   "profile": {
@@ -11,6 +11,6 @@
     "schema_id": "https://octos.dev/schema/lesson/authoring/0.1",
     "source": "schema/authoring/v0.1.schema.json",
     "vendored": "references/oll-authoring-v0.1.schema.json",
-    "sha256": "d4bbc9e98ababaa5ecf4f2c0f27c1e9ebfbfff85c2b4bdb3581f09ab8cd4846a"
+    "sha256": "f672be29a28f30be95ede630c23c158458b00d067fa1e68bdeb6cd86a89a5d77"
   }
 }

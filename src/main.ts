@@ -254,6 +254,7 @@ interface Scene3dTaskRequirement {
   prompt: string;
   visual: string;
   controls: Array<"orbit" | "zoom" | "preset" | "reset">;
+  view_match: "view_direction" | "camera_pose";
   target_yaw: number;
   target_pitch: number;
   target_zoom: number;
@@ -535,6 +536,7 @@ const LESSON_TASK_PLANNING_SYSTEM_PROMPT = `你是课后互动任务设计器。
 
 三维视角任务：
 - 仅当用户明确要求完成某个观察视角时生成，并引用带 orbit_control 的 scene3d visual。
+- view_match 必须说明任务实际检查什么：普通的俯视、正视、侧视、沿某个方向观察使用 view_direction，只比较学生的观察方向；只有任务明确要求画面中的轴、边或对象达到指定屏幕朝向时才使用 camera_pose。不要用 camera_pose 给学生附加 prompt 和 hints 没有说明的隐藏相机角度条件。
 - target_yaw、target_pitch 和 angular_tolerance 使用弧度。pitch 在 -π/2 到 π/2；zoom 在 0.2 到 5；angular_tolerance 在 0 到 π；zoom_tolerance 在 0 到 4.8。
 - controls 只能使用 orbit、zoom、preset、reset。
 
@@ -2033,7 +2035,7 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
         type: "object",
         additionalProperties: false,
         required: [
-          "id", "prompt", "visual", "controls", "target_yaw", "target_pitch",
+          "id", "prompt", "visual", "controls", "view_match", "target_yaw", "target_pitch",
           "target_zoom", "angular_tolerance", "zoom_tolerance", "hints",
           "hint_after_attempts", "success_message", "request_item_ids",
         ],
@@ -2046,6 +2048,7 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
             minItems: 1,
             items: { enum: ["orbit", "zoom", "preset", "reset"] },
           },
+          view_match: { enum: ["view_direction", "camera_pose"] },
           target_yaw: { type: "number" },
           target_pitch: { type: "number" },
           target_zoom: { type: "number" },
@@ -2958,6 +2961,9 @@ function validateLessonBrief(
       || new Set(controls).size !== controls.length) {
       violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_CONTROLS", `${path}/controls`, "controls must contain unique supported 3D view controls"));
     }
+    if (raw.view_match !== "view_direction" && raw.view_match !== "camera_pose") {
+      violations.push(briefViolation("BRIEF_INVALID_SCENE3D_TASK_VIEW_MATCH", `${path}/view_match`, "view_match must be view_direction or camera_pose"));
+    }
     const target = {
       yaw: numberValue(raw.target_yaw),
       pitch: numberValue(raw.target_pitch),
@@ -3509,6 +3515,7 @@ function lowerPlannedLessonFields(document: unknown, brief: LessonBrief): unknow
       completion: {
         kind: "scene3d_view_target",
         node: requirement.visual,
+        match: requirement.view_match,
         yaw: requirement.target_yaw,
         pitch: requirement.target_pitch,
         zoom: requirement.target_zoom,
@@ -3920,6 +3927,7 @@ function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): G
       && requirement.controls.every((control) => controls.includes(control))
       && completion?.kind === "scene3d_view_target"
       && completion.node === requirement.visual
+      && completion.match === requirement.view_match
       && approximatelyEqual(completion.yaw, requirement.target_yaw)
       && approximatelyEqual(completion.pitch, requirement.target_pitch)
       && approximatelyEqual(completion.zoom, requirement.target_zoom)

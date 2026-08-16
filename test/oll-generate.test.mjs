@@ -396,6 +396,7 @@ const cube3dBrief = {
     prompt: "把立方体转到正视图",
     visual: "cube-scene",
     controls: ["orbit", "preset", "reset"],
+    view_match: "view_direction",
     target_yaw: 0,
     target_pitch: 0,
     target_zoom: 1,
@@ -1673,6 +1674,11 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     if (isLessonTaskPlanningRequest(parsed)) {
       taskPlanningRequests += 1;
       taskSystemPrompt = parsed.systemInstruction.parts[0].text;
+      assert.deepEqual(parsed.generationConfig.thinkingConfig, { thinkingLevel: "LOW" });
+      const sceneTaskSchema = parsed.generationConfig.responseJsonSchema
+        .properties.scene3d_task_requirements.items;
+      assert.ok(sceneTaskSchema.required.includes("view_match"));
+      assert.deepEqual(sceneTaskSchema.properties.view_match.enum, ["view_direction", "camera_pose"]);
       if (taskPlanningRequests > 1) taskRepairPrompt = parsed.contents[0].parts[0].text;
       response.end(vertexPayload({
         student_task_requirements: [],
@@ -1768,6 +1774,7 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     assert.match(sectionRepairPrompt, /previous_step.*OLL_LEARNER_FACING_LANGUAGE/su);
     assert.match(plannerSystemPrompt, /scene3d.*角度.*弧度/s);
     assert.match(taskSystemPrompt, /target_pitch.*-π\/2.*π\/2/s);
+    assert.match(taskSystemPrompt, /view_match.*view_direction.*camera_pose/s);
     assert.match(visualComponentSystemPrompt, /scene3d\.camera.*角度.*弧度/s);
     assert.match(visualComponentSystemPrompt, /camera\.pitch.*-π\/2.*π\/2/s);
     assert.match(visualComponentSystemPrompt, /section\.targets.*section\.display.*plane_and_intersection/s);
@@ -1786,6 +1793,7 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
     assert.deepEqual(scene.content.sections[0].targets, ["cube"]);
     assert.equal(scene.content.sections[0].display, "plane_and_intersection");
     assert.deepEqual(lesson.lesson.tasks.map((task) => task.as), ["find-top-view"]);
+    assert.equal(lesson.lesson.tasks[0].completion.match, "view_direction");
     assert.equal(lesson.lesson.tasks[0].completion.pitch, Math.PI / 2);
   } finally {
     await new Promise((done) => server.close(done));
@@ -2800,6 +2808,7 @@ test("tool plans and generates a rotatable 3D cube instead of replacing it with 
       completion: {
         kind: "scene3d_view_target",
         node: "cube-scene",
+        match: "view_direction",
         yaw: 0,
         pitch: 0,
         zoom: 1,
