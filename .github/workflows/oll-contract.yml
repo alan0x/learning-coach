@@ -21,7 +21,8 @@ jobs:
       - name: Read pinned OLL commit
         id: contract
         working-directory: learning-coach
-        run: echo "oll_ref=$(node -p \"JSON.parse(require('fs').readFileSync('oll-contract.json','utf8')).oll.ref\")" >> "$GITHUB_OUTPUT"
+        run: |
+          node -e 'const fs = require("fs"); console.log("oll_ref=" + JSON.parse(fs.readFileSync("oll-contract.json", "utf8")).oll.ref)' >> "$GITHUB_OUTPUT"
 
       - name: Check out the pinned OLL source
         uses: actions/checkout@v4
