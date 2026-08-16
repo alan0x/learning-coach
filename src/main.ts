@@ -11,6 +11,8 @@ import {
   validateAuthoringSchema,
   compileMathExpression,
   referencedMathVariables,
+  OLL_BINDING_CAPABILITIES,
+  OLL_EXECUTION_CAPABILITIES,
   type AuthoringLesson,
   type ResourceContext,
 } from "octos-lesson-language";
@@ -196,13 +198,6 @@ type VisualFeature =
   | "cross_section"
   | "spatial_highlights"
   | "orbit_control";
-type VisualChangeKind =
-  | "linear_point"
-  | "angular_point"
-  | "planar_point"
-  | "radial_size"
-  | "angular_extent";
-
 interface VisualRequirement {
   id: string;
   surface: VisualSurface;
@@ -210,8 +205,6 @@ interface VisualRequirement {
   required_features: VisualFeature[];
   expressions: string[];
   request_item_ids: string[];
-  change_kind?: VisualChangeKind;
-  change_subject?: string;
 }
 
 interface VisualRelationshipRequirement {
@@ -355,6 +348,35 @@ interface AuthoringCapabilityPlan {
   allowAngleControl: boolean;
 }
 
+interface ExecutableLessonCapabilities {
+  node_kinds: string[];
+  action_names: string[];
+  value_bindings: Array<{
+    node: string;
+    kind: string;
+    target: string;
+    variables: string[];
+  }>;
+  student_controls: {
+    sliders: string[];
+    geometry_points: Array<{ node: string; point: string; variable: string }>;
+    scene3d: string[];
+  };
+  student_tasks: Array<{ id: string; completion: string }>;
+}
+
+interface DegradedLessonComponent {
+  id: string;
+  surface: VisualSurface;
+  error_code: string;
+  message: string;
+}
+
+interface VisualComponentResult {
+  action: Record<string, unknown>;
+  degradation?: DegradedLessonComponent;
+}
+
 interface ParallelLessonSectionPlan {
   id: string;
   title: string;
@@ -484,14 +506,6 @@ feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_
 
 如果请求涉及运动、映射或量的连续变化，规划中必须包含使这个变化可见的结构；例如“旋转角度”需要真实的角度标记，“投影/坐标对应”需要实际投影结构，“函数图像”需要坐标轴和带表达式的曲线。
 
-被 shared_variable_requirements 绑定的 geometry 还必须填写 change_kind 和 change_subject，说清画面上哪个对象的哪种数值属性会变化：
-- linear_point：一个代表主体的有标签点只沿 x 或 y 一个方向变化，例如振子、小车；
-- angular_point：一个代表主体的有标签点绕圆心转动，例如单位圆上的点、摆臂端点；
-- planar_point：一个代表主体的有标签点的 x、y 同时变化，例如平面抛体；
-- radial_size：有标签的圆或圆弧的半径变化，例如水平截面升高时截线圆的半径变化；
-- angular_extent：有标签圆弧的起止角之一变化，例如逐渐展开的扫过角；
-- change_subject 是画面上发生变化的对象名称，必须出现在对应 point、circle 或 arc 的 label 中，例如“振子”“圆上点”“截线圆”，不得填写 P、A、物体等无法说明对象的泛称。只有被共享变量绑定的 geometry 填写这两个字段；plot/scene3d/diagram/image/table 不填写。
-
 如果请求要求把两个视觉对象结合、对应、比较或推导，必须在 visual_relationships 中表达；不要把这种关系退化成两张互不相关的图。
 
 shared_variable_requirements 用来规划“同一个量同时驱动多个视觉对象”的课程，不是给每节课机械添加动画：
@@ -530,13 +544,15 @@ const BRIEF_VERIFICATION_SYSTEM_PROMPT = `你是用户要求覆盖复核器，�
 
 missing 只报告课程骨架自身遗漏的教学目标、视觉对象、关系、连续变化、学生控制、既有白板修改、展示限制或不支持能力，并必须填写对应 kind。用户要求类别若未被 request_items 记录，优先在 request_item_kinds 中如实列出，由本地程序进行差集检查。student_task 的具体任务由下一阶段生成，绝不能放进 missing。
 
-如果用户明确问“为什么发生”，遗漏因果解释属于 missing，不是 suggestions。如果用户要求演示某个对象的变化，却只规划类比图而没有直接表现该对象，也属于 missing。复核这类请求时必须检查被绑定 geometry 的 change_subject 和 change_kind：change_subject 必须明确命名用户要求观看的变化对象，change_kind 必须描述该对象实际变化的数值属性。如果用户要求观看物体本身的运动，圆周投影、函数曲线或其他类比即使数学上相关，也不能作为主体演示通过复核。但不得把圆的半径变化或圆弧的角度范围变化误判为“必须有一个点在移动”。只有在因果目标和主体演示已经覆盖后，受力图、速度图、能量图等可选讲法才属于 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
+如果用户明确问“为什么发生”，遗漏因果解释属于 missing，不是 suggestions。如果用户要求演示某个对象的变化，却只规划类比图而没有直接表现该对象，也属于 missing。只有在因果目标和主体演示已经覆盖后，受力图、速度图、能量图等可选讲法才属于 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
 
 const LESSON_TASK_PLANNING_SYSTEM_PROMPT = `你是课后互动任务设计器。课程的教学目标、视觉对象、共享变量和三维视角能力已经确定；你只补充讲解结束后交给学生完成的短任务，不修改课程规划。
 
+只有 request_items 中 kind="student_task" 且 polarity="require" 的明确用户要求可以产生任务。滑杆、旋转、缩放和拖动等 student_control 只表示允许自由探索，不等于存在标准答案，也不得被自动升级成任务。每个任务的 request_item_ids 只能引用这些明确的 student_task 项；不得引用 teaching_goal、continuous_change 或 student_control 来为系统自行加题。
+
 普通变量任务：
 - 只使用已有 shared_variable_requirements 中的变量和控制方式。controls 必须包含 slider；仅当 direct_angle_geometry 非空时才可增加 geometry_point。
-- 每个共享变量在没有禁止学生任务时通常设计一个任务。用户明确要求动手操作时必须覆盖对应 request_item；没有明确要求时，任务可引用它所检验的 teaching_goal 或 continuous_change request_item。
+- 只为明确的 student_task request_item 设计任务。一个可控变量若没有对应任务要求，就只保留自由探索控件。
 - completion_expression 只能读取该任务的 variable；目标必须在变量范围内可达，而且初始值不能已经满足目标。
 - prompt 使用自然的学生指令，描述可见目标，不暴露内部实现；hints 由观察提示逐步过渡到具体操作；success_message 解释操作为什么正确。
 - prompt、hints 和 success_message 会直接展示给当前学习者，必须直接使用“你”或中性祈使句，不得写“让学生……”“引导学习者……”等课程设计说明。
@@ -584,7 +600,7 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 - 输入中的课程要求清单是本轮请求的可执行要求合同；每个 visual_requirement 和 visual_relationship 都必须由实际白板动作满足，标题、goals、讲述或文字声明不能替代要求的视觉内容。
 - 每个 visual_requirement.id 就是该主要视觉节点必须使用的 write.as；一个视觉节点可以通过 request_item_ids 服务多个教学目标。visual_relationships 对应的 connect 由系统在两个节点创建后插入，模型不要输出 connect。
 - 课程要求清单中的 shared_variable_requirements 非空时，系统会确定性写入 lesson.variables 和可判定的 angle_control；模型负责在 bound_visuals 对应的 geometry/plot/scene3d content.bindings 中引用同一个变量，并把 do="animate" 动作放进合适的讲解节拍。scene3d 绑定目标目前只允许 section.value。禁止复制第二份状态。
-- geometry visual_requirement 包含 change_kind/change_subject 时，必须有一个 label 明确包含 change_subject 的对象，并让共享变量绑定该对象与 change_kind 对应的属性。linear_point 只绑定 point.x 或 point.y 一个坐标；planar_point 同时绑定 point.x/point.y；angular_point 同时绑定 point.x/point.y，并通过半径线或角控制表明它绕固定中心运动；radial_size 绑定 circle.radius 或 arc.radius；angular_extent 绑定 arc.start_angle 或 arc.end_angle。单位圆或其他类比图不能冒充用户要求直接演示的主体。
+- 共享变量必须绑定到画面里真实存在、Runtime 支持的数值字段。可以采用不同但合理的可视化结构；不要为了满足内部分类词而添加无教学价值的对象或标签。单位圆或其他类比图不能冒充用户要求直接演示的主体。
 - bindings.target 使用“局部元素别名.数值属性”，expression 使用受限表达式并直接引用变量名。例如单位圆与正弦图共享 theta：point-p.x=cos(theta)、point-p.y=sin(theta)、foot.x=cos(theta)、theta-arc.end_angle=theta、current-angle.x=theta、current-angle.y=sin(theta)。
 - animate 只描述语义目标，包含 variable、value，可包含 easing 和 duration_intent；不得生成毫秒时长。学生可在 Runtime 中播放、暂停、拖动、复位和重放。
 - 动画必须单独占用一个简短 Beat：相关 geometry/plot 和 connect 必须在更早的 Beat 已经创建；动画 Beat 只包含一个 do="animate" 和本 Beat 必需的 after_speech focus，不得同时 write、connect、group、revise、point 或 emphasize。
@@ -617,7 +633,7 @@ const VISUAL_COMPONENT_SYSTEM_PROMPT = `你是独立视觉组件编写器。你�
 
 只返回一个完整 write 动作，不返回 Lesson、Step、Beat、close、Markdown 或解释。必须保持 do="write"、as 与 visual_requirement.id 完全相同、kind 与 visual_requirement.surface 完全相同，并实现 required_features、expressions、可见变化对象和共享变量绑定。不得创建其他节点、connect、animate、旁白或教学任务。输出必须符合所附 JSON Schema。只写满足要求的最小充分内容，不要枚举没有被要求的额外元素，也不要填充无关可选字段。
 
-geometry 用于坐标轴、点、圆、线段、投影和角弧，不得用 diagram 冒充度量几何。visual_requirement.change_subject 非空时，对应 point、circle 或 arc 的 label 必须包含这段 change_subject 原文；linear_point 只绑定 point.x 或 point.y，planar_point 同时绑定 point.x/point.y，angular_point 同时绑定 point.x/point.y 并用半径线连接固定中心，radial_size 绑定 circle.radius 或 arc.radius，angular_extent 绑定 arc.start_angle 或 arc.end_angle。共享角变量要直接绑定对应点。plot 的曲线 expression 只写 Runtime 表达式，例如 sin(x)、cos(x)，不得写 y=、LaTeX、代码或 SVG。scene3d 的 camera、objects、sections、highlights 必须使用结构化字段，surface.expression 使用 z=f(x,y) 的受限表达式。要求 cross_section 时，section.targets 必须引用被切对象的局部别名，section.display 必须为 plane_and_intersection，让切割平面和真实交线或截面同时显示。scene3d.camera 的所有角度都使用弧度；camera.yaw 必须是有限弧度值，camera.pitch 必须在 -π/2 到 π/2 之间，camera.zoom 必须在 0.2 到 5 之间，绝不能把角度制数值直接填入相机字段。diagram 只用于语义元素和关系。image 只能引用 session_context 中明确给出的 asset_id。bindings.target 使用“局部元素别名.数值属性”，expression 直接引用 shared_variables 中的变量。不得输出像素坐标、HTML、SVG 路径或脚本。所有局部别名只能使用小写英文字母、数字和连字符。`;
+geometry 用于坐标轴、点、圆、线段、投影和角弧，不得用 diagram 冒充度量几何。共享角变量要直接绑定对应点或角弧等真实可变字段。plot 的曲线 expression 只写 Runtime 表达式，例如 sin(x)、cos(x)，不得写 y=、LaTeX、代码或 SVG。scene3d 的 camera、objects、sections、highlights 必须使用结构化字段，surface.expression 使用 z=f(x,y) 的受限表达式。要求 cross_section 时，section.targets 必须引用被切对象的局部别名，section.display 必须为 plane_and_intersection，让切割平面和真实交线或截面同时显示。scene3d.camera 的所有角度都使用弧度；camera.yaw 必须是有限弧度值，camera.pitch 必须在 -π/2 到 π/2 之间，camera.zoom 必须在 0.2 到 5 之间，绝不能把角度制数值直接填入相机字段。diagram 只用于语义元素和关系。image 只能引用 session_context 中明确给出的 asset_id。bindings.target 使用“局部元素别名.数值属性”，expression 直接引用 shared_variables 中的变量。不得输出像素坐标、HTML、SVG 路径或脚本。所有局部别名只能使用小写英文字母、数字和连字符。`;
 
 function requireNonEmptyString(value: unknown, label: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -1540,7 +1556,7 @@ function deriveAuthoringCapabilityPlan(input: ToolInput, brief: LessonBrief): Au
       if (forbid && taskCount > 0) {
         throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request both requires and forbids an after-lesson student task");
       }
-      if (!forbid && taskCount === 0) {
+      if (!forbid && taskCount === 0 && !taskPlanningNeeded(brief)) {
         throw new ToolExecutionError("REQUIREMENT_CAPABILITY_CONFLICT", "The request requires an after-lesson student task, but none was planned");
       }
       continue;
@@ -1843,13 +1859,6 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
 }
 
 const visualSurfaces: VisualSurface[] = ["geometry", "plot", "scene3d", "diagram", "image", "table"];
-const visualChangeKinds: VisualChangeKind[] = [
-  "linear_point",
-  "angular_point",
-  "planar_point",
-  "radial_size",
-  "angular_extent",
-];
 const visualFeatures: VisualFeature[] = [
   "coordinate_axes", "equal_scale", "circle", "origin_centered_circle", "unit_radius",
   "point_on_circle", "line_segments", "radius_segment", "projection_segment", "angle_arc", "function_curve",
@@ -1954,8 +1963,6 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
           required_features: { type: "array", items: { enum: visualFeatures } },
           expressions: { type: "array", items: { type: "string" } },
           request_item_ids: idArraySchema,
-          change_kind: { enum: visualChangeKinds },
-          change_subject: { type: "string" },
         },
       },
     },
@@ -2311,7 +2318,13 @@ function buildLessonTaskPlanResponseJsonSchema(brief: LessonBrief): JsonSchema {
     .map((requirement) => requirement.id);
   if (controllableScenes.length === 0) properties.scene3d_task_requirements.maxItems = 0;
   else sceneProperties.visual = { enum: controllableScenes };
-  const requestItemIds = brief.request_items.map((item) => item.id);
+  const requestItemIds = brief.request_items
+    .filter((item) => item.kind === "student_task" && item.polarity === "require")
+    .map((item) => item.id);
+  if (requestItemIds.length === 0) {
+    properties.student_task_requirements.maxItems = 0;
+    properties.scene3d_task_requirements.maxItems = 0;
+  }
   taskProperties.request_item_ids = {
     type: "array",
     minItems: 1,
@@ -2679,24 +2692,6 @@ function validateLessonBrief(
         }
       });
     }
-    const hasChangeKind = raw.change_kind !== undefined;
-    const hasChangeSubject = raw.change_subject !== undefined;
-    if (hasChangeKind !== hasChangeSubject) {
-      violations.push(briefViolation(
-        "BRIEF_INCOMPLETE_VISUAL_CHANGE",
-        path,
-        "change_kind and change_subject must be provided together",
-      ));
-    }
-    if (hasChangeKind && !visualChangeKinds.includes(raw.change_kind as VisualChangeKind)) {
-      violations.push(briefViolation("BRIEF_INVALID_VISUAL_CHANGE", `${path}/change_kind`, "change_kind is unsupported"));
-    }
-    if (hasChangeSubject && (typeof raw.change_subject !== "string" || !raw.change_subject.trim())) {
-      violations.push(briefViolation("BRIEF_INVALID_VISUAL_CHANGE_SUBJECT", `${path}/change_subject`, "change_subject must visibly name the changing object"));
-    }
-    if ((hasChangeKind || hasChangeSubject) && raw.surface !== "geometry") {
-      violations.push(briefViolation("BRIEF_INCOMPATIBLE_VISUAL_CHANGE", path, "visual change metadata is supported only by geometry"));
-    }
   });
 
   relationships.forEach((raw, index) => {
@@ -2798,21 +2793,6 @@ function validateLessonBrief(
             `${path}/bound_visuals`,
             "shared variables bind only geometry, plot, and scene3d visuals",
           ));
-        } else if (visual.surface === "geometry") {
-          if (!visualChangeKinds.includes(visual.change_kind as VisualChangeKind)) {
-            violations.push(briefViolation(
-              "BRIEF_MISSING_VISUAL_CHANGE",
-              `${path}/bound_visuals`,
-              `bound geometry '${String(visualId)}' must declare how its visible object changes`,
-            ));
-          }
-          if (typeof visual.change_subject !== "string" || !visual.change_subject.trim()) {
-            violations.push(briefViolation(
-              "BRIEF_MISSING_VISUAL_CHANGE_SUBJECT",
-              `${path}/bound_visuals`,
-              `bound geometry '${String(visualId)}' must visibly name its changing object`,
-            ));
-          }
         }
       }
     }
@@ -2826,12 +2806,6 @@ function validateLessonBrief(
           "BRIEF_INVALID_DIRECT_CONTROL",
           `${path}/direct_angle_geometry`,
           "direct_angle_geometry must reference a bound geometry requirement",
-        ));
-      } else if (directVisual.change_kind !== "angular_point") {
-        violations.push(briefViolation(
-          "BRIEF_INVALID_DIRECT_CONTROL_MOTION",
-          `${path}/direct_angle_geometry`,
-          "direct_angle_geometry must use angular_point motion",
         ));
       }
     }
@@ -2949,6 +2923,16 @@ function validateLessonBrief(
       violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/success_message`, "task feedback must address the learner directly"));
     }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
+    if (Array.isArray(raw.request_item_ids) && raw.request_item_ids.some((id) =>
+      typeof id !== "string"
+      || requestItemById.get(id)?.kind !== "student_task"
+      || requestItemById.get(id)?.polarity !== "require")) {
+      violations.push(briefViolation(
+        "BRIEF_TASK_WITHOUT_EXPLICIT_REQUEST",
+        `${path}/request_item_ids`,
+        "scored tasks must reference only explicit required student_task request items",
+      ));
+    }
   });
 
   scene3dTasks.forEach((raw, index) => {
@@ -3015,6 +2999,16 @@ function validateLessonBrief(
       violations.push(briefViolation("BRIEF_LEARNER_FACING_LANGUAGE", `${path}/success_message`, "3D task feedback must address the learner directly"));
     }
     mapRequestItems(raw.request_item_ids, `${path}/request_item_ids`, "student_task");
+    if (Array.isArray(raw.request_item_ids) && raw.request_item_ids.some((id) =>
+      typeof id !== "string"
+      || requestItemById.get(id)?.kind !== "student_task"
+      || requestItemById.get(id)?.polarity !== "require")) {
+      violations.push(briefViolation(
+        "BRIEF_TASK_WITHOUT_EXPLICIT_REQUEST",
+        `${path}/request_item_ids`,
+        "3D scored tasks must reference only explicit required student_task request items",
+      ));
+    }
   });
 
   const tasksForbidden = presentationConstraints.some((constraint) =>
@@ -3024,11 +3018,6 @@ function validateLessonBrief(
   if (tasksForbidden && (studentTasks.length > 0 || scene3dTasks.length > 0)) {
     violations.push(briefViolation("BRIEF_FORBIDDEN_STUDENT_TASK", "/student_task_requirements", "student tasks cannot be planned when the request forbids tasks or student control"));
   }
-  if (!options.allowDeferredTasks
-    && !tasksForbidden && sharedVariables.length > 0 && studentTasks.length === 0) {
-    violations.push(briefViolation("BRIEF_MISSING_STUDENT_TASK", "/student_task_requirements", "a lesson with a shared student-controllable variable must include at least one after-lesson task"));
-  }
-
   const unhandledRequestIds = new Set<string>();
   unhandledItems.forEach((raw, index) => {
     const path = `/unhandled_request_items/${index}`;
@@ -3422,6 +3411,105 @@ function allLessonActions(document: AuthoringLesson): Record<string, unknown>[] 
     (beat.actions as unknown[]).filter(isRecord)));
 }
 
+/**
+ * Inspect the validated OLL that will actually run. The planning model may
+ * propose a teaching shape, but this report is the source of truth for which
+ * executable capabilities the produced lesson really contains.
+ */
+function inspectExecutableLessonCapabilities(
+  document: AuthoringLesson,
+): ExecutableLessonCapabilities {
+  const supportedNodeKinds = new Set<string>(OLL_EXECUTION_CAPABILITIES.node_kinds);
+  const supportedActions = new Set<string>(OLL_EXECUTION_CAPABILITIES.action_names);
+  const nodeKinds = new Set<string>();
+  const actionNames = new Set<string>();
+  const valueBindings: ExecutableLessonCapabilities["value_bindings"] = [];
+  const geometryPoints: ExecutableLessonCapabilities["student_controls"]["geometry_points"] = [];
+  const scene3d = new Set<string>();
+  const declaredVariables = new Set((document.lesson.variables ?? []).map((variable) => variable.as));
+  const bindingCapabilities = OLL_BINDING_CAPABILITIES as Readonly<Record<
+    string,
+    Readonly<Record<string, readonly string[]>>
+  >>;
+
+  for (const action of allLessonActions(document)) {
+    if (typeof action.do !== "string" || !supportedActions.has(action.do)) continue;
+    actionNames.add(action.do);
+    if (action.do !== "write" || typeof action.as !== "string"
+      || typeof action.kind !== "string" || !supportedNodeKinds.has(action.kind)
+      || !isRecord(action.content)) continue;
+    nodeKinds.add(action.kind);
+    if (action.kind === "scene3d") scene3d.add(action.as);
+
+    const bindings = Array.isArray(action.content.bindings)
+      ? action.content.bindings.filter(isRecord)
+      : [];
+    for (const binding of bindings) {
+      if (typeof binding.target !== "string" || typeof binding.expression !== "string") continue;
+      const separator = binding.target.lastIndexOf(".");
+      if (separator <= 0) continue;
+      const alias = binding.target.slice(0, separator);
+      const property = binding.target.slice(separator + 1);
+      const collections = bindingCapabilities[action.kind] ?? {};
+      const collection = Object.entries(collections).find(([field, properties]) =>
+        properties.includes(property)
+        && Array.isArray(action.content[field])
+        && action.content[field].some((item: unknown) => isRecord(item) && item.as === alias));
+      if (!collection) continue;
+      let variables: string[] = [];
+      try {
+        variables = referencedMathVariables(binding.expression, declaredVariables);
+      } catch {
+        // The authoritative OLL validator reports malformed expressions. This
+        // inspector never turns a reporting concern into a second validator.
+      }
+      valueBindings.push({
+        node: action.as,
+        kind: action.kind,
+        target: binding.target,
+        variables: [...variables].sort(),
+      });
+    }
+
+    if (action.kind === "geometry") {
+      const points = Array.isArray(action.content.points)
+        ? action.content.points.filter(isRecord)
+        : [];
+      for (const point of points) {
+        const interaction = isRecord(point.interaction) ? point.interaction : undefined;
+        if (typeof point.as === "string" && interaction?.kind === "angle_control"
+          && typeof interaction.variable === "string") {
+          geometryPoints.push({
+            node: action.as,
+            point: point.as,
+            variable: interaction.variable,
+          });
+        }
+      }
+    }
+  }
+
+  const sliders = (document.lesson.variables ?? []).flatMap((variable) =>
+    variable.control?.kind === "slider" ? [variable.as] : []);
+  const tasks = (document.lesson.tasks ?? []).map((task) => ({
+    id: task.as,
+    completion: task.completion.kind,
+  }));
+  return {
+    node_kinds: [...nodeKinds].sort(),
+    action_names: [...actionNames].sort(),
+    value_bindings: valueBindings.sort((left, right) =>
+      left.node.localeCompare(right.node) || left.target.localeCompare(right.target)),
+    student_controls: {
+      sliders: sliders.sort(),
+      geometry_points: geometryPoints.sort((left, right) =>
+        left.node.localeCompare(right.node) || left.point.localeCompare(right.point)),
+      scene3d: [...scene3d].sort(),
+    },
+    student_tasks: tasks.sort((left, right) => left.id.localeCompare(right.id)),
+  };
+}
+
 function approximatelyEqual(left: unknown, right: number): boolean {
   const value = numberValue(left);
   return value !== undefined && Math.abs(value - right) <= 1e-8;
@@ -3431,69 +3519,6 @@ function expressionReferencesVariable(expression: unknown, variable: string): bo
   if (typeof expression !== "string") return false;
   const tokens = expression.match(/[a-z][a-z0-9_]*/giu) ?? [];
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
-}
-
-function geometryChangeSatisfied(
-  content: Record<string, unknown>,
-  requirement: VisualRequirement,
-  variable: string,
-): boolean {
-  if (!requirement.change_kind || !requirement.change_subject) return true;
-  const subject = normalizeEvidence(requirement.change_subject);
-  const points = Array.isArray(content.points) ? content.points.filter(isRecord) : [];
-  const pointByAlias = new Map(points.flatMap((point) =>
-    typeof point.as === "string" ? [[point.as, point] as const] : []));
-  const bindings = Array.isArray(content.bindings) ? content.bindings.filter(isRecord) : [];
-  const boundProperties = new Map<string, Set<string>>();
-  for (const binding of bindings) {
-    if (typeof binding.target !== "string"
-      || !expressionReferencesVariable(binding.expression, variable)) continue;
-    const separator = binding.target.lastIndexOf(".");
-    if (separator <= 0) continue;
-    const alias = binding.target.slice(0, separator);
-    const property = binding.target.slice(separator + 1);
-    const properties = boundProperties.get(alias) ?? new Set<string>();
-    properties.add(property);
-    boundProperties.set(alias, properties);
-  }
-  const labelMatches = (item: Record<string, unknown>): boolean =>
-    typeof item.as === "string"
-      && typeof item.label === "string"
-      && normalizeEvidence(item.label).includes(subject);
-
-  if (requirement.change_kind === "radial_size") {
-    const radialItems = [
-      ...(Array.isArray(content.circles) ? content.circles.filter(isRecord) : []),
-      ...(Array.isArray(content.arcs) ? content.arcs.filter(isRecord) : []),
-    ];
-    return radialItems.some((item) => labelMatches(item)
-      && boundProperties.get(item.as as string)?.has("radius"));
-  }
-  if (requirement.change_kind === "angular_extent") {
-    const arcs = Array.isArray(content.arcs) ? content.arcs.filter(isRecord) : [];
-    return arcs.some((arc) => {
-      if (!labelMatches(arc)) return false;
-      const properties = boundProperties.get(arc.as as string);
-      return properties?.has("start_angle") || properties?.has("end_angle");
-    });
-  }
-
-  const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
-  return points.some((point) => {
-    if (!labelMatches(point)) return false;
-    const coordinates = boundProperties.get(point.as as string) ?? new Set<string>();
-    if (requirement.change_kind === "linear_point") {
-      return (coordinates.has("x") ? 1 : 0) + (coordinates.has("y") ? 1 : 0) === 1;
-    }
-    if (!coordinates.has("x") || !coordinates.has("y")) return false;
-    if (requirement.change_kind === "planar_point") return true;
-    const interaction = isRecord(point.interaction) ? point.interaction : undefined;
-    const hasCenterConnection = segments.some((segment) =>
-      (segment.from === point.as && typeof segment.to === "string" && pointByAlias.has(segment.to))
-      || (segment.to === point.as && typeof segment.from === "string" && pointByAlias.has(segment.from)));
-    return requirement.change_kind === "angular_point"
-      && (interaction?.kind === "angle_control" || hasCenterConnection);
-  });
 }
 
 /** Insert fields that were already fixed by the validated request plan.
@@ -3776,15 +3801,9 @@ function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): G
     const missingExpressions = requirement.expressions.filter(
       (expression) => !actualExpressions.includes(normalizeExpression(expression)),
     );
-    const changeVariable = brief.shared_variable_requirements.find((variable) =>
-      variable.bound_visuals.includes(requirement.id));
-    const changeSatisfied = node.surface !== "geometry"
-      || !changeVariable
-      || geometryChangeSatisfied(node.content, requirement, changeVariable.variable);
     if (node.surface === requirement.surface
       && missingFeatures.length === 0
-      && missingExpressions.length === 0
-      && changeSatisfied) {
+      && missingExpressions.length === 0) {
       matched.set(requirement.id, node);
       continue;
     }
@@ -3799,15 +3818,6 @@ function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): G
         message: `Planned visual object '${requirement.id}' must be a complete ${requirement.surface} node`,
         missing_features: missingFeatures,
         missing_expressions: missingExpressions,
-      });
-    }
-    if (!changeSatisfied) {
-      violations.push({
-        stage: "request_coverage",
-        code: "OLL_VISUAL_CHANGE_UNSATISFIED",
-        path: "/steps",
-        requirement_id: requirement.id,
-        message: `Visual '${requirement.id}' must show '${requirement.change_subject}' with ${requirement.change_kind} driven by '${changeVariable?.variable}'`,
       });
     }
   }
@@ -3987,76 +3997,42 @@ function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): G
   return violations;
 }
 
-function reviseContentMatchesKind(content: Record<string, unknown>, kind: RevisableNodeKind): boolean {
-  if (kind === "text" || kind === "shape") return typeof content.text === "string" && content.text.trim().length > 0;
-  if (kind === "math") return typeof content.latex === "string" && content.latex.trim().length > 0;
-  if (kind === "note") {
-    return typeof content.title === "string" && content.title.trim().length > 0
-      && Array.isArray(content.items);
-  }
-  if (kind === "table") return Array.isArray(content.columns) && Array.isArray(content.rows);
-  if (kind === "diagram") return Array.isArray(content.elements);
-  return false;
-}
-
-function validateAllowedCapabilities(
-  document: AuthoringLesson,
-  plan: AuthoringCapabilityPlan,
+function validateExplicitPresentationConstraints(
+  brief: LessonBrief,
+  executable: ExecutableLessonCapabilities,
 ): GenerationViolation[] {
   const violations: GenerationViolation[] = [];
-  const nodeKindByAlias = new Map<string, AuthoringWriteKind>();
-  for (const [stepIndex, step] of document.steps.entries()) {
-    for (const [beatIndex, beat] of step.beats.entries()) {
-      for (const [actionIndex, action] of beat.actions.entries()) {
-        const path = `/steps/${stepIndex}/beats/${beatIndex}/actions/${actionIndex}`;
-        if (action.do === "write") {
-          if (!plan.writeKinds.includes(action.kind)) {
-            violations.push({
-              stage: "semantic",
-              code: "OLL_CAPABILITY_NOT_ALLOWED",
-              path: `${path}/kind`,
-              message: `write:${action.kind} is not allowed by this request's capability plan`,
-            });
-          }
-          nodeKindByAlias.set(action.as, action.kind);
-          continue;
-        }
-        if (!plan.actions.includes(action.do)) {
-          violations.push({
-            stage: "semantic",
-            code: "OLL_CAPABILITY_NOT_ALLOWED",
-            path: `${path}/do`,
-            message: `${action.do} is not allowed by this request's capability plan`,
-          });
-          continue;
-        }
-        if (action.do === "revise") {
-          const targetAlias = referenceRoot(action.target);
-          const targetKind = nodeKindByAlias.get(targetAlias);
-          if (!targetKind) {
-            violations.push({
-              stage: "semantic",
-              code: "OLL_REVISE_TARGET_KIND_UNKNOWN",
-              path: `${path}/target`,
-              message: `revise target '${targetAlias}' was not created earlier in this generated lesson`,
-            });
-          } else if (!plan.reviseKinds.includes(targetKind as RevisableNodeKind)) {
-            violations.push({
-              stage: "semantic",
-              code: "OLL_REVISE_KIND_NOT_ALLOWED",
-              path: `${path}/target`,
-              message: `revise is not allowed for ${targetKind} nodes in this request`,
-            });
-          } else if (!reviseContentMatchesKind(action.content, targetKind as RevisableNodeKind)) {
-            violations.push({
-              stage: "semantic",
-              code: "OLL_REVISE_CONTENT_KIND_MISMATCH",
-              path: `${path}/content`,
-              message: `revise content must be a complete ${targetKind} replacement`,
-            });
-          }
-        }
-      }
+  const nodeKinds = new Set(executable.node_kinds);
+  const actions = new Set(executable.action_names);
+  const hasStudentControl = executable.student_controls.sliders.length > 0
+    || executable.student_controls.geometry_points.length > 0
+    || executable.student_controls.scene3d.length > 0;
+  const hasCapability = (capability: PresentationCapability): boolean => {
+    if (capability === "visual") return [...nodeKinds].some((kind) =>
+      visualWriteKinds.has(kind as AuthoringWriteKind));
+    if (capability === "animation") return actions.has("animate");
+    if (capability === "student_control") return hasStudentControl;
+    if (capability === "student_task") return executable.student_tasks.length > 0;
+    if (capability === "revise") return actions.has("revise");
+    return nodeKinds.has(capability);
+  };
+  for (const [index, constraint] of brief.presentation_constraints.entries()) {
+    // In parallel authoring an explicitly requested task is planned alongside
+    // the first playable lesson prefix. It is not missing until that task
+    // planner has completed and the final brief is validated.
+    if (constraint.capability === "student_task" && taskPlanningNeeded(brief)) {
+      continue;
+    }
+    const present = hasCapability(constraint.capability);
+    const satisfied = constraint.polarity === "require" ? present : !present;
+    if (!satisfied) {
+      violations.push({
+        stage: "request_coverage",
+        code: "OLL_PRESENTATION_CONSTRAINT_UNSATISFIED",
+        path: `/presentation_constraints/${index}`,
+        requirement_id: constraint.id,
+        message: `Final OLL must ${constraint.polarity === "require" ? "include" : "exclude"} '${constraint.capability}'`,
+      });
     }
   }
   return violations;
@@ -4129,8 +4105,11 @@ function validateGeneratedLessonDocument(
   }
   violations.push(...validateAnimationBeatTiming(lesson));
   violations.push(...validateLearnerFacingLanguage(lesson));
-  if (requireCoverage) violations.push(...validateBriefCoverage(lesson, brief));
-  violations.push(...validateAllowedCapabilities(lesson, capabilityPlan));
+  if (requireCoverage) {
+    violations.push(...validateBriefCoverage(lesson, brief));
+    const executableCapabilities = inspectExecutableLessonCapabilities(lesson);
+    violations.push(...validateExplicitPresentationConstraints(brief, executableCapabilities));
+  }
   if (violations.length === 0) {
     try {
       const events = normalizeAuthoringLesson(lesson, {
@@ -4828,7 +4807,7 @@ async function verifyLessonBrief(
 ): Promise<BriefVerification> {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_VERIFICATION_ATTEMPTS,
-    3,
+    1,
     "OLL_VERIFICATION_ATTEMPTS",
   );
   let previousVerification: string | undefined;
@@ -4934,8 +4913,8 @@ function taskPlanningNeeded(brief: LessonBrief): boolean {
     constraint.polarity === "forbid"
     && (constraint.capability === "student_task" || constraint.capability === "student_control"));
   if (tasksForbidden) return false;
-  return brief.shared_variable_requirements.length > 0
-    || brief.request_items.some((item) => item.kind === "student_task" && item.polarity === "require");
+  return brief.request_items.some((item) =>
+    item.kind === "student_task" && item.polarity === "require");
 }
 
 function normalizeDeferredTaskCoverage(brief: LessonBrief): LessonBrief {
@@ -5068,21 +5047,32 @@ async function verifyLessonRequirements(
   brief: LessonBrief,
   raw: string,
 ): Promise<void> {
-  const verification = await verifyLessonBrief(client, input, brief, "core");
-  const coverageViolations = briefVerificationViolations(verification, input, brief);
-  if (coverageViolations.length > 0) {
-    throw new GeneratedLessonError(
-      `Course requirements did not cover the authoritative request: ${formatViolations(coverageViolations)}`,
-      raw,
-      coverageViolations,
-    );
-  }
-  if (verification.suggestions.length > 0) {
+  try {
+    const verification = await verifyLessonBrief(client, input, brief, "core");
+    const coverageViolations = briefVerificationViolations(verification, input, brief);
+    if (coverageViolations.length > 0) {
+      process.stderr.write(`learning-coach: ${JSON.stringify({
+        stage: "lesson-brief-advisory-review",
+        turn_id: input.turn_id,
+        status: "disagreed",
+        violation_count: coverageViolations.length,
+        violations: coverageViolations,
+      })}\n`);
+    }
+    if (verification.suggestions.length > 0) {
+      process.stderr.write(`learning-coach: ${JSON.stringify({
+        stage: "lesson-brief-review-suggestions",
+        turn_id: input.turn_id,
+        suggestion_count: verification.suggestions.length,
+        request_item_ids: [...new Set(verification.suggestions.map((item) => item.request_item_id))],
+      })}\n`);
+    }
+  } catch (error) {
     process.stderr.write(`learning-coach: ${JSON.stringify({
-      stage: "lesson-brief-review-suggestions",
+      stage: "lesson-brief-advisory-review",
       turn_id: input.turn_id,
-      suggestion_count: verification.suggestions.length,
-      request_item_ids: [...new Set(verification.suggestions.map((item) => item.request_item_id))],
+      status: "unavailable",
+      error: safeError(error),
     })}\n`);
   }
 }
@@ -5772,17 +5762,6 @@ async function generateVisualComponent(
           message: `Visual component '${requirement.id}' must bind every planned shared variable`,
         });
       }
-      const changeVariable = sharedVariables[0];
-      if (node?.surface === "geometry" && changeVariable
-        && !geometryChangeSatisfied(node.content, requirement, changeVariable.variable)) {
-        violations.push({
-          stage: "request_coverage",
-          code: "OLL_VISUAL_CHANGE_UNSATISFIED",
-          path: "/content",
-          requirement_id: requirement.id,
-          message: `Visual component '${requirement.id}' needs one variable-driven object whose label contains change_subject '${requirement.change_subject ?? ""}' and whose bound property matches change_kind '${requirement.change_kind ?? ""}'`,
-        });
-      }
       if (violations.length === 0) {
         violations.push(...visualComponentSemanticViolations(
           action,
@@ -5804,6 +5783,113 @@ async function generateVisualComponent(
     }
   }
   throw new GeneratedLessonError(`Visual component '${requirement.id}' failed`);
+}
+
+function degradedVisualAction(
+  requirement: VisualRequirement,
+  language: string,
+): Record<string, unknown> {
+  const english = language.toLocaleLowerCase().startsWith("en");
+  return {
+    do: "write",
+    as: requirement.id,
+    kind: "note",
+    role: "system-status",
+    content: english
+      ? {
+          title: "This interactive visual is temporarily unavailable",
+          items: ["The rest of the lesson can continue. You can retry only this part later."],
+          degradation: {
+            kind: "visual_component",
+            visual_id: requirement.id,
+            surface: requirement.surface,
+            purpose: requirement.purpose,
+            retryable: true,
+          },
+        }
+      : {
+          title: "这个互动画面暂时没有生成成功",
+          items: ["课程其余部分可以继续；稍后可以只重试这一部分。"],
+          degradation: {
+            kind: "visual_component",
+            visual_id: requirement.id,
+            surface: requirement.surface,
+            purpose: requirement.purpose,
+            retryable: true,
+          },
+        },
+    place: { relation: "new_region" },
+  };
+}
+
+function briefAfterComponentDegradation(
+  brief: LessonBrief,
+  degradedVisualIds: ReadonlySet<string>,
+): LessonBrief {
+  if (degradedVisualIds.size === 0) return brief;
+  const next = structuredClone(brief);
+  const degradedSurfaces = new Set(next.visual_requirements.flatMap((requirement) =>
+    degradedVisualIds.has(requirement.id) ? [requirement.surface] : []));
+  next.visual_requirements = next.visual_requirements.filter((requirement) =>
+    !degradedVisualIds.has(requirement.id));
+  next.visual_relationships = next.visual_relationships.filter((relationship) =>
+    !degradedVisualIds.has(relationship.from) && !degradedVisualIds.has(relationship.to));
+  next.shared_variable_requirements = next.shared_variable_requirements.flatMap((requirement) => {
+    const boundVisuals = requirement.bound_visuals.filter((visual) =>
+      !degradedVisualIds.has(visual));
+    if (boundVisuals.length === 0) return [];
+    return [{
+      ...requirement,
+      bound_visuals: boundVisuals,
+      direct_angle_geometry: degradedVisualIds.has(requirement.direct_angle_geometry)
+        ? ""
+        : requirement.direct_angle_geometry,
+    }];
+  });
+  const retainedVariables = new Set(next.shared_variable_requirements.map((requirement) =>
+    requirement.variable));
+  next.student_task_requirements = next.student_task_requirements.filter((requirement) =>
+    retainedVariables.has(requirement.variable));
+  next.scene3d_task_requirements = next.scene3d_task_requirements.filter((requirement) =>
+    !degradedVisualIds.has(requirement.visual));
+  next.presentation_constraints = next.presentation_constraints.filter((constraint) => {
+    if (constraint.polarity !== "require") return true;
+    if (constraint.capability === "visual") return next.visual_requirements.length > 0;
+    if (degradedSurfaces.has(constraint.capability as VisualSurface)) {
+      return next.visual_requirements.some((requirement) =>
+        requirement.surface === constraint.capability);
+    }
+    if (constraint.capability === "animation") {
+      return next.shared_variable_requirements.length > 0;
+    }
+    if (constraint.capability === "student_control") {
+      return next.shared_variable_requirements.length > 0
+        || next.visual_requirements.some((requirement) =>
+          requirement.surface === "scene3d"
+          && requirement.required_features.includes("orbit_control"));
+    }
+    if (constraint.capability === "student_task") {
+      return next.student_task_requirements.length + next.scene3d_task_requirements.length > 0;
+    }
+    return true;
+  });
+  return next;
+}
+
+function markSectionDegraded(
+  step: AuthoringLesson["steps"][number],
+  language: string,
+): void {
+  const english = language.toLocaleLowerCase().startsWith("en");
+  step.purpose = english
+    ? "Continue after one unavailable interactive visual"
+    : "一个互动画面暂时不可用，继续其余课程";
+  const firstBeat = step.beats[0];
+  if (firstBeat) {
+    firstBeat.say = english
+      ? "This interactive visual is temporarily unavailable. Let us continue with the rest of the lesson."
+      : "这个互动画面暂时没有生成成功，我们先继续后面的内容。";
+  }
 }
 
 function injectVisualComponents(
@@ -5986,6 +6072,7 @@ async function generateLessonInParallel(
   attempts: number;
   capabilityPlan: AuthoringCapabilityPlan;
   schema: ReturnType<typeof schemaDiagnostics>;
+  degradedComponents: DegradedLessonComponent[];
 }> {
   const capabilityPlan = deriveAuthoringCapabilityPlan(input, brief);
   const responseSchema = buildAuthoringResponseJsonSchema(brief, capabilityPlan);
@@ -6008,7 +6095,7 @@ async function generateLessonInParallel(
 
   const schedule = createLimitedTaskScheduler(parallelism, signal);
   const sectionPromises: Array<Promise<AuthoringLesson["steps"][number]>> = [];
-  const componentPromises = new Map<string, Promise<Record<string, unknown>>>();
+  const componentPromises = new Map<string, Promise<VisualComponentResult>>();
   const requirementById = new Map(brief.visual_requirements.map((requirement) =>
     [requirement.id, requirement] as const));
   for (const section of sections) {
@@ -6031,14 +6118,44 @@ async function generateLessonInParallel(
           `Parallel section '${section.id}' references unknown visual '${requirementId}'`,
         );
       }
-      const componentPromise = schedule(() => generateVisualComponent(
-        client,
-        input,
-        brief,
-        requirement,
-        exactVisualComponentSchema(responseSchema, requirement),
-        signal,
-      ));
+      const componentPromise = schedule(async (): Promise<VisualComponentResult> => {
+        try {
+          return {
+            action: await generateVisualComponent(
+              client,
+              input,
+              brief,
+              requirement,
+              exactVisualComponentSchema(responseSchema, requirement),
+              signal,
+            ),
+          };
+        } catch (error) {
+          // Only malformed model content is a local component failure. Auth,
+          // quota, deadline, provider-schema, and cancellation failures are
+          // systemic and must remain visible instead of being disguised as a
+          // successfully degraded lesson.
+          if (signal?.aborted || !(error instanceof GeneratedLessonError)) {
+            throw error;
+          }
+          const degradation: DegradedLessonComponent = {
+            id: requirement.id,
+            surface: requirement.surface,
+            error_code: "VISUAL_COMPONENT_INVALID",
+            message: safeError(error),
+          };
+          process.stderr.write(`learning-coach: ${JSON.stringify({
+            stage: "lesson-component-degraded",
+            turn_id: input.turn_id,
+            status: "degraded",
+            ...degradation,
+          })}\n`);
+          return {
+            action: degradedVisualAction(requirement, input.language ?? "zh-CN"),
+            degradation,
+          };
+        }
+      });
       void componentPromise.catch(() => undefined);
       componentPromises.set(requirementId, componentPromise);
     }
@@ -6046,6 +6163,8 @@ async function generateLessonInParallel(
 
   const assembledSteps: AuthoringLesson["steps"] = [];
   const publishedVisuals = new Set<string>();
+  const degradedVisualIds = new Set<string>();
+  const degradedComponents: DegradedLessonComponent[] = [];
   const annotationLayouts = new Map<string, ParallelAnnotationLayout>();
   for (const [index, sectionPromise] of sectionPromises.entries()) {
     const step = await sectionPromise;
@@ -6059,15 +6178,27 @@ async function generateLessonInParallel(
       }
       return dependency;
     });
-    const components = await Promise.all(componentDependencies);
+    const componentResults = await Promise.all(componentDependencies);
+    for (const result of componentResults) {
+      if (!result.degradation) continue;
+      degradedVisualIds.add(result.degradation.id);
+      degradedComponents.push(result.degradation);
+    }
+    const components = componentResults.map((result) => result.action);
     if (components.length > 0) injectVisualComponents(step, components);
+    if (componentResults.some((result) => result.degradation)) {
+      markSectionDegraded(step, input.language ?? "zh-CN");
+    }
     composeParallelSectionWithVisualContext(step, section, annotationLayouts);
     for (const requirementId of section.visualRequirementIds) {
       publishedVisuals.add(requirementId);
     }
     assembledSteps.push(step);
     if (index < sectionPromises.length - 1) {
-      const prefixBrief = briefForPublishedVisuals(brief, publishedVisuals);
+      const prefixBrief = briefForPublishedVisuals(
+        briefAfterComponentDegradation(brief, degradedVisualIds),
+        publishedVisuals,
+      );
       const prefix = validateGeneratedLessonDocument(
         assembleParallelLesson(input, prefixBrief, assembledSteps),
         input,
@@ -6078,12 +6209,13 @@ async function generateLessonInParallel(
       await onPrefix(prefix, index);
     }
   }
-  const animationStep = deterministicAnimationStep(brief);
+  const effectiveBrief = briefAfterComponentDegradation(brief, degradedVisualIds);
+  const animationStep = deterministicAnimationStep(effectiveBrief);
   if (animationStep) assembledSteps.push(animationStep);
   const lesson = validateGeneratedLessonDocument(
-    assembleParallelLesson(input, brief, assembledSteps),
+    assembleParallelLesson(input, effectiveBrief, assembledSteps),
     input,
-    brief,
+    effectiveBrief,
     capabilityPlan,
   );
   process.stderr.write(`learning-coach: ${JSON.stringify({
@@ -6092,7 +6224,13 @@ async function generateLessonInParallel(
     status: "completed",
     sections: assembledSteps.length,
   })}\n`);
-  return { lesson, attempts: 1, capabilityPlan, schema: diagnostics };
+  return {
+    lesson,
+    attempts: 1,
+    capabilityPlan,
+    schema: diagnostics,
+    degradedComponents: degradedComponents.sort((left, right) => left.id.localeCompare(right.id)),
+  };
 }
 
 async function planAndGenerateLessonInParallel(
@@ -6106,6 +6244,7 @@ async function planAndGenerateLessonInParallel(
   attempts: number;
   capabilityPlan: AuthoringCapabilityPlan;
   schema: ReturnType<typeof schemaDiagnostics>;
+  degradedComponents: DegradedLessonComponent[];
 }> {
   const maxAttempts = parsePositiveInteger(
     process.env.OLL_PLANNING_ATTEMPTS,
@@ -6145,43 +6284,29 @@ async function planAndGenerateLessonInParallel(
       client,
       input,
       candidate.brief,
-      async (prefix, part) => {
-        await verificationPromise;
-        await onPrefix(prefix, part);
-      },
+      onPrefix,
       authoringController.signal,
     );
     void generationPromise.catch(() => undefined);
-
-    try {
-      await verificationPromise;
-    } catch (error) {
-      authoringController.abort();
-      await generationPromise.catch(() => undefined);
-      if (!(error instanceof GeneratedLessonError)) throw error;
-      reportRejectedLessonBrief(attempt, candidate.raw, error);
-      if (attempt === maxAttempts) {
-        throw new Error(`Lesson Brief failed validation after ${maxAttempts} attempt(s). Last error: ${error.message}`);
-      }
-      previousBrief = candidate.raw;
-      violations = error.violations;
-      continue;
-    }
-
     onRequirementsVerified();
     const taskPlanningPromise = completeLessonTasks(client, input, candidate.brief);
     const [completedBrief, generated] = await Promise.all([
       taskPlanningPromise,
       generationPromise,
+      verificationPromise,
     ]);
+    const deliveredBrief = briefAfterComponentDegradation(
+      completedBrief,
+      new Set(generated.degradedComponents.map((component) => component.id)),
+    );
     const lesson = validateGeneratedLessonDocument(
       generated.lesson,
       input,
-      completedBrief,
+      deliveredBrief,
       generated.capabilityPlan,
     );
     return {
-      brief: completedBrief,
+      brief: deliveredBrief,
       ...generated,
       lesson,
     };
@@ -6198,6 +6323,7 @@ async function generateLesson(
   attempts: number;
   capabilityPlan: AuthoringCapabilityPlan;
   schema: ReturnType<typeof schemaDiagnostics>;
+  degradedComponents: DegradedLessonComponent[];
 }> {
   let previousCandidate: string | undefined;
   let violations: GenerationViolation[] = [];
@@ -6226,7 +6352,7 @@ async function generateLesson(
     generationViolations: GenerationViolation[],
   ): Promise<AuthoringLesson | undefined> => {
     if (generationViolations.length === 0) return undefined;
-    const localVisualCodes = new Set(["OLL_VISUAL_REQUIREMENT_UNSATISFIED", "OLL_VISUAL_CHANGE_UNSATISFIED"]);
+    const localVisualCodes = new Set(["OLL_VISUAL_REQUIREMENT_UNSATISFIED"]);
     const requirementIds = new Set(generationViolations.flatMap((violation) =>
       localVisualCodes.has(violation.code)
         && typeof violation.requirement_id === "string"
@@ -6412,6 +6538,7 @@ async function generateLesson(
         attempts: attempt,
         capabilityPlan,
         schema: diagnostics,
+        degradedComponents: [],
       };
     } catch (error) {
       if (!(error instanceof GeneratedLessonError)) throw error;
@@ -6428,6 +6555,7 @@ async function generateLesson(
             attempts: attempt,
             capabilityPlan,
             schema: diagnostics,
+            degradedComponents: [],
           };
         }
         const repairedBeatLesson = await repairOneBeat(raw, error.violations);
@@ -6438,6 +6566,7 @@ async function generateLesson(
             attempts: attempt,
             capabilityPlan,
             schema: diagnostics,
+            degradedComponents: [],
           };
         }
       } catch (repairError) {
@@ -6727,7 +6856,8 @@ async function main(): Promise<void> {
       reportRequirementsVerified();
       generated = await generateLesson(client, input, brief);
     }
-    const { lesson, attempts, capabilityPlan, schema } = generated;
+    const { lesson, attempts, capabilityPlan, schema, degradedComponents } = generated;
+    const executableCapabilities = inspectExecutableLessonCapabilities(lesson);
     const artifactPath = outputPath(input);
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}\n`, "utf8");
@@ -6741,7 +6871,9 @@ async function main(): Promise<void> {
     });
     emit({
       success: true,
-      output: `Validated OLL lesson generated with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
+      output: degradedComponents.length > 0
+        ? `OLL lesson generated with ${degradedComponents.length} locally degraded visual component(s); the remaining lesson is playable.`
+        : `Validated OLL lesson generated with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
       files_to_send: [artifactPath],
       generation_attempts: attempts,
       requirement_items: brief.request_items.length,
@@ -6750,6 +6882,8 @@ async function main(): Promise<void> {
       student_tasks: brief.student_task_requirements.length
         + brief.scene3d_task_requirements.length,
       capability_plan: capabilityPlan,
+      executable_capabilities: executableCapabilities,
+      degraded_components: degradedComponents,
       authoring_schema: schema,
       authoring_strategy: authoringStrategy,
       published_parts: publishedParts,

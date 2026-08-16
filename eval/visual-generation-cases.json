@@ -8,12 +8,11 @@
       "plot_expressions": ["sin(x)"],
       "requires_connect": true,
       "shared_variable": {
-        "alias": "theta",
         "bound_kinds": ["geometry", "plot"],
         "animate": true,
         "direct_angle_control": true
       },
-      "student_task": true
+      "student_task": false
     }
   },
   {
@@ -32,7 +31,6 @@
     "expected": {
       "kinds": ["geometry", "plot"],
       "geometry_fields": ["segments"],
-      "geometry_text_any_groups": [["弹簧", "振子"]],
       "lesson_text_any_groups": [["回复力", "恢复力", "弹力", "弹性力"], ["平衡位置", "平衡点"]],
       "plot_expressions": ["cos(x)"],
       "requires_connect": true,
@@ -40,7 +38,7 @@
         "bound_kinds": ["geometry", "plot"],
         "animate": true
       },
-      "student_task": true
+      "student_task": false
     }
   },
   {

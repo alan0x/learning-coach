@@ -9,6 +9,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = JSON.parse(await readFile(join(root, "eval/visual-generation-cases.json"), "utf8"));
 const caseIndex = process.argv.indexOf("--case");
 const selectedId = caseIndex >= 0 ? process.argv[caseIndex + 1] : undefined;
+const repeatIndex = process.argv.indexOf("--repeat");
+const repeat = repeatIndex >= 0 ? Number(process.argv[repeatIndex + 1]) : 1;
+if (!Number.isInteger(repeat) || repeat < 1 || repeat > 20) {
+  throw new Error("--repeat must be an integer from 1 to 20");
+}
 const selected = selectedId ? cases.filter((item) => item.id === selectedId) : cases;
 if (selected.length === 0) throw new Error(`Unknown eval case '${selectedId}'`);
 if (!process.env.VERTEX_SA_JSON) throw new Error("VERTEX_SA_JSON is required for live visual generation evals");
@@ -137,7 +142,9 @@ async function runCase(item) {
         assert.ok(directControl, `missing direct angle control for ${variableAlias}`);
       }
     }
-    if (item.expected.student_task) {
+    if (item.expected.student_task === false) {
+      assert.equal(lesson.lesson.tasks, undefined, "free exploration unexpectedly became a scored task");
+    } else if (item.expected.student_task) {
       const task = lesson.lesson.tasks?.[0];
       assert.ok(task, "missing after-lesson student task");
       assert.equal(task.availability?.kind, "after_lesson");
@@ -212,21 +219,24 @@ async function runCase(item) {
 
 let failures = 0;
 for (const item of selected) {
-  try {
-    const result = await runCase(item);
-    process.stdout.write(
-      `PASS ${item.id} attempts=${result.attempts} requirements_ms=${result.requirementsMs ?? "n/a"} first_part_ms=${result.firstPartMs ?? "n/a"} completed_ms=${result.completedMs ?? "n/a"} writes=${result.writes.join(",")}\n`
-      + `MODEL_METRICS ${item.id} calls=${result.modelCalls} retries=${result.requestRetries} prompt_tokens=${result.promptTokens} candidate_tokens=${result.candidateTokens} thought_tokens=${result.thoughtTokens}\n`
-      + `CALL_TIMINGS ${item.id} ${result.callTimings.map((call) =>
-        `${call.index}:${call.label}=${call.elapsedMs ?? "n/a"}ms/thought=${call.thoughtTokens ?? "n/a"}/finish=${call.finishReason ?? "n/a"}`
-      ).join(" ")}\n`
-      + (result.rejections.length > 0
-        ? `REJECTIONS ${item.id} ${result.rejections.join(" | ")}\n`
-        : ""),
-    );
-  } catch (error) {
-    failures += 1;
-    process.stderr.write(`FAIL ${item.id}: ${error.message}\n`);
+  for (let run = 1; run <= repeat; run += 1) {
+    const runLabel = repeat === 1 ? item.id : `${item.id}#${run}`;
+    try {
+      const result = await runCase(item);
+      process.stdout.write(
+        `PASS ${runLabel} attempts=${result.attempts} requirements_ms=${result.requirementsMs ?? "n/a"} first_part_ms=${result.firstPartMs ?? "n/a"} completed_ms=${result.completedMs ?? "n/a"} writes=${result.writes.join(",")}\n`
+        + `MODEL_METRICS ${runLabel} calls=${result.modelCalls} retries=${result.requestRetries} prompt_tokens=${result.promptTokens} candidate_tokens=${result.candidateTokens} thought_tokens=${result.thoughtTokens}\n`
+        + `CALL_TIMINGS ${runLabel} ${result.callTimings.map((call) =>
+          `${call.index}:${call.label}=${call.elapsedMs ?? "n/a"}ms/thought=${call.thoughtTokens ?? "n/a"}/finish=${call.finishReason ?? "n/a"}`
+        ).join(" ")}\n`
+        + (result.rejections.length > 0
+          ? `REJECTIONS ${runLabel} ${result.rejections.join(" | ")}\n`
+          : ""),
+      );
+    } catch (error) {
+      failures += 1;
+      process.stderr.write(`FAIL ${runLabel}: ${error.message}\n`);
+    }
   }
 }
 process.exitCode = failures === 0 ? 0 : 1;
