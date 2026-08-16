@@ -1338,6 +1338,24 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
   let firstPartExistedBeforeTaskCompleted = false;
   const coreBrief = structuredClone(unitCirclePlotBrief);
   coreBrief.student_task_requirements = [];
+  coreBrief.request_items.push({
+    id: "req-student-task",
+    source_ref: "learner_request:1",
+    kind: "student_task",
+    polarity: "require",
+  });
+  coreBrief.unhandled_request_items = [{
+    request_item_id: "req-student-task",
+    status: "ambiguous",
+    reason: "本阶段不设计具体任务，将在后续生成阶段补齐",
+  }];
+  const explicitStudentTask = {
+    ...structuredClone(unitCirclePlotBrief.student_task_requirements[0]),
+    request_item_ids: [
+      ...unitCirclePlotBrief.student_task_requirements[0].request_item_ids,
+      "req-student-task",
+    ],
+  };
   const server = createServer(async (request, response) => {
     let body = "";
     request.setEncoding("utf8");
@@ -1376,7 +1394,7 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
         // The assertion below requires task elaboration not to block first content.
       }
       response.end(vertexPayload({
-        student_task_requirements: unitCirclePlotBrief.student_task_requirements,
+        student_task_requirements: [explicitStudentTask],
         scene3d_task_requirements: [],
       }));
       return;
@@ -1418,7 +1436,7 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
       serviceAccount,
       workDirectory,
       input: {
-        learner_request: "请结合单位圆和 y=sin x 的函数图像，解释角度旋转如何变成周期波动。",
+        learner_request: "请结合单位圆和 y=sin x 的函数图像，解释角度旋转如何变成周期波动，最后给我一个可以亲手操作图形完成的小练习。",
       },
       environment: { OLL_AUTHORING_STRATEGY: "parallel" },
     });
@@ -1428,6 +1446,7 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
     assert.equal(firstPartExistedBeforePlotCompleted, true);
     assert.equal(taskPlanningRequests, 1);
     assert.equal(firstPartExistedBeforeTaskCompleted, true);
+    assert.match(result.stderr, /"stage":"lesson-deferred-task-coverage".*"req-student-task"/);
     assert.match(result.stderr, /"stage":"lesson-parallel-authoring".*"parallelism":1/);
     const partial = JSON.parse(await readFile(
       join(workDirectory, "study", "oll", "learn-e2e-001.part-000.octos-lesson.json"),
@@ -1476,6 +1495,84 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
       explanationActions.find((action) => action.do === "focus").targets,
       ["circle-geometry", "sine-plot", "explain-1-rotation-wave-note"],
     );
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("deferred task handoff does not erase a genuinely unsupported student control", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-blocked-task-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const blockedBrief = structuredClone(unitCirclePlotBrief);
+  blockedBrief.student_task_requirements = [];
+  blockedBrief.request_items.push(
+    {
+      id: "unsupported-free-drag",
+      source_ref: "learner_request:1",
+      kind: "student_control",
+      polarity: "require",
+    },
+    {
+      id: "task-using-free-drag",
+      source_ref: "learner_request:1",
+      kind: "student_task",
+      polarity: "require",
+    },
+  );
+  blockedBrief.unhandled_request_items = [
+    {
+      request_item_id: "unsupported-free-drag",
+      status: "unsupported",
+      reason: "当前没有任意拖动物体的控制能力",
+    },
+    {
+      request_item_id: "task-using-free-drag",
+      status: "unsupported",
+      reason: "该任务依赖尚不支持的任意拖动",
+    },
+  ];
+  const modelRequests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    const parsed = JSON.parse(body);
+    modelRequests.push(parsed);
+    response.end(vertexPayload(blockedBrief));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const result = await runTool({
+      baseUrl,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `${baseUrl}/token`,
+      },
+      workDirectory,
+      input: {
+        learner_request: "请让我任意拖动圆上的物体，再给我一道必须这样操作才能完成的练习",
+      },
+    });
+
+    assert.equal(result.exitCode, 1);
+    const protocol = JSON.parse(result.stdout);
+    assert.equal(protocol.error_code, "UNSUPPORTED_REQUIREMENT");
+    assert.match(protocol.output, /unsupported-free-drag/);
+    assert.equal(modelRequests.filter(isLessonBriefRequest).length, 1);
+    assert.equal(modelRequests.filter(isLessonBriefVerificationRequest).length, 0);
+    assert.equal(modelRequests.filter(isLessonTaskPlanningRequest).length, 0);
+    assert.equal(modelRequests.filter(isAuthoringRequest).length, 0);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });

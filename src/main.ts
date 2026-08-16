@@ -494,7 +494,7 @@ shared_variable_requirements 用来规划“同一个量同时驱动多个视觉
 - direct_angle_geometry 只在某个 geometry 里的点适合由学生直接绕圆心拖动时填写该 visual_requirement.id，否则返回空字符串。
 - 当前学生控制支持变量滑杆、圆上点绕圆心的 angle_control，以及 scene3d 视角的旋转、缩放、预设和复位；三维视角控制由 scene3d 的 orbit_control 表达，不要为它伪造 shared variable。不支持任意物体的自由拖动或沿直线拖动。一般性的“让我自己操作”或没有点明被拖物体的“拖着试试”可以用拖动滑杆满足；只有圆周角度确实是合适的教学操作时才使用 direct_angle_geometry。明确点名要拖动其他物体或沿特定路径拖动时必须列入 unhandled_request_items。
 
-本阶段不设计课后互动任务的目标值、提示语和成功反馈；这些细节会在首段课件开始生成后由独立步骤补齐。你仍须在 request_items 中忠实记录用户明确要求的 student_task，并规划它依赖的 shared variable 或带 orbit_control 的 scene3d；scene3d 视角任务的所有角度由后续阶段以弧度填写。student_task_requirements 和 scene3d_task_requirements 在本阶段必须始终返回空数组。
+本阶段不设计课后互动任务的目标值、提示语和成功反馈；这些细节会在首段课件开始生成后由独立步骤补齐。你仍须在 request_items 中忠实记录用户明确要求的 student_task，并规划它依赖的 shared variable 或带 orbit_control 的 scene3d；scene3d 视角任务的所有角度由后续阶段以弧度填写。student_task_requirements 和 scene3d_task_requirements 在本阶段必须始终返回空数组。只要现有 shared variable 或 scene3d orbit_control 能承载这个任务，延后生成不等于 unsupported 或 ambiguous，不得把对应 student_task 写入 unhandled_request_items。
 
 progressive_revision_kinds 只表示本轮新建板书是否适合用 revise 渐进替换，允许 text、math、shape、diagram、table、note；不需要时返回空数组。它不允许修改历史白板节点，也不得包含 geometry、plot、scene3d 或 image。
 
@@ -4863,10 +4863,15 @@ async function generateLessonBriefCandidate(
     throw new GeneratedLessonError(parseViolation.message, raw, [parseViolation]);
   }
   try {
+    const brief = validateLessonBrief(canonicalizeBriefAliases(candidate), input, {
+      allowDeferredTasks: true,
+    });
+    const normalizedBrief = normalizeDeferredTaskCoverage(brief);
+    // Fail real unsupported requirements before speculative authoring or the
+    // separately scheduled task planner can spend additional model calls.
+    deriveAuthoringCapabilityPlan(input, normalizedBrief);
     return {
-      brief: validateLessonBrief(canonicalizeBriefAliases(candidate), input, {
-        allowDeferredTasks: true,
-      }),
+      brief: normalizedBrief,
       raw,
     };
   } catch (error) {
@@ -4887,6 +4892,41 @@ function taskPlanningNeeded(brief: LessonBrief): boolean {
   if (tasksForbidden) return false;
   return brief.shared_variable_requirements.length > 0
     || brief.request_items.some((item) => item.kind === "student_task" && item.polarity === "require");
+}
+
+function normalizeDeferredTaskCoverage(brief: LessonBrief): LessonBrief {
+  const hasSupportedTaskControl = brief.shared_variable_requirements.length > 0
+    || brief.visual_requirements.some((requirement) =>
+      requirement.surface === "scene3d"
+      && requirement.required_features.includes("orbit_control"));
+  if (!hasSupportedTaskControl) return brief;
+
+  const requestItemById = new Map(brief.request_items.map((item) => [item.id, item]));
+  const blockedSourceRefs = new Set(brief.unhandled_request_items.flatMap((item) => {
+    const requestItem = requestItemById.get(item.request_item_id);
+    return requestItem && requestItem.kind !== "student_task" ? [requestItem.source_ref] : [];
+  }));
+  const deferredTaskIds = new Set(brief.request_items
+    .filter((item) => item.kind === "student_task"
+      && item.polarity === "require"
+      && !blockedSourceRefs.has(item.source_ref))
+    .map((item) => item.id));
+  if (deferredTaskIds.size === 0) return brief;
+
+  const unhandledRequestItems = brief.unhandled_request_items.filter((item) =>
+    !deferredTaskIds.has(item.request_item_id));
+  if (unhandledRequestItems.length === brief.unhandled_request_items.length) return brief;
+
+  process.stderr.write(`learning-coach: ${JSON.stringify({
+    stage: "lesson-deferred-task-coverage",
+    status: "normalized",
+    request_item_ids: [...deferredTaskIds].filter((id) =>
+      brief.unhandled_request_items.some((item) => item.request_item_id === id)),
+  })}\n`);
+  return {
+    ...brief,
+    unhandled_request_items: unhandledRequestItems,
+  };
 }
 
 function buildTaskPlanningPrompt(
