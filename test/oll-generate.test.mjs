@@ -305,8 +305,8 @@ const unitCirclePlotBrief = {
       ],
       expressions: [],
       request_item_ids: ["show-unit-circle", "show-continuous-change"],
-      motion_kind: "angular_point",
-      motion_subject: "圆上点",
+      change_kind: "angular_point",
+      change_subject: "圆上点",
     },
     {
       id: "sine-plot",
@@ -448,6 +448,177 @@ validCube3dLesson.close = {
   focus: ["cube-scene"],
 };
 
+const paraboloidSectionBrief = {
+  version: "1",
+  request_summary: "用可旋转的抛物面和水平截面解释截线为圆",
+  request_items: [
+    { id: "explain-paraboloid", source_ref: "learner_request:1", kind: "teaching_goal", polarity: "require" },
+    { id: "show-paraboloid", source_ref: "learner_request:2", kind: "visual", polarity: "require" },
+    { id: "show-section-circle", source_ref: "learner_request:2", kind: "visual", polarity: "require" },
+    { id: "relate-section-views", source_ref: "learner_request:2", kind: "relationship", polarity: "require" },
+    { id: "change-section-height", source_ref: "learner_request:2", kind: "continuous_change", polarity: "require" },
+    { id: "control-spatial-view", source_ref: "learner_request:2", kind: "student_control", polarity: "require" },
+  ],
+  non_requirement_clauses: [],
+  teaching_goal_requirements: [{
+    id: "explain-horizontal-level-set",
+    goal: "解释 z=x^2+y^2 的水平截线为什么是圆",
+    request_item_ids: ["explain-paraboloid"],
+  }],
+  presentation_constraints: [{
+    id: "use-three-dimensional-view",
+    capability: "scene3d",
+    polarity: "require",
+    request_item_ids: ["show-paraboloid"],
+  }],
+  visual_requirements: [
+    {
+      id: "paraboloid-scene",
+      surface: "scene3d",
+      purpose: "展示抛物面和会随高度变化的水平截面",
+      required_features: ["spatial_axes", "function_surface", "cross_section", "orbit_control"],
+      expressions: ["x^2+y^2"],
+      request_item_ids: ["show-paraboloid", "change-section-height", "control-spatial-view"],
+    },
+    {
+      id: "section-circle-geometry",
+      surface: "geometry",
+      purpose: "展示 x^2+y^2=h 的截线圆半径随 h 变化",
+      required_features: ["coordinate_axes", "equal_scale", "circle", "origin_centered_circle"],
+      expressions: [],
+      request_item_ids: ["show-section-circle", "change-section-height"],
+      change_kind: "radial_size",
+      change_subject: "截线圆",
+    },
+  ],
+  visual_relationships: [{
+    id: "section-to-circle",
+    from: "paraboloid-scene",
+    to: "section-circle-geometry",
+    relation: "maps_to",
+    request_item_ids: ["relate-section-views"],
+  }],
+  shared_variable_requirements: [{
+    id: "section-height",
+    variable: "h",
+    purpose: "让三维水平截面和二维截线圆共用同一高度",
+    initial: 1,
+    min: 0.25,
+    max: 4,
+    label: "截面高度 h",
+    unit: "",
+    slider_step: 0.25,
+    animate_to: 4,
+    easing: "linear",
+    duration_intent: "normal",
+    bound_visuals: ["paraboloid-scene", "section-circle-geometry"],
+    direct_angle_geometry: "",
+    request_item_ids: ["change-section-height"],
+  }],
+  student_task_requirements: [],
+  scene3d_task_requirements: [],
+  progressive_revision_kinds: [],
+  unhandled_request_items: [],
+};
+
+const validParaboloidSectionLesson = structuredClone(validLesson);
+validParaboloidSectionLesson.lesson.title = "抛物面的水平截线";
+validParaboloidSectionLesson.lesson.goals = ["解释 z=x^2+y^2 的水平截线为什么是圆"];
+validParaboloidSectionLesson.lesson.variables = [{
+  as: "h",
+  initial: 1,
+  min: 0.25,
+  max: 4,
+  label: "截面高度 h",
+  unit: "",
+  control: { kind: "slider", step: 0.25 },
+}];
+validParaboloidSectionLesson.steps[0].purpose = "联动观察抛物面截面与截线圆";
+validParaboloidSectionLesson.steps[0].beats[0].actions = [
+  {
+    do: "write",
+    as: "paraboloid-scene",
+    kind: "scene3d",
+    role: "diagram",
+    content: {
+      title: "z=x²+y² 与水平截面",
+      fallback: "开口向上的抛物面被高度为 h 的水平面截出圆。",
+      axes: true,
+      camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
+      objects: [{
+        as: "paraboloid",
+        kind: "surface",
+        label: "z=x²+y²",
+        color: "teal",
+        expression: "x^2+y^2",
+        x_range: { min: -2, max: 2 },
+        y_range: { min: -2, max: 2 },
+        samples: 12,
+      }],
+      sections: [{
+        as: "horizontal-section",
+        axis: "z",
+        value: 1,
+        targets: ["paraboloid"],
+        display: "plane_and_intersection",
+        label: "水平截面",
+        color: "orange",
+      }],
+      bindings: [{ target: "horizontal-section.value", expression: "h" }],
+    },
+    place: { relation: "new_region" },
+  },
+  {
+    do: "write",
+    as: "section-circle-geometry",
+    kind: "geometry",
+    role: "diagram",
+    content: {
+      title: "x²+y²=h",
+      axes: {
+        x: { min: -2.25, max: 2.25, label: "x" },
+        y: { min: -2.25, max: 2.25, label: "y" },
+        equal_scale: true,
+      },
+      points: [{ as: "origin", x: 0, y: 0, label: "O" }],
+      circles: [{ as: "section-circle", center: "origin", radius: 1, label: "截线圆" }],
+      bindings: [{ target: "section-circle.radius", expression: "sqrt(h)" }],
+    },
+    place: { relation: "right_of", anchor: "paraboloid-scene", gap: "normal" },
+  },
+  {
+    do: "connect",
+    as: "section-to-circle",
+    from: "paraboloid-scene",
+    to: "section-circle-geometry",
+    relation: "同一高度 h 的截面与截线",
+  },
+  {
+    do: "focus",
+    when: "after_speech",
+    targets: ["paraboloid-scene", "section-circle-geometry"],
+    intent: "current_step",
+  },
+];
+validParaboloidSectionLesson.steps[0].beats.push({
+  key: "animate-section-height",
+  say: "观察截面升高时，截线圆的半径怎样变化。",
+  delivery: "patient",
+  actions: [
+    { do: "animate", variable: "h", value: 4, easing: "linear", duration_intent: "normal" },
+    {
+      do: "focus",
+      when: "after_speech",
+      targets: ["paraboloid-scene", "section-circle-geometry"],
+      intent: "current_step",
+    },
+  ],
+});
+validParaboloidSectionLesson.close = {
+  summary: "水平截面 z=h 与抛物面相交得到 x²+y²=h，因此截线是半径为 √h 的圆。",
+  focus: ["paraboloid-scene", "section-circle-geometry"],
+};
+
 const springOscillationBrief = {
   version: "1",
   request_summary: "演示弹簧振子为什么往复运动以及位移和余弦函数的关系",
@@ -484,8 +655,8 @@ const springOscillationBrief = {
       required_features: ["coordinate_axes", "annotated_points", "line_segments"],
       expressions: [],
       request_item_ids: ["explain-oscillation", "show-motion"],
-      motion_kind: "linear_point",
-      motion_subject: "振子",
+      change_kind: "linear_point",
+      change_subject: "振子",
     },
     {
       id: "cosine-displacement",
@@ -2650,7 +2821,7 @@ test("a natural spring request keeps user requirements separate from optional te
     assert.match(plannerInstructions, /line_segments.*弹簧.*连杆/u);
     const verifierInstructions = modelRequests.find(isLessonBriefVerificationRequest)
       .systemInstruction.parts[0].text;
-    assert.match(verifierInstructions, /motion_subject.*用户要求观看的运动主体/u);
+    assert.match(verifierInstructions, /change_subject.*用户要求观看的变化对象/u);
     assert.match(verifierInstructions, /类比.*不能作为主体演示/u);
     assert.match(result.stderr, /lesson-brief-review-suggestions/);
     const protocol = JSON.parse(result.stdout);
@@ -2723,7 +2894,7 @@ test("a rotating-circle analogy cannot satisfy direct linear spring motion", asy
     assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
     const repairRequests = modelRequests.filter(isComponentRepairRequest);
     assert.equal(repairRequests.length, 1);
-    assert.match(repairRequests[0].contents[0].parts[0].text, /OLL_VISUAL_MOTION_UNSATISFIED/);
+    assert.match(repairRequests[0].contents[0].parts[0].text, /OLL_VISUAL_CHANGE_UNSATISFIED/);
     const protocol = JSON.parse(result.stdout);
     const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
     const geometry = artifact.steps.flatMap((step) => step.beats)
@@ -2731,6 +2902,94 @@ test("a rotating-circle analogy cannot satisfy direct linear spring motion", asy
       .find((action) => action.do === "write" && action.as === "spring-motion");
     assert.equal(geometry.content.points.some((point) => point.label === "振子"), true);
     assert.equal(geometry.content.bindings.some((binding) => binding.target === "mass.x"), true);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("a shared section height may drive a 3D section and a 2D circle radius", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-radial-change-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const modelRequests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    const parsedBody = JSON.parse(body);
+    modelRequests.push(parsedBody);
+    const value = isLessonBriefRequest(parsedBody)
+      ? paraboloidSectionBrief
+      : isLessonBriefVerificationRequest(parsedBody)
+        ? matchingBriefVerification(parsedBody)
+        : isLessonTaskPlanningRequest(parsedBody)
+          ? {
+              student_task_requirements: [{
+                id: "inspect-large-section",
+                prompt: "调高截面，观察截线圆怎样变化",
+                variable: "h",
+                controls: ["slider"],
+                completion_expression: "h",
+                completion_value: 4,
+                tolerance: 0.01,
+                hints: ["拖动截面高度滑杆。"],
+                hint_after_attempts: 2,
+                success_message: "截面升高时，截线圆的半径随之增大。",
+                request_item_ids: ["change-section-height"],
+              }],
+              scene3d_task_requirements: [],
+            }
+          : validParaboloidSectionLesson;
+    response.end(vertexPayload(value));
+  });
+
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const result = await runTool({
+      baseUrl,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `${baseUrl}/token`,
+      },
+      workDirectory,
+      input: {
+        learner_request: "二元函数的图像我一直想象不出来。请用一个可以旋转的三维图像解释 z=x^2+y^2，再用水平截面说明为什么截线是圆，并让我自己旋转和缩放观察。",
+      },
+    });
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(modelRequests.filter(isLessonBriefRequest).length, 1);
+    assert.equal(modelRequests.filter(isLessonBriefVerificationRequest).length, 1);
+    assert.equal(modelRequests.filter(isLessonTaskPlanningRequest).length, 1);
+    assert.equal(modelRequests.filter(isAuthoringRequest).length, 1);
+    assert.equal(modelRequests.filter(isComponentRepairRequest).length, 0);
+    const plannerSchema = modelRequests.find(isLessonBriefRequest)
+      .generationConfig.responseJsonSchema.properties.visual_requirements.items.properties;
+    assert.deepEqual(plannerSchema.change_kind.enum, [
+      "linear_point", "angular_point", "planar_point", "radial_size", "angular_extent",
+    ]);
+    assert.equal(plannerSchema.motion_kind, undefined);
+
+    const protocol = JSON.parse(result.stdout);
+    const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    const actions = artifact.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions);
+    const scene = actions.find((action) => action.do === "write" && action.as === "paraboloid-scene");
+    const geometry = actions.find((action) => action.do === "write" && action.as === "section-circle-geometry");
+    assert.equal(scene.content.bindings[0].target, "horizontal-section.value");
+    assert.equal(geometry.content.circles[0].label, "截线圆");
+    assert.deepEqual(geometry.content.bindings[0], {
+      target: "section-circle.radius",
+      expression: "sqrt(h)",
+    });
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });

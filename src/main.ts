@@ -196,7 +196,12 @@ type VisualFeature =
   | "cross_section"
   | "spatial_highlights"
   | "orbit_control";
-type VisualMotionKind = "linear_point" | "angular_point" | "planar_point";
+type VisualChangeKind =
+  | "linear_point"
+  | "angular_point"
+  | "planar_point"
+  | "radial_size"
+  | "angular_extent";
 
 interface VisualRequirement {
   id: string;
@@ -205,8 +210,8 @@ interface VisualRequirement {
   required_features: VisualFeature[];
   expressions: string[];
   request_item_ids: string[];
-  motion_kind?: VisualMotionKind;
-  motion_subject?: string;
+  change_kind?: VisualChangeKind;
+  change_subject?: string;
 }
 
 interface VisualRelationshipRequirement {
@@ -479,11 +484,13 @@ feature 必须属于对应 surface：geometry 只使用 coordinate_axes、equal_
 
 如果请求涉及运动、映射或量的连续变化，规划中必须包含使这个变化可见的结构；例如“旋转角度”需要真实的角度标记，“投影/坐标对应”需要实际投影结构，“函数图像”需要坐标轴和带表达式的曲线。
 
-被 shared_variable_requirements 绑定的 geometry 还必须填写 motion_kind 和 motion_subject：
+被 shared_variable_requirements 绑定的 geometry 还必须填写 change_kind 和 change_subject，说清画面上哪个对象的哪种数值属性会变化：
 - linear_point：一个代表主体的有标签点只沿 x 或 y 一个方向变化，例如振子、小车；
 - angular_point：一个代表主体的有标签点绕圆心转动，例如单位圆上的点、摆臂端点；
 - planar_point：一个代表主体的有标签点的 x、y 同时变化，例如平面抛体；
-- motion_subject 是该运动点在画面上必须明确显示的主体名称，例如“振子”“小车”“圆上点”，不得填写 P、A、物体等无法说明用户所问主体的泛称。只有被共享变量绑定的 geometry 填写这两个字段；plot/scene3d/diagram/image/table 不填写。
+- radial_size：有标签的圆或圆弧的半径变化，例如水平截面升高时截线圆的半径变化；
+- angular_extent：有标签圆弧的起止角之一变化，例如逐渐展开的扫过角；
+- change_subject 是画面上发生变化的对象名称，必须出现在对应 point、circle 或 arc 的 label 中，例如“振子”“圆上点”“截线圆”，不得填写 P、A、物体等无法说明对象的泛称。只有被共享变量绑定的 geometry 填写这两个字段；plot/scene3d/diagram/image/table 不填写。
 
 如果请求要求把两个视觉对象结合、对应、比较或推导，必须在 visual_relationships 中表达；不要把这种关系退化成两张互不相关的图。
 
@@ -523,7 +530,7 @@ const BRIEF_VERIFICATION_SYSTEM_PROMPT = `你是用户要求覆盖复核器，�
 
 missing 只报告课程骨架自身遗漏的教学目标、视觉对象、关系、连续变化、学生控制、既有白板修改、展示限制或不支持能力，并必须填写对应 kind。用户要求类别若未被 request_items 记录，优先在 request_item_kinds 中如实列出，由本地程序进行差集检查。student_task 的具体任务由下一阶段生成，绝不能放进 missing。
 
-如果用户明确问“为什么发生”，遗漏因果解释属于 missing，不是 suggestions。如果用户要求演示某个对象的变化，却只规划类比图而没有直接表现该对象，也属于 missing。复核这类请求时必须检查被绑定 geometry 的 motion_subject 和 motion_kind：motion_subject 必须明确命名用户要求观看的运动主体，motion_kind 必须描述该主体本身的运动；圆周投影、函数曲线或其他类比即使数学上相关，也不能作为主体演示通过复核。只有在因果目标和主体演示已经覆盖后，受力图、速度图、能量图等可选讲法才属于 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
+如果用户明确问“为什么发生”，遗漏因果解释属于 missing，不是 suggestions。如果用户要求演示某个对象的变化，却只规划类比图而没有直接表现该对象，也属于 missing。复核这类请求时必须检查被绑定 geometry 的 change_subject 和 change_kind：change_subject 必须明确命名用户要求观看的变化对象，change_kind 必须描述该对象实际变化的数值属性。如果用户要求观看物体本身的运动，圆周投影、函数曲线或其他类比即使数学上相关，也不能作为主体演示通过复核。但不得把圆的半径变化或圆弧的角度范围变化误判为“必须有一个点在移动”。只有在因果目标和主体演示已经覆盖后，受力图、速度图、能量图等可选讲法才属于 suggestions。教学建议不是用户要求。没有发现对应项目时返回空数组。`;
 
 const LESSON_TASK_PLANNING_SYSTEM_PROMPT = `你是课后互动任务设计器。课程的教学目标、视觉对象、共享变量和三维视角能力已经确定；你只补充讲解结束后交给学生完成的短任务，不修改课程规划。
 
@@ -577,7 +584,7 @@ const AUTHORING_SYSTEM_PROMPT = `你是一位耐心、具体、尊重学生的�
 - 输入中的课程要求清单是本轮请求的可执行要求合同；每个 visual_requirement 和 visual_relationship 都必须由实际白板动作满足，标题、goals、讲述或文字声明不能替代要求的视觉内容。
 - 每个 visual_requirement.id 就是该主要视觉节点必须使用的 write.as；一个视觉节点可以通过 request_item_ids 服务多个教学目标。visual_relationships 对应的 connect 由系统在两个节点创建后插入，模型不要输出 connect。
 - 课程要求清单中的 shared_variable_requirements 非空时，系统会确定性写入 lesson.variables 和可判定的 angle_control；模型负责在 bound_visuals 对应的 geometry/plot/scene3d content.bindings 中引用同一个变量，并把 do="animate" 动作放进合适的讲解节拍。scene3d 绑定目标目前只允许 section.value。禁止复制第二份状态。
-- geometry visual_requirement 包含 motion_kind/motion_subject 时，必须有一个 label 明确包含 motion_subject 的点代表运动主体。linear_point 只绑定该点的 x 或 y 一个坐标；planar_point 同时绑定 x/y；angular_point 同时绑定 x/y，并通过半径线或角控制表明它绕固定中心运动。单位圆或其他类比图不能冒充用户要求直接演示的主体。
+- geometry visual_requirement 包含 change_kind/change_subject 时，必须有一个 label 明确包含 change_subject 的对象，并让共享变量绑定该对象与 change_kind 对应的属性。linear_point 只绑定 point.x 或 point.y 一个坐标；planar_point 同时绑定 point.x/point.y；angular_point 同时绑定 point.x/point.y，并通过半径线或角控制表明它绕固定中心运动；radial_size 绑定 circle.radius 或 arc.radius；angular_extent 绑定 arc.start_angle 或 arc.end_angle。单位圆或其他类比图不能冒充用户要求直接演示的主体。
 - bindings.target 使用“局部元素别名.数值属性”，expression 使用受限表达式并直接引用变量名。例如单位圆与正弦图共享 theta：point-p.x=cos(theta)、point-p.y=sin(theta)、foot.x=cos(theta)、theta-arc.end_angle=theta、current-angle.x=theta、current-angle.y=sin(theta)。
 - animate 只描述语义目标，包含 variable、value，可包含 easing 和 duration_intent；不得生成毫秒时长。学生可在 Runtime 中播放、暂停、拖动、复位和重放。
 - 动画必须单独占用一个简短 Beat：相关 geometry/plot 和 connect 必须在更早的 Beat 已经创建；动画 Beat 只包含一个 do="animate" 和本 Beat 必需的 after_speech focus，不得同时 write、connect、group、revise、point 或 emphasize。
@@ -608,9 +615,9 @@ const PARALLEL_SECTION_SYSTEM_PROMPT = `你是独立课程分段编写器。你�
 
 const VISUAL_COMPONENT_SYSTEM_PROMPT = `你是独立视觉组件编写器。你只生成课程要求中指定的一个主要视觉对象，其他视觉对象和课程讲解会同时生成，最后由程序组装。
 
-只返回一个完整 write 动作，不返回 Lesson、Step、Beat、close、Markdown 或解释。必须保持 do="write"、as 与 visual_requirement.id 完全相同、kind 与 visual_requirement.surface 完全相同，并实现 required_features、expressions、运动主体和共享变量绑定。不得创建其他节点、connect、animate、旁白或教学任务。输出必须符合所附 JSON Schema。只写满足要求的最小充分内容，不要枚举没有被要求的额外元素，也不要填充无关可选字段。
+只返回一个完整 write 动作，不返回 Lesson、Step、Beat、close、Markdown 或解释。必须保持 do="write"、as 与 visual_requirement.id 完全相同、kind 与 visual_requirement.surface 完全相同，并实现 required_features、expressions、可见变化对象和共享变量绑定。不得创建其他节点、connect、animate、旁白或教学任务。输出必须符合所附 JSON Schema。只写满足要求的最小充分内容，不要枚举没有被要求的额外元素，也不要填充无关可选字段。
 
-geometry 用于坐标轴、点、圆、线段、投影和角弧，不得用 diagram 冒充度量几何。visual_requirement.motion_subject 非空时，代表运动主体的 point.label 必须包含这段 motion_subject 原文，让学生能看出是谁在运动；linear_point 只绑定该点的 x 或 y，planar_point 同时绑定 x/y，angular_point 同时绑定 x/y 并用半径线连接固定中心。共享角变量要直接绑定这个点。plot 的曲线 expression 只写 Runtime 表达式，例如 sin(x)、cos(x)，不得写 y=、LaTeX、代码或 SVG。scene3d 的 camera、objects、sections、highlights 必须使用结构化字段，surface.expression 使用 z=f(x,y) 的受限表达式。要求 cross_section 时，section.targets 必须引用被切对象的局部别名，section.display 必须为 plane_and_intersection，让切割平面和真实交线或截面同时显示。scene3d.camera 的所有角度都使用弧度；camera.yaw 必须是有限弧度值，camera.pitch 必须在 -π/2 到 π/2 之间，camera.zoom 必须在 0.2 到 5 之间，绝不能把角度制数值直接填入相机字段。diagram 只用于语义元素和关系。image 只能引用 session_context 中明确给出的 asset_id。bindings.target 使用“局部元素别名.数值属性”，expression 直接引用 shared_variables 中的变量。不得输出像素坐标、HTML、SVG 路径或脚本。所有局部别名只能使用小写英文字母、数字和连字符。`;
+geometry 用于坐标轴、点、圆、线段、投影和角弧，不得用 diagram 冒充度量几何。visual_requirement.change_subject 非空时，对应 point、circle 或 arc 的 label 必须包含这段 change_subject 原文；linear_point 只绑定 point.x 或 point.y，planar_point 同时绑定 point.x/point.y，angular_point 同时绑定 point.x/point.y 并用半径线连接固定中心，radial_size 绑定 circle.radius 或 arc.radius，angular_extent 绑定 arc.start_angle 或 arc.end_angle。共享角变量要直接绑定对应点。plot 的曲线 expression 只写 Runtime 表达式，例如 sin(x)、cos(x)，不得写 y=、LaTeX、代码或 SVG。scene3d 的 camera、objects、sections、highlights 必须使用结构化字段，surface.expression 使用 z=f(x,y) 的受限表达式。要求 cross_section 时，section.targets 必须引用被切对象的局部别名，section.display 必须为 plane_and_intersection，让切割平面和真实交线或截面同时显示。scene3d.camera 的所有角度都使用弧度；camera.yaw 必须是有限弧度值，camera.pitch 必须在 -π/2 到 π/2 之间，camera.zoom 必须在 0.2 到 5 之间，绝不能把角度制数值直接填入相机字段。diagram 只用于语义元素和关系。image 只能引用 session_context 中明确给出的 asset_id。bindings.target 使用“局部元素别名.数值属性”，expression 直接引用 shared_variables 中的变量。不得输出像素坐标、HTML、SVG 路径或脚本。所有局部别名只能使用小写英文字母、数字和连字符。`;
 
 function requireNonEmptyString(value: unknown, label: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -1836,6 +1843,13 @@ function buildAuthoringResponseJsonSchema(brief: LessonBrief, plan: AuthoringCap
 }
 
 const visualSurfaces: VisualSurface[] = ["geometry", "plot", "scene3d", "diagram", "image", "table"];
+const visualChangeKinds: VisualChangeKind[] = [
+  "linear_point",
+  "angular_point",
+  "planar_point",
+  "radial_size",
+  "angular_extent",
+];
 const visualFeatures: VisualFeature[] = [
   "coordinate_axes", "equal_scale", "circle", "origin_centered_circle", "unit_radius",
   "point_on_circle", "line_segments", "radius_segment", "projection_segment", "angle_arc", "function_curve",
@@ -1940,8 +1954,8 @@ const lessonBriefResponseJsonSchema: JsonSchema = {
           required_features: { type: "array", items: { enum: visualFeatures } },
           expressions: { type: "array", items: { type: "string" } },
           request_item_ids: idArraySchema,
-          motion_kind: { enum: ["linear_point", "angular_point", "planar_point"] },
-          motion_subject: { type: "string" },
+          change_kind: { enum: visualChangeKinds },
+          change_subject: { type: "string" },
         },
       },
     },
@@ -2665,23 +2679,23 @@ function validateLessonBrief(
         }
       });
     }
-    const hasMotionKind = raw.motion_kind !== undefined;
-    const hasMotionSubject = raw.motion_subject !== undefined;
-    if (hasMotionKind !== hasMotionSubject) {
+    const hasChangeKind = raw.change_kind !== undefined;
+    const hasChangeSubject = raw.change_subject !== undefined;
+    if (hasChangeKind !== hasChangeSubject) {
       violations.push(briefViolation(
-        "BRIEF_INCOMPLETE_VISUAL_MOTION",
+        "BRIEF_INCOMPLETE_VISUAL_CHANGE",
         path,
-        "motion_kind and motion_subject must be provided together",
+        "change_kind and change_subject must be provided together",
       ));
     }
-    if (hasMotionKind && !["linear_point", "angular_point", "planar_point"].includes(String(raw.motion_kind))) {
-      violations.push(briefViolation("BRIEF_INVALID_VISUAL_MOTION", `${path}/motion_kind`, "motion_kind is unsupported"));
+    if (hasChangeKind && !visualChangeKinds.includes(raw.change_kind as VisualChangeKind)) {
+      violations.push(briefViolation("BRIEF_INVALID_VISUAL_CHANGE", `${path}/change_kind`, "change_kind is unsupported"));
     }
-    if (hasMotionSubject && (typeof raw.motion_subject !== "string" || !raw.motion_subject.trim())) {
-      violations.push(briefViolation("BRIEF_INVALID_VISUAL_MOTION_SUBJECT", `${path}/motion_subject`, "motion_subject must visibly name the moving subject"));
+    if (hasChangeSubject && (typeof raw.change_subject !== "string" || !raw.change_subject.trim())) {
+      violations.push(briefViolation("BRIEF_INVALID_VISUAL_CHANGE_SUBJECT", `${path}/change_subject`, "change_subject must visibly name the changing object"));
     }
-    if ((hasMotionKind || hasMotionSubject) && raw.surface !== "geometry") {
-      violations.push(briefViolation("BRIEF_INCOMPATIBLE_VISUAL_MOTION", path, "visual motion metadata is supported only by geometry"));
+    if ((hasChangeKind || hasChangeSubject) && raw.surface !== "geometry") {
+      violations.push(briefViolation("BRIEF_INCOMPATIBLE_VISUAL_CHANGE", path, "visual change metadata is supported only by geometry"));
     }
   });
 
@@ -2785,18 +2799,18 @@ function validateLessonBrief(
             "shared variables bind only geometry, plot, and scene3d visuals",
           ));
         } else if (visual.surface === "geometry") {
-          if (!["linear_point", "angular_point", "planar_point"].includes(String(visual.motion_kind))) {
+          if (!visualChangeKinds.includes(visual.change_kind as VisualChangeKind)) {
             violations.push(briefViolation(
-              "BRIEF_MISSING_VISUAL_MOTION",
+              "BRIEF_MISSING_VISUAL_CHANGE",
               `${path}/bound_visuals`,
-              `bound geometry '${String(visualId)}' must declare linear_point, angular_point, or planar_point motion`,
+              `bound geometry '${String(visualId)}' must declare how its visible object changes`,
             ));
           }
-          if (typeof visual.motion_subject !== "string" || !visual.motion_subject.trim()) {
+          if (typeof visual.change_subject !== "string" || !visual.change_subject.trim()) {
             violations.push(briefViolation(
-              "BRIEF_MISSING_VISUAL_MOTION_SUBJECT",
+              "BRIEF_MISSING_VISUAL_CHANGE_SUBJECT",
               `${path}/bound_visuals`,
-              `bound geometry '${String(visualId)}' must visibly name its moving subject`,
+              `bound geometry '${String(visualId)}' must visibly name its changing object`,
             ));
           }
         }
@@ -2813,7 +2827,7 @@ function validateLessonBrief(
           `${path}/direct_angle_geometry`,
           "direct_angle_geometry must reference a bound geometry requirement",
         ));
-      } else if (directVisual.motion_kind !== "angular_point") {
+      } else if (directVisual.change_kind !== "angular_point") {
         violations.push(briefViolation(
           "BRIEF_INVALID_DIRECT_CONTROL_MOTION",
           `${path}/direct_angle_geometry`,
@@ -3419,18 +3433,18 @@ function expressionReferencesVariable(expression: unknown, variable: string): bo
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
 }
 
-function geometryMotionSatisfied(
+function geometryChangeSatisfied(
   content: Record<string, unknown>,
   requirement: VisualRequirement,
   variable: string,
 ): boolean {
-  if (!requirement.motion_kind || !requirement.motion_subject) return true;
-  const subject = normalizeEvidence(requirement.motion_subject);
+  if (!requirement.change_kind || !requirement.change_subject) return true;
+  const subject = normalizeEvidence(requirement.change_subject);
   const points = Array.isArray(content.points) ? content.points.filter(isRecord) : [];
   const pointByAlias = new Map(points.flatMap((point) =>
     typeof point.as === "string" ? [[point.as, point] as const] : []));
   const bindings = Array.isArray(content.bindings) ? content.bindings.filter(isRecord) : [];
-  const boundCoordinates = new Map<string, Set<string>>();
+  const boundProperties = new Map<string, Set<string>>();
   for (const binding of bindings) {
     if (typeof binding.target !== "string"
       || !expressionReferencesVariable(binding.expression, variable)) continue;
@@ -3438,25 +3452,47 @@ function geometryMotionSatisfied(
     if (separator <= 0) continue;
     const alias = binding.target.slice(0, separator);
     const property = binding.target.slice(separator + 1);
-    if (!pointByAlias.has(alias) || (property !== "x" && property !== "y")) continue;
-    const coordinates = boundCoordinates.get(alias) ?? new Set<string>();
-    coordinates.add(property);
-    boundCoordinates.set(alias, coordinates);
+    const properties = boundProperties.get(alias) ?? new Set<string>();
+    properties.add(property);
+    boundProperties.set(alias, properties);
   }
+  const labelMatches = (item: Record<string, unknown>): boolean =>
+    typeof item.as === "string"
+      && typeof item.label === "string"
+      && normalizeEvidence(item.label).includes(subject);
+
+  if (requirement.change_kind === "radial_size") {
+    const radialItems = [
+      ...(Array.isArray(content.circles) ? content.circles.filter(isRecord) : []),
+      ...(Array.isArray(content.arcs) ? content.arcs.filter(isRecord) : []),
+    ];
+    return radialItems.some((item) => labelMatches(item)
+      && boundProperties.get(item.as as string)?.has("radius"));
+  }
+  if (requirement.change_kind === "angular_extent") {
+    const arcs = Array.isArray(content.arcs) ? content.arcs.filter(isRecord) : [];
+    return arcs.some((arc) => {
+      if (!labelMatches(arc)) return false;
+      const properties = boundProperties.get(arc.as as string);
+      return properties?.has("start_angle") || properties?.has("end_angle");
+    });
+  }
+
   const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
   return points.some((point) => {
-    if (typeof point.as !== "string" || typeof point.label !== "string") return false;
-    const label = normalizeEvidence(point.label);
-    if (!label.includes(subject)) return false;
-    const coordinates = boundCoordinates.get(point.as) ?? new Set<string>();
-    if (requirement.motion_kind === "linear_point") return coordinates.size === 1;
+    if (!labelMatches(point)) return false;
+    const coordinates = boundProperties.get(point.as as string) ?? new Set<string>();
+    if (requirement.change_kind === "linear_point") {
+      return (coordinates.has("x") ? 1 : 0) + (coordinates.has("y") ? 1 : 0) === 1;
+    }
     if (!coordinates.has("x") || !coordinates.has("y")) return false;
-    if (requirement.motion_kind === "planar_point") return true;
+    if (requirement.change_kind === "planar_point") return true;
     const interaction = isRecord(point.interaction) ? point.interaction : undefined;
     const hasCenterConnection = segments.some((segment) =>
       (segment.from === point.as && typeof segment.to === "string" && pointByAlias.has(segment.to))
       || (segment.to === point.as && typeof segment.from === "string" && pointByAlias.has(segment.from)));
-    return interaction?.kind === "angle_control" || hasCenterConnection;
+    return requirement.change_kind === "angular_point"
+      && (interaction?.kind === "angle_control" || hasCenterConnection);
   });
 }
 
@@ -3740,15 +3776,15 @@ function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): G
     const missingExpressions = requirement.expressions.filter(
       (expression) => !actualExpressions.includes(normalizeExpression(expression)),
     );
-    const motionVariable = brief.shared_variable_requirements.find((variable) =>
+    const changeVariable = brief.shared_variable_requirements.find((variable) =>
       variable.bound_visuals.includes(requirement.id));
-    const motionSatisfied = node.surface !== "geometry"
-      || !motionVariable
-      || geometryMotionSatisfied(node.content, requirement, motionVariable.variable);
+    const changeSatisfied = node.surface !== "geometry"
+      || !changeVariable
+      || geometryChangeSatisfied(node.content, requirement, changeVariable.variable);
     if (node.surface === requirement.surface
       && missingFeatures.length === 0
       && missingExpressions.length === 0
-      && motionSatisfied) {
+      && changeSatisfied) {
       matched.set(requirement.id, node);
       continue;
     }
@@ -3765,13 +3801,13 @@ function validateBriefCoverage(document: AuthoringLesson, brief: LessonBrief): G
         missing_expressions: missingExpressions,
       });
     }
-    if (!motionSatisfied) {
+    if (!changeSatisfied) {
       violations.push({
         stage: "request_coverage",
-        code: "OLL_VISUAL_MOTION_UNSATISFIED",
+        code: "OLL_VISUAL_CHANGE_UNSATISFIED",
         path: "/steps",
         requirement_id: requirement.id,
-        message: `Visual '${requirement.id}' must show '${requirement.motion_subject}' with ${requirement.motion_kind} motion driven by '${motionVariable?.variable}'`,
+        message: `Visual '${requirement.id}' must show '${requirement.change_subject}' with ${requirement.change_kind} driven by '${changeVariable?.variable}'`,
       });
     }
   }
@@ -5736,15 +5772,15 @@ async function generateVisualComponent(
           message: `Visual component '${requirement.id}' must bind every planned shared variable`,
         });
       }
-      const motionVariable = sharedVariables[0];
-      if (node?.surface === "geometry" && motionVariable
-        && !geometryMotionSatisfied(node.content, requirement, motionVariable.variable)) {
+      const changeVariable = sharedVariables[0];
+      if (node?.surface === "geometry" && changeVariable
+        && !geometryChangeSatisfied(node.content, requirement, changeVariable.variable)) {
         violations.push({
           stage: "request_coverage",
-          code: "OLL_VISUAL_MOTION_UNSATISFIED",
+          code: "OLL_VISUAL_CHANGE_UNSATISFIED",
           path: "/content",
           requirement_id: requirement.id,
-          message: `Visual component '${requirement.id}' needs one variable-driven point whose label contains motion_subject '${requirement.motion_subject ?? ""}' and whose bound coordinates match motion_kind '${requirement.motion_kind ?? ""}'`,
+          message: `Visual component '${requirement.id}' needs one variable-driven object whose label contains change_subject '${requirement.change_subject ?? ""}' and whose bound property matches change_kind '${requirement.change_kind ?? ""}'`,
         });
       }
       if (violations.length === 0) {
@@ -6190,7 +6226,7 @@ async function generateLesson(
     generationViolations: GenerationViolation[],
   ): Promise<AuthoringLesson | undefined> => {
     if (generationViolations.length === 0) return undefined;
-    const localVisualCodes = new Set(["OLL_VISUAL_REQUIREMENT_UNSATISFIED", "OLL_VISUAL_MOTION_UNSATISFIED"]);
+    const localVisualCodes = new Set(["OLL_VISUAL_REQUIREMENT_UNSATISFIED", "OLL_VISUAL_CHANGE_UNSATISFIED"]);
     const requirementIds = new Set(generationViolations.flatMap((violation) =>
       localVisualCodes.has(violation.code)
         && typeof violation.requirement_id === "string"

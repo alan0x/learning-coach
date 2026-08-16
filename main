@@ -10223,11 +10223,13 @@ feature \u5FC5\u987B\u5C5E\u4E8E\u5BF9\u5E94 surface\uFF1Ageometry \u53EA\u4F7F\
 
 \u5982\u679C\u8BF7\u6C42\u6D89\u53CA\u8FD0\u52A8\u3001\u6620\u5C04\u6216\u91CF\u7684\u8FDE\u7EED\u53D8\u5316\uFF0C\u89C4\u5212\u4E2D\u5FC5\u987B\u5305\u542B\u4F7F\u8FD9\u4E2A\u53D8\u5316\u53EF\u89C1\u7684\u7ED3\u6784\uFF1B\u4F8B\u5982\u201C\u65CB\u8F6C\u89D2\u5EA6\u201D\u9700\u8981\u771F\u5B9E\u7684\u89D2\u5EA6\u6807\u8BB0\uFF0C\u201C\u6295\u5F71/\u5750\u6807\u5BF9\u5E94\u201D\u9700\u8981\u5B9E\u9645\u6295\u5F71\u7ED3\u6784\uFF0C\u201C\u51FD\u6570\u56FE\u50CF\u201D\u9700\u8981\u5750\u6807\u8F74\u548C\u5E26\u8868\u8FBE\u5F0F\u7684\u66F2\u7EBF\u3002
 
-\u88AB shared_variable_requirements \u7ED1\u5B9A\u7684 geometry \u8FD8\u5FC5\u987B\u586B\u5199 motion_kind \u548C motion_subject\uFF1A
+\u88AB shared_variable_requirements \u7ED1\u5B9A\u7684 geometry \u8FD8\u5FC5\u987B\u586B\u5199 change_kind \u548C change_subject\uFF0C\u8BF4\u6E05\u753B\u9762\u4E0A\u54EA\u4E2A\u5BF9\u8C61\u7684\u54EA\u79CD\u6570\u503C\u5C5E\u6027\u4F1A\u53D8\u5316\uFF1A
 - linear_point\uFF1A\u4E00\u4E2A\u4EE3\u8868\u4E3B\u4F53\u7684\u6709\u6807\u7B7E\u70B9\u53EA\u6CBF x \u6216 y \u4E00\u4E2A\u65B9\u5411\u53D8\u5316\uFF0C\u4F8B\u5982\u632F\u5B50\u3001\u5C0F\u8F66\uFF1B
 - angular_point\uFF1A\u4E00\u4E2A\u4EE3\u8868\u4E3B\u4F53\u7684\u6709\u6807\u7B7E\u70B9\u7ED5\u5706\u5FC3\u8F6C\u52A8\uFF0C\u4F8B\u5982\u5355\u4F4D\u5706\u4E0A\u7684\u70B9\u3001\u6446\u81C2\u7AEF\u70B9\uFF1B
 - planar_point\uFF1A\u4E00\u4E2A\u4EE3\u8868\u4E3B\u4F53\u7684\u6709\u6807\u7B7E\u70B9\u7684 x\u3001y \u540C\u65F6\u53D8\u5316\uFF0C\u4F8B\u5982\u5E73\u9762\u629B\u4F53\uFF1B
-- motion_subject \u662F\u8BE5\u8FD0\u52A8\u70B9\u5728\u753B\u9762\u4E0A\u5FC5\u987B\u660E\u786E\u663E\u793A\u7684\u4E3B\u4F53\u540D\u79F0\uFF0C\u4F8B\u5982\u201C\u632F\u5B50\u201D\u201C\u5C0F\u8F66\u201D\u201C\u5706\u4E0A\u70B9\u201D\uFF0C\u4E0D\u5F97\u586B\u5199 P\u3001A\u3001\u7269\u4F53\u7B49\u65E0\u6CD5\u8BF4\u660E\u7528\u6237\u6240\u95EE\u4E3B\u4F53\u7684\u6CDB\u79F0\u3002\u53EA\u6709\u88AB\u5171\u4EAB\u53D8\u91CF\u7ED1\u5B9A\u7684 geometry \u586B\u5199\u8FD9\u4E24\u4E2A\u5B57\u6BB5\uFF1Bplot/scene3d/diagram/image/table \u4E0D\u586B\u5199\u3002
+- radial_size\uFF1A\u6709\u6807\u7B7E\u7684\u5706\u6216\u5706\u5F27\u7684\u534A\u5F84\u53D8\u5316\uFF0C\u4F8B\u5982\u6C34\u5E73\u622A\u9762\u5347\u9AD8\u65F6\u622A\u7EBF\u5706\u7684\u534A\u5F84\u53D8\u5316\uFF1B
+- angular_extent\uFF1A\u6709\u6807\u7B7E\u5706\u5F27\u7684\u8D77\u6B62\u89D2\u4E4B\u4E00\u53D8\u5316\uFF0C\u4F8B\u5982\u9010\u6E10\u5C55\u5F00\u7684\u626B\u8FC7\u89D2\uFF1B
+- change_subject \u662F\u753B\u9762\u4E0A\u53D1\u751F\u53D8\u5316\u7684\u5BF9\u8C61\u540D\u79F0\uFF0C\u5FC5\u987B\u51FA\u73B0\u5728\u5BF9\u5E94 point\u3001circle \u6216 arc \u7684 label \u4E2D\uFF0C\u4F8B\u5982\u201C\u632F\u5B50\u201D\u201C\u5706\u4E0A\u70B9\u201D\u201C\u622A\u7EBF\u5706\u201D\uFF0C\u4E0D\u5F97\u586B\u5199 P\u3001A\u3001\u7269\u4F53\u7B49\u65E0\u6CD5\u8BF4\u660E\u5BF9\u8C61\u7684\u6CDB\u79F0\u3002\u53EA\u6709\u88AB\u5171\u4EAB\u53D8\u91CF\u7ED1\u5B9A\u7684 geometry \u586B\u5199\u8FD9\u4E24\u4E2A\u5B57\u6BB5\uFF1Bplot/scene3d/diagram/image/table \u4E0D\u586B\u5199\u3002
 
 \u5982\u679C\u8BF7\u6C42\u8981\u6C42\u628A\u4E24\u4E2A\u89C6\u89C9\u5BF9\u8C61\u7ED3\u5408\u3001\u5BF9\u5E94\u3001\u6BD4\u8F83\u6216\u63A8\u5BFC\uFF0C\u5FC5\u987B\u5728 visual_relationships \u4E2D\u8868\u8FBE\uFF1B\u4E0D\u8981\u628A\u8FD9\u79CD\u5173\u7CFB\u9000\u5316\u6210\u4E24\u5F20\u4E92\u4E0D\u76F8\u5173\u7684\u56FE\u3002
 
@@ -10266,7 +10268,7 @@ var BRIEF_VERIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u7528\u6237\u8981\u6C42\u89
 
 missing \u53EA\u62A5\u544A\u8BFE\u7A0B\u9AA8\u67B6\u81EA\u8EAB\u9057\u6F0F\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u5173\u7CFB\u3001\u8FDE\u7EED\u53D8\u5316\u3001\u5B66\u751F\u63A7\u5236\u3001\u65E2\u6709\u767D\u677F\u4FEE\u6539\u3001\u5C55\u793A\u9650\u5236\u6216\u4E0D\u652F\u6301\u80FD\u529B\uFF0C\u5E76\u5FC5\u987B\u586B\u5199\u5BF9\u5E94 kind\u3002\u7528\u6237\u8981\u6C42\u7C7B\u522B\u82E5\u672A\u88AB request_items \u8BB0\u5F55\uFF0C\u4F18\u5148\u5728 request_item_kinds \u4E2D\u5982\u5B9E\u5217\u51FA\uFF0C\u7531\u672C\u5730\u7A0B\u5E8F\u8FDB\u884C\u5DEE\u96C6\u68C0\u67E5\u3002student_task \u7684\u5177\u4F53\u4EFB\u52A1\u7531\u4E0B\u4E00\u9636\u6BB5\u751F\u6210\uFF0C\u7EDD\u4E0D\u80FD\u653E\u8FDB missing\u3002
 
-\u5982\u679C\u7528\u6237\u660E\u786E\u95EE\u201C\u4E3A\u4EC0\u4E48\u53D1\u751F\u201D\uFF0C\u9057\u6F0F\u56E0\u679C\u89E3\u91CA\u5C5E\u4E8E missing\uFF0C\u4E0D\u662F suggestions\u3002\u5982\u679C\u7528\u6237\u8981\u6C42\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\u7684\u53D8\u5316\uFF0C\u5374\u53EA\u89C4\u5212\u7C7B\u6BD4\u56FE\u800C\u6CA1\u6709\u76F4\u63A5\u8868\u73B0\u8BE5\u5BF9\u8C61\uFF0C\u4E5F\u5C5E\u4E8E missing\u3002\u590D\u6838\u8FD9\u7C7B\u8BF7\u6C42\u65F6\u5FC5\u987B\u68C0\u67E5\u88AB\u7ED1\u5B9A geometry \u7684 motion_subject \u548C motion_kind\uFF1Amotion_subject \u5FC5\u987B\u660E\u786E\u547D\u540D\u7528\u6237\u8981\u6C42\u89C2\u770B\u7684\u8FD0\u52A8\u4E3B\u4F53\uFF0Cmotion_kind \u5FC5\u987B\u63CF\u8FF0\u8BE5\u4E3B\u4F53\u672C\u8EAB\u7684\u8FD0\u52A8\uFF1B\u5706\u5468\u6295\u5F71\u3001\u51FD\u6570\u66F2\u7EBF\u6216\u5176\u4ED6\u7C7B\u6BD4\u5373\u4F7F\u6570\u5B66\u4E0A\u76F8\u5173\uFF0C\u4E5F\u4E0D\u80FD\u4F5C\u4E3A\u4E3B\u4F53\u6F14\u793A\u901A\u8FC7\u590D\u6838\u3002\u53EA\u6709\u5728\u56E0\u679C\u76EE\u6807\u548C\u4E3B\u4F53\u6F14\u793A\u5DF2\u7ECF\u8986\u76D6\u540E\uFF0C\u53D7\u529B\u56FE\u3001\u901F\u5EA6\u56FE\u3001\u80FD\u91CF\u56FE\u7B49\u53EF\u9009\u8BB2\u6CD5\u624D\u5C5E\u4E8E suggestions\u3002\u6559\u5B66\u5EFA\u8BAE\u4E0D\u662F\u7528\u6237\u8981\u6C42\u3002\u6CA1\u6709\u53D1\u73B0\u5BF9\u5E94\u9879\u76EE\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002`;
+\u5982\u679C\u7528\u6237\u660E\u786E\u95EE\u201C\u4E3A\u4EC0\u4E48\u53D1\u751F\u201D\uFF0C\u9057\u6F0F\u56E0\u679C\u89E3\u91CA\u5C5E\u4E8E missing\uFF0C\u4E0D\u662F suggestions\u3002\u5982\u679C\u7528\u6237\u8981\u6C42\u6F14\u793A\u67D0\u4E2A\u5BF9\u8C61\u7684\u53D8\u5316\uFF0C\u5374\u53EA\u89C4\u5212\u7C7B\u6BD4\u56FE\u800C\u6CA1\u6709\u76F4\u63A5\u8868\u73B0\u8BE5\u5BF9\u8C61\uFF0C\u4E5F\u5C5E\u4E8E missing\u3002\u590D\u6838\u8FD9\u7C7B\u8BF7\u6C42\u65F6\u5FC5\u987B\u68C0\u67E5\u88AB\u7ED1\u5B9A geometry \u7684 change_subject \u548C change_kind\uFF1Achange_subject \u5FC5\u987B\u660E\u786E\u547D\u540D\u7528\u6237\u8981\u6C42\u89C2\u770B\u7684\u53D8\u5316\u5BF9\u8C61\uFF0Cchange_kind \u5FC5\u987B\u63CF\u8FF0\u8BE5\u5BF9\u8C61\u5B9E\u9645\u53D8\u5316\u7684\u6570\u503C\u5C5E\u6027\u3002\u5982\u679C\u7528\u6237\u8981\u6C42\u89C2\u770B\u7269\u4F53\u672C\u8EAB\u7684\u8FD0\u52A8\uFF0C\u5706\u5468\u6295\u5F71\u3001\u51FD\u6570\u66F2\u7EBF\u6216\u5176\u4ED6\u7C7B\u6BD4\u5373\u4F7F\u6570\u5B66\u4E0A\u76F8\u5173\uFF0C\u4E5F\u4E0D\u80FD\u4F5C\u4E3A\u4E3B\u4F53\u6F14\u793A\u901A\u8FC7\u590D\u6838\u3002\u4F46\u4E0D\u5F97\u628A\u5706\u7684\u534A\u5F84\u53D8\u5316\u6216\u5706\u5F27\u7684\u89D2\u5EA6\u8303\u56F4\u53D8\u5316\u8BEF\u5224\u4E3A\u201C\u5FC5\u987B\u6709\u4E00\u4E2A\u70B9\u5728\u79FB\u52A8\u201D\u3002\u53EA\u6709\u5728\u56E0\u679C\u76EE\u6807\u548C\u4E3B\u4F53\u6F14\u793A\u5DF2\u7ECF\u8986\u76D6\u540E\uFF0C\u53D7\u529B\u56FE\u3001\u901F\u5EA6\u56FE\u3001\u80FD\u91CF\u56FE\u7B49\u53EF\u9009\u8BB2\u6CD5\u624D\u5C5E\u4E8E suggestions\u3002\u6559\u5B66\u5EFA\u8BAE\u4E0D\u662F\u7528\u6237\u8981\u6C42\u3002\u6CA1\u6709\u53D1\u73B0\u5BF9\u5E94\u9879\u76EE\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002`;
 var LESSON_TASK_PLANNING_SYSTEM_PROMPT = `\u4F60\u662F\u8BFE\u540E\u4E92\u52A8\u4EFB\u52A1\u8BBE\u8BA1\u5668\u3002\u8BFE\u7A0B\u7684\u6559\u5B66\u76EE\u6807\u3001\u89C6\u89C9\u5BF9\u8C61\u3001\u5171\u4EAB\u53D8\u91CF\u548C\u4E09\u7EF4\u89C6\u89D2\u80FD\u529B\u5DF2\u7ECF\u786E\u5B9A\uFF1B\u4F60\u53EA\u8865\u5145\u8BB2\u89E3\u7ED3\u675F\u540E\u4EA4\u7ED9\u5B66\u751F\u5B8C\u6210\u7684\u77ED\u4EFB\u52A1\uFF0C\u4E0D\u4FEE\u6539\u8BFE\u7A0B\u89C4\u5212\u3002
 
 \u666E\u901A\u53D8\u91CF\u4EFB\u52A1\uFF1A
@@ -10318,7 +10320,7 @@ var AUTHORING_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8010\u5FC3\u3001\u5177\
 - \u8F93\u5165\u4E2D\u7684\u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u662F\u672C\u8F6E\u8BF7\u6C42\u7684\u53EF\u6267\u884C\u8981\u6C42\u5408\u540C\uFF1B\u6BCF\u4E2A visual_requirement \u548C visual_relationship \u90FD\u5FC5\u987B\u7531\u5B9E\u9645\u767D\u677F\u52A8\u4F5C\u6EE1\u8DB3\uFF0C\u6807\u9898\u3001goals\u3001\u8BB2\u8FF0\u6216\u6587\u5B57\u58F0\u660E\u4E0D\u80FD\u66FF\u4EE3\u8981\u6C42\u7684\u89C6\u89C9\u5185\u5BB9\u3002
 - \u6BCF\u4E2A visual_requirement.id \u5C31\u662F\u8BE5\u4E3B\u8981\u89C6\u89C9\u8282\u70B9\u5FC5\u987B\u4F7F\u7528\u7684 write.as\uFF1B\u4E00\u4E2A\u89C6\u89C9\u8282\u70B9\u53EF\u4EE5\u901A\u8FC7 request_item_ids \u670D\u52A1\u591A\u4E2A\u6559\u5B66\u76EE\u6807\u3002visual_relationships \u5BF9\u5E94\u7684 connect \u7531\u7CFB\u7EDF\u5728\u4E24\u4E2A\u8282\u70B9\u521B\u5EFA\u540E\u63D2\u5165\uFF0C\u6A21\u578B\u4E0D\u8981\u8F93\u51FA connect\u3002
 - \u8BFE\u7A0B\u8981\u6C42\u6E05\u5355\u4E2D\u7684 shared_variable_requirements \u975E\u7A7A\u65F6\uFF0C\u7CFB\u7EDF\u4F1A\u786E\u5B9A\u6027\u5199\u5165 lesson.variables \u548C\u53EF\u5224\u5B9A\u7684 angle_control\uFF1B\u6A21\u578B\u8D1F\u8D23\u5728 bound_visuals \u5BF9\u5E94\u7684 geometry/plot/scene3d content.bindings \u4E2D\u5F15\u7528\u540C\u4E00\u4E2A\u53D8\u91CF\uFF0C\u5E76\u628A do="animate" \u52A8\u4F5C\u653E\u8FDB\u5408\u9002\u7684\u8BB2\u89E3\u8282\u62CD\u3002scene3d \u7ED1\u5B9A\u76EE\u6807\u76EE\u524D\u53EA\u5141\u8BB8 section.value\u3002\u7981\u6B62\u590D\u5236\u7B2C\u4E8C\u4EFD\u72B6\u6001\u3002
-- geometry visual_requirement \u5305\u542B motion_kind/motion_subject \u65F6\uFF0C\u5FC5\u987B\u6709\u4E00\u4E2A label \u660E\u786E\u5305\u542B motion_subject \u7684\u70B9\u4EE3\u8868\u8FD0\u52A8\u4E3B\u4F53\u3002linear_point \u53EA\u7ED1\u5B9A\u8BE5\u70B9\u7684 x \u6216 y \u4E00\u4E2A\u5750\u6807\uFF1Bplanar_point \u540C\u65F6\u7ED1\u5B9A x/y\uFF1Bangular_point \u540C\u65F6\u7ED1\u5B9A x/y\uFF0C\u5E76\u901A\u8FC7\u534A\u5F84\u7EBF\u6216\u89D2\u63A7\u5236\u8868\u660E\u5B83\u7ED5\u56FA\u5B9A\u4E2D\u5FC3\u8FD0\u52A8\u3002\u5355\u4F4D\u5706\u6216\u5176\u4ED6\u7C7B\u6BD4\u56FE\u4E0D\u80FD\u5192\u5145\u7528\u6237\u8981\u6C42\u76F4\u63A5\u6F14\u793A\u7684\u4E3B\u4F53\u3002
+- geometry visual_requirement \u5305\u542B change_kind/change_subject \u65F6\uFF0C\u5FC5\u987B\u6709\u4E00\u4E2A label \u660E\u786E\u5305\u542B change_subject \u7684\u5BF9\u8C61\uFF0C\u5E76\u8BA9\u5171\u4EAB\u53D8\u91CF\u7ED1\u5B9A\u8BE5\u5BF9\u8C61\u4E0E change_kind \u5BF9\u5E94\u7684\u5C5E\u6027\u3002linear_point \u53EA\u7ED1\u5B9A point.x \u6216 point.y \u4E00\u4E2A\u5750\u6807\uFF1Bplanar_point \u540C\u65F6\u7ED1\u5B9A point.x/point.y\uFF1Bangular_point \u540C\u65F6\u7ED1\u5B9A point.x/point.y\uFF0C\u5E76\u901A\u8FC7\u534A\u5F84\u7EBF\u6216\u89D2\u63A7\u5236\u8868\u660E\u5B83\u7ED5\u56FA\u5B9A\u4E2D\u5FC3\u8FD0\u52A8\uFF1Bradial_size \u7ED1\u5B9A circle.radius \u6216 arc.radius\uFF1Bangular_extent \u7ED1\u5B9A arc.start_angle \u6216 arc.end_angle\u3002\u5355\u4F4D\u5706\u6216\u5176\u4ED6\u7C7B\u6BD4\u56FE\u4E0D\u80FD\u5192\u5145\u7528\u6237\u8981\u6C42\u76F4\u63A5\u6F14\u793A\u7684\u4E3B\u4F53\u3002
 - bindings.target \u4F7F\u7528\u201C\u5C40\u90E8\u5143\u7D20\u522B\u540D.\u6570\u503C\u5C5E\u6027\u201D\uFF0Cexpression \u4F7F\u7528\u53D7\u9650\u8868\u8FBE\u5F0F\u5E76\u76F4\u63A5\u5F15\u7528\u53D8\u91CF\u540D\u3002\u4F8B\u5982\u5355\u4F4D\u5706\u4E0E\u6B63\u5F26\u56FE\u5171\u4EAB theta\uFF1Apoint-p.x=cos(theta)\u3001point-p.y=sin(theta)\u3001foot.x=cos(theta)\u3001theta-arc.end_angle=theta\u3001current-angle.x=theta\u3001current-angle.y=sin(theta)\u3002
 - animate \u53EA\u63CF\u8FF0\u8BED\u4E49\u76EE\u6807\uFF0C\u5305\u542B variable\u3001value\uFF0C\u53EF\u5305\u542B easing \u548C duration_intent\uFF1B\u4E0D\u5F97\u751F\u6210\u6BEB\u79D2\u65F6\u957F\u3002\u5B66\u751F\u53EF\u5728 Runtime \u4E2D\u64AD\u653E\u3001\u6682\u505C\u3001\u62D6\u52A8\u3001\u590D\u4F4D\u548C\u91CD\u653E\u3002
 - \u52A8\u753B\u5FC5\u987B\u5355\u72EC\u5360\u7528\u4E00\u4E2A\u7B80\u77ED Beat\uFF1A\u76F8\u5173 geometry/plot \u548C connect \u5FC5\u987B\u5728\u66F4\u65E9\u7684 Beat \u5DF2\u7ECF\u521B\u5EFA\uFF1B\u52A8\u753B Beat \u53EA\u5305\u542B\u4E00\u4E2A do="animate" \u548C\u672C Beat \u5FC5\u9700\u7684 after_speech focus\uFF0C\u4E0D\u5F97\u540C\u65F6 write\u3001connect\u3001group\u3001revise\u3001point \u6216 emphasize\u3002
@@ -10345,9 +10347,9 @@ var PARALLEL_SECTION_SYSTEM_PROMPT = `\u4F60\u662F\u72EC\u7ACB\u8BFE\u7A0B\u5206
 \u53EA\u8FD4\u56DE\u4E00\u4E2A\u7B26\u5408\u6240\u9644 JSON Schema \u7684 Step \u5BF9\u8C61\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001close\u3001Markdown \u6216\u89E3\u91CA\u3002\u53EA\u8BB2\u8F93\u5165 section.purpose \u548C teaching_goals \u6307\u5B9A\u7684\u5185\u5BB9\uFF0C\u4E0D\u91CD\u590D\u5B8C\u6574\u8BFE\u7A0B\u3002section.purpose \u662F\u7ED9\u7F16\u5199\u5668\u770B\u7684\u5185\u90E8\u8BF4\u660E\uFF0C\u4E0D\u5F97\u9010\u5B57\u590D\u5236\u8FDB say \u6216\u677F\u4E66\u3002\u4E3B\u8981 geometry\u3001plot\u3001scene3d\u3001diagram\u3001image\u3001table \u89C6\u89C9\u5BF9\u8C61\u7531\u7A0B\u5E8F\u53E6\u884C\u751F\u6210\u548C\u63D2\u5165\uFF1B\u4F60\u4E0D\u5F97\u521B\u5EFA\u8FD9\u4E9B\u4E3B\u8981\u89C6\u89C9\u5BF9\u8C61\u3002available_visuals \u662F\u672C\u6BB5\u8BB2\u89E3\u5FC5\u987B\u4FDD\u6301\u5728\u89C6\u91CE\u4E2D\u7684\u4E0A\u4E0B\u6587\uFF1B\u4F60\u53EA\u80FD\u7528 text\u3001math\u3001note \u6216 shape \u5199\u5FC5\u8981\u677F\u4E66\uFF0C\u5E76\u8BA9\u6BCF\u4E2A focus \u540C\u65F6\u5F15\u7528\u672C\u6BB5\u65B0\u5EFA\u8282\u70B9\u548C\u76F8\u5173 available_visuals\u3002\u4E0D\u8981\u5F15\u7528\u5176\u4ED6\u5206\u6BB5\u53EF\u80FD\u521B\u5EFA\u7684\u6587\u5B57\u8282\u70B9\uFF0C\u56E0\u4E3A\u8FD9\u4E9B\u5206\u6BB5\u6B63\u5728\u5E76\u884C\u751F\u6210\u3002\u6BCF\u4E2A Beat \u5FC5\u987B\u5305\u542B\u4E00\u4E2A when="after_speech" \u7684 focus\uFF0Csay \u548C\u677F\u4E66\u76F4\u63A5\u9762\u5411\u5F53\u524D\u5B66\u4E60\u8005\uFF0C\u4F7F\u7528\u201C\u4F60\u201D\u201C\u6211\u4EEC\u201D\u6216\u4E2D\u6027\u8868\u8FBE\uFF0C\u4E0D\u5F97\u5199\u201C\u5E2E\u52A9\u5B66\u751F\u201D\u201C\u8BA9\u5B66\u751F\u201D\u201C\u5F15\u5BFC\u5B66\u4E60\u8005\u201D\u7B49\u5185\u90E8\u8BFE\u7A0B\u8BBE\u8BA1\u53E3\u543B\u3002say \u5FC5\u987B\u662F\u9002\u5408 TTS \u7684\u81EA\u7136\u8BED\u8A00\uFF0C\u4E0D\u5305\u542B Markdown \u6216 LaTeX \u5B9A\u754C\u7B26\u3002write.content \u5FC5\u987B\u5339\u914D kind\uFF1Atext/shape \u4F7F\u7528\u975E\u7A7A text\uFF0Cmath \u4F7F\u7528 latex\uFF0Cnote \u4F7F\u7528 title \u548C items\u3002\u6240\u6709 key \u4E0E as \u53EA\u80FD\u4F7F\u7528\u5C0F\u5199\u82F1\u6587\u5B57\u6BCD\u3001\u6570\u5B57\u548C\u8FDE\u5B57\u7B26\u3002`;
 var VISUAL_COMPONENT_SYSTEM_PROMPT = `\u4F60\u662F\u72EC\u7ACB\u89C6\u89C9\u7EC4\u4EF6\u7F16\u5199\u5668\u3002\u4F60\u53EA\u751F\u6210\u8BFE\u7A0B\u8981\u6C42\u4E2D\u6307\u5B9A\u7684\u4E00\u4E2A\u4E3B\u8981\u89C6\u89C9\u5BF9\u8C61\uFF0C\u5176\u4ED6\u89C6\u89C9\u5BF9\u8C61\u548C\u8BFE\u7A0B\u8BB2\u89E3\u4F1A\u540C\u65F6\u751F\u6210\uFF0C\u6700\u540E\u7531\u7A0B\u5E8F\u7EC4\u88C5\u3002
 
-\u53EA\u8FD4\u56DE\u4E00\u4E2A\u5B8C\u6574 write \u52A8\u4F5C\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001Step\u3001Beat\u3001close\u3001Markdown \u6216\u89E3\u91CA\u3002\u5FC5\u987B\u4FDD\u6301 do="write"\u3001as \u4E0E visual_requirement.id \u5B8C\u5168\u76F8\u540C\u3001kind \u4E0E visual_requirement.surface \u5B8C\u5168\u76F8\u540C\uFF0C\u5E76\u5B9E\u73B0 required_features\u3001expressions\u3001\u8FD0\u52A8\u4E3B\u4F53\u548C\u5171\u4EAB\u53D8\u91CF\u7ED1\u5B9A\u3002\u4E0D\u5F97\u521B\u5EFA\u5176\u4ED6\u8282\u70B9\u3001connect\u3001animate\u3001\u65C1\u767D\u6216\u6559\u5B66\u4EFB\u52A1\u3002\u8F93\u51FA\u5FC5\u987B\u7B26\u5408\u6240\u9644 JSON Schema\u3002\u53EA\u5199\u6EE1\u8DB3\u8981\u6C42\u7684\u6700\u5C0F\u5145\u5206\u5185\u5BB9\uFF0C\u4E0D\u8981\u679A\u4E3E\u6CA1\u6709\u88AB\u8981\u6C42\u7684\u989D\u5916\u5143\u7D20\uFF0C\u4E5F\u4E0D\u8981\u586B\u5145\u65E0\u5173\u53EF\u9009\u5B57\u6BB5\u3002
+\u53EA\u8FD4\u56DE\u4E00\u4E2A\u5B8C\u6574 write \u52A8\u4F5C\uFF0C\u4E0D\u8FD4\u56DE Lesson\u3001Step\u3001Beat\u3001close\u3001Markdown \u6216\u89E3\u91CA\u3002\u5FC5\u987B\u4FDD\u6301 do="write"\u3001as \u4E0E visual_requirement.id \u5B8C\u5168\u76F8\u540C\u3001kind \u4E0E visual_requirement.surface \u5B8C\u5168\u76F8\u540C\uFF0C\u5E76\u5B9E\u73B0 required_features\u3001expressions\u3001\u53EF\u89C1\u53D8\u5316\u5BF9\u8C61\u548C\u5171\u4EAB\u53D8\u91CF\u7ED1\u5B9A\u3002\u4E0D\u5F97\u521B\u5EFA\u5176\u4ED6\u8282\u70B9\u3001connect\u3001animate\u3001\u65C1\u767D\u6216\u6559\u5B66\u4EFB\u52A1\u3002\u8F93\u51FA\u5FC5\u987B\u7B26\u5408\u6240\u9644 JSON Schema\u3002\u53EA\u5199\u6EE1\u8DB3\u8981\u6C42\u7684\u6700\u5C0F\u5145\u5206\u5185\u5BB9\uFF0C\u4E0D\u8981\u679A\u4E3E\u6CA1\u6709\u88AB\u8981\u6C42\u7684\u989D\u5916\u5143\u7D20\uFF0C\u4E5F\u4E0D\u8981\u586B\u5145\u65E0\u5173\u53EF\u9009\u5B57\u6BB5\u3002
 
-geometry \u7528\u4E8E\u5750\u6807\u8F74\u3001\u70B9\u3001\u5706\u3001\u7EBF\u6BB5\u3001\u6295\u5F71\u548C\u89D2\u5F27\uFF0C\u4E0D\u5F97\u7528 diagram \u5192\u5145\u5EA6\u91CF\u51E0\u4F55\u3002visual_requirement.motion_subject \u975E\u7A7A\u65F6\uFF0C\u4EE3\u8868\u8FD0\u52A8\u4E3B\u4F53\u7684 point.label \u5FC5\u987B\u5305\u542B\u8FD9\u6BB5 motion_subject \u539F\u6587\uFF0C\u8BA9\u5B66\u751F\u80FD\u770B\u51FA\u662F\u8C01\u5728\u8FD0\u52A8\uFF1Blinear_point \u53EA\u7ED1\u5B9A\u8BE5\u70B9\u7684 x \u6216 y\uFF0Cplanar_point \u540C\u65F6\u7ED1\u5B9A x/y\uFF0Cangular_point \u540C\u65F6\u7ED1\u5B9A x/y \u5E76\u7528\u534A\u5F84\u7EBF\u8FDE\u63A5\u56FA\u5B9A\u4E2D\u5FC3\u3002\u5171\u4EAB\u89D2\u53D8\u91CF\u8981\u76F4\u63A5\u7ED1\u5B9A\u8FD9\u4E2A\u70B9\u3002plot \u7684\u66F2\u7EBF expression \u53EA\u5199 Runtime \u8868\u8FBE\u5F0F\uFF0C\u4F8B\u5982 sin(x)\u3001cos(x)\uFF0C\u4E0D\u5F97\u5199 y=\u3001LaTeX\u3001\u4EE3\u7801\u6216 SVG\u3002scene3d \u7684 camera\u3001objects\u3001sections\u3001highlights \u5FC5\u987B\u4F7F\u7528\u7ED3\u6784\u5316\u5B57\u6BB5\uFF0Csurface.expression \u4F7F\u7528 z=f(x,y) \u7684\u53D7\u9650\u8868\u8FBE\u5F0F\u3002\u8981\u6C42 cross_section \u65F6\uFF0Csection.targets \u5FC5\u987B\u5F15\u7528\u88AB\u5207\u5BF9\u8C61\u7684\u5C40\u90E8\u522B\u540D\uFF0Csection.display \u5FC5\u987B\u4E3A plane_and_intersection\uFF0C\u8BA9\u5207\u5272\u5E73\u9762\u548C\u771F\u5B9E\u4EA4\u7EBF\u6216\u622A\u9762\u540C\u65F6\u663E\u793A\u3002scene3d.camera \u7684\u6240\u6709\u89D2\u5EA6\u90FD\u4F7F\u7528\u5F27\u5EA6\uFF1Bcamera.yaw \u5FC5\u987B\u662F\u6709\u9650\u5F27\u5EA6\u503C\uFF0Ccamera.pitch \u5FC5\u987B\u5728 -\u03C0/2 \u5230 \u03C0/2 \u4E4B\u95F4\uFF0Ccamera.zoom \u5FC5\u987B\u5728 0.2 \u5230 5 \u4E4B\u95F4\uFF0C\u7EDD\u4E0D\u80FD\u628A\u89D2\u5EA6\u5236\u6570\u503C\u76F4\u63A5\u586B\u5165\u76F8\u673A\u5B57\u6BB5\u3002diagram \u53EA\u7528\u4E8E\u8BED\u4E49\u5143\u7D20\u548C\u5173\u7CFB\u3002image \u53EA\u80FD\u5F15\u7528 session_context \u4E2D\u660E\u786E\u7ED9\u51FA\u7684 asset_id\u3002bindings.target \u4F7F\u7528\u201C\u5C40\u90E8\u5143\u7D20\u522B\u540D.\u6570\u503C\u5C5E\u6027\u201D\uFF0Cexpression \u76F4\u63A5\u5F15\u7528 shared_variables \u4E2D\u7684\u53D8\u91CF\u3002\u4E0D\u5F97\u8F93\u51FA\u50CF\u7D20\u5750\u6807\u3001HTML\u3001SVG \u8DEF\u5F84\u6216\u811A\u672C\u3002\u6240\u6709\u5C40\u90E8\u522B\u540D\u53EA\u80FD\u4F7F\u7528\u5C0F\u5199\u82F1\u6587\u5B57\u6BCD\u3001\u6570\u5B57\u548C\u8FDE\u5B57\u7B26\u3002`;
+geometry \u7528\u4E8E\u5750\u6807\u8F74\u3001\u70B9\u3001\u5706\u3001\u7EBF\u6BB5\u3001\u6295\u5F71\u548C\u89D2\u5F27\uFF0C\u4E0D\u5F97\u7528 diagram \u5192\u5145\u5EA6\u91CF\u51E0\u4F55\u3002visual_requirement.change_subject \u975E\u7A7A\u65F6\uFF0C\u5BF9\u5E94 point\u3001circle \u6216 arc \u7684 label \u5FC5\u987B\u5305\u542B\u8FD9\u6BB5 change_subject \u539F\u6587\uFF1Blinear_point \u53EA\u7ED1\u5B9A point.x \u6216 point.y\uFF0Cplanar_point \u540C\u65F6\u7ED1\u5B9A point.x/point.y\uFF0Cangular_point \u540C\u65F6\u7ED1\u5B9A point.x/point.y \u5E76\u7528\u534A\u5F84\u7EBF\u8FDE\u63A5\u56FA\u5B9A\u4E2D\u5FC3\uFF0Cradial_size \u7ED1\u5B9A circle.radius \u6216 arc.radius\uFF0Cangular_extent \u7ED1\u5B9A arc.start_angle \u6216 arc.end_angle\u3002\u5171\u4EAB\u89D2\u53D8\u91CF\u8981\u76F4\u63A5\u7ED1\u5B9A\u5BF9\u5E94\u70B9\u3002plot \u7684\u66F2\u7EBF expression \u53EA\u5199 Runtime \u8868\u8FBE\u5F0F\uFF0C\u4F8B\u5982 sin(x)\u3001cos(x)\uFF0C\u4E0D\u5F97\u5199 y=\u3001LaTeX\u3001\u4EE3\u7801\u6216 SVG\u3002scene3d \u7684 camera\u3001objects\u3001sections\u3001highlights \u5FC5\u987B\u4F7F\u7528\u7ED3\u6784\u5316\u5B57\u6BB5\uFF0Csurface.expression \u4F7F\u7528 z=f(x,y) \u7684\u53D7\u9650\u8868\u8FBE\u5F0F\u3002\u8981\u6C42 cross_section \u65F6\uFF0Csection.targets \u5FC5\u987B\u5F15\u7528\u88AB\u5207\u5BF9\u8C61\u7684\u5C40\u90E8\u522B\u540D\uFF0Csection.display \u5FC5\u987B\u4E3A plane_and_intersection\uFF0C\u8BA9\u5207\u5272\u5E73\u9762\u548C\u771F\u5B9E\u4EA4\u7EBF\u6216\u622A\u9762\u540C\u65F6\u663E\u793A\u3002scene3d.camera \u7684\u6240\u6709\u89D2\u5EA6\u90FD\u4F7F\u7528\u5F27\u5EA6\uFF1Bcamera.yaw \u5FC5\u987B\u662F\u6709\u9650\u5F27\u5EA6\u503C\uFF0Ccamera.pitch \u5FC5\u987B\u5728 -\u03C0/2 \u5230 \u03C0/2 \u4E4B\u95F4\uFF0Ccamera.zoom \u5FC5\u987B\u5728 0.2 \u5230 5 \u4E4B\u95F4\uFF0C\u7EDD\u4E0D\u80FD\u628A\u89D2\u5EA6\u5236\u6570\u503C\u76F4\u63A5\u586B\u5165\u76F8\u673A\u5B57\u6BB5\u3002diagram \u53EA\u7528\u4E8E\u8BED\u4E49\u5143\u7D20\u548C\u5173\u7CFB\u3002image \u53EA\u80FD\u5F15\u7528 session_context \u4E2D\u660E\u786E\u7ED9\u51FA\u7684 asset_id\u3002bindings.target \u4F7F\u7528\u201C\u5C40\u90E8\u5143\u7D20\u522B\u540D.\u6570\u503C\u5C5E\u6027\u201D\uFF0Cexpression \u76F4\u63A5\u5F15\u7528 shared_variables \u4E2D\u7684\u53D8\u91CF\u3002\u4E0D\u5F97\u8F93\u51FA\u50CF\u7D20\u5750\u6807\u3001HTML\u3001SVG \u8DEF\u5F84\u6216\u811A\u672C\u3002\u6240\u6709\u5C40\u90E8\u522B\u540D\u53EA\u80FD\u4F7F\u7528\u5C0F\u5199\u82F1\u6587\u5B57\u6BCD\u3001\u6570\u5B57\u548C\u8FDE\u5B57\u7B26\u3002`;
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string`);
@@ -11526,6 +11528,13 @@ function buildAuthoringResponseJsonSchema(brief, plan) {
   return projected;
 }
 var visualSurfaces = ["geometry", "plot", "scene3d", "diagram", "image", "table"];
+var visualChangeKinds = [
+  "linear_point",
+  "angular_point",
+  "planar_point",
+  "radial_size",
+  "angular_extent"
+];
 var visualFeatures = [
   "coordinate_axes",
   "equal_scale",
@@ -11669,8 +11678,8 @@ var lessonBriefResponseJsonSchema = {
           required_features: { type: "array", items: { enum: visualFeatures } },
           expressions: { type: "array", items: { type: "string" } },
           request_item_ids: idArraySchema,
-          motion_kind: { enum: ["linear_point", "angular_point", "planar_point"] },
-          motion_subject: { type: "string" }
+          change_kind: { enum: visualChangeKinds },
+          change_subject: { type: "string" }
         }
       }
     },
@@ -12352,23 +12361,23 @@ function validateLessonBrief(candidate, input, options = {}) {
         }
       });
     }
-    const hasMotionKind = raw.motion_kind !== void 0;
-    const hasMotionSubject = raw.motion_subject !== void 0;
-    if (hasMotionKind !== hasMotionSubject) {
+    const hasChangeKind = raw.change_kind !== void 0;
+    const hasChangeSubject = raw.change_subject !== void 0;
+    if (hasChangeKind !== hasChangeSubject) {
       violations.push(briefViolation(
-        "BRIEF_INCOMPLETE_VISUAL_MOTION",
+        "BRIEF_INCOMPLETE_VISUAL_CHANGE",
         path,
-        "motion_kind and motion_subject must be provided together"
+        "change_kind and change_subject must be provided together"
       ));
     }
-    if (hasMotionKind && !["linear_point", "angular_point", "planar_point"].includes(String(raw.motion_kind))) {
-      violations.push(briefViolation("BRIEF_INVALID_VISUAL_MOTION", `${path}/motion_kind`, "motion_kind is unsupported"));
+    if (hasChangeKind && !visualChangeKinds.includes(raw.change_kind)) {
+      violations.push(briefViolation("BRIEF_INVALID_VISUAL_CHANGE", `${path}/change_kind`, "change_kind is unsupported"));
     }
-    if (hasMotionSubject && (typeof raw.motion_subject !== "string" || !raw.motion_subject.trim())) {
-      violations.push(briefViolation("BRIEF_INVALID_VISUAL_MOTION_SUBJECT", `${path}/motion_subject`, "motion_subject must visibly name the moving subject"));
+    if (hasChangeSubject && (typeof raw.change_subject !== "string" || !raw.change_subject.trim())) {
+      violations.push(briefViolation("BRIEF_INVALID_VISUAL_CHANGE_SUBJECT", `${path}/change_subject`, "change_subject must visibly name the changing object"));
     }
-    if ((hasMotionKind || hasMotionSubject) && raw.surface !== "geometry") {
-      violations.push(briefViolation("BRIEF_INCOMPATIBLE_VISUAL_MOTION", path, "visual motion metadata is supported only by geometry"));
+    if ((hasChangeKind || hasChangeSubject) && raw.surface !== "geometry") {
+      violations.push(briefViolation("BRIEF_INCOMPATIBLE_VISUAL_CHANGE", path, "visual change metadata is supported only by geometry"));
     }
   });
   relationships.forEach((raw, index) => {
@@ -12467,18 +12476,18 @@ function validateLessonBrief(candidate, input, options = {}) {
             "shared variables bind only geometry, plot, and scene3d visuals"
           ));
         } else if (visual.surface === "geometry") {
-          if (!["linear_point", "angular_point", "planar_point"].includes(String(visual.motion_kind))) {
+          if (!visualChangeKinds.includes(visual.change_kind)) {
             violations.push(briefViolation(
-              "BRIEF_MISSING_VISUAL_MOTION",
+              "BRIEF_MISSING_VISUAL_CHANGE",
               `${path}/bound_visuals`,
-              `bound geometry '${String(visualId)}' must declare linear_point, angular_point, or planar_point motion`
+              `bound geometry '${String(visualId)}' must declare how its visible object changes`
             ));
           }
-          if (typeof visual.motion_subject !== "string" || !visual.motion_subject.trim()) {
+          if (typeof visual.change_subject !== "string" || !visual.change_subject.trim()) {
             violations.push(briefViolation(
-              "BRIEF_MISSING_VISUAL_MOTION_SUBJECT",
+              "BRIEF_MISSING_VISUAL_CHANGE_SUBJECT",
               `${path}/bound_visuals`,
-              `bound geometry '${String(visualId)}' must visibly name its moving subject`
+              `bound geometry '${String(visualId)}' must visibly name its changing object`
             ));
           }
         }
@@ -12494,7 +12503,7 @@ function validateLessonBrief(candidate, input, options = {}) {
           `${path}/direct_angle_geometry`,
           "direct_angle_geometry must reference a bound geometry requirement"
         ));
-      } else if (directVisual.motion_kind !== "angular_point") {
+      } else if (directVisual.change_kind !== "angular_point") {
         violations.push(briefViolation(
           "BRIEF_INVALID_DIRECT_CONTROL_MOTION",
           `${path}/direct_angle_geometry`,
@@ -13001,36 +13010,51 @@ function expressionReferencesVariable(expression, variable) {
   const tokens = expression.match(/[a-z][a-z0-9_]*/giu) ?? [];
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
 }
-function geometryMotionSatisfied(content, requirement, variable) {
-  if (!requirement.motion_kind || !requirement.motion_subject) return true;
-  const subject = normalizeEvidence(requirement.motion_subject);
+function geometryChangeSatisfied(content, requirement, variable) {
+  if (!requirement.change_kind || !requirement.change_subject) return true;
+  const subject = normalizeEvidence(requirement.change_subject);
   const points = Array.isArray(content.points) ? content.points.filter(isRecord) : [];
   const pointByAlias = new Map(points.flatMap((point) => typeof point.as === "string" ? [[point.as, point]] : []));
   const bindings = Array.isArray(content.bindings) ? content.bindings.filter(isRecord) : [];
-  const boundCoordinates = /* @__PURE__ */ new Map();
+  const boundProperties = /* @__PURE__ */ new Map();
   for (const binding of bindings) {
     if (typeof binding.target !== "string" || !expressionReferencesVariable(binding.expression, variable)) continue;
     const separator = binding.target.lastIndexOf(".");
     if (separator <= 0) continue;
     const alias = binding.target.slice(0, separator);
     const property = binding.target.slice(separator + 1);
-    if (!pointByAlias.has(alias) || property !== "x" && property !== "y") continue;
-    const coordinates = boundCoordinates.get(alias) ?? /* @__PURE__ */ new Set();
-    coordinates.add(property);
-    boundCoordinates.set(alias, coordinates);
+    const properties = boundProperties.get(alias) ?? /* @__PURE__ */ new Set();
+    properties.add(property);
+    boundProperties.set(alias, properties);
+  }
+  const labelMatches = (item) => typeof item.as === "string" && typeof item.label === "string" && normalizeEvidence(item.label).includes(subject);
+  if (requirement.change_kind === "radial_size") {
+    const radialItems = [
+      ...Array.isArray(content.circles) ? content.circles.filter(isRecord) : [],
+      ...Array.isArray(content.arcs) ? content.arcs.filter(isRecord) : []
+    ];
+    return radialItems.some((item) => labelMatches(item) && boundProperties.get(item.as)?.has("radius"));
+  }
+  if (requirement.change_kind === "angular_extent") {
+    const arcs = Array.isArray(content.arcs) ? content.arcs.filter(isRecord) : [];
+    return arcs.some((arc) => {
+      if (!labelMatches(arc)) return false;
+      const properties = boundProperties.get(arc.as);
+      return properties?.has("start_angle") || properties?.has("end_angle");
+    });
   }
   const segments = Array.isArray(content.segments) ? content.segments.filter(isRecord) : [];
   return points.some((point) => {
-    if (typeof point.as !== "string" || typeof point.label !== "string") return false;
-    const label = normalizeEvidence(point.label);
-    if (!label.includes(subject)) return false;
-    const coordinates = boundCoordinates.get(point.as) ?? /* @__PURE__ */ new Set();
-    if (requirement.motion_kind === "linear_point") return coordinates.size === 1;
+    if (!labelMatches(point)) return false;
+    const coordinates = boundProperties.get(point.as) ?? /* @__PURE__ */ new Set();
+    if (requirement.change_kind === "linear_point") {
+      return (coordinates.has("x") ? 1 : 0) + (coordinates.has("y") ? 1 : 0) === 1;
+    }
     if (!coordinates.has("x") || !coordinates.has("y")) return false;
-    if (requirement.motion_kind === "planar_point") return true;
+    if (requirement.change_kind === "planar_point") return true;
     const interaction = isRecord(point.interaction) ? point.interaction : void 0;
     const hasCenterConnection = segments.some((segment) => segment.from === point.as && typeof segment.to === "string" && pointByAlias.has(segment.to) || segment.to === point.as && typeof segment.from === "string" && pointByAlias.has(segment.from));
-    return interaction?.kind === "angle_control" || hasCenterConnection;
+    return requirement.change_kind === "angular_point" && (interaction?.kind === "angle_control" || hasCenterConnection);
   });
 }
 function lowerPlannedLessonFields(document, brief) {
@@ -13282,9 +13306,9 @@ function validateBriefCoverage(document, brief) {
     const missingExpressions = requirement.expressions.filter(
       (expression) => !actualExpressions.includes(normalizeExpression2(expression))
     );
-    const motionVariable = brief.shared_variable_requirements.find((variable) => variable.bound_visuals.includes(requirement.id));
-    const motionSatisfied = node.surface !== "geometry" || !motionVariable || geometryMotionSatisfied(node.content, requirement, motionVariable.variable);
-    if (node.surface === requirement.surface && missingFeatures.length === 0 && missingExpressions.length === 0 && motionSatisfied) {
+    const changeVariable = brief.shared_variable_requirements.find((variable) => variable.bound_visuals.includes(requirement.id));
+    const changeSatisfied = node.surface !== "geometry" || !changeVariable || geometryChangeSatisfied(node.content, requirement, changeVariable.variable);
+    if (node.surface === requirement.surface && missingFeatures.length === 0 && missingExpressions.length === 0 && changeSatisfied) {
       matched.set(requirement.id, node);
       continue;
     }
@@ -13299,13 +13323,13 @@ function validateBriefCoverage(document, brief) {
         missing_expressions: missingExpressions
       });
     }
-    if (!motionSatisfied) {
+    if (!changeSatisfied) {
       violations.push({
         stage: "request_coverage",
-        code: "OLL_VISUAL_MOTION_UNSATISFIED",
+        code: "OLL_VISUAL_CHANGE_UNSATISFIED",
         path: "/steps",
         requirement_id: requirement.id,
-        message: `Visual '${requirement.id}' must show '${requirement.motion_subject}' with ${requirement.motion_kind} motion driven by '${motionVariable?.variable}'`
+        message: `Visual '${requirement.id}' must show '${requirement.change_subject}' with ${requirement.change_kind} driven by '${changeVariable?.variable}'`
       });
     }
   }
@@ -14929,14 +14953,14 @@ async function generateVisualComponent(client, input, brief, requirement, respon
           message: `Visual component '${requirement.id}' must bind every planned shared variable`
         });
       }
-      const motionVariable = sharedVariables[0];
-      if (node?.surface === "geometry" && motionVariable && !geometryMotionSatisfied(node.content, requirement, motionVariable.variable)) {
+      const changeVariable = sharedVariables[0];
+      if (node?.surface === "geometry" && changeVariable && !geometryChangeSatisfied(node.content, requirement, changeVariable.variable)) {
         violations.push({
           stage: "request_coverage",
-          code: "OLL_VISUAL_MOTION_UNSATISFIED",
+          code: "OLL_VISUAL_CHANGE_UNSATISFIED",
           path: "/content",
           requirement_id: requirement.id,
-          message: `Visual component '${requirement.id}' needs one variable-driven point whose label contains motion_subject '${requirement.motion_subject ?? ""}' and whose bound coordinates match motion_kind '${requirement.motion_kind ?? ""}'`
+          message: `Visual component '${requirement.id}' needs one variable-driven object whose label contains change_subject '${requirement.change_subject ?? ""}' and whose bound property matches change_kind '${requirement.change_kind ?? ""}'`
         });
       }
       if (violations.length === 0) {
@@ -15303,7 +15327,7 @@ async function generateLesson(client, input, brief) {
 `);
   const repairVisualComponent = async (rawLesson, generationViolations) => {
     if (generationViolations.length === 0) return void 0;
-    const localVisualCodes = /* @__PURE__ */ new Set(["OLL_VISUAL_REQUIREMENT_UNSATISFIED", "OLL_VISUAL_MOTION_UNSATISFIED"]);
+    const localVisualCodes = /* @__PURE__ */ new Set(["OLL_VISUAL_REQUIREMENT_UNSATISFIED", "OLL_VISUAL_CHANGE_UNSATISFIED"]);
     const requirementIds = new Set(generationViolations.flatMap((violation) => localVisualCodes.has(violation.code) && typeof violation.requirement_id === "string" ? [violation.requirement_id] : []));
     if (requirementIds.size !== 1 || generationViolations.some((violation) => !localVisualCodes.has(violation.code))) return void 0;
     const requirementId = [...requirementIds][0];
