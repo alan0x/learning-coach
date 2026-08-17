@@ -15,7 +15,7 @@
     "eval:visual": "npm run build && node scripts/eval-visual-generation.mjs"
   },
   "dependencies": {
-    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#991a24764aa04b3aee3d448e81fe85aadf849c04"
+    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#ba9a9a7f69f060966aa62ef9cf1c50b95e35877a"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"
