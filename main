@@ -7170,7 +7170,7 @@ var require__ = __commonJS({
 });
 
 // src/main.ts
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createHash, createSign } from "node:crypto";
@@ -10662,8 +10662,13 @@ function parseSelectionToolInput(raw) {
     throw new Error("content_hint is invalid");
   }
   const confidence = input.recognition_confidence;
-  if (!["high", "medium", "low"].includes(String(confidence))) {
+  if (confidence !== void 0 && !["high", "medium", "low"].includes(String(confidence))) {
     throw new Error("recognition_confidence is invalid");
+  }
+  const selectionMedia = typeof input.selection_media === "string" && input.selection_media.trim() ? input.selection_media.trim() : void 0;
+  const recognizedContent = typeof input.recognized_content === "string" && input.recognized_content.trim() ? truncate(input.recognized_content.trim()) : void 0;
+  if (!selectionMedia && !recognizedContent) {
+    throw new Error("selection_media or recognized_content is required");
   }
   const toolId = input.tool_id;
   if (!["explain", "check-and-suggest", "generate-plot", "custom-question"].includes(
@@ -10774,11 +10779,9 @@ function parseSelectionToolInput(raw) {
       revision: Number(revision),
       targets
     },
-    recognized_content: truncate(requireNonEmptyString(
-      input.recognized_content,
-      "recognized_content"
-    )),
-    recognition_confidence: confidence,
+    ...selectionMedia ? { selection_media: selectionMedia } : {},
+    ...recognizedContent ? { recognized_content: recognizedContent } : {},
+    ...confidence ? { recognition_confidence: confidence } : {},
     ...typeof input.lesson_title === "string" ? { lesson_title: truncate(input.lesson_title) } : {},
     ...typeof input.board_summary === "string" ? { board_summary: truncate(input.board_summary) } : {}
   };
@@ -12162,7 +12165,7 @@ function canonicalizeBriefAliases(candidate) {
   if (Array.isArray(brief.visual_requirements)) {
     for (const requirement of brief.visual_requirements) {
       if (!isRecord(requirement) || !Array.isArray(requirement.expressions)) continue;
-      requirement.expressions = requirement.expressions.map((expression) => typeof expression === "string" ? canonicalPlotExpression(expression) : expression);
+      requirement.expressions = requirement.expressions.map((expression) => typeof expression === "string" ? requirement.surface === "scene3d" ? canonicalDependentExpression(expression, ["z"]) : canonicalPlotExpression(expression) : expression);
     }
   }
   if (Array.isArray(brief.visual_relationships)) {
@@ -12905,10 +12908,18 @@ function referenceRoot(value) {
   return typeof value === "string" ? value.split("#", 1)[0] : "";
 }
 function normalizeExpression2(value) {
-  return canonicalPlotExpression(value).toLocaleLowerCase().replace(/\s+/gu, "");
+  return canonicalDependentExpression(value, ["y", "z"]).toLocaleLowerCase().replace(/\s+/gu, "");
+}
+function canonicalDependentExpression(value, outputs) {
+  const normalized = value.normalize("NFKC").trim();
+  const assignment = /^([a-z][a-z0-9_]*)\s*=\s*(.+)$/iu.exec(normalized);
+  if (!assignment || !outputs.some((output) => output.toLocaleLowerCase() === assignment[1].toLocaleLowerCase())) {
+    return normalized;
+  }
+  return assignment[2].trim();
 }
 function canonicalPlotExpression(value) {
-  return value.normalize("NFKC").trim().replace(/^y\s*=\s*/iu, "").replace(/\\(?:left|right)\b/gu, "").replace(/\\(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|ln|log|floor|ceil|round)\s*\{/giu, "$1(").replace(/\\(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|ln|log|floor|ceil|round)\b/giu, "$1").replace(/\\pi\b/giu, "pi").replaceAll("{", "(").replaceAll("}", ")").trim();
+  return canonicalDependentExpression(value, ["y"]).replace(/\\(?:left|right)\b/gu, "").replace(/\\(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|ln|log|floor|ceil|round)\s*\{/giu, "$1(").replace(/\\(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|ln|log|floor|ceil|round)\b/giu, "$1").replace(/\\pi\b/giu, "pi").replaceAll("{", "(").replaceAll("}", ")").trim();
 }
 function geometryInventory(alias, content) {
   const tolerance = 1e-3;
@@ -13120,6 +13131,31 @@ function expressionReferencesVariable(expression, variable) {
 }
 function lowerPlannedLessonFields(document, brief) {
   if (!isRecord(document) || !isRecord(document.lesson)) return document;
+  if (Array.isArray(document.steps)) {
+    for (const step of document.steps) {
+      if (!isRecord(step) || !Array.isArray(step.beats)) continue;
+      for (const beat of step.beats) {
+        if (!isRecord(beat) || !Array.isArray(beat.actions)) continue;
+        for (const action of beat.actions) {
+          if (!isRecord(action) || action.do !== "write" || !isRecord(action.content)) continue;
+          if (action.kind === "plot" && Array.isArray(action.content.curves)) {
+            for (const curve of action.content.curves) {
+              if (isRecord(curve) && typeof curve.expression === "string") {
+                curve.expression = canonicalPlotExpression(curve.expression);
+              }
+            }
+          }
+          if (action.kind === "scene3d" && Array.isArray(action.content.objects)) {
+            for (const object of action.content.objects) {
+              if (isRecord(object) && object.kind === "surface" && typeof object.expression === "string") {
+                object.expression = canonicalDependentExpression(object.expression, ["z"]);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   document.lesson.goals = brief.teaching_goal_requirements.map((requirement) => requirement.goal);
   if (brief.shared_variable_requirements.length === 0) delete document.lesson.variables;
   else {
@@ -14063,9 +14099,13 @@ async function callStructuredModel(client, request) {
   const startedAt = Date.now();
   const deadlineAt = requestDeadline(client);
   const thinkingLevel = request.thinkingLevel ?? configuredThinkingLevel(request.label);
+  const userParts = [{ text: request.prompt }];
+  if (request.media) userParts.push({
+    inlineData: { mimeType: request.media.mimeType, data: request.media.data }
+  });
   const requestBody = JSON.stringify({
     systemInstruction: { parts: [{ text: request.systemPrompt }] },
-    contents: [{ role: "user", parts: [{ text: request.prompt }] }],
+    contents: [{ role: "user", parts: userParts }],
     generationConfig: {
       temperature: 0,
       maxOutputTokens: request.maxTokens ?? client.maxTokens,
@@ -15006,6 +15046,7 @@ async function generateVisualComponent(client, input, brief, requirement, respon
 }
 function degradedVisualAction(requirement, language) {
   const english = language.toLocaleLowerCase().startsWith("en");
+  const retryPurpose = english ? `Retry this ${requirement.surface} visual` : `\u91CD\u65B0\u751F\u6210\u8FD9\u4E2A${requirement.surface === "scene3d" ? "\u4E09\u7EF4" : requirement.surface}\u753B\u9762`;
   return {
     do: "write",
     as: requirement.id,
@@ -15018,7 +15059,7 @@ function degradedVisualAction(requirement, language) {
         kind: "visual_component",
         visual_id: requirement.id,
         surface: requirement.surface,
-        purpose: requirement.purpose,
+        purpose: retryPurpose,
         retryable: true
       }
     } : {
@@ -15028,7 +15069,7 @@ function degradedVisualAction(requirement, language) {
         kind: "visual_component",
         visual_id: requirement.id,
         surface: requirement.surface,
-        purpose: requirement.purpose,
+        purpose: retryPurpose,
         retryable: true
       }
     },
@@ -15714,6 +15755,30 @@ function selectionOutputPath(input) {
   }
   return path;
 }
+async function selectionModelMedia(input) {
+  if (!input.selection_media) return void 0;
+  const sessionWorkspace = resolve(
+    process.env.OCTOS_SESSION_WORKSPACE?.trim() || process.env.OCTOS_WORK_DIR?.trim() || process.cwd()
+  );
+  const candidate = resolve(sessionWorkspace, input.selection_media);
+  if (candidate !== sessionWorkspace && !candidate.startsWith(`${sessionWorkspace}${sep}`) || !isAbsolute(candidate)) {
+    throw new Error("selection_media escapes OCTOS_SESSION_WORKSPACE");
+  }
+  const [canonicalWorkspace, canonicalPath] = await Promise.all([
+    realpath(sessionWorkspace),
+    realpath(candidate)
+  ]);
+  if (canonicalPath !== canonicalWorkspace && !canonicalPath.startsWith(`${canonicalWorkspace}${sep}`)) {
+    throw new Error("selection_media escapes OCTOS_SESSION_WORKSPACE");
+  }
+  const data = await readFile(canonicalPath);
+  if (data.byteLength === 0 || data.byteLength > 10 * 1024 * 1024) {
+    throw new Error("selection_media must be between 1 byte and 10 MB");
+  }
+  const mimeType = data[0] === 137 && data[1] === 80 && data[2] === 78 && data[3] === 71 ? "image/png" : data[0] === 255 && data[1] === 216 ? "image/jpeg" : data.subarray(0, 4).toString("ascii") === "RIFF" && data.subarray(8, 12).toString("ascii") === "WEBP" ? "image/webp" : void 0;
+  if (!mimeType) throw new Error("selection_media must be PNG, JPEG, or WebP");
+  return { mimeType, data: data.toString("base64") };
+}
 function parseSelectionModelResponse(raw, input) {
   let value;
   try {
@@ -15792,18 +15857,21 @@ function parseSelectionModelResponse(raw, input) {
   };
 }
 async function generateSelectionEnhancement(client, input) {
+  const media = await selectionModelMedia(input);
   const raw = await callStructuredModel(client, {
     label: "selection-enhancement",
     turnId: input.turn_id,
     maxTokens: Math.min(client.maxTokens, 4096),
     responseSchema: SELECTION_RESPONSE_SCHEMA,
-    systemPrompt: `\u4F60\u662F\u767D\u677F\u9009\u533A\u8F85\u52A9\u5DE5\u5177\u3002\u53EA\u89E3\u91CA\u7528\u6237\u6846\u9009\u7684\u539F\u7A3F\u548C\u7528\u6237\u660E\u786E\u9009\u4E2D\u7684\u5C40\u90E8\u767D\u677F\u5BF9\u8C61\uFF0C\u5E76\u5728\u539F\u7A3F\u65C1\u8FB9\u751F\u6210\u72EC\u7ACB\u8F85\u52A9\u5185\u5BB9\uFF1B\u7EDD\u4E0D\u91CD\u5199\u3001\u7EA0\u6B63\u6216\u66FF\u6362\u539F\u7A3F\u3002recognized_content \u662F\u4E0A\u6E38\u89C6\u89C9\u6A21\u578B\u5BF9\u5C40\u90E8\u4E0A\u4E0B\u6587\u56FE\u7247\u7684\u89C2\u5BDF\uFF0C\u4E0D\u662F\u7EDD\u5BF9\u4E8B\u5B9E\uFF1B\u7F6E\u4FE1\u5EA6\u4E0D\u8DB3\u65F6\u5FC5\u987B\u660E\u786E\u8BF4\u660E\u4E0D\u786E\u5B9A\u6027\u3002board_targets \u662F Runtime \u63D0\u4F9B\u7684\u7A33\u5B9A\u5F15\u7528\uFF0C\u53EA\u80FD\u7528\u4E8E\u7406\u89E3\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u80FD\u81EA\u884C\u589E\u5220\u6216\u6539\u5199\u3002\u53EA\u6709 tool_id \u4E3A generate-plot \u6216 custom-question\u3001\u8BC6\u522B\u51FA\u660E\u786E\u7684\u5355\u53D8\u91CF y=f(x) \u4E14\u7528\u6237\u8981\u6C42\u51FD\u6570\u56FE\u50CF\u65F6\uFF0Cresponse_kind \u624D\u80FD\u4F7F\u7528 plot\uFF0Cexpression \u5FC5\u987B\u662F\u4EC5\u542B x \u7684\u5B89\u5168\u6570\u5B66\u8868\u8FBE\u5F0F\u3002\u5176\u4ED6\u60C5\u51B5\u4F7F\u7528 explanation\u3002\u4E0D\u8981\u58F0\u79F0\u770B\u5230\u4E86\u5C40\u90E8\u56FE\u7247\u4EE5\u5916\u7684\u767D\u677F\u3002`,
+    media,
+    systemPrompt: `\u4F60\u662F\u767D\u677F\u9009\u533A\u8F85\u52A9\u5DE5\u5177\u3002\u53EA\u89E3\u91CA\u5F53\u524D\u8BF7\u6C42\u9644\u5E26\u7684\u9009\u533A\u56FE\u7247\u548C\u7528\u6237\u660E\u786E\u9009\u4E2D\u7684\u5C40\u90E8\u767D\u677F\u5BF9\u8C61\uFF0C\u5E76\u5728\u539F\u7A3F\u65C1\u8FB9\u751F\u6210\u72EC\u7ACB\u8F85\u52A9\u5185\u5BB9\uFF1B\u7EDD\u4E0D\u91CD\u5199\u3001\u7EA0\u6B63\u6216\u66FF\u6362\u539F\u7A3F\u3002\u56FE\u7247\u8BC6\u522B\u4E0D\u786E\u5B9A\u65F6\u5FC5\u987B\u660E\u786E\u8BF4\u660E\u3002board_targets \u662F Runtime \u63D0\u4F9B\u7684\u7A33\u5B9A\u5F15\u7528\uFF0C\u53EA\u80FD\u7528\u4E8E\u7406\u89E3\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u80FD\u81EA\u884C\u589E\u5220\u6216\u6539\u5199\u3002\u53EA\u6709 tool_id \u4E3A generate-plot \u6216 custom-question\u3001\u4ECE\u56FE\u7247\u6216\u5907\u7528\u8BC6\u522B\u6587\u5B57\u4E2D\u8BFB\u51FA\u660E\u786E\u7684\u5355\u53D8\u91CF y=f(x) \u4E14\u7528\u6237\u8981\u6C42\u51FD\u6570\u56FE\u50CF\u65F6\uFF0Cresponse_kind \u624D\u80FD\u4F7F\u7528 plot\uFF0Cexpression \u5FC5\u987B\u662F\u4EC5\u542B x \u7684\u5B89\u5168\u6570\u5B66\u8868\u8FBE\u5F0F\u3002\u5176\u4ED6\u60C5\u51B5\u4F7F\u7528 explanation\u3002\u4E0D\u8981\u58F0\u79F0\u770B\u5230\u4E86\u9009\u533A\u56FE\u7247\u4EE5\u5916\u7684\u767D\u677F\u3002`,
     prompt: JSON.stringify({
       learner_request: input.learner_request,
       tool_id: input.tool_id,
       selected_content_hint: input.content_hint,
-      recognized_selected_content: input.recognized_content,
-      recognition_confidence: input.recognition_confidence,
+      attached_selection_image: Boolean(media),
+      fallback_recognized_selected_content: input.recognized_content ?? null,
+      fallback_recognition_confidence: input.recognition_confidence ?? null,
       lesson_title: input.lesson_title ?? null,
       board_summary: input.board_summary ?? null,
       board_id: input.board.board_id,

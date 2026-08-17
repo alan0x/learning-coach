@@ -25,7 +25,8 @@
         "OLL_GENERATION_ATTEMPTS",
         "OLL_AUTHORING_STRATEGY",
         "OLL_DEBUG_GENERATION",
-        "OCTOS_WORK_DIR"
+        "OCTOS_WORK_DIR",
+        "OCTOS_SESSION_WORKSPACE"
       ],
       "input_schema": {
         "type": "object",
@@ -149,7 +150,8 @@
         "OLL_TOTAL_TIMEOUT_MS",
         "OLL_MAX_TOKENS",
         "VERTEX_REQUEST_ATTEMPTS",
-        "OCTOS_WORK_DIR"
+        "OCTOS_WORK_DIR",
+        "OCTOS_SESSION_WORKSPACE"
       ],
       "input_schema": {
         "type": "object",
@@ -261,7 +263,11 @@
             "enum": ["high", "medium", "low"]
           },
           "lesson_title": { "type": "string" },
-          "board_summary": { "type": "string" }
+          "board_summary": { "type": "string" },
+          "selection_media": {
+            "type": "string",
+            "description": "Workspace-local image path injected by the trusted skill action binding."
+          }
         },
         "required": [
           "turn_id",
@@ -269,10 +275,60 @@
           "source",
           "content_hint",
           "tool_id",
-          "board",
-          "recognized_content",
-          "recognition_confidence"
+          "board"
         ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "learning.selection.enhance",
+      "label": "解释白板选区",
+      "description": "根据学生保留不变的笔迹选区生成旁侧解释或函数图。",
+      "tags": ["learning", "selection"],
+      "surfaces": ["learning.selection"],
+      "execution": "sync",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": { "type": "string" }
+          },
+          "turn_id": { "type": "string" },
+          "learner_request": { "type": "string" },
+          "source": { "type": "object" },
+          "content_hint": {
+            "type": "string",
+            "enum": ["text", "math", "geometry", "data", "unknown"]
+          },
+          "tool_id": {
+            "type": "string",
+            "enum": ["explain", "check-and-suggest", "generate-plot", "custom-question"]
+          },
+          "board": { "type": "object" },
+          "lesson_title": { "type": "string" },
+          "board_summary": { "type": "string" }
+        },
+        "required": [
+          "paths",
+          "turn_id",
+          "learner_request",
+          "source",
+          "content_hint",
+          "tool_id",
+          "board"
+        ]
+      },
+      "binding": {
+        "type": "tool",
+        "tool": "oll_enhance_selection",
+        "input_mode": "file_each",
+        "file_argument": "selection_media",
+        "file_materialization": "workspace_relative"
       }
     }
   ]

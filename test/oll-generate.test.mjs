@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
 import { createServer } from "node:http";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -1522,6 +1522,8 @@ test("one failed visual component degrades locally while the remaining lesson st
     const fallback = actions.find((action) => action.do === "write" && action.as === "sine-plot");
     assert.equal(fallback.kind, "note");
     assert.equal(fallback.role, "system-status");
+    assert.equal(fallback.content.degradation.purpose, "重新生成这个plot画面");
+    assert.doesNotMatch(JSON.stringify(fallback.content), /让学生/);
     assert.equal(actions.some((action) => action.as === "explain-1-period-note"), true);
   } finally {
     await new Promise((done) => server.close(done));
@@ -2162,7 +2164,11 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
 });
 
 test("selection tool writes a source-linked artifact without producing a lesson", async () => {
-  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-selection-"));
+  const sessionWorkspace = await mkdtemp(join(tmpdir(), "learning-coach-selection-"));
+  const workDirectory = join(sessionWorkspace, "skill-output");
+  const uploadsDirectory = join(sessionWorkspace, "uploads");
+  await mkdir(workDirectory, { recursive: true });
+  await mkdir(uploadsDirectory, { recursive: true });
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const requests = [];
   const server = createServer(async (request, response) => {
@@ -2191,6 +2197,13 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     }));
   });
   try {
+    await writeFile(
+      join(uploadsDirectory, "selection.png"),
+      Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    );
     await new Promise((done) => server.listen(0, "127.0.0.1", done));
     const address = server.address();
     assert.equal(typeof address, "object");
@@ -2205,6 +2218,7 @@ test("selection tool writes a source-linked artifact without producing a lesson"
         token_uri: `http://127.0.0.1:${address.port}/token`,
       },
       workDirectory,
+      environment: { OCTOS_SESSION_WORKSPACE: sessionWorkspace },
       input: {
         learner_request: "请为我选中的公式生成函数图像",
         source: {
@@ -2232,12 +2246,13 @@ test("selection tool writes a source-linked artifact without producing a lesson"
             z_index: 4,
           }],
         },
-        recognized_content: "y = x^2",
-        recognition_confidence: "high",
+        selection_media: "uploads/selection.png",
       },
     });
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(requests.length, 1);
+    assert.equal(requests[0].contents[0].parts.length, 2);
+    assert.equal(requests[0].contents[0].parts[1].inlineData.mimeType, "image/png");
     assert.equal(
       requests[0].generationConfig.responseJsonSchema.properties.response_kind.enum[1],
       "plot",
@@ -2265,7 +2280,7 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     );
   } finally {
     await new Promise((done) => server.close(done));
-    await rm(workDirectory, { recursive: true, force: true });
+    await rm(sessionWorkspace, { recursive: true, force: true });
   }
 });
 
@@ -3108,6 +3123,9 @@ test("a shared section height may drive a 3D section and a 2D circle radius", as
     }
     const parsedBody = JSON.parse(body);
     modelRequests.push(parsedBody);
+    const explicitEquationLesson = structuredClone(validParaboloidSectionLesson);
+    explicitEquationLesson.steps[0].beats[0].actions[0]
+      .content.objects[0].expression = "z = x^2 + y^2";
     const value = isLessonBriefRequest(parsedBody)
       ? paraboloidSectionBrief
       : isLessonBriefVerificationRequest(parsedBody)
@@ -3129,7 +3147,7 @@ test("a shared section height may drive a 3D section and a 2D circle radius", as
               }],
               scene3d_task_requirements: [],
             }
-          : validParaboloidSectionLesson;
+          : explicitEquationLesson;
     response.end(vertexPayload(value));
   });
 
@@ -3167,6 +3185,7 @@ test("a shared section height may drive a 3D section and a 2D circle radius", as
     const actions = artifact.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions);
     const scene = actions.find((action) => action.do === "write" && action.as === "paraboloid-scene");
     const geometry = actions.find((action) => action.do === "write" && action.as === "section-circle-geometry");
+    assert.equal(scene.content.objects[0].expression, "x^2 + y^2");
     assert.equal(scene.content.bindings[0].target, "horizontal-section.value");
     assert.equal(geometry.content.circles[0].label, "截线圆");
     assert.deepEqual(geometry.content.bindings[0], {

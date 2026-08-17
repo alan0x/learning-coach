@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createHash, createSign } from "node:crypto";
@@ -92,8 +92,9 @@ interface SelectionToolInput {
     revision: number;
     targets: SelectionBoardTargetRef[];
   };
-  recognized_content: string;
-  recognition_confidence: "high" | "medium" | "low";
+  selection_media?: string;
+  recognized_content?: string;
+  recognition_confidence?: "high" | "medium" | "low";
   lesson_title?: string;
   board_summary?: string;
 }
@@ -433,6 +434,7 @@ interface StructuredModelRequest {
   maxTokens?: number;
   thinkingLevel?: ThinkingLevel;
   signal?: AbortSignal;
+  media?: { mimeType: "image/png" | "image/jpeg" | "image/webp"; data: string };
 }
 
 class GeneratedLessonError extends Error {
@@ -918,8 +920,17 @@ function parseSelectionToolInput(raw: string): SelectionToolInput {
     throw new Error("content_hint is invalid");
   }
   const confidence = input.recognition_confidence;
-  if (!["high", "medium", "low"].includes(String(confidence))) {
+  if (confidence !== undefined && !["high", "medium", "low"].includes(String(confidence))) {
     throw new Error("recognition_confidence is invalid");
+  }
+  const selectionMedia = typeof input.selection_media === "string" && input.selection_media.trim()
+    ? input.selection_media.trim()
+    : undefined;
+  const recognizedContent = typeof input.recognized_content === "string" && input.recognized_content.trim()
+    ? truncate(input.recognized_content.trim())
+    : undefined;
+  if (!selectionMedia && !recognizedContent) {
+    throw new Error("selection_media or recognized_content is required");
   }
   const toolId = input.tool_id;
   if (!["explain", "check-and-suggest", "generate-plot", "custom-question"].includes(
@@ -1035,11 +1046,9 @@ function parseSelectionToolInput(raw: string): SelectionToolInput {
       revision: Number(revision),
       targets,
     },
-    recognized_content: truncate(requireNonEmptyString(
-      input.recognized_content,
-      "recognized_content",
-    ))!,
-    recognition_confidence: confidence as "high" | "medium" | "low",
+    ...(selectionMedia ? { selection_media: selectionMedia } : {}),
+    ...(recognizedContent ? { recognized_content: recognizedContent } : {}),
+    ...(confidence ? { recognition_confidence: confidence as "high" | "medium" | "low" } : {}),
     ...(typeof input.lesson_title === "string"
       ? { lesson_title: truncate(input.lesson_title) }
       : {}),
@@ -2390,7 +2399,11 @@ function canonicalizeBriefAliases(candidate: unknown): unknown {
     for (const requirement of brief.visual_requirements) {
       if (!isRecord(requirement) || !Array.isArray(requirement.expressions)) continue;
       requirement.expressions = requirement.expressions.map((expression) =>
-        typeof expression === "string" ? canonicalPlotExpression(expression) : expression);
+        typeof expression === "string"
+          ? requirement.surface === "scene3d"
+            ? canonicalDependentExpression(expression, ["z"])
+            : canonicalPlotExpression(expression)
+          : expression);
     }
   }
   if (Array.isArray(brief.visual_relationships)) {
@@ -3229,14 +3242,22 @@ function referenceRoot(value: unknown): string {
 }
 
 function normalizeExpression(value: string): string {
-  return canonicalPlotExpression(value).toLocaleLowerCase()
+  return canonicalDependentExpression(value, ["y", "z"]).toLocaleLowerCase()
     .replace(/\s+/gu, "");
 }
 
+function canonicalDependentExpression(value: string, outputs: readonly string[]): string {
+  const normalized = value.normalize("NFKC").trim();
+  const assignment = /^([a-z][a-z0-9_]*)\s*=\s*(.+)$/iu.exec(normalized);
+  if (!assignment || !outputs.some((output) =>
+    output.toLocaleLowerCase() === assignment[1]!.toLocaleLowerCase())) {
+    return normalized;
+  }
+  return assignment[2]!.trim();
+}
+
 function canonicalPlotExpression(value: string): string {
-  return value.normalize("NFKC")
-    .trim()
-    .replace(/^y\s*=\s*/iu, "")
+  return canonicalDependentExpression(value, ["y"])
     .replace(/\\(?:left|right)\b/gu, "")
     .replace(/\\(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|ln|log|floor|ceil|round)\s*\{/giu, "$1(")
     .replace(/\\(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|ln|log|floor|ceil|round)\b/giu, "$1")
@@ -3528,6 +3549,37 @@ function expressionReferencesVariable(expression: unknown, variable: string): bo
  * one variable-driven point and one matching circle center. */
 function lowerPlannedLessonFields(document: unknown, brief: LessonBrief): unknown {
   if (!isRecord(document) || !isRecord(document.lesson)) return document;
+
+  // Models commonly write an explicit dependent-variable equation while OLL
+  // stores only the right-hand expression. Lower only unambiguous y=... plot
+  // and z=... surface forms; implicit equations and other assignments remain
+  // unchanged and are still rejected by the normal validator when invalid.
+  if (Array.isArray(document.steps)) {
+    for (const step of document.steps) {
+      if (!isRecord(step) || !Array.isArray(step.beats)) continue;
+      for (const beat of step.beats) {
+        if (!isRecord(beat) || !Array.isArray(beat.actions)) continue;
+        for (const action of beat.actions) {
+          if (!isRecord(action) || action.do !== "write" || !isRecord(action.content)) continue;
+          if (action.kind === "plot" && Array.isArray(action.content.curves)) {
+            for (const curve of action.content.curves) {
+              if (isRecord(curve) && typeof curve.expression === "string") {
+                curve.expression = canonicalPlotExpression(curve.expression);
+              }
+            }
+          }
+          if (action.kind === "scene3d" && Array.isArray(action.content.objects)) {
+            for (const object of action.content.objects) {
+              if (isRecord(object) && object.kind === "surface"
+                && typeof object.expression === "string") {
+                object.expression = canonicalDependentExpression(object.expression, ["z"]);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   document.lesson.goals = brief.teaching_goal_requirements.map((requirement) => requirement.goal);
   if (brief.shared_variable_requirements.length === 0) delete document.lesson.variables;
@@ -4656,9 +4708,13 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
   const startedAt = Date.now();
   const deadlineAt = requestDeadline(client);
   const thinkingLevel = request.thinkingLevel ?? configuredThinkingLevel(request.label);
+  const userParts: Array<Record<string, unknown>> = [{ text: request.prompt }];
+  if (request.media) userParts.push({
+    inlineData: { mimeType: request.media.mimeType, data: request.media.data },
+  });
   const requestBody = JSON.stringify({
     systemInstruction: { parts: [{ text: request.systemPrompt }] },
-    contents: [{ role: "user", parts: [{ text: request.prompt }] }],
+    contents: [{ role: "user", parts: userParts }],
     generationConfig: {
       temperature: 0,
       maxOutputTokens: request.maxTokens ?? client.maxTokens,
@@ -5790,6 +5846,9 @@ function degradedVisualAction(
   language: string,
 ): Record<string, unknown> {
   const english = language.toLocaleLowerCase().startsWith("en");
+  const retryPurpose = english
+    ? `Retry this ${requirement.surface} visual`
+    : `重新生成这个${requirement.surface === "scene3d" ? "三维" : requirement.surface}画面`;
   return {
     do: "write",
     as: requirement.id,
@@ -5803,7 +5862,7 @@ function degradedVisualAction(
             kind: "visual_component",
             visual_id: requirement.id,
             surface: requirement.surface,
-            purpose: requirement.purpose,
+            purpose: retryPurpose,
             retryable: true,
           },
         }
@@ -5814,7 +5873,7 @@ function degradedVisualAction(
             kind: "visual_component",
             visual_id: requirement.id,
             surface: requirement.surface,
-            purpose: requirement.purpose,
+            purpose: retryPurpose,
             retryable: true,
           },
         },
@@ -6638,6 +6697,45 @@ function selectionOutputPath(input: SelectionToolInput): string {
   return path;
 }
 
+async function selectionModelMedia(
+  input: SelectionToolInput,
+): Promise<StructuredModelRequest["media"]> {
+  if (!input.selection_media) return undefined;
+  const sessionWorkspace = resolve(
+    process.env.OCTOS_SESSION_WORKSPACE?.trim()
+      || process.env.OCTOS_WORK_DIR?.trim()
+      || process.cwd(),
+  );
+  const candidate = resolve(sessionWorkspace, input.selection_media);
+  if ((candidate !== sessionWorkspace && !candidate.startsWith(`${sessionWorkspace}${sep}`))
+    || !isAbsolute(candidate)) {
+    throw new Error("selection_media escapes OCTOS_SESSION_WORKSPACE");
+  }
+  const [canonicalWorkspace, canonicalPath] = await Promise.all([
+    realpath(sessionWorkspace),
+    realpath(candidate),
+  ]);
+  if (canonicalPath !== canonicalWorkspace
+    && !canonicalPath.startsWith(`${canonicalWorkspace}${sep}`)) {
+    throw new Error("selection_media escapes OCTOS_SESSION_WORKSPACE");
+  }
+  const data = await readFile(canonicalPath);
+  if (data.byteLength === 0 || data.byteLength > 10 * 1024 * 1024) {
+    throw new Error("selection_media must be between 1 byte and 10 MB");
+  }
+  const mimeType = data[0] === 0x89 && data[1] === 0x50
+      && data[2] === 0x4e && data[3] === 0x47
+    ? "image/png"
+    : data[0] === 0xff && data[1] === 0xd8
+      ? "image/jpeg"
+      : data.subarray(0, 4).toString("ascii") === "RIFF"
+          && data.subarray(8, 12).toString("ascii") === "WEBP"
+        ? "image/webp"
+        : undefined;
+  if (!mimeType) throw new Error("selection_media must be PNG, JPEG, or WebP");
+  return { mimeType, data: data.toString("base64") };
+}
+
 function parseSelectionModelResponse(
   raw: string,
   input: SelectionToolInput,
@@ -6725,18 +6823,21 @@ async function generateSelectionEnhancement(
   client: VertexClient,
   input: SelectionToolInput,
 ): Promise<SelectionEnhancementArtifact> {
+  const media = await selectionModelMedia(input);
   const raw = await callStructuredModel(client, {
     label: "selection-enhancement",
     turnId: input.turn_id,
     maxTokens: Math.min(client.maxTokens, 4_096),
     responseSchema: SELECTION_RESPONSE_SCHEMA,
-    systemPrompt: `你是白板选区辅助工具。只解释用户框选的原稿和用户明确选中的局部白板对象，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。recognized_content 是上游视觉模型对局部上下文图片的观察，不是绝对事实；置信度不足时必须明确说明不确定性。board_targets 是 Runtime 提供的稳定引用，只能用于理解上下文，不能自行增删或改写。只有 tool_id 为 generate-plot 或 custom-question、识别出明确的单变量 y=f(x) 且用户要求函数图像时，response_kind 才能使用 plot，expression 必须是仅含 x 的安全数学表达式。其他情况使用 explanation。不要声称看到了局部图片以外的白板。`,
+    media,
+    systemPrompt: `你是白板选区辅助工具。只解释当前请求附带的选区图片和用户明确选中的局部白板对象，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。图片识别不确定时必须明确说明。board_targets 是 Runtime 提供的稳定引用，只能用于理解上下文，不能自行增删或改写。只有 tool_id 为 generate-plot 或 custom-question、从图片或备用识别文字中读出明确的单变量 y=f(x) 且用户要求函数图像时，response_kind 才能使用 plot，expression 必须是仅含 x 的安全数学表达式。其他情况使用 explanation。不要声称看到了选区图片以外的白板。`,
     prompt: JSON.stringify({
       learner_request: input.learner_request,
       tool_id: input.tool_id,
       selected_content_hint: input.content_hint,
-      recognized_selected_content: input.recognized_content,
-      recognition_confidence: input.recognition_confidence,
+      attached_selection_image: Boolean(media),
+      fallback_recognized_selected_content: input.recognized_content ?? null,
+      fallback_recognition_confidence: input.recognition_confidence ?? null,
       lesson_title: input.lesson_title ?? null,
       board_summary: input.board_summary ?? null,
       board_id: input.board.board_id,
