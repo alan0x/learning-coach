@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.12.6",
+  "version": "0.12.7",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -134,6 +134,38 @@
           }
         },
         "required": ["turn_id", "learner_request", "request_source"]
+      }
+    },
+    {
+      "name": "oll_classify_selection",
+      "description": "Classify only the immutable student-ink selection as text, math, geometry, data, or unknown. Never create tools, execute an enhancement, or modify the source ink.",
+      "concurrency_class": "exclusive",
+      "env": [
+        "VERTEX_SA_JSON",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_LOCATION",
+        "VERTEX_BASE_URL",
+        "OLL_MODEL",
+        "OLL_TIMEOUT_MS",
+        "OLL_TOTAL_TIMEOUT_MS",
+        "VERTEX_REQUEST_ATTEMPTS",
+        "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL",
+        "OCTOS_WORK_DIR",
+        "OCTOS_SESSION_WORKSPACE"
+      ],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "turn_id": { "type": "string" },
+          "source": { "type": "object" },
+          "board": { "type": "object" },
+          "selection_media": {
+            "type": "string",
+            "description": "Workspace-local image path injected by the trusted skill action binding."
+          }
+        },
+        "required": ["turn_id", "source", "board", "selection_media"]
       }
     },
     {
@@ -281,6 +313,37 @@
     }
   ],
   "actions": [
+    {
+      "id": "learning.selection.classify",
+      "label": "识别白板选区",
+      "description": "把学生选中的原始笔迹分类为文字、数学表达式、几何草图、数据或无法确定。",
+      "tags": ["learning", "selection", "classification"],
+      "surfaces": ["learning.selection"],
+      "execution": "sync",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": { "type": "string" }
+          },
+          "turn_id": { "type": "string" },
+          "source": { "type": "object" },
+          "board": { "type": "object" }
+        },
+        "required": ["paths", "turn_id", "source", "board"]
+      },
+      "binding": {
+        "type": "tool",
+        "tool": "oll_classify_selection",
+        "input_mode": "file_each",
+        "file_argument": "selection_media",
+        "file_materialization": "workspace_relative"
+      }
+    },
     {
       "id": "learning.selection.enhance",
       "label": "解释白板选区",

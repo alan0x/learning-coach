@@ -2163,6 +2163,102 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
   }
 });
 
+test("selection classifier returns bounded metadata without creating an artifact", async () => {
+  const sessionWorkspace = await mkdtemp(join(tmpdir(), "learning-coach-selection-classification-"));
+  const workDirectory = join(sessionWorkspace, "skill-output");
+  const uploadsDirectory = join(sessionWorkspace, "uploads");
+  await mkdir(workDirectory, { recursive: true });
+  await mkdir(uploadsDirectory, { recursive: true });
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    requests.push(JSON.parse(body));
+    response.end(vertexPayload({
+      kind: "math",
+      content: "y = x^2",
+      confidence: "high",
+    }));
+  });
+  try {
+    await writeFile(
+      join(uploadsDirectory, "selection.png"),
+      Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    );
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const result = await runTool({
+      tool: "oll_classify_selection",
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      environment: { OCTOS_SESSION_WORKSPACE: sessionWorkspace },
+      input: {
+        source: {
+          source_id: "selection-classify-1",
+          document_id: "ink-1",
+          document_version: 7,
+          bounds: { x: 120, y: 80, width: 240, height: 90 },
+          checksum: { algorithm: "sha-256", value: "a".repeat(64) },
+        },
+        board: {
+          board_id: "learning-board-session-1",
+          revision: 12,
+          targets: [{
+            target_id: "plot-1:curve:sin",
+            node_id: "plot-1",
+            element_id: "plot-1:curve:sin",
+            kind: "plot-curve",
+            label: "SECRET_UNDERLYING_FUNCTION",
+            world_bounds: { x: 100, y: 60, width: 320, height: 220 },
+            overlap: 0.8,
+            distance: 0,
+            z_index: 2,
+          }],
+        },
+        selection_media: "uploads/selection.png",
+      },
+    });
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(requests.length, 1);
+    assert.deepEqual(
+      requests[0].generationConfig.responseJsonSchema.properties.kind.enum,
+      ["text", "math", "geometry", "data", "unknown"],
+    );
+    assert.equal(requests[0].contents[0].parts[1].inlineData.mimeType, "image/png");
+    assert.equal(JSON.stringify(requests[0]).includes("SECRET_UNDERLYING_FUNCTION"), false);
+    const protocol = JSON.parse(result.stdout);
+    assert.equal(protocol.success, true);
+    assert.equal(protocol.files_to_send, undefined);
+    assert.deepEqual(protocol.structured_metadata, {
+      selection_classification: {
+        kind: "math",
+        content: "y = x^2",
+        confidence: "high",
+      },
+    });
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(sessionWorkspace, { recursive: true, force: true });
+  }
+});
+
 test("selection tool writes a source-linked artifact without producing a lesson", async () => {
   const sessionWorkspace = await mkdtemp(join(tmpdir(), "learning-coach-selection-"));
   const workDirectory = join(sessionWorkspace, "skill-output");

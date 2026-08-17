@@ -19,6 +19,7 @@ import {
 
 const TOOL_NAME = "oll_generate_lesson";
 const SELECTION_TOOL_NAME = "oll_enhance_selection";
+const SELECTION_CLASSIFICATION_TOOL_NAME = "oll_classify_selection";
 const DEFAULT_MODEL = "gemini-3.6-flash";
 const DEFAULT_VERTEX_LOCATION = "global";
 const DEFAULT_TIMEOUT_MS = 180_000;
@@ -97,6 +98,12 @@ interface SelectionToolInput {
   recognition_confidence?: "high" | "medium" | "low";
   lesson_title?: string;
   board_summary?: string;
+}
+
+interface SelectionClassification {
+  kind: SelectionContentKind;
+  content: string;
+  confidence: "high" | "medium" | "low";
 }
 
 interface SelectionEnhancementArtifact {
@@ -677,6 +684,8 @@ function configuredThinkingLevel(
             ? "OLL_VISUAL_THINKING_LEVEL"
             : label === "selection-enhancement"
               ? "OLL_SELECTION_THINKING_LEVEL"
+              : label === "selection-classification"
+                ? "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL"
               : label === "lesson-component-repair" || label === "lesson-beat-repair"
                 ? "OLL_REPAIR_THINKING_LEVEL"
                 : "OLL_AUTHORING_THINKING_LEVEL";
@@ -684,6 +693,7 @@ function configuredThinkingLevel(
     || label === "lesson-task-planning"
     || label === "lesson-section"
     || label === "lesson-visual-component"
+    || label === "selection-classification"
     ? "LOW"
     : undefined;
   return parseThinkingLevel(process.env[environmentName], environmentName)
@@ -1056,6 +1066,28 @@ function parseSelectionToolInput(raw: string): SelectionToolInput {
       ? { board_summary: truncate(input.board_summary) }
       : {}),
   };
+}
+
+function parseSelectionClassificationInput(raw: string): SelectionToolInput {
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Tool input is not valid JSON: ${(error as Error).message}`);
+  }
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    throw new Error("Selection classification input must be a JSON object");
+  }
+  const input = parseSelectionToolInput(JSON.stringify({
+    ...(candidate as Record<string, unknown>),
+    learner_request: "Classify only the selected student ink.",
+    content_hint: "unknown",
+    tool_id: "custom-question",
+  }));
+  if (!input.selection_media) {
+    throw new Error("selection_media is required for selection classification");
+  }
+  return input;
 }
 
 /** Build a compact request-only JSON Schema for Vertex controlled generation.
@@ -6644,6 +6676,23 @@ async function generateLesson(
   throw new Error("OLL generation failed");
 }
 
+const SELECTION_CLASSIFICATION_RESPONSE_SCHEMA: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    kind: {
+      type: "string",
+      enum: ["text", "math", "geometry", "data", "unknown"],
+    },
+    content: { type: "string" },
+    confidence: {
+      type: "string",
+      enum: ["high", "medium", "low"],
+    },
+  },
+  required: ["kind", "content", "confidence"],
+};
+
 const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
   type: "object",
   additionalProperties: false,
@@ -6848,6 +6897,51 @@ async function generateSelectionEnhancement(
   return parseSelectionModelResponse(raw, input);
 }
 
+function parseSelectionClassificationResponse(raw: string): SelectionClassification {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Selection classification is not JSON: ${(error as Error).message}`);
+  }
+  if (!isRecord(value)) throw new Error("Selection classification must be an object");
+  const kind = value.kind;
+  if (kind !== "text" && kind !== "math" && kind !== "geometry"
+    && kind !== "data" && kind !== "unknown") {
+    throw new Error("Selection classification kind is invalid");
+  }
+  const confidence = value.confidence;
+  if (confidence !== "high" && confidence !== "medium" && confidence !== "low") {
+    throw new Error("Selection classification confidence is invalid");
+  }
+  const content = typeof value.content === "string" ? value.content.trim() : "";
+  if (kind !== "unknown" && confidence !== "low" && !content) {
+    throw new Error("Confident selection classification requires recognized content");
+  }
+  return { kind, content, confidence };
+}
+
+async function classifySelection(
+  client: VertexClient,
+  input: SelectionToolInput,
+): Promise<SelectionClassification> {
+  const media = await selectionModelMedia(input);
+  if (!media) throw new Error("Selection classification requires an image");
+  const raw = await callStructuredModel(client, {
+    label: "selection-classification",
+    turnId: input.turn_id,
+    maxTokens: Math.min(client.maxTokens, 512),
+    responseSchema: SELECTION_CLASSIFICATION_RESPONSE_SCHEMA,
+    media,
+    systemPrompt: `你只分类学生明确选中的原始笔迹，不回答问题，不生成课程或白板内容。kind 只能是 text、math、geometry、data、unknown。只有图片中能直接读到数学表达式、方程或函数时才返回 math；圆圈、下划线、箭头、套索或普通曲线标记不是数学表达式。content 只抄录图片中可辨认的内容，不利用课程背景补全。无法可靠辨认时返回 unknown 或 low confidence。你看不到也不得猜测笔迹下方的课程内容。`,
+    prompt: JSON.stringify({
+      source_id: input.source.source_id,
+      selected_ink_image: "authoritative",
+    }),
+  });
+  return parseSelectionClassificationResponse(raw);
+}
+
 function outputPath(input: ToolInput): string {
   const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
   const path = resolve(workDirectory, "study", "oll", `${input.turn_id}.octos-lesson.json`);
@@ -6889,14 +6983,33 @@ async function main(): Promise<void> {
   const startedAt = Date.now();
   const invokedTool = process.argv[2];
   try {
-    if (invokedTool !== TOOL_NAME && invokedTool !== SELECTION_TOOL_NAME) {
+    if (invokedTool !== TOOL_NAME
+      && invokedTool !== SELECTION_TOOL_NAME
+      && invokedTool !== SELECTION_CLASSIFICATION_TOOL_NAME) {
       throw new Error(
-        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}' or '${SELECTION_TOOL_NAME}'`,
+        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}', '${SELECTION_TOOL_NAME}', or '${SELECTION_CLASSIFICATION_TOOL_NAME}'`,
       );
     }
     const chunks: Buffer[] = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
     const rawInput = Buffer.concat(chunks).toString("utf8");
+    if (invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME) {
+      const input = parseSelectionClassificationInput(rawInput);
+      const client = await createVertexClient();
+      const classification = await classifySelection(client, input);
+      stageLog({
+        stage: "selection-classification",
+        turn_id: input.turn_id,
+        status: "completed",
+        elapsed_ms: Date.now() - startedAt,
+      });
+      emit({
+        success: true,
+        output: "Selection classified without modifying source ink.",
+        structured_metadata: { selection_classification: classification },
+      });
+      return;
+    }
     if (invokedTool === SELECTION_TOOL_NAME) {
       const input = parseSelectionToolInput(rawInput);
       const client = await createVertexClient();
@@ -6963,9 +7076,11 @@ async function main(): Promise<void> {
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}\n`, "utf8");
     stageLog({
-      stage: invokedTool === SELECTION_TOOL_NAME
-        ? "selection-enhancement"
-        : "lesson-generation",
+      stage: invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME
+        ? "selection-classification"
+        : invokedTool === SELECTION_TOOL_NAME
+          ? "selection-enhancement"
+          : "lesson-generation",
       turn_id: input.turn_id,
       status: "completed",
       elapsed_ms: Date.now() - startedAt,
@@ -6997,18 +7112,22 @@ async function main(): Promise<void> {
       elapsed_ms: Date.now() - startedAt,
       error_code: error instanceof ToolExecutionError
         ? error.code
-        : invokedTool === SELECTION_TOOL_NAME
-          ? "SELECTION_ENHANCEMENT_FAILED"
-          : "LESSON_GENERATION_FAILED",
+        : invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME
+          ? "SELECTION_CLASSIFICATION_FAILED"
+          : invokedTool === SELECTION_TOOL_NAME
+            ? "SELECTION_ENHANCEMENT_FAILED"
+            : "LESSON_GENERATION_FAILED",
     });
     process.stderr.write(`learning-coach: ${message}\n`);
     emit({
       success: false,
       error_code: error instanceof ToolExecutionError
         ? error.code
-        : invokedTool === SELECTION_TOOL_NAME
-          ? "SELECTION_ENHANCEMENT_FAILED"
-          : "LESSON_GENERATION_FAILED",
+        : invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME
+          ? "SELECTION_CLASSIFICATION_FAILED"
+          : invokedTool === SELECTION_TOOL_NAME
+            ? "SELECTION_ENHANCEMENT_FAILED"
+            : "LESSON_GENERATION_FAILED",
       output: message,
     });
     process.exitCode = 1;
