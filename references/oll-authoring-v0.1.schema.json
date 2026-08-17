@@ -9,6 +9,20 @@
     "dsl": {"const": "octos.lesson"},
     "version": {"const": "0.1"},
     "profile": {"const": "authoring"},
+    "board_context": {
+      "type": "object",
+      "required": ["board_id", "revision", "references"],
+      "additionalProperties": false,
+      "properties": {
+        "board_id": {"type": "string", "minLength": 1},
+        "revision": {"type": "integer", "minimum": 0},
+        "references": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {"$ref": "#/$defs/externalBoardReference"}
+        }
+      }
+    },
     "lesson": {
       "type": "object",
       "required": ["mode", "language", "title", "goals"],
@@ -18,6 +32,18 @@
         "language": {"type": "string", "minLength": 2, "maxLength": 32},
         "title": {"type": "string", "minLength": 1, "maxLength": 160},
         "goals": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "string"}},
+        "variables": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/lessonVariable"}
+        },
+        "tasks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/studentTask"}
+        },
         "adaptation": {
           "type": "object",
           "properties": {
@@ -48,6 +74,122 @@
     }
   },
   "$defs": {
+    "externalBoardReference": {
+      "type": "object",
+      "required": ["as", "type", "target_id", "fragments"],
+      "additionalProperties": false,
+      "properties": {
+        "as": {"$ref": "#/$defs/alias"},
+        "type": {"enum": ["node", "group", "connection"]},
+        "target_id": {"type": "string", "minLength": 1},
+        "label": {"type": "string"},
+        "fragments": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "required": ["as", "target_id"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "target_id": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    "studentTask": {
+      "type": "object",
+      "required": ["as", "prompt", "availability", "allowed_operations", "completion", "hints"],
+      "additionalProperties": false,
+      "properties": {
+        "as": {"$ref": "#/$defs/alias"},
+        "prompt": {"type": "string", "minLength": 1, "maxLength": 480},
+        "availability": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "after_lesson"}
+          }
+        },
+        "allowed_operations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["kind", "variable", "controls"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "variable_change"},
+                  "variable": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+                  "controls": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"enum": ["slider", "geometry_point"]}
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["kind", "node", "controls"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "scene3d_view"},
+                  "node": {"$ref": "#/$defs/alias"},
+                  "controls": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"enum": ["orbit", "zoom", "preset", "reset"]}
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "completion": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["kind", "expression", "value", "tolerance"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {"const": "expression_target"},
+                "expression": {"type": "string", "minLength": 1, "maxLength": 256},
+                "value": {"type": "number"},
+                "tolerance": {"type": "number", "exclusiveMinimum": 0}
+              }
+            },
+            {
+              "type": "object",
+              "required": ["kind", "node", "yaw", "pitch", "zoom", "angular_tolerance", "zoom_tolerance"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {"const": "scene3d_view_target"},
+                "node": {"$ref": "#/$defs/alias"},
+                "match": {"enum": ["view_direction", "camera_pose"]},
+                "yaw": {"type": "number"},
+                "pitch": {"type": "number", "minimum": -1.5707963267948966, "maximum": 1.5707963267948966},
+                "zoom": {"type": "number", "minimum": 0.2, "maximum": 5},
+                "angular_tolerance": {"type": "number", "exclusiveMinimum": 0},
+                "zoom_tolerance": {"type": "number", "exclusiveMinimum": 0}
+              }
+            }
+          ]
+        },
+        "hints": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {"type": "string", "minLength": 1, "maxLength": 480}
+        },
+        "hint_after_attempts": {"type": "integer", "minimum": 1, "maximum": 20},
+        "success_message": {"type": "string", "minLength": 1, "maxLength": 480}
+      }
+    },
     "step": {
       "type": "object",
       "required": ["key", "purpose", "beats"],
@@ -84,10 +226,10 @@
       "required": ["do"],
       "additionalProperties": false,
       "properties": {
-        "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression"]},
+        "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate"]},
         "when": {"enum": ["before_speech", "during_speech", "after_speech"]},
         "as": {"$ref": "#/$defs/alias"},
-        "kind": {"enum": ["text", "math", "shape", "diagram", "plot", "image", "table", "note"]},
+        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note"]},
         "role": {"type": "string"},
         "content": {"type": "object"},
         "place": {"$ref": "#/$defs/placement"},
@@ -101,6 +243,10 @@
         "targets": {"type": "array", "items": {"type": "string"}},
         "intent": {"type": "string"},
         "expression": {"type": "string"},
+        "variable": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+        "value": {"type": "number"},
+        "easing": {"enum": ["linear", "ease_in_out"]},
+        "duration_intent": {"enum": ["brief", "normal", "extended"]},
         "reason": {"type": "string"}
       },
       "allOf": [
@@ -114,6 +260,27 @@
             "properties": {"do": {"const": "write"}, "kind": {"const": "image"}}
           },
           "then": {"properties": {"content": {"$ref": "#/$defs/imageContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "geometry"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/geometryContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "plot"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/plotContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "scene3d"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/scene3dContent"}}}
         },
         {
           "if": {"properties": {"do": {"const": "revise"}}},
@@ -142,8 +309,285 @@
         {
           "if": {"properties": {"do": {"const": "expression"}}},
           "then": {"required": ["expression"]}
+        },
+        {
+          "if": {"properties": {"do": {"const": "animate"}}},
+          "then": {"required": ["variable", "value"]}
         }
       ]
+    },
+    "geometryContent": {
+      "type": "object",
+      "required": ["axes", "points"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"type": "string"},
+        "caption": {"type": "string"},
+        "axes": {
+          "type": "object",
+          "required": ["x", "y", "equal_scale"],
+          "additionalProperties": false,
+          "properties": {
+            "x": {"$ref": "#/$defs/geometryAxis"},
+            "y": {"$ref": "#/$defs/geometryAxis"},
+            "equal_scale": {"const": true}
+          }
+        },
+        "points": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["as", "x", "y"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "x": {"type": "number"},
+              "y": {"type": "number"},
+              "label": {"type": "string"},
+              "visible": {"type": "boolean"},
+              "interaction": {
+                "type": "object",
+                "required": ["kind", "variable", "center"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "angle_control"},
+                  "variable": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+                  "center": {"$ref": "#/$defs/alias"}
+                }
+              }
+            }
+          }
+        },
+        "circles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["as", "center", "radius"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "center": {"$ref": "#/$defs/alias"},
+              "radius": {"type": "number", "exclusiveMinimum": 0},
+              "label": {"type": "string"}
+            }
+          }
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["as", "from", "to"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "from": {"$ref": "#/$defs/alias"},
+              "to": {"$ref": "#/$defs/alias"},
+              "label": {"type": "string"},
+              "style": {"enum": ["solid", "dashed", "projection"]}
+            }
+          }
+        },
+        "arcs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["as", "center", "radius", "start_angle", "end_angle"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "center": {"$ref": "#/$defs/alias"},
+              "radius": {"type": "number", "exclusiveMinimum": 0},
+              "start_angle": {"type": "number"},
+              "end_angle": {"type": "number"},
+              "label": {"type": "string"}
+            }
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
+    "lessonVariable": {
+      "type": "object",
+      "required": ["as", "initial", "min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "as": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+        "initial": {"type": "number"},
+        "min": {"type": "number"},
+        "max": {"type": "number"},
+        "label": {"type": "string", "maxLength": 80},
+        "unit": {"type": "string", "maxLength": 32},
+        "control": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "slider"},
+            "step": {"type": "number", "exclusiveMinimum": 0}
+          }
+        }
+      }
+    },
+    "plotContent": {
+      "type": "object",
+      "properties": {
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
+    "scene3dContent": {
+      "type": "object",
+      "required": ["objects", "camera", "fallback"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"type": "string"},
+        "caption": {"type": "string"},
+        "fallback": {"type": "string", "minLength": 1, "maxLength": 480},
+        "axes": {"type": "boolean"},
+        "camera": {
+          "type": "object",
+          "required": ["yaw", "pitch", "zoom"],
+          "additionalProperties": false,
+          "properties": {
+            "yaw": {"type": "number"},
+            "pitch": {"type": "number"},
+            "zoom": {"type": "number", "exclusiveMinimum": 0}
+          }
+        },
+        "objects": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "required": ["as", "kind"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "kind": {"enum": ["box", "sphere", "cylinder", "cone", "surface"]},
+              "label": {"type": "string"},
+              "color": {"type": "string"},
+              "center": {"$ref": "#/$defs/point3d"},
+              "size": {"$ref": "#/$defs/size3d"},
+              "radius": {"type": "number", "exclusiveMinimum": 0},
+              "height": {"type": "number", "exclusiveMinimum": 0},
+              "expression": {"type": "string", "minLength": 1, "maxLength": 256},
+              "x_range": {"$ref": "#/$defs/range3d"},
+              "y_range": {"$ref": "#/$defs/range3d"},
+              "samples": {"type": "integer", "minimum": 4, "maximum": 24}
+            }
+          }
+        },
+        "sections": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "required": ["as", "axis", "value"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "axis": {"enum": ["x", "y", "z"]},
+              "value": {"type": "number"},
+              "targets": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 24,
+                "uniqueItems": true,
+                "items": {"$ref": "#/$defs/alias"}
+              },
+              "display": {"enum": ["plane", "intersection", "plane_and_intersection"]},
+              "label": {"type": "string"},
+              "color": {"type": "string"}
+            }
+          }
+        },
+        "highlights": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "required": ["as", "kind", "points"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "kind": {"enum": ["point", "edge", "face"]},
+              "points": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": {"$ref": "#/$defs/point3d"}
+              },
+              "label": {"type": "string"},
+              "color": {"type": "string"}
+            }
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
+    "point3d": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {"type": "number"},
+        "y": {"type": "number"},
+        "z": {"type": "number"}
+      }
+    },
+    "size3d": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {"type": "number", "exclusiveMinimum": 0},
+        "y": {"type": "number", "exclusiveMinimum": 0},
+        "z": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "range3d": {
+      "type": "object",
+      "required": ["min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": {"type": "number"},
+        "max": {"type": "number"}
+      }
+    },
+    "valueBinding": {
+      "type": "object",
+      "required": ["target", "expression"],
+      "additionalProperties": false,
+      "properties": {
+        "target": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$"},
+        "expression": {"type": "string", "minLength": 1, "maxLength": 256}
+      }
+    },
+    "geometryAxis": {
+      "type": "object",
+      "required": ["min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": {"type": "number"},
+        "max": {"type": "number"},
+        "label": {"type": "string"}
+      }
     },
     "imageContent": {
       "type": "object",

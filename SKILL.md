@@ -2,7 +2,7 @@
 name: learning-coach
 description: Guide camera, voice, and infinite-whiteboard learning with continuous worked explanations, board-action artifacts, visual grounding, optional guided practice, session review, and evidence-based cross-session learner memory. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
 metadata:
-  version: 0.8.4
+  version: 0.12.6
   author: alan0x
   always: true
 ---
@@ -50,6 +50,16 @@ invocation, JSON Schema enforcement, OLL validation, serialization, writing,
 and delivery. Call it exactly once and wait for its result. After success, reply
 with one short natural sentence. After failure, apologize briefly without
 creating a fallback artifact or claiming that the board is ready.
+
+When the host supplies `[[LEARNING_DEGRADED_VISUAL_RETRY]]`, this is a
+machine-addressed retry of one failed visual component, not an invitation to
+reinterpret the whole lesson. Call `oll_generate_lesson` with
+`request_source: explicit_board_follow_up`; copy `board_id`, `board_revision`,
+`board_summary`, and `board_targets` from the block into `board_context`
+verbatim, use `board_revision` for `base_revision`, and keep the learner request
+limited to the named `surface` and `purpose`. Do not replace target IDs, omit
+the reference, or regenerate the rest of the course. The tool and Runtime own
+placement beside the referenced node and preservation of existing content.
 
 ## Handle provisional wake sessions
 

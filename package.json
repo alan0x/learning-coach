@@ -1,6 +1,6 @@
 {
   "name": "learning-coach-skill",
-  "version": "0.8.4",
+  "version": "0.12.6",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,7 +10,12 @@
     "build": "node scripts/oll-contract.mjs check && esbuild src/main.ts --bundle --platform=node --format=esm --target=node20 --banner:js='#!/usr/bin/env node' --outfile=main && chmod +x main",
     "oll:check": "node scripts/oll-contract.mjs check",
     "oll:sync": "node scripts/oll-contract.mjs sync",
-    "test": "npm run build && node --test test/*.test.mjs"
+    "test": "npm run build && node --test test/*.test.mjs",
+    "contract:vertex": "npm run build && node scripts/check-vertex-schema-contract.mjs",
+    "eval:visual": "npm run build && node scripts/eval-visual-generation.mjs"
+  },
+  "dependencies": {
+    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#ba9a9a7f69f060966aa62ef9cf1c50b95e35877a"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"

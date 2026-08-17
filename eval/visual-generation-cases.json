@@ -1,0 +1,70 @@
+[
+  {
+    "id": "unit-circle-to-sine",
+    "learner_request": "请结合单位圆和 y=sin x 的函数图像，解释角度旋转如何变成周期波动。",
+    "expected": {
+      "kinds": ["geometry", "plot"],
+      "geometry_fields": ["circles", "segments", "arcs"],
+      "plot_expressions": ["sin(x)"],
+      "requires_connect": true,
+      "shared_variable": {
+        "bound_kinds": ["geometry", "plot"],
+        "animate": true,
+        "direct_angle_control": true
+      },
+      "student_task": false
+    }
+  },
+  {
+    "id": "parabola-transform",
+    "learner_request": "请画出 y=(x+3)^2-4 的函数图像，并标出顶点，解释它从 y=x^2 怎样平移得到。",
+    "expected": {
+      "kinds": ["plot"],
+      "plot_expressions": ["(x+3)^2-4"]
+    }
+  },
+  {
+    "id": "natural-spring-oscillation",
+    "learner_request": "我还是不太明白弹簧为什么会来回运动，也不明白它为什么能用余弦函数表示。你能边演示边讲给我看吗？最好让我自己拖着试一试。",
+    "tutor_context": "可以考虑恢复力箭头、平衡位置和位移曲线，但这些只是讲法建议，不是用户逐字提出的硬要求。",
+    "timeout_ms": 285000,
+    "expected": {
+      "kinds": ["geometry", "plot"],
+      "geometry_fields": ["segments"],
+      "lesson_text_any_groups": [["回复力", "恢复力", "弹力", "弹性力"], ["平衡位置", "平衡点"]],
+      "plot_expressions": ["cos(x)"],
+      "requires_connect": true,
+      "shared_variable": {
+        "bound_kinds": ["geometry", "plot"],
+        "animate": true
+      },
+      "student_task": false
+    }
+  },
+  {
+    "id": "generic-coordinate-circle",
+    "learner_request": "请在坐标系里画一个圆，并结合半径解释圆的定义。",
+    "expected": {
+      "kinds": ["geometry"],
+      "geometry_fields": ["circles", "segments"]
+    }
+  },
+  {
+    "id": "semantic-process",
+    "learner_request": "请用流程图解释一元一次方程移项、合并同类项和求解之间的顺序关系。",
+    "expected": {
+      "kinds": ["diagram"]
+    }
+  },
+  {
+    "id": "interactive-cube-view-task",
+    "learner_request": "请用可以拖动旋转视角的三维场景讲解立方体，明确标出一个顶点、一条棱和一个面。讲解后，请让我把立方体转到正视图。",
+    "expected": {
+      "kinds": ["scene3d"],
+      "scene3d_fields": ["objects", "highlights"],
+      "scene3d_highlight_kinds": ["point", "edge", "face"],
+      "scene3d_fallback": true,
+      "scene3d_view_task": true
+    }
+  }
+]

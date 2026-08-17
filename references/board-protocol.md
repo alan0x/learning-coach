@@ -107,7 +107,7 @@ are available in the new artifact and do not repeat the entire original lesson.
 ## Actions
 
 Use only `write`, `revise`, `emphasize`, `connect`, `group`, `focus`, `point`,
-and `expression`. Use `when` only for `before_speech`, `during_speech`, or
+`expression`, and `animate`. Use `when` only for `before_speech`, `during_speech`, or
 `after_speech`. Do not output coordinates, zoom, duration, HTML, SVG paths, or
 JavaScript.
 
@@ -135,11 +135,109 @@ Useful content forms:
 - `math`: `{"latex":"..."}` or `fragments` containing `as` and `latex`.
 - `note`: `{"title":"...","items":["..."]}`.
 - `table`: `{"columns":["..."],"rows":[["..."]]}`.
-- `diagram`: semantic `elements`, `edges`, `points`, `guides`, or `regions`;
+- `diagram`: semantic `elements`, `edges`, or `regions`;
   give addressable items an `as` alias and refer to those aliases inside the
-  same diagram.
+  same diagram. It is not a coordinate-geometry surface and must not stand in
+  for a circle, angle, projection, or function graph.
+- `geometry`: equal-scale numeric x/y axes plus addressable `points`, `circles`,
+  `segments`, and `arcs`. Use this for unit circles and other metric coordinate
+  geometry; use `style="projection"` for a perpendicular coordinate projection.
+- `plot`: numeric `axes.x/y` ranges plus one or more addressable `curves` with
+  restricted math `expression` values; optional `points` and vertical or
+  horizontal `guides` may annotate the graph. Use `plot`, not `diagram` or a
+  table, whenever the learner explicitly requests a function image or curve.
 - `image`: only a controlled `asset_id`; map supplied regions through
   `content.regions[]` entries containing `as` and the exact `source_region`.
+
+Example function plot:
+
+```json
+{
+  "do": "write",
+  "as": "trig-curves",
+  "kind": "plot",
+  "role": "diagram",
+  "content": {
+    "axes": {
+      "x": {"min": 0, "max": 6.283185307179586},
+      "y": {"min": -1.2, "max": 1.2}
+    },
+    "curves": [
+      {"as": "sine-curve", "expression": "sin(x)", "label": "y = sin x"},
+      {"as": "cosine-curve", "expression": "cos(x)", "label": "y = cos x"}
+    ]
+  },
+  "place": {"relation": "new_region"}
+}
+```
+
+Plot expressions are data, not code. Use `x`, `pi`, `e`, arithmetic operators,
+parentheses, and supported functions such as `sin`, `cos`, `tan`, `sqrt`,
+`abs`, `exp`, and `log`. Do not emit JavaScript, LaTeX, coordinates, or SVG.
+
+## One variable, several synchronized views
+
+Use a lesson variable when the teaching point is a quantity changing across
+multiple visuals. Declare it once in `lesson.variables`; do not create separate
+state for the slider, animation, geometry, and plot.
+
+For example, a unit circle and sine graph can share `theta`:
+
+```json
+{
+  "as": "theta",
+  "initial": 0,
+  "min": 0,
+  "max": 6.283185307179586,
+  "label": "旋转角 θ",
+  "unit": "rad",
+  "control": {"kind": "slider", "step": 0.01}
+}
+```
+
+Each affected `geometry` or `plot` node supplies `content.bindings`. A binding
+names a local numeric property and the expression that computes it:
+
+```json
+"bindings": [
+  {"target": "point-p.x", "expression": "cos(theta)"},
+  {"target": "point-p.y", "expression": "sin(theta)"},
+  {"target": "theta-arc.end_angle", "expression": "theta"}
+]
+```
+
+Start the same variable's animation with an `animate` action. Use a semantic
+duration, never milliseconds:
+
+```json
+{
+  "do": "animate",
+  "variable": "theta",
+  "value": 6.283185307179586,
+  "easing": "linear",
+  "duration_intent": "extended"
+}
+```
+
+When a geometry point should be draggable around a center, put an explicit
+interaction on that point. The variable must be the same one used by the slider,
+bindings, and animation:
+
+```json
+{
+  "as": "point-p",
+  "x": 1,
+  "y": 0,
+  "interaction": {
+    "kind": "angle_control",
+    "variable": "theta",
+    "center": "origin"
+  }
+}
+```
+
+Only add these controls when the request or teaching goal genuinely involves
+motion or a changing quantity. Static lessons do not need a decorative slider.
 
 For prose that contains short formulas, keep the node as `text` or `note` and
 delimit only the formula spans with `$...$` or `\\(...\\)`. Formula-first board
