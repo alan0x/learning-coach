@@ -1,6 +1,6 @@
 {
   "name": "learning-coach-skill",
-  "version": "0.12.7",
+  "version": "0.12.8",
   "private": true,
   "type": "module",
   "engines": {
@@ -15,7 +15,7 @@
     "eval:visual": "npm run build && node scripts/eval-visual-generation.mjs"
   },
   "dependencies": {
-    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#ba9a9a7f69f060966aa62ef9cf1c50b95e35877a"
+    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#8ae59105abf3436cb1fabb151cadee0a2647e806"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"

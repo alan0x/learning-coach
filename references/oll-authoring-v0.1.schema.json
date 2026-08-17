@@ -474,7 +474,7 @@
             "additionalProperties": false,
             "properties": {
               "as": {"$ref": "#/$defs/alias"},
-              "kind": {"enum": ["box", "sphere", "cylinder", "cone", "surface"]},
+              "kind": {"enum": ["box", "sphere", "cylinder", "cone", "surface", "implicit_surface"]},
               "label": {"type": "string"},
               "color": {"type": "string"},
               "center": {"$ref": "#/$defs/point3d"},
@@ -484,6 +484,8 @@
               "expression": {"type": "string", "minLength": 1, "maxLength": 256},
               "x_range": {"$ref": "#/$defs/range3d"},
               "y_range": {"$ref": "#/$defs/range3d"},
+              "z_range": {"$ref": "#/$defs/range3d"},
+              "level": {"type": "number"},
               "samples": {"type": "integer", "minimum": 4, "maximum": 24}
             }
           }

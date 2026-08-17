@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.12.7",
+  "version": "0.12.8",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -170,7 +170,7 @@
     },
     {
       "name": "oll_enhance_selection",
-      "description": "Create a separate explanation, annotation, or safe 2D function plot beside an immutable student-ink selection. Use only when [[LEARNING_SELECTION]] requires this exact tool. Copy the source identity fields exactly, describe only the selected image, and never rewrite or replace the source ink.",
+      "description": "Create a separate explanation or validated 2D/3D function visualization beside an immutable student-ink selection. Return an explicit unsupported result when the selected expression cannot be rendered safely. Use only when [[LEARNING_SELECTION]] requires this exact tool. Copy the source identity fields exactly, describe only the selected image, and never rewrite or replace the source ink.",
       "concurrency_class": "exclusive",
       "env": [
         "VERTEX_SA_JSON",
@@ -347,7 +347,7 @@
     {
       "id": "learning.selection.enhance",
       "label": "解释白板选区",
-      "description": "根据学生保留不变的笔迹选区生成旁侧解释或函数图。",
+      "description": "根据学生保留不变的笔迹选区生成旁侧解释、二维函数图或三维函数图；无法安全绘制时返回明确原因。",
       "tags": ["learning", "selection"],
       "surfaces": ["learning.selection"],
       "execution": "sync",
@@ -373,6 +373,11 @@
             "enum": ["explain", "check-and-suggest", "generate-plot", "custom-question"]
           },
           "board": { "type": "object" },
+          "recognized_content": { "type": "string" },
+          "recognition_confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
           "lesson_title": { "type": "string" },
           "board_summary": { "type": "string" }
         },

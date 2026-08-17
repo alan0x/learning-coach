@@ -126,8 +126,34 @@ interface SelectionEnhancementArtifact {
         title: string;
         text: string;
         expression: string;
+        plot_kind?: "explicit" | "implicit";
+        level?: number;
+        samples?: number;
         x_range: { min: number; max: number };
         y_range: { min: number; max: number };
+      }
+    | {
+        kind: "scene3d";
+        title: string;
+        text: string;
+        content: {
+          title: string;
+          fallback: string;
+          axes: boolean;
+          camera: { yaw: number; pitch: number; zoom: number };
+          objects: Array<Record<string, unknown>>;
+        };
+      }
+    | {
+        kind: "unsupported";
+        title: string;
+        text: string;
+        reason_code:
+          | "unreadable_expression"
+          | "unsupported_variables"
+          | "unsupported_representation"
+          | "unsafe_complexity";
+        alternatives?: string[];
       };
 }
 
@@ -6706,7 +6732,11 @@ const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
       type: "string",
       enum: ["high", "medium", "low"],
     },
-    response_kind: { type: "string", enum: ["explanation", "plot"] },
+    response_kind: {
+      type: "string",
+      enum: ["explanation", "plot", "implicit_plot", "scene3d", "unsupported"],
+    },
+    scene_kind: { type: "string", enum: ["surface", "implicit_surface"] },
     title: { type: "string" },
     text: { type: "string" },
     items: { type: "array", items: { type: "string" } },
@@ -6715,12 +6745,27 @@ const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
     x_max: { type: "number" },
     y_min: { type: "number" },
     y_max: { type: "number" },
+    z_min: { type: "number" },
+    z_max: { type: "number" },
+    level: { type: "number" },
+    samples: { type: "integer" },
+    reason_code: {
+      type: "string",
+      enum: [
+        "unreadable_expression",
+        "unsupported_variables",
+        "unsupported_representation",
+        "unsafe_complexity",
+      ],
+    },
+    alternatives: { type: "array", items: { type: "string" } },
   },
   required: [
     "interpretation_kind",
     "interpretation_content",
     "interpretation_confidence",
     "response_kind",
+    "scene_kind",
     "title",
     "text",
     "items",
@@ -6729,6 +6774,12 @@ const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
     "x_max",
     "y_min",
     "y_max",
+    "z_min",
+    "z_max",
+    "level",
+    "samples",
+    "reason_code",
+    "alternatives",
   ],
 };
 
@@ -6800,6 +6851,13 @@ function parseSelectionModelResponse(
   }
   const output = value as Record<string, unknown>;
   const nonEmpty = (name: string) => requireNonEmptyString(output[name], name);
+  const finiteOutput = (name: string): number => {
+    const number = output[name];
+    if (typeof number !== "number" || !Number.isFinite(number)) {
+      throw new Error(`${name} must be a finite number`);
+    }
+    return number;
+  };
   const kind = nonEmpty("interpretation_kind") as SelectionContentKind;
   if (!["text", "math", "geometry", "data", "unknown"].includes(kind)) {
     throw new Error("interpretation_kind is invalid");
@@ -6810,46 +6868,215 @@ function parseSelectionModelResponse(
   }
   const title = nonEmpty("title");
   const text = nonEmpty("text");
+  const interpretationContent = nonEmpty("interpretation_content");
   const items = Array.isArray(output.items)
     ? output.items.map((item, index) => requireNonEmptyString(item, `items[${index}]`))
     : [];
   let response: SelectionEnhancementArtifact["response"];
-  if (output.response_kind === "plot") {
-    if (input.tool_id !== "generate-plot" && input.tool_id !== "custom-question") {
-      throw new Error(`${input.tool_id} cannot return a plot response`);
+  const visualizationRequested = input.tool_id === "generate-plot"
+    || input.tool_id === "custom-question";
+  const alternatives = Array.isArray(output.alternatives)
+    ? output.alternatives
+      .map((item, index) => requireNonEmptyString(item, `alternatives[${index}]`))
+      .slice(0, 4)
+    : [];
+  const unsupported = (
+    reasonCode: Extract<SelectionEnhancementArtifact["response"], { kind: "unsupported" }>["reason_code"],
+    reason: string,
+  ): SelectionEnhancementArtifact["response"] => ({
+    kind: "unsupported",
+    title: "当前无法生成这个函数图像",
+    text: reason,
+    reason_code: reasonCode,
+    alternatives: alternatives.length > 0
+      ? alternatives
+      : ["确认框选范围只包含一个完整公式", "使用“问小章鱼”让它解释或改写为可绘制形式"],
+  });
+  const failureReasonCode = (error: unknown): Extract<
+    SelectionEnhancementArtifact["response"],
+    { kind: "unsupported" }
+  >["reason_code"] => {
+    if (confidence === "low") return "unreadable_expression";
+    const message = error instanceof Error ? error.message : String(error);
+    if (/too complex/iu.test(message)) return "unsafe_complexity";
+    if (/Unknown variable or function '[a-z]'/u.test(message)) {
+      return "unsupported_variables";
     }
-    const expression = nonEmpty("expression");
-    const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
-    if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
-      throw new Error("Plot ranges must be finite numbers");
-    }
-    const [xMin, xMax, yMin, yMax] = numbers as number[];
-    if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
-    const evaluate = compileMathExpression(expression, ["x"]);
-    for (let index = 0; index <= 40; index += 1) {
-      const x = xMin + (xMax - xMin) * index / 40;
-      const y = evaluate({ x });
-      if (typeof y !== "number" || !Number.isFinite(y)) {
-        throw new Error("Plot expression is not finite across its range");
+    return "unsupported_representation";
+  };
+  try {
+    if (output.response_kind === "plot" || output.response_kind === "implicit_plot") {
+      if (!visualizationRequested) {
+        throw new Error(`${input.tool_id} cannot return a plot response`);
       }
+      const expression = nonEmpty("expression");
+      const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
+      if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
+        throw new Error("Plot ranges must be finite numbers");
+      }
+      const [xMin, xMax, yMin, yMax] = numbers as number[];
+      if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
+      if (output.response_kind === "plot") {
+        const evaluate = compileMathExpression(expression, ["x"]);
+        for (let index = 0; index <= 40; index += 1) {
+          const x = xMin + (xMax - xMin) * index / 40;
+          const y = evaluate({ x });
+          if (!Number.isFinite(y)) throw new Error("Plot expression is not finite across its range");
+        }
+        response = {
+          kind: "plot",
+          plot_kind: "explicit",
+          title,
+          text,
+          expression,
+          x_range: { min: xMin, max: xMax },
+          y_range: { min: yMin, max: yMax },
+        };
+      } else {
+        const level = finiteOutput("level");
+        const evaluate = compileMathExpression(expression, ["x", "y"]);
+        const sampled: number[] = [];
+        for (let xIndex = 0; xIndex <= 8; xIndex += 1) {
+          const x = xMin + (xMax - xMin) * xIndex / 8;
+          for (let yIndex = 0; yIndex <= 8; yIndex += 1) {
+            const y = yMin + (yMax - yMin) * yIndex / 8;
+            const value = evaluate({ x, y });
+            if (!Number.isFinite(value)) throw new Error("Implicit plot is not finite across its range");
+            sampled.push(value);
+          }
+        }
+        if (Math.min(...sampled) > level || Math.max(...sampled) < level) {
+          throw new Error("Implicit plot level is outside the sampled value range");
+        }
+        response = {
+          kind: "plot",
+          plot_kind: "implicit",
+          title,
+          text,
+          expression,
+          level,
+          samples: 80,
+          x_range: { min: xMin, max: xMax },
+          y_range: { min: yMin, max: yMax },
+        };
+      }
+    } else if (output.response_kind === "scene3d") {
+      if (!visualizationRequested) {
+        throw new Error(`${input.tool_id} cannot return a 3D response`);
+      }
+      const sceneKind = nonEmpty("scene_kind");
+      if (sceneKind !== "surface" && sceneKind !== "implicit_surface") {
+        throw new Error("scene_kind is invalid");
+      }
+      const expression = nonEmpty("expression");
+      const numbers = [
+        output.x_min, output.x_max, output.y_min, output.y_max,
+        output.z_min, output.z_max,
+      ];
+      if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
+        throw new Error("3D ranges must be finite numbers");
+      }
+      const [xMin, xMax, yMin, yMax, zMin, zMax] = numbers as number[];
+      if (xMax <= xMin || yMax <= yMin || zMax <= zMin) {
+        throw new Error("3D ranges must increase");
+      }
+      const level = finiteOutput("level");
+      const requestedSamples = Number(output.samples);
+      const samples = Number.isSafeInteger(requestedSamples)
+        ? Math.max(4, Math.min(18, requestedSamples))
+        : 12;
+      const evaluate = compileMathExpression(
+        expression,
+        sceneKind === "surface" ? ["x", "y"] : ["x", "y", "z"],
+      );
+      const sampled: number[] = [];
+      const verificationSamples = sceneKind === "surface" ? 8 : samples;
+      for (let xIndex = 0; xIndex <= verificationSamples; xIndex += 1) {
+        const x = xMin + (xMax - xMin) * xIndex / verificationSamples;
+        for (let yIndex = 0; yIndex <= verificationSamples; yIndex += 1) {
+          const y = yMin + (yMax - yMin) * yIndex / verificationSamples;
+          if (sceneKind === "surface") {
+            const z = evaluate({ x, y });
+            if (!Number.isFinite(z)) throw new Error("3D surface is not finite across its range");
+            sampled.push(z);
+          } else {
+            for (let zIndex = 0; zIndex <= verificationSamples; zIndex += 1) {
+              const z = zMin + (zMax - zMin) * zIndex / verificationSamples;
+              const value = evaluate({ x, y, z });
+              if (Number.isFinite(value)) sampled.push(value);
+            }
+          }
+        }
+      }
+      if (sceneKind === "implicit_surface"
+        && (sampled.length === 0
+          || Math.min(...sampled) > level
+          || Math.max(...sampled) < level)) {
+        throw new Error("3D implicit surface level is outside the sampled value range");
+      }
+      const object = sceneKind === "surface"
+        ? {
+            as: "selected-function",
+            kind: "surface",
+            expression,
+            x_range: { min: xMin, max: xMax },
+            y_range: { min: yMin, max: yMax },
+            samples,
+            color: "teal",
+          }
+        : {
+            as: "selected-function",
+            kind: "implicit_surface",
+            expression,
+            level,
+            x_range: { min: xMin, max: xMax },
+            y_range: { min: yMin, max: yMax },
+            z_range: { min: zMin, max: zMax },
+            samples,
+            color: "teal",
+          };
+      response = {
+        kind: "scene3d",
+        title,
+        text,
+        content: {
+          title,
+          fallback: text,
+          axes: true,
+          camera: { yaw: .65, pitch: .45, zoom: 1 },
+          objects: [object],
+        },
+      };
+    } else if (output.response_kind === "unsupported") {
+      const reasonCode = nonEmpty("reason_code") as Extract<
+        SelectionEnhancementArtifact["response"],
+        { kind: "unsupported" }
+      >["reason_code"];
+      if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
+        throw new Error("reason_code is invalid");
+      }
+      response = unsupported(reasonCode, text);
+    } else if (output.response_kind === "explanation") {
+      response = visualizationRequested && input.tool_id === "generate-plot"
+        ? unsupported(
+            confidence === "low" ? "unreadable_expression" : "unsupported_representation",
+            text,
+          )
+        : {
+            kind: "explanation",
+            title,
+            text,
+            ...(items.length > 0 ? { items } : {}),
+          };
+    } else {
+      throw new Error("response_kind is invalid");
     }
-    response = {
-      kind: "plot",
-      title,
-      text,
-      expression,
-      x_range: { min: xMin, max: xMax },
-      y_range: { min: yMin, max: yMax },
-    };
-  } else if (output.response_kind === "explanation") {
-    response = {
-      kind: "explanation",
-      title,
-      text,
-      ...(items.length > 0 ? { items } : {}),
-    };
-  } else {
-    throw new Error("response_kind is invalid");
+  } catch (error) {
+    if (!visualizationRequested) throw error;
+    response = unsupported(
+      failureReasonCode(error),
+      `已经识别到“${interpretationContent}”，但当前无法安全地生成它的图像。`,
+    );
   }
   return {
     profile: "octos.selection-enhancement",
@@ -6861,7 +7088,7 @@ function parseSelectionModelResponse(
     tool_id: input.tool_id,
     interpretation: {
       kind,
-      content: nonEmpty("interpretation_content"),
+      content: interpretationContent,
       confidence,
     },
     response,
@@ -6879,7 +7106,15 @@ async function generateSelectionEnhancement(
     maxTokens: Math.min(client.maxTokens, 4_096),
     responseSchema: SELECTION_RESPONSE_SCHEMA,
     media,
-    systemPrompt: `你是白板选区辅助工具。只解释当前请求附带的选区图片和用户明确选中的局部白板对象，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。图片识别不确定时必须明确说明。board_targets 是 Runtime 提供的稳定引用，只能用于理解上下文，不能自行增删或改写。只有 tool_id 为 generate-plot 或 custom-question、从图片或备用识别文字中读出明确的单变量 y=f(x) 且用户要求函数图像时，response_kind 才能使用 plot，expression 必须是仅含 x 的安全数学表达式。其他情况使用 explanation。不要声称看到了选区图片以外的白板。`,
+    systemPrompt: `你是白板选区辅助工具。只解释当前请求附带的选区图片和用户明确选中的局部白板对象，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。图片识别不确定时必须明确说明。board_targets 是 Runtime 提供的稳定引用，只能用于理解上下文，不能自行增删或改写。不要声称看到了选区图片以外的白板。
+
+当 tool_id 为 generate-plot 或 custom-question 且用户要求生成函数图像时，先把识别到的公式规范化为只能使用数字、x/y/z、pi、e、+ - * / ^、括号和 abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan 的表达式；必须显式写乘号。然后选择：
+- 单变量 y=f(x)：response_kind=plot，expression 只写 f(x)。
+- 二变量隐式方程 F(x,y)=c：response_kind=implicit_plot，expression 写 F(x,y)，level 写 c。
+- 显式曲面 z=f(x,y)：response_kind=scene3d，scene_kind=surface，expression 只写 f(x,y)。
+- 三变量隐式方程 F(x,y,z)=c：response_kind=scene3d，scene_kind=implicit_surface，expression 写 F(x,y,z)，level 写 c。
+- 超过三个独立变量、无法可靠识别、无法转为上述安全表达式或在合理有限范围内无法绘制：response_kind=unsupported，给出准确原因和可操作的 alternatives，不能假装已经绘制。
+所有范围必须有限并覆盖主要图形；scene3d 的 samples 使用 10 到 14。代码会再次校验你的选择和表达式，校验不通过时不会绘制。非绘图请求使用 explanation。`,
     prompt: JSON.stringify({
       learner_request: input.learner_request,
       tool_id: input.tool_id,

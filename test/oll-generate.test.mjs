@@ -2267,6 +2267,58 @@ test("selection tool writes a source-linked artifact without producing a lesson"
   await mkdir(uploadsDirectory, { recursive: true });
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const requests = [];
+  const modelResponses = [{
+    interpretation_kind: "math",
+    interpretation_content: "y = x^2",
+    interpretation_confidence: "high",
+    response_kind: "plot",
+    title: "二次函数图像",
+    text: "这是所选公式对应的函数图像，原稿保持不变。",
+    items: [],
+    expression: "x^2",
+    x_min: -4,
+    x_max: 4,
+    y_min: -1,
+    y_max: 16,
+  }, {
+    interpretation_kind: "math",
+    interpretation_content: "x^4+y^4+z^4=1",
+    interpretation_confidence: "high",
+    response_kind: "scene3d",
+    scene_kind: "implicit_surface",
+    title: "四次隐式曲面",
+    text: "拖动可以从不同方向观察这个三维曲面。",
+    items: [],
+    expression: "x^4+y^4+z^4-1",
+    x_min: -1.2,
+    x_max: 1.2,
+    y_min: -1.2,
+    y_max: 1.2,
+    z_min: -1.2,
+    z_max: 1.2,
+    level: 0,
+    samples: 12,
+    alternatives: [],
+  }, {
+    interpretation_kind: "math",
+    interpretation_content: "w+x+y+z=1",
+    interpretation_confidence: "high",
+    response_kind: "scene3d",
+    scene_kind: "implicit_surface",
+    title: "四变量关系",
+    text: "这个关系含有四个独立变量。",
+    items: [],
+    expression: "w+x+y+z-1",
+    x_min: -1,
+    x_max: 1,
+    y_min: -1,
+    y_max: 1,
+    z_min: -1,
+    z_max: 1,
+    level: 0,
+    samples: 12,
+    alternatives: ["固定 w 后绘制三维切片"],
+  }];
   const server = createServer(async (request, response) => {
     let body = "";
     request.setEncoding("utf8");
@@ -2277,20 +2329,7 @@ test("selection tool writes a source-linked artifact without producing a lesson"
       return;
     }
     requests.push(JSON.parse(body));
-    response.end(vertexPayload({
-      interpretation_kind: "math",
-      interpretation_content: "y = x^2",
-      interpretation_confidence: "high",
-      response_kind: "plot",
-      title: "二次函数图像",
-      text: "这是所选公式对应的函数图像，原稿保持不变。",
-      items: [],
-      expression: "x^2",
-      x_min: -4,
-      x_max: 4,
-      y_min: -1,
-      y_max: 16,
-    }));
+    response.end(vertexPayload(modelResponses[requests.length - 1]));
   });
   try {
     await writeFile(
@@ -2371,6 +2410,77 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     );
     assert.equal(artifact.response.kind, "plot");
     assert.equal(artifact.response.expression, "x^2");
+
+    const sceneResult = await runTool({
+      tool: "oll_enhance_selection",
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      input: {
+        turn_id: "selection-scene3d",
+        learner_request: "生成函数图像",
+        source: {
+          source_id: "selection-scene3d-source",
+          document_id: "ink-1",
+          document_version: 8,
+          bounds: { x: 120, y: 80, width: 300, height: 90 },
+          checksum: { algorithm: "sha-256", value: checksum },
+        },
+        content_hint: "math",
+        tool_id: "generate-plot",
+        board: { board_id: "learning-board-session-1", revision: 13, targets: [] },
+        recognized_content: "x^4+y^4+z^4=1",
+        recognition_confidence: "high",
+      },
+    });
+    assert.equal(sceneResult.exitCode, 0, sceneResult.stderr);
+    const sceneProtocol = JSON.parse(sceneResult.stdout);
+    const sceneArtifact = JSON.parse(await readFile(sceneProtocol.files_to_send[0], "utf8"));
+    assert.equal(sceneArtifact.response.kind, "scene3d", JSON.stringify(sceneArtifact.response));
+    assert.equal(sceneArtifact.response.content.objects[0].kind, "implicit_surface");
+    assert.equal(sceneArtifact.response.content.objects[0].expression, "x^4+y^4+z^4-1");
+
+    const unsupportedResult = await runTool({
+      tool: "oll_enhance_selection",
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      input: {
+        turn_id: "selection-unsupported",
+        learner_request: "生成函数图像",
+        source: {
+          source_id: "selection-unsupported-source",
+          document_id: "ink-1",
+          document_version: 9,
+          bounds: { x: 120, y: 80, width: 300, height: 90 },
+          checksum: { algorithm: "sha-256", value: checksum },
+        },
+        content_hint: "math",
+        tool_id: "generate-plot",
+        board: { board_id: "learning-board-session-1", revision: 14, targets: [] },
+        recognized_content: "w+x+y+z=1",
+        recognition_confidence: "high",
+      },
+    });
+    assert.equal(unsupportedResult.exitCode, 0, unsupportedResult.stderr);
+    const unsupportedProtocol = JSON.parse(unsupportedResult.stdout);
+    const unsupportedArtifact = JSON.parse(await readFile(
+      unsupportedProtocol.files_to_send[0],
+      "utf8",
+    ));
+    assert.equal(unsupportedArtifact.response.kind, "unsupported");
+    assert.equal(unsupportedArtifact.response.reason_code, "unsupported_variables");
+    assert.deepEqual(unsupportedArtifact.response.alternatives, ["固定 w 后绘制三维切片"]);
     await assert.rejects(
       readFile(join(workDirectory, "study", "oll", "learn-e2e-001.octos-lesson.json")),
     );
