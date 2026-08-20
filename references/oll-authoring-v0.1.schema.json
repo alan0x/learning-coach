@@ -359,6 +359,24 @@
             }
           }
         },
+        "polygons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["as", "points"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"},
+              "points": {
+                "type": "array",
+                "minItems": 3,
+                "items": {"$ref": "#/$defs/alias"}
+              },
+              "label": {"type": "string"},
+              "tone": {"enum": ["primary", "secondary", "accent", "neutral"]}
+            }
+          }
+        },
         "circles": {
           "type": "array",
           "items": {

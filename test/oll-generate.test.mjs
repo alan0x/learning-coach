@@ -8,7 +8,11 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { buildVertexSchemaContract, probeVertexSchema } from "../main";
+import {
+  buildVertexSchemaContract,
+  callStructuredModel,
+  probeVertexSchema,
+} from "../main";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -47,6 +51,66 @@ test("Vertex Schema probe retries temporary rate limits without changing the sch
   } finally {
     await new Promise((done) => server.close(done));
   }
+});
+
+test("structured Vertex calls retry a connection failure before any HTTP response", async () => {
+  let requests = 0;
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["ok"],
+    properties: { ok: { type: "boolean" } },
+  };
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request before simulating a dropped provider connection.
+    }
+    requests += 1;
+    if (requests === 1) {
+      request.socket.destroy();
+      return;
+    }
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({
+      candidates: [{
+        finishReason: "STOP",
+        content: { parts: [{ text: JSON.stringify({ ok: true }) }] },
+      }],
+    }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const content = await callStructuredModel({
+      endpoint: `http://127.0.0.1:${address.port}/generate`,
+      model: "test-model",
+      accessToken: "test-token",
+      timeoutMs: 5_000,
+      maxTokens: 32,
+      requestAttempts: 2,
+    }, {
+      label: "lesson-plan-outline",
+      turnId: "transport-retry-test",
+      systemPrompt: "Return JSON.",
+      prompt: "Return ok.",
+      responseSchema: schema,
+      maxTokens: 32,
+      lessonPlanPart: "outline",
+      lessonPlanAttempt: 1,
+    });
+    assert.equal(requests, 2);
+    assert.deepEqual(JSON.parse(content), { ok: true });
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("experimental Lesson Plan bundle does not duplicate the provider client", async () => {
+  const bundle = await readFile(join(root, "lesson-plan-experimental.js"), "utf8");
+  assert.doesNotMatch(bundle, /async function callStructuredModel\(/u);
+  assert.doesNotMatch(bundle, /async function vertexAccessToken\(/u);
+  assert.match(bundle, /async function generateLessonPlanWithModel\(/u);
 });
 
 const validLesson = {
@@ -1304,6 +1368,15 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
     assert.equal(partial.steps[0].beats[0].actions.some((action) => action.as === "sine-plot"), true);
     const protocol = JSON.parse(result.stdout);
     const finalLesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    const tracePath = join(workDirectory, "study", "oll", "learn-e2e-001.generation-trace.jsonl");
+    const trace = (await readFile(tracePath, "utf8")).trim().split("\n").map(JSON.parse);
+    assert.ok(trace.length > 4);
+    assert.deepEqual(trace.map((entry) => entry.sequence), trace.map((_entry, index) => index + 1));
+    assert.ok(trace.every((entry) => entry.schema === "octos.learning-coach.generation-stage.v1"));
+    assert.ok(trace.every((entry) => entry.turn_id === "learn-e2e-001"));
+    assert.ok(trace.some((entry) => entry.stage === "tool-invocation" && entry.status === "started"));
+    assert.ok(trace.some((entry) => entry.stage === "model-call" && entry.status === "completed"));
+    assert.ok(trace.some((entry) => entry.stage === "lesson-prefix-published" && entry.status === "completed"));
     assert.equal(finalLesson.steps.length, 2);
     assert.equal(finalLesson.steps[0].beats[0].actions.some((action) => action.as === "sine-plot"), true);
     assert.equal(finalLesson.steps[1].beats[0].actions.some(
@@ -1504,12 +1577,13 @@ test("one failed visual component degrades locally while the remaining lesson st
       input: { learner_request: "请用正弦函数图像解释周期。" },
       environment: {
         OLL_AUTHORING_STRATEGY: "parallel",
-        OLL_GENERATION_ATTEMPTS: "2",
+        OLL_GENERATION_ATTEMPTS: "3",
       },
     });
 
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(componentRequests, 2);
+    assert.match(result.stderr, /"stage":"lesson-component-repeated-failure".*"attempts":2/);
     assert.match(result.stderr, /"stage":"lesson-component-degraded".*"id":"sine-plot"/);
     const protocol = JSON.parse(result.stdout);
     assert.deepEqual(protocol.degraded_components.map(({ id, surface }) => ({ id, surface })), [{
@@ -1524,7 +1598,12 @@ test("one failed visual component degrades locally while the remaining lesson st
     assert.equal(fallback.role, "system-status");
     assert.equal(fallback.content.degradation.purpose, "重新生成这个plot画面");
     assert.doesNotMatch(JSON.stringify(fallback.content), /让学生/);
-    assert.equal(actions.some((action) => action.as === "explain-1-period-note"), true);
+    assert.equal(actions.some((action) => action.as === "explain-1-period-note"), false);
+    assert.doesNotMatch(
+      artifact.steps.flatMap((step) => step.beats).map((beat) => beat.say).join("\n"),
+      /观察.*图|拖动|操作.*图/,
+    );
+    assert.match(result.stderr, /"stage":"lesson-section-skipped".*"id":"explain-1"/);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -1687,6 +1766,8 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
   const incompleteGeometryComponent = structuredClone(geometryComponent);
   incompleteGeometryComponent.content.bindings = [];
   const plotComponent = structuredClone(modelAuthoredUnitCirclePlotLesson.steps[0].beats[0].actions[1]);
+  plotComponent.content.bindings[0].expression = "var";
+  plotComponent.content.bindings[1].expression = "sin(var(theta))";
   let geometryRequests = 0;
   let firstPartExistedBeforePlotCompleted = false;
   let taskPlanningRequests = 0;
@@ -1811,6 +1892,10 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
     assert.equal(taskPlanningRequests, 1);
     assert.equal(firstPartExistedBeforeTaskCompleted, true);
     assert.match(result.stderr, /"stage":"lesson-parallel-authoring".*"parallelism":1/);
+    assert.match(
+      result.stderr,
+      /"stage":"lesson-component-binding-normalization".*"id":"sine-plot".*"canonicalized":1.*"from":"var".*"to":"theta"/,
+    );
     const partial = JSON.parse(await readFile(
       join(workDirectory, "study", "oll", "learn-e2e-001.part-000.octos-lesson.json"),
       "utf8",
@@ -1836,6 +1921,13 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
 
     const protocol = JSON.parse(result.stdout);
     const finalLesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    const finalPlot = finalLesson.steps[1].beats[0].actions.find(
+      (action) => action.as === "sine-plot",
+    );
+    assert.deepEqual(finalPlot.content.bindings, [
+      { target: "current-angle.x", expression: "theta" },
+      { target: "current-angle.y", expression: "sin(theta)" },
+    ]);
     assert.equal(finalLesson.steps.length, 4);
     assert.deepEqual(finalLesson.lesson.tasks.map((task) => task.as), ["reach-sine-maximum"]);
     assert.equal(
@@ -4416,6 +4508,19 @@ test("tool requires board context for an explicit board follow-up", async () => 
     assert.match(result.stderr, /board_summary is required/);
     const protocol = JSON.parse(result.stdout);
     assert.equal(protocol.success, false);
+    assert.equal(protocol.retryable, false);
+    assert.equal(protocol.do_not_retry_same_turn, true);
+    assert.deepEqual(protocol.structured_metadata, {
+      retryable: false,
+      do_not_retry_same_turn: true,
+    });
+    assert.match(protocol.output, /Do not call oll_generate_lesson again in this turn/u);
+    const tracePath = join(workDirectory, "study", "oll", "learn-e2e-001.generation-trace.jsonl");
+    const trace = (await readFile(tracePath, "utf8")).trim().split("\n").map(JSON.parse);
+    assert.ok(trace.some((entry) => entry.stage === "tool-invocation" && entry.status === "started"));
+    assert.ok(trace.some((entry) => entry.stage === "lesson-generation"
+      && entry.status === "failed"
+      && entry.error_code === "LESSON_GENERATION_FAILED"));
   } finally {
     await rm(workDirectory, { recursive: true, force: true });
   }

@@ -1,3 +1,4 @@
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -437,7 +438,7 @@ interface VertexServiceAccount {
   token_uri?: string;
 }
 
-interface VertexClient {
+export interface VertexClient {
   endpoint: string;
   model: string;
   accessToken: string;
@@ -449,7 +450,7 @@ interface VertexClient {
 
 type ThinkingLevel = "MINIMAL" | "LOW" | "MEDIUM" | "HIGH";
 
-interface StructuredModelRequest {
+export interface StructuredModelRequest {
   label:
     | "lesson-brief"
     | "lesson-brief-verification"
@@ -459,6 +460,9 @@ interface StructuredModelRequest {
     | "lesson-visual-component"
     | "lesson-component-repair"
     | "lesson-beat-repair"
+    | "lesson-plan-bootstrap"
+    | "lesson-plan-outline"
+    | "lesson-plan-section"
     | "selection-enhancement";
   turnId: string;
   systemPrompt: string;
@@ -468,6 +472,9 @@ interface StructuredModelRequest {
   thinkingLevel?: ThinkingLevel;
   signal?: AbortSignal;
   media?: { mimeType: "image/png" | "image/jpeg" | "image/webp"; data: string };
+  lessonPlanPart?: "bootstrap" | "outline" | "section";
+  lessonPlanSection?: number;
+  lessonPlanAttempt?: number;
 }
 
 class GeneratedLessonError extends Error {
@@ -703,8 +710,10 @@ function configuredThinkingLevel(
     : label === "lesson-brief-verification"
       ? "OLL_VERIFICATION_THINKING_LEVEL"
       : label === "lesson-task-planning"
+          || label === "lesson-plan-bootstrap"
+          || label === "lesson-plan-outline"
         ? "OLL_TASK_THINKING_LEVEL"
-        : label === "lesson-section"
+        : label === "lesson-section" || label === "lesson-plan-section"
           ? "OLL_SECTION_THINKING_LEVEL"
           : label === "lesson-visual-component"
             ? "OLL_VISUAL_THINKING_LEVEL"
@@ -717,7 +726,10 @@ function configuredThinkingLevel(
                 : "OLL_AUTHORING_THINKING_LEVEL";
   const safeDefault = label === "lesson-brief-verification"
     || label === "lesson-task-planning"
+    || label === "lesson-plan-bootstrap"
+    || label === "lesson-plan-outline"
     || label === "lesson-section"
+    || label === "lesson-plan-section"
     || label === "lesson-visual-component"
     || label === "selection-classification"
     ? "LOW"
@@ -3600,6 +3612,100 @@ function expressionReferencesVariable(expression: unknown, variable: string): bo
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
 }
 
+const bindingExpressionBuiltins = new Set([
+  "abs", "acos", "asin", "atan", "ceil", "cos", "e", "exp", "floor",
+  "ln", "log", "pi", "round", "sin", "sqrt", "tan",
+]);
+
+interface VisualBindingNormalization {
+  removed: number;
+  canonicalized: number;
+  renamed: Array<{ from: string; to: string }>;
+}
+
+function canonicalModelVariableReferences(
+  expression: string,
+  plannedVariables: ReadonlySet<string>,
+): { expression: string; count: number } {
+  let count = 0;
+  const canonicalByLowercase = new Map([...plannedVariables].map((variable) => [
+    variable.toLocaleLowerCase(),
+    variable,
+  ]));
+  const canonical = expression.replace(
+    /\bvar\s*\(\s*(?:([a-z][a-z0-9_]*)|(["'])([a-z][a-z0-9_]*)\2)\s*\)/giu,
+    (match, bare: string | undefined, _quote: string | undefined, quoted: string | undefined) => {
+      const variable = canonicalByLowercase.get((bare ?? quoted ?? "").toLocaleLowerCase());
+      if (!variable) return match;
+      count += 1;
+      return variable;
+    },
+  );
+  return { expression: canonical, count };
+}
+
+/**
+ * Keep plan-owned variable identities out of the model's control. The model
+ * still chooses which visual property is driven and the shape of the
+ * expression, but it cannot invent a second lesson variable alias.
+ */
+function normalizeVisualComponentBindings(
+  action: Record<string, unknown>,
+  sharedVariables: SharedVariableRequirement[],
+): VisualBindingNormalization {
+  const result: VisualBindingNormalization = {
+    removed: 0,
+    canonicalized: 0,
+    renamed: [],
+  };
+  if (!isRecord(action.content) || !Array.isArray(action.content.bindings)) return result;
+  const bindings = action.content.bindings.filter(isRecord);
+  if (sharedVariables.length === 0) {
+    result.removed = bindings.length;
+    delete action.content.bindings;
+    return result;
+  }
+
+  const plannedVariables = new Set(sharedVariables.map((item) => item.variable));
+  for (const binding of bindings) {
+    if (typeof binding.expression !== "string") continue;
+    const canonical = canonicalModelVariableReferences(
+      binding.expression,
+      plannedVariables,
+    );
+    binding.expression = canonical.expression;
+    result.canonicalized += canonical.count;
+  }
+
+  // A wrapper can be removed without guessing even when several variables
+  // drive one visual. Renaming an invented alias is only unambiguous when the
+  // plan declared exactly one variable.
+  if (plannedVariables.size !== 1) return result;
+  const [plannedVariable] = [...plannedVariables];
+  const renamed = new Set<string>();
+  for (const binding of bindings) {
+    if (typeof binding.expression !== "string") continue;
+    const identifiers = [...new Set(
+      (binding.expression.match(/[a-z][a-z0-9_]*/giu) ?? [])
+        .map((identifier) => identifier.toLocaleLowerCase()),
+    )];
+    if (identifiers.some((identifier) => plannedVariables.has(identifier))) continue;
+    const unknown = identifiers.filter((identifier) =>
+      !plannedVariables.has(identifier) && !bindingExpressionBuiltins.has(identifier));
+    if (unknown.length !== 1) continue;
+    const [inventedVariable] = unknown;
+    binding.expression = binding.expression.replace(
+      /[a-z][a-z0-9_]*/giu,
+      (identifier) => identifier.toLocaleLowerCase() === inventedVariable
+        ? plannedVariable
+        : identifier,
+    );
+    renamed.add(inventedVariable);
+  }
+  result.renamed = [...renamed].map((from) => ({ from, to: plannedVariable }));
+  return result;
+}
+
 /** Insert fields that were already fixed by the validated request plan.
  * The authoring model still chooses teaching beats, board nodes, bindings, and
  * placement. This lowering step only copies plan-owned metadata and adds a
@@ -4682,8 +4788,75 @@ function timeoutUntil(deadlineAt: number, label: string): number {
   return remaining;
 }
 
+interface ActiveStageTrace {
+  path: string;
+  turnId: string;
+  invokedTool: string;
+  startedAt: number;
+  sequence: number;
+}
+
+let activeStageTrace: ActiveStageTrace | undefined;
+
+function stageTracePath(turnId: string): string {
+  const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
+  const path = resolve(workDirectory, "study", "oll", `${turnId}.generation-trace.jsonl`);
+  if (!path.startsWith(`${workDirectory}${sep}`) || !isAbsolute(path)) {
+    throw new Error("Resolved generation trace path escapes OCTOS_WORK_DIR");
+  }
+  return path;
+}
+
+function beginStageTrace(turnId: string, invokedTool: string, startedAt: number): void {
+  const path = stageTracePath(turnId);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, "", "utf8");
+  activeStageTrace = { path, turnId, invokedTool, startedAt, sequence: 0 };
+  stageLog({
+    stage: "tool-invocation",
+    turn_id: turnId,
+    tool: invokedTool,
+    status: "started",
+  });
+}
+
+function traceTurnIdFromRawInput(rawInput: string): string | undefined {
+  try {
+    const candidate = JSON.parse(rawInput) as unknown;
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return undefined;
+    return validateTurnId((candidate as Record<string, unknown>).turn_id);
+  } catch {
+    return undefined;
+  }
+}
+
 function stageLog(payload: Record<string, unknown>): void {
-  process.stderr.write(`learning-coach: ${JSON.stringify(payload)}\n`);
+  const trace = activeStageTrace;
+  const normalizedPayload = trace && payload.turn_id === undefined
+    ? { ...payload, turn_id: trace.turnId }
+    : payload;
+  process.stderr.write(`learning-coach: ${JSON.stringify(normalizedPayload)}\n`);
+  if (!trace) return;
+  trace.sequence += 1;
+  const entry = {
+    schema: "octos.learning-coach.generation-stage.v1",
+    sequence: trace.sequence,
+    recorded_at: new Date().toISOString(),
+    invocation_elapsed_ms: Date.now() - trace.startedAt,
+    tool: trace.invokedTool,
+    ...normalizedPayload,
+  };
+  try {
+    appendFileSync(trace.path, `${JSON.stringify(entry)}\n`, "utf8");
+  } catch (error) {
+    process.stderr.write(`learning-coach: ${JSON.stringify({
+      stage: "generation-trace",
+      turn_id: trace.turnId,
+      status: "failed",
+      error_code: "GENERATION_TRACE_WRITE_FAILED",
+      error: safeError(error),
+    })}\n`);
+  }
 }
 
 export function buildVertexSchemaContract(
@@ -4762,7 +4935,7 @@ export async function probeVertexSchema(
   };
 }
 
-async function callStructuredModel(client: VertexClient, request: StructuredModelRequest): Promise<string> {
+export async function callStructuredModel(client: VertexClient, request: StructuredModelRequest): Promise<string> {
   const startedAt = Date.now();
   const deadlineAt = requestDeadline(client);
   const thinkingLevel = request.thinkingLevel ?? configuredThinkingLevel(request.label);
@@ -4797,6 +4970,9 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
     system_prompt_bytes: Buffer.byteLength(request.systemPrompt),
     request_bytes: Buffer.byteLength(requestBody),
     max_output_tokens: request.maxTokens ?? client.maxTokens,
+    ...(request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {}),
+    ...(request.lessonPlanSection === undefined ? {} : { lesson_plan_section: request.lessonPlanSection }),
+    ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
   });
   let body = "";
   let status = 0;
@@ -4805,20 +4981,58 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
     let usedAttempts = 0;
     for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
       usedAttempts = requestAttempt;
-      const response = await fetch(client.endpoint, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${client.accessToken}`,
-          "content-type": "application/json",
-        },
-        body: requestBody,
-        signal: request.signal
-          ? AbortSignal.any([
-              request.signal,
-              AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
-            ])
-          : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
-      });
+      let response: Response;
+      try {
+        response = await fetch(client.endpoint, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${client.accessToken}`,
+            "content-type": "application/json",
+          },
+          body: requestBody,
+          signal: request.signal
+            ? AbortSignal.any([
+                request.signal,
+                AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
+              ])
+            : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
+        });
+      } catch (error) {
+        const cancelled = request.signal?.aborted === true;
+        const timeoutError = error instanceof Error
+          && (error.name === "TimeoutError" || error.name === "AbortError");
+        const cause = error instanceof Error && error.cause && typeof error.cause === "object"
+          ? error.cause as Record<string, unknown>
+          : undefined;
+        const transportCode = typeof cause?.code === "string" ? cause.code : undefined;
+        const canRetry = !cancelled && !timeoutError
+          && requestAttempt < client.requestAttempts;
+        stageLog({
+          stage: "model-transport",
+          turn_id: request.turnId,
+          label: request.label,
+          status: canRetry ? "retrying" : "failed",
+          request_attempt: requestAttempt,
+          ...(transportCode ? { transport_code: transportCode } : {}),
+          error: safeError(error),
+          ...(request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {}),
+          ...(request.lessonPlanSection === undefined ? {} : { lesson_plan_section: request.lessonPlanSection }),
+          ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
+        });
+        if (!canRetry) {
+          if (cancelled || timeoutError) throw error;
+          throw new ToolExecutionError(
+            "VERTEX_TRANSPORT_FAILED",
+            `Vertex ${request.label} transport failed${transportCode ? ` (${transportCode})` : ""}: ${safeError(error)}`,
+          );
+        }
+        const delayMs = Math.min(
+          500 * 2 ** (requestAttempt - 1),
+          timeoutUntil(deadlineAt, request.label),
+        );
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs));
+        continue;
+      }
       status = response.status;
       requestId = response.headers.get("x-goog-request-id") ?? requestId;
       body = await response.text();
@@ -4879,6 +5093,9 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
       ...(typeof usage.trafficType === "string" ? { traffic_type: usage.trafficType } : {}),
       response_bytes: Buffer.byteLength(body),
       elapsed_ms: Date.now() - startedAt,
+      ...(request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {}),
+      ...(request.lessonPlanSection === undefined ? {} : { lesson_plan_section: request.lessonPlanSection }),
+      ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
     });
     return content;
   } catch (error) {
@@ -4908,6 +5125,9 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
       http_status: status || null,
       elapsed_ms: Date.now() - startedAt,
       error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED",
+      ...(request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {}),
+      ...(request.lessonPlanSection === undefined ? {} : { lesson_plan_section: request.lessonPlanSection }),
+      ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
     });
     throw surfacedError;
   }
@@ -5757,6 +5977,7 @@ async function generateVisualComponent(
   const sharedVariables = brief.shared_variable_requirements.filter((variable) =>
     variable.bound_visuals.includes(requirement.id));
   let previousComponent: unknown;
+  let previousFailureFingerprint: string | undefined;
   let violations: GenerationViolation[] = [];
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     let raw: string;
@@ -5812,6 +6033,23 @@ async function generateVisualComponent(
       previousComponent = raw;
       if (attempt < maxAttempts) continue;
       throw new GeneratedLessonError(violations[0].message, raw, violations);
+    }
+    if (isRecord(action)) {
+      const normalization = normalizeVisualComponentBindings(action, sharedVariables);
+      if (
+        normalization.removed > 0
+        || normalization.canonicalized > 0
+        || normalization.renamed.length > 0
+      ) {
+        process.stderr.write(`learning-coach: ${JSON.stringify({
+          stage: "lesson-component-binding-normalization",
+          turn_id: input.turn_id,
+          id: requirement.id,
+          removed: normalization.removed,
+          canonicalized: normalization.canonicalized,
+          renamed: normalization.renamed,
+        })}\n`);
+      }
     }
     if (!isRecord(action)
       || action.do !== "write"
@@ -5888,6 +6126,23 @@ async function generateVisualComponent(
     if (violations.length === 0) return action as Record<string, unknown>;
     previousComponent = action;
     process.stderr.write(`learning-coach: rejected visual component '${requirement.id}' ${attempt}: ${formatViolations(violations)}\n`);
+    const failureFingerprint = createHash("sha256")
+      .update(JSON.stringify({ action, violations }))
+      .digest("hex");
+    if (failureFingerprint === previousFailureFingerprint) {
+      process.stderr.write(`learning-coach: ${JSON.stringify({
+        stage: "lesson-component-repeated-failure",
+        turn_id: input.turn_id,
+        id: requirement.id,
+        attempts: attempt,
+      })}\n`);
+      throw new GeneratedLessonError(
+        `Visual component '${requirement.id}' repeated the same invalid result after ${attempt} attempt(s)`,
+        raw,
+        violations,
+      );
+    }
+    previousFailureFingerprint = failureFingerprint;
     if (attempt === maxAttempts) {
       throw new GeneratedLessonError(
         `Visual component '${requirement.id}' failed after ${maxAttempts} attempt(s)`,
@@ -6002,11 +6257,19 @@ function markSectionDegraded(
     ? "Continue after one unavailable interactive visual"
     : "一个互动画面暂时不可用，继续其余课程";
   const firstBeat = step.beats[0];
-  if (firstBeat) {
-    firstBeat.say = english
-      ? "This interactive visual is temporarily unavailable. Let us continue with the rest of the lesson."
-      : "这个互动画面暂时没有生成成功，我们先继续后面的内容。";
-  }
+  step.beats = [{
+    key: firstBeat?.key ?? `${step.key}-visual-unavailable`,
+    say: english
+      ? "This interactive visual is temporarily unavailable. The lesson will not ask you to use it."
+      : "这个互动画面暂时没有生成成功，本节课不会再要求你操作它。",
+    delivery: "patient",
+    actions: [{
+      do: "focus",
+      when: "after_speech",
+      targets: [],
+      intent: "current_step",
+    }],
+  }];
 }
 
 function injectVisualComponents(
@@ -6207,6 +6470,14 @@ async function generateLessonInParallel(
     status: "started",
     sections: sections.length,
     visual_components: brief.visual_requirements.length,
+    visuals: brief.visual_requirements.map((requirement) => ({
+      id: requirement.id,
+      surface: requirement.surface,
+    })),
+    shared_variables: brief.shared_variable_requirements.map((variable) => ({
+      variable: variable.variable,
+      bound_visuals: variable.bound_visuals,
+    })),
     parallelism,
   })}\n`);
 
@@ -6286,6 +6557,17 @@ async function generateLessonInParallel(
   for (const [index, sectionPromise] of sectionPromises.entries()) {
     const step = await sectionPromise;
     const section = sections[index];
+    const unavailableContextVisuals = section.contextVisualIds.filter((visualId) =>
+      degradedVisualIds.has(visualId));
+    if (section.visualRequirementIds.length === 0 && unavailableContextVisuals.length > 0) {
+      process.stderr.write(`learning-coach: ${JSON.stringify({
+        stage: "lesson-section-skipped",
+        turn_id: input.turn_id,
+        id: section.id,
+        unavailable_visuals: unavailableContextVisuals,
+      })}\n`);
+      continue;
+    }
     const componentDependencies = section.visualRequirementIds.map((requirementId) => {
       const dependency = componentPromises.get(requirementId);
       if (!dependency) {
@@ -6302,10 +6584,10 @@ async function generateLessonInParallel(
       degradedComponents.push(result.degradation);
     }
     const components = componentResults.map((result) => result.action);
-    if (components.length > 0) injectVisualComponents(step, components);
     if (componentResults.some((result) => result.degradation)) {
       markSectionDegraded(step, input.language ?? "zh-CN");
     }
+    if (components.length > 0) injectVisualComponents(step, components);
     composeParallelSectionWithVisualContext(step, section, annotationLayouts);
     for (const requirementId of section.visualRequirementIds) {
       publishedVisuals.add(requirementId);
@@ -7202,7 +7484,18 @@ function partialOutputPath(input: ToolInput, part: number): string {
 }
 
 function safeError(error: unknown): string {
-  if (error instanceof Error) return error.message.slice(0, MAX_ERROR_BODY_LENGTH);
+  if (error instanceof Error) {
+    const cause = error.cause && typeof error.cause === "object"
+      ? error.cause as Record<string, unknown>
+      : undefined;
+    const causeMessage = typeof cause?.message === "string" ? cause.message : undefined;
+    const causeCode = typeof cause?.code === "string" ? cause.code : undefined;
+    return [
+      error.message,
+      causeCode ? `cause=${causeCode}` : "",
+      causeMessage && causeMessage !== error.message ? causeMessage : "",
+    ].filter(Boolean).join(": ").slice(0, MAX_ERROR_BODY_LENGTH);
+  }
   return String(error).slice(0, MAX_ERROR_BODY_LENGTH);
 }
 
@@ -7228,6 +7521,8 @@ async function main(): Promise<void> {
     const chunks: Buffer[] = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
     const rawInput = Buffer.concat(chunks).toString("utf8");
+    const traceTurnId = traceTurnIdFromRawInput(rawInput);
+    if (traceTurnId) beginStageTrace(traceTurnId, invokedTool, startedAt);
     if (invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME) {
       const input = parseSelectionClassificationInput(rawInput);
       const client = await createVertexClient();
@@ -7267,6 +7562,10 @@ async function main(): Promise<void> {
     }
     const input = parseToolInput(rawInput);
     const client = await createVertexClient();
+    const lessonPlanMode = process.env.OLL_LESSON_PLAN_MODE?.trim() || "off";
+    if (lessonPlanMode !== "off" && lessonPlanMode !== "experimental") {
+      throw new Error(`Unknown OLL_LESSON_PLAN_MODE '${lessonPlanMode}'`);
+    }
     const authoringStrategy = process.env.OLL_AUTHORING_STRATEGY?.trim() || "parallel";
     if (authoringStrategy !== "parallel" && authoringStrategy !== "monolithic") {
       throw new Error(`Unknown OLL_AUTHORING_STRATEGY '${authoringStrategy}'`);
@@ -7288,7 +7587,86 @@ async function main(): Promise<void> {
         "oll_lesson_part",
         `part=${part} elapsed_ms=${Date.now() - startedAt}`,
       );
+      stageLog({
+        stage: "lesson-prefix-published",
+        turn_id: input.turn_id,
+        status: "completed",
+        completed_sections: part,
+        elapsed_ms: Date.now() - startedAt,
+      });
     };
+    if (lessonPlanMode === "experimental" && input.request_source === "self_contained") {
+      const { generateLessonPlanWithModel } = await import("./lesson-plan-experimental.js");
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "started",
+        mode: "experimental",
+      });
+      const generatedLessonPlan = await generateLessonPlanWithModel(
+        (request) => callStructuredModel(client, {
+          label: request.label,
+          turnId: request.turn_id,
+          systemPrompt: request.system_prompt,
+          prompt: request.prompt,
+          responseSchema: request.response_schema,
+          maxTokens: request.max_output_tokens,
+          lessonPlanPart: request.part,
+          lessonPlanSection: request.section,
+          lessonPlanAttempt: request.attempt,
+        }),
+        {
+          turn_id: input.turn_id,
+          learner_request: input.learner_request,
+          language: input.language,
+          learner_context: input.learner_context,
+          tutor_context: input.tutor_context,
+        },
+        {
+          max_concurrency: 1,
+          compile: { language: input.language },
+          on_rejected_part: (event) => stageLog({
+            stage: "lesson-plan-local-rejection",
+            turn_id: input.turn_id,
+            ...event,
+          }),
+          on_playable_prefix: async ({ completed_sections, compiled }) => {
+            await publishPrefix(compiled.lesson, completed_sections);
+          },
+        },
+      );
+      const artifactPath = outputPath(input);
+      await mkdir(dirname(artifactPath), { recursive: true });
+      await writeFile(artifactPath, `${JSON.stringify(generatedLessonPlan.lesson, null, 2)}\n`, "utf8");
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "completed",
+        mode: "experimental",
+        sections: generatedLessonPlan.lesson.steps.length,
+        model_calls: generatedLessonPlan.model_calls,
+        elapsed_ms: Date.now() - startedAt,
+      });
+      emit({
+        success: true,
+        output: `Validated OLL lesson generated through the experimental Lesson Plan path with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
+        files_to_send: [artifactPath],
+        authoring_strategy: "lesson_plan_experimental",
+        lesson_plan_model_calls: generatedLessonPlan.model_calls,
+        lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
+        published_parts: publishedParts,
+      });
+      return;
+    }
+    if (lessonPlanMode === "experimental") {
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "skipped",
+        mode: "experimental",
+        reason: `request_source '${input.request_source}' is not supported by the experimental path`,
+      });
+    }
     let brief: LessonBrief;
     let generated: Awaited<ReturnType<typeof generateLesson>>;
     if (authoringStrategy === "parallel") {
@@ -7354,6 +7732,7 @@ async function main(): Promise<void> {
             : "LESSON_GENERATION_FAILED",
     });
     process.stderr.write(`learning-coach: ${message}\n`);
+    const terminalForTurn = invokedTool === TOOL_NAME;
     emit({
       success: false,
       error_code: error instanceof ToolExecutionError
@@ -7363,7 +7742,17 @@ async function main(): Promise<void> {
           : invokedTool === SELECTION_TOOL_NAME
             ? "SELECTION_ENHANCEMENT_FAILED"
             : "LESSON_GENERATION_FAILED",
-      output: message,
+      output: terminalForTurn
+        ? `Lesson generation already exhausted its internal attempts. Do not call oll_generate_lesson again in this turn. Report the failure once to the learner. ${message}`
+        : message,
+      ...(terminalForTurn ? {
+        retryable: false,
+        do_not_retry_same_turn: true,
+        structured_metadata: {
+          retryable: false,
+          do_not_retry_same_turn: true,
+        },
+      } : {}),
     });
     process.exitCode = 1;
   }

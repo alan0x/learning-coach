@@ -8,7 +8,7 @@
   "tools": [
     {
       "name": "oll_generate_lesson",
-      "description": "After resolving the learner request to exactly one authoritative source, generate, validate, save, and deliver the OLL lesson. Use self_contained for a complete standalone request, current_image for a request grounded in the current frame, and explicit_board_follow_up only when the learner explicitly continues prior board work. Never use board history to fill an incomplete request.",
+      "description": "After resolving the learner request to exactly one authoritative source, generate, validate, save, and deliver the OLL lesson. Use self_contained for a complete standalone request, current_image for a request grounded in the current frame, and explicit_board_follow_up only when the learner explicitly continues prior board work. Never use board history to fill an incomplete request. This tool performs its own generation and repair attempts; call it at most once per learner turn and do not call it again after an error in that turn.",
       "concurrency_class": "exclusive",
       "env": [
         "VERTEX_SA_JSON",
@@ -24,6 +24,7 @@
         "OLL_VERIFICATION_ATTEMPTS",
         "OLL_GENERATION_ATTEMPTS",
         "OLL_AUTHORING_STRATEGY",
+        "OLL_LESSON_PLAN_MODE",
         "OLL_DEBUG_GENERATION",
         "OCTOS_WORK_DIR",
         "OCTOS_SESSION_WORKSPACE"
@@ -313,6 +314,33 @@
     }
   ],
   "actions": [
+    {
+      "id": "learning.lesson.generate",
+      "label": "生成白板课程",
+      "description": "把 /learn 底部输入的完整学习问题直接交给课程生成器，不经过通用对话模型的工具选择。",
+      "tags": ["learning", "lesson", "generation"],
+      "surfaces": ["learning.composer"],
+      "execution": "background",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "turn_id": { "type": "string" },
+          "learner_request": { "type": "string" },
+          "request_source": {
+            "type": "string",
+            "enum": ["self_contained"]
+          },
+          "language": { "type": "string" }
+        },
+        "required": ["turn_id", "learner_request", "request_source"]
+      },
+      "binding": {
+        "type": "tool",
+        "tool": "oll_generate_lesson",
+        "input_mode": "single"
+      }
+    },
     {
       "id": "learning.selection.classify",
       "label": "识别白板选区",

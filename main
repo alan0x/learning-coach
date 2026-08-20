@@ -29,9 +29,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/ajv/dist/compile/codegen/code.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -183,9 +183,9 @@ var require_code = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/scope.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -328,9 +328,9 @@ var require_scope = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -1048,9 +1048,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/util.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "node_modules/ajv/dist/compile/util.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1215,9 +1215,9 @@ var require_util = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/names.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "node_modules/ajv/dist/compile/names.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1254,9 +1254,9 @@ var require_names = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/errors.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "node_modules/ajv/dist/compile/errors.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1376,9 +1376,9 @@ var require_errors = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/boolSchema.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1427,9 +1427,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/rules.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "node_modules/ajv/dist/compile/rules.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1458,9 +1458,9 @@ var require_rules = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/applicability.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1481,9 +1481,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/dataType.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1665,9 +1665,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/defaults.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1702,9 +1702,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/code.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1835,9 +1835,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/keyword.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1953,9 +1953,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/subschema.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2036,9 +2036,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// node_modules/fast-deep-equal/index.js
+// ../octos-lesson-language/node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "node_modules/fast-deep-equal/index.js"(exports, module) {
+  "../octos-lesson-language/node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2071,9 +2071,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// node_modules/json-schema-traverse/index.js
+// ../octos-lesson-language/node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "node_modules/json-schema-traverse/index.js"(exports, module) {
+  "../octos-lesson-language/node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2159,9 +2159,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/resolve.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2315,9 +2315,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2823,9 +2823,9 @@ var require_validate = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/validation_error.js
+// ../octos-lesson-language/node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2839,9 +2839,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/ref_error.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2856,9 +2856,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "node_modules/ajv/dist/compile/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3080,9 +3080,9 @@ var require_compile = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/data.json
+// ../octos-lesson-language/node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "../octos-lesson-language/node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3099,9 +3099,9 @@ var require_data = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/utils.js
+// ../octos-lesson-language/node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "../octos-lesson-language/node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -3412,9 +3412,9 @@ var require_utils = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/schemes.js
+// ../octos-lesson-language/node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "../octos-lesson-language/node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
     var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
@@ -3622,9 +3622,9 @@ var require_schemes = __commonJS({
   }
 });
 
-// node_modules/fast-uri/index.js
+// ../octos-lesson-language/node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "node_modules/fast-uri/index.js"(exports, module) {
+  "../octos-lesson-language/node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -3640,12 +3640,7 @@ var require_fast_uri = __commonJS({
     }
     function resolve2(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
-      const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
-      const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
-      if (baseMalformed || relativeMalformed) {
-        throw new Error(baseParsed.error || relativeParsed.error || "URI is malformed.");
-      }
-      const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true);
+      const resolved = resolveComponent(parse(baseURI, schemelessOptions), parse(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
@@ -3771,7 +3766,6 @@ var require_fast_uri = __commonJS({
     }
     var URI_PARSE = /^(?:([^#/:?]+):)?(?:\/\/((?:([^#/?@]*)@)?(\[[^#/?\]]+\]|[^#/:?]*)(?::(\d*))?))?([^#?]*)(?:\?([^#]*))?(?:#((?:.|[\n\r])*))?/u;
     var AUTHORITY_PREFIX = /^(?:[^#/:?]+:)?\/\/([^/?#]*)/;
-    var AUTHORITY_INTRODUCER_REGION = /^(?:[^#/:?]+:)?([/\\\t\n\r]*)/;
     function getParseError(parsed, matches) {
       if (matches[2] !== void 0 && parsed.path && parsed.path[0] !== "/") {
         return 'URI path must start with "/" when authority is present.';
@@ -3805,20 +3799,6 @@ var require_fast_uri = __commonJS({
       if (authorityMatch !== null && authorityMatch[1].indexOf("\\") !== -1) {
         parsed.error = "URI authority must not contain a literal backslash.";
         malformedAuthorityOrPort = true;
-      }
-      const introducerMatch = uri.match(AUTHORITY_INTRODUCER_REGION);
-      if (introducerMatch !== null) {
-        const region = introducerMatch[1];
-        const normalizedRegion = region.replace(/[\t\n\r]/g, "");
-        if (normalizedRegion.length >= 2) {
-          if (normalizedRegion.slice(0, 2) !== "//") {
-            parsed.error = parsed.error || "URI authority must not contain a literal backslash.";
-            malformedAuthorityOrPort = true;
-          } else if (region.length !== normalizedRegion.length) {
-            parsed.error = parsed.error || "URI authority introducer must not contain whitespace.";
-            malformedAuthorityOrPort = true;
-          }
-        }
       }
       const matches = uri.match(URI_PARSE);
       if (matches) {
@@ -3934,9 +3914,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/uri.js
+// ../octos-lesson-language/node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -3945,9 +3925,9 @@ var require_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/core.js
+// ../octos-lesson-language/node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "node_modules/ajv/dist/core.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4556,9 +4536,9 @@ var require_core = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/id.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4571,9 +4551,9 @@ var require_id = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/ref.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4693,9 +4673,9 @@ var require_ref = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -4714,9 +4694,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4746,9 +4726,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4774,9 +4754,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/ucs2length.js
+// ../octos-lesson-language/node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str) {
@@ -4800,9 +4780,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4832,9 +4812,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/pattern.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4869,9 +4849,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4898,9 +4878,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/required.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4980,9 +4960,9 @@ var require_required = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5009,9 +4989,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/equal.js
+// ../octos-lesson-language/node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5020,9 +5000,9 @@ var require_equal = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5087,9 +5067,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/const.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5116,9 +5096,9 @@ var require_const = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/enum.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5165,9 +5145,9 @@ var require_enum = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5203,9 +5183,9 @@ var require_validation = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5256,9 +5236,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5313,9 +5293,9 @@ var require_items = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5330,9 +5310,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5365,9 +5345,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/contains.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5459,9 +5439,9 @@ var require_contains = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5553,9 +5533,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5596,9 +5576,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5702,9 +5682,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/properties.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -5760,9 +5740,9 @@ var require_properties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5834,9 +5814,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/not.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5865,9 +5845,9 @@ var require_not = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5882,9 +5862,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5940,9 +5920,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5967,9 +5947,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/if.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6036,9 +6016,9 @@ var require_if = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6054,9 +6034,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6102,9 +6082,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
 var require_dynamicAnchor = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicAnchor = void 0;
@@ -6137,9 +6117,9 @@ var require_dynamicAnchor = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
 var require_dynamicRef = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicRef = void 0;
@@ -6183,9 +6163,9 @@ var require_dynamicRef = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
 var require_recursiveAnchor = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6204,9 +6184,9 @@ var require_recursiveAnchor = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
 var require_recursiveRef = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicRef_1 = require_dynamicRef();
@@ -6219,9 +6199,9 @@ var require_recursiveRef = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/index.js
 var require_dynamic = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6233,9 +6213,9 @@ var require_dynamic = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
 var require_dependentRequired = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6250,9 +6230,9 @@ var require_dependentRequired = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
 var require_dependentSchemas = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6266,9 +6246,9 @@ var require_dependentSchemas = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitContains.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitContains.js
 var require_limitContains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6286,9 +6266,9 @@ var require_limitContains = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/next.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/next.js
 var require_next = __commonJS({
-  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/next.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependentRequired_1 = require_dependentRequired();
@@ -6299,9 +6279,9 @@ var require_next = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
 var require_unevaluatedProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6365,9 +6345,9 @@ var require_unevaluatedProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
 var require_unevaluatedItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6409,9 +6389,9 @@ var require_unevaluatedItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/unevaluated/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/index.js
 var require_unevaluated = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var unevaluatedProperties_1 = require_unevaluatedProperties();
@@ -6421,9 +6401,9 @@ var require_unevaluated = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/format.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6511,9 +6491,9 @@ var require_format = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6522,9 +6502,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/metadata.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6545,9 +6525,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/draft2020.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/draft2020.js
 var require_draft2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6573,9 +6553,9 @@ var require_draft2020 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/types.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6587,9 +6567,9 @@ var require_types = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6692,9 +6672,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
+// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
 var require_schema = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
+  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/schema",
@@ -6752,9 +6732,9 @@ var require_schema = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
+// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
 var require_applicator2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
+  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/applicator",
@@ -6805,9 +6785,9 @@ var require_applicator2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
+// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
 var require_unevaluated2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
+  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
@@ -6825,9 +6805,9 @@ var require_unevaluated2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
+// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
 var require_content = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
+  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/content",
@@ -6846,9 +6826,9 @@ var require_content = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
+// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
 var require_core3 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
+  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/core",
@@ -6902,9 +6882,9 @@ var require_core3 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
+// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
 var require_format_annotation = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
+  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
@@ -6921,9 +6901,9 @@ var require_format_annotation = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
+// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
 var require_meta_data = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
+  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
@@ -6962,9 +6942,9 @@ var require_meta_data = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
+// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
 var require_validation2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
+  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/validation",
@@ -7057,9 +7037,9 @@ var require_validation2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
+// ../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/index.js
 var require_json_schema_2020_12 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
+  "../octos-lesson-language/node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var metaSchema = require_schema();
@@ -7092,9 +7072,9 @@ var require_json_schema_2020_12 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/2020.js
+// ../octos-lesson-language/node_modules/ajv/dist/2020.js
 var require__ = __commonJS({
-  "node_modules/ajv/dist/2020.js"(exports, module) {
+  "../octos-lesson-language/node_modules/ajv/dist/2020.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
@@ -7170,6 +7150,7 @@ var require__ = __commonJS({
 });
 
 // src/main.ts
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -7537,6 +7518,24 @@ var oll_authoring_v0_1_schema_default = {
             }
           }
         },
+        polygons: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["as", "points"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              points: {
+                type: "array",
+                minItems: 3,
+                items: { $ref: "#/$defs/alias" }
+              },
+              label: { type: "string" },
+              tone: { enum: ["primary", "secondary", "accent", "neutral"] }
+            }
+          }
+        },
         circles: {
           type: "array",
           items: {
@@ -7813,10 +7812,10 @@ var oll_authoring_v0_1_schema_default = {
   }
 };
 
-// node_modules/octos-lesson-language/dist/packages/core/src/index.js
+// ../octos-lesson-language/dist/packages/core/src/index.js
 var import__ = __toESM(require__(), 1);
 
-// node_modules/octos-lesson-language/dist/schema/authoring/v0.1.schema.json
+// ../octos-lesson-language/dist/schema/authoring/v0.1.schema.json
 var v0_1_schema_default = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://octos.dev/schema/lesson/authoring/0.1",
@@ -8178,6 +8177,24 @@ var v0_1_schema_default = {
             }
           }
         },
+        polygons: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["as", "points"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              points: {
+                type: "array",
+                minItems: 3,
+                items: { $ref: "#/$defs/alias" }
+              },
+              label: { type: "string" },
+              tone: { enum: ["primary", "secondary", "accent", "neutral"] }
+            }
+          }
+        },
         circles: {
           type: "array",
           items: {
@@ -8454,7 +8471,7 @@ var v0_1_schema_default = {
   }
 };
 
-// node_modules/octos-lesson-language/dist/packages/core/src/math-expression.js
+// ../octos-lesson-language/dist/packages/core/src/math-expression.js
 var FUNCTIONS = {
   abs: Math.abs,
   acos: Math.acos,
@@ -8628,7 +8645,7 @@ function evaluateMathExpression(expression, variables) {
   return result;
 }
 
-// node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
+// ../octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_NODE_KINDS = [
   "text",
   "math",
@@ -8666,6 +8683,11 @@ var OLL_BINDING_CAPABILITIES = {
     sections: ["value"]
   }
 };
+var OLL_EXPRESSION_CAPABILITIES = {
+  plot: {
+    curves: ["expression"]
+  }
+};
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
 function bindingCapabilitiesForNodeKind(kind) {
   if (Object.hasOwn(OLL_BINDING_CAPABILITIES, kind)) {
@@ -8700,6 +8722,7 @@ var OLL_EXECUTION_CAPABILITIES = {
   node_kinds: OLL_NODE_KINDS,
   action_names: OLL_ACTION_NAMES,
   value_bindings: OLL_BINDING_CAPABILITIES,
+  variable_expressions: OLL_EXPRESSION_CAPABILITIES,
   student_controls: {
     variable: OLL_VARIABLE_CONTROL_KINDS,
     scene3d: OLL_SCENE3D_CONTROL_KINDS
@@ -8710,7 +8733,7 @@ var OLL_EXECUTION_CAPABILITIES = {
   }
 };
 
-// node_modules/octos-lesson-language/dist/packages/core/src/index.js
+// ../octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
 var validateAuthoringDocument = ajv.compile(v0_1_schema_default);
 var ALIAS_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
@@ -9143,7 +9166,7 @@ function validateContentFragments(content, path) {
 }
 function collectAddressableContent(content) {
   const result = validateContentFragments(content, "/content");
-  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
+  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "polygons", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
     if (!content?.[field])
       continue;
     for (const item of content[field]) {
@@ -9234,6 +9257,24 @@ function validateGeometryContent(action, path, variables) {
       fail("OLL_REFERENCE_NOT_FOUND", referencePath, `Geometry point '${value}' is not defined`);
     }
   };
+  if (content.polygons !== void 0) {
+    if (!Array.isArray(content.polygons)) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/polygons`, "Expected an array");
+    }
+    content.polygons.forEach((polygon, index) => {
+      const polygonPath = `${path}/content/polygons/${index}`;
+      requireObject(polygon, polygonPath);
+      if (!Array.isArray(polygon.points) || polygon.points.length < 3) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${polygonPath}/points`, "A geometry polygon requires at least three points");
+      }
+      polygon.points.forEach((point, pointIndex) => {
+        requirePointReference(point, `${polygonPath}/points/${pointIndex}`);
+      });
+      if (new Set(polygon.points).size < 3) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${polygonPath}/points`, "A geometry polygon requires at least three distinct points");
+      }
+    });
+  }
   for (const [field, references] of [
     ["circles", ["center"]],
     ["segments", ["from", "to"]],
@@ -9453,7 +9494,7 @@ function validateScene3dContent(action, path, variables) {
     });
   }
 }
-function validateImplicitPlotContent(action, path, variables) {
+function validatePlotContent(action, path, variables) {
   if (action.kind !== "plot" || !Array.isArray(action.content.curves))
     return;
   const axes = action.content.axes ?? {};
@@ -9474,9 +9515,16 @@ function validateImplicitPlotContent(action, path, variables) {
     const curvePath = `${path}/content/curves/${index}`;
     requireObject(rawCurve, curvePath);
     const curve = rawCurve;
-    if (curve.kind !== "implicit")
-      return;
     requireString(curve.expression, `${curvePath}/expression`);
+    if (curve.kind !== "implicit") {
+      const expression = curve.expression.trim().replace(/^y\s*=/iu, "").trim();
+      try {
+        compileMathExpression(expression, ["x", ...variables.keys()]);
+      } catch (error) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/expression`, `Invalid plot expression: ${error.message}`);
+      }
+      return;
+    }
     const level = curve.level === void 0 ? 0 : requireFiniteNumber(curve.level, `${curvePath}/level`);
     const sampleCount = Number(curve.samples ?? 80);
     if (!Number.isInteger(sampleCount) || sampleCount < 16 || sampleCount > 200) {
@@ -9720,7 +9768,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
           validateStructuredContent(action.content, `${actionPath}/content`, uniqueFragments);
           validateImageResource(action, actionPath, resourceContext);
           validateGeometryContent(action, actionPath, lessonVariables);
-          validateImplicitPlotContent(action, actionPath, lessonVariables);
+          validatePlotContent(action, actionPath, lessonVariables);
           validateScene3dContent(action, actionPath, lessonVariables);
           if (action.kind === "scene3d") {
             const camera = action.content.camera;
@@ -9800,7 +9848,7 @@ function stableId(host, type, alias) {
 }
 function normalizeAddressableContent(_host, nodeId, content) {
   const clone = structuredClone(content);
-  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
+  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "polygons", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
     if (!Array.isArray(clone?.[field]))
       continue;
     clone[field] = clone[field].map((item) => {
@@ -9821,6 +9869,9 @@ function normalizeAddressableContent(_host, nodeId, content) {
       }
       if (field === "arcs") {
         normalized.center = `${nodeId}:fragment:${item.center}`;
+      }
+      if (field === "polygons" && Array.isArray(item.points)) {
+        normalized.points = item.points.map((point) => `${nodeId}:fragment:${point}`);
       }
       if (field === "points" && item.interaction?.kind === "angle_control") {
         normalized.interaction = {
@@ -10537,8 +10588,8 @@ function parseThinkingLevel(value, label) {
   return level;
 }
 function configuredThinkingLevel(label) {
-  const environmentName = label === "lesson-brief" ? "OLL_PLANNING_THINKING_LEVEL" : label === "lesson-brief-verification" ? "OLL_VERIFICATION_THINKING_LEVEL" : label === "lesson-task-planning" ? "OLL_TASK_THINKING_LEVEL" : label === "lesson-section" ? "OLL_SECTION_THINKING_LEVEL" : label === "lesson-visual-component" ? "OLL_VISUAL_THINKING_LEVEL" : label === "selection-enhancement" ? "OLL_SELECTION_THINKING_LEVEL" : label === "selection-classification" ? "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL" : label === "lesson-component-repair" || label === "lesson-beat-repair" ? "OLL_REPAIR_THINKING_LEVEL" : "OLL_AUTHORING_THINKING_LEVEL";
-  const safeDefault = label === "lesson-brief-verification" || label === "lesson-task-planning" || label === "lesson-section" || label === "lesson-visual-component" || label === "selection-classification" ? "LOW" : void 0;
+  const environmentName = label === "lesson-brief" ? "OLL_PLANNING_THINKING_LEVEL" : label === "lesson-brief-verification" ? "OLL_VERIFICATION_THINKING_LEVEL" : label === "lesson-task-planning" || label === "lesson-plan-bootstrap" || label === "lesson-plan-outline" ? "OLL_TASK_THINKING_LEVEL" : label === "lesson-section" || label === "lesson-plan-section" ? "OLL_SECTION_THINKING_LEVEL" : label === "lesson-visual-component" ? "OLL_VISUAL_THINKING_LEVEL" : label === "selection-enhancement" ? "OLL_SELECTION_THINKING_LEVEL" : label === "selection-classification" ? "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL" : label === "lesson-component-repair" || label === "lesson-beat-repair" ? "OLL_REPAIR_THINKING_LEVEL" : "OLL_AUTHORING_THINKING_LEVEL";
+  const safeDefault = label === "lesson-brief-verification" || label === "lesson-task-planning" || label === "lesson-plan-bootstrap" || label === "lesson-plan-outline" || label === "lesson-section" || label === "lesson-plan-section" || label === "lesson-visual-component" || label === "selection-classification" ? "LOW" : void 0;
   return parseThinkingLevel(process.env[environmentName], environmentName) ?? parseThinkingLevel(process.env.OLL_THINKING_LEVEL, "OLL_THINKING_LEVEL") ?? safeDefault;
 }
 function validateTurnId(value) {
@@ -13242,6 +13293,85 @@ function expressionReferencesVariable(expression, variable) {
   const tokens = expression.match(/[a-z][a-z0-9_]*/giu) ?? [];
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
 }
+var bindingExpressionBuiltins = /* @__PURE__ */ new Set([
+  "abs",
+  "acos",
+  "asin",
+  "atan",
+  "ceil",
+  "cos",
+  "e",
+  "exp",
+  "floor",
+  "ln",
+  "log",
+  "pi",
+  "round",
+  "sin",
+  "sqrt",
+  "tan"
+]);
+function canonicalModelVariableReferences(expression, plannedVariables) {
+  let count = 0;
+  const canonicalByLowercase = new Map([...plannedVariables].map((variable) => [
+    variable.toLocaleLowerCase(),
+    variable
+  ]));
+  const canonical = expression.replace(
+    /\bvar\s*\(\s*(?:([a-z][a-z0-9_]*)|(["'])([a-z][a-z0-9_]*)\2)\s*\)/giu,
+    (match, bare, _quote, quoted) => {
+      const variable = canonicalByLowercase.get((bare ?? quoted ?? "").toLocaleLowerCase());
+      if (!variable) return match;
+      count += 1;
+      return variable;
+    }
+  );
+  return { expression: canonical, count };
+}
+function normalizeVisualComponentBindings(action, sharedVariables) {
+  const result = {
+    removed: 0,
+    canonicalized: 0,
+    renamed: []
+  };
+  if (!isRecord(action.content) || !Array.isArray(action.content.bindings)) return result;
+  const bindings = action.content.bindings.filter(isRecord);
+  if (sharedVariables.length === 0) {
+    result.removed = bindings.length;
+    delete action.content.bindings;
+    return result;
+  }
+  const plannedVariables = new Set(sharedVariables.map((item) => item.variable));
+  for (const binding of bindings) {
+    if (typeof binding.expression !== "string") continue;
+    const canonical = canonicalModelVariableReferences(
+      binding.expression,
+      plannedVariables
+    );
+    binding.expression = canonical.expression;
+    result.canonicalized += canonical.count;
+  }
+  if (plannedVariables.size !== 1) return result;
+  const [plannedVariable] = [...plannedVariables];
+  const renamed = /* @__PURE__ */ new Set();
+  for (const binding of bindings) {
+    if (typeof binding.expression !== "string") continue;
+    const identifiers = [...new Set(
+      (binding.expression.match(/[a-z][a-z0-9_]*/giu) ?? []).map((identifier) => identifier.toLocaleLowerCase())
+    )];
+    if (identifiers.some((identifier) => plannedVariables.has(identifier))) continue;
+    const unknown = identifiers.filter((identifier) => !plannedVariables.has(identifier) && !bindingExpressionBuiltins.has(identifier));
+    if (unknown.length !== 1) continue;
+    const [inventedVariable] = unknown;
+    binding.expression = binding.expression.replace(
+      /[a-z][a-z0-9_]*/giu,
+      (identifier) => identifier.toLocaleLowerCase() === inventedVariable ? plannedVariable : identifier
+    );
+    renamed.add(inventedVariable);
+  }
+  result.renamed = [...renamed].map((from) => ({ from, to: plannedVariable }));
+  return result;
+}
 function lowerPlannedLessonFields(document, brief) {
   if (!isRecord(document) || !isRecord(document.lesson)) return document;
   if (Array.isArray(document.steps)) {
@@ -14147,9 +14277,64 @@ function timeoutUntil(deadlineAt, label) {
   }
   return remaining;
 }
+var activeStageTrace;
+function stageTracePath(turnId) {
+  const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
+  const path = resolve(workDirectory, "study", "oll", `${turnId}.generation-trace.jsonl`);
+  if (!path.startsWith(`${workDirectory}${sep}`) || !isAbsolute(path)) {
+    throw new Error("Resolved generation trace path escapes OCTOS_WORK_DIR");
+  }
+  return path;
+}
+function beginStageTrace(turnId, invokedTool, startedAt) {
+  const path = stageTracePath(turnId);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, "", "utf8");
+  activeStageTrace = { path, turnId, invokedTool, startedAt, sequence: 0 };
+  stageLog({
+    stage: "tool-invocation",
+    turn_id: turnId,
+    tool: invokedTool,
+    status: "started"
+  });
+}
+function traceTurnIdFromRawInput(rawInput) {
+  try {
+    const candidate = JSON.parse(rawInput);
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return void 0;
+    return validateTurnId(candidate.turn_id);
+  } catch {
+    return void 0;
+  }
+}
 function stageLog(payload) {
-  process.stderr.write(`learning-coach: ${JSON.stringify(payload)}
+  const trace = activeStageTrace;
+  const normalizedPayload = trace && payload.turn_id === void 0 ? { ...payload, turn_id: trace.turnId } : payload;
+  process.stderr.write(`learning-coach: ${JSON.stringify(normalizedPayload)}
 `);
+  if (!trace) return;
+  trace.sequence += 1;
+  const entry = {
+    schema: "octos.learning-coach.generation-stage.v1",
+    sequence: trace.sequence,
+    recorded_at: (/* @__PURE__ */ new Date()).toISOString(),
+    invocation_elapsed_ms: Date.now() - trace.startedAt,
+    tool: trace.invokedTool,
+    ...normalizedPayload
+  };
+  try {
+    appendFileSync(trace.path, `${JSON.stringify(entry)}
+`, "utf8");
+  } catch (error) {
+    process.stderr.write(`learning-coach: ${JSON.stringify({
+      stage: "generation-trace",
+      turn_id: trace.turnId,
+      status: "failed",
+      error_code: "GENERATION_TRACE_WRITE_FAILED",
+      error: safeError(error)
+    })}
+`);
+  }
 }
 function buildVertexSchemaContract(inputCandidate, briefCandidate) {
   const input = parseToolInput(JSON.stringify(inputCandidate));
@@ -14240,7 +14425,10 @@ async function callStructuredModel(client, request) {
     prompt_bytes: Buffer.byteLength(request.prompt),
     system_prompt_bytes: Buffer.byteLength(request.systemPrompt),
     request_bytes: Buffer.byteLength(requestBody),
-    max_output_tokens: request.maxTokens ?? client.maxTokens
+    max_output_tokens: request.maxTokens ?? client.maxTokens,
+    ...request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {},
+    ...request.lessonPlanSection === void 0 ? {} : { lesson_plan_section: request.lessonPlanSection },
+    ...request.lessonPlanAttempt === void 0 ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }
   });
   let body = "";
   let status = 0;
@@ -14249,18 +14437,52 @@ async function callStructuredModel(client, request) {
     let usedAttempts = 0;
     for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
       usedAttempts = requestAttempt;
-      const response = await fetch(client.endpoint, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${client.accessToken}`,
-          "content-type": "application/json"
-        },
-        body: requestBody,
-        signal: request.signal ? AbortSignal.any([
-          request.signal,
-          AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
-        ]) : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
-      });
+      let response;
+      try {
+        response = await fetch(client.endpoint, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${client.accessToken}`,
+            "content-type": "application/json"
+          },
+          body: requestBody,
+          signal: request.signal ? AbortSignal.any([
+            request.signal,
+            AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
+          ]) : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
+        });
+      } catch (error) {
+        const cancelled = request.signal?.aborted === true;
+        const timeoutError = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+        const cause = error instanceof Error && error.cause && typeof error.cause === "object" ? error.cause : void 0;
+        const transportCode = typeof cause?.code === "string" ? cause.code : void 0;
+        const canRetry = !cancelled && !timeoutError && requestAttempt < client.requestAttempts;
+        stageLog({
+          stage: "model-transport",
+          turn_id: request.turnId,
+          label: request.label,
+          status: canRetry ? "retrying" : "failed",
+          request_attempt: requestAttempt,
+          ...transportCode ? { transport_code: transportCode } : {},
+          error: safeError(error),
+          ...request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {},
+          ...request.lessonPlanSection === void 0 ? {} : { lesson_plan_section: request.lessonPlanSection },
+          ...request.lessonPlanAttempt === void 0 ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }
+        });
+        if (!canRetry) {
+          if (cancelled || timeoutError) throw error;
+          throw new ToolExecutionError(
+            "VERTEX_TRANSPORT_FAILED",
+            `Vertex ${request.label} transport failed${transportCode ? ` (${transportCode})` : ""}: ${safeError(error)}`
+          );
+        }
+        const delayMs2 = Math.min(
+          500 * 2 ** (requestAttempt - 1),
+          timeoutUntil(deadlineAt, request.label)
+        );
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs2));
+        continue;
+      }
       status = response.status;
       requestId = response.headers.get("x-goog-request-id") ?? requestId;
       body = await response.text();
@@ -14309,7 +14531,10 @@ async function callStructuredModel(client, request) {
       ...metric("totalTokenCount") === void 0 ? {} : { total_tokens: metric("totalTokenCount") },
       ...typeof usage.trafficType === "string" ? { traffic_type: usage.trafficType } : {},
       response_bytes: Buffer.byteLength(body),
-      elapsed_ms: Date.now() - startedAt
+      elapsed_ms: Date.now() - startedAt,
+      ...request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {},
+      ...request.lessonPlanSection === void 0 ? {} : { lesson_plan_section: request.lessonPlanSection },
+      ...request.lessonPlanAttempt === void 0 ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }
     });
     return content;
   } catch (error) {
@@ -14329,7 +14554,10 @@ async function callStructuredModel(client, request) {
       status: "failed",
       http_status: status || null,
       elapsed_ms: Date.now() - startedAt,
-      error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED"
+      error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED",
+      ...request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {},
+      ...request.lessonPlanSection === void 0 ? {} : { lesson_plan_section: request.lessonPlanSection },
+      ...request.lessonPlanAttempt === void 0 ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }
     });
     throw surfacedError;
   }
@@ -15034,6 +15262,7 @@ async function generateVisualComponent(client, input, brief, requirement, respon
   );
   const sharedVariables = brief.shared_variable_requirements.filter((variable) => variable.bound_visuals.includes(requirement.id));
   let previousComponent;
+  let previousFailureFingerprint;
   let violations = [];
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     let raw;
@@ -15087,6 +15316,20 @@ async function generateVisualComponent(client, input, brief, requirement, respon
       previousComponent = raw;
       if (attempt < maxAttempts) continue;
       throw new GeneratedLessonError(violations[0].message, raw, violations);
+    }
+    if (isRecord(action)) {
+      const normalization = normalizeVisualComponentBindings(action, sharedVariables);
+      if (normalization.removed > 0 || normalization.canonicalized > 0 || normalization.renamed.length > 0) {
+        process.stderr.write(`learning-coach: ${JSON.stringify({
+          stage: "lesson-component-binding-normalization",
+          turn_id: input.turn_id,
+          id: requirement.id,
+          removed: normalization.removed,
+          canonicalized: normalization.canonicalized,
+          renamed: normalization.renamed
+        })}
+`);
+      }
     }
     if (!isRecord(action) || action.do !== "write" || action.as !== requirement.id || action.kind !== requirement.surface) {
       violations = [{
@@ -15147,6 +15390,22 @@ async function generateVisualComponent(client, input, brief, requirement, respon
     previousComponent = action;
     process.stderr.write(`learning-coach: rejected visual component '${requirement.id}' ${attempt}: ${formatViolations(violations)}
 `);
+    const failureFingerprint = createHash("sha256").update(JSON.stringify({ action, violations })).digest("hex");
+    if (failureFingerprint === previousFailureFingerprint) {
+      process.stderr.write(`learning-coach: ${JSON.stringify({
+        stage: "lesson-component-repeated-failure",
+        turn_id: input.turn_id,
+        id: requirement.id,
+        attempts: attempt
+      })}
+`);
+      throw new GeneratedLessonError(
+        `Visual component '${requirement.id}' repeated the same invalid result after ${attempt} attempt(s)`,
+        raw,
+        violations
+      );
+    }
+    previousFailureFingerprint = failureFingerprint;
     if (attempt === maxAttempts) {
       throw new GeneratedLessonError(
         `Visual component '${requirement.id}' failed after ${maxAttempts} attempt(s)`,
@@ -15230,9 +15489,17 @@ function markSectionDegraded(step, language) {
   const english = language.toLocaleLowerCase().startsWith("en");
   step.purpose = english ? "Continue after one unavailable interactive visual" : "\u4E00\u4E2A\u4E92\u52A8\u753B\u9762\u6682\u65F6\u4E0D\u53EF\u7528\uFF0C\u7EE7\u7EED\u5176\u4F59\u8BFE\u7A0B";
   const firstBeat = step.beats[0];
-  if (firstBeat) {
-    firstBeat.say = english ? "This interactive visual is temporarily unavailable. Let us continue with the rest of the lesson." : "\u8FD9\u4E2A\u4E92\u52A8\u753B\u9762\u6682\u65F6\u6CA1\u6709\u751F\u6210\u6210\u529F\uFF0C\u6211\u4EEC\u5148\u7EE7\u7EED\u540E\u9762\u7684\u5185\u5BB9\u3002";
-  }
+  step.beats = [{
+    key: firstBeat?.key ?? `${step.key}-visual-unavailable`,
+    say: english ? "This interactive visual is temporarily unavailable. The lesson will not ask you to use it." : "\u8FD9\u4E2A\u4E92\u52A8\u753B\u9762\u6682\u65F6\u6CA1\u6709\u751F\u6210\u6210\u529F\uFF0C\u672C\u8282\u8BFE\u4E0D\u4F1A\u518D\u8981\u6C42\u4F60\u64CD\u4F5C\u5B83\u3002",
+    delivery: "patient",
+    actions: [{
+      do: "focus",
+      when: "after_speech",
+      targets: [],
+      intent: "current_step"
+    }]
+  }];
 }
 function injectVisualComponents(step, components) {
   const firstBeat = step.beats[0];
@@ -15384,6 +15651,14 @@ async function generateLessonInParallel(client, input, brief, onPrefix, signal) 
     status: "started",
     sections: sections.length,
     visual_components: brief.visual_requirements.length,
+    visuals: brief.visual_requirements.map((requirement) => ({
+      id: requirement.id,
+      surface: requirement.surface
+    })),
+    shared_variables: brief.shared_variable_requirements.map((variable) => ({
+      variable: variable.variable,
+      bound_visuals: variable.bound_visuals
+    })),
     parallelism
   })}
 `);
@@ -15455,6 +15730,17 @@ async function generateLessonInParallel(client, input, brief, onPrefix, signal) 
   for (const [index, sectionPromise] of sectionPromises.entries()) {
     const step = await sectionPromise;
     const section = sections[index];
+    const unavailableContextVisuals = section.contextVisualIds.filter((visualId) => degradedVisualIds.has(visualId));
+    if (section.visualRequirementIds.length === 0 && unavailableContextVisuals.length > 0) {
+      process.stderr.write(`learning-coach: ${JSON.stringify({
+        stage: "lesson-section-skipped",
+        turn_id: input.turn_id,
+        id: section.id,
+        unavailable_visuals: unavailableContextVisuals
+      })}
+`);
+      continue;
+    }
     const componentDependencies = section.visualRequirementIds.map((requirementId) => {
       const dependency = componentPromises.get(requirementId);
       if (!dependency) {
@@ -15471,10 +15757,10 @@ async function generateLessonInParallel(client, input, brief, onPrefix, signal) 
       degradedComponents.push(result.degradation);
     }
     const components = componentResults.map((result) => result.action);
-    if (components.length > 0) injectVisualComponents(step, components);
     if (componentResults.some((result) => result.degradation)) {
       markSectionDegraded(step, input.language ?? "zh-CN");
     }
+    if (components.length > 0) injectVisualComponents(step, components);
     composeParallelSectionWithVisualContext(step, section, annotationLayouts);
     for (const requirementId of section.visualRequirementIds) {
       publishedVisuals.add(requirementId);
@@ -16260,7 +16546,16 @@ function partialOutputPath(input, part) {
   return path;
 }
 function safeError(error) {
-  if (error instanceof Error) return error.message.slice(0, MAX_ERROR_BODY_LENGTH);
+  if (error instanceof Error) {
+    const cause = error.cause && typeof error.cause === "object" ? error.cause : void 0;
+    const causeMessage = typeof cause?.message === "string" ? cause.message : void 0;
+    const causeCode = typeof cause?.code === "string" ? cause.code : void 0;
+    return [
+      error.message,
+      causeCode ? `cause=${causeCode}` : "",
+      causeMessage && causeMessage !== error.message ? causeMessage : ""
+    ].filter(Boolean).join(": ").slice(0, MAX_ERROR_BODY_LENGTH);
+  }
   return String(error).slice(0, MAX_ERROR_BODY_LENGTH);
 }
 function emit(payload) {
@@ -16283,6 +16578,8 @@ async function main() {
     const chunks = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
     const rawInput = Buffer.concat(chunks).toString("utf8");
+    const traceTurnId = traceTurnIdFromRawInput(rawInput);
+    if (traceTurnId) beginStageTrace(traceTurnId, invokedTool, startedAt);
     if (invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME) {
       const input2 = parseSelectionClassificationInput(rawInput);
       const client2 = await createVertexClient();
@@ -16323,6 +16620,10 @@ async function main() {
     }
     const input = parseToolInput(rawInput);
     const client = await createVertexClient();
+    const lessonPlanMode = process.env.OLL_LESSON_PLAN_MODE?.trim() || "off";
+    if (lessonPlanMode !== "off" && lessonPlanMode !== "experimental") {
+      throw new Error(`Unknown OLL_LESSON_PLAN_MODE '${lessonPlanMode}'`);
+    }
     const authoringStrategy = process.env.OLL_AUTHORING_STRATEGY?.trim() || "parallel";
     if (authoringStrategy !== "parallel" && authoringStrategy !== "monolithic") {
       throw new Error(`Unknown OLL_AUTHORING_STRATEGY '${authoringStrategy}'`);
@@ -16345,7 +16646,87 @@ async function main() {
         "oll_lesson_part",
         `part=${part} elapsed_ms=${Date.now() - startedAt}`
       );
+      stageLog({
+        stage: "lesson-prefix-published",
+        turn_id: input.turn_id,
+        status: "completed",
+        completed_sections: part,
+        elapsed_ms: Date.now() - startedAt
+      });
     };
+    if (lessonPlanMode === "experimental" && input.request_source === "self_contained") {
+      const { generateLessonPlanWithModel } = await import("./lesson-plan-experimental.js");
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "started",
+        mode: "experimental"
+      });
+      const generatedLessonPlan = await generateLessonPlanWithModel(
+        (request) => callStructuredModel(client, {
+          label: request.label,
+          turnId: request.turn_id,
+          systemPrompt: request.system_prompt,
+          prompt: request.prompt,
+          responseSchema: request.response_schema,
+          maxTokens: request.max_output_tokens,
+          lessonPlanPart: request.part,
+          lessonPlanSection: request.section,
+          lessonPlanAttempt: request.attempt
+        }),
+        {
+          turn_id: input.turn_id,
+          learner_request: input.learner_request,
+          language: input.language,
+          learner_context: input.learner_context,
+          tutor_context: input.tutor_context
+        },
+        {
+          max_concurrency: 1,
+          compile: { language: input.language },
+          on_rejected_part: (event) => stageLog({
+            stage: "lesson-plan-local-rejection",
+            turn_id: input.turn_id,
+            ...event
+          }),
+          on_playable_prefix: async ({ completed_sections, compiled }) => {
+            await publishPrefix(compiled.lesson, completed_sections);
+          }
+        }
+      );
+      const artifactPath2 = outputPath(input);
+      await mkdir(dirname(artifactPath2), { recursive: true });
+      await writeFile(artifactPath2, `${JSON.stringify(generatedLessonPlan.lesson, null, 2)}
+`, "utf8");
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "completed",
+        mode: "experimental",
+        sections: generatedLessonPlan.lesson.steps.length,
+        model_calls: generatedLessonPlan.model_calls,
+        elapsed_ms: Date.now() - startedAt
+      });
+      emit({
+        success: true,
+        output: `Validated OLL lesson generated through the experimental Lesson Plan path with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
+        files_to_send: [artifactPath2],
+        authoring_strategy: "lesson_plan_experimental",
+        lesson_plan_model_calls: generatedLessonPlan.model_calls,
+        lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
+        published_parts: publishedParts
+      });
+      return;
+    }
+    if (lessonPlanMode === "experimental") {
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "skipped",
+        mode: "experimental",
+        reason: `request_source '${input.request_source}' is not supported by the experimental path`
+      });
+    }
     let brief;
     let generated;
     if (authoringStrategy === "parallel") {
@@ -16400,10 +16781,19 @@ async function main() {
     });
     process.stderr.write(`learning-coach: ${message}
 `);
+    const terminalForTurn = invokedTool === TOOL_NAME;
     emit({
       success: false,
       error_code: error instanceof ToolExecutionError ? error.code : invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME ? "SELECTION_CLASSIFICATION_FAILED" : invokedTool === SELECTION_TOOL_NAME ? "SELECTION_ENHANCEMENT_FAILED" : "LESSON_GENERATION_FAILED",
-      output: message
+      output: terminalForTurn ? `Lesson generation already exhausted its internal attempts. Do not call oll_generate_lesson again in this turn. Report the failure once to the learner. ${message}` : message,
+      ...terminalForTurn ? {
+        retryable: false,
+        do_not_retry_same_turn: true,
+        structured_metadata: {
+          retryable: false,
+          do_not_retry_same_turn: true
+        }
+      } : {}
     });
     process.exitCode = 1;
   }
@@ -16413,6 +16803,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
 }
 export {
   buildVertexSchemaContract,
+  callStructuredModel,
   createVertexClient,
   probeVertexSchema
 };

@@ -7,15 +7,18 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "node scripts/oll-contract.mjs check && esbuild src/main.ts --bundle --platform=node --format=esm --target=node20 --banner:js='#!/usr/bin/env node' --outfile=main && chmod +x main",
+    "build": "node scripts/oll-contract.mjs check && esbuild src/main.ts --bundle --platform=node --format=esm --target=node20 --external:./lesson-plan-experimental.js --banner:js='#!/usr/bin/env node' --outfile=main && esbuild src/lesson-plan-api.ts --bundle --platform=node --format=esm --target=node20 --outfile=lesson-plan-experimental.js && chmod +x main",
     "oll:check": "node scripts/oll-contract.mjs check",
     "oll:sync": "node scripts/oll-contract.mjs sync",
     "test": "npm run build && node --test test/*.test.mjs",
     "contract:vertex": "npm run build && node scripts/check-vertex-schema-contract.mjs",
-    "eval:visual": "npm run build && node scripts/eval-visual-generation.mjs"
+    "contract:lesson-plan-vertex": "node scripts/check-lesson-plan-vertex-schema.mjs",
+    "eval:visual": "npm run build && node scripts/eval-visual-generation.mjs",
+    "eval:lesson-plan": "node scripts/eval-lesson-plan-generation.mjs",
+    "eval:lesson-paths": "npm run build && node scripts/compare-lesson-generation-paths.mjs"
   },
   "dependencies": {
-    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#8ae59105abf3436cb1fabb151cadee0a2647e806"
+    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#35c7b7fc133576dde79e40458d3b70f6f73dabb0"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"
