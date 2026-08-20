@@ -1,0 +1,17 @@
+[
+  {
+    "id": "parabola-basics",
+    "learner_request": "我一直不明白为什么 y=x^2 的图像开口向上，请结合函数图像解释。",
+    "expected_kinds": ["plot"]
+  },
+  {
+    "id": "unit-circle-to-sine",
+    "learner_request": "请结合单位圆和 y=sin x 的函数图像，解释角度旋转如何变成周期波动。",
+    "expected_kinds": ["geometry", "plot"]
+  },
+  {
+    "id": "circle-arc-length",
+    "learner_request": "请结合圆、圆心角和半径，解释弧长公式是怎么得到的。",
+    "expected_kinds": ["geometry"]
+  }
+]

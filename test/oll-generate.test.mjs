@@ -8,7 +8,11 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { buildVertexSchemaContract, probeVertexSchema } from "../main";
+import {
+  buildVertexSchemaContract,
+  callStructuredModel,
+  probeVertexSchema,
+} from "../main";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -47,6 +51,66 @@ test("Vertex Schema probe retries temporary rate limits without changing the sch
   } finally {
     await new Promise((done) => server.close(done));
   }
+});
+
+test("structured Vertex calls retry a connection failure before any HTTP response", async () => {
+  let requests = 0;
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["ok"],
+    properties: { ok: { type: "boolean" } },
+  };
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request before simulating a dropped provider connection.
+    }
+    requests += 1;
+    if (requests === 1) {
+      request.socket.destroy();
+      return;
+    }
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({
+      candidates: [{
+        finishReason: "STOP",
+        content: { parts: [{ text: JSON.stringify({ ok: true }) }] },
+      }],
+    }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const content = await callStructuredModel({
+      endpoint: `http://127.0.0.1:${address.port}/generate`,
+      model: "test-model",
+      accessToken: "test-token",
+      timeoutMs: 5_000,
+      maxTokens: 32,
+      requestAttempts: 2,
+    }, {
+      label: "lesson-plan-outline",
+      turnId: "transport-retry-test",
+      systemPrompt: "Return JSON.",
+      prompt: "Return ok.",
+      responseSchema: schema,
+      maxTokens: 32,
+      lessonPlanPart: "outline",
+      lessonPlanAttempt: 1,
+    });
+    assert.equal(requests, 2);
+    assert.deepEqual(JSON.parse(content), { ok: true });
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("experimental Lesson Plan bundle does not duplicate the provider client", async () => {
+  const bundle = await readFile(join(root, "lesson-plan-experimental.js"), "utf8");
+  assert.doesNotMatch(bundle, /async function callStructuredModel\(/u);
+  assert.doesNotMatch(bundle, /async function vertexAccessToken\(/u);
+  assert.match(bundle, /async function generateLessonPlanWithModel\(/u);
 });
 
 const validLesson = {
@@ -1304,6 +1368,15 @@ test("parallel authoring overlaps independent work, publishes a playable prefix,
     assert.equal(partial.steps[0].beats[0].actions.some((action) => action.as === "sine-plot"), true);
     const protocol = JSON.parse(result.stdout);
     const finalLesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    const tracePath = join(workDirectory, "study", "oll", "learn-e2e-001.generation-trace.jsonl");
+    const trace = (await readFile(tracePath, "utf8")).trim().split("\n").map(JSON.parse);
+    assert.ok(trace.length > 4);
+    assert.deepEqual(trace.map((entry) => entry.sequence), trace.map((_entry, index) => index + 1));
+    assert.ok(trace.every((entry) => entry.schema === "octos.learning-coach.generation-stage.v1"));
+    assert.ok(trace.every((entry) => entry.turn_id === "learn-e2e-001"));
+    assert.ok(trace.some((entry) => entry.stage === "tool-invocation" && entry.status === "started"));
+    assert.ok(trace.some((entry) => entry.stage === "model-call" && entry.status === "completed"));
+    assert.ok(trace.some((entry) => entry.stage === "lesson-prefix-published" && entry.status === "completed"));
     assert.equal(finalLesson.steps.length, 2);
     assert.equal(finalLesson.steps[0].beats[0].actions.some((action) => action.as === "sine-plot"), true);
     assert.equal(finalLesson.steps[1].beats[0].actions.some(
@@ -1504,12 +1577,13 @@ test("one failed visual component degrades locally while the remaining lesson st
       input: { learner_request: "请用正弦函数图像解释周期。" },
       environment: {
         OLL_AUTHORING_STRATEGY: "parallel",
-        OLL_GENERATION_ATTEMPTS: "2",
+        OLL_GENERATION_ATTEMPTS: "3",
       },
     });
 
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(componentRequests, 2);
+    assert.match(result.stderr, /"stage":"lesson-component-repeated-failure".*"attempts":2/);
     assert.match(result.stderr, /"stage":"lesson-component-degraded".*"id":"sine-plot"/);
     const protocol = JSON.parse(result.stdout);
     assert.deepEqual(protocol.degraded_components.map(({ id, surface }) => ({ id, surface })), [{
@@ -1524,7 +1598,12 @@ test("one failed visual component degrades locally while the remaining lesson st
     assert.equal(fallback.role, "system-status");
     assert.equal(fallback.content.degradation.purpose, "重新生成这个plot画面");
     assert.doesNotMatch(JSON.stringify(fallback.content), /让学生/);
-    assert.equal(actions.some((action) => action.as === "explain-1-period-note"), true);
+    assert.equal(actions.some((action) => action.as === "explain-1-period-note"), false);
+    assert.doesNotMatch(
+      artifact.steps.flatMap((step) => step.beats).map((beat) => beat.say).join("\n"),
+      /观察.*图|拖动|操作.*图/,
+    );
+    assert.match(result.stderr, /"stage":"lesson-section-skipped".*"id":"explain-1"/);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -1687,6 +1766,8 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
   const incompleteGeometryComponent = structuredClone(geometryComponent);
   incompleteGeometryComponent.content.bindings = [];
   const plotComponent = structuredClone(modelAuthoredUnitCirclePlotLesson.steps[0].beats[0].actions[1]);
+  plotComponent.content.bindings[0].expression = "var";
+  plotComponent.content.bindings[1].expression = "sin(var(theta))";
   let geometryRequests = 0;
   let firstPartExistedBeforePlotCompleted = false;
   let taskPlanningRequests = 0;
@@ -1811,6 +1892,10 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
     assert.equal(taskPlanningRequests, 1);
     assert.equal(firstPartExistedBeforeTaskCompleted, true);
     assert.match(result.stderr, /"stage":"lesson-parallel-authoring".*"parallelism":1/);
+    assert.match(
+      result.stderr,
+      /"stage":"lesson-component-binding-normalization".*"id":"sine-plot".*"canonicalized":1.*"from":"var".*"to":"theta"/,
+    );
     const partial = JSON.parse(await readFile(
       join(workDirectory, "study", "oll", "learn-e2e-001.part-000.octos-lesson.json"),
       "utf8",
@@ -1836,6 +1921,13 @@ test("parallel authoring preserves shared controls, relationships, tasks, and an
 
     const protocol = JSON.parse(result.stdout);
     const finalLesson = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    const finalPlot = finalLesson.steps[1].beats[0].actions.find(
+      (action) => action.as === "sine-plot",
+    );
+    assert.deepEqual(finalPlot.content.bindings, [
+      { target: "current-angle.x", expression: "theta" },
+      { target: "current-angle.y", expression: "sin(theta)" },
+    ]);
     assert.equal(finalLesson.steps.length, 4);
     assert.deepEqual(finalLesson.lesson.tasks.map((task) => task.as), ["reach-sine-maximum"]);
     assert.equal(
@@ -2163,8 +2255,8 @@ test("parallel authoring keeps a controllable 3D scene and its view task", async
   }
 });
 
-test("selection tool writes a source-linked artifact without producing a lesson", async () => {
-  const sessionWorkspace = await mkdtemp(join(tmpdir(), "learning-coach-selection-"));
+test("selection classifier returns bounded metadata without creating an artifact", async () => {
+  const sessionWorkspace = await mkdtemp(join(tmpdir(), "learning-coach-selection-classification-"));
   const workDirectory = join(sessionWorkspace, "skill-output");
   const uploadsDirectory = join(sessionWorkspace, "uploads");
   await mkdir(workDirectory, { recursive: true });
@@ -2182,19 +2274,154 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     }
     requests.push(JSON.parse(body));
     response.end(vertexPayload({
-      interpretation_kind: "math",
-      interpretation_content: "y = x^2",
-      interpretation_confidence: "high",
-      response_kind: "plot",
-      title: "二次函数图像",
-      text: "这是所选公式对应的函数图像，原稿保持不变。",
-      items: [],
-      expression: "x^2",
-      x_min: -4,
-      x_max: 4,
-      y_min: -1,
-      y_max: 16,
+      kind: "math",
+      content: "y = x^2",
+      confidence: "high",
     }));
+  });
+  try {
+    await writeFile(
+      join(uploadsDirectory, "selection.png"),
+      Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    );
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const result = await runTool({
+      tool: "oll_classify_selection",
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      environment: { OCTOS_SESSION_WORKSPACE: sessionWorkspace },
+      input: {
+        source: {
+          source_id: "selection-classify-1",
+          document_id: "ink-1",
+          document_version: 7,
+          bounds: { x: 120, y: 80, width: 240, height: 90 },
+          checksum: { algorithm: "sha-256", value: "a".repeat(64) },
+        },
+        board: {
+          board_id: "learning-board-session-1",
+          revision: 12,
+          targets: [{
+            target_id: "plot-1:curve:sin",
+            node_id: "plot-1",
+            element_id: "plot-1:curve:sin",
+            kind: "plot-curve",
+            label: "SECRET_UNDERLYING_FUNCTION",
+            world_bounds: { x: 100, y: 60, width: 320, height: 220 },
+            overlap: 0.8,
+            distance: 0,
+            z_index: 2,
+          }],
+        },
+        selection_media: "uploads/selection.png",
+      },
+    });
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(requests.length, 1);
+    assert.deepEqual(
+      requests[0].generationConfig.responseJsonSchema.properties.kind.enum,
+      ["text", "math", "geometry", "data", "unknown"],
+    );
+    assert.equal(requests[0].contents[0].parts[1].inlineData.mimeType, "image/png");
+    assert.equal(JSON.stringify(requests[0]).includes("SECRET_UNDERLYING_FUNCTION"), false);
+    const protocol = JSON.parse(result.stdout);
+    assert.equal(protocol.success, true);
+    assert.equal(protocol.files_to_send, undefined);
+    assert.deepEqual(protocol.structured_metadata, {
+      selection_classification: {
+        kind: "math",
+        content: "y = x^2",
+        confidence: "high",
+      },
+    });
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(sessionWorkspace, { recursive: true, force: true });
+  }
+});
+
+test("selection tool writes a source-linked artifact without producing a lesson", async () => {
+  const sessionWorkspace = await mkdtemp(join(tmpdir(), "learning-coach-selection-"));
+  const workDirectory = join(sessionWorkspace, "skill-output");
+  const uploadsDirectory = join(sessionWorkspace, "uploads");
+  await mkdir(workDirectory, { recursive: true });
+  await mkdir(uploadsDirectory, { recursive: true });
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const requests = [];
+  const modelResponses = [{
+    interpretation_kind: "math",
+    interpretation_content: "y = x^2",
+    interpretation_confidence: "high",
+    response_kind: "plot",
+    title: "二次函数图像",
+    text: "这是所选公式对应的函数图像，原稿保持不变。",
+    items: [],
+    expression: "x^2",
+    x_min: -4,
+    x_max: 4,
+    y_min: -1,
+    y_max: 16,
+  }, {
+    interpretation_kind: "math",
+    interpretation_content: "x^4+y^4+z^4=1",
+    interpretation_confidence: "high",
+    response_kind: "scene3d",
+    scene_kind: "implicit_surface",
+    title: "四次隐式曲面",
+    text: "拖动可以从不同方向观察这个三维曲面。",
+    items: [],
+    expression: "x^4+y^4+z^4-1",
+    x_min: -1.2,
+    x_max: 1.2,
+    y_min: -1.2,
+    y_max: 1.2,
+    z_min: -1.2,
+    z_max: 1.2,
+    level: 0,
+    samples: 12,
+    alternatives: [],
+  }, {
+    interpretation_kind: "math",
+    interpretation_content: "w+x+y+z=1",
+    interpretation_confidence: "high",
+    response_kind: "scene3d",
+    scene_kind: "implicit_surface",
+    title: "四变量关系",
+    text: "这个关系含有四个独立变量。",
+    items: [],
+    expression: "w+x+y+z-1",
+    x_min: -1,
+    x_max: 1,
+    y_min: -1,
+    y_max: 1,
+    z_min: -1,
+    z_max: 1,
+    level: 0,
+    samples: 12,
+    alternatives: ["固定 w 后绘制三维切片"],
+  }];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    requests.push(JSON.parse(body));
+    response.end(vertexPayload(modelResponses[requests.length - 1]));
   });
   try {
     await writeFile(
@@ -2275,6 +2502,77 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     );
     assert.equal(artifact.response.kind, "plot");
     assert.equal(artifact.response.expression, "x^2");
+
+    const sceneResult = await runTool({
+      tool: "oll_enhance_selection",
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      input: {
+        turn_id: "selection-scene3d",
+        learner_request: "生成函数图像",
+        source: {
+          source_id: "selection-scene3d-source",
+          document_id: "ink-1",
+          document_version: 8,
+          bounds: { x: 120, y: 80, width: 300, height: 90 },
+          checksum: { algorithm: "sha-256", value: checksum },
+        },
+        content_hint: "math",
+        tool_id: "generate-plot",
+        board: { board_id: "learning-board-session-1", revision: 13, targets: [] },
+        recognized_content: "x^4+y^4+z^4=1",
+        recognition_confidence: "high",
+      },
+    });
+    assert.equal(sceneResult.exitCode, 0, sceneResult.stderr);
+    const sceneProtocol = JSON.parse(sceneResult.stdout);
+    const sceneArtifact = JSON.parse(await readFile(sceneProtocol.files_to_send[0], "utf8"));
+    assert.equal(sceneArtifact.response.kind, "scene3d", JSON.stringify(sceneArtifact.response));
+    assert.equal(sceneArtifact.response.content.objects[0].kind, "implicit_surface");
+    assert.equal(sceneArtifact.response.content.objects[0].expression, "x^4+y^4+z^4-1");
+
+    const unsupportedResult = await runTool({
+      tool: "oll_enhance_selection",
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      input: {
+        turn_id: "selection-unsupported",
+        learner_request: "生成函数图像",
+        source: {
+          source_id: "selection-unsupported-source",
+          document_id: "ink-1",
+          document_version: 9,
+          bounds: { x: 120, y: 80, width: 300, height: 90 },
+          checksum: { algorithm: "sha-256", value: checksum },
+        },
+        content_hint: "math",
+        tool_id: "generate-plot",
+        board: { board_id: "learning-board-session-1", revision: 14, targets: [] },
+        recognized_content: "w+x+y+z=1",
+        recognition_confidence: "high",
+      },
+    });
+    assert.equal(unsupportedResult.exitCode, 0, unsupportedResult.stderr);
+    const unsupportedProtocol = JSON.parse(unsupportedResult.stdout);
+    const unsupportedArtifact = JSON.parse(await readFile(
+      unsupportedProtocol.files_to_send[0],
+      "utf8",
+    ));
+    assert.equal(unsupportedArtifact.response.kind, "unsupported");
+    assert.equal(unsupportedArtifact.response.reason_code, "unsupported_variables");
+    assert.deepEqual(unsupportedArtifact.response.alternatives, ["固定 w 后绘制三维切片"]);
     await assert.rejects(
       readFile(join(workDirectory, "study", "oll", "learn-e2e-001.octos-lesson.json")),
     );
@@ -4210,6 +4508,19 @@ test("tool requires board context for an explicit board follow-up", async () => 
     assert.match(result.stderr, /board_summary is required/);
     const protocol = JSON.parse(result.stdout);
     assert.equal(protocol.success, false);
+    assert.equal(protocol.retryable, false);
+    assert.equal(protocol.do_not_retry_same_turn, true);
+    assert.deepEqual(protocol.structured_metadata, {
+      retryable: false,
+      do_not_retry_same_turn: true,
+    });
+    assert.match(protocol.output, /Do not call oll_generate_lesson again in this turn/u);
+    const tracePath = join(workDirectory, "study", "oll", "learn-e2e-001.generation-trace.jsonl");
+    const trace = (await readFile(tracePath, "utf8")).trim().split("\n").map(JSON.parse);
+    assert.ok(trace.some((entry) => entry.stage === "tool-invocation" && entry.status === "started"));
+    assert.ok(trace.some((entry) => entry.stage === "lesson-generation"
+      && entry.status === "failed"
+      && entry.error_code === "LESSON_GENERATION_FAILED"));
   } finally {
     await rm(workDirectory, { recursive: true, force: true });
   }

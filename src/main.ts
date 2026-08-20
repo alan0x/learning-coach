@@ -1,3 +1,4 @@
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -19,6 +20,7 @@ import {
 
 const TOOL_NAME = "oll_generate_lesson";
 const SELECTION_TOOL_NAME = "oll_enhance_selection";
+const SELECTION_CLASSIFICATION_TOOL_NAME = "oll_classify_selection";
 const DEFAULT_MODEL = "gemini-3.6-flash";
 const DEFAULT_VERTEX_LOCATION = "global";
 const DEFAULT_TIMEOUT_MS = 180_000;
@@ -99,6 +101,12 @@ interface SelectionToolInput {
   board_summary?: string;
 }
 
+interface SelectionClassification {
+  kind: SelectionContentKind;
+  content: string;
+  confidence: "high" | "medium" | "low";
+}
+
 interface SelectionEnhancementArtifact {
   profile: "octos.selection-enhancement";
   version: "0.2";
@@ -119,8 +127,34 @@ interface SelectionEnhancementArtifact {
         title: string;
         text: string;
         expression: string;
+        plot_kind?: "explicit" | "implicit";
+        level?: number;
+        samples?: number;
         x_range: { min: number; max: number };
         y_range: { min: number; max: number };
+      }
+    | {
+        kind: "scene3d";
+        title: string;
+        text: string;
+        content: {
+          title: string;
+          fallback: string;
+          axes: boolean;
+          camera: { yaw: number; pitch: number; zoom: number };
+          objects: Array<Record<string, unknown>>;
+        };
+      }
+    | {
+        kind: "unsupported";
+        title: string;
+        text: string;
+        reason_code:
+          | "unreadable_expression"
+          | "unsupported_variables"
+          | "unsupported_representation"
+          | "unsafe_complexity";
+        alternatives?: string[];
       };
 }
 
@@ -404,7 +438,7 @@ interface VertexServiceAccount {
   token_uri?: string;
 }
 
-interface VertexClient {
+export interface VertexClient {
   endpoint: string;
   model: string;
   accessToken: string;
@@ -416,7 +450,7 @@ interface VertexClient {
 
 type ThinkingLevel = "MINIMAL" | "LOW" | "MEDIUM" | "HIGH";
 
-interface StructuredModelRequest {
+export interface StructuredModelRequest {
   label:
     | "lesson-brief"
     | "lesson-brief-verification"
@@ -426,6 +460,9 @@ interface StructuredModelRequest {
     | "lesson-visual-component"
     | "lesson-component-repair"
     | "lesson-beat-repair"
+    | "lesson-plan-bootstrap"
+    | "lesson-plan-outline"
+    | "lesson-plan-section"
     | "selection-enhancement";
   turnId: string;
   systemPrompt: string;
@@ -435,6 +472,9 @@ interface StructuredModelRequest {
   thinkingLevel?: ThinkingLevel;
   signal?: AbortSignal;
   media?: { mimeType: "image/png" | "image/jpeg" | "image/webp"; data: string };
+  lessonPlanPart?: "bootstrap" | "outline" | "section";
+  lessonPlanSection?: number;
+  lessonPlanAttempt?: number;
 }
 
 class GeneratedLessonError extends Error {
@@ -670,20 +710,28 @@ function configuredThinkingLevel(
     : label === "lesson-brief-verification"
       ? "OLL_VERIFICATION_THINKING_LEVEL"
       : label === "lesson-task-planning"
+          || label === "lesson-plan-bootstrap"
+          || label === "lesson-plan-outline"
         ? "OLL_TASK_THINKING_LEVEL"
-        : label === "lesson-section"
+        : label === "lesson-section" || label === "lesson-plan-section"
           ? "OLL_SECTION_THINKING_LEVEL"
           : label === "lesson-visual-component"
             ? "OLL_VISUAL_THINKING_LEVEL"
             : label === "selection-enhancement"
               ? "OLL_SELECTION_THINKING_LEVEL"
+              : label === "selection-classification"
+                ? "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL"
               : label === "lesson-component-repair" || label === "lesson-beat-repair"
                 ? "OLL_REPAIR_THINKING_LEVEL"
                 : "OLL_AUTHORING_THINKING_LEVEL";
   const safeDefault = label === "lesson-brief-verification"
     || label === "lesson-task-planning"
+    || label === "lesson-plan-bootstrap"
+    || label === "lesson-plan-outline"
     || label === "lesson-section"
+    || label === "lesson-plan-section"
     || label === "lesson-visual-component"
+    || label === "selection-classification"
     ? "LOW"
     : undefined;
   return parseThinkingLevel(process.env[environmentName], environmentName)
@@ -1056,6 +1104,28 @@ function parseSelectionToolInput(raw: string): SelectionToolInput {
       ? { board_summary: truncate(input.board_summary) }
       : {}),
   };
+}
+
+function parseSelectionClassificationInput(raw: string): SelectionToolInput {
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Tool input is not valid JSON: ${(error as Error).message}`);
+  }
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    throw new Error("Selection classification input must be a JSON object");
+  }
+  const input = parseSelectionToolInput(JSON.stringify({
+    ...(candidate as Record<string, unknown>),
+    learner_request: "Classify only the selected student ink.",
+    content_hint: "unknown",
+    tool_id: "custom-question",
+  }));
+  if (!input.selection_media) {
+    throw new Error("selection_media is required for selection classification");
+  }
+  return input;
 }
 
 /** Build a compact request-only JSON Schema for Vertex controlled generation.
@@ -3542,6 +3612,100 @@ function expressionReferencesVariable(expression: unknown, variable: string): bo
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
 }
 
+const bindingExpressionBuiltins = new Set([
+  "abs", "acos", "asin", "atan", "ceil", "cos", "e", "exp", "floor",
+  "ln", "log", "pi", "round", "sin", "sqrt", "tan",
+]);
+
+interface VisualBindingNormalization {
+  removed: number;
+  canonicalized: number;
+  renamed: Array<{ from: string; to: string }>;
+}
+
+function canonicalModelVariableReferences(
+  expression: string,
+  plannedVariables: ReadonlySet<string>,
+): { expression: string; count: number } {
+  let count = 0;
+  const canonicalByLowercase = new Map([...plannedVariables].map((variable) => [
+    variable.toLocaleLowerCase(),
+    variable,
+  ]));
+  const canonical = expression.replace(
+    /\bvar\s*\(\s*(?:([a-z][a-z0-9_]*)|(["'])([a-z][a-z0-9_]*)\2)\s*\)/giu,
+    (match, bare: string | undefined, _quote: string | undefined, quoted: string | undefined) => {
+      const variable = canonicalByLowercase.get((bare ?? quoted ?? "").toLocaleLowerCase());
+      if (!variable) return match;
+      count += 1;
+      return variable;
+    },
+  );
+  return { expression: canonical, count };
+}
+
+/**
+ * Keep plan-owned variable identities out of the model's control. The model
+ * still chooses which visual property is driven and the shape of the
+ * expression, but it cannot invent a second lesson variable alias.
+ */
+function normalizeVisualComponentBindings(
+  action: Record<string, unknown>,
+  sharedVariables: SharedVariableRequirement[],
+): VisualBindingNormalization {
+  const result: VisualBindingNormalization = {
+    removed: 0,
+    canonicalized: 0,
+    renamed: [],
+  };
+  if (!isRecord(action.content) || !Array.isArray(action.content.bindings)) return result;
+  const bindings = action.content.bindings.filter(isRecord);
+  if (sharedVariables.length === 0) {
+    result.removed = bindings.length;
+    delete action.content.bindings;
+    return result;
+  }
+
+  const plannedVariables = new Set(sharedVariables.map((item) => item.variable));
+  for (const binding of bindings) {
+    if (typeof binding.expression !== "string") continue;
+    const canonical = canonicalModelVariableReferences(
+      binding.expression,
+      plannedVariables,
+    );
+    binding.expression = canonical.expression;
+    result.canonicalized += canonical.count;
+  }
+
+  // A wrapper can be removed without guessing even when several variables
+  // drive one visual. Renaming an invented alias is only unambiguous when the
+  // plan declared exactly one variable.
+  if (plannedVariables.size !== 1) return result;
+  const [plannedVariable] = [...plannedVariables];
+  const renamed = new Set<string>();
+  for (const binding of bindings) {
+    if (typeof binding.expression !== "string") continue;
+    const identifiers = [...new Set(
+      (binding.expression.match(/[a-z][a-z0-9_]*/giu) ?? [])
+        .map((identifier) => identifier.toLocaleLowerCase()),
+    )];
+    if (identifiers.some((identifier) => plannedVariables.has(identifier))) continue;
+    const unknown = identifiers.filter((identifier) =>
+      !plannedVariables.has(identifier) && !bindingExpressionBuiltins.has(identifier));
+    if (unknown.length !== 1) continue;
+    const [inventedVariable] = unknown;
+    binding.expression = binding.expression.replace(
+      /[a-z][a-z0-9_]*/giu,
+      (identifier) => identifier.toLocaleLowerCase() === inventedVariable
+        ? plannedVariable
+        : identifier,
+    );
+    renamed.add(inventedVariable);
+  }
+  result.renamed = [...renamed].map((from) => ({ from, to: plannedVariable }));
+  return result;
+}
+
 /** Insert fields that were already fixed by the validated request plan.
  * The authoring model still chooses teaching beats, board nodes, bindings, and
  * placement. This lowering step only copies plan-owned metadata and adds a
@@ -4624,8 +4788,75 @@ function timeoutUntil(deadlineAt: number, label: string): number {
   return remaining;
 }
 
+interface ActiveStageTrace {
+  path: string;
+  turnId: string;
+  invokedTool: string;
+  startedAt: number;
+  sequence: number;
+}
+
+let activeStageTrace: ActiveStageTrace | undefined;
+
+function stageTracePath(turnId: string): string {
+  const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
+  const path = resolve(workDirectory, "study", "oll", `${turnId}.generation-trace.jsonl`);
+  if (!path.startsWith(`${workDirectory}${sep}`) || !isAbsolute(path)) {
+    throw new Error("Resolved generation trace path escapes OCTOS_WORK_DIR");
+  }
+  return path;
+}
+
+function beginStageTrace(turnId: string, invokedTool: string, startedAt: number): void {
+  const path = stageTracePath(turnId);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, "", "utf8");
+  activeStageTrace = { path, turnId, invokedTool, startedAt, sequence: 0 };
+  stageLog({
+    stage: "tool-invocation",
+    turn_id: turnId,
+    tool: invokedTool,
+    status: "started",
+  });
+}
+
+function traceTurnIdFromRawInput(rawInput: string): string | undefined {
+  try {
+    const candidate = JSON.parse(rawInput) as unknown;
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return undefined;
+    return validateTurnId((candidate as Record<string, unknown>).turn_id);
+  } catch {
+    return undefined;
+  }
+}
+
 function stageLog(payload: Record<string, unknown>): void {
-  process.stderr.write(`learning-coach: ${JSON.stringify(payload)}\n`);
+  const trace = activeStageTrace;
+  const normalizedPayload = trace && payload.turn_id === undefined
+    ? { ...payload, turn_id: trace.turnId }
+    : payload;
+  process.stderr.write(`learning-coach: ${JSON.stringify(normalizedPayload)}\n`);
+  if (!trace) return;
+  trace.sequence += 1;
+  const entry = {
+    schema: "octos.learning-coach.generation-stage.v1",
+    sequence: trace.sequence,
+    recorded_at: new Date().toISOString(),
+    invocation_elapsed_ms: Date.now() - trace.startedAt,
+    tool: trace.invokedTool,
+    ...normalizedPayload,
+  };
+  try {
+    appendFileSync(trace.path, `${JSON.stringify(entry)}\n`, "utf8");
+  } catch (error) {
+    process.stderr.write(`learning-coach: ${JSON.stringify({
+      stage: "generation-trace",
+      turn_id: trace.turnId,
+      status: "failed",
+      error_code: "GENERATION_TRACE_WRITE_FAILED",
+      error: safeError(error),
+    })}\n`);
+  }
 }
 
 export function buildVertexSchemaContract(
@@ -4704,7 +4935,7 @@ export async function probeVertexSchema(
   };
 }
 
-async function callStructuredModel(client: VertexClient, request: StructuredModelRequest): Promise<string> {
+export async function callStructuredModel(client: VertexClient, request: StructuredModelRequest): Promise<string> {
   const startedAt = Date.now();
   const deadlineAt = requestDeadline(client);
   const thinkingLevel = request.thinkingLevel ?? configuredThinkingLevel(request.label);
@@ -4739,6 +4970,9 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
     system_prompt_bytes: Buffer.byteLength(request.systemPrompt),
     request_bytes: Buffer.byteLength(requestBody),
     max_output_tokens: request.maxTokens ?? client.maxTokens,
+    ...(request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {}),
+    ...(request.lessonPlanSection === undefined ? {} : { lesson_plan_section: request.lessonPlanSection }),
+    ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
   });
   let body = "";
   let status = 0;
@@ -4747,20 +4981,58 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
     let usedAttempts = 0;
     for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
       usedAttempts = requestAttempt;
-      const response = await fetch(client.endpoint, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${client.accessToken}`,
-          "content-type": "application/json",
-        },
-        body: requestBody,
-        signal: request.signal
-          ? AbortSignal.any([
-              request.signal,
-              AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
-            ])
-          : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
-      });
+      let response: Response;
+      try {
+        response = await fetch(client.endpoint, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${client.accessToken}`,
+            "content-type": "application/json",
+          },
+          body: requestBody,
+          signal: request.signal
+            ? AbortSignal.any([
+                request.signal,
+                AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
+              ])
+            : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
+        });
+      } catch (error) {
+        const cancelled = request.signal?.aborted === true;
+        const timeoutError = error instanceof Error
+          && (error.name === "TimeoutError" || error.name === "AbortError");
+        const cause = error instanceof Error && error.cause && typeof error.cause === "object"
+          ? error.cause as Record<string, unknown>
+          : undefined;
+        const transportCode = typeof cause?.code === "string" ? cause.code : undefined;
+        const canRetry = !cancelled && !timeoutError
+          && requestAttempt < client.requestAttempts;
+        stageLog({
+          stage: "model-transport",
+          turn_id: request.turnId,
+          label: request.label,
+          status: canRetry ? "retrying" : "failed",
+          request_attempt: requestAttempt,
+          ...(transportCode ? { transport_code: transportCode } : {}),
+          error: safeError(error),
+          ...(request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {}),
+          ...(request.lessonPlanSection === undefined ? {} : { lesson_plan_section: request.lessonPlanSection }),
+          ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
+        });
+        if (!canRetry) {
+          if (cancelled || timeoutError) throw error;
+          throw new ToolExecutionError(
+            "VERTEX_TRANSPORT_FAILED",
+            `Vertex ${request.label} transport failed${transportCode ? ` (${transportCode})` : ""}: ${safeError(error)}`,
+          );
+        }
+        const delayMs = Math.min(
+          500 * 2 ** (requestAttempt - 1),
+          timeoutUntil(deadlineAt, request.label),
+        );
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs));
+        continue;
+      }
       status = response.status;
       requestId = response.headers.get("x-goog-request-id") ?? requestId;
       body = await response.text();
@@ -4821,6 +5093,9 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
       ...(typeof usage.trafficType === "string" ? { traffic_type: usage.trafficType } : {}),
       response_bytes: Buffer.byteLength(body),
       elapsed_ms: Date.now() - startedAt,
+      ...(request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {}),
+      ...(request.lessonPlanSection === undefined ? {} : { lesson_plan_section: request.lessonPlanSection }),
+      ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
     });
     return content;
   } catch (error) {
@@ -4850,6 +5125,9 @@ async function callStructuredModel(client: VertexClient, request: StructuredMode
       http_status: status || null,
       elapsed_ms: Date.now() - startedAt,
       error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED",
+      ...(request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {}),
+      ...(request.lessonPlanSection === undefined ? {} : { lesson_plan_section: request.lessonPlanSection }),
+      ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
     });
     throw surfacedError;
   }
@@ -5699,6 +5977,7 @@ async function generateVisualComponent(
   const sharedVariables = brief.shared_variable_requirements.filter((variable) =>
     variable.bound_visuals.includes(requirement.id));
   let previousComponent: unknown;
+  let previousFailureFingerprint: string | undefined;
   let violations: GenerationViolation[] = [];
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     let raw: string;
@@ -5754,6 +6033,23 @@ async function generateVisualComponent(
       previousComponent = raw;
       if (attempt < maxAttempts) continue;
       throw new GeneratedLessonError(violations[0].message, raw, violations);
+    }
+    if (isRecord(action)) {
+      const normalization = normalizeVisualComponentBindings(action, sharedVariables);
+      if (
+        normalization.removed > 0
+        || normalization.canonicalized > 0
+        || normalization.renamed.length > 0
+      ) {
+        process.stderr.write(`learning-coach: ${JSON.stringify({
+          stage: "lesson-component-binding-normalization",
+          turn_id: input.turn_id,
+          id: requirement.id,
+          removed: normalization.removed,
+          canonicalized: normalization.canonicalized,
+          renamed: normalization.renamed,
+        })}\n`);
+      }
     }
     if (!isRecord(action)
       || action.do !== "write"
@@ -5830,6 +6126,23 @@ async function generateVisualComponent(
     if (violations.length === 0) return action as Record<string, unknown>;
     previousComponent = action;
     process.stderr.write(`learning-coach: rejected visual component '${requirement.id}' ${attempt}: ${formatViolations(violations)}\n`);
+    const failureFingerprint = createHash("sha256")
+      .update(JSON.stringify({ action, violations }))
+      .digest("hex");
+    if (failureFingerprint === previousFailureFingerprint) {
+      process.stderr.write(`learning-coach: ${JSON.stringify({
+        stage: "lesson-component-repeated-failure",
+        turn_id: input.turn_id,
+        id: requirement.id,
+        attempts: attempt,
+      })}\n`);
+      throw new GeneratedLessonError(
+        `Visual component '${requirement.id}' repeated the same invalid result after ${attempt} attempt(s)`,
+        raw,
+        violations,
+      );
+    }
+    previousFailureFingerprint = failureFingerprint;
     if (attempt === maxAttempts) {
       throw new GeneratedLessonError(
         `Visual component '${requirement.id}' failed after ${maxAttempts} attempt(s)`,
@@ -5944,11 +6257,19 @@ function markSectionDegraded(
     ? "Continue after one unavailable interactive visual"
     : "一个互动画面暂时不可用，继续其余课程";
   const firstBeat = step.beats[0];
-  if (firstBeat) {
-    firstBeat.say = english
-      ? "This interactive visual is temporarily unavailable. Let us continue with the rest of the lesson."
-      : "这个互动画面暂时没有生成成功，我们先继续后面的内容。";
-  }
+  step.beats = [{
+    key: firstBeat?.key ?? `${step.key}-visual-unavailable`,
+    say: english
+      ? "This interactive visual is temporarily unavailable. The lesson will not ask you to use it."
+      : "这个互动画面暂时没有生成成功，本节课不会再要求你操作它。",
+    delivery: "patient",
+    actions: [{
+      do: "focus",
+      when: "after_speech",
+      targets: [],
+      intent: "current_step",
+    }],
+  }];
 }
 
 function injectVisualComponents(
@@ -6149,6 +6470,14 @@ async function generateLessonInParallel(
     status: "started",
     sections: sections.length,
     visual_components: brief.visual_requirements.length,
+    visuals: brief.visual_requirements.map((requirement) => ({
+      id: requirement.id,
+      surface: requirement.surface,
+    })),
+    shared_variables: brief.shared_variable_requirements.map((variable) => ({
+      variable: variable.variable,
+      bound_visuals: variable.bound_visuals,
+    })),
     parallelism,
   })}\n`);
 
@@ -6228,6 +6557,17 @@ async function generateLessonInParallel(
   for (const [index, sectionPromise] of sectionPromises.entries()) {
     const step = await sectionPromise;
     const section = sections[index];
+    const unavailableContextVisuals = section.contextVisualIds.filter((visualId) =>
+      degradedVisualIds.has(visualId));
+    if (section.visualRequirementIds.length === 0 && unavailableContextVisuals.length > 0) {
+      process.stderr.write(`learning-coach: ${JSON.stringify({
+        stage: "lesson-section-skipped",
+        turn_id: input.turn_id,
+        id: section.id,
+        unavailable_visuals: unavailableContextVisuals,
+      })}\n`);
+      continue;
+    }
     const componentDependencies = section.visualRequirementIds.map((requirementId) => {
       const dependency = componentPromises.get(requirementId);
       if (!dependency) {
@@ -6244,10 +6584,10 @@ async function generateLessonInParallel(
       degradedComponents.push(result.degradation);
     }
     const components = componentResults.map((result) => result.action);
-    if (components.length > 0) injectVisualComponents(step, components);
     if (componentResults.some((result) => result.degradation)) {
       markSectionDegraded(step, input.language ?? "zh-CN");
     }
+    if (components.length > 0) injectVisualComponents(step, components);
     composeParallelSectionWithVisualContext(step, section, annotationLayouts);
     for (const requirementId of section.visualRequirementIds) {
       publishedVisuals.add(requirementId);
@@ -6644,6 +6984,23 @@ async function generateLesson(
   throw new Error("OLL generation failed");
 }
 
+const SELECTION_CLASSIFICATION_RESPONSE_SCHEMA: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    kind: {
+      type: "string",
+      enum: ["text", "math", "geometry", "data", "unknown"],
+    },
+    content: { type: "string" },
+    confidence: {
+      type: "string",
+      enum: ["high", "medium", "low"],
+    },
+  },
+  required: ["kind", "content", "confidence"],
+};
+
 const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
   type: "object",
   additionalProperties: false,
@@ -6657,7 +7014,11 @@ const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
       type: "string",
       enum: ["high", "medium", "low"],
     },
-    response_kind: { type: "string", enum: ["explanation", "plot"] },
+    response_kind: {
+      type: "string",
+      enum: ["explanation", "plot", "implicit_plot", "scene3d", "unsupported"],
+    },
+    scene_kind: { type: "string", enum: ["surface", "implicit_surface"] },
     title: { type: "string" },
     text: { type: "string" },
     items: { type: "array", items: { type: "string" } },
@@ -6666,12 +7027,27 @@ const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
     x_max: { type: "number" },
     y_min: { type: "number" },
     y_max: { type: "number" },
+    z_min: { type: "number" },
+    z_max: { type: "number" },
+    level: { type: "number" },
+    samples: { type: "integer" },
+    reason_code: {
+      type: "string",
+      enum: [
+        "unreadable_expression",
+        "unsupported_variables",
+        "unsupported_representation",
+        "unsafe_complexity",
+      ],
+    },
+    alternatives: { type: "array", items: { type: "string" } },
   },
   required: [
     "interpretation_kind",
     "interpretation_content",
     "interpretation_confidence",
     "response_kind",
+    "scene_kind",
     "title",
     "text",
     "items",
@@ -6680,6 +7056,12 @@ const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
     "x_max",
     "y_min",
     "y_max",
+    "z_min",
+    "z_max",
+    "level",
+    "samples",
+    "reason_code",
+    "alternatives",
   ],
 };
 
@@ -6751,6 +7133,13 @@ function parseSelectionModelResponse(
   }
   const output = value as Record<string, unknown>;
   const nonEmpty = (name: string) => requireNonEmptyString(output[name], name);
+  const finiteOutput = (name: string): number => {
+    const number = output[name];
+    if (typeof number !== "number" || !Number.isFinite(number)) {
+      throw new Error(`${name} must be a finite number`);
+    }
+    return number;
+  };
   const kind = nonEmpty("interpretation_kind") as SelectionContentKind;
   if (!["text", "math", "geometry", "data", "unknown"].includes(kind)) {
     throw new Error("interpretation_kind is invalid");
@@ -6761,46 +7150,215 @@ function parseSelectionModelResponse(
   }
   const title = nonEmpty("title");
   const text = nonEmpty("text");
+  const interpretationContent = nonEmpty("interpretation_content");
   const items = Array.isArray(output.items)
     ? output.items.map((item, index) => requireNonEmptyString(item, `items[${index}]`))
     : [];
   let response: SelectionEnhancementArtifact["response"];
-  if (output.response_kind === "plot") {
-    if (input.tool_id !== "generate-plot" && input.tool_id !== "custom-question") {
-      throw new Error(`${input.tool_id} cannot return a plot response`);
+  const visualizationRequested = input.tool_id === "generate-plot"
+    || input.tool_id === "custom-question";
+  const alternatives = Array.isArray(output.alternatives)
+    ? output.alternatives
+      .map((item, index) => requireNonEmptyString(item, `alternatives[${index}]`))
+      .slice(0, 4)
+    : [];
+  const unsupported = (
+    reasonCode: Extract<SelectionEnhancementArtifact["response"], { kind: "unsupported" }>["reason_code"],
+    reason: string,
+  ): SelectionEnhancementArtifact["response"] => ({
+    kind: "unsupported",
+    title: "当前无法生成这个函数图像",
+    text: reason,
+    reason_code: reasonCode,
+    alternatives: alternatives.length > 0
+      ? alternatives
+      : ["确认框选范围只包含一个完整公式", "使用“问小章鱼”让它解释或改写为可绘制形式"],
+  });
+  const failureReasonCode = (error: unknown): Extract<
+    SelectionEnhancementArtifact["response"],
+    { kind: "unsupported" }
+  >["reason_code"] => {
+    if (confidence === "low") return "unreadable_expression";
+    const message = error instanceof Error ? error.message : String(error);
+    if (/too complex/iu.test(message)) return "unsafe_complexity";
+    if (/Unknown variable or function '[a-z]'/u.test(message)) {
+      return "unsupported_variables";
     }
-    const expression = nonEmpty("expression");
-    const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
-    if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
-      throw new Error("Plot ranges must be finite numbers");
-    }
-    const [xMin, xMax, yMin, yMax] = numbers as number[];
-    if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
-    const evaluate = compileMathExpression(expression, ["x"]);
-    for (let index = 0; index <= 40; index += 1) {
-      const x = xMin + (xMax - xMin) * index / 40;
-      const y = evaluate({ x });
-      if (typeof y !== "number" || !Number.isFinite(y)) {
-        throw new Error("Plot expression is not finite across its range");
+    return "unsupported_representation";
+  };
+  try {
+    if (output.response_kind === "plot" || output.response_kind === "implicit_plot") {
+      if (!visualizationRequested) {
+        throw new Error(`${input.tool_id} cannot return a plot response`);
       }
+      const expression = nonEmpty("expression");
+      const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
+      if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
+        throw new Error("Plot ranges must be finite numbers");
+      }
+      const [xMin, xMax, yMin, yMax] = numbers as number[];
+      if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
+      if (output.response_kind === "plot") {
+        const evaluate = compileMathExpression(expression, ["x"]);
+        for (let index = 0; index <= 40; index += 1) {
+          const x = xMin + (xMax - xMin) * index / 40;
+          const y = evaluate({ x });
+          if (!Number.isFinite(y)) throw new Error("Plot expression is not finite across its range");
+        }
+        response = {
+          kind: "plot",
+          plot_kind: "explicit",
+          title,
+          text,
+          expression,
+          x_range: { min: xMin, max: xMax },
+          y_range: { min: yMin, max: yMax },
+        };
+      } else {
+        const level = finiteOutput("level");
+        const evaluate = compileMathExpression(expression, ["x", "y"]);
+        const sampled: number[] = [];
+        for (let xIndex = 0; xIndex <= 8; xIndex += 1) {
+          const x = xMin + (xMax - xMin) * xIndex / 8;
+          for (let yIndex = 0; yIndex <= 8; yIndex += 1) {
+            const y = yMin + (yMax - yMin) * yIndex / 8;
+            const value = evaluate({ x, y });
+            if (!Number.isFinite(value)) throw new Error("Implicit plot is not finite across its range");
+            sampled.push(value);
+          }
+        }
+        if (Math.min(...sampled) > level || Math.max(...sampled) < level) {
+          throw new Error("Implicit plot level is outside the sampled value range");
+        }
+        response = {
+          kind: "plot",
+          plot_kind: "implicit",
+          title,
+          text,
+          expression,
+          level,
+          samples: 80,
+          x_range: { min: xMin, max: xMax },
+          y_range: { min: yMin, max: yMax },
+        };
+      }
+    } else if (output.response_kind === "scene3d") {
+      if (!visualizationRequested) {
+        throw new Error(`${input.tool_id} cannot return a 3D response`);
+      }
+      const sceneKind = nonEmpty("scene_kind");
+      if (sceneKind !== "surface" && sceneKind !== "implicit_surface") {
+        throw new Error("scene_kind is invalid");
+      }
+      const expression = nonEmpty("expression");
+      const numbers = [
+        output.x_min, output.x_max, output.y_min, output.y_max,
+        output.z_min, output.z_max,
+      ];
+      if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
+        throw new Error("3D ranges must be finite numbers");
+      }
+      const [xMin, xMax, yMin, yMax, zMin, zMax] = numbers as number[];
+      if (xMax <= xMin || yMax <= yMin || zMax <= zMin) {
+        throw new Error("3D ranges must increase");
+      }
+      const level = finiteOutput("level");
+      const requestedSamples = Number(output.samples);
+      const samples = Number.isSafeInteger(requestedSamples)
+        ? Math.max(4, Math.min(18, requestedSamples))
+        : 12;
+      const evaluate = compileMathExpression(
+        expression,
+        sceneKind === "surface" ? ["x", "y"] : ["x", "y", "z"],
+      );
+      const sampled: number[] = [];
+      const verificationSamples = sceneKind === "surface" ? 8 : samples;
+      for (let xIndex = 0; xIndex <= verificationSamples; xIndex += 1) {
+        const x = xMin + (xMax - xMin) * xIndex / verificationSamples;
+        for (let yIndex = 0; yIndex <= verificationSamples; yIndex += 1) {
+          const y = yMin + (yMax - yMin) * yIndex / verificationSamples;
+          if (sceneKind === "surface") {
+            const z = evaluate({ x, y });
+            if (!Number.isFinite(z)) throw new Error("3D surface is not finite across its range");
+            sampled.push(z);
+          } else {
+            for (let zIndex = 0; zIndex <= verificationSamples; zIndex += 1) {
+              const z = zMin + (zMax - zMin) * zIndex / verificationSamples;
+              const value = evaluate({ x, y, z });
+              if (Number.isFinite(value)) sampled.push(value);
+            }
+          }
+        }
+      }
+      if (sceneKind === "implicit_surface"
+        && (sampled.length === 0
+          || Math.min(...sampled) > level
+          || Math.max(...sampled) < level)) {
+        throw new Error("3D implicit surface level is outside the sampled value range");
+      }
+      const object = sceneKind === "surface"
+        ? {
+            as: "selected-function",
+            kind: "surface",
+            expression,
+            x_range: { min: xMin, max: xMax },
+            y_range: { min: yMin, max: yMax },
+            samples,
+            color: "teal",
+          }
+        : {
+            as: "selected-function",
+            kind: "implicit_surface",
+            expression,
+            level,
+            x_range: { min: xMin, max: xMax },
+            y_range: { min: yMin, max: yMax },
+            z_range: { min: zMin, max: zMax },
+            samples,
+            color: "teal",
+          };
+      response = {
+        kind: "scene3d",
+        title,
+        text,
+        content: {
+          title,
+          fallback: text,
+          axes: true,
+          camera: { yaw: .65, pitch: .45, zoom: 1 },
+          objects: [object],
+        },
+      };
+    } else if (output.response_kind === "unsupported") {
+      const reasonCode = nonEmpty("reason_code") as Extract<
+        SelectionEnhancementArtifact["response"],
+        { kind: "unsupported" }
+      >["reason_code"];
+      if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
+        throw new Error("reason_code is invalid");
+      }
+      response = unsupported(reasonCode, text);
+    } else if (output.response_kind === "explanation") {
+      response = visualizationRequested && input.tool_id === "generate-plot"
+        ? unsupported(
+            confidence === "low" ? "unreadable_expression" : "unsupported_representation",
+            text,
+          )
+        : {
+            kind: "explanation",
+            title,
+            text,
+            ...(items.length > 0 ? { items } : {}),
+          };
+    } else {
+      throw new Error("response_kind is invalid");
     }
-    response = {
-      kind: "plot",
-      title,
-      text,
-      expression,
-      x_range: { min: xMin, max: xMax },
-      y_range: { min: yMin, max: yMax },
-    };
-  } else if (output.response_kind === "explanation") {
-    response = {
-      kind: "explanation",
-      title,
-      text,
-      ...(items.length > 0 ? { items } : {}),
-    };
-  } else {
-    throw new Error("response_kind is invalid");
+  } catch (error) {
+    if (!visualizationRequested) throw error;
+    response = unsupported(
+      failureReasonCode(error),
+      `已经识别到“${interpretationContent}”，但当前无法安全地生成它的图像。`,
+    );
   }
   return {
     profile: "octos.selection-enhancement",
@@ -6812,7 +7370,7 @@ function parseSelectionModelResponse(
     tool_id: input.tool_id,
     interpretation: {
       kind,
-      content: nonEmpty("interpretation_content"),
+      content: interpretationContent,
       confidence,
     },
     response,
@@ -6830,7 +7388,15 @@ async function generateSelectionEnhancement(
     maxTokens: Math.min(client.maxTokens, 4_096),
     responseSchema: SELECTION_RESPONSE_SCHEMA,
     media,
-    systemPrompt: `你是白板选区辅助工具。只解释当前请求附带的选区图片和用户明确选中的局部白板对象，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。图片识别不确定时必须明确说明。board_targets 是 Runtime 提供的稳定引用，只能用于理解上下文，不能自行增删或改写。只有 tool_id 为 generate-plot 或 custom-question、从图片或备用识别文字中读出明确的单变量 y=f(x) 且用户要求函数图像时，response_kind 才能使用 plot，expression 必须是仅含 x 的安全数学表达式。其他情况使用 explanation。不要声称看到了选区图片以外的白板。`,
+    systemPrompt: `你是白板选区辅助工具。只解释当前请求附带的选区图片和用户明确选中的局部白板对象，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。图片识别不确定时必须明确说明。board_targets 是 Runtime 提供的稳定引用，只能用于理解上下文，不能自行增删或改写。不要声称看到了选区图片以外的白板。
+
+当 tool_id 为 generate-plot 或 custom-question 且用户要求生成函数图像时，先把识别到的公式规范化为只能使用数字、x/y/z、pi、e、+ - * / ^、括号和 abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan 的表达式；必须显式写乘号。然后选择：
+- 单变量 y=f(x)：response_kind=plot，expression 只写 f(x)。
+- 二变量隐式方程 F(x,y)=c：response_kind=implicit_plot，expression 写 F(x,y)，level 写 c。
+- 显式曲面 z=f(x,y)：response_kind=scene3d，scene_kind=surface，expression 只写 f(x,y)。
+- 三变量隐式方程 F(x,y,z)=c：response_kind=scene3d，scene_kind=implicit_surface，expression 写 F(x,y,z)，level 写 c。
+- 超过三个独立变量、无法可靠识别、无法转为上述安全表达式或在合理有限范围内无法绘制：response_kind=unsupported，给出准确原因和可操作的 alternatives，不能假装已经绘制。
+所有范围必须有限并覆盖主要图形；scene3d 的 samples 使用 10 到 14。代码会再次校验你的选择和表达式，校验不通过时不会绘制。非绘图请求使用 explanation。`,
     prompt: JSON.stringify({
       learner_request: input.learner_request,
       tool_id: input.tool_id,
@@ -6846,6 +7412,51 @@ async function generateSelectionEnhancement(
     }, null, 2),
   });
   return parseSelectionModelResponse(raw, input);
+}
+
+function parseSelectionClassificationResponse(raw: string): SelectionClassification {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Selection classification is not JSON: ${(error as Error).message}`);
+  }
+  if (!isRecord(value)) throw new Error("Selection classification must be an object");
+  const kind = value.kind;
+  if (kind !== "text" && kind !== "math" && kind !== "geometry"
+    && kind !== "data" && kind !== "unknown") {
+    throw new Error("Selection classification kind is invalid");
+  }
+  const confidence = value.confidence;
+  if (confidence !== "high" && confidence !== "medium" && confidence !== "low") {
+    throw new Error("Selection classification confidence is invalid");
+  }
+  const content = typeof value.content === "string" ? value.content.trim() : "";
+  if (kind !== "unknown" && confidence !== "low" && !content) {
+    throw new Error("Confident selection classification requires recognized content");
+  }
+  return { kind, content, confidence };
+}
+
+async function classifySelection(
+  client: VertexClient,
+  input: SelectionToolInput,
+): Promise<SelectionClassification> {
+  const media = await selectionModelMedia(input);
+  if (!media) throw new Error("Selection classification requires an image");
+  const raw = await callStructuredModel(client, {
+    label: "selection-classification",
+    turnId: input.turn_id,
+    maxTokens: Math.min(client.maxTokens, 512),
+    responseSchema: SELECTION_CLASSIFICATION_RESPONSE_SCHEMA,
+    media,
+    systemPrompt: `你只分类学生明确选中的原始笔迹，不回答问题，不生成课程或白板内容。kind 只能是 text、math、geometry、data、unknown。只有图片中能直接读到数学表达式、方程或函数时才返回 math；圆圈、下划线、箭头、套索或普通曲线标记不是数学表达式。content 只抄录图片中可辨认的内容，不利用课程背景补全。无法可靠辨认时返回 unknown 或 low confidence。你看不到也不得猜测笔迹下方的课程内容。`,
+    prompt: JSON.stringify({
+      source_id: input.source.source_id,
+      selected_ink_image: "authoritative",
+    }),
+  });
+  return parseSelectionClassificationResponse(raw);
 }
 
 function outputPath(input: ToolInput): string {
@@ -6873,7 +7484,18 @@ function partialOutputPath(input: ToolInput, part: number): string {
 }
 
 function safeError(error: unknown): string {
-  if (error instanceof Error) return error.message.slice(0, MAX_ERROR_BODY_LENGTH);
+  if (error instanceof Error) {
+    const cause = error.cause && typeof error.cause === "object"
+      ? error.cause as Record<string, unknown>
+      : undefined;
+    const causeMessage = typeof cause?.message === "string" ? cause.message : undefined;
+    const causeCode = typeof cause?.code === "string" ? cause.code : undefined;
+    return [
+      error.message,
+      causeCode ? `cause=${causeCode}` : "",
+      causeMessage && causeMessage !== error.message ? causeMessage : "",
+    ].filter(Boolean).join(": ").slice(0, MAX_ERROR_BODY_LENGTH);
+  }
   return String(error).slice(0, MAX_ERROR_BODY_LENGTH);
 }
 
@@ -6889,14 +7511,35 @@ async function main(): Promise<void> {
   const startedAt = Date.now();
   const invokedTool = process.argv[2];
   try {
-    if (invokedTool !== TOOL_NAME && invokedTool !== SELECTION_TOOL_NAME) {
+    if (invokedTool !== TOOL_NAME
+      && invokedTool !== SELECTION_TOOL_NAME
+      && invokedTool !== SELECTION_CLASSIFICATION_TOOL_NAME) {
       throw new Error(
-        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}' or '${SELECTION_TOOL_NAME}'`,
+        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}', '${SELECTION_TOOL_NAME}', or '${SELECTION_CLASSIFICATION_TOOL_NAME}'`,
       );
     }
     const chunks: Buffer[] = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
     const rawInput = Buffer.concat(chunks).toString("utf8");
+    const traceTurnId = traceTurnIdFromRawInput(rawInput);
+    if (traceTurnId) beginStageTrace(traceTurnId, invokedTool, startedAt);
+    if (invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME) {
+      const input = parseSelectionClassificationInput(rawInput);
+      const client = await createVertexClient();
+      const classification = await classifySelection(client, input);
+      stageLog({
+        stage: "selection-classification",
+        turn_id: input.turn_id,
+        status: "completed",
+        elapsed_ms: Date.now() - startedAt,
+      });
+      emit({
+        success: true,
+        output: "Selection classified without modifying source ink.",
+        structured_metadata: { selection_classification: classification },
+      });
+      return;
+    }
     if (invokedTool === SELECTION_TOOL_NAME) {
       const input = parseSelectionToolInput(rawInput);
       const client = await createVertexClient();
@@ -6919,6 +7562,10 @@ async function main(): Promise<void> {
     }
     const input = parseToolInput(rawInput);
     const client = await createVertexClient();
+    const lessonPlanMode = process.env.OLL_LESSON_PLAN_MODE?.trim() || "off";
+    if (lessonPlanMode !== "off" && lessonPlanMode !== "experimental") {
+      throw new Error(`Unknown OLL_LESSON_PLAN_MODE '${lessonPlanMode}'`);
+    }
     const authoringStrategy = process.env.OLL_AUTHORING_STRATEGY?.trim() || "parallel";
     if (authoringStrategy !== "parallel" && authoringStrategy !== "monolithic") {
       throw new Error(`Unknown OLL_AUTHORING_STRATEGY '${authoringStrategy}'`);
@@ -6940,7 +7587,86 @@ async function main(): Promise<void> {
         "oll_lesson_part",
         `part=${part} elapsed_ms=${Date.now() - startedAt}`,
       );
+      stageLog({
+        stage: "lesson-prefix-published",
+        turn_id: input.turn_id,
+        status: "completed",
+        completed_sections: part,
+        elapsed_ms: Date.now() - startedAt,
+      });
     };
+    if (lessonPlanMode === "experimental" && input.request_source === "self_contained") {
+      const { generateLessonPlanWithModel } = await import("./lesson-plan-experimental.js");
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "started",
+        mode: "experimental",
+      });
+      const generatedLessonPlan = await generateLessonPlanWithModel(
+        (request) => callStructuredModel(client, {
+          label: request.label,
+          turnId: request.turn_id,
+          systemPrompt: request.system_prompt,
+          prompt: request.prompt,
+          responseSchema: request.response_schema,
+          maxTokens: request.max_output_tokens,
+          lessonPlanPart: request.part,
+          lessonPlanSection: request.section,
+          lessonPlanAttempt: request.attempt,
+        }),
+        {
+          turn_id: input.turn_id,
+          learner_request: input.learner_request,
+          language: input.language,
+          learner_context: input.learner_context,
+          tutor_context: input.tutor_context,
+        },
+        {
+          max_concurrency: 1,
+          compile: { language: input.language },
+          on_rejected_part: (event) => stageLog({
+            stage: "lesson-plan-local-rejection",
+            turn_id: input.turn_id,
+            ...event,
+          }),
+          on_playable_prefix: async ({ completed_sections, compiled }) => {
+            await publishPrefix(compiled.lesson, completed_sections);
+          },
+        },
+      );
+      const artifactPath = outputPath(input);
+      await mkdir(dirname(artifactPath), { recursive: true });
+      await writeFile(artifactPath, `${JSON.stringify(generatedLessonPlan.lesson, null, 2)}\n`, "utf8");
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "completed",
+        mode: "experimental",
+        sections: generatedLessonPlan.lesson.steps.length,
+        model_calls: generatedLessonPlan.model_calls,
+        elapsed_ms: Date.now() - startedAt,
+      });
+      emit({
+        success: true,
+        output: `Validated OLL lesson generated through the experimental Lesson Plan path with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
+        files_to_send: [artifactPath],
+        authoring_strategy: "lesson_plan_experimental",
+        lesson_plan_model_calls: generatedLessonPlan.model_calls,
+        lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
+        published_parts: publishedParts,
+      });
+      return;
+    }
+    if (lessonPlanMode === "experimental") {
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "skipped",
+        mode: "experimental",
+        reason: `request_source '${input.request_source}' is not supported by the experimental path`,
+      });
+    }
     let brief: LessonBrief;
     let generated: Awaited<ReturnType<typeof generateLesson>>;
     if (authoringStrategy === "parallel") {
@@ -6963,9 +7689,11 @@ async function main(): Promise<void> {
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}\n`, "utf8");
     stageLog({
-      stage: invokedTool === SELECTION_TOOL_NAME
-        ? "selection-enhancement"
-        : "lesson-generation",
+      stage: invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME
+        ? "selection-classification"
+        : invokedTool === SELECTION_TOOL_NAME
+          ? "selection-enhancement"
+          : "lesson-generation",
       turn_id: input.turn_id,
       status: "completed",
       elapsed_ms: Date.now() - startedAt,
@@ -6997,19 +7725,34 @@ async function main(): Promise<void> {
       elapsed_ms: Date.now() - startedAt,
       error_code: error instanceof ToolExecutionError
         ? error.code
-        : invokedTool === SELECTION_TOOL_NAME
-          ? "SELECTION_ENHANCEMENT_FAILED"
-          : "LESSON_GENERATION_FAILED",
+        : invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME
+          ? "SELECTION_CLASSIFICATION_FAILED"
+          : invokedTool === SELECTION_TOOL_NAME
+            ? "SELECTION_ENHANCEMENT_FAILED"
+            : "LESSON_GENERATION_FAILED",
     });
     process.stderr.write(`learning-coach: ${message}\n`);
+    const terminalForTurn = invokedTool === TOOL_NAME;
     emit({
       success: false,
       error_code: error instanceof ToolExecutionError
         ? error.code
-        : invokedTool === SELECTION_TOOL_NAME
-          ? "SELECTION_ENHANCEMENT_FAILED"
-          : "LESSON_GENERATION_FAILED",
-      output: message,
+        : invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME
+          ? "SELECTION_CLASSIFICATION_FAILED"
+          : invokedTool === SELECTION_TOOL_NAME
+            ? "SELECTION_ENHANCEMENT_FAILED"
+            : "LESSON_GENERATION_FAILED",
+      output: terminalForTurn
+        ? `Lesson generation already exhausted its internal attempts. Do not call oll_generate_lesson again in this turn. Report the failure once to the learner. ${message}`
+        : message,
+      ...(terminalForTurn ? {
+        retryable: false,
+        do_not_retry_same_turn: true,
+        structured_metadata: {
+          retryable: false,
+          do_not_retry_same_turn: true,
+        },
+      } : {}),
     });
     process.exitCode = 1;
   }

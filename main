@@ -7170,6 +7170,7 @@ var require__ = __commonJS({
 });
 
 // src/main.ts
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -7537,6 +7538,24 @@ var oll_authoring_v0_1_schema_default = {
             }
           }
         },
+        polygons: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["as", "points"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              points: {
+                type: "array",
+                minItems: 3,
+                items: { $ref: "#/$defs/alias" }
+              },
+              label: { type: "string" },
+              tone: { enum: ["primary", "secondary", "accent", "neutral"] }
+            }
+          }
+        },
         circles: {
           type: "array",
           items: {
@@ -7652,7 +7671,7 @@ var oll_authoring_v0_1_schema_default = {
             additionalProperties: false,
             properties: {
               as: { $ref: "#/$defs/alias" },
-              kind: { enum: ["box", "sphere", "cylinder", "cone", "surface"] },
+              kind: { enum: ["box", "sphere", "cylinder", "cone", "surface", "implicit_surface"] },
               label: { type: "string" },
               color: { type: "string" },
               center: { $ref: "#/$defs/point3d" },
@@ -7662,6 +7681,8 @@ var oll_authoring_v0_1_schema_default = {
               expression: { type: "string", minLength: 1, maxLength: 256 },
               x_range: { $ref: "#/$defs/range3d" },
               y_range: { $ref: "#/$defs/range3d" },
+              z_range: { $ref: "#/$defs/range3d" },
+              level: { type: "number" },
               samples: { type: "integer", minimum: 4, maximum: 24 }
             }
           }
@@ -8176,6 +8197,24 @@ var v0_1_schema_default = {
             }
           }
         },
+        polygons: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["as", "points"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              points: {
+                type: "array",
+                minItems: 3,
+                items: { $ref: "#/$defs/alias" }
+              },
+              label: { type: "string" },
+              tone: { enum: ["primary", "secondary", "accent", "neutral"] }
+            }
+          }
+        },
         circles: {
           type: "array",
           items: {
@@ -8291,7 +8330,7 @@ var v0_1_schema_default = {
             additionalProperties: false,
             properties: {
               as: { $ref: "#/$defs/alias" },
-              kind: { enum: ["box", "sphere", "cylinder", "cone", "surface"] },
+              kind: { enum: ["box", "sphere", "cylinder", "cone", "surface", "implicit_surface"] },
               label: { type: "string" },
               color: { type: "string" },
               center: { $ref: "#/$defs/point3d" },
@@ -8301,6 +8340,8 @@ var v0_1_schema_default = {
               expression: { type: "string", minLength: 1, maxLength: 256 },
               x_range: { $ref: "#/$defs/range3d" },
               y_range: { $ref: "#/$defs/range3d" },
+              z_range: { $ref: "#/$defs/range3d" },
+              level: { type: "number" },
               samples: { type: "integer", minimum: 4, maximum: 24 }
             }
           }
@@ -8662,6 +8703,11 @@ var OLL_BINDING_CAPABILITIES = {
     sections: ["value"]
   }
 };
+var OLL_EXPRESSION_CAPABILITIES = {
+  plot: {
+    curves: ["expression"]
+  }
+};
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
 function bindingCapabilitiesForNodeKind(kind) {
   if (Object.hasOwn(OLL_BINDING_CAPABILITIES, kind)) {
@@ -8696,6 +8742,7 @@ var OLL_EXECUTION_CAPABILITIES = {
   node_kinds: OLL_NODE_KINDS,
   action_names: OLL_ACTION_NAMES,
   value_bindings: OLL_BINDING_CAPABILITIES,
+  variable_expressions: OLL_EXPRESSION_CAPABILITIES,
   student_controls: {
     variable: OLL_VARIABLE_CONTROL_KINDS,
     scene3d: OLL_SCENE3D_CONTROL_KINDS
@@ -9139,7 +9186,7 @@ function validateContentFragments(content, path) {
 }
 function collectAddressableContent(content) {
   const result = validateContentFragments(content, "/content");
-  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
+  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "polygons", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
     if (!content?.[field])
       continue;
     for (const item of content[field]) {
@@ -9230,6 +9277,24 @@ function validateGeometryContent(action, path, variables) {
       fail("OLL_REFERENCE_NOT_FOUND", referencePath, `Geometry point '${value}' is not defined`);
     }
   };
+  if (content.polygons !== void 0) {
+    if (!Array.isArray(content.polygons)) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/polygons`, "Expected an array");
+    }
+    content.polygons.forEach((polygon, index) => {
+      const polygonPath = `${path}/content/polygons/${index}`;
+      requireObject(polygon, polygonPath);
+      if (!Array.isArray(polygon.points) || polygon.points.length < 3) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${polygonPath}/points`, "A geometry polygon requires at least three points");
+      }
+      polygon.points.forEach((point, pointIndex) => {
+        requirePointReference(point, `${polygonPath}/points/${pointIndex}`);
+      });
+      if (new Set(polygon.points).size < 3) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${polygonPath}/points`, "A geometry polygon requires at least three distinct points");
+      }
+    });
+  }
   for (const [field, references] of [
     ["circles", ["center"]],
     ["segments", ["from", "to"]],
@@ -9309,7 +9374,7 @@ function validateScene3dContent(action, path, variables) {
     aliases.add(object.as);
     objectAliases.add(object.as);
     const objectKind = String(object.kind);
-    if (!["box", "sphere", "cylinder", "cone", "surface"].includes(objectKind)) {
+    if (!["box", "sphere", "cylinder", "cone", "surface", "implicit_surface"].includes(objectKind)) {
       fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/kind`, `Unknown 3D object kind '${object.kind}'`);
     }
     if (object.color !== void 0 && (typeof object.color !== "string" || !/^(#[0-9a-fA-F]{6}|teal|blue|purple|orange|red|gray)$/.test(object.color))) {
@@ -9327,6 +9392,39 @@ function validateScene3dContent(action, path, variables) {
         const height = requireFiniteNumber(object.height, `${objectPath}/height`);
         if (height <= 0)
           fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/height`, "3D height must be greater than zero");
+      }
+    } else if (objectKind === "implicit_surface") {
+      requireString(object.expression, `${objectPath}/expression`);
+      const xRange = range(object.x_range, `${objectPath}/x_range`);
+      const yRange = range(object.y_range, `${objectPath}/y_range`);
+      const zRange = range(object.z_range, `${objectPath}/z_range`);
+      const level = object.level === void 0 ? 0 : requireFiniteNumber(object.level, `${objectPath}/level`);
+      const sampleCount = Number(object.samples ?? 12);
+      if (!Number.isInteger(sampleCount) || sampleCount < 4 || sampleCount > 18) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/samples`, "3D implicit surface samples must be an integer from 4 to 18");
+      }
+      try {
+        const variableNames = ["x", "y", "z", ...variables.keys()];
+        const evaluate = compileMathExpression(object.expression, variableNames);
+        const values = Object.fromEntries(variables);
+        const sampled = [];
+        for (let xIndex = 0; xIndex <= sampleCount; xIndex += 1) {
+          const x = xRange.min + (xRange.max - xRange.min) * xIndex / sampleCount;
+          for (let yIndex = 0; yIndex <= sampleCount; yIndex += 1) {
+            const y = yRange.min + (yRange.max - yRange.min) * yIndex / sampleCount;
+            for (let zIndex = 0; zIndex <= sampleCount; zIndex += 1) {
+              const z = zRange.min + (zRange.max - zRange.min) * zIndex / sampleCount;
+              const value = evaluate({ ...values, x, y, z });
+              if (Number.isFinite(value))
+                sampled.push(value);
+            }
+          }
+        }
+        if (sampled.length === 0 || Math.min(...sampled) > level || Math.max(...sampled) < level) {
+          throw new Error("the requested level is outside the sampled value range");
+        }
+      } catch (error) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/expression`, `Invalid 3D implicit surface expression: ${error.message}`);
       }
     } else {
       requireString(object.expression, `${objectPath}/expression`);
@@ -9415,6 +9513,66 @@ function validateScene3dContent(action, path, variables) {
       highlight.points.forEach((rawPoint, pointIndex) => point(rawPoint, `${highlightPath}/points/${pointIndex}`));
     });
   }
+}
+function validatePlotContent(action, path, variables) {
+  if (action.kind !== "plot" || !Array.isArray(action.content.curves))
+    return;
+  const axes = action.content.axes ?? {};
+  const plotRange = (value, rangePath, fallback) => {
+    if (value === void 0)
+      return fallback;
+    requireObject(value, rangePath);
+    const min = requireFiniteNumber(value.min, `${rangePath}/min`);
+    const max = requireFiniteNumber(value.max, `${rangePath}/max`);
+    if (max <= min) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", rangePath, "Plot range max must be greater than min");
+    }
+    return { min, max };
+  };
+  const xRange = plotRange(axes.x, `${path}/content/axes/x`, { min: -5, max: 5 });
+  const yRange = plotRange(axes.y, `${path}/content/axes/y`, { min: -5, max: 5 });
+  action.content.curves.forEach((rawCurve, index) => {
+    const curvePath = `${path}/content/curves/${index}`;
+    requireObject(rawCurve, curvePath);
+    const curve = rawCurve;
+    requireString(curve.expression, `${curvePath}/expression`);
+    if (curve.kind !== "implicit") {
+      const expression = curve.expression.trim().replace(/^y\s*=/iu, "").trim();
+      try {
+        compileMathExpression(expression, ["x", ...variables.keys()]);
+      } catch (error) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/expression`, `Invalid plot expression: ${error.message}`);
+      }
+      return;
+    }
+    const level = curve.level === void 0 ? 0 : requireFiniteNumber(curve.level, `${curvePath}/level`);
+    const sampleCount = Number(curve.samples ?? 80);
+    if (!Number.isInteger(sampleCount) || sampleCount < 16 || sampleCount > 200) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/samples`, "Implicit plot samples must be an integer from 16 to 200");
+    }
+    try {
+      const evaluate = compileMathExpression(curve.expression, ["x", "y", ...variables.keys()]);
+      const values = Object.fromEntries(variables);
+      let minimum = Infinity;
+      let maximum = -Infinity;
+      for (let xIndex = 0; xIndex <= sampleCount; xIndex += 1) {
+        const x = xRange.min + (xRange.max - xRange.min) * xIndex / sampleCount;
+        for (let yIndex = 0; yIndex <= sampleCount; yIndex += 1) {
+          const y = yRange.min + (yRange.max - yRange.min) * yIndex / sampleCount;
+          const result = evaluate({ ...values, x, y });
+          if (!Number.isFinite(result))
+            continue;
+          minimum = Math.min(minimum, result);
+          maximum = Math.max(maximum, result);
+        }
+      }
+      if (!Number.isFinite(minimum) || minimum > level || maximum < level) {
+        throw new Error("the requested level has no visible contour in the plot range");
+      }
+    } catch (error) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/expression`, `Invalid implicit plot expression: ${error.message}`);
+    }
+  });
 }
 function validateImageResource(action, path, resourceContext) {
   if (action.kind !== "image")
@@ -9630,6 +9788,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
           validateStructuredContent(action.content, `${actionPath}/content`, uniqueFragments);
           validateImageResource(action, actionPath, resourceContext);
           validateGeometryContent(action, actionPath, lessonVariables);
+          validatePlotContent(action, actionPath, lessonVariables);
           validateScene3dContent(action, actionPath, lessonVariables);
           if (action.kind === "scene3d") {
             const camera = action.content.camera;
@@ -9709,7 +9868,7 @@ function stableId(host, type, alias) {
 }
 function normalizeAddressableContent(_host, nodeId, content) {
   const clone = structuredClone(content);
-  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
+  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "polygons", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
     if (!Array.isArray(clone?.[field]))
       continue;
     clone[field] = clone[field].map((item) => {
@@ -9730,6 +9889,9 @@ function normalizeAddressableContent(_host, nodeId, content) {
       }
       if (field === "arcs") {
         normalized.center = `${nodeId}:fragment:${item.center}`;
+      }
+      if (field === "polygons" && Array.isArray(item.points)) {
+        normalized.points = item.points.map((point) => `${nodeId}:fragment:${point}`);
       }
       if (field === "points" && item.interaction?.kind === "angle_control") {
         normalized.interaction = {
@@ -10225,6 +10387,7 @@ function canonicalizeState(state) {
 // src/main.ts
 var TOOL_NAME = "oll_generate_lesson";
 var SELECTION_TOOL_NAME = "oll_enhance_selection";
+var SELECTION_CLASSIFICATION_TOOL_NAME = "oll_classify_selection";
 var DEFAULT_MODEL = "gemini-3.6-flash";
 var DEFAULT_VERTEX_LOCATION = "global";
 var DEFAULT_TIMEOUT_MS = 18e4;
@@ -10445,8 +10608,8 @@ function parseThinkingLevel(value, label) {
   return level;
 }
 function configuredThinkingLevel(label) {
-  const environmentName = label === "lesson-brief" ? "OLL_PLANNING_THINKING_LEVEL" : label === "lesson-brief-verification" ? "OLL_VERIFICATION_THINKING_LEVEL" : label === "lesson-task-planning" ? "OLL_TASK_THINKING_LEVEL" : label === "lesson-section" ? "OLL_SECTION_THINKING_LEVEL" : label === "lesson-visual-component" ? "OLL_VISUAL_THINKING_LEVEL" : label === "selection-enhancement" ? "OLL_SELECTION_THINKING_LEVEL" : label === "lesson-component-repair" || label === "lesson-beat-repair" ? "OLL_REPAIR_THINKING_LEVEL" : "OLL_AUTHORING_THINKING_LEVEL";
-  const safeDefault = label === "lesson-brief-verification" || label === "lesson-task-planning" || label === "lesson-section" || label === "lesson-visual-component" ? "LOW" : void 0;
+  const environmentName = label === "lesson-brief" ? "OLL_PLANNING_THINKING_LEVEL" : label === "lesson-brief-verification" ? "OLL_VERIFICATION_THINKING_LEVEL" : label === "lesson-task-planning" || label === "lesson-plan-bootstrap" || label === "lesson-plan-outline" ? "OLL_TASK_THINKING_LEVEL" : label === "lesson-section" || label === "lesson-plan-section" ? "OLL_SECTION_THINKING_LEVEL" : label === "lesson-visual-component" ? "OLL_VISUAL_THINKING_LEVEL" : label === "selection-enhancement" ? "OLL_SELECTION_THINKING_LEVEL" : label === "selection-classification" ? "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL" : label === "lesson-component-repair" || label === "lesson-beat-repair" ? "OLL_REPAIR_THINKING_LEVEL" : "OLL_AUTHORING_THINKING_LEVEL";
+  const safeDefault = label === "lesson-brief-verification" || label === "lesson-task-planning" || label === "lesson-plan-bootstrap" || label === "lesson-plan-outline" || label === "lesson-section" || label === "lesson-plan-section" || label === "lesson-visual-component" || label === "selection-classification" ? "LOW" : void 0;
   return parseThinkingLevel(process.env[environmentName], environmentName) ?? parseThinkingLevel(process.env.OLL_THINKING_LEVEL, "OLL_THINKING_LEVEL") ?? safeDefault;
 }
 function validateTurnId(value) {
@@ -10785,6 +10948,27 @@ function parseSelectionToolInput(raw) {
     ...typeof input.lesson_title === "string" ? { lesson_title: truncate(input.lesson_title) } : {},
     ...typeof input.board_summary === "string" ? { board_summary: truncate(input.board_summary) } : {}
   };
+}
+function parseSelectionClassificationInput(raw) {
+  let candidate;
+  try {
+    candidate = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Tool input is not valid JSON: ${error.message}`);
+  }
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    throw new Error("Selection classification input must be a JSON object");
+  }
+  const input = parseSelectionToolInput(JSON.stringify({
+    ...candidate,
+    learner_request: "Classify only the selected student ink.",
+    content_hint: "unknown",
+    tool_id: "custom-question"
+  }));
+  if (!input.selection_media) {
+    throw new Error("selection_media is required for selection classification");
+  }
+  return input;
 }
 function buildVertexResponseJsonSchema(root) {
   const omitted = /* @__PURE__ */ new Set([
@@ -13129,6 +13313,85 @@ function expressionReferencesVariable(expression, variable) {
   const tokens = expression.match(/[a-z][a-z0-9_]*/giu) ?? [];
   return tokens.some((token) => token.toLocaleLowerCase() === variable.toLocaleLowerCase());
 }
+var bindingExpressionBuiltins = /* @__PURE__ */ new Set([
+  "abs",
+  "acos",
+  "asin",
+  "atan",
+  "ceil",
+  "cos",
+  "e",
+  "exp",
+  "floor",
+  "ln",
+  "log",
+  "pi",
+  "round",
+  "sin",
+  "sqrt",
+  "tan"
+]);
+function canonicalModelVariableReferences(expression, plannedVariables) {
+  let count = 0;
+  const canonicalByLowercase = new Map([...plannedVariables].map((variable) => [
+    variable.toLocaleLowerCase(),
+    variable
+  ]));
+  const canonical = expression.replace(
+    /\bvar\s*\(\s*(?:([a-z][a-z0-9_]*)|(["'])([a-z][a-z0-9_]*)\2)\s*\)/giu,
+    (match, bare, _quote, quoted) => {
+      const variable = canonicalByLowercase.get((bare ?? quoted ?? "").toLocaleLowerCase());
+      if (!variable) return match;
+      count += 1;
+      return variable;
+    }
+  );
+  return { expression: canonical, count };
+}
+function normalizeVisualComponentBindings(action, sharedVariables) {
+  const result = {
+    removed: 0,
+    canonicalized: 0,
+    renamed: []
+  };
+  if (!isRecord(action.content) || !Array.isArray(action.content.bindings)) return result;
+  const bindings = action.content.bindings.filter(isRecord);
+  if (sharedVariables.length === 0) {
+    result.removed = bindings.length;
+    delete action.content.bindings;
+    return result;
+  }
+  const plannedVariables = new Set(sharedVariables.map((item) => item.variable));
+  for (const binding of bindings) {
+    if (typeof binding.expression !== "string") continue;
+    const canonical = canonicalModelVariableReferences(
+      binding.expression,
+      plannedVariables
+    );
+    binding.expression = canonical.expression;
+    result.canonicalized += canonical.count;
+  }
+  if (plannedVariables.size !== 1) return result;
+  const [plannedVariable] = [...plannedVariables];
+  const renamed = /* @__PURE__ */ new Set();
+  for (const binding of bindings) {
+    if (typeof binding.expression !== "string") continue;
+    const identifiers = [...new Set(
+      (binding.expression.match(/[a-z][a-z0-9_]*/giu) ?? []).map((identifier) => identifier.toLocaleLowerCase())
+    )];
+    if (identifiers.some((identifier) => plannedVariables.has(identifier))) continue;
+    const unknown = identifiers.filter((identifier) => !plannedVariables.has(identifier) && !bindingExpressionBuiltins.has(identifier));
+    if (unknown.length !== 1) continue;
+    const [inventedVariable] = unknown;
+    binding.expression = binding.expression.replace(
+      /[a-z][a-z0-9_]*/giu,
+      (identifier) => identifier.toLocaleLowerCase() === inventedVariable ? plannedVariable : identifier
+    );
+    renamed.add(inventedVariable);
+  }
+  result.renamed = [...renamed].map((from) => ({ from, to: plannedVariable }));
+  return result;
+}
 function lowerPlannedLessonFields(document, brief) {
   if (!isRecord(document) || !isRecord(document.lesson)) return document;
   if (Array.isArray(document.steps)) {
@@ -14034,9 +14297,64 @@ function timeoutUntil(deadlineAt, label) {
   }
   return remaining;
 }
+var activeStageTrace;
+function stageTracePath(turnId) {
+  const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
+  const path = resolve(workDirectory, "study", "oll", `${turnId}.generation-trace.jsonl`);
+  if (!path.startsWith(`${workDirectory}${sep}`) || !isAbsolute(path)) {
+    throw new Error("Resolved generation trace path escapes OCTOS_WORK_DIR");
+  }
+  return path;
+}
+function beginStageTrace(turnId, invokedTool, startedAt) {
+  const path = stageTracePath(turnId);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, "", "utf8");
+  activeStageTrace = { path, turnId, invokedTool, startedAt, sequence: 0 };
+  stageLog({
+    stage: "tool-invocation",
+    turn_id: turnId,
+    tool: invokedTool,
+    status: "started"
+  });
+}
+function traceTurnIdFromRawInput(rawInput) {
+  try {
+    const candidate = JSON.parse(rawInput);
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return void 0;
+    return validateTurnId(candidate.turn_id);
+  } catch {
+    return void 0;
+  }
+}
 function stageLog(payload) {
-  process.stderr.write(`learning-coach: ${JSON.stringify(payload)}
+  const trace = activeStageTrace;
+  const normalizedPayload = trace && payload.turn_id === void 0 ? { ...payload, turn_id: trace.turnId } : payload;
+  process.stderr.write(`learning-coach: ${JSON.stringify(normalizedPayload)}
 `);
+  if (!trace) return;
+  trace.sequence += 1;
+  const entry = {
+    schema: "octos.learning-coach.generation-stage.v1",
+    sequence: trace.sequence,
+    recorded_at: (/* @__PURE__ */ new Date()).toISOString(),
+    invocation_elapsed_ms: Date.now() - trace.startedAt,
+    tool: trace.invokedTool,
+    ...normalizedPayload
+  };
+  try {
+    appendFileSync(trace.path, `${JSON.stringify(entry)}
+`, "utf8");
+  } catch (error) {
+    process.stderr.write(`learning-coach: ${JSON.stringify({
+      stage: "generation-trace",
+      turn_id: trace.turnId,
+      status: "failed",
+      error_code: "GENERATION_TRACE_WRITE_FAILED",
+      error: safeError(error)
+    })}
+`);
+  }
 }
 function buildVertexSchemaContract(inputCandidate, briefCandidate) {
   const input = parseToolInput(JSON.stringify(inputCandidate));
@@ -14127,7 +14445,10 @@ async function callStructuredModel(client, request) {
     prompt_bytes: Buffer.byteLength(request.prompt),
     system_prompt_bytes: Buffer.byteLength(request.systemPrompt),
     request_bytes: Buffer.byteLength(requestBody),
-    max_output_tokens: request.maxTokens ?? client.maxTokens
+    max_output_tokens: request.maxTokens ?? client.maxTokens,
+    ...request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {},
+    ...request.lessonPlanSection === void 0 ? {} : { lesson_plan_section: request.lessonPlanSection },
+    ...request.lessonPlanAttempt === void 0 ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }
   });
   let body = "";
   let status = 0;
@@ -14136,18 +14457,52 @@ async function callStructuredModel(client, request) {
     let usedAttempts = 0;
     for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
       usedAttempts = requestAttempt;
-      const response = await fetch(client.endpoint, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${client.accessToken}`,
-          "content-type": "application/json"
-        },
-        body: requestBody,
-        signal: request.signal ? AbortSignal.any([
-          request.signal,
-          AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
-        ]) : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
-      });
+      let response;
+      try {
+        response = await fetch(client.endpoint, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${client.accessToken}`,
+            "content-type": "application/json"
+          },
+          body: requestBody,
+          signal: request.signal ? AbortSignal.any([
+            request.signal,
+            AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
+          ]) : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))
+        });
+      } catch (error) {
+        const cancelled = request.signal?.aborted === true;
+        const timeoutError = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+        const cause = error instanceof Error && error.cause && typeof error.cause === "object" ? error.cause : void 0;
+        const transportCode = typeof cause?.code === "string" ? cause.code : void 0;
+        const canRetry = !cancelled && !timeoutError && requestAttempt < client.requestAttempts;
+        stageLog({
+          stage: "model-transport",
+          turn_id: request.turnId,
+          label: request.label,
+          status: canRetry ? "retrying" : "failed",
+          request_attempt: requestAttempt,
+          ...transportCode ? { transport_code: transportCode } : {},
+          error: safeError(error),
+          ...request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {},
+          ...request.lessonPlanSection === void 0 ? {} : { lesson_plan_section: request.lessonPlanSection },
+          ...request.lessonPlanAttempt === void 0 ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }
+        });
+        if (!canRetry) {
+          if (cancelled || timeoutError) throw error;
+          throw new ToolExecutionError(
+            "VERTEX_TRANSPORT_FAILED",
+            `Vertex ${request.label} transport failed${transportCode ? ` (${transportCode})` : ""}: ${safeError(error)}`
+          );
+        }
+        const delayMs2 = Math.min(
+          500 * 2 ** (requestAttempt - 1),
+          timeoutUntil(deadlineAt, request.label)
+        );
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs2));
+        continue;
+      }
       status = response.status;
       requestId = response.headers.get("x-goog-request-id") ?? requestId;
       body = await response.text();
@@ -14196,7 +14551,10 @@ async function callStructuredModel(client, request) {
       ...metric("totalTokenCount") === void 0 ? {} : { total_tokens: metric("totalTokenCount") },
       ...typeof usage.trafficType === "string" ? { traffic_type: usage.trafficType } : {},
       response_bytes: Buffer.byteLength(body),
-      elapsed_ms: Date.now() - startedAt
+      elapsed_ms: Date.now() - startedAt,
+      ...request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {},
+      ...request.lessonPlanSection === void 0 ? {} : { lesson_plan_section: request.lessonPlanSection },
+      ...request.lessonPlanAttempt === void 0 ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }
     });
     return content;
   } catch (error) {
@@ -14216,7 +14574,10 @@ async function callStructuredModel(client, request) {
       status: "failed",
       http_status: status || null,
       elapsed_ms: Date.now() - startedAt,
-      error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED"
+      error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED",
+      ...request.lessonPlanPart ? { lesson_plan_part: request.lessonPlanPart } : {},
+      ...request.lessonPlanSection === void 0 ? {} : { lesson_plan_section: request.lessonPlanSection },
+      ...request.lessonPlanAttempt === void 0 ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }
     });
     throw surfacedError;
   }
@@ -14921,6 +15282,7 @@ async function generateVisualComponent(client, input, brief, requirement, respon
   );
   const sharedVariables = brief.shared_variable_requirements.filter((variable) => variable.bound_visuals.includes(requirement.id));
   let previousComponent;
+  let previousFailureFingerprint;
   let violations = [];
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     let raw;
@@ -14974,6 +15336,20 @@ async function generateVisualComponent(client, input, brief, requirement, respon
       previousComponent = raw;
       if (attempt < maxAttempts) continue;
       throw new GeneratedLessonError(violations[0].message, raw, violations);
+    }
+    if (isRecord(action)) {
+      const normalization = normalizeVisualComponentBindings(action, sharedVariables);
+      if (normalization.removed > 0 || normalization.canonicalized > 0 || normalization.renamed.length > 0) {
+        process.stderr.write(`learning-coach: ${JSON.stringify({
+          stage: "lesson-component-binding-normalization",
+          turn_id: input.turn_id,
+          id: requirement.id,
+          removed: normalization.removed,
+          canonicalized: normalization.canonicalized,
+          renamed: normalization.renamed
+        })}
+`);
+      }
     }
     if (!isRecord(action) || action.do !== "write" || action.as !== requirement.id || action.kind !== requirement.surface) {
       violations = [{
@@ -15034,6 +15410,22 @@ async function generateVisualComponent(client, input, brief, requirement, respon
     previousComponent = action;
     process.stderr.write(`learning-coach: rejected visual component '${requirement.id}' ${attempt}: ${formatViolations(violations)}
 `);
+    const failureFingerprint = createHash("sha256").update(JSON.stringify({ action, violations })).digest("hex");
+    if (failureFingerprint === previousFailureFingerprint) {
+      process.stderr.write(`learning-coach: ${JSON.stringify({
+        stage: "lesson-component-repeated-failure",
+        turn_id: input.turn_id,
+        id: requirement.id,
+        attempts: attempt
+      })}
+`);
+      throw new GeneratedLessonError(
+        `Visual component '${requirement.id}' repeated the same invalid result after ${attempt} attempt(s)`,
+        raw,
+        violations
+      );
+    }
+    previousFailureFingerprint = failureFingerprint;
     if (attempt === maxAttempts) {
       throw new GeneratedLessonError(
         `Visual component '${requirement.id}' failed after ${maxAttempts} attempt(s)`,
@@ -15117,9 +15509,17 @@ function markSectionDegraded(step, language) {
   const english = language.toLocaleLowerCase().startsWith("en");
   step.purpose = english ? "Continue after one unavailable interactive visual" : "\u4E00\u4E2A\u4E92\u52A8\u753B\u9762\u6682\u65F6\u4E0D\u53EF\u7528\uFF0C\u7EE7\u7EED\u5176\u4F59\u8BFE\u7A0B";
   const firstBeat = step.beats[0];
-  if (firstBeat) {
-    firstBeat.say = english ? "This interactive visual is temporarily unavailable. Let us continue with the rest of the lesson." : "\u8FD9\u4E2A\u4E92\u52A8\u753B\u9762\u6682\u65F6\u6CA1\u6709\u751F\u6210\u6210\u529F\uFF0C\u6211\u4EEC\u5148\u7EE7\u7EED\u540E\u9762\u7684\u5185\u5BB9\u3002";
-  }
+  step.beats = [{
+    key: firstBeat?.key ?? `${step.key}-visual-unavailable`,
+    say: english ? "This interactive visual is temporarily unavailable. The lesson will not ask you to use it." : "\u8FD9\u4E2A\u4E92\u52A8\u753B\u9762\u6682\u65F6\u6CA1\u6709\u751F\u6210\u6210\u529F\uFF0C\u672C\u8282\u8BFE\u4E0D\u4F1A\u518D\u8981\u6C42\u4F60\u64CD\u4F5C\u5B83\u3002",
+    delivery: "patient",
+    actions: [{
+      do: "focus",
+      when: "after_speech",
+      targets: [],
+      intent: "current_step"
+    }]
+  }];
 }
 function injectVisualComponents(step, components) {
   const firstBeat = step.beats[0];
@@ -15271,6 +15671,14 @@ async function generateLessonInParallel(client, input, brief, onPrefix, signal) 
     status: "started",
     sections: sections.length,
     visual_components: brief.visual_requirements.length,
+    visuals: brief.visual_requirements.map((requirement) => ({
+      id: requirement.id,
+      surface: requirement.surface
+    })),
+    shared_variables: brief.shared_variable_requirements.map((variable) => ({
+      variable: variable.variable,
+      bound_visuals: variable.bound_visuals
+    })),
     parallelism
   })}
 `);
@@ -15342,6 +15750,17 @@ async function generateLessonInParallel(client, input, brief, onPrefix, signal) 
   for (const [index, sectionPromise] of sectionPromises.entries()) {
     const step = await sectionPromise;
     const section = sections[index];
+    const unavailableContextVisuals = section.contextVisualIds.filter((visualId) => degradedVisualIds.has(visualId));
+    if (section.visualRequirementIds.length === 0 && unavailableContextVisuals.length > 0) {
+      process.stderr.write(`learning-coach: ${JSON.stringify({
+        stage: "lesson-section-skipped",
+        turn_id: input.turn_id,
+        id: section.id,
+        unavailable_visuals: unavailableContextVisuals
+      })}
+`);
+      continue;
+    }
     const componentDependencies = section.visualRequirementIds.map((requirementId) => {
       const dependency = componentPromises.get(requirementId);
       if (!dependency) {
@@ -15358,10 +15777,10 @@ async function generateLessonInParallel(client, input, brief, onPrefix, signal) 
       degradedComponents.push(result.degradation);
     }
     const components = componentResults.map((result) => result.action);
-    if (components.length > 0) injectVisualComponents(step, components);
     if (componentResults.some((result) => result.degradation)) {
       markSectionDegraded(step, input.language ?? "zh-CN");
     }
+    if (components.length > 0) injectVisualComponents(step, components);
     composeParallelSectionWithVisualContext(step, section, annotationLayouts);
     for (const requirementId of section.visualRequirementIds) {
       publishedVisuals.add(requirementId);
@@ -15704,6 +16123,22 @@ async function generateLesson(client, input, brief) {
   }
   throw new Error("OLL generation failed");
 }
+var SELECTION_CLASSIFICATION_RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    kind: {
+      type: "string",
+      enum: ["text", "math", "geometry", "data", "unknown"]
+    },
+    content: { type: "string" },
+    confidence: {
+      type: "string",
+      enum: ["high", "medium", "low"]
+    }
+  },
+  required: ["kind", "content", "confidence"]
+};
 var SELECTION_RESPONSE_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -15717,7 +16152,11 @@ var SELECTION_RESPONSE_SCHEMA = {
       type: "string",
       enum: ["high", "medium", "low"]
     },
-    response_kind: { type: "string", enum: ["explanation", "plot"] },
+    response_kind: {
+      type: "string",
+      enum: ["explanation", "plot", "implicit_plot", "scene3d", "unsupported"]
+    },
+    scene_kind: { type: "string", enum: ["surface", "implicit_surface"] },
     title: { type: "string" },
     text: { type: "string" },
     items: { type: "array", items: { type: "string" } },
@@ -15725,13 +16164,28 @@ var SELECTION_RESPONSE_SCHEMA = {
     x_min: { type: "number" },
     x_max: { type: "number" },
     y_min: { type: "number" },
-    y_max: { type: "number" }
+    y_max: { type: "number" },
+    z_min: { type: "number" },
+    z_max: { type: "number" },
+    level: { type: "number" },
+    samples: { type: "integer" },
+    reason_code: {
+      type: "string",
+      enum: [
+        "unreadable_expression",
+        "unsupported_variables",
+        "unsupported_representation",
+        "unsafe_complexity"
+      ]
+    },
+    alternatives: { type: "array", items: { type: "string" } }
   },
   required: [
     "interpretation_kind",
     "interpretation_content",
     "interpretation_confidence",
     "response_kind",
+    "scene_kind",
     "title",
     "text",
     "items",
@@ -15739,7 +16193,13 @@ var SELECTION_RESPONSE_SCHEMA = {
     "x_min",
     "x_max",
     "y_min",
-    "y_max"
+    "y_max",
+    "z_min",
+    "z_max",
+    "level",
+    "samples",
+    "reason_code",
+    "alternatives"
   ]
 };
 function selectionOutputPath(input) {
@@ -15791,6 +16251,13 @@ function parseSelectionModelResponse(raw, input) {
   }
   const output = value;
   const nonEmpty = (name) => requireNonEmptyString(output[name], name);
+  const finiteOutput = (name) => {
+    const number = output[name];
+    if (typeof number !== "number" || !Number.isFinite(number)) {
+      throw new Error(`${name} must be a finite number`);
+    }
+    return number;
+  };
   const kind = nonEmpty("interpretation_kind");
   if (!["text", "math", "geometry", "data", "unknown"].includes(kind)) {
     throw new Error("interpretation_kind is invalid");
@@ -15801,44 +16268,192 @@ function parseSelectionModelResponse(raw, input) {
   }
   const title = nonEmpty("title");
   const text = nonEmpty("text");
+  const interpretationContent = nonEmpty("interpretation_content");
   const items = Array.isArray(output.items) ? output.items.map((item, index) => requireNonEmptyString(item, `items[${index}]`)) : [];
   let response;
-  if (output.response_kind === "plot") {
-    if (input.tool_id !== "generate-plot" && input.tool_id !== "custom-question") {
-      throw new Error(`${input.tool_id} cannot return a plot response`);
+  const visualizationRequested = input.tool_id === "generate-plot" || input.tool_id === "custom-question";
+  const alternatives = Array.isArray(output.alternatives) ? output.alternatives.map((item, index) => requireNonEmptyString(item, `alternatives[${index}]`)).slice(0, 4) : [];
+  const unsupported = (reasonCode, reason) => ({
+    kind: "unsupported",
+    title: "\u5F53\u524D\u65E0\u6CD5\u751F\u6210\u8FD9\u4E2A\u51FD\u6570\u56FE\u50CF",
+    text: reason,
+    reason_code: reasonCode,
+    alternatives: alternatives.length > 0 ? alternatives : ["\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F", "\u4F7F\u7528\u201C\u95EE\u5C0F\u7AE0\u9C7C\u201D\u8BA9\u5B83\u89E3\u91CA\u6216\u6539\u5199\u4E3A\u53EF\u7ED8\u5236\u5F62\u5F0F"]
+  });
+  const failureReasonCode = (error) => {
+    if (confidence === "low") return "unreadable_expression";
+    const message = error instanceof Error ? error.message : String(error);
+    if (/too complex/iu.test(message)) return "unsafe_complexity";
+    if (/Unknown variable or function '[a-z]'/u.test(message)) {
+      return "unsupported_variables";
     }
-    const expression = nonEmpty("expression");
-    const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
-    if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
-      throw new Error("Plot ranges must be finite numbers");
-    }
-    const [xMin, xMax, yMin, yMax] = numbers;
-    if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
-    const evaluate = compileMathExpression(expression, ["x"]);
-    for (let index = 0; index <= 40; index += 1) {
-      const x = xMin + (xMax - xMin) * index / 40;
-      const y = evaluate({ x });
-      if (typeof y !== "number" || !Number.isFinite(y)) {
-        throw new Error("Plot expression is not finite across its range");
+    return "unsupported_representation";
+  };
+  try {
+    if (output.response_kind === "plot" || output.response_kind === "implicit_plot") {
+      if (!visualizationRequested) {
+        throw new Error(`${input.tool_id} cannot return a plot response`);
       }
+      const expression = nonEmpty("expression");
+      const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
+      if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
+        throw new Error("Plot ranges must be finite numbers");
+      }
+      const [xMin, xMax, yMin, yMax] = numbers;
+      if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
+      if (output.response_kind === "plot") {
+        const evaluate = compileMathExpression(expression, ["x"]);
+        for (let index = 0; index <= 40; index += 1) {
+          const x = xMin + (xMax - xMin) * index / 40;
+          const y = evaluate({ x });
+          if (!Number.isFinite(y)) throw new Error("Plot expression is not finite across its range");
+        }
+        response = {
+          kind: "plot",
+          plot_kind: "explicit",
+          title,
+          text,
+          expression,
+          x_range: { min: xMin, max: xMax },
+          y_range: { min: yMin, max: yMax }
+        };
+      } else {
+        const level = finiteOutput("level");
+        const evaluate = compileMathExpression(expression, ["x", "y"]);
+        const sampled = [];
+        for (let xIndex = 0; xIndex <= 8; xIndex += 1) {
+          const x = xMin + (xMax - xMin) * xIndex / 8;
+          for (let yIndex = 0; yIndex <= 8; yIndex += 1) {
+            const y = yMin + (yMax - yMin) * yIndex / 8;
+            const value2 = evaluate({ x, y });
+            if (!Number.isFinite(value2)) throw new Error("Implicit plot is not finite across its range");
+            sampled.push(value2);
+          }
+        }
+        if (Math.min(...sampled) > level || Math.max(...sampled) < level) {
+          throw new Error("Implicit plot level is outside the sampled value range");
+        }
+        response = {
+          kind: "plot",
+          plot_kind: "implicit",
+          title,
+          text,
+          expression,
+          level,
+          samples: 80,
+          x_range: { min: xMin, max: xMax },
+          y_range: { min: yMin, max: yMax }
+        };
+      }
+    } else if (output.response_kind === "scene3d") {
+      if (!visualizationRequested) {
+        throw new Error(`${input.tool_id} cannot return a 3D response`);
+      }
+      const sceneKind = nonEmpty("scene_kind");
+      if (sceneKind !== "surface" && sceneKind !== "implicit_surface") {
+        throw new Error("scene_kind is invalid");
+      }
+      const expression = nonEmpty("expression");
+      const numbers = [
+        output.x_min,
+        output.x_max,
+        output.y_min,
+        output.y_max,
+        output.z_min,
+        output.z_max
+      ];
+      if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
+        throw new Error("3D ranges must be finite numbers");
+      }
+      const [xMin, xMax, yMin, yMax, zMin, zMax] = numbers;
+      if (xMax <= xMin || yMax <= yMin || zMax <= zMin) {
+        throw new Error("3D ranges must increase");
+      }
+      const level = finiteOutput("level");
+      const requestedSamples = Number(output.samples);
+      const samples = Number.isSafeInteger(requestedSamples) ? Math.max(4, Math.min(18, requestedSamples)) : 12;
+      const evaluate = compileMathExpression(
+        expression,
+        sceneKind === "surface" ? ["x", "y"] : ["x", "y", "z"]
+      );
+      const sampled = [];
+      const verificationSamples = sceneKind === "surface" ? 8 : samples;
+      for (let xIndex = 0; xIndex <= verificationSamples; xIndex += 1) {
+        const x = xMin + (xMax - xMin) * xIndex / verificationSamples;
+        for (let yIndex = 0; yIndex <= verificationSamples; yIndex += 1) {
+          const y = yMin + (yMax - yMin) * yIndex / verificationSamples;
+          if (sceneKind === "surface") {
+            const z = evaluate({ x, y });
+            if (!Number.isFinite(z)) throw new Error("3D surface is not finite across its range");
+            sampled.push(z);
+          } else {
+            for (let zIndex = 0; zIndex <= verificationSamples; zIndex += 1) {
+              const z = zMin + (zMax - zMin) * zIndex / verificationSamples;
+              const value2 = evaluate({ x, y, z });
+              if (Number.isFinite(value2)) sampled.push(value2);
+            }
+          }
+        }
+      }
+      if (sceneKind === "implicit_surface" && (sampled.length === 0 || Math.min(...sampled) > level || Math.max(...sampled) < level)) {
+        throw new Error("3D implicit surface level is outside the sampled value range");
+      }
+      const object = sceneKind === "surface" ? {
+        as: "selected-function",
+        kind: "surface",
+        expression,
+        x_range: { min: xMin, max: xMax },
+        y_range: { min: yMin, max: yMax },
+        samples,
+        color: "teal"
+      } : {
+        as: "selected-function",
+        kind: "implicit_surface",
+        expression,
+        level,
+        x_range: { min: xMin, max: xMax },
+        y_range: { min: yMin, max: yMax },
+        z_range: { min: zMin, max: zMax },
+        samples,
+        color: "teal"
+      };
+      response = {
+        kind: "scene3d",
+        title,
+        text,
+        content: {
+          title,
+          fallback: text,
+          axes: true,
+          camera: { yaw: 0.65, pitch: 0.45, zoom: 1 },
+          objects: [object]
+        }
+      };
+    } else if (output.response_kind === "unsupported") {
+      const reasonCode = nonEmpty("reason_code");
+      if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
+        throw new Error("reason_code is invalid");
+      }
+      response = unsupported(reasonCode, text);
+    } else if (output.response_kind === "explanation") {
+      response = visualizationRequested && input.tool_id === "generate-plot" ? unsupported(
+        confidence === "low" ? "unreadable_expression" : "unsupported_representation",
+        text
+      ) : {
+        kind: "explanation",
+        title,
+        text,
+        ...items.length > 0 ? { items } : {}
+      };
+    } else {
+      throw new Error("response_kind is invalid");
     }
-    response = {
-      kind: "plot",
-      title,
-      text,
-      expression,
-      x_range: { min: xMin, max: xMax },
-      y_range: { min: yMin, max: yMax }
-    };
-  } else if (output.response_kind === "explanation") {
-    response = {
-      kind: "explanation",
-      title,
-      text,
-      ...items.length > 0 ? { items } : {}
-    };
-  } else {
-    throw new Error("response_kind is invalid");
+  } catch (error) {
+    if (!visualizationRequested) throw error;
+    response = unsupported(
+      failureReasonCode(error),
+      `\u5DF2\u7ECF\u8BC6\u522B\u5230\u201C${interpretationContent}\u201D\uFF0C\u4F46\u5F53\u524D\u65E0\u6CD5\u5B89\u5168\u5730\u751F\u6210\u5B83\u7684\u56FE\u50CF\u3002`
+    );
   }
   return {
     profile: "octos.selection-enhancement",
@@ -15850,7 +16465,7 @@ function parseSelectionModelResponse(raw, input) {
     tool_id: input.tool_id,
     interpretation: {
       kind,
-      content: nonEmpty("interpretation_content"),
+      content: interpretationContent,
       confidence
     },
     response
@@ -15864,7 +16479,15 @@ async function generateSelectionEnhancement(client, input) {
     maxTokens: Math.min(client.maxTokens, 4096),
     responseSchema: SELECTION_RESPONSE_SCHEMA,
     media,
-    systemPrompt: `\u4F60\u662F\u767D\u677F\u9009\u533A\u8F85\u52A9\u5DE5\u5177\u3002\u53EA\u89E3\u91CA\u5F53\u524D\u8BF7\u6C42\u9644\u5E26\u7684\u9009\u533A\u56FE\u7247\u548C\u7528\u6237\u660E\u786E\u9009\u4E2D\u7684\u5C40\u90E8\u767D\u677F\u5BF9\u8C61\uFF0C\u5E76\u5728\u539F\u7A3F\u65C1\u8FB9\u751F\u6210\u72EC\u7ACB\u8F85\u52A9\u5185\u5BB9\uFF1B\u7EDD\u4E0D\u91CD\u5199\u3001\u7EA0\u6B63\u6216\u66FF\u6362\u539F\u7A3F\u3002\u56FE\u7247\u8BC6\u522B\u4E0D\u786E\u5B9A\u65F6\u5FC5\u987B\u660E\u786E\u8BF4\u660E\u3002board_targets \u662F Runtime \u63D0\u4F9B\u7684\u7A33\u5B9A\u5F15\u7528\uFF0C\u53EA\u80FD\u7528\u4E8E\u7406\u89E3\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u80FD\u81EA\u884C\u589E\u5220\u6216\u6539\u5199\u3002\u53EA\u6709 tool_id \u4E3A generate-plot \u6216 custom-question\u3001\u4ECE\u56FE\u7247\u6216\u5907\u7528\u8BC6\u522B\u6587\u5B57\u4E2D\u8BFB\u51FA\u660E\u786E\u7684\u5355\u53D8\u91CF y=f(x) \u4E14\u7528\u6237\u8981\u6C42\u51FD\u6570\u56FE\u50CF\u65F6\uFF0Cresponse_kind \u624D\u80FD\u4F7F\u7528 plot\uFF0Cexpression \u5FC5\u987B\u662F\u4EC5\u542B x \u7684\u5B89\u5168\u6570\u5B66\u8868\u8FBE\u5F0F\u3002\u5176\u4ED6\u60C5\u51B5\u4F7F\u7528 explanation\u3002\u4E0D\u8981\u58F0\u79F0\u770B\u5230\u4E86\u9009\u533A\u56FE\u7247\u4EE5\u5916\u7684\u767D\u677F\u3002`,
+    systemPrompt: `\u4F60\u662F\u767D\u677F\u9009\u533A\u8F85\u52A9\u5DE5\u5177\u3002\u53EA\u89E3\u91CA\u5F53\u524D\u8BF7\u6C42\u9644\u5E26\u7684\u9009\u533A\u56FE\u7247\u548C\u7528\u6237\u660E\u786E\u9009\u4E2D\u7684\u5C40\u90E8\u767D\u677F\u5BF9\u8C61\uFF0C\u5E76\u5728\u539F\u7A3F\u65C1\u8FB9\u751F\u6210\u72EC\u7ACB\u8F85\u52A9\u5185\u5BB9\uFF1B\u7EDD\u4E0D\u91CD\u5199\u3001\u7EA0\u6B63\u6216\u66FF\u6362\u539F\u7A3F\u3002\u56FE\u7247\u8BC6\u522B\u4E0D\u786E\u5B9A\u65F6\u5FC5\u987B\u660E\u786E\u8BF4\u660E\u3002board_targets \u662F Runtime \u63D0\u4F9B\u7684\u7A33\u5B9A\u5F15\u7528\uFF0C\u53EA\u80FD\u7528\u4E8E\u7406\u89E3\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u80FD\u81EA\u884C\u589E\u5220\u6216\u6539\u5199\u3002\u4E0D\u8981\u58F0\u79F0\u770B\u5230\u4E86\u9009\u533A\u56FE\u7247\u4EE5\u5916\u7684\u767D\u677F\u3002
+
+\u5F53 tool_id \u4E3A generate-plot \u6216 custom-question \u4E14\u7528\u6237\u8981\u6C42\u751F\u6210\u51FD\u6570\u56FE\u50CF\u65F6\uFF0C\u5148\u628A\u8BC6\u522B\u5230\u7684\u516C\u5F0F\u89C4\u8303\u5316\u4E3A\u53EA\u80FD\u4F7F\u7528\u6570\u5B57\u3001x/y/z\u3001pi\u3001e\u3001+ - * / ^\u3001\u62EC\u53F7\u548C abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan \u7684\u8868\u8FBE\u5F0F\uFF1B\u5FC5\u987B\u663E\u5F0F\u5199\u4E58\u53F7\u3002\u7136\u540E\u9009\u62E9\uFF1A
+- \u5355\u53D8\u91CF y=f(x)\uFF1Aresponse_kind=plot\uFF0Cexpression \u53EA\u5199 f(x)\u3002
+- \u4E8C\u53D8\u91CF\u9690\u5F0F\u65B9\u7A0B F(x,y)=c\uFF1Aresponse_kind=implicit_plot\uFF0Cexpression \u5199 F(x,y)\uFF0Clevel \u5199 c\u3002
+- \u663E\u5F0F\u66F2\u9762 z=f(x,y)\uFF1Aresponse_kind=scene3d\uFF0Cscene_kind=surface\uFF0Cexpression \u53EA\u5199 f(x,y)\u3002
+- \u4E09\u53D8\u91CF\u9690\u5F0F\u65B9\u7A0B F(x,y,z)=c\uFF1Aresponse_kind=scene3d\uFF0Cscene_kind=implicit_surface\uFF0Cexpression \u5199 F(x,y,z)\uFF0Clevel \u5199 c\u3002
+- \u8D85\u8FC7\u4E09\u4E2A\u72EC\u7ACB\u53D8\u91CF\u3001\u65E0\u6CD5\u53EF\u9760\u8BC6\u522B\u3001\u65E0\u6CD5\u8F6C\u4E3A\u4E0A\u8FF0\u5B89\u5168\u8868\u8FBE\u5F0F\u6216\u5728\u5408\u7406\u6709\u9650\u8303\u56F4\u5185\u65E0\u6CD5\u7ED8\u5236\uFF1Aresponse_kind=unsupported\uFF0C\u7ED9\u51FA\u51C6\u786E\u539F\u56E0\u548C\u53EF\u64CD\u4F5C\u7684 alternatives\uFF0C\u4E0D\u80FD\u5047\u88C5\u5DF2\u7ECF\u7ED8\u5236\u3002
+\u6240\u6709\u8303\u56F4\u5FC5\u987B\u6709\u9650\u5E76\u8986\u76D6\u4E3B\u8981\u56FE\u5F62\uFF1Bscene3d \u7684 samples \u4F7F\u7528 10 \u5230 14\u3002\u4EE3\u7801\u4F1A\u518D\u6B21\u6821\u9A8C\u4F60\u7684\u9009\u62E9\u548C\u8868\u8FBE\u5F0F\uFF0C\u6821\u9A8C\u4E0D\u901A\u8FC7\u65F6\u4E0D\u4F1A\u7ED8\u5236\u3002\u975E\u7ED8\u56FE\u8BF7\u6C42\u4F7F\u7528 explanation\u3002`,
     prompt: JSON.stringify({
       learner_request: input.learner_request,
       tool_id: input.tool_id,
@@ -15880,6 +16503,45 @@ async function generateSelectionEnhancement(client, input) {
     }, null, 2)
   });
   return parseSelectionModelResponse(raw, input);
+}
+function parseSelectionClassificationResponse(raw) {
+  let value;
+  try {
+    value = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Selection classification is not JSON: ${error.message}`);
+  }
+  if (!isRecord(value)) throw new Error("Selection classification must be an object");
+  const kind = value.kind;
+  if (kind !== "text" && kind !== "math" && kind !== "geometry" && kind !== "data" && kind !== "unknown") {
+    throw new Error("Selection classification kind is invalid");
+  }
+  const confidence = value.confidence;
+  if (confidence !== "high" && confidence !== "medium" && confidence !== "low") {
+    throw new Error("Selection classification confidence is invalid");
+  }
+  const content = typeof value.content === "string" ? value.content.trim() : "";
+  if (kind !== "unknown" && confidence !== "low" && !content) {
+    throw new Error("Confident selection classification requires recognized content");
+  }
+  return { kind, content, confidence };
+}
+async function classifySelection(client, input) {
+  const media = await selectionModelMedia(input);
+  if (!media) throw new Error("Selection classification requires an image");
+  const raw = await callStructuredModel(client, {
+    label: "selection-classification",
+    turnId: input.turn_id,
+    maxTokens: Math.min(client.maxTokens, 512),
+    responseSchema: SELECTION_CLASSIFICATION_RESPONSE_SCHEMA,
+    media,
+    systemPrompt: `\u4F60\u53EA\u5206\u7C7B\u5B66\u751F\u660E\u786E\u9009\u4E2D\u7684\u539F\u59CB\u7B14\u8FF9\uFF0C\u4E0D\u56DE\u7B54\u95EE\u9898\uFF0C\u4E0D\u751F\u6210\u8BFE\u7A0B\u6216\u767D\u677F\u5185\u5BB9\u3002kind \u53EA\u80FD\u662F text\u3001math\u3001geometry\u3001data\u3001unknown\u3002\u53EA\u6709\u56FE\u7247\u4E2D\u80FD\u76F4\u63A5\u8BFB\u5230\u6570\u5B66\u8868\u8FBE\u5F0F\u3001\u65B9\u7A0B\u6216\u51FD\u6570\u65F6\u624D\u8FD4\u56DE math\uFF1B\u5706\u5708\u3001\u4E0B\u5212\u7EBF\u3001\u7BAD\u5934\u3001\u5957\u7D22\u6216\u666E\u901A\u66F2\u7EBF\u6807\u8BB0\u4E0D\u662F\u6570\u5B66\u8868\u8FBE\u5F0F\u3002content \u53EA\u6284\u5F55\u56FE\u7247\u4E2D\u53EF\u8FA8\u8BA4\u7684\u5185\u5BB9\uFF0C\u4E0D\u5229\u7528\u8BFE\u7A0B\u80CC\u666F\u8865\u5168\u3002\u65E0\u6CD5\u53EF\u9760\u8FA8\u8BA4\u65F6\u8FD4\u56DE unknown \u6216 low confidence\u3002\u4F60\u770B\u4E0D\u5230\u4E5F\u4E0D\u5F97\u731C\u6D4B\u7B14\u8FF9\u4E0B\u65B9\u7684\u8BFE\u7A0B\u5185\u5BB9\u3002`,
+    prompt: JSON.stringify({
+      source_id: input.source.source_id,
+      selected_ink_image: "authoritative"
+    })
+  });
+  return parseSelectionClassificationResponse(raw);
 }
 function outputPath(input) {
   const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
@@ -15904,7 +16566,16 @@ function partialOutputPath(input, part) {
   return path;
 }
 function safeError(error) {
-  if (error instanceof Error) return error.message.slice(0, MAX_ERROR_BODY_LENGTH);
+  if (error instanceof Error) {
+    const cause = error.cause && typeof error.cause === "object" ? error.cause : void 0;
+    const causeMessage = typeof cause?.message === "string" ? cause.message : void 0;
+    const causeCode = typeof cause?.code === "string" ? cause.code : void 0;
+    return [
+      error.message,
+      causeCode ? `cause=${causeCode}` : "",
+      causeMessage && causeMessage !== error.message ? causeMessage : ""
+    ].filter(Boolean).join(": ").slice(0, MAX_ERROR_BODY_LENGTH);
+  }
   return String(error).slice(0, MAX_ERROR_BODY_LENGTH);
 }
 function emit(payload) {
@@ -15919,14 +16590,33 @@ async function main() {
   const startedAt = Date.now();
   const invokedTool = process.argv[2];
   try {
-    if (invokedTool !== TOOL_NAME && invokedTool !== SELECTION_TOOL_NAME) {
+    if (invokedTool !== TOOL_NAME && invokedTool !== SELECTION_TOOL_NAME && invokedTool !== SELECTION_CLASSIFICATION_TOOL_NAME) {
       throw new Error(
-        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}' or '${SELECTION_TOOL_NAME}'`
+        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}', '${SELECTION_TOOL_NAME}', or '${SELECTION_CLASSIFICATION_TOOL_NAME}'`
       );
     }
     const chunks = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
     const rawInput = Buffer.concat(chunks).toString("utf8");
+    const traceTurnId = traceTurnIdFromRawInput(rawInput);
+    if (traceTurnId) beginStageTrace(traceTurnId, invokedTool, startedAt);
+    if (invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME) {
+      const input2 = parseSelectionClassificationInput(rawInput);
+      const client2 = await createVertexClient();
+      const classification = await classifySelection(client2, input2);
+      stageLog({
+        stage: "selection-classification",
+        turn_id: input2.turn_id,
+        status: "completed",
+        elapsed_ms: Date.now() - startedAt
+      });
+      emit({
+        success: true,
+        output: "Selection classified without modifying source ink.",
+        structured_metadata: { selection_classification: classification }
+      });
+      return;
+    }
     if (invokedTool === SELECTION_TOOL_NAME) {
       const input2 = parseSelectionToolInput(rawInput);
       const client2 = await createVertexClient();
@@ -15950,6 +16640,10 @@ async function main() {
     }
     const input = parseToolInput(rawInput);
     const client = await createVertexClient();
+    const lessonPlanMode = process.env.OLL_LESSON_PLAN_MODE?.trim() || "off";
+    if (lessonPlanMode !== "off" && lessonPlanMode !== "experimental") {
+      throw new Error(`Unknown OLL_LESSON_PLAN_MODE '${lessonPlanMode}'`);
+    }
     const authoringStrategy = process.env.OLL_AUTHORING_STRATEGY?.trim() || "parallel";
     if (authoringStrategy !== "parallel" && authoringStrategy !== "monolithic") {
       throw new Error(`Unknown OLL_AUTHORING_STRATEGY '${authoringStrategy}'`);
@@ -15972,7 +16666,87 @@ async function main() {
         "oll_lesson_part",
         `part=${part} elapsed_ms=${Date.now() - startedAt}`
       );
+      stageLog({
+        stage: "lesson-prefix-published",
+        turn_id: input.turn_id,
+        status: "completed",
+        completed_sections: part,
+        elapsed_ms: Date.now() - startedAt
+      });
     };
+    if (lessonPlanMode === "experimental" && input.request_source === "self_contained") {
+      const { generateLessonPlanWithModel } = await import("./lesson-plan-experimental.js");
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "started",
+        mode: "experimental"
+      });
+      const generatedLessonPlan = await generateLessonPlanWithModel(
+        (request) => callStructuredModel(client, {
+          label: request.label,
+          turnId: request.turn_id,
+          systemPrompt: request.system_prompt,
+          prompt: request.prompt,
+          responseSchema: request.response_schema,
+          maxTokens: request.max_output_tokens,
+          lessonPlanPart: request.part,
+          lessonPlanSection: request.section,
+          lessonPlanAttempt: request.attempt
+        }),
+        {
+          turn_id: input.turn_id,
+          learner_request: input.learner_request,
+          language: input.language,
+          learner_context: input.learner_context,
+          tutor_context: input.tutor_context
+        },
+        {
+          max_concurrency: 1,
+          compile: { language: input.language },
+          on_rejected_part: (event) => stageLog({
+            stage: "lesson-plan-local-rejection",
+            turn_id: input.turn_id,
+            ...event
+          }),
+          on_playable_prefix: async ({ completed_sections, compiled }) => {
+            await publishPrefix(compiled.lesson, completed_sections);
+          }
+        }
+      );
+      const artifactPath2 = outputPath(input);
+      await mkdir(dirname(artifactPath2), { recursive: true });
+      await writeFile(artifactPath2, `${JSON.stringify(generatedLessonPlan.lesson, null, 2)}
+`, "utf8");
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "completed",
+        mode: "experimental",
+        sections: generatedLessonPlan.lesson.steps.length,
+        model_calls: generatedLessonPlan.model_calls,
+        elapsed_ms: Date.now() - startedAt
+      });
+      emit({
+        success: true,
+        output: `Validated OLL lesson generated through the experimental Lesson Plan path with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
+        files_to_send: [artifactPath2],
+        authoring_strategy: "lesson_plan_experimental",
+        lesson_plan_model_calls: generatedLessonPlan.model_calls,
+        lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
+        published_parts: publishedParts
+      });
+      return;
+    }
+    if (lessonPlanMode === "experimental") {
+      stageLog({
+        stage: "lesson-plan-generation",
+        turn_id: input.turn_id,
+        status: "skipped",
+        mode: "experimental",
+        reason: `request_source '${input.request_source}' is not supported by the experimental path`
+      });
+    }
     let brief;
     let generated;
     if (authoringStrategy === "parallel") {
@@ -15996,7 +16770,7 @@ async function main() {
     await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}
 `, "utf8");
     stageLog({
-      stage: invokedTool === SELECTION_TOOL_NAME ? "selection-enhancement" : "lesson-generation",
+      stage: invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME ? "selection-classification" : invokedTool === SELECTION_TOOL_NAME ? "selection-enhancement" : "lesson-generation",
       turn_id: input.turn_id,
       status: "completed",
       elapsed_ms: Date.now() - startedAt
@@ -16023,14 +16797,23 @@ async function main() {
       stage: "lesson-generation",
       status: "failed",
       elapsed_ms: Date.now() - startedAt,
-      error_code: error instanceof ToolExecutionError ? error.code : invokedTool === SELECTION_TOOL_NAME ? "SELECTION_ENHANCEMENT_FAILED" : "LESSON_GENERATION_FAILED"
+      error_code: error instanceof ToolExecutionError ? error.code : invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME ? "SELECTION_CLASSIFICATION_FAILED" : invokedTool === SELECTION_TOOL_NAME ? "SELECTION_ENHANCEMENT_FAILED" : "LESSON_GENERATION_FAILED"
     });
     process.stderr.write(`learning-coach: ${message}
 `);
+    const terminalForTurn = invokedTool === TOOL_NAME;
     emit({
       success: false,
-      error_code: error instanceof ToolExecutionError ? error.code : invokedTool === SELECTION_TOOL_NAME ? "SELECTION_ENHANCEMENT_FAILED" : "LESSON_GENERATION_FAILED",
-      output: message
+      error_code: error instanceof ToolExecutionError ? error.code : invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME ? "SELECTION_CLASSIFICATION_FAILED" : invokedTool === SELECTION_TOOL_NAME ? "SELECTION_ENHANCEMENT_FAILED" : "LESSON_GENERATION_FAILED",
+      output: terminalForTurn ? `Lesson generation already exhausted its internal attempts. Do not call oll_generate_lesson again in this turn. Report the failure once to the learner. ${message}` : message,
+      ...terminalForTurn ? {
+        retryable: false,
+        do_not_retry_same_turn: true,
+        structured_metadata: {
+          retryable: false,
+          do_not_retry_same_turn: true
+        }
+      } : {}
     });
     process.exitCode = 1;
   }
@@ -16040,6 +16823,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
 }
 export {
   buildVertexSchemaContract,
+  callStructuredModel,
   createVertexClient,
   probeVertexSchema
 };

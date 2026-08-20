@@ -1,0 +1,84 @@
+[
+  {
+    "id": "unit-circle-to-sine",
+    "learner_request": "请结合单位圆和 y=sin x 的函数图像，解释角度旋转如何变成周期波动。",
+    "request_parts": [
+      "展示单位圆",
+      "展示 y=sin x 的函数图像",
+      "解释角度旋转如何变成周期波动"
+    ],
+    "expected_kinds": ["geometry", "plot"],
+    "requires_animation": true
+  },
+  {
+    "id": "parabola-basics",
+    "learner_request": "我一直不明白为什么 y=x^2 的图像开口向上，请结合函数图像解释。",
+    "request_parts": [
+      "展示 y=x^2 的函数图像",
+      "解释图像为什么开口向上"
+    ],
+    "expected_kinds": ["plot"]
+  },
+  {
+    "id": "parabola-transform",
+    "learner_request": "请画出 y=(x+3)^2-4 的函数图像，并标出顶点，解释它从 y=x^2 怎样平移得到。",
+    "request_parts": [
+      "展示 y=(x+3)^2-4 的函数图像",
+      "标出顶点",
+      "解释它从 y=x^2 怎样平移得到"
+    ],
+    "expected_kinds": ["plot"]
+  },
+  {
+    "id": "circle-arc-length",
+    "learner_request": "请结合圆、圆心角和半径，解释弧长公式是怎么得到的。",
+    "request_parts": [
+      "展示圆、圆心角和半径",
+      "解释弧长公式的推导"
+    ],
+    "expected_kinds": ["geometry"]
+  },
+  {
+    "id": "spring-oscillation",
+    "learner_request": "我不明白弹簧为什么会往复运动，也不明白为什么可以用余弦函数描述。请边演示边讲，并让我自己拖动观察。",
+    "request_parts": [
+      "解释弹簧为什么会往复运动",
+      "解释为什么可以用余弦函数描述",
+      "用动画演示",
+      "允许我自己拖动观察"
+    ],
+    "expected_kinds": ["geometry", "plot"],
+    "requires_animation": true
+  },
+  {
+    "id": "cube-section",
+    "learner_request": "我空间想象能力不太好，请用一个可以旋转的正方体，帮我理解顶点、棱和面之间的关系。再展示一个水平截面，让我从不同角度观察，最后让我自己把它转到俯视方向。",
+    "request_parts": [
+      "用可以旋转的正方体解释顶点、棱和面之间的关系",
+      "展示水平截面",
+      "允许从不同角度观察",
+      "最后让我自己转到俯视方向"
+    ],
+    "expected_kinds": ["scene3d"]
+  },
+  {
+    "id": "paraboloid-section",
+    "learner_request": "二元函数的图像我一直想象不出来。请用一个可以旋转的三维图像解释 z=x^2+y^2，再用水平截面说明为什么截线是圆，并让我自己旋转和缩放观察。",
+    "request_parts": [
+      "用可旋转的三维图像解释 z=x^2+y^2",
+      "用水平截面说明截线为什么是圆",
+      "允许我自己旋转和缩放观察"
+    ],
+    "expected_kinds": ["scene3d"]
+  },
+  {
+    "id": "natural-log-origin",
+    "learner_request": "请给我解释自然对数的由来和推导方式。",
+    "request_parts": [
+      "解释自然对数的由来",
+      "解释自然对数的推导方式"
+    ],
+    "expected_kinds": [],
+    "minimum_sections": 3
+  }
+]
