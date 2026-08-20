@@ -157,6 +157,29 @@ const cubeSection = api.buildLessonPlanSectionDraftJsonSchema({
     reusable_items: [{ kind: "board_item", board_kind: "visual", capability: "cube_with_section" }],
   }],
 }, 1);
+const reusableBoardSection = api.buildLessonPlanSectionDraftJsonSchema({
+  numbers: [{ initial: 0, min: 0, max: 1, label: "重排进度" }],
+  course_visuals: [{
+    capability: "geometric_rearrangement",
+    create_section: 2,
+    use_sections: [2, 3],
+    relation: "primary",
+    reusable_item: 3,
+  }],
+  sections: [
+    { purpose: "提出问题", allowed_capabilities: [], reusable_items: [] },
+    {
+      purpose: "用几何重排说明面积关系",
+      allowed_capabilities: ["geometric_rearrangement"],
+      reusable_items: [
+        { kind: "board_item", board_kind: "math" },
+        { kind: "board_item", board_kind: "note" },
+        { kind: "board_item", board_kind: "visual", capability: "geometric_rearrangement" },
+      ],
+    },
+    { purpose: "总结", allowed_capabilities: [], reusable_items: [] },
+  ],
+}, 2);
 const sectionNoActivities = clone(unitCircleSection);
 delete sectionNoActivities.properties.number_activities;
 delete sectionNoActivities.properties.scene3d_activities;
@@ -204,6 +227,9 @@ const variants = process.argv.includes("--bootstrap-only") ? [[
 ]] : process.argv.includes("--section-3d-only") ? [[
   "cube-section",
   cubeSection,
+]] : process.argv.includes("--section-reusable-only") ? [[
+  "reusable-board-section",
+  reusableBoardSection,
 ]] : [
   ["current", current],
   ["typed-enums", typedEnums],
