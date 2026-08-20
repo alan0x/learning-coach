@@ -1725,6 +1725,141 @@ test("the staged model path keeps default concurrency at one and repairs only th
   assert.match(generated.drafts[2].student_activities[0].prompt, /6\.28/u);
 });
 
+test("a progressive prefix does not expose a control before its visual section exists", async () => {
+  const plan = {
+    version: "0.1",
+    title: "用几何重排理解勾股定理",
+    goals: ["通过刚体重排理解面积关系"],
+    numbers: [{
+      initial: 0,
+      min: 0,
+      max: 1,
+      label: "重排进度",
+      student_control: { kind: "slider", step: 0.01 },
+    }],
+    sections: [
+      {
+        purpose: "先写出要证明的面积关系",
+        reusable_items: [{ kind: "board_item", board_kind: "math" }],
+        moments: [{
+          narration: "先看我们要证明的面积关系。",
+          actions: [
+            {
+              action: "create",
+              kind: "math",
+              role: "goal",
+              content: { latex: "a^2+b^2=c^2" },
+              placement: { relation: "new_region" },
+              reusable_item: 1,
+            },
+            {
+              action: "focus",
+              references: [localBoardItem(1, 1)],
+              intent: "看清待证关系",
+              timing: "after_speech",
+            },
+          ],
+        }],
+      },
+      {
+        purpose: "移动四个全等直角三角形",
+        reusable_items: [{
+          kind: "board_item",
+          board_kind: "visual",
+          capability: "geometric_rearrangement",
+        }],
+        moments: [{
+          narration: "拖动进度，观察四个全等三角形只平移和旋转。",
+          actions: [
+            {
+              action: "create",
+              kind: "visual",
+              role: "rearrangement",
+              content: {
+                capability: "geometric_rearrangement",
+                parameters: { construction: "right_triangle_square", leg_a: 3, leg_b: 2 },
+                numbers: [1],
+              },
+              placement: { relation: "new_region" },
+              reusable_item: 1,
+            },
+            {
+              action: "focus",
+              references: [localBoardItem(1, 1)],
+              intent: "观察几何重排",
+              timing: "after_speech",
+            },
+          ],
+        }],
+      },
+      {
+        purpose: "回到重排画面总结",
+        moments: [{
+          narration: "图形没有变形，变化的只是排列方式。",
+          actions: [{
+            action: "focus",
+            references: [reusable(2, 1)],
+            intent: "总结重排结果",
+            timing: "after_speech",
+          }],
+        }],
+      },
+    ],
+    close: { summary: "刚体重排保持每块面积不变。", focus: [reusable(2, 1)] },
+  };
+  const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
+    version: plan.version,
+    section: index + 1,
+    moments,
+    ...(student_activities ? { student_activities } : {}),
+  }));
+  const visualStructure = modelCourseVisualStructure(plan, drafts);
+  const outline = {
+    version: plan.version,
+    title: plan.title,
+    goals: plan.goals,
+    numbers: plan.numbers.map((number) => ({
+      ...number,
+      initial: String(number.initial),
+      min: String(number.min),
+      max: String(number.max),
+      student_control: { ...number.student_control, step: String(number.student_control.step) },
+    })),
+    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1, 2, 3] }],
+    ...visualStructure,
+    close: { summary: plan.close.summary },
+  };
+  const prefixes = [];
+  const rejected = [];
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
+    return JSON.stringify(drafts[request.section - 1]);
+  }, {
+    turn_id: "turn-future-control",
+    learner_request: "请用四个全等直角三角形的重排解释勾股定理。",
+  }, {
+    on_playable_prefix: ({ completed_sections, compiled }) => {
+      prefixes.push({
+        completed_sections,
+        has_control: Boolean(compiled.lesson.lesson.variables?.[0]?.control),
+      });
+    },
+    on_rejected_part: (event) => rejected.push(event),
+  });
+
+  assert.deepEqual(prefixes, [
+    { completed_sections: 1, has_control: false },
+    { completed_sections: 2, has_control: true },
+    { completed_sections: 3, has_control: true },
+  ]);
+  assert.deepEqual(rejected, []);
+  assert.ok(generated.lesson.lesson.variables[0].control);
+  const geometry = generated.lesson.steps[1].beats[0].actions.find(
+    (action) => action.do === "write" && action.kind === "geometry",
+  );
+  assert.ok(geometry.content.bindings.some((binding) => binding.expression.includes("number_01")));
+});
+
 test("the live bootstrap path returns the outline and first playable section in one model call", async () => {
   const plan = completeLessonPlanFixtures.unit_circle_to_sine;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({

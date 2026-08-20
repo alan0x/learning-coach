@@ -13491,7 +13491,29 @@ function compilePrefix(outline, drafts, options) {
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
     close: { summary: "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002", focus: [focus] }
   };
-  return compileAndValidateLessonPlan(assembleLessonPlan(prefixOutline, drafts, options), options);
+  const prefixPlan = assembleLessonPlan(prefixOutline, drafts, options);
+  const activeNumbers = /* @__PURE__ */ new Set();
+  for (const section of prefixPlan.sections) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action === "create" || action.action === "revise") {
+          if (action.kind === "visual") {
+            for (const number of action.content.numbers ?? []) activeNumbers.add(number);
+          }
+        } else if (action.action === "animate") {
+          activeNumbers.add(action.number);
+        }
+      }
+    }
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target") continue;
+      for (const control of activity.number_controls) activeNumbers.add(control.number);
+    }
+  }
+  prefixPlan.numbers?.forEach((number, index) => {
+    if (!activeNumbers.has(index + 1)) delete number.student_control;
+  });
+  return compileAndValidateLessonPlan(prefixPlan, options);
 }
 async function generateLessonPlanWithModel(model, input, options = {}) {
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");

@@ -1130,7 +1130,37 @@ function compilePrefix(
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
     close: { summary: "课程内容仍在继续生成。", focus: [focus] },
   };
-  return compileAndValidateLessonPlan(assembleLessonPlan(prefixOutline, drafts, options), options);
+  const prefixPlan = assembleLessonPlan(prefixOutline, drafts, options);
+
+  // The outline describes controls for the complete course, but a playable
+  // prefix may precede the section that creates the visual driven by one of
+  // those controls. Keep every numeric state (and therefore its stable
+  // number_XX identity), while withholding only the student-facing slider
+  // until the prefix contains an action that uses it. The final full-course
+  // compilation is deliberately unchanged and still rejects a control that
+  // never affects a visual.
+  const activeNumbers = new Set<number>();
+  for (const section of prefixPlan.sections) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action === "create" || action.action === "revise") {
+          if (action.kind === "visual") {
+            for (const number of action.content.numbers ?? []) activeNumbers.add(number);
+          }
+        } else if (action.action === "animate") {
+          activeNumbers.add(action.number);
+        }
+      }
+    }
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target") continue;
+      for (const control of activity.number_controls) activeNumbers.add(control.number);
+    }
+  }
+  prefixPlan.numbers?.forEach((number, index) => {
+    if (!activeNumbers.has(index + 1)) delete number.student_control;
+  });
+  return compileAndValidateLessonPlan(prefixPlan, options);
 }
 
 export async function generateLessonPlanWithModel(
