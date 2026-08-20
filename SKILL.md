@@ -2,7 +2,7 @@
 name: learning-coach
 description: Guide camera, voice, and infinite-whiteboard learning with continuous worked explanations, board-action artifacts, visual grounding, optional guided practice, session review, and evidence-based cross-session learner memory. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
 metadata:
-  version: 0.12.8
+  version: 0.13.0
   author: alan0x
   always: true
 ---
@@ -23,43 +23,33 @@ Never repeat them to the learner.
 
 ## Mandatory OLL lesson tool contract
 
-When `[[LEARNING_CONTEXT]]` contains both a `turn_id` and a substantive learner
-request, first resolve exactly one authoritative request source, then make
-`oll_generate_lesson` the first action. Pass the exact `turn_id`, the learner's
-complete request, and the matching `request_source`:
+When `[[LEARNING_CONTEXT]]` contains both a `turn_id` and a substantive,
+self-contained learner request, make `oll_generate_lesson` the first action.
+Pass the exact `turn_id`, the learner's complete request, and
+`request_source: self_contained`.
 
-- `self_contained`: the request itself contains everything needed to teach.
-- `current_image`: the learner refers to the current camera frame or uploaded
-  image; pass the transcribed problem in `source_observation`.
-- `explicit_board_follow_up`: the learner explicitly asks to continue, revise,
-  explain, or revisit identifiable prior board work.
-
-Topic similarity, session age, board recency, and missing details are never
-evidence of an explicit board follow-up. If the request is not self-contained
-and its intended image or prior-board target cannot be resolved reliably, ask a
-brief clarifying question and do not call the tool. Do not plan, draft, inspect,
+The complete-lesson tool does not currently accept a request whose substance
+depends on the current camera image or on prior board content. In those cases,
+ask the learner to provide the complete problem or request in the composer and
+do not call `oll_generate_lesson`. Never substitute a similar old topic or
+silently omit the missing image or board content. Do not plan, draft, inspect,
 or write OLL JSON in the main agent turn. Do not call `write_file`, `send_file`,
 or another artifact tool for the lesson.
 
-The call to `oll_generate_lesson` is mandatory even when the answer could be
-given directly in text. The only exception is an unresolved request: for
-example, a current frame that is too unclear to identify the referenced problem
-or “继续” when multiple prior topics are plausible. Ask briefly for the missing
-information and do not generate a lesson from history. The tool owns structured-output model
+The call to `oll_generate_lesson` is mandatory for every supported,
+self-contained teaching request even when the answer could be given directly
+in text. A camera-dependent request, a prior-board continuation, or an
+incomplete request is outside the current complete-course input contract. Ask
+briefly for a standalone request instead of generating from history. The tool owns structured-output model
 invocation, JSON Schema enforcement, OLL validation, serialization, writing,
 and delivery. Call it exactly once and wait for its result. After success, reply
 with one short natural sentence. After failure, apologize briefly without
 creating a fallback artifact or claiming that the board is ready.
 
-When the host supplies `[[LEARNING_DEGRADED_VISUAL_RETRY]]`, this is a
-machine-addressed retry of one failed visual component, not an invitation to
-reinterpret the whole lesson. Call `oll_generate_lesson` with
-`request_source: explicit_board_follow_up`; copy `board_id`, `board_revision`,
-`board_summary`, and `board_targets` from the block into `board_context`
-verbatim, use `board_revision` for `base_revision`, and keep the learner request
-limited to the named `surface` and `purpose`. Do not replace target IDs, omit
-the reference, or regenerate the rest of the course. The tool and Runtime own
-placement beside the referenced node and preservation of existing content.
+When the host supplies `[[LEARNING_DEGRADED_VISUAL_RETRY]]`, do not route it to
+`oll_generate_lesson`. Component-level repair against prior board content has
+not yet been migrated to the Lesson Plan input contract. Report the unsupported
+retry once; do not regenerate the whole lesson or alter existing content.
 
 ## Handle provisional wake sessions
 
@@ -156,16 +146,12 @@ prerequisites, is stuck after multiple hints, or asks for a worked example.
 - A complete standalone question remains `self_contained` even when a camera is
   enabled or an old board exists. Answer the stated question; do not search the
   frame or board for a substitute topic.
-- Current-image evidence is the only problem source for `current_image`. Do not
-  include old problem statements in tutor or learner context.
-- The old board is usable as problem content only for
-  `explicit_board_follow_up`. The learner must explicitly identify a previous
-  explanation, step, formula, or topic. Mere ambiguity is not a reference.
-- When no source is safely resolvable, ask what the learner means. Never choose
-  whichever historical problem happens to fit.
-- `board_summary` and `last_applied_action` may preserve layout and continuity,
-  but the tool deliberately hides their contents from lesson generation unless
-  `request_source` is `explicit_board_follow_up`.
+- If the request depends on the current image or old board, ask the learner to
+  restate the complete problem in the composer. Never choose whichever
+  historical problem happens to fit.
+- Do not send `board_summary`, `last_applied_action`, `source_observation`, or
+  board references to `oll_generate_lesson`; they are not part of its current
+  input contract.
 
 ## Speak for learning
 
@@ -183,16 +169,11 @@ an OLL whiteboard classroom. Call `oll_generate_lesson` for every substantive
 teaching reply. The generated OLL Authoring artifact is the lesson, not an
 optional visual enhancement.
 
-1. Resolve and pass the learner's substantive request, exact `turn_id`, and
-   `request_source` to `oll_generate_lesson`. For `current_image`, also pass the exact
-   recognized source in `source_observation`. Include concise learner, tutor,
-   session, and existing board context when available; never invent missing
-   context.
-2. Pass `board_summary` as teaching content only for
-   `explicit_board_follow_up`. For `self_contained` and `current_image`, the tool
-   isolates generation from old board content and starts the new teaching in a
-   new region. On an explicit follow-up, request only the needed extension
-   rather than a duplicate of the complete original lesson.
+1. Pass the learner's complete substantive request, exact `turn_id`, and
+   `request_source: self_contained` to `oll_generate_lesson`. Include concise
+   learner and tutor context when available; never invent missing context.
+2. Do not pass current-image or prior-board content. If that content is required
+   to understand the request, ask for a standalone problem statement instead.
 3. Call the tool once and wait for it to finish. The tool owns model invocation,
    OLL validation, deterministic JSON serialization, artifact writing, and
    delivery through `files_to_send`.

@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.12.8",
+  "version": "0.13.0",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -8,7 +8,7 @@
   "tools": [
     {
       "name": "oll_generate_lesson",
-      "description": "After resolving the learner request to exactly one authoritative source, generate, validate, save, and deliver the OLL lesson. Use self_contained for a complete standalone request, current_image for a request grounded in the current frame, and explicit_board_follow_up only when the learner explicitly continues prior board work. Never use board history to fill an incomplete request. This tool performs its own generation and repair attempts; call it at most once per learner turn and do not call it again after an error in that turn.",
+      "description": "Generate, validate, save, and deliver one complete OLL lesson from the learner's standalone request. request_source must be self_contained. Existing-board selection assistance is handled by the separate selection tools. This tool performs its own generation and repair attempts; call it at most once per learner turn and do not call it again after an error in that turn.",
       "concurrency_class": "exclusive",
       "env": [
         "VERTEX_SA_JSON",
@@ -20,11 +20,6 @@
         "OLL_TOTAL_TIMEOUT_MS",
         "OLL_MAX_TOKENS",
         "VERTEX_REQUEST_ATTEMPTS",
-        "OLL_PLANNING_ATTEMPTS",
-        "OLL_VERIFICATION_ATTEMPTS",
-        "OLL_GENERATION_ATTEMPTS",
-        "OLL_AUTHORING_STRATEGY",
-        "OLL_LESSON_PLAN_MODE",
         "OLL_DEBUG_GENERATION",
         "OCTOS_WORK_DIR",
         "OCTOS_SESSION_WORKSPACE"
@@ -43,8 +38,8 @@
           },
           "request_source": {
             "type": "string",
-            "enum": ["self_contained", "current_image", "explicit_board_follow_up"],
-            "description": "The single authoritative source resolved for this request. self_contained uses only learner_request; current_image requires source_observation; explicit_board_follow_up requires an explicit learner reference to prior board work and board_summary. If no source can be resolved safely, do not call the tool—ask the learner to clarify."
+            "enum": ["self_contained"],
+            "description": "Complete lessons are generated only from the standalone learner_request."
           },
           "language": {
             "type": "string",
@@ -57,81 +52,6 @@
           "learner_context": {
             "type": "string",
             "description": "Tentative learner background relevant to the requested explanation."
-          },
-          "session_context": {
-            "type": "object",
-            "description": "Controlled OLL resource context, including only assets and regions supplied by the host."
-          },
-          "board_summary": {
-            "type": "string",
-            "description": "Summary of the existing board. It is exposed to lesson generation only for explicit_board_follow_up and must never fill missing content in another request source."
-          },
-          "last_applied_action": {
-            "type": "string",
-            "description": "Last committed board action supplied by the host."
-          },
-          "base_revision": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Existing board revision when supplied by the host."
-          },
-          "board_context": {
-            "type": "object",
-            "additionalProperties": false,
-            "description": "Stable, read-only board references explicitly attached by the learner. Only valid for explicit_board_follow_up.",
-            "properties": {
-              "board_id": { "type": "string" },
-              "revision": { "type": "integer", "minimum": 0 },
-              "references": {
-                "type": "array",
-                "maxItems": 12,
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "as": { "type": "string" },
-                    "type": { "type": "string", "enum": ["node", "group", "connection"] },
-                    "target_id": { "type": "string" },
-                    "label": { "type": "string" },
-                    "fragments": {
-                      "type": "array",
-                      "maxItems": 24,
-                      "items": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": {
-                          "as": { "type": "string" },
-                          "target_id": { "type": "string" }
-                        },
-                        "required": ["as", "target_id"]
-                      }
-                    }
-                  },
-                  "required": ["as", "type", "target_id", "fragments"]
-                }
-              }
-            },
-            "required": ["board_id", "revision", "references"]
-          },
-          "source_observation": {
-            "type": "object",
-            "additionalProperties": false,
-            "description": "Authoritative problem transcribed from the current image after visual grounding. Omit when the request is not image-dependent.",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": ["live_camera", "uploaded_image"]
-              },
-              "recognized_problem": {
-                "type": "string",
-                "description": "Exact readable problem statement, givens, and learner target from the current image."
-              },
-              "confidence": {
-                "type": "string",
-                "enum": ["high", "medium"]
-              }
-            },
-            "required": ["kind", "recognized_problem", "confidence"]
           }
         },
         "required": ["turn_id", "learner_request", "request_source"]
