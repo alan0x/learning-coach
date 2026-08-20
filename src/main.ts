@@ -920,6 +920,55 @@ function parseToolInput(raw: string): ToolInput {
   };
 }
 
+function parseCompleteLessonInput(
+  raw: string,
+): ToolInput & { request_source: "self_contained" } {
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Tool input is not valid JSON: ${(error as Error).message}`);
+  }
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    throw new Error("Tool input must be a JSON object");
+  }
+  const input = candidate as Record<string, unknown>;
+  if (input.request_source !== "self_contained") {
+    throw new ToolExecutionError(
+      "LESSON_REQUEST_SOURCE_UNSUPPORTED",
+      "Complete lesson generation accepts self_contained requests only",
+    );
+  }
+  const allowedFields = new Set([
+    "turn_id",
+    "learner_request",
+    "request_source",
+    "language",
+    "tutor_context",
+    "learner_context",
+  ]);
+  for (const field of Object.keys(input)) {
+    if (!allowedFields.has(field)) {
+      throw new ToolExecutionError(
+        "LESSON_INPUT_FIELD_UNSUPPORTED",
+        `Complete lesson input does not accept '${field}'`,
+      );
+    }
+  }
+  return {
+    turn_id: validateTurnId(input.turn_id),
+    learner_request: requireNonEmptyString(input.learner_request, "learner_request"),
+    request_source: "self_contained",
+    ...(typeof input.language === "string" ? { language: truncate(input.language) } : {}),
+    ...(typeof input.tutor_context === "string"
+      ? { tutor_context: truncate(input.tutor_context) }
+      : {}),
+    ...(typeof input.learner_context === "string"
+      ? { learner_context: truncate(input.learner_context) }
+      : {}),
+  };
+}
+
 function parseSelectionToolInput(raw: string): SelectionToolInput {
   let candidate: unknown;
   try {
@@ -4859,7 +4908,7 @@ function stageLog(payload: Record<string, unknown>): void {
   }
 }
 
-export function buildVertexSchemaContract(
+function buildVertexSchemaContract(
   inputCandidate: Record<string, unknown>,
   briefCandidate: unknown,
 ): {
@@ -7560,23 +7609,9 @@ async function main(): Promise<void> {
       });
       return;
     }
-    const input = parseToolInput(rawInput);
+    const input = parseCompleteLessonInput(rawInput);
     const client = await createVertexClient();
-    const lessonPlanMode = process.env.OLL_LESSON_PLAN_MODE?.trim() || "off";
-    if (lessonPlanMode !== "off" && lessonPlanMode !== "experimental") {
-      throw new Error(`Unknown OLL_LESSON_PLAN_MODE '${lessonPlanMode}'`);
-    }
-    const authoringStrategy = process.env.OLL_AUTHORING_STRATEGY?.trim() || "parallel";
-    if (authoringStrategy !== "parallel" && authoringStrategy !== "monolithic") {
-      throw new Error(`Unknown OLL_AUTHORING_STRATEGY '${authoringStrategy}'`);
-    }
     let publishedParts = 0;
-    const reportRequirementsVerified = (): void => stageLog({
-      stage: "lesson-requirements",
-      turn_id: input.turn_id,
-      status: "completed",
-      elapsed_ms: Date.now() - startedAt,
-    });
     const publishPrefix = async (prefix: AuthoringLesson, part: number): Promise<void> => {
       const artifactPath = partialOutputPath(input, part);
       await mkdir(dirname(artifactPath), { recursive: true });
@@ -7595,13 +7630,13 @@ async function main(): Promise<void> {
         elapsed_ms: Date.now() - startedAt,
       });
     };
-    if (lessonPlanMode === "experimental" && input.request_source === "self_contained") {
-      const { generateLessonPlanWithModel } = await import("./lesson-plan-experimental.js");
+    {
+      const { generateLessonPlanWithModel } = await import("./lesson-plan.js");
       stageLog({
         stage: "lesson-plan-generation",
         turn_id: input.turn_id,
         status: "started",
-        mode: "experimental",
+        mode: "lesson_plan",
       });
       const generatedLessonPlan = await generateLessonPlanWithModel(
         (request) => callStructuredModel(client, {
@@ -7642,81 +7677,22 @@ async function main(): Promise<void> {
         stage: "lesson-plan-generation",
         turn_id: input.turn_id,
         status: "completed",
-        mode: "experimental",
+        mode: "lesson_plan",
         sections: generatedLessonPlan.lesson.steps.length,
         model_calls: generatedLessonPlan.model_calls,
         elapsed_ms: Date.now() - startedAt,
       });
       emit({
         success: true,
-        output: `Validated OLL lesson generated through the experimental Lesson Plan path with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
+        output: `Validated OLL lesson generated through the Lesson Plan path with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
         files_to_send: [artifactPath],
-        authoring_strategy: "lesson_plan_experimental",
+        authoring_strategy: "lesson_plan",
         lesson_plan_model_calls: generatedLessonPlan.model_calls,
         lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
         published_parts: publishedParts,
       });
       return;
     }
-    if (lessonPlanMode === "experimental") {
-      stageLog({
-        stage: "lesson-plan-generation",
-        turn_id: input.turn_id,
-        status: "skipped",
-        mode: "experimental",
-        reason: `request_source '${input.request_source}' is not supported by the experimental path`,
-      });
-    }
-    let brief: LessonBrief;
-    let generated: Awaited<ReturnType<typeof generateLesson>>;
-    if (authoringStrategy === "parallel") {
-      const planned = await planAndGenerateLessonInParallel(
-        client,
-        input,
-        reportRequirementsVerified,
-        publishPrefix,
-      );
-      brief = planned.brief;
-      generated = planned;
-    } else {
-      brief = await planLesson(client, input);
-      reportRequirementsVerified();
-      generated = await generateLesson(client, input, brief);
-    }
-    const { lesson, attempts, capabilityPlan, schema, degradedComponents } = generated;
-    const executableCapabilities = inspectExecutableLessonCapabilities(lesson);
-    const artifactPath = outputPath(input);
-    await mkdir(dirname(artifactPath), { recursive: true });
-    await writeFile(artifactPath, `${JSON.stringify(lesson, null, 2)}\n`, "utf8");
-    stageLog({
-      stage: invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME
-        ? "selection-classification"
-        : invokedTool === SELECTION_TOOL_NAME
-          ? "selection-enhancement"
-          : "lesson-generation",
-      turn_id: input.turn_id,
-      status: "completed",
-      elapsed_ms: Date.now() - startedAt,
-    });
-    emit({
-      success: true,
-      output: degradedComponents.length > 0
-        ? `OLL lesson generated with ${degradedComponents.length} locally degraded visual component(s); the remaining lesson is playable.`
-        : `Validated OLL lesson generated with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
-      files_to_send: [artifactPath],
-      generation_attempts: attempts,
-      requirement_items: brief.request_items.length,
-      visual_requirements: brief.visual_requirements.length,
-      visual_relationships: brief.visual_relationships.length,
-      student_tasks: brief.student_task_requirements.length
-        + brief.scene3d_task_requirements.length,
-      capability_plan: capabilityPlan,
-      executable_capabilities: executableCapabilities,
-      degraded_components: degradedComponents,
-      authoring_schema: schema,
-      authoring_strategy: authoringStrategy,
-      published_parts: publishedParts,
-    });
   } catch (error) {
     const message = safeError(error);
     stageLog({
