@@ -12086,7 +12086,6 @@ function compileAndValidateLessonPlan(value, options = {}) {
 var capabilityNames = LESSON_PLAN_CAPABILITY_NAMES;
 var timingNames = ["before_speech", "during_speech", "after_speech"];
 var deliveryNames = ["neutral", "patient", "encouraging", "careful", "emphatic"];
-var boardKinds2 = ["text", "math", "shape", "note", "table", "image", "visual"];
 var LESSON_PLAN_VISUAL_PARAMETER_NAMES = Object.fromEntries(
   capabilityNames.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].parameter_names])
 );
@@ -12203,12 +12202,11 @@ function numberSchema() {
     }, ["kind"])
   }, ["initial", "min", "max"]);
 }
-function reusableSchema(allowVisual = true) {
+function modelReusableBoardSchema() {
   return object({
-    kind: { enum: ["board_item", "connection", "group"] },
-    board_kind: { enum: allowVisual ? boardKinds2 : boardKinds2.filter((kind) => kind !== "visual") },
-    ...allowVisual ? { capability: { enum: capabilityNames } } : {}
-  }, ["kind"]);
+    kind: { enum: ["board_item"] },
+    board_kind: { enum: ["math", "note"] }
+  }, ["kind", "board_kind"]);
 }
 function placementSchema(sectionCount) {
   void sectionCount;
@@ -12366,6 +12364,36 @@ function courseVisualCreatesSchema(outline, sectionIndex) {
   }));
   return object(properties, Object.keys(properties));
 }
+function reusableBoardCreatesSchema(outline, sectionIndex) {
+  const entries = (outline.sections[sectionIndex - 1]?.reusable_items ?? []).map((item, index) => ({ item, position: index + 1 })).filter(({ item }) => item.kind === "board_item" && item.board_kind !== "visual");
+  if (entries.length === 0) return void 0;
+  const properties = Object.fromEntries(entries.map(({ item, position }) => {
+    let content;
+    if (item.board_kind === "math") {
+      content = object({ latex: string() }, ["latex"]);
+    } else if (item.board_kind === "note") {
+      content = object({
+        title: string(240),
+        items: { type: "array", minItems: 1, maxItems: 24, items: string(480) }
+      }, ["title", "items"]);
+    } else {
+      throw new LessonPlanError(
+        "LESSON_PLAN_REUSABLE",
+        `$lessonPlanOutline.sections[${sectionIndex - 1}].reusable_items[${position - 1}]`,
+        `the staged model path cannot create a reusable ${String(item.board_kind)} board item`
+      );
+    }
+    return [`item_${position}`, object({
+      moment: integer(1, 12),
+      order: integer(1, 48),
+      timing: { enum: timingNames },
+      role: string(80),
+      content,
+      placement: placementSchema(outline.sections.length)
+    }, ["moment", "order", "role", "content", "placement"])];
+  }));
+  return object(properties, Object.keys(properties));
+}
 function mathTokenSchema(numberCount, allowInput = false) {
   return object({
     kind: { enum: [...allowInput ? ["input"] : [], "number", "literal", "constant", "negate", "operator", "function"] },
@@ -12511,7 +12539,7 @@ function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
       maxItems: 24,
       items: object({
         purpose: string(480),
-        reusable_items: { type: "array", maxItems: 32, items: reusableSchema(false) }
+        reusable_items: { type: "array", maxItems: 32, items: modelReusableBoardSchema() }
       }, ["purpose"])
     },
     close: object({
@@ -12541,10 +12569,11 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
   const reusableCount = section.reusable_items?.length ?? 0;
   const numberCount = outline.numbers?.length ?? 0;
   const courseVisualCreates = bootstrapPermissive ? void 0 : courseVisualCreatesSchema(outline, sectionIndex);
+  const reusableBoardCreates = bootstrapPermissive ? void 0 : reusableBoardCreatesSchema(outline, sectionIndex);
   const actionCollections = actionCollectionSchemas(
     outline.sections.length,
     allowedCapabilities,
-    reusableCount,
+    bootstrapPermissive ? reusableCount : 0,
     numberCount,
     (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex).map(({ position }) => position),
     bootstrapPermissive
@@ -12582,12 +12611,14 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
       }, ["narration", "delivery", ...Object.keys(actionCollections)])
     },
     ...courseVisualCreates ? { course_visual_creates: courseVisualCreates } : {},
+    ...reusableBoardCreates ? { reusable_board_creates: reusableBoardCreates } : {},
     ...activityProperties
   }, [
     "version",
     "section",
     "moments",
     ...courseVisualCreates ? ["course_visual_creates"] : [],
+    ...reusableBoardCreates ? ["reusable_board_creates"] : [],
     ...Object.keys(activityProperties)
   ]);
   schema.$defs = { modelReference: referenceDefinitionSchema(outline.sections.length) };
@@ -12619,7 +12650,7 @@ assigned_request_parts \u662F\u8BFE\u7A0B\u76EE\u5F55\u5206\u914D\u7ED9\u672C\u8
 scene3d_activities \u4F7F\u7528 view_preset \u9009\u62E9 top\u3001front\u3001right\u3001left \u6216 isometric\uFF0C\u4E0D\u8981\u81EA\u884C\u8BA1\u7B97\u76F8\u673A\u89D2\u5EA6\u6216\u586B\u5199 3D \u8282\u70B9\u5F15\u7528\uFF1B\u7A0B\u5E8F\u4F1A\u9009\u62E9\u8BFE\u7A0B\u4E2D\u771F\u5B9E\u5B58\u5728\u7684 3D \u753B\u9762\uFF0C\u5E76\u8F6C\u6362\u6210\u8FD0\u884C\u65F6\u76F8\u673A\u53C2\u6570\u3002
 \u5F15\u7528\u53EA\u80FD\u4F7F\u7528\u6570\u5B57\u4F4D\u7F6E\uFF1A\u672C\u8282\u5DF2\u521B\u5EFA\u7684\u5185\u5BB9\u3001\u8BFE\u7A0B\u76EE\u5F55\u63D0\u524D\u58F0\u660E\u7684 reusable_items\uFF0C\u6216\u5BBF\u4E3B\u660E\u786E\u63D0\u4F9B\u7684\u4F4D\u7F6E\u3002\u6BCF\u4E2A\u5F15\u7528\u90FD\u5FC5\u987B\u586B\u5199 source\u3001section\u3001moment\u3001item\u3001host_reference \u4E94\u4E2A\u5B57\u6BB5\uFF1Blocal_* \u4F7F\u7528 moment \u548C item\uFF0C\u5176\u4E2D moment=0 \u660E\u786E\u8868\u793A\u5F53\u524D moment\uFF1Breusable \u4F7F\u7528 section \u548C item\uFF1Bhost \u4F7F\u7528 host_reference\u3002\u5F53\u524D\u6765\u6E90\u4E0D\u7528\u7684\u5176\u4ED6\u6570\u5B57\u5B57\u6BB5\u5199 0\u3002
 create \u52A8\u4F5C\u6309\u51FA\u73B0\u987A\u5E8F\u5206\u522B\u7F16\u53F7\uFF1B\u8FDE\u63A5\u548C\u7EC4\u4E5F\u5404\u81EA\u6309\u51FA\u73B0\u987A\u5E8F\u7F16\u53F7\u3002\u4E0D\u80FD\u5F15\u7528\u5C1A\u672A\u521B\u5EFA\u7684\u672C\u8282\u5185\u5BB9\u6216\u672A\u6765\u7AE0\u8282\u3002
-visuals_for_section \u662F\u8BFE\u7A0B\u76EE\u5F55\u5DF2\u7ECF\u786E\u5B9A\u7684\u753B\u9762\u4F4D\u7F6E\u3002mode=create \u7684\u753B\u9762\u7531 course_visual_creates \u4E2D\u5BF9\u5E94\u7684\u5FC5\u586B\u5C5E\u6027\u63CF\u8FF0\uFF0C\u5C5E\u6027\u540D\u548C\u753B\u9762\u80FD\u529B\u7531\u7A0B\u5E8F\u7ED9\u5B9A\uFF1B\u4E0D\u8981\u518D\u6B21\u586B\u5199 capability \u6216\u753B\u9762\u7F16\u53F7\u3002mode=reuse \u8868\u793A\u7A0B\u5E8F\u4F1A\u7EE7\u7EED\u4F7F\u7528\u4EE5\u524D\u7684\u540C\u4E00\u753B\u9762\uFF0C\u4E0D\u5F97\u91CD\u65B0\u521B\u5EFA\u3002\u6BCF\u4E2A\u666E\u901A reusable_item \u58F0\u660E\u4ECD\u5FC5\u987B\u7531\u7C7B\u578B\u5B8C\u5168\u5339\u914D\u7684 create\u3001connect \u6216 group \u52A8\u4F5C\u586B\u5145\u4E00\u6B21\u3002
+visuals_for_section \u662F\u8BFE\u7A0B\u76EE\u5F55\u5DF2\u7ECF\u786E\u5B9A\u7684\u753B\u9762\u4F4D\u7F6E\u3002mode=create \u7684\u753B\u9762\u7531 course_visual_creates \u4E2D\u5BF9\u5E94\u7684\u5FC5\u586B\u5C5E\u6027\u63CF\u8FF0\uFF0C\u5C5E\u6027\u540D\u548C\u753B\u9762\u80FD\u529B\u7531\u7A0B\u5E8F\u7ED9\u5B9A\uFF1B\u4E0D\u8981\u518D\u6B21\u586B\u5199 capability \u6216\u753B\u9762\u7F16\u53F7\u3002mode=reuse \u8868\u793A\u7A0B\u5E8F\u4F1A\u7EE7\u7EED\u4F7F\u7528\u4EE5\u524D\u7684\u540C\u4E00\u753B\u9762\uFF0C\u4E0D\u5F97\u91CD\u65B0\u521B\u5EFA\u3002reusable_board_creates \u4E2D\u7684\u6BCF\u4E2A\u5FC5\u586B\u5C5E\u6027\u4EE3\u8868\u8BFE\u7A0B\u76EE\u5F55\u5DF2\u7ECF\u786E\u5B9A\u8981\u7559\u7ED9\u540E\u7EED\u4F7F\u7528\u7684\u666E\u901A\u516C\u5F0F\u6216\u7B14\u8BB0\uFF1B\u4F60\u53EA\u586B\u5185\u5BB9\u3001moment \u548C\u52A8\u4F5C\u987A\u5E8F\uFF0C\u4E0D\u5F97\u5728 moment \u7684 math_creates \u6216 note_creates \u4E2D\u586B\u5199 reusable_item \u7F16\u53F7\u3002
 create \u7684 placement \u53EA\u63CF\u8FF0\u76F8\u5BF9\u65B9\u5411\uFF0C\u4E0D\u586B\u5199 reference\u3002\u7A0B\u5E8F\u4F1A\u628A\u5B83\u951A\u5230\u6700\u8FD1\u5DF2\u521B\u5EFA\u7684\u5185\u5BB9\uFF1B\u6CA1\u6709\u53EF\u7528\u951A\u70B9\u65F6\u81EA\u52A8\u4F7F\u7528\u65B0\u533A\u57DF\u3002
 \u6BCF\u6BB5\u65C1\u767D\u4E0E\u8FD9\u4E00\u523B\u7684\u677F\u4E66\u548C\u52A8\u4F5C\u5199\u5728\u540C\u4E00\u4E2A moment \u4E2D\u3002\u5B66\u751F\u53EF\u89C1\u6587\u5B57\u5FC5\u987B\u76F4\u63A5\u5BF9\u5F53\u524D\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u51FA\u73B0\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u4E4B\u7C7B\u7684\u5185\u90E8\u89C4\u5212\u53E3\u543B\u3002
 course_visual_creates \u4E2D numbers \u7684\u987A\u5E8F\u7531\u753B\u9762\u80FD\u529B\u56FA\u5B9A\u89C4\u5B9A\uFF0C\u4E0D\u4F7F\u7528\u540D\u79F0\u63A8\u65AD\uFF1Acircle_and_arc \u6700\u591A\u586B\u5199\u4E24\u4E2A\u6570\u5B57\u4F4D\u7F6E\uFF0C\u4F9D\u6B21\u8868\u793A\u5706\u5FC3\u89D2\u3001\u534A\u5F84\u3002\u5176\u4ED6\u7B2C\u4E00\u6279\u753B\u9762\u80FD\u529B\u6700\u591A\u586B\u5199\u4E00\u4E2A\u6570\u5B57\u4F4D\u7F6E\uFF1Bfunction_plot \u6700\u591A\u56DB\u4E2A\u3002
@@ -13027,13 +13058,21 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
   }
   return lowered;
 }
-function lowerModelSectionDraft(value, outline, expectedSection, requireFixedCourseVisuals = false) {
+function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReusableCreates = false) {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection", "expected an object");
   }
   const candidate = root;
-  const allowedRoot = /* @__PURE__ */ new Set(["version", "section", "moments", "course_visual_creates", "number_activities", "scene3d_activities"]);
+  const allowedRoot = /* @__PURE__ */ new Set([
+    "version",
+    "section",
+    "moments",
+    "course_visual_creates",
+    "reusable_board_creates",
+    "number_activities",
+    "scene3d_activities"
+  ]);
   for (const key of Object.keys(candidate)) {
     if (!allowedRoot.has(key)) throw new LessonPlanError("LESSON_PLAN_UNKNOWN_FIELD", `$lessonPlanModelSection.${key}`, "unknown field");
   }
@@ -13051,7 +13090,8 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedCou
   }
   const courseVisuals = outline.course_visuals ?? [];
   const courseVisualsToCreate = courseVisuals.map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === expectedSection);
-  if (requireFixedCourseVisuals && courseVisualsToCreate.length > 0 && candidate.course_visual_creates === void 0) {
+  const reusableBoardItemsToCreate = (outline.sections[expectedSection - 1]?.reusable_items ?? []).map((item, index) => ({ item, position: index + 1 })).filter(({ item }) => item.kind === "board_item" && item.board_kind !== "visual");
+  if (requireFixedReusableCreates && courseVisualsToCreate.length > 0 && candidate.course_visual_creates === void 0) {
     throw new LessonPlanError(
       "LESSON_PLAN_COURSE_VISUAL",
       "$lessonPlanModelSection.course_visual_creates",
@@ -13102,6 +13142,60 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedCou
       fixedCourseCreates.set(moment, entries);
     }
   }
+  if (requireFixedReusableCreates && reusableBoardItemsToCreate.length > 0 && candidate.reusable_board_creates === void 0) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_REUSABLE",
+      "$lessonPlanModelSection.reusable_board_creates",
+      "the section must describe every outline-declared reusable board item in the required root object"
+    );
+  }
+  const fixedReusableCreates = /* @__PURE__ */ new Map();
+  if (candidate.reusable_board_creates !== void 0) {
+    if (!candidate.reusable_board_creates || typeof candidate.reusable_board_creates !== "object" || Array.isArray(candidate.reusable_board_creates)) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_REUSABLE",
+        "$lessonPlanModelSection.reusable_board_creates",
+        "expected an object containing every required reusable board item"
+      );
+    }
+    const supplied = candidate.reusable_board_creates;
+    const expectedKeys = new Set(reusableBoardItemsToCreate.map(({ position }) => `item_${position}`));
+    for (const key of Object.keys(supplied)) {
+      if (!expectedKeys.has(key)) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_REUSABLE",
+          `$lessonPlanModelSection.reusable_board_creates.${key}`,
+          "reusable board item is not declared for this section"
+        );
+      }
+    }
+    for (const { item, position } of reusableBoardItemsToCreate) {
+      const key = `item_${position}`;
+      const source = supplied[key];
+      const entryPath = `$lessonPlanModelSection.reusable_board_creates.${key}`;
+      if (!source || typeof source !== "object" || Array.isArray(source)) {
+        throw new LessonPlanError("LESSON_PLAN_REUSABLE", entryPath, "required reusable board item is missing");
+      }
+      const entry = { ...source };
+      const moment = Number(entry.moment);
+      if (!Number.isInteger(moment) || moment < 1 || moment > candidate.moments.length) {
+        throw new LessonPlanError("LESSON_PLAN_REUSABLE", `${entryPath}.moment`, "reusable board item moment is unavailable");
+      }
+      delete entry.moment;
+      entry.reusable_item = position;
+      const collection = item.board_kind === "math" ? "math_creates" : item.board_kind === "note" ? "note_creates" : void 0;
+      if (!collection) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_REUSABLE",
+          entryPath,
+          `the staged model path cannot create a reusable ${String(item.board_kind)} board item`
+        );
+      }
+      const entries = fixedReusableCreates.get(moment) ?? { math_creates: [], note_creates: [] };
+      entries[collection].push(entry);
+      fixedReusableCreates.set(moment, entries);
+    }
+  }
   const createdCourseVisuals = /* @__PURE__ */ new Set();
   const momentKeys = /* @__PURE__ */ new Set(["narration", "delivery", ...Object.keys(modelActionCollections)]);
   const moments = candidate.moments.map((momentValue, momentIndex) => {
@@ -13117,7 +13211,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedCou
         "course visuals are created by the required root object, not by moment arrays"
       );
     }
-    if (requireFixedCourseVisuals && Array.isArray(originalMoment.visual_creates) && originalMoment.visual_creates.length > 0) {
+    if (requireFixedReusableCreates && Array.isArray(originalMoment.visual_creates) && originalMoment.visual_creates.length > 0) {
       throw new LessonPlanError(
         "LESSON_PLAN_COURSE_VISUAL",
         `${path}.visual_creates`,
@@ -13128,6 +13222,16 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedCou
       ...originalMoment,
       ...candidate.course_visual_creates === void 0 ? {} : {
         visual_creates: fixedCourseCreates.get(momentIndex + 1) ?? []
+      },
+      ...candidate.reusable_board_creates === void 0 ? {} : {
+        math_creates: [
+          ...originalMoment.math_creates ?? [],
+          ...fixedReusableCreates.get(momentIndex + 1)?.math_creates ?? []
+        ],
+        note_creates: [
+          ...originalMoment.note_creates ?? [],
+          ...fixedReusableCreates.get(momentIndex + 1)?.note_creates ?? []
+        ]
       }
     };
     for (const key of Object.keys(moment)) {

@@ -96,6 +96,7 @@ const modelActionCollectionNames = [
 function toModelSectionDraft(draft) {
   const numberActivities = [];
   const scene3dActivities = [];
+  const reusableBoardCreates = {};
   for (const [index, activity] of (draft.student_activities ?? []).entries()) {
     const { kind, ...payload } = activity;
     const decimalFields = (prefix, value) => {
@@ -127,41 +128,55 @@ function toModelSectionDraft(draft) {
     const target = kind === "number_target" ? numberActivities : scene3dActivities;
     target.push({ order: index + 1, ...encoded });
   }
+  const moments = draft.moments.map((moment, momentIndex) => {
+    const grouped = Object.fromEntries(modelActionCollectionNames.map((name) => [name, []]));
+    moment.actions.forEach((action, index) => {
+      const { action: actionName, ...rawPayload } = action;
+      const payload = structuredClone(rawPayload);
+      const collection = actionName === "create"
+        ? `${payload.kind}_creates`
+        : modelActionCollectionByName[actionName];
+      if (!(collection in grouped)) throw new Error(`unsupported model fixture action '${actionName}:${payload.kind ?? ""}'`);
+      if (actionName === "create") {
+        const boardKind = payload.kind;
+        delete payload.kind;
+        const tokens = payload.content?.parameters?.expression_tokens;
+        if (Array.isArray(tokens)) {
+          payload.content.parameters.expression_tokens = tokens.map((token) => {
+            if (token.kind !== "literal") return token;
+            const scale = 6;
+            return {
+              kind: "literal",
+              literal_mantissa: Math.round(token.value * 10 ** scale),
+              literal_scale: scale,
+            };
+          });
+        }
+        if ((boardKind === "math" || boardKind === "note")
+          && Number.isInteger(payload.reusable_item)) {
+          const reusableItem = payload.reusable_item;
+          delete payload.reusable_item;
+          reusableBoardCreates[`item_${reusableItem}`] = {
+            moment: momentIndex + 1,
+            order: index + 1,
+            ...payload,
+          };
+          return;
+        }
+      }
+      grouped[collection].push({ order: index + 1, ...payload });
+    });
+    return {
+      narration: moment.narration ?? "",
+      delivery: moment.delivery ?? "neutral",
+      ...grouped,
+    };
+  });
   return {
     version: draft.version,
     section: draft.section,
-    moments: draft.moments.map((moment) => {
-      const grouped = Object.fromEntries(modelActionCollectionNames.map((name) => [name, []]));
-      moment.actions.forEach((action, index) => {
-        const { action: actionName, ...rawPayload } = action;
-        const payload = structuredClone(rawPayload);
-        const collection = actionName === "create"
-          ? `${payload.kind}_creates`
-          : modelActionCollectionByName[actionName];
-        if (!(collection in grouped)) throw new Error(`unsupported model fixture action '${actionName}:${payload.kind ?? ""}'`);
-        if (actionName === "create") {
-          delete payload.kind;
-          const tokens = payload.content?.parameters?.expression_tokens;
-          if (Array.isArray(tokens)) {
-            payload.content.parameters.expression_tokens = tokens.map((token) => {
-              if (token.kind !== "literal") return token;
-              const scale = 6;
-              return {
-                kind: "literal",
-                literal_mantissa: Math.round(token.value * 10 ** scale),
-                literal_scale: scale,
-              };
-            });
-          }
-        }
-        grouped[collection].push({ order: index + 1, ...payload });
-      });
-      return {
-        narration: moment.narration ?? "",
-        delivery: moment.delivery ?? "neutral",
-        ...grouped,
-      };
-    }),
+    moments,
+    ...(Object.keys(reusableBoardCreates).length > 0 ? { reusable_board_creates: reusableBoardCreates } : {}),
     number_activities: numberActivities,
     scene3d_activities: scene3dActivities,
   };
@@ -1169,6 +1184,60 @@ test("model-facing outline and section schemas stay small, flat, and free of bus
   assert.throws(
     () => assembleLessonPlan(outline, invalid),
     (error) => error instanceof LessonPlanError && error.code === "LESSON_PLAN_CAPABILITY",
+  );
+});
+
+test("formal section generation cannot assign reusable board positions", () => {
+  const outlineSchema = buildLessonPlanOutlineJsonSchema();
+  const modelReusable = outlineSchema.properties.sections.items.properties.reusable_items.items;
+  assert.deepEqual(modelReusable.properties.kind.enum, ["board_item"]);
+  assert.deepEqual(modelReusable.properties.board_kind.enum, ["math", "note"]);
+
+  const outline = {
+    version: "0.1",
+    title: "几何重排",
+    goals: ["解释面积关系"],
+    numbers: [{ initial: 0, min: 0, max: 1, student_control: { kind: "slider", step: 0.01 } }],
+    course_visuals: [{
+      capability: "geometric_rearrangement",
+      create_section: 2,
+      use_sections: [2, 3],
+      relation: "primary",
+      reusable_item: 3,
+    }],
+    sections: [
+      { purpose: "提出问题", allowed_capabilities: [], reusable_items: [] },
+      {
+        purpose: "完成重排",
+        allowed_capabilities: ["geometric_rearrangement"],
+        reusable_items: [
+          { kind: "board_item", board_kind: "math" },
+          { kind: "board_item", board_kind: "note" },
+          { kind: "board_item", board_kind: "visual", capability: "geometric_rearrangement" },
+        ],
+      },
+      { purpose: "总结", allowed_capabilities: [], reusable_items: [] },
+    ],
+    close: { summary: "面积保持不变。", focus: [{ source: "reusable", section: 2, item: 3 }] },
+  };
+  const schema = buildLessonPlanSectionDraftJsonSchema(outline, 2);
+  assert.ok(schema.required.includes("reusable_board_creates"));
+  assert.deepEqual(schema.properties.reusable_board_creates.required, ["item_1", "item_2"]);
+  assert.deepEqual(
+    Object.keys(schema.properties.reusable_board_creates.properties.item_1.properties.content.properties),
+    ["latex"],
+  );
+  assert.deepEqual(
+    Object.keys(schema.properties.reusable_board_creates.properties.item_2.properties.content.properties).sort(),
+    ["items", "title"],
+  );
+  assert.equal(
+    "reusable_item" in schema.properties.moments.items.properties.math_creates.items.properties,
+    false,
+  );
+  assert.equal(
+    "reusable_item" in schema.properties.moments.items.properties.note_creates.items.properties,
+    false,
   );
 });
 

@@ -93,7 +93,7 @@ assigned_request_parts 是课程目录分配给本节的用户原始要求。本
 scene3d_activities 使用 view_preset 选择 top、front、right、left 或 isometric，不要自行计算相机角度或填写 3D 节点引用；程序会选择课程中真实存在的 3D 画面，并转换成运行时相机参数。
 引用只能使用数字位置：本节已创建的内容、课程目录提前声明的 reusable_items，或宿主明确提供的位置。每个引用都必须填写 source、section、moment、item、host_reference 五个字段；local_* 使用 moment 和 item，其中 moment=0 明确表示当前 moment；reusable 使用 section 和 item；host 使用 host_reference。当前来源不用的其他数字字段写 0。
 create 动作按出现顺序分别编号；连接和组也各自按出现顺序编号。不能引用尚未创建的本节内容或未来章节。
-visuals_for_section 是课程目录已经确定的画面位置。mode=create 的画面由 course_visual_creates 中对应的必填属性描述，属性名和画面能力由程序给定；不要再次填写 capability 或画面编号。mode=reuse 表示程序会继续使用以前的同一画面，不得重新创建。每个普通 reusable_item 声明仍必须由类型完全匹配的 create、connect 或 group 动作填充一次。
+visuals_for_section 是课程目录已经确定的画面位置。mode=create 的画面由 course_visual_creates 中对应的必填属性描述，属性名和画面能力由程序给定；不要再次填写 capability 或画面编号。mode=reuse 表示程序会继续使用以前的同一画面，不得重新创建。reusable_board_creates 中的每个必填属性代表课程目录已经确定要留给后续使用的普通公式或笔记；你只填内容、moment 和动作顺序，不得在 moment 的 math_creates 或 note_creates 中填写 reusable_item 编号。
 create 的 placement 只描述相对方向，不填写 reference。程序会把它锚到最近已创建的内容；没有可用锚点时自动使用新区域。
 每段旁白与这一刻的板书和动作写在同一个 moment 中。学生可见文字必须直接对当前学习者说话，不能出现“让学生……”之类的内部规划口吻。
 course_visual_creates 中 numbers 的顺序由画面能力固定规定，不使用名称推断：circle_and_arc 最多填写两个数字位置，依次表示圆心角、半径。其他第一批画面能力最多填写一个数字位置；function_plot 最多四个。
@@ -595,14 +595,17 @@ function lowerModelSectionDraft(
   value: unknown,
   outline: LessonPlanOutline,
   expectedSection: number,
-  requireFixedCourseVisuals = false,
+  requireFixedReusableCreates = false,
 ): LessonPlanSectionDraft {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection", "expected an object");
   }
   const candidate = root as Record<string, unknown>;
-  const allowedRoot = new Set(["version", "section", "moments", "course_visual_creates", "number_activities", "scene3d_activities"]);
+  const allowedRoot = new Set([
+    "version", "section", "moments", "course_visual_creates", "reusable_board_creates",
+    "number_activities", "scene3d_activities",
+  ]);
   for (const key of Object.keys(candidate)) {
     if (!allowedRoot.has(key)) throw new LessonPlanError("LESSON_PLAN_UNKNOWN_FIELD", `$lessonPlanModelSection.${key}`, "unknown field");
   }
@@ -622,7 +625,10 @@ function lowerModelSectionDraft(
   const courseVisualsToCreate = courseVisuals
     .map((visual, index) => ({ visual, position: index + 1 }))
     .filter(({ visual }) => visual.create_section === expectedSection);
-  if (requireFixedCourseVisuals
+  const reusableBoardItemsToCreate = (outline.sections[expectedSection - 1]?.reusable_items ?? [])
+    .map((item, index) => ({ item, position: index + 1 }))
+    .filter(({ item }) => item.kind === "board_item" && item.board_kind !== "visual");
+  if (requireFixedReusableCreates
     && courseVisualsToCreate.length > 0
     && candidate.course_visual_creates === undefined) {
     throw new LessonPlanError(
@@ -677,6 +683,66 @@ function lowerModelSectionDraft(
       fixedCourseCreates.set(moment, entries);
     }
   }
+  if (requireFixedReusableCreates
+    && reusableBoardItemsToCreate.length > 0
+    && candidate.reusable_board_creates === undefined) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_REUSABLE",
+      "$lessonPlanModelSection.reusable_board_creates",
+      "the section must describe every outline-declared reusable board item in the required root object",
+    );
+  }
+  const fixedReusableCreates = new Map<number, Record<"math_creates" | "note_creates", Array<Record<string, unknown>>>>();
+  if (candidate.reusable_board_creates !== undefined) {
+    if (!candidate.reusable_board_creates
+      || typeof candidate.reusable_board_creates !== "object"
+      || Array.isArray(candidate.reusable_board_creates)) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_REUSABLE",
+        "$lessonPlanModelSection.reusable_board_creates",
+        "expected an object containing every required reusable board item",
+      );
+    }
+    const supplied = candidate.reusable_board_creates as Record<string, unknown>;
+    const expectedKeys = new Set(reusableBoardItemsToCreate.map(({ position }) => `item_${position}`));
+    for (const key of Object.keys(supplied)) {
+      if (!expectedKeys.has(key)) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_REUSABLE",
+          `$lessonPlanModelSection.reusable_board_creates.${key}`,
+          "reusable board item is not declared for this section",
+        );
+      }
+    }
+    for (const { item, position } of reusableBoardItemsToCreate) {
+      const key = `item_${position}`;
+      const source = supplied[key];
+      const entryPath = `$lessonPlanModelSection.reusable_board_creates.${key}`;
+      if (!source || typeof source !== "object" || Array.isArray(source)) {
+        throw new LessonPlanError("LESSON_PLAN_REUSABLE", entryPath, "required reusable board item is missing");
+      }
+      const entry = { ...(source as Record<string, unknown>) };
+      const moment = Number(entry.moment);
+      if (!Number.isInteger(moment) || moment < 1 || moment > candidate.moments.length) {
+        throw new LessonPlanError("LESSON_PLAN_REUSABLE", `${entryPath}.moment`, "reusable board item moment is unavailable");
+      }
+      delete entry.moment;
+      entry.reusable_item = position;
+      const collection = item.board_kind === "math"
+        ? "math_creates"
+        : item.board_kind === "note" ? "note_creates" : undefined;
+      if (!collection) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_REUSABLE",
+          entryPath,
+          `the staged model path cannot create a reusable ${String(item.board_kind)} board item`,
+        );
+      }
+      const entries = fixedReusableCreates.get(moment) ?? { math_creates: [], note_creates: [] };
+      entries[collection].push(entry);
+      fixedReusableCreates.set(moment, entries);
+    }
+  }
   const createdCourseVisuals = new Set<number>();
   const momentKeys = new Set(["narration", "delivery", ...Object.keys(modelActionCollections)]);
   const moments = candidate.moments.map((momentValue, momentIndex) => {
@@ -694,7 +760,7 @@ function lowerModelSectionDraft(
         "course visuals are created by the required root object, not by moment arrays",
       );
     }
-    if (requireFixedCourseVisuals
+    if (requireFixedReusableCreates
       && Array.isArray(originalMoment.visual_creates)
       && originalMoment.visual_creates.length > 0) {
       throw new LessonPlanError(
@@ -707,6 +773,16 @@ function lowerModelSectionDraft(
       ...originalMoment,
       ...(candidate.course_visual_creates === undefined ? {} : {
         visual_creates: fixedCourseCreates.get(momentIndex + 1) ?? [],
+      }),
+      ...(candidate.reusable_board_creates === undefined ? {} : {
+        math_creates: [
+          ...((originalMoment.math_creates as unknown[] | undefined) ?? []),
+          ...(fixedReusableCreates.get(momentIndex + 1)?.math_creates ?? []),
+        ],
+        note_creates: [
+          ...((originalMoment.note_creates as unknown[] | undefined) ?? []),
+          ...(fixedReusableCreates.get(momentIndex + 1)?.note_creates ?? []),
+        ],
       }),
     };
     for (const key of Object.keys(moment)) {

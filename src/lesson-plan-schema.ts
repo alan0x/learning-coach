@@ -166,12 +166,15 @@ function numberSchema(): LessonPlanJsonSchema {
   }, ["initial", "min", "max"]);
 }
 
-function reusableSchema(allowVisual = true): LessonPlanJsonSchema {
+function modelReusableBoardSchema(): LessonPlanJsonSchema {
+  // The staged model path currently exposes ordinary reusable math and note
+  // cards. The complete Lesson Plan contract supports more kinds, but they
+  // must not be advertised by this provider schema until their model-facing
+  // create shapes are implemented.
   return object({
-    kind: { enum: ["board_item", "connection", "group"] },
-    board_kind: { enum: allowVisual ? boardKinds : boardKinds.filter((kind) => kind !== "visual") },
-    ...(allowVisual ? { capability: { enum: capabilityNames } } : {}),
-  }, ["kind"]);
+    kind: { enum: ["board_item"] },
+    board_kind: { enum: ["math", "note"] },
+  }, ["kind", "board_kind"]);
 }
 
 function placementSchema(sectionCount: number): LessonPlanJsonSchema {
@@ -388,6 +391,42 @@ function courseVisualCreatesSchema(
   return object(properties, Object.keys(properties));
 }
 
+function reusableBoardCreatesSchema(
+  outline: LessonPlanOutline,
+  sectionIndex: number,
+): LessonPlanJsonSchema | undefined {
+  const entries = (outline.sections[sectionIndex - 1]?.reusable_items ?? [])
+    .map((item, index) => ({ item, position: index + 1 }))
+    .filter(({ item }) => item.kind === "board_item" && item.board_kind !== "visual");
+  if (entries.length === 0) return undefined;
+  const properties = Object.fromEntries(entries.map(({ item, position }) => {
+    let content: LessonPlanJsonSchema;
+    if (item.board_kind === "math") {
+      content = object({ latex: string() }, ["latex"]);
+    } else if (item.board_kind === "note") {
+      content = object({
+        title: string(240),
+        items: { type: "array", minItems: 1, maxItems: 24, items: string(480) },
+      }, ["title", "items"]);
+    } else {
+      throw new LessonPlanError(
+        "LESSON_PLAN_REUSABLE",
+        `$lessonPlanOutline.sections[${sectionIndex - 1}].reusable_items[${position - 1}]`,
+        `the staged model path cannot create a reusable ${String(item.board_kind)} board item`,
+      );
+    }
+    return [`item_${position}`, object({
+      moment: integer(1, 12),
+      order: integer(1, 48),
+      timing: { enum: timingNames },
+      role: string(80),
+      content,
+      placement: placementSchema(outline.sections.length),
+    }, ["moment", "order", "role", "content", "placement"])];
+  }));
+  return object(properties, Object.keys(properties));
+}
+
 function mathTokenSchema(numberCount: number, allowInput = false): LessonPlanJsonSchema {
   return object({
     kind: { enum: [...(allowInput ? ["input"] : []), "number", "literal", "constant", "negate", "operator", "function"] },
@@ -539,7 +578,7 @@ function lessonPlanOutlineShapeJsonSchema(requestPartCount: number): LessonPlanJ
       maxItems: 24,
       items: object({
         purpose: string(480),
-        reusable_items: { type: "array", maxItems: 32, items: reusableSchema(false) },
+        reusable_items: { type: "array", maxItems: 32, items: modelReusableBoardSchema() },
       }, ["purpose"]),
     },
     close: object({
@@ -581,10 +620,13 @@ function lessonPlanSectionDraftShapeJsonSchema(
   const courseVisualCreates = bootstrapPermissive
     ? undefined
     : courseVisualCreatesSchema(outline, sectionIndex);
+  const reusableBoardCreates = bootstrapPermissive
+    ? undefined
+    : reusableBoardCreatesSchema(outline, sectionIndex);
   const actionCollections = actionCollectionSchemas(
     outline.sections.length,
     allowedCapabilities,
-    reusableCount,
+    bootstrapPermissive ? reusableCount : 0,
     numberCount,
     (outline.course_visuals ?? [])
       .map((visual, index) => ({ visual, position: index + 1 }))
@@ -629,12 +671,14 @@ function lessonPlanSectionDraftShapeJsonSchema(
       }, ["narration", "delivery", ...Object.keys(actionCollections)]),
     },
     ...(courseVisualCreates ? { course_visual_creates: courseVisualCreates } : {}),
+    ...(reusableBoardCreates ? { reusable_board_creates: reusableBoardCreates } : {}),
     ...activityProperties,
   }, [
     "version",
     "section",
     "moments",
     ...(courseVisualCreates ? ["course_visual_creates"] : []),
+    ...(reusableBoardCreates ? ["reusable_board_creates"] : []),
     ...Object.keys(activityProperties),
   ]);
   schema.$defs = { modelReference: referenceDefinitionSchema(outline.sections.length) };
