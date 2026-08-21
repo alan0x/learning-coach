@@ -9956,6 +9956,52 @@ var SELECTION_RESPONSE_SCHEMA = {
     "alternatives"
   ]
 };
+var SELECTION_EXPLANATION_RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    interpretation_kind: {
+      type: "string",
+      enum: ["text", "math", "geometry", "data", "unknown"]
+    },
+    interpretation_content: { type: "string" },
+    interpretation_confidence: {
+      type: "string",
+      enum: ["high", "medium", "low"]
+    },
+    response_kind: { type: "string", enum: ["explanation"] },
+    title: { type: "string" },
+    text: { type: "string" },
+    items: { type: "array", items: { type: "string" } }
+  },
+  required: [
+    "interpretation_kind",
+    "interpretation_content",
+    "interpretation_confidence",
+    "response_kind",
+    "title",
+    "text",
+    "items"
+  ]
+};
+var SELECTION_BASE_SYSTEM_PROMPT = `\u4F60\u662F\u767D\u677F\u9009\u533A\u8F85\u52A9\u5DE5\u5177\u3002\u53EA\u89E3\u91CA\u5F53\u524D\u8BF7\u6C42\u9644\u5E26\u7684\u9009\u533A\u56FE\u7247\u548C\u7528\u6237\u660E\u786E\u9009\u4E2D\u7684\u5C40\u90E8\u767D\u677F\u5BF9\u8C61\uFF0C\u5E76\u5728\u539F\u7A3F\u65C1\u8FB9\u751F\u6210\u72EC\u7ACB\u8F85\u52A9\u5185\u5BB9\uFF1B\u7EDD\u4E0D\u91CD\u5199\u3001\u7EA0\u6B63\u6216\u66FF\u6362\u539F\u7A3F\u3002\u56FE\u7247\u8BC6\u522B\u4E0D\u786E\u5B9A\u65F6\u5FC5\u987B\u660E\u786E\u8BF4\u660E\u3002board_targets \u662F Runtime \u63D0\u4F9B\u7684\u7A33\u5B9A\u5F15\u7528\uFF0C\u53EA\u80FD\u7528\u4E8E\u7406\u89E3\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u80FD\u81EA\u884C\u589E\u5220\u6216\u6539\u5199\u3002\u4E0D\u8981\u58F0\u79F0\u770B\u5230\u4E86\u9009\u533A\u56FE\u7247\u4EE5\u5916\u7684\u767D\u677F\u3002
+
+\u76F4\u63A5\u5B8C\u6210 learner_request\u3002\u89E3\u91CA\u6216\u68C0\u67E5\u8BF7\u6C42\u4F7F\u7528 response_kind=explanation\uFF1Btitle\u3001text \u548C items \u76F4\u63A5\u9762\u5411\u5F53\u524D\u5B66\u4E60\u8005\u3002`;
+var SELECTION_VISUALIZATION_SYSTEM_PROMPT = `\u5F53 tool_id \u4E3A generate-plot \u6216 custom-question \u4E14\u7528\u6237\u8981\u6C42\u751F\u6210\u51FD\u6570\u56FE\u50CF\u65F6\uFF0C\u5148\u628A\u8BC6\u522B\u5230\u7684\u516C\u5F0F\u89C4\u8303\u5316\u4E3A\u53EA\u80FD\u4F7F\u7528\u6570\u5B57\u3001x/y/z\u3001pi\u3001e\u3001+ - * / ^\u3001\u62EC\u53F7\u548C abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan \u7684\u8868\u8FBE\u5F0F\uFF1B\u5FC5\u987B\u663E\u5F0F\u5199\u4E58\u53F7\u3002\u7136\u540E\u9009\u62E9\uFF1A
+- \u5355\u53D8\u91CF y=f(x)\uFF1Aresponse_kind=plot\uFF0Cexpression \u53EA\u5199 f(x)\u3002
+- \u4E8C\u53D8\u91CF\u9690\u5F0F\u65B9\u7A0B F(x,y)=c\uFF1Aresponse_kind=implicit_plot\uFF0Cexpression \u5199 F(x,y)\uFF0Clevel \u5199 c\u3002
+- \u663E\u5F0F\u66F2\u9762 z=f(x,y)\uFF1Aresponse_kind=scene3d\uFF0Cscene_kind=surface\uFF0Cexpression \u53EA\u5199 f(x,y)\u3002
+- \u4E09\u53D8\u91CF\u9690\u5F0F\u65B9\u7A0B F(x,y,z)=c\uFF1Aresponse_kind=scene3d\uFF0Cscene_kind=implicit_surface\uFF0Cexpression \u5199 F(x,y,z)\uFF0Clevel \u5199 c\u3002
+- \u8D85\u8FC7\u4E09\u4E2A\u72EC\u7ACB\u53D8\u91CF\u3001\u65E0\u6CD5\u53EF\u9760\u8BC6\u522B\u3001\u65E0\u6CD5\u8F6C\u4E3A\u4E0A\u8FF0\u5B89\u5168\u8868\u8FBE\u5F0F\u6216\u5728\u5408\u7406\u6709\u9650\u8303\u56F4\u5185\u65E0\u6CD5\u7ED8\u5236\uFF1Aresponse_kind=unsupported\uFF0C\u7ED9\u51FA\u51C6\u786E\u539F\u56E0\u548C\u53EF\u64CD\u4F5C\u7684 alternatives\uFF0C\u4E0D\u80FD\u5047\u88C5\u5DF2\u7ECF\u7ED8\u5236\u3002
+\u6240\u6709\u8303\u56F4\u5FC5\u987B\u6709\u9650\u5E76\u8986\u76D6\u4E3B\u8981\u56FE\u5F62\uFF1Bscene3d \u7684 samples \u4F7F\u7528 10 \u5230 14\u3002\u4EE3\u7801\u4F1A\u518D\u6B21\u6821\u9A8C\u4F60\u7684\u9009\u62E9\u548C\u8868\u8FBE\u5F0F\uFF0C\u6821\u9A8C\u4E0D\u901A\u8FC7\u65F6\u4E0D\u4F1A\u7ED8\u5236\u3002\u975E\u7ED8\u56FE\u8BF7\u6C42\u4F7F\u7528 explanation\u3002`;
+function selectionResponseSchema(toolId) {
+  return toolId === "explain" || toolId === "check-and-suggest" ? SELECTION_EXPLANATION_RESPONSE_SCHEMA : SELECTION_RESPONSE_SCHEMA;
+}
+function selectionSystemPrompt(toolId) {
+  return toolId === "explain" || toolId === "check-and-suggest" ? SELECTION_BASE_SYSTEM_PROMPT : `${SELECTION_BASE_SYSTEM_PROMPT}
+
+${SELECTION_VISUALIZATION_SYSTEM_PROMPT}`;
+}
 function selectionOutputPath(input) {
   const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
   const path = resolve(
@@ -10231,17 +10277,9 @@ async function generateSelectionEnhancement(client, input) {
     label: "selection-enhancement",
     turnId: input.turn_id,
     maxTokens: Math.min(client.maxTokens, 4096),
-    responseSchema: SELECTION_RESPONSE_SCHEMA,
+    responseSchema: selectionResponseSchema(input.tool_id),
     media,
-    systemPrompt: `\u4F60\u662F\u767D\u677F\u9009\u533A\u8F85\u52A9\u5DE5\u5177\u3002\u53EA\u89E3\u91CA\u5F53\u524D\u8BF7\u6C42\u9644\u5E26\u7684\u9009\u533A\u56FE\u7247\u548C\u7528\u6237\u660E\u786E\u9009\u4E2D\u7684\u5C40\u90E8\u767D\u677F\u5BF9\u8C61\uFF0C\u5E76\u5728\u539F\u7A3F\u65C1\u8FB9\u751F\u6210\u72EC\u7ACB\u8F85\u52A9\u5185\u5BB9\uFF1B\u7EDD\u4E0D\u91CD\u5199\u3001\u7EA0\u6B63\u6216\u66FF\u6362\u539F\u7A3F\u3002\u56FE\u7247\u8BC6\u522B\u4E0D\u786E\u5B9A\u65F6\u5FC5\u987B\u660E\u786E\u8BF4\u660E\u3002board_targets \u662F Runtime \u63D0\u4F9B\u7684\u7A33\u5B9A\u5F15\u7528\uFF0C\u53EA\u80FD\u7528\u4E8E\u7406\u89E3\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u80FD\u81EA\u884C\u589E\u5220\u6216\u6539\u5199\u3002\u4E0D\u8981\u58F0\u79F0\u770B\u5230\u4E86\u9009\u533A\u56FE\u7247\u4EE5\u5916\u7684\u767D\u677F\u3002
-
-\u5F53 tool_id \u4E3A generate-plot \u6216 custom-question \u4E14\u7528\u6237\u8981\u6C42\u751F\u6210\u51FD\u6570\u56FE\u50CF\u65F6\uFF0C\u5148\u628A\u8BC6\u522B\u5230\u7684\u516C\u5F0F\u89C4\u8303\u5316\u4E3A\u53EA\u80FD\u4F7F\u7528\u6570\u5B57\u3001x/y/z\u3001pi\u3001e\u3001+ - * / ^\u3001\u62EC\u53F7\u548C abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan \u7684\u8868\u8FBE\u5F0F\uFF1B\u5FC5\u987B\u663E\u5F0F\u5199\u4E58\u53F7\u3002\u7136\u540E\u9009\u62E9\uFF1A
-- \u5355\u53D8\u91CF y=f(x)\uFF1Aresponse_kind=plot\uFF0Cexpression \u53EA\u5199 f(x)\u3002
-- \u4E8C\u53D8\u91CF\u9690\u5F0F\u65B9\u7A0B F(x,y)=c\uFF1Aresponse_kind=implicit_plot\uFF0Cexpression \u5199 F(x,y)\uFF0Clevel \u5199 c\u3002
-- \u663E\u5F0F\u66F2\u9762 z=f(x,y)\uFF1Aresponse_kind=scene3d\uFF0Cscene_kind=surface\uFF0Cexpression \u53EA\u5199 f(x,y)\u3002
-- \u4E09\u53D8\u91CF\u9690\u5F0F\u65B9\u7A0B F(x,y,z)=c\uFF1Aresponse_kind=scene3d\uFF0Cscene_kind=implicit_surface\uFF0Cexpression \u5199 F(x,y,z)\uFF0Clevel \u5199 c\u3002
-- \u8D85\u8FC7\u4E09\u4E2A\u72EC\u7ACB\u53D8\u91CF\u3001\u65E0\u6CD5\u53EF\u9760\u8BC6\u522B\u3001\u65E0\u6CD5\u8F6C\u4E3A\u4E0A\u8FF0\u5B89\u5168\u8868\u8FBE\u5F0F\u6216\u5728\u5408\u7406\u6709\u9650\u8303\u56F4\u5185\u65E0\u6CD5\u7ED8\u5236\uFF1Aresponse_kind=unsupported\uFF0C\u7ED9\u51FA\u51C6\u786E\u539F\u56E0\u548C\u53EF\u64CD\u4F5C\u7684 alternatives\uFF0C\u4E0D\u80FD\u5047\u88C5\u5DF2\u7ECF\u7ED8\u5236\u3002
-\u6240\u6709\u8303\u56F4\u5FC5\u987B\u6709\u9650\u5E76\u8986\u76D6\u4E3B\u8981\u56FE\u5F62\uFF1Bscene3d \u7684 samples \u4F7F\u7528 10 \u5230 14\u3002\u4EE3\u7801\u4F1A\u518D\u6B21\u6821\u9A8C\u4F60\u7684\u9009\u62E9\u548C\u8868\u8FBE\u5F0F\uFF0C\u6821\u9A8C\u4E0D\u901A\u8FC7\u65F6\u4E0D\u4F1A\u7ED8\u5236\u3002\u975E\u7ED8\u56FE\u8BF7\u6C42\u4F7F\u7528 explanation\u3002`,
+    systemPrompt: selectionSystemPrompt(input.tool_id),
     prompt: JSON.stringify({
       learner_request: input.learner_request,
       tool_id: input.tool_id,

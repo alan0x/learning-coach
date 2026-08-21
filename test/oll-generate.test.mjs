@@ -1193,6 +1193,14 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     level: 0,
     samples: 12,
     alternatives: ["固定 w 后绘制三维切片"],
+  }, {
+    interpretation_kind: "math",
+    interpretation_content: "y = x^2",
+    interpretation_confidence: "high",
+    response_kind: "explanation",
+    title: "二次函数说明",
+    text: "这个式子表示输出等于输入的平方。",
+    items: ["图像关于 y 轴对称", "最小值是 0"],
   }];
   const server = createServer(async (request, response) => {
     let body = "";
@@ -1359,6 +1367,47 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     assert.equal(unsupportedArtifact.response.kind, "unsupported");
     assert.equal(unsupportedArtifact.response.reason_code, "unsupported_variables");
     assert.deepEqual(unsupportedArtifact.response.alternatives, ["固定 w 后绘制三维切片"]);
+
+    const explanationResult = await runTool({
+      tool: "oll_enhance_selection",
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      input: {
+        turn_id: "selection-explanation",
+        learner_request: "解释这一部分",
+        source: {
+          source_id: "selection-explanation-source",
+          document_id: "ink-1",
+          document_version: 10,
+          bounds: { x: 120, y: 80, width: 300, height: 90 },
+          checksum: { algorithm: "sha-256", value: checksum },
+        },
+        content_hint: "math",
+        tool_id: "explain",
+        board: { board_id: "learning-board-session-1", revision: 15, targets: [] },
+        recognized_content: "y=x^2",
+        recognition_confidence: "high",
+      },
+    });
+    assert.equal(explanationResult.exitCode, 0, explanationResult.stderr);
+    const explanationSchema = requests[3].generationConfig.responseJsonSchema;
+    assert.deepEqual(explanationSchema.properties.response_kind.enum, ["explanation"]);
+    assert.equal("expression" in explanationSchema.properties, false);
+    assert.equal("x_min" in explanationSchema.properties, false);
+    assert.doesNotMatch(requests[3].systemInstruction.parts[0].text, /implicit_surface/u);
+    const explanationProtocol = JSON.parse(explanationResult.stdout);
+    const explanationArtifact = JSON.parse(await readFile(
+      explanationProtocol.files_to_send[0],
+      "utf8",
+    ));
+    assert.equal(explanationArtifact.response.kind, "explanation");
+    assert.equal(explanationArtifact.response.title, "二次函数说明");
     await assert.rejects(
       readFile(join(workDirectory, "study", "oll", "learn-e2e-001.octos-lesson.json")),
     );

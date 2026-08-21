@@ -7115,6 +7115,59 @@ const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
   ],
 };
 
+const SELECTION_EXPLANATION_RESPONSE_SCHEMA: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    interpretation_kind: {
+      type: "string",
+      enum: ["text", "math", "geometry", "data", "unknown"],
+    },
+    interpretation_content: { type: "string" },
+    interpretation_confidence: {
+      type: "string",
+      enum: ["high", "medium", "low"],
+    },
+    response_kind: { type: "string", enum: ["explanation"] },
+    title: { type: "string" },
+    text: { type: "string" },
+    items: { type: "array", items: { type: "string" } },
+  },
+  required: [
+    "interpretation_kind",
+    "interpretation_content",
+    "interpretation_confidence",
+    "response_kind",
+    "title",
+    "text",
+    "items",
+  ],
+};
+
+const SELECTION_BASE_SYSTEM_PROMPT = `你是白板选区辅助工具。只解释当前请求附带的选区图片和用户明确选中的局部白板对象，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。图片识别不确定时必须明确说明。board_targets 是 Runtime 提供的稳定引用，只能用于理解上下文，不能自行增删或改写。不要声称看到了选区图片以外的白板。
+
+直接完成 learner_request。解释或检查请求使用 response_kind=explanation；title、text 和 items 直接面向当前学习者。`;
+
+const SELECTION_VISUALIZATION_SYSTEM_PROMPT = `当 tool_id 为 generate-plot 或 custom-question 且用户要求生成函数图像时，先把识别到的公式规范化为只能使用数字、x/y/z、pi、e、+ - * / ^、括号和 abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan 的表达式；必须显式写乘号。然后选择：
+- 单变量 y=f(x)：response_kind=plot，expression 只写 f(x)。
+- 二变量隐式方程 F(x,y)=c：response_kind=implicit_plot，expression 写 F(x,y)，level 写 c。
+- 显式曲面 z=f(x,y)：response_kind=scene3d，scene_kind=surface，expression 只写 f(x,y)。
+- 三变量隐式方程 F(x,y,z)=c：response_kind=scene3d，scene_kind=implicit_surface，expression 写 F(x,y,z)，level 写 c。
+- 超过三个独立变量、无法可靠识别、无法转为上述安全表达式或在合理有限范围内无法绘制：response_kind=unsupported，给出准确原因和可操作的 alternatives，不能假装已经绘制。
+所有范围必须有限并覆盖主要图形；scene3d 的 samples 使用 10 到 14。代码会再次校验你的选择和表达式，校验不通过时不会绘制。非绘图请求使用 explanation。`;
+
+function selectionResponseSchema(toolId: SelectionToolInput["tool_id"]): JsonSchema {
+  return toolId === "explain" || toolId === "check-and-suggest"
+    ? SELECTION_EXPLANATION_RESPONSE_SCHEMA
+    : SELECTION_RESPONSE_SCHEMA;
+}
+
+function selectionSystemPrompt(toolId: SelectionToolInput["tool_id"]): string {
+  return toolId === "explain" || toolId === "check-and-suggest"
+    ? SELECTION_BASE_SYSTEM_PROMPT
+    : `${SELECTION_BASE_SYSTEM_PROMPT}\n\n${SELECTION_VISUALIZATION_SYSTEM_PROMPT}`;
+}
+
 function selectionOutputPath(input: SelectionToolInput): string {
   const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
   const path = resolve(
@@ -7436,17 +7489,9 @@ async function generateSelectionEnhancement(
     label: "selection-enhancement",
     turnId: input.turn_id,
     maxTokens: Math.min(client.maxTokens, 4_096),
-    responseSchema: SELECTION_RESPONSE_SCHEMA,
+    responseSchema: selectionResponseSchema(input.tool_id),
     media,
-    systemPrompt: `你是白板选区辅助工具。只解释当前请求附带的选区图片和用户明确选中的局部白板对象，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。图片识别不确定时必须明确说明。board_targets 是 Runtime 提供的稳定引用，只能用于理解上下文，不能自行增删或改写。不要声称看到了选区图片以外的白板。
-
-当 tool_id 为 generate-plot 或 custom-question 且用户要求生成函数图像时，先把识别到的公式规范化为只能使用数字、x/y/z、pi、e、+ - * / ^、括号和 abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan 的表达式；必须显式写乘号。然后选择：
-- 单变量 y=f(x)：response_kind=plot，expression 只写 f(x)。
-- 二变量隐式方程 F(x,y)=c：response_kind=implicit_plot，expression 写 F(x,y)，level 写 c。
-- 显式曲面 z=f(x,y)：response_kind=scene3d，scene_kind=surface，expression 只写 f(x,y)。
-- 三变量隐式方程 F(x,y,z)=c：response_kind=scene3d，scene_kind=implicit_surface，expression 写 F(x,y,z)，level 写 c。
-- 超过三个独立变量、无法可靠识别、无法转为上述安全表达式或在合理有限范围内无法绘制：response_kind=unsupported，给出准确原因和可操作的 alternatives，不能假装已经绘制。
-所有范围必须有限并覆盖主要图形；scene3d 的 samples 使用 10 到 14。代码会再次校验你的选择和表达式，校验不通过时不会绘制。非绘图请求使用 explanation。`,
+    systemPrompt: selectionSystemPrompt(input.tool_id),
     prompt: JSON.stringify({
       learner_request: input.learner_request,
       tool_id: input.tool_id,
