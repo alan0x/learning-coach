@@ -1984,6 +1984,69 @@ test("the live bootstrap path returns the outline and first playable section in 
   assert.ok(calls[0].response_schema.properties.first_section);
 });
 
+test("the bootstrap path decodes provider decimal parameters using its own response shape", async () => {
+  const plan = completeLessonPlanFixtures.square_function;
+  const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
+    version: plan.version,
+    section: index + 1,
+    moments,
+    ...(student_activities ? { student_activities } : {}),
+  }));
+  const outline = {
+    version: plan.version,
+    title: plan.title,
+    goals: plan.goals,
+    numbers: plan.numbers,
+    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1] }],
+    sections: plan.sections.map(({ purpose, reusable_items, moments }) => ({
+      purpose,
+      allowed_capabilities: [...new Set(moments.flatMap((moment) => moment.actions)
+        .filter((action) => action.action === "create" && action.kind === "visual")
+        .map((action) => action.content.capability))],
+      ...(reusable_items ? { reusable_items } : {}),
+    })),
+    close: plan.close,
+  };
+  Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
+  const parameters = drafts[0].moments[0].visual_creates[0].content.parameters;
+  parameters.expression_tokens = staticFunctionTokens(parameters.expression);
+  delete parameters.expression;
+  const decimal = (value) => ({ mantissa: value * 10, scale: 1 });
+  parameters.x_min = decimal(-4);
+  parameters.x_max = decimal(4);
+  parameters.y_min = decimal(-1);
+  parameters.y_max = decimal(10);
+  drafts[0].moments[0].visual_creates[0].course_visual = 32;
+  drafts[0].moments[0].visual_creates[0].reusable_item = 32;
+
+  const calls = [];
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    calls.push(request);
+    if (request.label === "lesson-plan-bootstrap") {
+      return JSON.stringify({ outline, first_section: drafts[0] });
+    }
+    return JSON.stringify(drafts[request.section - 1]);
+  }, {
+    turn_id: "turn-bootstrap-decimal-parameters",
+    learner_request: "请结合函数图像解释 y=x^2 为什么开口向上。",
+    request_parts: ["请结合函数图像解释 y=x^2 为什么开口向上。"],
+  }, {
+    bootstrap_first_section: true,
+  });
+
+  assert.deepEqual(calls.map(({ label, section }) => ({ label, section })), [
+    { label: "lesson-plan-bootstrap", section: undefined },
+    { label: "lesson-plan-section", section: 2 },
+    { label: "lesson-plan-section", section: 3 },
+  ]);
+  assert.equal(generated.model_calls, 3);
+  const plot = generated.lesson.steps[0].beats[0].actions.find(
+    (action) => action.do === "write" && action.kind === "plot",
+  ).content;
+  assert.deepEqual(plot.axes.x, { min: -4, max: 4, label: "x" });
+  assert.deepEqual(plot.axes.y, { min: -1, max: 10, label: "y" });
+});
+
 test("an invalid speculative first section does not consume the formal section attempt", async () => {
   const plan = completeLessonPlanFixtures.unit_circle_to_sine;
   const exactDrafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({

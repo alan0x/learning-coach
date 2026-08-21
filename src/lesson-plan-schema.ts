@@ -490,6 +490,24 @@ function outlineShape(value: unknown): LessonPlanOutline {
   return outline as LessonPlanOutline;
 }
 
+function bootstrapPermissiveOutline(): LessonPlanOutline {
+  return {
+    sections: [{
+      purpose: "bootstrap",
+      allowed_capabilities: capabilityNames,
+      reusable_items: Array.from({ length: 32 }, () => ({ kind: "board_item" })),
+    }],
+    numbers: Array.from({ length: 16 }, () => ({ initial: 0, min: 0, max: 1 })),
+    course_visuals: Array.from({ length: 32 }, (_unused, index) => ({
+      capability: capabilityNames[index % capabilityNames.length],
+      create_section: 1,
+      use_sections: [1],
+      relation: "primary",
+      reusable_item: index + 1,
+    })),
+  } as LessonPlanOutline;
+}
+
 export function buildLessonPlanOutlineJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
@@ -509,22 +527,7 @@ export function buildLessonPlanBootstrapJsonSchema(requestPartCount = 0): Lesson
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  const permissiveOutline = {
-    sections: [{
-      purpose: "bootstrap",
-      allowed_capabilities: capabilityNames,
-      reusable_items: Array.from({ length: 32 }, () => ({ kind: "board_item" })),
-    }],
-    numbers: Array.from({ length: 16 }, () => ({ initial: 0, min: 0, max: 1 })),
-    course_visuals: Array.from({ length: 32 }, (_unused, index) => ({
-      capability: capabilityNames[index % capabilityNames.length],
-      create_section: 1,
-      use_sections: [1],
-      relation: "primary",
-      reusable_item: index + 1,
-    })),
-  };
-  const firstSection = lessonPlanSectionDraftShapeJsonSchema(permissiveOutline, 1, true);
+  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
   const modelReference = (firstSection.$defs as Record<string, unknown> | undefined)?.modelReference;
   delete firstSection.$defs;
   return vertexCompatible({
@@ -693,6 +696,14 @@ export function coerceLessonPlanSectionModelNumbers(
   return coerceModelNumbers(
     value,
     lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex),
+    "$lessonPlanModelSection",
+  );
+}
+
+export function coerceLessonPlanBootstrapSectionModelNumbers(value: unknown): unknown {
+  return coerceModelNumbers(
+    value,
+    lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true),
     "$lessonPlanModelSection",
   );
 }

@@ -22,6 +22,7 @@ import {
   buildLessonPlanBootstrapJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
+  coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
   LESSON_PLAN_VISUAL_PARAMETER_NAMES,
@@ -589,6 +590,92 @@ function lowerModelActivityNumbers(
     });
   }
   return lowered;
+}
+
+function reconcileBootstrapFirstSectionPositions(
+  value: unknown,
+  outline: LessonPlanOutline,
+): unknown {
+  const root = structuredClone(value);
+  if (!root || typeof root !== "object" || Array.isArray(root)) return root;
+  const candidate = root as Record<string, unknown>;
+  if (!Array.isArray(candidate.moments)) return root;
+
+  type CreateCandidate = {
+    entry: Record<string, unknown>;
+    moment: number;
+    order: number;
+    index: number;
+  };
+  const collect = (collection: "visual_creates" | "math_creates" | "note_creates"): CreateCandidate[] => (
+    candidate.moments.flatMap((momentValue, momentIndex) => {
+      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) return [];
+      const entries = (momentValue as Record<string, unknown>)[collection];
+      if (!Array.isArray(entries)) return [];
+      return entries.flatMap((entry, entryIndex) => (
+        entry && typeof entry === "object" && !Array.isArray(entry)
+          ? [{
+            entry: entry as Record<string, unknown>,
+            moment: momentIndex + 1,
+            order: Number((entry as Record<string, unknown>).order),
+            index: entryIndex,
+          }]
+          : []
+      ));
+    }).sort((left, right) => (
+      left.moment - right.moment
+      || (Number.isFinite(left.order) ? left.order : Number.MAX_SAFE_INTEGER)
+        - (Number.isFinite(right.order) ? right.order : Number.MAX_SAFE_INTEGER)
+      || left.index - right.index
+    ))
+  );
+
+  const visualCreates = collect("visual_creates");
+  for (const { entry } of visualCreates) {
+    delete entry.course_visual;
+    delete entry.reusable_item;
+  }
+  const unmatchedVisuals = new Set(visualCreates);
+  const expectedVisuals = (outline.course_visuals ?? [])
+    .map((visual, index) => ({ visual, position: index + 1 }))
+    .filter(({ visual }) => visual.create_section === 1);
+  for (const { visual, position } of expectedVisuals) {
+    const match = visualCreates.find((candidateEntry) => {
+      if (!unmatchedVisuals.has(candidateEntry)) return false;
+      const content = candidateEntry.entry.content;
+      return content && typeof content === "object" && !Array.isArray(content)
+        && (content as Record<string, unknown>).capability === visual.capability;
+    });
+    if (!match) continue;
+    match.entry.course_visual = position;
+    unmatchedVisuals.delete(match);
+  }
+  if (unmatchedVisuals.size > 0 && expectedVisuals.length === 0) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_COURSE_VISUAL",
+      "$lessonPlanModelSection.moments",
+      "the bootstrap section created a visual that the outline did not declare",
+    );
+  }
+
+  const createsByKind = {
+    math: collect("math_creates"),
+    note: collect("note_creates"),
+  };
+  for (const entries of Object.values(createsByKind)) {
+    for (const { entry } of entries) delete entry.reusable_item;
+  }
+  const usedBoardCreates = new Set<CreateCandidate>();
+  const reusableItems = outline.sections[0]?.reusable_items ?? [];
+  reusableItems.forEach((item, index) => {
+    if (item.kind !== "board_item" || (item.board_kind !== "math" && item.board_kind !== "note")) return;
+    const match = createsByKind[item.board_kind].find((candidateEntry) => !usedBoardCreates.has(candidateEntry));
+    if (!match) return;
+    match.entry.reusable_item = index + 1;
+    usedBoardCreates.add(match);
+  });
+
+  return root;
 }
 
 function lowerModelSectionDraft(
@@ -1308,10 +1395,11 @@ export async function generateLessonPlanWithModel(
       if (bootstrapFirstSection) {
         try {
           bootstrappedFirstSection = lowerModelSectionDraft(
-            coerceLessonPlanSectionModelNumbers(
-              (parsed as Record<string, unknown>).first_section,
+            reconcileBootstrapFirstSectionPositions(
+              coerceLessonPlanBootstrapSectionModelNumbers(
+                (parsed as Record<string, unknown>).first_section,
+              ),
               outline,
-              1,
             ),
             outline,
             1,
