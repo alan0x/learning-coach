@@ -107,7 +107,7 @@ function_plot 只有一种公式表示：必须填写 parameters.expression_toke
 const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
 你还必须在同一次返回中写出课程第一节。返回对象只有 outline 和 first_section 两个字段。outline 遵守上面的课程目录规则；first_section 遵守下面的单节规则，并且只能使用同一返回中 outline 第一节已经声明的数字位置、画面位置和可复用内容。不要为了第一节重复创建同一种主要画面。
-
+first_section 不负责填写画面或可复用内容的内部位置；程序会按受控画面能力、内容类型和出现顺序建立对应关系。
 ${SECTION_SYSTEM_PROMPT}`;
 
 function positiveInteger(value: number | undefined, fallback: number, label: string): number {
@@ -1359,10 +1359,10 @@ export async function generateLessonPlanWithModel(
         })),
         ...(bootstrapFirstSection ? {
           first_section_to_write: 1,
-          first_section_rule: "first_section must implement outline.sections[0] and may only use positions declared by the returned outline",
+          first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions",
         } : {}),
         ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
-      }, null, 2),
+      }),
       response_schema: bootstrapFirstSection
         ? buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length)
         : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
@@ -1478,7 +1478,7 @@ export async function generateLessonPlanWithModel(
         ...(sectionErrors.has(section)
           ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) }
           : {}),
-      }, null, 2),
+      }),
       response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section),
       max_output_tokens: 12_288,
     });

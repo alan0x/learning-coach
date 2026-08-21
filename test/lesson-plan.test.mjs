@@ -27,6 +27,7 @@ const {
   LESSON_PLAN_VISUAL_FEATURES,
   LessonPlanError,
   assembleLessonPlan,
+  buildLessonPlanBootstrapJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
   compileAndValidateLessonPlan,
@@ -2018,6 +2019,16 @@ test("the bootstrap path decodes provider decimal parameters using its own respo
   parameters.y_max = decimal(10);
   drafts[0].moments[0].visual_creates[0].course_visual = 32;
   drafts[0].moments[0].visual_creates[0].reusable_item = 32;
+
+  const bootstrapSchema = buildLessonPlanBootstrapJsonSchema(1);
+  const bootstrapMoment = bootstrapSchema.properties.first_section.properties.moments.items.properties;
+  assert.equal(
+    "course_visual" in bootstrapMoment.visual_creates.items.properties,
+    false,
+  );
+  assert.equal("reusable_item" in bootstrapMoment.visual_creates.items.properties, false);
+  assert.equal("reusable_item" in bootstrapMoment.math_creates.items.properties, false);
+  assert.equal("reusable_item" in bootstrapMoment.note_creates.items.properties, false);
 
   const calls = [];
   const generated = await generateLessonPlanWithModel(async (request) => {

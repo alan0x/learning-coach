@@ -12595,9 +12595,9 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
   const actionCollections = actionCollectionSchemas(
     outline.sections.length,
     allowedCapabilities,
-    bootstrapPermissive ? reusableCount : 0,
+    0,
     numberCount,
-    (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex).map(({ position }) => position),
+    bootstrapPermissive ? [] : (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex).map(({ position }) => position),
     bootstrapPermissive
   );
   const supportsNumberActivity = Array.isArray(outline.numbers) && outline.numbers.length > 0;
@@ -12691,7 +12691,7 @@ function_plot \u53EA\u6709\u4E00\u79CD\u516C\u5F0F\u8868\u793A\uFF1A\u5FC5\u987B
 var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
 \u4F60\u8FD8\u5FC5\u987B\u5728\u540C\u4E00\u6B21\u8FD4\u56DE\u4E2D\u5199\u51FA\u8BFE\u7A0B\u7B2C\u4E00\u8282\u3002\u8FD4\u56DE\u5BF9\u8C61\u53EA\u6709 outline \u548C first_section \u4E24\u4E2A\u5B57\u6BB5\u3002outline \u9075\u5B88\u4E0A\u9762\u7684\u8BFE\u7A0B\u76EE\u5F55\u89C4\u5219\uFF1Bfirst_section \u9075\u5B88\u4E0B\u9762\u7684\u5355\u8282\u89C4\u5219\uFF0C\u5E76\u4E14\u53EA\u80FD\u4F7F\u7528\u540C\u4E00\u8FD4\u56DE\u4E2D outline \u7B2C\u4E00\u8282\u5DF2\u7ECF\u58F0\u660E\u7684\u6570\u5B57\u4F4D\u7F6E\u3001\u753B\u9762\u4F4D\u7F6E\u548C\u53EF\u590D\u7528\u5185\u5BB9\u3002\u4E0D\u8981\u4E3A\u4E86\u7B2C\u4E00\u8282\u91CD\u590D\u521B\u5EFA\u540C\u4E00\u79CD\u4E3B\u8981\u753B\u9762\u3002
-
+first_section \u4E0D\u8D1F\u8D23\u586B\u5199\u753B\u9762\u6216\u53EF\u590D\u7528\u5185\u5BB9\u7684\u5185\u90E8\u4F4D\u7F6E\uFF1B\u7A0B\u5E8F\u4F1A\u6309\u53D7\u63A7\u753B\u9762\u80FD\u529B\u3001\u5185\u5BB9\u7C7B\u578B\u548C\u51FA\u73B0\u987A\u5E8F\u5EFA\u7ACB\u5BF9\u5E94\u5173\u7CFB\u3002
 ${SECTION_SYSTEM_PROMPT}`;
 function positiveInteger(value, fallback, label) {
   const result = value ?? fallback;
@@ -13735,10 +13735,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         })),
         ...bootstrapFirstSection ? {
           first_section_to_write: 1,
-          first_section_rule: "first_section must implement outline.sections[0] and may only use positions declared by the returned outline"
+          first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions"
         } : {},
         ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
-      }, null, 2),
+      }),
       response_schema: bootstrapFirstSection ? buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
       max_output_tokens: bootstrapFirstSection ? 16384 : 8192
     });
@@ -13840,7 +13840,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           text: fixedRequestParts[item.request_part - 1]
         })),
         ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
-      }, null, 2),
+      }),
       response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section),
       max_output_tokens: 12288
     });

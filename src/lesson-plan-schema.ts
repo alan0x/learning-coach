@@ -629,9 +629,9 @@ function lessonPlanSectionDraftShapeJsonSchema(
   const actionCollections = actionCollectionSchemas(
     outline.sections.length,
     allowedCapabilities,
-    bootstrapPermissive ? reusableCount : 0,
+    0,
     numberCount,
-    (outline.course_visuals ?? [])
+    bootstrapPermissive ? [] : (outline.course_visuals ?? [])
       .map((visual, index) => ({ visual, position: index + 1 }))
       .filter(({ visual }) => visual.create_section === sectionIndex)
       .map(({ position }) => position),
