@@ -169,7 +169,7 @@ test("the complete-lesson executable exposes one Lesson Plan path and no rollbac
   assert.match(executable, /authoring_strategy:\s*"lesson_plan"/u);
 });
 
-test("the complete-lesson command compiles staged Lesson Plan output into a delivered OLL file", async () => {
+test("the complete-lesson command bootstraps the outline and first section in one model call", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-lesson-plan-command-"));
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const outline = {
@@ -235,7 +235,12 @@ test("the complete-lesson command compiles staged Lesson Plan output into a deli
     for await (const chunk of request) body += chunk;
     const payload = JSON.parse(body);
     const schema = payload.generationConfig.responseJsonSchema;
-    const content = schema.properties?.course_visuals ? outline : section;
+    const content = schema.properties?.outline && schema.properties?.first_section
+      ? {
+          outline,
+          first_section: section,
+        }
+      : schema.properties?.course_visuals ? outline : section;
     modelCalls += 1;
     response.writeHead(200, { "content-type": "application/json" });
     response.end(JSON.stringify({
@@ -264,7 +269,8 @@ test("the complete-lesson command compiles staged Lesson Plan output into a deli
     const completed = messages.find((message) => message.success === true);
     assert.equal(completed.authoring_strategy, "lesson_plan");
     assert.equal(completed.lesson_plan_sections, 1);
-    assert.equal(modelCalls, 2);
+    assert.equal(completed.published_parts, 1);
+    assert.equal(modelCalls, 1);
     const lesson = JSON.parse(await readFile(completed.files_to_send[0], "utf8"));
     assert.equal(lesson.dsl, "octos.lesson");
     assert.equal(lesson.steps.length, 1);

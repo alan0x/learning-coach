@@ -7658,6 +7658,7 @@ async function main(): Promise<void> {
           tutor_context: input.tutor_context,
         },
         {
+          bootstrap_first_section: true,
           max_concurrency: 1,
           compile: { language: input.language },
           on_rejected_part: (event) => stageLog({
