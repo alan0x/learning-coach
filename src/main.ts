@@ -731,6 +731,7 @@ function configuredThinkingLevel(
     || label === "lesson-section"
     || label === "lesson-plan-section"
     || label === "lesson-visual-component"
+    || label === "selection-enhancement"
     || label === "selection-classification"
     ? "LOW"
     : undefined;
@@ -7458,7 +7459,7 @@ async function generateSelectionEnhancement(
       board_id: input.board.board_id,
       board_revision: input.board.revision,
       board_targets: input.board.targets,
-    }, null, 2),
+    }),
   });
   return parseSelectionModelResponse(raw, input);
 }

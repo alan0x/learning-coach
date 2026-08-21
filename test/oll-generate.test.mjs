@@ -1267,6 +1267,9 @@ test("selection tool writes a source-linked artifact without producing a lesson"
       requests[0].generationConfig.responseJsonSchema.properties.response_kind.enum[1],
       "plot",
     );
+    assert.deepEqual(requests[0].generationConfig.thinkingConfig, {
+      thinkingLevel: "LOW",
+    });
     const protocol = JSON.parse(result.stdout);
     assert.equal(protocol.success, true);
     assert.equal(protocol.files_to_send.length, 1);

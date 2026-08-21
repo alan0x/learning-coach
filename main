@@ -8750,7 +8750,7 @@ function parseThinkingLevel(value, label) {
 }
 function configuredThinkingLevel(label) {
   const environmentName = label === "lesson-brief" ? "OLL_PLANNING_THINKING_LEVEL" : label === "lesson-brief-verification" ? "OLL_VERIFICATION_THINKING_LEVEL" : label === "lesson-task-planning" || label === "lesson-plan-bootstrap" || label === "lesson-plan-outline" ? "OLL_TASK_THINKING_LEVEL" : label === "lesson-section" || label === "lesson-plan-section" ? "OLL_SECTION_THINKING_LEVEL" : label === "lesson-visual-component" ? "OLL_VISUAL_THINKING_LEVEL" : label === "selection-enhancement" ? "OLL_SELECTION_THINKING_LEVEL" : label === "selection-classification" ? "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL" : label === "lesson-component-repair" || label === "lesson-beat-repair" ? "OLL_REPAIR_THINKING_LEVEL" : "OLL_AUTHORING_THINKING_LEVEL";
-  const safeDefault = label === "lesson-brief-verification" || label === "lesson-task-planning" || label === "lesson-plan-bootstrap" || label === "lesson-plan-outline" || label === "lesson-section" || label === "lesson-plan-section" || label === "lesson-visual-component" || label === "selection-classification" ? "LOW" : void 0;
+  const safeDefault = label === "lesson-brief-verification" || label === "lesson-task-planning" || label === "lesson-plan-bootstrap" || label === "lesson-plan-outline" || label === "lesson-section" || label === "lesson-plan-section" || label === "lesson-visual-component" || label === "selection-enhancement" || label === "selection-classification" ? "LOW" : void 0;
   return parseThinkingLevel(process.env[environmentName], environmentName) ?? parseThinkingLevel(process.env.OLL_THINKING_LEVEL, "OLL_THINKING_LEVEL") ?? safeDefault;
 }
 function validateTurnId(value) {
@@ -10254,7 +10254,7 @@ async function generateSelectionEnhancement(client, input) {
       board_id: input.board.board_id,
       board_revision: input.board.revision,
       board_targets: input.board.targets
-    }, null, 2)
+    })
   });
   return parseSelectionModelResponse(raw, input);
 }
