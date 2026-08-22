@@ -132,26 +132,6 @@ function integer(minimum = 1, maximum?: number): LessonPlanJsonSchema {
   return { type: "integer", minimum, ...(maximum === undefined ? {} : { maximum }) };
 }
 
-function referenceSchema(sectionCount: number): LessonPlanJsonSchema {
-  void sectionCount;
-  return { $ref: "#/$defs/modelReference" };
-}
-
-function referenceDefinitionSchema(sectionCount: number): LessonPlanJsonSchema {
-  return object({
-    source: { enum: ["local_board_item", "local_connection", "local_group", "reusable", "host"] },
-    section: integer(0, sectionCount),
-    moment: integer(0, 12),
-    item: integer(0, 48),
-    host_reference: integer(0, 24),
-    part: object({
-      kind: { enum: ["capability", "index"] },
-      role: { type: "string" },
-      index: integer(1, 24),
-    }, ["kind"]),
-  }, ["source", "section", "moment", "item", "host_reference"]);
-}
-
 function numberSchema(): LessonPlanJsonSchema {
   return object({
     initial: { type: "number" },
@@ -196,18 +176,7 @@ function visualParametersSchema(
   const uses = (capability: LessonPlanCapability): boolean => allowedCapabilities.includes(capability);
   if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
   if (uses("function_plot")) {
-    if (!canonicalFunctionPlot) {
-      properties.expression = string(256);
-      properties.expressions = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
-    }
-    if (numberCount > 0 || canonicalFunctionPlot) {
-      properties.expression_tokens = {
-        type: "array",
-        minItems: 1,
-        maxItems: 128,
-        items: mathTokenSchema(numberCount, true),
-      };
-    }
+    properties.formula = string(256);
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
   }
@@ -238,7 +207,7 @@ function visualParametersSchema(
   if (uses("process_diagram")) {
     properties.steps = { type: "array", minItems: 1, maxItems: 24, items: string(240) };
   }
-  return object(properties, (requireDynamicPlotExpression || canonicalFunctionPlot) ? ["expression_tokens"] : []);
+  return object(properties, (requireDynamicPlotExpression || canonicalFunctionPlot) ? ["formula"] : []);
 }
 
 function contentSchema(allowedCapabilities: LessonPlanCapability[]): LessonPlanJsonSchema {
@@ -263,11 +232,11 @@ function contentSchema(allowedCapabilities: LessonPlanCapability[]): LessonPlanJ
   });
 }
 
-function orderedAction(
+function modelAction(
   properties: Record<string, unknown>,
   required: string[],
 ): LessonPlanJsonSchema {
-  return object({ order: integer(1, 48), ...properties }, ["order", ...required]);
+  return object(properties, required);
 }
 
 function actionCollectionSchemas(
@@ -278,7 +247,6 @@ function actionCollectionSchemas(
   courseVisualPositions: number[] = [],
   includeVisualCreates = true,
 ): Record<string, LessonPlanJsonSchema> {
-  const reference = referenceSchema(sectionCount);
   const timing = { enum: timingNames };
   const collection = (items: LessonPlanJsonSchema): LessonPlanJsonSchema => ({ type: "array", items });
   const createCommon = {
@@ -300,7 +268,7 @@ function actionCollectionSchemas(
     && allowedCapabilities[0] === "function_plot";
   return {
     ...(allowedCapabilities.length && includeVisualCreates ? {
-      visual_creates: collection(orderedAction({
+      visual_creates: collection(modelAction({
         ...createCommon,
         ...(courseVisualPositions.length > 0
           ? { course_visual: { enum: courseVisualPositions } }
@@ -324,25 +292,24 @@ function actionCollectionSchemas(
         }, ["capability", ...(requireFunctionPlotParameters ? ["parameters"] : [])]),
       }, ["role", ...(courseVisualPositions.length > 0 ? ["course_visual"] : []), "content", "placement"])),
     } : {}),
-    math_creates: collection(orderedAction({
+    math_creates: collection(modelAction({
       ...createCommon,
       content: object({ latex: string() }, ["latex"]),
     }, ["role", "content", "placement"])),
-    note_creates: collection(orderedAction({
+    note_creates: collection(modelAction({
       ...createCommon,
       content: object({
         title: string(240),
         items: { type: "array", minItems: 1, maxItems: 24, items: string(480) },
       }, ["title", "items"]),
     }, ["role", "content", "placement"])),
-    focuses: collection(orderedAction({
+    focuses: collection(modelAction({
       timing,
-      references: { type: "array", items: reference },
       intent: string(160),
-    }, ["references", "intent"])),
-    points: collection(orderedAction({ timing, reference }, ["reference"])),
+    }, ["intent"])),
+    points: collection(modelAction({ timing }, [])),
     ...(numberCount > 0 ? {
-      animations: collection(orderedAction({
+      animations: collection(modelAction({
         timing,
         number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
         end_value: { type: "number" },
@@ -367,7 +334,6 @@ function courseVisualCreatesSchema(
     const numberLimit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability];
     return [`visual_${position}`, object({
       moment: integer(1, 12),
-      order: integer(1, 48),
       timing: { enum: timingNames },
       role: string(80),
       content: object({
@@ -386,7 +352,7 @@ function courseVisualCreatesSchema(
         } : {}),
       }, ["parameters"]),
       placement: placementSchema(outline.sections.length),
-    }, ["moment", "order", "role", "content", "placement"])];
+    }, ["moment", "role", "content", "placement"])];
   }));
   return object(properties, Object.keys(properties));
 }
@@ -417,25 +383,13 @@ function reusableBoardCreatesSchema(
     }
     return [`item_${position}`, object({
       moment: integer(1, 12),
-      order: integer(1, 48),
       timing: { enum: timingNames },
       role: string(80),
       content,
       placement: placementSchema(outline.sections.length),
-    }, ["moment", "order", "role", "content", "placement"])];
+    }, ["moment", "role", "content", "placement"])];
   }));
   return object(properties, Object.keys(properties));
-}
-
-function mathTokenSchema(numberCount: number, allowInput = false): LessonPlanJsonSchema {
-  return object({
-    kind: { enum: [...(allowInput ? ["input"] : []), "number", "literal", "constant", "negate", "operator", "function"] },
-    number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
-    literal_mantissa: integer(-1_000_000_000_000, 1_000_000_000_000),
-    literal_scale: { enum: [0, 1, 2, 3, 4, 5, 6] },
-    name: { enum: ["pi", "e", "abs", "acos", "asin", "atan", "ceil", "cos", "exp", "floor", "ln", "log", "round", "sin", "sqrt", "tan"] },
-    operator: { enum: ["add", "subtract", "multiply", "divide", "power"] },
-  }, ["kind"]);
 }
 
 function decimalIntegerFields(prefix: string): Record<string, unknown> {
@@ -447,7 +401,6 @@ function decimalIntegerFields(prefix: string): Record<string, unknown> {
 
 function activityCommonSchema(): Record<string, unknown> {
   return {
-    order: integer(1, 16),
     prompt: string(480),
     hints: { type: "array", minItems: 1, maxItems: 8, items: string(480) },
     hint_after_attempts: integer(1, 20),
@@ -461,7 +414,7 @@ function numberActivitySchema(numberCount: number): LessonPlanJsonSchema {
     number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
     ...decimalIntegerFields("value"),
   }, [
-    "order", "prompt", "number", "value_mantissa", "value_scale", "hints",
+    "prompt", "number", "value_mantissa", "value_scale", "hints",
   ]);
 }
 
@@ -474,7 +427,7 @@ function scene3dActivitySchema(sectionCount: number): LessonPlanJsonSchema {
     angular_tolerance_degrees: integer(1, 90),
     zoom_tolerance_percent: integer(1, 100),
   }, [
-    "order", "prompt", "controls", "view_preset",
+    "prompt", "controls", "view_preset",
     "angular_tolerance_degrees", "zoom_tolerance_percent", "hints",
   ]);
 }
@@ -528,14 +481,11 @@ export function buildLessonPlanBootstrapJsonSchema(requestPartCount = 0): Lesson
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
   const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
-  const modelReference = (firstSection.$defs as Record<string, unknown> | undefined)?.modelReference;
-  delete firstSection.$defs;
   return vertexCompatible({
     ...object({
       outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
       first_section: firstSection,
     }, ["outline", "first_section"]),
-    ...(modelReference ? { $defs: { modelReference } } : {}),
   });
 }
 
@@ -671,7 +621,7 @@ function lessonPlanSectionDraftShapeJsonSchema(
         narration: string(),
         delivery: { enum: deliveryNames },
         ...actionCollections,
-      }, ["narration", "delivery", ...Object.keys(actionCollections)]),
+      }, ["narration", "delivery"]),
     },
     ...(courseVisualCreates ? { course_visual_creates: courseVisualCreates } : {}),
     ...(reusableBoardCreates ? { reusable_board_creates: reusableBoardCreates } : {}),
@@ -682,9 +632,7 @@ function lessonPlanSectionDraftShapeJsonSchema(
     "moments",
     ...(courseVisualCreates ? ["course_visual_creates"] : []),
     ...(reusableBoardCreates ? ["reusable_board_creates"] : []),
-    ...Object.keys(activityProperties),
   ]);
-  schema.$defs = { modelReference: referenceDefinitionSchema(outline.sections.length) };
   return schema;
 }
 

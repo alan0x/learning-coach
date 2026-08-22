@@ -10,6 +10,7 @@ import test from "node:test";
 
 import {
   callStructuredModel,
+  createVertexClient,
   probeVertexSchema,
 } from "../main";
 
@@ -96,6 +97,59 @@ test("Vertex Schema probe retries temporary rate limits without changing the sch
     }, schema);
     assert.equal(requests, 2);
     assert.deepEqual(result, { ok: true, status: 200, finishReason: "MAX_TOKENS" });
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("a host-provided Vertex access token bypasses the OAuth exchange", async () => {
+  let oauthRequests = 0;
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the body before replying.
+    }
+    if (request.url === "/token") {
+      oauthRequests += 1;
+      response.writeHead(500, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "OAuth must not be called" }));
+      return;
+    }
+    assert.equal(request.headers.authorization, "Bearer host-token");
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(vertexPayload({ ok: true }));
+  });
+  const { privateKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: "pkcs8", format: "pem" },
+    publicKeyEncoding: { type: "spki", format: "pem" },
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const previous = {
+      VERTEX_SA_JSON: process.env.VERTEX_SA_JSON,
+      VERTEX_ACCESS_TOKEN: process.env.VERTEX_ACCESS_TOKEN,
+      GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
+      VERTEX_BASE_URL: process.env.VERTEX_BASE_URL,
+      OLL_MODEL: process.env.OLL_MODEL,
+    };
+    delete process.env.VERTEX_SA_JSON;
+    process.env.VERTEX_ACCESS_TOKEN = "host-token";
+    process.env.GOOGLE_CLOUD_PROJECT = "test-project";
+    process.env.VERTEX_BASE_URL = `${baseUrl}/v1`;
+    process.env.OLL_MODEL = "test-model";
+    try {
+      const client = await createVertexClient();
+      assert.equal(client.accessToken, "host-token");
+      assert.equal(oauthRequests, 0);
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
   } finally {
     await new Promise((done) => server.close(done));
   }
@@ -199,14 +253,6 @@ test("the complete-lesson command bootstraps the outline and first section in on
       math_creates: [],
       note_creates: [],
       focuses: [{
-        order: 2,
-        references: [{
-          source: "reusable",
-          section: 1,
-          moment: 0,
-          item: 1,
-          host_reference: 0,
-        }],
         intent: "观察等式",
         timing: "after_speech",
       }],
@@ -215,7 +261,6 @@ test("the complete-lesson command bootstraps the outline and first section in on
     reusable_board_creates: {
       item_1: {
         moment: 1,
-        order: 1,
         role: "derivation",
         content: { latex: "(-1)\\\\times(-1)=1" },
         placement: { relation: "new_region" },
@@ -1247,6 +1292,8 @@ test("selection tool writes a source-linked artifact without producing a lesson"
           checksum: { algorithm: "sha-256", value: checksum },
         },
         content_hint: "math",
+        recognized_content: "y = x^2",
+        recognition_confidence: "high",
         tool_id: "generate-plot",
         board: {
           board_id: "learning-board-session-1",
@@ -1269,8 +1316,11 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     });
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(requests.length, 1);
-    assert.equal(requests[0].contents[0].parts.length, 2);
-    assert.equal(requests[0].contents[0].parts[1].inlineData.mimeType, "image/png");
+    assert.equal(requests[0].contents[0].parts.length, 1);
+    assert.equal(
+      "interpretation_content" in requests[0].generationConfig.responseJsonSchema.properties,
+      false,
+    );
     assert.equal(
       requests[0].generationConfig.responseJsonSchema.properties.response_kind.enum[1],
       "plot",
@@ -1397,7 +1447,8 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     });
     assert.equal(explanationResult.exitCode, 0, explanationResult.stderr);
     const explanationSchema = requests[3].generationConfig.responseJsonSchema;
-    assert.deepEqual(explanationSchema.properties.response_kind.enum, ["explanation"]);
+    assert.equal("response_kind" in explanationSchema.properties, false);
+    assert.equal("interpretation_kind" in explanationSchema.properties, false);
     assert.equal("expression" in explanationSchema.properties, false);
     assert.equal("x_min" in explanationSchema.properties, false);
     assert.doesNotMatch(requests[3].systemInstruction.parts[0].text, /implicit_surface/u);

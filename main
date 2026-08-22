@@ -9534,9 +9534,13 @@ function vertexResponseContent(payload) {
   return text;
 }
 async function createVertexClient() {
-  const account = parseServiceAccount();
+  const hostAccessToken = process.env.VERTEX_ACCESS_TOKEN?.trim();
+  const account = hostAccessToken ? void 0 : parseServiceAccount();
   const model = process.env.OLL_MODEL?.trim() || DEFAULT_MODEL;
-  const project = process.env.GOOGLE_CLOUD_PROJECT?.trim() || account.project_id;
+  const project = requireNonEmptyString(
+    process.env.GOOGLE_CLOUD_PROJECT?.trim() || account?.project_id,
+    "GOOGLE_CLOUD_PROJECT"
+  );
   const location = process.env.GOOGLE_CLOUD_LOCATION?.trim() || DEFAULT_VERTEX_LOCATION;
   const timeoutMs = parsePositiveInteger(process.env.OLL_TIMEOUT_MS, DEFAULT_TIMEOUT_MS, "OLL_TIMEOUT_MS");
   const totalTimeoutMs = parsePositiveInteger(
@@ -9550,11 +9554,12 @@ async function createVertexClient() {
   stageLog({ stage: "vertex-auth", status: "started" });
   let accessToken;
   try {
-    accessToken = await vertexAccessToken(account, Math.min(timeoutMs, totalTimeoutMs));
+    accessToken = hostAccessToken ? hostAccessToken : await vertexAccessToken(account, Math.min(timeoutMs, totalTimeoutMs));
     stageLog({
       stage: "vertex-auth",
       status: "completed",
-      elapsed_ms: Date.now() - authStartedAt
+      elapsed_ms: Date.now() - authStartedAt,
+      source: hostAccessToken ? "host_token" : "service_account_exchange"
     });
   } catch (error) {
     const timeoutError = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
@@ -9723,11 +9728,11 @@ async function callStructuredModel(client, request) {
       temperature: 0,
       maxOutputTokens: request.maxTokens ?? client.maxTokens,
       responseMimeType: "application/json",
-      responseJsonSchema: request.responseSchema,
+      ...request.responseSchema ? { responseJsonSchema: request.responseSchema } : {},
       ...thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}
     }
   });
-  const diagnostics = schemaDiagnostics(request.responseSchema);
+  const diagnostics = request.responseSchema ? schemaDiagnostics(request.responseSchema) : { sha256: "none", bytes: 0 };
   stageLog({
     stage: "model-call",
     turn_id: request.turnId,
@@ -9843,6 +9848,7 @@ async function callStructuredModel(client, request) {
       ...metric("promptTokenCount") === void 0 ? {} : { prompt_tokens: metric("promptTokenCount") },
       ...metric("candidatesTokenCount") === void 0 ? {} : { candidate_tokens: metric("candidatesTokenCount") },
       ...metric("thoughtsTokenCount") === void 0 ? {} : { thought_tokens: metric("thoughtsTokenCount") },
+      ...metric("cachedContentTokenCount") === void 0 ? {} : { cached_content_tokens: metric("cachedContentTokenCount") },
       ...metric("totalTokenCount") === void 0 ? {} : { total_tokens: metric("totalTokenCount") },
       ...typeof usage.trafficType === "string" ? { traffic_type: usage.trafficType } : {},
       response_bytes: Buffer.byteLength(body),
@@ -9986,7 +9992,7 @@ var SELECTION_EXPLANATION_RESPONSE_SCHEMA = {
 };
 var SELECTION_BASE_SYSTEM_PROMPT = `\u4F60\u662F\u767D\u677F\u9009\u533A\u8F85\u52A9\u5DE5\u5177\u3002\u53EA\u89E3\u91CA\u5F53\u524D\u8BF7\u6C42\u9644\u5E26\u7684\u9009\u533A\u56FE\u7247\u548C\u7528\u6237\u660E\u786E\u9009\u4E2D\u7684\u5C40\u90E8\u767D\u677F\u5BF9\u8C61\uFF0C\u5E76\u5728\u539F\u7A3F\u65C1\u8FB9\u751F\u6210\u72EC\u7ACB\u8F85\u52A9\u5185\u5BB9\uFF1B\u7EDD\u4E0D\u91CD\u5199\u3001\u7EA0\u6B63\u6216\u66FF\u6362\u539F\u7A3F\u3002\u56FE\u7247\u8BC6\u522B\u4E0D\u786E\u5B9A\u65F6\u5FC5\u987B\u660E\u786E\u8BF4\u660E\u3002board_targets \u662F Runtime \u63D0\u4F9B\u7684\u7A33\u5B9A\u5F15\u7528\uFF0C\u53EA\u80FD\u7528\u4E8E\u7406\u89E3\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u80FD\u81EA\u884C\u589E\u5220\u6216\u6539\u5199\u3002\u4E0D\u8981\u58F0\u79F0\u770B\u5230\u4E86\u9009\u533A\u56FE\u7247\u4EE5\u5916\u7684\u767D\u677F\u3002
 
-\u76F4\u63A5\u5B8C\u6210 learner_request\u3002\u89E3\u91CA\u6216\u68C0\u67E5\u8BF7\u6C42\u4F7F\u7528 response_kind=explanation\uFF1Btitle\u3001text \u548C items \u76F4\u63A5\u9762\u5411\u5F53\u524D\u5B66\u4E60\u8005\u3002`;
+\u76F4\u63A5\u5B8C\u6210 learner_request\u3002\u89E3\u91CA\u6216\u68C0\u67E5\u8BF7\u6C42\u53EA\u8FD4\u56DE title\u3001text \u548C items\uFF0C\u5E76\u76F4\u63A5\u9762\u5411\u5F53\u524D\u5B66\u4E60\u8005\u3002\u82E5\u8F93\u5165\u63D0\u4F9B\u4E86\u4E2D\u9AD8\u7F6E\u4FE1\u5EA6\u7684 selected_recognition\uFF0C\u76F4\u63A5\u4F7F\u7528\u5B83\uFF0C\u4E0D\u8981\u518D\u6B21\u6539\u5199\u8BC6\u522B\u7ED3\u679C\u3002`;
 var SELECTION_VISUALIZATION_SYSTEM_PROMPT = `\u5F53 tool_id \u4E3A generate-plot \u6216 custom-question \u4E14\u7528\u6237\u8981\u6C42\u751F\u6210\u51FD\u6570\u56FE\u50CF\u65F6\uFF0C\u5148\u628A\u8BC6\u522B\u5230\u7684\u516C\u5F0F\u89C4\u8303\u5316\u4E3A\u53EA\u80FD\u4F7F\u7528\u6570\u5B57\u3001x/y/z\u3001pi\u3001e\u3001+ - * / ^\u3001\u62EC\u53F7\u548C abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan \u7684\u8868\u8FBE\u5F0F\uFF1B\u5FC5\u987B\u663E\u5F0F\u5199\u4E58\u53F7\u3002\u7136\u540E\u9009\u62E9\uFF1A
 - \u5355\u53D8\u91CF y=f(x)\uFF1Aresponse_kind=plot\uFF0Cexpression \u53EA\u5199 f(x)\u3002
 - \u4E8C\u53D8\u91CF\u9690\u5F0F\u65B9\u7A0B F(x,y)=c\uFF1Aresponse_kind=implicit_plot\uFF0Cexpression \u5199 F(x,y)\uFF0Clevel \u5199 c\u3002
@@ -9994,8 +10000,33 @@ var SELECTION_VISUALIZATION_SYSTEM_PROMPT = `\u5F53 tool_id \u4E3A generate-plot
 - \u4E09\u53D8\u91CF\u9690\u5F0F\u65B9\u7A0B F(x,y,z)=c\uFF1Aresponse_kind=scene3d\uFF0Cscene_kind=implicit_surface\uFF0Cexpression \u5199 F(x,y,z)\uFF0Clevel \u5199 c\u3002
 - \u8D85\u8FC7\u4E09\u4E2A\u72EC\u7ACB\u53D8\u91CF\u3001\u65E0\u6CD5\u53EF\u9760\u8BC6\u522B\u3001\u65E0\u6CD5\u8F6C\u4E3A\u4E0A\u8FF0\u5B89\u5168\u8868\u8FBE\u5F0F\u6216\u5728\u5408\u7406\u6709\u9650\u8303\u56F4\u5185\u65E0\u6CD5\u7ED8\u5236\uFF1Aresponse_kind=unsupported\uFF0C\u7ED9\u51FA\u51C6\u786E\u539F\u56E0\u548C\u53EF\u64CD\u4F5C\u7684 alternatives\uFF0C\u4E0D\u80FD\u5047\u88C5\u5DF2\u7ECF\u7ED8\u5236\u3002
 \u6240\u6709\u8303\u56F4\u5FC5\u987B\u6709\u9650\u5E76\u8986\u76D6\u4E3B\u8981\u56FE\u5F62\uFF1Bscene3d \u7684 samples \u4F7F\u7528 10 \u5230 14\u3002\u4EE3\u7801\u4F1A\u518D\u6B21\u6821\u9A8C\u4F60\u7684\u9009\u62E9\u548C\u8868\u8FBE\u5F0F\uFF0C\u6821\u9A8C\u4E0D\u901A\u8FC7\u65F6\u4E0D\u4F1A\u7ED8\u5236\u3002\u975E\u7ED8\u56FE\u8BF7\u6C42\u4F7F\u7528 explanation\u3002`;
-function selectionResponseSchema(toolId) {
-  return toolId === "explain" || toolId === "check-and-suggest" ? SELECTION_EXPLANATION_RESPONSE_SCHEMA : SELECTION_RESPONSE_SCHEMA;
+function hasReusableSelectionRecognition(input) {
+  return input.content_hint !== "unknown" && Boolean(input.recognized_content?.trim()) && (input.recognition_confidence === "high" || input.recognition_confidence === "medium");
+}
+function selectionResponseSchema(input) {
+  const explanation = input.tool_id === "explain" || input.tool_id === "check-and-suggest";
+  const schema = structuredClone(
+    explanation ? SELECTION_EXPLANATION_RESPONSE_SCHEMA : SELECTION_RESPONSE_SCHEMA
+  );
+  if (explanation) {
+    delete schema.properties?.response_kind;
+    schema.required = schema.required?.filter((field) => field !== "response_kind");
+  }
+  if (hasReusableSelectionRecognition(input)) {
+    for (const field of [
+      "interpretation_kind",
+      "interpretation_content",
+      "interpretation_confidence"
+    ]) {
+      delete schema.properties?.[field];
+    }
+    schema.required = schema.required?.filter((field) => ![
+      "interpretation_kind",
+      "interpretation_content",
+      "interpretation_confidence"
+    ].includes(field));
+  }
+  return schema;
 }
 function selectionSystemPrompt(toolId) {
   return toolId === "explain" || toolId === "check-and-suggest" ? SELECTION_BASE_SYSTEM_PROMPT : `${SELECTION_BASE_SYSTEM_PROMPT}
@@ -10058,17 +10089,18 @@ function parseSelectionModelResponse(raw, input) {
     }
     return number;
   };
-  const kind = nonEmpty("interpretation_kind");
+  const reusableRecognition = hasReusableSelectionRecognition(input);
+  const kind = reusableRecognition ? input.content_hint : nonEmpty("interpretation_kind");
   if (!["text", "math", "geometry", "data", "unknown"].includes(kind)) {
     throw new Error("interpretation_kind is invalid");
   }
-  const confidence = nonEmpty("interpretation_confidence");
+  const confidence = reusableRecognition ? input.recognition_confidence : nonEmpty("interpretation_confidence");
   if (!["high", "medium", "low"].includes(confidence)) {
     throw new Error("interpretation_confidence is invalid");
   }
   const title = nonEmpty("title");
   const text = nonEmpty("text");
-  const interpretationContent = nonEmpty("interpretation_content");
+  const interpretationContent = reusableRecognition ? requireNonEmptyString(input.recognized_content, "recognized_content") : nonEmpty("interpretation_content");
   const items = Array.isArray(output.items) ? output.items.map((item, index) => requireNonEmptyString(item, `items[${index}]`)) : [];
   let response;
   const visualizationRequested = input.tool_id === "generate-plot" || input.tool_id === "custom-question";
@@ -10089,8 +10121,9 @@ function parseSelectionModelResponse(raw, input) {
     }
     return "unsupported_representation";
   };
+  const responseKind = input.tool_id === "explain" || input.tool_id === "check-and-suggest" ? "explanation" : output.response_kind;
   try {
-    if (output.response_kind === "plot" || output.response_kind === "implicit_plot") {
+    if (responseKind === "plot" || responseKind === "implicit_plot") {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a plot response`);
       }
@@ -10101,7 +10134,7 @@ function parseSelectionModelResponse(raw, input) {
       }
       const [xMin, xMax, yMin, yMax] = numbers;
       if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
-      if (output.response_kind === "plot") {
+      if (responseKind === "plot") {
         const evaluate = compileMathExpression(expression, ["x"]);
         for (let index = 0; index <= 40; index += 1) {
           const x = xMin + (xMax - xMin) * index / 40;
@@ -10145,7 +10178,7 @@ function parseSelectionModelResponse(raw, input) {
           y_range: { min: yMin, max: yMax }
         };
       }
-    } else if (output.response_kind === "scene3d") {
+    } else if (responseKind === "scene3d") {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a 3D response`);
       }
@@ -10229,13 +10262,13 @@ function parseSelectionModelResponse(raw, input) {
           objects: [object]
         }
       };
-    } else if (output.response_kind === "unsupported") {
+    } else if (responseKind === "unsupported") {
       const reasonCode = nonEmpty("reason_code");
       if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
         throw new Error("reason_code is invalid");
       }
       response = unsupported(reasonCode, text);
-    } else if (output.response_kind === "explanation") {
+    } else if (responseKind === "explanation") {
       response = visualizationRequested && input.tool_id === "generate-plot" ? unsupported(
         confidence === "low" ? "unreadable_expression" : "unsupported_representation",
         text
@@ -10272,26 +10305,30 @@ function parseSelectionModelResponse(raw, input) {
   };
 }
 async function generateSelectionEnhancement(client, input) {
-  const media = await selectionModelMedia(input);
+  const media = input.tool_id === "generate-plot" && hasReusableSelectionRecognition(input) ? void 0 : await selectionModelMedia(input);
   const raw = await callStructuredModel(client, {
     label: "selection-enhancement",
     turnId: input.turn_id,
     maxTokens: Math.min(client.maxTokens, 4096),
-    responseSchema: selectionResponseSchema(input.tool_id),
+    responseSchema: selectionResponseSchema(input),
     media,
     systemPrompt: selectionSystemPrompt(input.tool_id),
     prompt: JSON.stringify({
       learner_request: input.learner_request,
       tool_id: input.tool_id,
-      selected_content_hint: input.content_hint,
+      selected_recognition: {
+        kind: input.content_hint,
+        content: input.recognized_content ?? null,
+        confidence: input.recognition_confidence ?? null
+      },
       attached_selection_image: Boolean(media),
-      fallback_recognized_selected_content: input.recognized_content ?? null,
-      fallback_recognition_confidence: input.recognition_confidence ?? null,
       lesson_title: input.lesson_title ?? null,
       board_summary: input.board_summary ?? null,
-      board_id: input.board.board_id,
-      board_revision: input.board.revision,
-      board_targets: input.board.targets
+      selected_board_context: input.board.targets.map((target) => ({
+        kind: target.kind,
+        label: target.label,
+        value: target.value
+      }))
     })
   });
   return parseSelectionModelResponse(raw, input);
@@ -10481,7 +10518,14 @@ async function main() {
         },
         {
           bootstrap_first_section: true,
-          max_concurrency: 1,
+          max_concurrency: Math.min(
+            parsePositiveInteger(
+              process.env.OLL_SECTION_CONCURRENCY,
+              2,
+              "OLL_SECTION_CONCURRENCY"
+            ),
+            2
+          ),
           compile: { language: input.language },
           on_rejected_part: (event) => stageLog({
             stage: "lesson-plan-local-rejection",
@@ -10490,7 +10534,14 @@ async function main() {
           }),
           on_playable_prefix: async ({ completed_sections, compiled }) => {
             await publishPrefix(compiled.lesson, completed_sections);
-          }
+          },
+          on_concurrency_fallback: ({ section, reason }) => stageLog({
+            stage: "lesson-plan-concurrency",
+            turn_id: input.turn_id,
+            status: "fallback",
+            section,
+            reason
+          })
         }
       );
       const artifactPath = outputPath(input);

@@ -467,7 +467,12 @@ export interface StructuredModelRequest {
   turnId: string;
   systemPrompt: string;
   prompt: string;
-  responseSchema: JsonSchema;
+  /**
+   * Provider-side JSON grammar. Omit only for controlled evaluation of
+   * Vertex JSON mode; all generated values still pass the same local Lesson
+   * Plan/OLL validators before they can reach the runtime.
+   */
+  responseSchema?: JsonSchema;
   maxTokens?: number;
   thinkingLevel?: ThinkingLevel;
   signal?: AbortSignal;
@@ -4769,9 +4774,13 @@ function vertexResponseContent(payload: unknown): string {
 }
 
 export async function createVertexClient(): Promise<VertexClient> {
-  const account = parseServiceAccount();
+  const hostAccessToken = process.env.VERTEX_ACCESS_TOKEN?.trim();
+  const account = hostAccessToken ? undefined : parseServiceAccount();
   const model = process.env.OLL_MODEL?.trim() || DEFAULT_MODEL;
-  const project = process.env.GOOGLE_CLOUD_PROJECT?.trim() || account.project_id;
+  const project = requireNonEmptyString(
+    process.env.GOOGLE_CLOUD_PROJECT?.trim() || account?.project_id,
+    "GOOGLE_CLOUD_PROJECT",
+  );
   const location = process.env.GOOGLE_CLOUD_LOCATION?.trim() || DEFAULT_VERTEX_LOCATION;
   const timeoutMs = parsePositiveInteger(process.env.OLL_TIMEOUT_MS, DEFAULT_TIMEOUT_MS, "OLL_TIMEOUT_MS");
   const totalTimeoutMs = parsePositiveInteger(
@@ -4785,11 +4794,14 @@ export async function createVertexClient(): Promise<VertexClient> {
   stageLog({ stage: "vertex-auth", status: "started" });
   let accessToken: string;
   try {
-    accessToken = await vertexAccessToken(account, Math.min(timeoutMs, totalTimeoutMs));
+    accessToken = hostAccessToken
+      ? hostAccessToken
+      : await vertexAccessToken(account!, Math.min(timeoutMs, totalTimeoutMs));
     stageLog({
       stage: "vertex-auth",
       status: "completed",
       elapsed_ms: Date.now() - authStartedAt,
+      source: hostAccessToken ? "host_token" : "service_account_exchange",
     });
   } catch (error) {
     const timeoutError = error instanceof Error
@@ -5000,13 +5012,15 @@ export async function callStructuredModel(client: VertexClient, request: Structu
       temperature: 0,
       maxOutputTokens: request.maxTokens ?? client.maxTokens,
       responseMimeType: "application/json",
-      responseJsonSchema: request.responseSchema,
+      ...(request.responseSchema ? { responseJsonSchema: request.responseSchema } : {}),
       ...(thinkingLevel
         ? { thinkingConfig: { thinkingLevel } }
         : {}),
     },
   });
-  const diagnostics = schemaDiagnostics(request.responseSchema);
+  const diagnostics = request.responseSchema
+    ? schemaDiagnostics(request.responseSchema)
+    : { sha256: "none", bytes: 0 };
   stageLog({
     stage: "model-call",
     turn_id: request.turnId,
@@ -5137,6 +5151,9 @@ export async function callStructuredModel(client: VertexClient, request: Structu
       ...(metric("thoughtsTokenCount") === undefined
         ? {}
         : { thought_tokens: metric("thoughtsTokenCount") }),
+      ...(metric("cachedContentTokenCount") === undefined
+        ? {}
+        : { cached_content_tokens: metric("cachedContentTokenCount") }),
       ...(metric("totalTokenCount") === undefined
         ? {}
         : { total_tokens: metric("totalTokenCount") }),
@@ -7146,7 +7163,7 @@ const SELECTION_EXPLANATION_RESPONSE_SCHEMA: JsonSchema = {
 
 const SELECTION_BASE_SYSTEM_PROMPT = `你是白板选区辅助工具。只解释当前请求附带的选区图片和用户明确选中的局部白板对象，并在原稿旁边生成独立辅助内容；绝不重写、纠正或替换原稿。图片识别不确定时必须明确说明。board_targets 是 Runtime 提供的稳定引用，只能用于理解上下文，不能自行增删或改写。不要声称看到了选区图片以外的白板。
 
-直接完成 learner_request。解释或检查请求使用 response_kind=explanation；title、text 和 items 直接面向当前学习者。`;
+直接完成 learner_request。解释或检查请求只返回 title、text 和 items，并直接面向当前学习者。若输入提供了中高置信度的 selected_recognition，直接使用它，不要再次改写识别结果。`;
 
 const SELECTION_VISUALIZATION_SYSTEM_PROMPT = `当 tool_id 为 generate-plot 或 custom-question 且用户要求生成函数图像时，先把识别到的公式规范化为只能使用数字、x/y/z、pi、e、+ - * / ^、括号和 abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan 的表达式；必须显式写乘号。然后选择：
 - 单变量 y=f(x)：response_kind=plot，expression 只写 f(x)。
@@ -7156,10 +7173,41 @@ const SELECTION_VISUALIZATION_SYSTEM_PROMPT = `当 tool_id 为 generate-plot 或
 - 超过三个独立变量、无法可靠识别、无法转为上述安全表达式或在合理有限范围内无法绘制：response_kind=unsupported，给出准确原因和可操作的 alternatives，不能假装已经绘制。
 所有范围必须有限并覆盖主要图形；scene3d 的 samples 使用 10 到 14。代码会再次校验你的选择和表达式，校验不通过时不会绘制。非绘图请求使用 explanation。`;
 
-function selectionResponseSchema(toolId: SelectionToolInput["tool_id"]): JsonSchema {
-  return toolId === "explain" || toolId === "check-and-suggest"
-    ? SELECTION_EXPLANATION_RESPONSE_SCHEMA
-    : SELECTION_RESPONSE_SCHEMA;
+function hasReusableSelectionRecognition(input: SelectionToolInput): boolean {
+  return input.content_hint !== "unknown"
+    && Boolean(input.recognized_content?.trim())
+    && (input.recognition_confidence === "high" || input.recognition_confidence === "medium");
+}
+
+function selectionResponseSchema(input: SelectionToolInput): JsonSchema {
+  const explanation = input.tool_id === "explain" || input.tool_id === "check-and-suggest";
+  const schema = structuredClone(
+    explanation ? SELECTION_EXPLANATION_RESPONSE_SCHEMA : SELECTION_RESPONSE_SCHEMA,
+  );
+  // The tool identity already fixes explanation responses; making the model
+  // echo that constant adds output tokens but no information.
+  if (explanation) {
+    delete schema.properties?.response_kind;
+    schema.required = schema.required?.filter((field) => field !== "response_kind");
+  }
+  // Classification is a separate, persisted model result. When it is usable,
+  // keep it as the source of truth rather than asking a second model call to
+  // probabilistically copy the same three fields.
+  if (hasReusableSelectionRecognition(input)) {
+    for (const field of [
+      "interpretation_kind",
+      "interpretation_content",
+      "interpretation_confidence",
+    ]) {
+      delete schema.properties?.[field];
+    }
+    schema.required = schema.required?.filter((field) => ![
+      "interpretation_kind",
+      "interpretation_content",
+      "interpretation_confidence",
+    ].includes(field));
+  }
+  return schema;
 }
 
 function selectionSystemPrompt(toolId: SelectionToolInput["tool_id"]): string {
@@ -7243,17 +7291,24 @@ function parseSelectionModelResponse(
     }
     return number;
   };
-  const kind = nonEmpty("interpretation_kind") as SelectionContentKind;
+  const reusableRecognition = hasReusableSelectionRecognition(input);
+  const kind = (reusableRecognition
+    ? input.content_hint
+    : nonEmpty("interpretation_kind")) as SelectionContentKind;
   if (!["text", "math", "geometry", "data", "unknown"].includes(kind)) {
     throw new Error("interpretation_kind is invalid");
   }
-  const confidence = nonEmpty("interpretation_confidence") as "high" | "medium" | "low";
+  const confidence = (reusableRecognition
+    ? input.recognition_confidence
+    : nonEmpty("interpretation_confidence")) as "high" | "medium" | "low";
   if (!["high", "medium", "low"].includes(confidence)) {
     throw new Error("interpretation_confidence is invalid");
   }
   const title = nonEmpty("title");
   const text = nonEmpty("text");
-  const interpretationContent = nonEmpty("interpretation_content");
+  const interpretationContent = reusableRecognition
+    ? requireNonEmptyString(input.recognized_content, "recognized_content")
+    : nonEmpty("interpretation_content");
   const items = Array.isArray(output.items)
     ? output.items.map((item, index) => requireNonEmptyString(item, `items[${index}]`))
     : [];
@@ -7289,8 +7344,11 @@ function parseSelectionModelResponse(
     }
     return "unsupported_representation";
   };
+  const responseKind = input.tool_id === "explain" || input.tool_id === "check-and-suggest"
+    ? "explanation"
+    : output.response_kind;
   try {
-    if (output.response_kind === "plot" || output.response_kind === "implicit_plot") {
+    if (responseKind === "plot" || responseKind === "implicit_plot") {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a plot response`);
       }
@@ -7301,7 +7359,7 @@ function parseSelectionModelResponse(
       }
       const [xMin, xMax, yMin, yMax] = numbers as number[];
       if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
-      if (output.response_kind === "plot") {
+      if (responseKind === "plot") {
         const evaluate = compileMathExpression(expression, ["x"]);
         for (let index = 0; index <= 40; index += 1) {
           const x = xMin + (xMax - xMin) * index / 40;
@@ -7345,7 +7403,7 @@ function parseSelectionModelResponse(
           y_range: { min: yMin, max: yMax },
         };
       }
-    } else if (output.response_kind === "scene3d") {
+    } else if (responseKind === "scene3d") {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a 3D response`);
       }
@@ -7432,7 +7490,7 @@ function parseSelectionModelResponse(
           objects: [object],
         },
       };
-    } else if (output.response_kind === "unsupported") {
+    } else if (responseKind === "unsupported") {
       const reasonCode = nonEmpty("reason_code") as Extract<
         SelectionEnhancementArtifact["response"],
         { kind: "unsupported" }
@@ -7441,7 +7499,7 @@ function parseSelectionModelResponse(
         throw new Error("reason_code is invalid");
       }
       response = unsupported(reasonCode, text);
-    } else if (output.response_kind === "explanation") {
+    } else if (responseKind === "explanation") {
       response = visualizationRequested && input.tool_id === "generate-plot"
         ? unsupported(
             confidence === "low" ? "unreadable_expression" : "unsupported_representation",
@@ -7484,26 +7542,36 @@ async function generateSelectionEnhancement(
   client: VertexClient,
   input: SelectionToolInput,
 ): Promise<SelectionEnhancementArtifact> {
-  const media = await selectionModelMedia(input);
+  // A successful classification pass already transcribed the selected
+  // formula. Re-uploading the same image for generate-plot wastes vision
+  // tokens and can produce a second, inconsistent transcription. Keep the
+  // image for explanations, custom questions, and uncertain recognition.
+  const media = input.tool_id === "generate-plot" && hasReusableSelectionRecognition(input)
+    ? undefined
+    : await selectionModelMedia(input);
   const raw = await callStructuredModel(client, {
     label: "selection-enhancement",
     turnId: input.turn_id,
     maxTokens: Math.min(client.maxTokens, 4_096),
-    responseSchema: selectionResponseSchema(input.tool_id),
+    responseSchema: selectionResponseSchema(input),
     media,
     systemPrompt: selectionSystemPrompt(input.tool_id),
     prompt: JSON.stringify({
       learner_request: input.learner_request,
       tool_id: input.tool_id,
-      selected_content_hint: input.content_hint,
+      selected_recognition: {
+        kind: input.content_hint,
+        content: input.recognized_content ?? null,
+        confidence: input.recognition_confidence ?? null,
+      },
       attached_selection_image: Boolean(media),
-      fallback_recognized_selected_content: input.recognized_content ?? null,
-      fallback_recognition_confidence: input.recognition_confidence ?? null,
       lesson_title: input.lesson_title ?? null,
       board_summary: input.board_summary ?? null,
-      board_id: input.board.board_id,
-      board_revision: input.board.revision,
-      board_targets: input.board.targets,
+      selected_board_context: input.board.targets.map((target) => ({
+        kind: target.kind,
+        label: target.label,
+        value: target.value,
+      })),
     }),
   });
   return parseSelectionModelResponse(raw, input);
@@ -7705,7 +7773,14 @@ async function main(): Promise<void> {
         },
         {
           bootstrap_first_section: true,
-          max_concurrency: 1,
+          max_concurrency: Math.min(
+            parsePositiveInteger(
+              process.env.OLL_SECTION_CONCURRENCY,
+              2,
+              "OLL_SECTION_CONCURRENCY",
+            ),
+            2,
+          ),
           compile: { language: input.language },
           on_rejected_part: (event) => stageLog({
             stage: "lesson-plan-local-rejection",
@@ -7715,6 +7790,13 @@ async function main(): Promise<void> {
           on_playable_prefix: async ({ completed_sections, compiled }) => {
             await publishPrefix(compiled.lesson, completed_sections);
           },
+          on_concurrency_fallback: ({ section, reason }) => stageLog({
+            stage: "lesson-plan-concurrency",
+            turn_id: input.turn_id,
+            status: "fallback",
+            section,
+            reason,
+          }),
         },
       );
       const artifactPath = outputPath(input);

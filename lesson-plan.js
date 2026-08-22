@@ -12191,24 +12191,6 @@ function string(_maximumLength = 1200) {
 function integer(minimum = 1, maximum) {
   return { type: "integer", minimum, ...maximum === void 0 ? {} : { maximum } };
 }
-function referenceSchema(sectionCount) {
-  void sectionCount;
-  return { $ref: "#/$defs/modelReference" };
-}
-function referenceDefinitionSchema(sectionCount) {
-  return object({
-    source: { enum: ["local_board_item", "local_connection", "local_group", "reusable", "host"] },
-    section: integer(0, sectionCount),
-    moment: integer(0, 12),
-    item: integer(0, 48),
-    host_reference: integer(0, 24),
-    part: object({
-      kind: { enum: ["capability", "index"] },
-      role: { type: "string" },
-      index: integer(1, 24)
-    }, ["kind"])
-  }, ["source", "section", "moment", "item", "host_reference"]);
-}
 function numberSchema() {
   return object({
     initial: { type: "number" },
@@ -12241,18 +12223,7 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
   const uses = (capability2) => allowedCapabilities.includes(capability2);
   if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
   if (uses("function_plot")) {
-    if (!canonicalFunctionPlot) {
-      properties.expression = string(256);
-      properties.expressions = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
-    }
-    if (numberCount > 0 || canonicalFunctionPlot) {
-      properties.expression_tokens = {
-        type: "array",
-        minItems: 1,
-        maxItems: 128,
-        items: mathTokenSchema(numberCount, true)
-      };
-    }
+    properties.formula = string(256);
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
   }
@@ -12283,13 +12254,12 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
   if (uses("process_diagram")) {
     properties.steps = { type: "array", minItems: 1, maxItems: 24, items: string(240) };
   }
-  return object(properties, requireDynamicPlotExpression || canonicalFunctionPlot ? ["expression_tokens"] : []);
+  return object(properties, requireDynamicPlotExpression || canonicalFunctionPlot ? ["formula"] : []);
 }
-function orderedAction(properties, required) {
-  return object({ order: integer(1, 48), ...properties }, ["order", ...required]);
+function modelAction(properties, required) {
+  return object(properties, required);
 }
 function actionCollectionSchemas(sectionCount, allowedCapabilities, reusableCount, numberCount, courseVisualPositions = [], includeVisualCreates = true) {
-  const reference = referenceSchema(sectionCount);
   const timing = { enum: timingNames };
   const collection = (items) => ({ type: "array", items });
   const createCommon = {
@@ -12302,7 +12272,7 @@ function actionCollectionSchemas(sectionCount, allowedCapabilities, reusableCoun
   const requireDynamicPlotExpression = numberCount > 1 && allowedCapabilities.length === 1 && allowedCapabilities[0] === "function_plot";
   return {
     ...allowedCapabilities.length && includeVisualCreates ? {
-      visual_creates: collection(orderedAction({
+      visual_creates: collection(modelAction({
         ...createCommon,
         ...courseVisualPositions.length > 0 ? { course_visual: { enum: courseVisualPositions } } : {},
         content: object({
@@ -12324,25 +12294,24 @@ function actionCollectionSchemas(sectionCount, allowedCapabilities, reusableCoun
         }, ["capability", ...requireFunctionPlotParameters ? ["parameters"] : []])
       }, ["role", ...courseVisualPositions.length > 0 ? ["course_visual"] : [], "content", "placement"]))
     } : {},
-    math_creates: collection(orderedAction({
+    math_creates: collection(modelAction({
       ...createCommon,
       content: object({ latex: string() }, ["latex"])
     }, ["role", "content", "placement"])),
-    note_creates: collection(orderedAction({
+    note_creates: collection(modelAction({
       ...createCommon,
       content: object({
         title: string(240),
         items: { type: "array", minItems: 1, maxItems: 24, items: string(480) }
       }, ["title", "items"])
     }, ["role", "content", "placement"])),
-    focuses: collection(orderedAction({
+    focuses: collection(modelAction({
       timing,
-      references: { type: "array", items: reference },
       intent: string(160)
-    }, ["references", "intent"])),
-    points: collection(orderedAction({ timing, reference }, ["reference"])),
+    }, ["intent"])),
+    points: collection(modelAction({ timing }, [])),
     ...numberCount > 0 ? {
-      animations: collection(orderedAction({
+      animations: collection(modelAction({
         timing,
         number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
         end_value: { type: "number" },
@@ -12361,7 +12330,6 @@ function courseVisualCreatesSchema(outline, sectionIndex) {
     const numberLimit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2];
     return [`visual_${position}`, object({
       moment: integer(1, 12),
-      order: integer(1, 48),
       timing: { enum: timingNames },
       role: string(80),
       content: object({
@@ -12380,7 +12348,7 @@ function courseVisualCreatesSchema(outline, sectionIndex) {
         } : {}
       }, ["parameters"]),
       placement: placementSchema(outline.sections.length)
-    }, ["moment", "order", "role", "content", "placement"])];
+    }, ["moment", "role", "content", "placement"])];
   }));
   return object(properties, Object.keys(properties));
 }
@@ -12405,24 +12373,13 @@ function reusableBoardCreatesSchema(outline, sectionIndex) {
     }
     return [`item_${position}`, object({
       moment: integer(1, 12),
-      order: integer(1, 48),
       timing: { enum: timingNames },
       role: string(80),
       content,
       placement: placementSchema(outline.sections.length)
-    }, ["moment", "order", "role", "content", "placement"])];
+    }, ["moment", "role", "content", "placement"])];
   }));
   return object(properties, Object.keys(properties));
-}
-function mathTokenSchema(numberCount, allowInput = false) {
-  return object({
-    kind: { enum: [...allowInput ? ["input"] : [], "number", "literal", "constant", "negate", "operator", "function"] },
-    number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
-    literal_mantissa: integer(-1e12, 1e12),
-    literal_scale: { enum: [0, 1, 2, 3, 4, 5, 6] },
-    name: { enum: ["pi", "e", "abs", "acos", "asin", "atan", "ceil", "cos", "exp", "floor", "ln", "log", "round", "sin", "sqrt", "tan"] },
-    operator: { enum: ["add", "subtract", "multiply", "divide", "power"] }
-  }, ["kind"]);
 }
 function decimalIntegerFields(prefix) {
   return {
@@ -12432,7 +12389,6 @@ function decimalIntegerFields(prefix) {
 }
 function activityCommonSchema() {
   return {
-    order: integer(1, 16),
     prompt: string(480),
     hints: { type: "array", minItems: 1, maxItems: 8, items: string(480) },
     hint_after_attempts: integer(1, 20),
@@ -12445,7 +12401,6 @@ function numberActivitySchema(numberCount) {
     number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
     ...decimalIntegerFields("value")
   }, [
-    "order",
     "prompt",
     "number",
     "value_mantissa",
@@ -12462,7 +12417,6 @@ function scene3dActivitySchema(sectionCount) {
     angular_tolerance_degrees: integer(1, 90),
     zoom_tolerance_percent: integer(1, 100)
   }, [
-    "order",
     "prompt",
     "controls",
     "view_preset",
@@ -12509,14 +12463,11 @@ function buildLessonPlanBootstrapJsonSchema(requestPartCount = 0) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
   const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
-  const modelReference = firstSection.$defs?.modelReference;
-  delete firstSection.$defs;
   return vertexCompatible({
     ...object({
       outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
       first_section: firstSection
-    }, ["outline", "first_section"]),
-    ...modelReference ? { $defs: { modelReference } } : {}
+    }, ["outline", "first_section"])
   });
 }
 function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
@@ -12630,7 +12581,7 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
         narration: string(),
         delivery: { enum: deliveryNames },
         ...actionCollections
-      }, ["narration", "delivery", ...Object.keys(actionCollections)])
+      }, ["narration", "delivery"])
     },
     ...courseVisualCreates ? { course_visual_creates: courseVisualCreates } : {},
     ...reusableBoardCreates ? { reusable_board_creates: reusableBoardCreates } : {},
@@ -12640,10 +12591,8 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
     "section",
     "moments",
     ...courseVisualCreates ? ["course_visual_creates"] : [],
-    ...reusableBoardCreates ? ["reusable_board_creates"] : [],
-    ...Object.keys(activityProperties)
+    ...reusableBoardCreates ? ["reusable_board_creates"] : []
   ]);
-  schema.$defs = { modelReference: referenceDefinitionSchema(outline.sections.length) };
   return schema;
 }
 function coerceLessonPlanSectionModelNumbers(value, outlineValue, sectionIndex) {
@@ -12662,36 +12611,25 @@ function coerceLessonPlanBootstrapSectionModelNumbers(value) {
 }
 
 // src/lesson-plan-generation.ts
-var OUTLINE_SYSTEM_PROMPT = `\u4F60\u8D1F\u8D23\u8BBE\u8BA1\u4E00\u6574\u8282\u8BFE\u7684\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E5F\u4E0D\u586B\u5199\u4EFB\u4F55\u6267\u884C ID\u3001\u6267\u884C\u7EC4\u4EF6\u540D\u79F0\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u79F0\u3002
-\u5E95\u90E8\u8F93\u5165\u7684\u95EE\u9898\u59CB\u7EC8\u8981\u6C42\u4E00\u6574\u8282\u5B8C\u6574\u8BFE\u7A0B\u3002\u8BFE\u7A0B\u53EF\u4EE5\u6709\u591A\u8282\uFF0C\u6BCF\u8282\u53EF\u4EE5\u6709\u591A\u6BB5\u65C1\u767D\u3001\u677F\u4E66\u3001\u52A8\u753B\u548C\u5B66\u751F\u7EC3\u4E60\u3002
-\u5148\u5728 course_visuals \u4E2D\u4E00\u6B21\u6027\u5217\u51FA\u6574\u5802\u8BFE\u771F\u6B63\u9700\u8981\u7684\u4E3B\u8981\u753B\u9762\u3002\u6BCF\u4E2A\u753B\u9762\u53EA\u586B\u5199 required_features\uFF0C\u63CF\u8FF0\u5B83\u5FC5\u987B\u5177\u5907\u54EA\u4E9B\u53D7\u63A7\u7279\u5F81\uFF1B\u7A0B\u5E8F\u4F1A\u4ECE\u5DF2\u5B89\u88C5\u3001\u7ECF\u8FC7\u9A8C\u8BC1\u7684\u753B\u9762\u80FD\u529B\u4E2D\u9009\u62E9\u552F\u4E00\u5B9E\u73B0\u3002\u4E0D\u8981\u586B\u5199\u6216\u731C\u6D4B capability\u3002\u6BCF\u9879\u8FD8\u8981\u586B\u5199\u9996\u6B21\u521B\u5EFA\u7AE0\u8282\u3001\u4F1A\u7EE7\u7EED\u4F7F\u7528\u5B83\u7684\u7AE0\u8282\u548C\u5B83\u4E0E\u5176\u4ED6\u753B\u9762\u7684\u5173\u7CFB\u3002\u5177\u5907\u540C\u4E00\u7EC4 required_features \u7684\u753B\u9762\u9ED8\u8BA4\u53EA\u80FD\u58F0\u660E\u4E00\u4E2A\uFF1B\u540E\u7EED\u7AE0\u8282\u7EE7\u7EED\u89C2\u5BDF\u65F6\u5FC5\u987B\u590D\u7528\u5B83\uFF0C\u4E0D\u80FD\u56E0\u4E3A\u6807\u9898\u3001\u5750\u6807\u8303\u56F4\u3001\u76F8\u673A\u3001\u989C\u8272\u6216\u5E03\u5C40\u53D8\u5316\u518D\u58F0\u660E\u4E00\u4EFD\u3002\u6570\u5B66\u56FE\u3001\u51E0\u4F55\u30013D\u3001\u7269\u7406\u88C5\u7F6E\u548C\u5DF2\u652F\u6301\u7684\u51E0\u4F55\u91CD\u6392\u90FD\u9075\u5B88\u540C\u4E00\u89C4\u5219\u3002\u786E\u5B9E\u9700\u8981\u5E76\u6392\u6BD4\u8F83\u65F6\u624D\u53EF\u4E3A\u540C\u4E00\u7EC4 required_features \u58F0\u660E\u7B2C\u4E8C\u9879\uFF0C\u5E76\u7528 comparison \u548C related_visual \u6307\u5411\u524D\u9762\u5DF2\u7ECF\u58F0\u660E\u7684\u6570\u5B57\u4F4D\u7F6E\uFF1B\u8F85\u52A9\u753B\u9762\u4F7F\u7528 supporting\uFF0C\u4E5F\u5FC5\u987B\u6307\u5411\u524D\u9762\u5DF2\u58F0\u660E\u7684\u76F8\u5173\u753B\u9762\u3002\u975E\u753B\u9762\u677F\u4E66\u3001\u8FDE\u63A5\u6216\u7EC4\u9700\u8981\u540E\u7EED\u7AE0\u8282\u4F7F\u7528\u65F6\uFF0C\u4ECD\u5728\u5BF9\u5E94\u7AE0\u8282\u7684 reusable_items \u4E2D\u6309\u4F4D\u7F6E\u58F0\u660E\u3002
-\u6700\u7EC8\u603B\u7ED3\u53EA\u5199\u603B\u7ED3\u6587\u5B57\uFF1B\u7ED3\u5C3E\u805A\u7126\u54EA\u4E9B\u5DF2\u7ECF\u58F0\u660E\u7684\u53EF\u590D\u7528\u5185\u5BB9\u7531\u7A0B\u5E8F\u9009\u62E9\uFF0C\u4E0D\u8981\u8F93\u51FA\u4F4D\u7F6E\u7F16\u53F7\u3002\u663E\u793A\u6807\u9898\u548C\u65C1\u767D\u4E0D\u4F1A\u88AB\u7A0B\u5E8F\u5F53\u4F5C\u67E5\u627E\u952E\u3002
-\u7B2C\u4E00\u6279\u666E\u901A visual \u901A\u5E38\u53EA\u7ED1\u5B9A\u4E00\u4E2A\u4E3B\u8981\u6570\u503C\u72B6\u6001\uFF1Bcircle_and_arc \u53EF\u4EE5\u6309\u987A\u5E8F\u7ED1\u5B9A\u5706\u5FC3\u89D2\u548C\u534A\u5F84\uFF0Cfunction_plot \u53EF\u4EE5\u8BA9\u6700\u591A\u56DB\u4E2A\u6570\u503C\u5171\u540C\u6539\u53D8\u4E3B\u66F2\u7EBF\u3002\u4E00\u5802\u8BFE\u4ECD\u53EF\u4EE5\u6709\u591A\u4E2A\u5F7C\u6B64\u72EC\u7ACB\u7684\u6570\u503C\u72B6\u6001\u3002
-\u9700\u8981\u628A\u51E0\u4F55\u56FE\u5F62\u5207\u5206\u3001\u79FB\u52A8\u6216\u91CD\u65B0\u62FC\u5408\u6765\u8BC1\u660E\u9762\u79EF\u5173\u7CFB\u65F6\uFF0Crequired_features \u5FC5\u987B\u540C\u65F6\u5305\u542B polygon_pieces\u3001rigid_rearrangement \u548C area_relation\uFF1B\u7A0B\u5E8F\u4F1A\u9009\u62E9\u5E76\u9A8C\u8BC1\u5B9E\u9645\u6784\u9020\u3002ordered_process_steps \u53EA\u8868\u793A\u6982\u5FF5\u6B65\u9AA4\u6216\u6D41\u7A0B\uFF0C\u6CA1\u6709\u6570\u503C\u8F93\u5165\uFF0C\u4E0D\u80FD\u7528\u5B83\u5192\u5145\u4F1A\u79FB\u52A8\u7684\u51E0\u4F55\u56FE\u5F62\u3002
-\u5982\u679C\u7528\u6237\u660E\u786E\u8981\u6C42\u7684\u4EA4\u4E92\u753B\u9762\u4E0D\u5728\u80FD\u529B\u6E05\u5355\u4E2D\uFF0C\u4E0D\u8981\u7528\u9519\u8BEF\u753B\u9762\u5192\u5145\uFF1B\u53EF\u4EE5\u6539\u7528\u6587\u5B57\u548C\u516C\u5F0F\u89E3\u91CA\uFF0C\u4F46\u8BFE\u7A0B\u76EE\u6807\u4ECD\u8981\u5FE0\u5B9E\u53CD\u6620\u7528\u6237\u95EE\u9898\u3002
-request_coverage \u5FC5\u987B\u9010\u9879\u8986\u76D6\u8F93\u5165\u7684 request_parts\u3002\u53EA\u6709\u5B9E\u9645\u8BFE\u7A0B\u80FD\u591F\u6EE1\u8DB3\u8BE5\u9879\u8981\u6C42\u65F6\u624D\u5199 treatment="teach"\uFF0C\u5E76\u586B\u5199\u4F1A\u843D\u5B9E\u5B83\u7684\u7AE0\u8282\u7F16\u53F7\u3002\u6587\u5B57\u8BA8\u8BBA\u4E0D\u80FD\u5192\u5145\u7528\u6237\u660E\u786E\u8981\u6C42\u4F46\u5F53\u524D\u65E0\u6CD5\u751F\u6210\u7684\u753B\u9762\u6216\u4EA4\u4E92\uFF1B\u8FD9\u79CD\u60C5\u51B5\u5FC5\u987B\u5199 treatment="unsupported"\u3001\u7A7A sections \u548C\u5177\u4F53 reason\u3002
+var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u4E00\u6574\u8282\u5B8C\u6574\u8BFE\u7A0B\u7684\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E0D\u586B\u5199\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002
+- course_visuals \u4E00\u6B21\u5217\u51FA\u8BFE\u7A0B\u771F\u6B63\u9700\u8981\u7684\u4E3B\u8981\u753B\u9762\uFF1B\u53EA\u9009 Schema \u4E2D\u7684 required_features\u3002\u76F8\u540C\u753B\u9762\u540E\u7EED\u5FC5\u987B\u590D\u7528\uFF0C\u4E0D\u80FD\u56E0\u6807\u9898\u3001\u5E03\u5C40\u3001\u8303\u56F4\u3001\u76F8\u673A\u6216\u989C\u8272\u518D\u5EFA\u4E00\u4EFD\u3002\u53EA\u6709\u786E\u9700\u5E76\u6392\u6BD4\u8F83\u65F6\u624D\u7528 comparison \u5E76\u6307\u5411\u8F83\u65E9\u753B\u9762\uFF1Bsupporting \u4E5F\u8981\u6307\u5411\u8F83\u65E9\u753B\u9762\u3002
+- \u9700\u8981\u5207\u5206\u5E76\u79FB\u52A8\u56FE\u5F62\u8BC1\u660E\u9762\u79EF\u65F6\uFF0C\u4F7F\u7528 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1Bordered_process_steps \u53EA\u662F\u9759\u6001\u6D41\u7A0B\uFF0C\u4E0D\u80FD\u5192\u5145\u79FB\u52A8\u56FE\u5F62\u6216\u6570\u503C\u63A7\u4EF6\u3002
+- numbers \u53EA\u58F0\u660E\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3002\u753B\u9762\u6240\u9700\u6570\u503C\u53CA\u987A\u5E8F\u4EE5 available_visual_recipes \u4E3A\u51C6\u3002
+- request_coverage \u9010\u9879\u8986\u76D6 request_parts\u3002\u80FD\u843D\u5B9E\u624D\u5199 teach \u548C\u7AE0\u8282\uFF1B\u660E\u786E\u8981\u6C42\u4F46\u5F53\u524D\u80FD\u529B\u65E0\u6CD5\u5B9E\u73B0\u65F6\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u548C\u539F\u56E0\uFF0C\u4E0D\u5F97\u7528\u6587\u5B57\u6216\u9519\u8BEF\u753B\u9762\u5192\u5145\u3002
+- sections \u53EF\u4EE5\u6709\u591A\u8282\uFF1B\u6BCF\u8282\u53EF\u6709\u591A\u6BB5\u65C1\u767D\u3001\u677F\u4E66\u3001\u52A8\u753B\u548C\u7EC3\u4E60\u3002close \u53EA\u5199\u603B\u7ED3\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
-var SECTION_SYSTEM_PROMPT = `\u4F60\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5B9A\u7684\u4E00\u8282\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E5F\u4E0D\u586B\u5199\u4EFB\u4F55\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u79F0\u3002
-assigned_request_parts \u662F\u8BFE\u7A0B\u76EE\u5F55\u5206\u914D\u7ED9\u672C\u8282\u7684\u7528\u6237\u539F\u59CB\u8981\u6C42\u3002\u672C\u8282\u7684\u65C1\u767D\u3001\u677F\u4E66\u6216\u7EC3\u4E60\u5FC5\u987B\u5B9E\u9645\u843D\u5B9E\u8FD9\u4E9B\u8981\u6C42\uFF0C\u4E0D\u80FD\u53EA\u590D\u8FF0\u8BFE\u7A0B\u76EE\u5F55\u7684\u76EE\u7684\u3002
-\u8BFE\u7A0B\u76EE\u5F55\u5DF2\u7ECF\u786E\u5B9A\u7684\u4E3B\u8981\u753B\u9762\u4F1A\u4F5C\u4E3A\u6839\u5C42 course_visual_creates \u7684\u5FC5\u586B\u5C5E\u6027\u51FA\u73B0\u3002\u4F60\u53EA\u63CF\u8FF0\u6BCF\u4E2A\u753B\u9762\u7684\u6559\u5B66\u5185\u5BB9\u3001\u653E\u5728\u54EA\u4E2A moment \u548C\u52A8\u4F5C\u987A\u5E8F\uFF1B\u7A0B\u5E8F\u8D1F\u8D23\u521B\u5EFA\u3001\u7F16\u53F7\u548C\u540E\u7EED\u590D\u7528\uFF0C\u4E0D\u80FD\u5728 moment \u4E2D\u91CD\u590D\u521B\u5EFA\u8FD9\u4E9B\u753B\u9762\u3002\u6BCF\u4E2A moment \u53EA\u628A\u666E\u901A\u6570\u5B66\u677F\u4E66\u3001\u7B14\u8BB0\u548C\u5176\u4ED6\u52A8\u4F5C\u5199\u8FDB\u54CD\u5E94 Schema \u63D0\u4F9B\u7684\u6E05\u5355\u3002\u7B2C\u4E00\u6279\u666E\u901A\u677F\u4E66\u521B\u5EFA\u5206\u4E3A math_creates\u3001note_creates\uFF1B\u5176\u4ED6\u52A8\u4F5C\u53EA\u4F7F\u7528 focuses\u3001points\uFF0C\u4EE5\u53CA Schema \u63D0\u4F9B\u65F6\u7684 animations\u3002Bootstrap \u54CD\u5E94\u82E5\u4ECD\u63D0\u4F9B visual_creates\uFF0C\u5219\u53EA\u6309\u8BE5 Schema \u586B\u5199\u3002\u4E0D\u8981\u6DFB\u52A0 Schema \u6CA1\u6709\u63D0\u4F9B\u7684\u4FEE\u6539\u3001\u8FDE\u63A5\u3001\u5206\u7EC4\u3001\u5F3A\u8C03\u6216\u8868\u60C5\u52A8\u4F5C\u3002\u6BCF\u4E2A\u52A8\u4F5C\u7684 order \u662F\u8FD9\u4E00\u6BB5\u91CC\u7684\u603B\u987A\u5E8F\uFF0C\u6240\u6709\u6E05\u5355\u4E0E\u8BE5 moment \u5BF9\u5E94\u7684\u4E3B\u8981\u753B\u9762\u5408\u5728\u4E00\u8D77\u540E order \u4E0D\u80FD\u91CD\u590D\u3002\u6CA1\u6709\u67D0\u7C7B\u52A8\u4F5C\u65F6\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002
-\u54CD\u5E94 Schema \u4E2D\u7684\u5C0F\u6570\u4F7F\u7528 mantissa \u548C scale \u4E24\u4E2A\u6574\u6570\u8868\u793A\uFF1A-1.5 \u5199\u6210 {"mantissa":-15,"scale":1}\uFF0C6.283 \u5199\u6210 {"mantissa":6283,"scale":3}\u3002\u4E0D\u8981\u628A\u5C0F\u6570\u5199\u6210\u5B57\u7B26\u4E32\u6216\u666E\u901A JSON \u5C0F\u6570\u3002
-\u5B66\u751F\u7EC3\u4E60\u53EA\u5199\u5165\u54CD\u5E94 Schema \u5B9E\u9645\u63D0\u4F9B\u7684\u6E05\u5355\u3002number_activities \u8868\u793A\u6570\u503C\u7EC3\u4E60\uFF0Cscene3d_activities \u8868\u793A 3D \u89C6\u89D2\u7EC3\u4E60\uFF1B\u6BCF\u9879\u7684 order \u8868\u793A\u6240\u6709\u5DF2\u63D0\u4F9B\u6E05\u5355\u5408\u5E76\u540E\u7684\u987A\u5E8F\u3002Schema \u4E2D\u51FA\u73B0\u4F46\u672C\u8282\u4E0D\u9700\u8981\u7684\u6E05\u5355\u8FD4\u56DE\u7A7A\u6570\u7EC4\u3002\u6570\u503C\u7EC3\u4E60\u53EA\u586B\u5199 number \u9009\u62E9\u4E00\u4E2A\u73B0\u6709\u6570\u503C\u72B6\u6001\uFF0C\u5E76\u586B\u5199\u5E0C\u671B\u89C2\u5BDF\u7684\u76EE\u6807\u503C\uFF1B\u7A0B\u5E8F\u4F1A\u6839\u636E\u771F\u5B9E\u63A7\u4EF6\u3001\u8303\u56F4\u548C\u6B65\u957F\u751F\u6210\u53EF\u6267\u884C\u7684\u64CD\u4F5C\u65B9\u5F0F\u3001\u53EF\u8FBE\u5230\u7684\u76EE\u6807\u548C\u5B8C\u6210\u5BB9\u5DEE\uFF0C\u4E0D\u8981\u81EA\u884C\u586B\u5199\u63A7\u4EF6\u7C7B\u578B\u3001\u8BA1\u7B97\u8868\u8FBE\u5F0F\u6216\u5BB9\u5DEE\u3002
-scene3d_activities \u4F7F\u7528 view_preset \u9009\u62E9 top\u3001front\u3001right\u3001left \u6216 isometric\uFF0C\u4E0D\u8981\u81EA\u884C\u8BA1\u7B97\u76F8\u673A\u89D2\u5EA6\u6216\u586B\u5199 3D \u8282\u70B9\u5F15\u7528\uFF1B\u7A0B\u5E8F\u4F1A\u9009\u62E9\u8BFE\u7A0B\u4E2D\u771F\u5B9E\u5B58\u5728\u7684 3D \u753B\u9762\uFF0C\u5E76\u8F6C\u6362\u6210\u8FD0\u884C\u65F6\u76F8\u673A\u53C2\u6570\u3002
-\u5F15\u7528\u53EA\u80FD\u4F7F\u7528\u6570\u5B57\u4F4D\u7F6E\uFF1A\u672C\u8282\u5DF2\u521B\u5EFA\u7684\u5185\u5BB9\u3001\u8BFE\u7A0B\u76EE\u5F55\u63D0\u524D\u58F0\u660E\u7684 reusable_items\uFF0C\u6216\u5BBF\u4E3B\u660E\u786E\u63D0\u4F9B\u7684\u4F4D\u7F6E\u3002\u6BCF\u4E2A\u5F15\u7528\u90FD\u5FC5\u987B\u586B\u5199 source\u3001section\u3001moment\u3001item\u3001host_reference \u4E94\u4E2A\u5B57\u6BB5\uFF1Blocal_* \u4F7F\u7528 moment \u548C item\uFF0C\u5176\u4E2D moment=0 \u660E\u786E\u8868\u793A\u5F53\u524D moment\uFF1Breusable \u4F7F\u7528 section \u548C item\uFF1Bhost \u4F7F\u7528 host_reference\u3002\u5F53\u524D\u6765\u6E90\u4E0D\u7528\u7684\u5176\u4ED6\u6570\u5B57\u5B57\u6BB5\u5199 0\u3002
-create \u52A8\u4F5C\u6309\u51FA\u73B0\u987A\u5E8F\u5206\u522B\u7F16\u53F7\uFF1B\u8FDE\u63A5\u548C\u7EC4\u4E5F\u5404\u81EA\u6309\u51FA\u73B0\u987A\u5E8F\u7F16\u53F7\u3002\u4E0D\u80FD\u5F15\u7528\u5C1A\u672A\u521B\u5EFA\u7684\u672C\u8282\u5185\u5BB9\u6216\u672A\u6765\u7AE0\u8282\u3002
-visuals_for_section \u662F\u8BFE\u7A0B\u76EE\u5F55\u5DF2\u7ECF\u786E\u5B9A\u7684\u753B\u9762\u4F4D\u7F6E\u3002mode=create \u7684\u753B\u9762\u7531 course_visual_creates \u4E2D\u5BF9\u5E94\u7684\u5FC5\u586B\u5C5E\u6027\u63CF\u8FF0\uFF0C\u5C5E\u6027\u540D\u548C\u753B\u9762\u80FD\u529B\u7531\u7A0B\u5E8F\u7ED9\u5B9A\uFF1B\u4E0D\u8981\u518D\u6B21\u586B\u5199 capability \u6216\u753B\u9762\u7F16\u53F7\u3002mode=reuse \u8868\u793A\u7A0B\u5E8F\u4F1A\u7EE7\u7EED\u4F7F\u7528\u4EE5\u524D\u7684\u540C\u4E00\u753B\u9762\uFF0C\u4E0D\u5F97\u91CD\u65B0\u521B\u5EFA\u3002reusable_board_creates \u4E2D\u7684\u6BCF\u4E2A\u5FC5\u586B\u5C5E\u6027\u4EE3\u8868\u8BFE\u7A0B\u76EE\u5F55\u5DF2\u7ECF\u786E\u5B9A\u8981\u7559\u7ED9\u540E\u7EED\u4F7F\u7528\u7684\u666E\u901A\u516C\u5F0F\u6216\u7B14\u8BB0\uFF1B\u4F60\u53EA\u586B\u5185\u5BB9\u3001moment \u548C\u52A8\u4F5C\u987A\u5E8F\uFF0C\u4E0D\u5F97\u5728 moment \u7684 math_creates \u6216 note_creates \u4E2D\u586B\u5199 reusable_item \u7F16\u53F7\u3002
-create \u7684 placement \u53EA\u63CF\u8FF0\u76F8\u5BF9\u65B9\u5411\uFF0C\u4E0D\u586B\u5199 reference\u3002\u7A0B\u5E8F\u4F1A\u628A\u5B83\u951A\u5230\u6700\u8FD1\u5DF2\u521B\u5EFA\u7684\u5185\u5BB9\uFF1B\u6CA1\u6709\u53EF\u7528\u951A\u70B9\u65F6\u81EA\u52A8\u4F7F\u7528\u65B0\u533A\u57DF\u3002
-\u6BCF\u6BB5\u65C1\u767D\u4E0E\u8FD9\u4E00\u523B\u7684\u677F\u4E66\u548C\u52A8\u4F5C\u5199\u5728\u540C\u4E00\u4E2A moment \u4E2D\u3002\u5B66\u751F\u53EF\u89C1\u6587\u5B57\u5FC5\u987B\u76F4\u63A5\u5BF9\u5F53\u524D\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u51FA\u73B0\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u4E4B\u7C7B\u7684\u5185\u90E8\u89C4\u5212\u53E3\u543B\u3002
-course_visual_creates \u4E2D numbers \u7684\u987A\u5E8F\u7531\u753B\u9762\u80FD\u529B\u56FA\u5B9A\u89C4\u5B9A\uFF0C\u4E0D\u4F7F\u7528\u540D\u79F0\u63A8\u65AD\uFF1Acircle_and_arc \u6700\u591A\u586B\u5199\u4E24\u4E2A\u6570\u5B57\u4F4D\u7F6E\uFF0C\u4F9D\u6B21\u8868\u793A\u5706\u5FC3\u89D2\u3001\u534A\u5F84\u3002\u5176\u4ED6\u7B2C\u4E00\u6279\u753B\u9762\u80FD\u529B\u6700\u591A\u586B\u5199\u4E00\u4E2A\u6570\u5B57\u4F4D\u7F6E\uFF1Bfunction_plot \u6700\u591A\u56DB\u4E2A\u3002
-geometric_rearrangement \u7684\u4E00\u4E2A\u6570\u5B57\u4F4D\u7F6E\u8868\u793A\u4ECE\u521D\u59CB\u6392\u5217\u5230\u6700\u7EC8\u6392\u5217\u7684\u8FDB\u5EA6\uFF1Bprocess_diagram \u4E0D\u63A5\u53D7 numbers\uFF0C\u4E5F\u4E0D\u4F1A\u4EA7\u751F\u6ED1\u6746\u6216\u52A8\u753B\u3002
-geometric_rearrangement \u7684 construction \u53EA\u4ECE\u54CD\u5E94 Schema \u4E2D\u9009\u62E9\uFF1Aright_triangle_square \u7528\u56DB\u4E2A\u76F4\u89D2\u4E09\u89D2\u5F62\u8BF4\u660E\u52FE\u80A1\u9762\u79EF\u5173\u7CFB\uFF1Bsquare_area_identity \u7528\u56DB\u5757\u9762\u79EF\u62FC\u6210\u8FB9\u957F a+b \u7684\u6B63\u65B9\u5F62\uFF1Btriangle_to_rectangle \u7528\u4E24\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u65CB\u8F6C\u62FC\u6210\u957F\u65B9\u5F62\u3002\u4E0D\u8981\u7528 process_diagram \u4EE3\u66FF\u8FD9\u4E9B\u5B9E\u9645\u79FB\u52A8\u3002
-function_plot \u53EA\u6709\u4E00\u79CD\u516C\u5F0F\u8868\u793A\uFF1A\u5FC5\u987B\u586B\u5199 parameters.expression_tokens\u3002\u5B83\u662F\u6570\u5B66\u5173\u7CFB\uFF0C\u4E0D\u662F OLL \u6216\u8FD0\u884C\u65F6\u7ED1\u5B9A\uFF1Binput \u8868\u793A\u6A2A\u8F74\u81EA\u53D8\u91CF\uFF0Cnumber \u8868\u793A\u8BFE\u7A0B\u76EE\u5F55\u4E2D\u7684\u6570\u503C\u4F4D\u7F6E\uFF0Cliteral \u8868\u793A\u5E38\u6570\uFF0Coperator/function \u8868\u793A\u8FD0\u7B97\u3002\u7A0B\u5E8F\u8D1F\u8D23\u628A\u5B83\u89E3\u6790\u6210\u66F2\u7EBF\u3001\u52A8\u70B9\u3001\u53D8\u91CF\u7ED1\u5B9A\u548C\u5750\u6807\u8303\u56F4\u3002\u4F8B\uFF1Ay=(x-number1)^2+number2 \u4F9D\u6B21\u5199 input\u3001number1\u3001subtract\u3001literal2\u3001power\u3001number2\u3001add\u3002\u82E5 token \u4E2D\u51FA\u73B0 number\uFF0Cnumbers \u5FC5\u987B\u6B63\u597D\u5217\u51FA\u8FD9\u4E9B\u4F4D\u7F6E\uFF0C\u8868\u793A\u5B83\u4EEC\u6539\u53D8\u6574\u6761\u66F2\u7EBF\uFF1B\u82E5 token \u4E2D\u6CA1\u6709 number \u4E14 numbers \u53EA\u5217\u4E00\u4E2A\u4F4D\u7F6E\uFF0C\u8BE5\u6570\u503C\u8868\u793A\u6CBF\u66F2\u7EBF\u79FB\u52A8\u7684\u91C7\u6837\u70B9\u3002\u753B f(n)=(1+1/n)^n \u65F6\uFF0C\u516C\u5F0F\u4F9D\u6B21\u5199 literal1\u3001literal1\u3001input\u3001divide\u3001add\u3001input\u3001power\uFF0Cnumbers \u53EF\u586B\u5199 n \u7684\u4F4D\u7F6E\uFF0C\u8BA9\u7A0B\u5E8F\u751F\u6210\u6CBF\u66F2\u7EBF\u79FB\u52A8\u7684\u70B9\u3002
-\u51FD\u6570\u56FE\u4E2D\u7684 input \u6C38\u8FDC\u8868\u793A\u6A2A\u8F74\u81EA\u53D8\u91CF\uFF1Bnumber \u6C38\u8FDC\u8868\u793A\u989D\u5916\u7684\u8BFE\u7A0B\u63A7\u4EF6\u53C2\u6570\uFF0C\u4E0D\u80FD\u7528 number \u4EE3\u66FF\u6A2A\u8F74\u81EA\u53D8\u91CF\u3002\u4E0D\u8981\u586B\u5199 expression \u6216 expressions\uFF0C\u4E5F\u4E0D\u8981\u81EA\u884C\u4FDD\u8BC1\u5750\u6807\u8F74\u8986\u76D6\u63A7\u4EF6\u8303\u56F4\uFF1B\u8FD9\u4E9B\u5C5E\u4E8E\u7A0B\u5E8F\u7F16\u8BD1\u5DE5\u4F5C\u3002
+var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5B9A\u7684\u4E00\u8282\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E0D\u586B\u5199\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u6216\u5BF9\u8C61\u5F15\u7528\u3002
+- \u5FC5\u987B\u5B9E\u9645\u843D\u5B9E assigned_request_parts\u3002\u6BCF\u6BB5\u65C1\u767D\u4E0E\u5F53\u65F6\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002
+- visuals_for_section \u4E2D create \u7684\u753B\u9762\u53EA\u5728\u6839\u5C42 course_visual_creates \u63CF\u8FF0\u5E76\u6307\u5B9A moment\uFF1Breuse \u7684\u65E7\u753B\u9762\u4E0D\u5F97\u91CD\u5EFA\u3002\u666E\u901A\u516C\u5F0F\u3001\u7B14\u8BB0\u53EA\u7528 Schema \u63D0\u4F9B\u7684\u6E05\u5355\u3002\u7A7A\u6E05\u5355\u7701\u7565\u3002
+- focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\u5E76\u51B3\u5B9A\u52A8\u4F5C\u987A\u5E8F\u3002placement \u53EA\u5199\u76F8\u5BF9\u65B9\u5411\u3002\u53EF\u590D\u7528\u666E\u901A\u677F\u4E66\u53EA\u586B\u6839\u5C42\u5FC5\u586B\u9879\uFF0C\u4E0D\u586B\u5199\u5185\u90E8\u4F4D\u7F6E\u3002
+- \u5C0F\u6570\u6309 Schema \u7684 mantissa\u3001scale \u586B\u5199\uFF0C\u4F8B\u5982 -1.5 \u4E3A -15\u30011\uFF1B6.283 \u4E3A 6283\u30013\u3002
+- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
+- function_plot \u7684 parameters.formula \u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u4F8B\uFF1A(x-n1)^2+n2\u3001(1+1/x)^x\u3002\u516C\u5F0F\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u89E3\u6790\u516C\u5F0F\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002
+- geometric_rearrangement \u7684\u6570\u503C\u8868\u793A\u91CD\u6392\u8FDB\u5EA6\uFF1Bconstruction \u4ECE Schema \u9009\u62E9\u3002process_diagram \u6CA1\u6709\u6570\u503C\u6216\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
 var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
-\u4F60\u8FD8\u5FC5\u987B\u5728\u540C\u4E00\u6B21\u8FD4\u56DE\u4E2D\u5199\u51FA\u8BFE\u7A0B\u7B2C\u4E00\u8282\u3002\u8FD4\u56DE\u5BF9\u8C61\u53EA\u6709 outline \u548C first_section \u4E24\u4E2A\u5B57\u6BB5\u3002outline \u9075\u5B88\u4E0A\u9762\u7684\u8BFE\u7A0B\u76EE\u5F55\u89C4\u5219\uFF1Bfirst_section \u9075\u5B88\u4E0B\u9762\u7684\u5355\u8282\u89C4\u5219\uFF0C\u5E76\u4E14\u53EA\u80FD\u4F7F\u7528\u540C\u4E00\u8FD4\u56DE\u4E2D outline \u7B2C\u4E00\u8282\u5DF2\u7ECF\u58F0\u660E\u7684\u6570\u5B57\u4F4D\u7F6E\u3001\u753B\u9762\u4F4D\u7F6E\u548C\u53EF\u590D\u7528\u5185\u5BB9\u3002\u4E0D\u8981\u4E3A\u4E86\u7B2C\u4E00\u8282\u91CD\u590D\u521B\u5EFA\u540C\u4E00\u79CD\u4E3B\u8981\u753B\u9762\u3002
-first_section \u4E0D\u8D1F\u8D23\u586B\u5199\u753B\u9762\u6216\u53EF\u590D\u7528\u5185\u5BB9\u7684\u5185\u90E8\u4F4D\u7F6E\uFF1B\u7A0B\u5E8F\u4F1A\u6309\u53D7\u63A7\u753B\u9762\u80FD\u529B\u3001\u5185\u5BB9\u7C7B\u578B\u548C\u51FA\u73B0\u987A\u5E8F\u5EFA\u7ACB\u5BF9\u5E94\u5173\u7CFB\u3002
+\u540C\u4E00\u6B21\u8FD4\u56DE outline \u548C first_section\u3002first_section \u5FC5\u987B\u5B9E\u73B0 outline \u7B2C\u4E00\u8282\uFF0C\u53EA\u4F7F\u7528 outline \u5DF2\u58F0\u660E\u7684\u6570\u503C\u3001\u753B\u9762\u548C\u53EF\u590D\u7528\u5185\u5BB9\uFF1B\u5185\u90E8\u4F4D\u7F6E\u3001\u7F16\u53F7\u548C\u5F15\u7528\u7531\u7A0B\u5E8F\u5EFA\u7ACB\u3002
 ${SECTION_SYSTEM_PROMPT}`;
 function positiveInteger(value, fallback, label) {
   const result = value ?? fallback;
@@ -12884,26 +12822,165 @@ var boardContentKeys = {
   table: ["columns", "rows"],
   image: ["resource", "alt"]
 };
-function lowerModelMathTokens(value, path) {
-  if (!Array.isArray(value)) return value;
-  return value.map((entry, index) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
-    const token = { ...entry };
-    const tokenPath = `${path}[${index}]`;
-    if (token.kind === "input" || token.kind === "negate") return { kind: token.kind };
-    if (token.kind === "number") return { kind: "number", number: token.number };
-    if (token.kind === "literal") {
-      return {
-        kind: "literal",
-        value: lowerIntegerDecimal(token, "literal", tokenPath)
-      };
+var formulaFunctions = /* @__PURE__ */ new Set([
+  "abs",
+  "acos",
+  "asin",
+  "atan",
+  "ceil",
+  "cos",
+  "exp",
+  "floor",
+  "ln",
+  "log",
+  "round",
+  "sin",
+  "sqrt",
+  "tan"
+]);
+function formulaError(path, message) {
+  throw new LessonPlanError("LESSON_PLAN_EXPRESSION", path, message);
+}
+function formulaLexemes(rawFormula, path) {
+  if (typeof rawFormula !== "string" || !rawFormula.trim() || rawFormula.length > 256) {
+    return formulaError(path, "expected a non-empty formula up to 256 characters");
+  }
+  let formula = rawFormula.trim().replaceAll("\u2212", "-").replaceAll("\xD7", "*").replaceAll("\xF7", "/").replaceAll("\u03C0", "pi").replaceAll("\xB2", "^2").replaceAll("\xB3", "^3");
+  const equals = [...formula.matchAll(/=/gu)];
+  if (equals.length > 1) formulaError(path, "formula may contain at most one equals sign");
+  if (equals.length === 1) {
+    const index = equals[0].index ?? 0;
+    const left = formula.slice(0, index).replaceAll(/\s+/gu, "").toLowerCase();
+    if (left !== "y" && left !== "f(x)") {
+      formulaError(path, "an optional formula left side must be y or f(x)");
     }
-    if (token.kind === "constant" || token.kind === "function") {
-      return { kind: token.kind, name: token.name };
+    formula = formula.slice(index + 1);
+  }
+  const compact = formula.replaceAll(/\s+/gu, "");
+  const tokens = [];
+  for (let index = 0; index < compact.length; ) {
+    const rest = compact.slice(index);
+    const number = /^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/iu.exec(rest)?.[0];
+    if (number) {
+      const value = Number(number);
+      if (!Number.isFinite(value)) formulaError(path, `invalid number '${number}'`);
+      tokens.push({ kind: "number", value });
+      index += number.length;
+      continue;
     }
-    if (token.kind === "operator") return { kind: "operator", operator: token.operator };
-    return token;
-  });
+    const identifier = /^(?:n\d+|[a-z_][a-z_]*)/iu.exec(rest)?.[0];
+    if (identifier) {
+      tokens.push({ kind: "identifier", value: identifier.toLowerCase() });
+      index += identifier.length;
+      continue;
+    }
+    const character = compact[index];
+    if (character === "(" || character === ")") {
+      tokens.push({ kind: character === "(" ? "left" : "right" });
+      index += 1;
+      continue;
+    }
+    if (character === "+" || character === "-" || character === "*" || character === "/" || character === "^") {
+      tokens.push({ kind: "operator", value: character });
+      index += 1;
+      continue;
+    }
+    formulaError(path, `unsupported formula character '${character}'`);
+  }
+  const withImplicitMultiplication = [];
+  const canEndValue = (token) => token.kind === "number" || token.kind === "identifier" || token.kind === "right";
+  const canStartValue = (token) => token.kind === "number" || token.kind === "identifier" || token.kind === "left";
+  for (const token of tokens) {
+    const previous = withImplicitMultiplication.at(-1);
+    const functionCall = previous?.kind === "identifier" && formulaFunctions.has(previous.value) && token.kind === "left";
+    if (previous && canEndValue(previous) && canStartValue(token) && !functionCall) {
+      withImplicitMultiplication.push({ kind: "operator", value: "*" });
+    }
+    withImplicitMultiplication.push(token);
+  }
+  return withImplicitMultiplication;
+}
+function parseModelFormula(rawFormula, numberCount, path) {
+  const lexemes = formulaLexemes(rawFormula, path);
+  let position = 0;
+  const peek = () => lexemes[position];
+  const take = () => lexemes[position++];
+  const binary = (left, right, operator) => [...left, ...right, { kind: "operator", operator }];
+  let parseExpression;
+  let parseUnary;
+  const parsePrimary = () => {
+    const token = take();
+    if (!token) return formulaError(path, "formula ended before a value");
+    if (token.kind === "number") return [{ kind: "literal", value: token.value }];
+    if (token.kind === "left") {
+      const value = parseExpression();
+      if (take()?.kind !== "right") formulaError(path, "formula has an unclosed parenthesis");
+      return value;
+    }
+    if (token.kind !== "identifier") return formulaError(path, "expected a number, x, n1, constant, or function");
+    if (token.value === "x") return [{ kind: "input" }];
+    if (token.value === "pi" || token.value === "e") return [{ kind: "constant", name: token.value }];
+    const numberMatch = /^n(\d+)$/u.exec(token.value);
+    if (numberMatch) {
+      const number = Number(numberMatch[1]);
+      if (number < 1 || number > numberCount) {
+        formulaError(path, `formula references unavailable numeric control n${number}`);
+      }
+      return [{ kind: "number", number }];
+    }
+    if (!formulaFunctions.has(token.value)) formulaError(path, `unsupported formula name '${token.value}'`);
+    if (take()?.kind !== "left") formulaError(path, `function ${token.value} requires parentheses`);
+    const argument = parseExpression();
+    if (take()?.kind !== "right") formulaError(path, `function ${token.value} has an unclosed parenthesis`);
+    return [...argument, {
+      kind: "function",
+      name: token.value
+    }];
+  };
+  const parsePower = () => {
+    const left = parsePrimary();
+    const token = peek();
+    if (token?.kind === "operator" && token.value === "^") {
+      take();
+      return binary(left, parseUnary(), "power");
+    }
+    return left;
+  };
+  parseUnary = () => {
+    const token = peek();
+    if (token?.kind === "operator" && (token.value === "+" || token.value === "-")) {
+      take();
+      const value = parseUnary();
+      return token.value === "-" ? [...value, { kind: "negate" }] : value;
+    }
+    return parsePower();
+  };
+  const parseProduct = () => {
+    let value = parseUnary();
+    while (true) {
+      const token = peek();
+      if (token?.kind !== "operator" || token.value !== "*" && token.value !== "/") break;
+      take();
+      value = binary(value, parseUnary(), token.value === "*" ? "multiply" : "divide");
+    }
+    return value;
+  };
+  parseExpression = () => {
+    let value = parseProduct();
+    while (true) {
+      const token = peek();
+      if (token?.kind !== "operator" || token.value !== "+" && token.value !== "-") break;
+      take();
+      value = binary(value, parseProduct(), token.value === "+" ? "add" : "subtract");
+    }
+    return value;
+  };
+  const result = parseExpression();
+  if (position !== lexemes.length) formulaError(path, "formula contains an unexpected trailing token");
+  if (!result.some((token) => token.kind === "input")) {
+    formulaError(path, "a function plot formula must depend on x");
+  }
+  return result;
 }
 function lowerModelBoardContent(kind, value, numberCount) {
   if (typeof kind !== "string" || !value || typeof value !== "object" || Array.isArray(value)) return value;
@@ -12921,11 +12998,13 @@ function lowerModelBoardContent(kind, value, numberCount) {
   }
   const capability2 = content.capability;
   const parameters2 = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? { ...content.parameters } : {};
-  if (parameters2.expression_tokens !== void 0) {
-    parameters2.expression_tokens = lowerModelMathTokens(
-      parameters2.expression_tokens,
-      "$lessonPlanSection.visual.parameters.expression_tokens"
+  if (capability2 === "function_plot" && parameters2.formula !== void 0) {
+    parameters2.expression_tokens = parseModelFormula(
+      parameters2.formula,
+      numberCount,
+      "$lessonPlanSection.visual.parameters.formula"
     );
+    delete parameters2.formula;
   }
   if (typeof content.title === "string" && parameters2.title === void 0) parameters2.title = content.title;
   if (typeof capability2 === "string" && capability2 in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
@@ -12938,8 +13017,9 @@ function lowerModelBoardContent(kind, value, numberCount) {
   }
   const numberLimit = typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITY_NUMBER_LIMITS ? LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2] : 0;
   let validNumbers = Array.isArray(content.numbers) ? [...new Set(content.numbers.filter((number) => Number.isInteger(number) && Number(number) >= 1 && Number(number) <= numberCount))].slice(0, numberLimit) : [];
-  if (capability2 === "function_plot" && Array.isArray(parameters2.expression_tokens) && validNumbers.length === 0) {
-    validNumbers = [...new Set(parameters2.expression_tokens.flatMap((token) => token && typeof token === "object" && !Array.isArray(token) && token.kind === "number" && Number.isInteger(token.number) ? [Number(token.number)] : []))].filter((number) => number >= 1 && number <= numberCount).slice(0, numberLimit);
+  if (capability2 === "function_plot" && Array.isArray(parameters2.expression_tokens)) {
+    const formulaNumbers = [...new Set(parameters2.expression_tokens.flatMap((token) => token && typeof token === "object" && !Array.isArray(token) && token.kind === "number" && Number.isInteger(token.number) ? [Number(token.number)] : []))].filter((number) => number >= 1 && number <= numberCount).slice(0, numberLimit);
+    if (formulaNumbers.length > 0) validNumbers = formulaNumbers;
   }
   if (validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
     validNumbers = [1];
@@ -12960,7 +13040,9 @@ function lowerModelActionReferences(actionName, action, currentMoment, numberCou
     if (placement.reference !== void 0) placement.reference = lowerModelReference(placement.reference, currentMoment);
     lowered.placement = placement;
   }
-  if (actionName === "revise" || actionName === "emphasize" || actionName === "point_at") {
+  if (actionName === "point_at") {
+    delete lowered.reference;
+  } else if (actionName === "revise" || actionName === "emphasize") {
     lowered.reference = lowerModelReference(lowered.reference, currentMoment);
   }
   if (actionName === "connect") {
@@ -12970,9 +13052,7 @@ function lowerModelActionReferences(actionName, action, currentMoment, numberCou
   if (actionName === "group" && Array.isArray(lowered.members)) {
     lowered.members = lowered.members.map((reference) => lowerModelReference(reference, currentMoment));
   }
-  if (actionName === "focus" && Array.isArray(lowered.references)) {
-    lowered.references = lowered.references.map((reference) => lowerModelReference(reference, currentMoment));
-  }
+  if (actionName === "focus") delete lowered.references;
   return lowered;
 }
 function lowerIntegerDecimal(record2, prefix, path) {
@@ -13144,6 +13224,106 @@ function reconcileBootstrapFirstSectionPositions(value, outline) {
     usedBoardCreates.add(match);
   });
   return root;
+}
+function reconcileBootstrapReusableDeclarations(value, outline) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const candidate = value;
+  if (!Array.isArray(candidate.moments)) return value;
+  const section = outline.sections[0];
+  if (!section) return value;
+  const oldItems = [...section.reusable_items ?? []];
+  const creates = [];
+  for (const momentValue of candidate.moments) {
+    if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
+    const moment = momentValue;
+    for (const [collection, kind] of [["math_creates", "math"], ["note_creates", "note"]]) {
+      const entries = moment[collection];
+      if (!Array.isArray(entries)) continue;
+      for (const entry of entries) {
+        if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+          const record2 = entry;
+          const position = Number(record2.reusable_item);
+          creates.push({
+            kind,
+            entry: record2,
+            ...Number.isInteger(position) && position > 0 ? { oldPosition: position } : {},
+            source: "moment"
+          });
+        }
+      }
+    }
+  }
+  const rootCreates = candidate.reusable_board_creates;
+  if (rootCreates && typeof rootCreates === "object" && !Array.isArray(rootCreates)) {
+    for (const [key, entry] of Object.entries(rootCreates)) {
+      const match = /^item_(\d+)$/u.exec(key);
+      const oldPosition = Number(match?.[1]);
+      const declaration = oldItems[oldPosition - 1];
+      if (!Number.isInteger(oldPosition) || !entry || typeof entry !== "object" || Array.isArray(entry) || declaration?.kind !== "board_item" || declaration.board_kind !== "math" && declaration.board_kind !== "note") continue;
+      creates.push({
+        kind: declaration.board_kind,
+        entry,
+        oldPosition,
+        source: "root"
+      });
+    }
+  }
+  const filledPositions = new Set(
+    creates.flatMap(({ oldPosition }) => oldPosition !== void 0 && Number.isInteger(oldPosition) && oldPosition > 0 ? [oldPosition] : [])
+  );
+  const hasCreatedOrVisual = oldItems.some((item, index) => item.kind === "board_item" && (item.board_kind === "visual" || filledPositions.has(index + 1)));
+  if (!hasCreatedOrVisual && creates.length > 0) {
+    const promoted = [...creates].reverse().find(({ source }) => source === "moment");
+    if (promoted) {
+      oldItems.push({ kind: "board_item", board_kind: promoted.kind });
+      promoted.oldPosition = oldItems.length;
+      promoted.entry.reusable_item = oldItems.length;
+      filledPositions.add(oldItems.length);
+    }
+  }
+  const positionMap = /* @__PURE__ */ new Map();
+  const reconciledItems = oldItems.filter((item, index) => {
+    const keep = item.kind === "board_item" && (item.board_kind === "visual" || filledPositions.has(index + 1));
+    if (keep) positionMap.set(index + 1, positionMap.size + 1);
+    return keep;
+  });
+  section.reusable_items = reconciledItems;
+  for (const { entry, oldPosition, source } of creates) {
+    const newPosition = oldPosition === void 0 ? void 0 : positionMap.get(oldPosition);
+    if (source !== "moment") continue;
+    if (newPosition === void 0) delete entry.reusable_item;
+    else entry.reusable_item = newPosition;
+  }
+  if (rootCreates && typeof rootCreates === "object" && !Array.isArray(rootCreates)) {
+    candidate.reusable_board_creates = Object.fromEntries(
+      creates.flatMap(({ entry, oldPosition, source }) => {
+        if (source !== "root") return [];
+        const newPosition = oldPosition === void 0 ? void 0 : positionMap.get(oldPosition);
+        return newPosition === void 0 ? [] : [[`item_${newPosition}`, entry]];
+      })
+    );
+  }
+  for (const visual of outline.course_visuals ?? []) {
+    if (visual.create_section !== 1) continue;
+    const newPosition = positionMap.get(visual.reusable_item);
+    if (newPosition === void 0) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_COURSE_VISUAL",
+        "$lessonPlanOutline.course_visuals",
+        "a first-section course visual lost its reusable position during bootstrap reconciliation"
+      );
+    }
+    visual.reusable_item = newPosition;
+  }
+  outline.close.focus = outline.close.focus.flatMap((reference) => {
+    if (reference.source !== "reusable" || reference.section !== 1) return [reference];
+    const newPosition = positionMap.get(reference.item);
+    return newPosition === void 0 ? [] : [{ ...reference, item: newPosition }];
+  });
+  if (outline.close.focus.length === 0 && reconciledItems.length > 0) {
+    outline.close.focus = [{ source: "reusable", section: 1, item: reconciledItems.length }];
+  }
+  return value;
 }
 function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReusableCreates = false) {
   const root = pruneModelNulls(value);
@@ -13325,15 +13505,8 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
       if (!momentKeys.has(key)) throw new LessonPlanError("LESSON_PLAN_UNKNOWN_FIELD", `${path}.${key}`, "unknown field");
     }
     const ordered = [];
-    const seenOrders = /* @__PURE__ */ new Set();
     for (const [collectionName, descriptor] of Object.entries(modelActionCollections)) {
-      const collection = moment[collectionName];
-      if (collection === void 0 && collectionName === "visual_creates" && outline.sections[expectedSection - 1]?.allowed_capabilities.length === 0) {
-        continue;
-      }
-      if (collection === void 0 && collectionName === "animations" && (outline.numbers?.length ?? 0) === 0) {
-        continue;
-      }
+      const collection = moment[collectionName] ?? [];
       if (!Array.isArray(collection)) {
         throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", `${path}.${collectionName}`, "expected an array");
       }
@@ -13346,15 +13519,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
           ..."kind" in descriptor ? { kind: descriptor.kind } : {},
           ...entry
         };
-        const order = action.order;
-        if (!Number.isInteger(order) || Number(order) < 1 || Number(order) > 48) {
-          throw new LessonPlanError("LESSON_PLAN_ACTION_ORDER", `${entryPath}.order`, "expected an integer from 1 to 48");
-        }
-        if (seenOrders.has(Number(order))) {
-          throw new LessonPlanError("LESSON_PLAN_ACTION_ORDER", `${entryPath}.order`, "action order is duplicated");
-        }
-        seenOrders.add(Number(order));
-        delete action.order;
+        const order = ordered.length + 1;
         if (collectionName === "visual_creates" && courseVisualsToCreate.length > 0) {
           const visualPosition = Number(action.course_visual);
           const declaration = courseVisuals[visualPosition - 1];
@@ -13374,7 +13539,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
           delete action.course_visual;
         }
         ordered.push({
-          order: Number(order),
+          order,
           action: {
             action: descriptor.action,
             ...lowerModelActionReferences(
@@ -13406,7 +13571,6 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
       );
     }
   }
-  const activityOrders = /* @__PURE__ */ new Set();
   const activities = [];
   const collectActivities = (values, kind, path) => {
     values.forEach((activity, index) => {
@@ -13415,17 +13579,12 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
         throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", itemPath, "expected an object");
       }
       let lowered = { ...activity };
-      const order = lowered.order;
-      if (!Number.isInteger(order) || Number(order) < 1 || Number(order) > 16 || activityOrders.has(Number(order))) {
-        throw new LessonPlanError("LESSON_PLAN_ACTIVITY_ORDER", `${itemPath}.order`, "expected a unique integer from 1 to 16");
-      }
-      activityOrders.add(Number(order));
-      delete lowered.order;
+      const order = activities.length + 1;
       if (kind === "number_target" && lowered.reference !== void 0) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
       lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection);
-      activities.push({ order: Number(order), activity: { kind, ...lowered } });
+      activities.push({ order, activity: { kind, ...lowered } });
     });
   };
   collectActivities(candidate.number_activities ?? [], "number_target", "$lessonPlanModelSection.number_activities");
@@ -13450,6 +13609,18 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
   const localCounts = [];
   const localCapabilities = /* @__PURE__ */ new Map();
   const currentReusableTargets = /* @__PURE__ */ new Map();
+  const activeVisualReferences = () => courseVisuals.flatMap((visual) => {
+    if (!visual.use_sections.includes(expectedSection)) return [];
+    if (visual.create_section < expectedSection) {
+      return [{
+        source: "reusable",
+        section: visual.create_section,
+        item: visual.reusable_item
+      }];
+    }
+    const current = currentReusableTargets.get(visual.reusable_item)?.reference;
+    return current ? [structuredClone(current)] : [];
+  });
   moments.forEach((moment, momentIndex) => {
     const currentCounts = { local_board_item: 0, local_connection: 0, local_group: 0 };
     const existingLocal = (value2) => {
@@ -13461,7 +13632,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
       const counts = referencedMoment === momentIndex + 1 ? currentCounts : localCounts[referencedMoment - 1];
       return Number.isInteger(referencedMoment) && referencedMoment > 0 && Number.isInteger(item) && item > 0 && counts !== void 0 && item <= counts[reference.source];
     };
-    const presentationReference = (value2) => {
+    const presentationReference = (value2, preferVisual = false) => {
       const original = value2 && typeof value2 === "object" && !Array.isArray(value2) ? value2 : void 0;
       let reference = original ? { ...original } : void 0;
       let capability2;
@@ -13482,7 +13653,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
         }
       }
       const part = original?.part;
-      const needsVisual = part && typeof part === "object" && !Array.isArray(part) && part.kind === "capability";
+      const needsVisual = preferVisual || part && typeof part === "object" && !Array.isArray(part) && part.kind === "capability";
       if (!reference) {
         const fallback = needsVisual ? latestVisualReference : latestBoardReference;
         if (!fallback) return void 0;
@@ -13490,7 +13661,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
         capability2 = needsVisual ? latestVisualCapability : void 0;
       }
       if (needsVisual) {
-        const role = part.role;
+        const role = part && typeof part === "object" && !Array.isArray(part) ? part.role : void 0;
         if (capability2 && typeof role === "string" && LESSON_PLAN_CAPABILITIES[capability2].includes(role)) {
           reference.part = part;
         } else {
@@ -13539,11 +13710,12 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
           latestVisualCapability = capability2;
         }
       } else if (action.action === "emphasize" || action.action === "point_at") {
-        const reference = presentationReference(action.reference);
+        const reference = presentationReference(action.reference, action.action === "point_at");
         if (reference === void 0) return;
         action.reference = reference;
-      } else if (action.action === "focus" && Array.isArray(action.references)) {
-        const references = action.references.map(presentationReference).filter((reference) => reference !== void 0);
+      } else if (action.action === "focus") {
+        const supplied = Array.isArray(action.references) ? action.references.map((reference) => presentationReference(reference)).filter((reference) => reference !== void 0) : [];
+        const references = supplied.length > 0 ? supplied : activeVisualReferences().length > 0 ? activeVisualReferences() : [latestVisualReference ?? latestBoardReference].filter((reference) => reference !== void 0);
         const unique = [...new Map(references.map((reference) => [JSON.stringify(reference), reference])).values()];
         if (unique.length === 0) return;
         action.references = unique;
@@ -13647,18 +13819,9 @@ function sectionIndexFromError(error, sectionCount) {
   const offset = Number(draftMatch?.[1] ?? planMatch?.[1]);
   return Number.isInteger(offset) && offset >= 0 && offset < sectionCount ? offset + 1 : void 0;
 }
-async function mapWithConcurrency(count, concurrency, work) {
-  const results = new Array(count);
-  let next = 0;
-  const worker = async () => {
-    while (next < count) {
-      const index = next;
-      next += 1;
-      results[index] = await work(index);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(count, concurrency) }, () => worker()));
-  return results;
+function isRateLimitError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /(?:\b429\b|RESOURCE_EXHAUSTED|rate[ _-]?limit)/iu.test(message);
 }
 function compilePrefix(outline, drafts, options) {
   const sectionCount = drafts.length;
@@ -13764,13 +13927,16 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       );
       if (bootstrapFirstSection) {
         try {
-          bootstrappedFirstSection = lowerModelSectionDraft(
-            reconcileBootstrapFirstSectionPositions(
-              coerceLessonPlanBootstrapSectionModelNumbers(
-                parsed.first_section
-              ),
-              outline
+          const positionedFirstSection = reconcileBootstrapFirstSectionPositions(
+            coerceLessonPlanBootstrapSectionModelNumbers(
+              parsed.first_section
             ),
+            outline
+          );
+          reconcileBootstrapReusableDeclarations(positionedFirstSection, outline);
+          outline = validateLessonPlanOutline(outline, fixedRequestParts.length);
+          bootstrappedFirstSection = lowerModelSectionDraft(
+            positionedFirstSection,
             outline,
             1
           );
@@ -13807,44 +13973,50 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     const attempt = (sectionAttempts.get(section) ?? 0) + 1;
     sectionAttempts.set(section, attempt);
     if (attempt > maxAttempts) throw sectionErrors.get(section);
-    const raw = await model({
-      label: "lesson-plan-section",
-      part: "section",
-      section,
-      attempt,
-      turn_id: input.turn_id,
-      system_prompt: SECTION_SYSTEM_PROMPT,
-      prompt: JSON.stringify({
-        course: context,
-        immutable_outline: outline,
-        section_to_write: section,
-        visuals_for_section: (outline.course_visuals ?? []).flatMap((visual, index) => {
-          if (!visual.use_sections.includes(section)) return [];
-          return [{
-            course_visual: index + 1,
-            capability: visual.capability,
-            mode: visual.create_section === section ? "create" : "reuse",
-            relation: visual.relation,
-            ...visual.related_visual === void 0 ? {} : { related_visual: visual.related_visual },
-            reference: {
-              source: "reusable",
-              section: visual.create_section,
-              item: visual.reusable_item,
-              host_reference: 0,
-              moment: 0
-            }
-          }];
+    let raw;
+    try {
+      raw = await model({
+        label: "lesson-plan-section",
+        part: "section",
+        section,
+        attempt,
+        turn_id: input.turn_id,
+        system_prompt: SECTION_SYSTEM_PROMPT,
+        prompt: JSON.stringify({
+          course: context,
+          immutable_outline: outline,
+          section_to_write: section,
+          visuals_for_section: (outline.course_visuals ?? []).flatMap((visual, index) => {
+            if (!visual.use_sections.includes(section)) return [];
+            return [{
+              course_visual: index + 1,
+              capability: visual.capability,
+              mode: visual.create_section === section ? "create" : "reuse",
+              relation: visual.relation,
+              ...visual.related_visual === void 0 ? {} : { related_visual: visual.related_visual },
+              reference: {
+                source: "reusable",
+                section: visual.create_section,
+                item: visual.reusable_item,
+                host_reference: 0,
+                moment: 0
+              }
+            }];
+          }),
+          assigned_request_parts: (outline.request_coverage ?? []).filter((item) => item.treatment === "teach" && item.sections.includes(section)).map((item) => ({
+            request_part: item.request_part,
+            text: fixedRequestParts[item.request_part - 1]
+          })),
+          ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
         }),
-        assigned_request_parts: (outline.request_coverage ?? []).filter((item) => item.treatment === "teach" && item.sections.includes(section)).map((item) => ({
-          request_part: item.request_part,
-          text: fixedRequestParts[item.request_part - 1]
-        })),
-        ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
-      }),
-      response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section),
-      max_output_tokens: 12288
-    });
-    modelCalls += 1;
+        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section),
+        max_output_tokens: 12288
+      });
+      modelCalls += 1;
+    } catch (error) {
+      sectionAttempts.set(section, attempt - 1);
+      throw error;
+    }
     let candidate;
     try {
       candidate = lowerModelSectionDraft(
@@ -13869,37 +14041,89 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     }
     return candidate;
   };
-  let drafts;
-  if (concurrency === 1) {
-    drafts = [];
-    for (let section = 1; section <= outline.sections.length; section += 1) {
-      let candidate = section === 1 ? bootstrappedFirstSection : void 0;
-      while (true) {
-        candidate ??= await generateSection(section);
-        drafts[section - 1] = candidate;
-        try {
-          const prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
-          await options.on_playable_prefix?.({ completed_sections: section, compiled: prefix });
-          break;
-        } catch (error) {
-          if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
-          sectionErrors.set(section, error);
-          await options.on_rejected_part?.({
-            label: "lesson-plan-section",
-            section,
-            attempt: sectionAttempts.get(section) ?? 1,
-            error: rejectionDetails(error)
-          });
-          candidate = void 0;
-        }
+  const drafts = [];
+  const acceptSection = async (section, initialCandidate) => {
+    let candidate = initialCandidate;
+    while (true) {
+      candidate ??= await generateSection(section);
+      drafts[section - 1] = candidate;
+      try {
+        const prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
+        await options.on_playable_prefix?.({ completed_sections: section, compiled: prefix });
+        return;
+      } catch (error) {
+        if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
+        sectionErrors.set(section, error);
+        await options.on_rejected_part?.({
+          label: "lesson-plan-section",
+          section,
+          attempt: sectionAttempts.get(section) ?? 1,
+          error: rejectionDetails(error)
+        });
+        candidate = void 0;
       }
     }
-  } else {
-    drafts = await mapWithConcurrency(
-      outline.sections.length,
-      concurrency,
-      (index) => index === 0 && bootstrappedFirstSection ? Promise.resolve(bootstrappedFirstSection) : generateSection(index + 1)
+  };
+  await acceptSection(1, bootstrappedFirstSection);
+  if (outline.sections.length > 1 && concurrency === 1) {
+    for (let section = 2; section <= outline.sections.length; section += 1) {
+      await acceptSection(section);
+    }
+  } else if (outline.sections.length > 1) {
+    const pending = /* @__PURE__ */ new Map();
+    const resolvePending = /* @__PURE__ */ new Map();
+    const settled = /* @__PURE__ */ new Map();
+    for (let section = 2; section <= outline.sections.length; section += 1) {
+      pending.set(section, new Promise((resolve) => resolvePending.set(section, resolve)));
+    }
+    let nextSection = 2;
+    let stopScheduling = false;
+    const worker = async () => {
+      while (!stopScheduling && nextSection <= outline.sections.length) {
+        const section = nextSection;
+        nextSection += 1;
+        try {
+          const result = { ok: true, draft: await generateSection(section) };
+          settled.set(section, result);
+          resolvePending.get(section)?.(result);
+        } catch (error) {
+          if (isRateLimitError(error)) stopScheduling = true;
+          const result = { ok: false, error };
+          settled.set(section, result);
+          resolvePending.get(section)?.(result);
+          if (!isRateLimitError(error)) stopScheduling = true;
+        }
+      }
+    };
+    const workers = Array.from(
+      { length: Math.min(concurrency, outline.sections.length - 1) },
+      () => worker()
     );
+    let sequentialFallback = false;
+    for (let section = 2; section <= outline.sections.length; section += 1) {
+      if (sequentialFallback) {
+        const completed = settled.get(section);
+        await acceptSection(section, completed?.ok ? completed.draft : void 0);
+        continue;
+      }
+      const result = await pending.get(section);
+      if (result.ok) {
+        await acceptSection(section, result.draft);
+        continue;
+      }
+      if (!isRateLimitError(result.error)) {
+        stopScheduling = true;
+        await Promise.allSettled(workers);
+        throw result.error;
+      }
+      stopScheduling = true;
+      await Promise.allSettled(workers);
+      sequentialFallback = true;
+      await options.on_concurrency_fallback?.({ section, reason: "rate_limited" });
+      await acceptSection(section);
+    }
+    stopScheduling = true;
+    await Promise.allSettled(workers);
   }
   let compiled;
   let finalError;
