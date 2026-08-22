@@ -12,6 +12,7 @@
       "concurrency_class": "exclusive",
       "env": [
         "VERTEX_SA_JSON",
+        "VERTEX_ACCESS_TOKEN",
         "GOOGLE_CLOUD_PROJECT",
         "GOOGLE_CLOUD_LOCATION",
         "VERTEX_BASE_URL",
@@ -20,6 +21,7 @@
         "OLL_TOTAL_TIMEOUT_MS",
         "OLL_MAX_TOKENS",
         "VERTEX_REQUEST_ATTEMPTS",
+        "OLL_SECTION_CONCURRENCY",
         "OLL_DEBUG_GENERATION",
         "OCTOS_WORK_DIR",
         "OCTOS_SESSION_WORKSPACE"
@@ -63,6 +65,7 @@
       "concurrency_class": "exclusive",
       "env": [
         "VERTEX_SA_JSON",
+        "VERTEX_ACCESS_TOKEN",
         "GOOGLE_CLOUD_PROJECT",
         "GOOGLE_CLOUD_LOCATION",
         "VERTEX_BASE_URL",
@@ -95,6 +98,7 @@
       "concurrency_class": "exclusive",
       "env": [
         "VERTEX_SA_JSON",
+        "VERTEX_ACCESS_TOKEN",
         "GOOGLE_CLOUD_PROJECT",
         "GOOGLE_CLOUD_LOCATION",
         "VERTEX_BASE_URL",
