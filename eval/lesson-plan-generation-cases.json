@@ -30,6 +30,39 @@
     "expected_kinds": ["plot"]
   },
   {
+    "id": "parabola-two-parameter-control",
+    "learner_request": "请用同一条抛物线 y=(x-h)^2+k 解释 h 和 k 如何改变图像，并给我两个滑杆，让我分别观察左右平移和上下平移。",
+    "request_parts": [
+      "用同一条抛物线 y=(x-h)^2+k 解释 h 和 k 如何改变图像",
+      "提供两个滑杆分别观察左右平移和上下平移"
+    ],
+    "expected_kinds": ["plot"],
+    "minimum_numeric_controls": 2,
+    "required_curve_number_count": 2
+  },
+  {
+    "id": "three-static-function-comparison",
+    "learner_request": "请把 y=x、y=x^2 和 y=sin(x) 画在同一个坐标系中，比较它们在 x 从 -3 到 3 时的变化。",
+    "request_parts": [
+      "把 y=x、y=x^2 和 y=sin(x) 画在同一个坐标系中",
+      "比较它们在 x 从 -3 到 3 时的变化"
+    ],
+    "expected_kinds": ["plot"],
+    "minimum_curves_in_one_plot": 3
+  },
+  {
+    "id": "cubic-sampled-point",
+    "learner_request": "请画出 y=x^3，并给我一个滑杆控制曲线上的点，让我观察 x 改变时点的横坐标和纵坐标怎样一起变化。",
+    "request_parts": [
+      "画出 y=x^3",
+      "提供一个滑杆控制曲线上的点",
+      "观察 x 改变时点的横坐标和纵坐标怎样一起变化"
+    ],
+    "expected_kinds": ["plot"],
+    "minimum_numeric_controls": 1,
+    "requires_moving_point": true
+  },
+  {
     "id": "circle-arc-length",
     "learner_request": "请结合圆、圆心角和半径，解释弧长公式是怎么得到的。",
     "request_parts": [
