@@ -11,7 +11,6 @@
     "oll:check": "node scripts/oll-contract.mjs check",
     "oll:sync": "node scripts/oll-contract.mjs sync",
     "test": "npm run build && node --test test/*.test.mjs",
-    "contract:vertex": "npm run build && node scripts/check-vertex-schema-contract.mjs",
     "contract:lesson-plan-vertex": "node scripts/check-lesson-plan-vertex-schema.mjs",
     "eval:visual": "npm run build && node scripts/eval-visual-generation.mjs",
     "eval:lesson-plan": "node scripts/eval-lesson-plan-generation.mjs"
