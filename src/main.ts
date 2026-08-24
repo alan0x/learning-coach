@@ -601,7 +601,12 @@ function vertexResponseContent(payload: unknown): string {
     ?.map((part) => typeof part.text === "string" ? part.text : "")
     .join("")
     .trim();
-  if (!text) throw new Error(`Vertex response contains no JSON text (finishReason=${candidate.finishReason ?? "unknown"})`);
+  if (!text) {
+    throw new ToolExecutionError(
+      "VERTEX_RESPONSE_EMPTY",
+      `Vertex response contains no JSON text (finishReason=${candidate.finishReason ?? "unknown"})`,
+    );
+  }
   return text;
 }
 

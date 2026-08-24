@@ -48,7 +48,52 @@
       "比较它们在 x 从 -3 到 3 时的变化"
     ],
     "expected_kinds": ["plot"],
-    "minimum_curves_in_one_plot": 3
+    "minimum_curves_in_one_plot": 3,
+    "maximum_numeric_controls": 0
+  },
+  {
+    "id": "polynomial-static-comparison",
+    "learner_request": "请把 y=x、y=x^2 和 y=x^3 放在同一个坐标系里，比较它们经过原点时和远离原点后的变化。",
+    "request_parts": [
+      "在同一个坐标系展示 y=x、y=x^2 和 y=x^3",
+      "比较三条曲线经过原点时和远离原点后的变化"
+    ],
+    "expected_kinds": ["plot"],
+    "minimum_curves_in_one_plot": 3,
+    "maximum_numeric_controls": 0
+  },
+  {
+    "id": "trigonometric-static-comparison",
+    "learner_request": "请在同一个坐标系画出 y=sin(x)、y=cos(x) 和 y=sin(x)+cos(x)，解释第三条曲线和前两条的关系。",
+    "request_parts": [
+      "在同一个坐标系展示 y=sin(x)、y=cos(x) 和 y=sin(x)+cos(x)",
+      "解释第三条曲线和前两条曲线的关系"
+    ],
+    "expected_kinds": ["plot"],
+    "minimum_curves_in_one_plot": 3,
+    "maximum_numeric_controls": 0
+  },
+  {
+    "id": "shifted-parabolas-static-comparison",
+    "learner_request": "请把 y=x^2、y=(x-1)^2 和 y=(x+1)^2 画在同一个坐标系中，比较它们顶点位置的不同。",
+    "request_parts": [
+      "在同一个坐标系展示 y=x^2、y=(x-1)^2 和 y=(x+1)^2",
+      "比较三条抛物线的顶点位置"
+    ],
+    "expected_kinds": ["plot"],
+    "minimum_curves_in_one_plot": 3,
+    "maximum_numeric_controls": 0
+  },
+  {
+    "id": "absolute-value-static-comparison",
+    "learner_request": "请在同一个坐标系画出 y=abs(x)、y=x 和 y=-x，说明绝对值图像为什么由两条直线的一部分组成。",
+    "request_parts": [
+      "在同一个坐标系展示 y=abs(x)、y=x 和 y=-x",
+      "解释绝对值图像与两条直线的关系"
+    ],
+    "expected_kinds": ["plot"],
+    "minimum_curves_in_one_plot": 3,
+    "maximum_numeric_controls": 0
   },
   {
     "id": "cubic-sampled-point",

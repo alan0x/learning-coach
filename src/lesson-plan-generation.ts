@@ -11,6 +11,7 @@ import {
   type LessonPlanOutline,
   type LessonPlanMathExpression,
   type LessonPlanSectionDraft,
+  type LessonPlanVisualContent,
   type LessonPlanVisualFeature,
 } from "./lesson-plan.js";
 import {
@@ -25,6 +26,7 @@ import {
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
   buildLessonPlanAdmissionBootstrapJsonSchema,
+  buildLessonPlanAdmissionOutlineJsonSchema,
   coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
@@ -50,6 +52,7 @@ export interface LessonPlanModelRequest {
   prompt: string;
   response_schema: LessonPlanJsonSchema;
   max_output_tokens: number;
+  timeout_ms: number;
   part: "bootstrap" | "outline" | "section";
   section?: number;
   attempt: number;
@@ -60,6 +63,8 @@ export type LessonPlanModelCall = (request: LessonPlanModelRequest) => Promise<s
 export interface GenerateLessonPlanOptions {
   max_attempts_per_part?: number;
   max_concurrency?: number;
+  /** Total wall-clock budget for producing the first playable section. */
+  first_playable_timeout_ms?: number;
   /** Ask for the outline and section 1 in the same provider request. */
   bootstrap_first_section?: boolean;
   compile?: CompileLessonPlanOptions;
@@ -117,6 +122,14 @@ const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 同一次返回 outline 和 first_section。first_section 必须实现 outline 第一节，只使用 outline 已声明的数值、画面和可复用内容；内部位置、编号和引用由程序建立。
 ${SECTION_SYSTEM_PROMPT}`;
 
+const ADMISSION_OUTLINE_SYSTEM_PROMPT = `用户正尝试从文字输入或语音输入开始一整节白板课程。先判断当前内容是否足以确定课程主题，不要从可用画面或数学能力猜测用户没有表达的主题。
+- generate_lesson：用户提出了学习问题、解释请求，或清楚说出了想学习的主题。简短但明确的主题也属于这一类。此时填写完整 outline，learner_response 留空。
+- clarify：这是真实话语，但内容残缺、含义不清或没有说明要学什么，无法可靠确定课程主题。此时不要填写 outline，用 learner_response 简短追问用户想学习什么。
+- ignore：只是语气词、口头填充或没有可回应内容。此时不要填写 outline，learner_response 留空。
+只做上述语义判断，不使用字数、语言或固定关键词作为规则。
+
+${OUTLINE_SYSTEM_PROMPT}`;
+
 const ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户正尝试从文字输入或语音输入开始一整节白板课程。先判断当前内容是否足以确定课程主题，不要从可用画面或数学能力猜测用户没有表达的主题。
 - generate_lesson：用户提出了学习问题、解释请求，或清楚说出了想学习的主题。简短但明确的主题（例如“勾股定理”）也属于这一类。此时填写完整 outline 和 first_section，learner_response 留空。
 - clarify：这是真实话语，但内容残缺、含义不清或没有说明要学什么，无法可靠确定课程主题。此时不要填写 outline 或 first_section，用 learner_response 简短追问用户想学习什么。例如 “The book.” 应追问用户想了解这本书的什么内容，而不是猜成数学课程。
@@ -124,6 +137,17 @@ const ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户正尝试从文字输入或语�
 只做上述语义判断，不使用字数、语言或固定关键词作为规则。
 
 ${BOOTSTRAP_SYSTEM_PROMPT}`;
+
+// Existing successful production traces use at most 1,985 candidate tokens
+// for the combined outline + first section. These limits retain more than 2x
+// headroom while preventing a malformed response from consuming the former
+// 16,384-token allowance. A combined-request failure falls back to the smaller
+// outline-only contract instead of repeating the same permissive request.
+const LESSON_PLAN_BOOTSTRAP_MAX_OUTPUT_TOKENS = 4_096;
+const LESSON_PLAN_OUTLINE_MAX_OUTPUT_TOKENS = 4_096;
+const LESSON_PLAN_SECTION_MAX_OUTPUT_TOKENS = 4_096;
+const LESSON_PLAN_MODEL_PART_TIMEOUT_MS = 30_000;
+const LESSON_PLAN_FIRST_PLAYABLE_TIMEOUT_MS = 60_000;
 
 function positiveInteger(value: number | undefined, fallback: number, label: string): number {
   const result = value ?? fallback;
@@ -558,32 +582,76 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
   const parameters = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters)
     ? { ...(content.parameters as Record<string, unknown>) }
     : {};
-  if (capability === "function_plot" && parameters.formulas !== undefined) {
-    if (!Array.isArray(parameters.formulas)
-      || parameters.formulas.length < 1
-      || parameters.formulas.length > 8) {
-      formulaError(
-        "$lessonPlanSection.visual.parameters.formulas",
-        "expected one to eight formulas",
-      );
-    }
-    const parsed = parameters.formulas.map((formula, index) => parseModelFormula(
-      formula,
-      numberCount,
-      `$lessonPlanSection.visual.parameters.formulas[${index}]`,
-    ));
-    if (parsed.length === 1) {
-      parameters.expression_tokens = parsed[0];
-    } else {
-      if (parsed.some((expression) => expression.some((token) => token.kind === "number"))) {
+  let forceNoNumbers = false;
+  if (capability === "function_plot") {
+    const rawFormulas = parameters.formulas !== undefined
+      ? parameters.formulas
+      : typeof parameters.expression === "string"
+        ? [parameters.expression]
+        : Array.isArray(parameters.expressions)
+          ? parameters.expressions
+          : undefined;
+    if (rawFormulas !== undefined) {
+      if (!Array.isArray(rawFormulas)
+        || rawFormulas.length < 1
+        || rawFormulas.length > 8) {
         formulaError(
           "$lessonPlanSection.visual.parameters.formulas",
-          "a multi-curve comparison currently supports static formulas only; use one formula when lesson numbers change the whole curve",
+          "expected one to eight formulas",
         );
       }
-      parameters.expressions = parsed.map(mathExpressionToOll);
+      // The provider can occasionally return an older synonymous field in
+      // addition to `formulas`, even under a response schema. Select one
+      // semantic source and erase all execution representations before the
+      // program builds exactly one canonical representation below.
+      delete parameters.formulas;
+      delete parameters.expression;
+      delete parameters.expressions;
+      delete parameters.expression_tokens;
+      const parsed = rawFormulas.map((formula, index) => parseModelFormula(
+        formula,
+        numberCount,
+        `$lessonPlanSection.visual.parameters.formulas[${index}]`,
+      ));
+      if (parsed.length === 1) {
+        parameters.expression_tokens = parsed[0];
+      } else {
+        if (parsed.some((expression) => expression.some((token) => token.kind === "number"))) {
+          formulaError(
+            "$lessonPlanSection.visual.parameters.formulas",
+            "a multi-curve comparison currently supports static formulas only; use one formula when lesson numbers change the whole curve",
+          );
+        }
+        // Formula text is a teaching choice. Curve identity and duplicate
+        // handling are execution details: canonicalize and deduplicate them in
+        // the program so a probabilistic repeated formula cannot render the
+        // same curve twice.
+        const canonical = parsed.map(mathExpressionToOll);
+        const retainedIndexes: number[] = [];
+        const seen = new Set<string>();
+        canonical.forEach((expression, index) => {
+          if (seen.has(expression)) return;
+          seen.add(expression);
+          retainedIndexes.push(index);
+        });
+        parameters.expressions = retainedIndexes.map((index) => canonical[index]);
+        if (Array.isArray(parameters.curve_labels)
+          && parameters.curve_labels.length === canonical.length) {
+          parameters.curve_labels = retainedIndexes.map((index) => parameters.curve_labels![index]);
+        } else {
+          // Labels are optional presentation text. If they do not align with
+          // the actual curves, derive safe labels from the expressions instead
+          // of rejecting and regenerating the lesson.
+          delete parameters.curve_labels;
+        }
+        // A single-curve label from a speculative draft cannot safely name the
+        // first member of a later multi-curve comparison.
+        delete parameters.curve_label;
+        // A multi-curve request is an explicit static comparison. A stray
+        // model-authored number must never turn it into a moving-point lesson.
+        forceNoNumbers = true;
+      }
     }
-    delete parameters.formulas;
   }
   if (typeof content.title === "string" && parameters.title === undefined) parameters.title = content.title;
   if (typeof capability === "string" && capability in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
@@ -604,6 +672,7 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
       Number.isInteger(number) && Number(number) >= 1 && Number(number) <= numberCount
     )))].slice(0, numberLimit)
     : [];
+  if (forceNoNumbers) validNumbers = [];
   if (capability === "function_plot" && Array.isArray(parameters.expression_tokens)) {
     const formulaNumbers = [...new Set(parameters.expression_tokens.flatMap((token) => (
       token && typeof token === "object" && !Array.isArray(token)
@@ -614,7 +683,8 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
     )))].filter((number) => number >= 1 && number <= numberCount).slice(0, numberLimit);
     if (formulaNumbers.length > 0) validNumbers = formulaNumbers;
   }
-  if (validNumbers.length === 0
+  if (!forceNoNumbers
+    && validNumbers.length === 0
     && numberCount === 1
     && typeof capability === "string"
     && capability in LESSON_PLAN_CAPABILITIES
@@ -627,6 +697,66 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
     ...(Object.keys(parameters).length === 0 ? {} : { parameters }),
     ...(validNumbers.length === 0 ? {} : { numbers: validNumbers }),
   };
+}
+
+/**
+ * Remove interactions that cannot affect any compiled visual.
+ *
+ * The model may decide that a lesson benefits from a numeric idea and choose
+ * its teaching range. Whether a slider, animation, or task is executable is
+ * program-owned: an interaction without a visual binding is dead UI and must
+ * not make the whole lesson fail or trigger another model request.
+ */
+function normalizeExecutableNumberInteractions(
+  outlineValue: LessonPlanOutline,
+  draftValues: LessonPlanSectionDraft[],
+): { outline: LessonPlanOutline; drafts: LessonPlanSectionDraft[] } {
+  const outline = structuredClone(outlineValue);
+  const drafts = structuredClone(draftValues);
+  const visuallyBound = new Set<number>();
+  for (const section of drafts) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if ((action.action !== "create" && action.action !== "revise") || action.kind !== "visual") continue;
+        const visual = action.content as LessonPlanVisualContent;
+        for (const number of visual.numbers ?? []) visuallyBound.add(number);
+      }
+    }
+  }
+  outline.numbers?.forEach((number, index) => {
+    if (!visuallyBound.has(index + 1)) delete number.student_control;
+  });
+  for (const section of drafts) {
+    for (const moment of section.moments) {
+      moment.actions = moment.actions.filter((action) => (
+        action.action !== "animate" || visuallyBound.has(action.number)
+      ));
+      if (moment.actions.length === 0) {
+        // Removing a dead animation can leave a narration-only moment. OLL
+        // requires an executable action per beat, so keep the narration and
+        // give the teacher a neutral expression instead of asking the model to
+        // rewrite an otherwise usable section.
+        moment.actions.push({
+          action: "teacher_expression",
+          expression: "neutral",
+          timing: "after_speech",
+        });
+      }
+    }
+    if (!section.student_activities) continue;
+    section.student_activities = section.student_activities.flatMap((activity) => {
+      if (activity.kind !== "number_target") return [activity];
+      const numberControls = activity.number_controls.filter(({ number }) => visuallyBound.has(number));
+      const expressionNumbers = new Set((activity.expression ?? []).flatMap((token) => (
+        token.kind === "number" ? [token.number] : []
+      )));
+      if (numberControls.length === 0
+        || [...expressionNumbers].some((number) => !visuallyBound.has(number))) return [];
+      return [{ ...activity, number_controls: numberControls }];
+    });
+    if (section.student_activities.length === 0) delete section.student_activities;
+  }
+  return { outline, drafts };
 }
 
 function lowerModelActionReferences(
@@ -1620,13 +1750,12 @@ function isRateLimitError(error: unknown): boolean {
   return /(?:\b429\b|RESOURCE_EXHAUSTED|rate[ _-]?limit)/iu.test(message);
 }
 
-function isTruncatedModelResponse(error: unknown): boolean {
-  return Boolean(
-    error
-      && typeof error === "object"
-      && !Array.isArray(error)
-      && (error as { code?: unknown }).code === "VERTEX_RESPONSE_TRUNCATED",
-  );
+function isBoundedModelResponseFailure(error: unknown): boolean {
+  if (!error || typeof error !== "object" || Array.isArray(error)) return false;
+  const code = (error as { code?: unknown }).code;
+  return code === "VERTEX_RESPONSE_TRUNCATED"
+    || code === "VERTEX_RESPONSE_EMPTY"
+    || code === "VERTEX_REQUEST_TIMEOUT";
 }
 
 function compilePrefix(
@@ -1660,36 +1789,8 @@ function compilePrefix(
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
     close: { summary: "课程内容仍在继续生成。", focus: [focus] },
   };
-  const prefixPlan = assembleLessonPlan(prefixOutline, drafts, options);
-
-  // The outline describes controls for the complete course, but a playable
-  // prefix may precede the section that creates the visual driven by one of
-  // those controls. Keep every numeric state (and therefore its stable
-  // number_XX identity), while withholding only the student-facing slider
-  // until the prefix contains an action that uses it. The final full-course
-  // compilation is deliberately unchanged and still rejects a control that
-  // never affects a visual.
-  const activeNumbers = new Set<number>();
-  for (const section of prefixPlan.sections) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
-        if (action.action === "create" || action.action === "revise") {
-          if (action.kind === "visual") {
-            for (const number of action.content.numbers ?? []) activeNumbers.add(number);
-          }
-        } else if (action.action === "animate") {
-          activeNumbers.add(action.number);
-        }
-      }
-    }
-    for (const activity of section.student_activities ?? []) {
-      if (activity.kind !== "number_target") continue;
-      for (const control of activity.number_controls) activeNumbers.add(control.number);
-    }
-  }
-  prefixPlan.numbers?.forEach((number, index) => {
-    if (!activeNumbers.has(index + 1)) delete number.student_control;
-  });
+  const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
+  const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, options);
 }
 
@@ -1700,6 +1801,23 @@ export async function generateLessonPlanWithModel(
 ): Promise<LessonPlanGenerationResult> {
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");
   const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
+  const firstPlayableTimeout = positiveInteger(
+    options.first_playable_timeout_ms,
+    LESSON_PLAN_FIRST_PLAYABLE_TIMEOUT_MS,
+    "first_playable_timeout_ms",
+  );
+  const firstPlayableStartedAt = Date.now();
+  const firstPlayablePartTimeout = (): number => {
+    const remaining = firstPlayableTimeout - (Date.now() - firstPlayableStartedAt);
+    if (remaining < 1) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_FIRST_PLAYABLE_TIMEOUT",
+        "$lessonPlan.first_playable",
+        `the first playable section exceeded ${firstPlayableTimeout}ms`,
+      );
+    }
+    return Math.min(LESSON_PLAN_MODEL_PART_TIMEOUT_MS, remaining);
+  };
   const context = inputContext(input);
   const fixedRequestParts = requestParts(input);
   const bootstrapFirstSection = options.bootstrap_first_section === true;
@@ -1711,19 +1829,22 @@ export async function generateLessonPlanWithModel(
   let outline: LessonPlanOutline | undefined;
   let bootstrappedFirstSection: LessonPlanSectionDraft | undefined;
   let outlineError: unknown;
+  let tryCombinedBootstrap = bootstrapFirstSection;
   const sectionErrors = new Map<number, unknown>();
   const sectionAttempts = new Map<number, number>();
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const combinedBootstrap = tryCombinedBootstrap;
+    const responseUsesEnvelope = combinedBootstrap || admissionInput;
     let raw: string;
     try {
       raw = await model({
-        label: bootstrapFirstSection ? "lesson-plan-bootstrap" : "lesson-plan-outline",
-        part: bootstrapFirstSection ? "bootstrap" : "outline",
+        label: combinedBootstrap ? "lesson-plan-bootstrap" : "lesson-plan-outline",
+        part: combinedBootstrap ? "bootstrap" : "outline",
         attempt,
         turn_id: input.turn_id,
-        system_prompt: bootstrapFirstSection
+        system_prompt: combinedBootstrap
           ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT
-          : OUTLINE_SYSTEM_PROMPT,
+          : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
         prompt: JSON.stringify({
           course: context,
           request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
@@ -1732,22 +1853,27 @@ export async function generateLessonPlanWithModel(
             number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
             guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
           })),
-          ...(bootstrapFirstSection ? {
+          ...(combinedBootstrap ? {
             first_section_to_write: 1,
             first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions",
           } : {}),
           ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
         }),
-        response_schema: bootstrapFirstSection
+        response_schema: combinedBootstrap
           ? admissionInput
             ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length)
             : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length)
-          : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
-        max_output_tokens: bootstrapFirstSection ? 16_384 : 8_192,
+          : admissionInput
+            ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
+            : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+        max_output_tokens: combinedBootstrap
+          ? LESSON_PLAN_BOOTSTRAP_MAX_OUTPUT_TOKENS
+          : LESSON_PLAN_OUTLINE_MAX_OUTPUT_TOKENS,
+        timeout_ms: firstPlayablePartTimeout(),
       });
       modelCalls += 1;
     } catch (error) {
-      if (!isTruncatedModelResponse(error)) throw error;
+      if (!isBoundedModelResponseFailure(error)) throw error;
       modelCalls += 1;
       outlineError = error;
       await options.on_rejected_part?.({
@@ -1755,18 +1881,24 @@ export async function generateLessonPlanWithModel(
         attempt,
         error: rejectionDetails(error),
       });
+      // The combined request is an optional latency optimization. Repeating
+      // the same all-capabilities first-section schema after a bounded-output
+      // failure recreates the same long-tail risk. Recover with the smaller
+      // outline-only schema; the first section will then use the exact schema
+      // derived from that validated outline.
+      if (combinedBootstrap) tryCombinedBootstrap = false;
       if (attempt === maxAttempts) throw error;
       continue;
     }
     try {
-      const parsed = pruneModelNulls(parseModelJson(raw, bootstrapFirstSection
-        ? "lessonPlanBootstrap"
+      const parsed = pruneModelNulls(parseModelJson(raw, responseUsesEnvelope
+        ? "lessonPlanEnvelope"
         : "lessonPlanOutline"));
-      if (bootstrapFirstSection && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
+      if (responseUsesEnvelope && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
         throw new LessonPlanError(
           "LESSON_PLAN_MODEL_JSON",
-          "$lessonPlanBootstrap",
-          "bootstrap response must be an object",
+          "$lessonPlanEnvelope",
+          "lesson response envelope must be an object",
         );
       }
       if (admissionInput) {
@@ -1797,7 +1929,7 @@ export async function generateLessonPlanWithModel(
           };
         }
       }
-      const rawOutline = bootstrapFirstSection
+      const rawOutline = responseUsesEnvelope
         ? (parsed as Record<string, unknown>).outline
         : parsed;
       outline = validateLessonPlanOutline(
@@ -1809,7 +1941,7 @@ export async function generateLessonPlanWithModel(
         ),
         fixedRequestParts.length,
       );
-      if (bootstrapFirstSection) {
+      if (combinedBootstrap) {
         try {
           const positionedFirstSection = reconcileBootstrapFirstSectionPositions(
             coerceLessonPlanBootstrapSectionModelNumbers(
@@ -1845,6 +1977,7 @@ export async function generateLessonPlanWithModel(
         attempt,
         error: rejectionDetails(error),
       });
+      if (combinedBootstrap) tryCombinedBootstrap = false;
     }
   }
   if (!outline) throw outlineError;
@@ -1902,11 +2035,14 @@ export async function generateLessonPlanWithModel(
             : {}),
         }),
         response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section),
-        max_output_tokens: 12_288,
+        max_output_tokens: LESSON_PLAN_SECTION_MAX_OUTPUT_TOKENS,
+        timeout_ms: section === 1
+          ? firstPlayablePartTimeout()
+          : LESSON_PLAN_MODEL_PART_TIMEOUT_MS,
       });
       modelCalls += 1;
     } catch (error) {
-      if (isTruncatedModelResponse(error)) {
+      if (isBoundedModelResponseFailure(error)) {
         modelCalls += 1;
         sectionErrors.set(section, error);
         await options.on_rejected_part?.({
@@ -2046,11 +2182,16 @@ export async function generateLessonPlanWithModel(
     await Promise.allSettled(workers);
   }
   let compiled: CompiledLessonPlan | undefined;
+  let compiledOutline: LessonPlanOutline | undefined;
+  let compiledDrafts: LessonPlanSectionDraft[] | undefined;
   let finalError: unknown;
   for (let attempt = 1; attempt <= outline.sections.length * maxAttempts; attempt += 1) {
     try {
-      const plan = assembleLessonPlan(outline, drafts, options.compile);
+      const normalized = normalizeExecutableNumberInteractions(outline, drafts);
+      const plan = assembleLessonPlan(normalized.outline, normalized.drafts, options.compile);
       compiled = compileAndValidateLessonPlan(plan, options.compile);
+      compiledOutline = normalized.outline;
+      compiledDrafts = normalized.drafts;
       break;
     } catch (error) {
       finalError = error;
@@ -2069,8 +2210,8 @@ export async function generateLessonPlanWithModel(
   if (!compiled) throw finalError;
   return {
     ...compiled,
-    outline,
-    drafts: drafts.map((draft) => structuredClone(draft)),
+    outline: compiledOutline ?? outline,
+    drafts: (compiledDrafts ?? drafts).map((draft) => structuredClone(draft)),
     model_calls: modelCalls,
   };
 }

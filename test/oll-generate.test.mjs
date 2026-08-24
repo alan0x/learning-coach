@@ -208,6 +208,44 @@ test("structured Vertex calls retry a connection failure before any HTTP respons
   }
 });
 
+test("a successful HTTP response without JSON is classified for lesson fallback", async () => {
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request before returning an unusable model candidate.
+    }
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ candidates: [{ finishReason: "RECITATION" }] }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    await assert.rejects(
+      () => callStructuredModel({
+        endpoint: `http://127.0.0.1:${address.port}/generate`,
+        model: "test-model",
+        accessToken: "test-token",
+        timeoutMs: 5_000,
+        maxTokens: 32,
+        requestAttempts: 1,
+      }, {
+        label: "lesson-plan-bootstrap",
+        turnId: "empty-candidate-test",
+        systemPrompt: "Return JSON.",
+        prompt: "Return a lesson.",
+        responseSchema: { type: "object", properties: {} },
+        maxTokens: 32,
+        lessonPlanPart: "bootstrap",
+        lessonPlanAttempt: 1,
+      }),
+      (error) => error?.code === "VERTEX_RESPONSE_EMPTY"
+        && /finishReason=RECITATION/u.test(error.message),
+    );
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
 test("Lesson Plan bundle does not duplicate the provider client", async () => {
   const bundle = await readFile(join(root, "lesson-plan.js"), "utf8");
   assert.doesNotMatch(bundle, /async function callStructuredModel\(/u);

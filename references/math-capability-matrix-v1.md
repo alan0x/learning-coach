@@ -78,8 +78,6 @@ same production Lesson Plan path rather than a hand-written fixture:
   coordinates bound to it in 9.8 seconds.
 
 These are single-run capability checks, not latency or reliability statistics.
-Repeated real-model runs and `/learn` E2E are still required before this row is
-marked complete.
 
 A following three-run batch checked the same requests again:
 
@@ -94,9 +92,41 @@ A following three-run batch checked the same requests again:
   outline. These recovery rules contain no function names or subject-specific
   cases and add no request to the normal successful path.
 
-The multi-curve result proves eventual execution, not stable latency. Its long
-tail remains recorded as an open reliability/performance concern. A three-run
-sample is also too small for a production percentile claim.
+The reliability investigation then repeated several different static
+multi-curve lessons: polynomial comparison, trigonometric comparison, shifted
+parabolas, and absolute-value comparison. Across the recorded batches, 21
+courses completed and every successful course produced at least three curves
+in one plot with no invented numeric control. One earlier request failed when
+Vertex returned HTTP 200 with `finishReason=RECITATION` but no JSON. That
+provider response is now classified as an unusable combined response and
+enters the same bounded small-response fallback as truncation and timeout. Two
+post-fix repeats of the previously failing shifted-parabola case both completed
+in 8.7 and 21.4 seconds.
+
+The investigation also established a program/model responsibility boundary:
+
+- the model chooses the lesson outline, narration, formulas, comparisons, and
+  teaching intent;
+- program code assigns identity and references, parses formulas, removes exact
+  duplicate curves, aligns or derives labels, removes controls and tasks that
+  cannot affect a visual, computes axes and sampling, and compiles OLL;
+- synonymous or stale expression fields are collapsed into one canonical
+  representation instead of causing a full lesson retry;
+- a combined outline-and-first-section response is limited to 4,096 output
+  tokens and 30 seconds. If it is truncated, times out, contains no JSON, or has
+  an invalid outline, the program asks for the smaller outline and exact first
+  section separately. It does not repeat the same broad request;
+- the total budget for obtaining the first playable section is 60 seconds, so
+  fallback requests cannot extend the wait indefinitely;
+- if a formula is genuinely missing, the program does not invent mathematics.
+  It preserves the valid outline and regenerates only the affected section
+  under its exact capability schema.
+
+The normal successful path is still one model request. These rules do not use
+function names or test-question branches. They improve bounded recovery, but
+they do not remove Vertex latency variation. The sample is too small for a
+production p50/p95 claim, and `/learn` E2E remains required before the complete
+one-variable-function row is marked accepted.
 
 ## Rule for changing this matrix
 

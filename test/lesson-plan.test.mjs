@@ -31,6 +31,7 @@ const {
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
   buildLessonPlanAdmissionBootstrapJsonSchema,
+  buildLessonPlanAdmissionOutlineJsonSchema,
   compileAndValidateLessonPlan,
   deriveLessonRequestParts,
   generateLessonPlanWithModel,
@@ -2346,6 +2347,82 @@ test("a spoken fragment can request clarification without compiling a guessed le
   assert.deepEqual(prefixes, []);
 });
 
+test("a failed admission bootstrap keeps clarification semantics in the small-outline fallback", async () => {
+  const requests = [];
+  const timeout = Object.assign(new Error("bootstrap timed out"), { code: "VERTEX_REQUEST_TIMEOUT" });
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    requests.push(request);
+    if (request.label === "lesson-plan-bootstrap") throw timeout;
+    return JSON.stringify({
+      disposition: "clarify",
+      learner_response: "你想学习这本书的哪一部分？",
+    });
+  }, {
+    turn_id: "turn-voice-fragment-after-bootstrap-timeout",
+    learner_request: "The book.",
+    input_modality: "voice",
+  }, {
+    bootstrap_first_section: true,
+  });
+
+  assert.deepEqual(generated, {
+    disposition: "clarify",
+    learner_response: "你想学习这本书的哪一部分？",
+    model_calls: 2,
+  });
+  assert.deepEqual(requests.map((request) => request.label), [
+    "lesson-plan-bootstrap",
+    "lesson-plan-outline",
+  ]);
+  assert.ok(requests[1].response_schema.properties.outline);
+  assert.equal(requests[1].response_schema.properties.first_section, undefined);
+  assert.match(requests[1].system_prompt, /不要从可用画面或数学能力猜测/u);
+
+  const emptyResponse = Object.assign(new Error("empty provider candidate"), {
+    code: "VERTEX_RESPONSE_EMPTY",
+  });
+  const emptyCalls = [];
+  const recoveredFromEmpty = await generateLessonPlanWithModel(async (request) => {
+    emptyCalls.push(request.label);
+    if (request.label === "lesson-plan-bootstrap") throw emptyResponse;
+    return JSON.stringify({
+      disposition: "clarify",
+      learner_response: "你想学习这本书的哪一部分？",
+    });
+  }, {
+    turn_id: "turn-voice-fragment-after-empty-candidate",
+    learner_request: "The book.",
+    input_modality: "voice",
+  }, {
+    bootstrap_first_section: true,
+  });
+  assert.equal(recoveredFromEmpty.disposition, "clarify");
+  assert.deepEqual(emptyCalls, ["lesson-plan-bootstrap", "lesson-plan-outline"]);
+});
+
+test("the first playable deadline is shared by bootstrap and fallback requests", async () => {
+  const calls = [];
+  const timedOut = Object.assign(new Error("bootstrap timed out"), { code: "VERTEX_REQUEST_TIMEOUT" });
+  await assert.rejects(
+    () => generateLessonPlanWithModel(async (request) => {
+      calls.push(request);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      throw timedOut;
+    }, {
+      turn_id: "turn-first-playable-deadline",
+      learner_request: "解释单位圆和正弦函数。",
+      request_parts: ["解释单位圆和正弦函数。"],
+    }, {
+      bootstrap_first_section: true,
+      first_playable_timeout_ms: 5,
+    }),
+    (error) => error instanceof LessonPlanError
+      && error.code === "LESSON_PLAN_FIRST_PLAYABLE_TIMEOUT",
+  );
+  assert.equal(calls.length, 1, "the fallback must not start after the total first-playable budget expires");
+  assert.ok(calls[0].timeout_ms <= 5);
+});
+
 test("a clear spoken learning request still compiles the ordinary complete lesson", async () => {
   const plan = completeLessonPlanFixtures.unit_circle_to_sine;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
@@ -2397,9 +2474,13 @@ test("a clear spoken learning request still compiles the ordinary complete lesso
 
 test("the lesson admission schema does not force course fields for clarification", () => {
   const schema = buildLessonPlanAdmissionBootstrapJsonSchema(1);
+  const fallbackSchema = buildLessonPlanAdmissionOutlineJsonSchema(1);
   assert.deepEqual(schema.required, ["disposition", "learner_response"]);
   assert.ok(schema.properties.outline);
   assert.ok(schema.properties.first_section);
+  assert.deepEqual(fallbackSchema.required, ["disposition", "learner_response"]);
+  assert.ok(fallbackSchema.properties.outline);
+  assert.equal(fallbackSchema.properties.first_section, undefined);
 });
 
 test("the bootstrap path ignores model-authored viewport parameters and computes its own", async () => {
@@ -2591,7 +2672,7 @@ test("an invalid speculative first section does not consume the formal section a
   assert.equal(generated.lesson.steps.length, 3);
 });
 
-test("truncated model output retries only the affected lesson part", async () => {
+test("truncated combined output falls back to the small outline and exact section contracts", async () => {
   const plan = completeLessonPlanFixtures.unit_circle_to_sine;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
     version: plan.version,
@@ -2614,10 +2695,12 @@ test("truncated model output retries only the affected lesson part", async () =>
     })),
     close: plan.close,
   };
-  Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
+  // After the combined request fails, every section is requested through the
+  // exact section contract. Keep the fixture in that contract as well instead
+  // of returning the permissive bootstrap shape to an exact section request.
+  Object.assign(outline, modelCourseVisualStructure(plan, drafts));
   const calls = [];
   const rejected = [];
-  let bootstrapCalls = 0;
   let sectionTwoCalls = 0;
   const truncated = () => Object.assign(
     new Error("Vertex response was truncated at maxOutputTokens"),
@@ -2625,18 +2708,30 @@ test("truncated model output retries only the affected lesson part", async () =>
   );
 
   const generated = await generateLessonPlanWithModel(async (request) => {
-    calls.push({ label: request.label, section: request.section, attempt: request.attempt });
+    calls.push({
+      label: request.label,
+      section: request.section,
+      attempt: request.attempt,
+      max_output_tokens: request.max_output_tokens,
+      timeout_ms: request.timeout_ms,
+    });
     if (request.label === "lesson-plan-bootstrap") {
-      bootstrapCalls += 1;
-      if (bootstrapCalls === 1) throw truncated();
+      throw truncated();
+    }
+    if (request.label === "lesson-plan-outline") {
       assert.match(request.prompt, /previous_validation_error/u);
-      return JSON.stringify({ outline, first_section: drafts[0] });
+      return JSON.stringify(outline);
     }
     if (request.section === 2) {
       sectionTwoCalls += 1;
       if (sectionTwoCalls === 1) throw truncated();
       assert.match(request.prompt, /previous_validation_error/u);
     }
+    assert.deepEqual(
+      Object.keys(drafts[request.section - 1].course_visual_creates ?? {}).sort(),
+      (request.response_schema.properties.course_visual_creates?.required ?? []).sort(),
+      `section ${request.section} fixture must match the exact fallback contract`,
+    );
     return JSON.stringify(drafts[request.section - 1]);
   }, {
     turn_id: "turn-truncated-output-retry",
@@ -2648,13 +2743,14 @@ test("truncated model output retries only the affected lesson part", async () =>
   });
 
   assert.deepEqual(calls, [
-    { label: "lesson-plan-bootstrap", section: undefined, attempt: 1 },
-    { label: "lesson-plan-bootstrap", section: undefined, attempt: 2 },
-    { label: "lesson-plan-section", section: 2, attempt: 1 },
-    { label: "lesson-plan-section", section: 2, attempt: 2 },
-    { label: "lesson-plan-section", section: 3, attempt: 1 },
+    { label: "lesson-plan-bootstrap", section: undefined, attempt: 1, max_output_tokens: 4096, timeout_ms: 30000 },
+    { label: "lesson-plan-outline", section: undefined, attempt: 2, max_output_tokens: 4096, timeout_ms: 30000 },
+    { label: "lesson-plan-section", section: 1, attempt: 1, max_output_tokens: 4096, timeout_ms: 30000 },
+    { label: "lesson-plan-section", section: 2, attempt: 1, max_output_tokens: 4096, timeout_ms: 30000 },
+    { label: "lesson-plan-section", section: 2, attempt: 2, max_output_tokens: 4096, timeout_ms: 30000 },
+    { label: "lesson-plan-section", section: 3, attempt: 1, max_output_tokens: 4096, timeout_ms: 30000 },
   ]);
-  assert.equal(generated.model_calls, 5);
+  assert.equal(generated.model_calls, 6);
   assert.equal(generated.lesson.steps.length, 3);
   assert.deepEqual(
     rejected.map(({ label, section, attempt }) => ({ label, section, attempt })),
@@ -2663,6 +2759,59 @@ test("truncated model output retries only the affected lesson part", async () =>
       { label: "lesson-plan-section", section: 2, attempt: 1 },
     ],
   );
+
+  const timeoutCalls = [];
+  const timedOut = Object.assign(
+    new Error("Vertex lesson-plan-bootstrap exceeded its request timeout"),
+    { code: "VERTEX_REQUEST_TIMEOUT" },
+  );
+  const recoveredAfterTimeout = await generateLessonPlanWithModel(async (request) => {
+    timeoutCalls.push(request.label);
+    if (request.label === "lesson-plan-bootstrap") throw timedOut;
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
+    return JSON.stringify(drafts[request.section - 1]);
+  }, {
+    turn_id: "turn-timeout-output-fallback",
+    learner_request: "请结合单位圆和正弦图解释旋转如何变成周期波动。",
+    request_parts: ["请结合单位圆和正弦图解释旋转如何变成周期波动。"],
+  }, {
+    bootstrap_first_section: true,
+  });
+  assert.deepEqual(timeoutCalls, [
+    "lesson-plan-bootstrap",
+    "lesson-plan-outline",
+    "lesson-plan-section",
+    "lesson-plan-section",
+    "lesson-plan-section",
+  ]);
+  assert.equal(recoveredAfterTimeout.lesson.steps.length, 3);
+
+  const invalidOutlineCalls = [];
+  const recoveredAfterInvalidOutline = await generateLessonPlanWithModel(async (request) => {
+    invalidOutlineCalls.push(request.label);
+    if (request.label === "lesson-plan-bootstrap") {
+      return JSON.stringify({
+        outline: { ...outline, sections: [] },
+        first_section: drafts[0],
+      });
+    }
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
+    return JSON.stringify(drafts[request.section - 1]);
+  }, {
+    turn_id: "turn-invalid-outline-fallback",
+    learner_request: "请结合单位圆和正弦图解释旋转如何变成周期波动。",
+    request_parts: ["请结合单位圆和正弦图解释旋转如何变成周期波动。"],
+  }, {
+    bootstrap_first_section: true,
+  });
+  assert.deepEqual(invalidOutlineCalls, [
+    "lesson-plan-bootstrap",
+    "lesson-plan-outline",
+    "lesson-plan-section",
+    "lesson-plan-section",
+    "lesson-plan-section",
+  ]);
+  assert.equal(recoveredAfterInvalidOutline.lesson.steps.length, 3);
 });
 
 test("the staged model path lowers positional curve tokens into a multi-number plot", async () => {
@@ -2740,11 +2889,12 @@ test("the staged model path lowers positional curve tokens into a multi-number p
   );
   assert.equal(rejectedParts.length, 1);
   assert.equal(rejectedParts[0].section, 1);
-  assert.equal(rejectedParts[0].error.code, "LESSON_PLAN_EXPRESSION");
+  assert.equal(rejectedParts[0].error.code, "LESSON_PLAN_CAPABILITY_PARAMETER");
+  assert.match(rejectedParts[0].error.message, /at most one number as its moving sample/u);
   const repairedCall = calls.filter((call) => call.label === "lesson-plan-section"
     && JSON.parse(call.prompt).section_to_write === 1).at(-1);
   assert.match(repairedCall.prompt, /previous_validation_error/u);
-  assert.match(repairedCall.prompt, /change the whole curve/u);
+  assert.match(repairedCall.prompt, /at most one number as its moving sample/u);
   const plot = generated.lesson.steps[0].beats[0].actions.find(
     (action) => action.do === "write" && action.kind === "plot",
   );
@@ -2827,6 +2977,49 @@ test("the staged model path lowers several static formulas into one multi-curve 
       ["sin(x)", "y = sin(x)"],
     ],
   );
+  assert.equal(plot.content.points, undefined, "a static comparison must not inherit a stray moving point");
+  assert.equal(
+    generated.lesson.lesson.variables?.[0]?.control,
+    undefined,
+    "an unbound model number must not create a dead slider",
+  );
+  assert.equal(
+    generated.lesson.steps.flatMap((step) => step.beats)
+      .flatMap((beat) => beat.actions)
+      .some((action) => action.do === "animate"),
+    false,
+    "an unbound model number must not leave a dead animation",
+  );
+  assert.equal(generated.lesson.lesson.activities, undefined);
+
+  const noisyDrafts = structuredClone(drafts);
+  const noisyVisual = noisyDrafts[0].course_visual_creates.visual_1.content;
+  noisyVisual.parameters.formulas = ["x", "x", "x^2"];
+  noisyVisual.parameters.expression = "x^9";
+  noisyVisual.parameters.expressions = ["x^8"];
+  noisyVisual.parameters.curve_labels = ["mismatched label"];
+  noisyVisual.numbers = [1];
+  const normalized = await generateLessonPlanWithModel(async (request) => {
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
+    const section = JSON.parse(request.prompt).section_to_write;
+    return JSON.stringify(noisyDrafts[section - 1]);
+  }, {
+    turn_id: "turn-noisy-static-function-comparison",
+    learner_request: "比较 y=x 和 y=x^2。",
+    request_parts: ["比较 y=x 和 y=x^2。"],
+  });
+  const normalizedPlot = normalized.lesson.steps[0].beats[0].actions.find(
+    (action) => action.do === "write" && action.kind === "plot",
+  );
+  assert.deepEqual(
+    normalizedPlot.content.curves.map((curve) => [curve.expression, curve.label]),
+    [
+      ["x", "y = x"],
+      ["(x)^(2)", "y = (x)^(2)"],
+    ],
+  );
+  assert.equal(normalizedPlot.content.points, undefined);
+  assert.equal(normalized.lesson.lesson.variables?.[0]?.control, undefined);
 
   const invalidDrafts = structuredClone(drafts);
   invalidDrafts[0].course_visual_creates.visual_1.content.parameters.formulas = ["x+n1", "x^2"];

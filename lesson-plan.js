@@ -12673,6 +12673,18 @@ function buildLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0) {
     }, ["disposition", "learner_response"])
   });
 }
+function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
+  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
+    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
+  }
+  return vertexCompatible({
+    ...object({
+      disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
+      learner_response: string(480),
+      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount)
+    }, ["disposition", "learner_response"])
+  });
+}
 function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
   return object({
     version: { enum: [LESSON_PLAN_VERSION] },
@@ -12835,6 +12847,13 @@ var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
 \u540C\u4E00\u6B21\u8FD4\u56DE outline \u548C first_section\u3002first_section \u5FC5\u987B\u5B9E\u73B0 outline \u7B2C\u4E00\u8282\uFF0C\u53EA\u4F7F\u7528 outline \u5DF2\u58F0\u660E\u7684\u6570\u503C\u3001\u753B\u9762\u548C\u53EF\u590D\u7528\u5185\u5BB9\uFF1B\u5185\u90E8\u4F4D\u7F6E\u3001\u7F16\u53F7\u548C\u5F15\u7528\u7531\u7A0B\u5E8F\u5EFA\u7ACB\u3002
 ${SECTION_SYSTEM_PROMPT}`;
+var ADMISSION_OUTLINE_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u6587\u5B57\u8F93\u5165\u6216\u8BED\u97F3\u8F93\u5165\u5F00\u59CB\u4E00\u6574\u8282\u767D\u677F\u8BFE\u7A0B\u3002\u5148\u5224\u65AD\u5F53\u524D\u5185\u5BB9\u662F\u5426\u8DB3\u4EE5\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\uFF0C\u4E0D\u8981\u4ECE\u53EF\u7528\u753B\u9762\u6216\u6570\u5B66\u80FD\u529B\u731C\u6D4B\u7528\u6237\u6CA1\u6709\u8868\u8FBE\u7684\u4E3B\u9898\u3002
+- generate_lesson\uFF1A\u7528\u6237\u63D0\u51FA\u4E86\u5B66\u4E60\u95EE\u9898\u3001\u89E3\u91CA\u8BF7\u6C42\uFF0C\u6216\u6E05\u695A\u8BF4\u51FA\u4E86\u60F3\u5B66\u4E60\u7684\u4E3B\u9898\u3002\u7B80\u77ED\u4F46\u660E\u786E\u7684\u4E3B\u9898\u4E5F\u5C5E\u4E8E\u8FD9\u4E00\u7C7B\u3002\u6B64\u65F6\u586B\u5199\u5B8C\u6574 outline\uFF0Clearner_response \u7559\u7A7A\u3002
+- clarify\uFF1A\u8FD9\u662F\u771F\u5B9E\u8BDD\u8BED\uFF0C\u4F46\u5185\u5BB9\u6B8B\u7F3A\u3001\u542B\u4E49\u4E0D\u6E05\u6216\u6CA1\u6709\u8BF4\u660E\u8981\u5B66\u4EC0\u4E48\uFF0C\u65E0\u6CD5\u53EF\u9760\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\u3002\u6B64\u65F6\u4E0D\u8981\u586B\u5199 outline\uFF0C\u7528 learner_response \u7B80\u77ED\u8FFD\u95EE\u7528\u6237\u60F3\u5B66\u4E60\u4EC0\u4E48\u3002
+- ignore\uFF1A\u53EA\u662F\u8BED\u6C14\u8BCD\u3001\u53E3\u5934\u586B\u5145\u6216\u6CA1\u6709\u53EF\u56DE\u5E94\u5185\u5BB9\u3002\u6B64\u65F6\u4E0D\u8981\u586B\u5199 outline\uFF0Clearner_response \u7559\u7A7A\u3002
+\u53EA\u505A\u4E0A\u8FF0\u8BED\u4E49\u5224\u65AD\uFF0C\u4E0D\u4F7F\u7528\u5B57\u6570\u3001\u8BED\u8A00\u6216\u56FA\u5B9A\u5173\u952E\u8BCD\u4F5C\u4E3A\u89C4\u5219\u3002
+
+${OUTLINE_SYSTEM_PROMPT}`;
 var ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u6587\u5B57\u8F93\u5165\u6216\u8BED\u97F3\u8F93\u5165\u5F00\u59CB\u4E00\u6574\u8282\u767D\u677F\u8BFE\u7A0B\u3002\u5148\u5224\u65AD\u5F53\u524D\u5185\u5BB9\u662F\u5426\u8DB3\u4EE5\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\uFF0C\u4E0D\u8981\u4ECE\u53EF\u7528\u753B\u9762\u6216\u6570\u5B66\u80FD\u529B\u731C\u6D4B\u7528\u6237\u6CA1\u6709\u8868\u8FBE\u7684\u4E3B\u9898\u3002
 - generate_lesson\uFF1A\u7528\u6237\u63D0\u51FA\u4E86\u5B66\u4E60\u95EE\u9898\u3001\u89E3\u91CA\u8BF7\u6C42\uFF0C\u6216\u6E05\u695A\u8BF4\u51FA\u4E86\u60F3\u5B66\u4E60\u7684\u4E3B\u9898\u3002\u7B80\u77ED\u4F46\u660E\u786E\u7684\u4E3B\u9898\uFF08\u4F8B\u5982\u201C\u52FE\u80A1\u5B9A\u7406\u201D\uFF09\u4E5F\u5C5E\u4E8E\u8FD9\u4E00\u7C7B\u3002\u6B64\u65F6\u586B\u5199\u5B8C\u6574 outline \u548C first_section\uFF0Clearner_response \u7559\u7A7A\u3002
 - clarify\uFF1A\u8FD9\u662F\u771F\u5B9E\u8BDD\u8BED\uFF0C\u4F46\u5185\u5BB9\u6B8B\u7F3A\u3001\u542B\u4E49\u4E0D\u6E05\u6216\u6CA1\u6709\u8BF4\u660E\u8981\u5B66\u4EC0\u4E48\uFF0C\u65E0\u6CD5\u53EF\u9760\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\u3002\u6B64\u65F6\u4E0D\u8981\u586B\u5199 outline \u6216 first_section\uFF0C\u7528 learner_response \u7B80\u77ED\u8FFD\u95EE\u7528\u6237\u60F3\u5B66\u4E60\u4EC0\u4E48\u3002\u4F8B\u5982 \u201CThe book.\u201D \u5E94\u8FFD\u95EE\u7528\u6237\u60F3\u4E86\u89E3\u8FD9\u672C\u4E66\u7684\u4EC0\u4E48\u5185\u5BB9\uFF0C\u800C\u4E0D\u662F\u731C\u6210\u6570\u5B66\u8BFE\u7A0B\u3002
@@ -12842,6 +12861,11 @@ var ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u6
 \u53EA\u505A\u4E0A\u8FF0\u8BED\u4E49\u5224\u65AD\uFF0C\u4E0D\u4F7F\u7528\u5B57\u6570\u3001\u8BED\u8A00\u6216\u56FA\u5B9A\u5173\u952E\u8BCD\u4F5C\u4E3A\u89C4\u5219\u3002
 
 ${BOOTSTRAP_SYSTEM_PROMPT}`;
+var LESSON_PLAN_BOOTSTRAP_MAX_OUTPUT_TOKENS = 4096;
+var LESSON_PLAN_OUTLINE_MAX_OUTPUT_TOKENS = 4096;
+var LESSON_PLAN_SECTION_MAX_OUTPUT_TOKENS = 4096;
+var LESSON_PLAN_MODEL_PART_TIMEOUT_MS = 3e4;
+var LESSON_PLAN_FIRST_PLAYABLE_TIMEOUT_MS = 6e4;
 function positiveInteger(value, fallback, label) {
   const result = value ?? fallback;
   if (!Number.isInteger(result) || result < 1) throw new Error(`${label} must be a positive integer`);
@@ -13219,30 +13243,52 @@ function lowerModelBoardContent(kind, value, numberCount) {
   }
   const capability2 = content.capability;
   const parameters2 = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? { ...content.parameters } : {};
-  if (capability2 === "function_plot" && parameters2.formulas !== void 0) {
-    if (!Array.isArray(parameters2.formulas) || parameters2.formulas.length < 1 || parameters2.formulas.length > 8) {
-      formulaError(
-        "$lessonPlanSection.visual.parameters.formulas",
-        "expected one to eight formulas"
-      );
-    }
-    const parsed = parameters2.formulas.map((formula, index) => parseModelFormula(
-      formula,
-      numberCount,
-      `$lessonPlanSection.visual.parameters.formulas[${index}]`
-    ));
-    if (parsed.length === 1) {
-      parameters2.expression_tokens = parsed[0];
-    } else {
-      if (parsed.some((expression) => expression.some((token) => token.kind === "number"))) {
+  let forceNoNumbers = false;
+  if (capability2 === "function_plot") {
+    const rawFormulas = parameters2.formulas !== void 0 ? parameters2.formulas : typeof parameters2.expression === "string" ? [parameters2.expression] : Array.isArray(parameters2.expressions) ? parameters2.expressions : void 0;
+    if (rawFormulas !== void 0) {
+      if (!Array.isArray(rawFormulas) || rawFormulas.length < 1 || rawFormulas.length > 8) {
         formulaError(
           "$lessonPlanSection.visual.parameters.formulas",
-          "a multi-curve comparison currently supports static formulas only; use one formula when lesson numbers change the whole curve"
+          "expected one to eight formulas"
         );
       }
-      parameters2.expressions = parsed.map(mathExpressionToOll);
+      delete parameters2.formulas;
+      delete parameters2.expression;
+      delete parameters2.expressions;
+      delete parameters2.expression_tokens;
+      const parsed = rawFormulas.map((formula, index) => parseModelFormula(
+        formula,
+        numberCount,
+        `$lessonPlanSection.visual.parameters.formulas[${index}]`
+      ));
+      if (parsed.length === 1) {
+        parameters2.expression_tokens = parsed[0];
+      } else {
+        if (parsed.some((expression) => expression.some((token) => token.kind === "number"))) {
+          formulaError(
+            "$lessonPlanSection.visual.parameters.formulas",
+            "a multi-curve comparison currently supports static formulas only; use one formula when lesson numbers change the whole curve"
+          );
+        }
+        const canonical = parsed.map(mathExpressionToOll);
+        const retainedIndexes = [];
+        const seen = /* @__PURE__ */ new Set();
+        canonical.forEach((expression, index) => {
+          if (seen.has(expression)) return;
+          seen.add(expression);
+          retainedIndexes.push(index);
+        });
+        parameters2.expressions = retainedIndexes.map((index) => canonical[index]);
+        if (Array.isArray(parameters2.curve_labels) && parameters2.curve_labels.length === canonical.length) {
+          parameters2.curve_labels = retainedIndexes.map((index) => parameters2.curve_labels[index]);
+        } else {
+          delete parameters2.curve_labels;
+        }
+        delete parameters2.curve_label;
+        forceNoNumbers = true;
+      }
     }
-    delete parameters2.formulas;
   }
   if (typeof content.title === "string" && parameters2.title === void 0) parameters2.title = content.title;
   if (typeof capability2 === "string" && capability2 in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
@@ -13255,11 +13301,12 @@ function lowerModelBoardContent(kind, value, numberCount) {
   }
   const numberLimit = typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITY_NUMBER_LIMITS ? LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2] : 0;
   let validNumbers = Array.isArray(content.numbers) ? [...new Set(content.numbers.filter((number) => Number.isInteger(number) && Number(number) >= 1 && Number(number) <= numberCount))].slice(0, numberLimit) : [];
+  if (forceNoNumbers) validNumbers = [];
   if (capability2 === "function_plot" && Array.isArray(parameters2.expression_tokens)) {
     const formulaNumbers = [...new Set(parameters2.expression_tokens.flatMap((token) => token && typeof token === "object" && !Array.isArray(token) && token.kind === "number" && Number.isInteger(token.number) ? [Number(token.number)] : []))].filter((number) => number >= 1 && number <= numberCount).slice(0, numberLimit);
     if (formulaNumbers.length > 0) validNumbers = formulaNumbers;
   }
-  if (validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
+  if (!forceNoNumbers && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
     validNumbers = [1];
   }
   return {
@@ -13267,6 +13314,45 @@ function lowerModelBoardContent(kind, value, numberCount) {
     ...Object.keys(parameters2).length === 0 ? {} : { parameters: parameters2 },
     ...validNumbers.length === 0 ? {} : { numbers: validNumbers }
   };
+}
+function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
+  const outline = structuredClone(outlineValue);
+  const drafts = structuredClone(draftValues);
+  const visuallyBound = /* @__PURE__ */ new Set();
+  for (const section of drafts) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" && action.action !== "revise" || action.kind !== "visual") continue;
+        const visual = action.content;
+        for (const number of visual.numbers ?? []) visuallyBound.add(number);
+      }
+    }
+  }
+  outline.numbers?.forEach((number, index) => {
+    if (!visuallyBound.has(index + 1)) delete number.student_control;
+  });
+  for (const section of drafts) {
+    for (const moment of section.moments) {
+      moment.actions = moment.actions.filter((action) => action.action !== "animate" || visuallyBound.has(action.number));
+      if (moment.actions.length === 0) {
+        moment.actions.push({
+          action: "teacher_expression",
+          expression: "neutral",
+          timing: "after_speech"
+        });
+      }
+    }
+    if (!section.student_activities) continue;
+    section.student_activities = section.student_activities.flatMap((activity) => {
+      if (activity.kind !== "number_target") return [activity];
+      const numberControls = activity.number_controls.filter(({ number }) => visuallyBound.has(number));
+      const expressionNumbers = new Set((activity.expression ?? []).flatMap((token) => token.kind === "number" ? [token.number] : []));
+      if (numberControls.length === 0 || [...expressionNumbers].some((number) => !visuallyBound.has(number))) return [];
+      return [{ ...activity, number_controls: numberControls }];
+    });
+    if (section.student_activities.length === 0) delete section.student_activities;
+  }
+  return { outline, drafts };
 }
 function lowerModelActionReferences(actionName, action, currentMoment, numberCount) {
   const lowered = { ...action };
@@ -14084,10 +14170,10 @@ function isRateLimitError(error) {
   const message = error instanceof Error ? error.message : String(error);
   return /(?:\b429\b|RESOURCE_EXHAUSTED|rate[ _-]?limit)/iu.test(message);
 }
-function isTruncatedModelResponse(error) {
-  return Boolean(
-    error && typeof error === "object" && !Array.isArray(error) && error.code === "VERTEX_RESPONSE_TRUNCATED"
-  );
+function isBoundedModelResponseFailure(error) {
+  if (!error || typeof error !== "object" || Array.isArray(error)) return false;
+  const code = error.code;
+  return code === "VERTEX_RESPONSE_TRUNCATED" || code === "VERTEX_RESPONSE_EMPTY" || code === "VERTEX_REQUEST_TIMEOUT";
 }
 function compilePrefix(outline, drafts, options) {
   const sectionCount = drafts.length;
@@ -14111,33 +14197,30 @@ function compilePrefix(outline, drafts, options) {
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
     close: { summary: "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002", focus: [focus] }
   };
-  const prefixPlan = assembleLessonPlan(prefixOutline, drafts, options);
-  const activeNumbers = /* @__PURE__ */ new Set();
-  for (const section of prefixPlan.sections) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
-        if (action.action === "create" || action.action === "revise") {
-          if (action.kind === "visual") {
-            for (const number of action.content.numbers ?? []) activeNumbers.add(number);
-          }
-        } else if (action.action === "animate") {
-          activeNumbers.add(action.number);
-        }
-      }
-    }
-    for (const activity of section.student_activities ?? []) {
-      if (activity.kind !== "number_target") continue;
-      for (const control of activity.number_controls) activeNumbers.add(control.number);
-    }
-  }
-  prefixPlan.numbers?.forEach((number, index) => {
-    if (!activeNumbers.has(index + 1)) delete number.student_control;
-  });
+  const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
+  const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, options);
 }
 async function generateLessonPlanWithModel(model, input, options = {}) {
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");
   const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
+  const firstPlayableTimeout = positiveInteger(
+    options.first_playable_timeout_ms,
+    LESSON_PLAN_FIRST_PLAYABLE_TIMEOUT_MS,
+    "first_playable_timeout_ms"
+  );
+  const firstPlayableStartedAt = Date.now();
+  const firstPlayablePartTimeout = () => {
+    const remaining = firstPlayableTimeout - (Date.now() - firstPlayableStartedAt);
+    if (remaining < 1) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_FIRST_PLAYABLE_TIMEOUT",
+        "$lessonPlan.first_playable",
+        `the first playable section exceeded ${firstPlayableTimeout}ms`
+      );
+    }
+    return Math.min(LESSON_PLAN_MODEL_PART_TIMEOUT_MS, remaining);
+  };
   const context = inputContext(input);
   const fixedRequestParts = requestParts(input);
   const bootstrapFirstSection = options.bootstrap_first_section === true;
@@ -14149,17 +14232,20 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   let outline;
   let bootstrappedFirstSection;
   let outlineError;
+  let tryCombinedBootstrap = bootstrapFirstSection;
   const sectionErrors = /* @__PURE__ */ new Map();
   const sectionAttempts = /* @__PURE__ */ new Map();
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const combinedBootstrap = tryCombinedBootstrap;
+    const responseUsesEnvelope = combinedBootstrap || admissionInput;
     let raw;
     try {
       raw = await model({
-        label: bootstrapFirstSection ? "lesson-plan-bootstrap" : "lesson-plan-outline",
-        part: bootstrapFirstSection ? "bootstrap" : "outline",
+        label: combinedBootstrap ? "lesson-plan-bootstrap" : "lesson-plan-outline",
+        part: combinedBootstrap ? "bootstrap" : "outline",
         attempt,
         turn_id: input.turn_id,
-        system_prompt: bootstrapFirstSection ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
+        system_prompt: combinedBootstrap ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
         prompt: JSON.stringify({
           course: context,
           request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
@@ -14168,18 +14254,19 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
             number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
             guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
           })),
-          ...bootstrapFirstSection ? {
+          ...combinedBootstrap ? {
             first_section_to_write: 1,
             first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions"
           } : {},
           ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
         }),
-        response_schema: bootstrapFirstSection ? admissionInput ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
-        max_output_tokens: bootstrapFirstSection ? 16384 : 8192
+        response_schema: combinedBootstrap ? admissionInput ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+        max_output_tokens: combinedBootstrap ? LESSON_PLAN_BOOTSTRAP_MAX_OUTPUT_TOKENS : LESSON_PLAN_OUTLINE_MAX_OUTPUT_TOKENS,
+        timeout_ms: firstPlayablePartTimeout()
       });
       modelCalls += 1;
     } catch (error) {
-      if (!isTruncatedModelResponse(error)) throw error;
+      if (!isBoundedModelResponseFailure(error)) throw error;
       modelCalls += 1;
       outlineError = error;
       await options.on_rejected_part?.({
@@ -14187,16 +14274,17 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         attempt,
         error: rejectionDetails(error)
       });
+      if (combinedBootstrap) tryCombinedBootstrap = false;
       if (attempt === maxAttempts) throw error;
       continue;
     }
     try {
-      const parsed = pruneModelNulls(parseModelJson(raw, bootstrapFirstSection ? "lessonPlanBootstrap" : "lessonPlanOutline"));
-      if (bootstrapFirstSection && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
+      const parsed = pruneModelNulls(parseModelJson(raw, responseUsesEnvelope ? "lessonPlanEnvelope" : "lessonPlanOutline"));
+      if (responseUsesEnvelope && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
         throw new LessonPlanError(
           "LESSON_PLAN_MODEL_JSON",
-          "$lessonPlanBootstrap",
-          "bootstrap response must be an object"
+          "$lessonPlanEnvelope",
+          "lesson response envelope must be an object"
         );
       }
       if (admissionInput) {
@@ -14225,7 +14313,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           };
         }
       }
-      const rawOutline = bootstrapFirstSection ? parsed.outline : parsed;
+      const rawOutline = responseUsesEnvelope ? parsed.outline : parsed;
       outline = validateLessonPlanOutline(
         lowerModelOutline(
           coerceLessonPlanOutlineModelNumbers(
@@ -14235,7 +14323,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         ),
         fixedRequestParts.length
       );
-      if (bootstrapFirstSection) {
+      if (combinedBootstrap) {
         try {
           const positionedFirstSection = reconcileBootstrapFirstSectionPositions(
             coerceLessonPlanBootstrapSectionModelNumbers(
@@ -14268,6 +14356,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         attempt,
         error: rejectionDetails(error)
       });
+      if (combinedBootstrap) tryCombinedBootstrap = false;
     }
   }
   if (!outline) throw outlineError;
@@ -14320,11 +14409,12 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
         }),
         response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section),
-        max_output_tokens: 12288
+        max_output_tokens: LESSON_PLAN_SECTION_MAX_OUTPUT_TOKENS,
+        timeout_ms: section === 1 ? firstPlayablePartTimeout() : LESSON_PLAN_MODEL_PART_TIMEOUT_MS
       });
       modelCalls += 1;
     } catch (error) {
-      if (isTruncatedModelResponse(error)) {
+      if (isBoundedModelResponseFailure(error)) {
         modelCalls += 1;
         sectionErrors.set(section, error);
         await options.on_rejected_part?.({
@@ -14448,11 +14538,16 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     await Promise.allSettled(workers);
   }
   let compiled;
+  let compiledOutline;
+  let compiledDrafts;
   let finalError;
   for (let attempt = 1; attempt <= outline.sections.length * maxAttempts; attempt += 1) {
     try {
-      const plan = assembleLessonPlan(outline, drafts, options.compile);
+      const normalized = normalizeExecutableNumberInteractions(outline, drafts);
+      const plan = assembleLessonPlan(normalized.outline, normalized.drafts, options.compile);
       compiled = compileAndValidateLessonPlan(plan, options.compile);
+      compiledOutline = normalized.outline;
+      compiledDrafts = normalized.drafts;
       break;
     } catch (error) {
       finalError = error;
@@ -14471,8 +14566,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   if (!compiled) throw finalError;
   return {
     ...compiled,
-    outline,
-    drafts: drafts.map((draft) => structuredClone(draft)),
+    outline: compiledOutline ?? outline,
+    drafts: (compiledDrafts ?? drafts).map((draft) => structuredClone(draft)),
     model_calls: modelCalls
   };
 }
@@ -14490,6 +14585,7 @@ export {
   LessonPlanError,
   assembleLessonPlan,
   buildLessonPlanAdmissionBootstrapJsonSchema,
+  buildLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanBootstrapJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,

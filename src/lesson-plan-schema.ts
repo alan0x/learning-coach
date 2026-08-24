@@ -500,6 +500,25 @@ export function buildLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0
   });
 }
 
+/**
+ * Smaller recovery schema for composer input after the combined outline +
+ * first-section request was truncated, timed out, or failed local outline
+ * validation. It preserves the same generate/clarify/ignore admission decision
+ * without asking the provider to author another speculative first section.
+ */
+export function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
+  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
+    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
+  }
+  return vertexCompatible({
+    ...object({
+      disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
+      learner_response: string(480),
+      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
+    }, ["disposition", "learner_response"]),
+  });
+}
+
 function lessonPlanOutlineShapeJsonSchema(requestPartCount: number): LessonPlanJsonSchema {
   return object({
     version: { enum: [LESSON_PLAN_VERSION] },

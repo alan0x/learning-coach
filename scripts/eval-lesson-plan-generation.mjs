@@ -66,6 +66,7 @@ function wait(milliseconds) {
 for (const item of selected) {
   for (let run = 1; run <= repeat; run += 1) {
   const prefixes = [];
+  const rejectedParts = [];
   const startedAt = Date.now();
   let generated;
   try {
@@ -76,11 +77,14 @@ for (const item of selected) {
       language: "zh-CN",
     }, {
       max_concurrency: concurrency,
-      on_rejected_part: (event) => process.stderr.write(`${JSON.stringify({
-        stage: "lesson-plan-local-rejection",
-        id: item.id,
-        ...event,
-      })}\n`),
+      on_rejected_part: (event) => {
+        rejectedParts.push(event);
+        process.stderr.write(`${JSON.stringify({
+          stage: "lesson-plan-local-rejection",
+          id: item.id,
+          ...event,
+        })}\n`);
+      },
       on_playable_prefix: ({ completed_sections }) => prefixes.push({
         completed_sections,
         elapsed_ms: Date.now() - startedAt,
@@ -108,9 +112,17 @@ for (const item of selected) {
     for (const kind of item.expected_kinds) assert.ok(writeKinds.has(kind), `missing write kind '${kind}'`);
     if (item.requires_animation) assert.ok(actions.some((action) => action.do === "animate"), "missing animation");
     if (item.minimum_numeric_controls !== undefined) {
+      const numericControls = generated.lesson.lesson.variables?.filter((variable) => variable.control) ?? [];
       assert.ok(
-        (generated.lesson.lesson.variables?.length ?? 0) >= item.minimum_numeric_controls,
+        numericControls.length >= item.minimum_numeric_controls,
         `expected at least ${item.minimum_numeric_controls} numeric controls`,
+      );
+    }
+    if (item.maximum_numeric_controls !== undefined) {
+      const numericControls = generated.lesson.lesson.variables?.filter((variable) => variable.control) ?? [];
+      assert.ok(
+        numericControls.length <= item.maximum_numeric_controls,
+        `expected at most ${item.maximum_numeric_controls} numeric controls`,
       );
     }
     if (item.required_curve_number_count !== undefined) {
@@ -146,8 +158,10 @@ for (const item of selected) {
       sections: generated.lesson.steps.length,
       first_playable_ms: prefixes[0]?.elapsed_ms,
       write_kinds: [...writeKinds].sort(),
-      numeric_controls: generated.lesson.lesson.variables?.length ?? 0,
+      numeric_controls: generated.lesson.lesson.variables?.filter((variable) => variable.control).length ?? 0,
       maximum_curves_in_one_plot: Math.max(0, ...plots.map((plot) => plot.curves?.length ?? 0)),
+      rejected_part_count: rejectedParts.length,
+      rejected_parts: rejectedParts,
       prefixes,
     };
     results.push(result);
