@@ -23,9 +23,11 @@ import {
   buildLessonPlanBootstrapJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
+  buildLessonPlanAdmissionBootstrapJsonSchema,
   coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
+  LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES,
   LESSON_PLAN_VISUAL_PARAMETER_NAMES,
   type LessonPlanJsonSchema,
 } from "./lesson-plan-schema.js";
@@ -37,6 +39,7 @@ export interface LessonPlanGenerationInput {
   learner_context?: string;
   tutor_context?: string;
   request_parts?: string[];
+  input_modality?: "text" | "voice";
 }
 
 export interface LessonPlanModelRequest {
@@ -81,10 +84,18 @@ export interface GeneratedLessonPlan extends CompiledLessonPlan {
   model_calls: number;
 }
 
+export interface NonLessonPlanResponse {
+  disposition: "clarify" | "ignore";
+  learner_response: string;
+  model_calls: number;
+}
+
+export type LessonPlanGenerationResult = GeneratedLessonPlan | NonLessonPlanResponse;
+
 const OUTLINE_SYSTEM_PROMPT = `设计一整节完整课程的目录，不生成 OLL，不填写执行 ID、组件名或自由对象名。
 - course_visuals 一次列出课程真正需要的主要画面；只选 Schema 中的 required_features。相同画面后续必须复用，不能因标题、布局、范围、相机或颜色再建一份。只有确需并排比较时才用 comparison 并指向较早画面；supporting 也要指向较早画面。
 - 需要切分并移动图形证明面积时，使用 polygon_pieces、rigid_rearrangement、area_relation；ordered_process_steps 只是静态流程，不能冒充移动图形或数值控件。
-- numbers 只声明有教学作用的共享数值。画面所需数值及顺序以 available_visual_recipes 为准。
+- numbers 只声明有教学作用的共享数值、教学范围和初始值。画面所需数值及顺序以 available_visual_recipes 为准。滑杆种类、步长和能力允许的执行范围由程序统一生成，不要填写或估算。
 - request_coverage 逐项覆盖 request_parts。能落实才写 teach 和章节；明确要求但当前能力无法实现时写 unsupported、空章节和原因，不得用文字或错误画面冒充。
 - sections 可以有多节；每节可有多段旁白、板书、动画和练习。close 只写总结。
 只返回符合响应 Schema 的 JSON。`;
@@ -94,8 +105,9 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - visuals_for_section 中 create 的画面只在根层 course_visual_creates 描述并指定 moment；reuse 的旧画面不得重建。普通公式、笔记只用 Schema 提供的清单。空清单省略。
 - focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象并决定动作顺序。placement 只写相对方向。可复用普通板书只填根层必填项，不填写内部位置。
 - 小数按 Schema 的 mantissa、scale 填写，例如 -1.5 为 -15、1；6.283 为 6283、3。
-- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、相机和运行时引用由程序生成。
-- function_plot 的 parameters.formula 只写中缀公式右侧：x 是横轴，n1、n2 是课程第 1、2 个数值；支持 + - * / ^、括号、pi、e 和常见单参数函数。例：(x-n1)^2+n2、(1+1/x)^x。公式必须依赖 x；程序解析公式、绑定控件并计算坐标范围。
+- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
+- function_plot 的 parameters.formula 只写中缀公式右侧：x 是横轴，n1、n2 是课程第 1、2 个数值；支持 + - * / ^、括号、pi、e 和常见单参数函数。例：(x-n1)^2+n2、(1+1/x)^x。公式必须依赖 x；程序解析公式、绑定控件并计算坐标范围。函数图和三维曲面都不填写视窗、采样密度或网格精度。
+- animations 只决定演示哪个数值、目标值和教学节奏；程序统一生成缓动方式。placement 只决定相对方向；程序统一生成锚点、对齐和间距。
 - geometric_rearrangement 的数值表示重排进度；construction 从 Schema 选择。process_diagram 没有数值或动画。
 只返回符合响应 Schema 的 JSON。`;
 
@@ -103,6 +115,14 @@ const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
 同一次返回 outline 和 first_section。first_section 必须实现 outline 第一节，只使用 outline 已声明的数值、画面和可复用内容；内部位置、编号和引用由程序建立。
 ${SECTION_SYSTEM_PROMPT}`;
+
+const ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户正尝试从文字输入或语音输入开始一整节白板课程。先判断当前内容是否足以确定课程主题，不要从可用画面或数学能力猜测用户没有表达的主题。
+- generate_lesson：用户提出了学习问题、解释请求，或清楚说出了想学习的主题。简短但明确的主题（例如“勾股定理”）也属于这一类。此时填写完整 outline 和 first_section，learner_response 留空。
+- clarify：这是真实话语，但内容残缺、含义不清或没有说明要学什么，无法可靠确定课程主题。此时不要填写 outline 或 first_section，用 learner_response 简短追问用户想学习什么。例如 “The book.” 应追问用户想了解这本书的什么内容，而不是猜成数学课程。
+- ignore：只是语气词、口头填充或没有可回应内容。此时不要填写 outline 或 first_section，learner_response 留空。
+只做上述语义判断，不使用字数、语言或固定关键词作为规则。
+
+${BOOTSTRAP_SYSTEM_PROMPT}`;
 
 function positiveInteger(value: number | undefined, fallback: number, label: string): number {
   const result = value ?? fallback;
@@ -149,6 +169,24 @@ function pruneModelNulls(value: unknown): unknown {
   );
 }
 
+const TARGET_SLIDER_INTERVALS = 200;
+const PROGRAM_HINT_AFTER_ATTEMPTS = 2;
+const PROGRAM_ANIMATION_EASING = "linear" as const;
+const PROGRAM_SCENE_ANGULAR_TOLERANCE_DEGREES = 7.5;
+const PROGRAM_SCENE_ZOOM_TOLERANCE = 0.1;
+
+/**
+ * Convert a numeric teaching range into a stable slider step.
+ * The model decides what the number means and which range is useful. This
+ * function owns the mechanical resolution so a probabilistic decimal can
+ * never create an unusable control or trigger another model request. Deriving
+ * the step directly from the span also keeps both endpoints reachable.
+ */
+function deriveSliderStep(min: number, max: number): number {
+  const span = max - min;
+  return span / TARGET_SLIDER_INTERVALS;
+}
+
 function lowerModelOutline(value: unknown): unknown {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) return root;
@@ -157,20 +195,22 @@ function lowerModelOutline(value: unknown): unknown {
     candidate.numbers = candidate.numbers.map((entry) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
       const number = { ...(entry as Record<string, unknown>) };
+      delete number.student_control;
       if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
       if (typeof number.label === "string" && !number.label.trim()) delete number.label;
-      if (number.student_control === undefined
-        && typeof number.min === "number"
+      if (typeof number.min === "number"
         && Number.isFinite(number.min)
         && typeof number.max === "number"
         && Number.isFinite(number.max)
         && number.max > number.min) {
-        const rawStep = (number.max - number.min) / 100;
-        const precision = 10 ** 6;
         number.student_control = {
           kind: "slider",
-          step: Math.max(Math.round(rawStep * precision) / precision, 1 / precision),
+          step: deriveSliderStep(number.min, number.max),
         };
+      } else if (number.student_control !== undefined) {
+        // Older mock data or an out-of-date provider may still send step.
+        // Discard it before validation: step is program-owned state.
+        number.student_control = { kind: "slider" };
       }
       return number;
     });
@@ -528,7 +568,9 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
   if (typeof content.title === "string" && parameters.title === undefined) parameters.title = content.title;
   if (typeof capability === "string" && capability in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
     const allowedParameters = new Set(
-      LESSON_PLAN_VISUAL_PARAMETER_NAMES[capability as keyof typeof LESSON_PLAN_VISUAL_PARAMETER_NAMES],
+      LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES[
+        capability as keyof typeof LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES
+      ],
     );
     for (const key of Object.keys(parameters)) {
       if (!allowedParameters.has(key)) delete parameters[key];
@@ -596,6 +638,16 @@ function lowerModelActionReferences(
     lowered.members = lowered.members.map((reference) => lowerModelReference(reference, currentMoment));
   }
   if (actionName === "focus") delete lowered.references;
+  if (actionName === "animate") {
+    delete lowered.easing;
+    lowered.easing = PROGRAM_ANIMATION_EASING;
+  }
+  if (lowered.placement && typeof lowered.placement === "object" && !Array.isArray(lowered.placement)) {
+    const placement = { ...(lowered.placement as Record<string, unknown>) };
+    delete placement.align;
+    delete placement.gap;
+    lowered.placement = placement;
+  }
   return lowered;
 }
 
@@ -622,6 +674,8 @@ function lowerModelActivityNumbers(
   expectedSection: number,
 ): Record<string, unknown> {
   const lowered = { ...activity };
+  delete lowered.hint_after_attempts;
+  lowered.hint_after_attempts = PROGRAM_HINT_AFTER_ATTEMPTS;
   if (kind === "number_target") {
     const requestedValue = lowerIntegerDecimal(lowered, "value", `${path}.value`);
     delete lowered.expression;
@@ -702,14 +756,13 @@ function lowerModelActivityNumbers(
     let preset = typeof lowered.view_preset === "string"
       ? presets[lowered.view_preset as keyof typeof presets]
       : undefined;
-    if (!preset
-      || !Number.isInteger(lowered.angular_tolerance_degrees)
-      || !Number.isInteger(lowered.zoom_tolerance_percent)) {
-      throw new LessonPlanError("LESSON_PLAN_ACTIVITY", path, "expected a supported 3D view preset and integer tolerances");
+    if (!preset) {
+      throw new LessonPlanError("LESSON_PLAN_ACTIVITY", path, "expected a supported 3D view preset");
     }
     delete lowered.view_preset;
-    let angularTolerance = Math.min(Number(lowered.angular_tolerance_degrees), 10);
-    const zoomTolerance = Math.min(Number(lowered.zoom_tolerance_percent), 15);
+    delete lowered.angular_tolerance_degrees;
+    delete lowered.zoom_tolerance_percent;
+    let angularTolerance = PROGRAM_SCENE_ANGULAR_TOLERANCE_DEGREES;
     const sceneCapability = outline.sections.slice(0, expectedSection).flatMap((section) => [
       ...section.allowed_capabilities,
       ...(section.reusable_items ?? []).flatMap((item) => item.capability ? [item.capability] : []),
@@ -728,13 +781,11 @@ function lowerModelActivityNumbers(
         angularTolerance = Math.min(angularTolerance, Math.max(0.25, separationDegrees / 2));
       }
     }
-    delete lowered.angular_tolerance_degrees;
-    delete lowered.zoom_tolerance_percent;
     Object.assign(lowered, {
       match: "view_direction",
       ...preset,
       angular_tolerance: angularTolerance * Math.PI / 180,
-      zoom_tolerance: zoomTolerance / 100,
+      zoom_tolerance: PROGRAM_SCENE_ZOOM_TOLERANCE,
     });
   }
   return lowered;
@@ -1484,6 +1535,7 @@ function inputContext(input: LessonPlanGenerationInput): Record<string, unknown>
   if (!input.learner_request.trim()) throw new Error("learner_request is required");
   return {
     learner_request: input.learner_request,
+    input_modality: input.input_modality ?? null,
     language: input.language ?? "zh-CN",
     learner_context: input.learner_context ?? null,
     tutor_context: input.tutor_context ?? null,
@@ -1605,12 +1657,16 @@ export async function generateLessonPlanWithModel(
   model: LessonPlanModelCall,
   input: LessonPlanGenerationInput,
   options: GenerateLessonPlanOptions = {},
-): Promise<GeneratedLessonPlan> {
+): Promise<LessonPlanGenerationResult> {
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");
   const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
   const context = inputContext(input);
   const fixedRequestParts = requestParts(input);
   const bootstrapFirstSection = options.bootstrap_first_section === true;
+  const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
+  if (admissionInput && !bootstrapFirstSection) {
+    throw new Error("lesson admission requires bootstrap_first_section");
+  }
   let modelCalls = 0;
   let outline: LessonPlanOutline | undefined;
   let bootstrappedFirstSection: LessonPlanSectionDraft | undefined;
@@ -1623,7 +1679,9 @@ export async function generateLessonPlanWithModel(
       part: bootstrapFirstSection ? "bootstrap" : "outline",
       attempt,
       turn_id: input.turn_id,
-      system_prompt: bootstrapFirstSection ? BOOTSTRAP_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
+      system_prompt: bootstrapFirstSection
+        ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT
+        : OUTLINE_SYSTEM_PROMPT,
       prompt: JSON.stringify({
         course: context,
         request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
@@ -1639,7 +1697,9 @@ export async function generateLessonPlanWithModel(
         ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
       }),
       response_schema: bootstrapFirstSection
-        ? buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length)
+        ? admissionInput
+          ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length)
+          : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length)
         : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
       max_output_tokens: bootstrapFirstSection ? 16_384 : 8_192,
     });
@@ -1654,6 +1714,34 @@ export async function generateLessonPlanWithModel(
           "$lessonPlanBootstrap",
           "bootstrap response must be an object",
         );
+      }
+      if (admissionInput) {
+        const envelope = parsed as Record<string, unknown>;
+        const disposition = envelope.disposition;
+        if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
+          throw new LessonPlanError(
+            "LESSON_PLAN_MODEL_JSON",
+            "$lessonPlanBootstrap.disposition",
+            "lesson bootstrap must choose generate_lesson, clarify, or ignore",
+          );
+        }
+        if (disposition !== "generate_lesson") {
+          const learnerResponse = typeof envelope.learner_response === "string"
+            ? envelope.learner_response.trim()
+            : "";
+          if (disposition === "clarify" && !learnerResponse) {
+            throw new LessonPlanError(
+              "LESSON_PLAN_MODEL_JSON",
+              "$lessonPlanBootstrap.learner_response",
+              "clarify requires a learner-facing question",
+            );
+          }
+          return {
+            disposition,
+            learner_response: learnerResponse,
+            model_calls: modelCalls,
+          };
+        }
       }
       const rawOutline = bootstrapFirstSection
         ? (parsed as Record<string, unknown>).outline
