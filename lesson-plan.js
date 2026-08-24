@@ -13456,6 +13456,17 @@ function reconcileBootstrapFirstSectionPositions(value, outline) {
       "the bootstrap section created a visual that the outline did not declare"
     );
   }
+  if (unmatchedVisuals.size > 0) {
+    const unmatchedEntries = new Set([...unmatchedVisuals].map(({ entry }) => entry));
+    for (const momentValue of candidate.moments) {
+      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
+      const moment = momentValue;
+      if (!Array.isArray(moment.visual_creates)) continue;
+      moment.visual_creates = moment.visual_creates.filter((entry) => !unmatchedEntries.has(
+        entry
+      ));
+    }
+  }
   const createsByKind = {
     math: collect("math_creates"),
     note: collect("note_creates")
@@ -14073,6 +14084,11 @@ function isRateLimitError(error) {
   const message = error instanceof Error ? error.message : String(error);
   return /(?:\b429\b|RESOURCE_EXHAUSTED|rate[ _-]?limit)/iu.test(message);
 }
+function isTruncatedModelResponse(error) {
+  return Boolean(
+    error && typeof error === "object" && !Array.isArray(error) && error.code === "VERTEX_RESPONSE_TRUNCATED"
+  );
+}
 function compilePrefix(outline, drafts, options) {
   const sectionCount = drafts.length;
   let focus;
@@ -14136,30 +14152,44 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const sectionErrors = /* @__PURE__ */ new Map();
   const sectionAttempts = /* @__PURE__ */ new Map();
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const raw = await model({
-      label: bootstrapFirstSection ? "lesson-plan-bootstrap" : "lesson-plan-outline",
-      part: bootstrapFirstSection ? "bootstrap" : "outline",
-      attempt,
-      turn_id: input.turn_id,
-      system_prompt: bootstrapFirstSection ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
-      prompt: JSON.stringify({
-        course: context,
-        request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
-        available_visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability2) => ({
-          required_features: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features],
-          number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
-          guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
-        })),
-        ...bootstrapFirstSection ? {
-          first_section_to_write: 1,
-          first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions"
-        } : {},
-        ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
-      }),
-      response_schema: bootstrapFirstSection ? admissionInput ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
-      max_output_tokens: bootstrapFirstSection ? 16384 : 8192
-    });
-    modelCalls += 1;
+    let raw;
+    try {
+      raw = await model({
+        label: bootstrapFirstSection ? "lesson-plan-bootstrap" : "lesson-plan-outline",
+        part: bootstrapFirstSection ? "bootstrap" : "outline",
+        attempt,
+        turn_id: input.turn_id,
+        system_prompt: bootstrapFirstSection ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
+        prompt: JSON.stringify({
+          course: context,
+          request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
+          available_visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability2) => ({
+            required_features: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features],
+            number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
+            guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
+          })),
+          ...bootstrapFirstSection ? {
+            first_section_to_write: 1,
+            first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions"
+          } : {},
+          ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
+        }),
+        response_schema: bootstrapFirstSection ? admissionInput ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+        max_output_tokens: bootstrapFirstSection ? 16384 : 8192
+      });
+      modelCalls += 1;
+    } catch (error) {
+      if (!isTruncatedModelResponse(error)) throw error;
+      modelCalls += 1;
+      outlineError = error;
+      await options.on_rejected_part?.({
+        label: "lesson-plan-outline",
+        attempt,
+        error: rejectionDetails(error)
+      });
+      if (attempt === maxAttempts) throw error;
+      continue;
+    }
     try {
       const parsed = pruneModelNulls(parseModelJson(raw, bootstrapFirstSection ? "lessonPlanBootstrap" : "lessonPlanOutline"));
       if (bootstrapFirstSection && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
@@ -14294,6 +14324,18 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       });
       modelCalls += 1;
     } catch (error) {
+      if (isTruncatedModelResponse(error)) {
+        modelCalls += 1;
+        sectionErrors.set(section, error);
+        await options.on_rejected_part?.({
+          label: "lesson-plan-section",
+          section,
+          attempt,
+          error: rejectionDetails(error)
+        });
+        if (attempt >= maxAttempts) throw error;
+        return generateSection(section);
+      }
       sectionAttempts.set(section, attempt - 1);
       throw error;
     }

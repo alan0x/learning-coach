@@ -2502,6 +2502,9 @@ test("the bootstrap path drops reusable board declarations that the same respons
   };
   Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
   outline.sections[0].reusable_items.unshift({ kind: "board_item", board_kind: "note" });
+  const extraVisual = structuredClone(drafts[0].moments[0].visual_creates[0]);
+  extraVisual.role = "duplicate_view_not_declared_by_outline";
+  drafts[0].moments[0].visual_creates.push(extraVisual);
 
   const calls = [];
   const generated = await generateLessonPlanWithModel(async (request) => {
@@ -2529,6 +2532,12 @@ test("the bootstrap path drops reusable board declarations that the same respons
     { kind: "board_item", board_kind: "visual", capability: "function_plot" },
   ]);
   assert.equal(generated.outline.course_visuals[0].reusable_item, 1);
+  assert.equal(
+    generated.lesson.steps[0].beats[0].actions.filter(
+      (action) => action.do === "write" && action.kind === "plot",
+    ).length,
+    1,
+  );
 });
 
 test("an invalid speculative first section does not consume the formal section attempt", async () => {
@@ -2580,6 +2589,80 @@ test("an invalid speculative first section does not consume the formal section a
     { label: "lesson-plan-section", section: 3, attempt: 1 },
   ]);
   assert.equal(generated.lesson.steps.length, 3);
+});
+
+test("truncated model output retries only the affected lesson part", async () => {
+  const plan = completeLessonPlanFixtures.unit_circle_to_sine;
+  const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
+    version: plan.version,
+    section: index + 1,
+    moments,
+    ...(student_activities ? { student_activities } : {}),
+  }));
+  const outline = {
+    version: plan.version,
+    title: plan.title,
+    goals: plan.goals,
+    numbers: plan.numbers,
+    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1, 2, 3] }],
+    sections: plan.sections.map(({ purpose, reusable_items, moments }) => ({
+      purpose,
+      allowed_capabilities: [...new Set(moments.flatMap((moment) => moment.actions)
+        .filter((action) => action.action === "create" && action.kind === "visual")
+        .map((action) => action.content.capability))],
+      ...(reusable_items ? { reusable_items } : {}),
+    })),
+    close: plan.close,
+  };
+  Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
+  const calls = [];
+  const rejected = [];
+  let bootstrapCalls = 0;
+  let sectionTwoCalls = 0;
+  const truncated = () => Object.assign(
+    new Error("Vertex response was truncated at maxOutputTokens"),
+    { code: "VERTEX_RESPONSE_TRUNCATED" },
+  );
+
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    calls.push({ label: request.label, section: request.section, attempt: request.attempt });
+    if (request.label === "lesson-plan-bootstrap") {
+      bootstrapCalls += 1;
+      if (bootstrapCalls === 1) throw truncated();
+      assert.match(request.prompt, /previous_validation_error/u);
+      return JSON.stringify({ outline, first_section: drafts[0] });
+    }
+    if (request.section === 2) {
+      sectionTwoCalls += 1;
+      if (sectionTwoCalls === 1) throw truncated();
+      assert.match(request.prompt, /previous_validation_error/u);
+    }
+    return JSON.stringify(drafts[request.section - 1]);
+  }, {
+    turn_id: "turn-truncated-output-retry",
+    learner_request: "请结合单位圆和正弦图解释旋转如何变成周期波动。",
+    request_parts: ["请结合单位圆和正弦图解释旋转如何变成周期波动。"],
+  }, {
+    bootstrap_first_section: true,
+    on_rejected_part: (event) => rejected.push(event),
+  });
+
+  assert.deepEqual(calls, [
+    { label: "lesson-plan-bootstrap", section: undefined, attempt: 1 },
+    { label: "lesson-plan-bootstrap", section: undefined, attempt: 2 },
+    { label: "lesson-plan-section", section: 2, attempt: 1 },
+    { label: "lesson-plan-section", section: 2, attempt: 2 },
+    { label: "lesson-plan-section", section: 3, attempt: 1 },
+  ]);
+  assert.equal(generated.model_calls, 5);
+  assert.equal(generated.lesson.steps.length, 3);
+  assert.deepEqual(
+    rejected.map(({ label, section, attempt }) => ({ label, section, attempt })),
+    [
+      { label: "lesson-plan-outline", section: undefined, attempt: 1 },
+      { label: "lesson-plan-section", section: 2, attempt: 1 },
+    ],
+  );
 });
 
 test("the staged model path lowers positional curve tokens into a multi-number plot", async () => {

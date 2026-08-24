@@ -876,6 +876,17 @@ function reconcileBootstrapFirstSectionPositions(
       "the bootstrap section created a visual that the outline did not declare",
     );
   }
+  if (unmatchedVisuals.size > 0) {
+    const unmatchedEntries = new Set([...unmatchedVisuals].map(({ entry }) => entry));
+    for (const momentValue of candidate.moments) {
+      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
+      const moment = momentValue as Record<string, unknown>;
+      if (!Array.isArray(moment.visual_creates)) continue;
+      moment.visual_creates = moment.visual_creates.filter((entry) => !unmatchedEntries.has(
+        entry as Record<string, unknown>,
+      ));
+    }
+  }
 
   const createsByKind = {
     math: collect("math_creates"),
@@ -1609,6 +1620,15 @@ function isRateLimitError(error: unknown): boolean {
   return /(?:\b429\b|RESOURCE_EXHAUSTED|rate[ _-]?limit)/iu.test(message);
 }
 
+function isTruncatedModelResponse(error: unknown): boolean {
+  return Boolean(
+    error
+      && typeof error === "object"
+      && !Array.isArray(error)
+      && (error as { code?: unknown }).code === "VERTEX_RESPONSE_TRUNCATED",
+  );
+}
+
 function compilePrefix(
   outline: LessonPlanOutline,
   drafts: LessonPlanSectionDraft[],
@@ -1694,36 +1714,50 @@ export async function generateLessonPlanWithModel(
   const sectionErrors = new Map<number, unknown>();
   const sectionAttempts = new Map<number, number>();
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const raw = await model({
-      label: bootstrapFirstSection ? "lesson-plan-bootstrap" : "lesson-plan-outline",
-      part: bootstrapFirstSection ? "bootstrap" : "outline",
-      attempt,
-      turn_id: input.turn_id,
-      system_prompt: bootstrapFirstSection
-        ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT
-        : OUTLINE_SYSTEM_PROMPT,
-      prompt: JSON.stringify({
-        course: context,
-        request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
-        available_visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability) => ({
-          required_features: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features],
-          number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
-          guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
-        })),
-        ...(bootstrapFirstSection ? {
-          first_section_to_write: 1,
-          first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions",
-        } : {}),
-        ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
-      }),
-      response_schema: bootstrapFirstSection
-        ? admissionInput
-          ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length)
-          : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length)
-        : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
-      max_output_tokens: bootstrapFirstSection ? 16_384 : 8_192,
-    });
-    modelCalls += 1;
+    let raw: string;
+    try {
+      raw = await model({
+        label: bootstrapFirstSection ? "lesson-plan-bootstrap" : "lesson-plan-outline",
+        part: bootstrapFirstSection ? "bootstrap" : "outline",
+        attempt,
+        turn_id: input.turn_id,
+        system_prompt: bootstrapFirstSection
+          ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT
+          : OUTLINE_SYSTEM_PROMPT,
+        prompt: JSON.stringify({
+          course: context,
+          request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
+          available_visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability) => ({
+            required_features: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features],
+            number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
+            guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
+          })),
+          ...(bootstrapFirstSection ? {
+            first_section_to_write: 1,
+            first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions",
+          } : {}),
+          ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
+        }),
+        response_schema: bootstrapFirstSection
+          ? admissionInput
+            ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length)
+            : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length)
+          : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+        max_output_tokens: bootstrapFirstSection ? 16_384 : 8_192,
+      });
+      modelCalls += 1;
+    } catch (error) {
+      if (!isTruncatedModelResponse(error)) throw error;
+      modelCalls += 1;
+      outlineError = error;
+      await options.on_rejected_part?.({
+        label: "lesson-plan-outline",
+        attempt,
+        error: rejectionDetails(error),
+      });
+      if (attempt === maxAttempts) throw error;
+      continue;
+    }
     try {
       const parsed = pruneModelNulls(parseModelJson(raw, bootstrapFirstSection
         ? "lessonPlanBootstrap"
@@ -1872,6 +1906,18 @@ export async function generateLessonPlanWithModel(
       });
       modelCalls += 1;
     } catch (error) {
+      if (isTruncatedModelResponse(error)) {
+        modelCalls += 1;
+        sectionErrors.set(section, error);
+        await options.on_rejected_part?.({
+          label: "lesson-plan-section",
+          section,
+          attempt,
+          error: rejectionDetails(error),
+        });
+        if (attempt >= maxAttempts) throw error;
+        return generateSection(section);
+      }
       // Provider quota and transport failures are not semantic authoring
       // attempts. They must not consume the section's repair budget.
       sectionAttempts.set(section, attempt - 1);

@@ -81,6 +81,23 @@ These are single-run capability checks, not latency or reliability statistics.
 Repeated real-model runs and `/learn` E2E are still required before this row is
 marked complete.
 
+A following three-run batch checked the same requests again:
+
+- the two-control parabola passed 3/3 without repair; first playable p50 was
+  10.0 seconds and the slowest run was 11.3 seconds;
+- the cubic sampled point passed 3/3 without repair; first playable p50 was
+  10.5 seconds and the slowest run was 12.1 seconds;
+- the three-curve comparison eventually passed 3/3, but first playable results
+  were about 11, 39, and 86 seconds. One run retried only a truncated bootstrap
+  response. Another discarded an outline-external speculative visual, then
+  repaired invalid first-section activities without regenerating the course
+  outline. These recovery rules contain no function names or subject-specific
+  cases and add no request to the normal successful path.
+
+The multi-curve result proves eventual execution, not stable latency. Its long
+tail remains recorded as an open reliability/performance concern. A three-run
+sample is also too small for a production percentile claim.
+
 ## Rule for changing this matrix
 
 A row can be widened only when the same change includes:
