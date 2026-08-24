@@ -223,6 +223,24 @@ test("the complete-lesson executable exposes one Lesson Plan path and no rollbac
   assert.match(executable, /authoring_strategy:\s*"lesson_plan"/u);
 });
 
+test("the source and executable do not retain the unreachable direct-OLL lesson generator", async () => {
+  const source = await readFile(join(root, "src/main.ts"), "utf8");
+  const executable = await readFile(join(root, "main"), "utf8");
+  const obsoletePatterns = [
+    /LESSON_BRIEF_SYSTEM_PROMPT/u,
+    /function buildAuthoringResponseJsonSchema\(/u,
+    /async function planLesson\(/u,
+    /async function generateLessonInParallel\(/u,
+    /async function generateLesson\(/u,
+    /references\/oll-authoring-v0\.1\.schema\.json/u,
+  ];
+  for (const pattern of obsoletePatterns) {
+    assert.doesNotMatch(source, pattern);
+    assert.doesNotMatch(executable, pattern);
+  }
+  assert.match(source, /generateLessonPlanWithModel/u);
+});
+
 test("the complete-lesson command bootstraps the outline and first section in one model call", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-lesson-plan-command-"));
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
