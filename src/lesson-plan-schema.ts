@@ -178,7 +178,7 @@ function visualParametersSchema(
   if (modelParameters.has("title")) properties.title = string(240);
   if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
   if (uses("function_plot")) {
-    properties.formula = string(256);
+    properties.formulas = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
   }
@@ -202,7 +202,7 @@ function visualParametersSchema(
   if (uses("process_diagram")) {
     properties.steps = { type: "array", minItems: 1, maxItems: 24, items: string(240) };
   }
-  return object(properties, (requireDynamicPlotExpression || canonicalFunctionPlot) ? ["formula"] : []);
+  return object(properties, (requireDynamicPlotExpression || canonicalFunctionPlot) ? ["formulas"] : []);
 }
 
 function contentSchema(allowedCapabilities: LessonPlanCapability[]): LessonPlanJsonSchema {

@@ -12425,7 +12425,7 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
   if (modelParameters.has("title")) properties.title = string(240);
   if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
   if (uses("function_plot")) {
-    properties.formula = string(256);
+    properties.formulas = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
   }
@@ -12449,7 +12449,7 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
   if (uses("process_diagram")) {
     properties.steps = { type: "array", minItems: 1, maxItems: 24, items: string(240) };
   }
-  return object(properties, requireDynamicPlotExpression || canonicalFunctionPlot ? ["formula"] : []);
+  return object(properties, requireDynamicPlotExpression || canonicalFunctionPlot ? ["formulas"] : []);
 }
 function modelAction(properties, required) {
   return object(properties, required);
@@ -12827,7 +12827,7 @@ var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5
 - focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\u5E76\u51B3\u5B9A\u52A8\u4F5C\u987A\u5E8F\u3002placement \u53EA\u5199\u76F8\u5BF9\u65B9\u5411\u3002\u53EF\u590D\u7528\u666E\u901A\u677F\u4E66\u53EA\u586B\u6839\u5C42\u5FC5\u586B\u9879\uFF0C\u4E0D\u586B\u5199\u5185\u90E8\u4F4D\u7F6E\u3002
 - \u5C0F\u6570\u6309 Schema \u7684 mantissa\u3001scale \u586B\u5199\uFF0C\u4F8B\u5982 -1.5 \u4E3A -15\u30011\uFF1B6.283 \u4E3A 6283\u30013\u3002
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- function_plot \u7684 parameters.formula \u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u4F8B\uFF1A(x-n1)^2+n2\u3001(1+1/x)^x\u3002\u516C\u5F0F\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u89E3\u6790\u516C\u5F0F\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002\u51FD\u6570\u56FE\u548C\u4E09\u7EF4\u66F2\u9762\u90FD\u4E0D\u586B\u5199\u89C6\u7A97\u3001\u91C7\u6837\u5BC6\u5EA6\u6216\u7F51\u683C\u7CBE\u5EA6\u3002
+- function_plot \u7684 parameters.formulas \u59CB\u7EC8\u662F\u516C\u5F0F\u6570\u7EC4\uFF0C\u6BCF\u9879\u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u5355\u6761\u66F2\u7EBF\u53EF\u5F15\u7528 n1\u3001n2\uFF0C\u4F8B\u5982 (x-n1)^2+n2\uFF1B\u6BD4\u8F83\u591A\u6761\u66F2\u7EBF\u65F6\u586B\u5199\u591A\u4E2A\u4E0D\u542B n1\u3001n2 \u7684\u9759\u6001\u516C\u5F0F\uFF0C\u4F8B\u5982 ["x", "x^2", "sin(x)"]\u3002\u6BCF\u6761\u516C\u5F0F\u90FD\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u9010\u6761\u89E3\u6790\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002\u51FD\u6570\u56FE\u548C\u4E09\u7EF4\u66F2\u9762\u90FD\u4E0D\u586B\u5199\u89C6\u7A97\u3001\u91C7\u6837\u5BC6\u5EA6\u6216\u7F51\u683C\u7CBE\u5EA6\u3002
 - animations \u53EA\u51B3\u5B9A\u6F14\u793A\u54EA\u4E2A\u6570\u503C\u3001\u76EE\u6807\u503C\u548C\u6559\u5B66\u8282\u594F\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u7F13\u52A8\u65B9\u5F0F\u3002placement \u53EA\u51B3\u5B9A\u76F8\u5BF9\u65B9\u5411\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u951A\u70B9\u3001\u5BF9\u9F50\u548C\u95F4\u8DDD\u3002
 - geometric_rearrangement \u7684\u6570\u503C\u8868\u793A\u91CD\u6392\u8FDB\u5EA6\uFF1Bconstruction \u4ECE Schema \u9009\u62E9\u3002process_diagram \u6CA1\u6709\u6570\u503C\u6216\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
@@ -13219,13 +13219,30 @@ function lowerModelBoardContent(kind, value, numberCount) {
   }
   const capability2 = content.capability;
   const parameters2 = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? { ...content.parameters } : {};
-  if (capability2 === "function_plot" && parameters2.formula !== void 0) {
-    parameters2.expression_tokens = parseModelFormula(
-      parameters2.formula,
+  if (capability2 === "function_plot" && parameters2.formulas !== void 0) {
+    if (!Array.isArray(parameters2.formulas) || parameters2.formulas.length < 1 || parameters2.formulas.length > 8) {
+      formulaError(
+        "$lessonPlanSection.visual.parameters.formulas",
+        "expected one to eight formulas"
+      );
+    }
+    const parsed = parameters2.formulas.map((formula, index) => parseModelFormula(
+      formula,
       numberCount,
-      "$lessonPlanSection.visual.parameters.formula"
-    );
-    delete parameters2.formula;
+      `$lessonPlanSection.visual.parameters.formulas[${index}]`
+    ));
+    if (parsed.length === 1) {
+      parameters2.expression_tokens = parsed[0];
+    } else {
+      if (parsed.some((expression) => expression.some((token) => token.kind === "number"))) {
+        formulaError(
+          "$lessonPlanSection.visual.parameters.formulas",
+          "a multi-curve comparison currently supports static formulas only; use one formula when lesson numbers change the whole curve"
+        );
+      }
+      parameters2.expressions = parsed.map(mathExpressionToOll);
+    }
+    delete parameters2.formulas;
   }
   if (typeof content.title === "string" && parameters2.title === void 0) parameters2.title = content.title;
   if (typeof capability2 === "string" && capability2 in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
@@ -14442,6 +14459,7 @@ export {
   deriveLessonRequestParts,
   generateLessonPlanWithModel,
   matchLessonPlanCapability,
+  mathExpressionToOll,
   resolveLessonPlan,
   validateLessonPlan,
   validateLessonPlanOutline

@@ -16,6 +16,7 @@ import {
 import {
   compileAndValidateLessonPlan,
   LESSON_PLAN_SCENE_INITIAL_CAMERAS,
+  mathExpressionToOll,
   type CompileLessonPlanOptions,
   type CompiledLessonPlan,
 } from "./lesson-plan-compiler.js";
@@ -106,7 +107,7 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象并决定动作顺序。placement 只写相对方向。可复用普通板书只填根层必填项，不填写内部位置。
 - 小数按 Schema 的 mantissa、scale 填写，例如 -1.5 为 -15、1；6.283 为 6283、3。
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
-- function_plot 的 parameters.formula 只写中缀公式右侧：x 是横轴，n1、n2 是课程第 1、2 个数值；支持 + - * / ^、括号、pi、e 和常见单参数函数。例：(x-n1)^2+n2、(1+1/x)^x。公式必须依赖 x；程序解析公式、绑定控件并计算坐标范围。函数图和三维曲面都不填写视窗、采样密度或网格精度。
+- function_plot 的 parameters.formulas 始终是公式数组，每项只写中缀公式右侧：x 是横轴，n1、n2 是课程第 1、2 个数值；支持 + - * / ^、括号、pi、e 和常见单参数函数。单条曲线可引用 n1、n2，例如 (x-n1)^2+n2；比较多条曲线时填写多个不含 n1、n2 的静态公式，例如 ["x", "x^2", "sin(x)"]。每条公式都必须依赖 x；程序逐条解析、绑定控件并计算坐标范围。函数图和三维曲面都不填写视窗、采样密度或网格精度。
 - animations 只决定演示哪个数值、目标值和教学节奏；程序统一生成缓动方式。placement 只决定相对方向；程序统一生成锚点、对齐和间距。
 - geometric_rearrangement 的数值表示重排进度；construction 从 Schema 选择。process_diagram 没有数值或动画。
 只返回符合响应 Schema 的 JSON。`;
@@ -557,13 +558,32 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
   const parameters = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters)
     ? { ...(content.parameters as Record<string, unknown>) }
     : {};
-  if (capability === "function_plot" && parameters.formula !== undefined) {
-    parameters.expression_tokens = parseModelFormula(
-      parameters.formula,
+  if (capability === "function_plot" && parameters.formulas !== undefined) {
+    if (!Array.isArray(parameters.formulas)
+      || parameters.formulas.length < 1
+      || parameters.formulas.length > 8) {
+      formulaError(
+        "$lessonPlanSection.visual.parameters.formulas",
+        "expected one to eight formulas",
+      );
+    }
+    const parsed = parameters.formulas.map((formula, index) => parseModelFormula(
+      formula,
       numberCount,
-      "$lessonPlanSection.visual.parameters.formula",
-    );
-    delete parameters.formula;
+      `$lessonPlanSection.visual.parameters.formulas[${index}]`,
+    ));
+    if (parsed.length === 1) {
+      parameters.expression_tokens = parsed[0];
+    } else {
+      if (parsed.some((expression) => expression.some((token) => token.kind === "number"))) {
+        formulaError(
+          "$lessonPlanSection.visual.parameters.formulas",
+          "a multi-curve comparison currently supports static formulas only; use one formula when lesson numbers change the whole curve",
+        );
+      }
+      parameters.expressions = parsed.map(mathExpressionToOll);
+    }
+    delete parameters.formulas;
   }
   if (typeof content.title === "string" && parameters.title === undefined) parameters.title = content.title;
   if (typeof capability === "string" && capability in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {

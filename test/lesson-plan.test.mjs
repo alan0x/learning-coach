@@ -181,7 +181,7 @@ function toModelSectionDraft(draft) {
         delete payload.kind;
         const tokens = payload.content?.parameters?.expression_tokens;
         if (Array.isArray(tokens)) {
-          payload.content.parameters.formula = modelFormula(tokens);
+          payload.content.parameters.formulas = [modelFormula(tokens)];
           delete payload.content.parameters.expression_tokens;
         }
         if ((boardKind === "math" || boardKind === "note")
@@ -269,7 +269,7 @@ function modelCourseVisualStructure(plan, drafts = [], { canonical = true } = {}
         delete entry.reusable_item;
         delete entry.content.capability;
         if (entry.content.parameters?.expression !== undefined) {
-          entry.content.parameters.formula = entry.content.parameters.expression;
+          entry.content.parameters.formulas = [entry.content.parameters.expression];
           delete entry.content.parameters.expression;
         }
         return [`visual_${position}`, { moment, ...entry }];
@@ -2427,7 +2427,7 @@ test("the bootstrap path ignores model-authored viewport parameters and computes
   };
   Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
   const parameters = drafts[0].moments[0].visual_creates[0].content.parameters;
-  parameters.formula = parameters.expression;
+  parameters.formulas = [parameters.expression];
   delete parameters.expression;
   const decimal = (value) => ({ mantissa: value * 10, scale: 1 });
   parameters.x_min = decimal(-4);
@@ -2628,7 +2628,7 @@ test("the staged model path lowers positional curve tokens into a multi-number p
       if (firstSectionCalls === 1) {
         const invalid = structuredClone(drafts[0]);
         const visual = invalid.course_visual_creates.visual_1.content;
-        delete visual.parameters.formula;
+        delete visual.parameters.formulas;
         visual.parameters.expression = "x^2";
         visual.numbers = [1, 2];
         return JSON.stringify(invalid);
@@ -2674,12 +2674,95 @@ test("the staged model path lowers positional curve tokens into a multi-number p
   const parameterSchema = visualContentSchema.properties.parameters;
   const parameters = parameterSchema.properties;
   assert.ok(visualContentSchema.required.includes("parameters"));
-  assert.ok(parameterSchema.required.includes("formula"));
-  assert.ok(parameters.formula);
+  assert.ok(parameterSchema.required.includes("formulas"));
+  assert.ok(parameters.formulas);
+  assert.equal(parameters.formulas.type, "array");
+  assert.equal(parameters.formulas.items.type, "string");
+  assert.equal(parameters.formula, undefined);
   assert.equal(parameters.expression, undefined);
   assert.equal(parameters.expressions, undefined);
   assert.equal(parameters.expression_tokens, undefined);
   assert.equal(parameters.number_effect, undefined);
+});
+
+test("the staged model path lowers several static formulas into one multi-curve plot", async () => {
+  const plan = completeLessonPlanFixtures.square_function;
+  const decimal = (value) => ({ mantissa: Math.round(value * 10 ** 6), scale: 6 });
+  const outline = {
+    version: plan.version,
+    title: plan.title,
+    goals: plan.goals,
+    numbers: plan.numbers.map((number) => ({
+      ...number,
+      initial: decimal(number.initial),
+      min: decimal(number.min),
+      max: decimal(number.max),
+      student_control: {
+        ...number.student_control,
+        step: decimal(number.student_control.step),
+      },
+    })),
+    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1, 2, 3] }],
+    sections: plan.sections.map(({ purpose, reusable_items, moments }) => ({
+      purpose,
+      allowed_capabilities: [...new Set(moments.flatMap((moment) => moment.actions)
+        .filter((action) => action.action === "create" && action.kind === "visual")
+        .map((action) => action.content.capability))],
+      ...(reusable_items ? { reusable_items } : {}),
+    })),
+    close: { summary: plan.close.summary },
+  };
+  const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
+    version: plan.version,
+    section: index + 1,
+    moments,
+    ...(student_activities ? { student_activities } : {}),
+  }));
+  Object.assign(outline, modelCourseVisualStructure(plan, drafts));
+  const visual = drafts[0].course_visual_creates.visual_1.content;
+  visual.parameters.formulas = ["x", "x^2", "sin(x)"];
+  visual.parameters.curve_labels = ["y = x", "y = x^2", "y = sin(x)"];
+
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
+    const section = JSON.parse(request.prompt).section_to_write;
+    return JSON.stringify(drafts[section - 1]);
+  }, {
+    turn_id: "turn-static-function-comparison",
+    learner_request: "把 y=x、y=x^2 和 y=sin(x) 画在同一个坐标系中。",
+    request_parts: ["把 y=x、y=x^2 和 y=sin(x) 画在同一个坐标系中。"],
+  });
+
+  const plot = generated.lesson.steps[0].beats[0].actions.find(
+    (action) => action.do === "write" && action.kind === "plot",
+  );
+  assert.deepEqual(
+    plot.content.curves.map((curve) => [curve.expression, curve.label]),
+    [
+      ["x", "y = x"],
+      ["(x)^(2)", "y = x^2"],
+      ["sin(x)", "y = sin(x)"],
+    ],
+  );
+
+  const invalidDrafts = structuredClone(drafts);
+  invalidDrafts[0].course_visual_creates.visual_1.content.parameters.formulas = ["x+n1", "x^2"];
+  await assert.rejects(
+    () => generateLessonPlanWithModel(async (request) => {
+      if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
+      const section = JSON.parse(request.prompt).section_to_write;
+      return JSON.stringify(invalidDrafts[section - 1]);
+    }, {
+      turn_id: "turn-invalid-dynamic-function-comparison",
+      learner_request: "比较两条会随同一个数值变化的曲线。",
+      request_parts: ["比较两条会随同一个数值变化的曲线。"],
+    }, {
+      max_attempts_per_part: 1,
+    }),
+    (error) => error instanceof LessonPlanError
+      && error.code === "LESSON_PLAN_EXPRESSION"
+      && /multi-curve comparison currently supports static formulas only/u.test(error.message),
+  );
 });
 
 test("the course outline creates one visual position and later sections can only reuse it", async () => {

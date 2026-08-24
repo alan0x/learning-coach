@@ -64,6 +64,23 @@ The current automated suite verifies, among other things:
 These tests establish the execution boundary. They do not establish broad
 curriculum coverage or teaching quality.
 
+The first isolated Gemini 3.6 Flash checks on 2026-08-23 also exercised the
+same production Lesson Plan path rather than a hand-written fixture:
+
+- a two-control parabola changed one whole curve with both lesson numbers and
+  produced its first playable section in 11.5 seconds;
+- a request to compare `x`, `x^2`, and `sin(x)` initially exposed that the
+  model-facing course format only accepted one formula even though the compiler
+  supported several. The format now accepts one to eight explicit formulas,
+  parses every formula locally, and the unchanged request produced three curves
+  in one plot in 12.7 seconds;
+- a cubic sampled-point request produced one numeric control with both point
+  coordinates bound to it in 9.8 seconds.
+
+These are single-run capability checks, not latency or reliability statistics.
+Repeated real-model runs and `/learn` E2E are still required before this row is
+marked complete.
+
 ## Rule for changing this matrix
 
 A row can be widened only when the same change includes:

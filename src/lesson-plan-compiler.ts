@@ -258,7 +258,7 @@ function deterministicFunctionViewport(
   return { x: best.x, y: paddedNumericRange(best.values, { min: -1, max: 1 }) };
 }
 
-function mathExpressionToOll(expression: LessonPlanMathExpression): string {
+export function mathExpressionToOll(expression: LessonPlanMathExpression): string {
   const operators = {
     add: "+",
     subtract: "-",
