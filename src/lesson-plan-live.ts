@@ -5,7 +5,7 @@ import {
 } from "./main.js";
 import {
   generateLessonPlanWithModel,
-  type GeneratedLessonPlan,
+  type LessonPlanGenerationResult,
   type GenerateLessonPlanOptions,
   type LessonPlanGenerationInput,
 } from "./lesson-plan-generation.js";
@@ -71,7 +71,7 @@ export interface GenerateLessonPlanWithVertexOptions extends GenerateLessonPlanO
 export async function generateLessonPlanWithVertex(
   input: LessonPlanGenerationInput,
   options: GenerateLessonPlanWithVertexOptions = {},
-): Promise<GeneratedLessonPlan> {
+): Promise<LessonPlanGenerationResult> {
   const client = options.client ?? await createVertexClient();
   const schemaMode = providerSchemaMode();
   const {

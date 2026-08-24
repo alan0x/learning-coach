@@ -54,6 +54,11 @@
           "learner_context": {
             "type": "string",
             "description": "Tentative learner background relevant to the requested explanation."
+          },
+          "input_modality": {
+            "type": "string",
+            "enum": ["text", "voice"],
+            "description": "How this standalone request entered /learn. Voice requests may need clarification before a course is generated."
           }
         },
         "required": ["turn_id", "learner_request", "request_source"]
@@ -255,7 +260,11 @@
             "type": "string",
             "enum": ["self_contained"]
           },
-          "language": { "type": "string" }
+          "language": { "type": "string" },
+          "input_modality": {
+            "type": "string",
+            "enum": ["text", "voice"]
+          }
         },
         "required": ["turn_id", "learner_request", "request_source"]
       },

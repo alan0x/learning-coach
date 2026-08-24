@@ -7174,7 +7174,9 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels"],
     semantic_parameters: ["expression", "expressions", "expression_tokens"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
@@ -7184,7 +7186,9 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
   unit_circle_projection: {
     parts: ["whole", "unit_circle", "moving_point", "radius", "projection_line", "primary_curve", "primary_control"],
     number_inputs: ["angle"],
+    number_input_policies: [{ kind: "angle" }],
     parameter_names: ["title", "projection"],
+    model_parameter_names: ["title", "projection"],
     semantic_parameters: ["projection"],
     output_kinds: ["geometry", "plot"],
     student_controls: ["slider", "geometry_point"],
@@ -7194,7 +7198,9 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
   circle_and_arc: {
     parts: ["whole", "circle", "arc", "radius", "primary_control"],
     number_inputs: ["angle", "radius"],
+    number_input_policies: [{ kind: "angle" }, { kind: "positive" }],
     parameter_names: ["title", "radius", "angle"],
+    model_parameter_names: ["title", "radius", "angle"],
     semantic_parameters: ["radius", "angle"],
     output_kinds: ["geometry"],
     student_controls: ["slider", "geometry_point"],
@@ -7204,7 +7210,9 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
   spring_and_mass: {
     parts: ["whole", "spring", "mass", "equilibrium", "force_arrow", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["phase"],
+    number_input_policies: [{ kind: "angle" }],
     parameter_names: ["title"],
+    model_parameter_names: ["title"],
     semantic_parameters: [],
     output_kinds: ["geometry", "plot"],
     student_controls: ["slider"],
@@ -7214,7 +7222,9 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
   cube_with_section: {
     parts: ["whole", "solid", "vertex", "edge", "face", "section", "primary_control"],
     number_inputs: ["section_height"],
+    number_input_policies: [{ kind: "bounded", min: -1, max: 1 }],
     parameter_names: ["title"],
+    model_parameter_names: ["title"],
     semantic_parameters: [],
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
@@ -7224,7 +7234,9 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
   function_surface_with_section: {
     parts: ["whole", "surface", "section", "intersection", "primary_control"],
     number_inputs: ["section_position"],
+    number_input_policies: [{ kind: "surface_section" }],
     parameter_names: ["title", "expression", "samples", "section_axis", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
@@ -7234,7 +7246,9 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
   coordinate_circle: {
     parts: ["whole", "circle", "center", "radius", "primary_control"],
     number_inputs: ["radius"],
+    number_input_policies: [{ kind: "positive" }],
     parameter_names: ["title", "radius", "center_x", "center_y"],
+    model_parameter_names: ["title", "radius", "center_x", "center_y"],
     semantic_parameters: ["radius", "center_x", "center_y"],
     output_kinds: ["geometry"],
     student_controls: ["slider"],
@@ -7244,7 +7258,9 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
   geometric_rearrangement: {
     parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "primary_control"],
     number_inputs: ["progress"],
+    number_input_policies: [{ kind: "normalized_progress" }],
     parameter_names: ["title", "construction", "leg_a", "leg_b"],
+    model_parameter_names: ["title", "construction", "leg_a", "leg_b"],
     parameter_options: {
       construction: ["right_triangle_square", "square_area_identity", "triangle_to_rectangle"]
     },
@@ -7257,7 +7273,9 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
   process_diagram: {
     parts: ["whole", "first_step", "current_step", "last_step"],
     number_inputs: [],
+    number_input_policies: [],
     parameter_names: ["title", "steps"],
+    model_parameter_names: ["title", "steps"],
     semantic_parameters: ["steps"],
     output_kinds: ["diagram"],
     student_controls: [],
@@ -7632,6 +7650,41 @@ function assertPart(target, part, path) {
     if (part.index > target.hostParts.size) fail("LESSON_PLAN_PART", path, "host part is unavailable");
   }
 }
+function validateLessonPlanNumbers(value, path) {
+  const numbers = value === void 0 ? [] : array(value, path);
+  if (numbers.length > 16) fail("LESSON_PLAN_NUMBERS", path, "expected at most 16 numeric states");
+  numbers.forEach((entry, index) => {
+    const numberPath = `${path}[${index}]`;
+    const number = record(entry, numberPath);
+    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], numberPath);
+    const initial = finiteNumber(number.initial, `${numberPath}.initial`);
+    const min = finiteNumber(number.min, `${numberPath}.min`);
+    const max = finiteNumber(number.max, `${numberPath}.max`);
+    if (!(min < max && initial >= min && initial <= max)) {
+      fail("LESSON_PLAN_NUMBER_RANGE", numberPath, "expected min < max and initial inside the range");
+    }
+    optionalString(number.label, `${numberPath}.label`, 80);
+    optionalString(number.unit, `${numberPath}.unit`, 32);
+    if (number.student_control === void 0) return;
+    const controlPath = `${numberPath}.student_control`;
+    const control = record(number.student_control, controlPath);
+    allowedKeys(control, ["kind", "step"], controlPath);
+    if (control.kind !== "slider") fail("LESSON_PLAN_CONTROL", `${controlPath}.kind`, "only slider is supported");
+    if (control.step === void 0) return;
+    const step = finiteNumber(control.step, `${controlPath}.step`);
+    if (step <= 0 || step > max - min) {
+      fail("LESSON_PLAN_CONTROL", `${controlPath}.step`, "step must be positive and inside the range");
+    }
+    if ((max - min) / step > 1e3) {
+      fail(
+        "LESSON_PLAN_CONTROL_RESOLUTION",
+        `${controlPath}.step`,
+        "a slider cannot expose more than 1000 distinct intervals; use a coarser step or a smaller range"
+      );
+    }
+  });
+  return numbers;
+}
 function resolveLessonPlan(value, options = {}) {
   const root = record(value, "$lessonPlan");
   allowedKeys(root, ["version", "title", "goals", "teaching_strategies", "numbers", "sections", "close"], "$lessonPlan");
@@ -7645,35 +7698,7 @@ function resolveLessonPlan(value, options = {}) {
     if (strategies.length > 16) fail("LESSON_PLAN_STRATEGIES", "$lessonPlan.teaching_strategies", "expected at most 16 strategies");
     strategies.forEach((strategy, index) => nonEmptyString(strategy, `$lessonPlan.teaching_strategies[${index}]`, 240));
   }
-  const rawNumbers = root.numbers === void 0 ? [] : array(root.numbers, "$lessonPlan.numbers");
-  if (rawNumbers.length > 16) fail("LESSON_PLAN_NUMBERS", "$lessonPlan.numbers", "expected at most 16 numeric states");
-  rawNumbers.forEach((entry, index) => {
-    const path = `$lessonPlan.numbers[${index}]`;
-    const number = record(entry, path);
-    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], path);
-    const initial = finiteNumber(number.initial, `${path}.initial`);
-    const min = finiteNumber(number.min, `${path}.min`);
-    const max = finiteNumber(number.max, `${path}.max`);
-    if (!(min < max && initial >= min && initial <= max)) fail("LESSON_PLAN_NUMBER_RANGE", path, "expected min < max and initial inside the range");
-    optionalString(number.label, `${path}.label`, 80);
-    optionalString(number.unit, `${path}.unit`, 32);
-    if (number.student_control !== void 0) {
-      const control = record(number.student_control, `${path}.student_control`);
-      allowedKeys(control, ["kind", "step"], `${path}.student_control`);
-      if (control.kind !== "slider") fail("LESSON_PLAN_CONTROL", `${path}.student_control.kind`, "only slider is supported");
-      if (control.step !== void 0) {
-        const step = finiteNumber(control.step, `${path}.student_control.step`);
-        if (step <= 0 || step > max - min) fail("LESSON_PLAN_CONTROL", `${path}.student_control.step`, "step must be positive and inside the range");
-        if ((max - min) / step > 1e3) {
-          fail(
-            "LESSON_PLAN_CONTROL_RESOLUTION",
-            `${path}.student_control.step`,
-            "a slider cannot expose more than 1000 distinct intervals; use a coarser step or a smaller range"
-          );
-        }
-      }
-    }
-  });
+  const rawNumbers = validateLessonPlanNumbers(root.numbers, "$lessonPlan.numbers");
   const hostReferences = options.host_references ?? [];
   const imageResources = options.image_resources ?? [];
   imageResources.forEach((resource, index) => {
@@ -8048,28 +8073,7 @@ function validateLessonPlanOutline(value, expectedRequestParts = 0) {
     if (strategies.length > 16) fail("LESSON_PLAN_STRATEGIES", "$lessonPlanOutline.teaching_strategies", "expected at most 16 strategies");
     strategies.forEach((strategy, index) => nonEmptyString(strategy, `$lessonPlanOutline.teaching_strategies[${index}]`, 240));
   }
-  const numbers = outline.numbers === void 0 ? [] : array(outline.numbers, "$lessonPlanOutline.numbers");
-  if (numbers.length > 16) fail("LESSON_PLAN_NUMBERS", "$lessonPlanOutline.numbers", "expected at most 16 numeric states");
-  numbers.forEach((entry, index) => {
-    const path = `$lessonPlanOutline.numbers[${index}]`;
-    const number = record(entry, path);
-    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], path);
-    const initial = finiteNumber(number.initial, `${path}.initial`);
-    const min = finiteNumber(number.min, `${path}.min`);
-    const max = finiteNumber(number.max, `${path}.max`);
-    if (!(min < max && initial >= min && initial <= max)) fail("LESSON_PLAN_NUMBER_RANGE", path, "expected min < max and initial inside the range");
-    optionalString(number.label, `${path}.label`, 80);
-    optionalString(number.unit, `${path}.unit`, 32);
-    if (number.student_control !== void 0) {
-      const control = record(number.student_control, `${path}.student_control`);
-      allowedKeys(control, ["kind", "step"], `${path}.student_control`);
-      if (control.kind !== "slider") fail("LESSON_PLAN_CONTROL", `${path}.student_control.kind`, "only slider is supported");
-      if (control.step !== void 0) {
-        const step = finiteNumber(control.step, `${path}.student_control.step`);
-        if (step <= 0 || step > max - min) fail("LESSON_PLAN_CONTROL", `${path}.student_control.step`, "step must be positive and inside the range");
-      }
-    }
-  });
+  const numbers = validateLessonPlanNumbers(outline.numbers, "$lessonPlanOutline.numbers");
   const sections = array(outline.sections, "$lessonPlanOutline.sections");
   if (sections.length < 1 || sections.length > 24) fail("LESSON_PLAN_SECTIONS", "$lessonPlanOutline.sections", "expected 1 to 24 sections");
   const declarationsBySection = [];
@@ -10958,6 +10962,57 @@ function evaluate(expression, variables, values, path) {
     );
   }
 }
+function numericCombinations(entries) {
+  return entries.reduce(
+    (combinations, entry) => combinations.flatMap((combination) => entry.values.map((value) => ({ ...combination, [entry.name]: value }))),
+    [{}]
+  );
+}
+function paddedNumericRange(values, fallback) {
+  const finite = values.filter((value) => Number.isFinite(value) && Math.abs(value) <= 1e12).sort((a, b) => a - b);
+  if (finite.length === 0) return fallback;
+  const low = finite[Math.floor((finite.length - 1) * 0.02)];
+  const high = finite[Math.ceil((finite.length - 1) * 0.98)];
+  const span = high - low;
+  const padding = span > 1e-9 ? span * 0.12 : Math.max(0.5, Math.abs(low) * 0.2);
+  return { min: low - padding, max: high + padding };
+}
+function deterministicFunctionViewport(expressions, variables, parameterValues, requestedX, path) {
+  const evaluators = expressions.map((expression) => compileMathExpression(expression, variables));
+  const candidates = requestedX ? [requestedX] : [
+    { min: -4, max: 4 },
+    { min: 0.05, max: 8 },
+    { min: -10, max: 10 }
+  ];
+  let best;
+  for (const xRange of candidates) {
+    const values = [];
+    let attempts = 0;
+    for (let index = 0; index <= 120; index += 1) {
+      const x = xRange.min + (xRange.max - xRange.min) * index / 120;
+      for (const parameters2 of parameterValues) {
+        for (const evaluator of evaluators) {
+          attempts += 1;
+          try {
+            const value = evaluator({ x, ...parameters2 });
+            if (Number.isFinite(value) && Math.abs(value) <= 1e12) values.push(value);
+          } catch {
+          }
+        }
+      }
+    }
+    const ratio = attempts > 0 ? values.length / attempts : 0;
+    if (!best || ratio > best.ratio) best = { x: xRange, values, ratio };
+    if (ratio >= 0.75) {
+      best = { x: xRange, values, ratio };
+      break;
+    }
+  }
+  if (!best || best.values.length < 8) {
+    fail3("LESSON_PLAN_CAPABILITY_PARAMETER", path, "function has no stable finite viewport");
+  }
+  return { x: best.x, y: paddedNumericRange(best.values, { min: -1, max: 1 }) };
+}
 function mathExpressionToOll(expression) {
   const operators = {
     add: "+",
@@ -11088,19 +11143,42 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   }
   const number = dynamicTokens === void 0 || dynamicNumbers.length === 0 ? content.numbers?.[0] : void 0;
   const definition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
-  let xMin = optionalNumber(input.x_min, -4, `${path}.x_min`);
-  let xMax = optionalNumber(input.x_max, 4, `${path}.x_max`);
+  let requestedX = input.x_min !== void 0 || input.x_max !== void 0 ? {
+    min: optionalNumber(input.x_min, -4, `${path}.x_min`),
+    max: optionalNumber(input.x_max, 4, `${path}.x_max`)
+  } : void 0;
+  if (requestedX) assertRange(requestedX.min, requestedX.max, `${path}.x_range`);
   if (definition) {
-    xMin = Math.min(xMin, definition.min);
-    xMax = Math.max(xMax, definition.max);
+    requestedX = {
+      min: Math.min(requestedX?.min ?? definition.min, definition.min),
+      max: Math.max(requestedX?.max ?? definition.max, definition.max)
+    };
   }
-  const yMin = optionalNumber(input.y_min, -1, `${path}.y_min`);
-  const yMax = optionalNumber(input.y_max, 10, `${path}.y_max`);
-  assertRange(xMin, xMax, `${path}.x_range`);
-  assertRange(yMin, yMax, `${path}.y_range`);
+  const parameterValues = numericCombinations(dynamicNumbers.map((numberIndex) => {
+    const item = numberDefinition(plan, numberIndex, `${path}.numbers`);
+    return {
+      name: variableAlias(numberIndex),
+      values: [item.min, (item.min + item.max) / 2, item.max]
+    };
+  }));
+  const viewport = deterministicFunctionViewport(
+    expressions,
+    expressionVariables,
+    parameterValues,
+    requestedX,
+    `${path}.expression`
+  );
+  const requestedY = input.y_min !== void 0 || input.y_max !== void 0 ? {
+    min: optionalNumber(input.y_min, viewport.y.min, `${path}.y_min`),
+    max: optionalNumber(input.y_max, viewport.y.max, `${path}.y_max`)
+  } : viewport.y;
+  assertRange(requestedY.min, requestedY.max, `${path}.y_range`);
   const plotContent = {
     title: optionalText(input.title, "\u51FD\u6570\u56FE\u50CF", `${path}.title`),
-    axes: { x: { min: xMin, max: xMax, label: "x" }, y: { min: yMin, max: yMax, label: "y" } },
+    axes: {
+      x: { min: viewport.x.min, max: viewport.x.max, label: "x" },
+      y: { min: requestedY.min, max: requestedY.max, label: "y" }
+    },
     curves: expressions.map((item, index) => ({
       as: index === 0 ? "primary-curve" : `curve-${pad2(index + 1)}`,
       expression: item,
@@ -11178,9 +11256,11 @@ function compileUnitCircleProjection(base, content, role, placement, plan, path)
     } : {}
   };
   const functionName = projection;
+  const plotAngleMin = angleDefinition ? angleDefinition.min * angleScale : 0;
+  const plotAngleMax = angleDefinition ? angleDefinition.max * angleScale : Math.PI * 2;
   const plotContent = {
     title: `${functionName === "sin" ? "\u6B63\u5F26" : "\u4F59\u5F26"}\u51FD\u6570\u56FE\u50CF`,
-    axes: { x: { min: 0, max: Math.PI * 2, label: "\u03B8" }, y: { min: -1.2, max: 1.2, label: "y" } },
+    axes: { x: { min: plotAngleMin, max: plotAngleMax, label: "\u03B8" }, y: { min: -1.2, max: 1.2, label: "y" } },
     curves: [{ as: "primary-curve", expression: `${functionName}(x)`, label: `y = ${functionName}(x)` }],
     points: [{ as: "moving-point", x: theta, y: Math[functionName](theta), label: `P(\u03B8, ${functionName}(\u03B8))` }],
     ...variable ? {
@@ -11285,6 +11365,8 @@ function compileSpringAndMass(base, content, role, placement, plan, path) {
   const phaseExpression = variable ? scaledAngleExpression(variable, phaseScale) : void 0;
   const motion = `${base}-motion`;
   const plot = `${base}-plot`;
+  const plotPhaseMin = phaseDefinition ? phaseDefinition.min * phaseScale : 0;
+  const plotPhaseMax = phaseDefinition ? phaseDefinition.max * phaseScale : Math.PI * 2;
   const geometry = {
     title: optionalText(input.title, "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8", `${path}.title`),
     axes: { x: { min: -1.5, max: 1.5, label: "\u4F4D\u79FB" }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
@@ -11307,7 +11389,7 @@ function compileSpringAndMass(base, content, role, placement, plan, path) {
   };
   const plotContent = {
     title: "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316",
-    axes: { x: { min: 0, max: Math.PI * 2, label: "\u76F8\u4F4D" }, y: { min: -1.2, max: 1.2, label: "\u4F4D\u79FB" } },
+    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: "\u76F8\u4F4D" }, y: { min: -1.2, max: 1.2, label: "\u4F4D\u79FB" } },
     curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
     points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: "\u5F53\u524D\u72B6\u6001" }],
     ...variable ? {
@@ -11675,6 +11757,124 @@ var VISUAL_COMPILERS = {
   geometric_rearrangement: compileGeometricRearrangement,
   process_diagram: compileProcessDiagram
 };
+function intersectProgramRange(definition, allowedMin, allowedMax) {
+  let min = Math.max(definition.min, allowedMin);
+  let max = Math.min(definition.max, allowedMax);
+  if (!(min < max)) {
+    min = allowedMin;
+    max = allowedMax;
+  }
+  definition.min = min;
+  definition.max = max;
+  definition.initial = Math.min(max, Math.max(min, definition.initial));
+  if (definition.student_control) definition.student_control.step = (max - min) / 200;
+}
+function positiveProgramRange(definition) {
+  if (definition.max <= 0) {
+    definition.min = 0.1;
+    definition.max = 5;
+    definition.initial = 1;
+  } else {
+    const positiveMinimum = Math.max(1e-6, definition.max / 1e3);
+    definition.min = Math.max(definition.min, positiveMinimum);
+    if (!(definition.min < definition.max)) definition.min = Math.max(1e-6, definition.max / 200);
+    definition.initial = Math.min(definition.max, Math.max(definition.min, definition.initial));
+  }
+  if (definition.student_control) {
+    definition.student_control.step = (definition.max - definition.min) / 200;
+  }
+}
+function surfaceSectionProgramRange(content, path) {
+  const input = parameters(content);
+  const xMin = optionalNumber(input.x_min, -2, `${path}.x_min`);
+  const xMax = optionalNumber(input.x_max, 2, `${path}.x_max`);
+  const yMin = optionalNumber(input.y_min, -2, `${path}.y_min`);
+  const yMax = optionalNumber(input.y_max, 2, `${path}.y_max`);
+  assertRange(xMin, xMax, `${path}.x_range`);
+  assertRange(yMin, yMax, `${path}.y_range`);
+  const axis = input.section_axis ?? "z";
+  if (axis === "x") return { min: xMin, max: xMax };
+  if (axis === "y") return { min: yMin, max: yMax };
+  const expression = safeFunctionExpression(input.expression, "x^2+y^2", ["x", "y"], `${path}.expression`);
+  const evaluateSurface = compileMathExpression(expression, ["x", "y"]);
+  const values = [];
+  for (let xIndex = 0; xIndex <= 20; xIndex += 1) {
+    const x = xMin + (xMax - xMin) * xIndex / 20;
+    for (let yIndex = 0; yIndex <= 20; yIndex += 1) {
+      const y = yMin + (yMax - yMin) * yIndex / 20;
+      try {
+        const z = evaluateSurface({ x, y });
+        if (Number.isFinite(z) && Math.abs(z) <= 1e12) values.push(z);
+      } catch {
+      }
+    }
+  }
+  if (values.length < 8) {
+    fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "surface has no stable finite section range");
+  }
+  return { min: Math.min(...values), max: Math.max(...values) };
+}
+function normalizeProgramOwnedNumberRanges(plan) {
+  const constrained = /* @__PURE__ */ new Set();
+  for (const [sectionIndex, section] of plan.sections.entries()) {
+    for (const [momentIndex, moment] of section.moments.entries()) {
+      for (const [actionIndex, action] of moment.actions.entries()) {
+        if (action.action !== "create" && action.action !== "revise" || action.kind !== "visual") continue;
+        const content = action.content;
+        const policies = LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].number_input_policies;
+        for (const [inputIndex, numberIndex] of (content.numbers ?? []).entries()) {
+          const definition = plan.numbers?.[numberIndex - 1];
+          const policy = policies[inputIndex];
+          if (!definition || !policy) continue;
+          const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
+          if (policy.kind === "bounded") {
+            intersectProgramRange(definition, policy.min, policy.max);
+            constrained.add(numberIndex);
+          } else if (policy.kind === "positive") {
+            positiveProgramRange(definition);
+            constrained.add(numberIndex);
+          } else if (policy.kind === "surface_section") {
+            const allowed = surfaceSectionProgramRange(content, path);
+            if (allowed.min < allowed.max) {
+              intersectProgramRange(definition, allowed.min, allowed.max);
+              constrained.add(numberIndex);
+            }
+          }
+        }
+      }
+    }
+  }
+  if (constrained.size === 0) return;
+  for (const section of plan.sections) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "animate" || !constrained.has(action.number)) continue;
+        const definition = plan.numbers[action.number - 1];
+        action.end_value = Math.min(definition.max, Math.max(definition.min, action.end_value));
+      }
+    }
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target") continue;
+      const number = activity.number_controls[0]?.number;
+      if (!number || !constrained.has(number)) continue;
+      const definition = plan.numbers[number - 1];
+      const original = activity.value;
+      activity.value = Math.min(definition.max, Math.max(definition.min, activity.value));
+      activity.tolerance = Math.max(
+        (definition.student_control?.step ?? (definition.max - definition.min) / 200) / 2,
+        (definition.max - definition.min) / 1e3,
+        1e-6
+      );
+      if (activity.value !== original) {
+        const value = Number(activity.value.toPrecision(12));
+        const label = definition.label?.trim() || "\u6570\u503C";
+        const unit = definition.unit?.trim();
+        activity.prompt = `\u8BF7\u628A${label}\u8C03\u5230 ${value}${unit ? ` ${unit}` : ""}\u3002`;
+        activity.success_message = `\u5B8C\u6210\uFF0C${label}\u5DF2\u7ECF\u8C03\u5230 ${value}${unit ? ` ${unit}` : ""}\u3002`;
+      }
+    }
+  }
+}
 function compileVisual(base, content, role, placement, plan, path) {
   if ((content.numbers?.length ?? 0) > LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[content.capability]) {
     fail3(
@@ -11709,6 +11909,7 @@ function compilePlainContent(kind, content, options, path) {
 function compileLessonPlan(value, options = {}) {
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
+  normalizeProgramOwnedNumberRanges(plan);
   mergeEquivalentVisualInputs(plan);
   const resolvedReferences = new Map(resolved.references.map((item) => [item.path, item]));
   const wholeTargets = /* @__PURE__ */ new Map();
@@ -12109,6 +12310,9 @@ var deliveryNames = ["neutral", "patient", "encouraging", "careful", "emphatic"]
 var LESSON_PLAN_VISUAL_PARAMETER_NAMES = Object.fromEntries(
   capabilityNames.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].parameter_names])
 );
+var LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES = Object.fromEntries(
+  capabilityNames.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].model_parameter_names])
+);
 function object(properties, required = []) {
   return {
     type: "object",
@@ -12197,11 +12401,7 @@ function numberSchema() {
     min: { type: "number" },
     max: { type: "number" },
     label: { type: "string" },
-    unit: { type: "string" },
-    student_control: object({
-      kind: { enum: ["slider"] },
-      step: { type: "number", minimum: 0 }
-    }, ["kind"])
+    unit: { type: "string" }
   }, ["initial", "min", "max"]);
 }
 function modelReusableBoardSchema() {
@@ -12213,29 +12413,24 @@ function modelReusableBoardSchema() {
 function placementSchema(sectionCount) {
   void sectionCount;
   return object({
-    relation: { enum: ["new_region", "below", "above", "left_of", "right_of", "near"] },
-    align: { enum: ["start", "center", "end"] },
-    gap: { enum: ["tight", "normal", "wide"] }
+    relation: { enum: ["new_region", "below", "above", "left_of", "right_of", "near"] }
   }, ["relation"]);
 }
 function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDynamicPlotExpression = false, canonicalFunctionPlot = false) {
-  const properties = { title: string(240) };
+  const modelParameters = new Set(allowedCapabilities.flatMap(
+    (capability2) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_parameter_names]
+  ));
+  const properties = {};
   const uses = (capability2) => allowedCapabilities.includes(capability2);
+  if (modelParameters.has("title")) properties.title = string(240);
   if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
   if (uses("function_plot")) {
     properties.formula = string(256);
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
   }
-  if (uses("function_plot") || uses("function_surface_with_section")) {
-    properties.x_min = { type: "number" };
-    properties.x_max = { type: "number" };
-    properties.y_min = { type: "number" };
-    properties.y_max = { type: "number" };
-  }
   if (uses("function_surface_with_section")) {
     properties.expression = string(256);
-    properties.samples = integer(4, 24);
     properties.section_axis = { enum: ["x", "y", "z"] };
   }
   if (uses("circle_and_arc") || uses("coordinate_circle")) properties.radius = { type: "number", minimum: 0 };
@@ -12315,7 +12510,6 @@ function actionCollectionSchemas(sectionCount, allowedCapabilities, reusableCoun
         timing,
         number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
         end_value: { type: "number" },
-        easing: { enum: ["linear", "ease_in_out"] },
         duration_intent: { enum: ["brief", "normal", "extended"] }
       }, ["number", "end_value"]))
     } : {}
@@ -12391,7 +12585,6 @@ function activityCommonSchema() {
   return {
     prompt: string(480),
     hints: { type: "array", minItems: 1, maxItems: 8, items: string(480) },
-    hint_after_attempts: integer(1, 20),
     success_message: string(480)
   };
 }
@@ -12413,15 +12606,11 @@ function scene3dActivitySchema(sectionCount) {
   return object({
     ...activityCommonSchema(),
     controls: { type: "array", minItems: 1, items: { enum: ["orbit", "zoom", "preset", "reset"] } },
-    view_preset: { enum: ["top", "front", "right", "left", "isometric"] },
-    angular_tolerance_degrees: integer(1, 90),
-    zoom_tolerance_percent: integer(1, 100)
+    view_preset: { enum: ["top", "front", "right", "left", "isometric"] }
   }, [
     "prompt",
     "controls",
     "view_preset",
-    "angular_tolerance_degrees",
-    "zoom_tolerance_percent",
     "hints"
   ]);
 }
@@ -12468,6 +12657,20 @@ function buildLessonPlanBootstrapJsonSchema(requestPartCount = 0) {
       outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
       first_section: firstSection
     }, ["outline", "first_section"])
+  });
+}
+function buildLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0) {
+  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
+    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
+  }
+  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
+  return vertexCompatible({
+    ...object({
+      disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
+      learner_response: string(480),
+      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
+      first_section: firstSection
+    }, ["disposition", "learner_response"])
   });
 }
 function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
@@ -12614,7 +12817,7 @@ function coerceLessonPlanBootstrapSectionModelNumbers(value) {
 var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u4E00\u6574\u8282\u5B8C\u6574\u8BFE\u7A0B\u7684\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E0D\u586B\u5199\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002
 - course_visuals \u4E00\u6B21\u5217\u51FA\u8BFE\u7A0B\u771F\u6B63\u9700\u8981\u7684\u4E3B\u8981\u753B\u9762\uFF1B\u53EA\u9009 Schema \u4E2D\u7684 required_features\u3002\u76F8\u540C\u753B\u9762\u540E\u7EED\u5FC5\u987B\u590D\u7528\uFF0C\u4E0D\u80FD\u56E0\u6807\u9898\u3001\u5E03\u5C40\u3001\u8303\u56F4\u3001\u76F8\u673A\u6216\u989C\u8272\u518D\u5EFA\u4E00\u4EFD\u3002\u53EA\u6709\u786E\u9700\u5E76\u6392\u6BD4\u8F83\u65F6\u624D\u7528 comparison \u5E76\u6307\u5411\u8F83\u65E9\u753B\u9762\uFF1Bsupporting \u4E5F\u8981\u6307\u5411\u8F83\u65E9\u753B\u9762\u3002
 - \u9700\u8981\u5207\u5206\u5E76\u79FB\u52A8\u56FE\u5F62\u8BC1\u660E\u9762\u79EF\u65F6\uFF0C\u4F7F\u7528 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1Bordered_process_steps \u53EA\u662F\u9759\u6001\u6D41\u7A0B\uFF0C\u4E0D\u80FD\u5192\u5145\u79FB\u52A8\u56FE\u5F62\u6216\u6570\u503C\u63A7\u4EF6\u3002
-- numbers \u53EA\u58F0\u660E\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3002\u753B\u9762\u6240\u9700\u6570\u503C\u53CA\u987A\u5E8F\u4EE5 available_visual_recipes \u4E3A\u51C6\u3002
+- numbers \u53EA\u58F0\u660E\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3001\u6559\u5B66\u8303\u56F4\u548C\u521D\u59CB\u503C\u3002\u753B\u9762\u6240\u9700\u6570\u503C\u53CA\u987A\u5E8F\u4EE5 available_visual_recipes \u4E3A\u51C6\u3002\u6ED1\u6746\u79CD\u7C7B\u3001\u6B65\u957F\u548C\u80FD\u529B\u5141\u8BB8\u7684\u6267\u884C\u8303\u56F4\u7531\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\uFF0C\u4E0D\u8981\u586B\u5199\u6216\u4F30\u7B97\u3002
 - request_coverage \u9010\u9879\u8986\u76D6 request_parts\u3002\u80FD\u843D\u5B9E\u624D\u5199 teach \u548C\u7AE0\u8282\uFF1B\u660E\u786E\u8981\u6C42\u4F46\u5F53\u524D\u80FD\u529B\u65E0\u6CD5\u5B9E\u73B0\u65F6\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u548C\u539F\u56E0\uFF0C\u4E0D\u5F97\u7528\u6587\u5B57\u6216\u9519\u8BEF\u753B\u9762\u5192\u5145\u3002
 - sections \u53EF\u4EE5\u6709\u591A\u8282\uFF1B\u6BCF\u8282\u53EF\u6709\u591A\u6BB5\u65C1\u767D\u3001\u677F\u4E66\u3001\u52A8\u753B\u548C\u7EC3\u4E60\u3002close \u53EA\u5199\u603B\u7ED3\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
@@ -12623,14 +12826,22 @@ var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5
 - visuals_for_section \u4E2D create \u7684\u753B\u9762\u53EA\u5728\u6839\u5C42 course_visual_creates \u63CF\u8FF0\u5E76\u6307\u5B9A moment\uFF1Breuse \u7684\u65E7\u753B\u9762\u4E0D\u5F97\u91CD\u5EFA\u3002\u666E\u901A\u516C\u5F0F\u3001\u7B14\u8BB0\u53EA\u7528 Schema \u63D0\u4F9B\u7684\u6E05\u5355\u3002\u7A7A\u6E05\u5355\u7701\u7565\u3002
 - focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\u5E76\u51B3\u5B9A\u52A8\u4F5C\u987A\u5E8F\u3002placement \u53EA\u5199\u76F8\u5BF9\u65B9\u5411\u3002\u53EF\u590D\u7528\u666E\u901A\u677F\u4E66\u53EA\u586B\u6839\u5C42\u5FC5\u586B\u9879\uFF0C\u4E0D\u586B\u5199\u5185\u90E8\u4F4D\u7F6E\u3002
 - \u5C0F\u6570\u6309 Schema \u7684 mantissa\u3001scale \u586B\u5199\uFF0C\u4F8B\u5982 -1.5 \u4E3A -15\u30011\uFF1B6.283 \u4E3A 6283\u30013\u3002
-- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- function_plot \u7684 parameters.formula \u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u4F8B\uFF1A(x-n1)^2+n2\u3001(1+1/x)^x\u3002\u516C\u5F0F\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u89E3\u6790\u516C\u5F0F\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002
+- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
+- function_plot \u7684 parameters.formula \u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u4F8B\uFF1A(x-n1)^2+n2\u3001(1+1/x)^x\u3002\u516C\u5F0F\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u89E3\u6790\u516C\u5F0F\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002\u51FD\u6570\u56FE\u548C\u4E09\u7EF4\u66F2\u9762\u90FD\u4E0D\u586B\u5199\u89C6\u7A97\u3001\u91C7\u6837\u5BC6\u5EA6\u6216\u7F51\u683C\u7CBE\u5EA6\u3002
+- animations \u53EA\u51B3\u5B9A\u6F14\u793A\u54EA\u4E2A\u6570\u503C\u3001\u76EE\u6807\u503C\u548C\u6559\u5B66\u8282\u594F\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u7F13\u52A8\u65B9\u5F0F\u3002placement \u53EA\u51B3\u5B9A\u76F8\u5BF9\u65B9\u5411\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u951A\u70B9\u3001\u5BF9\u9F50\u548C\u95F4\u8DDD\u3002
 - geometric_rearrangement \u7684\u6570\u503C\u8868\u793A\u91CD\u6392\u8FDB\u5EA6\uFF1Bconstruction \u4ECE Schema \u9009\u62E9\u3002process_diagram \u6CA1\u6709\u6570\u503C\u6216\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
 var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
 \u540C\u4E00\u6B21\u8FD4\u56DE outline \u548C first_section\u3002first_section \u5FC5\u987B\u5B9E\u73B0 outline \u7B2C\u4E00\u8282\uFF0C\u53EA\u4F7F\u7528 outline \u5DF2\u58F0\u660E\u7684\u6570\u503C\u3001\u753B\u9762\u548C\u53EF\u590D\u7528\u5185\u5BB9\uFF1B\u5185\u90E8\u4F4D\u7F6E\u3001\u7F16\u53F7\u548C\u5F15\u7528\u7531\u7A0B\u5E8F\u5EFA\u7ACB\u3002
 ${SECTION_SYSTEM_PROMPT}`;
+var ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u6587\u5B57\u8F93\u5165\u6216\u8BED\u97F3\u8F93\u5165\u5F00\u59CB\u4E00\u6574\u8282\u767D\u677F\u8BFE\u7A0B\u3002\u5148\u5224\u65AD\u5F53\u524D\u5185\u5BB9\u662F\u5426\u8DB3\u4EE5\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\uFF0C\u4E0D\u8981\u4ECE\u53EF\u7528\u753B\u9762\u6216\u6570\u5B66\u80FD\u529B\u731C\u6D4B\u7528\u6237\u6CA1\u6709\u8868\u8FBE\u7684\u4E3B\u9898\u3002
+- generate_lesson\uFF1A\u7528\u6237\u63D0\u51FA\u4E86\u5B66\u4E60\u95EE\u9898\u3001\u89E3\u91CA\u8BF7\u6C42\uFF0C\u6216\u6E05\u695A\u8BF4\u51FA\u4E86\u60F3\u5B66\u4E60\u7684\u4E3B\u9898\u3002\u7B80\u77ED\u4F46\u660E\u786E\u7684\u4E3B\u9898\uFF08\u4F8B\u5982\u201C\u52FE\u80A1\u5B9A\u7406\u201D\uFF09\u4E5F\u5C5E\u4E8E\u8FD9\u4E00\u7C7B\u3002\u6B64\u65F6\u586B\u5199\u5B8C\u6574 outline \u548C first_section\uFF0Clearner_response \u7559\u7A7A\u3002
+- clarify\uFF1A\u8FD9\u662F\u771F\u5B9E\u8BDD\u8BED\uFF0C\u4F46\u5185\u5BB9\u6B8B\u7F3A\u3001\u542B\u4E49\u4E0D\u6E05\u6216\u6CA1\u6709\u8BF4\u660E\u8981\u5B66\u4EC0\u4E48\uFF0C\u65E0\u6CD5\u53EF\u9760\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\u3002\u6B64\u65F6\u4E0D\u8981\u586B\u5199 outline \u6216 first_section\uFF0C\u7528 learner_response \u7B80\u77ED\u8FFD\u95EE\u7528\u6237\u60F3\u5B66\u4E60\u4EC0\u4E48\u3002\u4F8B\u5982 \u201CThe book.\u201D \u5E94\u8FFD\u95EE\u7528\u6237\u60F3\u4E86\u89E3\u8FD9\u672C\u4E66\u7684\u4EC0\u4E48\u5185\u5BB9\uFF0C\u800C\u4E0D\u662F\u731C\u6210\u6570\u5B66\u8BFE\u7A0B\u3002
+- ignore\uFF1A\u53EA\u662F\u8BED\u6C14\u8BCD\u3001\u53E3\u5934\u586B\u5145\u6216\u6CA1\u6709\u53EF\u56DE\u5E94\u5185\u5BB9\u3002\u6B64\u65F6\u4E0D\u8981\u586B\u5199 outline \u6216 first_section\uFF0Clearner_response \u7559\u7A7A\u3002
+\u53EA\u505A\u4E0A\u8FF0\u8BED\u4E49\u5224\u65AD\uFF0C\u4E0D\u4F7F\u7528\u5B57\u6570\u3001\u8BED\u8A00\u6216\u56FA\u5B9A\u5173\u952E\u8BCD\u4F5C\u4E3A\u89C4\u5219\u3002
+
+${BOOTSTRAP_SYSTEM_PROMPT}`;
 function positiveInteger(value, fallback, label) {
   const result = value ?? fallback;
   if (!Number.isInteger(result) || result < 1) throw new Error(`${label} must be a positive integer`);
@@ -12669,6 +12880,15 @@ function pruneModelNulls(value) {
     Object.entries(value).filter(([, child]) => child !== null).map(([key, child]) => [key, pruneModelNulls(child)])
   );
 }
+var TARGET_SLIDER_INTERVALS = 200;
+var PROGRAM_HINT_AFTER_ATTEMPTS = 2;
+var PROGRAM_ANIMATION_EASING = "linear";
+var PROGRAM_SCENE_ANGULAR_TOLERANCE_DEGREES = 7.5;
+var PROGRAM_SCENE_ZOOM_TOLERANCE = 0.1;
+function deriveSliderStep(min, max) {
+  const span = max - min;
+  return span / TARGET_SLIDER_INTERVALS;
+}
 function lowerModelOutline(value) {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) return root;
@@ -12677,15 +12897,16 @@ function lowerModelOutline(value) {
     candidate.numbers = candidate.numbers.map((entry) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
       const number = { ...entry };
+      delete number.student_control;
       if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
       if (typeof number.label === "string" && !number.label.trim()) delete number.label;
-      if (number.student_control === void 0 && typeof number.min === "number" && Number.isFinite(number.min) && typeof number.max === "number" && Number.isFinite(number.max) && number.max > number.min) {
-        const rawStep = (number.max - number.min) / 100;
-        const precision = 10 ** 6;
+      if (typeof number.min === "number" && Number.isFinite(number.min) && typeof number.max === "number" && Number.isFinite(number.max) && number.max > number.min) {
         number.student_control = {
           kind: "slider",
-          step: Math.max(Math.round(rawStep * precision) / precision, 1 / precision)
+          step: deriveSliderStep(number.min, number.max)
         };
+      } else if (number.student_control !== void 0) {
+        number.student_control = { kind: "slider" };
       }
       return number;
     });
@@ -13009,7 +13230,7 @@ function lowerModelBoardContent(kind, value, numberCount) {
   if (typeof content.title === "string" && parameters2.title === void 0) parameters2.title = content.title;
   if (typeof capability2 === "string" && capability2 in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
     const allowedParameters = new Set(
-      LESSON_PLAN_VISUAL_PARAMETER_NAMES[capability2]
+      LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES[capability2]
     );
     for (const key of Object.keys(parameters2)) {
       if (!allowedParameters.has(key)) delete parameters2[key];
@@ -13053,6 +13274,16 @@ function lowerModelActionReferences(actionName, action, currentMoment, numberCou
     lowered.members = lowered.members.map((reference) => lowerModelReference(reference, currentMoment));
   }
   if (actionName === "focus") delete lowered.references;
+  if (actionName === "animate") {
+    delete lowered.easing;
+    lowered.easing = PROGRAM_ANIMATION_EASING;
+  }
+  if (lowered.placement && typeof lowered.placement === "object" && !Array.isArray(lowered.placement)) {
+    const placement = { ...lowered.placement };
+    delete placement.align;
+    delete placement.gap;
+    lowered.placement = placement;
+  }
   return lowered;
 }
 function lowerIntegerDecimal(record2, prefix, path) {
@@ -13067,6 +13298,8 @@ function lowerIntegerDecimal(record2, prefix, path) {
 }
 function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection) {
   const lowered = { ...activity };
+  delete lowered.hint_after_attempts;
+  lowered.hint_after_attempts = PROGRAM_HINT_AFTER_ATTEMPTS;
   if (kind === "number_target") {
     const requestedValue = lowerIntegerDecimal(lowered, "value", `${path}.value`);
     delete lowered.expression;
@@ -13133,12 +13366,13 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
       isometric: { yaw: Math.PI / 4, pitch: Math.PI / 6, zoom: 1 }
     };
     let preset = typeof lowered.view_preset === "string" ? presets[lowered.view_preset] : void 0;
-    if (!preset || !Number.isInteger(lowered.angular_tolerance_degrees) || !Number.isInteger(lowered.zoom_tolerance_percent)) {
-      throw new LessonPlanError("LESSON_PLAN_ACTIVITY", path, "expected a supported 3D view preset and integer tolerances");
+    if (!preset) {
+      throw new LessonPlanError("LESSON_PLAN_ACTIVITY", path, "expected a supported 3D view preset");
     }
     delete lowered.view_preset;
-    let angularTolerance = Math.min(Number(lowered.angular_tolerance_degrees), 10);
-    const zoomTolerance = Math.min(Number(lowered.zoom_tolerance_percent), 15);
+    delete lowered.angular_tolerance_degrees;
+    delete lowered.zoom_tolerance_percent;
+    let angularTolerance = PROGRAM_SCENE_ANGULAR_TOLERANCE_DEGREES;
     const sceneCapability = outline.sections.slice(0, expectedSection).flatMap((section) => [
       ...section.allowed_capabilities,
       ...(section.reusable_items ?? []).flatMap((item) => item.capability ? [item.capability] : [])
@@ -13156,13 +13390,11 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
         angularTolerance = Math.min(angularTolerance, Math.max(0.25, separationDegrees / 2));
       }
     }
-    delete lowered.angular_tolerance_degrees;
-    delete lowered.zoom_tolerance_percent;
     Object.assign(lowered, {
       match: "view_direction",
       ...preset,
       angular_tolerance: angularTolerance * Math.PI / 180,
-      zoom_tolerance: zoomTolerance / 100
+      zoom_tolerance: PROGRAM_SCENE_ZOOM_TOLERANCE
     });
   }
   return lowered;
@@ -13787,6 +14019,7 @@ function inputContext(input) {
   if (!input.learner_request.trim()) throw new Error("learner_request is required");
   return {
     learner_request: input.learner_request,
+    input_modality: input.input_modality ?? null,
     language: input.language ?? "zh-CN",
     learner_context: input.learner_context ?? null,
     tutor_context: input.tutor_context ?? null
@@ -13875,6 +14108,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const context = inputContext(input);
   const fixedRequestParts = requestParts(input);
   const bootstrapFirstSection = options.bootstrap_first_section === true;
+  const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
+  if (admissionInput && !bootstrapFirstSection) {
+    throw new Error("lesson admission requires bootstrap_first_section");
+  }
   let modelCalls = 0;
   let outline;
   let bootstrappedFirstSection;
@@ -13887,7 +14124,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       part: bootstrapFirstSection ? "bootstrap" : "outline",
       attempt,
       turn_id: input.turn_id,
-      system_prompt: bootstrapFirstSection ? BOOTSTRAP_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
+      system_prompt: bootstrapFirstSection ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
       prompt: JSON.stringify({
         course: context,
         request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
@@ -13902,7 +14139,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         } : {},
         ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
       }),
-      response_schema: bootstrapFirstSection ? buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+      response_schema: bootstrapFirstSection ? admissionInput ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
       max_output_tokens: bootstrapFirstSection ? 16384 : 8192
     });
     modelCalls += 1;
@@ -13914,6 +14151,32 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           "$lessonPlanBootstrap",
           "bootstrap response must be an object"
         );
+      }
+      if (admissionInput) {
+        const envelope = parsed;
+        const disposition = envelope.disposition;
+        if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
+          throw new LessonPlanError(
+            "LESSON_PLAN_MODEL_JSON",
+            "$lessonPlanBootstrap.disposition",
+            "lesson bootstrap must choose generate_lesson, clarify, or ignore"
+          );
+        }
+        if (disposition !== "generate_lesson") {
+          const learnerResponse = typeof envelope.learner_response === "string" ? envelope.learner_response.trim() : "";
+          if (disposition === "clarify" && !learnerResponse) {
+            throw new LessonPlanError(
+              "LESSON_PLAN_MODEL_JSON",
+              "$lessonPlanBootstrap.learner_response",
+              "clarify requires a learner-facing question"
+            );
+          }
+          return {
+            disposition,
+            learner_response: learnerResponse,
+            model_calls: modelCalls
+          };
+        }
       }
       const rawOutline = bootstrapFirstSection ? parsed.outline : parsed;
       outline = validateLessonPlanOutline(
@@ -14160,12 +14423,14 @@ export {
   LESSON_PLAN_CAPABILITY_NUMBER_INPUTS,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
+  LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES,
   LESSON_PLAN_SCENE_INITIAL_CAMERAS,
   LESSON_PLAN_VERSION,
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VISUAL_PARAMETER_NAMES,
   LessonPlanError,
   assembleLessonPlan,
+  buildLessonPlanAdmissionBootstrapJsonSchema,
   buildLessonPlanBootstrapJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,

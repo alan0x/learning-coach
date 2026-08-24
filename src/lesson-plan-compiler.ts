@@ -192,6 +192,72 @@ function evaluate(expression: string, variables: string[], values: Record<string
   }
 }
 
+function numericCombinations(
+  entries: Array<{ name: string; values: number[] }>,
+): Array<Record<string, number>> {
+  return entries.reduce<Array<Record<string, number>>>(
+    (combinations, entry) => combinations.flatMap((combination) => (
+      entry.values.map((value) => ({ ...combination, [entry.name]: value }))
+    )),
+    [{}],
+  );
+}
+
+function paddedNumericRange(values: number[], fallback: { min: number; max: number }): { min: number; max: number } {
+  const finite = values.filter((value) => Number.isFinite(value) && Math.abs(value) <= 1e12).sort((a, b) => a - b);
+  if (finite.length === 0) return fallback;
+  const low = finite[Math.floor((finite.length - 1) * 0.02)]!;
+  const high = finite[Math.ceil((finite.length - 1) * 0.98)]!;
+  const span = high - low;
+  const padding = span > 1e-9 ? span * 0.12 : Math.max(0.5, Math.abs(low) * 0.2);
+  return { min: low - padding, max: high + padding };
+}
+
+function deterministicFunctionViewport(
+  expressions: string[],
+  variables: string[],
+  parameterValues: Array<Record<string, number>>,
+  requestedX: { min: number; max: number } | undefined,
+  path: string,
+): { x: { min: number; max: number }; y: { min: number; max: number } } {
+  const evaluators = expressions.map((expression) => compileMathExpression(expression, variables));
+  const candidates = requestedX ? [requestedX] : [
+    { min: -4, max: 4 },
+    { min: 0.05, max: 8 },
+    { min: -10, max: 10 },
+  ];
+  let best: { x: { min: number; max: number }; values: number[]; ratio: number } | undefined;
+  for (const xRange of candidates) {
+    const values: number[] = [];
+    let attempts = 0;
+    for (let index = 0; index <= 120; index += 1) {
+      const x = xRange.min + (xRange.max - xRange.min) * index / 120;
+      for (const parameters of parameterValues) {
+        for (const evaluator of evaluators) {
+          attempts += 1;
+          try {
+            const value = evaluator({ x, ...parameters });
+            if (Number.isFinite(value) && Math.abs(value) <= 1e12) values.push(value);
+          } catch {
+            // Keep sampling. A candidate that crosses a singularity can still
+            // be useful when most of its domain is finite.
+          }
+        }
+      }
+    }
+    const ratio = attempts > 0 ? values.length / attempts : 0;
+    if (!best || ratio > best.ratio) best = { x: xRange, values, ratio };
+    if (ratio >= 0.75) {
+      best = { x: xRange, values, ratio };
+      break;
+    }
+  }
+  if (!best || best.values.length < 8) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", path, "function has no stable finite viewport");
+  }
+  return { x: best.x, y: paddedNumericRange(best.values, { min: -1, max: 1 }) };
+}
+
 function mathExpressionToOll(expression: LessonPlanMathExpression): string {
   const operators = {
     add: "+",
@@ -356,23 +422,50 @@ function compileFunctionPlot(
   const definition = number
     ? numberDefinition(plan, number, `${path}.numbers[0]`)
     : undefined;
-  let xMin = optionalNumber(input.x_min, -4, `${path}.x_min`);
-  let xMax = optionalNumber(input.x_max, 4, `${path}.x_max`);
+  let requestedX = input.x_min !== undefined || input.x_max !== undefined
+    ? {
+        min: optionalNumber(input.x_min, -4, `${path}.x_min`),
+        max: optionalNumber(input.x_max, 4, `${path}.x_max`),
+      }
+    : undefined;
+  if (requestedX) assertRange(requestedX.min, requestedX.max, `${path}.x_range`);
   if (definition) {
     // The Lesson Plan describes what should be taught; the compiler owns the
     // mechanical viewport needed to make that teaching state visible. A model
     // should not spend another request merely copying a slider's numeric range
     // into plot axes.
-    xMin = Math.min(xMin, definition.min);
-    xMax = Math.max(xMax, definition.max);
+    requestedX = {
+      min: Math.min(requestedX?.min ?? definition.min, definition.min),
+      max: Math.max(requestedX?.max ?? definition.max, definition.max),
+    };
   }
-  const yMin = optionalNumber(input.y_min, -1, `${path}.y_min`);
-  const yMax = optionalNumber(input.y_max, 10, `${path}.y_max`);
-  assertRange(xMin, xMax, `${path}.x_range`);
-  assertRange(yMin, yMax, `${path}.y_range`);
+  const parameterValues = numericCombinations(dynamicNumbers.map((numberIndex) => {
+    const item = numberDefinition(plan, numberIndex, `${path}.numbers`);
+    return {
+      name: variableAlias(numberIndex),
+      values: [item.min, (item.min + item.max) / 2, item.max],
+    };
+  }));
+  const viewport = deterministicFunctionViewport(
+    expressions,
+    expressionVariables,
+    parameterValues,
+    requestedX,
+    `${path}.expression`,
+  );
+  const requestedY = input.y_min !== undefined || input.y_max !== undefined
+    ? {
+        min: optionalNumber(input.y_min, viewport.y.min, `${path}.y_min`),
+        max: optionalNumber(input.y_max, viewport.y.max, `${path}.y_max`),
+      }
+    : viewport.y;
+  assertRange(requestedY.min, requestedY.max, `${path}.y_range`);
   const plotContent: Record<string, unknown> = {
     title: optionalText(input.title, "函数图像", `${path}.title`),
-    axes: { x: { min: xMin, max: xMax, label: "x" }, y: { min: yMin, max: yMax, label: "y" } },
+    axes: {
+      x: { min: viewport.x.min, max: viewport.x.max, label: "x" },
+      y: { min: requestedY.min, max: requestedY.max, label: "y" },
+    },
     curves: expressions.map((item, index) => ({
       as: index === 0 ? "primary-curve" : `curve-${pad(index + 1)}`,
       expression: item,
@@ -459,9 +552,11 @@ function compileUnitCircleProjection(
     } : {}),
   };
   const functionName = projection as "sin" | "cos";
+  const plotAngleMin = angleDefinition ? angleDefinition.min * angleScale : 0;
+  const plotAngleMax = angleDefinition ? angleDefinition.max * angleScale : Math.PI * 2;
   const plotContent: Record<string, unknown> = {
     title: `${functionName === "sin" ? "正弦" : "余弦"}函数图像`,
-    axes: { x: { min: 0, max: Math.PI * 2, label: "θ" }, y: { min: -1.2, max: 1.2, label: "y" } },
+    axes: { x: { min: plotAngleMin, max: plotAngleMax, label: "θ" }, y: { min: -1.2, max: 1.2, label: "y" } },
     curves: [{ as: "primary-curve", expression: `${functionName}(x)`, label: `y = ${functionName}(x)` }],
     points: [{ as: "moving-point", x: theta, y: Math[functionName](theta), label: `P(θ, ${functionName}(θ))` }],
     ...(variable ? {
@@ -581,6 +676,8 @@ function compileSpringAndMass(
   const phaseExpression = variable ? scaledAngleExpression(variable, phaseScale) : undefined;
   const motion = `${base}-motion`;
   const plot = `${base}-plot`;
+  const plotPhaseMin = phaseDefinition ? phaseDefinition.min * phaseScale : 0;
+  const plotPhaseMax = phaseDefinition ? phaseDefinition.max * phaseScale : Math.PI * 2;
   const geometry: Record<string, unknown> = {
     title: optionalText(input.title, "弹簧振子的往复运动", `${path}.title`),
     axes: { x: { min: -1.5, max: 1.5, label: "位移" }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
@@ -603,7 +700,7 @@ function compileSpringAndMass(
   };
   const plotContent: Record<string, unknown> = {
     title: "位移随相位变化",
-    axes: { x: { min: 0, max: Math.PI * 2, label: "相位" }, y: { min: -1.2, max: 1.2, label: "位移" } },
+    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: "相位" }, y: { min: -1.2, max: 1.2, label: "位移" } },
     curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
     points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: "当前状态" }],
     ...(variable ? {
@@ -1014,6 +1111,141 @@ const VISUAL_COMPILERS = {
   process_diagram: compileProcessDiagram,
 } satisfies Record<LessonPlanVisualContent["capability"], VisualCompiler>;
 
+function intersectProgramRange(
+  definition: NonNullable<LessonPlan["numbers"]>[number],
+  allowedMin: number,
+  allowedMax: number,
+): void {
+  let min = Math.max(definition.min, allowedMin);
+  let max = Math.min(definition.max, allowedMax);
+  if (!(min < max)) {
+    min = allowedMin;
+    max = allowedMax;
+  }
+  definition.min = min;
+  definition.max = max;
+  definition.initial = Math.min(max, Math.max(min, definition.initial));
+  if (definition.student_control) definition.student_control.step = (max - min) / 200;
+}
+
+function positiveProgramRange(definition: NonNullable<LessonPlan["numbers"]>[number]): void {
+  if (definition.max <= 0) {
+    definition.min = 0.1;
+    definition.max = 5;
+    definition.initial = 1;
+  } else {
+    const positiveMinimum = Math.max(1e-6, definition.max / 1_000);
+    definition.min = Math.max(definition.min, positiveMinimum);
+    if (!(definition.min < definition.max)) definition.min = Math.max(1e-6, definition.max / 200);
+    definition.initial = Math.min(definition.max, Math.max(definition.min, definition.initial));
+  }
+  if (definition.student_control) {
+    definition.student_control.step = (definition.max - definition.min) / 200;
+  }
+}
+
+function surfaceSectionProgramRange(content: LessonPlanVisualContent, path: string): { min: number; max: number } {
+  const input = parameters(content);
+  const xMin = optionalNumber(input.x_min, -2, `${path}.x_min`);
+  const xMax = optionalNumber(input.x_max, 2, `${path}.x_max`);
+  const yMin = optionalNumber(input.y_min, -2, `${path}.y_min`);
+  const yMax = optionalNumber(input.y_max, 2, `${path}.y_max`);
+  assertRange(xMin, xMax, `${path}.x_range`);
+  assertRange(yMin, yMax, `${path}.y_range`);
+  const axis = input.section_axis ?? "z";
+  if (axis === "x") return { min: xMin, max: xMax };
+  if (axis === "y") return { min: yMin, max: yMax };
+  const expression = safeFunctionExpression(input.expression, "x^2+y^2", ["x", "y"], `${path}.expression`);
+  const evaluateSurface = compileMathExpression(expression, ["x", "y"]);
+  const values: number[] = [];
+  for (let xIndex = 0; xIndex <= 20; xIndex += 1) {
+    const x = xMin + (xMax - xMin) * xIndex / 20;
+    for (let yIndex = 0; yIndex <= 20; yIndex += 1) {
+      const y = yMin + (yMax - yMin) * yIndex / 20;
+      try {
+        const z = evaluateSurface({ x, y });
+        if (Number.isFinite(z) && Math.abs(z) <= 1e12) values.push(z);
+      } catch {
+        // The visual compiler will report an unusable expression if no stable
+        // finite section range can be found.
+      }
+    }
+  }
+  if (values.length < 8) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "surface has no stable finite section range");
+  }
+  return { min: Math.min(...values), max: Math.max(...values) };
+}
+
+/**
+ * Apply physical and rendering constraints after the model-authored teaching
+ * plan has been resolved, but before OLL variables, animations, and tasks are
+ * emitted. The model may request a useful teaching range; installed
+ * capabilities own the executable range that can actually affect a visual.
+ */
+function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
+  const constrained = new Set<number>();
+  for (const [sectionIndex, section] of plan.sections.entries()) {
+    for (const [momentIndex, moment] of section.moments.entries()) {
+      for (const [actionIndex, action] of moment.actions.entries()) {
+        if ((action.action !== "create" && action.action !== "revise")
+          || action.kind !== "visual") continue;
+        const content = action.content as LessonPlanVisualContent;
+        const policies = LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].number_input_policies;
+        for (const [inputIndex, numberIndex] of (content.numbers ?? []).entries()) {
+          const definition = plan.numbers?.[numberIndex - 1];
+          const policy = policies[inputIndex];
+          if (!definition || !policy) continue;
+          const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
+          if (policy.kind === "bounded") {
+            intersectProgramRange(definition, policy.min, policy.max);
+            constrained.add(numberIndex);
+          } else if (policy.kind === "positive") {
+            positiveProgramRange(definition);
+            constrained.add(numberIndex);
+          } else if (policy.kind === "surface_section") {
+            const allowed = surfaceSectionProgramRange(content, path);
+            if (allowed.min < allowed.max) {
+              intersectProgramRange(definition, allowed.min, allowed.max);
+              constrained.add(numberIndex);
+            }
+          }
+        }
+      }
+    }
+  }
+  if (constrained.size === 0) return;
+  for (const section of plan.sections) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "animate" || !constrained.has(action.number)) continue;
+        const definition = plan.numbers![action.number - 1]!;
+        action.end_value = Math.min(definition.max, Math.max(definition.min, action.end_value));
+      }
+    }
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target") continue;
+      const number = activity.number_controls[0]?.number;
+      if (!number || !constrained.has(number)) continue;
+      const definition = plan.numbers![number - 1]!;
+      const original = activity.value;
+      activity.value = Math.min(definition.max, Math.max(definition.min, activity.value));
+      activity.tolerance = Math.max(
+        (definition.student_control?.step ?? (definition.max - definition.min) / 200) / 2,
+        (definition.max - definition.min) / 1_000,
+        1e-6,
+      );
+      if (activity.value !== original) {
+        const value = Number(activity.value.toPrecision(12));
+        const label = definition.label?.trim() || "数值";
+        const unit = definition.unit?.trim();
+        activity.prompt = `请把${label}调到 ${value}${unit ? ` ${unit}` : ""}。`;
+        activity.success_message = `完成，${label}已经调到 ${value}${unit ? ` ${unit}` : ""}。`;
+      }
+    }
+  }
+}
+
 function compileVisual(
   base: string,
   content: LessonPlanVisualContent,
@@ -1062,6 +1294,7 @@ function compilePlainContent(
 export function compileLessonPlan(value: unknown, options: CompileLessonPlanOptions = {}): CompiledLessonPlan {
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
+  normalizeProgramOwnedNumberRanges(plan);
   mergeEquivalentVisualInputs(plan);
   const resolvedReferences = new Map(resolved.references.map((item) => [item.path, item]));
   const wholeTargets = new Map<string, string>();

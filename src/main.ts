@@ -39,6 +39,7 @@ interface ToolInput {
   language?: string;
   tutor_context?: string;
   learner_context?: string;
+  input_modality?: "text" | "voice";
   session_context?: ResourceContext;
   board_summary?: string;
   last_applied_action?: string;
@@ -952,6 +953,7 @@ function parseCompleteLessonInput(
     "language",
     "tutor_context",
     "learner_context",
+    "input_modality",
   ]);
   for (const field of Object.keys(input)) {
     if (!allowedFields.has(field)) {
@@ -960,6 +962,14 @@ function parseCompleteLessonInput(
         `Complete lesson input does not accept '${field}'`,
       );
     }
+  }
+  if (input.input_modality !== undefined
+    && input.input_modality !== "text"
+    && input.input_modality !== "voice") {
+    throw new ToolExecutionError(
+      "LESSON_INPUT_MODALITY_UNSUPPORTED",
+      "input_modality must be text or voice",
+    );
   }
   return {
     turn_id: validateTurnId(input.turn_id),
@@ -972,6 +982,7 @@ function parseCompleteLessonInput(
     ...(typeof input.learner_context === "string"
       ? { learner_context: truncate(input.learner_context) }
       : {}),
+    input_modality: input.input_modality === "voice" ? "voice" : "text",
   };
 }
 
@@ -7090,14 +7101,7 @@ const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
     text: { type: "string" },
     items: { type: "array", items: { type: "string" } },
     expression: { type: "string" },
-    x_min: { type: "number" },
-    x_max: { type: "number" },
-    y_min: { type: "number" },
-    y_max: { type: "number" },
-    z_min: { type: "number" },
-    z_max: { type: "number" },
     level: { type: "number" },
-    samples: { type: "integer" },
     reason_code: {
       type: "string",
       enum: [
@@ -7119,14 +7123,7 @@ const SELECTION_RESPONSE_SCHEMA: JsonSchema = {
     "text",
     "items",
     "expression",
-    "x_min",
-    "x_max",
-    "y_min",
-    "y_max",
-    "z_min",
-    "z_max",
     "level",
-    "samples",
     "reason_code",
     "alternatives",
   ],
@@ -7171,7 +7168,7 @@ const SELECTION_VISUALIZATION_SYSTEM_PROMPT = `当 tool_id 为 generate-plot 或
 - 显式曲面 z=f(x,y)：response_kind=scene3d，scene_kind=surface，expression 只写 f(x,y)。
 - 三变量隐式方程 F(x,y,z)=c：response_kind=scene3d，scene_kind=implicit_surface，expression 写 F(x,y,z)，level 写 c。
 - 超过三个独立变量、无法可靠识别、无法转为上述安全表达式或在合理有限范围内无法绘制：response_kind=unsupported，给出准确原因和可操作的 alternatives，不能假装已经绘制。
-所有范围必须有限并覆盖主要图形；scene3d 的 samples 使用 10 到 14。代码会再次校验你的选择和表达式，校验不通过时不会绘制。非绘图请求使用 explanation。`;
+坐标范围和三维网格精度由程序根据表达式按统一预算计算，不要填写坐标范围或采样密度。代码会再次校验表达式，无法在安全有限范围内找到图形时不会绘制。非绘图请求使用 explanation。`;
 
 function hasReusableSelectionRecognition(input: SelectionToolInput): boolean {
   return input.content_hint !== "unknown"
@@ -7269,6 +7266,113 @@ async function selectionModelMedia(
   return { mimeType, data: data.toString("base64") };
 }
 
+type SelectionRange = { min: number; max: number };
+
+function selectionPaddedRange(values: number[], fallback: SelectionRange): SelectionRange {
+  const finite = values.filter((value) => Number.isFinite(value) && Math.abs(value) <= 1e12).sort((a, b) => a - b);
+  if (finite.length === 0) return fallback;
+  const low = finite[Math.floor((finite.length - 1) * 0.02)]!;
+  const high = finite[Math.ceil((finite.length - 1) * 0.98)]!;
+  const span = high - low;
+  const padding = span > 1e-9 ? span * 0.12 : Math.max(0.5, Math.abs(low) * 0.2);
+  return { min: low - padding, max: high + padding };
+}
+
+function selectionExplicitViewport(expression: string): { x: SelectionRange; y: SelectionRange } {
+  const evaluate = compileMathExpression(expression, ["x"]);
+  const candidates: SelectionRange[] = [
+    { min: -4, max: 4 },
+    { min: 0.05, max: 8 },
+    { min: -10, max: 10 },
+  ];
+  let best: { x: SelectionRange; values: number[]; ratio: number } | undefined;
+  for (const xRange of candidates) {
+    const values: number[] = [];
+    for (let index = 0; index <= 160; index += 1) {
+      const x = xRange.min + (xRange.max - xRange.min) * index / 160;
+      try {
+        const y = evaluate({ x });
+        if (Number.isFinite(y) && Math.abs(y) <= 1e12) values.push(y);
+      } catch {
+        // A deterministic candidate may cross a singularity. Try the rest of
+        // the domain and, if too little is drawable, the next candidate.
+      }
+    }
+    const ratio = values.length / 161;
+    if (!best || ratio > best.ratio) best = { x: xRange, values, ratio };
+    if (ratio >= 0.75) {
+      best = { x: xRange, values, ratio };
+      break;
+    }
+  }
+  if (!best || best.values.length < 8) throw new Error("Plot expression has no stable finite viewport");
+  return { x: best.x, y: selectionPaddedRange(best.values, { min: -1, max: 1 }) };
+}
+
+function selectionSurfaceDomain(expression: string): { x: SelectionRange; y: SelectionRange } {
+  const evaluate = compileMathExpression(expression, ["x", "y"]);
+  const candidates = [
+    { x: { min: -2, max: 2 }, y: { min: -2, max: 2 } },
+    { x: { min: 0.05, max: 4 }, y: { min: 0.05, max: 4 } },
+    { x: { min: -5, max: 5 }, y: { min: -5, max: 5 } },
+  ];
+  for (const candidate of candidates) {
+    let finite = 0;
+    for (let xIndex = 0; xIndex <= 12; xIndex += 1) {
+      const x = candidate.x.min + (candidate.x.max - candidate.x.min) * xIndex / 12;
+      for (let yIndex = 0; yIndex <= 12; yIndex += 1) {
+        const y = candidate.y.min + (candidate.y.max - candidate.y.min) * yIndex / 12;
+        try {
+          const z = evaluate({ x, y });
+          if (Number.isFinite(z) && Math.abs(z) <= 1e12) finite += 1;
+        } catch {
+          // Continue sampling this deterministic candidate.
+        }
+      }
+    }
+    if (finite / (13 * 13) >= 0.75) return candidate;
+  }
+  throw new Error("3D surface has no stable finite viewport");
+}
+
+function selectionImplicitDomain(
+  expression: string,
+  variables: ["x", "y"] | ["x", "y", "z"],
+  level: number,
+): { x: SelectionRange; y: SelectionRange; z?: SelectionRange } {
+  const evaluate = compileMathExpression(expression, variables);
+  for (const halfSpan of [2, 5, 10, 20]) {
+    const range = { min: -halfSpan, max: halfSpan };
+    const resolution = variables.length === 2 ? 16 : 8;
+    let minimum = Number.POSITIVE_INFINITY;
+    let maximum = Number.NEGATIVE_INFINITY;
+    for (let xIndex = 0; xIndex <= resolution; xIndex += 1) {
+      const x = range.min + (range.max - range.min) * xIndex / resolution;
+      for (let yIndex = 0; yIndex <= resolution; yIndex += 1) {
+        const y = range.min + (range.max - range.min) * yIndex / resolution;
+        const zIterations = variables.length === 3 ? resolution : 0;
+        for (let zIndex = 0; zIndex <= zIterations; zIndex += 1) {
+          const z = variables.length === 3
+            ? range.min + (range.max - range.min) * zIndex / resolution
+            : 0;
+          try {
+            const value = evaluate(variables.length === 3 ? { x, y, z } : { x, y });
+            if (!Number.isFinite(value) || Math.abs(value) > 1e12) continue;
+            minimum = Math.min(minimum, value);
+            maximum = Math.max(maximum, value);
+          } catch {
+            // Continue searching the bounded grid.
+          }
+        }
+      }
+    }
+    if (minimum <= level && maximum >= level) {
+      return { x: range, y: range, ...(variables.length === 3 ? { z: range } : {}) };
+    }
+  }
+  throw new Error("Implicit surface level is outside the program-selected viewport");
+}
+
 function parseSelectionModelResponse(
   raw: string,
   input: SelectionToolInput,
@@ -7353,44 +7457,20 @@ function parseSelectionModelResponse(
         throw new Error(`${input.tool_id} cannot return a plot response`);
       }
       const expression = nonEmpty("expression");
-      const numbers = [output.x_min, output.x_max, output.y_min, output.y_max];
-      if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
-        throw new Error("Plot ranges must be finite numbers");
-      }
-      const [xMin, xMax, yMin, yMax] = numbers as number[];
-      if (xMax <= xMin || yMax <= yMin) throw new Error("Plot ranges must increase");
       if (responseKind === "plot") {
-        const evaluate = compileMathExpression(expression, ["x"]);
-        for (let index = 0; index <= 40; index += 1) {
-          const x = xMin + (xMax - xMin) * index / 40;
-          const y = evaluate({ x });
-          if (!Number.isFinite(y)) throw new Error("Plot expression is not finite across its range");
-        }
+        const viewport = selectionExplicitViewport(expression);
         response = {
           kind: "plot",
           plot_kind: "explicit",
           title,
           text,
           expression,
-          x_range: { min: xMin, max: xMax },
-          y_range: { min: yMin, max: yMax },
+          x_range: viewport.x,
+          y_range: viewport.y,
         };
       } else {
         const level = finiteOutput("level");
-        const evaluate = compileMathExpression(expression, ["x", "y"]);
-        const sampled: number[] = [];
-        for (let xIndex = 0; xIndex <= 8; xIndex += 1) {
-          const x = xMin + (xMax - xMin) * xIndex / 8;
-          for (let yIndex = 0; yIndex <= 8; yIndex += 1) {
-            const y = yMin + (yMax - yMin) * yIndex / 8;
-            const value = evaluate({ x, y });
-            if (!Number.isFinite(value)) throw new Error("Implicit plot is not finite across its range");
-            sampled.push(value);
-          }
-        }
-        if (Math.min(...sampled) > level || Math.max(...sampled) < level) {
-          throw new Error("Implicit plot level is outside the sampled value range");
-        }
+        const viewport = selectionImplicitDomain(expression, ["x", "y"], level);
         response = {
           kind: "plot",
           plot_kind: "implicit",
@@ -7399,8 +7479,8 @@ function parseSelectionModelResponse(
           expression,
           level,
           samples: 80,
-          x_range: { min: xMin, max: xMax },
-          y_range: { min: yMin, max: yMax },
+          x_range: viewport.x,
+          y_range: viewport.y,
         };
       }
     } else if (responseKind === "scene3d") {
@@ -7412,58 +7492,18 @@ function parseSelectionModelResponse(
         throw new Error("scene_kind is invalid");
       }
       const expression = nonEmpty("expression");
-      const numbers = [
-        output.x_min, output.x_max, output.y_min, output.y_max,
-        output.z_min, output.z_max,
-      ];
-      if (numbers.some((number) => typeof number !== "number" || !Number.isFinite(number))) {
-        throw new Error("3D ranges must be finite numbers");
-      }
-      const [xMin, xMax, yMin, yMax, zMin, zMax] = numbers as number[];
-      if (xMax <= xMin || yMax <= yMin || zMax <= zMin) {
-        throw new Error("3D ranges must increase");
-      }
       const level = finiteOutput("level");
-      const requestedSamples = Number(output.samples);
-      const samples = Number.isSafeInteger(requestedSamples)
-        ? Math.max(4, Math.min(18, requestedSamples))
-        : 12;
-      const evaluate = compileMathExpression(
-        expression,
-        sceneKind === "surface" ? ["x", "y"] : ["x", "y", "z"],
-      );
-      const sampled: number[] = [];
-      const verificationSamples = sceneKind === "surface" ? 8 : samples;
-      for (let xIndex = 0; xIndex <= verificationSamples; xIndex += 1) {
-        const x = xMin + (xMax - xMin) * xIndex / verificationSamples;
-        for (let yIndex = 0; yIndex <= verificationSamples; yIndex += 1) {
-          const y = yMin + (yMax - yMin) * yIndex / verificationSamples;
-          if (sceneKind === "surface") {
-            const z = evaluate({ x, y });
-            if (!Number.isFinite(z)) throw new Error("3D surface is not finite across its range");
-            sampled.push(z);
-          } else {
-            for (let zIndex = 0; zIndex <= verificationSamples; zIndex += 1) {
-              const z = zMin + (zMax - zMin) * zIndex / verificationSamples;
-              const value = evaluate({ x, y, z });
-              if (Number.isFinite(value)) sampled.push(value);
-            }
-          }
-        }
-      }
-      if (sceneKind === "implicit_surface"
-        && (sampled.length === 0
-          || Math.min(...sampled) > level
-          || Math.max(...sampled) < level)) {
-        throw new Error("3D implicit surface level is outside the sampled value range");
-      }
+      const samples = 12;
+      const viewport = sceneKind === "surface"
+        ? selectionSurfaceDomain(expression)
+        : selectionImplicitDomain(expression, ["x", "y", "z"], level);
       const object = sceneKind === "surface"
         ? {
             as: "selected-function",
             kind: "surface",
             expression,
-            x_range: { min: xMin, max: xMax },
-            y_range: { min: yMin, max: yMax },
+            x_range: viewport.x,
+            y_range: viewport.y,
             samples,
             color: "teal",
           }
@@ -7472,9 +7512,9 @@ function parseSelectionModelResponse(
             kind: "implicit_surface",
             expression,
             level,
-            x_range: { min: xMin, max: xMax },
-            y_range: { min: yMin, max: yMax },
-            z_range: { min: zMin, max: zMax },
+            x_range: viewport.x,
+            y_range: viewport.y,
+            z_range: viewport.z!,
             samples,
             color: "teal",
           };
@@ -7770,6 +7810,7 @@ async function main(): Promise<void> {
           language: input.language,
           learner_context: input.learner_context,
           tutor_context: input.tutor_context,
+          input_modality: input.input_modality,
         },
         {
           bootstrap_first_section: true,
@@ -7799,6 +7840,29 @@ async function main(): Promise<void> {
           }),
         },
       );
+      if ("disposition" in generatedLessonPlan) {
+        stageLog({
+          stage: "lesson-plan-generation",
+          turn_id: input.turn_id,
+          status: "completed",
+          mode: "lesson_plan",
+          disposition: generatedLessonPlan.disposition,
+          model_calls: generatedLessonPlan.model_calls,
+          elapsed_ms: Date.now() - startedAt,
+        });
+        emit({
+          success: true,
+          output: generatedLessonPlan.learner_response,
+          structured_metadata: {
+            lesson_disposition: generatedLessonPlan.disposition,
+            learner_response: generatedLessonPlan.learner_response,
+          },
+          authoring_strategy: "lesson_plan",
+          lesson_plan_model_calls: generatedLessonPlan.model_calls,
+          published_parts: 0,
+        });
+        return;
+      }
       const artifactPath = outputPath(input);
       await mkdir(dirname(artifactPath), { recursive: true });
       await writeFile(artifactPath, `${JSON.stringify(generatedLessonPlan.lesson, null, 2)}\n`, "utf8");

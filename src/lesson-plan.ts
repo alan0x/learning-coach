@@ -9,7 +9,9 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels"],
     semantic_parameters: ["expression", "expressions", "expression_tokens"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
@@ -19,7 +21,9 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
   unit_circle_projection: {
     parts: ["whole", "unit_circle", "moving_point", "radius", "projection_line", "primary_curve", "primary_control"],
     number_inputs: ["angle"],
+    number_input_policies: [{ kind: "angle" }],
     parameter_names: ["title", "projection"],
+    model_parameter_names: ["title", "projection"],
     semantic_parameters: ["projection"],
     output_kinds: ["geometry", "plot"],
     student_controls: ["slider", "geometry_point"],
@@ -29,7 +33,9 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
   circle_and_arc: {
     parts: ["whole", "circle", "arc", "radius", "primary_control"],
     number_inputs: ["angle", "radius"],
+    number_input_policies: [{ kind: "angle" }, { kind: "positive" }],
     parameter_names: ["title", "radius", "angle"],
+    model_parameter_names: ["title", "radius", "angle"],
     semantic_parameters: ["radius", "angle"],
     output_kinds: ["geometry"],
     student_controls: ["slider", "geometry_point"],
@@ -39,7 +45,9 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
   spring_and_mass: {
     parts: ["whole", "spring", "mass", "equilibrium", "force_arrow", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["phase"],
+    number_input_policies: [{ kind: "angle" }],
     parameter_names: ["title"],
+    model_parameter_names: ["title"],
     semantic_parameters: [],
     output_kinds: ["geometry", "plot"],
     student_controls: ["slider"],
@@ -49,7 +57,9 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
   cube_with_section: {
     parts: ["whole", "solid", "vertex", "edge", "face", "section", "primary_control"],
     number_inputs: ["section_height"],
+    number_input_policies: [{ kind: "bounded", min: -1, max: 1 }],
     parameter_names: ["title"],
+    model_parameter_names: ["title"],
     semantic_parameters: [],
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
@@ -59,7 +69,9 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
   function_surface_with_section: {
     parts: ["whole", "surface", "section", "intersection", "primary_control"],
     number_inputs: ["section_position"],
+    number_input_policies: [{ kind: "surface_section" }],
     parameter_names: ["title", "expression", "samples", "section_axis", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
@@ -69,7 +81,9 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
   coordinate_circle: {
     parts: ["whole", "circle", "center", "radius", "primary_control"],
     number_inputs: ["radius"],
+    number_input_policies: [{ kind: "positive" }],
     parameter_names: ["title", "radius", "center_x", "center_y"],
+    model_parameter_names: ["title", "radius", "center_x", "center_y"],
     semantic_parameters: ["radius", "center_x", "center_y"],
     output_kinds: ["geometry"],
     student_controls: ["slider"],
@@ -79,7 +93,9 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
   geometric_rearrangement: {
     parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "primary_control"],
     number_inputs: ["progress"],
+    number_input_policies: [{ kind: "normalized_progress" }],
     parameter_names: ["title", "construction", "leg_a", "leg_b"],
+    model_parameter_names: ["title", "construction", "leg_a", "leg_b"],
     parameter_options: {
       construction: ["right_triangle_square", "square_area_identity", "triangle_to_rectangle"],
     },
@@ -92,7 +108,9 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
   process_diagram: {
     parts: ["whole", "first_step", "current_step", "last_step"],
     number_inputs: [],
+    number_input_policies: [],
     parameter_names: ["title", "steps"],
+    model_parameter_names: ["title", "steps"],
     semantic_parameters: ["steps"],
     output_kinds: ["diagram"],
     student_controls: [],
@@ -813,6 +831,42 @@ function assertPart(target: TargetRecord, part: LessonPlanPartReference | undefi
   }
 }
 
+function validateLessonPlanNumbers(value: unknown, path: string): unknown[] {
+  const numbers = value === undefined ? [] : array(value, path);
+  if (numbers.length > 16) fail("LESSON_PLAN_NUMBERS", path, "expected at most 16 numeric states");
+  numbers.forEach((entry, index) => {
+    const numberPath = `${path}[${index}]`;
+    const number = record(entry, numberPath);
+    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], numberPath);
+    const initial = finiteNumber(number.initial, `${numberPath}.initial`);
+    const min = finiteNumber(number.min, `${numberPath}.min`);
+    const max = finiteNumber(number.max, `${numberPath}.max`);
+    if (!(min < max && initial >= min && initial <= max)) {
+      fail("LESSON_PLAN_NUMBER_RANGE", numberPath, "expected min < max and initial inside the range");
+    }
+    optionalString(number.label, `${numberPath}.label`, 80);
+    optionalString(number.unit, `${numberPath}.unit`, 32);
+    if (number.student_control === undefined) return;
+    const controlPath = `${numberPath}.student_control`;
+    const control = record(number.student_control, controlPath);
+    allowedKeys(control, ["kind", "step"], controlPath);
+    if (control.kind !== "slider") fail("LESSON_PLAN_CONTROL", `${controlPath}.kind`, "only slider is supported");
+    if (control.step === undefined) return;
+    const step = finiteNumber(control.step, `${controlPath}.step`);
+    if (step <= 0 || step > max - min) {
+      fail("LESSON_PLAN_CONTROL", `${controlPath}.step`, "step must be positive and inside the range");
+    }
+    if ((max - min) / step > 1_000) {
+      fail(
+        "LESSON_PLAN_CONTROL_RESOLUTION",
+        `${controlPath}.step`,
+        "a slider cannot expose more than 1000 distinct intervals; use a coarser step or a smaller range",
+      );
+    }
+  });
+  return numbers;
+}
+
 export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOptions = {}): ResolvedLessonPlan {
   const root = record(value, "$lessonPlan");
   allowedKeys(root, ["version", "title", "goals", "teaching_strategies", "numbers", "sections", "close"], "$lessonPlan");
@@ -827,35 +881,7 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
     strategies.forEach((strategy, index) => nonEmptyString(strategy, `$lessonPlan.teaching_strategies[${index}]`, 240));
   }
 
-  const rawNumbers = root.numbers === undefined ? [] : array(root.numbers, "$lessonPlan.numbers");
-  if (rawNumbers.length > 16) fail("LESSON_PLAN_NUMBERS", "$lessonPlan.numbers", "expected at most 16 numeric states");
-  rawNumbers.forEach((entry, index) => {
-    const path = `$lessonPlan.numbers[${index}]`;
-    const number = record(entry, path);
-    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], path);
-    const initial = finiteNumber(number.initial, `${path}.initial`);
-    const min = finiteNumber(number.min, `${path}.min`);
-    const max = finiteNumber(number.max, `${path}.max`);
-    if (!(min < max && initial >= min && initial <= max)) fail("LESSON_PLAN_NUMBER_RANGE", path, "expected min < max and initial inside the range");
-    optionalString(number.label, `${path}.label`, 80);
-    optionalString(number.unit, `${path}.unit`, 32);
-    if (number.student_control !== undefined) {
-      const control = record(number.student_control, `${path}.student_control`);
-      allowedKeys(control, ["kind", "step"], `${path}.student_control`);
-      if (control.kind !== "slider") fail("LESSON_PLAN_CONTROL", `${path}.student_control.kind`, "only slider is supported");
-      if (control.step !== undefined) {
-        const step = finiteNumber(control.step, `${path}.student_control.step`);
-        if (step <= 0 || step > max - min) fail("LESSON_PLAN_CONTROL", `${path}.student_control.step`, "step must be positive and inside the range");
-        if ((max - min) / step > 1_000) {
-          fail(
-            "LESSON_PLAN_CONTROL_RESOLUTION",
-            `${path}.student_control.step`,
-            "a slider cannot expose more than 1000 distinct intervals; use a coarser step or a smaller range",
-          );
-        }
-      }
-    }
-  });
+  const rawNumbers = validateLessonPlanNumbers(root.numbers, "$lessonPlan.numbers");
 
   const hostReferences = options.host_references ?? [];
   const imageResources = options.image_resources ?? [];
@@ -1234,28 +1260,7 @@ export function validateLessonPlanOutline(value: unknown, expectedRequestParts =
     if (strategies.length > 16) fail("LESSON_PLAN_STRATEGIES", "$lessonPlanOutline.teaching_strategies", "expected at most 16 strategies");
     strategies.forEach((strategy, index) => nonEmptyString(strategy, `$lessonPlanOutline.teaching_strategies[${index}]`, 240));
   }
-  const numbers = outline.numbers === undefined ? [] : array(outline.numbers, "$lessonPlanOutline.numbers");
-  if (numbers.length > 16) fail("LESSON_PLAN_NUMBERS", "$lessonPlanOutline.numbers", "expected at most 16 numeric states");
-  numbers.forEach((entry, index) => {
-    const path = `$lessonPlanOutline.numbers[${index}]`;
-    const number = record(entry, path);
-    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], path);
-    const initial = finiteNumber(number.initial, `${path}.initial`);
-    const min = finiteNumber(number.min, `${path}.min`);
-    const max = finiteNumber(number.max, `${path}.max`);
-    if (!(min < max && initial >= min && initial <= max)) fail("LESSON_PLAN_NUMBER_RANGE", path, "expected min < max and initial inside the range");
-    optionalString(number.label, `${path}.label`, 80);
-    optionalString(number.unit, `${path}.unit`, 32);
-    if (number.student_control !== undefined) {
-      const control = record(number.student_control, `${path}.student_control`);
-      allowedKeys(control, ["kind", "step"], `${path}.student_control`);
-      if (control.kind !== "slider") fail("LESSON_PLAN_CONTROL", `${path}.student_control.kind`, "only slider is supported");
-      if (control.step !== undefined) {
-        const step = finiteNumber(control.step, `${path}.student_control.step`);
-        if (step <= 0 || step > max - min) fail("LESSON_PLAN_CONTROL", `${path}.student_control.step`, "step must be positive and inside the range");
-      }
-    }
-  });
+  const numbers = validateLessonPlanNumbers(outline.numbers, "$lessonPlanOutline.numbers");
 
   const sections = array(outline.sections, "$lessonPlanOutline.sections");
   if (sections.length < 1 || sections.length > 24) fail("LESSON_PLAN_SECTIONS", "$lessonPlanOutline.sections", "expected 1 to 24 sections");

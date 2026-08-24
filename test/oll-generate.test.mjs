@@ -282,6 +282,10 @@ test("the complete-lesson command bootstraps the outline and first section in on
     const schema = payload.generationConfig.responseJsonSchema;
     const content = schema.properties?.outline && schema.properties?.first_section
       ? {
+          ...(schema.properties?.disposition ? {
+            disposition: "generate_lesson",
+            learner_response: "",
+          } : {}),
           outline,
           first_section: section,
         }
@@ -320,6 +324,60 @@ test("the complete-lesson command bootstraps the outline and first section in on
     assert.equal(lesson.dsl, "octos.lesson");
     assert.equal(lesson.steps.length, 1);
     assert.equal(lesson.steps[0].beats[0].actions[0].kind, "math");
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("an incomplete composer request returns clarification without writing a lesson artifact", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-voice-clarify-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  let modelCalls = 0;
+  const server = createServer(async (request, response) => {
+    if (request.url === "/token") {
+      for await (const _chunk of request) { /* consume OAuth request */ }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ access_token: "test-token", expires_in: 3600 }));
+      return;
+    }
+    for await (const _chunk of request) { /* consume model request */ }
+    modelCalls += 1;
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(vertexPayload({
+      disposition: "clarify",
+      learner_response: "你想了解这本书的哪一方面？",
+    }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const result = await runTool({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      input: {
+        learner_request: "The book.",
+        input_modality: "text",
+      },
+    });
+    assert.equal(result.exitCode, 0, result.stderr);
+    const completed = result.stdout.trim().split("\n")
+      .map((line) => JSON.parse(line))
+      .find((message) => message.success === true);
+    assert.deepEqual(completed.structured_metadata, {
+      lesson_disposition: "clarify",
+      learner_response: "你想了解这本书的哪一方面？",
+    });
+    assert.equal(completed.published_parts, 0);
+    assert.equal("files_to_send" in completed, false);
+    assert.equal(modelCalls, 1);
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
@@ -1346,6 +1404,18 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     );
     assert.equal(artifact.response.kind, "plot");
     assert.equal(artifact.response.expression, "x^2");
+    for (const programOwnedField of [
+      "x_min", "x_max", "y_min", "y_max", "z_min", "z_max", "samples",
+    ]) {
+      assert.equal(
+        programOwnedField in requests[0].generationConfig.responseJsonSchema.properties,
+        false,
+        programOwnedField,
+      );
+    }
+    assert.deepEqual(artifact.response.x_range, { min: -4, max: 4 });
+    assert.ok(artifact.response.y_range.min < 0);
+    assert.ok(artifact.response.y_range.max > 15);
 
     const sceneResult = await runTool({
       tool: "oll_enhance_selection",
@@ -1380,6 +1450,10 @@ test("selection tool writes a source-linked artifact without producing a lesson"
     assert.equal(sceneArtifact.response.kind, "scene3d", JSON.stringify(sceneArtifact.response));
     assert.equal(sceneArtifact.response.content.objects[0].kind, "implicit_surface");
     assert.equal(sceneArtifact.response.content.objects[0].expression, "x^4+y^4+z^4-1");
+    assert.deepEqual(sceneArtifact.response.content.objects[0].x_range, { min: -2, max: 2 });
+    assert.deepEqual(sceneArtifact.response.content.objects[0].y_range, { min: -2, max: 2 });
+    assert.deepEqual(sceneArtifact.response.content.objects[0].z_range, { min: -2, max: 2 });
+    assert.equal(sceneArtifact.response.content.objects[0].samples, 12);
 
     const unsupportedResult = await runTool({
       tool: "oll_enhance_selection",

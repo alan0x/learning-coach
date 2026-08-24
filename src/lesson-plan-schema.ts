@@ -20,6 +20,10 @@ export const LESSON_PLAN_VISUAL_PARAMETER_NAMES = Object.fromEntries(
   capabilityNames.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].parameter_names]),
 ) as Record<LessonPlanCapability, readonly string[]>;
 
+export const LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES = Object.fromEntries(
+  capabilityNames.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].model_parameter_names]),
+) as Record<LessonPlanCapability, readonly string[]>;
+
 function object(properties: Record<string, unknown>, required: string[] = []): LessonPlanJsonSchema {
   return {
     type: "object",
@@ -139,10 +143,6 @@ function numberSchema(): LessonPlanJsonSchema {
     max: { type: "number" },
     label: { type: "string" },
     unit: { type: "string" },
-    student_control: object({
-      kind: { enum: ["slider"] },
-      step: { type: "number", minimum: 0 },
-    }, ["kind"]),
   }, ["initial", "min", "max"]);
 }
 
@@ -161,8 +161,6 @@ function placementSchema(sectionCount: number): LessonPlanJsonSchema {
   void sectionCount;
   return object({
     relation: { enum: ["new_region", "below", "above", "left_of", "right_of", "near"] },
-    align: { enum: ["start", "center", "end"] },
-    gap: { enum: ["tight", "normal", "wide"] },
   }, ["relation"]);
 }
 
@@ -172,23 +170,20 @@ function visualParametersSchema(
   requireDynamicPlotExpression = false,
   canonicalFunctionPlot = false,
 ): LessonPlanJsonSchema {
-  const properties: Record<string, unknown> = { title: string(240) };
+  const modelParameters = new Set(allowedCapabilities.flatMap(
+    (capability) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_parameter_names],
+  ));
+  const properties: Record<string, unknown> = {};
   const uses = (capability: LessonPlanCapability): boolean => allowedCapabilities.includes(capability);
+  if (modelParameters.has("title")) properties.title = string(240);
   if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
   if (uses("function_plot")) {
     properties.formula = string(256);
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
   }
-  if (uses("function_plot") || uses("function_surface_with_section")) {
-    properties.x_min = { type: "number" };
-    properties.x_max = { type: "number" };
-    properties.y_min = { type: "number" };
-    properties.y_max = { type: "number" };
-  }
   if (uses("function_surface_with_section")) {
     properties.expression = string(256);
-    properties.samples = integer(4, 24);
     properties.section_axis = { enum: ["x", "y", "z"] };
   }
   if (uses("circle_and_arc") || uses("coordinate_circle")) properties.radius = { type: "number", minimum: 0 };
@@ -313,7 +308,6 @@ function actionCollectionSchemas(
         timing,
         number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
         end_value: { type: "number" },
-        easing: { enum: ["linear", "ease_in_out"] },
         duration_intent: { enum: ["brief", "normal", "extended"] },
       }, ["number", "end_value"])),
     } : {}),
@@ -403,7 +397,6 @@ function activityCommonSchema(): Record<string, unknown> {
   return {
     prompt: string(480),
     hints: { type: "array", minItems: 1, maxItems: 8, items: string(480) },
-    hint_after_attempts: integer(1, 20),
     success_message: string(480),
   };
 }
@@ -424,11 +417,8 @@ function scene3dActivitySchema(sectionCount: number): LessonPlanJsonSchema {
     ...activityCommonSchema(),
     controls: { type: "array", minItems: 1, items: { enum: ["orbit", "zoom", "preset", "reset"] } },
     view_preset: { enum: ["top", "front", "right", "left", "isometric"] },
-    angular_tolerance_degrees: integer(1, 90),
-    zoom_tolerance_percent: integer(1, 100),
   }, [
-    "prompt", "controls", "view_preset",
-    "angular_tolerance_degrees", "zoom_tolerance_percent", "hints",
+    "prompt", "controls", "view_preset", "hints",
   ]);
 }
 
@@ -486,6 +476,27 @@ export function buildLessonPlanBootstrapJsonSchema(requestPartCount = 0): Lesson
       outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
       first_section: firstSection,
     }, ["outline", "first_section"]),
+  });
+}
+
+/**
+ * Composer text and voice transcripts can both be genuine input without
+ * identifying a complete learning request. This schema keeps that decision
+ * inside the existing bootstrap model call. The program only reads
+ * outline/first_section when the model explicitly chooses generate_lesson.
+ */
+export function buildLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
+  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
+    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
+  }
+  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
+  return vertexCompatible({
+    ...object({
+      disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
+      learner_response: string(480),
+      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
+      first_section: firstSection,
+    }, ["disposition", "learner_response"]),
   });
 }
 

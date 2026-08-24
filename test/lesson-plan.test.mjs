@@ -30,6 +30,7 @@ const {
   buildLessonPlanBootstrapJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
+  buildLessonPlanAdmissionBootstrapJsonSchema,
   compileAndValidateLessonPlan,
   deriveLessonRequestParts,
   generateLessonPlanWithModel,
@@ -69,6 +70,21 @@ test("model-facing visual requirements map to exactly one installed program capa
     visualProperties.required_features.items.enum,
     LESSON_PLAN_VISUAL_FEATURES,
   );
+});
+
+test("the capability registry separates model teaching choices from program execution policy", () => {
+  const programOwned = new Set(["samples", "x_min", "x_max", "y_min", "y_max"]);
+  for (const [name, capability] of Object.entries(LESSON_PLAN_CAPABILITY_REGISTRY)) {
+    assert.equal(
+      capability.number_input_policies.length,
+      capability.number_inputs.length,
+      `${name} number policy count`,
+    );
+    for (const parameter of capability.model_parameter_names) {
+      assert.ok(capability.parameter_names.includes(parameter), `${name}.${parameter}`);
+      assert.equal(programOwned.has(parameter), false, `${name}.${parameter}`);
+    }
+  }
 });
 
 function reusable(section, item, part) {
@@ -658,6 +674,39 @@ test("unit circle projection keeps degree controls in range across both linked v
   }
 });
 
+test("installed visual capabilities normalize executable numeric ranges without a model retry", () => {
+  const cube = structuredClone(completeLessonPlanFixtures.cube_and_section);
+  Object.assign(cube.numbers[0], { min: -10, max: 10, initial: 5 });
+  const compiledCube = compileAndValidateLessonPlan(cube).lesson;
+  assert.deepEqual(
+    {
+      min: compiledCube.lesson.variables[0].min,
+      max: compiledCube.lesson.variables[0].max,
+      initial: compiledCube.lesson.variables[0].initial,
+    },
+    { min: -1, max: 1, initial: 1 },
+  );
+  assert.equal(compiledCube.lesson.variables[0].control.step, 0.01);
+
+  const surface = structuredClone(completeLessonPlanFixtures.paraboloid_section);
+  Object.assign(surface.numbers[0], { min: -100, max: 100, initial: 50 });
+  const compiledSurface = compileAndValidateLessonPlan(surface).lesson;
+  assert.deepEqual(
+    {
+      min: compiledSurface.lesson.variables[0].min,
+      max: compiledSurface.lesson.variables[0].max,
+      initial: compiledSurface.lesson.variables[0].initial,
+    },
+    { min: 0, max: 8, initial: 8 },
+  );
+
+  const radius = samplePlan("coordinate_circle");
+  Object.assign(radius.numbers[0], { min: -5, max: 5, initial: -2 });
+  const compiledRadius = compileAndValidateLessonPlan(radius).lesson.lesson.variables[0];
+  assert.ok(compiledRadius.min > 0);
+  assert.ok(compiledRadius.initial >= compiledRadius.min);
+});
+
 test("a slider cannot expose an impractical number of indistinguishable steps", () => {
   const plan = samplePlan("function_plot");
   plan.numbers[0] = {
@@ -675,6 +724,21 @@ test("a slider cannot expose an impractical number of indistinguishable steps", 
     () => compileAndValidateLessonPlan(plan),
     (error) => error instanceof LessonPlanError
       && error.code === "LESSON_PLAN_CONTROL_RESOLUTION",
+  );
+
+  const outline = {
+    version: "0.1",
+    title: "数值控件检查",
+    goals: ["检查滑杆分辨率"],
+    numbers: [plan.numbers[0]],
+    sections: [{ purpose: "展示数值", allowed_capabilities: [] }],
+    close: { summary: "检查完成" },
+  };
+  assert.throws(
+    () => validateLessonPlanOutline(outline),
+    (error) => error instanceof LessonPlanError
+      && error.code === "LESSON_PLAN_CONTROL_RESOLUTION"
+      && error.path === "$lessonPlanOutline.numbers[0].student_control.step",
   );
 });
 
@@ -1142,9 +1206,10 @@ test("model-facing outline and section schemas stay small, flat, and free of bus
     close: plan.close,
   };
   const outlineSchema = buildLessonPlanOutlineJsonSchema();
+  const bootstrapSchema = buildLessonPlanBootstrapJsonSchema();
   const firstSectionSchema = buildLessonPlanSectionDraftJsonSchema(outline, 1);
   const textOnlySectionSchema = buildLessonPlanSectionDraftJsonSchema(outline, 2);
-  const encoded = JSON.stringify({ outlineSchema, firstSectionSchema, textOnlySectionSchema });
+  const encoded = JSON.stringify({ outlineSchema, bootstrapSchema, firstSectionSchema, textOnlySectionSchema });
   assert.equal(encoded.includes("anyOf"), false);
   assert.equal(encoded.includes("oneOf"), false);
   assert.equal(encoded.includes("exclusiveMinimum"), false);
@@ -1178,6 +1243,7 @@ test("model-facing outline and section schemas stay small, flat, and free of bus
     outlineSchema.properties.numbers.items.properties.initial.$ref,
     "#/$defs/modelDecimal",
   );
+  assert.equal("student_control" in outlineSchema.properties.numbers.items.properties, false);
   assert.equal(
     firstSectionSchema.properties.moments.items.properties.animations.items.properties.end_value.$ref,
     "#/$defs/modelDecimal",
@@ -1185,6 +1251,13 @@ test("model-facing outline and section schemas stay small, flat, and free of bus
   assert.deepEqual(outlineSchema.$defs.modelDecimal.required, ["mantissa", "scale"]);
   const firstVisualParameters = requiredVisual.properties.content.properties.parameters.properties;
   assert.deepEqual(Object.keys(firstVisualParameters).sort(), ["projection", "title"]);
+  for (const programOwnedKey of [
+    "samples", "x_min", "x_max", "y_min", "y_max",
+    "angular_tolerance_degrees", "zoom_tolerance_percent",
+    "hint_after_attempts", "easing", "align", "gap",
+  ]) {
+    assert.equal(encoded.includes(`\"${programOwnedKey}\"`), false, programOwnedKey);
+  }
   const textOnlyActions = textOnlySectionSchema.properties.moments.items.properties;
   assert.equal("visual_creates" in textOnlyActions, false);
   assert.ok("math_creates" in textOnlyActions);
@@ -1713,6 +1786,10 @@ test("the staged model path keeps default concurrency at one and repairs only th
   }));
   modelOutline.request_coverage[0].reason = "";
   modelOutline.numbers[0].unit = "";
+  // Simulate an old or out-of-contract model response with an unusably fine
+  // step. The program must replace this mechanical value without asking the
+  // model to repair any section.
+  modelOutline.numbers[0].student_control.step = "0.000000001";
   modelOutline.close.focus = [{ source: "reusable", section: 99, item: 99 }];
   const model = async (request) => {
     active += 1;
@@ -1756,6 +1833,11 @@ test("the staged model path keeps default concurrency at one and repairs only th
   assert.match(repairedSectionCall.prompt, /previous_validation_error/u);
   assert.equal(generated.lesson.steps.length, 3);
   assert.equal(typeof generated.outline.numbers[0].initial, "number");
+  assert.ok(
+    (generated.outline.numbers[0].max - generated.outline.numbers[0].min)
+      / generated.outline.numbers[0].student_control.step <= 1_000,
+  );
+  assert.notEqual(generated.outline.numbers[0].student_control.step, 0.000000001);
   assert.equal("unit" in generated.outline.numbers[0], false);
   assert.equal("reason" in generated.outline.request_coverage[0], false);
   const outlineRequestParts = JSON.parse(calls[0].prompt).request_parts;
@@ -1803,7 +1885,12 @@ test("the staged model path keeps default concurrency at one and repairs only th
     section: 1,
     item: 1,
   });
-  assert.equal(generated.drafts[2].student_activities[0].value, 6.28);
+  assert.ok(
+    Math.abs(
+      generated.drafts[2].student_activities[0].value
+        - generated.outline.numbers[0].max,
+    ) < 1e-10,
+  );
   assert.ok(generated.drafts[2].student_activities[0].tolerance > 0);
   assert.notEqual(
     generated.drafts[2].student_activities[0].value,
@@ -2096,7 +2183,99 @@ test("the live bootstrap path returns the outline and first playable section in 
   assert.ok(calls[0].response_schema.properties.first_section);
 });
 
-test("the bootstrap path decodes provider decimal parameters using its own response shape", async () => {
+test("a spoken fragment can request clarification without compiling a guessed lesson", async () => {
+  const requests = [];
+  const prefixes = [];
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    requests.push(request);
+    return JSON.stringify({
+      disposition: "clarify",
+      learner_response: "你想了解这本书的哪一方面？",
+    });
+  }, {
+    turn_id: "turn-voice-fragment",
+    learner_request: "The book.",
+    input_modality: "voice",
+  }, {
+    bootstrap_first_section: true,
+    on_playable_prefix: (event) => prefixes.push(event),
+  });
+
+  assert.deepEqual(generated, {
+    disposition: "clarify",
+    learner_response: "你想了解这本书的哪一方面？",
+    model_calls: 1,
+  });
+  assert.equal(requests.length, 1);
+  assert.match(requests[0].system_prompt, /不要从可用画面或数学能力猜测/u);
+  assert.deepEqual(
+    requests[0].response_schema.properties.disposition.enum,
+    ["generate_lesson", "clarify", "ignore"],
+  );
+  assert.deepEqual(
+    requests[0].response_schema.required,
+    ["disposition", "learner_response"],
+  );
+  assert.deepEqual(prefixes, []);
+});
+
+test("a clear spoken learning request still compiles the ordinary complete lesson", async () => {
+  const plan = completeLessonPlanFixtures.unit_circle_to_sine;
+  const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
+    version: plan.version,
+    section: index + 1,
+    moments,
+    ...(student_activities ? { student_activities } : {}),
+  }));
+  const outline = {
+    version: plan.version,
+    title: plan.title,
+    goals: plan.goals,
+    numbers: plan.numbers,
+    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1, 2, 3] }],
+    sections: plan.sections.map(({ purpose, reusable_items, moments }) => ({
+      purpose,
+      allowed_capabilities: [...new Set(moments.flatMap((moment) => moment.actions)
+        .filter((action) => action.action === "create" && action.kind === "visual")
+        .map((action) => action.content.capability))],
+      ...(reusable_items ? { reusable_items } : {}),
+    })),
+    close: plan.close,
+  };
+  Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
+
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    if (request.label === "lesson-plan-bootstrap") {
+      return JSON.stringify({
+        disposition: "generate_lesson",
+        learner_response: "",
+        outline,
+        first_section: drafts[0],
+      });
+    }
+    const section = JSON.parse(request.prompt).section_to_write;
+    return JSON.stringify(drafts[section - 1]);
+  }, {
+    turn_id: "turn-clear-voice-course",
+    learner_request: "请结合单位圆和正弦图解释周期波动。",
+    request_parts: ["请结合单位圆和正弦图解释周期波动。"],
+    input_modality: "voice",
+  }, {
+    bootstrap_first_section: true,
+  });
+
+  assert.equal("lesson" in generated, true);
+  assert.equal(generated.lesson.steps.length, 3);
+});
+
+test("the lesson admission schema does not force course fields for clarification", () => {
+  const schema = buildLessonPlanAdmissionBootstrapJsonSchema(1);
+  assert.deepEqual(schema.required, ["disposition", "learner_response"]);
+  assert.ok(schema.properties.outline);
+  assert.ok(schema.properties.first_section);
+});
+
+test("the bootstrap path ignores model-authored viewport parameters and computes its own", async () => {
   const plan = completeLessonPlanFixtures.square_function;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
     version: plan.version,
@@ -2140,6 +2319,9 @@ test("the bootstrap path decodes provider decimal parameters using its own respo
   assert.equal("reusable_item" in bootstrapMoment.visual_creates.items.properties, false);
   assert.equal("reusable_item" in bootstrapMoment.math_creates.items.properties, false);
   assert.equal("reusable_item" in bootstrapMoment.note_creates.items.properties, false);
+  for (const field of ["x_min", "x_max", "y_min", "y_max", "samples"]) {
+    assert.equal(field in bootstrapMoment.visual_creates.items.properties.content.properties.parameters.properties, false);
+  }
 
   const calls = [];
   const generated = await generateLessonPlanWithModel(async (request) => {
@@ -2165,8 +2347,13 @@ test("the bootstrap path decodes provider decimal parameters using its own respo
   const plot = generated.lesson.steps[0].beats[0].actions.find(
     (action) => action.do === "write" && action.kind === "plot",
   ).content;
-  assert.deepEqual(plot.axes.x, { min: -4, max: 4, label: "x" });
-  assert.deepEqual(plot.axes.y, { min: -1, max: 10, label: "y" });
+  assert.deepEqual(plot.axes.x, {
+    min: plan.numbers[0].min,
+    max: plan.numbers[0].max,
+    label: "x",
+  });
+  assert.ok(plot.axes.y.min < 0);
+  assert.ok(plot.axes.y.max > 9);
 });
 
 test("the bootstrap path drops reusable board declarations that the same response did not create", async () => {
