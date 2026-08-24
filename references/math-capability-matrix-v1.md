@@ -48,6 +48,10 @@ The current automated suite verifies, among other things:
 - a declared control must change a compiled visual;
 - function parameters change the whole curve when the mathematical structure
   says they do, while a sampled-point control only moves the point;
+- two-parameter curve translation is checked across 200 deterministic random
+  parameter combinations, including its vertex and symmetry invariants;
+- one function card renders several static explicit curves, accepts the
+  declared maximum of four curve parameters, and rejects a fifth parameter;
 - axes and numeric ranges are computed or normalized by program code;
 - the circle/arc, unit-circle, spring, cube-section, and surface-section
   controls remain inside their executable ranges;

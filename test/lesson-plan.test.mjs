@@ -973,6 +973,133 @@ test("quadratic translation uses h and k to move the entire compiled curve", () 
   );
 });
 
+test("quadratic translation remains correct across deterministic random parameter combinations", () => {
+  const compiled = compileAndValidateLessonPlan(completeLessonPlanFixtures.quadratic_translation).lesson;
+  const plot = compiled.steps[0].beats[0].actions.find(
+    (action) => action.do === "write" && action.kind === "plot",
+  );
+  const expression = plot.content.curves[0].expression;
+  let state = 0x51a7c0de;
+  const random = () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 0x100000000;
+  };
+
+  for (let index = 0; index < 200; index += 1) {
+    const h = -5 + random() * 10;
+    const k = -5 + random() * 10;
+    const offset = -6 + random() * 12;
+    const variables = { x: h + offset, number_01: h, number_02: k };
+    const actual = evaluateMathExpression(expression, variables);
+    const expected = offset ** 2 + k;
+    assert.ok(
+      Math.abs(actual - expected) < 1e-9,
+      `case ${index}: expected (${h} + ${offset} - ${h})^2 + ${k} = ${expected}, got ${actual}`,
+    );
+
+    const left = evaluateMathExpression(expression, {
+      x: h - Math.abs(offset),
+      number_01: h,
+      number_02: k,
+    });
+    const right = evaluateMathExpression(expression, {
+      x: h + Math.abs(offset),
+      number_01: h,
+      number_02: k,
+    });
+    assert.ok(Math.abs(left - right) < 1e-9, `case ${index}: translation must preserve symmetry`);
+  }
+});
+
+test("a function curve supports exactly the declared maximum of four numeric parameters", () => {
+  const plan = samplePlan("function_plot");
+  plan.numbers = Array.from({ length: 4 }, (_, index) => ({
+    initial: 0,
+    min: -1,
+    max: 1,
+    label: `parameter ${index + 1}`,
+    student_control: { kind: "slider", step: 0.1 },
+  }));
+  plan.sections[0].moments[0].actions[0].content.numbers = [1, 2, 3, 4];
+  plan.sections[0].moments[0].actions[0].content.parameters = {
+    expression_tokens: [
+      { kind: "input" },
+      { kind: "number", number: 1 },
+      { kind: "operator", operator: "add" },
+      { kind: "number", number: 2 },
+      { kind: "operator", operator: "add" },
+      { kind: "number", number: 3 },
+      { kind: "operator", operator: "add" },
+      { kind: "number", number: 4 },
+      { kind: "operator", operator: "add" },
+    ],
+  };
+
+  const compiled = compileAndValidateLessonPlan(plan).lesson;
+  const plot = compiled.steps[0].beats[0].actions.find(
+    (action) => action.do === "write" && action.kind === "plot",
+  );
+  assert.equal(
+    evaluateMathExpression(plot.content.curves[0].expression, {
+      x: 10,
+      number_01: 1,
+      number_02: 2,
+      number_03: 3,
+      number_04: 4,
+    }),
+    20,
+  );
+  assert.equal(compiled.lesson.variables.length, 4);
+
+  const tooMany = structuredClone(plan);
+  tooMany.numbers.push({
+    initial: 0,
+    min: -1,
+    max: 1,
+    label: "parameter 5",
+    student_control: { kind: "slider", step: 0.1 },
+  });
+  tooMany.sections[0].moments[0].actions[0].content.numbers.push(5);
+  tooMany.sections[0].moments[0].actions[0].content.parameters.expression_tokens.push(
+    { kind: "number", number: 5 },
+    { kind: "operator", operator: "add" },
+  );
+  assert.throws(
+    () => compileAndValidateLessonPlan(tooMany),
+    (error) => error instanceof LessonPlanError
+      && error.code === "LESSON_PLAN_COMPILER_CONTROL_LIMIT",
+  );
+});
+
+test("one function plot can render several static explicit curves without inventing controls", () => {
+  const plan = samplePlan("function_plot");
+  delete plan.numbers;
+  delete plan.sections[0].moments[0].actions[0].content.numbers;
+  plan.sections[0].moments[0].actions[0].content.parameters = {
+    expressions: ["x", "x^2", "sin(x)"],
+    curve_labels: ["y = x", "y = x^2", "y = sin(x)"],
+  };
+  plan.sections[0].moments[0].actions = plan.sections[0].moments[0].actions.filter(
+    (action) => action.action !== "animate",
+  );
+  delete plan.sections[0].student_activities;
+
+  const compiled = compileAndValidateLessonPlan(plan).lesson;
+  const plot = compiled.steps[0].beats[0].actions.find(
+    (action) => action.do === "write" && action.kind === "plot",
+  );
+  assert.deepEqual(
+    plot.content.curves.map((curve) => [curve.expression, curve.label]),
+    [
+      ["x", "y = x"],
+      ["x^2", "y = x^2"],
+      ["sin(x)", "y = sin(x)"],
+    ],
+  );
+  assert.equal(plot.content.points, undefined);
+  assert.equal(compiled.lesson.variables, undefined);
+});
+
 test("the mathematical structure distinguishes a moving point from a changing curve", () => {
   const pointPlan = samplePlan("function_plot");
   const pointPlot = compileAndValidateLessonPlan(pointPlan).lesson.steps[0].beats[0].actions.find(
