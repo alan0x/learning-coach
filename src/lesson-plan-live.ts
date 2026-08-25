@@ -80,10 +80,7 @@ export async function generateLessonPlanWithVertex(
   } = options;
   return generateLessonPlanWithModel(
     (request) => callStructuredModel(
-      {
-        ...client,
-        timeoutMs: Math.min(client.timeoutMs, request.timeout_ms),
-      },
+      client,
       {
         label: request.label,
         turnId: request.turn_id,
@@ -94,7 +91,6 @@ export async function generateLessonPlanWithVertex(
           : schemaMode === "shallow"
             ? shallowProviderSchema(request.response_schema)
             : request.response_schema,
-        maxTokens: request.max_output_tokens,
         lessonPlanPart: request.part,
         lessonPlanSection: request.section,
         lessonPlanAttempt: request.attempt,

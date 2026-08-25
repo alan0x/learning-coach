@@ -79,54 +79,57 @@ same production Lesson Plan path rather than a hand-written fixture:
 
 These are single-run capability checks, not latency or reliability statistics.
 
-A following three-run batch checked the same requests again:
+A following three-run batch checked the same requests again. The two-control
+parabola and cubic sampled-point courses each passed 3/3 with first-playable
+times around 10–12 seconds. The three-curve comparison also completed 3/3, but
+its first-playable times varied from about 11 to 86 seconds. These measurements
+are historical observations of provider variation, not a reliability or
+latency guarantee.
 
-- the two-control parabola passed 3/3 without repair; first playable p50 was
-  10.0 seconds and the slowest run was 11.3 seconds;
-- the cubic sampled point passed 3/3 without repair; first playable p50 was
-  10.5 seconds and the slowest run was 12.1 seconds;
-- the three-curve comparison eventually passed 3/3, but first playable results
-  were about 11, 39, and 86 seconds. One run retried only a truncated bootstrap
-  response. Another discarded an outline-external speculative visual, then
-  repaired invalid first-section activities without regenerating the course
-  outline. These recovery rules contain no function names or subject-specific
-  cases and add no request to the normal successful path.
+The static multi-curve addition is intentionally narrow: one `function_plot`
+may contain one to eight explicit one-variable formulas for comparison. The
+program parses every formula, removes exact duplicates, derives or aligns
+labels, computes the viewport, and does not invent a numeric control for a
+static comparison. This does not claim a general plotting language or add a
+new subject package.
 
-The reliability investigation then repeated several different static
-multi-curve lessons: polynomial comparison, trigonometric comparison, shifted
-parabolas, and absolute-value comparison. Across the recorded batches, 21
-courses completed and every successful course produced at least three curves
-in one plot with no invented numeric control. One earlier request failed when
-Vertex returned HTTP 200 with `finishReason=RECITATION` but no JSON. That
-provider response is now classified as an unusable combined response and
-enters the same bounded small-response fallback as truncation and timeout. Two
-post-fix repeats of the previously failing shifted-parabola case both completed
-in 8.7 and 21.4 seconds.
+The current responsibility boundary is:
 
-The investigation also established a program/model responsibility boundary:
-
-- the model chooses the lesson outline, narration, formulas, comparisons, and
+- the model chooses the course outline, narration, formulas, comparisons, and
   teaching intent;
+- the accepted course outline is the only authority for which persistent
+  visuals and reusable board items a section must create;
+- for the combined outline-and-first-section response, program code matches
+  first-section visuals to the outline by installed capability and outline
+  position. It copies only those matches into the exact section format. A
+  duplicate or outline-external visual is discarded before OLL exists;
+- an outline-declared visual or reusable formula/note that is missing from the
+  combined first section makes only that speculative first section invalid.
+  The accepted outline is not edited. Section 1 is then generated through the
+  same exact schema and validator used for later sections;
+- ordinary non-reusable Math and Note cards remain ordinary section content.
+  They are not deleted merely because the outline did not reserve them for
+  later reuse;
 - program code assigns identity and references, parses formulas, removes exact
-  duplicate curves, aligns or derives labels, removes controls and tasks that
-  cannot affect a visual, computes axes and sampling, and compiles OLL;
-- synonymous or stale expression fields are collapsed into one canonical
-  representation instead of causing a full lesson retry;
-- a combined outline-and-first-section response is limited to 4,096 output
-  tokens and 30 seconds. If it is truncated, times out, contains no JSON, or has
-  an invalid outline, the program asks for the smaller outline and exact first
-  section separately. It does not repeat the same broad request;
-- the total budget for obtaining the first playable section is 60 seconds, so
-  fallback requests cannot extend the wait indefinitely;
-- if a formula is genuinely missing, the program does not invent mathematics.
-  It preserves the valid outline and regenerates only the affected section
-  under its exact capability schema.
+  duplicate curves, collapses equivalent formula fields, removes controls and
+  tasks that cannot affect a visual, computes axes and sampling, and compiles
+  OLL;
+- if a required mathematical expression is genuinely missing, the program
+  does not invent it and does not weaken the outline. The affected section must
+  be generated correctly before publication.
 
-The normal successful path is still one model request. These rules do not use
-function names or test-question branches. They improve bounded recovery, but
-they do not remove Vertex latency variation. The sample is too small for a
-production p50/p95 claim, and `/learn` E2E remains required before the complete
-one-variable-function row is marked accepted.
+The normal successful first-playable path remains one combined model request.
+Lesson authoring no longer adds its own 4,096-token cap, 30/60-second deadlines,
+or a second broad-request fallback for truncated, empty, or timed-out provider
+responses. Generic model transport configuration owns request limits and
+transport retries. Local semantic validation still rejects an invalid outline
+or section and can regenerate the exact invalid part with its validation error.
+
+The full automated suite currently passes 87/87 tests, including outline
+authority, extra-visual removal, missing required first-section content,
+single-call successful bootstrap, static multi-curve compilation, and provider
+failure non-repetition. `/learn` E2E is still required before treating the
+inserted multi-curve capability as accepted for a release.
 
 ## Rule for changing this matrix
 

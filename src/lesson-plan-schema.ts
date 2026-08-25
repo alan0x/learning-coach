@@ -2,6 +2,7 @@ import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
+  PROCESS_DIAGRAM_CONTRACT,
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VERSION,
   LessonPlanError,
@@ -182,10 +183,11 @@ function visualParametersSchema(
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
   }
-  if (uses("function_surface_with_section")) {
+  if (uses("function_surface_with_section") || uses("implicit_surface_with_section")) {
     properties.expression = string(256);
     properties.section_axis = { enum: ["x", "y", "z"] };
   }
+  if (uses("implicit_surface_with_section")) properties.level = { type: "number" };
   if (uses("circle_and_arc") || uses("coordinate_circle")) properties.radius = { type: "number", minimum: 0 };
   if (uses("circle_and_arc")) properties.angle = { type: "number" };
   if (uses("coordinate_circle")) {
@@ -200,9 +202,20 @@ function visualParametersSchema(
     properties.leg_b = { type: "number", minimum: 0 };
   }
   if (uses("process_diagram")) {
-    properties.steps = { type: "array", minItems: 1, maxItems: 24, items: string(240) };
+    properties.steps = {
+      type: "array",
+      minItems: PROCESS_DIAGRAM_CONTRACT.min_steps,
+      maxItems: PROCESS_DIAGRAM_CONTRACT.max_steps,
+      items: string(PROCESS_DIAGRAM_CONTRACT.max_step_characters),
+    };
   }
-  return object(properties, (requireDynamicPlotExpression || canonicalFunctionPlot) ? ["formulas"] : []);
+  const required = allowedCapabilities.length === 1
+    ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters]
+    : [];
+  if ((requireDynamicPlotExpression || canonicalFunctionPlot) && !required.includes("formulas")) {
+    required.push("formulas");
+  }
+  return object(properties, required);
 }
 
 function contentSchema(allowedCapabilities: LessonPlanCapability[]): LessonPlanJsonSchema {
@@ -256,8 +269,8 @@ function actionCollectionSchemas(
   // mixed-capability sections the local validator below remains authoritative,
   // because applying this requirement to every visual would also constrain
   // unrelated geometry and 3D content.
-  const requireFunctionPlotParameters = allowedCapabilities.length === 1
-    && allowedCapabilities[0] === "function_plot";
+  const requireVisualParameters = allowedCapabilities.length === 1
+    && LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters.length > 0;
   const requireDynamicPlotExpression = numberCount > 1
     && allowedCapabilities.length === 1
     && allowedCapabilities[0] === "function_plot";
@@ -284,7 +297,7 @@ function actionCollectionSchemas(
               items: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
             },
           } : {}),
-        }, ["capability", ...(requireFunctionPlotParameters ? ["parameters"] : [])]),
+        }, ["capability", ...(requireVisualParameters ? ["parameters"] : [])]),
       }, ["role", ...(courseVisualPositions.length > 0 ? ["course_visual"] : []), "content", "placement"])),
     } : {}),
     math_creates: collection(modelAction({
@@ -490,32 +503,17 @@ export function buildLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
   const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
+  const course = object({
+    outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
+    first_section: firstSection,
+  }, ["outline", "first_section"]);
+  course.nullable = true;
   return vertexCompatible({
     ...object({
       disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
       learner_response: string(480),
-      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
-      first_section: firstSection,
-    }, ["disposition", "learner_response"]),
-  });
-}
-
-/**
- * Smaller recovery schema for composer input after the combined outline +
- * first-section request was truncated, timed out, or failed local outline
- * validation. It preserves the same generate/clarify/ignore admission decision
- * without asking the provider to author another speculative first section.
- */
-export function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
-  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
-    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
-  }
-  return vertexCompatible({
-    ...object({
-      disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
-      learner_response: string(480),
-      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
-    }, ["disposition", "learner_response"]),
+      course,
+    }, ["disposition", "learner_response", "course"]),
   });
 }
 

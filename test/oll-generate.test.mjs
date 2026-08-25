@@ -306,7 +306,13 @@ test("the complete-lesson command bootstraps the outline and first section in on
     moments: [{
       narration: "我们用分配律检查这个符号规则。",
       delivery: "patient",
-      math_creates: [],
+      math_creates: [{
+        order: 1,
+        timing: "during_speech",
+        role: "derivation",
+        content: { latex: "(-1)\\\\times(-1)=1" },
+        placement: { relation: "new_region" },
+      }],
       note_creates: [],
       focuses: [{
         intent: "观察等式",
@@ -314,14 +320,6 @@ test("the complete-lesson command bootstraps the outline and first section in on
       }],
       points: [],
     }],
-    reusable_board_creates: {
-      item_1: {
-        moment: 1,
-        role: "derivation",
-        content: { latex: "(-1)\\\\times(-1)=1" },
-        placement: { relation: "new_region" },
-      },
-    },
   };
   let modelCalls = 0;
   const server = createServer(async (request, response) => {
@@ -336,15 +334,14 @@ test("the complete-lesson command bootstraps the outline and first section in on
     for await (const chunk of request) body += chunk;
     const payload = JSON.parse(body);
     const schema = payload.generationConfig.responseJsonSchema;
-    const content = schema.properties?.outline && schema.properties?.first_section
+    const content = schema.properties?.course
       ? {
-          ...(schema.properties?.disposition ? {
-            disposition: "generate_lesson",
-            learner_response: "",
-          } : {}),
-          outline,
-          first_section: section,
+          disposition: "generate_lesson",
+          learner_response: "",
+          course: { outline, first_section: section },
         }
+      : schema.properties?.outline && schema.properties?.first_section
+        ? { outline, first_section: section }
       : schema.properties?.course_visuals ? outline : section;
     modelCalls += 1;
     response.writeHead(200, { "content-type": "application/json" });
@@ -403,6 +400,7 @@ test("an incomplete composer request returns clarification without writing a les
     response.end(vertexPayload({
       disposition: "clarify",
       learner_response: "你想了解这本书的哪一方面？",
+      course: null,
     }));
   });
   try {
@@ -1645,7 +1643,7 @@ test("complete lessons reject explicit board follow-up input instead of falling 
       retryable: false,
       do_not_retry_same_turn: true,
     });
-    assert.match(protocol.output, /Do not call oll_generate_lesson again in this turn/u);
+    assert.equal(protocol.output, "这次课程没有生成成功，请稍后重试。");
     assert.equal(protocol.error_code, "LESSON_REQUEST_SOURCE_UNSUPPORTED");
   } finally {
     await rm(workDirectory, { recursive: true, force: true });

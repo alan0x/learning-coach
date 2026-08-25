@@ -1,5 +1,12 @@
 export const LESSON_PLAN_VERSION = "0.1" as const;
 
+export const PROCESS_DIAGRAM_CONTRACT = {
+  min_steps: 2,
+  max_steps: 8,
+  max_step_characters: 80,
+  max_title_characters: 120,
+} as const;
+
 /**
  * The single program-owned declaration for every deterministic visual.
  * Provider schemas, model catalogs, reference parts, numeric-input limits,
@@ -12,6 +19,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_min", "x_max", "y_min", "y_max"],
     model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels"],
+    required_model_schema_parameters: ["formulas"],
     semantic_parameters: ["expression", "expressions", "expression_tokens"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
@@ -24,6 +32,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "angle" }],
     parameter_names: ["title", "projection"],
     model_parameter_names: ["title", "projection"],
+    required_model_schema_parameters: ["projection"],
     semantic_parameters: ["projection"],
     output_kinds: ["geometry", "plot"],
     student_controls: ["slider", "geometry_point"],
@@ -36,6 +45,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "angle" }, { kind: "positive" }],
     parameter_names: ["title", "radius", "angle"],
     model_parameter_names: ["title", "radius", "angle"],
+    required_model_schema_parameters: [],
     semantic_parameters: ["radius", "angle"],
     output_kinds: ["geometry"],
     student_controls: ["slider", "geometry_point"],
@@ -48,6 +58,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "angle" }],
     parameter_names: ["title"],
     model_parameter_names: ["title"],
+    required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["geometry", "plot"],
     student_controls: ["slider"],
@@ -60,6 +71,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "bounded", min: -1, max: 1 }],
     parameter_names: ["title"],
     model_parameter_names: ["title"],
+    required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
@@ -72,11 +84,25 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "surface_section" }],
     parameter_names: ["title", "expression", "samples", "section_axis", "x_min", "x_max", "y_min", "y_max"],
     model_parameter_names: ["title", "expression", "section_axis"],
+    required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["function_surface_3d", "section_plane"],
     model_guidance: "可旋转三维函数曲面、可变截面和真实交线",
+  },
+  implicit_surface_with_section: {
+    parts: ["whole", "surface", "section", "intersection", "primary_control"],
+    number_inputs: ["section_position"],
+    number_input_policies: [{ kind: "surface_section" }],
+    parameter_names: ["title", "expression", "level", "section_axis"],
+    model_parameter_names: ["title", "expression", "level", "section_axis"],
+    required_model_schema_parameters: ["expression", "section_axis"],
+    semantic_parameters: ["expression", "level", "section_axis"],
+    output_kinds: ["scene3d"],
+    student_controls: ["slider", "scene3d_view"],
+    required_features: ["implicit_surface_3d", "section_plane"],
+    model_guidance: "三变量隐式曲面 F(x,y,z)=c，以及垂直于 x、y 或 z 轴的可变截面和真实交线",
   },
   coordinate_circle: {
     parts: ["whole", "circle", "center", "radius", "primary_control"],
@@ -84,6 +110,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "positive" }],
     parameter_names: ["title", "radius", "center_x", "center_y"],
     model_parameter_names: ["title", "radius", "center_x", "center_y"],
+    required_model_schema_parameters: [],
     semantic_parameters: ["radius", "center_x", "center_y"],
     output_kinds: ["geometry"],
     student_controls: ["slider"],
@@ -96,6 +123,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "normalized_progress" }],
     parameter_names: ["title", "construction", "leg_a", "leg_b"],
     model_parameter_names: ["title", "construction", "leg_a", "leg_b"],
+    required_model_schema_parameters: ["construction"],
     parameter_options: {
       construction: ["right_triangle_square", "square_area_identity", "triangle_to_rectangle"],
     },
@@ -111,6 +139,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [],
     parameter_names: ["title", "steps"],
     model_parameter_names: ["title", "steps"],
+    required_model_schema_parameters: ["steps"],
     semantic_parameters: ["steps"],
     output_kinds: ["diagram"],
     student_controls: [],
