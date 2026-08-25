@@ -13619,13 +13619,6 @@ function sanitizeNonessentialVisuals(outlineValue, draftValues) {
         const courseVisualPosition = Number.isInteger(slot) ? courseVisualPositionBySlot.get(`${sectionNumber}:${slot}`) : void 0;
         const processDiagramReason = processDiagramRemovalReason(content);
         if (processDiagramReason) {
-          if (processDiagramReason === "missing_steps") {
-            throw new LessonPlanError(
-              "LESSON_PLAN_CAPABILITY_PARAMETER",
-              `$lessonPlan.sections[${sectionOffset}].moments.visual.parameters.steps`,
-              "a process diagram requires explicit ordered steps"
-            );
-          }
           adjustments.push({
             kind: "visual_removed",
             section: sectionNumber,
@@ -13677,6 +13670,7 @@ function sanitizeNonessentialVisuals(outlineValue, draftValues) {
     });
   }
   const droppedActions = /* @__PURE__ */ new Set();
+  const replacementForDroppedAction = /* @__PURE__ */ new Map();
   const droppedReusable = /* @__PURE__ */ new Set();
   for (const [sectionOffset, section] of drafts.entries()) {
     const sectionNumber = sectionOffset + 1;
@@ -13693,21 +13687,53 @@ function sanitizeNonessentialVisuals(outlineValue, draftValues) {
       }
     }
   }
+  for (const [sectionOffset, section] of drafts.entries()) {
+    section.moments.forEach((moment, momentOffset) => {
+      const bySignature = /* @__PURE__ */ new Map();
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "math" && action.kind !== "note") continue;
+        const signature = JSON.stringify({ kind: action.kind, content: action.content });
+        const prior = bySignature.get(signature);
+        if (!prior) {
+          bySignature.set(signature, action);
+          continue;
+        }
+        const priorReusable = Number.isInteger(prior.reusable_item);
+        const currentReusable = Number.isInteger(action.reusable_item);
+        const removed = currentReusable && !priorReusable ? prior : action;
+        const retained = removed === prior ? action : prior;
+        if (removed === prior) bySignature.set(signature, action);
+        droppedActions.add(removed);
+        replacementForDroppedAction.set(removed, retained);
+        adjustments.push({
+          kind: "duplicate_board_item_removed",
+          section: sectionOffset + 1,
+          moment: momentOffset + 1,
+          board_kind: action.kind,
+          reason: "same_moment_exact_duplicate"
+        });
+      }
+    });
+  }
   const localBoardItemMap = /* @__PURE__ */ new Map();
   for (const [sectionOffset, section] of drafts.entries()) {
     const sectionNumber = sectionOffset + 1;
     section.moments.forEach((moment, momentOffset) => {
-      let oldIndex = 0;
+      const creates = moment.actions.filter((action) => action.action === "create");
+      const retainedIndex = /* @__PURE__ */ new Map();
       let nextIndex = 0;
-      for (const action of moment.actions) {
-        if (action.action !== "create") continue;
-        oldIndex += 1;
-        if (!droppedActions.has(action)) nextIndex += 1;
-        localBoardItemMap.set(
-          `${sectionNumber}:${momentOffset + 1}:${oldIndex}`,
-          droppedActions.has(action) ? void 0 : nextIndex
-        );
+      for (const action of creates) {
+        if (droppedActions.has(action)) continue;
+        nextIndex += 1;
+        retainedIndex.set(action, nextIndex);
       }
+      creates.forEach((action, oldOffset) => {
+        const replacement = replacementForDroppedAction.get(action);
+        localBoardItemMap.set(
+          `${sectionNumber}:${momentOffset + 1}:${oldOffset + 1}`,
+          droppedActions.has(action) ? replacement ? retainedIndex.get(replacement) : void 0 : retainedIndex.get(action)
+        );
+      });
     });
   }
   const retainedReusable = /* @__PURE__ */ new Set();
@@ -14638,8 +14664,9 @@ function compilePrefix(outline, drafts, options) {
   const sectionCount = drafts.length;
   let focus;
   for (let section = sectionCount; section >= 1 && !focus; section -= 1) {
-    const items = outline.sections[section - 1]?.reusable_items ?? [];
-    if (items.length > 0) focus = { source: "reusable", section, item: items.length };
+    const createdItems = drafts[section - 1]?.moments.flatMap((moment) => moment.actions).flatMap((action) => action.action === "create" && Number.isInteger(action.reusable_item) ? [Number(action.reusable_item)] : []) ?? [];
+    const item = createdItems.length > 0 ? Math.max(...createdItems) : void 0;
+    if (item !== void 0) focus = { source: "reusable", section, item };
   }
   if (!focus) {
     throw new LessonPlanError(

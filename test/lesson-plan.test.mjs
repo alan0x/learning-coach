@@ -2572,8 +2572,15 @@ test("an over-capacity process diagram is removed while ordinary course cards re
   }]);
 });
 
-test("a process diagram missing its ordered steps regenerates only its section", async () => {
+test("a process diagram missing its ordered steps is removed without regenerating the section", async () => {
   const plan = makeSamplePlanModelCompatible(samplePlan("process_diagram"));
+  plan.sections[0].moments[0].actions.push({
+    action: "create",
+    kind: "math",
+    role: "usable_formula_without_diagram",
+    content: { latex: "\\gcd(a,b)=\\gcd(b,r)" },
+    placement: { relation: "new_region" },
+  });
   const drafts = plan.sections.map(({ moments }, index) => toModelSectionDraft({
     version: plan.version,
     section: index + 1,
@@ -2591,6 +2598,7 @@ test("a process diagram missing its ordered steps regenerates only its section",
   const exactDrafts = structuredClone(drafts);
   Object.assign(outline, modelCourseVisualStructure(plan, exactDrafts));
   const calls = [];
+  const adjustments = [];
 
   const generated = await generateLessonPlanWithModel(async (request) => {
     calls.push({ label: request.label, section: request.section });
@@ -2605,21 +2613,66 @@ test("a process diagram missing its ordered steps regenerates only its section",
   }, {
     bootstrap_first_section: true,
     max_attempts_per_part: 2,
+    on_program_adjustment: (event) => adjustments.push(event),
   });
 
   assert.deepEqual(calls, [
     { label: "lesson-plan-bootstrap", section: undefined },
-    { label: "lesson-plan-section", section: 1 },
     { label: "lesson-plan-section", section: 2 },
   ]);
   const diagram = generated.lesson.steps[0].beats[0].actions.find(
     (action) => action.do === "write" && action.kind === "diagram",
   );
-  assert.ok(diagram);
-  assert.deepEqual(
-    diagram.content.elements.map((element) => element.label),
-    ["252 除以 105 余 42", "105 除以 42 余 21", "42 除以 21 余 0"],
+  assert.equal(diagram, undefined);
+  assert.deepEqual(adjustments, [{
+    kind: "visual_removed",
+    section: 1,
+    capability: "process_diagram",
+    reason: "missing_steps",
+  }]);
+});
+
+test("identical math cards in one moment are deduplicated without a model retry", async () => {
+  const plan = makeSamplePlanModelCompatible(samplePlan("process_diagram"));
+  const duplicate = {
+    action: "create",
+    kind: "math",
+    role: "same_formula_twice",
+    content: { latex: "S_n=\\frac{n(a_1+a_n)}{2}" },
+    placement: { relation: "new_region" },
+  };
+  plan.sections[0].moments[0].actions.push(structuredClone(duplicate), structuredClone(duplicate));
+  const drafts = plan.sections.map(({ moments }, index) => toModelSectionDraft({
+    version: plan.version,
+    section: index + 1,
+    moments,
+  }));
+  const outline = stagedOutline(plan, drafts);
+  const calls = [];
+  const adjustments = [];
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    calls.push({ label: request.label, section: request.section });
+    if (request.label === "lesson-plan-bootstrap") return JSON.stringify({ outline, first_section: drafts[0] });
+    return JSON.stringify(drafts[request.section - 1]);
+  }, {
+    turn_id: "turn-deduplicate-same-moment-math",
+    learner_request: "请解释等差数列求和。",
+    request_parts: ["请解释等差数列求和。"],
+  }, {
+    bootstrap_first_section: true,
+    max_attempts_per_part: 1,
+    on_program_adjustment: (event) => adjustments.push(event),
+  });
+  assert.deepEqual(calls, [
+    { label: "lesson-plan-bootstrap", section: undefined },
+    { label: "lesson-plan-section", section: 2 },
+  ]);
+  const formulas = generated.lesson.steps[0].beats[0].actions.filter(
+    (action) => action.do === "write" && action.kind === "math"
+      && action.content.latex === "S_n=\\frac{n(a_1+a_n)}{2}",
   );
+  assert.equal(formulas.length, 1);
+  assert.ok(adjustments.some((event) => event.kind === "duplicate_board_item_removed"));
 });
 
 test("an ordinary process diagram with explicit short steps is preserved", async () => {
