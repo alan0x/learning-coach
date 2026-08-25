@@ -97,9 +97,6 @@ export async function generateLessonPlanWithVertex(
       },
     ),
     input,
-    {
-      ...generationOptions,
-      bootstrap_first_section: generationOptions.bootstrap_first_section ?? true,
-    },
+    generationOptions,
   );
 }

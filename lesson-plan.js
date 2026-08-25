@@ -12876,50 +12876,17 @@ function outlineShape(value) {
   }
   return outline;
 }
-function bootstrapPermissiveOutline() {
-  return {
-    sections: [{
-      purpose: "bootstrap",
-      allowed_capabilities: capabilityNames,
-      reusable_items: Array.from({ length: 32 }, () => ({ kind: "board_item" }))
-    }],
-    numbers: Array.from({ length: 16 }, () => ({ initial: 0, min: 0, max: 1 })),
-    course_visuals: Array.from({ length: 32 }, (_unused, index) => ({
-      capability: capabilityNames[index % capabilityNames.length],
-      create_section: 1,
-      use_sections: [1],
-      relation: "primary",
-      reusable_item: index + 1
-    }))
-  };
-}
 function buildLessonPlanOutlineJsonSchema(requestPartCount = 0) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
   return vertexCompatible(lessonPlanOutlineShapeJsonSchema(requestPartCount));
 }
-function buildLessonPlanBootstrapJsonSchema(requestPartCount = 0) {
+function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
-  return vertexCompatible({
-    ...object({
-      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
-      first_section: firstSection
-    }, ["outline", "first_section"])
-  });
-}
-function buildLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0) {
-  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
-    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
-  }
-  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
-  const course = object({
-    outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
-    first_section: firstSection
-  }, ["outline", "first_section"]);
+  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount);
   course.nullable = true;
   return vertexCompatible({
     ...object({
@@ -12988,7 +12955,7 @@ function coerceLessonPlanOutlineModelNumbers(value, requestPartCount = 0) {
 function buildLessonPlanSectionDraftJsonSchema(outlineValue, sectionIndex) {
   return vertexCompatible(lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex));
 }
-function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, bootstrapPermissive = false) {
+function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex) {
   const outline = outlineShape(outlineValue);
   if (!Number.isInteger(sectionIndex) || sectionIndex < 1 || sectionIndex > outline.sections.length) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$section", "section is outside the outline");
@@ -13000,15 +12967,15 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
   }
   const reusableCount = section.reusable_items?.length ?? 0;
   const numberCount = outline.numbers?.length ?? 0;
-  const courseVisualCreates = bootstrapPermissive ? void 0 : courseVisualCreatesSchema(outline, sectionIndex);
-  const reusableBoardCreates = bootstrapPermissive ? void 0 : reusableBoardCreatesSchema(outline, sectionIndex);
+  const courseVisualCreates = courseVisualCreatesSchema(outline, sectionIndex);
+  const reusableBoardCreates = reusableBoardCreatesSchema(outline, sectionIndex);
   const actionCollections = actionCollectionSchemas(
     outline.sections.length,
     allowedCapabilities,
     0,
     numberCount,
-    bootstrapPermissive ? [] : (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex).map(({ position }) => position),
-    bootstrapPermissive
+    (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex).map(({ position }) => position),
+    false
   );
   const supportsNumberActivity = Array.isArray(outline.numbers) && outline.numbers.length > 0;
   const sectionVisualCapabilities = (outline.course_visuals ?? []).filter((visual) => visual.use_sections.includes(sectionIndex)).map((visual) => visual.capability);
@@ -13061,13 +13028,6 @@ function coerceLessonPlanSectionModelNumbers(value, outlineValue, sectionIndex) 
     "$lessonPlanModelSection"
   );
 }
-function coerceLessonPlanBootstrapSectionModelNumbers(value) {
-  return coerceModelNumbers(
-    value,
-    lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true),
-    "$lessonPlanModelSection"
-  );
-}
 
 // src/lesson-plan-generation.ts
 var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u4E00\u6574\u8282\u5B8C\u6574\u8BFE\u7A0B\u7684\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E0D\u586B\u5199\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002
@@ -13087,17 +13047,13 @@ var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5
 - animations \u53EA\u51B3\u5B9A\u6F14\u793A\u54EA\u4E2A\u6570\u503C\u3001\u76EE\u6807\u503C\u548C\u6559\u5B66\u8282\u594F\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u7F13\u52A8\u65B9\u5F0F\u3002placement \u53EA\u51B3\u5B9A\u76F8\u5BF9\u65B9\u5411\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u951A\u70B9\u3001\u5BF9\u9F50\u548C\u95F4\u8DDD\u3002
 - geometric_rearrangement \u7684\u6570\u503C\u8868\u793A\u91CD\u6392\u8FDB\u5EA6\uFF1Bconstruction \u4ECE Schema \u9009\u62E9\u3002process_diagram \u6CA1\u6709\u6570\u503C\u6216\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
-var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
-
-\u540C\u4E00\u6B21\u8FD4\u56DE outline \u548C first_section\u3002first_section \u5FC5\u987B\u5B9E\u73B0 outline \u7B2C\u4E00\u8282\uFF0C\u53EA\u4F7F\u7528 outline \u5DF2\u58F0\u660E\u7684\u6570\u503C\u3001\u753B\u9762\u548C\u53EF\u590D\u7528\u5185\u5BB9\uFF1B\u5185\u90E8\u4F4D\u7F6E\u3001\u7F16\u53F7\u548C\u5F15\u7528\u7531\u7A0B\u5E8F\u5EFA\u7ACB\u3002
-${SECTION_SYSTEM_PROMPT}`;
-var ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u6587\u5B57\u8F93\u5165\u6216\u8BED\u97F3\u8F93\u5165\u5F00\u59CB\u4E00\u6574\u8282\u767D\u677F\u8BFE\u7A0B\u3002\u5148\u5224\u65AD\u5F53\u524D\u5185\u5BB9\u662F\u5426\u8DB3\u4EE5\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\uFF0C\u4E0D\u8981\u4ECE\u53EF\u7528\u753B\u9762\u6216\u6570\u5B66\u80FD\u529B\u731C\u6D4B\u7528\u6237\u6CA1\u6709\u8868\u8FBE\u7684\u4E3B\u9898\u3002
-- generate_lesson\uFF1A\u7528\u6237\u63D0\u51FA\u4E86\u5B66\u4E60\u95EE\u9898\u3001\u89E3\u91CA\u8BF7\u6C42\uFF0C\u6216\u6E05\u695A\u8BF4\u51FA\u4E86\u60F3\u5B66\u4E60\u7684\u4E3B\u9898\u3002\u7B80\u77ED\u4F46\u660E\u786E\u7684\u4E3B\u9898\uFF08\u4F8B\u5982\u201C\u52FE\u80A1\u5B9A\u7406\u201D\uFF09\u4E5F\u5C5E\u4E8E\u8FD9\u4E00\u7C7B\u3002\u6B64\u65F6 course \u5FC5\u987B\u540C\u65F6\u5305\u542B\u5B8C\u6574 outline \u548C first_section\uFF0Clearner_response \u7559\u7A7A\u3002
+var ADMISSION_OUTLINE_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u6587\u5B57\u8F93\u5165\u6216\u8BED\u97F3\u8F93\u5165\u5F00\u59CB\u4E00\u6574\u8282\u767D\u677F\u8BFE\u7A0B\u3002\u5148\u5224\u65AD\u5F53\u524D\u5185\u5BB9\u662F\u5426\u8DB3\u4EE5\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\uFF0C\u4E0D\u8981\u4ECE\u53EF\u7528\u753B\u9762\u6216\u6570\u5B66\u80FD\u529B\u731C\u6D4B\u7528\u6237\u6CA1\u6709\u8868\u8FBE\u7684\u4E3B\u9898\u3002
+- generate_lesson\uFF1A\u7528\u6237\u63D0\u51FA\u4E86\u5B66\u4E60\u95EE\u9898\u3001\u89E3\u91CA\u8BF7\u6C42\uFF0C\u6216\u6E05\u695A\u8BF4\u51FA\u4E86\u60F3\u5B66\u4E60\u7684\u4E3B\u9898\u3002\u7B80\u77ED\u4F46\u660E\u786E\u7684\u4E3B\u9898\uFF08\u4F8B\u5982\u201C\u52FE\u80A1\u5B9A\u7406\u201D\uFF09\u4E5F\u5C5E\u4E8E\u8FD9\u4E00\u7C7B\u3002\u6B64\u65F6 course \u5FC5\u987B\u5305\u542B\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uFF0Clearner_response \u7559\u7A7A\u3002\u4E0D\u8981\u751F\u6210\u4EFB\u4F55\u4E00\u8282\u7684\u65C1\u767D\u6216\u677F\u4E66\u5185\u5BB9\u3002
 - clarify\uFF1A\u8FD9\u662F\u771F\u5B9E\u8BDD\u8BED\uFF0C\u4F46\u5185\u5BB9\u6B8B\u7F3A\u3001\u542B\u4E49\u4E0D\u6E05\u6216\u6CA1\u6709\u8BF4\u660E\u8981\u5B66\u4EC0\u4E48\uFF0C\u65E0\u6CD5\u53EF\u9760\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\u3002\u6B64\u65F6 course \u5FC5\u987B\u4E3A null\uFF0C\u7528 learner_response \u7B80\u77ED\u8FFD\u95EE\u7528\u6237\u60F3\u5B66\u4E60\u4EC0\u4E48\u3002\u4F8B\u5982 \u201CThe book.\u201D \u5E94\u8FFD\u95EE\u7528\u6237\u60F3\u4E86\u89E3\u8FD9\u672C\u4E66\u7684\u4EC0\u4E48\u5185\u5BB9\uFF0C\u800C\u4E0D\u662F\u731C\u6210\u6570\u5B66\u8BFE\u7A0B\u3002
 - ignore\uFF1A\u53EA\u662F\u8BED\u6C14\u8BCD\u3001\u53E3\u5934\u586B\u5145\u6216\u6CA1\u6709\u53EF\u56DE\u5E94\u5185\u5BB9\u3002\u6B64\u65F6 course \u5FC5\u987B\u4E3A null\uFF0Clearner_response \u7559\u7A7A\u3002
 \u53EA\u505A\u4E0A\u8FF0\u8BED\u4E49\u5224\u65AD\uFF0C\u4E0D\u4F7F\u7528\u5B57\u6570\u3001\u8BED\u8A00\u6216\u56FA\u5B9A\u5173\u952E\u8BCD\u4F5C\u4E3A\u89C4\u5219\u3002
 
-${BOOTSTRAP_SYSTEM_PROMPT}`;
+${OUTLINE_SYSTEM_PROMPT}`;
 function positiveInteger(value, fallback, label) {
   const result = value ?? fallback;
   if (!Number.isInteger(result) || result < 1) throw new Error(`${label} must be a positive integer`);
@@ -14076,91 +14032,6 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
   }
   return lowered;
 }
-function reconcileBootstrapFirstSectionPositions(value, outline) {
-  const root = structuredClone(value);
-  if (!root || typeof root !== "object" || Array.isArray(root)) return root;
-  const candidate = root;
-  if (!Array.isArray(candidate.moments)) return root;
-  const collect = (collection) => candidate.moments.flatMap((momentValue, momentIndex) => {
-    if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) return [];
-    const entries = momentValue[collection];
-    if (!Array.isArray(entries)) return [];
-    return entries.flatMap((entry, entryIndex) => entry && typeof entry === "object" && !Array.isArray(entry) ? [{
-      entry,
-      moment: momentIndex + 1,
-      order: Number(entry.order),
-      index: entryIndex
-    }] : []);
-  }).sort((left, right) => left.moment - right.moment || (Number.isFinite(left.order) ? left.order : Number.MAX_SAFE_INTEGER) - (Number.isFinite(right.order) ? right.order : Number.MAX_SAFE_INTEGER) || left.index - right.index);
-  const visualCreates = collect("visual_creates");
-  for (const { entry } of visualCreates) {
-    delete entry.course_visual;
-    delete entry.reusable_item;
-  }
-  const unmatchedVisuals = new Set(visualCreates);
-  const matchedVisuals = /* @__PURE__ */ new Map();
-  const expectedVisuals = (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === 1);
-  for (const { visual, position } of expectedVisuals) {
-    const match = visualCreates.find((candidateEntry) => {
-      if (!unmatchedVisuals.has(candidateEntry)) return false;
-      const content = candidateEntry.entry.content;
-      return content && typeof content === "object" && !Array.isArray(content) && content.capability === visual.capability;
-    });
-    if (!match) continue;
-    matchedVisuals.set(match, position);
-    unmatchedVisuals.delete(match);
-  }
-  const fixedCourseCreates = Object.fromEntries([...matchedVisuals].map(([match, position]) => {
-    const entry = structuredClone(match.entry);
-    delete entry.order;
-    delete entry.course_visual;
-    delete entry.reusable_item;
-    const content = entry.content && typeof entry.content === "object" && !Array.isArray(entry.content) ? { ...entry.content } : {};
-    delete content.capability;
-    entry.content = content;
-    return [`visual_${position}`, { moment: match.moment, ...entry }];
-  }));
-  for (const momentValue of candidate.moments) {
-    if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
-    delete momentValue.visual_creates;
-  }
-  if (expectedVisuals.length > 0) candidate.course_visual_creates = fixedCourseCreates;
-  else delete candidate.course_visual_creates;
-  const createsByKind = {
-    math: collect("math_creates"),
-    note: collect("note_creates")
-  };
-  for (const entries of Object.values(createsByKind)) {
-    for (const { entry } of entries) delete entry.reusable_item;
-  }
-  const usedBoardCreates = /* @__PURE__ */ new Set();
-  const reusableItems = outline.sections[0]?.reusable_items ?? [];
-  const fixedReusableCreates = {};
-  reusableItems.forEach((item, index) => {
-    if (item.kind !== "board_item" || item.board_kind !== "math" && item.board_kind !== "note") return;
-    const match = createsByKind[item.board_kind].find((candidateEntry) => !usedBoardCreates.has(candidateEntry));
-    if (!match) return;
-    usedBoardCreates.add(match);
-    const entry = structuredClone(match.entry);
-    delete entry.order;
-    delete entry.reusable_item;
-    fixedReusableCreates[`item_${index + 1}`] = { moment: match.moment, ...entry };
-  });
-  for (const [collection, entries] of Object.entries(createsByKind)) {
-    const selected = new Set(entries.filter((entry) => usedBoardCreates.has(entry)).map(({ entry }) => entry));
-    const property = collection === "math" ? "math_creates" : "note_creates";
-    for (const momentValue of candidate.moments) {
-      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
-      const moment = momentValue;
-      if (!Array.isArray(moment[property])) continue;
-      moment[property] = moment[property].filter((entry) => !selected.has(entry));
-    }
-  }
-  const expectedReusableBoardCreates = reusableItems.some((item) => item.kind === "board_item" && (item.board_kind === "math" || item.board_kind === "note"));
-  if (expectedReusableBoardCreates) candidate.reusable_board_creates = fixedReusableCreates;
-  else delete candidate.reusable_board_creates;
-  return root;
-}
 function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReusableCreates = false) {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) {
@@ -14692,24 +14563,19 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
   const context = inputContext(input);
   const fixedRequestParts = requestParts(input);
-  const bootstrapFirstSection = options.bootstrap_first_section === true;
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
-  if (admissionInput && !bootstrapFirstSection) {
-    throw new Error("lesson admission requires bootstrap_first_section");
-  }
   let modelCalls = 0;
   let outline;
-  let bootstrappedFirstSection;
   let outlineError;
   const sectionErrors = /* @__PURE__ */ new Map();
   const sectionAttempts = /* @__PURE__ */ new Map();
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await model({
-      label: bootstrapFirstSection ? "lesson-plan-bootstrap" : "lesson-plan-outline",
-      part: bootstrapFirstSection ? "bootstrap" : "outline",
+      label: "lesson-plan-outline",
+      part: "outline",
       attempt,
       turn_id: input.turn_id,
-      system_prompt: bootstrapFirstSection ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
+      system_prompt: admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
       prompt: JSON.stringify({
         course: context,
         request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
@@ -14718,18 +14584,14 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
           guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
         })),
-        ...bootstrapFirstSection ? {
-          first_section_to_write: 1,
-          first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions"
-        } : {},
         ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
       }),
-      response_schema: bootstrapFirstSection ? admissionInput ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length)
+      response_schema: admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length)
     });
     modelCalls += 1;
     try {
-      let parsed = parseModelJson(raw, bootstrapFirstSection ? "lessonPlanEnvelope" : "lessonPlanOutline");
-      if (bootstrapFirstSection && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
+      let parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
+      if (admissionInput && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
         throw new LessonPlanError(
           "LESSON_PLAN_MODEL_JSON",
           "$lessonPlanEnvelope",
@@ -14742,15 +14604,15 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
           throw new LessonPlanError(
             "LESSON_PLAN_MODEL_JSON",
-            "$lessonPlanBootstrap.disposition",
-            "lesson bootstrap must choose generate_lesson, clarify, or ignore"
+            "$lessonPlanAdmission.disposition",
+            "lesson admission must choose generate_lesson, clarify, or ignore"
           );
         }
         if (disposition !== "generate_lesson") {
           if (!Object.hasOwn(envelope, "course") || envelope.course !== null) {
             throw new LessonPlanError(
               "LESSON_PLAN_MODEL_JSON",
-              "$lessonPlanBootstrap.course",
+              "$lessonPlanAdmission.course",
               "clarify and ignore require course to be null"
             );
           }
@@ -14758,7 +14620,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           if (disposition === "clarify" && !learnerResponse) {
             throw new LessonPlanError(
               "LESSON_PLAN_MODEL_JSON",
-              "$lessonPlanBootstrap.learner_response",
+              "$lessonPlanAdmission.learner_response",
               "clarify requires a learner-facing question"
             );
           }
@@ -14771,47 +14633,22 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         if (!envelope.course || typeof envelope.course !== "object" || Array.isArray(envelope.course)) {
           throw new LessonPlanError(
             "LESSON_PLAN_MODEL_JSON",
-            "$lessonPlanBootstrap.course",
-            "generate_lesson requires course with outline and first_section"
+            "$lessonPlanAdmission.course",
+            "generate_lesson requires a complete course outline"
           );
         }
         parsed = envelope.course;
       }
       parsed = pruneModelNulls(parsed);
-      const rawOutline = bootstrapFirstSection ? parsed.outline : parsed;
       outline = validateLessonPlanOutline(
         lowerModelOutline(
           coerceLessonPlanOutlineModelNumbers(
-            rawOutline,
+            parsed,
             fixedRequestParts.length
           )
         ),
         fixedRequestParts.length
       );
-      if (bootstrapFirstSection) {
-        try {
-          const positionedFirstSection = reconcileBootstrapFirstSectionPositions(
-            coerceLessonPlanBootstrapSectionModelNumbers(
-              parsed.first_section
-            ),
-            outline
-          );
-          bootstrappedFirstSection = lowerModelSectionDraft(
-            positionedFirstSection,
-            outline,
-            1,
-            true
-          );
-        } catch (error) {
-          sectionErrors.set(1, error);
-          await options.on_rejected_part?.({
-            label: "lesson-plan-section",
-            section: 1,
-            attempt: 1,
-            error: rejectionDetails(error)
-          });
-        }
-      }
       break;
     } catch (error) {
       outlineError = error;
@@ -14927,7 +14764,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       }
     }
   };
-  await acceptSection(1, bootstrappedFirstSection);
+  await acceptSection(1);
   if (outline.sections.length > 1 && concurrency === 1) {
     for (let section = 2; section <= outline.sections.length; section += 1) {
       await acceptSection(section);
@@ -15041,11 +14878,9 @@ export {
   LessonPlanError,
   PROCESS_DIAGRAM_CONTRACT,
   assembleLessonPlan,
-  buildLessonPlanAdmissionBootstrapJsonSchema,
-  buildLessonPlanBootstrapJsonSchema,
+  buildLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
-  coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
   compileAndValidateLessonPlan,

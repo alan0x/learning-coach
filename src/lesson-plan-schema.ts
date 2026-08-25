@@ -446,24 +446,6 @@ function outlineShape(value: unknown): LessonPlanOutline {
   return outline as LessonPlanOutline;
 }
 
-function bootstrapPermissiveOutline(): LessonPlanOutline {
-  return {
-    sections: [{
-      purpose: "bootstrap",
-      allowed_capabilities: capabilityNames,
-      reusable_items: Array.from({ length: 32 }, () => ({ kind: "board_item" })),
-    }],
-    numbers: Array.from({ length: 16 }, () => ({ initial: 0, min: 0, max: 1 })),
-    course_visuals: Array.from({ length: 32 }, (_unused, index) => ({
-      capability: capabilityNames[index % capabilityNames.length],
-      create_section: 1,
-      use_sections: [1],
-      relation: "primary",
-      reusable_item: index + 1,
-    })),
-  } as LessonPlanOutline;
-}
-
 export function buildLessonPlanOutlineJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
@@ -472,41 +454,17 @@ export function buildLessonPlanOutlineJsonSchema(requestPartCount = 0): LessonPl
 }
 
 /**
- * Provider schema for the first request of a course: the complete outline and
- * section 1 arrive together. The section shape deliberately permits every
- * currently supported visual and every positional reference. Once the model
- * response arrives, the ordinary outline-derived section schema and validators
- * narrow it to the capabilities, numbers, reusable items, and visuals that the
- * returned outline actually declared.
- */
-export function buildLessonPlanBootstrapJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
-  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
-    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
-  }
-  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
-  return vertexCompatible({
-    ...object({
-      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
-      first_section: firstSection,
-    }, ["outline", "first_section"]),
-  });
-}
-
-/**
  * Composer text and voice transcripts can both be genuine input without
- * identifying a complete learning request. This schema keeps that decision
- * inside the existing bootstrap model call. The program only reads
- * outline/first_section when the model explicitly chooses generate_lesson.
+ * identifying a complete learning request. Admission and the compact course
+ * outline share one model call, but section content is deliberately excluded.
+ * Once the outline is validated, the program builds an exact schema for
+ * section 1 from that immutable outline.
  */
-export function buildLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
+export function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
-  const course = object({
-    outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
-    first_section: firstSection,
-  }, ["outline", "first_section"]);
+  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount);
   course.nullable = true;
   return vertexCompatible({
     ...object({
@@ -585,7 +543,6 @@ export function buildLessonPlanSectionDraftJsonSchema(
 function lessonPlanSectionDraftShapeJsonSchema(
   outlineValue: unknown,
   sectionIndex: number,
-  bootstrapPermissive = false,
 ): LessonPlanJsonSchema {
   const outline = outlineShape(outlineValue);
   if (!Number.isInteger(sectionIndex) || sectionIndex < 1 || sectionIndex > outline.sections.length) {
@@ -598,22 +555,18 @@ function lessonPlanSectionDraftShapeJsonSchema(
   }
   const reusableCount = section.reusable_items?.length ?? 0;
   const numberCount = outline.numbers?.length ?? 0;
-  const courseVisualCreates = bootstrapPermissive
-    ? undefined
-    : courseVisualCreatesSchema(outline, sectionIndex);
-  const reusableBoardCreates = bootstrapPermissive
-    ? undefined
-    : reusableBoardCreatesSchema(outline, sectionIndex);
+  const courseVisualCreates = courseVisualCreatesSchema(outline, sectionIndex);
+  const reusableBoardCreates = reusableBoardCreatesSchema(outline, sectionIndex);
   const actionCollections = actionCollectionSchemas(
     outline.sections.length,
     allowedCapabilities,
     0,
     numberCount,
-    bootstrapPermissive ? [] : (outline.course_visuals ?? [])
+    (outline.course_visuals ?? [])
       .map((visual, index) => ({ visual, position: index + 1 }))
       .filter(({ visual }) => visual.create_section === sectionIndex)
       .map(({ position }) => position),
-    bootstrapPermissive,
+    false,
   );
   const supportsNumberActivity = Array.isArray(outline.numbers) && outline.numbers.length > 0;
   const sectionVisualCapabilities = (outline.course_visuals ?? [])
@@ -672,14 +625,6 @@ export function coerceLessonPlanSectionModelNumbers(
   return coerceModelNumbers(
     value,
     lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex),
-    "$lessonPlanModelSection",
-  );
-}
-
-export function coerceLessonPlanBootstrapSectionModelNumbers(value: unknown): unknown {
-  return coerceModelNumbers(
-    value,
-    lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true),
     "$lessonPlanModelSection",
   );
 }

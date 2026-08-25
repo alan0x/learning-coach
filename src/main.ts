@@ -154,7 +154,6 @@ type ThinkingLevel = "MINIMAL" | "LOW" | "MEDIUM" | "HIGH";
 
 export interface StructuredModelRequest {
   label:
-    | "lesson-plan-bootstrap"
     | "lesson-plan-outline"
     | "lesson-plan-section"
     | "selection-enhancement"
@@ -172,7 +171,7 @@ export interface StructuredModelRequest {
   thinkingLevel?: ThinkingLevel;
   signal?: AbortSignal;
   media?: { mimeType: "image/png" | "image/jpeg" | "image/webp"; data: string };
-  lessonPlanPart?: "bootstrap" | "outline" | "section";
+  lessonPlanPart?: "outline" | "section";
   lessonPlanSection?: number;
   lessonPlanAttempt?: number;
 }
@@ -215,8 +214,7 @@ function parseThinkingLevel(value: string | undefined, label: string): ThinkingL
 function configuredThinkingLevel(
   label: StructuredModelRequest["label"],
 ): ThinkingLevel | undefined {
-  const environmentName = label === "lesson-plan-bootstrap"
-    || label === "lesson-plan-outline"
+  const environmentName = label === "lesson-plan-outline"
     ? "OLL_TASK_THINKING_LEVEL"
     : label === "lesson-plan-section"
       ? "OLL_SECTION_THINKING_LEVEL"
@@ -1730,7 +1728,6 @@ async function main(): Promise<void> {
           input_modality: input.input_modality,
         },
         {
-          bootstrap_first_section: true,
           max_concurrency: Math.min(
             parsePositiveInteger(
               process.env.OLL_SECTION_CONCURRENCY,

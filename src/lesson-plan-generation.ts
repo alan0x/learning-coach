@@ -25,11 +25,9 @@ import {
   type CompiledLessonPlan,
 } from "./lesson-plan-compiler.js";
 import {
-  buildLessonPlanBootstrapJsonSchema,
+  buildLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
-  buildLessonPlanAdmissionBootstrapJsonSchema,
-  coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
   LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES,
@@ -48,12 +46,12 @@ export interface LessonPlanGenerationInput {
 }
 
 export interface LessonPlanModelRequest {
-  label: "lesson-plan-bootstrap" | "lesson-plan-outline" | "lesson-plan-section";
+  label: "lesson-plan-outline" | "lesson-plan-section";
   turn_id: string;
   system_prompt: string;
   prompt: string;
   response_schema: LessonPlanJsonSchema;
-  part: "bootstrap" | "outline" | "section";
+  part: "outline" | "section";
   section?: number;
   attempt: number;
 }
@@ -63,8 +61,6 @@ export type LessonPlanModelCall = (request: LessonPlanModelRequest) => Promise<s
 export interface GenerateLessonPlanOptions {
   max_attempts_per_part?: number;
   max_concurrency?: number;
-  /** Ask for the outline and section 1 in the same provider request. */
-  bootstrap_first_section?: boolean;
   compile?: CompileLessonPlanOptions;
   on_playable_prefix?: (event: {
     completed_sections: number;
@@ -123,18 +119,13 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - geometric_rearrangement 的数值表示重排进度；construction 从 Schema 选择。process_diagram 没有数值或动画。
 只返回符合响应 Schema 的 JSON。`;
 
-const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
-
-同一次返回 outline 和 first_section。first_section 必须实现 outline 第一节，只使用 outline 已声明的数值、画面和可复用内容；内部位置、编号和引用由程序建立。
-${SECTION_SYSTEM_PROMPT}`;
-
-const ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户正尝试从文字输入或语音输入开始一整节白板课程。先判断当前内容是否足以确定课程主题，不要从可用画面或数学能力猜测用户没有表达的主题。
-- generate_lesson：用户提出了学习问题、解释请求，或清楚说出了想学习的主题。简短但明确的主题（例如“勾股定理”）也属于这一类。此时 course 必须同时包含完整 outline 和 first_section，learner_response 留空。
+const ADMISSION_OUTLINE_SYSTEM_PROMPT = `用户正尝试从文字输入或语音输入开始一整节白板课程。先判断当前内容是否足以确定课程主题，不要从可用画面或数学能力猜测用户没有表达的主题。
+- generate_lesson：用户提出了学习问题、解释请求，或清楚说出了想学习的主题。简短但明确的主题（例如“勾股定理”）也属于这一类。此时 course 必须包含完整课程目录，learner_response 留空。不要生成任何一节的旁白或板书内容。
 - clarify：这是真实话语，但内容残缺、含义不清或没有说明要学什么，无法可靠确定课程主题。此时 course 必须为 null，用 learner_response 简短追问用户想学习什么。例如 “The book.” 应追问用户想了解这本书的什么内容，而不是猜成数学课程。
 - ignore：只是语气词、口头填充或没有可回应内容。此时 course 必须为 null，learner_response 留空。
 只做上述语义判断，不使用字数、语言或固定关键词作为规则。
 
-${BOOTSTRAP_SYSTEM_PROMPT}`;
+${OUTLINE_SYSTEM_PROMPT}`;
 
 function positiveInteger(value: number | undefined, fallback: number, label: string): number {
   const result = value ?? fallback;
@@ -1359,131 +1350,6 @@ function lowerModelActivityNumbers(
   return lowered;
 }
 
-function reconcileBootstrapFirstSectionPositions(
-  value: unknown,
-  outline: LessonPlanOutline,
-): unknown {
-  const root = structuredClone(value);
-  if (!root || typeof root !== "object" || Array.isArray(root)) return root;
-  const candidate = root as Record<string, unknown>;
-  if (!Array.isArray(candidate.moments)) return root;
-
-  type CreateCandidate = {
-    entry: Record<string, unknown>;
-    moment: number;
-    order: number;
-    index: number;
-  };
-  const collect = (collection: "visual_creates" | "math_creates" | "note_creates"): CreateCandidate[] => (
-    candidate.moments.flatMap((momentValue, momentIndex) => {
-      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) return [];
-      const entries = (momentValue as Record<string, unknown>)[collection];
-      if (!Array.isArray(entries)) return [];
-      return entries.flatMap((entry, entryIndex) => (
-        entry && typeof entry === "object" && !Array.isArray(entry)
-          ? [{
-            entry: entry as Record<string, unknown>,
-            moment: momentIndex + 1,
-            order: Number((entry as Record<string, unknown>).order),
-            index: entryIndex,
-          }]
-          : []
-      ));
-    }).sort((left, right) => (
-      left.moment - right.moment
-      || (Number.isFinite(left.order) ? left.order : Number.MAX_SAFE_INTEGER)
-        - (Number.isFinite(right.order) ? right.order : Number.MAX_SAFE_INTEGER)
-      || left.index - right.index
-    ))
-  );
-
-  const visualCreates = collect("visual_creates");
-  for (const { entry } of visualCreates) {
-    delete entry.course_visual;
-    delete entry.reusable_item;
-  }
-  const unmatchedVisuals = new Set(visualCreates);
-  const matchedVisuals = new Map<CreateCandidate, number>();
-  const expectedVisuals = (outline.course_visuals ?? [])
-    .map((visual, index) => ({ visual, position: index + 1 }))
-    .filter(({ visual }) => visual.create_section === 1);
-  for (const { visual, position } of expectedVisuals) {
-    const match = visualCreates.find((candidateEntry) => {
-      if (!unmatchedVisuals.has(candidateEntry)) return false;
-      const content = candidateEntry.entry.content;
-      return content && typeof content === "object" && !Array.isArray(content)
-        && (content as Record<string, unknown>).capability === visual.capability;
-    });
-    if (!match) continue;
-    matchedVisuals.set(match, position);
-    unmatchedVisuals.delete(match);
-  }
-  // Convert only outline-matched creates into the exact root object used by
-  // formal section generation. Unmatched creates are not copied, so they
-  // cannot reach OLL. Missing expected keys are deliberately left missing and
-  // the ordinary strict section validator rejects the incomplete first
-  // section without changing the outline.
-  const fixedCourseCreates = Object.fromEntries([...matchedVisuals].map(([match, position]) => {
-    const entry = structuredClone(match.entry);
-    delete entry.order;
-    delete entry.course_visual;
-    delete entry.reusable_item;
-    const content = entry.content && typeof entry.content === "object" && !Array.isArray(entry.content)
-      ? { ...(entry.content as Record<string, unknown>) }
-      : {};
-    delete content.capability;
-    entry.content = content;
-    return [`visual_${position}`, { moment: match.moment, ...entry }];
-  }));
-  for (const momentValue of candidate.moments) {
-    if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
-    delete (momentValue as Record<string, unknown>).visual_creates;
-  }
-  if (expectedVisuals.length > 0) candidate.course_visual_creates = fixedCourseCreates;
-  else delete candidate.course_visual_creates;
-
-  const createsByKind = {
-    math: collect("math_creates"),
-    note: collect("note_creates"),
-  };
-  for (const entries of Object.values(createsByKind)) {
-    for (const { entry } of entries) delete entry.reusable_item;
-  }
-  const usedBoardCreates = new Set<CreateCandidate>();
-  const reusableItems = outline.sections[0]?.reusable_items ?? [];
-  const fixedReusableCreates: Record<string, unknown> = {};
-  reusableItems.forEach((item, index) => {
-    if (item.kind !== "board_item" || (item.board_kind !== "math" && item.board_kind !== "note")) return;
-    const match = createsByKind[item.board_kind].find((candidateEntry) => !usedBoardCreates.has(candidateEntry));
-    if (!match) return;
-    usedBoardCreates.add(match);
-    const entry = structuredClone(match.entry);
-    delete entry.order;
-    delete entry.reusable_item;
-    fixedReusableCreates[`item_${index + 1}`] = { moment: match.moment, ...entry };
-  });
-
-  for (const [collection, entries] of Object.entries(createsByKind) as Array<
-    ["math" | "note", CreateCandidate[]]
-  >) {
-    const selected = new Set(entries.filter((entry) => usedBoardCreates.has(entry)).map(({ entry }) => entry));
-    const property = collection === "math" ? "math_creates" : "note_creates";
-    for (const momentValue of candidate.moments) {
-      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
-      const moment = momentValue as Record<string, unknown>;
-      if (!Array.isArray(moment[property])) continue;
-      moment[property] = moment[property].filter((entry) => !selected.has(entry as Record<string, unknown>));
-    }
-  }
-  const expectedReusableBoardCreates = reusableItems.some((item) => (
-    item.kind === "board_item" && (item.board_kind === "math" || item.board_kind === "note")
-  ));
-  if (expectedReusableBoardCreates) candidate.reusable_board_creates = fixedReusableCreates;
-  else delete candidate.reusable_board_creates;
-
-  return root;
-}
-
 function lowerModelSectionDraft(
   value: unknown,
   outline: LessonPlanOutline,
@@ -2104,25 +1970,20 @@ export async function generateLessonPlanWithModel(
   const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
   const context = inputContext(input);
   const fixedRequestParts = requestParts(input);
-  const bootstrapFirstSection = options.bootstrap_first_section === true;
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
-  if (admissionInput && !bootstrapFirstSection) {
-    throw new Error("lesson admission requires bootstrap_first_section");
-  }
   let modelCalls = 0;
   let outline: LessonPlanOutline | undefined;
-  let bootstrappedFirstSection: LessonPlanSectionDraft | undefined;
   let outlineError: unknown;
   const sectionErrors = new Map<number, unknown>();
   const sectionAttempts = new Map<number, number>();
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await model({
-      label: bootstrapFirstSection ? "lesson-plan-bootstrap" : "lesson-plan-outline",
-      part: bootstrapFirstSection ? "bootstrap" : "outline",
+      label: "lesson-plan-outline",
+      part: "outline",
       attempt,
       turn_id: input.turn_id,
-      system_prompt: bootstrapFirstSection
-        ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT
+      system_prompt: admissionInput
+        ? ADMISSION_OUTLINE_SYSTEM_PROMPT
         : OUTLINE_SYSTEM_PROMPT,
       prompt: JSON.stringify({
         course: context,
@@ -2132,24 +1993,18 @@ export async function generateLessonPlanWithModel(
           number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
           guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
         })),
-        ...(bootstrapFirstSection ? {
-          first_section_to_write: 1,
-          first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions",
-        } : {}),
         ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
       }),
-      response_schema: bootstrapFirstSection
-        ? admissionInput
-          ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length)
-          : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length)
+      response_schema: admissionInput
+        ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
         : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
     });
     modelCalls += 1;
     try {
-      let parsed = parseModelJson(raw, bootstrapFirstSection
+      let parsed = parseModelJson(raw, admissionInput
         ? "lessonPlanEnvelope"
         : "lessonPlanOutline");
-      if (bootstrapFirstSection && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
+      if (admissionInput && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
         throw new LessonPlanError(
           "LESSON_PLAN_MODEL_JSON",
           "$lessonPlanEnvelope",
@@ -2162,15 +2017,15 @@ export async function generateLessonPlanWithModel(
         if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
           throw new LessonPlanError(
             "LESSON_PLAN_MODEL_JSON",
-            "$lessonPlanBootstrap.disposition",
-            "lesson bootstrap must choose generate_lesson, clarify, or ignore",
+            "$lessonPlanAdmission.disposition",
+            "lesson admission must choose generate_lesson, clarify, or ignore",
           );
         }
         if (disposition !== "generate_lesson") {
           if (!Object.hasOwn(envelope, "course") || envelope.course !== null) {
             throw new LessonPlanError(
               "LESSON_PLAN_MODEL_JSON",
-              "$lessonPlanBootstrap.course",
+              "$lessonPlanAdmission.course",
               "clarify and ignore require course to be null",
             );
           }
@@ -2180,7 +2035,7 @@ export async function generateLessonPlanWithModel(
           if (disposition === "clarify" && !learnerResponse) {
             throw new LessonPlanError(
               "LESSON_PLAN_MODEL_JSON",
-              "$lessonPlanBootstrap.learner_response",
+              "$lessonPlanAdmission.learner_response",
               "clarify requires a learner-facing question",
             );
           }
@@ -2193,52 +2048,22 @@ export async function generateLessonPlanWithModel(
         if (!envelope.course || typeof envelope.course !== "object" || Array.isArray(envelope.course)) {
           throw new LessonPlanError(
             "LESSON_PLAN_MODEL_JSON",
-            "$lessonPlanBootstrap.course",
-            "generate_lesson requires course with outline and first_section",
+            "$lessonPlanAdmission.course",
+            "generate_lesson requires a complete course outline",
           );
         }
         parsed = envelope.course;
       }
       parsed = pruneModelNulls(parsed);
-      const rawOutline = bootstrapFirstSection
-        ? (parsed as Record<string, unknown>).outline
-        : parsed;
       outline = validateLessonPlanOutline(
         lowerModelOutline(
           coerceLessonPlanOutlineModelNumbers(
-            rawOutline,
+            parsed,
             fixedRequestParts.length,
           ),
         ),
         fixedRequestParts.length,
       );
-      if (bootstrapFirstSection) {
-        try {
-          const positionedFirstSection = reconcileBootstrapFirstSectionPositions(
-            coerceLessonPlanBootstrapSectionModelNumbers(
-              (parsed as Record<string, unknown>).first_section,
-            ),
-            outline,
-          );
-          bootstrappedFirstSection = lowerModelSectionDraft(
-            positionedFirstSection,
-            outline,
-            1,
-            true,
-          );
-        } catch (error) {
-          // The combined outline + first-section response is a latency
-          // optimization. An invalid speculative first section must not spend
-          // one of the formal section-generation attempts.
-          sectionErrors.set(1, error);
-          await options.on_rejected_part?.({
-            label: "lesson-plan-section",
-            section: 1,
-            attempt: 1,
-            error: rejectionDetails(error),
-          });
-        }
-      }
       break;
     } catch (error) {
       outlineError = error;
@@ -2372,7 +2197,7 @@ export async function generateLessonPlanWithModel(
 
   // The first section remains the latency-critical path and is published
   // before any later-section work can delay it.
-  await acceptSection(1, bootstrappedFirstSection);
+  await acceptSection(1);
 
   if (outline.sections.length > 1 && concurrency === 1) {
     for (let section = 2; section <= outline.sections.length; section += 1) {

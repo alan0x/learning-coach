@@ -99,14 +99,13 @@ The current responsibility boundary is:
   teaching intent;
 - the accepted course outline is the only authority for which persistent
   visuals and reusable board items a section must create;
-- for the combined outline-and-first-section response, program code matches
-  first-section visuals to the outline by installed capability and outline
-  position. It copies only those matches into the exact section format. A
-  duplicate or outline-external visual is discarded before OLL exists;
-- an outline-declared visual or reusable formula/note that is missing from the
-  combined first section makes only that speculative first section invalid.
-  The accepted outline is not edited. Section 1 is then generated through the
-  same exact schema and validator used for later sections;
+- the first model response contains only the course outline. It cannot include
+  narration or board cards;
+- after the outline passes validation, section 1 is generated through the same
+  exact, outline-derived schema and validator used for every later section;
+- because that exact schema contains only the visuals and reusable board items
+  declared by the accepted outline, section 1 cannot add an unrelated visual
+  or silently omit a required one;
 - ordinary non-reusable Math and Note cards remain ordinary section content.
   They are not deleted merely because the outline did not reserve them for
   later reuse;
@@ -118,18 +117,21 @@ The current responsibility boundary is:
   does not invent it and does not weaken the outline. The affected section must
   be generated correctly before publication.
 
-The normal successful first-playable path remains one combined model request.
+The normal successful first-playable path now uses one small outline request
+followed by one exact section-1 request. This adds a model round trip, but avoids
+the former large response that mixed admission, the whole-course outline, and
+the first section. The first request is now smaller and section 1 cannot be
+generated against an outline that has not yet passed validation.
 Lesson authoring no longer adds its own 4,096-token cap, 30/60-second deadlines,
 or a second broad-request fallback for truncated, empty, or timed-out provider
 responses. Generic model transport configuration owns request limits and
 transport retries. Local semantic validation still rejects an invalid outline
 or section and can regenerate the exact invalid part with its validation error.
 
-The full automated suite currently passes 87/87 tests, including outline
-authority, extra-visual removal, missing required first-section content,
-single-call successful bootstrap, static multi-curve compilation, and provider
-failure non-repetition. `/learn` E2E is still required before treating the
-inserted multi-curve capability as accepted for a release.
+The automated suite covers outline authority, exact first-section structure,
+static multi-curve compilation, and provider failure non-repetition. `/learn`
+E2E is still required before treating the inserted multi-curve capability as
+accepted for a release.
 
 ## Rule for changing this matrix
 

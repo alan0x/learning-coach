@@ -229,13 +229,13 @@ test("a successful HTTP response without JSON is classified for lesson fallback"
         maxTokens: 32,
         requestAttempts: 1,
       }, {
-        label: "lesson-plan-bootstrap",
+        label: "lesson-plan-outline",
         turnId: "empty-candidate-test",
         systemPrompt: "Return JSON.",
         prompt: "Return a lesson.",
         responseSchema: { type: "object", properties: {} },
         maxTokens: 32,
-        lessonPlanPart: "bootstrap",
+        lessonPlanPart: "outline",
         lessonPlanAttempt: 1,
       }),
       (error) => error?.code === "VERTEX_RESPONSE_EMPTY"
@@ -279,7 +279,7 @@ test("the source and executable do not retain the unreachable direct-OLL lesson 
   assert.match(source, /generateLessonPlanWithModel/u);
 });
 
-test("the complete-lesson command bootstraps the outline and first section in one model call", async () => {
+test("the complete-lesson command validates the outline before generating the first section", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-lesson-plan-command-"));
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const outline = {
@@ -306,13 +306,7 @@ test("the complete-lesson command bootstraps the outline and first section in on
     moments: [{
       narration: "我们用分配律检查这个符号规则。",
       delivery: "patient",
-      math_creates: [{
-        order: 1,
-        timing: "during_speech",
-        role: "derivation",
-        content: { latex: "(-1)\\\\times(-1)=1" },
-        placement: { relation: "new_region" },
-      }],
+      math_creates: [],
       note_creates: [],
       focuses: [{
         intent: "观察等式",
@@ -320,6 +314,15 @@ test("the complete-lesson command bootstraps the outline and first section in on
       }],
       points: [],
     }],
+    reusable_board_creates: {
+      item_1: {
+        moment: 1,
+        timing: "during_speech",
+        role: "derivation",
+        content: { latex: "(-1)\\\\times(-1)=1" },
+        placement: { relation: "new_region" },
+      },
+    },
   };
   let modelCalls = 0;
   const server = createServer(async (request, response) => {
@@ -338,10 +341,8 @@ test("the complete-lesson command bootstraps the outline and first section in on
       ? {
           disposition: "generate_lesson",
           learner_response: "",
-          course: { outline, first_section: section },
+          course: outline,
         }
-      : schema.properties?.outline && schema.properties?.first_section
-        ? { outline, first_section: section }
       : schema.properties?.course_visuals ? outline : section;
     modelCalls += 1;
     response.writeHead(200, { "content-type": "application/json" });
@@ -372,7 +373,7 @@ test("the complete-lesson command bootstraps the outline and first section in on
     assert.equal(completed.authoring_strategy, "lesson_plan");
     assert.equal(completed.lesson_plan_sections, 1);
     assert.equal(completed.published_parts, 1);
-    assert.equal(modelCalls, 1);
+    assert.equal(modelCalls, 2);
     const lesson = JSON.parse(await readFile(completed.files_to_send[0], "utf8"));
     assert.equal(lesson.dsl, "octos.lesson");
     assert.equal(lesson.steps.length, 1);

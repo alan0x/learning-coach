@@ -27,10 +27,9 @@ const {
   LESSON_PLAN_VISUAL_FEATURES,
   LessonPlanError,
   assembleLessonPlan,
-  buildLessonPlanBootstrapJsonSchema,
+  buildLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
-  buildLessonPlanAdmissionBootstrapJsonSchema,
   compileAndValidateLessonPlan,
   deriveLessonRequestParts,
   generateLessonPlanWithModel,
@@ -265,10 +264,11 @@ function modelCourseVisualStructure(plan, drafts = [], { canonical = true } = {}
       draft.course_visual_creates = Object.fromEntries(creates.map(({ create, moment }) => {
         const entry = structuredClone(create);
         const position = entry.course_visual;
+        const capability = entry.content.capability;
         delete entry.course_visual;
         delete entry.reusable_item;
         delete entry.content.capability;
-        if (entry.content.parameters?.expression !== undefined) {
+        if (capability === "function_plot" && entry.content.parameters?.expression !== undefined) {
           entry.content.parameters.formulas = [entry.content.parameters.expression];
           delete entry.content.parameters.expression;
         }
@@ -280,7 +280,7 @@ function modelCourseVisualStructure(plan, drafts = [], { canonical = true } = {}
   return { course_visuals: courseVisuals, sections };
 }
 
-function stagedOutline(plan, drafts, { canonical = false } = {}) {
+function stagedOutline(plan, drafts, { canonical = true } = {}) {
   const outline = {
     version: plan.version,
     title: plan.title,
@@ -1430,10 +1430,10 @@ test("model-facing outline and section schemas stay small, flat, and free of bus
     close: plan.close,
   };
   const outlineSchema = buildLessonPlanOutlineJsonSchema();
-  const bootstrapSchema = buildLessonPlanBootstrapJsonSchema();
+  const admissionOutlineSchema = buildLessonPlanAdmissionOutlineJsonSchema();
   const firstSectionSchema = buildLessonPlanSectionDraftJsonSchema(outline, 1);
   const textOnlySectionSchema = buildLessonPlanSectionDraftJsonSchema(outline, 2);
-  const encoded = JSON.stringify({ outlineSchema, bootstrapSchema, firstSectionSchema, textOnlySectionSchema });
+  const encoded = JSON.stringify({ outlineSchema, admissionOutlineSchema, firstSectionSchema, textOnlySectionSchema });
   assert.equal(encoded.includes("anyOf"), false);
   assert.equal(encoded.includes("oneOf"), false);
   assert.equal(encoded.includes("exclusiveMinimum"), false);
@@ -2352,7 +2352,7 @@ test("a progressive prefix does not expose a control before its visual section e
   assert.ok(geometry.content.bindings.some((binding) => binding.expression.includes("number_01")));
 });
 
-test("the live bootstrap path returns the outline and first playable section in one model call", async () => {
+test("the live path validates the outline before requesting an exact first section", async () => {
   const plan = completeLessonPlanFixtures.unit_circle_to_sine;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
     version: plan.version,
@@ -2375,7 +2375,7 @@ test("the live bootstrap path returns the outline and first playable section in 
     })),
     close: plan.close,
   };
-  Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
+  Object.assign(outline, modelCourseVisualStructure(plan, drafts));
   assert.ok(drafts[0].moments[0].focuses.length > 0);
   drafts[0].moments[0].focuses[0].references = [{
     source: "reusable",
@@ -2386,32 +2386,32 @@ test("the live bootstrap path returns the outline and first playable section in 
   const prefixes = [];
   const generated = await generateLessonPlanWithModel(async (request) => {
     calls.push(request);
-    if (request.label === "lesson-plan-bootstrap") {
-      return JSON.stringify({ outline, first_section: drafts[0] });
-    }
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     const section = JSON.parse(request.prompt).section_to_write;
     return JSON.stringify(drafts[section - 1]);
   }, {
-    turn_id: "turn-bootstrap-course",
+    turn_id: "turn-outline-then-sections",
     learner_request: "请结合单位圆和正弦图解释旋转如何变成周期波动。",
     request_parts: ["请结合单位圆和正弦图解释旋转如何变成周期波动。"],
   }, {
-    bootstrap_first_section: true,
     on_playable_prefix: ({ completed_sections }) => prefixes.push(completed_sections),
   });
 
   assert.deepEqual(calls.map((call) => call.label), [
-    "lesson-plan-bootstrap",
+    "lesson-plan-outline",
+    "lesson-plan-section",
     "lesson-plan-section",
     "lesson-plan-section",
   ]);
-  assert.equal(generated.model_calls, 3);
-  assert.equal(calls.filter((call) => call.section === 1).length, 0);
+  assert.equal(generated.model_calls, 4);
+  assert.equal(calls.filter((call) => call.section === 1).length, 1);
   assert.deepEqual(prefixes, [1, 2, 3]);
   assert.equal(generated.lesson.steps.length, 3);
-  assert.equal(calls[0].part, "bootstrap");
-  assert.ok(calls[0].response_schema.properties.outline);
-  assert.ok(calls[0].response_schema.properties.first_section);
+  assert.equal(calls[0].part, "outline");
+  assert.ok(calls[0].response_schema.properties.course_visuals);
+  assert.equal(calls[0].response_schema.properties.moments, undefined);
+  const firstSectionSchema = calls.find((call) => call.section === 1).response_schema;
+  assert.ok(firstSectionSchema.properties.course_visual_creates);
 });
 
 test("a missing implicit-surface level is completed by the program without regenerating the section", async () => {
@@ -2430,21 +2430,17 @@ test("a missing implicit-surface level is completed by the program without regen
 
   const generated = await generateLessonPlanWithModel(async (request) => {
     calls.push({ label: request.label, section: request.section });
-    if (request.label === "lesson-plan-bootstrap") {
-      return JSON.stringify({ outline, first_section: drafts[0] });
-    }
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return JSON.stringify(drafts[request.section - 1]);
   }, {
     turn_id: "turn-program-supplies-implicit-level",
     learner_request: "请展示球面和水平截面。",
     request_parts: ["请展示球面和水平截面。"],
-  }, {
-    bootstrap_first_section: true,
-    max_attempts_per_part: 1,
-  });
+  }, { max_attempts_per_part: 1 });
 
   assert.deepEqual(calls, [
-    { label: "lesson-plan-bootstrap", section: undefined },
+    { label: "lesson-plan-outline", section: undefined },
+    { label: "lesson-plan-section", section: 1 },
     { label: "lesson-plan-section", section: 2 },
   ]);
   const scene = generated.lesson.steps[0].beats[0].actions.find(
@@ -2481,26 +2477,21 @@ test("a supporting visual that reuses an unrelated numeric control is removed wi
     ...(student_activities ? { student_activities } : {}),
   }));
   const outline = stagedOutline(plan, drafts);
-  drafts[0].moments[0].visual_creates.reverse();
   const calls = [];
 
   const generated = await generateLessonPlanWithModel(async (request) => {
     calls.push({ label: request.label, section: request.section });
-    if (request.label === "lesson-plan-bootstrap") {
-      return JSON.stringify({ outline, first_section: drafts[0] });
-    }
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return JSON.stringify(drafts[request.section - 1]);
   }, {
     turn_id: "turn-drop-mismatched-supporting-visual",
     learner_request: "请用图形重排解释勾股定理。",
     request_parts: ["请用图形重排解释勾股定理。"],
-  }, {
-    bootstrap_first_section: true,
-    max_attempts_per_part: 1,
-  });
+  }, { max_attempts_per_part: 1 });
 
   assert.deepEqual(calls, [
-    { label: "lesson-plan-bootstrap", section: undefined },
+    { label: "lesson-plan-outline", section: undefined },
+    { label: "lesson-plan-section", section: 1 },
     { label: "lesson-plan-section", section: 2 },
   ]);
   assert.equal(generated.outline.course_visuals.length, 1);
@@ -2536,22 +2527,20 @@ test("an over-capacity process diagram is removed while ordinary course cards re
 
   const generated = await generateLessonPlanWithModel(async (request) => {
     calls.push({ label: request.label, section: request.section });
-    if (request.label === "lesson-plan-bootstrap") {
-      return JSON.stringify({ outline, first_section: drafts[0] });
-    }
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return JSON.stringify(drafts[request.section - 1]);
   }, {
     turn_id: "turn-drop-over-capacity-process-diagram",
     learner_request: "请推导等差数列求和公式。",
     request_parts: ["请推导等差数列求和公式。"],
   }, {
-    bootstrap_first_section: true,
     max_attempts_per_part: 1,
     on_program_adjustment: (event) => adjustments.push(event),
   });
 
   assert.deepEqual(calls, [
-    { label: "lesson-plan-bootstrap", section: undefined },
+    { label: "lesson-plan-outline", section: undefined },
+    { label: "lesson-plan-section", section: 1 },
     { label: "lesson-plan-section", section: 2 },
   ]);
   assert.equal(generated.outline.course_visuals.length, 0);
@@ -2586,15 +2575,15 @@ test("a process diagram missing its ordered steps is removed without regeneratin
     section: index + 1,
     moments,
   }));
-  const incompleteFirstSection = structuredClone(drafts[0]);
-  incompleteFirstSection.moments[0].visual_creates[0].content.parameters = {
-    title: "辗转相除法",
-  };
   drafts[0].moments[0].visual_creates[0].content.parameters = {
     title: "辗转相除法",
     steps: ["252 除以 105 余 42", "105 除以 42 余 21", "42 除以 21 余 0"],
   };
   const outline = stagedOutline(plan, drafts);
+  const incompleteFirstSection = structuredClone(drafts[0]);
+  incompleteFirstSection.course_visual_creates.visual_1.content.parameters = {
+    title: "辗转相除法",
+  };
   const exactDrafts = structuredClone(drafts);
   Object.assign(outline, modelCourseVisualStructure(plan, exactDrafts));
   const calls = [];
@@ -2602,22 +2591,21 @@ test("a process diagram missing its ordered steps is removed without regeneratin
 
   const generated = await generateLessonPlanWithModel(async (request) => {
     calls.push({ label: request.label, section: request.section });
-    if (request.label === "lesson-plan-bootstrap") {
-      return JSON.stringify({ outline, first_section: incompleteFirstSection });
-    }
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
+    if (request.section === 1) return JSON.stringify(incompleteFirstSection);
     return JSON.stringify(exactDrafts[request.section - 1]);
   }, {
     turn_id: "turn-repair-missing-process-steps",
     learner_request: "请用流程图解释辗转相除法。",
     request_parts: ["请用流程图解释辗转相除法。"],
   }, {
-    bootstrap_first_section: true,
     max_attempts_per_part: 2,
     on_program_adjustment: (event) => adjustments.push(event),
   });
 
   assert.deepEqual(calls, [
-    { label: "lesson-plan-bootstrap", section: undefined },
+    { label: "lesson-plan-outline", section: undefined },
+    { label: "lesson-plan-section", section: 1 },
     { label: "lesson-plan-section", section: 2 },
   ]);
   const diagram = generated.lesson.steps[0].beats[0].actions.find(
@@ -2652,19 +2640,19 @@ test("identical math cards in one moment are deduplicated without a model retry"
   const adjustments = [];
   const generated = await generateLessonPlanWithModel(async (request) => {
     calls.push({ label: request.label, section: request.section });
-    if (request.label === "lesson-plan-bootstrap") return JSON.stringify({ outline, first_section: drafts[0] });
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return JSON.stringify(drafts[request.section - 1]);
   }, {
     turn_id: "turn-deduplicate-same-moment-math",
     learner_request: "请解释等差数列求和。",
     request_parts: ["请解释等差数列求和。"],
   }, {
-    bootstrap_first_section: true,
     max_attempts_per_part: 1,
     on_program_adjustment: (event) => adjustments.push(event),
   });
   assert.deepEqual(calls, [
-    { label: "lesson-plan-bootstrap", section: undefined },
+    { label: "lesson-plan-outline", section: undefined },
+    { label: "lesson-plan-section", section: 1 },
     { label: "lesson-plan-section", section: 2 },
   ]);
   const formulas = generated.lesson.steps[0].beats[0].actions.filter(
@@ -2709,16 +2697,13 @@ test("an ordinary process diagram with explicit short steps is preserved", async
   );
 
   const generated = await generateLessonPlanWithModel(async (request) => {
-    if (request.label === "lesson-plan-bootstrap") {
-      return JSON.stringify({ outline, first_section: drafts[0] });
-    }
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return JSON.stringify(drafts[request.section - 1]);
   }, {
     turn_id: "turn-keep-ordinary-process-diagram",
     learner_request: "请用普通流程图说明首尾配对。",
     request_parts: ["请用普通流程图说明首尾配对。"],
   }, {
-    bootstrap_first_section: true,
     max_attempts_per_part: 1,
   });
 
@@ -2747,7 +2732,6 @@ test("a spoken fragment can request clarification without compiling a guessed le
     learner_request: "The book.",
     input_modality: "voice",
   }, {
-    bootstrap_first_section: true,
     on_playable_prefix: (event) => prefixes.push(event),
   });
 
@@ -2792,14 +2776,14 @@ test("a clear spoken learning request still compiles the ordinary complete lesso
     })),
     close: plan.close,
   };
-  Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
+  Object.assign(outline, modelCourseVisualStructure(plan, drafts));
 
   const generated = await generateLessonPlanWithModel(async (request) => {
-    if (request.label === "lesson-plan-bootstrap") {
+    if (request.label === "lesson-plan-outline") {
       return JSON.stringify({
         disposition: "generate_lesson",
         learner_response: "",
-        course: { outline, first_section: drafts[0] },
+        course: outline,
       });
     }
     const section = JSON.parse(request.prompt).section_to_write;
@@ -2809,24 +2793,22 @@ test("a clear spoken learning request still compiles the ordinary complete lesso
     learner_request: "请结合单位圆和正弦图解释周期波动。",
     request_parts: ["请结合单位圆和正弦图解释周期波动。"],
     input_modality: "voice",
-  }, {
-    bootstrap_first_section: true,
   });
 
   assert.equal("lesson" in generated, true);
   assert.equal(generated.lesson.steps.length, 3);
 });
 
-test("the lesson admission schema requires one nullable course envelope", () => {
-  const schema = buildLessonPlanAdmissionBootstrapJsonSchema(1);
+test("the lesson admission schema requires one nullable outline", () => {
+  const schema = buildLessonPlanAdmissionOutlineJsonSchema(1);
   assert.deepEqual(schema.required, ["disposition", "learner_response", "course"]);
   assert.equal(schema.properties.course.nullable, true);
-  assert.deepEqual(schema.properties.course.required, ["outline", "first_section"]);
+  assert.ok(schema.properties.course.required.includes("sections"));
   assert.equal(schema.properties.outline, undefined);
   assert.equal(schema.properties.first_section, undefined);
 });
 
-test("the bootstrap path ignores model-authored viewport parameters and computes its own", async () => {
+test("the exact section schema withholds viewport parameters and the program computes them", async () => {
   const plan = completeLessonPlanFixtures.square_function;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
     version: plan.version,
@@ -2853,48 +2835,33 @@ test("the bootstrap path ignores model-authored viewport parameters and computes
   const parameters = drafts[0].moments[0].visual_creates[0].content.parameters;
   parameters.formulas = [parameters.expression];
   delete parameters.expression;
-  const decimal = (value) => ({ mantissa: value * 10, scale: 1 });
-  parameters.x_min = decimal(-4);
-  parameters.x_max = decimal(4);
-  parameters.y_min = decimal(-1);
-  parameters.y_max = decimal(10);
-  drafts[0].moments[0].visual_creates[0].course_visual = 32;
-  drafts[0].moments[0].visual_creates[0].reusable_item = 32;
-
-  const bootstrapSchema = buildLessonPlanBootstrapJsonSchema(1);
-  const bootstrapMoment = bootstrapSchema.properties.first_section.properties.moments.items.properties;
-  assert.equal(
-    "course_visual" in bootstrapMoment.visual_creates.items.properties,
-    false,
-  );
-  assert.equal("reusable_item" in bootstrapMoment.visual_creates.items.properties, false);
-  assert.equal("reusable_item" in bootstrapMoment.math_creates.items.properties, false);
-  assert.equal("reusable_item" in bootstrapMoment.note_creates.items.properties, false);
-  for (const field of ["x_min", "x_max", "y_min", "y_max", "samples"]) {
-    assert.equal(field in bootstrapMoment.visual_creates.items.properties.content.properties.parameters.properties, false);
-  }
+  modelCourseVisualStructure(plan, drafts);
 
   const calls = [];
   const generated = await generateLessonPlanWithModel(async (request) => {
     calls.push(request);
-    if (request.label === "lesson-plan-bootstrap") {
-      return JSON.stringify({ outline, first_section: drafts[0] });
-    }
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return JSON.stringify(drafts[request.section - 1]);
   }, {
-    turn_id: "turn-bootstrap-decimal-parameters",
+    turn_id: "turn-exact-section-program-viewport",
     learner_request: "请结合函数图像解释 y=x^2 为什么开口向上。",
     request_parts: ["请结合函数图像解释 y=x^2 为什么开口向上。"],
-  }, {
-    bootstrap_first_section: true,
   });
 
   assert.deepEqual(calls.map(({ label, section }) => ({ label, section })), [
-    { label: "lesson-plan-bootstrap", section: undefined },
+    { label: "lesson-plan-outline", section: undefined },
+    { label: "lesson-plan-section", section: 1 },
     { label: "lesson-plan-section", section: 2 },
     { label: "lesson-plan-section", section: 3 },
   ]);
-  assert.equal(generated.model_calls, 3);
+  assert.equal(generated.model_calls, 4);
+  const firstSectionSchema = calls.find((call) => call.section === 1).response_schema;
+  const visual = firstSectionSchema.properties.course_visual_creates.properties.visual_1;
+  assert.equal("course_visual" in visual.properties, false);
+  assert.equal("reusable_item" in visual.properties, false);
+  for (const field of ["x_min", "x_max", "y_min", "y_max", "samples"]) {
+    assert.equal(field in visual.properties.content.properties.parameters.properties, false);
+  }
   const plot = generated.lesson.steps[0].beats[0].actions.find(
     (action) => action.do === "write" && action.kind === "plot",
   ).content;
@@ -2907,7 +2874,7 @@ test("the bootstrap path ignores model-authored viewport parameters and computes
   assert.ok(plot.axes.y.max > 9);
 });
 
-test("the bootstrap path keeps outline reusable declarations and regenerates an incomplete first section", async () => {
+test("the accepted outline keeps authority over reusable items in the exact first section", async () => {
   const plan = completeLessonPlanFixtures.square_function;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
     version: plan.version,
@@ -2915,20 +2882,9 @@ test("the bootstrap path keeps outline reusable declarations and regenerates an 
     moments,
     ...(student_activities ? { student_activities } : {}),
   }));
-  const outline = {
-    version: plan.version,
-    title: plan.title,
-    goals: plan.goals,
-    numbers: plan.numbers,
-    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1, 2, 3] }],
-    sections: [],
-    close: { summary: plan.close.summary },
-  };
-  Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
-  const exactFirstSection = structuredClone(drafts[0]);
-  Object.assign(outline, modelCourseVisualStructure(plan, [exactFirstSection]));
+  const outline = stagedOutline(plan, drafts);
   outline.sections[0].reusable_items.unshift({ kind: "board_item", board_kind: "note" });
-  exactFirstSection.reusable_board_creates = {
+  drafts[0].reusable_board_creates = {
     item_1: {
       moment: 1,
       timing: "after_speech",
@@ -2944,22 +2900,18 @@ test("the bootstrap path keeps outline reusable declarations and regenerates an 
   const calls = [];
   const generated = await generateLessonPlanWithModel(async (request) => {
     calls.push({ label: request.label, section: request.section });
-    if (request.label === "lesson-plan-bootstrap") {
-      return JSON.stringify({ outline, first_section: drafts[0] });
-    }
-    if (request.section === 1) return JSON.stringify(exactFirstSection);
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return JSON.stringify(drafts[request.section - 1]);
   }, {
-    turn_id: "turn-bootstrap-prune-unfilled-reusable",
+    turn_id: "turn-outline-controls-reusable-items",
     learner_request: "请结合函数图像解释 y=x^2 为什么开口向上。",
     request_parts: ["请结合函数图像解释 y=x^2 为什么开口向上。"],
   }, {
-    bootstrap_first_section: true,
     max_attempts_per_part: 1,
   });
 
   assert.deepEqual(calls, [
-    { label: "lesson-plan-bootstrap", section: undefined },
+    { label: "lesson-plan-outline", section: undefined },
     { label: "lesson-plan-section", section: 1 },
     { label: "lesson-plan-section", section: 2 },
     { label: "lesson-plan-section", section: 3 },
@@ -2984,7 +2936,7 @@ test("the bootstrap path keeps outline reusable declarations and regenerates an 
   );
 });
 
-test("the bootstrap path drops every visual that the outline did not declare", async () => {
+test("the exact first-section schema cannot add visuals that the outline did not declare", async () => {
   const plan = completeLessonPlanFixtures.square_function;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
     version: plan.version,
@@ -3007,37 +2959,26 @@ test("the bootstrap path drops every visual that the outline did not declare", a
     })),
     close: plan.close,
   };
-  Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
-  const duplicatePlot = structuredClone(drafts[0].moments[0].visual_creates[0]);
-  duplicatePlot.role = "duplicate_plot_not_declared_by_outline";
-  const extraScene = structuredClone(duplicatePlot);
-  extraScene.role = "scene_not_declared_by_outline";
-  extraScene.content = { capability: "cube_with_section", parameters: {} };
-  drafts[0].moments[0].visual_creates.push(duplicatePlot, extraScene);
-
-  const generated = await generateLessonPlanWithModel(async (request) => {
-    if (request.label === "lesson-plan-bootstrap") {
-      return JSON.stringify({ outline, first_section: drafts[0] });
-    }
+  Object.assign(outline, modelCourseVisualStructure(plan, drafts));
+  const calls = [];
+  await generateLessonPlanWithModel(async (request) => {
+    calls.push(request);
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return JSON.stringify(drafts[request.section - 1]);
   }, {
-    turn_id: "turn-bootstrap-prune-extra-visuals",
+    turn_id: "turn-exact-section-no-extra-visuals",
     learner_request: "请结合函数图像解释 y=x^2 为什么开口向上。",
     request_parts: ["请结合函数图像解释 y=x^2 为什么开口向上。"],
-  }, {
-    bootstrap_first_section: true,
-    max_attempts_per_part: 1,
   });
-
-  const firstBeatWrites = generated.lesson.steps[0].beats[0].actions.filter(
-    (action) => action.do === "write",
+  const sectionSchema = calls.find((call) => call.section === 1).response_schema;
+  assert.deepEqual(
+    Object.keys(sectionSchema.properties.course_visual_creates.properties),
+    ["visual_1"],
   );
-  assert.equal(firstBeatWrites.filter((action) => action.kind === "plot").length, 1);
-  assert.equal(firstBeatWrites.filter((action) => action.kind === "scene3d").length, 0);
-  assert.equal(generated.outline.course_visuals.length, 1);
+  assert.equal(sectionSchema.properties.course_visual_creates.additionalProperties, false);
 });
 
-test("an invalid speculative first section does not consume the formal section attempt", async () => {
+test("the first section is requested only after the outline and uses the formal section attempt", async () => {
   const plan = completeLessonPlanFixtures.unit_circle_to_sine;
   const exactDrafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
     version: plan.version,
@@ -3045,8 +2986,6 @@ test("an invalid speculative first section does not consume the formal section a
     moments,
     ...(student_activities ? { student_activities } : {}),
   }));
-  const invalidBootstrapFirstSection = structuredClone(exactDrafts[0]);
-  invalidBootstrapFirstSection.moments[0].visual_creates = [];
   const outline = {
     version: plan.version,
     title: plan.title,
@@ -3066,21 +3005,18 @@ test("an invalid speculative first section does not consume the formal section a
   const calls = [];
   const generated = await generateLessonPlanWithModel(async (request) => {
     calls.push({ label: request.label, section: request.section, attempt: request.attempt });
-    if (request.label === "lesson-plan-bootstrap") {
-      return JSON.stringify({ outline, first_section: invalidBootstrapFirstSection });
-    }
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return JSON.stringify(exactDrafts[request.section - 1]);
   }, {
-    turn_id: "turn-bootstrap-fallback",
+    turn_id: "turn-outline-then-first-section",
     learner_request: "请结合单位圆和正弦图解释旋转如何变成周期波动。",
     request_parts: ["请结合单位圆和正弦图解释旋转如何变成周期波动。"],
   }, {
-    bootstrap_first_section: true,
     max_attempts_per_part: 1,
   });
 
   assert.deepEqual(calls, [
-    { label: "lesson-plan-bootstrap", section: undefined, attempt: 1 },
+    { label: "lesson-plan-outline", section: undefined, attempt: 1 },
     { label: "lesson-plan-section", section: 1, attempt: 1 },
     { label: "lesson-plan-section", section: 2, attempt: 1 },
     { label: "lesson-plan-section", section: 3, attempt: 1 },
@@ -3111,42 +3047,36 @@ test("provider output failures are not retried by the lesson authoring loop", as
     })),
     close: plan.close,
   };
-  Object.assign(outline, modelCourseVisualStructure(plan, drafts, { canonical: false }));
+  Object.assign(outline, modelCourseVisualStructure(plan, drafts));
   const truncated = () => Object.assign(
     new Error("Vertex response was truncated at maxOutputTokens"),
     { code: "VERTEX_RESPONSE_TRUNCATED" },
   );
-  const bootstrapCalls = [];
+  const outlineCalls = [];
   await assert.rejects(
     () => generateLessonPlanWithModel(async (request) => {
-      bootstrapCalls.push(request.label);
+      outlineCalls.push(request.label);
       throw truncated();
     }, {
-      turn_id: "turn-truncated-bootstrap",
+      turn_id: "turn-truncated-outline",
       learner_request: "请结合单位圆和正弦图解释旋转如何变成周期波动。",
       request_parts: ["请结合单位圆和正弦图解释旋转如何变成周期波动。"],
-    }, {
-      bootstrap_first_section: true,
     }),
     (error) => error?.code === "VERTEX_RESPONSE_TRUNCATED",
   );
-  assert.deepEqual(bootstrapCalls, ["lesson-plan-bootstrap"]);
+  assert.deepEqual(outlineCalls, ["lesson-plan-outline"]);
 
   const sectionCalls = [];
   await assert.rejects(
     () => generateLessonPlanWithModel(async (request) => {
       sectionCalls.push({ label: request.label, section: request.section });
-      if (request.label === "lesson-plan-bootstrap") {
-        return JSON.stringify({ outline, first_section: drafts[0] });
-      }
+      if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
       if (request.section === 2) throw truncated();
       return JSON.stringify(drafts[request.section - 1]);
     }, {
       turn_id: "turn-truncated-section",
       learner_request: "请结合单位圆和正弦图解释旋转如何变成周期波动。",
       request_parts: ["请结合单位圆和正弦图解释旋转如何变成周期波动。"],
-    }, {
-      bootstrap_first_section: true,
     }),
     (error) => error?.code === "VERTEX_RESPONSE_TRUNCATED",
   );

@@ -8215,7 +8215,7 @@ function parseThinkingLevel(value, label) {
   return level;
 }
 function configuredThinkingLevel(label) {
-  const environmentName = label === "lesson-plan-bootstrap" || label === "lesson-plan-outline" ? "OLL_TASK_THINKING_LEVEL" : label === "lesson-plan-section" ? "OLL_SECTION_THINKING_LEVEL" : label === "selection-enhancement" ? "OLL_SELECTION_THINKING_LEVEL" : "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL";
+  const environmentName = label === "lesson-plan-outline" ? "OLL_TASK_THINKING_LEVEL" : label === "lesson-plan-section" ? "OLL_SECTION_THINKING_LEVEL" : label === "selection-enhancement" ? "OLL_SELECTION_THINKING_LEVEL" : "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL";
   const safeDefault = "LOW";
   return parseThinkingLevel(process.env[environmentName], environmentName) ?? parseThinkingLevel(process.env.OLL_THINKING_LEVEL, "OLL_THINKING_LEVEL") ?? safeDefault;
 }
@@ -9517,7 +9517,6 @@ async function main() {
           input_modality: input.input_modality
         },
         {
-          bootstrap_first_section: true,
           max_concurrency: Math.min(
             parsePositiveInteger(
               process.env.OLL_SECTION_CONCURRENCY,
