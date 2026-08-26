@@ -28,11 +28,12 @@ const MAX_ERROR_BODY_LENGTH = 4_000;
 interface ToolInput {
   turn_id: string;
   learner_request: string;
-  request_source: "self_contained";
+  request_source: "self_contained" | "current_image";
   language?: string;
   tutor_context?: string;
   learner_context?: string;
   input_modality?: "text" | "voice";
+  camera_media?: string;
 }
 
 type SelectionContentKind = "text" | "math" | "geometry" | "data" | "unknown";
@@ -253,10 +254,10 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     throw new Error("Tool input must be a JSON object");
   }
   const input = candidate as Record<string, unknown>;
-  if (input.request_source !== "self_contained") {
+  if (input.request_source !== "self_contained" && input.request_source !== "current_image") {
     throw new ToolExecutionError(
       "LESSON_REQUEST_SOURCE_UNSUPPORTED",
-      "Complete lesson generation accepts self_contained requests only",
+      "Complete lesson generation accepts self_contained or current_image requests only",
     );
   }
   const allowedFields = new Set([
@@ -267,6 +268,7 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     "tutor_context",
     "learner_context",
     "input_modality",
+    "camera_media",
   ]);
   for (const field of Object.keys(input)) {
     if (!allowedFields.has(field)) {
@@ -284,10 +286,16 @@ function parseCompleteLessonInput(raw: string): ToolInput {
       "input_modality must be text or voice",
     );
   }
+  if (input.request_source === "self_contained" && input.camera_media !== undefined) {
+    throw new ToolExecutionError(
+      "LESSON_CAMERA_IMAGE_UNEXPECTED",
+      "self_contained lesson input cannot include camera_media",
+    );
+  }
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: requireNonEmptyString(input.learner_request, "learner_request"),
-    request_source: "self_contained",
+    request_source: input.request_source,
     ...(typeof input.language === "string" ? { language: truncate(input.language) } : {}),
     ...(typeof input.tutor_context === "string"
       ? { tutor_context: truncate(input.tutor_context) }
@@ -296,6 +304,9 @@ function parseCompleteLessonInput(raw: string): ToolInput {
       ? { learner_context: truncate(input.learner_context) }
       : {}),
     input_modality: input.input_modality === "voice" ? "voice" : "text",
+    ...(typeof input.camera_media === "string"
+      ? { camera_media: requireNonEmptyString(input.camera_media, "camera_media") }
+      : {}),
   };
 }
 
@@ -1189,19 +1200,20 @@ function selectionOutputPath(input: SelectionToolInput): string {
   return path;
 }
 
-async function selectionModelMedia(
-  input: SelectionToolInput,
+async function workspaceImageMedia(
+  relativePath: string | undefined,
+  fieldName: "selection_media" | "camera_media",
 ): Promise<StructuredModelRequest["media"]> {
-  if (!input.selection_media) return undefined;
+  if (!relativePath) return undefined;
   const sessionWorkspace = resolve(
     process.env.OCTOS_SESSION_WORKSPACE?.trim()
       || process.env.OCTOS_WORK_DIR?.trim()
       || process.cwd(),
   );
-  const candidate = resolve(sessionWorkspace, input.selection_media);
+  const candidate = resolve(sessionWorkspace, relativePath);
   if ((candidate !== sessionWorkspace && !candidate.startsWith(`${sessionWorkspace}${sep}`))
     || !isAbsolute(candidate)) {
-    throw new Error("selection_media escapes OCTOS_SESSION_WORKSPACE");
+    throw new Error(`${fieldName} escapes OCTOS_SESSION_WORKSPACE`);
   }
   const [canonicalWorkspace, canonicalPath] = await Promise.all([
     realpath(sessionWorkspace),
@@ -1209,11 +1221,11 @@ async function selectionModelMedia(
   ]);
   if (canonicalPath !== canonicalWorkspace
     && !canonicalPath.startsWith(`${canonicalWorkspace}${sep}`)) {
-    throw new Error("selection_media escapes OCTOS_SESSION_WORKSPACE");
+    throw new Error(`${fieldName} escapes OCTOS_SESSION_WORKSPACE`);
   }
   const data = await readFile(canonicalPath);
   if (data.byteLength === 0 || data.byteLength > 10 * 1024 * 1024) {
-    throw new Error("selection_media must be between 1 byte and 10 MB");
+    throw new Error(`${fieldName} must be between 1 byte and 10 MB`);
   }
   const mimeType = data[0] === 0x89 && data[1] === 0x50
       && data[2] === 0x4e && data[3] === 0x47
@@ -1224,8 +1236,12 @@ async function selectionModelMedia(
           && data.subarray(8, 12).toString("ascii") === "WEBP"
         ? "image/webp"
         : undefined;
-  if (!mimeType) throw new Error("selection_media must be PNG, JPEG, or WebP");
+  if (!mimeType) throw new Error(`${fieldName} must be PNG, JPEG, or WebP`);
   return { mimeType, data: data.toString("base64") };
+}
+
+async function selectionModelMedia(input: SelectionToolInput): Promise<StructuredModelRequest["media"]> {
+  return workspaceImageMedia(input.selection_media, "selection_media");
 }
 
 type SelectionRange = { min: number; max: number };
@@ -1681,6 +1697,15 @@ async function main(): Promise<void> {
     }
     const input = parseCompleteLessonInput(rawInput);
     const client = await createVertexClient();
+    const cameraMedia = input.request_source === "current_image"
+      ? await workspaceImageMedia(input.camera_media, "camera_media")
+      : undefined;
+    if (input.request_source === "current_image" && !cameraMedia) {
+      throw new ToolExecutionError(
+        "LESSON_CAMERA_IMAGE_REQUIRED",
+        "Camera lesson generation requires one camera image",
+      );
+    }
     let publishedParts = 0;
     const publishPrefix = async (prefix: AuthoringLesson, part: number): Promise<void> => {
       const artifactPath = partialOutputPath(input, part);
@@ -1718,6 +1743,7 @@ async function main(): Promise<void> {
           lessonPlanPart: request.part,
           lessonPlanSection: request.section,
           lessonPlanAttempt: request.attempt,
+          ...(request.include_camera_media ? { media: cameraMedia } : {}),
         }),
         {
           turn_id: input.turn_id,
@@ -1726,6 +1752,7 @@ async function main(): Promise<void> {
           learner_context: input.learner_context,
           tutor_context: input.tutor_context,
           input_modality: input.input_modality,
+          camera_input: input.request_source === "current_image",
         },
         {
           max_concurrency: Math.min(
@@ -1780,6 +1807,7 @@ async function main(): Promise<void> {
           authoring_strategy: "lesson_plan",
           lesson_plan_model_calls: generatedLessonPlan.model_calls,
           published_parts: 0,
+          ...(input.request_source === "current_image" ? { request_source: "current_image" } : {}),
         });
         return;
       }
@@ -1803,6 +1831,9 @@ async function main(): Promise<void> {
         lesson_plan_model_calls: generatedLessonPlan.model_calls,
         lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
         published_parts: publishedParts,
+        ...(generatedLessonPlan.camera_observation
+          ? { camera_observation: generatedLessonPlan.camera_observation }
+          : {}),
       });
       return;
     }

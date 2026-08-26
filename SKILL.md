@@ -28,19 +28,22 @@ self-contained learner request, make `oll_generate_lesson` the first action.
 Pass the exact `turn_id`, the learner's complete request, and
 `request_source: self_contained`.
 
-The complete-lesson tool does not currently accept a request whose substance
-depends on the current camera image or on prior board content. In those cases,
-ask the learner to provide the complete problem or request in the composer and
-do not call `oll_generate_lesson`. Never substitute a similar old topic or
-silently omit the missing image or board content. Do not plan, draft, inspect,
-or write OLL JSON in the main agent turn. Do not call `write_file`, `send_file`,
-or another artifact tool for the lesson.
+The `/learn` host has a separate `learning.lesson.generate-from-camera` action
+for a request submitted with one current camera frame. That action supplies the
+frame to `oll_generate_lesson` through its file transport; the first model call
+records what is readable before planning the course, and later section calls
+reuse only that fixed observation. Do not route camera input through the main
+agent, invent a file path, or silently omit an unreadable frame. Prior-board
+content still belongs to the separate selection workflow. Do not plan, draft,
+inspect, or write OLL JSON in the main agent turn. Do not call `write_file`,
+`send_file`, or another artifact tool for the lesson.
 
 The call to `oll_generate_lesson` is mandatory for every supported,
 self-contained teaching request even when the answer could be given directly
-in text. A camera-dependent request, a prior-board continuation, or an
-incomplete request is outside the current complete-course input contract. Ask
-briefly for a standalone request instead of generating from history. The tool owns structured-output model
+in text. A camera-dependent request is supported only when the dedicated host
+action supplies exactly one current frame. A prior-board continuation remains
+outside the complete-course input contract. Ask briefly for a standalone
+request instead of generating from history. The tool owns structured-output model
 invocation, JSON Schema enforcement, OLL validation, serialization, writing,
 and delivery. Call it exactly once and wait for its result. After success, reply
 with one short natural sentence. After failure, apologize briefly without
@@ -125,12 +128,12 @@ prerequisites, is stuck after multiple hints, or asks for a worked example.
 - Never replace unreadable current-frame content with a similarly named item,
   “first question”, formula, or topic from history. Prior turns and the existing
   board describe past teaching, not what the learner is currently pointing at.
-- If the referenced problem is readable, transcribe its exact givens and request
-  into `source_observation` when calling `oll_generate_lesson`. Preserve any
-  uncertainty; do not silently correct or complete the source.
+- The dedicated camera action asks the model to return the exact visible
+  content and its uncertainties together with the course outline. Do not create
+  a second transcription in the main agent.
 - If the referenced problem is not readable with enough confidence to teach,
-  do not call `oll_generate_lesson`. Say what needs adjustment (rotation,
-  distance, focus, lighting, or obstruction) and ask for a new frame.
+  return a normal clarification asking for better rotation, distance, focus,
+  lighting, or obstruction removal; do not generate a guessed course.
 - Distinguish observed facts from inference.
 - Never invent unreadable text, formulas, labels, or handwriting.
 - Refer to concrete visible regions when giving feedback.
@@ -143,15 +146,15 @@ prerequisites, is stuck after multiple hints, or asks for a worked example.
 
 ## Keep request sources isolated
 
-- A complete standalone question remains `self_contained` even when a camera is
-  enabled or an old board exists. Answer the stated question; do not search the
-  frame or board for a substitute topic.
-- If the request depends on the current image or old board, ask the learner to
-  restate the complete problem in the composer. Never choose whichever
-  historical problem happens to fit.
-- Do not send `board_summary`, `last_applied_action`, `source_observation`, or
-  board references to `oll_generate_lesson`; they are not part of its current
-  input contract.
+- A request submitted without a captured frame remains `self_contained` even
+  when a camera preview is enabled elsewhere. Answer the stated question; do
+  not search the board for a substitute topic.
+- A request submitted with a captured frame uses `current_image`. If the text
+  is already complete, it remains the primary topic and an unrelated background
+  image must not redirect the lesson. If the text says “这个”“这里”“这道题”,
+  ground those words in that exact frame.
+- Do not send `board_summary`, `last_applied_action`, or board references to
+  `oll_generate_lesson`; they are not part of the complete-course input contract.
 
 ## Speak for learning
 
@@ -172,8 +175,8 @@ optional visual enhancement.
 1. Pass the learner's complete substantive request, exact `turn_id`, and
    `request_source: self_contained` to `oll_generate_lesson`. Include concise
    learner and tutor context when available; never invent missing context.
-2. Do not pass current-image or prior-board content. If that content is required
-   to understand the request, ask for a standalone problem statement instead.
+2. Do not pass prior-board content. Current-image content reaches this tool only
+   through the host's dedicated camera action and workspace-relative image path.
 3. Call the tool once and wait for it to finish. The tool owns model invocation,
    OLL validation, deterministic JSON serialization, artifact writing, and
    delivery through `files_to_send`.

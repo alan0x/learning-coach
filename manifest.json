@@ -8,7 +8,7 @@
   "tools": [
     {
       "name": "oll_generate_lesson",
-      "description": "Generate, validate, save, and deliver one complete OLL lesson from the learner's standalone request. request_source must be self_contained. Existing-board selection assistance is handled by the separate selection tools. This tool performs its own generation and repair attempts; call it at most once per learner turn and do not call it again after an error in that turn.",
+      "description": "Generate, validate, save, and deliver one complete OLL lesson from a standalone learner request, optionally grounded in one current camera frame supplied by the dedicated camera action. Existing-board selection assistance is handled by separate selection tools. This tool performs its own generation and repair attempts; call it at most once per learner turn.",
       "concurrency_class": "exclusive",
       "env": [
         "VERTEX_SA_JSON",
@@ -40,8 +40,8 @@
           },
           "request_source": {
             "type": "string",
-            "enum": ["self_contained"],
-            "description": "Complete lessons are generated only from the standalone learner_request."
+            "enum": ["self_contained", "current_image"],
+            "description": "Whether the lesson uses only the request or also one current camera frame."
           },
           "language": {
             "type": "string",
@@ -59,6 +59,10 @@
             "type": "string",
             "enum": ["text", "voice"],
             "description": "How this standalone request entered /learn. Voice requests may need clarification before a course is generated."
+          },
+          "camera_media": {
+            "type": "string",
+            "description": "Workspace-relative image path materialized by the camera action."
           }
         },
         "required": ["turn_id", "learner_request", "request_source"]
@@ -272,6 +276,45 @@
         "type": "tool",
         "tool": "oll_generate_lesson",
         "input_mode": "single"
+      }
+    },
+    {
+      "id": "learning.lesson.generate-from-camera",
+      "label": "根据摄像头画面生成白板课程",
+      "description": "把 /learn 当前提交的文字或语音与一张即时摄像头画面直接交给课程生成器，不经过通用对话模型的工具选择。",
+      "tags": ["learning", "lesson", "generation", "camera"],
+      "surfaces": ["learning.composer"],
+      "execution": "background",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": { "type": "string" }
+          },
+          "turn_id": { "type": "string" },
+          "learner_request": { "type": "string" },
+          "request_source": {
+            "type": "string",
+            "enum": ["current_image"]
+          },
+          "language": { "type": "string" },
+          "input_modality": {
+            "type": "string",
+            "enum": ["text", "voice"]
+          }
+        },
+        "required": ["paths", "turn_id", "learner_request", "request_source"]
+      },
+      "binding": {
+        "type": "tool",
+        "tool": "oll_generate_lesson",
+        "input_mode": "file_each",
+        "file_argument": "camera_media",
+        "file_materialization": "workspace_relative"
       }
     },
     {

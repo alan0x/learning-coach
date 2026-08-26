@@ -3024,6 +3024,28 @@ test("the first section is requested only after the outline and uses the formal 
   assert.equal(generated.lesson.steps.length, 3);
 });
 
+test("a malformed first camera response asks for a clearer frame without resending the image", async () => {
+  const calls = [];
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    calls.push(request);
+    return "not-json";
+  }, {
+    turn_id: "turn-camera-malformed",
+    learner_request: "请解释这道题",
+    request_parts: ["请解释这道题"],
+    input_modality: "text",
+    camera_input: true,
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].include_camera_media, true);
+  assert.deepEqual(generated, {
+    disposition: "clarify",
+    learner_response: "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。",
+    model_calls: 1,
+  });
+});
+
 test("provider output failures are not retried by the lesson authoring loop", async () => {
   const plan = completeLessonPlanFixtures.unit_circle_to_sine;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
