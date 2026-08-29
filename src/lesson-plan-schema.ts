@@ -475,6 +475,32 @@ export function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0):
   });
 }
 
+/**
+ * The camera path keeps the ordinary course outline unchanged, but asks the
+ * first model response to make its reading of the submitted frame explicit.
+ * If outline validation needs a retry, the program keeps this observation and
+ * uses the ordinary admission schema without sending the image again.
+ */
+export function buildCameraLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
+  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
+    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
+  }
+  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount);
+  course.nullable = true;
+  return vertexCompatible({
+    ...object({
+      disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
+      learner_response: string(480),
+      image_observation: object({
+        readability: { enum: ["readable", "partially_readable", "unreadable"] },
+        observed_content: string(4_000),
+        uncertainties: { type: "array", maxItems: 12, items: string(480) },
+      }, ["readability", "observed_content", "uncertainties"]),
+      course,
+    }, ["disposition", "learner_response", "image_observation", "course"]),
+  });
+}
+
 function lessonPlanOutlineShapeJsonSchema(requestPartCount: number): LessonPlanJsonSchema {
   return object({
     version: { enum: [LESSON_PLAN_VERSION] },

@@ -26,6 +26,7 @@ import {
 } from "./lesson-plan-compiler.js";
 import {
   buildLessonPlanAdmissionOutlineJsonSchema,
+  buildCameraLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
   coerceLessonPlanOutlineModelNumbers,
@@ -43,6 +44,13 @@ export interface LessonPlanGenerationInput {
   tutor_context?: string;
   request_parts?: string[];
   input_modality?: "text" | "voice";
+  camera_input?: boolean;
+}
+
+export interface CameraLessonObservation {
+  readability: "readable" | "partially_readable" | "unreadable";
+  observed_content: string;
+  uncertainties: string[];
 }
 
 export interface LessonPlanModelRequest {
@@ -54,6 +62,7 @@ export interface LessonPlanModelRequest {
   part: "outline" | "section";
   section?: number;
   attempt: number;
+  include_camera_media?: boolean;
 }
 
 export type LessonPlanModelCall = (request: LessonPlanModelRequest) => Promise<string>;
@@ -90,6 +99,7 @@ export interface GeneratedLessonPlan extends CompiledLessonPlan {
   outline: LessonPlanOutline;
   drafts: LessonPlanSectionDraft[];
   model_calls: number;
+  camera_observation?: CameraLessonObservation;
 }
 
 export interface NonLessonPlanResponse {
@@ -126,6 +136,42 @@ const ADMISSION_OUTLINE_SYSTEM_PROMPT = `用户正尝试从文字输入或语音
 只做上述语义判断，不使用字数、语言或固定关键词作为规则。
 
 ${OUTLINE_SYSTEM_PROMPT}`;
+
+const CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT = `用户提交了一段文字或语音，同时附带了一张此刻的摄像头画面。只在这一次请求中读取图片。
+- image_observation 必须忠实记录图片是否看清、实际看到了什么、哪些地方不确定。不要补写图片中不存在的题目、公式或文字。
+- 如果 learner_request 自己已经清楚说明学习主题，以 learner_request 为主；无关背景不能改变课程主题。
+- 如果 learner_request 使用“这个、这里、这道题、我手上的内容”等指代，使用 image_observation 来确定主题。
+- 图片无法看清且 learner_request 又不能独立确定主题时，返回 clarify 和简短追问，course 必须为 null。
+- 图片部分可读时，把不确定内容保留在 uncertainties 中，不要把猜测当成确定事实。
+
+${ADMISSION_OUTLINE_SYSTEM_PROMPT}`;
+
+function cameraObservation(value: unknown): CameraLessonObservation {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation", "expected an object");
+  }
+  const candidate = value as Record<string, unknown>;
+  const readability = candidate.readability;
+  const observedContent = typeof candidate.observed_content === "string"
+    ? candidate.observed_content.trim()
+    : "";
+  const uncertainties = Array.isArray(candidate.uncertainties)
+    ? candidate.uncertainties.map((item) => typeof item === "string" ? item.trim() : "").filter(Boolean)
+    : undefined;
+  if (readability !== "readable" && readability !== "partially_readable" && readability !== "unreadable") {
+    throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation.readability", "expected readable, partially_readable, or unreadable");
+  }
+  if (uncertainties === undefined || uncertainties.length > 12) {
+    throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation.uncertainties", "expected at most 12 strings");
+  }
+  if (observedContent.length > 4_000 || uncertainties.some((item) => item.length > 480)) {
+    throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation", "camera observation exceeds its bounded text size");
+  }
+  if (readability !== "unreadable" && !observedContent) {
+    throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation.observed_content", "readable camera input requires observed content");
+  }
+  return { readability, observed_content: observedContent, uncertainties };
+}
 
 function positiveInteger(value: number | undefined, fallback: number, label: string): number {
   const result = value ?? fallback;
@@ -1968,25 +2014,31 @@ export async function generateLessonPlanWithModel(
 ): Promise<LessonPlanGenerationResult> {
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");
   const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
-  const context = inputContext(input);
+  let context = inputContext(input);
   const fixedRequestParts = requestParts(input);
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
   let modelCalls = 0;
   let outline: LessonPlanOutline | undefined;
   let outlineError: unknown;
+  let stableCameraObservation: CameraLessonObservation | undefined;
   const sectionErrors = new Map<number, unknown>();
   const sectionAttempts = new Map<number, number>();
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const observeCamera = input.camera_input === true && stableCameraObservation === undefined;
     const raw = await model({
       label: "lesson-plan-outline",
       part: "outline",
       attempt,
       turn_id: input.turn_id,
-      system_prompt: admissionInput
-        ? ADMISSION_OUTLINE_SYSTEM_PROMPT
+      system_prompt: observeCamera
+        ? CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT
+        : admissionInput
+          ? ADMISSION_OUTLINE_SYSTEM_PROMPT
         : OUTLINE_SYSTEM_PROMPT,
       prompt: JSON.stringify({
-        course: context,
+        course: stableCameraObservation
+          ? { ...context, camera_observation: stableCameraObservation }
+          : context,
         request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
         available_visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability) => ({
           required_features: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features],
@@ -1995,9 +2047,12 @@ export async function generateLessonPlanWithModel(
         })),
         ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
       }),
-      response_schema: admissionInput
-        ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
+      response_schema: observeCamera
+        ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
+        : admissionInput
+          ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
         : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+      ...(observeCamera ? { include_camera_media: true } : {}),
     });
     modelCalls += 1;
     try {
@@ -2013,6 +2068,10 @@ export async function generateLessonPlanWithModel(
       }
       if (admissionInput) {
         const envelope = parsed as Record<string, unknown>;
+        if (observeCamera) {
+          stableCameraObservation = cameraObservation(envelope.image_observation);
+          context = { ...context, camera_observation: stableCameraObservation };
+        }
         const disposition = envelope.disposition;
         if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
           throw new LessonPlanError(
@@ -2072,6 +2131,13 @@ export async function generateLessonPlanWithModel(
         attempt,
         error: rejectionDetails(error),
       });
+      if (observeCamera && stableCameraObservation === undefined) {
+        return {
+          disposition: "clarify",
+          learner_response: "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。",
+          model_calls: modelCalls,
+        };
+      }
     }
   }
   if (!outline) throw outlineError;
@@ -2302,5 +2368,6 @@ export async function generateLessonPlanWithModel(
     outline: compiledOutline ?? outline,
     drafts: (compiledDrafts ?? drafts).map((draft) => structuredClone(draft)),
     model_calls: modelCalls,
+    ...(stableCameraObservation ? { camera_observation: stableCameraObservation } : {}),
   };
 }

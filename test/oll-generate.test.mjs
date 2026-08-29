@@ -1597,27 +1597,195 @@ test("selection tool writes a source-linked artifact without producing a lesson"
   }
 });
 
-test("complete lessons reject current-image input instead of falling back to another generator", async () => {
-  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-unresolved-image-"));
+test("camera lessons send one image only to the first outline request and reuse its observation", async () => {
+  const sessionWorkspace = await mkdtemp(join(tmpdir(), "learning-coach-camera-lesson-"));
+  const workDirectory = join(sessionWorkspace, "skill-output");
+  const uploadsDirectory = join(sessionWorkspace, "uploads");
+  await mkdir(workDirectory, { recursive: true });
+  await mkdir(uploadsDirectory, { recursive: true });
+  await writeFile(
+    join(uploadsDirectory, "camera.png"),
+    Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  );
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const outline = {
+    version: "0.1",
+    title: "摄像头中的二次函数",
+    goals: ["解释图片里的函数"],
+    teaching_strategies: [],
+    numbers: [],
+    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1] }],
+    course_visuals: [],
+    sections: [{
+      purpose: "解释图片里的函数",
+      allowed_capabilities: [],
+      reusable_items: [{ kind: "board_item", board_kind: "math" }],
+    }],
+    close: {
+      summary: "图片中的函数是二次函数。",
+      focus: [{ source: "reusable", section: 1, item: 1 }],
+    },
+  };
+  const section = {
+    version: "0.1",
+    section: 1,
+    moments: [{
+      narration: "图片中写的是 y 等于 x 的平方。",
+      delivery: "patient",
+      math_creates: [],
+      note_creates: [],
+      focuses: [{ intent: "观察函数", timing: "after_speech" }],
+      points: [],
+    }],
+    reusable_board_creates: {
+      item_1: {
+        moment: 1,
+        timing: "during_speech",
+        role: "definition",
+        content: { latex: "y=x^2" },
+        placement: { relation: "new_region" },
+      },
+    },
+  };
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    if (request.url === "/token") {
+      for await (const _chunk of request) { /* consume OAuth request */ }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ access_token: "test-token", expires_in: 3600 }));
+      return;
+    }
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    const payload = JSON.parse(body);
+    requests.push(payload);
+    const index = requests.length;
+    const content = index === 1
+      ? {
+          disposition: "generate_lesson",
+          learner_response: "",
+          image_observation: {
+            readability: "readable",
+            observed_content: "纸上写着 y=x^2",
+            uncertainties: [],
+          },
+          course: null,
+        }
+      : index === 2
+        ? { disposition: "generate_lesson", learner_response: "", course: outline }
+        : section;
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(vertexPayload(content));
+  });
   try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
     const result = await runTool({
-      baseUrl: "http://127.0.0.1:1",
-      serviceAccount: {},
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
       workDirectory,
+      environment: { OCTOS_SESSION_WORKSPACE: sessionWorkspace },
       input: {
-        learner_request: "老师，这个第一题应该怎么做？",
+        learner_request: "请解释这个函数",
         request_source: "current_image",
-        board_summary: "旧课程：长方形周长应用题",
+        camera_media: "uploads/camera.png",
       },
     });
-
-    assert.equal(result.exitCode, 1);
-    assert.match(result.stderr, /Complete lesson generation accepts self_contained requests only/);
-    const protocol = JSON.parse(result.stdout);
-    assert.equal(protocol.success, false);
-    assert.equal(protocol.error_code, "LESSON_REQUEST_SOURCE_UNSUPPORTED");
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(requests.length, 3);
+    assert.equal(requests[0].contents[0].parts.length, 2);
+    assert.equal(requests[0].contents[0].parts[1].inlineData.mimeType, "image/png");
+    assert.equal(requests[1].contents[0].parts.length, 1);
+    assert.equal(requests[2].contents[0].parts.length, 1);
+    assert.match(requests[1].contents[0].parts[0].text, /纸上写着 y=x\^2/u);
+    assert.match(requests[2].contents[0].parts[0].text, /纸上写着 y=x\^2/u);
+    const messages = result.stdout.trim().split("\n").map((line) => JSON.parse(line));
+    const completed = messages.find((message) => message.success === true);
+    assert.deepEqual(completed.camera_observation, {
+      readability: "readable",
+      observed_content: "纸上写着 y=x^2",
+      uncertainties: [],
+    });
   } finally {
-    await rm(workDirectory, { recursive: true, force: true });
+    await new Promise((done) => server.close(done));
+    await rm(sessionWorkspace, { recursive: true, force: true });
+  }
+});
+
+test("camera lessons return a normal clarification when the submitted frame is unreadable", async () => {
+  const sessionWorkspace = await mkdtemp(join(tmpdir(), "learning-coach-camera-unreadable-"));
+  const workDirectory = join(sessionWorkspace, "skill-output");
+  const uploadsDirectory = join(sessionWorkspace, "uploads");
+  await mkdir(workDirectory, { recursive: true });
+  await mkdir(uploadsDirectory, { recursive: true });
+  await writeFile(join(uploadsDirectory, "camera.png"), Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64",
+  ));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  let modelCalls = 0;
+  const server = createServer(async (request, response) => {
+    if (request.url === "/token") {
+      for await (const _chunk of request) { /* consume OAuth request */ }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ access_token: "test-token", expires_in: 3600 }));
+      return;
+    }
+    for await (const _chunk of request) { /* consume model request */ }
+    modelCalls += 1;
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(vertexPayload({
+      disposition: "clarify",
+      learner_response: "我没有看清画面里的题目，请把它移到画面中央后再试一次。",
+      image_observation: {
+        readability: "unreadable",
+        observed_content: "",
+        uncertainties: ["题目文字模糊"],
+      },
+      course: null,
+    }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const result = await runTool({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      environment: { OCTOS_SESSION_WORKSPACE: sessionWorkspace },
+      input: {
+        learner_request: "请解释这道题",
+        request_source: "current_image",
+        camera_media: "uploads/camera.png",
+      },
+    });
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(modelCalls, 1);
+    const completed = result.stdout.trim().split("\n")
+      .map((line) => JSON.parse(line))
+      .find((message) => message.success === true);
+    assert.equal(completed.structured_metadata.lesson_disposition, "clarify");
+    assert.match(completed.output, /没有看清/u);
+    assert.equal(completed.files_to_send, undefined);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(sessionWorkspace, { recursive: true, force: true });
   }
 });
 
@@ -1635,7 +1803,7 @@ test("complete lessons reject explicit board follow-up input instead of falling 
     });
 
     assert.equal(result.exitCode, 1);
-    assert.match(result.stderr, /Complete lesson generation accepts self_contained requests only/);
+    assert.match(result.stderr, /Complete lesson generation accepts self_contained or current_image requests only/);
     const protocol = JSON.parse(result.stdout);
     assert.equal(protocol.success, false);
     assert.equal(protocol.retryable, false);
@@ -1677,7 +1845,7 @@ test("old board-reference fields cannot bypass the complete-lesson source bounda
     });
 
     assert.equal(result.exitCode, 1);
-    assert.match(result.stderr, /Complete lesson generation accepts self_contained requests only/);
+    assert.match(result.stderr, /Complete lesson generation accepts self_contained or current_image requests only/);
     assert.equal(JSON.parse(result.stdout).success, false);
   } finally {
     await rm(workDirectory, { recursive: true, force: true });
@@ -1699,7 +1867,7 @@ test("complete lessons reject a missing request source before model generation",
     });
 
     assert.equal(result.exitCode, 1);
-    assert.match(result.stderr, /Complete lesson generation accepts self_contained requests only/);
+    assert.match(result.stderr, /Complete lesson generation accepts self_contained or current_image requests only/);
     const protocol = JSON.parse(result.stdout);
     assert.equal(protocol.success, false);
   } finally {

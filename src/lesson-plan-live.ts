@@ -94,6 +94,8 @@ export async function generateLessonPlanWithVertex(
         lessonPlanPart: request.part,
         lessonPlanSection: request.section,
         lessonPlanAttempt: request.attempt,
+        // The isolated live adapter has no file transport. Production camera
+        // lessons attach media in main.ts through the dedicated action.
       },
     ),
     input,

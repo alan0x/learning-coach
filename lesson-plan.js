@@ -12896,6 +12896,25 @@ function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
     }, ["disposition", "learner_response", "course"])
   });
 }
+function buildCameraLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
+  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
+    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
+  }
+  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount);
+  course.nullable = true;
+  return vertexCompatible({
+    ...object({
+      disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
+      learner_response: string(480),
+      image_observation: object({
+        readability: { enum: ["readable", "partially_readable", "unreadable"] },
+        observed_content: string(4e3),
+        uncertainties: { type: "array", maxItems: 12, items: string(480) }
+      }, ["readability", "observed_content", "uncertainties"]),
+      course
+    }, ["disposition", "learner_response", "image_observation", "course"])
+  });
+}
 function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
   return object({
     version: { enum: [LESSON_PLAN_VERSION] },
@@ -13054,6 +13073,36 @@ var ADMISSION_OUTLINE_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u658
 \u53EA\u505A\u4E0A\u8FF0\u8BED\u4E49\u5224\u65AD\uFF0C\u4E0D\u4F7F\u7528\u5B57\u6570\u3001\u8BED\u8A00\u6216\u56FA\u5B9A\u5173\u952E\u8BCD\u4F5C\u4E3A\u89C4\u5219\u3002
 
 ${OUTLINE_SYSTEM_PROMPT}`;
+var CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT = `\u7528\u6237\u63D0\u4EA4\u4E86\u4E00\u6BB5\u6587\u5B57\u6216\u8BED\u97F3\uFF0C\u540C\u65F6\u9644\u5E26\u4E86\u4E00\u5F20\u6B64\u523B\u7684\u6444\u50CF\u5934\u753B\u9762\u3002\u53EA\u5728\u8FD9\u4E00\u6B21\u8BF7\u6C42\u4E2D\u8BFB\u53D6\u56FE\u7247\u3002
+- image_observation \u5FC5\u987B\u5FE0\u5B9E\u8BB0\u5F55\u56FE\u7247\u662F\u5426\u770B\u6E05\u3001\u5B9E\u9645\u770B\u5230\u4E86\u4EC0\u4E48\u3001\u54EA\u4E9B\u5730\u65B9\u4E0D\u786E\u5B9A\u3002\u4E0D\u8981\u8865\u5199\u56FE\u7247\u4E2D\u4E0D\u5B58\u5728\u7684\u9898\u76EE\u3001\u516C\u5F0F\u6216\u6587\u5B57\u3002
+- \u5982\u679C learner_request \u81EA\u5DF1\u5DF2\u7ECF\u6E05\u695A\u8BF4\u660E\u5B66\u4E60\u4E3B\u9898\uFF0C\u4EE5 learner_request \u4E3A\u4E3B\uFF1B\u65E0\u5173\u80CC\u666F\u4E0D\u80FD\u6539\u53D8\u8BFE\u7A0B\u4E3B\u9898\u3002
+- \u5982\u679C learner_request \u4F7F\u7528\u201C\u8FD9\u4E2A\u3001\u8FD9\u91CC\u3001\u8FD9\u9053\u9898\u3001\u6211\u624B\u4E0A\u7684\u5185\u5BB9\u201D\u7B49\u6307\u4EE3\uFF0C\u4F7F\u7528 image_observation \u6765\u786E\u5B9A\u4E3B\u9898\u3002
+- \u56FE\u7247\u65E0\u6CD5\u770B\u6E05\u4E14 learner_request \u53C8\u4E0D\u80FD\u72EC\u7ACB\u786E\u5B9A\u4E3B\u9898\u65F6\uFF0C\u8FD4\u56DE clarify \u548C\u7B80\u77ED\u8FFD\u95EE\uFF0Ccourse \u5FC5\u987B\u4E3A null\u3002
+- \u56FE\u7247\u90E8\u5206\u53EF\u8BFB\u65F6\uFF0C\u628A\u4E0D\u786E\u5B9A\u5185\u5BB9\u4FDD\u7559\u5728 uncertainties \u4E2D\uFF0C\u4E0D\u8981\u628A\u731C\u6D4B\u5F53\u6210\u786E\u5B9A\u4E8B\u5B9E\u3002
+
+${ADMISSION_OUTLINE_SYSTEM_PROMPT}`;
+function cameraObservation(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation", "expected an object");
+  }
+  const candidate = value;
+  const readability = candidate.readability;
+  const observedContent = typeof candidate.observed_content === "string" ? candidate.observed_content.trim() : "";
+  const uncertainties = Array.isArray(candidate.uncertainties) ? candidate.uncertainties.map((item) => typeof item === "string" ? item.trim() : "").filter(Boolean) : void 0;
+  if (readability !== "readable" && readability !== "partially_readable" && readability !== "unreadable") {
+    throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation.readability", "expected readable, partially_readable, or unreadable");
+  }
+  if (uncertainties === void 0 || uncertainties.length > 12) {
+    throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation.uncertainties", "expected at most 12 strings");
+  }
+  if (observedContent.length > 4e3 || uncertainties.some((item) => item.length > 480)) {
+    throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation", "camera observation exceeds its bounded text size");
+  }
+  if (readability !== "unreadable" && !observedContent) {
+    throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation.observed_content", "readable camera input requires observed content");
+  }
+  return { readability, observed_content: observedContent, uncertainties };
+}
 function positiveInteger(value, fallback, label) {
   const result = value ?? fallback;
   if (!Number.isInteger(result) || result < 1) throw new Error(`${label} must be a positive integer`);
@@ -14561,23 +14610,25 @@ function compilePrefix(outline, drafts, options) {
 async function generateLessonPlanWithModel(model, input, options = {}) {
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");
   const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
-  const context = inputContext(input);
+  let context = inputContext(input);
   const fixedRequestParts = requestParts(input);
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
   let modelCalls = 0;
   let outline;
   let outlineError;
+  let stableCameraObservation;
   const sectionErrors = /* @__PURE__ */ new Map();
   const sectionAttempts = /* @__PURE__ */ new Map();
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const observeCamera = input.camera_input === true && stableCameraObservation === void 0;
     const raw = await model({
       label: "lesson-plan-outline",
       part: "outline",
       attempt,
       turn_id: input.turn_id,
-      system_prompt: admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
+      system_prompt: observeCamera ? CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
       prompt: JSON.stringify({
-        course: context,
+        course: stableCameraObservation ? { ...context, camera_observation: stableCameraObservation } : context,
         request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
         available_visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability2) => ({
           required_features: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features],
@@ -14586,7 +14637,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         })),
         ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
       }),
-      response_schema: admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length)
+      response_schema: observeCamera ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+      ...observeCamera ? { include_camera_media: true } : {}
     });
     modelCalls += 1;
     try {
@@ -14600,6 +14652,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       }
       if (admissionInput) {
         const envelope = parsed;
+        if (observeCamera) {
+          stableCameraObservation = cameraObservation(envelope.image_observation);
+          context = { ...context, camera_observation: stableCameraObservation };
+        }
         const disposition = envelope.disposition;
         if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
           throw new LessonPlanError(
@@ -14657,6 +14713,13 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         attempt,
         error: rejectionDetails(error)
       });
+      if (observeCamera && stableCameraObservation === void 0) {
+        return {
+          disposition: "clarify",
+          learner_response: "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002",
+          model_calls: modelCalls
+        };
+      }
     }
   }
   if (!outline) throw outlineError;
@@ -14861,7 +14924,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     ...compiled,
     outline: compiledOutline ?? outline,
     drafts: (compiledDrafts ?? drafts).map((draft) => structuredClone(draft)),
-    model_calls: modelCalls
+    model_calls: modelCalls,
+    ...stableCameraObservation ? { camera_observation: stableCameraObservation } : {}
   };
 }
 export {
@@ -14878,6 +14942,7 @@ export {
   LessonPlanError,
   PROCESS_DIAGRAM_CONTRACT,
   assembleLessonPlan,
+  buildCameraLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
