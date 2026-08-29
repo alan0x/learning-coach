@@ -200,6 +200,16 @@ export interface ApiKeyModelClient {
 
 export type StructuredModelClient = VertexClient | ApiKeyModelClient;
 
+type StructuredModelProvider = "vertex" | "gemini" | "ark";
+
+export interface StructuredModelRouter {
+  readonly primaryClient: StructuredModelClient;
+  readonly fallbackClient?: StructuredModelClient;
+  readonly hedgeDelayMs: number;
+  call(request: StructuredModelRequest): Promise<string>;
+  rejectLastResponse(): void;
+}
+
 type ThinkingLevel = "MINIMAL" | "LOW" | "MEDIUM" | "HIGH";
 
 export interface StructuredModelRequest {
@@ -699,7 +709,7 @@ function arkEndpoint(): string {
   return `${base}/responses`;
 }
 
-function modelProvider(client: StructuredModelClient): "vertex" | "gemini" | "ark" {
+function modelProvider(client: StructuredModelClient): StructuredModelProvider {
   return client.provider ?? "vertex";
 }
 
@@ -962,10 +972,240 @@ export async function createArkClient(): Promise<ApiKeyModelClient> {
 
 export async function createStructuredModelClient(): Promise<StructuredModelClient> {
   const provider = process.env.OLL_PROVIDER?.trim().toLowerCase() || "vertex";
+  return createStructuredModelClientFor(provider);
+}
+
+async function createStructuredModelClientFor(provider: string): Promise<StructuredModelClient> {
   if (provider === "vertex") return createVertexClient();
   if (provider === "gemini") return createGeminiApiClient();
   if (provider === "ark") return createArkClient();
   throw new Error(`OLL_PROVIDER must be vertex, gemini, or ark; received ${provider}`);
+}
+
+function configuredFallbackProvider(primaryProvider: StructuredModelProvider): StructuredModelProvider | undefined {
+  const value = process.env.OLL_FALLBACK_PROVIDER?.trim().toLowerCase();
+  if (!value) return undefined;
+  if (value !== "vertex" && value !== "gemini") {
+    throw new Error(`OLL_FALLBACK_PROVIDER must be vertex or gemini; received ${value}`);
+  }
+  if (value === primaryProvider) {
+    throw new Error("OLL_FALLBACK_PROVIDER must differ from OLL_PROVIDER");
+  }
+  if (primaryProvider === "ark") {
+    throw new Error("OLL_FALLBACK_PROVIDER is supported only when OLL_PROVIDER is vertex or gemini");
+  }
+  return value;
+}
+
+type StructuredModelOutcome =
+  | { status: "fulfilled"; provider: StructuredModelProvider; value: string }
+  | { status: "rejected"; provider: StructuredModelProvider; reason: unknown };
+
+function requestWithSignal(
+  request: StructuredModelRequest,
+  signal: AbortSignal,
+): StructuredModelRequest {
+  return {
+    ...request,
+    signal: request.signal ? AbortSignal.any([request.signal, signal]) : signal,
+  };
+}
+
+async function modelOutcome(
+  client: StructuredModelClient,
+  request: StructuredModelRequest,
+  controller: AbortController,
+): Promise<StructuredModelOutcome> {
+  const provider = modelProvider(client);
+  try {
+    return {
+      status: "fulfilled",
+      provider,
+      value: await callStructuredModel(client, requestWithSignal(request, controller.signal)),
+    };
+  } catch (reason) {
+    return { status: "rejected", provider, reason };
+  }
+}
+
+function delayedHedge(delayMs: number): { promise: Promise<"hedge">; cancel: () => void } {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  return {
+    promise: new Promise((resolveDelay) => {
+      timeout = setTimeout(() => resolveDelay("hedge"), delayMs);
+    }),
+    cancel: () => {
+      if (timeout !== undefined) clearTimeout(timeout);
+    },
+  };
+}
+
+/**
+ * Starts with one provider and starts the other only when the first call is
+ * still pending after the configured delay. This shares independent provider
+ * capacity without charging twice for ordinary fast calls.
+ */
+export class HedgedStructuredModelRouter implements StructuredModelRouter {
+  readonly primaryClient: StructuredModelClient;
+  readonly fallbackClient?: StructuredModelClient;
+  readonly hedgeDelayMs: number;
+  private lastWinner?: StructuredModelProvider;
+  private preferredNext?: StructuredModelProvider;
+
+  constructor(
+    primaryClient: StructuredModelClient,
+    fallbackClient?: StructuredModelClient,
+    hedgeDelayMs = 12_000,
+  ) {
+    if (!Number.isInteger(hedgeDelayMs) || hedgeDelayMs <= 0) {
+      throw new Error("hedgeDelayMs must be a positive integer");
+    }
+    if (fallbackClient && modelProvider(primaryClient) === modelProvider(fallbackClient)) {
+      throw new Error("Hedged model providers must be different");
+    }
+    this.primaryClient = primaryClient;
+    this.fallbackClient = fallbackClient;
+    this.hedgeDelayMs = hedgeDelayMs;
+  }
+
+  rejectLastResponse(): void {
+    if (!this.fallbackClient || !this.lastWinner) return;
+    const primaryProvider = modelProvider(this.primaryClient);
+    const fallbackProvider = modelProvider(this.fallbackClient);
+    this.preferredNext = this.lastWinner === primaryProvider ? fallbackProvider : primaryProvider;
+  }
+
+  async call(request: StructuredModelRequest): Promise<string> {
+    if (!this.fallbackClient) return callStructuredModel(this.primaryClient, request);
+    const configuredPrimary = this.primaryClient;
+    const configuredFallback = this.fallbackClient;
+    const requestedProvider = this.preferredNext;
+    this.preferredNext = undefined;
+    const firstClient = requestedProvider === modelProvider(configuredFallback)
+      ? configuredFallback
+      : configuredPrimary;
+    const secondClient = firstClient === configuredPrimary ? configuredFallback : configuredPrimary;
+    const firstProvider = modelProvider(firstClient);
+    const secondProvider = modelProvider(secondClient);
+    const routeStartedAt = Date.now();
+    stageLog({
+      stage: "model-route",
+      turn_id: request.turnId,
+      label: request.label,
+      status: "started",
+      primary_provider: firstProvider,
+      fallback_provider: secondProvider,
+      hedge_delay_ms: this.hedgeDelayMs,
+      ...(requestedProvider ? { reason: "previous_local_rejection" } : {}),
+    });
+
+    const firstController = new AbortController();
+    const firstPromise = modelOutcome(firstClient, request, firstController);
+    const hedge = delayedHedge(this.hedgeDelayMs);
+    const initial = await Promise.race([firstPromise, hedge.promise]);
+    hedge.cancel();
+    if (initial !== "hedge") {
+      if (initial.status === "fulfilled") {
+        this.lastWinner = initial.provider;
+        stageLog({
+          stage: "model-route",
+          turn_id: request.turnId,
+          label: request.label,
+          status: "completed",
+          winner_provider: initial.provider,
+          hedge_started: false,
+          elapsed_ms: Date.now() - routeStartedAt,
+        });
+        return initial.value;
+      }
+      stageLog({
+        stage: "model-route",
+        turn_id: request.turnId,
+        label: request.label,
+        status: "fallback-started",
+        failed_provider: initial.provider,
+        fallback_provider: secondProvider,
+        hedge_started: false,
+        elapsed_ms: Date.now() - routeStartedAt,
+      });
+      const secondController = new AbortController();
+      const second = await modelOutcome(secondClient, request, secondController);
+      if (second.status === "fulfilled") {
+        this.lastWinner = second.provider;
+        stageLog({
+          stage: "model-route",
+          turn_id: request.turnId,
+          label: request.label,
+          status: "completed",
+          winner_provider: second.provider,
+          hedge_started: false,
+          elapsed_ms: Date.now() - routeStartedAt,
+        });
+        return second.value;
+      }
+      throw initial.reason;
+    }
+
+    stageLog({
+      stage: "model-route",
+      turn_id: request.turnId,
+      label: request.label,
+      status: "hedge-started",
+      primary_provider: firstProvider,
+      fallback_provider: secondProvider,
+      elapsed_ms: Date.now() - routeStartedAt,
+    });
+    const secondController = new AbortController();
+    const secondPromise = modelOutcome(secondClient, request, secondController);
+    const firstCompleted = await Promise.race([firstPromise, secondPromise]);
+    if (firstCompleted.status === "fulfilled") {
+      this.lastWinner = firstCompleted.provider;
+      if (firstCompleted.provider === firstProvider) secondController.abort();
+      else firstController.abort();
+      stageLog({
+        stage: "model-route",
+        turn_id: request.turnId,
+        label: request.label,
+        status: "completed",
+        winner_provider: firstCompleted.provider,
+        hedge_started: true,
+        elapsed_ms: Date.now() - routeStartedAt,
+      });
+      return firstCompleted.value;
+    }
+    const remaining = firstCompleted.provider === firstProvider
+      ? await secondPromise
+      : await firstPromise;
+    if (remaining.status === "fulfilled") {
+      this.lastWinner = remaining.provider;
+      stageLog({
+        stage: "model-route",
+        turn_id: request.turnId,
+        label: request.label,
+        status: "completed",
+        winner_provider: remaining.provider,
+        hedge_started: true,
+        elapsed_ms: Date.now() - routeStartedAt,
+      });
+      return remaining.value;
+    }
+    throw firstCompleted.reason;
+  }
+}
+
+export async function createStructuredModelRouter(): Promise<StructuredModelRouter> {
+  const primaryClient = await createStructuredModelClient();
+  const primaryProvider = modelProvider(primaryClient);
+  const fallbackProvider = configuredFallbackProvider(primaryProvider);
+  const fallbackClient = fallbackProvider
+    ? await createStructuredModelClientFor(fallbackProvider)
+    : undefined;
+  const hedgeDelayMs = parsePositiveInteger(
+    process.env.OLL_HEDGE_DELAY_MS,
+    12_000,
+    "OLL_HEDGE_DELAY_MS",
+  );
+  return new HedgedStructuredModelRouter(primaryClient, fallbackClient, hedgeDelayMs);
 }
 
 function requestDeadline(client: StructuredModelClient): number {
@@ -2377,7 +2617,7 @@ async function main(): Promise<void> {
         skill_process_started_at_epoch_ms: startedAt,
       });
     }
-    const client = await createStructuredModelClient();
+    const modelRouter = await createStructuredModelRouter();
     const cameraMedia = input.request_source === "current_image"
       ? await workspaceImageMedia(input.camera_media, "camera_media")
       : undefined;
@@ -2415,7 +2655,7 @@ async function main(): Promise<void> {
         mode: "lesson_plan",
       });
       const generatedLessonPlan = await generateLessonPlanWithModel(
-        (request) => callStructuredModel(client, {
+        (request) => modelRouter.call({
           label: request.label,
           turnId: request.turn_id,
           systemPrompt: request.system_prompt,
@@ -2437,11 +2677,14 @@ async function main(): Promise<void> {
         },
         {
           compile: { language: input.language },
-          on_rejected_part: (event) => stageLog({
-            stage: "lesson-plan-local-rejection",
-            turn_id: input.turn_id,
-            ...event,
-          }),
+          on_rejected_part: (event) => {
+            modelRouter.rejectLastResponse();
+            stageLog({
+              stage: "lesson-plan-local-rejection",
+              turn_id: input.turn_id,
+              ...event,
+            });
+          },
           on_program_adjustment: (event) => stageLog({
             stage: "lesson-plan-program-adjustment",
             turn_id: input.turn_id,
