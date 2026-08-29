@@ -13,6 +13,7 @@ import {
   createArkClient,
   createGeminiApiClient,
   createVertexClient,
+  HedgedStructuredModelRouter,
   probeVertexSchema,
 } from "../main";
 
@@ -518,6 +519,208 @@ test("Gemini API structured calls use API-key auth and the existing generateCont
     assert.equal(captured.headers.authorization, undefined);
     assert.equal(captured.body.generationConfig.responseMimeType, "application/json");
     assert.equal(captured.body.generationConfig.responseJsonSchema.properties.ok.type, "boolean");
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("hedged model routing does not call the fallback when the primary is fast", async () => {
+  let primaryRequests = 0;
+  let fallbackRequests = 0;
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request before replying.
+    }
+    if (request.url === "/primary") primaryRequests += 1;
+    else fallbackRequests += 1;
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(vertexPayload({ source: request.url === "/primary" ? "primary" : "fallback" }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const router = new HedgedStructuredModelRouter({
+      provider: "gemini",
+      endpoint: `${baseUrl}/primary`,
+      model: "test-gemini",
+      apiKey: "gemini-secret",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, {
+      provider: "vertex",
+      endpoint: `${baseUrl}/fallback`,
+      model: "test-vertex",
+      accessToken: "vertex-token",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, 100);
+    const content = await router.call({
+      label: "lesson-plan-outline",
+      turnId: "hedge-primary-fast",
+      systemPrompt: "Return JSON.",
+      prompt: "Return source.",
+      responseSchema: { type: "object", properties: { source: { type: "string" } } },
+    });
+    assert.deepEqual(JSON.parse(content), { source: "primary" });
+    assert.equal(primaryRequests, 1);
+    assert.equal(fallbackRequests, 0);
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("hedged model routing starts the fallback after the delay and uses the first response", async () => {
+  let primaryRequests = 0;
+  let fallbackRequests = 0;
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request before replying.
+    }
+    if (request.url === "/primary") {
+      primaryRequests += 1;
+      await new Promise((done) => setTimeout(done, 120));
+    } else {
+      fallbackRequests += 1;
+    }
+    if (response.destroyed) return;
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(vertexPayload({ source: request.url === "/primary" ? "primary" : "fallback" }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const router = new HedgedStructuredModelRouter({
+      provider: "gemini",
+      endpoint: `${baseUrl}/primary`,
+      model: "test-gemini",
+      apiKey: "gemini-secret",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, {
+      provider: "vertex",
+      endpoint: `${baseUrl}/fallback`,
+      model: "test-vertex",
+      accessToken: "vertex-token",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, 20);
+    const content = await router.call({
+      label: "lesson-plan-outline",
+      turnId: "hedge-fallback-wins",
+      systemPrompt: "Return JSON.",
+      prompt: "Return source.",
+      responseSchema: { type: "object", properties: { source: { type: "string" } } },
+    });
+    assert.deepEqual(JSON.parse(content), { source: "fallback" });
+    assert.equal(primaryRequests, 1);
+    assert.equal(fallbackRequests, 1);
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("hedged model routing uses the fallback immediately after a primary transport failure", async () => {
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request before replying.
+    }
+    requests.push(request.url);
+    if (request.url === "/primary") {
+      response.writeHead(503, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: { status: "UNAVAILABLE" } }));
+      return;
+    }
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(vertexPayload({ source: "fallback" }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const router = new HedgedStructuredModelRouter({
+      provider: "gemini",
+      endpoint: `${baseUrl}/primary`,
+      model: "test-gemini",
+      apiKey: "gemini-secret",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, {
+      provider: "vertex",
+      endpoint: `${baseUrl}/fallback`,
+      model: "test-vertex",
+      accessToken: "vertex-token",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, 1_000);
+    const content = await router.call({
+      label: "lesson-plan-outline",
+      turnId: "hedge-primary-failed",
+      systemPrompt: "Return JSON.",
+      prompt: "Return source.",
+      responseSchema: { type: "object", properties: { source: { type: "string" } } },
+    });
+    assert.deepEqual(JSON.parse(content), { source: "fallback" });
+    assert.deepEqual(requests, ["/primary", "/fallback"]);
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("a locally rejected response makes the other provider lead the next request", async () => {
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request before replying.
+    }
+    requests.push(request.url);
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(vertexPayload({ source: request.url === "/primary" ? "primary" : "fallback" }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const router = new HedgedStructuredModelRouter({
+      provider: "gemini",
+      endpoint: `${baseUrl}/primary`,
+      model: "test-gemini",
+      apiKey: "gemini-secret",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, {
+      provider: "vertex",
+      endpoint: `${baseUrl}/fallback`,
+      model: "test-vertex",
+      accessToken: "vertex-token",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, 100);
+    const request = {
+      label: "lesson-plan-outline",
+      turnId: "hedge-local-rejection",
+      systemPrompt: "Return JSON.",
+      prompt: "Return source.",
+      responseSchema: { type: "object", properties: { source: { type: "string" } } },
+    };
+    assert.deepEqual(JSON.parse(await router.call(request)), { source: "primary" });
+    router.rejectLastResponse();
+    assert.deepEqual(JSON.parse(await router.call(request)), { source: "fallback" });
+    assert.deepEqual(requests, ["/primary", "/fallback"]);
   } finally {
     await new Promise((done) => server.close(done));
   }

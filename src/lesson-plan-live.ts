@@ -1,7 +1,8 @@
 import {
-  callStructuredModel,
-  createStructuredModelClient,
+  createStructuredModelRouter,
+  HedgedStructuredModelRouter,
   type StructuredModelClient,
+  type StructuredModelRouter,
 } from "./main.js";
 import {
   generateLessonPlanWithModel,
@@ -60,6 +61,7 @@ function shallowProviderSchema(schema: Record<string, unknown>): Record<string, 
 
 export interface GenerateLessonPlanWithVertexOptions extends GenerateLessonPlanOptions {
   client?: StructuredModelClient;
+  router?: StructuredModelRouter;
 }
 
 /**
@@ -72,15 +74,19 @@ export async function generateLessonPlanWithVertex(
   input: LessonPlanGenerationInput,
   options: GenerateLessonPlanWithVertexOptions = {},
 ): Promise<LessonPlanGenerationResult> {
-  const client = options.client ?? await createStructuredModelClient();
+  const router = options.router
+    ?? (options.client
+      ? new HedgedStructuredModelRouter(options.client)
+      : await createStructuredModelRouter());
   const schemaMode = providerSchemaMode();
   const {
     client: _client,
+    router: _router,
+    on_rejected_part: onRejectedPart,
     ...generationOptions
   } = options;
   return generateLessonPlanWithModel(
-    (request) => callStructuredModel(
-      client,
+    (request) => router.call(
       {
         label: request.label,
         turnId: request.turn_id,
@@ -99,6 +105,12 @@ export async function generateLessonPlanWithVertex(
       },
     ),
     input,
-    generationOptions,
+    {
+      ...generationOptions,
+      on_rejected_part: async (event) => {
+        router.rejectLastResponse();
+        await onRejectedPart?.(event);
+      },
+    },
   );
 }

@@ -12,6 +12,8 @@
       "concurrency_class": "exclusive",
       "env": [
         "OLL_PROVIDER",
+        "OLL_FALLBACK_PROVIDER",
+        "OLL_HEDGE_DELAY_MS",
         "VERTEX_SA_JSON",
         "VERTEX_ACCESS_TOKEN",
         "GOOGLE_CLOUD_PROJECT",
