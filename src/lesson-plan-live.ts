@@ -79,25 +79,24 @@ export async function generateLessonPlanWithVertex(
     ...generationOptions
   } = options;
   return generateLessonPlanWithModel(
-    (request) => callStructuredModel(client, {
-      label: request.label,
-      turnId: request.turn_id,
-      systemPrompt: request.system_prompt,
-      prompt: request.prompt,
-      responseSchema: schemaMode === "json"
-        ? undefined
-        : schemaMode === "shallow"
-          ? shallowProviderSchema(request.response_schema)
-          : request.response_schema,
-      maxTokens: request.max_output_tokens,
-      lessonPlanPart: request.part,
-      lessonPlanSection: request.section,
-      lessonPlanAttempt: request.attempt,
-    }),
+    (request) => callStructuredModel(
+      client,
+      {
+        label: request.label,
+        turnId: request.turn_id,
+        systemPrompt: request.system_prompt,
+        prompt: request.prompt,
+        responseSchema: schemaMode === "json"
+          ? undefined
+          : schemaMode === "shallow"
+            ? shallowProviderSchema(request.response_schema)
+            : request.response_schema,
+        lessonPlanPart: request.part,
+        lessonPlanSection: request.section,
+        lessonPlanAttempt: request.attempt,
+      },
+    ),
     input,
-    {
-      ...generationOptions,
-      bootstrap_first_section: generationOptions.bootstrap_first_section ?? true,
-    },
+    generationOptions,
   );
 }

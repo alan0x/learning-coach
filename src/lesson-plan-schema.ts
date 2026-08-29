@@ -2,6 +2,7 @@ import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
+  PROCESS_DIAGRAM_CONTRACT,
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VERSION,
   LessonPlanError,
@@ -178,14 +179,15 @@ function visualParametersSchema(
   if (modelParameters.has("title")) properties.title = string(240);
   if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
   if (uses("function_plot")) {
-    properties.formula = string(256);
+    properties.formulas = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
   }
-  if (uses("function_surface_with_section")) {
+  if (uses("function_surface_with_section") || uses("implicit_surface_with_section")) {
     properties.expression = string(256);
     properties.section_axis = { enum: ["x", "y", "z"] };
   }
+  if (uses("implicit_surface_with_section")) properties.level = { type: "number" };
   if (uses("circle_and_arc") || uses("coordinate_circle")) properties.radius = { type: "number", minimum: 0 };
   if (uses("circle_and_arc")) properties.angle = { type: "number" };
   if (uses("coordinate_circle")) {
@@ -200,9 +202,20 @@ function visualParametersSchema(
     properties.leg_b = { type: "number", minimum: 0 };
   }
   if (uses("process_diagram")) {
-    properties.steps = { type: "array", minItems: 1, maxItems: 24, items: string(240) };
+    properties.steps = {
+      type: "array",
+      minItems: PROCESS_DIAGRAM_CONTRACT.min_steps,
+      maxItems: PROCESS_DIAGRAM_CONTRACT.max_steps,
+      items: string(PROCESS_DIAGRAM_CONTRACT.max_step_characters),
+    };
   }
-  return object(properties, (requireDynamicPlotExpression || canonicalFunctionPlot) ? ["formula"] : []);
+  const required = allowedCapabilities.length === 1
+    ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters]
+    : [];
+  if ((requireDynamicPlotExpression || canonicalFunctionPlot) && !required.includes("formulas")) {
+    required.push("formulas");
+  }
+  return object(properties, required);
 }
 
 function contentSchema(allowedCapabilities: LessonPlanCapability[]): LessonPlanJsonSchema {
@@ -256,8 +269,8 @@ function actionCollectionSchemas(
   // mixed-capability sections the local validator below remains authoritative,
   // because applying this requirement to every visual would also constrain
   // unrelated geometry and 3D content.
-  const requireFunctionPlotParameters = allowedCapabilities.length === 1
-    && allowedCapabilities[0] === "function_plot";
+  const requireVisualParameters = allowedCapabilities.length === 1
+    && LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters.length > 0;
   const requireDynamicPlotExpression = numberCount > 1
     && allowedCapabilities.length === 1
     && allowedCapabilities[0] === "function_plot";
@@ -284,7 +297,7 @@ function actionCollectionSchemas(
               items: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
             },
           } : {}),
-        }, ["capability", ...(requireFunctionPlotParameters ? ["parameters"] : [])]),
+        }, ["capability", ...(requireVisualParameters ? ["parameters"] : [])]),
       }, ["role", ...(courseVisualPositions.length > 0 ? ["course_visual"] : []), "content", "placement"])),
     } : {}),
     math_creates: collection(modelAction({
@@ -433,24 +446,6 @@ function outlineShape(value: unknown): LessonPlanOutline {
   return outline as LessonPlanOutline;
 }
 
-function bootstrapPermissiveOutline(): LessonPlanOutline {
-  return {
-    sections: [{
-      purpose: "bootstrap",
-      allowed_capabilities: capabilityNames,
-      reusable_items: Array.from({ length: 32 }, () => ({ kind: "board_item" })),
-    }],
-    numbers: Array.from({ length: 16 }, () => ({ initial: 0, min: 0, max: 1 })),
-    course_visuals: Array.from({ length: 32 }, (_unused, index) => ({
-      capability: capabilityNames[index % capabilityNames.length],
-      create_section: 1,
-      use_sections: [1],
-      relation: "primary",
-      reusable_item: index + 1,
-    })),
-  } as LessonPlanOutline;
-}
-
 export function buildLessonPlanOutlineJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
@@ -459,44 +454,24 @@ export function buildLessonPlanOutlineJsonSchema(requestPartCount = 0): LessonPl
 }
 
 /**
- * Provider schema for the first request of a course: the complete outline and
- * section 1 arrive together. The section shape deliberately permits every
- * currently supported visual and every positional reference. Once the model
- * response arrives, the ordinary outline-derived section schema and validators
- * narrow it to the capabilities, numbers, reusable items, and visuals that the
- * returned outline actually declared.
- */
-export function buildLessonPlanBootstrapJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
-  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
-    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
-  }
-  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
-  return vertexCompatible({
-    ...object({
-      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
-      first_section: firstSection,
-    }, ["outline", "first_section"]),
-  });
-}
-
-/**
  * Composer text and voice transcripts can both be genuine input without
- * identifying a complete learning request. This schema keeps that decision
- * inside the existing bootstrap model call. The program only reads
- * outline/first_section when the model explicitly chooses generate_lesson.
+ * identifying a complete learning request. Admission and the compact course
+ * outline share one model call, but section content is deliberately excluded.
+ * Once the outline is validated, the program builds an exact schema for
+ * section 1 from that immutable outline.
  */
-export function buildLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
+export function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
+  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount);
+  course.nullable = true;
   return vertexCompatible({
     ...object({
       disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
       learner_response: string(480),
-      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
-      first_section: firstSection,
-    }, ["disposition", "learner_response"]),
+      course,
+    }, ["disposition", "learner_response", "course"]),
   });
 }
 
@@ -568,7 +543,6 @@ export function buildLessonPlanSectionDraftJsonSchema(
 function lessonPlanSectionDraftShapeJsonSchema(
   outlineValue: unknown,
   sectionIndex: number,
-  bootstrapPermissive = false,
 ): LessonPlanJsonSchema {
   const outline = outlineShape(outlineValue);
   if (!Number.isInteger(sectionIndex) || sectionIndex < 1 || sectionIndex > outline.sections.length) {
@@ -581,22 +555,18 @@ function lessonPlanSectionDraftShapeJsonSchema(
   }
   const reusableCount = section.reusable_items?.length ?? 0;
   const numberCount = outline.numbers?.length ?? 0;
-  const courseVisualCreates = bootstrapPermissive
-    ? undefined
-    : courseVisualCreatesSchema(outline, sectionIndex);
-  const reusableBoardCreates = bootstrapPermissive
-    ? undefined
-    : reusableBoardCreatesSchema(outline, sectionIndex);
+  const courseVisualCreates = courseVisualCreatesSchema(outline, sectionIndex);
+  const reusableBoardCreates = reusableBoardCreatesSchema(outline, sectionIndex);
   const actionCollections = actionCollectionSchemas(
     outline.sections.length,
     allowedCapabilities,
     0,
     numberCount,
-    bootstrapPermissive ? [] : (outline.course_visuals ?? [])
+    (outline.course_visuals ?? [])
       .map((visual, index) => ({ visual, position: index + 1 }))
       .filter(({ visual }) => visual.create_section === sectionIndex)
       .map(({ position }) => position),
-    bootstrapPermissive,
+    false,
   );
   const supportsNumberActivity = Array.isArray(outline.numbers) && outline.numbers.length > 0;
   const sectionVisualCapabilities = (outline.course_visuals ?? [])
@@ -655,14 +625,6 @@ export function coerceLessonPlanSectionModelNumbers(
   return coerceModelNumbers(
     value,
     lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex),
-    "$lessonPlanModelSection",
-  );
-}
-
-export function coerceLessonPlanBootstrapSectionModelNumbers(value: unknown): unknown {
-  return coerceModelNumbers(
-    value,
-    lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true),
     "$lessonPlanModelSection",
   );
 }

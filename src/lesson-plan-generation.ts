@@ -2,6 +2,7 @@ import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
+  PROCESS_DIAGRAM_CONTRACT,
   LESSON_PLAN_CAPABILITIES,
   LESSON_PLAN_VISUAL_FEATURES,
   LessonPlanError,
@@ -9,22 +10,24 @@ import {
   matchLessonPlanCapability,
   validateLessonPlanOutline,
   type LessonPlanOutline,
+  type LessonPlanAction,
   type LessonPlanMathExpression,
+  type LessonPlanReference,
   type LessonPlanSectionDraft,
+  type LessonPlanVisualContent,
   type LessonPlanVisualFeature,
 } from "./lesson-plan.js";
 import {
   compileAndValidateLessonPlan,
   LESSON_PLAN_SCENE_INITIAL_CAMERAS,
+  mathExpressionToOll,
   type CompileLessonPlanOptions,
   type CompiledLessonPlan,
 } from "./lesson-plan-compiler.js";
 import {
-  buildLessonPlanBootstrapJsonSchema,
+  buildLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
-  buildLessonPlanAdmissionBootstrapJsonSchema,
-  coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
   LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES,
@@ -43,13 +46,12 @@ export interface LessonPlanGenerationInput {
 }
 
 export interface LessonPlanModelRequest {
-  label: "lesson-plan-bootstrap" | "lesson-plan-outline" | "lesson-plan-section";
+  label: "lesson-plan-outline" | "lesson-plan-section";
   turn_id: string;
   system_prompt: string;
   prompt: string;
   response_schema: LessonPlanJsonSchema;
-  max_output_tokens: number;
-  part: "bootstrap" | "outline" | "section";
+  part: "outline" | "section";
   section?: number;
   attempt: number;
 }
@@ -59,8 +61,6 @@ export type LessonPlanModelCall = (request: LessonPlanModelRequest) => Promise<s
 export interface GenerateLessonPlanOptions {
   max_attempts_per_part?: number;
   max_concurrency?: number;
-  /** Ask for the outline and section 1 in the same provider request. */
-  bootstrap_first_section?: boolean;
   compile?: CompileLessonPlanOptions;
   on_playable_prefix?: (event: {
     completed_sections: number;
@@ -76,6 +76,14 @@ export interface GenerateLessonPlanOptions {
     section?: number;
     error: { code: string; path?: string; message: string };
   }) => void | Promise<void>;
+  on_program_adjustment?: (event: {
+    kind: "visual_removed" | "duplicate_board_item_removed";
+    section: number;
+    capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
+    moment?: number;
+    board_kind?: "math" | "note";
+    reason: string;
+  }) => void | Promise<void>;
 }
 
 export interface GeneratedLessonPlan extends CompiledLessonPlan {
@@ -85,7 +93,7 @@ export interface GeneratedLessonPlan extends CompiledLessonPlan {
 }
 
 export interface NonLessonPlanResponse {
-  disposition: "clarify" | "ignore";
+  disposition: "clarify" | "ignore" | "unsupported";
   learner_response: string;
   model_calls: number;
 }
@@ -106,23 +114,18 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象并决定动作顺序。placement 只写相对方向。可复用普通板书只填根层必填项，不填写内部位置。
 - 小数按 Schema 的 mantissa、scale 填写，例如 -1.5 为 -15、1；6.283 为 6283、3。
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
-- function_plot 的 parameters.formula 只写中缀公式右侧：x 是横轴，n1、n2 是课程第 1、2 个数值；支持 + - * / ^、括号、pi、e 和常见单参数函数。例：(x-n1)^2+n2、(1+1/x)^x。公式必须依赖 x；程序解析公式、绑定控件并计算坐标范围。函数图和三维曲面都不填写视窗、采样密度或网格精度。
+- function_plot 的 parameters.formulas 始终是公式数组，每项只写中缀公式右侧：x 是横轴，n1、n2 是课程第 1、2 个数值；支持 + - * / ^、括号、pi、e 和常见单参数函数。单条曲线可引用 n1、n2，例如 (x-n1)^2+n2；比较多条曲线时填写多个不含 n1、n2 的静态公式，例如 ["x", "x^2", "sin(x)"]。每条公式都必须依赖 x；程序逐条解析、绑定控件并计算坐标范围。函数图和三维曲面都不填写视窗、采样密度或网格精度。
 - animations 只决定演示哪个数值、目标值和教学节奏；程序统一生成缓动方式。placement 只决定相对方向；程序统一生成锚点、对齐和间距。
 - geometric_rearrangement 的数值表示重排进度；construction 从 Schema 选择。process_diagram 没有数值或动画。
 只返回符合响应 Schema 的 JSON。`;
 
-const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
-
-同一次返回 outline 和 first_section。first_section 必须实现 outline 第一节，只使用 outline 已声明的数值、画面和可复用内容；内部位置、编号和引用由程序建立。
-${SECTION_SYSTEM_PROMPT}`;
-
-const ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户正尝试从文字输入或语音输入开始一整节白板课程。先判断当前内容是否足以确定课程主题，不要从可用画面或数学能力猜测用户没有表达的主题。
-- generate_lesson：用户提出了学习问题、解释请求，或清楚说出了想学习的主题。简短但明确的主题（例如“勾股定理”）也属于这一类。此时填写完整 outline 和 first_section，learner_response 留空。
-- clarify：这是真实话语，但内容残缺、含义不清或没有说明要学什么，无法可靠确定课程主题。此时不要填写 outline 或 first_section，用 learner_response 简短追问用户想学习什么。例如 “The book.” 应追问用户想了解这本书的什么内容，而不是猜成数学课程。
-- ignore：只是语气词、口头填充或没有可回应内容。此时不要填写 outline 或 first_section，learner_response 留空。
+const ADMISSION_OUTLINE_SYSTEM_PROMPT = `用户正尝试从文字输入或语音输入开始一整节白板课程。先判断当前内容是否足以确定课程主题，不要从可用画面或数学能力猜测用户没有表达的主题。
+- generate_lesson：用户提出了学习问题、解释请求，或清楚说出了想学习的主题。简短但明确的主题（例如“勾股定理”）也属于这一类。此时 course 必须包含完整课程目录，learner_response 留空。不要生成任何一节的旁白或板书内容。
+- clarify：这是真实话语，但内容残缺、含义不清或没有说明要学什么，无法可靠确定课程主题。此时 course 必须为 null，用 learner_response 简短追问用户想学习什么。例如 “The book.” 应追问用户想了解这本书的什么内容，而不是猜成数学课程。
+- ignore：只是语气词、口头填充或没有可回应内容。此时 course 必须为 null，learner_response 留空。
 只做上述语义判断，不使用字数、语言或固定关键词作为规则。
 
-${BOOTSTRAP_SYSTEM_PROMPT}`;
+${OUTLINE_SYSTEM_PROMPT}`;
 
 function positiveInteger(value: number | undefined, fallback: number, label: string): number {
   const result = value ?? fallback;
@@ -557,13 +560,100 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
   const parameters = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters)
     ? { ...(content.parameters as Record<string, unknown>) }
     : {};
-  if (capability === "function_plot" && parameters.formula !== undefined) {
-    parameters.expression_tokens = parseModelFormula(
-      parameters.formula,
-      numberCount,
-      "$lessonPlanSection.visual.parameters.formula",
-    );
-    delete parameters.formula;
+  if (capability === "implicit_surface_with_section"
+    && typeof parameters.expression === "string"
+    && parameters.level === undefined) {
+    const equation = parameters.expression.split("=").map((part) => part.trim());
+    if (equation.length === 2 && equation.every(Boolean)) {
+      const rightLevel = Number(equation[1]);
+      const leftLevel = Number(equation[0]);
+      if (Number.isFinite(rightLevel)) {
+        parameters.expression = equation[0];
+        parameters.level = rightLevel;
+      } else if (Number.isFinite(leftLevel)) {
+        parameters.expression = equation[1];
+        parameters.level = leftLevel;
+      } else {
+        parameters.expression = `(${equation[0]})-(${equation[1]})`;
+        parameters.level = 0;
+      }
+    } else {
+      // Implicit equations are canonically F(x,y,z)=0. When the model writes
+      // only the residual expression, the missing right-hand side is execution
+      // state the program can supply without regenerating the section.
+      parameters.level = 0;
+    }
+  }
+  let forceNoNumbers = false;
+  if (capability === "function_plot") {
+    const rawFormulas = parameters.formulas !== undefined
+      ? parameters.formulas
+      : typeof parameters.expression === "string"
+        ? [parameters.expression]
+        : Array.isArray(parameters.expressions)
+          ? parameters.expressions
+          : undefined;
+    if (rawFormulas !== undefined) {
+      if (!Array.isArray(rawFormulas)
+        || rawFormulas.length < 1
+        || rawFormulas.length > 8) {
+        formulaError(
+          "$lessonPlanSection.visual.parameters.formulas",
+          "expected one to eight formulas",
+        );
+      }
+      // The provider can occasionally return an older synonymous field in
+      // addition to `formulas`, even under a response schema. Select one
+      // semantic source and erase all execution representations before the
+      // program builds exactly one canonical representation below.
+      delete parameters.formulas;
+      delete parameters.expression;
+      delete parameters.expressions;
+      delete parameters.expression_tokens;
+      const parsed = rawFormulas.map((formula, index) => parseModelFormula(
+        formula,
+        numberCount,
+        `$lessonPlanSection.visual.parameters.formulas[${index}]`,
+      ));
+      if (parsed.length === 1) {
+        parameters.expression_tokens = parsed[0];
+      } else {
+        if (parsed.some((expression) => expression.some((token) => token.kind === "number"))) {
+          formulaError(
+            "$lessonPlanSection.visual.parameters.formulas",
+            "a multi-curve comparison currently supports static formulas only; use one formula when lesson numbers change the whole curve",
+          );
+        }
+        // Formula text is a teaching choice. Curve identity and duplicate
+        // handling are execution details: canonicalize and deduplicate them in
+        // the program so a probabilistic repeated formula cannot render the
+        // same curve twice.
+        const canonical = parsed.map(mathExpressionToOll);
+        const retainedIndexes: number[] = [];
+        const seen = new Set<string>();
+        canonical.forEach((expression, index) => {
+          if (seen.has(expression)) return;
+          seen.add(expression);
+          retainedIndexes.push(index);
+        });
+        parameters.expressions = retainedIndexes.map((index) => canonical[index]);
+        if (Array.isArray(parameters.curve_labels)
+          && parameters.curve_labels.length === canonical.length) {
+          parameters.curve_labels = retainedIndexes.map((index) => parameters.curve_labels![index]);
+        } else {
+          // Labels are optional presentation text. If they do not align with
+          // the actual curves, derive safe labels from the expressions instead
+          // of rejecting and regenerating the lesson.
+          delete parameters.curve_labels;
+        }
+        // A single-curve label from a speculative draft cannot safely name the
+        // first member of a later multi-curve comparison.
+        delete parameters.curve_label;
+        // A multi-curve request is an explicit static comparison. A stray
+        // model-authored number must never turn it into a moving-point lesson.
+        forceNoNumbers = true;
+      }
+    }
   }
   if (typeof content.title === "string" && parameters.title === undefined) parameters.title = content.title;
   if (typeof capability === "string" && capability in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
@@ -584,6 +674,7 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
       Number.isInteger(number) && Number(number) >= 1 && Number(number) <= numberCount
     )))].slice(0, numberLimit)
     : [];
+  if (forceNoNumbers) validNumbers = [];
   if (capability === "function_plot" && Array.isArray(parameters.expression_tokens)) {
     const formulaNumbers = [...new Set(parameters.expression_tokens.flatMap((token) => (
       token && typeof token === "object" && !Array.isArray(token)
@@ -594,7 +685,8 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
     )))].filter((number) => number >= 1 && number <= numberCount).slice(0, numberLimit);
     if (formulaNumbers.length > 0) validNumbers = formulaNumbers;
   }
-  if (validNumbers.length === 0
+  if (!forceNoNumbers
+    && validNumbers.length === 0
     && numberCount === 1
     && typeof capability === "string"
     && capability in LESSON_PLAN_CAPABILITIES
@@ -607,6 +699,473 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
     ...(Object.keys(parameters).length === 0 ? {} : { parameters }),
     ...(validNumbers.length === 0 ? {} : { numbers: validNumbers }),
   };
+}
+
+type VisualNumberPurpose = "angle" | "radius" | "section" | "progress" | "generic";
+
+function visualNumberPurpose(capability: keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY, index: number): VisualNumberPurpose {
+  const input = LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs[index] as string | undefined;
+  if (!input || input.startsWith("curve_parameter_")) return "generic";
+  if (input === "angle" || input === "phase") return "angle";
+  if (input === "radius") return "radius";
+  if (input === "section_height" || input === "section_position") return "section";
+  if (input === "progress") return "progress";
+  return "generic";
+}
+
+function compatibleVisualNumberPurpose(left: VisualNumberPurpose, right: VisualNumberPurpose): boolean {
+  return left === "generic" || right === "generic" || left === right;
+}
+
+function processDiagramRemovalReason(content: LessonPlanVisualContent): string | undefined {
+  if (content.capability !== "process_diagram") return undefined;
+  const input = content.parameters ?? {};
+  const steps = input.steps;
+  const title = input.title;
+  if (!Array.isArray(steps)) return "missing_steps";
+  if (steps.length < PROCESS_DIAGRAM_CONTRACT.min_steps || steps.length > PROCESS_DIAGRAM_CONTRACT.max_steps) {
+    return "step_count_out_of_range";
+  }
+  if (!steps.every((step) => (
+    typeof step === "string"
+    && step.trim().length >= 1
+    && step.trim().length <= PROCESS_DIAGRAM_CONTRACT.max_step_characters
+  ))) {
+    return "step_text_out_of_range";
+  }
+  if (title !== undefined && (
+    typeof title !== "string"
+    || title.trim().length < 1
+    || title.trim().length > PROCESS_DIAGRAM_CONTRACT.max_title_characters
+  )) {
+    return "title_text_out_of_range";
+  }
+  return undefined;
+}
+
+function isExecutableProcessDiagram(content: LessonPlanVisualContent): boolean {
+  return processDiagramRemovalReason(content) === undefined;
+}
+
+function sanitizeNonessentialVisuals(
+  outlineValue: LessonPlanOutline,
+  draftValues: LessonPlanSectionDraft[],
+): {
+  outline: LessonPlanOutline;
+  drafts: LessonPlanSectionDraft[];
+  adjustments: Array<{
+    kind: "visual_removed" | "duplicate_board_item_removed";
+    section: number;
+    capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
+    moment?: number;
+    board_kind?: "math" | "note";
+    reason: string;
+  }>;
+} {
+  const outline = structuredClone(outlineValue);
+  const drafts = structuredClone(draftValues);
+  const adjustments: Array<{
+    kind: "visual_removed" | "duplicate_board_item_removed";
+    section: number;
+    capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
+    moment?: number;
+    board_kind?: "math" | "note";
+    reason: string;
+  }> = [];
+  const courseVisualPositionBySlot = new Map<string, number>();
+  (outline.course_visuals ?? []).forEach((visual, index) => {
+    courseVisualPositionBySlot.set(`${visual.create_section}:${visual.reusable_item}`, index + 1);
+  });
+  const droppedCourseVisuals = new Set<number>();
+  const establishedPurposes = new Map<number, VisualNumberPurpose>();
+  const visualEntries: Array<{
+    content: LessonPlanVisualContent;
+    courseVisualPosition?: number;
+    relation?: "primary" | "supporting" | "comparison";
+  }> = [];
+
+  for (const [sectionOffset, section] of drafts.entries()) {
+    const sectionNumber = sectionOffset + 1;
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const content = action.content as LessonPlanVisualContent;
+        const slot = Number(action.reusable_item);
+        const courseVisualPosition = Number.isInteger(slot)
+          ? courseVisualPositionBySlot.get(`${sectionNumber}:${slot}`)
+          : undefined;
+        const processDiagramReason = processDiagramRemovalReason(content);
+        if (processDiagramReason) {
+          adjustments.push({
+            kind: "visual_removed",
+            section: sectionNumber,
+            capability: content.capability,
+            reason: processDiagramReason,
+          });
+          if (courseVisualPosition !== undefined) droppedCourseVisuals.add(courseVisualPosition);
+          continue;
+        }
+        visualEntries.push({
+          content,
+          courseVisualPosition,
+          relation: courseVisualPosition === undefined
+            ? undefined
+            : outline.course_visuals?.[courseVisualPosition - 1]?.relation,
+        });
+      }
+    }
+  }
+
+  // The primary teaching picture owns a numeric meaning even if the model
+  // happens to emit a supporting create action first. Execution must not
+  // depend on probabilistic action ordering.
+  visualEntries.sort((left, right) => {
+    const priority = (relation: typeof left.relation): number => (
+      relation === "supporting" ? 1 : 0
+    );
+    return priority(left.relation) - priority(right.relation)
+      || (left.courseVisualPosition ?? Number.MAX_SAFE_INTEGER)
+        - (right.courseVisualPosition ?? Number.MAX_SAFE_INTEGER);
+  });
+  for (const entry of visualEntries) {
+    const incompatible = (entry.content.numbers ?? []).some((number, index) => {
+      const next = visualNumberPurpose(entry.content.capability, index);
+      const current = establishedPurposes.get(number);
+      if (!current || compatibleVisualNumberPurpose(current, next)) {
+        if (!current || current === "generic") establishedPurposes.set(number, next);
+        return false;
+      }
+      return true;
+    });
+    if (!incompatible) continue;
+    if (entry.relation === "supporting" && entry.courseVisualPosition !== undefined) {
+      droppedCourseVisuals.add(entry.courseVisualPosition);
+    } else {
+      // A primary visual remains useful without an accidental shared
+      // control. Make it static instead of rejecting the whole section.
+      delete entry.content.numbers;
+    }
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    (outline.course_visuals ?? []).forEach((visual, index) => {
+      const position = index + 1;
+      if (droppedCourseVisuals.has(position)) return;
+      if (visual.related_visual !== undefined && droppedCourseVisuals.has(visual.related_visual)) {
+        droppedCourseVisuals.add(position);
+        changed = true;
+      }
+    });
+  }
+
+  const droppedActions = new Set<LessonPlanAction>();
+  const replacementForDroppedAction = new Map<LessonPlanAction, LessonPlanAction>();
+  const droppedReusable = new Set<string>();
+  for (const [sectionOffset, section] of drafts.entries()) {
+    const sectionNumber = sectionOffset + 1;
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const content = action.content as LessonPlanVisualContent;
+        const slot = Number(action.reusable_item);
+        const position = Number.isInteger(slot)
+          ? courseVisualPositionBySlot.get(`${sectionNumber}:${slot}`)
+          : undefined;
+        if (!isExecutableProcessDiagram(content)
+          || (position !== undefined && droppedCourseVisuals.has(position))) {
+          droppedActions.add(action);
+          if (Number.isInteger(slot)) droppedReusable.add(`${sectionNumber}:${slot}`);
+        }
+      }
+    }
+  }
+
+  // Two identical formula/note cards created in the same teaching moment do
+  // not carry two meanings. Keep the reusable copy when one exists; otherwise
+  // keep the first. This is presentation cleanup, not a model-authored choice.
+  for (const [sectionOffset, section] of drafts.entries()) {
+    section.moments.forEach((moment, momentOffset) => {
+      const bySignature = new Map<string, LessonPlanAction>();
+      for (const action of moment.actions) {
+        if (action.action !== "create" || (action.kind !== "math" && action.kind !== "note")) continue;
+        const signature = JSON.stringify({ kind: action.kind, content: action.content });
+        const prior = bySignature.get(signature);
+        if (!prior) {
+          bySignature.set(signature, action);
+          continue;
+        }
+        const priorReusable = Number.isInteger(prior.reusable_item);
+        const currentReusable = Number.isInteger(action.reusable_item);
+        const removed = currentReusable && !priorReusable ? prior : action;
+        const retained = removed === prior ? action : prior;
+        if (removed === prior) bySignature.set(signature, action);
+        droppedActions.add(removed);
+        replacementForDroppedAction.set(removed, retained);
+        adjustments.push({
+          kind: "duplicate_board_item_removed",
+          section: sectionOffset + 1,
+          moment: momentOffset + 1,
+          board_kind: action.kind,
+          reason: "same_moment_exact_duplicate",
+        });
+      }
+    });
+  }
+
+  const localBoardItemMap = new Map<string, number | undefined>();
+  for (const [sectionOffset, section] of drafts.entries()) {
+    const sectionNumber = sectionOffset + 1;
+    section.moments.forEach((moment, momentOffset) => {
+      const creates = moment.actions.filter((action) => action.action === "create");
+      const retainedIndex = new Map<LessonPlanAction, number>();
+      let nextIndex = 0;
+      for (const action of creates) {
+        if (droppedActions.has(action)) continue;
+        nextIndex += 1;
+        retainedIndex.set(action, nextIndex);
+      }
+      creates.forEach((action, oldOffset) => {
+        const replacement = replacementForDroppedAction.get(action);
+        localBoardItemMap.set(
+          `${sectionNumber}:${momentOffset + 1}:${oldOffset + 1}`,
+          droppedActions.has(action)
+            ? replacement ? retainedIndex.get(replacement) : undefined
+            : retainedIndex.get(action),
+        );
+      });
+    });
+  }
+
+  const retainedReusable = new Set<string>();
+  for (const [sectionOffset, section] of drafts.entries()) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (droppedActions.has(action) || action.action !== "create") continue;
+        if (Number.isInteger(action.reusable_item)) retainedReusable.add(`${sectionOffset + 1}:${action.reusable_item}`);
+      }
+    }
+  }
+
+  const reassignedReusable = new Set<string>();
+  for (const key of droppedReusable) {
+    const [sectionNumberText, slotText] = key.split(":");
+    const sectionNumber = Number(sectionNumberText);
+    const slot = Number(slotText);
+    if ([...retainedReusable].some((candidate) => candidate.startsWith(`${sectionNumber}:`))) continue;
+    const section = drafts[sectionNumber - 1];
+    const replacement = [...(section?.moments ?? [])]
+      .flatMap((moment) => moment.actions)
+      .findLast((action) => action.action === "create"
+        && !droppedActions.has(action)
+        && action.reusable_item === undefined
+        && action.kind !== "visual");
+    if (!replacement || replacement.action !== "create") continue;
+    replacement.reusable_item = slot;
+    const declaration = outline.sections[sectionNumber - 1]?.reusable_items?.[slot - 1];
+    if (declaration) {
+      outline.sections[sectionNumber - 1]!.reusable_items![slot - 1] = {
+        kind: "board_item",
+        board_kind: replacement.kind,
+      };
+      retainedReusable.add(key);
+      reassignedReusable.add(key);
+    }
+  }
+
+  const removedReusable = new Set(
+    [...droppedReusable].filter((key) => !reassignedReusable.has(key)),
+  );
+  const reusableItemMap = new Map<string, number>();
+  outline.sections.forEach((section, sectionOffset) => {
+    const sectionNumber = sectionOffset + 1;
+    const retainedItems = (section.reusable_items ?? []).flatMap((item, itemOffset) => {
+      const oldItem = itemOffset + 1;
+      if (removedReusable.has(`${sectionNumber}:${oldItem}`)) return [];
+      return [{ item, oldItem }];
+    });
+    retainedItems.forEach(({ oldItem }, index) => {
+      reusableItemMap.set(`${sectionNumber}:${oldItem}`, index + 1);
+    });
+    section.reusable_items = retainedItems.map(({ item }) => item);
+  });
+  drafts.forEach((section, sectionOffset) => {
+    const sectionNumber = sectionOffset + 1;
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" || !Number.isInteger(action.reusable_item)) continue;
+        const nextItem = reusableItemMap.get(`${sectionNumber}:${action.reusable_item}`);
+        if (nextItem !== undefined) action.reusable_item = nextItem;
+      }
+    }
+  });
+
+  const normalizeReference = (
+    reference: LessonPlanReference | undefined,
+    sectionNumber: number,
+  ): LessonPlanReference | undefined => {
+    if (!reference) return undefined;
+    const next = structuredClone(reference);
+    if (next.source === "local_board_item") {
+      const item = localBoardItemMap.get(`${sectionNumber}:${next.moment}:${next.item}`);
+      if (item === undefined) return undefined;
+      next.item = item;
+    } else if (next.source === "reusable") {
+      const key = `${next.section}:${next.item}`;
+      if (removedReusable.has(key)) return undefined;
+      const nextItem = reusableItemMap.get(key);
+      if (nextItem === undefined) return undefined;
+      next.item = nextItem;
+      if (reassignedReusable.has(key)) delete next.part;
+    }
+    return next;
+  };
+
+  for (const [sectionOffset, section] of drafts.entries()) {
+    const sectionNumber = sectionOffset + 1;
+    for (const moment of section.moments) {
+      const actions: LessonPlanAction[] = [];
+      for (const action of moment.actions) {
+        if (droppedActions.has(action)) continue;
+        const next = structuredClone(action) as LessonPlanAction;
+        if (next.action === "create") {
+          const reference = normalizeReference(next.placement?.reference, sectionNumber);
+          if (next.placement && next.placement.reference && !reference) {
+            next.placement = { relation: "new_region" };
+          } else if (next.placement && reference) {
+            next.placement.reference = reference;
+          }
+        } else if (next.action === "revise" || next.action === "emphasize" || next.action === "point_at") {
+          const reference = normalizeReference(next.reference, sectionNumber);
+          if (!reference) continue;
+          next.reference = reference;
+        } else if (next.action === "connect") {
+          const from = normalizeReference(next.from_ref, sectionNumber);
+          const to = normalizeReference(next.to_ref, sectionNumber);
+          if (!from || !to) continue;
+          next.from_ref = from;
+          next.to_ref = to;
+        } else if (next.action === "group") {
+          next.members = next.members.flatMap((reference) => {
+            const normalized = normalizeReference(reference, sectionNumber);
+            return normalized ? [normalized] : [];
+          });
+          if (next.members.length === 0) continue;
+        } else if (next.action === "focus") {
+          next.references = next.references.flatMap((reference) => {
+            const normalized = normalizeReference(reference, sectionNumber);
+            return normalized ? [normalized] : [];
+          });
+          if (next.references.length === 0) continue;
+        }
+        actions.push(next);
+      }
+      moment.actions = actions.length > 0 ? actions : [{
+        action: "teacher_expression",
+        expression: "neutral",
+        timing: "after_speech",
+      }];
+    }
+    if (section.student_activities) {
+      section.student_activities = section.student_activities.flatMap((activity) => {
+        if (activity.kind !== "scene3d_view") return [activity];
+        const reference = normalizeReference(activity.reference, sectionNumber);
+        return reference ? [{ ...activity, reference }] : [];
+      });
+      if (section.student_activities.length === 0) delete section.student_activities;
+    }
+  }
+
+  if (outline.course_visuals) {
+    const retainedPositions = outline.course_visuals
+      .map((visual, index) => ({ visual, oldPosition: index + 1 }))
+      .filter(({ oldPosition }) => !droppedCourseVisuals.has(oldPosition));
+    const positionMap = new Map(retainedPositions.map(({ oldPosition }, index) => [oldPosition, index + 1]));
+    outline.course_visuals = retainedPositions.map(({ visual }) => ({
+      ...visual,
+      reusable_item: reusableItemMap.get(`${visual.create_section}:${visual.reusable_item}`)
+        ?? visual.reusable_item,
+      ...(visual.related_visual === undefined
+        ? {}
+        : { related_visual: positionMap.get(visual.related_visual) }),
+    }));
+  }
+  outline.close.focus = outline.close.focus.flatMap((reference) => {
+    const normalized = normalizeReference(reference, outline.sections.length + 1);
+    return normalized ? [normalized] : [];
+  });
+  if (outline.close.focus.length === 0) {
+    const fallback = [...retainedReusable]
+      .flatMap((key) => {
+        const [section, item] = key.split(":").map(Number);
+        const nextItem = reusableItemMap.get(key);
+        return nextItem === undefined ? [] : [`${section}:${nextItem}`];
+      })
+      .at(-1);
+    if (fallback) {
+      const [section, item] = fallback.split(":").map(Number);
+      outline.close.focus = [{ source: "reusable", section, item }];
+    }
+  }
+  return { outline, drafts, adjustments };
+}
+
+/**
+ * Remove non-executable visuals and interactions without asking the model to
+ * rewrite an otherwise usable section.
+ */
+function normalizeExecutableNumberInteractions(
+  outlineValue: LessonPlanOutline,
+  draftValues: LessonPlanSectionDraft[],
+): ReturnType<typeof sanitizeNonessentialVisuals> {
+  const sanitized = sanitizeNonessentialVisuals(outlineValue, draftValues);
+  const outline = sanitized.outline;
+  const drafts = sanitized.drafts;
+  const visuallyBound = new Set<number>();
+  for (const section of drafts) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if ((action.action !== "create" && action.action !== "revise") || action.kind !== "visual") continue;
+        const visual = action.content as LessonPlanVisualContent;
+        for (const number of visual.numbers ?? []) visuallyBound.add(number);
+      }
+    }
+  }
+  outline.numbers?.forEach((number, index) => {
+    if (!visuallyBound.has(index + 1)) delete number.student_control;
+  });
+  for (const section of drafts) {
+    for (const moment of section.moments) {
+      moment.actions = moment.actions.filter((action) => (
+        action.action !== "animate" || visuallyBound.has(action.number)
+      ));
+      if (moment.actions.length === 0) {
+        // Removing a dead animation can leave a narration-only moment. OLL
+        // requires an executable action per beat, so keep the narration and
+        // give the teacher a neutral expression instead of asking the model to
+        // rewrite an otherwise usable section.
+        moment.actions.push({
+          action: "teacher_expression",
+          expression: "neutral",
+          timing: "after_speech",
+        });
+      }
+    }
+    if (!section.student_activities) continue;
+    section.student_activities = section.student_activities.flatMap((activity) => {
+      if (activity.kind !== "number_target") return [activity];
+      const numberControls = activity.number_controls.filter(({ number }) => visuallyBound.has(number));
+      const expressionNumbers = new Set((activity.expression ?? []).flatMap((token) => (
+        token.kind === "number" ? [token.number] : []
+      )));
+      if (numberControls.length === 0
+        || [...expressionNumbers].some((number) => !visuallyBound.has(number))) return [];
+      return [{ ...activity, number_controls: numberControls }];
+    });
+    if (section.student_activities.length === 0) delete section.student_activities;
+  }
+  return { outline, drafts, adjustments: sanitized.adjustments };
 }
 
 function lowerModelActionReferences(
@@ -789,232 +1348,6 @@ function lowerModelActivityNumbers(
     });
   }
   return lowered;
-}
-
-function reconcileBootstrapFirstSectionPositions(
-  value: unknown,
-  outline: LessonPlanOutline,
-): unknown {
-  const root = structuredClone(value);
-  if (!root || typeof root !== "object" || Array.isArray(root)) return root;
-  const candidate = root as Record<string, unknown>;
-  if (!Array.isArray(candidate.moments)) return root;
-
-  type CreateCandidate = {
-    entry: Record<string, unknown>;
-    moment: number;
-    order: number;
-    index: number;
-  };
-  const collect = (collection: "visual_creates" | "math_creates" | "note_creates"): CreateCandidate[] => (
-    candidate.moments.flatMap((momentValue, momentIndex) => {
-      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) return [];
-      const entries = (momentValue as Record<string, unknown>)[collection];
-      if (!Array.isArray(entries)) return [];
-      return entries.flatMap((entry, entryIndex) => (
-        entry && typeof entry === "object" && !Array.isArray(entry)
-          ? [{
-            entry: entry as Record<string, unknown>,
-            moment: momentIndex + 1,
-            order: Number((entry as Record<string, unknown>).order),
-            index: entryIndex,
-          }]
-          : []
-      ));
-    }).sort((left, right) => (
-      left.moment - right.moment
-      || (Number.isFinite(left.order) ? left.order : Number.MAX_SAFE_INTEGER)
-        - (Number.isFinite(right.order) ? right.order : Number.MAX_SAFE_INTEGER)
-      || left.index - right.index
-    ))
-  );
-
-  const visualCreates = collect("visual_creates");
-  for (const { entry } of visualCreates) {
-    delete entry.course_visual;
-    delete entry.reusable_item;
-  }
-  const unmatchedVisuals = new Set(visualCreates);
-  const expectedVisuals = (outline.course_visuals ?? [])
-    .map((visual, index) => ({ visual, position: index + 1 }))
-    .filter(({ visual }) => visual.create_section === 1);
-  for (const { visual, position } of expectedVisuals) {
-    const match = visualCreates.find((candidateEntry) => {
-      if (!unmatchedVisuals.has(candidateEntry)) return false;
-      const content = candidateEntry.entry.content;
-      return content && typeof content === "object" && !Array.isArray(content)
-        && (content as Record<string, unknown>).capability === visual.capability;
-    });
-    if (!match) continue;
-    match.entry.course_visual = position;
-    unmatchedVisuals.delete(match);
-  }
-  if (unmatchedVisuals.size > 0 && expectedVisuals.length === 0) {
-    throw new LessonPlanError(
-      "LESSON_PLAN_COURSE_VISUAL",
-      "$lessonPlanModelSection.moments",
-      "the bootstrap section created a visual that the outline did not declare",
-    );
-  }
-
-  const createsByKind = {
-    math: collect("math_creates"),
-    note: collect("note_creates"),
-  };
-  for (const entries of Object.values(createsByKind)) {
-    for (const { entry } of entries) delete entry.reusable_item;
-  }
-  const usedBoardCreates = new Set<CreateCandidate>();
-  const reusableItems = outline.sections[0]?.reusable_items ?? [];
-  reusableItems.forEach((item, index) => {
-    if (item.kind !== "board_item" || (item.board_kind !== "math" && item.board_kind !== "note")) return;
-    const match = createsByKind[item.board_kind].find((candidateEntry) => !usedBoardCreates.has(candidateEntry));
-    if (!match) return;
-    match.entry.reusable_item = index + 1;
-    usedBoardCreates.add(match);
-  });
-
-  return root;
-}
-
-/**
- * The combined bootstrap response contains both the outline's reusable-card
- * declarations and the first section that is supposed to create them. Those
- * two model-written lists can disagree. At this point the actual first-section
- * creates are authoritative: an uncreated declaration cannot be referenced by
- * the runtime, so remove it and deterministically renumber the declarations
- * that really exist. Course visuals are never removed here.
- *
- * If a text-only first section created math or a note without declaring any
- * reusable item, promote its last created card so a progressive prefix still
- * has a concrete focus target. Later sections receive this reconciled outline,
- * so they can only reuse objects that the first section actually created.
- */
-function reconcileBootstrapReusableDeclarations(
-  value: unknown,
-  outline: LessonPlanOutline,
-): unknown {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
-  const candidate = value as Record<string, unknown>;
-  if (!Array.isArray(candidate.moments)) return value;
-  const section = outline.sections[0];
-  if (!section) return value;
-
-  const oldItems = [...(section.reusable_items ?? [])];
-  const creates: Array<{
-    kind: "math" | "note";
-    entry: Record<string, unknown>;
-    oldPosition?: number;
-    source: "moment" | "root";
-  }> = [];
-  for (const momentValue of candidate.moments) {
-    if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
-    const moment = momentValue as Record<string, unknown>;
-    for (const [collection, kind] of [["math_creates", "math"], ["note_creates", "note"]] as const) {
-      const entries = moment[collection];
-      if (!Array.isArray(entries)) continue;
-      for (const entry of entries) {
-        if (entry && typeof entry === "object" && !Array.isArray(entry)) {
-          const record = entry as Record<string, unknown>;
-          const position = Number(record.reusable_item);
-          creates.push({
-            kind,
-            entry: record,
-            ...(Number.isInteger(position) && position > 0 ? { oldPosition: position } : {}),
-            source: "moment",
-          });
-        }
-      }
-    }
-  }
-  const rootCreates = candidate.reusable_board_creates;
-  if (rootCreates && typeof rootCreates === "object" && !Array.isArray(rootCreates)) {
-    for (const [key, entry] of Object.entries(rootCreates as Record<string, unknown>)) {
-      const match = /^item_(\d+)$/u.exec(key);
-      const oldPosition = Number(match?.[1]);
-      const declaration = oldItems[oldPosition - 1];
-      if (!Number.isInteger(oldPosition)
-        || !entry
-        || typeof entry !== "object"
-        || Array.isArray(entry)
-        || declaration?.kind !== "board_item"
-        || (declaration.board_kind !== "math" && declaration.board_kind !== "note")) continue;
-      creates.push({
-        kind: declaration.board_kind,
-        entry: entry as Record<string, unknown>,
-        oldPosition,
-        source: "root",
-      });
-    }
-  }
-
-  const filledPositions = new Set<number>(
-    creates.flatMap(({ oldPosition }) => (
-      oldPosition !== undefined && Number.isInteger(oldPosition) && oldPosition > 0
-        ? [oldPosition]
-        : []
-    )),
-  );
-  const hasCreatedOrVisual = oldItems.some((item, index) => (
-    item.kind === "board_item"
-      && (item.board_kind === "visual" || filledPositions.has(index + 1))
-  ));
-  if (!hasCreatedOrVisual && creates.length > 0) {
-    const promoted = [...creates].reverse().find(({ source }) => source === "moment");
-    if (promoted) {
-      oldItems.push({ kind: "board_item", board_kind: promoted.kind });
-      promoted.oldPosition = oldItems.length;
-      promoted.entry.reusable_item = oldItems.length;
-      filledPositions.add(oldItems.length);
-    }
-  }
-
-  const positionMap = new Map<number, number>();
-  const reconciledItems = oldItems.filter((item, index) => {
-    const keep = item.kind === "board_item"
-      && (item.board_kind === "visual" || filledPositions.has(index + 1));
-    if (keep) positionMap.set(index + 1, positionMap.size + 1);
-    return keep;
-  });
-  section.reusable_items = reconciledItems;
-
-  for (const { entry, oldPosition, source } of creates) {
-    const newPosition = oldPosition === undefined ? undefined : positionMap.get(oldPosition);
-    if (source !== "moment") continue;
-    if (newPosition === undefined) delete entry.reusable_item;
-    else entry.reusable_item = newPosition;
-  }
-  if (rootCreates && typeof rootCreates === "object" && !Array.isArray(rootCreates)) {
-    candidate.reusable_board_creates = Object.fromEntries(
-      creates.flatMap(({ entry, oldPosition, source }) => {
-        if (source !== "root") return [];
-        const newPosition = oldPosition === undefined ? undefined : positionMap.get(oldPosition);
-        return newPosition === undefined ? [] : [[`item_${newPosition}`, entry]];
-      }),
-    );
-  }
-  for (const visual of outline.course_visuals ?? []) {
-    if (visual.create_section !== 1) continue;
-    const newPosition = positionMap.get(visual.reusable_item);
-    if (newPosition === undefined) {
-      throw new LessonPlanError(
-        "LESSON_PLAN_COURSE_VISUAL",
-        "$lessonPlanOutline.course_visuals",
-        "a first-section course visual lost its reusable position during bootstrap reconciliation",
-      );
-    }
-    visual.reusable_item = newPosition;
-  }
-
-  outline.close.focus = outline.close.focus.flatMap((reference) => {
-    if (reference.source !== "reusable" || reference.section !== 1) return [reference];
-    const newPosition = positionMap.get(reference.item);
-    return newPosition === undefined ? [] : [{ ...reference, item: newPosition }];
-  });
-  if (outline.close.focus.length === 0 && reconciledItems.length > 0) {
-    outline.close.focus = [{ source: "reusable", section: 1, item: reconciledItems.length }];
-  }
-  return value;
 }
 
 function lowerModelSectionDraft(
@@ -1597,8 +1930,11 @@ function compilePrefix(
   const sectionCount = drafts.length;
   let focus: { source: "reusable"; section: number; item: number } | undefined;
   for (let section = sectionCount; section >= 1 && !focus; section -= 1) {
-    const items = outline.sections[section - 1]?.reusable_items ?? [];
-    if (items.length > 0) focus = { source: "reusable", section, item: items.length };
+    const createdItems = drafts[section - 1]?.moments.flatMap((moment) => moment.actions)
+      .flatMap((action) => action.action === "create" && Number.isInteger(action.reusable_item)
+        ? [Number(action.reusable_item)] : []) ?? [];
+    const item = createdItems.length > 0 ? Math.max(...createdItems) : undefined;
+    if (item !== undefined) focus = { source: "reusable", section, item };
   }
   if (!focus) {
     throw new LessonPlanError(
@@ -1620,36 +1956,8 @@ function compilePrefix(
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
     close: { summary: "课程内容仍在继续生成。", focus: [focus] },
   };
-  const prefixPlan = assembleLessonPlan(prefixOutline, drafts, options);
-
-  // The outline describes controls for the complete course, but a playable
-  // prefix may precede the section that creates the visual driven by one of
-  // those controls. Keep every numeric state (and therefore its stable
-  // number_XX identity), while withholding only the student-facing slider
-  // until the prefix contains an action that uses it. The final full-course
-  // compilation is deliberately unchanged and still rejects a control that
-  // never affects a visual.
-  const activeNumbers = new Set<number>();
-  for (const section of prefixPlan.sections) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
-        if (action.action === "create" || action.action === "revise") {
-          if (action.kind === "visual") {
-            for (const number of action.content.numbers ?? []) activeNumbers.add(number);
-          }
-        } else if (action.action === "animate") {
-          activeNumbers.add(action.number);
-        }
-      }
-    }
-    for (const activity of section.student_activities ?? []) {
-      if (activity.kind !== "number_target") continue;
-      for (const control of activity.number_controls) activeNumbers.add(control.number);
-    }
-  }
-  prefixPlan.numbers?.forEach((number, index) => {
-    if (!activeNumbers.has(index + 1)) delete number.student_control;
-  });
+  const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
+  const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, options);
 }
 
@@ -1662,25 +1970,20 @@ export async function generateLessonPlanWithModel(
   const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
   const context = inputContext(input);
   const fixedRequestParts = requestParts(input);
-  const bootstrapFirstSection = options.bootstrap_first_section === true;
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
-  if (admissionInput && !bootstrapFirstSection) {
-    throw new Error("lesson admission requires bootstrap_first_section");
-  }
   let modelCalls = 0;
   let outline: LessonPlanOutline | undefined;
-  let bootstrappedFirstSection: LessonPlanSectionDraft | undefined;
   let outlineError: unknown;
   const sectionErrors = new Map<number, unknown>();
   const sectionAttempts = new Map<number, number>();
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await model({
-      label: bootstrapFirstSection ? "lesson-plan-bootstrap" : "lesson-plan-outline",
-      part: bootstrapFirstSection ? "bootstrap" : "outline",
+      label: "lesson-plan-outline",
+      part: "outline",
       attempt,
       turn_id: input.turn_id,
-      system_prompt: bootstrapFirstSection
-        ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT
+      system_prompt: admissionInput
+        ? ADMISSION_OUTLINE_SYSTEM_PROMPT
         : OUTLINE_SYSTEM_PROMPT,
       prompt: JSON.stringify({
         course: context,
@@ -1690,29 +1993,22 @@ export async function generateLessonPlanWithModel(
           number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
           guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
         })),
-        ...(bootstrapFirstSection ? {
-          first_section_to_write: 1,
-          first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions",
-        } : {}),
         ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
       }),
-      response_schema: bootstrapFirstSection
-        ? admissionInput
-          ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length)
-          : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length)
+      response_schema: admissionInput
+        ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
         : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
-      max_output_tokens: bootstrapFirstSection ? 16_384 : 8_192,
     });
     modelCalls += 1;
     try {
-      const parsed = pruneModelNulls(parseModelJson(raw, bootstrapFirstSection
-        ? "lessonPlanBootstrap"
-        : "lessonPlanOutline"));
-      if (bootstrapFirstSection && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
+      let parsed = parseModelJson(raw, admissionInput
+        ? "lessonPlanEnvelope"
+        : "lessonPlanOutline");
+      if (admissionInput && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
         throw new LessonPlanError(
           "LESSON_PLAN_MODEL_JSON",
-          "$lessonPlanBootstrap",
-          "bootstrap response must be an object",
+          "$lessonPlanEnvelope",
+          "lesson response envelope must be an object",
         );
       }
       if (admissionInput) {
@@ -1721,18 +2017,25 @@ export async function generateLessonPlanWithModel(
         if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
           throw new LessonPlanError(
             "LESSON_PLAN_MODEL_JSON",
-            "$lessonPlanBootstrap.disposition",
-            "lesson bootstrap must choose generate_lesson, clarify, or ignore",
+            "$lessonPlanAdmission.disposition",
+            "lesson admission must choose generate_lesson, clarify, or ignore",
           );
         }
         if (disposition !== "generate_lesson") {
+          if (!Object.hasOwn(envelope, "course") || envelope.course !== null) {
+            throw new LessonPlanError(
+              "LESSON_PLAN_MODEL_JSON",
+              "$lessonPlanAdmission.course",
+              "clarify and ignore require course to be null",
+            );
+          }
           const learnerResponse = typeof envelope.learner_response === "string"
             ? envelope.learner_response.trim()
             : "";
           if (disposition === "clarify" && !learnerResponse) {
             throw new LessonPlanError(
               "LESSON_PLAN_MODEL_JSON",
-              "$lessonPlanBootstrap.learner_response",
+              "$lessonPlanAdmission.learner_response",
               "clarify requires a learner-facing question",
             );
           }
@@ -1742,47 +2045,25 @@ export async function generateLessonPlanWithModel(
             model_calls: modelCalls,
           };
         }
+        if (!envelope.course || typeof envelope.course !== "object" || Array.isArray(envelope.course)) {
+          throw new LessonPlanError(
+            "LESSON_PLAN_MODEL_JSON",
+            "$lessonPlanAdmission.course",
+            "generate_lesson requires a complete course outline",
+          );
+        }
+        parsed = envelope.course;
       }
-      const rawOutline = bootstrapFirstSection
-        ? (parsed as Record<string, unknown>).outline
-        : parsed;
+      parsed = pruneModelNulls(parsed);
       outline = validateLessonPlanOutline(
         lowerModelOutline(
           coerceLessonPlanOutlineModelNumbers(
-            rawOutline,
+            parsed,
             fixedRequestParts.length,
           ),
         ),
         fixedRequestParts.length,
       );
-      if (bootstrapFirstSection) {
-        try {
-          const positionedFirstSection = reconcileBootstrapFirstSectionPositions(
-            coerceLessonPlanBootstrapSectionModelNumbers(
-              (parsed as Record<string, unknown>).first_section,
-            ),
-            outline,
-          );
-          reconcileBootstrapReusableDeclarations(positionedFirstSection, outline);
-          outline = validateLessonPlanOutline(outline, fixedRequestParts.length);
-          bootstrappedFirstSection = lowerModelSectionDraft(
-            positionedFirstSection,
-            outline,
-            1,
-          );
-        } catch (error) {
-          // The combined outline + first-section response is a latency
-          // optimization. An invalid speculative first section must not spend
-          // one of the formal section-generation attempts.
-          sectionErrors.set(1, error);
-          await options.on_rejected_part?.({
-            label: "lesson-plan-section",
-            section: 1,
-            attempt: 1,
-            error: rejectionDetails(error),
-          });
-        }
-      }
       break;
     } catch (error) {
       outlineError = error;
@@ -1796,11 +2077,17 @@ export async function generateLessonPlanWithModel(
   if (!outline) throw outlineError;
   const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
   if (unsupported) {
-    throw new LessonPlanError(
-      "LESSON_PLAN_UNSUPPORTED_REQUIREMENT",
-      `$lessonPlanOutline.request_coverage[${outline.request_coverage!.indexOf(unsupported)}]`,
-      unsupported.reason ?? `request part ${unsupported.request_part} is unsupported`,
-    );
+    const reason = unsupported.reason?.trim();
+    const learnerResponse = reason
+      && reason.length <= 480
+      && !/\$lesson|LESSON_PLAN_|already exhausted|do not call|internal attempts/iu.test(reason)
+      ? `目前还不能完整生成这节课：${reason}`
+      : "目前还不能完整生成这节课，因为其中包含尚未支持的画面或互动。";
+    return {
+      disposition: "unsupported",
+      learner_response: learnerResponse,
+      model_calls: modelCalls,
+    };
   }
 
   const generateSection = async (section: number): Promise<LessonPlanSectionDraft> => {
@@ -1848,7 +2135,6 @@ export async function generateLessonPlanWithModel(
             : {}),
         }),
         response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section),
-        max_output_tokens: 12_288,
       });
       modelCalls += 1;
     } catch (error) {
@@ -1911,7 +2197,7 @@ export async function generateLessonPlanWithModel(
 
   // The first section remains the latency-critical path and is published
   // before any later-section work can delay it.
-  await acceptSection(1, bootstrappedFirstSection);
+  await acceptSection(1);
 
   if (outline.sections.length > 1 && concurrency === 1) {
     for (let section = 2; section <= outline.sections.length; section += 1) {
@@ -1980,11 +2266,18 @@ export async function generateLessonPlanWithModel(
     await Promise.allSettled(workers);
   }
   let compiled: CompiledLessonPlan | undefined;
+  let compiledOutline: LessonPlanOutline | undefined;
+  let compiledDrafts: LessonPlanSectionDraft[] | undefined;
+  let programAdjustments: ReturnType<typeof sanitizeNonessentialVisuals>["adjustments"] = [];
   let finalError: unknown;
   for (let attempt = 1; attempt <= outline.sections.length * maxAttempts; attempt += 1) {
     try {
-      const plan = assembleLessonPlan(outline, drafts, options.compile);
+      const normalized = normalizeExecutableNumberInteractions(outline, drafts);
+      const plan = assembleLessonPlan(normalized.outline, normalized.drafts, options.compile);
       compiled = compileAndValidateLessonPlan(plan, options.compile);
+      compiledOutline = normalized.outline;
+      compiledDrafts = normalized.drafts;
+      programAdjustments = normalized.adjustments;
       break;
     } catch (error) {
       finalError = error;
@@ -2001,10 +2294,13 @@ export async function generateLessonPlanWithModel(
     }
   }
   if (!compiled) throw finalError;
+  for (const adjustment of programAdjustments) {
+    await options.on_program_adjustment?.(adjustment);
+  }
   return {
     ...compiled,
-    outline,
-    drafts: drafts.map((draft) => structuredClone(draft)),
+    outline: compiledOutline ?? outline,
+    drafts: (compiledDrafts ?? drafts).map((draft) => structuredClone(draft)),
     model_calls: modelCalls,
   };
 }

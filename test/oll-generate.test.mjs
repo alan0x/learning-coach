@@ -208,6 +208,44 @@ test("structured Vertex calls retry a connection failure before any HTTP respons
   }
 });
 
+test("a successful HTTP response without JSON is classified for lesson fallback", async () => {
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request before returning an unusable model candidate.
+    }
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ candidates: [{ finishReason: "RECITATION" }] }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    await assert.rejects(
+      () => callStructuredModel({
+        endpoint: `http://127.0.0.1:${address.port}/generate`,
+        model: "test-model",
+        accessToken: "test-token",
+        timeoutMs: 5_000,
+        maxTokens: 32,
+        requestAttempts: 1,
+      }, {
+        label: "lesson-plan-outline",
+        turnId: "empty-candidate-test",
+        systemPrompt: "Return JSON.",
+        prompt: "Return a lesson.",
+        responseSchema: { type: "object", properties: {} },
+        maxTokens: 32,
+        lessonPlanPart: "outline",
+        lessonPlanAttempt: 1,
+      }),
+      (error) => error?.code === "VERTEX_RESPONSE_EMPTY"
+        && /finishReason=RECITATION/u.test(error.message),
+    );
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
 test("Lesson Plan bundle does not duplicate the provider client", async () => {
   const bundle = await readFile(join(root, "lesson-plan.js"), "utf8");
   assert.doesNotMatch(bundle, /async function callStructuredModel\(/u);
@@ -241,7 +279,7 @@ test("the source and executable do not retain the unreachable direct-OLL lesson 
   assert.match(source, /generateLessonPlanWithModel/u);
 });
 
-test("the complete-lesson command bootstraps the outline and first section in one model call", async () => {
+test("the complete-lesson command validates the outline before generating the first section", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-lesson-plan-command-"));
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const outline = {
@@ -279,6 +317,7 @@ test("the complete-lesson command bootstraps the outline and first section in on
     reusable_board_creates: {
       item_1: {
         moment: 1,
+        timing: "during_speech",
         role: "derivation",
         content: { latex: "(-1)\\\\times(-1)=1" },
         placement: { relation: "new_region" },
@@ -298,14 +337,11 @@ test("the complete-lesson command bootstraps the outline and first section in on
     for await (const chunk of request) body += chunk;
     const payload = JSON.parse(body);
     const schema = payload.generationConfig.responseJsonSchema;
-    const content = schema.properties?.outline && schema.properties?.first_section
+    const content = schema.properties?.course
       ? {
-          ...(schema.properties?.disposition ? {
-            disposition: "generate_lesson",
-            learner_response: "",
-          } : {}),
-          outline,
-          first_section: section,
+          disposition: "generate_lesson",
+          learner_response: "",
+          course: outline,
         }
       : schema.properties?.course_visuals ? outline : section;
     modelCalls += 1;
@@ -337,7 +373,7 @@ test("the complete-lesson command bootstraps the outline and first section in on
     assert.equal(completed.authoring_strategy, "lesson_plan");
     assert.equal(completed.lesson_plan_sections, 1);
     assert.equal(completed.published_parts, 1);
-    assert.equal(modelCalls, 1);
+    assert.equal(modelCalls, 2);
     const lesson = JSON.parse(await readFile(completed.files_to_send[0], "utf8"));
     assert.equal(lesson.dsl, "octos.lesson");
     assert.equal(lesson.steps.length, 1);
@@ -365,6 +401,7 @@ test("an incomplete composer request returns clarification without writing a les
     response.end(vertexPayload({
       disposition: "clarify",
       learner_response: "你想了解这本书的哪一方面？",
+      course: null,
     }));
   });
   try {
@@ -1607,7 +1644,7 @@ test("complete lessons reject explicit board follow-up input instead of falling 
       retryable: false,
       do_not_retry_same_turn: true,
     });
-    assert.match(protocol.output, /Do not call oll_generate_lesson again in this turn/u);
+    assert.equal(protocol.output, "这次课程没有生成成功，请稍后重试。");
     assert.equal(protocol.error_code, "LESSON_REQUEST_SOURCE_UNSUPPORTED");
   } finally {
     await rm(workDirectory, { recursive: true, force: true });

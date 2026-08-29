@@ -66,6 +66,7 @@ function wait(milliseconds) {
 for (const item of selected) {
   for (let run = 1; run <= repeat; run += 1) {
   const prefixes = [];
+  const rejectedParts = [];
   const startedAt = Date.now();
   let generated;
   try {
@@ -76,11 +77,14 @@ for (const item of selected) {
       language: "zh-CN",
     }, {
       max_concurrency: concurrency,
-      on_rejected_part: (event) => process.stderr.write(`${JSON.stringify({
-        stage: "lesson-plan-local-rejection",
-        id: item.id,
-        ...event,
-      })}\n`),
+      on_rejected_part: (event) => {
+        rejectedParts.push(event);
+        process.stderr.write(`${JSON.stringify({
+          stage: "lesson-plan-local-rejection",
+          id: item.id,
+          ...event,
+        })}\n`);
+      },
       on_playable_prefix: ({ completed_sections }) => prefixes.push({
         completed_sections,
         elapsed_ms: Date.now() - startedAt,
@@ -102,8 +106,47 @@ for (const item of selected) {
     const actions = generated.lesson.steps.flatMap((step) => step.beats.flatMap((beat) => beat.actions));
     assert.ok(actions.some((action) => action.do === "write"), "course must contain playable board content");
     const writeKinds = new Set(actions.filter((action) => action.do === "write").map((action) => action.kind));
+    const plots = actions
+      .filter((action) => action.do === "write" && action.kind === "plot")
+      .map((action) => action.content);
     for (const kind of item.expected_kinds) assert.ok(writeKinds.has(kind), `missing write kind '${kind}'`);
     if (item.requires_animation) assert.ok(actions.some((action) => action.do === "animate"), "missing animation");
+    if (item.minimum_numeric_controls !== undefined) {
+      const numericControls = generated.lesson.lesson.variables?.filter((variable) => variable.control) ?? [];
+      assert.ok(
+        numericControls.length >= item.minimum_numeric_controls,
+        `expected at least ${item.minimum_numeric_controls} numeric controls`,
+      );
+    }
+    if (item.maximum_numeric_controls !== undefined) {
+      const numericControls = generated.lesson.lesson.variables?.filter((variable) => variable.control) ?? [];
+      assert.ok(
+        numericControls.length <= item.maximum_numeric_controls,
+        `expected at most ${item.maximum_numeric_controls} numeric controls`,
+      );
+    }
+    if (item.required_curve_number_count !== undefined) {
+      const parameterizedCurves = plots.flatMap((plot) => plot.curves ?? []).filter((curve) => {
+        const referencedNumbers = new Set(curve.expression.match(/number_\d+/gu) ?? []);
+        return referencedNumbers.size >= item.required_curve_number_count;
+      });
+      assert.ok(
+        parameterizedCurves.length > 0,
+        `expected one curve controlled by at least ${item.required_curve_number_count} lesson numbers`,
+      );
+    }
+    if (item.minimum_curves_in_one_plot !== undefined) {
+      assert.ok(
+        plots.some((plot) => (plot.curves?.length ?? 0) >= item.minimum_curves_in_one_plot),
+        `expected at least ${item.minimum_curves_in_one_plot} curves in one plot`,
+      );
+    }
+    if (item.requires_moving_point) {
+      assert.ok(
+        plots.some((plot) => (plot.points?.length ?? 0) > 0 && (plot.bindings?.length ?? 0) >= 2),
+        "expected a moving point whose x and y coordinates are both bound to the lesson number",
+      );
+    }
     assert.deepEqual(prefixes.map((entry) => entry.completed_sections), generated.lesson.steps.map((_step, index) => index + 1));
 
     const result = {
@@ -115,6 +158,10 @@ for (const item of selected) {
       sections: generated.lesson.steps.length,
       first_playable_ms: prefixes[0]?.elapsed_ms,
       write_kinds: [...writeKinds].sort(),
+      numeric_controls: generated.lesson.lesson.variables?.filter((variable) => variable.control).length ?? 0,
+      maximum_curves_in_one_plot: Math.max(0, ...plots.map((plot) => plot.curves?.length ?? 0)),
+      rejected_part_count: rejectedParts.length,
+      rejected_parts: rejectedParts,
       prefixes,
     };
     results.push(result);

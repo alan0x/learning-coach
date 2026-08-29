@@ -7170,6 +7170,12 @@ var require__ = __commonJS({
 
 // src/lesson-plan.ts
 var LESSON_PLAN_VERSION = "0.1";
+var PROCESS_DIAGRAM_CONTRACT = {
+  min_steps: 2,
+  max_steps: 8,
+  max_step_characters: 80,
+  max_title_characters: 120
+};
 var LESSON_PLAN_CAPABILITY_REGISTRY = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
@@ -7177,6 +7183,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_min", "x_max", "y_min", "y_max"],
     model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels"],
+    required_model_schema_parameters: ["formulas"],
     semantic_parameters: ["expression", "expressions", "expression_tokens"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
@@ -7189,6 +7196,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "angle" }],
     parameter_names: ["title", "projection"],
     model_parameter_names: ["title", "projection"],
+    required_model_schema_parameters: ["projection"],
     semantic_parameters: ["projection"],
     output_kinds: ["geometry", "plot"],
     student_controls: ["slider", "geometry_point"],
@@ -7201,6 +7209,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "angle" }, { kind: "positive" }],
     parameter_names: ["title", "radius", "angle"],
     model_parameter_names: ["title", "radius", "angle"],
+    required_model_schema_parameters: [],
     semantic_parameters: ["radius", "angle"],
     output_kinds: ["geometry"],
     student_controls: ["slider", "geometry_point"],
@@ -7213,6 +7222,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "angle" }],
     parameter_names: ["title"],
     model_parameter_names: ["title"],
+    required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["geometry", "plot"],
     student_controls: ["slider"],
@@ -7225,6 +7235,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "bounded", min: -1, max: 1 }],
     parameter_names: ["title"],
     model_parameter_names: ["title"],
+    required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
@@ -7237,11 +7248,25 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "surface_section" }],
     parameter_names: ["title", "expression", "samples", "section_axis", "x_min", "x_max", "y_min", "y_max"],
     model_parameter_names: ["title", "expression", "section_axis"],
+    required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["function_surface_3d", "section_plane"],
     model_guidance: "\u53EF\u65CB\u8F6C\u4E09\u7EF4\u51FD\u6570\u66F2\u9762\u3001\u53EF\u53D8\u622A\u9762\u548C\u771F\u5B9E\u4EA4\u7EBF"
+  },
+  implicit_surface_with_section: {
+    parts: ["whole", "surface", "section", "intersection", "primary_control"],
+    number_inputs: ["section_position"],
+    number_input_policies: [{ kind: "surface_section" }],
+    parameter_names: ["title", "expression", "level", "section_axis"],
+    model_parameter_names: ["title", "expression", "level", "section_axis"],
+    required_model_schema_parameters: ["expression", "section_axis"],
+    semantic_parameters: ["expression", "level", "section_axis"],
+    output_kinds: ["scene3d"],
+    student_controls: ["slider", "scene3d_view"],
+    required_features: ["implicit_surface_3d", "section_plane"],
+    model_guidance: "\u4E09\u53D8\u91CF\u9690\u5F0F\u66F2\u9762 F(x,y,z)=c\uFF0C\u4EE5\u53CA\u5782\u76F4\u4E8E x\u3001y \u6216 z \u8F74\u7684\u53EF\u53D8\u622A\u9762\u548C\u771F\u5B9E\u4EA4\u7EBF"
   },
   coordinate_circle: {
     parts: ["whole", "circle", "center", "radius", "primary_control"],
@@ -7249,6 +7274,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "positive" }],
     parameter_names: ["title", "radius", "center_x", "center_y"],
     model_parameter_names: ["title", "radius", "center_x", "center_y"],
+    required_model_schema_parameters: [],
     semantic_parameters: ["radius", "center_x", "center_y"],
     output_kinds: ["geometry"],
     student_controls: ["slider"],
@@ -7261,6 +7287,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [{ kind: "normalized_progress" }],
     parameter_names: ["title", "construction", "leg_a", "leg_b"],
     model_parameter_names: ["title", "construction", "leg_a", "leg_b"],
+    required_model_schema_parameters: ["construction"],
     parameter_options: {
       construction: ["right_triangle_square", "square_area_identity", "triangle_to_rectangle"]
     },
@@ -7276,6 +7303,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     number_input_policies: [],
     parameter_names: ["title", "steps"],
     model_parameter_names: ["title", "steps"],
+    required_model_schema_parameters: ["steps"],
     semantic_parameters: ["steps"],
     output_kinds: ["diagram"],
     student_controls: [],
@@ -10839,10 +10867,133 @@ function canonicalizeState(state) {
   };
 }
 
+// src/scene3d-surfaces.ts
+var DOMAIN_CANDIDATE_HALF_SPANS = [2, 5, 10, 20, 50, 100];
+var DOMAIN_REFINEMENT_STEPS = 12;
+var DOMAIN_MARGIN = 1.1;
+function expressionUsesVariable(expression, variable) {
+  return new RegExp(`(^|[^A-Za-z0-9_])${variable}([^A-Za-z0-9_]|$)`, "u").test(expression);
+}
+function sampleImplicitSurfaceStatus(evaluate2, variables, level, halfSpan, dependentVariables) {
+  const resolution = variables.length === 2 ? 18 : 10;
+  let minimum = Number.POSITIVE_INFINITY;
+  let maximum = Number.NEGATIVE_INFINITY;
+  const boundaryRanges = /* @__PURE__ */ new Map();
+  for (const variable of dependentVariables) {
+    boundaryRanges.set(`${variable}:min`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
+    boundaryRanges.set(`${variable}:max`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
+  }
+  const observe = (value, coordinates) => {
+    if (!Number.isFinite(value) || Math.abs(value) > 1e12) return;
+    minimum = Math.min(minimum, value);
+    maximum = Math.max(maximum, value);
+    for (const variable of dependentVariables) {
+      const coordinate = coordinates[variable];
+      const side = Math.abs((coordinate ?? 0) + halfSpan) < 1e-9 ? "min" : Math.abs((coordinate ?? 0) - halfSpan) < 1e-9 ? "max" : void 0;
+      if (!side) continue;
+      const range = boundaryRanges.get(`${variable}:${side}`);
+      range.minimum = Math.min(range.minimum, value);
+      range.maximum = Math.max(range.maximum, value);
+    }
+  };
+  for (let xIndex = 0; xIndex <= resolution; xIndex += 1) {
+    const x = -halfSpan + 2 * halfSpan * xIndex / resolution;
+    for (let yIndex = 0; yIndex <= resolution; yIndex += 1) {
+      const y = -halfSpan + 2 * halfSpan * yIndex / resolution;
+      const zIterations = variables.length === 3 ? resolution : 0;
+      for (let zIndex = 0; zIndex <= zIterations; zIndex += 1) {
+        const z = variables.length === 3 ? -halfSpan + 2 * halfSpan * zIndex / resolution : 0;
+        const coordinates = variables.length === 3 ? { x, y, z } : { x, y };
+        try {
+          observe(evaluate2(coordinates), coordinates);
+        } catch {
+        }
+      }
+    }
+  }
+  if (!(minimum <= level && maximum >= level)) return "absent";
+  const crossesBoundary = [...boundaryRanges.values()].some((range) => range.minimum <= level && range.maximum >= level);
+  return crossesBoundary ? "clipped" : "contained";
+}
+function implicitSurfaceDomain(expression, variables, level) {
+  if (!Number.isFinite(level)) throw new Error("Implicit surface level must be finite");
+  const evaluate2 = compileMathExpression(expression, [...variables]);
+  const dependentVariables = new Set(variables.filter((variable) => expressionUsesVariable(expression, variable)));
+  let firstVisibleHalfSpan;
+  let previousHalfSpan = 0;
+  for (const candidateHalfSpan of DOMAIN_CANDIDATE_HALF_SPANS) {
+    const status = sampleImplicitSurfaceStatus(
+      evaluate2,
+      variables,
+      level,
+      candidateHalfSpan,
+      dependentVariables
+    );
+    if (status !== "absent" && firstVisibleHalfSpan === void 0) {
+      firstVisibleHalfSpan = candidateHalfSpan;
+    }
+    if (status === "contained") {
+      let lower = previousHalfSpan;
+      let upper = candidateHalfSpan;
+      for (let step = 0; step < DOMAIN_REFINEMENT_STEPS; step += 1) {
+        const middle = (lower + upper) / 2;
+        const middleStatus = sampleImplicitSurfaceStatus(
+          evaluate2,
+          variables,
+          level,
+          middle,
+          dependentVariables
+        );
+        if (middleStatus === "contained") upper = middle;
+        else lower = middle;
+      }
+      const dependentHalfSpan = Math.max(2, upper * DOMAIN_MARGIN);
+      const rangeFor = (variable) => {
+        const halfSpan = dependentVariables.has(variable) ? dependentHalfSpan : Math.max(2, dependentHalfSpan);
+        return { min: -halfSpan, max: halfSpan };
+      };
+      return {
+        x: rangeFor("x"),
+        y: rangeFor("y"),
+        ...variables.length === 3 ? { z: rangeFor("z") } : {}
+      };
+    }
+    previousHalfSpan = candidateHalfSpan;
+  }
+  if (firstVisibleHalfSpan !== void 0) {
+    const range = { min: -firstVisibleHalfSpan, max: firstVisibleHalfSpan };
+    return { x: range, y: range, ...variables.length === 3 ? { z: range } : {} };
+  }
+  throw new Error("Implicit surface level is outside the program-selected viewport");
+}
+function buildImplicitSurfaceObject(input) {
+  const expression = input.expression.trim();
+  if (!expression) throw new Error("Implicit surface expression must not be empty");
+  const domain = implicitSurfaceDomain(expression, ["x", "y", "z"], input.level);
+  if (!domain.z) throw new Error("Implicit surface requires a three-dimensional viewport");
+  const samples = input.samples ?? 12;
+  if (!Number.isInteger(samples) || samples < 4 || samples > 24) {
+    throw new Error("Implicit surface samples must be an integer from 4 to 24");
+  }
+  return {
+    as: input.as,
+    kind: "implicit_surface",
+    expression,
+    level: input.level,
+    x_range: domain.x,
+    y_range: domain.y,
+    z_range: domain.z,
+    samples,
+    color: input.color ?? "teal",
+    ...input.label ? { label: input.label } : {}
+  };
+}
+
 // src/lesson-plan-compiler.ts
 var LESSON_PLAN_SCENE_INITIAL_CAMERAS = {
   cube_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
-  function_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 }
+  function_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
+  implicit_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 }
 };
 function normalizedVisualIdentity(content, includeNumbers = true) {
   const sourceParameters = content.parameters ?? {};
@@ -11524,6 +11675,71 @@ function compileFunctionSurface(base, content, role, placement, plan, path) {
     ])
   };
 }
+function compileImplicitSurface(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "expression", "level", "section_axis"], path);
+  if (input.expression === void 0) {
+    fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "an implicit surface requires an expression");
+  }
+  if (input.level === void 0) {
+    fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.level`, "an implicit surface requires a level");
+  }
+  const expression = safeFunctionExpression(input.expression, "", ["x", "y", "z"], `${path}.expression`);
+  const level = optionalNumber(input.level, 0, `${path}.level`);
+  const axis = input.section_axis ?? "z";
+  if (axis !== "x" && axis !== "y" && axis !== "z") {
+    fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
+  }
+  let surface;
+  try {
+    surface = buildImplicitSurfaceObject({
+      as: "surface",
+      expression,
+      level,
+      samples: 12,
+      color: "teal",
+      label: `${expression}=${level}`
+    });
+  } catch (error) {
+    fail3(
+      "LESSON_PLAN_CAPABILITY_PARAMETER",
+      `${path}.expression`,
+      error instanceof Error ? error.message : "implicit surface cannot be rendered"
+    );
+  }
+  const number = content.numbers?.[0];
+  const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
+  const variable = number ? variableAlias(number) : void 0;
+  const sceneContent = {
+    title: optionalText(input.title, "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762", `${path}.title`),
+    fallback: `\u9690\u5F0F\u66F2\u9762 ${expression}=${level} \u4E0E\u53EF\u53D8\u8F74\u5411\u622A\u9762\u3002`,
+    axes: true,
+    camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.implicit_surface_with_section },
+    objects: [surface],
+    sections: [{
+      as: "section",
+      axis,
+      value: sectionValue,
+      targets: ["surface"],
+      display: "plane_and_intersection",
+      label: "\u622A\u9762",
+      color: "orange"
+    }],
+    ...variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}
+  };
+  return {
+    actions: [{ do: "write", as: base, kind: "scene3d", role, content: sceneContent, place: placement }],
+    whole: base,
+    primaryScene: base,
+    parts: new Map([
+      ["whole", base],
+      ["surface", `${base}#surface`],
+      ["section", `${base}#section`],
+      ["intersection", `${base}#section`],
+      ...variable ? [["primary_control", `${base}#section`]] : []
+    ])
+  };
+}
 function compileCoordinateCircle(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "center_x", "center_y", "radius"], path);
@@ -11753,6 +11969,7 @@ var VISUAL_COMPILERS = {
   spring_and_mass: compileSpringAndMass,
   cube_with_section: compileCubeWithSection,
   function_surface_with_section: compileFunctionSurface,
+  implicit_surface_with_section: compileImplicitSurface,
   coordinate_circle: compileCoordinateCircle,
   geometric_rearrangement: compileGeometricRearrangement,
   process_diagram: compileProcessDiagram
@@ -11786,6 +12003,31 @@ function positiveProgramRange(definition) {
 }
 function surfaceSectionProgramRange(content, path) {
   const input = parameters(content);
+  if (content.capability === "implicit_surface_with_section") {
+    if (input.expression === void 0) {
+      fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "an implicit surface requires an expression");
+    }
+    if (input.level === void 0) {
+      fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.level`, "an implicit surface requires a level");
+    }
+    const expression2 = safeFunctionExpression(input.expression, "", ["x", "y", "z"], `${path}.expression`);
+    const level = optionalNumber(input.level, 0, `${path}.level`);
+    let domain;
+    try {
+      domain = implicitSurfaceDomain(expression2, ["x", "y", "z"], level);
+    } catch (error) {
+      fail3(
+        "LESSON_PLAN_CAPABILITY_PARAMETER",
+        `${path}.expression`,
+        error instanceof Error ? error.message : "implicit surface has no stable finite viewport"
+      );
+    }
+    const axis2 = input.section_axis ?? "z";
+    if (axis2 !== "x" && axis2 !== "y" && axis2 !== "z") {
+      fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
+    }
+    return axis2 === "x" ? domain.x : axis2 === "y" ? domain.y : domain.z;
+  }
   const xMin = optionalNumber(input.x_min, -2, `${path}.x_min`);
   const xMax = optionalNumber(input.x_max, 2, `${path}.x_max`);
   const yMin = optionalNumber(input.y_min, -2, `${path}.y_min`);
@@ -12425,14 +12667,15 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
   if (modelParameters.has("title")) properties.title = string(240);
   if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
   if (uses("function_plot")) {
-    properties.formula = string(256);
+    properties.formulas = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
   }
-  if (uses("function_surface_with_section")) {
+  if (uses("function_surface_with_section") || uses("implicit_surface_with_section")) {
     properties.expression = string(256);
     properties.section_axis = { enum: ["x", "y", "z"] };
   }
+  if (uses("implicit_surface_with_section")) properties.level = { type: "number" };
   if (uses("circle_and_arc") || uses("coordinate_circle")) properties.radius = { type: "number", minimum: 0 };
   if (uses("circle_and_arc")) properties.angle = { type: "number" };
   if (uses("coordinate_circle")) {
@@ -12447,9 +12690,18 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
     properties.leg_b = { type: "number", minimum: 0 };
   }
   if (uses("process_diagram")) {
-    properties.steps = { type: "array", minItems: 1, maxItems: 24, items: string(240) };
+    properties.steps = {
+      type: "array",
+      minItems: PROCESS_DIAGRAM_CONTRACT.min_steps,
+      maxItems: PROCESS_DIAGRAM_CONTRACT.max_steps,
+      items: string(PROCESS_DIAGRAM_CONTRACT.max_step_characters)
+    };
   }
-  return object(properties, requireDynamicPlotExpression || canonicalFunctionPlot ? ["formula"] : []);
+  const required = allowedCapabilities.length === 1 ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters] : [];
+  if ((requireDynamicPlotExpression || canonicalFunctionPlot) && !required.includes("formulas")) {
+    required.push("formulas");
+  }
+  return object(properties, required);
 }
 function modelAction(properties, required) {
   return object(properties, required);
@@ -12463,7 +12715,7 @@ function actionCollectionSchemas(sectionCount, allowedCapabilities, reusableCoun
     placement: placementSchema(sectionCount),
     ...reusableCount > 0 ? { reusable_item: integer(1, reusableCount) } : {}
   };
-  const requireFunctionPlotParameters = allowedCapabilities.length === 1 && allowedCapabilities[0] === "function_plot";
+  const requireVisualParameters = allowedCapabilities.length === 1 && LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters.length > 0;
   const requireDynamicPlotExpression = numberCount > 1 && allowedCapabilities.length === 1 && allowedCapabilities[0] === "function_plot";
   return {
     ...allowedCapabilities.length && includeVisualCreates ? {
@@ -12486,7 +12738,7 @@ function actionCollectionSchemas(sectionCount, allowedCapabilities, reusableCoun
               items: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) }
             }
           } : {}
-        }, ["capability", ...requireFunctionPlotParameters ? ["parameters"] : []])
+        }, ["capability", ...requireVisualParameters ? ["parameters"] : []])
       }, ["role", ...courseVisualPositions.length > 0 ? ["course_visual"] : [], "content", "placement"]))
     } : {},
     math_creates: collection(modelAction({
@@ -12624,53 +12876,24 @@ function outlineShape(value) {
   }
   return outline;
 }
-function bootstrapPermissiveOutline() {
-  return {
-    sections: [{
-      purpose: "bootstrap",
-      allowed_capabilities: capabilityNames,
-      reusable_items: Array.from({ length: 32 }, () => ({ kind: "board_item" }))
-    }],
-    numbers: Array.from({ length: 16 }, () => ({ initial: 0, min: 0, max: 1 })),
-    course_visuals: Array.from({ length: 32 }, (_unused, index) => ({
-      capability: capabilityNames[index % capabilityNames.length],
-      create_section: 1,
-      use_sections: [1],
-      relation: "primary",
-      reusable_item: index + 1
-    }))
-  };
-}
 function buildLessonPlanOutlineJsonSchema(requestPartCount = 0) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
   return vertexCompatible(lessonPlanOutlineShapeJsonSchema(requestPartCount));
 }
-function buildLessonPlanBootstrapJsonSchema(requestPartCount = 0) {
+function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
-  return vertexCompatible({
-    ...object({
-      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
-      first_section: firstSection
-    }, ["outline", "first_section"])
-  });
-}
-function buildLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0) {
-  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
-    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
-  }
-  const firstSection = lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true);
+  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount);
+  course.nullable = true;
   return vertexCompatible({
     ...object({
       disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
       learner_response: string(480),
-      outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
-      first_section: firstSection
-    }, ["disposition", "learner_response"])
+      course
+    }, ["disposition", "learner_response", "course"])
   });
 }
 function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
@@ -12732,7 +12955,7 @@ function coerceLessonPlanOutlineModelNumbers(value, requestPartCount = 0) {
 function buildLessonPlanSectionDraftJsonSchema(outlineValue, sectionIndex) {
   return vertexCompatible(lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex));
 }
-function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, bootstrapPermissive = false) {
+function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex) {
   const outline = outlineShape(outlineValue);
   if (!Number.isInteger(sectionIndex) || sectionIndex < 1 || sectionIndex > outline.sections.length) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$section", "section is outside the outline");
@@ -12744,15 +12967,15 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
   }
   const reusableCount = section.reusable_items?.length ?? 0;
   const numberCount = outline.numbers?.length ?? 0;
-  const courseVisualCreates = bootstrapPermissive ? void 0 : courseVisualCreatesSchema(outline, sectionIndex);
-  const reusableBoardCreates = bootstrapPermissive ? void 0 : reusableBoardCreatesSchema(outline, sectionIndex);
+  const courseVisualCreates = courseVisualCreatesSchema(outline, sectionIndex);
+  const reusableBoardCreates = reusableBoardCreatesSchema(outline, sectionIndex);
   const actionCollections = actionCollectionSchemas(
     outline.sections.length,
     allowedCapabilities,
     0,
     numberCount,
-    bootstrapPermissive ? [] : (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex).map(({ position }) => position),
-    bootstrapPermissive
+    (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex).map(({ position }) => position),
+    false
   );
   const supportsNumberActivity = Array.isArray(outline.numbers) && outline.numbers.length > 0;
   const sectionVisualCapabilities = (outline.course_visuals ?? []).filter((visual) => visual.use_sections.includes(sectionIndex)).map((visual) => visual.capability);
@@ -12805,13 +13028,6 @@ function coerceLessonPlanSectionModelNumbers(value, outlineValue, sectionIndex) 
     "$lessonPlanModelSection"
   );
 }
-function coerceLessonPlanBootstrapSectionModelNumbers(value) {
-  return coerceModelNumbers(
-    value,
-    lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true),
-    "$lessonPlanModelSection"
-  );
-}
 
 // src/lesson-plan-generation.ts
 var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u4E00\u6574\u8282\u5B8C\u6574\u8BFE\u7A0B\u7684\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E0D\u586B\u5199\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002
@@ -12827,21 +13043,17 @@ var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5
 - focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\u5E76\u51B3\u5B9A\u52A8\u4F5C\u987A\u5E8F\u3002placement \u53EA\u5199\u76F8\u5BF9\u65B9\u5411\u3002\u53EF\u590D\u7528\u666E\u901A\u677F\u4E66\u53EA\u586B\u6839\u5C42\u5FC5\u586B\u9879\uFF0C\u4E0D\u586B\u5199\u5185\u90E8\u4F4D\u7F6E\u3002
 - \u5C0F\u6570\u6309 Schema \u7684 mantissa\u3001scale \u586B\u5199\uFF0C\u4F8B\u5982 -1.5 \u4E3A -15\u30011\uFF1B6.283 \u4E3A 6283\u30013\u3002
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- function_plot \u7684 parameters.formula \u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u4F8B\uFF1A(x-n1)^2+n2\u3001(1+1/x)^x\u3002\u516C\u5F0F\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u89E3\u6790\u516C\u5F0F\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002\u51FD\u6570\u56FE\u548C\u4E09\u7EF4\u66F2\u9762\u90FD\u4E0D\u586B\u5199\u89C6\u7A97\u3001\u91C7\u6837\u5BC6\u5EA6\u6216\u7F51\u683C\u7CBE\u5EA6\u3002
+- function_plot \u7684 parameters.formulas \u59CB\u7EC8\u662F\u516C\u5F0F\u6570\u7EC4\uFF0C\u6BCF\u9879\u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u5355\u6761\u66F2\u7EBF\u53EF\u5F15\u7528 n1\u3001n2\uFF0C\u4F8B\u5982 (x-n1)^2+n2\uFF1B\u6BD4\u8F83\u591A\u6761\u66F2\u7EBF\u65F6\u586B\u5199\u591A\u4E2A\u4E0D\u542B n1\u3001n2 \u7684\u9759\u6001\u516C\u5F0F\uFF0C\u4F8B\u5982 ["x", "x^2", "sin(x)"]\u3002\u6BCF\u6761\u516C\u5F0F\u90FD\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u9010\u6761\u89E3\u6790\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002\u51FD\u6570\u56FE\u548C\u4E09\u7EF4\u66F2\u9762\u90FD\u4E0D\u586B\u5199\u89C6\u7A97\u3001\u91C7\u6837\u5BC6\u5EA6\u6216\u7F51\u683C\u7CBE\u5EA6\u3002
 - animations \u53EA\u51B3\u5B9A\u6F14\u793A\u54EA\u4E2A\u6570\u503C\u3001\u76EE\u6807\u503C\u548C\u6559\u5B66\u8282\u594F\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u7F13\u52A8\u65B9\u5F0F\u3002placement \u53EA\u51B3\u5B9A\u76F8\u5BF9\u65B9\u5411\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u951A\u70B9\u3001\u5BF9\u9F50\u548C\u95F4\u8DDD\u3002
 - geometric_rearrangement \u7684\u6570\u503C\u8868\u793A\u91CD\u6392\u8FDB\u5EA6\uFF1Bconstruction \u4ECE Schema \u9009\u62E9\u3002process_diagram \u6CA1\u6709\u6570\u503C\u6216\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
-var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
-
-\u540C\u4E00\u6B21\u8FD4\u56DE outline \u548C first_section\u3002first_section \u5FC5\u987B\u5B9E\u73B0 outline \u7B2C\u4E00\u8282\uFF0C\u53EA\u4F7F\u7528 outline \u5DF2\u58F0\u660E\u7684\u6570\u503C\u3001\u753B\u9762\u548C\u53EF\u590D\u7528\u5185\u5BB9\uFF1B\u5185\u90E8\u4F4D\u7F6E\u3001\u7F16\u53F7\u548C\u5F15\u7528\u7531\u7A0B\u5E8F\u5EFA\u7ACB\u3002
-${SECTION_SYSTEM_PROMPT}`;
-var ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u6587\u5B57\u8F93\u5165\u6216\u8BED\u97F3\u8F93\u5165\u5F00\u59CB\u4E00\u6574\u8282\u767D\u677F\u8BFE\u7A0B\u3002\u5148\u5224\u65AD\u5F53\u524D\u5185\u5BB9\u662F\u5426\u8DB3\u4EE5\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\uFF0C\u4E0D\u8981\u4ECE\u53EF\u7528\u753B\u9762\u6216\u6570\u5B66\u80FD\u529B\u731C\u6D4B\u7528\u6237\u6CA1\u6709\u8868\u8FBE\u7684\u4E3B\u9898\u3002
-- generate_lesson\uFF1A\u7528\u6237\u63D0\u51FA\u4E86\u5B66\u4E60\u95EE\u9898\u3001\u89E3\u91CA\u8BF7\u6C42\uFF0C\u6216\u6E05\u695A\u8BF4\u51FA\u4E86\u60F3\u5B66\u4E60\u7684\u4E3B\u9898\u3002\u7B80\u77ED\u4F46\u660E\u786E\u7684\u4E3B\u9898\uFF08\u4F8B\u5982\u201C\u52FE\u80A1\u5B9A\u7406\u201D\uFF09\u4E5F\u5C5E\u4E8E\u8FD9\u4E00\u7C7B\u3002\u6B64\u65F6\u586B\u5199\u5B8C\u6574 outline \u548C first_section\uFF0Clearner_response \u7559\u7A7A\u3002
-- clarify\uFF1A\u8FD9\u662F\u771F\u5B9E\u8BDD\u8BED\uFF0C\u4F46\u5185\u5BB9\u6B8B\u7F3A\u3001\u542B\u4E49\u4E0D\u6E05\u6216\u6CA1\u6709\u8BF4\u660E\u8981\u5B66\u4EC0\u4E48\uFF0C\u65E0\u6CD5\u53EF\u9760\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\u3002\u6B64\u65F6\u4E0D\u8981\u586B\u5199 outline \u6216 first_section\uFF0C\u7528 learner_response \u7B80\u77ED\u8FFD\u95EE\u7528\u6237\u60F3\u5B66\u4E60\u4EC0\u4E48\u3002\u4F8B\u5982 \u201CThe book.\u201D \u5E94\u8FFD\u95EE\u7528\u6237\u60F3\u4E86\u89E3\u8FD9\u672C\u4E66\u7684\u4EC0\u4E48\u5185\u5BB9\uFF0C\u800C\u4E0D\u662F\u731C\u6210\u6570\u5B66\u8BFE\u7A0B\u3002
-- ignore\uFF1A\u53EA\u662F\u8BED\u6C14\u8BCD\u3001\u53E3\u5934\u586B\u5145\u6216\u6CA1\u6709\u53EF\u56DE\u5E94\u5185\u5BB9\u3002\u6B64\u65F6\u4E0D\u8981\u586B\u5199 outline \u6216 first_section\uFF0Clearner_response \u7559\u7A7A\u3002
+var ADMISSION_OUTLINE_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u6587\u5B57\u8F93\u5165\u6216\u8BED\u97F3\u8F93\u5165\u5F00\u59CB\u4E00\u6574\u8282\u767D\u677F\u8BFE\u7A0B\u3002\u5148\u5224\u65AD\u5F53\u524D\u5185\u5BB9\u662F\u5426\u8DB3\u4EE5\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\uFF0C\u4E0D\u8981\u4ECE\u53EF\u7528\u753B\u9762\u6216\u6570\u5B66\u80FD\u529B\u731C\u6D4B\u7528\u6237\u6CA1\u6709\u8868\u8FBE\u7684\u4E3B\u9898\u3002
+- generate_lesson\uFF1A\u7528\u6237\u63D0\u51FA\u4E86\u5B66\u4E60\u95EE\u9898\u3001\u89E3\u91CA\u8BF7\u6C42\uFF0C\u6216\u6E05\u695A\u8BF4\u51FA\u4E86\u60F3\u5B66\u4E60\u7684\u4E3B\u9898\u3002\u7B80\u77ED\u4F46\u660E\u786E\u7684\u4E3B\u9898\uFF08\u4F8B\u5982\u201C\u52FE\u80A1\u5B9A\u7406\u201D\uFF09\u4E5F\u5C5E\u4E8E\u8FD9\u4E00\u7C7B\u3002\u6B64\u65F6 course \u5FC5\u987B\u5305\u542B\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uFF0Clearner_response \u7559\u7A7A\u3002\u4E0D\u8981\u751F\u6210\u4EFB\u4F55\u4E00\u8282\u7684\u65C1\u767D\u6216\u677F\u4E66\u5185\u5BB9\u3002
+- clarify\uFF1A\u8FD9\u662F\u771F\u5B9E\u8BDD\u8BED\uFF0C\u4F46\u5185\u5BB9\u6B8B\u7F3A\u3001\u542B\u4E49\u4E0D\u6E05\u6216\u6CA1\u6709\u8BF4\u660E\u8981\u5B66\u4EC0\u4E48\uFF0C\u65E0\u6CD5\u53EF\u9760\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\u3002\u6B64\u65F6 course \u5FC5\u987B\u4E3A null\uFF0C\u7528 learner_response \u7B80\u77ED\u8FFD\u95EE\u7528\u6237\u60F3\u5B66\u4E60\u4EC0\u4E48\u3002\u4F8B\u5982 \u201CThe book.\u201D \u5E94\u8FFD\u95EE\u7528\u6237\u60F3\u4E86\u89E3\u8FD9\u672C\u4E66\u7684\u4EC0\u4E48\u5185\u5BB9\uFF0C\u800C\u4E0D\u662F\u731C\u6210\u6570\u5B66\u8BFE\u7A0B\u3002
+- ignore\uFF1A\u53EA\u662F\u8BED\u6C14\u8BCD\u3001\u53E3\u5934\u586B\u5145\u6216\u6CA1\u6709\u53EF\u56DE\u5E94\u5185\u5BB9\u3002\u6B64\u65F6 course \u5FC5\u987B\u4E3A null\uFF0Clearner_response \u7559\u7A7A\u3002
 \u53EA\u505A\u4E0A\u8FF0\u8BED\u4E49\u5224\u65AD\uFF0C\u4E0D\u4F7F\u7528\u5B57\u6570\u3001\u8BED\u8A00\u6216\u56FA\u5B9A\u5173\u952E\u8BCD\u4F5C\u4E3A\u89C4\u5219\u3002
 
-${BOOTSTRAP_SYSTEM_PROMPT}`;
+${OUTLINE_SYSTEM_PROMPT}`;
 function positiveInteger(value, fallback, label) {
   const result = value ?? fallback;
   if (!Number.isInteger(result) || result < 1) throw new Error(`${label} must be a positive integer`);
@@ -13219,13 +13431,71 @@ function lowerModelBoardContent(kind, value, numberCount) {
   }
   const capability2 = content.capability;
   const parameters2 = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? { ...content.parameters } : {};
-  if (capability2 === "function_plot" && parameters2.formula !== void 0) {
-    parameters2.expression_tokens = parseModelFormula(
-      parameters2.formula,
-      numberCount,
-      "$lessonPlanSection.visual.parameters.formula"
-    );
-    delete parameters2.formula;
+  if (capability2 === "implicit_surface_with_section" && typeof parameters2.expression === "string" && parameters2.level === void 0) {
+    const equation = parameters2.expression.split("=").map((part) => part.trim());
+    if (equation.length === 2 && equation.every(Boolean)) {
+      const rightLevel = Number(equation[1]);
+      const leftLevel = Number(equation[0]);
+      if (Number.isFinite(rightLevel)) {
+        parameters2.expression = equation[0];
+        parameters2.level = rightLevel;
+      } else if (Number.isFinite(leftLevel)) {
+        parameters2.expression = equation[1];
+        parameters2.level = leftLevel;
+      } else {
+        parameters2.expression = `(${equation[0]})-(${equation[1]})`;
+        parameters2.level = 0;
+      }
+    } else {
+      parameters2.level = 0;
+    }
+  }
+  let forceNoNumbers = false;
+  if (capability2 === "function_plot") {
+    const rawFormulas = parameters2.formulas !== void 0 ? parameters2.formulas : typeof parameters2.expression === "string" ? [parameters2.expression] : Array.isArray(parameters2.expressions) ? parameters2.expressions : void 0;
+    if (rawFormulas !== void 0) {
+      if (!Array.isArray(rawFormulas) || rawFormulas.length < 1 || rawFormulas.length > 8) {
+        formulaError(
+          "$lessonPlanSection.visual.parameters.formulas",
+          "expected one to eight formulas"
+        );
+      }
+      delete parameters2.formulas;
+      delete parameters2.expression;
+      delete parameters2.expressions;
+      delete parameters2.expression_tokens;
+      const parsed = rawFormulas.map((formula, index) => parseModelFormula(
+        formula,
+        numberCount,
+        `$lessonPlanSection.visual.parameters.formulas[${index}]`
+      ));
+      if (parsed.length === 1) {
+        parameters2.expression_tokens = parsed[0];
+      } else {
+        if (parsed.some((expression) => expression.some((token) => token.kind === "number"))) {
+          formulaError(
+            "$lessonPlanSection.visual.parameters.formulas",
+            "a multi-curve comparison currently supports static formulas only; use one formula when lesson numbers change the whole curve"
+          );
+        }
+        const canonical = parsed.map(mathExpressionToOll);
+        const retainedIndexes = [];
+        const seen = /* @__PURE__ */ new Set();
+        canonical.forEach((expression, index) => {
+          if (seen.has(expression)) return;
+          seen.add(expression);
+          retainedIndexes.push(index);
+        });
+        parameters2.expressions = retainedIndexes.map((index) => canonical[index]);
+        if (Array.isArray(parameters2.curve_labels) && parameters2.curve_labels.length === canonical.length) {
+          parameters2.curve_labels = retainedIndexes.map((index) => parameters2.curve_labels[index]);
+        } else {
+          delete parameters2.curve_labels;
+        }
+        delete parameters2.curve_label;
+        forceNoNumbers = true;
+      }
+    }
   }
   if (typeof content.title === "string" && parameters2.title === void 0) parameters2.title = content.title;
   if (typeof capability2 === "string" && capability2 in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
@@ -13238,11 +13508,12 @@ function lowerModelBoardContent(kind, value, numberCount) {
   }
   const numberLimit = typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITY_NUMBER_LIMITS ? LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2] : 0;
   let validNumbers = Array.isArray(content.numbers) ? [...new Set(content.numbers.filter((number) => Number.isInteger(number) && Number(number) >= 1 && Number(number) <= numberCount))].slice(0, numberLimit) : [];
+  if (forceNoNumbers) validNumbers = [];
   if (capability2 === "function_plot" && Array.isArray(parameters2.expression_tokens)) {
     const formulaNumbers = [...new Set(parameters2.expression_tokens.flatMap((token) => token && typeof token === "object" && !Array.isArray(token) && token.kind === "number" && Number.isInteger(token.number) ? [Number(token.number)] : []))].filter((number) => number >= 1 && number <= numberCount).slice(0, numberLimit);
     if (formulaNumbers.length > 0) validNumbers = formulaNumbers;
   }
-  if (validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
+  if (!forceNoNumbers && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
     validNumbers = [1];
   }
   return {
@@ -13250,6 +13521,368 @@ function lowerModelBoardContent(kind, value, numberCount) {
     ...Object.keys(parameters2).length === 0 ? {} : { parameters: parameters2 },
     ...validNumbers.length === 0 ? {} : { numbers: validNumbers }
   };
+}
+function visualNumberPurpose(capability2, index) {
+  const input = LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs[index];
+  if (!input || input.startsWith("curve_parameter_")) return "generic";
+  if (input === "angle" || input === "phase") return "angle";
+  if (input === "radius") return "radius";
+  if (input === "section_height" || input === "section_position") return "section";
+  if (input === "progress") return "progress";
+  return "generic";
+}
+function compatibleVisualNumberPurpose(left, right) {
+  return left === "generic" || right === "generic" || left === right;
+}
+function processDiagramRemovalReason(content) {
+  if (content.capability !== "process_diagram") return void 0;
+  const input = content.parameters ?? {};
+  const steps = input.steps;
+  const title = input.title;
+  if (!Array.isArray(steps)) return "missing_steps";
+  if (steps.length < PROCESS_DIAGRAM_CONTRACT.min_steps || steps.length > PROCESS_DIAGRAM_CONTRACT.max_steps) {
+    return "step_count_out_of_range";
+  }
+  if (!steps.every((step) => typeof step === "string" && step.trim().length >= 1 && step.trim().length <= PROCESS_DIAGRAM_CONTRACT.max_step_characters)) {
+    return "step_text_out_of_range";
+  }
+  if (title !== void 0 && (typeof title !== "string" || title.trim().length < 1 || title.trim().length > PROCESS_DIAGRAM_CONTRACT.max_title_characters)) {
+    return "title_text_out_of_range";
+  }
+  return void 0;
+}
+function isExecutableProcessDiagram(content) {
+  return processDiagramRemovalReason(content) === void 0;
+}
+function sanitizeNonessentialVisuals(outlineValue, draftValues) {
+  const outline = structuredClone(outlineValue);
+  const drafts = structuredClone(draftValues);
+  const adjustments = [];
+  const courseVisualPositionBySlot = /* @__PURE__ */ new Map();
+  (outline.course_visuals ?? []).forEach((visual, index) => {
+    courseVisualPositionBySlot.set(`${visual.create_section}:${visual.reusable_item}`, index + 1);
+  });
+  const droppedCourseVisuals = /* @__PURE__ */ new Set();
+  const establishedPurposes = /* @__PURE__ */ new Map();
+  const visualEntries = [];
+  for (const [sectionOffset, section] of drafts.entries()) {
+    const sectionNumber = sectionOffset + 1;
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const content = action.content;
+        const slot = Number(action.reusable_item);
+        const courseVisualPosition = Number.isInteger(slot) ? courseVisualPositionBySlot.get(`${sectionNumber}:${slot}`) : void 0;
+        const processDiagramReason = processDiagramRemovalReason(content);
+        if (processDiagramReason) {
+          adjustments.push({
+            kind: "visual_removed",
+            section: sectionNumber,
+            capability: content.capability,
+            reason: processDiagramReason
+          });
+          if (courseVisualPosition !== void 0) droppedCourseVisuals.add(courseVisualPosition);
+          continue;
+        }
+        visualEntries.push({
+          content,
+          courseVisualPosition,
+          relation: courseVisualPosition === void 0 ? void 0 : outline.course_visuals?.[courseVisualPosition - 1]?.relation
+        });
+      }
+    }
+  }
+  visualEntries.sort((left, right) => {
+    const priority = (relation) => relation === "supporting" ? 1 : 0;
+    return priority(left.relation) - priority(right.relation) || (left.courseVisualPosition ?? Number.MAX_SAFE_INTEGER) - (right.courseVisualPosition ?? Number.MAX_SAFE_INTEGER);
+  });
+  for (const entry of visualEntries) {
+    const incompatible = (entry.content.numbers ?? []).some((number, index) => {
+      const next = visualNumberPurpose(entry.content.capability, index);
+      const current = establishedPurposes.get(number);
+      if (!current || compatibleVisualNumberPurpose(current, next)) {
+        if (!current || current === "generic") establishedPurposes.set(number, next);
+        return false;
+      }
+      return true;
+    });
+    if (!incompatible) continue;
+    if (entry.relation === "supporting" && entry.courseVisualPosition !== void 0) {
+      droppedCourseVisuals.add(entry.courseVisualPosition);
+    } else {
+      delete entry.content.numbers;
+    }
+  }
+  let changed = true;
+  while (changed) {
+    changed = false;
+    (outline.course_visuals ?? []).forEach((visual, index) => {
+      const position = index + 1;
+      if (droppedCourseVisuals.has(position)) return;
+      if (visual.related_visual !== void 0 && droppedCourseVisuals.has(visual.related_visual)) {
+        droppedCourseVisuals.add(position);
+        changed = true;
+      }
+    });
+  }
+  const droppedActions = /* @__PURE__ */ new Set();
+  const replacementForDroppedAction = /* @__PURE__ */ new Map();
+  const droppedReusable = /* @__PURE__ */ new Set();
+  for (const [sectionOffset, section] of drafts.entries()) {
+    const sectionNumber = sectionOffset + 1;
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const content = action.content;
+        const slot = Number(action.reusable_item);
+        const position = Number.isInteger(slot) ? courseVisualPositionBySlot.get(`${sectionNumber}:${slot}`) : void 0;
+        if (!isExecutableProcessDiagram(content) || position !== void 0 && droppedCourseVisuals.has(position)) {
+          droppedActions.add(action);
+          if (Number.isInteger(slot)) droppedReusable.add(`${sectionNumber}:${slot}`);
+        }
+      }
+    }
+  }
+  for (const [sectionOffset, section] of drafts.entries()) {
+    section.moments.forEach((moment, momentOffset) => {
+      const bySignature = /* @__PURE__ */ new Map();
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "math" && action.kind !== "note") continue;
+        const signature = JSON.stringify({ kind: action.kind, content: action.content });
+        const prior = bySignature.get(signature);
+        if (!prior) {
+          bySignature.set(signature, action);
+          continue;
+        }
+        const priorReusable = Number.isInteger(prior.reusable_item);
+        const currentReusable = Number.isInteger(action.reusable_item);
+        const removed = currentReusable && !priorReusable ? prior : action;
+        const retained = removed === prior ? action : prior;
+        if (removed === prior) bySignature.set(signature, action);
+        droppedActions.add(removed);
+        replacementForDroppedAction.set(removed, retained);
+        adjustments.push({
+          kind: "duplicate_board_item_removed",
+          section: sectionOffset + 1,
+          moment: momentOffset + 1,
+          board_kind: action.kind,
+          reason: "same_moment_exact_duplicate"
+        });
+      }
+    });
+  }
+  const localBoardItemMap = /* @__PURE__ */ new Map();
+  for (const [sectionOffset, section] of drafts.entries()) {
+    const sectionNumber = sectionOffset + 1;
+    section.moments.forEach((moment, momentOffset) => {
+      const creates = moment.actions.filter((action) => action.action === "create");
+      const retainedIndex = /* @__PURE__ */ new Map();
+      let nextIndex = 0;
+      for (const action of creates) {
+        if (droppedActions.has(action)) continue;
+        nextIndex += 1;
+        retainedIndex.set(action, nextIndex);
+      }
+      creates.forEach((action, oldOffset) => {
+        const replacement = replacementForDroppedAction.get(action);
+        localBoardItemMap.set(
+          `${sectionNumber}:${momentOffset + 1}:${oldOffset + 1}`,
+          droppedActions.has(action) ? replacement ? retainedIndex.get(replacement) : void 0 : retainedIndex.get(action)
+        );
+      });
+    });
+  }
+  const retainedReusable = /* @__PURE__ */ new Set();
+  for (const [sectionOffset, section] of drafts.entries()) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (droppedActions.has(action) || action.action !== "create") continue;
+        if (Number.isInteger(action.reusable_item)) retainedReusable.add(`${sectionOffset + 1}:${action.reusable_item}`);
+      }
+    }
+  }
+  const reassignedReusable = /* @__PURE__ */ new Set();
+  for (const key of droppedReusable) {
+    const [sectionNumberText, slotText] = key.split(":");
+    const sectionNumber = Number(sectionNumberText);
+    const slot = Number(slotText);
+    if ([...retainedReusable].some((candidate) => candidate.startsWith(`${sectionNumber}:`))) continue;
+    const section = drafts[sectionNumber - 1];
+    const replacement = [...section?.moments ?? []].flatMap((moment) => moment.actions).findLast((action) => action.action === "create" && !droppedActions.has(action) && action.reusable_item === void 0 && action.kind !== "visual");
+    if (!replacement || replacement.action !== "create") continue;
+    replacement.reusable_item = slot;
+    const declaration = outline.sections[sectionNumber - 1]?.reusable_items?.[slot - 1];
+    if (declaration) {
+      outline.sections[sectionNumber - 1].reusable_items[slot - 1] = {
+        kind: "board_item",
+        board_kind: replacement.kind
+      };
+      retainedReusable.add(key);
+      reassignedReusable.add(key);
+    }
+  }
+  const removedReusable = new Set(
+    [...droppedReusable].filter((key) => !reassignedReusable.has(key))
+  );
+  const reusableItemMap = /* @__PURE__ */ new Map();
+  outline.sections.forEach((section, sectionOffset) => {
+    const sectionNumber = sectionOffset + 1;
+    const retainedItems = (section.reusable_items ?? []).flatMap((item, itemOffset) => {
+      const oldItem = itemOffset + 1;
+      if (removedReusable.has(`${sectionNumber}:${oldItem}`)) return [];
+      return [{ item, oldItem }];
+    });
+    retainedItems.forEach(({ oldItem }, index) => {
+      reusableItemMap.set(`${sectionNumber}:${oldItem}`, index + 1);
+    });
+    section.reusable_items = retainedItems.map(({ item }) => item);
+  });
+  drafts.forEach((section, sectionOffset) => {
+    const sectionNumber = sectionOffset + 1;
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" || !Number.isInteger(action.reusable_item)) continue;
+        const nextItem = reusableItemMap.get(`${sectionNumber}:${action.reusable_item}`);
+        if (nextItem !== void 0) action.reusable_item = nextItem;
+      }
+    }
+  });
+  const normalizeReference = (reference, sectionNumber) => {
+    if (!reference) return void 0;
+    const next = structuredClone(reference);
+    if (next.source === "local_board_item") {
+      const item = localBoardItemMap.get(`${sectionNumber}:${next.moment}:${next.item}`);
+      if (item === void 0) return void 0;
+      next.item = item;
+    } else if (next.source === "reusable") {
+      const key = `${next.section}:${next.item}`;
+      if (removedReusable.has(key)) return void 0;
+      const nextItem = reusableItemMap.get(key);
+      if (nextItem === void 0) return void 0;
+      next.item = nextItem;
+      if (reassignedReusable.has(key)) delete next.part;
+    }
+    return next;
+  };
+  for (const [sectionOffset, section] of drafts.entries()) {
+    const sectionNumber = sectionOffset + 1;
+    for (const moment of section.moments) {
+      const actions = [];
+      for (const action of moment.actions) {
+        if (droppedActions.has(action)) continue;
+        const next = structuredClone(action);
+        if (next.action === "create") {
+          const reference = normalizeReference(next.placement?.reference, sectionNumber);
+          if (next.placement && next.placement.reference && !reference) {
+            next.placement = { relation: "new_region" };
+          } else if (next.placement && reference) {
+            next.placement.reference = reference;
+          }
+        } else if (next.action === "revise" || next.action === "emphasize" || next.action === "point_at") {
+          const reference = normalizeReference(next.reference, sectionNumber);
+          if (!reference) continue;
+          next.reference = reference;
+        } else if (next.action === "connect") {
+          const from = normalizeReference(next.from_ref, sectionNumber);
+          const to = normalizeReference(next.to_ref, sectionNumber);
+          if (!from || !to) continue;
+          next.from_ref = from;
+          next.to_ref = to;
+        } else if (next.action === "group") {
+          next.members = next.members.flatMap((reference) => {
+            const normalized = normalizeReference(reference, sectionNumber);
+            return normalized ? [normalized] : [];
+          });
+          if (next.members.length === 0) continue;
+        } else if (next.action === "focus") {
+          next.references = next.references.flatMap((reference) => {
+            const normalized = normalizeReference(reference, sectionNumber);
+            return normalized ? [normalized] : [];
+          });
+          if (next.references.length === 0) continue;
+        }
+        actions.push(next);
+      }
+      moment.actions = actions.length > 0 ? actions : [{
+        action: "teacher_expression",
+        expression: "neutral",
+        timing: "after_speech"
+      }];
+    }
+    if (section.student_activities) {
+      section.student_activities = section.student_activities.flatMap((activity) => {
+        if (activity.kind !== "scene3d_view") return [activity];
+        const reference = normalizeReference(activity.reference, sectionNumber);
+        return reference ? [{ ...activity, reference }] : [];
+      });
+      if (section.student_activities.length === 0) delete section.student_activities;
+    }
+  }
+  if (outline.course_visuals) {
+    const retainedPositions = outline.course_visuals.map((visual, index) => ({ visual, oldPosition: index + 1 })).filter(({ oldPosition }) => !droppedCourseVisuals.has(oldPosition));
+    const positionMap = new Map(retainedPositions.map(({ oldPosition }, index) => [oldPosition, index + 1]));
+    outline.course_visuals = retainedPositions.map(({ visual }) => ({
+      ...visual,
+      reusable_item: reusableItemMap.get(`${visual.create_section}:${visual.reusable_item}`) ?? visual.reusable_item,
+      ...visual.related_visual === void 0 ? {} : { related_visual: positionMap.get(visual.related_visual) }
+    }));
+  }
+  outline.close.focus = outline.close.focus.flatMap((reference) => {
+    const normalized = normalizeReference(reference, outline.sections.length + 1);
+    return normalized ? [normalized] : [];
+  });
+  if (outline.close.focus.length === 0) {
+    const fallback = [...retainedReusable].flatMap((key) => {
+      const [section, item] = key.split(":").map(Number);
+      const nextItem = reusableItemMap.get(key);
+      return nextItem === void 0 ? [] : [`${section}:${nextItem}`];
+    }).at(-1);
+    if (fallback) {
+      const [section, item] = fallback.split(":").map(Number);
+      outline.close.focus = [{ source: "reusable", section, item }];
+    }
+  }
+  return { outline, drafts, adjustments };
+}
+function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
+  const sanitized = sanitizeNonessentialVisuals(outlineValue, draftValues);
+  const outline = sanitized.outline;
+  const drafts = sanitized.drafts;
+  const visuallyBound = /* @__PURE__ */ new Set();
+  for (const section of drafts) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" && action.action !== "revise" || action.kind !== "visual") continue;
+        const visual = action.content;
+        for (const number of visual.numbers ?? []) visuallyBound.add(number);
+      }
+    }
+  }
+  outline.numbers?.forEach((number, index) => {
+    if (!visuallyBound.has(index + 1)) delete number.student_control;
+  });
+  for (const section of drafts) {
+    for (const moment of section.moments) {
+      moment.actions = moment.actions.filter((action) => action.action !== "animate" || visuallyBound.has(action.number));
+      if (moment.actions.length === 0) {
+        moment.actions.push({
+          action: "teacher_expression",
+          expression: "neutral",
+          timing: "after_speech"
+        });
+      }
+    }
+    if (!section.student_activities) continue;
+    section.student_activities = section.student_activities.flatMap((activity) => {
+      if (activity.kind !== "number_target") return [activity];
+      const numberControls = activity.number_controls.filter(({ number }) => visuallyBound.has(number));
+      const expressionNumbers = new Set((activity.expression ?? []).flatMap((token) => token.kind === "number" ? [token.number] : []));
+      if (numberControls.length === 0 || [...expressionNumbers].some((number) => !visuallyBound.has(number))) return [];
+      return [{ ...activity, number_controls: numberControls }];
+    });
+    if (section.student_activities.length === 0) delete section.student_activities;
+  }
+  return { outline, drafts, adjustments: sanitized.adjustments };
 }
 function lowerModelActionReferences(actionName, action, currentMoment, numberCount) {
   const lowered = { ...action };
@@ -13398,164 +14031,6 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
     });
   }
   return lowered;
-}
-function reconcileBootstrapFirstSectionPositions(value, outline) {
-  const root = structuredClone(value);
-  if (!root || typeof root !== "object" || Array.isArray(root)) return root;
-  const candidate = root;
-  if (!Array.isArray(candidate.moments)) return root;
-  const collect = (collection) => candidate.moments.flatMap((momentValue, momentIndex) => {
-    if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) return [];
-    const entries = momentValue[collection];
-    if (!Array.isArray(entries)) return [];
-    return entries.flatMap((entry, entryIndex) => entry && typeof entry === "object" && !Array.isArray(entry) ? [{
-      entry,
-      moment: momentIndex + 1,
-      order: Number(entry.order),
-      index: entryIndex
-    }] : []);
-  }).sort((left, right) => left.moment - right.moment || (Number.isFinite(left.order) ? left.order : Number.MAX_SAFE_INTEGER) - (Number.isFinite(right.order) ? right.order : Number.MAX_SAFE_INTEGER) || left.index - right.index);
-  const visualCreates = collect("visual_creates");
-  for (const { entry } of visualCreates) {
-    delete entry.course_visual;
-    delete entry.reusable_item;
-  }
-  const unmatchedVisuals = new Set(visualCreates);
-  const expectedVisuals = (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === 1);
-  for (const { visual, position } of expectedVisuals) {
-    const match = visualCreates.find((candidateEntry) => {
-      if (!unmatchedVisuals.has(candidateEntry)) return false;
-      const content = candidateEntry.entry.content;
-      return content && typeof content === "object" && !Array.isArray(content) && content.capability === visual.capability;
-    });
-    if (!match) continue;
-    match.entry.course_visual = position;
-    unmatchedVisuals.delete(match);
-  }
-  if (unmatchedVisuals.size > 0 && expectedVisuals.length === 0) {
-    throw new LessonPlanError(
-      "LESSON_PLAN_COURSE_VISUAL",
-      "$lessonPlanModelSection.moments",
-      "the bootstrap section created a visual that the outline did not declare"
-    );
-  }
-  const createsByKind = {
-    math: collect("math_creates"),
-    note: collect("note_creates")
-  };
-  for (const entries of Object.values(createsByKind)) {
-    for (const { entry } of entries) delete entry.reusable_item;
-  }
-  const usedBoardCreates = /* @__PURE__ */ new Set();
-  const reusableItems = outline.sections[0]?.reusable_items ?? [];
-  reusableItems.forEach((item, index) => {
-    if (item.kind !== "board_item" || item.board_kind !== "math" && item.board_kind !== "note") return;
-    const match = createsByKind[item.board_kind].find((candidateEntry) => !usedBoardCreates.has(candidateEntry));
-    if (!match) return;
-    match.entry.reusable_item = index + 1;
-    usedBoardCreates.add(match);
-  });
-  return root;
-}
-function reconcileBootstrapReusableDeclarations(value, outline) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
-  const candidate = value;
-  if (!Array.isArray(candidate.moments)) return value;
-  const section = outline.sections[0];
-  if (!section) return value;
-  const oldItems = [...section.reusable_items ?? []];
-  const creates = [];
-  for (const momentValue of candidate.moments) {
-    if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
-    const moment = momentValue;
-    for (const [collection, kind] of [["math_creates", "math"], ["note_creates", "note"]]) {
-      const entries = moment[collection];
-      if (!Array.isArray(entries)) continue;
-      for (const entry of entries) {
-        if (entry && typeof entry === "object" && !Array.isArray(entry)) {
-          const record2 = entry;
-          const position = Number(record2.reusable_item);
-          creates.push({
-            kind,
-            entry: record2,
-            ...Number.isInteger(position) && position > 0 ? { oldPosition: position } : {},
-            source: "moment"
-          });
-        }
-      }
-    }
-  }
-  const rootCreates = candidate.reusable_board_creates;
-  if (rootCreates && typeof rootCreates === "object" && !Array.isArray(rootCreates)) {
-    for (const [key, entry] of Object.entries(rootCreates)) {
-      const match = /^item_(\d+)$/u.exec(key);
-      const oldPosition = Number(match?.[1]);
-      const declaration = oldItems[oldPosition - 1];
-      if (!Number.isInteger(oldPosition) || !entry || typeof entry !== "object" || Array.isArray(entry) || declaration?.kind !== "board_item" || declaration.board_kind !== "math" && declaration.board_kind !== "note") continue;
-      creates.push({
-        kind: declaration.board_kind,
-        entry,
-        oldPosition,
-        source: "root"
-      });
-    }
-  }
-  const filledPositions = new Set(
-    creates.flatMap(({ oldPosition }) => oldPosition !== void 0 && Number.isInteger(oldPosition) && oldPosition > 0 ? [oldPosition] : [])
-  );
-  const hasCreatedOrVisual = oldItems.some((item, index) => item.kind === "board_item" && (item.board_kind === "visual" || filledPositions.has(index + 1)));
-  if (!hasCreatedOrVisual && creates.length > 0) {
-    const promoted = [...creates].reverse().find(({ source }) => source === "moment");
-    if (promoted) {
-      oldItems.push({ kind: "board_item", board_kind: promoted.kind });
-      promoted.oldPosition = oldItems.length;
-      promoted.entry.reusable_item = oldItems.length;
-      filledPositions.add(oldItems.length);
-    }
-  }
-  const positionMap = /* @__PURE__ */ new Map();
-  const reconciledItems = oldItems.filter((item, index) => {
-    const keep = item.kind === "board_item" && (item.board_kind === "visual" || filledPositions.has(index + 1));
-    if (keep) positionMap.set(index + 1, positionMap.size + 1);
-    return keep;
-  });
-  section.reusable_items = reconciledItems;
-  for (const { entry, oldPosition, source } of creates) {
-    const newPosition = oldPosition === void 0 ? void 0 : positionMap.get(oldPosition);
-    if (source !== "moment") continue;
-    if (newPosition === void 0) delete entry.reusable_item;
-    else entry.reusable_item = newPosition;
-  }
-  if (rootCreates && typeof rootCreates === "object" && !Array.isArray(rootCreates)) {
-    candidate.reusable_board_creates = Object.fromEntries(
-      creates.flatMap(({ entry, oldPosition, source }) => {
-        if (source !== "root") return [];
-        const newPosition = oldPosition === void 0 ? void 0 : positionMap.get(oldPosition);
-        return newPosition === void 0 ? [] : [[`item_${newPosition}`, entry]];
-      })
-    );
-  }
-  for (const visual of outline.course_visuals ?? []) {
-    if (visual.create_section !== 1) continue;
-    const newPosition = positionMap.get(visual.reusable_item);
-    if (newPosition === void 0) {
-      throw new LessonPlanError(
-        "LESSON_PLAN_COURSE_VISUAL",
-        "$lessonPlanOutline.course_visuals",
-        "a first-section course visual lost its reusable position during bootstrap reconciliation"
-      );
-    }
-    visual.reusable_item = newPosition;
-  }
-  outline.close.focus = outline.close.focus.flatMap((reference) => {
-    if (reference.source !== "reusable" || reference.section !== 1) return [reference];
-    const newPosition = positionMap.get(reference.item);
-    return newPosition === void 0 ? [] : [{ ...reference, item: newPosition }];
-  });
-  if (outline.close.focus.length === 0 && reconciledItems.length > 0) {
-    outline.close.focus = [{ source: "reusable", section: 1, item: reconciledItems.length }];
-  }
-  return value;
 }
 function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReusableCreates = false) {
   const root = pruneModelNulls(value);
@@ -14060,8 +14535,9 @@ function compilePrefix(outline, drafts, options) {
   const sectionCount = drafts.length;
   let focus;
   for (let section = sectionCount; section >= 1 && !focus; section -= 1) {
-    const items = outline.sections[section - 1]?.reusable_items ?? [];
-    if (items.length > 0) focus = { source: "reusable", section, item: items.length };
+    const createdItems = drafts[section - 1]?.moments.flatMap((moment) => moment.actions).flatMap((action) => action.action === "create" && Number.isInteger(action.reusable_item) ? [Number(action.reusable_item)] : []) ?? [];
+    const item = createdItems.length > 0 ? Math.max(...createdItems) : void 0;
+    if (item !== void 0) focus = { source: "reusable", section, item };
   }
   if (!focus) {
     throw new LessonPlanError(
@@ -14078,28 +14554,8 @@ function compilePrefix(outline, drafts, options) {
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
     close: { summary: "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002", focus: [focus] }
   };
-  const prefixPlan = assembleLessonPlan(prefixOutline, drafts, options);
-  const activeNumbers = /* @__PURE__ */ new Set();
-  for (const section of prefixPlan.sections) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
-        if (action.action === "create" || action.action === "revise") {
-          if (action.kind === "visual") {
-            for (const number of action.content.numbers ?? []) activeNumbers.add(number);
-          }
-        } else if (action.action === "animate") {
-          activeNumbers.add(action.number);
-        }
-      }
-    }
-    for (const activity of section.student_activities ?? []) {
-      if (activity.kind !== "number_target") continue;
-      for (const control of activity.number_controls) activeNumbers.add(control.number);
-    }
-  }
-  prefixPlan.numbers?.forEach((number, index) => {
-    if (!activeNumbers.has(index + 1)) delete number.student_control;
-  });
+  const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
+  const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, options);
 }
 async function generateLessonPlanWithModel(model, input, options = {}) {
@@ -14107,24 +14563,19 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
   const context = inputContext(input);
   const fixedRequestParts = requestParts(input);
-  const bootstrapFirstSection = options.bootstrap_first_section === true;
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
-  if (admissionInput && !bootstrapFirstSection) {
-    throw new Error("lesson admission requires bootstrap_first_section");
-  }
   let modelCalls = 0;
   let outline;
-  let bootstrappedFirstSection;
   let outlineError;
   const sectionErrors = /* @__PURE__ */ new Map();
   const sectionAttempts = /* @__PURE__ */ new Map();
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const raw = await model({
-      label: bootstrapFirstSection ? "lesson-plan-bootstrap" : "lesson-plan-outline",
-      part: bootstrapFirstSection ? "bootstrap" : "outline",
+      label: "lesson-plan-outline",
+      part: "outline",
       attempt,
       turn_id: input.turn_id,
-      system_prompt: bootstrapFirstSection ? admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
+      system_prompt: admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
       prompt: JSON.stringify({
         course: context,
         request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
@@ -14133,23 +14584,18 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
           guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
         })),
-        ...bootstrapFirstSection ? {
-          first_section_to_write: 1,
-          first_section_rule: "first_section must implement outline.sections[0]; the program assigns visual and reusable-item positions"
-        } : {},
         ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
       }),
-      response_schema: bootstrapFirstSection ? admissionInput ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
-      max_output_tokens: bootstrapFirstSection ? 16384 : 8192
+      response_schema: admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length)
     });
     modelCalls += 1;
     try {
-      const parsed = pruneModelNulls(parseModelJson(raw, bootstrapFirstSection ? "lessonPlanBootstrap" : "lessonPlanOutline"));
-      if (bootstrapFirstSection && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
+      let parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
+      if (admissionInput && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
         throw new LessonPlanError(
           "LESSON_PLAN_MODEL_JSON",
-          "$lessonPlanBootstrap",
-          "bootstrap response must be an object"
+          "$lessonPlanEnvelope",
+          "lesson response envelope must be an object"
         );
       }
       if (admissionInput) {
@@ -14158,16 +14604,23 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
           throw new LessonPlanError(
             "LESSON_PLAN_MODEL_JSON",
-            "$lessonPlanBootstrap.disposition",
-            "lesson bootstrap must choose generate_lesson, clarify, or ignore"
+            "$lessonPlanAdmission.disposition",
+            "lesson admission must choose generate_lesson, clarify, or ignore"
           );
         }
         if (disposition !== "generate_lesson") {
+          if (!Object.hasOwn(envelope, "course") || envelope.course !== null) {
+            throw new LessonPlanError(
+              "LESSON_PLAN_MODEL_JSON",
+              "$lessonPlanAdmission.course",
+              "clarify and ignore require course to be null"
+            );
+          }
           const learnerResponse = typeof envelope.learner_response === "string" ? envelope.learner_response.trim() : "";
           if (disposition === "clarify" && !learnerResponse) {
             throw new LessonPlanError(
               "LESSON_PLAN_MODEL_JSON",
-              "$lessonPlanBootstrap.learner_response",
+              "$lessonPlanAdmission.learner_response",
               "clarify requires a learner-facing question"
             );
           }
@@ -14177,42 +14630,25 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
             model_calls: modelCalls
           };
         }
+        if (!envelope.course || typeof envelope.course !== "object" || Array.isArray(envelope.course)) {
+          throw new LessonPlanError(
+            "LESSON_PLAN_MODEL_JSON",
+            "$lessonPlanAdmission.course",
+            "generate_lesson requires a complete course outline"
+          );
+        }
+        parsed = envelope.course;
       }
-      const rawOutline = bootstrapFirstSection ? parsed.outline : parsed;
+      parsed = pruneModelNulls(parsed);
       outline = validateLessonPlanOutline(
         lowerModelOutline(
           coerceLessonPlanOutlineModelNumbers(
-            rawOutline,
+            parsed,
             fixedRequestParts.length
           )
         ),
         fixedRequestParts.length
       );
-      if (bootstrapFirstSection) {
-        try {
-          const positionedFirstSection = reconcileBootstrapFirstSectionPositions(
-            coerceLessonPlanBootstrapSectionModelNumbers(
-              parsed.first_section
-            ),
-            outline
-          );
-          reconcileBootstrapReusableDeclarations(positionedFirstSection, outline);
-          outline = validateLessonPlanOutline(outline, fixedRequestParts.length);
-          bootstrappedFirstSection = lowerModelSectionDraft(
-            positionedFirstSection,
-            outline,
-            1
-          );
-        } catch (error) {
-          sectionErrors.set(1, error);
-          await options.on_rejected_part?.({
-            label: "lesson-plan-section",
-            section: 1,
-            attempt: 1,
-            error: rejectionDetails(error)
-          });
-        }
-      }
       break;
     } catch (error) {
       outlineError = error;
@@ -14226,11 +14662,13 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   if (!outline) throw outlineError;
   const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
   if (unsupported) {
-    throw new LessonPlanError(
-      "LESSON_PLAN_UNSUPPORTED_REQUIREMENT",
-      `$lessonPlanOutline.request_coverage[${outline.request_coverage.indexOf(unsupported)}]`,
-      unsupported.reason ?? `request part ${unsupported.request_part} is unsupported`
-    );
+    const reason = unsupported.reason?.trim();
+    const learnerResponse = reason && reason.length <= 480 && !/\$lesson|LESSON_PLAN_|already exhausted|do not call|internal attempts/iu.test(reason) ? `\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF1A${reason}` : "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002";
+    return {
+      disposition: "unsupported",
+      learner_response: learnerResponse,
+      model_calls: modelCalls
+    };
   }
   const generateSection = async (section) => {
     const attempt = (sectionAttempts.get(section) ?? 0) + 1;
@@ -14272,8 +14710,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           })),
           ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
         }),
-        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section),
-        max_output_tokens: 12288
+        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section)
       });
       modelCalls += 1;
     } catch (error) {
@@ -14327,7 +14764,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       }
     }
   };
-  await acceptSection(1, bootstrappedFirstSection);
+  await acceptSection(1);
   if (outline.sections.length > 1 && concurrency === 1) {
     for (let section = 2; section <= outline.sections.length; section += 1) {
       await acceptSection(section);
@@ -14389,11 +14826,18 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     await Promise.allSettled(workers);
   }
   let compiled;
+  let compiledOutline;
+  let compiledDrafts;
+  let programAdjustments = [];
   let finalError;
   for (let attempt = 1; attempt <= outline.sections.length * maxAttempts; attempt += 1) {
     try {
-      const plan = assembleLessonPlan(outline, drafts, options.compile);
+      const normalized = normalizeExecutableNumberInteractions(outline, drafts);
+      const plan = assembleLessonPlan(normalized.outline, normalized.drafts, options.compile);
       compiled = compileAndValidateLessonPlan(plan, options.compile);
+      compiledOutline = normalized.outline;
+      compiledDrafts = normalized.drafts;
+      programAdjustments = normalized.adjustments;
       break;
     } catch (error) {
       finalError = error;
@@ -14410,10 +14854,13 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     }
   }
   if (!compiled) throw finalError;
+  for (const adjustment of programAdjustments) {
+    await options.on_program_adjustment?.(adjustment);
+  }
   return {
     ...compiled,
-    outline,
-    drafts: drafts.map((draft) => structuredClone(draft)),
+    outline: compiledOutline ?? outline,
+    drafts: (compiledDrafts ?? drafts).map((draft) => structuredClone(draft)),
     model_calls: modelCalls
   };
 }
@@ -14429,12 +14876,11 @@ export {
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VISUAL_PARAMETER_NAMES,
   LessonPlanError,
+  PROCESS_DIAGRAM_CONTRACT,
   assembleLessonPlan,
-  buildLessonPlanAdmissionBootstrapJsonSchema,
-  buildLessonPlanBootstrapJsonSchema,
+  buildLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
-  coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
   compileAndValidateLessonPlan,
@@ -14442,6 +14888,7 @@ export {
   deriveLessonRequestParts,
   generateLessonPlanWithModel,
   matchLessonPlanCapability,
+  mathExpressionToOll,
   resolveLessonPlan,
   validateLessonPlan,
   validateLessonPlanOutline

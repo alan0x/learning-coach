@@ -8,6 +8,10 @@ import {
   compileMathExpression,
   type AuthoringLesson,
 } from "octos-lesson-language";
+import {
+  buildImplicitSurfaceObject,
+  implicitSurfaceDomain,
+} from "./scene3d-surfaces.js";
 
 const TOOL_NAME = "oll_generate_lesson";
 const SELECTION_TOOL_NAME = "oll_enhance_selection";
@@ -150,7 +154,6 @@ type ThinkingLevel = "MINIMAL" | "LOW" | "MEDIUM" | "HIGH";
 
 export interface StructuredModelRequest {
   label:
-    | "lesson-plan-bootstrap"
     | "lesson-plan-outline"
     | "lesson-plan-section"
     | "selection-enhancement"
@@ -168,7 +171,7 @@ export interface StructuredModelRequest {
   thinkingLevel?: ThinkingLevel;
   signal?: AbortSignal;
   media?: { mimeType: "image/png" | "image/jpeg" | "image/webp"; data: string };
-  lessonPlanPart?: "bootstrap" | "outline" | "section";
+  lessonPlanPart?: "outline" | "section";
   lessonPlanSection?: number;
   lessonPlanAttempt?: number;
 }
@@ -211,8 +214,7 @@ function parseThinkingLevel(value: string | undefined, label: string): ThinkingL
 function configuredThinkingLevel(
   label: StructuredModelRequest["label"],
 ): ThinkingLevel | undefined {
-  const environmentName = label === "lesson-plan-bootstrap"
-    || label === "lesson-plan-outline"
+  const environmentName = label === "lesson-plan-outline"
     ? "OLL_TASK_THINKING_LEVEL"
     : label === "lesson-plan-section"
       ? "OLL_SECTION_THINKING_LEVEL"
@@ -601,7 +603,12 @@ function vertexResponseContent(payload: unknown): string {
     ?.map((part) => typeof part.text === "string" ? part.text : "")
     .join("")
     .trim();
-  if (!text) throw new Error(`Vertex response contains no JSON text (finishReason=${candidate.finishReason ?? "unknown"})`);
+  if (!text) {
+    throw new ToolExecutionError(
+      "VERTEX_RESPONSE_EMPTY",
+      `Vertex response contains no JSON text (finishReason=${candidate.finishReason ?? "unknown"})`,
+    );
+  }
   return text;
 }
 
@@ -1290,44 +1297,6 @@ function selectionSurfaceDomain(expression: string): { x: SelectionRange; y: Sel
   throw new Error("3D surface has no stable finite viewport");
 }
 
-function selectionImplicitDomain(
-  expression: string,
-  variables: ["x", "y"] | ["x", "y", "z"],
-  level: number,
-): { x: SelectionRange; y: SelectionRange; z?: SelectionRange } {
-  const evaluate = compileMathExpression(expression, variables);
-  for (const halfSpan of [2, 5, 10, 20]) {
-    const range = { min: -halfSpan, max: halfSpan };
-    const resolution = variables.length === 2 ? 16 : 8;
-    let minimum = Number.POSITIVE_INFINITY;
-    let maximum = Number.NEGATIVE_INFINITY;
-    for (let xIndex = 0; xIndex <= resolution; xIndex += 1) {
-      const x = range.min + (range.max - range.min) * xIndex / resolution;
-      for (let yIndex = 0; yIndex <= resolution; yIndex += 1) {
-        const y = range.min + (range.max - range.min) * yIndex / resolution;
-        const zIterations = variables.length === 3 ? resolution : 0;
-        for (let zIndex = 0; zIndex <= zIterations; zIndex += 1) {
-          const z = variables.length === 3
-            ? range.min + (range.max - range.min) * zIndex / resolution
-            : 0;
-          try {
-            const value = evaluate(variables.length === 3 ? { x, y, z } : { x, y });
-            if (!Number.isFinite(value) || Math.abs(value) > 1e12) continue;
-            minimum = Math.min(minimum, value);
-            maximum = Math.max(maximum, value);
-          } catch {
-            // Continue searching the bounded grid.
-          }
-        }
-      }
-    }
-    if (minimum <= level && maximum >= level) {
-      return { x: range, y: range, ...(variables.length === 3 ? { z: range } : {}) };
-    }
-  }
-  throw new Error("Implicit surface level is outside the program-selected viewport");
-}
-
 function parseSelectionModelResponse(
   raw: string,
   input: SelectionToolInput,
@@ -1425,7 +1394,7 @@ function parseSelectionModelResponse(
         };
       } else {
         const level = finiteOutput("level");
-        const viewport = selectionImplicitDomain(expression, ["x", "y"], level);
+        const viewport = implicitSurfaceDomain(expression, ["x", "y"], level);
         response = {
           kind: "plot",
           plot_kind: "implicit",
@@ -1449,30 +1418,22 @@ function parseSelectionModelResponse(
       const expression = nonEmpty("expression");
       const level = finiteOutput("level");
       const samples = 12;
-      const viewport = sceneKind === "surface"
-        ? selectionSurfaceDomain(expression)
-        : selectionImplicitDomain(expression, ["x", "y", "z"], level);
       const object = sceneKind === "surface"
         ? {
             as: "selected-function",
             kind: "surface",
             expression,
-            x_range: viewport.x,
-            y_range: viewport.y,
+            ...selectionSurfaceDomain(expression),
             samples,
             color: "teal",
           }
-        : {
+        : buildImplicitSurfaceObject({
             as: "selected-function",
-            kind: "implicit_surface",
             expression,
             level,
-            x_range: viewport.x,
-            y_range: viewport.y,
-            z_range: viewport.z!,
             samples,
             color: "teal",
-          };
+          });
       response = {
         kind: "scene3d",
         title,
@@ -1754,7 +1715,6 @@ async function main(): Promise<void> {
           systemPrompt: request.system_prompt,
           prompt: request.prompt,
           responseSchema: request.response_schema,
-          maxTokens: request.max_output_tokens,
           lessonPlanPart: request.part,
           lessonPlanSection: request.section,
           lessonPlanAttempt: request.attempt,
@@ -1768,7 +1728,6 @@ async function main(): Promise<void> {
           input_modality: input.input_modality,
         },
         {
-          bootstrap_first_section: true,
           max_concurrency: Math.min(
             parsePositiveInteger(
               process.env.OLL_SECTION_CONCURRENCY,
@@ -1781,6 +1740,12 @@ async function main(): Promise<void> {
           on_rejected_part: (event) => stageLog({
             stage: "lesson-plan-local-rejection",
             turn_id: input.turn_id,
+            ...event,
+          }),
+          on_program_adjustment: (event) => stageLog({
+            stage: "lesson-plan-program-adjustment",
+            turn_id: input.turn_id,
+            status: "applied",
             ...event,
           }),
           on_playable_prefix: async ({ completed_sections, compiled }) => {
@@ -1867,10 +1832,10 @@ async function main(): Promise<void> {
             ? "SELECTION_ENHANCEMENT_FAILED"
             : "LESSON_GENERATION_FAILED",
       output: terminalForTurn
-        ? `Lesson generation already exhausted its internal attempts. Do not call oll_generate_lesson again in this turn. Report the failure once to the learner. ${message}`
+        ? "这次课程没有生成成功，请稍后重试。"
         : message,
-      ...(terminalForTurn ? {
-        retryable: false,
+     ...(terminalForTurn ? {
+       retryable: false,
         do_not_retry_same_turn: true,
         structured_metadata: {
           retryable: false,

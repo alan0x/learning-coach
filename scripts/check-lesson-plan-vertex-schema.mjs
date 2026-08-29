@@ -8,8 +8,8 @@ if (!process.env.VERTEX_SA_JSON) throw new Error("VERTEX_SA_JSON is required for
 
 const entry = `
   import { createVertexClient, probeVertexSchema } from ${JSON.stringify(resolve(root, "src/main.ts"))};
-  import { buildLessonPlanBootstrapJsonSchema, buildLessonPlanOutlineJsonSchema, buildLessonPlanSectionDraftJsonSchema } from ${JSON.stringify(resolve(root, "src/lesson-plan-schema.ts"))};
-  export { createVertexClient, probeVertexSchema, buildLessonPlanBootstrapJsonSchema, buildLessonPlanOutlineJsonSchema, buildLessonPlanSectionDraftJsonSchema };
+  import { buildLessonPlanAdmissionOutlineJsonSchema, buildLessonPlanOutlineJsonSchema, buildLessonPlanSectionDraftJsonSchema } from ${JSON.stringify(resolve(root, "src/lesson-plan-schema.ts"))};
+  export { createVertexClient, probeVertexSchema, buildLessonPlanAdmissionOutlineJsonSchema, buildLessonPlanOutlineJsonSchema, buildLessonPlanSectionDraftJsonSchema };
 `;
 const bundle = await build({
   stdin: { contents: entry, resolveDir: root, sourcefile: "lesson-plan-schema-contract-entry.ts" },
@@ -44,7 +44,7 @@ function addEnumTypes(value) {
 }
 
 const current = api.buildLessonPlanOutlineJsonSchema(3);
-const bootstrap = api.buildLessonPlanBootstrapJsonSchema(3);
+const admissionOutline = api.buildLessonPlanAdmissionOutlineJsonSchema(3);
 const noNumericBounds = clone(current);
 removeKeywords(noNumericBounds, new Set(["minimum", "maximum"]));
 const noArrayBounds = clone(current);
@@ -210,9 +210,9 @@ const replaceReferenceRefs = (value) => {
 replaceReferenceRefs(sectionInlineReferences);
 delete sectionInlineReferences.$defs.modelReference;
 
-const variants = process.argv.includes("--bootstrap-only") ? [[
-  "outline-and-first-section-bootstrap",
-  bootstrap,
+const variants = process.argv.includes("--admission-outline-only") ? [[
+  "admission-outline",
+  admissionOutline,
 ]] : process.argv.includes("--decimal-contract") ? [
   ["decimal-inline", decimalInline],
   ["decimal-ref", decimalRef],

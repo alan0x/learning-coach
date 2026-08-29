@@ -28,6 +28,10 @@ import {
   type ResolvedLessonPlan,
   type ResolvedLessonPlanReference,
 } from "./lesson-plan.js";
+import {
+  buildImplicitSurfaceObject,
+  implicitSurfaceDomain,
+} from "./scene3d-surfaces.js";
 
 export interface CompileLessonPlanOptions extends ResolveLessonPlanOptions {
   language?: string;
@@ -39,6 +43,7 @@ export interface CompileLessonPlanOptions extends ResolveLessonPlanOptions {
 export const LESSON_PLAN_SCENE_INITIAL_CAMERAS = {
   cube_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
   function_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
+  implicit_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
 } as const;
 
 export interface CompiledLessonPlan {
@@ -258,7 +263,7 @@ function deterministicFunctionViewport(
   return { x: best.x, y: paddedNumericRange(best.values, { min: -1, max: 1 }) };
 }
 
-function mathExpressionToOll(expression: LessonPlanMathExpression): string {
+export function mathExpressionToOll(expression: LessonPlanMathExpression): string {
   const operators = {
     add: "+",
     subtract: "-",
@@ -821,6 +826,71 @@ function compileFunctionSurface(
   };
 }
 
+function compileImplicitSurface(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "expression", "level", "section_axis"], path);
+  if (input.expression === undefined) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "an implicit surface requires an expression");
+  }
+  if (input.level === undefined) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.level`, "an implicit surface requires a level");
+  }
+  const expression = safeFunctionExpression(input.expression, "", ["x", "y", "z"], `${path}.expression`);
+  const level = optionalNumber(input.level, 0, `${path}.level`);
+  const axis = input.section_axis ?? "z";
+  if (axis !== "x" && axis !== "y" && axis !== "z") {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
+  }
+  let surface: ReturnType<typeof buildImplicitSurfaceObject>;
+  try {
+    surface = buildImplicitSurfaceObject({
+      as: "surface",
+      expression,
+      level,
+      samples: 12,
+      color: "teal",
+      label: `${expression}=${level}`,
+    });
+  } catch (error) {
+    fail(
+      "LESSON_PLAN_CAPABILITY_PARAMETER",
+      `${path}.expression`,
+      error instanceof Error ? error.message : "implicit surface cannot be rendered",
+    );
+  }
+  const number = content.numbers?.[0];
+  const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
+  const variable = number ? variableAlias(number) : undefined;
+  const sceneContent: Record<string, unknown> = {
+    title: optionalText(input.title, "隐式曲面与截面", `${path}.title`),
+    fallback: `隐式曲面 ${expression}=${level} 与可变轴向截面。`,
+    axes: true,
+    camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.implicit_surface_with_section },
+    objects: [surface],
+    sections: [{
+      as: "section", axis, value: sectionValue, targets: ["surface"],
+      display: "plane_and_intersection", label: "截面", color: "orange",
+    }],
+    ...(variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}),
+  };
+  return {
+    actions: [{ do: "write", as: base, kind: "scene3d", role, content: sceneContent, place: placement }],
+    whole: base,
+    primaryScene: base,
+    parts: new Map([
+      ["whole", base], ["surface", `${base}#surface`], ["section", `${base}#section`],
+      ["intersection", `${base}#section`], ...(variable ? [["primary_control", `${base}#section`]] as Array<[string, string]> : []),
+    ]),
+  };
+}
+
 function compileCoordinateCircle(
   base: string,
   content: LessonPlanVisualContent,
@@ -1106,6 +1176,7 @@ const VISUAL_COMPILERS = {
   spring_and_mass: compileSpringAndMass,
   cube_with_section: compileCubeWithSection,
   function_surface_with_section: compileFunctionSurface,
+  implicit_surface_with_section: compileImplicitSurface,
   coordinate_circle: compileCoordinateCircle,
   geometric_rearrangement: compileGeometricRearrangement,
   process_diagram: compileProcessDiagram,
@@ -1146,6 +1217,31 @@ function positiveProgramRange(definition: NonNullable<LessonPlan["numbers"]>[num
 
 function surfaceSectionProgramRange(content: LessonPlanVisualContent, path: string): { min: number; max: number } {
   const input = parameters(content);
+  if (content.capability === "implicit_surface_with_section") {
+    if (input.expression === undefined) {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "an implicit surface requires an expression");
+    }
+    if (input.level === undefined) {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.level`, "an implicit surface requires a level");
+    }
+    const expression = safeFunctionExpression(input.expression, "", ["x", "y", "z"], `${path}.expression`);
+    const level = optionalNumber(input.level, 0, `${path}.level`);
+    let domain: ReturnType<typeof implicitSurfaceDomain>;
+    try {
+      domain = implicitSurfaceDomain(expression, ["x", "y", "z"], level);
+    } catch (error) {
+      fail(
+        "LESSON_PLAN_CAPABILITY_PARAMETER",
+        `${path}.expression`,
+        error instanceof Error ? error.message : "implicit surface has no stable finite viewport",
+      );
+    }
+    const axis = input.section_axis ?? "z";
+    if (axis !== "x" && axis !== "y" && axis !== "z") {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
+    }
+    return axis === "x" ? domain.x : axis === "y" ? domain.y : domain.z!;
+  }
   const xMin = optionalNumber(input.x_min, -2, `${path}.x_min`);
   const xMax = optionalNumber(input.x_max, 2, `${path}.x_max`);
   const yMin = optionalNumber(input.y_min, -2, `${path}.y_min`);
