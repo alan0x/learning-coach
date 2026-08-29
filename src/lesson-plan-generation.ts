@@ -5,6 +5,7 @@ import {
   PROCESS_DIAGRAM_CONTRACT,
   LESSON_PLAN_CAPABILITIES,
   LESSON_PLAN_VISUAL_FEATURES,
+  LESSON_PLAN_VERSION,
   LessonPlanError,
   assembleLessonPlan,
   matchLessonPlanCapability,
@@ -25,16 +26,21 @@ import {
   type CompiledLessonPlan,
 } from "./lesson-plan-compiler.js";
 import {
+  buildLessonPlanAdmissionBootstrapJsonSchema,
   buildLessonPlanAdmissionOutlineJsonSchema,
+  buildCameraLessonPlanAdmissionBootstrapJsonSchema,
   buildCameraLessonPlanAdmissionOutlineJsonSchema,
+  buildLessonPlanBootstrapJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
+  coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
   LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES,
   LESSON_PLAN_VISUAL_PARAMETER_NAMES,
   type LessonPlanJsonSchema,
 } from "./lesson-plan-schema.js";
+import { completedJsonObjectProperty } from "./json-stream.js";
 
 export interface LessonPlanGenerationInput {
   turn_id: string;
@@ -54,12 +60,12 @@ export interface CameraLessonObservation {
 }
 
 export interface LessonPlanModelRequest {
-  label: "lesson-plan-outline" | "lesson-plan-section";
+  label: "lesson-plan-bootstrap" | "lesson-plan-outline" | "lesson-plan-section";
   turn_id: string;
   system_prompt: string;
   prompt: string;
   response_schema: LessonPlanJsonSchema;
-  part: "outline" | "section";
+  part: "bootstrap" | "outline" | "section";
   section?: number;
   attempt: number;
   include_camera_media?: boolean;
@@ -69,18 +75,13 @@ export type LessonPlanModelCall = (request: LessonPlanModelRequest) => Promise<s
 
 export interface GenerateLessonPlanOptions {
   max_attempts_per_part?: number;
-  max_concurrency?: number;
   compile?: CompileLessonPlanOptions;
   on_playable_prefix?: (event: {
     completed_sections: number;
     compiled: CompiledLessonPlan;
   }) => void | Promise<void>;
-  on_concurrency_fallback?: (event: {
-    section: number;
-    reason: "rate_limited";
-  }) => void | Promise<void>;
   on_rejected_part?: (event: {
-    label: "lesson-plan-outline" | "lesson-plan-section";
+    label: "lesson-plan-bootstrap" | "lesson-plan-outline" | "lesson-plan-section";
     attempt: number;
     section?: number;
     error: { code: string; path?: string; message: string };
@@ -110,24 +111,51 @@ export interface NonLessonPlanResponse {
 
 export type LessonPlanGenerationResult = GeneratedLessonPlan | NonLessonPlanResponse;
 
-const OUTLINE_SYSTEM_PROMPT = `设计一整节完整课程的目录，不生成 OLL，不填写执行 ID、组件名或自由对象名。
-- course_visuals 一次列出课程真正需要的主要画面；只选 Schema 中的 required_features。相同画面后续必须复用，不能因标题、布局、范围、相机或颜色再建一份。只有确需并排比较时才用 comparison 并指向较早画面；supporting 也要指向较早画面。
-- 需要切分并移动图形证明面积时，使用 polygon_pieces、rigid_rearrangement、area_relation；ordered_process_steps 只是静态流程，不能冒充移动图形或数值控件。
-- numbers 只声明有教学作用的共享数值、教学范围和初始值。画面所需数值及顺序以 available_visual_recipes 为准。滑杆种类、步长和能力允许的执行范围由程序统一生成，不要填写或估算。
-- request_coverage 逐项覆盖 request_parts。能落实才写 teach 和章节；明确要求但当前能力无法实现时写 unsupported、空章节和原因，不得用文字或错误画面冒充。
-- sections 可以有多节；每节可有多段旁白、板书、动画和练习。close 只写总结。
+const OUTLINE_SYSTEM_PROMPT = `设计完整课程目录，不生成 OLL、执行 ID、组件名或自由对象名。
+- visual_recipes 每项依次是 [features, numbers, purpose]。course_visuals 只列真正需要的主要画面并选择其中的 features；同一画面后续复用，只有确需并排比较才建 comparison，supporting/comparison 都指向较早画面。
+- 图形拆分移动证明使用 polygon_pieces、rigid_rearrangement、area_relation；ordered_process_steps 只是静态流程。
+- numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。
+- request_coverage 按 request_parts 的原顺序逐项覆盖。可落实写 teach 和章节；当前能力不能完整实现则写 unsupported、空章节和原因，不能用文字或错误画面替代。
+- sections 可含多节，每节可有旁白、板书、动画和练习；close 只总结。
 只返回符合响应 Schema 的 JSON。`;
 
-const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 OLL，不填写执行 ID、变量名、对象名或对象引用。
-- 必须实际落实 assigned_request_parts。每段旁白与当时板书和动作放在同一 moment；可见文字直接对学习者说话，不能写“让学生……”。
-- visuals_for_section 中 create 的画面只在根层 course_visual_creates 描述并指定 moment；reuse 的旧画面不得重建。普通公式、笔记只用 Schema 提供的清单。空清单省略。
-- focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象并决定动作顺序。placement 只写相对方向。可复用普通板书只填根层必填项，不填写内部位置。
+const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 OLL、执行 ID、变量名、对象名或对象引用。
+- 必须落实目录分配的 request_parts。旁白与对应板书和动作放在同一 moment；可见文字直接对学习者说话，不能写“让学生……”。
+- 目录中本节 create 的画面按顺序写入 course_visual_creates 并指定 moment；reuse 的画面不得重建。目录声明的公式和笔记分别按顺序写入 reusable_math_creates、reusable_note_creates；空清单省略。
+- focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象，补齐卡片用途、位置、默认时机和动作顺序。
 - 小数按 Schema 的 mantissa、scale 填写，例如 -1.5 为 -15、1；6.283 为 6283、3。
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
 - function_plot 的 parameters.formulas 始终是公式数组，每项只写中缀公式右侧：x 是横轴，n1、n2 是课程第 1、2 个数值；支持 + - * / ^、括号、pi、e 和常见单参数函数。单条曲线可引用 n1、n2，例如 (x-n1)^2+n2；比较多条曲线时填写多个不含 n1、n2 的静态公式，例如 ["x", "x^2", "sin(x)"]。每条公式都必须依赖 x；程序逐条解析、绑定控件并计算坐标范围。函数图和三维曲面都不填写视窗、采样密度或网格精度。
-- animations 只决定演示哪个数值、目标值和教学节奏；程序统一生成缓动方式。placement 只决定相对方向；程序统一生成锚点、对齐和间距。
+- animations 只决定演示哪个数值、目标值和教学节奏；程序统一生成缓动方式。
 - geometric_rearrangement 的数值表示重排进度；construction 从 Schema 选择。process_diagram 没有数值或动画。
 只返回符合响应 Schema 的 JSON。`;
+
+const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 outline，再依据这个 outline 编写 first_section。first_section 只能落实 outline.sections[0]：
+- outline 是唯一课程安排；不得在 first_section 增加 outline 没有声明的主要画面，也不得遗漏第一节声明的主要画面和可复用板书。
+- first_section 只写 moments 以及可选的 number_activities、scene3d_activities。旁白与对应板书和动作放在同一 moment；可见文字直接对学习者说话，不能写“让学生……”。
+- outline 中第一节新建的主要画面，按 course_visuals 的位置写进对应 moment 的 visual_creates：course_visual 填其从 1 开始的位置，content.parameters 只填写该画面所需的数学内容，content.numbers 使用 outline.numbers 的位置。画面能力由程序根据 outline.required_features 确定，first_section 不再重复选择。不得重建 outline 声明为复用的旧画面。
+- outline 中第一节声明的可复用公式和笔记，按 reusable_items 的位置写进对应 moment 的 math_creates 和 note_creates，并用 reusable_item 填其从 1 开始的位置；其他只在当前讲解中出现的公式或笔记也可写入这两个数组，但不填 reusable_item。程序把位置转换为稳定引用。
+- first_section 使用 outline 中数值和画面的先后顺序，不生成 OLL、执行 ID、变量名、对象名、对象引用、course_visual_creates 或 reusable_board_creates。
+- focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象，补齐卡片用途、位置、默认时机和动作顺序。
+- 小数按 Schema 的 mantissa、scale 填写，例如 -1.5 为 -15、1；6.283 为 6283、3。
+- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
+- function_plot 的 parameters.formulas 始终是公式数组，每项只写中缀公式右侧：x 是横轴，n1、n2 是课程第 1、2 个数值；支持 + - * / ^、括号、pi、e 和常见单参数函数。单条曲线可引用 n1、n2，例如 (x-n1)^2+n2；比较多条曲线时填写多个不含 n1、n2 的静态公式，例如 ["x", "x^2", "sin(x)"]。每条公式都必须依赖 x；程序逐条解析、绑定控件并计算坐标范围。函数图和三维曲面都不填写视窗、采样密度或网格精度。
+- animations 只决定演示哪个数值、目标值和教学节奏；程序统一生成缓动方式。
+- geometric_rearrangement 的数值表示重排进度；construction 从 Schema 选择。process_diagram 没有数值或动画。`;
+
+const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
+
+${BOOTSTRAP_FIRST_SECTION_PROMPT}
+
+只返回符合响应 Schema 的 JSON。`;
+
+const ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户正尝试从文字输入或语音输入开始一整节白板课程。先判断当前内容是否足以确定课程主题，不要从可用画面或数学能力猜测用户没有表达的主题。
+- generate_lesson：用户提出了学习问题、解释请求，或清楚说出了想学习的主题。简短但明确的主题（例如“勾股定理”）也属于这一类。此时 course 必须同时包含完整 outline 和 first_section，learner_response 留空。
+- clarify：这是真实话语，但内容残缺、含义不清或没有说明要学什么，无法可靠确定课程主题。此时 course 必须为 null，用 learner_response 简短追问用户想学习什么。例如 “The book.” 应追问用户想了解这本书的什么内容，而不是猜成数学课程。
+- ignore：只是语气词、口头填充或没有可回应内容。此时 course 必须为 null，learner_response 留空。
+只做上述语义判断，不使用字数、语言或固定关键词作为规则。
+
+${BOOTSTRAP_SYSTEM_PROMPT}`;
 
 const ADMISSION_OUTLINE_SYSTEM_PROMPT = `用户正尝试从文字输入或语音输入开始一整节白板课程。先判断当前内容是否足以确定课程主题，不要从可用画面或数学能力猜测用户没有表达的主题。
 - generate_lesson：用户提出了学习问题、解释请求，或清楚说出了想学习的主题。简短但明确的主题（例如“勾股定理”）也属于这一类。此时 course 必须包含完整课程目录，learner_response 留空。不要生成任何一节的旁白或板书内容。
@@ -139,12 +167,21 @@ ${OUTLINE_SYSTEM_PROMPT}`;
 
 const CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT = `用户提交了一段文字或语音，同时附带了一张此刻的摄像头画面。只在这一次请求中读取图片。
 - image_observation 必须忠实记录图片是否看清、实际看到了什么、哪些地方不确定。不要补写图片中不存在的题目、公式或文字。
-- 如果 learner_request 自己已经清楚说明学习主题，以 learner_request 为主；无关背景不能改变课程主题。
-- 如果 learner_request 使用“这个、这里、这道题、我手上的内容”等指代，使用 image_observation 来确定主题。
-- 图片无法看清且 learner_request 又不能独立确定主题时，返回 clarify 和简短追问，course 必须为 null。
+- 如果 request_parts 已清楚说明学习主题，以文字为主；无关背景不能改变主题。
+- 如果 request_parts 使用“这个、这里、这道题、我手上的内容”等指代，使用 image_observation 确定主题。
+- 图片无法看清且文字又不能独立确定主题时，返回 clarify 和简短追问，course 必须为 null。
 - 图片部分可读时，把不确定内容保留在 uncertainties 中，不要把猜测当成确定事实。
 
 ${ADMISSION_OUTLINE_SYSTEM_PROMPT}`;
+
+const CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户提交了一段文字或语音，同时附带了一张此刻的摄像头画面。只在这一次请求中读取图片。
+- image_observation 必须忠实记录图片是否看清、实际看到了什么、哪些地方不确定。不要补写图片中不存在的题目、公式或文字。
+- 如果 request_parts 已清楚说明学习主题，以文字为主；无关背景不能改变主题。
+- 如果 request_parts 使用“这个、这里、这道题、我手上的内容”等指代，使用 image_observation 确定主题。
+- 图片无法看清且文字又不能独立确定主题时，返回 clarify 和简短追问，course 必须为 null。
+- 图片部分可读时，把不确定内容保留在 uncertainties 中，不要把猜测当成确定事实。
+
+${ADMISSION_BOOTSTRAP_SYSTEM_PROMPT}`;
 
 function cameraObservation(value: unknown): CameraLessonObservation {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -236,10 +273,46 @@ function deriveSliderStep(min: number, max: number): number {
   return span / TARGET_SLIDER_INTERVALS;
 }
 
-function lowerModelOutline(value: unknown): unknown {
+function normalizeModelNumberRange(number: Record<string, unknown>): void {
+  if (typeof number.initial !== "number" || !Number.isFinite(number.initial)
+    || typeof number.min !== "number" || !Number.isFinite(number.min)
+    || typeof number.max !== "number" || !Number.isFinite(number.max)) return;
+  const initial = number.initial;
+  let min = Math.min(number.min, number.max, initial);
+  let max = Math.max(number.min, number.max, initial);
+  if (min === max) {
+    // A zero-width teaching range cannot drive an animation or slider. The
+    // value itself is still useful course intent, so give it a small stable
+    // neighbourhood rather than asking the model to restate the same number.
+    const padding = Math.max(1, Math.abs(initial) * 0.1);
+    min = initial - padding;
+    max = initial + padding;
+  }
+  number.min = min;
+  number.max = max;
+  number.initial = initial;
+}
+
+function defaultCoverageSection(
+  requestPart: number,
+  requestPartCount: number,
+  sectionCount: number,
+): number {
+  // Request parts and outline sections are both ordered. When the model omits
+  // only trailing coverage metadata, keep its accepted outline unchanged and
+  // assign each missing tail requirement to the corresponding later section.
+  // The original request text is then passed into that section's exact prompt.
+  return Math.min(
+    sectionCount,
+    Math.max(1, Math.ceil((requestPart * sectionCount) / requestPartCount)),
+  );
+}
+
+function lowerModelOutline(value: unknown, requestPartCount = 0): unknown {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) return root;
   const candidate = root as Record<string, unknown>;
+  candidate.version = LESSON_PLAN_VERSION;
   if (Array.isArray(candidate.numbers)) {
     candidate.numbers = candidate.numbers.map((entry) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
@@ -247,6 +320,7 @@ function lowerModelOutline(value: unknown): unknown {
       delete number.student_control;
       if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
       if (typeof number.label === "string" && !number.label.trim()) delete number.label;
+      normalizeModelNumberRange(number);
       if (typeof number.min === "number"
         && Number.isFinite(number.min)
         && typeof number.max === "number"
@@ -265,12 +339,28 @@ function lowerModelOutline(value: unknown): unknown {
     });
   }
   if (Array.isArray(candidate.request_coverage)) {
-    candidate.request_coverage = candidate.request_coverage.map((entry) => {
+    candidate.request_coverage = candidate.request_coverage.map((entry, index) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
       const coverage = { ...(entry as Record<string, unknown>) };
+      coverage.request_part = index + 1;
       if (coverage.treatment === "teach") delete coverage.reason;
       return coverage;
     });
+  }
+  if (requestPartCount > 0
+    && (candidate.request_coverage === undefined || Array.isArray(candidate.request_coverage))
+    && Array.isArray(candidate.sections)
+    && candidate.sections.length > 0) {
+    const coverage = (candidate.request_coverage ?? []) as unknown[];
+    for (let index = coverage.length; index < requestPartCount; index += 1) {
+      const requestPart = index + 1;
+      coverage.push({
+        request_part: requestPart,
+        treatment: "teach",
+        sections: [defaultCoverageSection(requestPart, requestPartCount, candidate.sections.length)],
+      });
+    }
+    candidate.request_coverage = coverage;
   }
   if (Array.isArray(candidate.course_visuals) && Array.isArray(candidate.sections)) {
     const sections = candidate.sections.map((entry) => {
@@ -288,6 +378,11 @@ function lowerModelOutline(value: unknown): unknown {
     candidate.course_visuals = candidate.course_visuals.map((entry, visualIndex) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
       const visual = { ...(entry as Record<string, unknown>) };
+      if (Array.isArray(visual.use_sections)) {
+        const sections = visual.use_sections.filter((section) => Number.isInteger(section) && Number(section) > 0)
+          .map(Number);
+        if (sections.length > 0) visual.create_section = Math.min(...sections);
+      }
       if (!Array.isArray(visual.required_features)) {
         throw new LessonPlanError(
           "LESSON_PLAN_CAPABILITY_REQUIREMENTS",
@@ -368,6 +463,29 @@ const modelActionCollections = {
   animations: { action: "animate" },
 } as const;
 
+function withProgramCreateDefaults(
+  value: Record<string, unknown>,
+  kind: "visual" | "math" | "note",
+  relation?: "primary" | "supporting" | "comparison",
+): Record<string, unknown> {
+  const lowered = { ...value };
+  if (lowered.role === undefined) {
+    lowered.role = kind === "visual"
+      ? relation === "comparison" ? "comparison_visual"
+        : relation === "supporting" ? "supporting_visual"
+          : "main_visual"
+      : kind === "math" ? "derivation" : "explanation";
+  }
+  if (lowered.placement === undefined) {
+    lowered.placement = {
+      relation: kind === "visual"
+        ? relation === "supporting" || relation === "comparison" ? "right_of" : "new_region"
+        : "below",
+    };
+  }
+  return lowered;
+}
+
 function lowerModelReference(value: unknown, currentMoment?: number): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   const reference = value as Record<string, unknown>;
@@ -424,11 +542,47 @@ function formulaError(path: string, message: string): never {
   throw new LessonPlanError("LESSON_PLAN_EXPRESSION", path, message);
 }
 
+const atomicBareFunctionPattern = new RegExp(
+  `\\b(${[...formulaFunctions].join("|")})\\s+(-?(?:x|n\\d+|pi|e|(?:\\d+(?:\\.\\d*)?|\\.\\d+)))(?=\\s*(?:$|[+\\-*/),]))`,
+  "giu",
+);
+
+const atomicSubscriptLogPattern = new RegExp(
+  `\\blog_\\{?((?:\\d+(?:\\.\\d*)?|\\.\\d+))\\}?\\s+(-?(?:x|n\\d+|pi|e|(?:\\d+(?:\\.\\d*)?|\\.\\d+)))(?=\\s*(?:$|[+\\-*/),]))`,
+  "giu",
+);
+
+const parenthesizedSubscriptLogPattern = new RegExp(
+  `\\blog_?\\{?((?:\\d+(?:\\.\\d*)?|\\.\\d+))\\}?\\s*\\(\\s*(-?(?:x|n\\d+|pi|e|(?:\\d+(?:\\.\\d*)?|\\.\\d+)))\\s*\\)`,
+  "giu",
+);
+
+function normalizeAtomicBareFunctionCalls(formula: string): string {
+  // Only normalize an unambiguous, single atomic argument. Expressions such
+  // as `log x^2` or `sin x y` keep failing instead of being guessed.
+  return formula
+    .replace(parenthesizedSubscriptLogPattern, (_match, base: string, argument: string) => {
+      const numericBase = Number(base);
+      if (!(numericBase > 0) || numericBase === 1) return _match;
+      return `(log(${argument})/log(${base}))`;
+    })
+    .replace(atomicSubscriptLogPattern, (_match, base: string, argument: string) => {
+      const numericBase = Number(base);
+      if (!(numericBase > 0) || numericBase === 1) return _match;
+      // Change of base works regardless of whether the runtime's `log` is
+      // natural or base ten, and avoids adding a second log operator.
+      return `(log(${argument})/log(${base}))`;
+    })
+    .replace(atomicBareFunctionPattern, (_match, name: string, argument: string) => (
+      `${name}(${argument})`
+    ));
+}
+
 function formulaLexemes(rawFormula: unknown, path: string): FormulaLexeme[] {
   if (typeof rawFormula !== "string" || !rawFormula.trim() || rawFormula.length > 256) {
     return formulaError(path, "expected a non-empty formula up to 256 characters");
   }
-  let formula = rawFormula.trim()
+  let formula = normalizeAtomicBareFunctionCalls(rawFormula.trim())
     .replaceAll("−", "-")
     .replaceAll("×", "*")
     .replaceAll("÷", "/")
@@ -607,8 +761,7 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
     ? { ...(content.parameters as Record<string, unknown>) }
     : {};
   if (capability === "implicit_surface_with_section"
-    && typeof parameters.expression === "string"
-    && parameters.level === undefined) {
+    && typeof parameters.expression === "string") {
     const equation = parameters.expression.split("=").map((part) => part.trim());
     if (equation.length === 2 && equation.every(Boolean)) {
       const rightLevel = Number(equation[1]);
@@ -623,7 +776,7 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
         parameters.expression = `(${equation[0]})-(${equation[1]})`;
         parameters.level = 0;
       }
-    } else {
+    } else if (parameters.level === undefined) {
       // Implicit equations are canonically F(x,y,z)=0. When the model writes
       // only the residual expression, the missing right-hand side is execution
       // state the program can supply without regenerating the section.
@@ -791,6 +944,46 @@ function processDiagramRemovalReason(content: LessonPlanVisualContent): string |
 
 function isExecutableProcessDiagram(content: LessonPlanVisualContent): boolean {
   return processDiagramRemovalReason(content) === undefined;
+}
+
+function rebuildCreatePlacements(
+  outline: LessonPlanOutline,
+  drafts: LessonPlanSectionDraft[],
+): void {
+  const latestReusableBefore = (sectionNumber: number): LessonPlanReference | undefined => {
+    for (let section = sectionNumber - 1; section >= 1; section -= 1) {
+      const items = outline.sections[section - 1]?.reusable_items ?? [];
+      for (let item = items.length; item >= 1; item -= 1) {
+        if (items[item - 1]?.kind === "board_item") {
+          return { source: "reusable", section, item };
+        }
+      }
+    }
+    return undefined;
+  };
+
+  drafts.forEach((section, sectionOffset) => {
+    let latestBoardReference = latestReusableBefore(sectionOffset + 1);
+    section.moments.forEach((moment, momentOffset) => {
+      let boardItem = 0;
+      for (const action of moment.actions) {
+        if (action.action !== "create") continue;
+        const requestedRelation = action.placement?.relation ?? "new_region";
+        action.placement = requestedRelation !== "new_region" && latestBoardReference
+          ? {
+              relation: requestedRelation,
+              reference: structuredClone(latestBoardReference),
+            }
+          : { relation: "new_region" };
+        boardItem += 1;
+        latestBoardReference = {
+          source: "local_board_item",
+          moment: momentOffset + 1,
+          item: boardItem,
+        };
+      }
+    });
+  });
 }
 
 function sanitizeNonessentialVisuals(
@@ -1123,6 +1316,11 @@ function sanitizeNonessentialVisuals(
     }
   }
 
+  // Dropping or deduplicating a create action changes local board-item
+  // positions. Rebuild every placement from the final retained action order,
+  // so no card can point to a removed item or to itself.
+  rebuildCreatePlacements(outline, drafts);
+
   if (outline.course_visuals) {
     const retainedPositions = outline.course_visuals
       .map((visual, index) => ({ visual, oldPosition: index + 1 }))
@@ -1168,6 +1366,30 @@ function normalizeExecutableNumberInteractions(
   const sanitized = sanitizeNonessentialVisuals(outlineValue, draftValues);
   const outline = sanitized.outline;
   const drafts = sanitized.drafts;
+  // A model can describe an animation endpoint that lies just outside the
+  // teaching range it declared in the outline. Both values are explicit
+  // course intent; asking the model to choose between them again adds latency
+  // without adding information. Build the executable range from their union,
+  // then let installed capability policies apply any physical/rendering limit
+  // during compilation.
+  for (const section of drafts) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "animate") continue;
+        const definition = outline.numbers?.[action.number - 1];
+        if (!definition || !Number.isFinite(action.end_value)) continue;
+        const nextMin = Math.min(definition.min, action.end_value);
+        const nextMax = Math.max(definition.max, action.end_value);
+        if (nextMin === definition.min && nextMax === definition.max) continue;
+        definition.min = nextMin;
+        definition.max = nextMax;
+        definition.initial = Math.min(nextMax, Math.max(nextMin, definition.initial));
+        if (definition.student_control) {
+          definition.student_control.step = deriveSliderStep(nextMin, nextMax);
+        }
+      }
+    }
+  }
   const visuallyBound = new Set<number>();
   for (const section of drafts) {
     for (const moment of section.moments) {
@@ -1396,6 +1618,144 @@ function lowerModelActivityNumbers(
   return lowered;
 }
 
+/**
+ * The combined provider schema cannot know the outline that is being written
+ * in the same response. Convert its broad create arrays into the exact
+ * outline-owned positions before the ordinary strict section lowering runs.
+ * Unmatched visuals are discarded; missing outline visuals stay missing so
+ * the accepted outline, rather than the speculative section, remains the
+ * authority and triggers a section-only repair.
+ */
+function reconcileBootstrapFirstSectionPositions(
+  value: unknown,
+  outline: LessonPlanOutline,
+): unknown {
+  const root = structuredClone(value);
+  if (!root || typeof root !== "object" || Array.isArray(root)) return root;
+  const candidate = root as Record<string, unknown>;
+  if (!Array.isArray(candidate.moments)) return root;
+
+  // Tests and older compatible callers may already provide the exact
+  // outline-indexed root objects. Keep those objects for the same strict
+  // validator below, while still removing any broad-schema visual extras.
+  if (candidate.course_visual_creates !== undefined || candidate.reusable_board_creates !== undefined) {
+    for (const momentValue of candidate.moments) {
+      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
+      delete (momentValue as Record<string, unknown>).visual_creates;
+    }
+    return root;
+  }
+
+  type CreateCandidate = {
+    entry: Record<string, unknown>;
+    moment: number;
+    order: number;
+    index: number;
+  };
+  const collect = (collection: "visual_creates" | "math_creates" | "note_creates"): CreateCandidate[] => (
+    candidate.moments.flatMap((momentValue, momentIndex) => {
+      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) return [];
+      const entries = (momentValue as Record<string, unknown>)[collection];
+      if (!Array.isArray(entries)) return [];
+      return entries.flatMap((entry, entryIndex) => (
+        entry && typeof entry === "object" && !Array.isArray(entry)
+          ? [{
+            entry: entry as Record<string, unknown>,
+            moment: momentIndex + 1,
+            order: Number((entry as Record<string, unknown>).order),
+            index: entryIndex,
+          }]
+          : []
+      ));
+    }).sort((left, right) => (
+      left.moment - right.moment
+      || (Number.isFinite(left.order) ? left.order : Number.MAX_SAFE_INTEGER)
+        - (Number.isFinite(right.order) ? right.order : Number.MAX_SAFE_INTEGER)
+      || left.index - right.index
+    ))
+  );
+
+  const visualCreates = collect("visual_creates");
+  const unmatchedVisuals = new Set(visualCreates);
+  const matchedVisuals = new Map<CreateCandidate, number>();
+  const expectedVisuals = (outline.course_visuals ?? [])
+    .map((visual, index) => ({ visual, position: index + 1 }))
+    .filter(({ visual }) => visual.create_section === 1);
+  for (const { visual, position } of expectedVisuals) {
+    const matchesCapability = (candidateEntry: CreateCandidate): boolean => {
+      if (!unmatchedVisuals.has(candidateEntry)) return false;
+      const content = candidateEntry.entry.content;
+      return content && typeof content === "object" && !Array.isArray(content)
+        && (content as Record<string, unknown>).capability === visual.capability;
+    };
+    const match = visualCreates.find((candidateEntry) => (
+      candidateEntry.entry.course_visual === position && unmatchedVisuals.has(candidateEntry)
+    )) ?? visualCreates.find(matchesCapability);
+    if (!match) continue;
+    matchedVisuals.set(match, position);
+    unmatchedVisuals.delete(match);
+  }
+  const fixedCourseCreates = Object.fromEntries([...matchedVisuals].map(([match, position]) => {
+    const entry = structuredClone(match.entry);
+    delete entry.order;
+    delete entry.course_visual;
+    delete entry.reusable_item;
+    const content = entry.content && typeof entry.content === "object" && !Array.isArray(entry.content)
+      ? { ...(entry.content as Record<string, unknown>) }
+      : {};
+    delete content.capability;
+    entry.content = content;
+    return [`visual_${position}`, { moment: match.moment, ...entry }];
+  }));
+  for (const momentValue of candidate.moments) {
+    if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
+    delete (momentValue as Record<string, unknown>).visual_creates;
+  }
+  if (expectedVisuals.length > 0) candidate.course_visual_creates = fixedCourseCreates;
+  else delete candidate.course_visual_creates;
+
+  const createsByKind = {
+    math: collect("math_creates"),
+    note: collect("note_creates"),
+  };
+  const usedBoardCreates = new Set<CreateCandidate>();
+  const reusableItems = outline.sections[0]?.reusable_items ?? [];
+  const fixedReusableCreates: Record<string, unknown> = {};
+  reusableItems.forEach((item, index) => {
+    if (item.kind !== "board_item" || (item.board_kind !== "math" && item.board_kind !== "note")) return;
+    const reusablePosition = index + 1;
+    const match = createsByKind[item.board_kind].find((candidateEntry) => (
+      !usedBoardCreates.has(candidateEntry)
+        && candidateEntry.entry.reusable_item === reusablePosition
+    )) ?? createsByKind[item.board_kind].find((candidateEntry) => !usedBoardCreates.has(candidateEntry));
+    if (!match) return;
+    usedBoardCreates.add(match);
+    const entry = structuredClone(match.entry);
+    delete entry.order;
+    delete entry.reusable_item;
+    fixedReusableCreates[`item_${index + 1}`] = { moment: match.moment, ...entry };
+  });
+  for (const [collection, entries] of Object.entries(createsByKind) as Array<
+    ["math" | "note", CreateCandidate[]]
+  >) {
+    const selected = new Set(entries.filter((entry) => usedBoardCreates.has(entry)).map(({ entry }) => entry));
+    const property = collection === "math" ? "math_creates" : "note_creates";
+    for (const momentValue of candidate.moments) {
+      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
+      const moment = momentValue as Record<string, unknown>;
+      if (!Array.isArray(moment[property])) continue;
+      moment[property] = moment[property].filter((entry) => !selected.has(entry as Record<string, unknown>));
+    }
+  }
+  const expectsReusableBoardCreates = reusableItems.some((item) => (
+    item.kind === "board_item" && (item.board_kind === "math" || item.board_kind === "note")
+  ));
+  if (expectsReusableBoardCreates) candidate.reusable_board_creates = fixedReusableCreates;
+  else delete candidate.reusable_board_creates;
+
+  return root;
+}
+
 function lowerModelSectionDraft(
   value: unknown,
   outline: LessonPlanOutline,
@@ -1414,7 +1774,7 @@ function lowerModelSectionDraft(
   for (const key of Object.keys(candidate)) {
     if (!allowedRoot.has(key)) throw new LessonPlanError("LESSON_PLAN_UNKNOWN_FIELD", `$lessonPlanModelSection.${key}`, "unknown field");
   }
-  if (candidate.section !== expectedSection) {
+  if (candidate.section !== undefined && candidate.section !== expectedSection) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.section", `expected section ${expectedSection}`);
   }
   if (!Array.isArray(candidate.moments) || candidate.moments.length === 0) {
@@ -1471,7 +1831,7 @@ function lowerModelSectionDraft(
       if (!source || typeof source !== "object" || Array.isArray(source)) {
         throw new LessonPlanError("LESSON_PLAN_COURSE_VISUAL", entryPath, "required course visual is missing");
       }
-      const entry = { ...(source as Record<string, unknown>) };
+      let entry = { ...(source as Record<string, unknown>) };
       const moment = Number(entry.moment);
       if (!Number.isInteger(moment) || moment < 1 || moment > candidate.moments.length) {
         throw new LessonPlanError("LESSON_PLAN_COURSE_VISUAL", `${entryPath}.moment`, "visual moment is unavailable");
@@ -1483,6 +1843,7 @@ function lowerModelSectionDraft(
       }
       entry.course_visual = position;
       entry.content = { capability: visual.capability, ...(rawContent as Record<string, unknown>) };
+      entry = withProgramCreateDefaults(entry, "visual", visual.relation);
       const entries = fixedCourseCreates.get(moment) ?? [];
       entries.push(entry);
       fixedCourseCreates.set(moment, entries);
@@ -1526,7 +1887,7 @@ function lowerModelSectionDraft(
       if (!source || typeof source !== "object" || Array.isArray(source)) {
         throw new LessonPlanError("LESSON_PLAN_REUSABLE", entryPath, "required reusable board item is missing");
       }
-      const entry = { ...(source as Record<string, unknown>) };
+      let entry = { ...(source as Record<string, unknown>) };
       const moment = Number(entry.moment);
       if (!Number.isInteger(moment) || moment < 1 || moment > candidate.moments.length) {
         throw new LessonPlanError("LESSON_PLAN_REUSABLE", `${entryPath}.moment`, "reusable board item moment is unavailable");
@@ -1543,6 +1904,7 @@ function lowerModelSectionDraft(
           `the staged model path cannot create a reusable ${String(item.board_kind)} board item`,
         );
       }
+      entry = withProgramCreateDefaults(entry, item.board_kind === "math" ? "math" : "note");
       const entries = fixedReusableCreates.get(moment) ?? { math_creates: [], note_creates: [] };
       entries[collection].push(entry);
       fixedReusableCreates.set(moment, entries);
@@ -1604,10 +1966,13 @@ function lowerModelSectionDraft(
         if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
           throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", entryPath, "expected an object");
         }
-        const action = {
+        let action = {
           ...("kind" in descriptor ? { kind: descriptor.kind } : {}),
           ...(entry as Record<string, unknown>),
         };
+        if (descriptor.action === "create" && "kind" in descriptor) {
+          action = withProgramCreateDefaults(action, descriptor.kind);
+        }
         const order = ordered.length + 1;
         if (collectionName === "visual_creates" && courseVisualsToCreate.length > 0) {
           const visualPosition = Number(action.course_visual);
@@ -1781,6 +2146,30 @@ function lowerModelSectionDraft(
     const normalizedActions: Record<string, unknown>[] = [];
     const timingOrder = { before_speech: 0, during_speech: 1, after_speech: 2 } as const;
     const timingName = ["before_speech", "during_speech", "after_speech"] as const;
+    const currentReferenceTimings = new Map<string, number>();
+    const actionTimingRank = (value: unknown): number => (
+      typeof value === "string" && value in timingOrder
+        ? timingOrder[value as keyof typeof timingOrder]
+        : 0
+    );
+    const referenceTimingRank = (value: unknown): number => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return 0;
+      const reference = value as Record<string, unknown>;
+      if (reference.moment !== momentIndex + 1
+        || !["local_board_item", "local_connection", "local_group"].includes(String(reference.source))) {
+        return 0;
+      }
+      return currentReferenceTimings.get(`${reference.source}:${reference.item}`) ?? 0;
+    };
+    const ensureActionAfterReferences = (
+      action: Record<string, unknown>,
+      references: unknown[],
+    ): void => {
+      const requiredRank = Math.max(0, ...references.map(referenceTimingRank));
+      if (actionTimingRank(action.timing) < requiredRank) {
+        action.timing = timingName[requiredRank];
+      }
+    };
     moment.actions.forEach((action) => {
       if (action.action === "create") {
         const placement = action.placement && typeof action.placement === "object" && !Array.isArray(action.placement)
@@ -1810,6 +2199,10 @@ function lowerModelSectionDraft(
           moment: momentIndex + 1,
           item: currentCounts.local_board_item,
         };
+        currentReferenceTimings.set(
+          `local_board_item:${currentCounts.local_board_item}`,
+          actionTimingRank(action.timing),
+        );
         const capability = action.kind === "visual"
           && action.content && typeof action.content === "object" && !Array.isArray(action.content)
           && typeof (action.content as Record<string, unknown>).capability === "string"
@@ -1831,6 +2224,7 @@ function lowerModelSectionDraft(
         const reference = presentationReference(action.reference, action.action === "point_at");
         if (reference === undefined) return;
         action.reference = reference;
+        ensureActionAfterReferences(action, [reference]);
       } else if (action.action === "focus") {
         const supplied = Array.isArray(action.references)
           ? action.references.map((reference) => presentationReference(reference)).filter((reference) => reference !== undefined)
@@ -1843,10 +2237,23 @@ function lowerModelSectionDraft(
         const unique = [...new Map(references.map((reference) => [JSON.stringify(reference), reference])).values()];
         if (unique.length === 0) return;
         action.references = unique;
+        ensureActionAfterReferences(action, unique);
       }
       normalizedActions.push(action);
-      if (action.action === "connect") currentCounts.local_connection += 1;
-      if (action.action === "group") currentCounts.local_group += 1;
+      if (action.action === "connect") {
+        currentCounts.local_connection += 1;
+        currentReferenceTimings.set(
+          `local_connection:${currentCounts.local_connection}`,
+          actionTimingRank(action.timing),
+        );
+      }
+      if (action.action === "group") {
+        currentCounts.local_group += 1;
+        currentReferenceTimings.set(
+          `local_group:${currentCounts.local_group}`,
+          actionTimingRank(action.timing),
+        );
+      }
     });
     moment.actions = normalizedActions;
     if (moment.actions.length === 0 && latestBoardReference) {
@@ -1902,8 +2309,8 @@ function lowerModelSectionDraft(
     item.activity.reference = structuredClone(sceneReference);
   }
   return {
-    version: candidate.version as LessonPlanSectionDraft["version"],
-    section: candidate.section as number,
+    version: outline.version,
+    section: expectedSection,
     moments: moments as LessonPlanSectionDraft["moments"],
     student_activities: activities.map((item) => item.activity) as LessonPlanSectionDraft["student_activities"],
   };
@@ -1919,6 +2326,15 @@ function inputContext(input: LessonPlanGenerationInput): Record<string, unknown>
     learner_context: input.learner_context ?? null,
     tutor_context: input.tutor_context ?? null,
   };
+}
+
+function compactModelContext(context: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(context).filter(([key, value]) => key !== "learner_request"
+      && key !== "input_modality"
+      && value !== null
+      && value !== undefined),
+  );
 }
 
 const requestSentenceBoundary = /(?:\r?\n+|[。！？!?；;]+)/u;
@@ -1955,17 +2371,61 @@ function requestParts(input: LessonPlanGenerationInput): string[] {
   });
 }
 
+function sectionPromptContext(outline: LessonPlanOutline, sectionNumber: number): Record<string, unknown> {
+  const section = outline.sections[sectionNumber - 1];
+  return {
+    title: outline.title,
+    goals: outline.goals,
+    ...(outline.numbers?.length ? {
+      numbers: outline.numbers.map((number, index) => ({
+        number: index + 1,
+        label: number.label,
+        initial: number.initial,
+        min: number.min,
+        max: number.max,
+        ...(number.unit === undefined ? {} : { unit: number.unit }),
+      })),
+    } : {}),
+    section: {
+      section: sectionNumber,
+      purpose: section?.purpose,
+      reusable_items: (section?.reusable_items ?? []).map((item, index) => ({
+        item: index + 1,
+        ...item,
+      })),
+    },
+    previous_sections: outline.sections.slice(0, sectionNumber - 1).map((previous, index) => ({
+      section: index + 1,
+      purpose: previous.purpose,
+      reusable_items: (previous.reusable_items ?? []).map((item, itemIndex) => ({
+        item: itemIndex + 1,
+        ...item,
+      })),
+    })),
+  };
+}
+
+function unsupportedSectionResponse(error: unknown, previousError?: unknown): string | undefined {
+  if (!(error instanceof LessonPlanError)) return undefined;
+  if (error.code === "LESSON_PLAN_UNSUPPORTED_REQUIREMENT") {
+    return "目前还不能完整生成这节课，因为其中包含尚未支持的画面或互动。";
+  }
+  if (error.code === "LESSON_PLAN_EXPRESSION"
+    && /multi-curve comparison currently supports static formulas only/u.test(error.message)
+    && previousError instanceof LessonPlanError
+    && previousError.code === error.code
+    && previousError.message === error.message) {
+    return "目前还不能在同一张函数图中同时展示静态曲线和由控件改变的另一条曲线。";
+  }
+  return undefined;
+}
+
 function sectionIndexFromError(error: unknown, sectionCount: number): number | undefined {
   if (!(error instanceof LessonPlanError)) return undefined;
   const draftMatch = error.path.match(/\$lessonPlanSectionDrafts\[(\d+)\]/u);
   const planMatch = error.path.match(/\$lessonPlan\.sections\[(\d+)\]/u);
   const offset = Number(draftMatch?.[1] ?? planMatch?.[1]);
   return Number.isInteger(offset) && offset >= 0 && offset < sectionCount ? offset + 1 : undefined;
-}
-
-function isRateLimitError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /(?:\b429\b|RESOURCE_EXHAUSTED|rate[ _-]?limit)/iu.test(message);
 }
 
 function compilePrefix(
@@ -2007,124 +2467,262 @@ function compilePrefix(
   return compileAndValidateLessonPlan(prefixPlan, options);
 }
 
+function canFallBackFromBootstrap(error: unknown): boolean {
+  if (error instanceof LessonPlanError) return true;
+  const code = error && typeof error === "object" && "code" in error
+    ? String((error as { code?: unknown }).code ?? "")
+    : "";
+  return /(?:RESPONSE_TRUNCATED|RESPONSE_EMPTY)$/u.test(code);
+}
+
+function partialModelResponse(error: unknown): string | undefined {
+  if (!error || typeof error !== "object" || !("partialResponse" in error)) return undefined;
+  const value = (error as { partialResponse?: unknown }).partialResponse;
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
 export async function generateLessonPlanWithModel(
   model: LessonPlanModelCall,
   input: LessonPlanGenerationInput,
   options: GenerateLessonPlanOptions = {},
 ): Promise<LessonPlanGenerationResult> {
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");
-  const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
   let context = inputContext(input);
   const fixedRequestParts = requestParts(input);
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
   let modelCalls = 0;
   let outline: LessonPlanOutline | undefined;
+  let bootstrappedFirstSection: LessonPlanSectionDraft | undefined;
   let outlineError: unknown;
   let stableCameraObservation: CameraLessonObservation | undefined;
   const sectionErrors = new Map<number, unknown>();
   const sectionAttempts = new Map<number, number>();
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const observeCamera = input.camera_input === true && stableCameraObservation === undefined;
-    const raw = await model({
-      label: "lesson-plan-outline",
-      part: "outline",
-      attempt,
-      turn_id: input.turn_id,
-      system_prompt: observeCamera
-        ? CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT
-        : admissionInput
-          ? ADMISSION_OUTLINE_SYSTEM_PROMPT
-        : OUTLINE_SYSTEM_PROMPT,
-      prompt: JSON.stringify({
-        course: stableCameraObservation
-          ? { ...context, camera_observation: stableCameraObservation }
-          : context,
-        request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
-        available_visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability) => ({
-          required_features: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features],
-          number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
-          guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
-        })),
-        ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
-      }),
-      response_schema: observeCamera
-        ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
-        : admissionInput
-          ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
-        : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
-      ...(observeCamera ? { include_camera_media: true } : {}),
-    });
-    modelCalls += 1;
-    try {
-      let parsed = parseModelJson(raw, admissionInput
-        ? "lessonPlanEnvelope"
-        : "lessonPlanOutline");
-      if (admissionInput && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
+
+  const admissionCourse = (
+    parsed: unknown,
+    observeCamera: boolean,
+  ): { course?: unknown; result?: NonLessonPlanResponse } => {
+    if (!admissionInput) return { course: parsed };
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_MODEL_JSON",
+        "$lessonPlanEnvelope",
+        "lesson response envelope must be an object",
+      );
+    }
+    const envelope = parsed as Record<string, unknown>;
+    if (observeCamera) {
+      stableCameraObservation = cameraObservation(envelope.image_observation);
+      context = { ...context, camera_observation: stableCameraObservation };
+    }
+    const disposition = envelope.disposition;
+    if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
+      throw new LessonPlanError(
+        "LESSON_PLAN_MODEL_JSON",
+        "$lessonPlanAdmission.disposition",
+        "lesson admission must choose generate_lesson, clarify, or ignore",
+      );
+    }
+    if (disposition !== "generate_lesson") {
+      if (!Object.hasOwn(envelope, "course") || envelope.course !== null) {
         throw new LessonPlanError(
           "LESSON_PLAN_MODEL_JSON",
-          "$lessonPlanEnvelope",
-          "lesson response envelope must be an object",
+          "$lessonPlanAdmission.course",
+          "clarify and ignore require course to be null",
         );
       }
-      if (admissionInput) {
-        const envelope = parsed as Record<string, unknown>;
-        if (observeCamera) {
-          stableCameraObservation = cameraObservation(envelope.image_observation);
-          context = { ...context, camera_observation: stableCameraObservation };
-        }
-        const disposition = envelope.disposition;
-        if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
-          throw new LessonPlanError(
-            "LESSON_PLAN_MODEL_JSON",
-            "$lessonPlanAdmission.disposition",
-            "lesson admission must choose generate_lesson, clarify, or ignore",
-          );
-        }
-        if (disposition !== "generate_lesson") {
-          if (!Object.hasOwn(envelope, "course") || envelope.course !== null) {
-            throw new LessonPlanError(
-              "LESSON_PLAN_MODEL_JSON",
-              "$lessonPlanAdmission.course",
-              "clarify and ignore require course to be null",
-            );
-          }
-          const learnerResponse = typeof envelope.learner_response === "string"
-            ? envelope.learner_response.trim()
-            : "";
-          if (disposition === "clarify" && !learnerResponse) {
-            throw new LessonPlanError(
-              "LESSON_PLAN_MODEL_JSON",
-              "$lessonPlanAdmission.learner_response",
-              "clarify requires a learner-facing question",
-            );
-          }
-          return {
-            disposition,
-            learner_response: learnerResponse,
-            model_calls: modelCalls,
-          };
-        }
-        if (!envelope.course || typeof envelope.course !== "object" || Array.isArray(envelope.course)) {
-          throw new LessonPlanError(
-            "LESSON_PLAN_MODEL_JSON",
-            "$lessonPlanAdmission.course",
-            "generate_lesson requires a complete course outline",
-          );
-        }
-        parsed = envelope.course;
+      const learnerResponse = typeof envelope.learner_response === "string"
+        ? envelope.learner_response.trim()
+        : "";
+      if (disposition === "clarify" && !learnerResponse) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_MODEL_JSON",
+          "$lessonPlanAdmission.learner_response",
+          "clarify requires a learner-facing question",
+        );
       }
-      parsed = pruneModelNulls(parsed);
+      return {
+        result: {
+          disposition,
+          learner_response: learnerResponse,
+          model_calls: modelCalls,
+        },
+      };
+    }
+    if (!envelope.course || typeof envelope.course !== "object" || Array.isArray(envelope.course)) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_MODEL_JSON",
+        "$lessonPlanAdmission.course",
+        "generate_lesson requires a course object",
+      );
+    }
+    return { course: envelope.course };
+  };
+
+  // The normal latency path asks for the complete outline and section 1 once.
+  // It is speculative only in transport shape: the outline is validated first
+  // and remains the sole authority for narrowing the section.
+  try {
+    const observeCamera = input.camera_input === true && stableCameraObservation === undefined;
+    modelCalls += 1;
+    const raw = await model({
+      label: "lesson-plan-bootstrap",
+      part: "bootstrap",
+      attempt: 1,
+      turn_id: input.turn_id,
+      system_prompt: observeCamera
+        ? CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT
+        : admissionInput
+          ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT
+          : BOOTSTRAP_SYSTEM_PROMPT,
+      prompt: JSON.stringify({
+        course_context: compactModelContext(context),
+        request_parts: fixedRequestParts,
+        visual_recipe_columns: ["features", "numbers", "purpose"],
+        visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability) => [
+          [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features],
+          [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
+          LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
+        ]),
+        first_section_to_write: 1,
+        first_section_rule: "first_section must implement outline.sections[0]; outline is authoritative and the program assigns all execution references",
+      }),
+      response_schema: observeCamera
+        ? buildCameraLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length)
+        : admissionInput
+          ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length)
+          : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length),
+      ...(observeCamera ? { include_camera_media: true } : {}),
+    });
+    const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanBootstrap");
+    const admitted = admissionCourse(parsed, observeCamera);
+    if (admitted.result) return admitted.result;
+    const course = pruneModelNulls(admitted.course);
+    if (!course || typeof course !== "object" || Array.isArray(course)) {
+      throw new LessonPlanError("LESSON_PLAN_MODEL_JSON", "$lessonPlanBootstrap.course", "expected outline and first_section");
+    }
+    const bootstrap = course as Record<string, unknown>;
+    outline = validateLessonPlanOutline(
+      lowerModelOutline(
+        coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
+        fixedRequestParts.length,
+      ),
+      fixedRequestParts.length,
+    );
+    try {
+      bootstrappedFirstSection = lowerModelSectionDraft(
+        reconcileBootstrapFirstSectionPositions(
+          coerceLessonPlanBootstrapSectionModelNumbers(bootstrap.first_section),
+          outline,
+        ),
+        outline,
+        1,
+        true,
+      );
+    } catch (error) {
+      sectionErrors.set(1, error);
+      await options.on_rejected_part?.({
+        label: "lesson-plan-section",
+        section: 1,
+        attempt: 1,
+        error: rejectionDetails(error),
+      });
+    }
+  } catch (error) {
+    const partialResponse = partialModelResponse(error);
+    if (partialResponse) {
+      if (input.camera_input === true && stableCameraObservation === undefined) {
+        const partialObservation = completedJsonObjectProperty(partialResponse, "image_observation");
+        if (partialObservation !== undefined) {
+          try {
+            stableCameraObservation = cameraObservation(partialObservation);
+            context = { ...context, camera_observation: stableCameraObservation };
+          } catch (observationError) {
+            outlineError = observationError;
+          }
+        }
+      }
+      const partialOutline = completedJsonObjectProperty(partialResponse, "outline");
+      if (partialOutline !== undefined) {
+        try {
+          outline = validateLessonPlanOutline(
+            lowerModelOutline(
+              coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
+              fixedRequestParts.length,
+            ),
+            fixedRequestParts.length,
+          );
+          sectionErrors.set(1, error);
+        } catch (outlineValidationError) {
+          outline = undefined;
+          outlineError = outlineValidationError;
+        }
+      }
+    }
+    if (!outline && !canFallBackFromBootstrap(error) && !partialResponse) throw error;
+    if (input.camera_input === true && stableCameraObservation === undefined) {
+      return {
+        disposition: "clarify",
+        learner_response: "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。",
+        model_calls: modelCalls,
+      };
+    }
+    outlineError ??= error;
+    await options.on_rejected_part?.({
+      label: "lesson-plan-bootstrap",
+      attempt: 1,
+      error: rejectionDetails(error),
+    });
+  }
+
+  // A malformed/truncated combined response falls back once to the proven
+  // outline-only path. The large combined request itself is never repeated.
+  for (let attempt = 1; !outline && attempt <= maxAttempts; attempt += 1) {
+    const observeCamera = input.camera_input === true && stableCameraObservation === undefined;
+    try {
+      modelCalls += 1;
+      const raw = await model({
+        label: "lesson-plan-outline",
+        part: "outline",
+        attempt,
+        turn_id: input.turn_id,
+        system_prompt: observeCamera
+          ? CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT
+          : admissionInput
+            ? ADMISSION_OUTLINE_SYSTEM_PROMPT
+            : OUTLINE_SYSTEM_PROMPT,
+        prompt: JSON.stringify({
+          course_context: compactModelContext(stableCameraObservation
+            ? { ...context, camera_observation: stableCameraObservation }
+            : context),
+          request_parts: fixedRequestParts,
+          visual_recipe_columns: ["features", "numbers", "purpose"],
+          visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability) => [
+            [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features],
+            [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
+            LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
+          ]),
+          ...(outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}),
+        }),
+        response_schema: observeCamera
+          ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
+          : admissionInput
+            ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
+            : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+        ...(observeCamera ? { include_camera_media: true } : {}),
+      });
+      const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
+      const admitted = admissionCourse(parsed, observeCamera);
+      if (admitted.result) return admitted.result;
       outline = validateLessonPlanOutline(
         lowerModelOutline(
-          coerceLessonPlanOutlineModelNumbers(
-            parsed,
-            fixedRequestParts.length,
-          ),
+          coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
+          fixedRequestParts.length,
         ),
         fixedRequestParts.length,
       );
-      break;
     } catch (error) {
+      if (!(error instanceof LessonPlanError)) throw error;
       outlineError = error;
       await options.on_rejected_part?.({
         label: "lesson-plan-outline",
@@ -2156,6 +2754,23 @@ export async function generateLessonPlanWithModel(
     };
   }
 
+  const visualsForSection = (section: number) => (outline.course_visuals ?? []).flatMap((visual, index) => {
+    if (!visual.use_sections.includes(section)) return [];
+    return [{
+      course_visual: index + 1,
+      capability: visual.capability,
+      mode: visual.create_section === section ? "create" : "reuse",
+      relation: visual.relation,
+      ...(visual.related_visual === undefined ? {} : { related_visual: visual.related_visual }),
+    }];
+  });
+  const assignedRequestParts = (section: number) => (outline.request_coverage ?? [])
+    .filter((item) => item.treatment === "teach" && item.sections.includes(section))
+    .map((item) => ({
+      request_part: item.request_part,
+      text: fixedRequestParts[item.request_part - 1],
+    }));
+
   const generateSection = async (section: number): Promise<LessonPlanSectionDraft> => {
     const attempt = (sectionAttempts.get(section) ?? 0) + 1;
     sectionAttempts.set(section, attempt);
@@ -2170,32 +2785,10 @@ export async function generateLessonPlanWithModel(
         turn_id: input.turn_id,
         system_prompt: SECTION_SYSTEM_PROMPT,
         prompt: JSON.stringify({
-          course: context,
-          immutable_outline: outline,
-          section_to_write: section,
-          visuals_for_section: (outline.course_visuals ?? []).flatMap((visual, index) => {
-            if (!visual.use_sections.includes(section)) return [];
-            return [{
-              course_visual: index + 1,
-              capability: visual.capability,
-              mode: visual.create_section === section ? "create" : "reuse",
-              relation: visual.relation,
-              ...(visual.related_visual === undefined ? {} : { related_visual: visual.related_visual }),
-              reference: {
-                source: "reusable",
-                section: visual.create_section,
-                item: visual.reusable_item,
-                host_reference: 0,
-                moment: 0,
-              },
-            }];
-          }),
-          assigned_request_parts: (outline.request_coverage ?? [])
-            .filter((item) => item.treatment === "teach" && item.sections.includes(section))
-            .map((item) => ({
-              request_part: item.request_part,
-              text: fixedRequestParts[item.request_part - 1],
-            })),
+          course_context: compactModelContext(context),
+          course_and_section: sectionPromptContext(outline, section),
+          visuals_for_section: visualsForSection(section),
+          assigned_request_parts: assignedRequestParts(section),
           ...(sectionErrors.has(section)
             ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) }
             : {}),
@@ -2222,6 +2815,7 @@ export async function generateLessonPlanWithModel(
         true,
       );
     } catch (error) {
+      const previousError = sectionErrors.get(section);
       sectionErrors.set(section, error);
       await options.on_rejected_part?.({
         label: "lesson-plan-section",
@@ -2229,6 +2823,7 @@ export async function generateLessonPlanWithModel(
         attempt,
         error: rejectionDetails(error),
       });
+      if (unsupportedSectionResponse(error, previousError)) throw error;
       return generateSection(section);
     }
     return candidate;
@@ -2248,6 +2843,8 @@ export async function generateLessonPlanWithModel(
         await options.on_playable_prefix?.({ completed_sections: section, compiled: prefix });
         return;
       } catch (error) {
+        const previousError = sectionErrors.get(section);
+        if (unsupportedSectionResponse(error, previousError)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
         sectionErrors.set(section, error);
         await options.on_rejected_part?.({
@@ -2261,75 +2858,35 @@ export async function generateLessonPlanWithModel(
     }
   };
 
-  // The first section remains the latency-critical path and is published
-  // before any later-section work can delay it.
-  await acceptSection(1);
-
-  if (outline.sections.length > 1 && concurrency === 1) {
-    for (let section = 2; section <= outline.sections.length; section += 1) {
-      await acceptSection(section);
-    }
-  } else if (outline.sections.length > 1) {
-    type ConcurrentResult =
-      | { ok: true; draft: LessonPlanSectionDraft }
-      | { ok: false; error: unknown };
-    const pending = new Map<number, Promise<ConcurrentResult>>();
-    const resolvePending = new Map<number, (result: ConcurrentResult) => void>();
-    const settled = new Map<number, ConcurrentResult>();
-    for (let section = 2; section <= outline.sections.length; section += 1) {
-      pending.set(section, new Promise((resolve) => resolvePending.set(section, resolve)));
-    }
-    let nextSection = 2;
-    let stopScheduling = false;
-    const worker = async (): Promise<void> => {
-      while (!stopScheduling && nextSection <= outline.sections.length) {
-        const section = nextSection;
-        nextSection += 1;
-        try {
-          const result: ConcurrentResult = { ok: true, draft: await generateSection(section) };
-          settled.set(section, result);
-          resolvePending.get(section)?.(result);
-        } catch (error) {
-          if (isRateLimitError(error)) stopScheduling = true;
-          const result: ConcurrentResult = { ok: false, error };
-          settled.set(section, result);
-          resolvePending.get(section)?.(result);
-          if (!isRateLimitError(error)) stopScheduling = true;
-        }
-      }
+  // Section 1 normally comes from the combined response. If it was missing or
+  // conflicts with the accepted outline, acceptSection regenerates only this
+  // section through the ordinary exact-schema request.
+  try {
+    await acceptSection(1, bootstrappedFirstSection);
+  } catch (error) {
+    const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(1));
+    if (!learnerResponse) throw error;
+    return {
+      disposition: "unsupported",
+      learner_response: learnerResponse,
+      model_calls: modelCalls,
     };
-    const workers = Array.from(
-      { length: Math.min(concurrency, outline.sections.length - 1) },
-      () => worker(),
-    );
-    let sequentialFallback = false;
-    for (let section = 2; section <= outline.sections.length; section += 1) {
-      if (sequentialFallback) {
-        const completed = settled.get(section);
-        await acceptSection(section, completed?.ok ? completed.draft : undefined);
-        continue;
-      }
-      const result = await pending.get(section)!;
-      if (result.ok) {
-        await acceptSection(section, result.draft);
-        continue;
-      }
-      if (!isRateLimitError(result.error)) {
-        stopScheduling = true;
-        await Promise.allSettled(workers);
-        throw result.error;
-      }
-      // A paid or trial project can still hit a short concurrency quota. Wait
-      // for the in-flight request to settle, then finish the remaining
-      // sections one at a time without discarding any completed draft.
-      stopScheduling = true;
-      await Promise.allSettled(workers);
-      sequentialFallback = true;
-      await options.on_concurrency_fallback?.({ section, reason: "rate_limited" });
+  }
+
+  // Later sections keep the existing proven progressive path and are
+  // published one by one while section 1 can already play.
+  for (let section = 2; section <= outline.sections.length; section += 1) {
+    try {
       await acceptSection(section);
+    } catch (error) {
+      const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(section));
+      if (!learnerResponse) throw error;
+      return {
+        disposition: "unsupported",
+        learner_response: learnerResponse,
+        model_calls: modelCalls,
+      };
     }
-    stopScheduling = true;
-    await Promise.allSettled(workers);
   }
   let compiled: CompiledLessonPlan | undefined;
   let compiledOutline: LessonPlanOutline | undefined;

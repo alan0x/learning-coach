@@ -8,8 +8,8 @@ if (!process.env.VERTEX_SA_JSON) throw new Error("VERTEX_SA_JSON is required for
 
 const entry = `
   import { createVertexClient, probeVertexSchema } from ${JSON.stringify(resolve(root, "src/main.ts"))};
-  import { buildLessonPlanAdmissionOutlineJsonSchema, buildLessonPlanOutlineJsonSchema, buildLessonPlanSectionDraftJsonSchema } from ${JSON.stringify(resolve(root, "src/lesson-plan-schema.ts"))};
-  export { createVertexClient, probeVertexSchema, buildLessonPlanAdmissionOutlineJsonSchema, buildLessonPlanOutlineJsonSchema, buildLessonPlanSectionDraftJsonSchema };
+  import { buildCameraLessonPlanAdmissionBootstrapJsonSchema, buildLessonPlanAdmissionBootstrapJsonSchema, buildLessonPlanAdmissionOutlineJsonSchema, buildLessonPlanBootstrapJsonSchema, buildLessonPlanOutlineJsonSchema, buildLessonPlanSectionDraftJsonSchema } from ${JSON.stringify(resolve(root, "src/lesson-plan-schema.ts"))};
+  export { createVertexClient, probeVertexSchema, buildCameraLessonPlanAdmissionBootstrapJsonSchema, buildLessonPlanAdmissionBootstrapJsonSchema, buildLessonPlanAdmissionOutlineJsonSchema, buildLessonPlanBootstrapJsonSchema, buildLessonPlanOutlineJsonSchema, buildLessonPlanSectionDraftJsonSchema };
 `;
 const bundle = await build({
   stdin: { contents: entry, resolveDir: root, sourcefile: "lesson-plan-schema-contract-entry.ts" },
@@ -45,6 +45,9 @@ function addEnumTypes(value) {
 
 const current = api.buildLessonPlanOutlineJsonSchema(3);
 const admissionOutline = api.buildLessonPlanAdmissionOutlineJsonSchema(3);
+const bootstrap = api.buildLessonPlanBootstrapJsonSchema(3);
+const admissionBootstrap = api.buildLessonPlanAdmissionBootstrapJsonSchema(3);
+const cameraAdmissionBootstrap = api.buildCameraLessonPlanAdmissionBootstrapJsonSchema(3);
 const noNumericBounds = clone(current);
 removeKeywords(noNumericBounds, new Set(["minimum", "maximum"]));
 const noArrayBounds = clone(current);
@@ -210,7 +213,11 @@ const replaceReferenceRefs = (value) => {
 replaceReferenceRefs(sectionInlineReferences);
 delete sectionInlineReferences.$defs.modelReference;
 
-const variants = process.argv.includes("--admission-outline-only") ? [[
+const variants = process.argv.includes("--bootstrap-only") ? [
+  ["bootstrap", bootstrap],
+  ["admission-bootstrap", admissionBootstrap],
+  ["camera-admission-bootstrap", cameraAdmissionBootstrap],
+] : process.argv.includes("--admission-outline-only") ? [[
   "admission-outline",
   admissionOutline,
 ]] : process.argv.includes("--decimal-contract") ? [

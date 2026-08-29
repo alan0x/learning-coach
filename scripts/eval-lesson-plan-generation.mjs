@@ -20,11 +20,6 @@ const outputPath = outputIndex >= 0 ? resolve(process.argv[outputIndex + 1]) : u
 const delayIndex = process.argv.indexOf("--delay-ms");
 const delayMs = delayIndex >= 0 ? Number(process.argv[delayIndex + 1]) : 0;
 if (!Number.isSafeInteger(delayMs) || delayMs < 0) throw new Error("--delay-ms must be a non-negative integer");
-const concurrencyIndex = process.argv.indexOf("--concurrency");
-const concurrency = concurrencyIndex >= 0 ? Number(process.argv[concurrencyIndex + 1]) : 1;
-if (!Number.isSafeInteger(concurrency) || concurrency < 1 || concurrency > 2) {
-  throw new Error("--concurrency must be 1 or 2");
-}
 
 const allCases = JSON.parse(await readFile(resolve(root, "eval/lesson-plan-generation-cases.json"), "utf8"));
 const selected = runAll ? allCases : allCases.filter((item) => item.id === selectedId);
@@ -53,7 +48,6 @@ async function persistPartialResults() {
     measured_at: new Date().toISOString(),
     model: process.env.OLL_MODEL || "gemini-3.6-flash",
     repeat,
-    concurrency,
     cases: selected.map((item) => item.id),
     results,
   }, null, 2)}\n`, "utf8");
@@ -76,7 +70,6 @@ for (const item of selected) {
       request_parts: item.request_parts,
       language: "zh-CN",
     }, {
-      max_concurrency: concurrency,
       on_rejected_part: (event) => {
         rejectedParts.push(event);
         process.stderr.write(`${JSON.stringify({
@@ -89,11 +82,6 @@ for (const item of selected) {
         completed_sections,
         elapsed_ms: Date.now() - startedAt,
       }),
-      on_concurrency_fallback: (event) => process.stderr.write(`${JSON.stringify({
-        stage: "lesson-plan-concurrency-fallback",
-        id: item.id,
-        ...event,
-      })}\n`),
     });
     assert.equal(generated.outline.request_coverage.length, item.request_parts.length);
     assert.ok(generated.outline.request_coverage.every((entry) => entry.treatment === "teach"));
@@ -200,7 +188,6 @@ const summary = {
   measured_at: new Date().toISOString(),
   model: process.env.OLL_MODEL || "gemini-3.6-flash",
   repeat,
-  concurrency,
   cases: selected.map((item) => item.id),
   total_runs: results.length,
   successful_runs: successful.length,

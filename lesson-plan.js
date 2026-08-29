@@ -28,9 +28,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/ajv/dist/compile/codegen/code.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -182,9 +182,9 @@ var require_code = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/scope.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -327,9 +327,9 @@ var require_scope = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -1047,9 +1047,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/util.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "node_modules/ajv/dist/compile/util.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1214,9 +1214,9 @@ var require_util = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/names.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "node_modules/ajv/dist/compile/names.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1253,9 +1253,9 @@ var require_names = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/errors.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "node_modules/ajv/dist/compile/errors.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1375,9 +1375,9 @@ var require_errors = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/boolSchema.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1426,9 +1426,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/rules.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "node_modules/ajv/dist/compile/rules.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1457,9 +1457,9 @@ var require_rules = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/applicability.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1480,9 +1480,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/dataType.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1664,9 +1664,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/defaults.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1701,9 +1701,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/code.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1834,9 +1834,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/keyword.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1952,9 +1952,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/subschema.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2035,9 +2035,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// node_modules/fast-deep-equal/index.js
+// node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "node_modules/fast-deep-equal/index.js"(exports, module) {
+  "node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2070,9 +2070,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// node_modules/json-schema-traverse/index.js
+// node_modules/.pnpm/json-schema-traverse@1.0.0/node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "node_modules/json-schema-traverse/index.js"(exports, module) {
+  "node_modules/.pnpm/json-schema-traverse@1.0.0/node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2158,9 +2158,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/resolve.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2314,9 +2314,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2822,9 +2822,9 @@ var require_validate = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/validation_error.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2838,9 +2838,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/ref_error.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2855,9 +2855,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "node_modules/ajv/dist/compile/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3079,9 +3079,9 @@ var require_compile = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/data.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3098,15 +3098,33 @@ var require_data = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/utils.js
+// node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
     var isHexPair = RegExp.prototype.test.bind(/^[\da-f]{2}$/iu);
     var isUnreserved = RegExp.prototype.test.bind(/^[\da-z\-._~]$/iu);
-    var isPathCharacter = RegExp.prototype.test.bind(/^[\da-z\-._~!$&'()*+,;=:@/]$/iu);
+    var isPathCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:@/]$/u);
+    var isQueryFragmentCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:@/?]$/u);
+    var isUserinfoCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:]$/u);
+    var BYTE_HEX = new Array(256);
+    {
+      const HEX_DIGITS = "0123456789ABCDEF";
+      for (let i = 0; i < 256; i++) {
+        BYTE_HEX[i] = "%" + HEX_DIGITS[i >> 4] + HEX_DIGITS[i & 15];
+      }
+    }
+    function percentEncodeNonAscii(cp) {
+      if (cp < 2048) {
+        return BYTE_HEX[192 | cp >> 6] + BYTE_HEX[128 | cp & 63];
+      }
+      if (cp < 65536) {
+        return BYTE_HEX[224 | cp >> 12] + BYTE_HEX[128 | cp >> 6 & 63] + BYTE_HEX[128 | cp & 63];
+      }
+      return BYTE_HEX[240 | cp >> 18] + BYTE_HEX[128 | cp >> 12 & 63] + BYTE_HEX[128 | cp >> 6 & 63] + BYTE_HEX[128 | cp & 63];
+    }
     function stringArrayToHexStripped(input) {
       let acc = "";
       let code = 0;
@@ -3131,91 +3149,105 @@ var require_utils = __commonJS({
       }
       return acc;
     }
+    var isHextet = RegExp.prototype.test.bind(/^[\dA-Fa-f]{1,4}$/);
+    var isIPvFuture = RegExp.prototype.test.bind(/^[vV][\dA-Fa-f]+\.[A-Za-z\d\-._~!$&'()*+,;=:]+$/);
+    var isZoneCharacter = RegExp.prototype.test.bind(/^[A-Za-z\d\-._~]$/);
     var nonSimpleDomain = RegExp.prototype.test.bind(/[^!"$&'()*+,\-.;=_`a-z{}~]/u);
-    function consumeIsZone(buffer) {
-      buffer.length = 0;
-      return true;
-    }
-    function consumeHextets(buffer, address, output) {
-      if (buffer.length) {
-        const hex = stringArrayToHexStripped(buffer);
-        if (hex !== "") {
-          address.push(hex);
-        } else {
-          output.error = true;
-          return false;
+    function isZoneIdentifier(zone) {
+      if (zone.length === 0) return false;
+      for (let i = 0; i < zone.length; i++) {
+        if (isZoneCharacter(zone[i])) continue;
+        if (zone[i] === "%" && i + 2 < zone.length && isHexPair(zone.slice(i + 1, i + 3))) {
+          i += 2;
+          continue;
         }
-        buffer.length = 0;
+        return false;
       }
       return true;
     }
-    function getIPV6(input) {
-      let tokenCount = 0;
-      const output = { error: false, address: "", zone: "" };
-      const address = [];
-      const buffer = [];
-      let endipv6Encountered = false;
-      let endIpv6 = false;
-      let consume = consumeHextets;
-      for (let i = 0; i < input.length; i++) {
-        const cursor = input[i];
-        if (cursor === "[" || cursor === "]") {
-          continue;
-        }
-        if (cursor === ":") {
-          if (endipv6Encountered === true) {
-            endIpv6 = true;
+    function compressIPv6ZeroRun(hextets) {
+      let bestStart = -1;
+      let bestLength = 0;
+      let runStart = -1;
+      let runLength = 0;
+      for (let i = 0; i < hextets.length; i++) {
+        if (hextets[i] === "0") {
+          if (runStart === -1) runStart = i;
+          runLength++;
+          if (runLength > bestLength) {
+            bestLength = runLength;
+            bestStart = runStart;
           }
-          if (!consume(buffer, address, output)) {
-            break;
-          }
-          if (++tokenCount > 7) {
-            output.error = true;
-            break;
-          }
-          if (i > 0 && input[i - 1] === ":") {
-            endipv6Encountered = true;
-          }
-          address.push(":");
-          continue;
-        } else if (cursor === "%") {
-          if (!consume(buffer, address, output)) {
-            break;
-          }
-          consume = consumeIsZone;
         } else {
-          buffer.push(cursor);
-          continue;
+          runStart = -1;
+          runLength = 0;
         }
       }
-      if (buffer.length) {
-        if (consume === consumeIsZone) {
-          output.zone = buffer.join("");
-        } else if (endIpv6) {
-          address.push(buffer.join(""));
-        } else {
-          address.push(stringArrayToHexStripped(buffer));
-        }
+      if (bestLength < 2) return hextets.join(":");
+      const head = hextets.slice(0, bestStart).join(":");
+      const tail = hextets.slice(bestStart + bestLength).join(":");
+      return head + "::" + tail;
+    }
+    function normalizeIPv6Address(input) {
+      const compression = input.indexOf("::");
+      if (compression !== -1 && input.indexOf("::", compression + 1) !== -1) return void 0;
+      const left = compression === -1 ? input.split(":") : input.slice(0, compression).split(":");
+      const right = compression === -1 ? [] : input.slice(compression + 2).split(":");
+      if (compression !== -1) {
+        if (left.length === 1 && left[0] === "") left.length = 0;
+        if (right.length === 1 && right[0] === "") right.length = 0;
       }
-      output.address = address.join("");
-      return output;
+      const parts = left.concat(right);
+      let hextetCount = 0;
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        if (part === "") return void 0;
+        if (part.indexOf(".") !== -1) {
+          if (i !== parts.length - 1 || compression !== -1 && right.length === 0 || !isIPv4(part)) return void 0;
+          hextetCount += 2;
+          continue;
+        }
+        if (!isHextet(part)) return void 0;
+        parts[i] = parseInt(part, 16).toString(16);
+        hextetCount++;
+      }
+      if (compression === -1) {
+        if (hextetCount !== 8) return void 0;
+        return compressIPv6ZeroRun(parts);
+      }
+      if (hextetCount >= 8) return void 0;
+      const expanded = parts.slice(0, left.length);
+      for (let i = hextetCount; i < 8; i++) expanded.push("0");
+      for (let i = left.length; i < parts.length; i++) expanded.push(parts[i]);
+      return compressIPv6ZeroRun(expanded);
     }
     function normalizeIPv6(host) {
-      if (findToken(host, ":") < 2) {
-        return { host, isIPV6: false };
+      const bracketed = host[0] === "[" && host[host.length - 1] === "]";
+      const hasBracket = host[0] === "[" || host[host.length - 1] === "]";
+      if (hasBracket && !bracketed) return { host, isIPV6: false, error: true };
+      let input = bracketed ? host.slice(1, -1) : host;
+      if (bracketed && isIPvFuture(input)) {
+        input = input.toLowerCase();
+        return { host: `[${input}]`, escapedHost: input, isIPV6: false, isIPVFuture: true };
       }
-      const ipv6 = getIPV6(host);
-      if (!ipv6.error) {
-        let newHost = ipv6.address;
-        let escapedHost = ipv6.address;
-        if (ipv6.zone) {
-          newHost += "%" + ipv6.zone;
-          escapedHost += "%25" + ipv6.zone;
-        }
-        return { host: newHost, isIPV6: true, escapedHost };
-      } else {
-        return { host, isIPV6: false };
+      if (findToken(input, ":") < 2) {
+        return { host, isIPV6: false, error: bracketed };
       }
+      let zoneIdentifier = "";
+      const zoneSeparator = input.indexOf("%");
+      if (zoneSeparator !== -1) {
+        const separatorLength = input.slice(zoneSeparator, zoneSeparator + 3).toLowerCase() === "%25" ? 3 : 1;
+        zoneIdentifier = input.slice(zoneSeparator + separatorLength);
+        if (!isZoneIdentifier(zoneIdentifier)) return { host, isIPV6: false, error: true };
+        input = input.slice(0, zoneSeparator);
+      }
+      const address = normalizeIPv6Address(input);
+      if (address === void 0) return { host, isIPV6: false, error: true };
+      return {
+        host: address + (zoneIdentifier ? "%" + zoneIdentifier : ""),
+        escapedHost: address + (zoneIdentifier ? "%25" + zoneIdentifier : ""),
+        isIPV6: true
+      };
     }
     function findToken(str, token) {
       let ind = 0;
@@ -3334,7 +3366,8 @@ var require_utils = __commonJS({
     function normalizePathEncoding(input) {
       let output = "";
       for (let i = 0; i < input.length; i++) {
-        if (input[i] === "%" && i + 2 < input.length) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
           const hex = input.slice(i + 1, i + 3);
           if (isHexPair(hex)) {
             const normalizedHex = hex.toUpperCase();
@@ -3348,10 +3381,152 @@ var require_utils = __commonJS({
             continue;
           }
         }
-        if (isPathCharacter(input[i])) {
-          output += input[i];
+        if (isPathCharacter(ch)) {
+          output += ch;
         } else {
-          output += escape(input[i]);
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += isEscapeSafe(code) ? ch : BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
+        }
+      }
+      return output;
+    }
+    function serializePathEncoding(input, pathNoScheme = false) {
+      let output = "";
+      let firstSegment = pathNoScheme && input[0] !== "/";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
+          const hex = input.slice(i + 1, i + 3);
+          if (isHexPair(hex)) {
+            output += "%" + hex.toUpperCase();
+            i += 2;
+            continue;
+          }
+        }
+        if (ch === "/") {
+          firstSegment = false;
+        }
+        if (isPathCharacter(ch) && (ch !== ":" || !firstSegment)) {
+          output += ch;
+        } else {
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
+        }
+      }
+      return output;
+    }
+    function encodeComponent(input, isAllowed) {
+      let output = "";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
+          const hex = input.slice(i + 1, i + 3);
+          if (isHexPair(hex)) {
+            output += "%" + hex.toUpperCase();
+            i += 2;
+            continue;
+          }
+        }
+        if (isAllowed(ch)) {
+          output += ch;
+        } else {
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
+        }
+      }
+      return output;
+    }
+    function encodeUserinfo(input) {
+      return encodeComponent(input, isUserinfoCharacter);
+    }
+    function encodeQuery(input) {
+      return encodeComponent(input, isQueryFragmentCharacter);
+    }
+    function encodeFragment(input) {
+      return encodeComponent(input, isQueryFragmentCharacter);
+    }
+    function isEscapeSafe(cp) {
+      return cp >= 48 && cp <= 57 || cp >= 65 && cp <= 90 || cp >= 97 && cp <= 122 || cp === 42 || cp === 43 || cp === 45 || cp === 46 || cp === 47 || cp === 64 || cp === 95;
+    }
+    function normalizeQueryFragmentEncoding(input) {
+      let output = "";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
+          const hex = input.slice(i + 1, i + 3);
+          if (isHexPair(hex)) {
+            const normalizedHex = hex.toUpperCase();
+            const decoded = String.fromCharCode(parseInt(normalizedHex, 16));
+            if (isUnreserved(decoded)) {
+              output += decoded;
+            } else {
+              output += "%" + normalizedHex;
+            }
+            i += 2;
+            continue;
+          }
+        }
+        if (isQueryFragmentCharacter(ch)) {
+          output += ch;
+        } else {
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += isEscapeSafe(code) ? ch : BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
         }
       }
       return output;
@@ -3374,14 +3549,18 @@ var require_utils = __commonJS({
     function recomposeAuthority(component) {
       const uriTokens = [];
       if (component.userinfo !== void 0) {
-        uriTokens.push(component.userinfo);
+        uriTokens.push(encodeUserinfo(component.userinfo));
         uriTokens.push("@");
       }
       if (component.host !== void 0) {
-        let host = unescape(component.host);
+        let host = component.host;
         if (!isIPv4(host)) {
-          const ipV6res = normalizeIPv6(host);
-          if (ipV6res.isIPV6 === true) {
+          let ipV6res = normalizeIPv6(host);
+          if (ipV6res.isIPV6 !== true && ipV6res.isIPVFuture !== true) {
+            host = normalizePercentEncoding(host, true);
+            ipV6res = normalizeIPv6(host);
+          }
+          if (ipV6res.isIPV6 === true || ipV6res.isIPVFuture === true) {
             host = `[${ipV6res.escapedHost}]`;
           } else {
             host = reescapeHostDelimiters(host, false);
@@ -3401,6 +3580,11 @@ var require_utils = __commonJS({
       reescapeHostDelimiters,
       normalizePercentEncoding,
       normalizePathEncoding,
+      serializePathEncoding,
+      normalizeQueryFragmentEncoding,
+      encodeUserinfo,
+      encodeQuery,
+      encodeFragment,
       escapePreservingEscapes,
       removeDotSegments,
       isIPv4,
@@ -3411,12 +3595,12 @@ var require_utils = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/schemes.js
+// node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
-    var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
+    var URN_REG = /^([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-./:;=@]|%[\da-f]{2})+)$/iu;
     var supportedSchemeNames = (
       /** @type {const} */
       [
@@ -3477,9 +3661,10 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path, query] = wsComponent.resourceName.split("?");
+        const queryIndex = wsComponent.resourceName.indexOf("?");
+        const path = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
         wsComponent.path = path && path !== "/" ? path : void 0;
-        wsComponent.query = query;
+        wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
       wsComponent.fragment = void 0;
@@ -3491,7 +3676,7 @@ var require_schemes = __commonJS({
         return urnComponent;
       }
       const matches = urnComponent.path.match(URN_REG);
-      if (matches) {
+      if (matches && matches[0] === urnComponent.path) {
         const scheme = options.scheme || urnComponent.scheme || "urn";
         urnComponent.nid = matches[1].toLowerCase();
         urnComponent.nss = matches[2];
@@ -3621,12 +3806,21 @@ var require_schemes = __commonJS({
   }
 });
 
-// node_modules/fast-uri/index.js
+// node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "node_modules/fast-uri/index.js"(exports, module) {
+  "node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
-    var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
+    var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, serializePathEncoding, normalizeQueryFragmentEncoding, encodeQuery, encodeFragment, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
+    var VALID_SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*$/u;
+    var MALFORMED_SCHEME_ERROR = "URI scheme is malformed.";
+    function decodeValidScheme(scheme) {
+      const decodedScheme = unescape(String(scheme));
+      if (!VALID_SCHEME.test(decodedScheme)) {
+        throw new TypeError(MALFORMED_SCHEME_ERROR);
+      }
+      return decodedScheme;
+    }
     function normalize(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
@@ -3639,12 +3833,34 @@ var require_fast_uri = __commonJS({
     }
     function resolve(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
-      const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
-      const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
-      if (baseMalformed || relativeMalformed) {
+      const {
+        parsed: baseParsed,
+        malformedAuthorityOrPort: baseMalformed,
+        malformedPercentEncoding: baseMalformedPercentEncoding,
+        malformedSchemeSpecific: baseMalformedSchemeSpecific,
+        malformedHost: baseMalformedHost,
+        malformedScheme: baseMalformedScheme
+      } = parseWithStatus(baseURI, schemelessOptions);
+      const {
+        parsed: relativeParsed,
+        malformedAuthorityOrPort: relativeMalformed,
+        malformedPercentEncoding: relativeMalformedPercentEncoding,
+        malformedSchemeSpecific: relativeMalformedSchemeSpecific,
+        malformedHost: relativeMalformedHost,
+        malformedScheme: relativeMalformedScheme
+      } = parseWithStatus(relativeURI, schemelessOptions);
+      if (baseMalformed || relativeMalformed || baseMalformedPercentEncoding || relativeMalformedPercentEncoding || baseMalformedSchemeSpecific || relativeMalformedSchemeSpecific || baseMalformedHost || relativeMalformedHost || baseMalformedScheme || relativeMalformedScheme) {
         throw new Error(baseParsed.error || relativeParsed.error || "URI is malformed.");
       }
       const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true);
+      const resolvedSchemeHandler = getSchemeHandler(options && options.scheme || resolved.scheme);
+      const resolvedHost = resolved.host;
+      const resolvedHostIsIP = resolvedHost !== void 0 && resolvedHost !== "" && (isIPv4(resolvedHost) || normalizeIPv6(resolvedHost).isIPV6);
+      canonicalizeHost(resolved, options || {}, resolvedSchemeHandler, resolvedHostIsIP);
+      const encodedASCIIHost = resolvedHost && resolvedHost.indexOf("%") !== -1 && !new RegExp("\\P{ASCII}", "u").test(resolvedHost);
+      if (resolved.error && !encodedASCIIHost) {
+        throw new Error(resolved.error);
+      }
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
@@ -3704,7 +3920,7 @@ var require_fast_uri = __commonJS({
     function equal(uriA, uriB, options) {
       const normalizedA = normalizeComparableURI(uriA, options);
       const normalizedB = normalizeComparableURI(uriB, options);
-      return normalizedA !== void 0 && normalizedB !== void 0 && normalizedA.toLowerCase() === normalizedB.toLowerCase();
+      return normalizedA !== void 0 && normalizedB !== void 0 && normalizedA === normalizedB;
     }
     function serialize(cmpts, opts) {
       const component = {
@@ -3725,19 +3941,22 @@ var require_fast_uri = __commonJS({
       };
       const options = Object.assign({}, opts);
       const uriTokens = [];
+      if (component.scheme) {
+        component.scheme = decodeValidScheme(component.scheme);
+      }
       const schemeHandler = getSchemeHandler(options.scheme || component.scheme);
       if (schemeHandler && schemeHandler.serialize) schemeHandler.serialize(component, options);
+      const hasAuthority = component.userinfo !== void 0 || component.host !== void 0 || component.port !== void 0;
+      const pathNoScheme = !options.skipEscape && component.scheme === void 0 && !hasAuthority;
       if (component.path !== void 0) {
         if (!options.skipEscape) {
-          component.path = escapePreservingEscapes(component.path);
-          if (component.scheme !== void 0) {
-            component.path = component.path.split("%3A").join(":");
-          }
+          component.path = serializePathEncoding(component.path, pathNoScheme);
         } else {
           component.path = normalizePercentEncoding(component.path);
         }
       }
       if (options.reference !== "suffix" && component.scheme) {
+        component.scheme = decodeValidScheme(component.scheme);
         uriTokens.push(component.scheme, ":");
       }
       const authority = recomposeAuthority(component);
@@ -3755,16 +3974,19 @@ var require_fast_uri = __commonJS({
         if (!options.absolutePath && (!schemeHandler || !schemeHandler.absolutePath)) {
           s = removeDotSegments(s);
         }
+        if (pathNoScheme) {
+          s = serializePathEncoding(s, true);
+        }
         if (authority === void 0 && s[0] === "/" && s[1] === "/") {
           s = "/%2F" + s.slice(2);
         }
         uriTokens.push(s);
       }
       if (component.query !== void 0) {
-        uriTokens.push("?", component.query);
+        uriTokens.push("?", encodeQuery(component.query));
       }
       if (component.fragment !== void 0) {
-        uriTokens.push("#", component.fragment);
+        uriTokens.push("#", encodeFragment(component.fragment));
       }
       return uriTokens.join("");
     }
@@ -3780,6 +4002,32 @@ var require_fast_uri = __commonJS({
       }
       return void 0;
     }
+    function hasMalformedPercentEncoding(component) {
+      if (component === void 0) return false;
+      let percent = component.indexOf("%");
+      while (percent !== -1) {
+        if (percent + 2 >= component.length || !/^[\da-f]{2}$/iu.test(component.slice(percent + 1, percent + 3))) {
+          return true;
+        }
+        percent = component.indexOf("%", percent + 3);
+      }
+      return false;
+    }
+    function hasMalformedComponentPercentEncoding(matches) {
+      const host = matches[4];
+      return hasMalformedPercentEncoding(matches[3]) || host !== void 0 && !(host[0] === "[" && host[host.length - 1] === "]") && hasMalformedPercentEncoding(host) || hasMalformedPercentEncoding(matches[6]) || hasMalformedPercentEncoding(matches[7]) || hasMalformedPercentEncoding(matches[8]);
+    }
+    function canonicalizeHost(parsed, options, schemeHandler, isIP) {
+      if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport) && parsed.host && parsed.host[0] !== "[" && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
+        try {
+          parsed.host = new URL("http://" + parsed.host).hostname;
+        } catch (e) {
+          parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
+          return true;
+        }
+      }
+      return false;
+    }
     function parseWithStatus(uri, opts) {
       const options = Object.assign({}, opts);
       const parsed = {
@@ -3792,6 +4040,11 @@ var require_fast_uri = __commonJS({
         fragment: void 0
       };
       let malformedAuthorityOrPort = false;
+      let malformedPercentEncoding = false;
+      let malformedSchemeSpecific = false;
+      let malformedHost = false;
+      let malformedIPLiteral = false;
+      let malformedScheme = false;
       let isIP = false;
       if (options.reference === "suffix") {
         if (options.scheme) {
@@ -3828,6 +4081,19 @@ var require_fast_uri = __commonJS({
         parsed.path = matches[6] || "";
         parsed.query = matches[7];
         parsed.fragment = matches[8];
+        if (parsed.scheme !== void 0) {
+          const decodedScheme = unescape(parsed.scheme);
+          if (VALID_SCHEME.test(decodedScheme)) {
+            parsed.scheme = decodedScheme.toLowerCase();
+          } else {
+            parsed.error = parsed.error || MALFORMED_SCHEME_ERROR;
+            malformedScheme = true;
+          }
+        }
+        malformedPercentEncoding = hasMalformedComponentPercentEncoding(matches);
+        if (malformedPercentEncoding) {
+          parsed.error = parsed.error || "URI contains malformed percent-encoding.";
+        }
         if (isNaN(parsed.port)) {
           parsed.port = matches[5];
         }
@@ -3839,9 +4105,15 @@ var require_fast_uri = __commonJS({
         if (parsed.host) {
           const ipv4result = isIPv4(parsed.host);
           if (ipv4result === false) {
+            const bracketedIPLiteral = parsed.host[0] === "[" && parsed.host[parsed.host.length - 1] === "]";
             const ipv6result = normalizeIPv6(parsed.host);
-            parsed.host = ipv6result.host.toLowerCase();
-            isIP = ipv6result.isIPV6;
+            isIP = ipv6result.isIPV6 || ipv6result.isIPVFuture === true;
+            malformedIPLiteral = bracketedIPLiteral && ipv6result.error === true;
+            parsed.host = isIP ? ipv6result.host : ipv6result.host.toLowerCase();
+            if (malformedIPLiteral) {
+              parsed.error = parsed.error || "URI host is malformed.";
+              malformedAuthorityOrPort = true;
+            }
           } else {
             isIP = true;
           }
@@ -3859,42 +4131,34 @@ var require_fast_uri = __commonJS({
           parsed.error = parsed.error || "URI is not a " + options.reference + " reference.";
         }
         const schemeHandler = getSchemeHandler(options.scheme || parsed.scheme);
-        if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport)) {
-          if (parsed.host && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
-            try {
-              parsed.host = new URL("http://" + parsed.host).hostname;
-            } catch (e) {
-              parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
-            }
-          }
-        }
+        malformedHost = canonicalizeHost(parsed, options, schemeHandler, isIP);
         if (!schemeHandler || schemeHandler && !schemeHandler.skipNormalize) {
           if (uri.indexOf("%") !== -1) {
-            if (parsed.scheme !== void 0) {
-              parsed.scheme = unescape(parsed.scheme);
-            }
-            if (parsed.host !== void 0) {
-              parsed.host = reescapeHostDelimiters(unescape(parsed.host), isIP);
+            if (parsed.host !== void 0 && !malformedIPLiteral) {
+              const host = isIP ? parsed.host : normalizePercentEncoding(parsed.host, true);
+              parsed.host = reescapeHostDelimiters(host, isIP);
             }
           }
           if (parsed.path) {
             parsed.path = normalizePathEncoding(parsed.path);
           }
+          if (parsed.query) {
+            parsed.query = normalizeQueryFragmentEncoding(parsed.query);
+          }
           if (parsed.fragment) {
-            try {
-              parsed.fragment = encodeURI(decodeURIComponent(parsed.fragment));
-            } catch {
-              parsed.error = parsed.error || "URI malformed";
-            }
+            parsed.fragment = normalizeQueryFragmentEncoding(parsed.fragment);
           }
         }
         if (schemeHandler && schemeHandler.parse) {
           schemeHandler.parse(parsed, options);
+          if (schemeHandler === SCHEMES.urn && parsed.nid === void 0) {
+            malformedSchemeSpecific = true;
+          }
         }
       } else {
         parsed.error = parsed.error || "URI can not be parsed.";
       }
-      return { parsed, malformedAuthorityOrPort };
+      return { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme };
     }
     function parse(uri, opts) {
       return parseWithStatus(uri, opts).parsed;
@@ -3903,20 +4167,28 @@ var require_fast_uri = __commonJS({
       return normalizeStringWithStatus(uri, opts).normalized;
     }
     function normalizeStringWithStatus(uri, opts) {
-      const { parsed, malformedAuthorityOrPort } = parseWithStatus(uri, opts);
+      const { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = parseWithStatus(uri, opts);
       return {
-        normalized: malformedAuthorityOrPort ? uri : serialize(parsed, opts),
-        malformedAuthorityOrPort
+        normalized: malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? uri : serialize(parsed, opts),
+        malformedAuthorityOrPort,
+        malformedPercentEncoding,
+        malformedSchemeSpecific,
+        malformedHost,
+        malformedScheme
       };
     }
     function normalizeComparableURI(uri, opts) {
-      if (typeof uri === "string") {
-        const { normalized, malformedAuthorityOrPort } = normalizeStringWithStatus(uri, opts);
-        return malformedAuthorityOrPort ? void 0 : normalized;
+      if (typeof uri !== "string" && typeof uri !== "object") {
+        return void 0;
       }
-      if (typeof uri === "object") {
-        return serialize(uri, opts);
+      let value;
+      try {
+        value = typeof uri === "string" ? uri : serialize(uri, opts);
+      } catch {
+        return void 0;
       }
+      const { normalized, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = normalizeStringWithStatus(value, opts);
+      return malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? void 0 : normalized;
     }
     var fastUri = {
       SCHEMES,
@@ -3933,9 +4205,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/uri.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -3944,9 +4216,9 @@ var require_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/core.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "node_modules/ajv/dist/core.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4555,9 +4827,9 @@ var require_core = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/id.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4570,9 +4842,9 @@ var require_id = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/ref.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4692,9 +4964,9 @@ var require_ref = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -4713,9 +4985,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4745,9 +5017,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4773,9 +5045,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/ucs2length.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str) {
@@ -4799,9 +5071,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4831,9 +5103,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/pattern.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4868,9 +5140,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4897,9 +5169,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/required.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4979,9 +5251,9 @@ var require_required = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5008,9 +5280,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/equal.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5019,9 +5291,9 @@ var require_equal = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5086,9 +5358,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/const.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5115,9 +5387,9 @@ var require_const = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/enum.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5164,9 +5436,9 @@ var require_enum = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5202,9 +5474,9 @@ var require_validation = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5255,9 +5527,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5312,9 +5584,9 @@ var require_items = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5329,9 +5601,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5364,9 +5636,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/contains.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5458,9 +5730,9 @@ var require_contains = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5552,9 +5824,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5595,9 +5867,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5701,9 +5973,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/properties.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -5759,9 +6031,9 @@ var require_properties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5833,9 +6105,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/not.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5864,9 +6136,9 @@ var require_not = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5881,9 +6153,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5939,9 +6211,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5966,9 +6238,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/if.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6035,9 +6307,9 @@ var require_if = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6053,9 +6325,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6101,9 +6373,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
 var require_dynamicAnchor = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicAnchor = void 0;
@@ -6136,9 +6408,9 @@ var require_dynamicAnchor = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
 var require_dynamicRef = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicRef = void 0;
@@ -6182,9 +6454,9 @@ var require_dynamicRef = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
 var require_recursiveAnchor = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6203,9 +6475,9 @@ var require_recursiveAnchor = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
 var require_recursiveRef = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicRef_1 = require_dynamicRef();
@@ -6218,9 +6490,9 @@ var require_recursiveRef = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/index.js
 var require_dynamic = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6232,9 +6504,9 @@ var require_dynamic = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
 var require_dependentRequired = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6249,9 +6521,9 @@ var require_dependentRequired = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
 var require_dependentSchemas = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6265,9 +6537,9 @@ var require_dependentSchemas = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitContains.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitContains.js
 var require_limitContains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6285,9 +6557,9 @@ var require_limitContains = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/next.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/next.js
 var require_next = __commonJS({
-  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/next.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependentRequired_1 = require_dependentRequired();
@@ -6298,9 +6570,9 @@ var require_next = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
 var require_unevaluatedProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6364,9 +6636,9 @@ var require_unevaluatedProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
 var require_unevaluatedItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6408,9 +6680,9 @@ var require_unevaluatedItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/unevaluated/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/index.js
 var require_unevaluated = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var unevaluatedProperties_1 = require_unevaluatedProperties();
@@ -6420,9 +6692,9 @@ var require_unevaluated = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/format.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6510,9 +6782,9 @@ var require_format = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6521,9 +6793,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/metadata.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6544,9 +6816,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/draft2020.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/draft2020.js
 var require_draft2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6572,9 +6844,9 @@ var require_draft2020 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/types.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6586,9 +6858,9 @@ var require_types = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6691,9 +6963,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
 var require_schema = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/schema",
@@ -6751,9 +7023,9 @@ var require_schema = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
 var require_applicator2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/applicator",
@@ -6804,9 +7076,9 @@ var require_applicator2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
 var require_unevaluated2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
@@ -6824,9 +7096,9 @@ var require_unevaluated2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
 var require_content = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/content",
@@ -6845,9 +7117,9 @@ var require_content = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
 var require_core3 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/core",
@@ -6901,9 +7173,9 @@ var require_core3 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
 var require_format_annotation = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
@@ -6920,9 +7192,9 @@ var require_format_annotation = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
 var require_meta_data = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
@@ -6961,9 +7233,9 @@ var require_meta_data = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
 var require_validation2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/validation",
@@ -7056,9 +7328,9 @@ var require_validation2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/index.js
 var require_json_schema_2020_12 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var metaSchema = require_schema();
@@ -7091,9 +7363,9 @@ var require_json_schema_2020_12 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/2020.js
+// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/2020.js
 var require__ = __commonJS({
-  "node_modules/ajv/dist/2020.js"(exports, module) {
+  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/2020.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
@@ -7337,8 +7609,11 @@ function matchLessonPlanCapability(features) {
     const provided = LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features;
     return {
       capability: capability2,
-      extra: 0,
-      matches: provided.length === requested.length && requested.every((feature) => provided.includes(feature))
+      // The model describes the features it needs; it does not select an
+      // execution program. A program may provide fixed companion features
+      // the model omitted, but it may never omit a requested feature.
+      extra: provided.filter((feature) => !requested.includes(feature)).length,
+      matches: requested.every((feature) => provided.includes(feature))
     };
   }).filter((candidate) => candidate.matches).sort((left, right) => left.extra - right.extra || left.capability.localeCompare(right.capability));
   if (candidates.length === 0) {
@@ -8351,10 +8626,10 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   return resolveLessonPlan(assembled, options).plan;
 }
 
-// node_modules/octos-lesson-language/dist/packages/core/src/index.js
+// node_modules/.pnpm/octos-lesson-language@https+++codeload.github.com+alan0x+octos-lesson-language+tar.gz+4_ed9571987195fc2223acec7dd495e2d0/node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var import__ = __toESM(require__(), 1);
 
-// node_modules/octos-lesson-language/dist/schema/authoring/v0.1.schema.json
+// node_modules/.pnpm/octos-lesson-language@https+++codeload.github.com+alan0x+octos-lesson-language+tar.gz+4_ed9571987195fc2223acec7dd495e2d0/node_modules/octos-lesson-language/dist/schema/authoring/v0.1.schema.json
 var v0_1_schema_default = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://octos.dev/schema/lesson/authoring/0.1",
@@ -9010,7 +9285,7 @@ var v0_1_schema_default = {
   }
 };
 
-// node_modules/octos-lesson-language/dist/packages/core/src/math-expression.js
+// node_modules/.pnpm/octos-lesson-language@https+++codeload.github.com+alan0x+octos-lesson-language+tar.gz+4_ed9571987195fc2223acec7dd495e2d0/node_modules/octos-lesson-language/dist/packages/core/src/math-expression.js
 var FUNCTIONS = {
   abs: Math.abs,
   acos: Math.acos,
@@ -9184,7 +9459,7 @@ function evaluateMathExpression(expression, variables) {
   return result;
 }
 
-// node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
+// node_modules/.pnpm/octos-lesson-language@https+++codeload.github.com+alan0x+octos-lesson-language+tar.gz+4_ed9571987195fc2223acec7dd495e2d0/node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_ACTION_NAMES = [
   "write",
   "revise",
@@ -9236,7 +9511,7 @@ function collectBindingCapabilities() {
 }
 var OLL_CANONICAL_BINDING_CAPABILITIES = collectBindingCapabilities();
 
-// node_modules/octos-lesson-language/dist/packages/core/src/index.js
+// node_modules/.pnpm/octos-lesson-language@https+++codeload.github.com+alan0x+octos-lesson-language+tar.gz+4_ed9571987195fc2223acec7dd495e2d0/node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
 var validateAuthoringDocument = ajv.compile(v0_1_schema_default);
 var ALIAS_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
@@ -12652,12 +12927,6 @@ function modelReusableBoardSchema() {
     board_kind: { enum: ["math", "note"] }
   }, ["kind", "board_kind"]);
 }
-function placementSchema(sectionCount) {
-  void sectionCount;
-  return object({
-    relation: { enum: ["new_region", "below", "above", "left_of", "right_of", "near"] }
-  }, ["relation"]);
-}
 function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDynamicPlotExpression = false, canonicalFunctionPlot = false) {
   const modelParameters = new Set(allowedCapabilities.flatMap(
     (capability2) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_parameter_names]
@@ -12706,13 +12975,11 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
 function modelAction(properties, required) {
   return object(properties, required);
 }
-function actionCollectionSchemas(sectionCount, allowedCapabilities, reusableCount, numberCount, courseVisualPositions = [], includeVisualCreates = true) {
+function actionCollectionSchemas(allowedCapabilities, reusableCount, numberCount, courseVisualPositions = [], includeVisualCreates = true, includeVisualCapability = true) {
   const timing = { enum: timingNames };
   const collection = (items) => ({ type: "array", items });
   const createCommon = {
     timing,
-    role: string(80),
-    placement: placementSchema(sectionCount),
     ...reusableCount > 0 ? { reusable_item: integer(1, reusableCount) } : {}
   };
   const requireVisualParameters = allowedCapabilities.length === 1 && LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters.length > 0;
@@ -12723,7 +12990,7 @@ function actionCollectionSchemas(sectionCount, allowedCapabilities, reusableCoun
         ...createCommon,
         ...courseVisualPositions.length > 0 ? { course_visual: { enum: courseVisualPositions } } : {},
         content: object({
-          capability: { enum: allowedCapabilities },
+          ...includeVisualCapability ? { capability: { enum: allowedCapabilities } } : {},
           parameters: visualParametersSchema(
             allowedCapabilities,
             numberCount,
@@ -12738,20 +13005,23 @@ function actionCollectionSchemas(sectionCount, allowedCapabilities, reusableCoun
               items: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) }
             }
           } : {}
-        }, ["capability", ...requireVisualParameters ? ["parameters"] : []])
-      }, ["role", ...courseVisualPositions.length > 0 ? ["course_visual"] : [], "content", "placement"]))
+        }, [
+          ...includeVisualCapability ? ["capability"] : [],
+          ...requireVisualParameters ? ["parameters"] : []
+        ])
+      }, [...courseVisualPositions.length > 0 ? ["course_visual"] : [], "content"]))
     } : {},
     math_creates: collection(modelAction({
       ...createCommon,
       content: object({ latex: string() }, ["latex"])
-    }, ["role", "content", "placement"])),
+    }, ["content"])),
     note_creates: collection(modelAction({
       ...createCommon,
       content: object({
         title: string(240),
         items: { type: "array", minItems: 1, maxItems: 24, items: string(480) }
       }, ["title", "items"])
-    }, ["role", "content", "placement"])),
+    }, ["content"])),
     focuses: collection(modelAction({
       timing,
       intent: string(160)
@@ -12777,7 +13047,6 @@ function courseVisualCreatesSchema(outline, sectionIndex) {
     return [`visual_${position}`, object({
       moment: integer(1, 12),
       timing: { enum: timingNames },
-      role: string(80),
       content: object({
         parameters: visualParametersSchema(
           [capability2],
@@ -12792,9 +13061,8 @@ function courseVisualCreatesSchema(outline, sectionIndex) {
             items: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) }
           }
         } : {}
-      }, ["parameters"]),
-      placement: placementSchema(outline.sections.length)
-    }, ["moment", "role", "content", "placement"])];
+      }, ["parameters"])
+    }, ["moment", "content"])];
   }));
   return object(properties, Object.keys(properties));
 }
@@ -12820,10 +13088,8 @@ function reusableBoardCreatesSchema(outline, sectionIndex) {
     return [`item_${position}`, object({
       moment: integer(1, 12),
       timing: { enum: timingNames },
-      role: string(80),
-      content,
-      placement: placementSchema(outline.sections.length)
-    }, ["moment", "role", "content", "placement"])];
+      content
+    }, ["moment", "content"])];
   }));
   return object(properties, Object.keys(properties));
 }
@@ -12876,6 +13142,16 @@ function outlineShape(value) {
   }
   return outline;
 }
+function bootstrapPermissiveOutline() {
+  return {
+    sections: [{
+      purpose: "combined first response",
+      allowed_capabilities: capabilityNames,
+      reusable_items: []
+    }],
+    numbers: Array.from({ length: 16 }, () => ({ initial: 0, min: 0, max: 1 }))
+  };
+}
 function buildLessonPlanOutlineJsonSchema(requestPartCount = 0) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
@@ -12895,6 +13171,50 @@ function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
       course
     }, ["disposition", "learner_response", "course"])
   });
+}
+function buildLessonPlanBootstrapJsonSchema(requestPartCount = 0) {
+  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
+    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
+  }
+  return vertexCompatible(object({
+    outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
+    first_section: lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true)
+  }, ["outline", "first_section"]));
+}
+function buildLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0) {
+  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
+    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
+  }
+  const course = object({
+    outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
+    first_section: lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true)
+  }, ["outline", "first_section"]);
+  course.nullable = true;
+  return vertexCompatible(object({
+    disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
+    learner_response: string(480),
+    course
+  }, ["disposition", "learner_response", "course"]));
+}
+function buildCameraLessonPlanAdmissionBootstrapJsonSchema(requestPartCount = 0) {
+  if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
+    throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
+  }
+  const course = object({
+    outline: lessonPlanOutlineShapeJsonSchema(requestPartCount),
+    first_section: lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true)
+  }, ["outline", "first_section"]);
+  course.nullable = true;
+  return vertexCompatible(object({
+    disposition: { enum: ["generate_lesson", "clarify", "ignore"] },
+    learner_response: string(480),
+    image_observation: object({
+      readability: { enum: ["readable", "partially_readable", "unreadable"] },
+      observed_content: string(4e3),
+      uncertainties: { type: "array", maxItems: 12, items: string(480) }
+    }, ["readability", "observed_content", "uncertainties"]),
+    course
+  }, ["disposition", "learner_response", "image_observation", "course"]));
 }
 function buildCameraLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
@@ -12917,7 +13237,6 @@ function buildCameraLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
 }
 function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
   return object({
-    version: { enum: [LESSON_PLAN_VERSION] },
     title: string(160),
     goals: { type: "array", minItems: 1, maxItems: 8, items: string(480) },
     teaching_strategies: { type: "array", maxItems: 16, items: string(240) },
@@ -12928,11 +13247,10 @@ function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
         minItems: requestPartCount,
         maxItems: requestPartCount,
         items: object({
-          request_part: integer(1, requestPartCount),
           treatment: { enum: ["teach", "unsupported"] },
           sections: { type: "array", maxItems: 24, items: integer(1, 24) },
           reason: string(480)
-        }, ["request_part", "treatment", "sections"])
+        }, ["treatment", "sections"])
       }
     } : {},
     course_visuals: {
@@ -12945,11 +13263,10 @@ function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
           maxItems: LESSON_PLAN_VISUAL_FEATURES.length,
           items: { enum: LESSON_PLAN_VISUAL_FEATURES }
         },
-        create_section: integer(1, 24),
         use_sections: { type: "array", maxItems: 24, items: integer(1, 24) },
         relation: { enum: ["primary", "supporting", "comparison"] },
         related_visual: integer(1, 32)
-      }, ["required_features", "create_section", "use_sections", "relation"])
+      }, ["required_features", "use_sections", "relation"])
     },
     sections: {
       type: "array",
@@ -12963,7 +13280,7 @@ function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
     close: object({
       summary: string()
     }, ["summary"])
-  }, ["version", "title", "goals", ...requestPartCount > 0 ? ["request_coverage"] : [], "course_visuals", "sections", "close"]);
+  }, ["title", "goals", ...requestPartCount > 0 ? ["request_coverage"] : [], "course_visuals", "sections", "close"]);
 }
 function coerceLessonPlanOutlineModelNumbers(value, requestPartCount = 0) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
@@ -12974,7 +13291,7 @@ function coerceLessonPlanOutlineModelNumbers(value, requestPartCount = 0) {
 function buildLessonPlanSectionDraftJsonSchema(outlineValue, sectionIndex) {
   return vertexCompatible(lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex));
 }
-function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex) {
+function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, bootstrapPermissive = false) {
   const outline = outlineShape(outlineValue);
   if (!Number.isInteger(sectionIndex) || sectionIndex < 1 || sectionIndex > outline.sections.length) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$section", "section is outside the outline");
@@ -12986,15 +13303,15 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex) {
   }
   const reusableCount = section.reusable_items?.length ?? 0;
   const numberCount = outline.numbers?.length ?? 0;
-  const courseVisualCreates = courseVisualCreatesSchema(outline, sectionIndex);
-  const reusableBoardCreates = reusableBoardCreatesSchema(outline, sectionIndex);
+  const courseVisualCreates = bootstrapPermissive ? void 0 : courseVisualCreatesSchema(outline, sectionIndex);
+  const reusableBoardCreates = bootstrapPermissive ? void 0 : reusableBoardCreatesSchema(outline, sectionIndex);
   const actionCollections = actionCollectionSchemas(
-    outline.sections.length,
     allowedCapabilities,
-    0,
+    bootstrapPermissive ? 24 : 0,
     numberCount,
-    (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex).map(({ position }) => position),
-    false
+    bootstrapPermissive ? Array.from({ length: 16 }, (_unused, index) => index + 1) : (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex).map(({ position }) => position),
+    bootstrapPermissive,
+    !bootstrapPermissive
   );
   const supportsNumberActivity = Array.isArray(outline.numbers) && outline.numbers.length > 0;
   const sectionVisualCapabilities = (outline.course_visuals ?? []).filter((visual) => visual.use_sections.includes(sectionIndex)).map((visual) => visual.capability);
@@ -13016,8 +13333,6 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex) {
     } : {}
   };
   const schema = object({
-    version: { enum: [LESSON_PLAN_VERSION] },
-    section: { enum: [sectionIndex] },
     moments: {
       type: "array",
       minItems: 1,
@@ -13032,8 +13347,6 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex) {
     ...reusableBoardCreates ? { reusable_board_creates: reusableBoardCreates } : {},
     ...activityProperties
   }, [
-    "version",
-    "section",
     "moments",
     ...courseVisualCreates ? ["course_visual_creates"] : [],
     ...reusableBoardCreates ? ["reusable_board_creates"] : []
@@ -13047,25 +13360,124 @@ function coerceLessonPlanSectionModelNumbers(value, outlineValue, sectionIndex) 
     "$lessonPlanModelSection"
   );
 }
+function coerceLessonPlanBootstrapSectionModelNumbers(value) {
+  return coerceModelNumbers(
+    value,
+    lessonPlanSectionDraftShapeJsonSchema(bootstrapPermissiveOutline(), 1, true),
+    "$lessonPlanModelSection"
+  );
+}
+
+// src/json-stream.ts
+function completedObjectText(source, propertyName) {
+  let index = 0;
+  while (index < source.length) {
+    if (source[index] !== '"') {
+      index += 1;
+      continue;
+    }
+    const stringStart = index;
+    index += 1;
+    let value = "";
+    let escaped = false;
+    for (; index < source.length; index += 1) {
+      const character = source[index];
+      if (escaped) {
+        escaped = false;
+        value += character;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === '"') {
+        break;
+      } else {
+        value += character;
+      }
+    }
+    if (index >= source.length || value !== propertyName) {
+      index = Math.max(index + 1, stringStart + 1);
+      continue;
+    }
+    index += 1;
+    while (/\s/u.test(source[index] || "")) index += 1;
+    if (source[index] !== ":") continue;
+    index += 1;
+    while (/\s/u.test(source[index] || "")) index += 1;
+    if (source[index] !== "{") continue;
+    const objectStart = index;
+    let depth = 0;
+    let inString = false;
+    let objectEscaped = false;
+    for (; index < source.length; index += 1) {
+      const character = source[index];
+      if (inString) {
+        if (objectEscaped) objectEscaped = false;
+        else if (character === "\\") objectEscaped = true;
+        else if (character === '"') inString = false;
+        continue;
+      }
+      if (character === '"') inString = true;
+      else if (character === "{") depth += 1;
+      else if (character === "}") {
+        depth -= 1;
+        if (depth === 0) return source.slice(objectStart, index + 1);
+      }
+    }
+    return void 0;
+  }
+  return void 0;
+}
+function completedJsonObjectProperty(source, propertyName) {
+  const text = completedObjectText(source, propertyName);
+  if (text === void 0) return void 0;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return void 0;
+  }
+}
 
 // src/lesson-plan-generation.ts
-var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u4E00\u6574\u8282\u5B8C\u6574\u8BFE\u7A0B\u7684\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E0D\u586B\u5199\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002
-- course_visuals \u4E00\u6B21\u5217\u51FA\u8BFE\u7A0B\u771F\u6B63\u9700\u8981\u7684\u4E3B\u8981\u753B\u9762\uFF1B\u53EA\u9009 Schema \u4E2D\u7684 required_features\u3002\u76F8\u540C\u753B\u9762\u540E\u7EED\u5FC5\u987B\u590D\u7528\uFF0C\u4E0D\u80FD\u56E0\u6807\u9898\u3001\u5E03\u5C40\u3001\u8303\u56F4\u3001\u76F8\u673A\u6216\u989C\u8272\u518D\u5EFA\u4E00\u4EFD\u3002\u53EA\u6709\u786E\u9700\u5E76\u6392\u6BD4\u8F83\u65F6\u624D\u7528 comparison \u5E76\u6307\u5411\u8F83\u65E9\u753B\u9762\uFF1Bsupporting \u4E5F\u8981\u6307\u5411\u8F83\u65E9\u753B\u9762\u3002
-- \u9700\u8981\u5207\u5206\u5E76\u79FB\u52A8\u56FE\u5F62\u8BC1\u660E\u9762\u79EF\u65F6\uFF0C\u4F7F\u7528 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1Bordered_process_steps \u53EA\u662F\u9759\u6001\u6D41\u7A0B\uFF0C\u4E0D\u80FD\u5192\u5145\u79FB\u52A8\u56FE\u5F62\u6216\u6570\u503C\u63A7\u4EF6\u3002
-- numbers \u53EA\u58F0\u660E\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3001\u6559\u5B66\u8303\u56F4\u548C\u521D\u59CB\u503C\u3002\u753B\u9762\u6240\u9700\u6570\u503C\u53CA\u987A\u5E8F\u4EE5 available_visual_recipes \u4E3A\u51C6\u3002\u6ED1\u6746\u79CD\u7C7B\u3001\u6B65\u957F\u548C\u80FD\u529B\u5141\u8BB8\u7684\u6267\u884C\u8303\u56F4\u7531\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\uFF0C\u4E0D\u8981\u586B\u5199\u6216\u4F30\u7B97\u3002
-- request_coverage \u9010\u9879\u8986\u76D6 request_parts\u3002\u80FD\u843D\u5B9E\u624D\u5199 teach \u548C\u7AE0\u8282\uFF1B\u660E\u786E\u8981\u6C42\u4F46\u5F53\u524D\u80FD\u529B\u65E0\u6CD5\u5B9E\u73B0\u65F6\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u548C\u539F\u56E0\uFF0C\u4E0D\u5F97\u7528\u6587\u5B57\u6216\u9519\u8BEF\u753B\u9762\u5192\u5145\u3002
-- sections \u53EF\u4EE5\u6709\u591A\u8282\uFF1B\u6BCF\u8282\u53EF\u6709\u591A\u6BB5\u65C1\u767D\u3001\u677F\u4E66\u3001\u52A8\u753B\u548C\u7EC3\u4E60\u3002close \u53EA\u5199\u603B\u7ED3\u3002
+var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002
+- visual_recipes \u6BCF\u9879\u4F9D\u6B21\u662F [features, numbers, purpose]\u3002course_visuals \u53EA\u5217\u771F\u6B63\u9700\u8981\u7684\u4E3B\u8981\u753B\u9762\u5E76\u9009\u62E9\u5176\u4E2D\u7684 features\uFF1B\u540C\u4E00\u753B\u9762\u540E\u7EED\u590D\u7528\uFF0C\u53EA\u6709\u786E\u9700\u5E76\u6392\u6BD4\u8F83\u624D\u5EFA comparison\uFF0Csupporting/comparison \u90FD\u6307\u5411\u8F83\u65E9\u753B\u9762\u3002
+- \u56FE\u5F62\u62C6\u5206\u79FB\u52A8\u8BC1\u660E\u4F7F\u7528 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1Bordered_process_steps \u53EA\u662F\u9759\u6001\u6D41\u7A0B\u3002
+- numbers \u53EA\u5199\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3001\u8303\u56F4\u548C\u521D\u503C\uFF0C\u987A\u5E8F\u4F9D visual_recipes \u7684 numbers\uFF1B\u63A7\u4EF6\u4E0E\u6B65\u957F\u7531\u7A0B\u5E8F\u751F\u6210\u3002
+- request_coverage \u6309 request_parts \u7684\u539F\u987A\u5E8F\u9010\u9879\u8986\u76D6\u3002\u53EF\u843D\u5B9E\u5199 teach \u548C\u7AE0\u8282\uFF1B\u5F53\u524D\u80FD\u529B\u4E0D\u80FD\u5B8C\u6574\u5B9E\u73B0\u5219\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u548C\u539F\u56E0\uFF0C\u4E0D\u80FD\u7528\u6587\u5B57\u6216\u9519\u8BEF\u753B\u9762\u66FF\u4EE3\u3002
+- sections \u53EF\u542B\u591A\u8282\uFF0C\u6BCF\u8282\u53EF\u6709\u65C1\u767D\u3001\u677F\u4E66\u3001\u52A8\u753B\u548C\u7EC3\u4E60\uFF1Bclose \u53EA\u603B\u7ED3\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
-var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5B9A\u7684\u4E00\u8282\uFF0C\u4E0D\u751F\u6210 OLL\uFF0C\u4E0D\u586B\u5199\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u6216\u5BF9\u8C61\u5F15\u7528\u3002
-- \u5FC5\u987B\u5B9E\u9645\u843D\u5B9E assigned_request_parts\u3002\u6BCF\u6BB5\u65C1\u767D\u4E0E\u5F53\u65F6\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002
-- visuals_for_section \u4E2D create \u7684\u753B\u9762\u53EA\u5728\u6839\u5C42 course_visual_creates \u63CF\u8FF0\u5E76\u6307\u5B9A moment\uFF1Breuse \u7684\u65E7\u753B\u9762\u4E0D\u5F97\u91CD\u5EFA\u3002\u666E\u901A\u516C\u5F0F\u3001\u7B14\u8BB0\u53EA\u7528 Schema \u63D0\u4F9B\u7684\u6E05\u5355\u3002\u7A7A\u6E05\u5355\u7701\u7565\u3002
-- focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\u5E76\u51B3\u5B9A\u52A8\u4F5C\u987A\u5E8F\u3002placement \u53EA\u5199\u76F8\u5BF9\u65B9\u5411\u3002\u53EF\u590D\u7528\u666E\u901A\u677F\u4E66\u53EA\u586B\u6839\u5C42\u5FC5\u586B\u9879\uFF0C\u4E0D\u586B\u5199\u5185\u90E8\u4F4D\u7F6E\u3002
+var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5B9A\u7684\u4E00\u8282\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u6216\u5BF9\u8C61\u5F15\u7528\u3002
+- \u5FC5\u987B\u843D\u5B9E\u76EE\u5F55\u5206\u914D\u7684 request_parts\u3002\u65C1\u767D\u4E0E\u5BF9\u5E94\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002
+- \u76EE\u5F55\u4E2D\u672C\u8282 create \u7684\u753B\u9762\u6309\u987A\u5E8F\u5199\u5165 course_visual_creates \u5E76\u6307\u5B9A moment\uFF1Breuse \u7684\u753B\u9762\u4E0D\u5F97\u91CD\u5EFA\u3002\u76EE\u5F55\u58F0\u660E\u7684\u516C\u5F0F\u548C\u7B14\u8BB0\u5206\u522B\u6309\u987A\u5E8F\u5199\u5165 reusable_math_creates\u3001reusable_note_creates\uFF1B\u7A7A\u6E05\u5355\u7701\u7565\u3002
+- focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\uFF0C\u8865\u9F50\u5361\u7247\u7528\u9014\u3001\u4F4D\u7F6E\u3001\u9ED8\u8BA4\u65F6\u673A\u548C\u52A8\u4F5C\u987A\u5E8F\u3002
 - \u5C0F\u6570\u6309 Schema \u7684 mantissa\u3001scale \u586B\u5199\uFF0C\u4F8B\u5982 -1.5 \u4E3A -15\u30011\uFF1B6.283 \u4E3A 6283\u30013\u3002
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - function_plot \u7684 parameters.formulas \u59CB\u7EC8\u662F\u516C\u5F0F\u6570\u7EC4\uFF0C\u6BCF\u9879\u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u5355\u6761\u66F2\u7EBF\u53EF\u5F15\u7528 n1\u3001n2\uFF0C\u4F8B\u5982 (x-n1)^2+n2\uFF1B\u6BD4\u8F83\u591A\u6761\u66F2\u7EBF\u65F6\u586B\u5199\u591A\u4E2A\u4E0D\u542B n1\u3001n2 \u7684\u9759\u6001\u516C\u5F0F\uFF0C\u4F8B\u5982 ["x", "x^2", "sin(x)"]\u3002\u6BCF\u6761\u516C\u5F0F\u90FD\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u9010\u6761\u89E3\u6790\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002\u51FD\u6570\u56FE\u548C\u4E09\u7EF4\u66F2\u9762\u90FD\u4E0D\u586B\u5199\u89C6\u7A97\u3001\u91C7\u6837\u5BC6\u5EA6\u6216\u7F51\u683C\u7CBE\u5EA6\u3002
-- animations \u53EA\u51B3\u5B9A\u6F14\u793A\u54EA\u4E2A\u6570\u503C\u3001\u76EE\u6807\u503C\u548C\u6559\u5B66\u8282\u594F\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u7F13\u52A8\u65B9\u5F0F\u3002placement \u53EA\u51B3\u5B9A\u76F8\u5BF9\u65B9\u5411\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u951A\u70B9\u3001\u5BF9\u9F50\u548C\u95F4\u8DDD\u3002
+- animations \u53EA\u51B3\u5B9A\u6F14\u793A\u54EA\u4E2A\u6570\u503C\u3001\u76EE\u6807\u503C\u548C\u6559\u5B66\u8282\u594F\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u7F13\u52A8\u65B9\u5F0F\u3002
 - geometric_rearrangement \u7684\u6570\u503C\u8868\u793A\u91CD\u6392\u8FDB\u5EA6\uFF1Bconstruction \u4ECE Schema \u9009\u62E9\u3002process_diagram \u6CA1\u6709\u6570\u503C\u6216\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
+var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D\uFF0C\u5FC5\u987B\u5148\u5B8C\u6210 outline\uFF0C\u518D\u4F9D\u636E\u8FD9\u4E2A outline \u7F16\u5199 first_section\u3002first_section \u53EA\u80FD\u843D\u5B9E outline.sections[0]\uFF1A
+- outline \u662F\u552F\u4E00\u8BFE\u7A0B\u5B89\u6392\uFF1B\u4E0D\u5F97\u5728 first_section \u589E\u52A0 outline \u6CA1\u6709\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\uFF0C\u4E5F\u4E0D\u5F97\u9057\u6F0F\u7B2C\u4E00\u8282\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\u548C\u53EF\u590D\u7528\u677F\u4E66\u3002
+- first_section \u53EA\u5199 moments \u4EE5\u53CA\u53EF\u9009\u7684 number_activities\u3001scene3d_activities\u3002\u65C1\u767D\u4E0E\u5BF9\u5E94\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002
+- outline \u4E2D\u7B2C\u4E00\u8282\u65B0\u5EFA\u7684\u4E3B\u8981\u753B\u9762\uFF0C\u6309 course_visuals \u7684\u4F4D\u7F6E\u5199\u8FDB\u5BF9\u5E94 moment \u7684 visual_creates\uFF1Acourse_visual \u586B\u5176\u4ECE 1 \u5F00\u59CB\u7684\u4F4D\u7F6E\uFF0Ccontent.parameters \u53EA\u586B\u5199\u8BE5\u753B\u9762\u6240\u9700\u7684\u6570\u5B66\u5185\u5BB9\uFF0Ccontent.numbers \u4F7F\u7528 outline.numbers \u7684\u4F4D\u7F6E\u3002\u753B\u9762\u80FD\u529B\u7531\u7A0B\u5E8F\u6839\u636E outline.required_features \u786E\u5B9A\uFF0Cfirst_section \u4E0D\u518D\u91CD\u590D\u9009\u62E9\u3002\u4E0D\u5F97\u91CD\u5EFA outline \u58F0\u660E\u4E3A\u590D\u7528\u7684\u65E7\u753B\u9762\u3002
+- outline \u4E2D\u7B2C\u4E00\u8282\u58F0\u660E\u7684\u53EF\u590D\u7528\u516C\u5F0F\u548C\u7B14\u8BB0\uFF0C\u6309 reusable_items \u7684\u4F4D\u7F6E\u5199\u8FDB\u5BF9\u5E94 moment \u7684 math_creates \u548C note_creates\uFF0C\u5E76\u7528 reusable_item \u586B\u5176\u4ECE 1 \u5F00\u59CB\u7684\u4F4D\u7F6E\uFF1B\u5176\u4ED6\u53EA\u5728\u5F53\u524D\u8BB2\u89E3\u4E2D\u51FA\u73B0\u7684\u516C\u5F0F\u6216\u7B14\u8BB0\u4E5F\u53EF\u5199\u5165\u8FD9\u4E24\u4E2A\u6570\u7EC4\uFF0C\u4F46\u4E0D\u586B reusable_item\u3002\u7A0B\u5E8F\u628A\u4F4D\u7F6E\u8F6C\u6362\u4E3A\u7A33\u5B9A\u5F15\u7528\u3002
+- first_section \u4F7F\u7528 outline \u4E2D\u6570\u503C\u548C\u753B\u9762\u7684\u5148\u540E\u987A\u5E8F\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u3001\u5BF9\u8C61\u5F15\u7528\u3001course_visual_creates \u6216 reusable_board_creates\u3002
+- focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\uFF0C\u8865\u9F50\u5361\u7247\u7528\u9014\u3001\u4F4D\u7F6E\u3001\u9ED8\u8BA4\u65F6\u673A\u548C\u52A8\u4F5C\u987A\u5E8F\u3002
+- \u5C0F\u6570\u6309 Schema \u7684 mantissa\u3001scale \u586B\u5199\uFF0C\u4F8B\u5982 -1.5 \u4E3A -15\u30011\uFF1B6.283 \u4E3A 6283\u30013\u3002
+- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
+- function_plot \u7684 parameters.formulas \u59CB\u7EC8\u662F\u516C\u5F0F\u6570\u7EC4\uFF0C\u6BCF\u9879\u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u5355\u6761\u66F2\u7EBF\u53EF\u5F15\u7528 n1\u3001n2\uFF0C\u4F8B\u5982 (x-n1)^2+n2\uFF1B\u6BD4\u8F83\u591A\u6761\u66F2\u7EBF\u65F6\u586B\u5199\u591A\u4E2A\u4E0D\u542B n1\u3001n2 \u7684\u9759\u6001\u516C\u5F0F\uFF0C\u4F8B\u5982 ["x", "x^2", "sin(x)"]\u3002\u6BCF\u6761\u516C\u5F0F\u90FD\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u9010\u6761\u89E3\u6790\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002\u51FD\u6570\u56FE\u548C\u4E09\u7EF4\u66F2\u9762\u90FD\u4E0D\u586B\u5199\u89C6\u7A97\u3001\u91C7\u6837\u5BC6\u5EA6\u6216\u7F51\u683C\u7CBE\u5EA6\u3002
+- animations \u53EA\u51B3\u5B9A\u6F14\u793A\u54EA\u4E2A\u6570\u503C\u3001\u76EE\u6807\u503C\u548C\u6559\u5B66\u8282\u594F\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u7F13\u52A8\u65B9\u5F0F\u3002
+- geometric_rearrangement \u7684\u6570\u503C\u8868\u793A\u91CD\u6392\u8FDB\u5EA6\uFF1Bconstruction \u4ECE Schema \u9009\u62E9\u3002process_diagram \u6CA1\u6709\u6570\u503C\u6216\u52A8\u753B\u3002`;
+var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
+
+${BOOTSTRAP_FIRST_SECTION_PROMPT}
+
+\u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
+var ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u6587\u5B57\u8F93\u5165\u6216\u8BED\u97F3\u8F93\u5165\u5F00\u59CB\u4E00\u6574\u8282\u767D\u677F\u8BFE\u7A0B\u3002\u5148\u5224\u65AD\u5F53\u524D\u5185\u5BB9\u662F\u5426\u8DB3\u4EE5\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\uFF0C\u4E0D\u8981\u4ECE\u53EF\u7528\u753B\u9762\u6216\u6570\u5B66\u80FD\u529B\u731C\u6D4B\u7528\u6237\u6CA1\u6709\u8868\u8FBE\u7684\u4E3B\u9898\u3002
+- generate_lesson\uFF1A\u7528\u6237\u63D0\u51FA\u4E86\u5B66\u4E60\u95EE\u9898\u3001\u89E3\u91CA\u8BF7\u6C42\uFF0C\u6216\u6E05\u695A\u8BF4\u51FA\u4E86\u60F3\u5B66\u4E60\u7684\u4E3B\u9898\u3002\u7B80\u77ED\u4F46\u660E\u786E\u7684\u4E3B\u9898\uFF08\u4F8B\u5982\u201C\u52FE\u80A1\u5B9A\u7406\u201D\uFF09\u4E5F\u5C5E\u4E8E\u8FD9\u4E00\u7C7B\u3002\u6B64\u65F6 course \u5FC5\u987B\u540C\u65F6\u5305\u542B\u5B8C\u6574 outline \u548C first_section\uFF0Clearner_response \u7559\u7A7A\u3002
+- clarify\uFF1A\u8FD9\u662F\u771F\u5B9E\u8BDD\u8BED\uFF0C\u4F46\u5185\u5BB9\u6B8B\u7F3A\u3001\u542B\u4E49\u4E0D\u6E05\u6216\u6CA1\u6709\u8BF4\u660E\u8981\u5B66\u4EC0\u4E48\uFF0C\u65E0\u6CD5\u53EF\u9760\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\u3002\u6B64\u65F6 course \u5FC5\u987B\u4E3A null\uFF0C\u7528 learner_response \u7B80\u77ED\u8FFD\u95EE\u7528\u6237\u60F3\u5B66\u4E60\u4EC0\u4E48\u3002\u4F8B\u5982 \u201CThe book.\u201D \u5E94\u8FFD\u95EE\u7528\u6237\u60F3\u4E86\u89E3\u8FD9\u672C\u4E66\u7684\u4EC0\u4E48\u5185\u5BB9\uFF0C\u800C\u4E0D\u662F\u731C\u6210\u6570\u5B66\u8BFE\u7A0B\u3002
+- ignore\uFF1A\u53EA\u662F\u8BED\u6C14\u8BCD\u3001\u53E3\u5934\u586B\u5145\u6216\u6CA1\u6709\u53EF\u56DE\u5E94\u5185\u5BB9\u3002\u6B64\u65F6 course \u5FC5\u987B\u4E3A null\uFF0Clearner_response \u7559\u7A7A\u3002
+\u53EA\u505A\u4E0A\u8FF0\u8BED\u4E49\u5224\u65AD\uFF0C\u4E0D\u4F7F\u7528\u5B57\u6570\u3001\u8BED\u8A00\u6216\u56FA\u5B9A\u5173\u952E\u8BCD\u4F5C\u4E3A\u89C4\u5219\u3002
+
+${BOOTSTRAP_SYSTEM_PROMPT}`;
 var ADMISSION_OUTLINE_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u6587\u5B57\u8F93\u5165\u6216\u8BED\u97F3\u8F93\u5165\u5F00\u59CB\u4E00\u6574\u8282\u767D\u677F\u8BFE\u7A0B\u3002\u5148\u5224\u65AD\u5F53\u524D\u5185\u5BB9\u662F\u5426\u8DB3\u4EE5\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\uFF0C\u4E0D\u8981\u4ECE\u53EF\u7528\u753B\u9762\u6216\u6570\u5B66\u80FD\u529B\u731C\u6D4B\u7528\u6237\u6CA1\u6709\u8868\u8FBE\u7684\u4E3B\u9898\u3002
 - generate_lesson\uFF1A\u7528\u6237\u63D0\u51FA\u4E86\u5B66\u4E60\u95EE\u9898\u3001\u89E3\u91CA\u8BF7\u6C42\uFF0C\u6216\u6E05\u695A\u8BF4\u51FA\u4E86\u60F3\u5B66\u4E60\u7684\u4E3B\u9898\u3002\u7B80\u77ED\u4F46\u660E\u786E\u7684\u4E3B\u9898\uFF08\u4F8B\u5982\u201C\u52FE\u80A1\u5B9A\u7406\u201D\uFF09\u4E5F\u5C5E\u4E8E\u8FD9\u4E00\u7C7B\u3002\u6B64\u65F6 course \u5FC5\u987B\u5305\u542B\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uFF0Clearner_response \u7559\u7A7A\u3002\u4E0D\u8981\u751F\u6210\u4EFB\u4F55\u4E00\u8282\u7684\u65C1\u767D\u6216\u677F\u4E66\u5185\u5BB9\u3002
 - clarify\uFF1A\u8FD9\u662F\u771F\u5B9E\u8BDD\u8BED\uFF0C\u4F46\u5185\u5BB9\u6B8B\u7F3A\u3001\u542B\u4E49\u4E0D\u6E05\u6216\u6CA1\u6709\u8BF4\u660E\u8981\u5B66\u4EC0\u4E48\uFF0C\u65E0\u6CD5\u53EF\u9760\u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\u3002\u6B64\u65F6 course \u5FC5\u987B\u4E3A null\uFF0C\u7528 learner_response \u7B80\u77ED\u8FFD\u95EE\u7528\u6237\u60F3\u5B66\u4E60\u4EC0\u4E48\u3002\u4F8B\u5982 \u201CThe book.\u201D \u5E94\u8FFD\u95EE\u7528\u6237\u60F3\u4E86\u89E3\u8FD9\u672C\u4E66\u7684\u4EC0\u4E48\u5185\u5BB9\uFF0C\u800C\u4E0D\u662F\u731C\u6210\u6570\u5B66\u8BFE\u7A0B\u3002
@@ -13075,12 +13487,20 @@ var ADMISSION_OUTLINE_SYSTEM_PROMPT = `\u7528\u6237\u6B63\u5C1D\u8BD5\u4ECE\u658
 ${OUTLINE_SYSTEM_PROMPT}`;
 var CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT = `\u7528\u6237\u63D0\u4EA4\u4E86\u4E00\u6BB5\u6587\u5B57\u6216\u8BED\u97F3\uFF0C\u540C\u65F6\u9644\u5E26\u4E86\u4E00\u5F20\u6B64\u523B\u7684\u6444\u50CF\u5934\u753B\u9762\u3002\u53EA\u5728\u8FD9\u4E00\u6B21\u8BF7\u6C42\u4E2D\u8BFB\u53D6\u56FE\u7247\u3002
 - image_observation \u5FC5\u987B\u5FE0\u5B9E\u8BB0\u5F55\u56FE\u7247\u662F\u5426\u770B\u6E05\u3001\u5B9E\u9645\u770B\u5230\u4E86\u4EC0\u4E48\u3001\u54EA\u4E9B\u5730\u65B9\u4E0D\u786E\u5B9A\u3002\u4E0D\u8981\u8865\u5199\u56FE\u7247\u4E2D\u4E0D\u5B58\u5728\u7684\u9898\u76EE\u3001\u516C\u5F0F\u6216\u6587\u5B57\u3002
-- \u5982\u679C learner_request \u81EA\u5DF1\u5DF2\u7ECF\u6E05\u695A\u8BF4\u660E\u5B66\u4E60\u4E3B\u9898\uFF0C\u4EE5 learner_request \u4E3A\u4E3B\uFF1B\u65E0\u5173\u80CC\u666F\u4E0D\u80FD\u6539\u53D8\u8BFE\u7A0B\u4E3B\u9898\u3002
-- \u5982\u679C learner_request \u4F7F\u7528\u201C\u8FD9\u4E2A\u3001\u8FD9\u91CC\u3001\u8FD9\u9053\u9898\u3001\u6211\u624B\u4E0A\u7684\u5185\u5BB9\u201D\u7B49\u6307\u4EE3\uFF0C\u4F7F\u7528 image_observation \u6765\u786E\u5B9A\u4E3B\u9898\u3002
-- \u56FE\u7247\u65E0\u6CD5\u770B\u6E05\u4E14 learner_request \u53C8\u4E0D\u80FD\u72EC\u7ACB\u786E\u5B9A\u4E3B\u9898\u65F6\uFF0C\u8FD4\u56DE clarify \u548C\u7B80\u77ED\u8FFD\u95EE\uFF0Ccourse \u5FC5\u987B\u4E3A null\u3002
+- \u5982\u679C request_parts \u5DF2\u6E05\u695A\u8BF4\u660E\u5B66\u4E60\u4E3B\u9898\uFF0C\u4EE5\u6587\u5B57\u4E3A\u4E3B\uFF1B\u65E0\u5173\u80CC\u666F\u4E0D\u80FD\u6539\u53D8\u4E3B\u9898\u3002
+- \u5982\u679C request_parts \u4F7F\u7528\u201C\u8FD9\u4E2A\u3001\u8FD9\u91CC\u3001\u8FD9\u9053\u9898\u3001\u6211\u624B\u4E0A\u7684\u5185\u5BB9\u201D\u7B49\u6307\u4EE3\uFF0C\u4F7F\u7528 image_observation \u786E\u5B9A\u4E3B\u9898\u3002
+- \u56FE\u7247\u65E0\u6CD5\u770B\u6E05\u4E14\u6587\u5B57\u53C8\u4E0D\u80FD\u72EC\u7ACB\u786E\u5B9A\u4E3B\u9898\u65F6\uFF0C\u8FD4\u56DE clarify \u548C\u7B80\u77ED\u8FFD\u95EE\uFF0Ccourse \u5FC5\u987B\u4E3A null\u3002
 - \u56FE\u7247\u90E8\u5206\u53EF\u8BFB\u65F6\uFF0C\u628A\u4E0D\u786E\u5B9A\u5185\u5BB9\u4FDD\u7559\u5728 uncertainties \u4E2D\uFF0C\u4E0D\u8981\u628A\u731C\u6D4B\u5F53\u6210\u786E\u5B9A\u4E8B\u5B9E\u3002
 
 ${ADMISSION_OUTLINE_SYSTEM_PROMPT}`;
+var CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `\u7528\u6237\u63D0\u4EA4\u4E86\u4E00\u6BB5\u6587\u5B57\u6216\u8BED\u97F3\uFF0C\u540C\u65F6\u9644\u5E26\u4E86\u4E00\u5F20\u6B64\u523B\u7684\u6444\u50CF\u5934\u753B\u9762\u3002\u53EA\u5728\u8FD9\u4E00\u6B21\u8BF7\u6C42\u4E2D\u8BFB\u53D6\u56FE\u7247\u3002
+- image_observation \u5FC5\u987B\u5FE0\u5B9E\u8BB0\u5F55\u56FE\u7247\u662F\u5426\u770B\u6E05\u3001\u5B9E\u9645\u770B\u5230\u4E86\u4EC0\u4E48\u3001\u54EA\u4E9B\u5730\u65B9\u4E0D\u786E\u5B9A\u3002\u4E0D\u8981\u8865\u5199\u56FE\u7247\u4E2D\u4E0D\u5B58\u5728\u7684\u9898\u76EE\u3001\u516C\u5F0F\u6216\u6587\u5B57\u3002
+- \u5982\u679C request_parts \u5DF2\u6E05\u695A\u8BF4\u660E\u5B66\u4E60\u4E3B\u9898\uFF0C\u4EE5\u6587\u5B57\u4E3A\u4E3B\uFF1B\u65E0\u5173\u80CC\u666F\u4E0D\u80FD\u6539\u53D8\u4E3B\u9898\u3002
+- \u5982\u679C request_parts \u4F7F\u7528\u201C\u8FD9\u4E2A\u3001\u8FD9\u91CC\u3001\u8FD9\u9053\u9898\u3001\u6211\u624B\u4E0A\u7684\u5185\u5BB9\u201D\u7B49\u6307\u4EE3\uFF0C\u4F7F\u7528 image_observation \u786E\u5B9A\u4E3B\u9898\u3002
+- \u56FE\u7247\u65E0\u6CD5\u770B\u6E05\u4E14\u6587\u5B57\u53C8\u4E0D\u80FD\u72EC\u7ACB\u786E\u5B9A\u4E3B\u9898\u65F6\uFF0C\u8FD4\u56DE clarify \u548C\u7B80\u77ED\u8FFD\u95EE\uFF0Ccourse \u5FC5\u987B\u4E3A null\u3002
+- \u56FE\u7247\u90E8\u5206\u53EF\u8BFB\u65F6\uFF0C\u628A\u4E0D\u786E\u5B9A\u5185\u5BB9\u4FDD\u7559\u5728 uncertainties \u4E2D\uFF0C\u4E0D\u8981\u628A\u731C\u6D4B\u5F53\u6210\u786E\u5B9A\u4E8B\u5B9E\u3002
+
+${ADMISSION_BOOTSTRAP_SYSTEM_PROMPT}`;
 function cameraObservation(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation", "expected an object");
@@ -13150,10 +13570,31 @@ function deriveSliderStep(min, max) {
   const span = max - min;
   return span / TARGET_SLIDER_INTERVALS;
 }
-function lowerModelOutline(value) {
+function normalizeModelNumberRange(number) {
+  if (typeof number.initial !== "number" || !Number.isFinite(number.initial) || typeof number.min !== "number" || !Number.isFinite(number.min) || typeof number.max !== "number" || !Number.isFinite(number.max)) return;
+  const initial = number.initial;
+  let min = Math.min(number.min, number.max, initial);
+  let max = Math.max(number.min, number.max, initial);
+  if (min === max) {
+    const padding = Math.max(1, Math.abs(initial) * 0.1);
+    min = initial - padding;
+    max = initial + padding;
+  }
+  number.min = min;
+  number.max = max;
+  number.initial = initial;
+}
+function defaultCoverageSection(requestPart, requestPartCount, sectionCount) {
+  return Math.min(
+    sectionCount,
+    Math.max(1, Math.ceil(requestPart * sectionCount / requestPartCount))
+  );
+}
+function lowerModelOutline(value, requestPartCount = 0) {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) return root;
   const candidate = root;
+  candidate.version = LESSON_PLAN_VERSION;
   if (Array.isArray(candidate.numbers)) {
     candidate.numbers = candidate.numbers.map((entry) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
@@ -13161,6 +13602,7 @@ function lowerModelOutline(value) {
       delete number.student_control;
       if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
       if (typeof number.label === "string" && !number.label.trim()) delete number.label;
+      normalizeModelNumberRange(number);
       if (typeof number.min === "number" && Number.isFinite(number.min) && typeof number.max === "number" && Number.isFinite(number.max) && number.max > number.min) {
         number.student_control = {
           kind: "slider",
@@ -13173,12 +13615,25 @@ function lowerModelOutline(value) {
     });
   }
   if (Array.isArray(candidate.request_coverage)) {
-    candidate.request_coverage = candidate.request_coverage.map((entry) => {
+    candidate.request_coverage = candidate.request_coverage.map((entry, index) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
       const coverage = { ...entry };
+      coverage.request_part = index + 1;
       if (coverage.treatment === "teach") delete coverage.reason;
       return coverage;
     });
+  }
+  if (requestPartCount > 0 && (candidate.request_coverage === void 0 || Array.isArray(candidate.request_coverage)) && Array.isArray(candidate.sections) && candidate.sections.length > 0) {
+    const coverage = candidate.request_coverage ?? [];
+    for (let index = coverage.length; index < requestPartCount; index += 1) {
+      const requestPart = index + 1;
+      coverage.push({
+        request_part: requestPart,
+        treatment: "teach",
+        sections: [defaultCoverageSection(requestPart, requestPartCount, candidate.sections.length)]
+      });
+    }
+    candidate.request_coverage = coverage;
   }
   if (Array.isArray(candidate.course_visuals) && Array.isArray(candidate.sections)) {
     const sections = candidate.sections.map((entry) => {
@@ -13191,6 +13646,10 @@ function lowerModelOutline(value) {
     candidate.course_visuals = candidate.course_visuals.map((entry, visualIndex) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
       const visual = { ...entry };
+      if (Array.isArray(visual.use_sections)) {
+        const sections2 = visual.use_sections.filter((section2) => Number.isInteger(section2) && Number(section2) > 0).map(Number);
+        if (sections2.length > 0) visual.create_section = Math.min(...sections2);
+      }
       if (!Array.isArray(visual.required_features)) {
         throw new LessonPlanError(
           "LESSON_PLAN_CAPABILITY_REQUIREMENTS",
@@ -13267,6 +13726,18 @@ var modelActionCollections = {
   points: { action: "point_at" },
   animations: { action: "animate" }
 };
+function withProgramCreateDefaults(value, kind, relation) {
+  const lowered = { ...value };
+  if (lowered.role === void 0) {
+    lowered.role = kind === "visual" ? relation === "comparison" ? "comparison_visual" : relation === "supporting" ? "supporting_visual" : "main_visual" : kind === "math" ? "derivation" : "explanation";
+  }
+  if (lowered.placement === void 0) {
+    lowered.placement = {
+      relation: kind === "visual" ? relation === "supporting" || relation === "comparison" ? "right_of" : "new_region" : "below"
+    };
+  }
+  return lowered;
+}
 function lowerModelReference(value, currentMoment) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   const reference = value;
@@ -13323,11 +13794,34 @@ var formulaFunctions = /* @__PURE__ */ new Set([
 function formulaError(path, message) {
   throw new LessonPlanError("LESSON_PLAN_EXPRESSION", path, message);
 }
+var atomicBareFunctionPattern = new RegExp(
+  `\\b(${[...formulaFunctions].join("|")})\\s+(-?(?:x|n\\d+|pi|e|(?:\\d+(?:\\.\\d*)?|\\.\\d+)))(?=\\s*(?:$|[+\\-*/),]))`,
+  "giu"
+);
+var atomicSubscriptLogPattern = new RegExp(
+  `\\blog_\\{?((?:\\d+(?:\\.\\d*)?|\\.\\d+))\\}?\\s+(-?(?:x|n\\d+|pi|e|(?:\\d+(?:\\.\\d*)?|\\.\\d+)))(?=\\s*(?:$|[+\\-*/),]))`,
+  "giu"
+);
+var parenthesizedSubscriptLogPattern = new RegExp(
+  `\\blog_?\\{?((?:\\d+(?:\\.\\d*)?|\\.\\d+))\\}?\\s*\\(\\s*(-?(?:x|n\\d+|pi|e|(?:\\d+(?:\\.\\d*)?|\\.\\d+)))\\s*\\)`,
+  "giu"
+);
+function normalizeAtomicBareFunctionCalls(formula) {
+  return formula.replace(parenthesizedSubscriptLogPattern, (_match, base, argument) => {
+    const numericBase = Number(base);
+    if (!(numericBase > 0) || numericBase === 1) return _match;
+    return `(log(${argument})/log(${base}))`;
+  }).replace(atomicSubscriptLogPattern, (_match, base, argument) => {
+    const numericBase = Number(base);
+    if (!(numericBase > 0) || numericBase === 1) return _match;
+    return `(log(${argument})/log(${base}))`;
+  }).replace(atomicBareFunctionPattern, (_match, name, argument) => `${name}(${argument})`);
+}
 function formulaLexemes(rawFormula, path) {
   if (typeof rawFormula !== "string" || !rawFormula.trim() || rawFormula.length > 256) {
     return formulaError(path, "expected a non-empty formula up to 256 characters");
   }
-  let formula = rawFormula.trim().replaceAll("\u2212", "-").replaceAll("\xD7", "*").replaceAll("\xF7", "/").replaceAll("\u03C0", "pi").replaceAll("\xB2", "^2").replaceAll("\xB3", "^3");
+  let formula = normalizeAtomicBareFunctionCalls(rawFormula.trim()).replaceAll("\u2212", "-").replaceAll("\xD7", "*").replaceAll("\xF7", "/").replaceAll("\u03C0", "pi").replaceAll("\xB2", "^2").replaceAll("\xB3", "^3");
   const equals = [...formula.matchAll(/=/gu)];
   if (equals.length > 1) formulaError(path, "formula may contain at most one equals sign");
   if (equals.length === 1) {
@@ -13480,7 +13974,7 @@ function lowerModelBoardContent(kind, value, numberCount) {
   }
   const capability2 = content.capability;
   const parameters2 = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? { ...content.parameters } : {};
-  if (capability2 === "implicit_surface_with_section" && typeof parameters2.expression === "string" && parameters2.level === void 0) {
+  if (capability2 === "implicit_surface_with_section" && typeof parameters2.expression === "string") {
     const equation = parameters2.expression.split("=").map((part) => part.trim());
     if (equation.length === 2 && equation.every(Boolean)) {
       const rightLevel = Number(equation[1]);
@@ -13495,7 +13989,7 @@ function lowerModelBoardContent(kind, value, numberCount) {
         parameters2.expression = `(${equation[0]})-(${equation[1]})`;
         parameters2.level = 0;
       }
-    } else {
+    } else if (parameters2.level === void 0) {
       parameters2.level = 0;
     }
   }
@@ -13602,6 +14096,39 @@ function processDiagramRemovalReason(content) {
 }
 function isExecutableProcessDiagram(content) {
   return processDiagramRemovalReason(content) === void 0;
+}
+function rebuildCreatePlacements(outline, drafts) {
+  const latestReusableBefore = (sectionNumber) => {
+    for (let section = sectionNumber - 1; section >= 1; section -= 1) {
+      const items = outline.sections[section - 1]?.reusable_items ?? [];
+      for (let item = items.length; item >= 1; item -= 1) {
+        if (items[item - 1]?.kind === "board_item") {
+          return { source: "reusable", section, item };
+        }
+      }
+    }
+    return void 0;
+  };
+  drafts.forEach((section, sectionOffset) => {
+    let latestBoardReference = latestReusableBefore(sectionOffset + 1);
+    section.moments.forEach((moment, momentOffset) => {
+      let boardItem = 0;
+      for (const action of moment.actions) {
+        if (action.action !== "create") continue;
+        const requestedRelation = action.placement?.relation ?? "new_region";
+        action.placement = requestedRelation !== "new_region" && latestBoardReference ? {
+          relation: requestedRelation,
+          reference: structuredClone(latestBoardReference)
+        } : { relation: "new_region" };
+        boardItem += 1;
+        latestBoardReference = {
+          source: "local_board_item",
+          moment: momentOffset + 1,
+          item: boardItem
+        };
+      }
+    });
+  });
 }
 function sanitizeNonessentialVisuals(outlineValue, draftValues) {
   const outline = structuredClone(outlineValue);
@@ -13867,6 +14394,7 @@ function sanitizeNonessentialVisuals(outlineValue, draftValues) {
       if (section.student_activities.length === 0) delete section.student_activities;
     }
   }
+  rebuildCreatePlacements(outline, drafts);
   if (outline.course_visuals) {
     const retainedPositions = outline.course_visuals.map((visual, index) => ({ visual, oldPosition: index + 1 })).filter(({ oldPosition }) => !droppedCourseVisuals.has(oldPosition));
     const positionMap = new Map(retainedPositions.map(({ oldPosition }, index) => [oldPosition, index + 1]));
@@ -13897,6 +14425,24 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
   const sanitized = sanitizeNonessentialVisuals(outlineValue, draftValues);
   const outline = sanitized.outline;
   const drafts = sanitized.drafts;
+  for (const section of drafts) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "animate") continue;
+        const definition = outline.numbers?.[action.number - 1];
+        if (!definition || !Number.isFinite(action.end_value)) continue;
+        const nextMin = Math.min(definition.min, action.end_value);
+        const nextMax = Math.max(definition.max, action.end_value);
+        if (nextMin === definition.min && nextMax === definition.max) continue;
+        definition.min = nextMin;
+        definition.max = nextMax;
+        definition.initial = Math.min(nextMax, Math.max(nextMin, definition.initial));
+        if (definition.student_control) {
+          definition.student_control.step = deriveSliderStep(nextMin, nextMax);
+        }
+      }
+    }
+  }
   const visuallyBound = /* @__PURE__ */ new Set();
   for (const section of drafts) {
     for (const moment of section.moments) {
@@ -14081,6 +14627,93 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
   }
   return lowered;
 }
+function reconcileBootstrapFirstSectionPositions(value, outline) {
+  const root = structuredClone(value);
+  if (!root || typeof root !== "object" || Array.isArray(root)) return root;
+  const candidate = root;
+  if (!Array.isArray(candidate.moments)) return root;
+  if (candidate.course_visual_creates !== void 0 || candidate.reusable_board_creates !== void 0) {
+    for (const momentValue of candidate.moments) {
+      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
+      delete momentValue.visual_creates;
+    }
+    return root;
+  }
+  const collect = (collection) => candidate.moments.flatMap((momentValue, momentIndex) => {
+    if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) return [];
+    const entries = momentValue[collection];
+    if (!Array.isArray(entries)) return [];
+    return entries.flatMap((entry, entryIndex) => entry && typeof entry === "object" && !Array.isArray(entry) ? [{
+      entry,
+      moment: momentIndex + 1,
+      order: Number(entry.order),
+      index: entryIndex
+    }] : []);
+  }).sort((left, right) => left.moment - right.moment || (Number.isFinite(left.order) ? left.order : Number.MAX_SAFE_INTEGER) - (Number.isFinite(right.order) ? right.order : Number.MAX_SAFE_INTEGER) || left.index - right.index);
+  const visualCreates = collect("visual_creates");
+  const unmatchedVisuals = new Set(visualCreates);
+  const matchedVisuals = /* @__PURE__ */ new Map();
+  const expectedVisuals = (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === 1);
+  for (const { visual, position } of expectedVisuals) {
+    const matchesCapability = (candidateEntry) => {
+      if (!unmatchedVisuals.has(candidateEntry)) return false;
+      const content = candidateEntry.entry.content;
+      return content && typeof content === "object" && !Array.isArray(content) && content.capability === visual.capability;
+    };
+    const match = visualCreates.find((candidateEntry) => candidateEntry.entry.course_visual === position && unmatchedVisuals.has(candidateEntry)) ?? visualCreates.find(matchesCapability);
+    if (!match) continue;
+    matchedVisuals.set(match, position);
+    unmatchedVisuals.delete(match);
+  }
+  const fixedCourseCreates = Object.fromEntries([...matchedVisuals].map(([match, position]) => {
+    const entry = structuredClone(match.entry);
+    delete entry.order;
+    delete entry.course_visual;
+    delete entry.reusable_item;
+    const content = entry.content && typeof entry.content === "object" && !Array.isArray(entry.content) ? { ...entry.content } : {};
+    delete content.capability;
+    entry.content = content;
+    return [`visual_${position}`, { moment: match.moment, ...entry }];
+  }));
+  for (const momentValue of candidate.moments) {
+    if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
+    delete momentValue.visual_creates;
+  }
+  if (expectedVisuals.length > 0) candidate.course_visual_creates = fixedCourseCreates;
+  else delete candidate.course_visual_creates;
+  const createsByKind = {
+    math: collect("math_creates"),
+    note: collect("note_creates")
+  };
+  const usedBoardCreates = /* @__PURE__ */ new Set();
+  const reusableItems = outline.sections[0]?.reusable_items ?? [];
+  const fixedReusableCreates = {};
+  reusableItems.forEach((item, index) => {
+    if (item.kind !== "board_item" || item.board_kind !== "math" && item.board_kind !== "note") return;
+    const reusablePosition = index + 1;
+    const match = createsByKind[item.board_kind].find((candidateEntry) => !usedBoardCreates.has(candidateEntry) && candidateEntry.entry.reusable_item === reusablePosition) ?? createsByKind[item.board_kind].find((candidateEntry) => !usedBoardCreates.has(candidateEntry));
+    if (!match) return;
+    usedBoardCreates.add(match);
+    const entry = structuredClone(match.entry);
+    delete entry.order;
+    delete entry.reusable_item;
+    fixedReusableCreates[`item_${index + 1}`] = { moment: match.moment, ...entry };
+  });
+  for (const [collection, entries] of Object.entries(createsByKind)) {
+    const selected = new Set(entries.filter((entry) => usedBoardCreates.has(entry)).map(({ entry }) => entry));
+    const property = collection === "math" ? "math_creates" : "note_creates";
+    for (const momentValue of candidate.moments) {
+      if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
+      const moment = momentValue;
+      if (!Array.isArray(moment[property])) continue;
+      moment[property] = moment[property].filter((entry) => !selected.has(entry));
+    }
+  }
+  const expectsReusableBoardCreates = reusableItems.some((item) => item.kind === "board_item" && (item.board_kind === "math" || item.board_kind === "note"));
+  if (expectsReusableBoardCreates) candidate.reusable_board_creates = fixedReusableCreates;
+  else delete candidate.reusable_board_creates;
+  return root;
+}
 function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReusableCreates = false) {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) {
@@ -14099,7 +14732,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
   for (const key of Object.keys(candidate)) {
     if (!allowedRoot.has(key)) throw new LessonPlanError("LESSON_PLAN_UNKNOWN_FIELD", `$lessonPlanModelSection.${key}`, "unknown field");
   }
-  if (candidate.section !== expectedSection) {
+  if (candidate.section !== void 0 && candidate.section !== expectedSection) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.section", `expected section ${expectedSection}`);
   }
   if (!Array.isArray(candidate.moments) || candidate.moments.length === 0) {
@@ -14148,7 +14781,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
       if (!source || typeof source !== "object" || Array.isArray(source)) {
         throw new LessonPlanError("LESSON_PLAN_COURSE_VISUAL", entryPath, "required course visual is missing");
       }
-      const entry = { ...source };
+      let entry = { ...source };
       const moment = Number(entry.moment);
       if (!Number.isInteger(moment) || moment < 1 || moment > candidate.moments.length) {
         throw new LessonPlanError("LESSON_PLAN_COURSE_VISUAL", `${entryPath}.moment`, "visual moment is unavailable");
@@ -14160,6 +14793,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
       }
       entry.course_visual = position;
       entry.content = { capability: visual.capability, ...rawContent };
+      entry = withProgramCreateDefaults(entry, "visual", visual.relation);
       const entries = fixedCourseCreates.get(moment) ?? [];
       entries.push(entry);
       fixedCourseCreates.set(moment, entries);
@@ -14199,7 +14833,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
       if (!source || typeof source !== "object" || Array.isArray(source)) {
         throw new LessonPlanError("LESSON_PLAN_REUSABLE", entryPath, "required reusable board item is missing");
       }
-      const entry = { ...source };
+      let entry = { ...source };
       const moment = Number(entry.moment);
       if (!Number.isInteger(moment) || moment < 1 || moment > candidate.moments.length) {
         throw new LessonPlanError("LESSON_PLAN_REUSABLE", `${entryPath}.moment`, "reusable board item moment is unavailable");
@@ -14214,6 +14848,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
           `the staged model path cannot create a reusable ${String(item.board_kind)} board item`
         );
       }
+      entry = withProgramCreateDefaults(entry, item.board_kind === "math" ? "math" : "note");
       const entries = fixedReusableCreates.get(moment) ?? { math_creates: [], note_creates: [] };
       entries[collection].push(entry);
       fixedReusableCreates.set(moment, entries);
@@ -14271,10 +14906,13 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
         if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
           throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", entryPath, "expected an object");
         }
-        const action = {
+        let action = {
           ..."kind" in descriptor ? { kind: descriptor.kind } : {},
           ...entry
         };
+        if (descriptor.action === "create" && "kind" in descriptor) {
+          action = withProgramCreateDefaults(action, descriptor.kind);
+        }
         const order = ordered.length + 1;
         if (collectionName === "visual_creates" && courseVisualsToCreate.length > 0) {
           const visualPosition = Number(action.course_visual);
@@ -14431,6 +15069,22 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
     const normalizedActions = [];
     const timingOrder = { before_speech: 0, during_speech: 1, after_speech: 2 };
     const timingName = ["before_speech", "during_speech", "after_speech"];
+    const currentReferenceTimings = /* @__PURE__ */ new Map();
+    const actionTimingRank = (value2) => typeof value2 === "string" && value2 in timingOrder ? timingOrder[value2] : 0;
+    const referenceTimingRank = (value2) => {
+      if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) return 0;
+      const reference = value2;
+      if (reference.moment !== momentIndex + 1 || !["local_board_item", "local_connection", "local_group"].includes(String(reference.source))) {
+        return 0;
+      }
+      return currentReferenceTimings.get(`${reference.source}:${reference.item}`) ?? 0;
+    };
+    const ensureActionAfterReferences = (action, references) => {
+      const requiredRank = Math.max(0, ...references.map(referenceTimingRank));
+      if (actionTimingRank(action.timing) < requiredRank) {
+        action.timing = timingName[requiredRank];
+      }
+    };
     moment.actions.forEach((action) => {
       if (action.action === "create") {
         const placement = action.placement && typeof action.placement === "object" && !Array.isArray(action.placement) ? { ...action.placement } : { relation: "new_region" };
@@ -14453,6 +15107,10 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
           moment: momentIndex + 1,
           item: currentCounts.local_board_item
         };
+        currentReferenceTimings.set(
+          `local_board_item:${currentCounts.local_board_item}`,
+          actionTimingRank(action.timing)
+        );
         const capability2 = action.kind === "visual" && action.content && typeof action.content === "object" && !Array.isArray(action.content) && typeof action.content.capability === "string" && action.content.capability in LESSON_PLAN_CAPABILITIES ? action.content.capability : void 0;
         localCapabilities.set(`${momentIndex + 1}:${currentCounts.local_board_item}`, capability2);
         if (Number.isInteger(action.reusable_item) && Number(action.reusable_item) > 0) {
@@ -14469,16 +15127,30 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
         const reference = presentationReference(action.reference, action.action === "point_at");
         if (reference === void 0) return;
         action.reference = reference;
+        ensureActionAfterReferences(action, [reference]);
       } else if (action.action === "focus") {
         const supplied = Array.isArray(action.references) ? action.references.map((reference) => presentationReference(reference)).filter((reference) => reference !== void 0) : [];
         const references = supplied.length > 0 ? supplied : activeVisualReferences().length > 0 ? activeVisualReferences() : [latestVisualReference ?? latestBoardReference].filter((reference) => reference !== void 0);
         const unique = [...new Map(references.map((reference) => [JSON.stringify(reference), reference])).values()];
         if (unique.length === 0) return;
         action.references = unique;
+        ensureActionAfterReferences(action, unique);
       }
       normalizedActions.push(action);
-      if (action.action === "connect") currentCounts.local_connection += 1;
-      if (action.action === "group") currentCounts.local_group += 1;
+      if (action.action === "connect") {
+        currentCounts.local_connection += 1;
+        currentReferenceTimings.set(
+          `local_connection:${currentCounts.local_connection}`,
+          actionTimingRank(action.timing)
+        );
+      }
+      if (action.action === "group") {
+        currentCounts.local_group += 1;
+        currentReferenceTimings.set(
+          `local_group:${currentCounts.local_group}`,
+          actionTimingRank(action.timing)
+        );
+      }
     });
     moment.actions = normalizedActions;
     if (moment.actions.length === 0 && latestBoardReference) {
@@ -14532,8 +15204,8 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
     item.activity.reference = structuredClone(sceneReference);
   }
   return {
-    version: candidate.version,
-    section: candidate.section,
+    version: outline.version,
+    section: expectedSection,
     moments,
     student_activities: activities.map((item) => item.activity)
   };
@@ -14548,6 +15220,11 @@ function inputContext(input) {
     learner_context: input.learner_context ?? null,
     tutor_context: input.tutor_context ?? null
   };
+}
+function compactModelContext(context) {
+  return Object.fromEntries(
+    Object.entries(context).filter(([key, value]) => key !== "learner_request" && key !== "input_modality" && value !== null && value !== void 0)
+  );
 }
 var requestSentenceBoundary = /(?:\r?\n+|[。！？!?；;]+)/u;
 var requestSequenceBoundary = /[，,]\s*(?=(?:再(?:请|用|展示|说明|解释|让|给|比较|演示|带|分析|推导|证明)|然后|接着|最后|随后|同时|并且|并请|并让|还要|另外|此外))/u;
@@ -14569,16 +15246,55 @@ function requestParts(input) {
     return part;
   });
 }
+function sectionPromptContext(outline, sectionNumber) {
+  const section = outline.sections[sectionNumber - 1];
+  return {
+    title: outline.title,
+    goals: outline.goals,
+    ...outline.numbers?.length ? {
+      numbers: outline.numbers.map((number, index) => ({
+        number: index + 1,
+        label: number.label,
+        initial: number.initial,
+        min: number.min,
+        max: number.max,
+        ...number.unit === void 0 ? {} : { unit: number.unit }
+      }))
+    } : {},
+    section: {
+      section: sectionNumber,
+      purpose: section?.purpose,
+      reusable_items: (section?.reusable_items ?? []).map((item, index) => ({
+        item: index + 1,
+        ...item
+      }))
+    },
+    previous_sections: outline.sections.slice(0, sectionNumber - 1).map((previous, index) => ({
+      section: index + 1,
+      purpose: previous.purpose,
+      reusable_items: (previous.reusable_items ?? []).map((item, itemIndex) => ({
+        item: itemIndex + 1,
+        ...item
+      }))
+    }))
+  };
+}
+function unsupportedSectionResponse(error, previousError) {
+  if (!(error instanceof LessonPlanError)) return void 0;
+  if (error.code === "LESSON_PLAN_UNSUPPORTED_REQUIREMENT") {
+    return "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002";
+  }
+  if (error.code === "LESSON_PLAN_EXPRESSION" && /multi-curve comparison currently supports static formulas only/u.test(error.message) && previousError instanceof LessonPlanError && previousError.code === error.code && previousError.message === error.message) {
+    return "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5728\u540C\u4E00\u5F20\u51FD\u6570\u56FE\u4E2D\u540C\u65F6\u5C55\u793A\u9759\u6001\u66F2\u7EBF\u548C\u7531\u63A7\u4EF6\u6539\u53D8\u7684\u53E6\u4E00\u6761\u66F2\u7EBF\u3002";
+  }
+  return void 0;
+}
 function sectionIndexFromError(error, sectionCount) {
   if (!(error instanceof LessonPlanError)) return void 0;
   const draftMatch = error.path.match(/\$lessonPlanSectionDrafts\[(\d+)\]/u);
   const planMatch = error.path.match(/\$lessonPlan\.sections\[(\d+)\]/u);
   const offset = Number(draftMatch?.[1] ?? planMatch?.[1]);
   return Number.isInteger(offset) && offset >= 0 && offset < sectionCount ? offset + 1 : void 0;
-}
-function isRateLimitError(error) {
-  const message = error instanceof Error ? error.message : String(error);
-  return /(?:\b429\b|RESOURCE_EXHAUSTED|rate[ _-]?limit)/iu.test(message);
 }
 function compilePrefix(outline, drafts, options) {
   const sectionCount = drafts.length;
@@ -14607,106 +15323,223 @@ function compilePrefix(outline, drafts, options) {
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, options);
 }
+function canFallBackFromBootstrap(error) {
+  if (error instanceof LessonPlanError) return true;
+  const code = error && typeof error === "object" && "code" in error ? String(error.code ?? "") : "";
+  return /(?:RESPONSE_TRUNCATED|RESPONSE_EMPTY)$/u.test(code);
+}
+function partialModelResponse(error) {
+  if (!error || typeof error !== "object" || !("partialResponse" in error)) return void 0;
+  const value = error.partialResponse;
+  return typeof value === "string" && value.trim() ? value : void 0;
+}
 async function generateLessonPlanWithModel(model, input, options = {}) {
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");
-  const concurrency = positiveInteger(options.max_concurrency, 1, "max_concurrency");
   let context = inputContext(input);
   const fixedRequestParts = requestParts(input);
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
   let modelCalls = 0;
   let outline;
+  let bootstrappedFirstSection;
   let outlineError;
   let stableCameraObservation;
   const sectionErrors = /* @__PURE__ */ new Map();
   const sectionAttempts = /* @__PURE__ */ new Map();
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const observeCamera = input.camera_input === true && stableCameraObservation === void 0;
-    const raw = await model({
-      label: "lesson-plan-outline",
-      part: "outline",
-      attempt,
-      turn_id: input.turn_id,
-      system_prompt: observeCamera ? CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
-      prompt: JSON.stringify({
-        course: stableCameraObservation ? { ...context, camera_observation: stableCameraObservation } : context,
-        request_parts: fixedRequestParts.map((text, index) => ({ request_part: index + 1, text })),
-        available_visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability2) => ({
-          required_features: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features],
-          number_inputs: [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
-          guidance: LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
-        })),
-        ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
-      }),
-      response_schema: observeCamera ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
-      ...observeCamera ? { include_camera_media: true } : {}
-    });
-    modelCalls += 1;
-    try {
-      let parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
-      if (admissionInput && (!parsed || typeof parsed !== "object" || Array.isArray(parsed))) {
+  const admissionCourse = (parsed, observeCamera) => {
+    if (!admissionInput) return { course: parsed };
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_MODEL_JSON",
+        "$lessonPlanEnvelope",
+        "lesson response envelope must be an object"
+      );
+    }
+    const envelope = parsed;
+    if (observeCamera) {
+      stableCameraObservation = cameraObservation(envelope.image_observation);
+      context = { ...context, camera_observation: stableCameraObservation };
+    }
+    const disposition = envelope.disposition;
+    if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
+      throw new LessonPlanError(
+        "LESSON_PLAN_MODEL_JSON",
+        "$lessonPlanAdmission.disposition",
+        "lesson admission must choose generate_lesson, clarify, or ignore"
+      );
+    }
+    if (disposition !== "generate_lesson") {
+      if (!Object.hasOwn(envelope, "course") || envelope.course !== null) {
         throw new LessonPlanError(
           "LESSON_PLAN_MODEL_JSON",
-          "$lessonPlanEnvelope",
-          "lesson response envelope must be an object"
+          "$lessonPlanAdmission.course",
+          "clarify and ignore require course to be null"
         );
       }
-      if (admissionInput) {
-        const envelope = parsed;
-        if (observeCamera) {
-          stableCameraObservation = cameraObservation(envelope.image_observation);
-          context = { ...context, camera_observation: stableCameraObservation };
-        }
-        const disposition = envelope.disposition;
-        if (disposition !== "generate_lesson" && disposition !== "clarify" && disposition !== "ignore") {
-          throw new LessonPlanError(
-            "LESSON_PLAN_MODEL_JSON",
-            "$lessonPlanAdmission.disposition",
-            "lesson admission must choose generate_lesson, clarify, or ignore"
-          );
-        }
-        if (disposition !== "generate_lesson") {
-          if (!Object.hasOwn(envelope, "course") || envelope.course !== null) {
-            throw new LessonPlanError(
-              "LESSON_PLAN_MODEL_JSON",
-              "$lessonPlanAdmission.course",
-              "clarify and ignore require course to be null"
-            );
-          }
-          const learnerResponse = typeof envelope.learner_response === "string" ? envelope.learner_response.trim() : "";
-          if (disposition === "clarify" && !learnerResponse) {
-            throw new LessonPlanError(
-              "LESSON_PLAN_MODEL_JSON",
-              "$lessonPlanAdmission.learner_response",
-              "clarify requires a learner-facing question"
-            );
-          }
-          return {
-            disposition,
-            learner_response: learnerResponse,
-            model_calls: modelCalls
-          };
-        }
-        if (!envelope.course || typeof envelope.course !== "object" || Array.isArray(envelope.course)) {
-          throw new LessonPlanError(
-            "LESSON_PLAN_MODEL_JSON",
-            "$lessonPlanAdmission.course",
-            "generate_lesson requires a complete course outline"
-          );
-        }
-        parsed = envelope.course;
+      const learnerResponse = typeof envelope.learner_response === "string" ? envelope.learner_response.trim() : "";
+      if (disposition === "clarify" && !learnerResponse) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_MODEL_JSON",
+          "$lessonPlanAdmission.learner_response",
+          "clarify requires a learner-facing question"
+        );
       }
-      parsed = pruneModelNulls(parsed);
+      return {
+        result: {
+          disposition,
+          learner_response: learnerResponse,
+          model_calls: modelCalls
+        }
+      };
+    }
+    if (!envelope.course || typeof envelope.course !== "object" || Array.isArray(envelope.course)) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_MODEL_JSON",
+        "$lessonPlanAdmission.course",
+        "generate_lesson requires a course object"
+      );
+    }
+    return { course: envelope.course };
+  };
+  try {
+    const observeCamera = input.camera_input === true && stableCameraObservation === void 0;
+    modelCalls += 1;
+    const raw = await model({
+      label: "lesson-plan-bootstrap",
+      part: "bootstrap",
+      attempt: 1,
+      turn_id: input.turn_id,
+      system_prompt: observeCamera ? CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT,
+      prompt: JSON.stringify({
+        course_context: compactModelContext(context),
+        request_parts: fixedRequestParts,
+        visual_recipe_columns: ["features", "numbers", "purpose"],
+        visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability2) => [
+          [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features],
+          [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
+          LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
+        ]),
+        first_section_to_write: 1,
+        first_section_rule: "first_section must implement outline.sections[0]; outline is authoritative and the program assigns all execution references"
+      }),
+      response_schema: observeCamera ? buildCameraLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionBootstrapJsonSchema(fixedRequestParts.length) : buildLessonPlanBootstrapJsonSchema(fixedRequestParts.length),
+      ...observeCamera ? { include_camera_media: true } : {}
+    });
+    const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanBootstrap");
+    const admitted = admissionCourse(parsed, observeCamera);
+    if (admitted.result) return admitted.result;
+    const course = pruneModelNulls(admitted.course);
+    if (!course || typeof course !== "object" || Array.isArray(course)) {
+      throw new LessonPlanError("LESSON_PLAN_MODEL_JSON", "$lessonPlanBootstrap.course", "expected outline and first_section");
+    }
+    const bootstrap = course;
+    outline = validateLessonPlanOutline(
+      lowerModelOutline(
+        coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
+        fixedRequestParts.length
+      ),
+      fixedRequestParts.length
+    );
+    try {
+      bootstrappedFirstSection = lowerModelSectionDraft(
+        reconcileBootstrapFirstSectionPositions(
+          coerceLessonPlanBootstrapSectionModelNumbers(bootstrap.first_section),
+          outline
+        ),
+        outline,
+        1,
+        true
+      );
+    } catch (error) {
+      sectionErrors.set(1, error);
+      await options.on_rejected_part?.({
+        label: "lesson-plan-section",
+        section: 1,
+        attempt: 1,
+        error: rejectionDetails(error)
+      });
+    }
+  } catch (error) {
+    const partialResponse = partialModelResponse(error);
+    if (partialResponse) {
+      if (input.camera_input === true && stableCameraObservation === void 0) {
+        const partialObservation = completedJsonObjectProperty(partialResponse, "image_observation");
+        if (partialObservation !== void 0) {
+          try {
+            stableCameraObservation = cameraObservation(partialObservation);
+            context = { ...context, camera_observation: stableCameraObservation };
+          } catch (observationError) {
+            outlineError = observationError;
+          }
+        }
+      }
+      const partialOutline = completedJsonObjectProperty(partialResponse, "outline");
+      if (partialOutline !== void 0) {
+        try {
+          outline = validateLessonPlanOutline(
+            lowerModelOutline(
+              coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
+              fixedRequestParts.length
+            ),
+            fixedRequestParts.length
+          );
+          sectionErrors.set(1, error);
+        } catch (outlineValidationError) {
+          outline = void 0;
+          outlineError = outlineValidationError;
+        }
+      }
+    }
+    if (!outline && !canFallBackFromBootstrap(error) && !partialResponse) throw error;
+    if (input.camera_input === true && stableCameraObservation === void 0) {
+      return {
+        disposition: "clarify",
+        learner_response: "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002",
+        model_calls: modelCalls
+      };
+    }
+    outlineError ??= error;
+    await options.on_rejected_part?.({
+      label: "lesson-plan-bootstrap",
+      attempt: 1,
+      error: rejectionDetails(error)
+    });
+  }
+  for (let attempt = 1; !outline && attempt <= maxAttempts; attempt += 1) {
+    const observeCamera = input.camera_input === true && stableCameraObservation === void 0;
+    try {
+      modelCalls += 1;
+      const raw = await model({
+        label: "lesson-plan-outline",
+        part: "outline",
+        attempt,
+        turn_id: input.turn_id,
+        system_prompt: observeCamera ? CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
+        prompt: JSON.stringify({
+          course_context: compactModelContext(stableCameraObservation ? { ...context, camera_observation: stableCameraObservation } : context),
+          request_parts: fixedRequestParts,
+          visual_recipe_columns: ["features", "numbers", "purpose"],
+          visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability2) => [
+            [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features],
+            [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
+            LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
+          ]),
+          ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
+        }),
+        response_schema: observeCamera ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+        ...observeCamera ? { include_camera_media: true } : {}
+      });
+      const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
+      const admitted = admissionCourse(parsed, observeCamera);
+      if (admitted.result) return admitted.result;
       outline = validateLessonPlanOutline(
         lowerModelOutline(
-          coerceLessonPlanOutlineModelNumbers(
-            parsed,
-            fixedRequestParts.length
-          )
+          coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
+          fixedRequestParts.length
         ),
         fixedRequestParts.length
       );
-      break;
     } catch (error) {
+      if (!(error instanceof LessonPlanError)) throw error;
       outlineError = error;
       await options.on_rejected_part?.({
         label: "lesson-plan-outline",
@@ -14733,6 +15566,20 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       model_calls: modelCalls
     };
   }
+  const visualsForSection = (section) => (outline.course_visuals ?? []).flatMap((visual, index) => {
+    if (!visual.use_sections.includes(section)) return [];
+    return [{
+      course_visual: index + 1,
+      capability: visual.capability,
+      mode: visual.create_section === section ? "create" : "reuse",
+      relation: visual.relation,
+      ...visual.related_visual === void 0 ? {} : { related_visual: visual.related_visual }
+    }];
+  });
+  const assignedRequestParts = (section) => (outline.request_coverage ?? []).filter((item) => item.treatment === "teach" && item.sections.includes(section)).map((item) => ({
+    request_part: item.request_part,
+    text: fixedRequestParts[item.request_part - 1]
+  }));
   const generateSection = async (section) => {
     const attempt = (sectionAttempts.get(section) ?? 0) + 1;
     sectionAttempts.set(section, attempt);
@@ -14747,30 +15594,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         turn_id: input.turn_id,
         system_prompt: SECTION_SYSTEM_PROMPT,
         prompt: JSON.stringify({
-          course: context,
-          immutable_outline: outline,
-          section_to_write: section,
-          visuals_for_section: (outline.course_visuals ?? []).flatMap((visual, index) => {
-            if (!visual.use_sections.includes(section)) return [];
-            return [{
-              course_visual: index + 1,
-              capability: visual.capability,
-              mode: visual.create_section === section ? "create" : "reuse",
-              relation: visual.relation,
-              ...visual.related_visual === void 0 ? {} : { related_visual: visual.related_visual },
-              reference: {
-                source: "reusable",
-                section: visual.create_section,
-                item: visual.reusable_item,
-                host_reference: 0,
-                moment: 0
-              }
-            }];
-          }),
-          assigned_request_parts: (outline.request_coverage ?? []).filter((item) => item.treatment === "teach" && item.sections.includes(section)).map((item) => ({
-            request_part: item.request_part,
-            text: fixedRequestParts[item.request_part - 1]
-          })),
+          course_context: compactModelContext(context),
+          course_and_section: sectionPromptContext(outline, section),
+          visuals_for_section: visualsForSection(section),
+          assigned_request_parts: assignedRequestParts(section),
           ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
         }),
         response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section)
@@ -14793,6 +15620,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         true
       );
     } catch (error) {
+      const previousError = sectionErrors.get(section);
       sectionErrors.set(section, error);
       await options.on_rejected_part?.({
         label: "lesson-plan-section",
@@ -14800,6 +15628,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         attempt,
         error: rejectionDetails(error)
       });
+      if (unsupportedSectionResponse(error, previousError)) throw error;
       return generateSection(section);
     }
     return candidate;
@@ -14815,6 +15644,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         await options.on_playable_prefix?.({ completed_sections: section, compiled: prefix });
         return;
       } catch (error) {
+        const previousError = sectionErrors.get(section);
+        if (unsupportedSectionResponse(error, previousError)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
         sectionErrors.set(section, error);
         await options.on_rejected_part?.({
@@ -14827,66 +15658,29 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       }
     }
   };
-  await acceptSection(1);
-  if (outline.sections.length > 1 && concurrency === 1) {
-    for (let section = 2; section <= outline.sections.length; section += 1) {
-      await acceptSection(section);
-    }
-  } else if (outline.sections.length > 1) {
-    const pending = /* @__PURE__ */ new Map();
-    const resolvePending = /* @__PURE__ */ new Map();
-    const settled = /* @__PURE__ */ new Map();
-    for (let section = 2; section <= outline.sections.length; section += 1) {
-      pending.set(section, new Promise((resolve) => resolvePending.set(section, resolve)));
-    }
-    let nextSection = 2;
-    let stopScheduling = false;
-    const worker = async () => {
-      while (!stopScheduling && nextSection <= outline.sections.length) {
-        const section = nextSection;
-        nextSection += 1;
-        try {
-          const result = { ok: true, draft: await generateSection(section) };
-          settled.set(section, result);
-          resolvePending.get(section)?.(result);
-        } catch (error) {
-          if (isRateLimitError(error)) stopScheduling = true;
-          const result = { ok: false, error };
-          settled.set(section, result);
-          resolvePending.get(section)?.(result);
-          if (!isRateLimitError(error)) stopScheduling = true;
-        }
-      }
+  try {
+    await acceptSection(1, bootstrappedFirstSection);
+  } catch (error) {
+    const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(1));
+    if (!learnerResponse) throw error;
+    return {
+      disposition: "unsupported",
+      learner_response: learnerResponse,
+      model_calls: modelCalls
     };
-    const workers = Array.from(
-      { length: Math.min(concurrency, outline.sections.length - 1) },
-      () => worker()
-    );
-    let sequentialFallback = false;
-    for (let section = 2; section <= outline.sections.length; section += 1) {
-      if (sequentialFallback) {
-        const completed = settled.get(section);
-        await acceptSection(section, completed?.ok ? completed.draft : void 0);
-        continue;
-      }
-      const result = await pending.get(section);
-      if (result.ok) {
-        await acceptSection(section, result.draft);
-        continue;
-      }
-      if (!isRateLimitError(result.error)) {
-        stopScheduling = true;
-        await Promise.allSettled(workers);
-        throw result.error;
-      }
-      stopScheduling = true;
-      await Promise.allSettled(workers);
-      sequentialFallback = true;
-      await options.on_concurrency_fallback?.({ section, reason: "rate_limited" });
+  }
+  for (let section = 2; section <= outline.sections.length; section += 1) {
+    try {
       await acceptSection(section);
+    } catch (error) {
+      const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(section));
+      if (!learnerResponse) throw error;
+      return {
+        disposition: "unsupported",
+        learner_response: learnerResponse,
+        model_calls: modelCalls
+      };
     }
-    stopScheduling = true;
-    await Promise.allSettled(workers);
   }
   let compiled;
   let compiledOutline;
@@ -14942,10 +15736,14 @@ export {
   LessonPlanError,
   PROCESS_DIAGRAM_CONTRACT,
   assembleLessonPlan,
+  buildCameraLessonPlanAdmissionBootstrapJsonSchema,
   buildCameraLessonPlanAdmissionOutlineJsonSchema,
+  buildLessonPlanAdmissionBootstrapJsonSchema,
   buildLessonPlanAdmissionOutlineJsonSchema,
+  buildLessonPlanBootstrapJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
+  coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
   compileAndValidateLessonPlan,

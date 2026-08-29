@@ -11,17 +11,24 @@
       "description": "Generate, validate, save, and deliver one complete OLL lesson from a standalone learner request, optionally grounded in one current camera frame supplied by the dedicated camera action. Existing-board selection assistance is handled by separate selection tools. This tool performs its own generation and repair attempts; call it at most once per learner turn.",
       "concurrency_class": "exclusive",
       "env": [
+        "OLL_PROVIDER",
         "VERTEX_SA_JSON",
         "VERTEX_ACCESS_TOKEN",
         "GOOGLE_CLOUD_PROJECT",
         "GOOGLE_CLOUD_LOCATION",
         "VERTEX_BASE_URL",
+        "GEMINI_API_KEY",
+        "GEMINI_BASE_URL",
+        "ARK_API_KEY",
+        "ARK_BASE_URL",
+        "ARK_THINKING_TYPE",
         "OLL_MODEL",
         "OLL_TIMEOUT_MS",
         "OLL_TOTAL_TIMEOUT_MS",
         "OLL_MAX_TOKENS",
+        "OLL_MODEL_REQUEST_ATTEMPTS",
+        "OLL_THINKING_LEVEL",
         "VERTEX_REQUEST_ATTEMPTS",
-        "OLL_SECTION_CONCURRENCY",
         "OLL_DEBUG_GENERATION",
         "OCTOS_WORK_DIR",
         "OCTOS_SESSION_WORKSPACE"
@@ -63,6 +70,24 @@
           "camera_media": {
             "type": "string",
             "description": "Workspace-relative image path materialized by the camera action."
+          },
+          "client_timing": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Optional client-side timestamps and upload sizes used only for latency diagnostics.",
+            "properties": {
+              "submitted_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "camera_capture_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "camera_capture_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "audio_upload_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "audio_upload_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "media_upload_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "media_upload_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "voice_admission_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "voice_admission_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "skill_invocation_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "camera_media_bytes": { "type": "integer", "minimum": 0 }
+            }
           }
         },
         "required": ["turn_id", "learner_request", "request_source"]
@@ -73,14 +98,22 @@
       "description": "Classify only the immutable student-ink selection as text, math, geometry, data, or unknown. Never create tools, execute an enhancement, or modify the source ink.",
       "concurrency_class": "exclusive",
       "env": [
+        "OLL_PROVIDER",
         "VERTEX_SA_JSON",
         "VERTEX_ACCESS_TOKEN",
         "GOOGLE_CLOUD_PROJECT",
         "GOOGLE_CLOUD_LOCATION",
         "VERTEX_BASE_URL",
+        "GEMINI_API_KEY",
+        "GEMINI_BASE_URL",
+        "ARK_API_KEY",
+        "ARK_BASE_URL",
+        "ARK_THINKING_TYPE",
         "OLL_MODEL",
         "OLL_TIMEOUT_MS",
         "OLL_TOTAL_TIMEOUT_MS",
+        "OLL_MODEL_REQUEST_ATTEMPTS",
+        "OLL_THINKING_LEVEL",
         "VERTEX_REQUEST_ATTEMPTS",
         "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL",
         "OCTOS_WORK_DIR",
@@ -106,15 +139,23 @@
       "description": "Create a separate explanation or validated 2D/3D function visualization beside an immutable student-ink selection. Return an explicit unsupported result when the selected expression cannot be rendered safely. Use only when [[LEARNING_SELECTION]] requires this exact tool. Copy the source identity fields exactly, describe only the selected image, and never rewrite or replace the source ink.",
       "concurrency_class": "exclusive",
       "env": [
+        "OLL_PROVIDER",
         "VERTEX_SA_JSON",
         "VERTEX_ACCESS_TOKEN",
         "GOOGLE_CLOUD_PROJECT",
         "GOOGLE_CLOUD_LOCATION",
         "VERTEX_BASE_URL",
+        "GEMINI_API_KEY",
+        "GEMINI_BASE_URL",
+        "ARK_API_KEY",
+        "ARK_BASE_URL",
+        "ARK_THINKING_TYPE",
         "OLL_MODEL",
         "OLL_TIMEOUT_MS",
         "OLL_TOTAL_TIMEOUT_MS",
         "OLL_MAX_TOKENS",
+        "OLL_MODEL_REQUEST_ATTEMPTS",
+        "OLL_THINKING_LEVEL",
         "VERTEX_REQUEST_ATTEMPTS",
         "OCTOS_WORK_DIR",
         "OCTOS_SESSION_WORKSPACE"
@@ -268,6 +309,23 @@
           "input_modality": {
             "type": "string",
             "enum": ["text", "voice"]
+          },
+          "client_timing": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "submitted_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "camera_capture_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "camera_capture_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "audio_upload_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "audio_upload_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "media_upload_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "media_upload_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "voice_admission_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "voice_admission_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "skill_invocation_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "camera_media_bytes": { "type": "integer", "minimum": 0 }
+            }
           }
         },
         "required": ["turn_id", "learner_request", "request_source"]
@@ -305,6 +363,23 @@
           "input_modality": {
             "type": "string",
             "enum": ["text", "voice"]
+          },
+          "client_timing": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "submitted_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "camera_capture_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "camera_capture_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "audio_upload_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "audio_upload_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "media_upload_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "media_upload_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "voice_admission_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "voice_admission_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "skill_invocation_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "camera_media_bytes": { "type": "integer", "minimum": 0 }
+            }
           }
         },
         "required": ["paths", "turn_id", "learner_request", "request_source"]
