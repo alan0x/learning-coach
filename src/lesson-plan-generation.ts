@@ -76,6 +76,12 @@ export type LessonPlanModelCall = (request: LessonPlanModelRequest) => Promise<s
 export interface GenerateLessonPlanOptions {
   max_attempts_per_part?: number;
   compile?: CompileLessonPlanOptions;
+  on_outline_ready?: (event: {
+    sections: number;
+    course_visuals: number;
+    request_parts: number;
+    camera_observation: boolean;
+  }) => void | Promise<void>;
   on_playable_prefix?: (event: {
     completed_sections: number;
     compiled: CompiledLessonPlan;
@@ -2739,6 +2745,12 @@ export async function generateLessonPlanWithModel(
     }
   }
   if (!outline) throw outlineError;
+  await options.on_outline_ready?.({
+    sections: outline.sections.length,
+    course_visuals: outline.course_visuals?.length ?? 0,
+    request_parts: fixedRequestParts.length,
+    camera_observation: stableCameraObservation !== undefined,
+  });
   const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
   if (unsupported) {
     const reason = unsupported.reason?.trim();

@@ -15556,6 +15556,12 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     }
   }
   if (!outline) throw outlineError;
+  await options.on_outline_ready?.({
+    sections: outline.sections.length,
+    course_visuals: outline.course_visuals?.length ?? 0,
+    request_parts: fixedRequestParts.length,
+    camera_observation: stableCameraObservation !== void 0
+  });
   const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
   if (unsupported) {
     const reason = unsupported.reason?.trim();

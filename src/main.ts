@@ -29,6 +29,7 @@ const DEFAULT_VERTEX_REQUEST_ATTEMPTS = 3;
 const DEFAULT_MODEL_REQUEST_ATTEMPTS = 3;
 const MAX_CONTEXT_LENGTH = 24_000;
 const MAX_ERROR_BODY_LENGTH = 4_000;
+const LEARN_TRACE_SCHEMA = "octos.learn.trace.v1";
 
 interface ToolInput {
   turn_id: string;
@@ -1169,6 +1170,7 @@ export class HedgedStructuredModelRouter implements StructuredModelRouter {
         status: "completed",
         winner_provider: firstCompleted.provider,
         hedge_started: true,
+        loser_aborted: true,
         elapsed_ms: Date.now() - routeStartedAt,
       });
       return firstCompleted.value;
@@ -1185,6 +1187,7 @@ export class HedgedStructuredModelRouter implements StructuredModelRouter {
         status: "completed",
         winner_provider: remaining.provider,
         hedge_started: true,
+        loser_aborted: false,
         elapsed_ms: Date.now() - routeStartedAt,
       });
       return remaining.value;
@@ -1270,27 +1273,43 @@ function traceTurnIdFromRawInput(rawInput: string): string | undefined {
 
 function stageLog(payload: Record<string, unknown>): void {
   const trace = activeStageTrace;
-  const normalizedPayload = trace && payload.turn_id === undefined
+  const normalizedPayload = trace
     ? { ...payload, turn_id: trace.turnId }
     : payload;
-  process.stderr.write(`learning-coach: ${JSON.stringify(normalizedPayload)}\n`);
-  if (!trace) return;
-  trace.sequence += 1;
+  const recordedAtEpochMs = Date.now();
+  if (trace) trace.sequence += 1;
   const entry = {
-    schema: "octos.learning-coach.generation-stage.v1",
-    sequence: trace.sequence,
-    recorded_at: new Date().toISOString(),
-    invocation_elapsed_ms: Date.now() - trace.startedAt,
-    tool: trace.invokedTool,
     ...normalizedPayload,
+    schema: LEARN_TRACE_SCHEMA,
+    source: "learning-coach",
+    ...(trace ? {
+      sequence: trace.sequence,
+      trace_id: trace.turnId,
+      invocation_elapsed_ms: recordedAtEpochMs - trace.startedAt,
+      tool: trace.invokedTool,
+    } : typeof normalizedPayload.turn_id === "string"
+      ? { trace_id: normalizedPayload.turn_id }
+      : {}),
+    recorded_at: new Date(recordedAtEpochMs).toISOString(),
+    recorded_at_epoch_ms: recordedAtEpochMs,
   };
+  process.stderr.write(`learning-coach: ${JSON.stringify(entry)}\n`);
+  if (!trace) return;
   try {
     appendFileSync(trace.path, `${JSON.stringify(entry)}\n`, "utf8");
   } catch (error) {
+    const failureRecordedAtEpochMs = Date.now();
     process.stderr.write(`learning-coach: ${JSON.stringify({
-      stage: "generation-trace",
+      schema: LEARN_TRACE_SCHEMA,
+      source: "learning-coach",
+      trace_id: trace.turnId,
       turn_id: trace.turnId,
+      stage: "generation-trace",
       status: "failed",
+      recorded_at: new Date(failureRecordedAtEpochMs).toISOString(),
+      recorded_at_epoch_ms: failureRecordedAtEpochMs,
+      invocation_elapsed_ms: failureRecordedAtEpochMs - trace.startedAt,
+      tool: trace.invokedTool,
       error_code: "GENERATION_TRACE_WRITE_FAILED",
       error: safeError(error),
     })}\n`);
@@ -1425,6 +1444,10 @@ async function readGeminiStructuredStream(
   response: Response,
   startedAt: number,
   provider: "vertex" | "gemini",
+  onMilestone?: (
+    milestone: "first-chunk" | "outline-completed",
+    elapsedMs: number,
+  ) => void,
 ): Promise<GeminiStreamResult> {
   if (!response.body) {
     throw new ToolExecutionError(
@@ -1473,11 +1496,15 @@ async function readGeminiStructuredStream(
     const text = parts.map((part) => isRecord(part) && typeof part.text === "string" ? part.text : "").join("");
     if (text) {
       chunks += 1;
-      firstChunkMs ??= Date.now() - startedAt;
+      if (firstChunkMs === undefined) {
+        firstChunkMs = Date.now() - startedAt;
+        onMilestone?.("first-chunk", firstChunkMs);
+      }
       content += text;
       if (outlineCompletedMs === undefined
         && completedJsonObjectProperty(content, "outline") !== undefined) {
         outlineCompletedMs = Date.now() - startedAt;
+        onMilestone?.("outline-completed", outlineCompletedMs);
       }
     }
     if (typeof candidate.finishReason === "string") finishReason = candidate.finishReason;
@@ -1637,7 +1664,24 @@ async function callStreamingBootstrapModel(
           `${providerName} ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`,
         );
       }
-      const result = await readGeminiStructuredStream(response, startedAt, provider);
+      const result = await readGeminiStructuredStream(
+        response,
+        startedAt,
+        provider,
+        (milestone, elapsedMs) => stageLog({
+          stage: "model-stream",
+          turn_id: request.turnId,
+          label: request.label,
+          status: milestone,
+          provider,
+          model: client.model,
+          elapsed_ms: elapsedMs,
+          lesson_plan_part: request.lessonPlanPart ?? "bootstrap",
+          ...(request.lessonPlanAttempt === undefined
+            ? {}
+            : { lesson_plan_attempt: request.lessonPlanAttempt }),
+        }),
+      );
       const metric = (name: string): number | undefined => {
         const value = result.usage[name];
         return typeof value === "number" && Number.isFinite(value) ? value : undefined;
@@ -2677,6 +2721,13 @@ async function main(): Promise<void> {
         },
         {
           compile: { language: input.language },
+          on_outline_ready: (event) => stageLog({
+            stage: "lesson-plan-outline-ready",
+            turn_id: input.turn_id,
+            status: "completed",
+            ...event,
+            elapsed_ms: Date.now() - startedAt,
+          }),
           on_rejected_part: (event) => {
             modelRouter.rejectLastResponse();
             stageLog({
