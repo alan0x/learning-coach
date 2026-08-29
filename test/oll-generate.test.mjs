@@ -10,6 +10,8 @@ import test from "node:test";
 
 import {
   callStructuredModel,
+  createArkClient,
+  createGeminiApiClient,
   createVertexClient,
   probeVertexSchema,
 } from "../main";
@@ -102,7 +104,7 @@ test("Vertex Schema probe retries temporary rate limits without changing the sch
   }
 });
 
-test("a host-provided Vertex access token bypasses the OAuth exchange", async () => {
+test("Vertex Priority PayGo applies the required headers without changing the request body", async () => {
   let oauthRequests = 0;
   const server = createServer(async (request, response) => {
     for await (const _chunk of request) {
@@ -115,6 +117,8 @@ test("a host-provided Vertex access token bypasses the OAuth exchange", async ()
       return;
     }
     assert.equal(request.headers.authorization, "Bearer host-token");
+    assert.equal(request.headers["x-vertex-ai-llm-request-type"], "shared");
+    assert.equal(request.headers["x-vertex-ai-llm-shared-request-type"], "priority");
     response.writeHead(200, { "content-type": "application/json" });
     response.end(vertexPayload({ ok: true }));
   });
@@ -133,17 +137,34 @@ test("a host-provided Vertex access token bypasses the OAuth exchange", async ()
       VERTEX_ACCESS_TOKEN: process.env.VERTEX_ACCESS_TOKEN,
       GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
       VERTEX_BASE_URL: process.env.VERTEX_BASE_URL,
+      VERTEX_PAYGO_MODE: process.env.VERTEX_PAYGO_MODE,
       OLL_MODEL: process.env.OLL_MODEL,
     };
     delete process.env.VERTEX_SA_JSON;
     process.env.VERTEX_ACCESS_TOKEN = "host-token";
     process.env.GOOGLE_CLOUD_PROJECT = "test-project";
     process.env.VERTEX_BASE_URL = `${baseUrl}/v1`;
+    process.env.VERTEX_PAYGO_MODE = "priority";
     process.env.OLL_MODEL = "test-model";
     try {
       const client = await createVertexClient();
       assert.equal(client.accessToken, "host-token");
+      assert.equal(client.paygoMode, "priority");
       assert.equal(oauthRequests, 0);
+      const content = await callStructuredModel(client, {
+        label: "lesson-plan-outline",
+        turnId: "priority-paygo-header-test",
+        systemPrompt: "Return JSON.",
+        prompt: "Return ok.",
+        responseSchema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["ok"],
+          properties: { ok: { type: "boolean" } },
+        },
+        maxTokens: 32,
+      });
+      assert.deepEqual(JSON.parse(content), { ok: true });
     } finally {
       for (const [key, value] of Object.entries(previous)) {
         if (value === undefined) delete process.env[key];
@@ -152,6 +173,34 @@ test("a host-provided Vertex access token bypasses the OAuth exchange", async ()
     }
   } finally {
     await new Promise((done) => server.close(done));
+  }
+});
+
+test("Vertex Standard PayGo remains the default and rejects unknown modes", async () => {
+  const previous = {
+    VERTEX_ACCESS_TOKEN: process.env.VERTEX_ACCESS_TOKEN,
+    GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
+    VERTEX_BASE_URL: process.env.VERTEX_BASE_URL,
+    VERTEX_PAYGO_MODE: process.env.VERTEX_PAYGO_MODE,
+    OLL_MODEL: process.env.OLL_MODEL,
+  };
+  process.env.VERTEX_ACCESS_TOKEN = "host-token";
+  process.env.GOOGLE_CLOUD_PROJECT = "test-project";
+  process.env.VERTEX_BASE_URL = "http://127.0.0.1:1/v1";
+  process.env.OLL_MODEL = "test-model";
+  try {
+    delete process.env.VERTEX_PAYGO_MODE;
+    assert.equal((await createVertexClient()).paygoMode, "standard");
+    process.env.VERTEX_PAYGO_MODE = "turbo";
+    await assert.rejects(
+      () => createVertexClient(),
+      /VERTEX_PAYGO_MODE must be standard or priority/u,
+    );
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
   }
 });
 
@@ -208,6 +257,191 @@ test("structured Vertex calls retry a connection failure before any HTTP respons
   }
 });
 
+test("lesson bootstrap uses Vertex streaming and preserves schema property order", async () => {
+  let capturedPath;
+  let capturedBody;
+  const server = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    capturedPath = request.url;
+    capturedBody = JSON.parse(body);
+    response.writeHead(200, { "content-type": "text/event-stream" });
+    response.write(`data: ${JSON.stringify({
+      candidates: [{ content: { parts: [{ text: '{"outline":{"ok":' }] } }],
+    })}\n\n`);
+    response.write(`data: ${JSON.stringify({
+      candidates: [{ content: { parts: [{ text: 'true},"first_section":{"ok":true}}' }] }, finishReason: "STOP" }],
+      usageMetadata: { promptTokenCount: 12, candidatesTokenCount: 8 },
+    })}\n\n`);
+    response.end();
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const content = await callStructuredModel({
+      endpoint: `http://127.0.0.1:${address.port}/v1:generateContent`,
+      model: "test-model",
+      accessToken: "test-token",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, {
+      label: "lesson-plan-bootstrap",
+      turnId: "stream-bootstrap-test",
+      systemPrompt: "Return JSON.",
+      prompt: "Return a lesson.",
+      responseSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          outline: {
+            type: "object",
+            properties: { ok: { type: "boolean" } },
+            required: ["ok"],
+          },
+          first_section: {
+            type: "object",
+            properties: { ok: { type: "boolean" } },
+            required: ["ok"],
+          },
+        },
+        required: ["outline", "first_section"],
+      },
+      lessonPlanPart: "bootstrap",
+      lessonPlanAttempt: 1,
+    });
+    assert.deepEqual(JSON.parse(content), {
+      outline: { ok: true },
+      first_section: { ok: true },
+    });
+    assert.equal(capturedPath, "/v1:streamGenerateContent?alt=sse");
+    assert.deepEqual(
+      capturedBody.generationConfig.responseJsonSchema.propertyOrdering,
+      ["outline", "first_section"],
+    );
+    assert.deepEqual(
+      capturedBody.generationConfig.responseJsonSchema.properties.outline.propertyOrdering,
+      ["ok"],
+    );
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("a truncated Vertex bootstrap exposes its completed streamed prefix", async () => {
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request before streaming a deliberately truncated result.
+    }
+    response.writeHead(200, { "content-type": "text/event-stream" });
+    response.write(`data: ${JSON.stringify({
+      candidates: [{ content: { parts: [{ text: '{"outline":{"ok":true},' }] } }],
+    })}\n\n`);
+    response.write(`data: ${JSON.stringify({
+      candidates: [{ content: { parts: [{ text: '"first_section":{' }] }, finishReason: "MAX_TOKENS" }],
+    })}\n\n`);
+    response.end();
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    await assert.rejects(
+      () => callStructuredModel({
+        endpoint: `http://127.0.0.1:${address.port}/v1:generateContent`,
+        model: "test-model",
+        accessToken: "test-token",
+        timeoutMs: 5_000,
+        maxTokens: 64,
+        requestAttempts: 1,
+      }, {
+        label: "lesson-plan-bootstrap",
+        turnId: "stream-truncated-bootstrap-test",
+        systemPrompt: "Return JSON.",
+        prompt: "Return a lesson.",
+        responseSchema: {
+          type: "object",
+          properties: {
+            outline: { type: "object", properties: { ok: { type: "boolean" } } },
+            first_section: { type: "object", properties: { ok: { type: "boolean" } } },
+          },
+        },
+        lessonPlanPart: "bootstrap",
+        lessonPlanAttempt: 1,
+      }),
+      (error) => error?.code === "VERTEX_RESPONSE_TRUNCATED"
+        && error.partialResponse === '{"outline":{"ok":true},"first_section":{',
+    );
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("structured Vertex diagnostics preserve the provider cache-hit token count", async () => {
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["ok"],
+    properties: { ok: { type: "boolean" } },
+  };
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request before replying.
+    }
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({
+      candidates: [{
+        finishReason: "STOP",
+        content: { parts: [{ text: JSON.stringify({ ok: true }) }] },
+      }],
+      usageMetadata: {
+        promptTokenCount: 12,
+        candidatesTokenCount: 4,
+        cachedContentTokenCount: 9,
+        totalTokenCount: 16,
+        trafficType: "ON_DEMAND",
+      },
+    }));
+  });
+  const previousWrite = process.stderr.write;
+  let diagnostics = "";
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    process.stderr.write = (chunk) => {
+      diagnostics += String(chunk);
+      return true;
+    };
+    const content = await callStructuredModel({
+      endpoint: `http://127.0.0.1:${address.port}/generate`,
+      model: "test-model",
+      accessToken: "test-token",
+      timeoutMs: 5_000,
+      maxTokens: 32,
+      requestAttempts: 1,
+    }, {
+      label: "lesson-plan-outline",
+      turnId: "cache-token-diagnostic-test",
+      systemPrompt: "Return JSON.",
+      prompt: "Return ok.",
+      responseSchema: schema,
+      maxTokens: 32,
+      lessonPlanPart: "outline",
+      lessonPlanAttempt: 1,
+    });
+    assert.deepEqual(JSON.parse(content), { ok: true });
+    const completed = diagnostics.split("\n").find((line) => line.includes('"status":"completed"'));
+    assert.ok(completed);
+    assert.match(completed, /"cached_content_tokens":9/u);
+    assert.match(completed, /"traffic_type":"ON_DEMAND"/u);
+  } finally {
+    process.stderr.write = previousWrite;
+    await new Promise((done) => server.close(done));
+  }
+});
+
 test("a successful HTTP response without JSON is classified for lesson fallback", async () => {
   const server = createServer(async (request, response) => {
     for await (const _chunk of request) {
@@ -246,6 +480,127 @@ test("a successful HTTP response without JSON is classified for lesson fallback"
   }
 });
 
+test("Gemini API structured calls use API-key auth and the existing generateContent schema", async () => {
+  let captured;
+  const server = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    captured = { headers: request.headers, body: JSON.parse(body) };
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(vertexPayload({ ok: true }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const content = await callStructuredModel({
+      provider: "gemini",
+      endpoint: `http://127.0.0.1:${address.port}/generate`,
+      model: "test-gemini",
+      apiKey: "gemini-secret",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, {
+      label: "lesson-plan-outline",
+      turnId: "gemini-request-shape-test",
+      systemPrompt: "Return JSON.",
+      prompt: "Return ok.",
+      responseSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: { ok: { type: "boolean" } },
+        required: ["ok"],
+      },
+    });
+    assert.deepEqual(JSON.parse(content), { ok: true });
+    assert.equal(captured.headers["x-goog-api-key"], "gemini-secret");
+    assert.equal(captured.headers.authorization, undefined);
+    assert.equal(captured.body.generationConfig.responseMimeType, "application/json");
+    assert.equal(captured.body.generationConfig.responseJsonSchema.properties.ok.type, "boolean");
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("Ark structured calls require strict json_schema instead of prompt-only JSON", async () => {
+  let captured;
+  const server = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    captured = { headers: request.headers, body: JSON.parse(body) };
+    response.writeHead(200, { "content-type": "application/json", "x-request-id": "ark-test" });
+    response.end(JSON.stringify({
+      id: "response-test",
+      status: "completed",
+      output: [{
+        type: "message",
+        content: [{ type: "output_text", text: JSON.stringify({ ok: true }) }],
+      }],
+      usage: { input_tokens: 12, output_tokens: 4 },
+    }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const content = await callStructuredModel({
+      provider: "ark",
+      endpoint: `http://127.0.0.1:${address.port}/responses`,
+      model: "test-ark",
+      apiKey: "ark-secret",
+      timeoutMs: 5_000,
+      maxTokens: 64,
+      requestAttempts: 1,
+    }, {
+      label: "lesson-plan-section",
+      turnId: "ark-request-shape-test",
+      systemPrompt: "Return JSON.",
+      prompt: "Return ok.",
+      responseSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: { ok: { type: "boolean" } },
+        required: ["ok"],
+      },
+    });
+    assert.deepEqual(JSON.parse(content), { ok: true });
+    assert.equal(captured.headers.authorization, "Bearer ark-secret");
+    assert.equal(captured.body.thinking.type, "disabled");
+    assert.equal(captured.body.text.format.type, "json_schema");
+    assert.equal(captured.body.text.format.strict, true);
+    assert.equal(captured.body.text.format.schema.properties.ok.type, "boolean");
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+});
+
+test("API-key clients require their own credentials and Ark requires an explicit model", async () => {
+  const previous = {
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    ARK_API_KEY: process.env.ARK_API_KEY,
+    OLL_MODEL: process.env.OLL_MODEL,
+  };
+  try {
+    process.env.GEMINI_API_KEY = "gemini-key";
+    process.env.OLL_MODEL = "models/gemini-test";
+    const gemini = await createGeminiApiClient();
+    assert.equal(gemini.provider, "gemini");
+    assert.match(gemini.endpoint, /\/models\/gemini-test:generateContent$/u);
+
+    process.env.ARK_API_KEY = "ark-key";
+    process.env.OLL_MODEL = "ark-endpoint-test";
+    const ark = await createArkClient();
+    assert.equal(ark.provider, "ark");
+    assert.match(ark.endpoint, /\/api\/v3\/responses$/u);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
 test("Lesson Plan bundle does not duplicate the provider client", async () => {
   const bundle = await readFile(join(root, "lesson-plan.js"), "utf8");
   assert.doesNotMatch(bundle, /async function callStructuredModel\(/u);
@@ -279,7 +634,7 @@ test("the source and executable do not retain the unreachable direct-OLL lesson 
   assert.match(source, /generateLessonPlanWithModel/u);
 });
 
-test("the complete-lesson command validates the outline before generating the first section", async () => {
+test("the complete-lesson command accepts an outline and first section in one model response", async () => {
   const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-lesson-plan-command-"));
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const outline = {
@@ -341,9 +696,13 @@ test("the complete-lesson command validates the outline before generating the fi
       ? {
           disposition: "generate_lesson",
           learner_response: "",
-          course: outline,
+          course: schema.properties.course.properties?.outline
+            ? { outline, first_section: section }
+            : outline,
         }
-      : schema.properties?.course_visuals ? outline : section;
+      : schema.properties?.course_visuals
+        ? outline
+      : section;
     modelCalls += 1;
     response.writeHead(200, { "content-type": "application/json" });
     response.end(JSON.stringify({
@@ -366,14 +725,22 @@ test("the complete-lesson command validates the outline before generating the fi
         token_uri: `http://127.0.0.1:${address.port}/token`,
       },
       workDirectory,
+      input: {
+        client_timing: {
+          submitted_at_epoch_ms: 1_787_600_000_000,
+          skill_invocation_started_at_epoch_ms: 1_787_600_000_125,
+        },
+      },
     });
     assert.equal(result.exitCode, 0, result.stderr);
+    assert.match(result.stderr, /"stage":"lesson-client-timing"/u);
+    assert.match(result.stderr, /"submitted_at_epoch_ms":1787600000000/u);
     const messages = result.stdout.trim().split("\n").map((line) => JSON.parse(line));
     const completed = messages.find((message) => message.success === true);
     assert.equal(completed.authoring_strategy, "lesson_plan");
     assert.equal(completed.lesson_plan_sections, 1);
     assert.equal(completed.published_parts, 1);
-    assert.equal(modelCalls, 2);
+    assert.equal(modelCalls, 1);
     const lesson = JSON.parse(await readFile(completed.files_to_send[0], "utf8"));
     assert.equal(lesson.dsl, "octos.lesson");
     assert.equal(lesson.steps.length, 1);

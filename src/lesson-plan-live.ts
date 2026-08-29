@@ -1,7 +1,7 @@
 import {
   callStructuredModel,
-  createVertexClient,
-  type VertexClient,
+  createStructuredModelClient,
+  type StructuredModelClient,
 } from "./main.js";
 import {
   generateLessonPlanWithModel,
@@ -59,7 +59,7 @@ function shallowProviderSchema(schema: Record<string, unknown>): Record<string, 
 }
 
 export interface GenerateLessonPlanWithVertexOptions extends GenerateLessonPlanOptions {
-  client?: VertexClient;
+  client?: StructuredModelClient;
 }
 
 /**
@@ -72,7 +72,7 @@ export async function generateLessonPlanWithVertex(
   input: LessonPlanGenerationInput,
   options: GenerateLessonPlanWithVertexOptions = {},
 ): Promise<LessonPlanGenerationResult> {
-  const client = options.client ?? await createVertexClient();
+  const client = options.client ?? await createStructuredModelClient();
   const schemaMode = providerSchemaMode();
   const {
     client: _client,

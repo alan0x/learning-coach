@@ -12,6 +12,10 @@ import {
   buildImplicitSurfaceObject,
   implicitSurfaceDomain,
 } from "./scene3d-surfaces.js";
+import {
+  completedJsonObjectProperty,
+  withJsonPropertyOrdering,
+} from "./json-stream.js";
 
 const TOOL_NAME = "oll_generate_lesson";
 const SELECTION_TOOL_NAME = "oll_enhance_selection";
@@ -22,6 +26,7 @@ const DEFAULT_TIMEOUT_MS = 180_000;
 const DEFAULT_TOTAL_TIMEOUT_MS = 270_000;
 const DEFAULT_MAX_TOKENS = 32_768;
 const DEFAULT_VERTEX_REQUEST_ATTEMPTS = 3;
+const DEFAULT_MODEL_REQUEST_ATTEMPTS = 3;
 const MAX_CONTEXT_LENGTH = 24_000;
 const MAX_ERROR_BODY_LENGTH = 4_000;
 
@@ -34,7 +39,36 @@ interface ToolInput {
   learner_context?: string;
   input_modality?: "text" | "voice";
   camera_media?: string;
+  client_timing?: ClientTiming;
 }
+
+interface ClientTiming {
+  submitted_at_epoch_ms?: number;
+  camera_capture_started_at_epoch_ms?: number;
+  camera_capture_completed_at_epoch_ms?: number;
+  audio_upload_started_at_epoch_ms?: number;
+  audio_upload_completed_at_epoch_ms?: number;
+  media_upload_started_at_epoch_ms?: number;
+  media_upload_completed_at_epoch_ms?: number;
+  voice_admission_started_at_epoch_ms?: number;
+  voice_admission_completed_at_epoch_ms?: number;
+  skill_invocation_started_at_epoch_ms?: number;
+  camera_media_bytes?: number;
+}
+
+const CLIENT_TIMING_FIELDS = [
+  "submitted_at_epoch_ms",
+  "camera_capture_started_at_epoch_ms",
+  "camera_capture_completed_at_epoch_ms",
+  "audio_upload_started_at_epoch_ms",
+  "audio_upload_completed_at_epoch_ms",
+  "media_upload_started_at_epoch_ms",
+  "media_upload_completed_at_epoch_ms",
+  "voice_admission_started_at_epoch_ms",
+  "voice_admission_completed_at_epoch_ms",
+  "skill_invocation_started_at_epoch_ms",
+  "camera_media_bytes",
+] as const satisfies readonly (keyof ClientTiming)[];
 
 type SelectionContentKind = "text" | "math" | "geometry" | "data" | "unknown";
 type SelectionToolId = "explain" | "check-and-suggest" | "generate-plot" | "custom-question";
@@ -142,19 +176,35 @@ interface VertexServiceAccount {
 }
 
 export interface VertexClient {
+  provider?: "vertex";
   endpoint: string;
   model: string;
   accessToken: string;
+  paygoMode?: "standard" | "priority";
   timeoutMs: number;
   maxTokens: number;
   requestAttempts: number;
   deadlineAt?: number;
 }
 
+export interface ApiKeyModelClient {
+  provider: "gemini" | "ark";
+  endpoint: string;
+  model: string;
+  apiKey: string;
+  timeoutMs: number;
+  maxTokens: number;
+  requestAttempts: number;
+  deadlineAt?: number;
+}
+
+export type StructuredModelClient = VertexClient | ApiKeyModelClient;
+
 type ThinkingLevel = "MINIMAL" | "LOW" | "MEDIUM" | "HIGH";
 
 export interface StructuredModelRequest {
   label:
+    | "lesson-plan-bootstrap"
     | "lesson-plan-outline"
     | "lesson-plan-section"
     | "selection-enhancement"
@@ -172,7 +222,7 @@ export interface StructuredModelRequest {
   thinkingLevel?: ThinkingLevel;
   signal?: AbortSignal;
   media?: { mimeType: "image/png" | "image/jpeg" | "image/webp"; data: string };
-  lessonPlanPart?: "outline" | "section";
+  lessonPlanPart?: "bootstrap" | "outline" | "section";
   lessonPlanSection?: number;
   lessonPlanAttempt?: number;
 }
@@ -181,6 +231,7 @@ class ToolExecutionError extends Error {
   constructor(
     readonly code: string,
     message: string,
+    readonly partialResponse?: string,
   ) {
     super(message);
     this.name = "ToolExecutionError";
@@ -215,7 +266,7 @@ function parseThinkingLevel(value: string | undefined, label: string): ThinkingL
 function configuredThinkingLevel(
   label: StructuredModelRequest["label"],
 ): ThinkingLevel | undefined {
-  const environmentName = label === "lesson-plan-outline"
+  const environmentName = label === "lesson-plan-bootstrap" || label === "lesson-plan-outline"
     ? "OLL_TASK_THINKING_LEVEL"
     : label === "lesson-plan-section"
       ? "OLL_SECTION_THINKING_LEVEL"
@@ -241,6 +292,39 @@ function truncate(value: string | undefined): string | undefined {
   return value.length <= MAX_CONTEXT_LENGTH
     ? value
     : `${value.slice(0, MAX_CONTEXT_LENGTH)}\n[context truncated]`;
+}
+
+function parseClientTiming(value: unknown): ClientTiming | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new ToolExecutionError(
+      "LESSON_CLIENT_TIMING_INVALID",
+      "client_timing must be an object",
+    );
+  }
+  const candidate = value as Record<string, unknown>;
+  const allowedFields = new Set<string>(CLIENT_TIMING_FIELDS);
+  for (const field of Object.keys(candidate)) {
+    if (!allowedFields.has(field)) {
+      throw new ToolExecutionError(
+        "LESSON_CLIENT_TIMING_INVALID",
+        `client_timing does not accept '${field}'`,
+      );
+    }
+  }
+  const timing: ClientTiming = {};
+  for (const field of CLIENT_TIMING_FIELDS) {
+    const item = candidate[field];
+    if (item === undefined) continue;
+    if (typeof item !== "number" || !Number.isSafeInteger(item) || item < 0) {
+      throw new ToolExecutionError(
+        "LESSON_CLIENT_TIMING_INVALID",
+        `client_timing.${field} must be a non-negative safe integer`,
+      );
+    }
+    timing[field] = item;
+  }
+  return timing;
 }
 
 function parseCompleteLessonInput(raw: string): ToolInput {
@@ -269,6 +353,7 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     "learner_context",
     "input_modality",
     "camera_media",
+    "client_timing",
   ]);
   for (const field of Object.keys(input)) {
     if (!allowedFields.has(field)) {
@@ -306,6 +391,9 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     input_modality: input.input_modality === "voice" ? "voice" : "text",
     ...(typeof input.camera_media === "string"
       ? { camera_media: requireNonEmptyString(input.camera_media, "camera_media") }
+      : {}),
+    ...(input.client_timing !== undefined
+      ? { client_timing: parseClientTiming(input.client_timing) }
       : {}),
   };
 }
@@ -598,7 +686,39 @@ function vertexEndpoint(project: string, location: string, model: string): strin
     + `/publishers/google/models/${encodeURIComponent(model)}:generateContent`;
 }
 
-function vertexResponseContent(payload: unknown): string {
+function directGeminiEndpoint(model: string): string {
+  const base = (process.env.GEMINI_BASE_URL || "https://generativelanguage.googleapis.com/v1beta")
+    .replace(/\/+$/, "");
+  const normalizedModel = model.replace(/^models\//u, "");
+  return `${base}/models/${encodeURIComponent(normalizedModel)}:generateContent`;
+}
+
+function arkEndpoint(): string {
+  const base = (process.env.ARK_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3")
+    .replace(/\/+$/, "");
+  return `${base}/responses`;
+}
+
+function modelProvider(client: StructuredModelClient): "vertex" | "gemini" | "ark" {
+  return client.provider ?? "vertex";
+}
+
+function providerLabel(provider: "vertex" | "gemini" | "ark"): string {
+  return provider === "vertex" ? "Vertex" : provider === "gemini" ? "Gemini API" : "Ark";
+}
+
+function providerErrorCode(
+  provider: "vertex" | "gemini" | "ark",
+  suffix: "TRANSPORT_FAILED" | "SCHEMA_REJECTED" | "REQUEST_FAILED" | "REQUEST_TIMEOUT"
+    | "RESPONSE_TRUNCATED" | "RESPONSE_EMPTY",
+): string {
+  return `${provider.toUpperCase()}_${suffix}`;
+}
+
+function geminiResponseContent(
+  payload: unknown,
+  provider: "vertex" | "gemini",
+): string {
   const root = payload as {
     candidates?: Array<{
       finishReason?: string;
@@ -606,9 +726,13 @@ function vertexResponseContent(payload: unknown): string {
     }>;
   };
   const candidate = root?.candidates?.[0];
-  if (!candidate) throw new Error("Vertex response contains no candidates");
+  const label = providerLabel(provider);
+  if (!candidate) throw new Error(`${label} response contains no candidates`);
   if (candidate.finishReason === "MAX_TOKENS") {
-    throw new ToolExecutionError("VERTEX_RESPONSE_TRUNCATED", "Vertex response was truncated at maxOutputTokens");
+    throw new ToolExecutionError(
+      providerErrorCode(provider, "RESPONSE_TRUNCATED"),
+      `${label} response was truncated at maxOutputTokens`,
+    );
   }
   const text = candidate.content?.parts
     ?.map((part) => typeof part.text === "string" ? part.text : "")
@@ -616,11 +740,117 @@ function vertexResponseContent(payload: unknown): string {
     .trim();
   if (!text) {
     throw new ToolExecutionError(
-      "VERTEX_RESPONSE_EMPTY",
-      `Vertex response contains no JSON text (finishReason=${candidate.finishReason ?? "unknown"})`,
+      providerErrorCode(provider, "RESPONSE_EMPTY"),
+      `${label} response contains no JSON text (finishReason=${candidate.finishReason ?? "unknown"})`,
     );
   }
   return text;
+}
+
+function arkResponseContent(payload: unknown): string {
+  const root = isRecord(payload) ? payload : {};
+  if (root.status === "incomplete") {
+    throw new ToolExecutionError(
+      providerErrorCode("ark", "RESPONSE_TRUNCATED"),
+      "Ark response was incomplete",
+    );
+  }
+  const output = Array.isArray(root.output) ? root.output : [];
+  const text = output.flatMap((item) => {
+    if (!isRecord(item) || item.type !== "message" || !Array.isArray(item.content)) return [];
+    return item.content.flatMap((content) => (
+      isRecord(content) && content.type === "output_text" && typeof content.text === "string"
+        ? [content.text]
+        : []
+    ));
+  }).join("").trim();
+  if (!text) {
+    throw new ToolExecutionError(
+      providerErrorCode("ark", "RESPONSE_EMPTY"),
+      `Ark response contains no JSON text (status=${String(root.status ?? "unknown")})`,
+    );
+  }
+  return text;
+}
+
+function arkThinkingType(): "disabled" | "enabled" | "auto" {
+  const value = process.env.ARK_THINKING_TYPE?.trim().toLowerCase() || "disabled";
+  if (value === "disabled" || value === "enabled" || value === "auto") return value;
+  throw new Error(`ARK_THINKING_TYPE must be disabled, enabled, or auto; received ${value}`);
+}
+
+function structuredModelRequestBody(
+  client: StructuredModelClient,
+  request: StructuredModelRequest,
+  thinkingLevel: ThinkingLevel | undefined,
+): string {
+  const provider = modelProvider(client);
+  if (provider === "ark") {
+    const content: Array<Record<string, unknown>> = [{ type: "input_text", text: request.prompt }];
+    if (request.media) content.push({
+      type: "input_image",
+      image_url: `data:${request.media.mimeType};base64,${request.media.data}`,
+      detail: "auto",
+    });
+    return JSON.stringify({
+      model: client.model,
+      instructions: request.systemPrompt,
+      input: [{ type: "message", role: "user", content }],
+      thinking: { type: arkThinkingType() },
+      stream: false,
+      max_output_tokens: request.maxTokens ?? client.maxTokens,
+      text: {
+        format: request.responseSchema
+          ? {
+              type: "json_schema",
+              name: request.label.replaceAll("-", "_"),
+              strict: true,
+              schema: request.responseSchema,
+            }
+          : { type: "json_object" },
+      },
+    });
+  }
+  const userParts: Array<Record<string, unknown>> = [{ text: request.prompt }];
+  if (request.media) userParts.push({
+    inlineData: { mimeType: request.media.mimeType, data: request.media.data },
+  });
+  return JSON.stringify({
+    systemInstruction: { parts: [{ text: request.systemPrompt }] },
+    contents: [{ role: "user", parts: userParts }],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: request.maxTokens ?? client.maxTokens,
+      responseMimeType: "application/json",
+      ...(request.responseSchema ? { responseJsonSchema: request.responseSchema } : {}),
+      ...(thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
+    },
+  });
+}
+
+function structuredModelHeaders(client: StructuredModelClient): Record<string, string> {
+  if ("accessToken" in client) {
+    return {
+      authorization: `Bearer ${client.accessToken}`,
+      "content-type": "application/json",
+      ...(client.paygoMode === "priority"
+        ? {
+            "X-Vertex-AI-LLM-Request-Type": "shared",
+            "X-Vertex-AI-LLM-Shared-Request-Type": "priority",
+          }
+        : {}),
+    };
+  }
+  if (client.provider === "gemini") {
+    return { "x-goog-api-key": client.apiKey, "content-type": "application/json" };
+  }
+  return { authorization: `Bearer ${client.apiKey}`, "content-type": "application/json" };
+}
+
+function vertexPaygoMode(): "standard" | "priority" {
+  const value = process.env.VERTEX_PAYGO_MODE?.trim().toLowerCase() || "standard";
+  if (value === "standard" || value === "priority") return value;
+  throw new Error(`VERTEX_PAYGO_MODE must be standard or priority; received ${value}`);
 }
 
 export async function createVertexClient(): Promise<VertexClient> {
@@ -668,9 +898,11 @@ export async function createVertexClient(): Promise<VertexClient> {
     throw error;
   }
   return {
+    provider: "vertex",
     endpoint: vertexEndpoint(project, location, model),
     model,
     accessToken,
+    paygoMode: vertexPaygoMode(),
     timeoutMs,
     maxTokens,
     deadlineAt,
@@ -682,7 +914,61 @@ export async function createVertexClient(): Promise<VertexClient> {
   };
 }
 
-function requestDeadline(client: VertexClient): number {
+function apiKeyClientLimits(): Pick<
+  ApiKeyModelClient,
+  "timeoutMs" | "maxTokens" | "requestAttempts" | "deadlineAt"
+> {
+  const timeoutMs = parsePositiveInteger(process.env.OLL_TIMEOUT_MS, DEFAULT_TIMEOUT_MS, "OLL_TIMEOUT_MS");
+  const totalTimeoutMs = parsePositiveInteger(
+    process.env.OLL_TOTAL_TIMEOUT_MS,
+    DEFAULT_TOTAL_TIMEOUT_MS,
+    "OLL_TOTAL_TIMEOUT_MS",
+  );
+  return {
+    timeoutMs,
+    maxTokens: parsePositiveInteger(process.env.OLL_MAX_TOKENS, DEFAULT_MAX_TOKENS, "OLL_MAX_TOKENS"),
+    requestAttempts: parsePositiveInteger(
+      process.env.OLL_MODEL_REQUEST_ATTEMPTS,
+      DEFAULT_MODEL_REQUEST_ATTEMPTS,
+      "OLL_MODEL_REQUEST_ATTEMPTS",
+    ),
+    deadlineAt: Date.now() + totalTimeoutMs,
+  };
+}
+
+export async function createGeminiApiClient(): Promise<ApiKeyModelClient> {
+  const apiKey = requireNonEmptyString(process.env.GEMINI_API_KEY, "GEMINI_API_KEY");
+  const model = process.env.OLL_MODEL?.trim() || DEFAULT_MODEL;
+  return {
+    provider: "gemini",
+    endpoint: directGeminiEndpoint(model),
+    model,
+    apiKey,
+    ...apiKeyClientLimits(),
+  };
+}
+
+export async function createArkClient(): Promise<ApiKeyModelClient> {
+  const apiKey = requireNonEmptyString(process.env.ARK_API_KEY, "ARK_API_KEY");
+  const model = requireNonEmptyString(process.env.OLL_MODEL, "OLL_MODEL");
+  return {
+    provider: "ark",
+    endpoint: arkEndpoint(),
+    model,
+    apiKey,
+    ...apiKeyClientLimits(),
+  };
+}
+
+export async function createStructuredModelClient(): Promise<StructuredModelClient> {
+  const provider = process.env.OLL_PROVIDER?.trim().toLowerCase() || "vertex";
+  if (provider === "vertex") return createVertexClient();
+  if (provider === "gemini") return createGeminiApiClient();
+  if (provider === "ark") return createArkClient();
+  throw new Error(`OLL_PROVIDER must be vertex, gemini, or ark; received ${provider}`);
+}
+
+function requestDeadline(client: StructuredModelClient): number {
   return Math.min(
     Date.now() + client.timeoutMs,
     client.deadlineAt ?? Number.POSITIVE_INFINITY,
@@ -796,10 +1082,7 @@ export async function probeVertexSchema(
   for (let attempt = 1; attempt <= client.requestAttempts; attempt += 1) {
     response = await fetch(client.endpoint, {
       method: "POST",
-      headers: {
-        authorization: `Bearer ${client.accessToken}`,
-        "content-type": "application/json",
-      },
+      headers: structuredModelHeaders(client),
       body: requestBody,
       signal: AbortSignal.timeout(client.timeoutMs),
     });
@@ -832,27 +1115,394 @@ export async function probeVertexSchema(
   };
 }
 
-export async function callStructuredModel(client: VertexClient, request: StructuredModelRequest): Promise<string> {
+export async function probeStructuredModelSchema(
+  client: StructuredModelClient,
+  schema: JsonSchema,
+  options: {
+    label?: StructuredModelRequest["label"];
+    turnId?: string;
+    maxTokens?: number;
+  } = {},
+): Promise<{
+  ok: boolean;
+  provider: "vertex" | "gemini" | "ark";
+  model: string;
+  elapsed_ms: number;
+  error_code?: string;
+  error?: string;
+}> {
+  const startedAt = Date.now();
+  const provider = modelProvider(client);
+  try {
+    const text = await callStructuredModel(client, {
+      label: options.label ?? "lesson-plan-outline",
+      turnId: options.turnId ?? `provider-schema-probe-${Date.now()}`,
+      systemPrompt: "Return exactly one minimal JSON value that satisfies the supplied response schema.",
+      prompt: "Generate the smallest valid value. Do not add explanations.",
+      responseSchema: schema,
+      maxTokens: options.maxTokens ?? Math.min(client.maxTokens, 4_096),
+    });
+    JSON.parse(text);
+    return {
+      ok: true,
+      provider,
+      model: client.model,
+      elapsed_ms: Date.now() - startedAt,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      provider,
+      model: client.model,
+      elapsed_ms: Date.now() - startedAt,
+      error_code: error instanceof ToolExecutionError ? error.code : "PROVIDER_SCHEMA_PROBE_FAILED",
+      error: safeError(error),
+    };
+  }
+}
+
+function geminiStreamingEndpoint(endpoint: string): string {
+  const [base] = endpoint.split("?", 1);
+  const streamBase = base.endsWith(":generateContent")
+    ? `${base.slice(0, -":generateContent".length)}:streamGenerateContent`
+    : base.endsWith("/generate")
+      ? `${base.slice(0, -"/generate".length)}/streamGenerateContent`
+      : `${base.replace(/\/+$/u, "")}/streamGenerateContent`;
+  return `${streamBase}?alt=sse`;
+}
+
+interface GeminiStreamResult {
+  content: string;
+  finishReason?: string;
+  usage: Record<string, unknown>;
+  responseBytes: number;
+  chunks: number;
+  firstChunkMs?: number;
+  outlineCompletedMs?: number;
+}
+
+async function readGeminiStructuredStream(
+  response: Response,
+  startedAt: number,
+  provider: "vertex" | "gemini",
+): Promise<GeminiStreamResult> {
+  if (!response.body) {
+    throw new ToolExecutionError(
+      providerErrorCode(provider, "RESPONSE_EMPTY"),
+      `${providerLabel(provider)} streaming response contains no body`,
+    );
+  }
+  const decoder = new TextDecoder();
+  let eventBuffer = "";
+  let content = "";
+  let finishReason: string | undefined;
+  let usage: Record<string, unknown> = {};
+  let responseBytes = 0;
+  let chunks = 0;
+  let firstChunkMs: number | undefined;
+  let outlineCompletedMs: number | undefined;
+
+  const handleEvent = (event: string): void => {
+    const data = event.split(/\r?\n/u)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n");
+    if (!data || data === "[DONE]") return;
+    let payload: unknown;
+    try {
+      payload = JSON.parse(data);
+    } catch (error) {
+      throw new ToolExecutionError(
+        providerErrorCode(provider, "TRANSPORT_FAILED"),
+        `${providerLabel(provider)} returned an invalid streaming event: ${safeError(error)}`,
+        content || undefined,
+      );
+    }
+    const root = isRecord(payload) ? payload : {};
+    if (isRecord(root.error)) {
+      throw new ToolExecutionError(
+        providerErrorCode(provider, "REQUEST_FAILED"),
+        `${providerLabel(provider)} streaming response failed: ${JSON.stringify(root.error).slice(0, MAX_ERROR_BODY_LENGTH)}`,
+        content || undefined,
+      );
+    }
+    const candidates = Array.isArray(root.candidates) ? root.candidates : [];
+    const candidate = isRecord(candidates[0]) ? candidates[0] : {};
+    const candidateContent = isRecord(candidate.content) ? candidate.content : {};
+    const parts = Array.isArray(candidateContent.parts) ? candidateContent.parts : [];
+    const text = parts.map((part) => isRecord(part) && typeof part.text === "string" ? part.text : "").join("");
+    if (text) {
+      chunks += 1;
+      firstChunkMs ??= Date.now() - startedAt;
+      content += text;
+      if (outlineCompletedMs === undefined
+        && completedJsonObjectProperty(content, "outline") !== undefined) {
+        outlineCompletedMs = Date.now() - startedAt;
+      }
+    }
+    if (typeof candidate.finishReason === "string") finishReason = candidate.finishReason;
+    if (isRecord(root.usageMetadata)) usage = root.usageMetadata;
+  };
+
+  try {
+    for await (const chunk of response.body) {
+      responseBytes += chunk.byteLength;
+      eventBuffer += decoder.decode(chunk, { stream: true });
+      let boundary: number;
+      while ((boundary = eventBuffer.search(/\r?\n\r?\n/u)) >= 0) {
+        const event = eventBuffer.slice(0, boundary);
+        const delimiter = eventBuffer.slice(boundary).match(/^\r?\n\r?\n/u)?.[0] ?? "\n\n";
+        eventBuffer = eventBuffer.slice(boundary + delimiter.length);
+        handleEvent(event);
+      }
+    }
+    eventBuffer += decoder.decode();
+    if (eventBuffer.trim()) {
+      const remaining = eventBuffer.trim();
+      handleEvent(remaining.startsWith("{") ? `data: ${remaining}` : remaining);
+    }
+  } catch (error) {
+    if (error instanceof ToolExecutionError) throw error;
+    throw new ToolExecutionError(
+      providerErrorCode(provider, "TRANSPORT_FAILED"),
+      `${providerLabel(provider)} streaming response was interrupted: ${safeError(error)}`,
+      content || undefined,
+    );
+  }
+
+  if (finishReason === "MAX_TOKENS") {
+    throw new ToolExecutionError(
+      providerErrorCode(provider, "RESPONSE_TRUNCATED"),
+      `${providerLabel(provider)} response was truncated at maxOutputTokens`,
+      content || undefined,
+    );
+  }
+  if (!content.trim()) {
+    throw new ToolExecutionError(
+      providerErrorCode(provider, "RESPONSE_EMPTY"),
+      `${providerLabel(provider)} response contains no JSON text (finishReason=${finishReason ?? "unknown"})`,
+    );
+  }
+  try {
+    JSON.parse(content);
+  } catch {
+    throw new ToolExecutionError(
+      providerErrorCode(provider, "RESPONSE_TRUNCATED"),
+      `${providerLabel(provider)} streaming response ended before its JSON value was complete`,
+      content,
+    );
+  }
+  return {
+    content: content.trim(),
+    finishReason,
+    usage,
+    responseBytes,
+    chunks,
+    firstChunkMs,
+    outlineCompletedMs,
+  };
+}
+
+async function callStreamingBootstrapModel(
+  client: StructuredModelClient,
+  request: StructuredModelRequest,
+): Promise<string> {
   const startedAt = Date.now();
   const deadlineAt = requestDeadline(client);
   const thinkingLevel = request.thinkingLevel ?? configuredThinkingLevel(request.label);
-  const userParts: Array<Record<string, unknown>> = [{ text: request.prompt }];
-  if (request.media) userParts.push({
-    inlineData: { mimeType: request.media.mimeType, data: request.media.data },
+  const provider = modelProvider(client);
+  if (provider === "ark") throw new Error("Ark bootstrap streaming is not supported");
+  const providerName = providerLabel(provider);
+  const orderedRequest = request.responseSchema
+    ? {
+        ...request,
+        responseSchema: withJsonPropertyOrdering(request.responseSchema) as JsonSchema,
+      }
+    : request;
+  const requestBody = structuredModelRequestBody(client, orderedRequest, thinkingLevel);
+  const diagnostics = orderedRequest.responseSchema
+    ? schemaDiagnostics(orderedRequest.responseSchema)
+    : { sha256: "none", bytes: 0 };
+  stageLog({
+    stage: "model-call",
+    turn_id: request.turnId,
+    label: request.label,
+    status: "started",
+    provider,
+    model: client.model,
+    transport: "stream",
+    ...(provider === "vertex" ? { vertex_paygo_mode: client.paygoMode ?? "standard" } : {}),
+    thinking_level: thinkingLevel ?? "UNSPECIFIED",
+    schema_sha256: diagnostics.sha256,
+    schema_bytes: diagnostics.bytes,
+    prompt_bytes: Buffer.byteLength(request.prompt),
+    system_prompt_bytes: Buffer.byteLength(request.systemPrompt),
+    request_bytes: Buffer.byteLength(requestBody),
+    max_output_tokens: request.maxTokens ?? client.maxTokens,
+    lesson_plan_part: request.lessonPlanPart ?? "bootstrap",
+    ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
   });
-  const requestBody = JSON.stringify({
-    systemInstruction: { parts: [{ text: request.systemPrompt }] },
-    contents: [{ role: "user", parts: userParts }],
-    generationConfig: {
-      temperature: 0,
-      maxOutputTokens: request.maxTokens ?? client.maxTokens,
-      responseMimeType: "application/json",
-      ...(request.responseSchema ? { responseJsonSchema: request.responseSchema } : {}),
-      ...(thinkingLevel
-        ? { thinkingConfig: { thinkingLevel } }
-        : {}),
-    },
-  });
+
+  let status = 0;
+  let requestId: string | undefined;
+  let usedAttempts = 0;
+  try {
+    for (let requestAttempt = 1; requestAttempt <= client.requestAttempts; requestAttempt += 1) {
+      usedAttempts = requestAttempt;
+      let response: Response;
+      try {
+        response = await fetch(geminiStreamingEndpoint(client.endpoint), {
+          method: "POST",
+          headers: structuredModelHeaders(client),
+          body: requestBody,
+          signal: request.signal
+            ? AbortSignal.any([request.signal, AbortSignal.timeout(timeoutUntil(deadlineAt, request.label))])
+            : AbortSignal.timeout(timeoutUntil(deadlineAt, request.label)),
+        });
+      } catch (error) {
+        const cancelled = request.signal?.aborted === true;
+        const timeoutError = error instanceof Error
+          && (error.name === "TimeoutError" || error.name === "AbortError");
+        if (!cancelled && !timeoutError && requestAttempt < client.requestAttempts) {
+          await new Promise((resolveDelay) => setTimeout(
+            resolveDelay,
+            Math.min(500 * 2 ** (requestAttempt - 1), timeoutUntil(deadlineAt, request.label)),
+          ));
+          continue;
+        }
+        throw error;
+      }
+      status = response.status;
+      requestId = response.headers.get("x-goog-request-id")
+        ?? response.headers.get("x-request-id")
+        ?? requestId;
+      if (!response.ok) {
+        const body = await response.text();
+        const retryable = status === 429 || status >= 500;
+        if (retryable && requestAttempt < client.requestAttempts) {
+          const retryAfterSeconds = Number(response.headers.get("retry-after"));
+          const requestedDelayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+            ? Math.min(retryAfterSeconds * 1_000, 10_000)
+            : Math.min(1_000 * 2 ** (requestAttempt - 1), 4_000);
+          await new Promise((resolveDelay) => setTimeout(
+            resolveDelay,
+            Math.min(requestedDelayMs, timeoutUntil(deadlineAt, request.label)),
+          ));
+          continue;
+        }
+        throw new ToolExecutionError(
+          status === 400
+            ? providerErrorCode(provider, "SCHEMA_REJECTED")
+            : providerErrorCode(provider, "REQUEST_FAILED"),
+          `${providerName} ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`,
+        );
+      }
+      const result = await readGeminiStructuredStream(response, startedAt, provider);
+      const metric = (name: string): number | undefined => {
+        const value = result.usage[name];
+        return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+      };
+      stageLog({
+        stage: "model-call",
+        turn_id: request.turnId,
+        label: request.label,
+        status: "completed",
+        provider,
+        model: client.model,
+        transport: "stream",
+        http_status: status,
+        request_attempts: usedAttempts,
+        ...(requestId ? { request_id: requestId } : {}),
+        ...(result.finishReason ? { finish_reason: result.finishReason } : {}),
+        ...(metric("promptTokenCount") === undefined ? {} : { prompt_tokens: metric("promptTokenCount") }),
+        ...(metric("candidatesTokenCount") === undefined ? {} : { candidate_tokens: metric("candidatesTokenCount") }),
+        ...(metric("thoughtsTokenCount") === undefined ? {} : { thought_tokens: metric("thoughtsTokenCount") }),
+        ...(metric("cachedContentTokenCount") === undefined ? {} : { cached_content_tokens: metric("cachedContentTokenCount") }),
+        ...(metric("totalTokenCount") === undefined ? {} : { total_tokens: metric("totalTokenCount") }),
+        ...(typeof result.usage.trafficType === "string" ? { traffic_type: result.usage.trafficType } : {}),
+        response_bytes: result.responseBytes,
+        response_content_bytes: Buffer.byteLength(result.content),
+        stream_chunks: result.chunks,
+        ...(result.firstChunkMs === undefined ? {} : { first_chunk_ms: result.firstChunkMs }),
+        ...(result.outlineCompletedMs === undefined ? {} : { outline_completed_ms: result.outlineCompletedMs }),
+        elapsed_ms: Date.now() - startedAt,
+        lesson_plan_part: request.lessonPlanPart ?? "bootstrap",
+        ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
+      });
+      return result.content;
+    }
+    throw new ToolExecutionError(
+      providerErrorCode(provider, "REQUEST_FAILED"),
+      `${providerName} ${request.label} exhausted its request attempts`,
+    );
+  } catch (error) {
+    const cancelled = request.signal?.aborted === true;
+    const timeoutError = error instanceof Error
+      && (error.name === "TimeoutError" || error.name === "AbortError");
+    const partialResponse = error && typeof error === "object" && "partialResponse" in error
+      && typeof (error as { partialResponse?: unknown }).partialResponse === "string"
+      ? (error as { partialResponse: string }).partialResponse
+      : undefined;
+    const surfacedError = cancelled
+      ? new ToolExecutionError(
+          "MODEL_REQUEST_CANCELLED",
+          `${providerName} ${request.label} was cancelled because its lesson plan was rejected`,
+          partialResponse,
+        )
+      : timeoutError
+        ? new ToolExecutionError(
+            client.deadlineAt !== undefined && Date.now() >= client.deadlineAt
+              ? "LESSON_GENERATION_TIMEOUT"
+              : providerErrorCode(provider, "REQUEST_TIMEOUT"),
+            client.deadlineAt !== undefined && Date.now() >= client.deadlineAt
+              ? `The lesson generation time budget was exhausted during ${request.label}`
+              : `${providerName} ${request.label} exceeded its request timeout`,
+            partialResponse,
+          )
+        : error instanceof ToolExecutionError
+          ? error
+          : new ToolExecutionError(
+              providerErrorCode(provider, "TRANSPORT_FAILED"),
+              `${providerName} ${request.label} transport failed: ${safeError(error)}`,
+              partialResponse,
+            );
+    stageLog({
+      stage: "model-call",
+      turn_id: request.turnId,
+      label: request.label,
+      status: "failed",
+      provider,
+      model: client.model,
+      transport: "stream",
+      http_status: status || null,
+      request_attempts: usedAttempts,
+      ...(requestId ? { request_id: requestId } : {}),
+      elapsed_ms: Date.now() - startedAt,
+      error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED",
+      partial_response_bytes: partialResponse ? Buffer.byteLength(partialResponse) : 0,
+      outline_completed: partialResponse
+        ? completedJsonObjectProperty(partialResponse, "outline") !== undefined
+        : false,
+      lesson_plan_part: request.lessonPlanPart ?? "bootstrap",
+      ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
+    });
+    throw surfacedError;
+  }
+}
+
+export async function callStructuredModel(
+  client: StructuredModelClient,
+  request: StructuredModelRequest,
+): Promise<string> {
+  if (request.label === "lesson-plan-bootstrap" && modelProvider(client) === "vertex") {
+    return callStreamingBootstrapModel(client, request);
+  }
+  const startedAt = Date.now();
+  const deadlineAt = requestDeadline(client);
+  const thinkingLevel = request.thinkingLevel ?? configuredThinkingLevel(request.label);
+  const provider = modelProvider(client);
+  const providerName = providerLabel(provider);
+  const requestBody = structuredModelRequestBody(client, request, thinkingLevel);
   const diagnostics = request.responseSchema
     ? schemaDiagnostics(request.responseSchema)
     : { sha256: "none", bytes: 0 };
@@ -861,8 +1511,10 @@ export async function callStructuredModel(client: VertexClient, request: Structu
     turn_id: request.turnId,
     label: request.label,
     status: "started",
+    provider,
     model: client.model,
-    thinking_level: thinkingLevel ?? "UNSPECIFIED",
+    ...(provider === "vertex" ? { vertex_paygo_mode: client.paygoMode ?? "standard" } : {}),
+    thinking_level: provider === "ark" ? arkThinkingType() : thinkingLevel ?? "UNSPECIFIED",
     schema_sha256: diagnostics.sha256,
     schema_bytes: diagnostics.bytes,
     prompt_bytes: Buffer.byteLength(request.prompt),
@@ -884,10 +1536,7 @@ export async function callStructuredModel(client: VertexClient, request: Structu
       try {
         response = await fetch(client.endpoint, {
           method: "POST",
-          headers: {
-            authorization: `Bearer ${client.accessToken}`,
-            "content-type": "application/json",
-          },
+          headers: structuredModelHeaders(client),
           body: requestBody,
           signal: request.signal
             ? AbortSignal.any([
@@ -921,8 +1570,8 @@ export async function callStructuredModel(client: VertexClient, request: Structu
         if (!canRetry) {
           if (cancelled || timeoutError) throw error;
           throw new ToolExecutionError(
-            "VERTEX_TRANSPORT_FAILED",
-            `Vertex ${request.label} transport failed${transportCode ? ` (${transportCode})` : ""}: ${safeError(error)}`,
+            providerErrorCode(provider, "TRANSPORT_FAILED"),
+            `${providerName} ${request.label} transport failed${transportCode ? ` (${transportCode})` : ""}: ${safeError(error)}`,
           );
         }
         const delayMs = Math.min(
@@ -933,13 +1582,20 @@ export async function callStructuredModel(client: VertexClient, request: Structu
         continue;
       }
       status = response.status;
-      requestId = response.headers.get("x-goog-request-id") ?? requestId;
+      requestId = response.headers.get("x-goog-request-id")
+        ?? response.headers.get("x-request-id")
+        ?? requestId;
       body = await response.text();
       if (response.ok) break;
       const retryable = status === 429 || status >= 500;
       if (!retryable || requestAttempt === client.requestAttempts) {
-        const code = status === 400 ? "VERTEX_SCHEMA_REJECTED" : "VERTEX_REQUEST_FAILED";
-        throw new ToolExecutionError(code, `Vertex ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`);
+        const code = status === 400
+          ? providerErrorCode(provider, "SCHEMA_REJECTED")
+          : providerErrorCode(provider, "REQUEST_FAILED");
+        throw new ToolExecutionError(
+          code,
+          `${providerName} ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`,
+        );
       }
       const retryAfterSeconds = Number(response.headers.get("retry-after"));
       const requestedDelayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
@@ -952,16 +1608,21 @@ export async function callStructuredModel(client: VertexClient, request: Structu
     try {
       payload = JSON.parse(body);
     } catch (error) {
-      throw new Error(`Vertex returned a non-JSON API response: ${(error as Error).message}`);
+      throw new Error(`${providerName} returned a non-JSON API response: ${(error as Error).message}`);
     }
     if (process.env.OLL_DEBUG_GENERATION === "1") {
-      process.stderr.write(`learning-coach: raw Vertex ${request.label} payload: ${JSON.stringify(payload).slice(0, 16_000)}\n`);
+      process.stderr.write(`learning-coach: raw ${providerName} ${request.label} payload: ${JSON.stringify(payload).slice(0, 16_000)}\n`);
     }
-    const content = vertexResponseContent(payload);
+    const content = provider === "ark"
+      ? arkResponseContent(payload)
+      : geminiResponseContent(payload, provider);
     const root = isRecord(payload) ? payload : {};
     const candidates = Array.isArray(root.candidates) ? root.candidates : [];
     const firstCandidate = isRecord(candidates[0]) ? candidates[0] : {};
-    const usage = isRecord(root.usageMetadata) ? root.usageMetadata : {};
+    const usage = provider === "ark"
+      ? isRecord(root.usage) ? root.usage : {}
+      : isRecord(root.usageMetadata) ? root.usageMetadata : {};
+    const arkOutputDetails = isRecord(usage.output_tokens_details) ? usage.output_tokens_details : {};
     const metric = (name: string): number | undefined => {
       const value = usage[name];
       return typeof value === "number" && Number.isFinite(value) ? value : undefined;
@@ -971,21 +1632,31 @@ export async function callStructuredModel(client: VertexClient, request: Structu
       turn_id: request.turnId,
       label: request.label,
       status: "completed",
+      provider,
       http_status: status,
+      ...(provider === "vertex" ? { vertex_paygo_mode: client.paygoMode ?? "standard" } : {}),
       request_attempts: usedAttempts,
       ...(requestId ? { request_id: requestId } : {}),
-      ...(typeof firstCandidate.finishReason === "string"
-        ? { finish_reason: firstCandidate.finishReason }
-        : {}),
-      ...(metric("promptTokenCount") === undefined
+      ...((provider === "ark" ? root.status : firstCandidate.finishReason) === undefined
         ? {}
-        : { prompt_tokens: metric("promptTokenCount") }),
-      ...(metric("candidatesTokenCount") === undefined
+        : { finish_reason: provider === "ark" ? root.status : firstCandidate.finishReason }),
+      ...(metric(provider === "ark" ? "input_tokens" : "promptTokenCount") === undefined
         ? {}
-        : { candidate_tokens: metric("candidatesTokenCount") }),
-      ...(metric("thoughtsTokenCount") === undefined
+        : { prompt_tokens: metric(provider === "ark" ? "input_tokens" : "promptTokenCount") }),
+      ...(metric(provider === "ark" ? "output_tokens" : "candidatesTokenCount") === undefined
         ? {}
-        : { thought_tokens: metric("thoughtsTokenCount") }),
+        : { candidate_tokens: metric(provider === "ark" ? "output_tokens" : "candidatesTokenCount") }),
+      ...((provider === "ark"
+        ? typeof arkOutputDetails.reasoning_tokens === "number"
+          ? arkOutputDetails.reasoning_tokens
+          : undefined
+        : metric("thoughtsTokenCount")) === undefined
+        ? {}
+        : {
+            thought_tokens: provider === "ark"
+              ? arkOutputDetails.reasoning_tokens
+              : metric("thoughtsTokenCount"),
+          }),
       ...(metric("cachedContentTokenCount") === undefined
         ? {}
         : { cached_content_tokens: metric("cachedContentTokenCount") }),
@@ -1007,16 +1678,16 @@ export async function callStructuredModel(client: VertexClient, request: Structu
     const surfacedError = cancelled
       ? new ToolExecutionError(
           "MODEL_REQUEST_CANCELLED",
-          `Vertex ${request.label} was cancelled because its lesson plan was rejected`,
+          `${providerName} ${request.label} was cancelled because its lesson plan was rejected`,
         )
       : timeoutError
       ? new ToolExecutionError(
           client.deadlineAt !== undefined && Date.now() >= client.deadlineAt
             ? "LESSON_GENERATION_TIMEOUT"
-            : "VERTEX_REQUEST_TIMEOUT",
+            : providerErrorCode(provider, "REQUEST_TIMEOUT"),
           client.deadlineAt !== undefined && Date.now() >= client.deadlineAt
             ? `The lesson generation time budget was exhausted during ${request.label}`
-            : `Vertex ${request.label} exceeded its request timeout`,
+            : `${providerName} ${request.label} exceeded its request timeout`,
         )
       : error;
     stageLog({
@@ -1024,6 +1695,7 @@ export async function callStructuredModel(client: VertexClient, request: Structu
       turn_id: request.turnId,
       label: request.label,
       status: "failed",
+      provider,
       http_status: status || null,
       elapsed_ms: Date.now() - startedAt,
       error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED",
@@ -1511,7 +2183,7 @@ function parseSelectionModelResponse(
 }
 
 async function generateSelectionEnhancement(
-  client: VertexClient,
+  client: StructuredModelClient,
   input: SelectionToolInput,
 ): Promise<SelectionEnhancementArtifact> {
   // A successful classification pass already transcribed the selected
@@ -1574,7 +2246,7 @@ function parseSelectionClassificationResponse(raw: string): SelectionClassificat
 }
 
 async function classifySelection(
-  client: VertexClient,
+  client: StructuredModelClient,
   input: SelectionToolInput,
 ): Promise<SelectionClassification> {
   const media = await selectionModelMedia(input);
@@ -1660,7 +2332,7 @@ async function main(): Promise<void> {
     if (traceTurnId) beginStageTrace(traceTurnId, invokedTool, startedAt);
     if (invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME) {
       const input = parseSelectionClassificationInput(rawInput);
-      const client = await createVertexClient();
+      const client = await createStructuredModelClient();
       const classification = await classifySelection(client, input);
       stageLog({
         stage: "selection-classification",
@@ -1677,7 +2349,7 @@ async function main(): Promise<void> {
     }
     if (invokedTool === SELECTION_TOOL_NAME) {
       const input = parseSelectionToolInput(rawInput);
-      const client = await createVertexClient();
+      const client = await createStructuredModelClient();
       const artifact = await generateSelectionEnhancement(client, input);
       const artifactPath = selectionOutputPath(input);
       await mkdir(dirname(artifactPath), { recursive: true });
@@ -1696,7 +2368,16 @@ async function main(): Promise<void> {
       return;
     }
     const input = parseCompleteLessonInput(rawInput);
-    const client = await createVertexClient();
+    if (input.client_timing) {
+      stageLog({
+        stage: "lesson-client-timing",
+        turn_id: input.turn_id,
+        status: "received",
+        client_timing: input.client_timing,
+        skill_process_started_at_epoch_ms: startedAt,
+      });
+    }
+    const client = await createStructuredModelClient();
     const cameraMedia = input.request_source === "current_image"
       ? await workspaceImageMedia(input.camera_media, "camera_media")
       : undefined;
@@ -1755,14 +2436,6 @@ async function main(): Promise<void> {
           camera_input: input.request_source === "current_image",
         },
         {
-          max_concurrency: Math.min(
-            parsePositiveInteger(
-              process.env.OLL_SECTION_CONCURRENCY,
-              2,
-              "OLL_SECTION_CONCURRENCY",
-            ),
-            2,
-          ),
           compile: { language: input.language },
           on_rejected_part: (event) => stageLog({
             stage: "lesson-plan-local-rejection",
@@ -1778,13 +2451,6 @@ async function main(): Promise<void> {
           on_playable_prefix: async ({ completed_sections, compiled }) => {
             await publishPrefix(compiled.lesson, completed_sections);
           },
-          on_concurrency_fallback: ({ section, reason }) => stageLog({
-            stage: "lesson-plan-concurrency",
-            turn_id: input.turn_id,
-            status: "fallback",
-            section,
-            reason,
-          }),
         },
       );
       if ("disposition" in generatedLessonPlan) {

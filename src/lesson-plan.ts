@@ -179,9 +179,11 @@ export function matchLessonPlanCapability(features: readonly LessonPlanVisualFea
       const provided: readonly string[] = LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features;
       return {
         capability,
-        extra: 0,
-        matches: provided.length === requested.length
-          && requested.every((feature) => provided.includes(feature)),
+        // The model describes the features it needs; it does not select an
+        // execution program. A program may provide fixed companion features
+        // the model omitted, but it may never omit a requested feature.
+        extra: provided.filter((feature) => !requested.includes(feature)).length,
+        matches: requested.every((feature) => provided.includes(feature)),
       };
     })
     .filter((candidate) => candidate.matches)

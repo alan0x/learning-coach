@@ -12,6 +12,7 @@
     "oll:sync": "node scripts/oll-contract.mjs sync",
     "test": "npm run build && node --test test/*.test.mjs",
     "contract:lesson-plan-vertex": "node scripts/check-lesson-plan-vertex-schema.mjs",
+    "probe:provider-schema": "npm run build && node scripts/probe-structured-provider.mjs",
     "eval:visual": "npm run build && node scripts/eval-visual-generation.mjs",
     "eval:lesson-plan": "node scripts/eval-lesson-plan-generation.mjs"
   },
