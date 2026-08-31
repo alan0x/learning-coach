@@ -938,6 +938,9 @@ test("the complete-lesson command accepts an outline and first section in one mo
     assert.equal(result.exitCode, 0, result.stderr);
     assert.match(result.stderr, /"stage":"lesson-client-timing"/u);
     assert.match(result.stderr, /"submitted_at_epoch_ms":1787600000000/u);
+    assert.match(result.stderr, /"stage":"model-stream"/u);
+    assert.match(result.stderr, /"status":"first-chunk"/u);
+    assert.match(result.stderr, /"stage":"lesson-plan-outline-ready"/u);
     const messages = result.stdout.trim().split("\n").map((line) => JSON.parse(line));
     const completed = messages.find((message) => message.success === true);
     assert.equal(completed.authoring_strategy, "lesson_plan");
@@ -948,6 +951,16 @@ test("the complete-lesson command accepts an outline and first section in one mo
     assert.equal(lesson.dsl, "octos.lesson");
     assert.equal(lesson.steps.length, 1);
     assert.equal(lesson.steps[0].beats[0].actions[0].kind, "math");
+    const trace = (await readFile(
+      join(workDirectory, "study", "oll", "learn-e2e-001.generation-trace.jsonl"),
+      "utf8",
+    )).trim().split("\n").map((line) => JSON.parse(line));
+    assert.ok(trace.length > 0);
+    assert.ok(trace.every((event) => event.schema === "octos.learn.trace.v1"));
+    assert.ok(trace.every((event) => event.source === "learning-coach"));
+    assert.ok(trace.every((event) => event.trace_id === "learn-e2e-001"));
+    assert.ok(trace.some((event) => event.stage === "lesson-plan-outline-ready"));
+    assert.ok(trace.some((event) => event.stage === "lesson-prefix-published"));
   } finally {
     await new Promise((done) => server.close(done));
     await rm(workDirectory, { recursive: true, force: true });
