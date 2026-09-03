@@ -122,7 +122,7 @@ const OUTLINE_SYSTEM_PROMPT = `设计完整课程目录，不生成 OLL、执行
 - 图形拆分移动证明使用 polygon_pieces、rigid_rearrangement、area_relation；ordered_process_steps 只是静态流程。
 - numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。
 - request_coverage 按 request_parts 的原顺序逐项覆盖。可落实写 teach 和章节；当前能力不能完整实现则写 unsupported、空章节和原因，不能用文字或错误画面替代。
-- sections 可含多节，每节可有旁白、板书、动画和练习；close 只总结。
+- 完整课程不得只有一节。sections 至少包含 2 节，通常按主题自然拆成 3–6 节；每节承担不同的教学目的，不要通过重复内容或拆句凑节数。每节可有旁白、板书、动画和练习；close 只总结。
 只返回符合响应 Schema 的 JSON。`;
 
 const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 OLL、执行 ID、变量名、对象名或对象引用。
@@ -2487,6 +2487,21 @@ function partialModelResponse(error: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+function validateGeneratedCompleteOutline(
+  value: unknown,
+  expectedRequestParts: number,
+): LessonPlanOutline {
+  const outline = validateLessonPlanOutline(value, expectedRequestParts);
+  if (outline.sections.length < 2) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_SECTIONS",
+      "$lessonPlanOutline.sections",
+      "a complete course requires at least 2 sections with different teaching purposes",
+    );
+  }
+  return outline;
+}
+
 export async function generateLessonPlanWithModel(
   model: LessonPlanModelCall,
   input: LessonPlanGenerationInput,
@@ -2608,7 +2623,7 @@ export async function generateLessonPlanWithModel(
       throw new LessonPlanError("LESSON_PLAN_MODEL_JSON", "$lessonPlanBootstrap.course", "expected outline and first_section");
     }
     const bootstrap = course as Record<string, unknown>;
-    outline = validateLessonPlanOutline(
+    outline = validateGeneratedCompleteOutline(
       lowerModelOutline(
         coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
         fixedRequestParts.length,
@@ -2651,7 +2666,7 @@ export async function generateLessonPlanWithModel(
       const partialOutline = completedJsonObjectProperty(partialResponse, "outline");
       if (partialOutline !== undefined) {
         try {
-          outline = validateLessonPlanOutline(
+          outline = validateGeneratedCompleteOutline(
             lowerModelOutline(
               coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
               fixedRequestParts.length,
@@ -2720,7 +2735,7 @@ export async function generateLessonPlanWithModel(
       const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
       const admitted = admissionCourse(parsed, observeCamera);
       if (admitted.result) return admitted.result;
-      outline = validateLessonPlanOutline(
+      outline = validateGeneratedCompleteOutline(
         lowerModelOutline(
           coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
           fixedRequestParts.length,

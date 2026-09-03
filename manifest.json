@@ -12,6 +12,8 @@
       "concurrency_class": "exclusive",
       "env": [
         "OLL_PROVIDER",
+        "OCTOS_PROFILE_LLM_PROVIDER",
+        "OCTOS_PROFILE_LLM_MODEL",
         "OLL_FALLBACK_PROVIDER",
         "OLL_HEDGE_DELAY_MS",
         "VERTEX_SA_JSON",
@@ -101,6 +103,8 @@
       "concurrency_class": "exclusive",
       "env": [
         "OLL_PROVIDER",
+        "OCTOS_PROFILE_LLM_PROVIDER",
+        "OCTOS_PROFILE_LLM_MODEL",
         "VERTEX_SA_JSON",
         "VERTEX_ACCESS_TOKEN",
         "GOOGLE_CLOUD_PROJECT",
@@ -142,6 +146,8 @@
       "concurrency_class": "exclusive",
       "env": [
         "OLL_PROVIDER",
+        "OCTOS_PROFILE_LLM_PROVIDER",
+        "OCTOS_PROFILE_LLM_MODEL",
         "VERTEX_SA_JSON",
         "VERTEX_ACCESS_TOKEN",
         "GOOGLE_CLOUD_PROJECT",

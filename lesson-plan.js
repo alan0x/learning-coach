@@ -13270,7 +13270,7 @@ function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
     },
     sections: {
       type: "array",
-      minItems: 1,
+      minItems: 2,
       maxItems: 24,
       items: object({
         purpose: string(480),
@@ -13442,7 +13442,7 @@ var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uF
 - \u56FE\u5F62\u62C6\u5206\u79FB\u52A8\u8BC1\u660E\u4F7F\u7528 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1Bordered_process_steps \u53EA\u662F\u9759\u6001\u6D41\u7A0B\u3002
 - numbers \u53EA\u5199\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3001\u8303\u56F4\u548C\u521D\u503C\uFF0C\u987A\u5E8F\u4F9D visual_recipes \u7684 numbers\uFF1B\u63A7\u4EF6\u4E0E\u6B65\u957F\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - request_coverage \u6309 request_parts \u7684\u539F\u987A\u5E8F\u9010\u9879\u8986\u76D6\u3002\u53EF\u843D\u5B9E\u5199 teach \u548C\u7AE0\u8282\uFF1B\u5F53\u524D\u80FD\u529B\u4E0D\u80FD\u5B8C\u6574\u5B9E\u73B0\u5219\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u548C\u539F\u56E0\uFF0C\u4E0D\u80FD\u7528\u6587\u5B57\u6216\u9519\u8BEF\u753B\u9762\u66FF\u4EE3\u3002
-- sections \u53EF\u542B\u591A\u8282\uFF0C\u6BCF\u8282\u53EF\u6709\u65C1\u767D\u3001\u677F\u4E66\u3001\u52A8\u753B\u548C\u7EC3\u4E60\uFF1Bclose \u53EA\u603B\u7ED3\u3002
+- \u5B8C\u6574\u8BFE\u7A0B\u4E0D\u5F97\u53EA\u6709\u4E00\u8282\u3002sections \u81F3\u5C11\u5305\u542B 2 \u8282\uFF0C\u901A\u5E38\u6309\u4E3B\u9898\u81EA\u7136\u62C6\u6210 3\u20136 \u8282\uFF1B\u6BCF\u8282\u627F\u62C5\u4E0D\u540C\u7684\u6559\u5B66\u76EE\u7684\uFF0C\u4E0D\u8981\u901A\u8FC7\u91CD\u590D\u5185\u5BB9\u6216\u62C6\u53E5\u51D1\u8282\u6570\u3002\u6BCF\u8282\u53EF\u6709\u65C1\u767D\u3001\u677F\u4E66\u3001\u52A8\u753B\u548C\u7EC3\u4E60\uFF1Bclose \u53EA\u603B\u7ED3\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
 var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5B9A\u7684\u4E00\u8282\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u6216\u5BF9\u8C61\u5F15\u7528\u3002
 - \u5FC5\u987B\u843D\u5B9E\u76EE\u5F55\u5206\u914D\u7684 request_parts\u3002\u65C1\u767D\u4E0E\u5BF9\u5E94\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002
@@ -15333,6 +15333,17 @@ function partialModelResponse(error) {
   const value = error.partialResponse;
   return typeof value === "string" && value.trim() ? value : void 0;
 }
+function validateGeneratedCompleteOutline(value, expectedRequestParts) {
+  const outline = validateLessonPlanOutline(value, expectedRequestParts);
+  if (outline.sections.length < 2) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_SECTIONS",
+      "$lessonPlanOutline.sections",
+      "a complete course requires at least 2 sections with different teaching purposes"
+    );
+  }
+  return outline;
+}
 async function generateLessonPlanWithModel(model, input, options = {}) {
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");
   let context = inputContext(input);
@@ -15432,7 +15443,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       throw new LessonPlanError("LESSON_PLAN_MODEL_JSON", "$lessonPlanBootstrap.course", "expected outline and first_section");
     }
     const bootstrap = course;
-    outline = validateLessonPlanOutline(
+    outline = validateGeneratedCompleteOutline(
       lowerModelOutline(
         coerceLessonPlanOutlineModelNumbers(bootstrap.outline, fixedRequestParts.length),
         fixedRequestParts.length
@@ -15475,7 +15486,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       const partialOutline = completedJsonObjectProperty(partialResponse, "outline");
       if (partialOutline !== void 0) {
         try {
-          outline = validateLessonPlanOutline(
+          outline = validateGeneratedCompleteOutline(
             lowerModelOutline(
               coerceLessonPlanOutlineModelNumbers(partialOutline, fixedRequestParts.length),
               fixedRequestParts.length
@@ -15531,7 +15542,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
       const admitted = admissionCourse(parsed, observeCamera);
       if (admitted.result) return admitted.result;
-      outline = validateLessonPlanOutline(
+      outline = validateGeneratedCompleteOutline(
         lowerModelOutline(
           coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
           fixedRequestParts.length
