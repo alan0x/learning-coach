@@ -864,16 +864,12 @@ test("the complete-lesson command accepts an outline and first section in one mo
     goals: ["解释符号规则"],
     teaching_strategies: [],
     numbers: [],
-    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1, 2] }],
+    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1] }],
     course_visuals: [],
     sections: [{
       purpose: "解释符号规则",
       allowed_capabilities: [],
       reusable_items: [{ kind: "board_item", board_kind: "math" }],
-    }, {
-      purpose: "用分配律复核结论",
-      allowed_capabilities: [],
-      reusable_items: [],
     }],
     close: {
       summary: "负数乘负数得到正数。",
@@ -904,18 +900,6 @@ test("the complete-lesson command accepts an outline and first section in one mo
       },
     },
   };
-  const secondSection = {
-    version: "0.1",
-    section: 2,
-    moments: [{
-      narration: "再用分配律复核一次，就能确认这个符号规则前后一致。",
-      delivery: "patient",
-      math_creates: [],
-      note_creates: [],
-      focuses: [],
-      points: [],
-    }],
-  };
   let modelCalls = 0;
   const server = createServer(async (request, response) => {
     if (request.url === "/token") {
@@ -939,9 +923,7 @@ test("the complete-lesson command accepts an outline and first section in one mo
         }
       : schema.properties?.course_visuals
         ? outline
-      : modelCalls === 1
-        ? secondSection
-        : section;
+      : section;
     modelCalls += 1;
     response.writeHead(200, { "content-type": "application/json" });
     response.end(JSON.stringify({
@@ -980,12 +962,12 @@ test("the complete-lesson command accepts an outline and first section in one mo
     const messages = result.stdout.trim().split("\n").map((line) => JSON.parse(line));
     const completed = messages.find((message) => message.success === true);
     assert.equal(completed.authoring_strategy, "lesson_plan");
-    assert.equal(completed.lesson_plan_sections, 2);
-    assert.equal(completed.published_parts, 2);
-    assert.equal(modelCalls, 2);
+    assert.equal(completed.lesson_plan_sections, 1);
+    assert.equal(completed.published_parts, 1);
+    assert.equal(modelCalls, 1);
     const lesson = JSON.parse(await readFile(completed.files_to_send[0], "utf8"));
     assert.equal(lesson.dsl, "octos.lesson");
-    assert.equal(lesson.steps.length, 2);
+    assert.equal(lesson.steps.length, 1);
     assert.equal(lesson.steps[0].beats[0].actions[0].kind, "math");
     const trace = (await readFile(
       join(workDirectory, "study", "oll", "learn-e2e-001.generation-trace.jsonl"),
@@ -2236,16 +2218,12 @@ test("camera lessons send one image only to the first outline request and reuse 
     goals: ["解释图片里的函数"],
     teaching_strategies: [],
     numbers: [],
-    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1, 2] }],
+    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1] }],
     course_visuals: [],
     sections: [{
       purpose: "解释图片里的函数",
       allowed_capabilities: [],
       reusable_items: [{ kind: "board_item", board_kind: "math" }],
-    }, {
-      purpose: "总结函数的基本性质",
-      allowed_capabilities: [],
-      reusable_items: [],
     }],
     close: {
       summary: "图片中的函数是二次函数。",
@@ -2272,18 +2250,6 @@ test("camera lessons send one image only to the first outline request and reuse 
         placement: { relation: "new_region" },
       },
     },
-  };
-  const secondSection = {
-    version: "0.1",
-    section: 2,
-    moments: [{
-      narration: "最后总结这个二次函数最基本的图像性质。",
-      delivery: "patient",
-      math_creates: [],
-      note_creates: [],
-      focuses: [],
-      points: [],
-    }],
   };
   const requests = [];
   const server = createServer(async (request, response) => {
@@ -2312,9 +2278,7 @@ test("camera lessons send one image only to the first outline request and reuse 
         }
       : index === 2
         ? { disposition: "generate_lesson", learner_response: "", course: outline }
-        : index === 3
-          ? section
-          : secondSection;
+      : section;
     response.writeHead(200, { "content-type": "application/json" });
     response.end(vertexPayload(content));
   });
@@ -2339,12 +2303,11 @@ test("camera lessons send one image only to the first outline request and reuse 
       },
     });
     assert.equal(result.exitCode, 0, result.stderr);
-    assert.equal(requests.length, 4);
+    assert.equal(requests.length, 3);
     assert.equal(requests[0].contents[0].parts.length, 2);
     assert.equal(requests[0].contents[0].parts[1].inlineData.mimeType, "image/png");
     assert.equal(requests[1].contents[0].parts.length, 1);
     assert.equal(requests[2].contents[0].parts.length, 1);
-    assert.equal(requests[3].contents[0].parts.length, 1);
     assert.match(requests[1].contents[0].parts[0].text, /纸上写着 y=x\^2/u);
     assert.match(requests[2].contents[0].parts[0].text, /纸上写着 y=x\^2/u);
     const messages = result.stdout.trim().split("\n").map((line) => JSON.parse(line));

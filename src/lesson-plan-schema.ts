@@ -587,7 +587,7 @@ function lessonPlanOutlineShapeJsonSchema(requestPartCount: number): LessonPlanJ
     },
     sections: {
       type: "array",
-      minItems: 2,
+      minItems: 1,
       maxItems: 24,
       items: object({
         purpose: string(480),
