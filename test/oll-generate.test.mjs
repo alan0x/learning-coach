@@ -12,6 +12,7 @@ import {
   callStructuredModel,
   createArkClient,
   createGeminiApiClient,
+  createStructuredModelClient,
   createVertexClient,
   HedgedStructuredModelRouter,
   probeVertexSchema,
@@ -778,11 +779,14 @@ test("Ark structured calls require strict json_schema instead of prompt-only JSO
   }
 });
 
-test("API-key clients require their own credentials and Ark requires an explicit model", async () => {
+test("API-key clients use explicit settings before the active Octos profile selection", async () => {
   const previous = {
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     ARK_API_KEY: process.env.ARK_API_KEY,
+    OLL_PROVIDER: process.env.OLL_PROVIDER,
     OLL_MODEL: process.env.OLL_MODEL,
+    OCTOS_PROFILE_LLM_PROVIDER: process.env.OCTOS_PROFILE_LLM_PROVIDER,
+    OCTOS_PROFILE_LLM_MODEL: process.env.OCTOS_PROFILE_LLM_MODEL,
   };
   try {
     process.env.GEMINI_API_KEY = "gemini-key";
@@ -796,6 +800,20 @@ test("API-key clients require their own credentials and Ark requires an explicit
     const ark = await createArkClient();
     assert.equal(ark.provider, "ark");
     assert.match(ark.endpoint, /\/api\/v3\/responses$/u);
+
+    delete process.env.OLL_PROVIDER;
+    delete process.env.OLL_MODEL;
+    process.env.OCTOS_PROFILE_LLM_PROVIDER = "google";
+    process.env.OCTOS_PROFILE_LLM_MODEL = "gemini-profile-model";
+    const profileGemini = await createStructuredModelClient();
+    assert.equal(profileGemini.provider, "gemini");
+    assert.equal(profileGemini.model, "gemini-profile-model");
+
+    process.env.OLL_PROVIDER = "ark";
+    process.env.OLL_MODEL = "ark-explicit-model";
+    const explicitArk = await createStructuredModelClient();
+    assert.equal(explicitArk.provider, "ark");
+    assert.equal(explicitArk.model, "ark-explicit-model");
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];
@@ -2260,7 +2278,7 @@ test("camera lessons send one image only to the first outline request and reuse 
         }
       : index === 2
         ? { disposition: "generate_lesson", learner_response: "", course: outline }
-        : section;
+      : section;
     response.writeHead(200, { "content-type": "application/json" });
     response.end(vertexPayload(content));
   });

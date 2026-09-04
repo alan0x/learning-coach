@@ -867,7 +867,7 @@ function vertexPaygoMode(): "standard" | "priority" {
 export async function createVertexClient(): Promise<VertexClient> {
   const hostAccessToken = process.env.VERTEX_ACCESS_TOKEN?.trim();
   const account = hostAccessToken ? undefined : parseServiceAccount();
-  const model = process.env.OLL_MODEL?.trim() || DEFAULT_MODEL;
+  const model = configuredModel() || DEFAULT_MODEL;
   const project = requireNonEmptyString(
     process.env.GOOGLE_CLOUD_PROJECT?.trim() || account?.project_id,
     "GOOGLE_CLOUD_PROJECT",
@@ -949,7 +949,7 @@ function apiKeyClientLimits(): Pick<
 
 export async function createGeminiApiClient(): Promise<ApiKeyModelClient> {
   const apiKey = requireNonEmptyString(process.env.GEMINI_API_KEY, "GEMINI_API_KEY");
-  const model = process.env.OLL_MODEL?.trim() || DEFAULT_MODEL;
+  const model = configuredModel() || DEFAULT_MODEL;
   return {
     provider: "gemini",
     endpoint: directGeminiEndpoint(model),
@@ -961,7 +961,7 @@ export async function createGeminiApiClient(): Promise<ApiKeyModelClient> {
 
 export async function createArkClient(): Promise<ApiKeyModelClient> {
   const apiKey = requireNonEmptyString(process.env.ARK_API_KEY, "ARK_API_KEY");
-  const model = requireNonEmptyString(process.env.OLL_MODEL, "OLL_MODEL");
+  const model = requireNonEmptyString(configuredModel(), "OLL_MODEL or OCTOS_PROFILE_LLM_MODEL");
   return {
     provider: "ark",
     endpoint: arkEndpoint(),
@@ -972,8 +972,28 @@ export async function createArkClient(): Promise<ApiKeyModelClient> {
 }
 
 export async function createStructuredModelClient(): Promise<StructuredModelClient> {
-  const provider = process.env.OLL_PROVIDER?.trim().toLowerCase() || "vertex";
+  const provider = configuredProvider();
   return createStructuredModelClientFor(provider);
+}
+
+function configuredModel(): string | undefined {
+  return process.env.OLL_MODEL?.trim() || process.env.OCTOS_PROFILE_LLM_MODEL?.trim() || undefined;
+}
+
+function configuredProvider(): string {
+  const explicit = process.env.OLL_PROVIDER?.trim().toLowerCase();
+  if (explicit) return explicit;
+
+  const profileProvider = process.env.OCTOS_PROFILE_LLM_PROVIDER?.trim().toLowerCase();
+  if (!profileProvider) return "vertex";
+  if (profileProvider === "google" || profileProvider === "gemini") return "gemini";
+  if (profileProvider === "vertex" || profileProvider === "vertex-ai" || profileProvider === "vertexai") {
+    return "vertex";
+  }
+  if (profileProvider === "ark" || profileProvider === "volcengine" || profileProvider === "bytedance") {
+    return "ark";
+  }
+  return profileProvider;
 }
 
 async function createStructuredModelClientFor(provider: string): Promise<StructuredModelClient> {
@@ -2785,7 +2805,7 @@ async function main(): Promise<void> {
       });
       emit({
         success: true,
-        output: `Validated OLL lesson generated through the Lesson Plan path with ${process.env.OLL_MODEL?.trim() || DEFAULT_MODEL}.`,
+        output: `Validated OLL lesson generated through the Lesson Plan path with ${configuredModel() || DEFAULT_MODEL}.`,
         files_to_send: [artifactPath],
         authoring_strategy: "lesson_plan",
         lesson_plan_model_calls: generatedLessonPlan.model_calls,
