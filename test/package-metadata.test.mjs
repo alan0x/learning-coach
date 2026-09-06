@@ -19,3 +19,11 @@ test("package, manifest, and skill metadata publish the same version", async () 
   assert.equal(manifestJson.version, packageJson.version);
   assert.equal(skillVersion, packageJson.version);
 });
+
+test("the text lesson action accepts established context for a short follow-up", async () => {
+  const manifest = JSON.parse(await readFile(new URL("manifest.json", projectRoot), "utf8"));
+  const action = manifest.actions.find(({ id }) => id === "learning.lesson.generate");
+
+  assert.equal(action.input_schema.properties.learner_context.type, "string");
+  assert.equal(action.input_schema.required.includes("learner_context"), false);
+});

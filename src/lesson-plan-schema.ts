@@ -180,7 +180,7 @@ function visualParametersSchema(
     properties.section_axis = { enum: ["x", "y", "z"] };
   }
   if (uses("implicit_surface_with_section")) properties.level = { type: "number" };
-  if (uses("circle_and_arc") || uses("coordinate_circle")) properties.radius = { type: "number", minimum: 0 };
+  if (modelParameters.has("radius")) properties.radius = { type: "number", minimum: 0 };
   if (uses("circle_and_arc")) properties.angle = { type: "number" };
   if (uses("coordinate_circle")) {
     properties.center_x = { type: "number" };

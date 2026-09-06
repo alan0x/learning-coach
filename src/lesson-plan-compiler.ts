@@ -1,3 +1,5 @@
+import { normalizePlotInputInstructions, validateTeachingClaims } from "./teaching-contracts.js";
+import { functionViewport } from "./function-viewport.js";
 import {
   compileMathExpression,
   normalizeAuthoringLesson,
@@ -79,6 +81,23 @@ function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbe
     parameters,
     ...(includeNumbers ? { numbers: content.numbers ?? [] } : {}),
   }));
+}
+
+function separateInitialSamples(plan: LessonPlan): void {
+  const words = JSON.stringify(plan.sections.map(s => s.moments.map(m => m.narration)));
+  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合/.test(words)) return;
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    const visual = action.content as LessonPlanVisualContent;
+    if (visual.capability !== "function_plot" || visual.numbers?.length !== 2) continue;
+    const tokens = visual.parameters?.expression_tokens;
+    if (Array.isArray(tokens) && tokens.some(t => t && typeof t === "object" && "kind" in t && t.kind === "number")) continue;
+    const a = plan.numbers?.[visual.numbers[0]-1], b = plan.numbers?.[visual.numbers[1]-1];
+    if (!a || !b || a === b || Math.abs(a.initial-b.initial)>1e-8) continue;
+    const step = b.student_control?.step ?? (b.max-b.min)/200;
+    const delta = Math.max(step, Math.round((b.max-b.min)/5/step)*step);
+    b.initial = b.initial+delta <= b.max ? b.initial+delta : Math.max(b.min,b.initial-delta);
+  }
 }
 
 function mergeEquivalentVisualInputs(plan: LessonPlan): void {
@@ -197,72 +216,6 @@ function evaluate(expression: string, variables: string[], values: Record<string
   }
 }
 
-function numericCombinations(
-  entries: Array<{ name: string; values: number[] }>,
-): Array<Record<string, number>> {
-  return entries.reduce<Array<Record<string, number>>>(
-    (combinations, entry) => combinations.flatMap((combination) => (
-      entry.values.map((value) => ({ ...combination, [entry.name]: value }))
-    )),
-    [{}],
-  );
-}
-
-function paddedNumericRange(values: number[], fallback: { min: number; max: number }): { min: number; max: number } {
-  const finite = values.filter((value) => Number.isFinite(value) && Math.abs(value) <= 1e12).sort((a, b) => a - b);
-  if (finite.length === 0) return fallback;
-  const low = finite[Math.floor((finite.length - 1) * 0.02)]!;
-  const high = finite[Math.ceil((finite.length - 1) * 0.98)]!;
-  const span = high - low;
-  const padding = span > 1e-9 ? span * 0.12 : Math.max(0.5, Math.abs(low) * 0.2);
-  return { min: low - padding, max: high + padding };
-}
-
-function deterministicFunctionViewport(
-  expressions: string[],
-  variables: string[],
-  parameterValues: Array<Record<string, number>>,
-  requestedX: { min: number; max: number } | undefined,
-  path: string,
-): { x: { min: number; max: number }; y: { min: number; max: number } } {
-  const evaluators = expressions.map((expression) => compileMathExpression(expression, variables));
-  const candidates = requestedX ? [requestedX] : [
-    { min: -4, max: 4 },
-    { min: 0.05, max: 8 },
-    { min: -10, max: 10 },
-  ];
-  let best: { x: { min: number; max: number }; values: number[]; ratio: number } | undefined;
-  for (const xRange of candidates) {
-    const values: number[] = [];
-    let attempts = 0;
-    for (let index = 0; index <= 120; index += 1) {
-      const x = xRange.min + (xRange.max - xRange.min) * index / 120;
-      for (const parameters of parameterValues) {
-        for (const evaluator of evaluators) {
-          attempts += 1;
-          try {
-            const value = evaluator({ x, ...parameters });
-            if (Number.isFinite(value) && Math.abs(value) <= 1e12) values.push(value);
-          } catch {
-            // Keep sampling. A candidate that crosses a singularity can still
-            // be useful when most of its domain is finite.
-          }
-        }
-      }
-    }
-    const ratio = attempts > 0 ? values.length / attempts : 0;
-    if (!best || ratio > best.ratio) best = { x: xRange, values, ratio };
-    if (ratio >= 0.75) {
-      best = { x: xRange, values, ratio };
-      break;
-    }
-  }
-  if (!best || best.values.length < 8) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", path, "function has no stable finite viewport");
-  }
-  return { x: best.x, y: paddedNumericRange(best.values, { min: -1, max: 1 }) };
-}
-
 export function mathExpressionToOll(expression: LessonPlanMathExpression): string {
   const operators = {
     add: "+",
@@ -371,13 +324,6 @@ function compileFunctionPlot(
       "a function plot requires an explicit mathematical expression",
     );
   }
-  if ((content.numbers?.length ?? 0) > 1 && dynamicTokens === undefined) {
-    fail(
-      "LESSON_PLAN_CAPABILITY_PARAMETER",
-      `${path}.expression_tokens`,
-      "a function plot with multiple numeric inputs must define how those inputs change the whole curve",
-    );
-  }
   const dynamicNumbers = dynamicTokens === undefined
     ? []
     : [...new Set(dynamicTokens.flatMap((token) => token.kind === "number" ? [token.number] : []))];
@@ -398,11 +344,11 @@ function compileFunctionPlot(
         "function_plot numbers must exactly match the number references in expression_tokens",
       );
     }
-    if (dynamicNumbers.length === 0 && declaredNumbers.length > 1) {
+    if (dynamicNumbers.length === 0 && declaredNumbers.length > 2) {
       fail(
         "LESSON_PLAN_CAPABILITY_PARAMETER",
         `${path}.numbers`,
-        "a function curve without numeric parameters can use at most one number as its moving sample",
+        "a static function supports at most two independent sample points",
       );
     }
   }
@@ -421,12 +367,10 @@ function compileFunctionPlot(
   if (curveLabels.length > 0 && curveLabels.length !== expressions.length) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.curve_labels`, "curve label count must equal expression count");
   }
-  const number = dynamicTokens === undefined || dynamicNumbers.length === 0
-    ? content.numbers?.[0]
-    : undefined;
-  const definition = number
-    ? numberDefinition(plan, number, `${path}.numbers[0]`)
-    : undefined;
+  const sampleNumbers = dynamicNumbers.length === 0 ? [...new Set(content.numbers ?? [])] : [];
+  if (sampleNumbers.length > 2) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "static curves support at most two sample points");
+  const number = sampleNumbers[0];
+  const definition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : undefined;
   let requestedX = input.x_min !== undefined || input.x_max !== undefined
     ? {
         min: optionalNumber(input.x_min, -4, `${path}.x_min`),
@@ -434,7 +378,8 @@ function compileFunctionPlot(
       }
     : undefined;
   if (requestedX) assertRange(requestedX.min, requestedX.max, `${path}.x_range`);
-  if (definition) {
+  for (const sampleNumber of sampleNumbers) {
+    const definition = numberDefinition(plan, sampleNumber, `${path}.numbers`);
     // The Lesson Plan describes what should be taught; the compiler owns the
     // mechanical viewport needed to make that teaching state visible. A model
     // should not spend another request merely copying a slider's numeric range
@@ -444,20 +389,15 @@ function compileFunctionPlot(
       max: Math.max(requestedX?.max ?? definition.max, definition.max),
     };
   }
-  const parameterValues = numericCombinations(dynamicNumbers.map((numberIndex) => {
-    const item = numberDefinition(plan, numberIndex, `${path}.numbers`);
-    return {
-      name: variableAlias(numberIndex),
-      values: [item.min, (item.min + item.max) / 2, item.max],
-    };
-  }));
-  const viewport = deterministicFunctionViewport(
-    expressions,
-    expressionVariables,
-    parameterValues,
-    requestedX,
-    `${path}.expression`,
-  );
+  let viewport: ReturnType<typeof functionViewport>;
+  try {
+    viewport = functionViewport(expressions, dynamicNumbers.map(index => {
+      const item = numberDefinition(plan, index, `${path}.numbers`);
+      return { name: variableAlias(index), initial: item.initial, min: item.min, max: item.max };
+    }), requestedX);
+  } catch (error) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, error instanceof Error ? error.message : "invalid viewport");
+  }
   const requestedY = input.y_min !== undefined || input.y_max !== undefined
     ? {
         min: optionalNumber(input.y_min, viewport.y.min, `${path}.y_min`),
@@ -468,6 +408,7 @@ function compileFunctionPlot(
   const plotContent: Record<string, unknown> = {
     title: optionalText(input.title, "函数图像", `${path}.title`),
     axes: {
+      ...(expressions.length > 1 && expressions.some(e => e.replace(/[()\s]/g, "") === "x") ? {equal_scale:true} : {}),
       x: { min: viewport.x.min, max: viewport.x.max, label: "x" },
       y: { min: requestedY.min, max: requestedY.max, label: "y" },
     },
@@ -478,17 +419,38 @@ function compileFunctionPlot(
         ?? (index === 0 ? optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`) : `y = ${item}`),
     })),
   };
-  if (number && definition) {
-    for (const x of [definition.min, definition.initial, definition.max]) {
-      evaluate(expression, ["x"], { x }, `${path}.expression`);
+  if (sampleNumbers.length) {
+    plotContent.points = sampleNumbers.map((sampleNumber, index) => {
+      const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+      for (const x of [d.min, d.initial, d.max]) evaluate(expression, ["x"], {x}, `${path}.expression`);
+      return { as: index === 0 ? "moving-point" : "second-point", x: d.initial,
+        y: evaluate(expression, ["x"], {x:d.initial}, `${path}.expression`),
+        label: sampleNumbers.length === 2 ? (index === 0 ? "A" : "B") : "P(x, y)" };
+    });
+    plotContent.bindings = sampleNumbers.flatMap((sampleNumber, index) => {
+      const point = index === 0 ? "moving-point" : "second-point";
+      const variable = variableAlias(sampleNumber);
+      return [{target:`${point}.x`,expression:variable},
+        {target:`${point}.y`,expression:replaceIdentifier(expression,"x",variable)}];
+    });
+    if (sampleNumbers.length === 2) plotContent.measurement = "secant";
+  }
+  // Slope lessons with curve parameters still need visible reference points.
+  // Their x positions are fixed; the parameter sliders change the curve.
+  if (!sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
+    const initialVariables = Object.fromEntries(dynamicNumbers.map(index =>
+      [variableAlias(index), numberDefinition(plan, index, path).initial]));
+    const xs = [0, 1];
+    const ys = xs.map(x => {
+      try { return evaluate(expression, expressionVariables, {...initialVariables, x}, path); }
+      catch { return NaN; }
+    });
+    if (ys.every(Number.isFinite)) {
+      plotContent.points = xs.map((x, index) => ({as:index ? "reference-b" : "reference-a", x, y:ys[index], label:index ? "B" : "A"}));
+      plotContent.bindings = xs.map((x, index) => ({target:`${index ? "reference-b" : "reference-a"}.y`, expression:replaceIdentifier(expression,"x",String(x))}));
+      plotContent.measurement = "secant";
+      plotContent.sample_input = "fixed_x";
     }
-    const y = evaluate(expression, ["x"], { x: definition.initial }, `${path}.expression`);
-    const variable = variableAlias(number);
-    plotContent.points = [{ as: "moving-point", x: definition.initial, y, label: "P(x, y)" }];
-    plotContent.bindings = [
-      { target: "moving-point.x", expression: variable },
-      { target: "moving-point.y", expression: replaceIdentifier(expression, "x", variable) },
-    ];
   }
   return {
     actions: [{ do: "write", as: base, kind: "plot", role, content: plotContent, place: placement }],
@@ -1128,6 +1090,51 @@ function compileGeometricRearrangement(
   };
 }
 
+/** True circular sectors, not triangles or a finite "exact rectangle". */
+function compileCircleArea(
+  base: string, content: LessonPlanVisualContent, role: string,
+  placement: ReturnType<typeof place>, plan: LessonPlan, path: string,
+): CompiledVisual {
+  const input=parameters(content);
+  allowParameterKeys(input,["title","radius"],path);
+  const r=optionalNumber(input.radius,2,`${path}.radius`);
+  if (r<=0 || r>1e6) fail("LESSON_PLAN_CAPABILITY_PARAMETER",path,"radius must be positive and bounded");
+  const number=content.numbers?.[0];
+  const d=number?numberDefinition(plan,number,path):undefined;
+  const variable=number?variableAlias(number):undefined;
+  const progress=variable&&d?`(${variable}-${d.min})/(${d.max-d.min})`:"0";
+  const initial=d?(d.initial-d.min)/(d.max-d.min):0;
+  const actions: AuthoringAction[]=[];
+  for (const [panel,n] of [8,16].entries()) {
+    const id=panel===0?base:`${base}-refined`;
+    const angle=2*Math.PI/n, chord=2*r*Math.sin(angle/2), height=r*Math.cos(angle/2);
+    const points: Array<Record<string,unknown>>=[];
+    const arcs: Array<Record<string,unknown>>=[];
+    const bindings: Array<{target:string;expression:string}>=[];
+    for(let i=0;i<n;i++) {
+      const center=`center-${i}`, sector=`sector-${i}`;
+      const up=i%2===0;
+      const endX=(i/2)*chord, endY=up?0:height;
+      const start=i*angle, end=(up?Math.PI/2:-Math.PI/2)-angle/2;
+      points.push({as:center,x:endX*initial,y:endY*initial,visible:false});
+      arcs.push({as:sector,center,radius:r,start_angle:start+(end-start)*initial,end_angle:start+angle+(end-start)*initial,filled:true});
+      if(variable) bindings.push(
+        {target:`${center}.x`,expression:`${endX}*(${progress})`},
+        {target:`${center}.y`,expression:`${endY}*(${progress})`},
+        {target:`${sector}.start_angle`,expression:linearExpression(start,end,progress)},
+        {target:`${sector}.end_angle`,expression:linearExpression(start+angle,end+angle,progress)},
+      );
+    }
+    actions.push({do:"write",as:id,kind:"geometry",role,place:panel===0?placement:{relation:"below",anchor:base,gap:"normal"},content:{
+      title:`${n} 等分圆的面积重排`,
+      caption:`半径 r=${r}；每块均为真实扇形，重排面积不变。有限等分的边缘仍弯曲；等分越细，底趋近 πr，高趋近 r，面积为 πr²。`,
+      axes:{x:{min:-r*1.3,max:Math.PI*r+r},y:{min:-r*1.3,max:r*1.6},equal_scale:true},
+      points,arcs,...(bindings.length?{bindings}:{}),
+    }});
+  }
+  return {actions,whole:base,parts:new Map([["whole",base],...(variable?[["primary_control",base] as [string,string]]:[])])};
+}
+
 function compileProcessDiagram(
   base: string,
   content: LessonPlanVisualContent,
@@ -1180,6 +1187,7 @@ const VISUAL_COMPILERS = {
   coordinate_circle: compileCoordinateCircle,
   geometric_rearrangement: compileGeometricRearrangement,
   process_diagram: compileProcessDiagram,
+  circle_area_rearrangement: compileCircleArea,
 } satisfies Record<LessonPlanVisualContent["capability"], VisualCompiler>;
 
 function intersectProgramRange(
@@ -1390,8 +1398,11 @@ function compilePlainContent(
 export function compileLessonPlan(value: unknown, options: CompileLessonPlanOptions = {}): CompiledLessonPlan {
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
+  normalizePlotInputInstructions(plan);
+  validateTeachingClaims(plan);
   normalizeProgramOwnedNumberRanges(plan);
   mergeEquivalentVisualInputs(plan);
+  separateInitialSamples(plan);
   const resolvedReferences = new Map(resolved.references.map((item) => [item.path, item]));
   const wholeTargets = new Map<string, string>();
   const partTargets = new Map<string, Map<string, string>>();

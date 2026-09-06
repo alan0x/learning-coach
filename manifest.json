@@ -314,6 +314,10 @@
             "enum": ["self_contained"]
           },
           "language": { "type": "string" },
+          "learner_context": {
+            "type": "string",
+            "description": "Optional nearby problem statement or established math context for a short follow-up question."
+          },
           "input_modality": {
             "type": "string",
             "enum": ["text", "voice"]
