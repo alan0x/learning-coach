@@ -28,9 +28,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/code.js
+// node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -182,9 +182,9 @@ var require_code = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/scope.js
+// node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -327,9 +327,9 @@ var require_scope = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/index.js
+// node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -1047,9 +1047,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/util.js
+// node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/util.js"(exports) {
+  "node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1214,9 +1214,9 @@ var require_util = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/names.js
+// node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/names.js"(exports) {
+  "node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1253,9 +1253,9 @@ var require_names = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/errors.js
+// node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/errors.js"(exports) {
+  "node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1375,9 +1375,9 @@ var require_errors = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/boolSchema.js
+// node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1426,9 +1426,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/rules.js
+// node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/rules.js"(exports) {
+  "node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1457,9 +1457,9 @@ var require_rules = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/applicability.js
+// node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1480,9 +1480,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/dataType.js
+// node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1664,9 +1664,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/defaults.js
+// node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1701,9 +1701,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/code.js
+// node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1834,9 +1834,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/keyword.js
+// node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1952,9 +1952,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/subschema.js
+// node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2035,9 +2035,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal/index.js
+// node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal/index.js"(exports, module) {
+  "node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2070,9 +2070,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// node_modules/.pnpm/json-schema-traverse@1.0.0/node_modules/json-schema-traverse/index.js
+// node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "node_modules/.pnpm/json-schema-traverse@1.0.0/node_modules/json-schema-traverse/index.js"(exports, module) {
+  "node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2158,9 +2158,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/resolve.js
+// node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2314,9 +2314,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/index.js
+// node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2822,9 +2822,9 @@ var require_validate = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/validation_error.js
+// node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2838,9 +2838,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/ref_error.js
+// node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2855,9 +2855,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/index.js
+// node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/index.js"(exports) {
+  "node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3079,9 +3079,9 @@ var require_compile = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/data.json
+// node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3098,33 +3098,15 @@ var require_data = __commonJS({
   }
 });
 
-// node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/lib/utils.js
+// node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
     var isHexPair = RegExp.prototype.test.bind(/^[\da-f]{2}$/iu);
     var isUnreserved = RegExp.prototype.test.bind(/^[\da-z\-._~]$/iu);
-    var isPathCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:@/]$/u);
-    var isQueryFragmentCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:@/?]$/u);
-    var isUserinfoCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:]$/u);
-    var BYTE_HEX = new Array(256);
-    {
-      const HEX_DIGITS = "0123456789ABCDEF";
-      for (let i = 0; i < 256; i++) {
-        BYTE_HEX[i] = "%" + HEX_DIGITS[i >> 4] + HEX_DIGITS[i & 15];
-      }
-    }
-    function percentEncodeNonAscii(cp) {
-      if (cp < 2048) {
-        return BYTE_HEX[192 | cp >> 6] + BYTE_HEX[128 | cp & 63];
-      }
-      if (cp < 65536) {
-        return BYTE_HEX[224 | cp >> 12] + BYTE_HEX[128 | cp >> 6 & 63] + BYTE_HEX[128 | cp & 63];
-      }
-      return BYTE_HEX[240 | cp >> 18] + BYTE_HEX[128 | cp >> 12 & 63] + BYTE_HEX[128 | cp >> 6 & 63] + BYTE_HEX[128 | cp & 63];
-    }
+    var isPathCharacter = RegExp.prototype.test.bind(/^[\da-z\-._~!$&'()*+,;=:@/]$/iu);
     function stringArrayToHexStripped(input) {
       let acc = "";
       let code = 0;
@@ -3149,105 +3131,91 @@ var require_utils = __commonJS({
       }
       return acc;
     }
-    var isHextet = RegExp.prototype.test.bind(/^[\dA-Fa-f]{1,4}$/);
-    var isIPvFuture = RegExp.prototype.test.bind(/^[vV][\dA-Fa-f]+\.[A-Za-z\d\-._~!$&'()*+,;=:]+$/);
-    var isZoneCharacter = RegExp.prototype.test.bind(/^[A-Za-z\d\-._~]$/);
     var nonSimpleDomain = RegExp.prototype.test.bind(/[^!"$&'()*+,\-.;=_`a-z{}~]/u);
-    function isZoneIdentifier(zone) {
-      if (zone.length === 0) return false;
-      for (let i = 0; i < zone.length; i++) {
-        if (isZoneCharacter(zone[i])) continue;
-        if (zone[i] === "%" && i + 2 < zone.length && isHexPair(zone.slice(i + 1, i + 3))) {
-          i += 2;
-          continue;
+    function consumeIsZone(buffer) {
+      buffer.length = 0;
+      return true;
+    }
+    function consumeHextets(buffer, address, output) {
+      if (buffer.length) {
+        const hex = stringArrayToHexStripped(buffer);
+        if (hex !== "") {
+          address.push(hex);
+        } else {
+          output.error = true;
+          return false;
         }
-        return false;
+        buffer.length = 0;
       }
       return true;
     }
-    function compressIPv6ZeroRun(hextets) {
-      let bestStart = -1;
-      let bestLength = 0;
-      let runStart = -1;
-      let runLength = 0;
-      for (let i = 0; i < hextets.length; i++) {
-        if (hextets[i] === "0") {
-          if (runStart === -1) runStart = i;
-          runLength++;
-          if (runLength > bestLength) {
-            bestLength = runLength;
-            bestStart = runStart;
-          }
-        } else {
-          runStart = -1;
-          runLength = 0;
-        }
-      }
-      if (bestLength < 2) return hextets.join(":");
-      const head = hextets.slice(0, bestStart).join(":");
-      const tail = hextets.slice(bestStart + bestLength).join(":");
-      return head + "::" + tail;
-    }
-    function normalizeIPv6Address(input) {
-      const compression = input.indexOf("::");
-      if (compression !== -1 && input.indexOf("::", compression + 1) !== -1) return void 0;
-      const left = compression === -1 ? input.split(":") : input.slice(0, compression).split(":");
-      const right = compression === -1 ? [] : input.slice(compression + 2).split(":");
-      if (compression !== -1) {
-        if (left.length === 1 && left[0] === "") left.length = 0;
-        if (right.length === 1 && right[0] === "") right.length = 0;
-      }
-      const parts = left.concat(right);
-      let hextetCount = 0;
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-        if (part === "") return void 0;
-        if (part.indexOf(".") !== -1) {
-          if (i !== parts.length - 1 || compression !== -1 && right.length === 0 || !isIPv4(part)) return void 0;
-          hextetCount += 2;
+    function getIPV6(input) {
+      let tokenCount = 0;
+      const output = { error: false, address: "", zone: "" };
+      const address = [];
+      const buffer = [];
+      let endipv6Encountered = false;
+      let endIpv6 = false;
+      let consume = consumeHextets;
+      for (let i = 0; i < input.length; i++) {
+        const cursor = input[i];
+        if (cursor === "[" || cursor === "]") {
           continue;
         }
-        if (!isHextet(part)) return void 0;
-        parts[i] = parseInt(part, 16).toString(16);
-        hextetCount++;
+        if (cursor === ":") {
+          if (endipv6Encountered === true) {
+            endIpv6 = true;
+          }
+          if (!consume(buffer, address, output)) {
+            break;
+          }
+          if (++tokenCount > 7) {
+            output.error = true;
+            break;
+          }
+          if (i > 0 && input[i - 1] === ":") {
+            endipv6Encountered = true;
+          }
+          address.push(":");
+          continue;
+        } else if (cursor === "%") {
+          if (!consume(buffer, address, output)) {
+            break;
+          }
+          consume = consumeIsZone;
+        } else {
+          buffer.push(cursor);
+          continue;
+        }
       }
-      if (compression === -1) {
-        if (hextetCount !== 8) return void 0;
-        return compressIPv6ZeroRun(parts);
+      if (buffer.length) {
+        if (consume === consumeIsZone) {
+          output.zone = buffer.join("");
+        } else if (endIpv6) {
+          address.push(buffer.join(""));
+        } else {
+          address.push(stringArrayToHexStripped(buffer));
+        }
       }
-      if (hextetCount >= 8) return void 0;
-      const expanded = parts.slice(0, left.length);
-      for (let i = hextetCount; i < 8; i++) expanded.push("0");
-      for (let i = left.length; i < parts.length; i++) expanded.push(parts[i]);
-      return compressIPv6ZeroRun(expanded);
+      output.address = address.join("");
+      return output;
     }
     function normalizeIPv6(host) {
-      const bracketed = host[0] === "[" && host[host.length - 1] === "]";
-      const hasBracket = host[0] === "[" || host[host.length - 1] === "]";
-      if (hasBracket && !bracketed) return { host, isIPV6: false, error: true };
-      let input = bracketed ? host.slice(1, -1) : host;
-      if (bracketed && isIPvFuture(input)) {
-        input = input.toLowerCase();
-        return { host: `[${input}]`, escapedHost: input, isIPV6: false, isIPVFuture: true };
+      if (findToken(host, ":") < 2) {
+        return { host, isIPV6: false };
       }
-      if (findToken(input, ":") < 2) {
-        return { host, isIPV6: false, error: bracketed };
+      const ipv6 = getIPV6(host);
+      if (!ipv6.error) {
+        let newHost = ipv6.address;
+        let escapedHost = ipv6.address;
+        if (ipv6.zone) {
+          newHost += "%" + ipv6.zone;
+          escapedHost += "%25" + ipv6.zone;
+        }
+        return { host: newHost, isIPV6: true, escapedHost };
+      } else {
+        return { host, isIPV6: false };
       }
-      let zoneIdentifier = "";
-      const zoneSeparator = input.indexOf("%");
-      if (zoneSeparator !== -1) {
-        const separatorLength = input.slice(zoneSeparator, zoneSeparator + 3).toLowerCase() === "%25" ? 3 : 1;
-        zoneIdentifier = input.slice(zoneSeparator + separatorLength);
-        if (!isZoneIdentifier(zoneIdentifier)) return { host, isIPV6: false, error: true };
-        input = input.slice(0, zoneSeparator);
-      }
-      const address = normalizeIPv6Address(input);
-      if (address === void 0) return { host, isIPV6: false, error: true };
-      return {
-        host: address + (zoneIdentifier ? "%" + zoneIdentifier : ""),
-        escapedHost: address + (zoneIdentifier ? "%25" + zoneIdentifier : ""),
-        isIPV6: true
-      };
     }
     function findToken(str, token) {
       let ind = 0;
@@ -3366,8 +3334,7 @@ var require_utils = __commonJS({
     function normalizePathEncoding(input) {
       let output = "";
       for (let i = 0; i < input.length; i++) {
-        const ch = input[i];
-        if (ch === "%" && i + 2 < input.length) {
+        if (input[i] === "%" && i + 2 < input.length) {
           const hex = input.slice(i + 1, i + 3);
           if (isHexPair(hex)) {
             const normalizedHex = hex.toUpperCase();
@@ -3381,152 +3348,10 @@ var require_utils = __commonJS({
             continue;
           }
         }
-        if (isPathCharacter(ch)) {
-          output += ch;
+        if (isPathCharacter(input[i])) {
+          output += input[i];
         } else {
-          const code = input.charCodeAt(i);
-          if (code < 128) {
-            output += isEscapeSafe(code) ? ch : BYTE_HEX[code];
-          } else if (code < 55296 || code > 57343) {
-            output += percentEncodeNonAscii(code);
-          } else if (code <= 56319 && i + 1 < input.length) {
-            const low = input.charCodeAt(i + 1);
-            if (low >= 56320 && low <= 57343) {
-              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
-              i++;
-            } else {
-              output += percentEncodeNonAscii(65533);
-            }
-          } else {
-            output += percentEncodeNonAscii(65533);
-          }
-        }
-      }
-      return output;
-    }
-    function serializePathEncoding(input, pathNoScheme = false) {
-      let output = "";
-      let firstSegment = pathNoScheme && input[0] !== "/";
-      for (let i = 0; i < input.length; i++) {
-        const ch = input[i];
-        if (ch === "%" && i + 2 < input.length) {
-          const hex = input.slice(i + 1, i + 3);
-          if (isHexPair(hex)) {
-            output += "%" + hex.toUpperCase();
-            i += 2;
-            continue;
-          }
-        }
-        if (ch === "/") {
-          firstSegment = false;
-        }
-        if (isPathCharacter(ch) && (ch !== ":" || !firstSegment)) {
-          output += ch;
-        } else {
-          const code = input.charCodeAt(i);
-          if (code < 128) {
-            output += BYTE_HEX[code];
-          } else if (code < 55296 || code > 57343) {
-            output += percentEncodeNonAscii(code);
-          } else if (code <= 56319 && i + 1 < input.length) {
-            const low = input.charCodeAt(i + 1);
-            if (low >= 56320 && low <= 57343) {
-              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
-              i++;
-            } else {
-              output += percentEncodeNonAscii(65533);
-            }
-          } else {
-            output += percentEncodeNonAscii(65533);
-          }
-        }
-      }
-      return output;
-    }
-    function encodeComponent(input, isAllowed) {
-      let output = "";
-      for (let i = 0; i < input.length; i++) {
-        const ch = input[i];
-        if (ch === "%" && i + 2 < input.length) {
-          const hex = input.slice(i + 1, i + 3);
-          if (isHexPair(hex)) {
-            output += "%" + hex.toUpperCase();
-            i += 2;
-            continue;
-          }
-        }
-        if (isAllowed(ch)) {
-          output += ch;
-        } else {
-          const code = input.charCodeAt(i);
-          if (code < 128) {
-            output += BYTE_HEX[code];
-          } else if (code < 55296 || code > 57343) {
-            output += percentEncodeNonAscii(code);
-          } else if (code <= 56319 && i + 1 < input.length) {
-            const low = input.charCodeAt(i + 1);
-            if (low >= 56320 && low <= 57343) {
-              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
-              i++;
-            } else {
-              output += percentEncodeNonAscii(65533);
-            }
-          } else {
-            output += percentEncodeNonAscii(65533);
-          }
-        }
-      }
-      return output;
-    }
-    function encodeUserinfo(input) {
-      return encodeComponent(input, isUserinfoCharacter);
-    }
-    function encodeQuery(input) {
-      return encodeComponent(input, isQueryFragmentCharacter);
-    }
-    function encodeFragment(input) {
-      return encodeComponent(input, isQueryFragmentCharacter);
-    }
-    function isEscapeSafe(cp) {
-      return cp >= 48 && cp <= 57 || cp >= 65 && cp <= 90 || cp >= 97 && cp <= 122 || cp === 42 || cp === 43 || cp === 45 || cp === 46 || cp === 47 || cp === 64 || cp === 95;
-    }
-    function normalizeQueryFragmentEncoding(input) {
-      let output = "";
-      for (let i = 0; i < input.length; i++) {
-        const ch = input[i];
-        if (ch === "%" && i + 2 < input.length) {
-          const hex = input.slice(i + 1, i + 3);
-          if (isHexPair(hex)) {
-            const normalizedHex = hex.toUpperCase();
-            const decoded = String.fromCharCode(parseInt(normalizedHex, 16));
-            if (isUnreserved(decoded)) {
-              output += decoded;
-            } else {
-              output += "%" + normalizedHex;
-            }
-            i += 2;
-            continue;
-          }
-        }
-        if (isQueryFragmentCharacter(ch)) {
-          output += ch;
-        } else {
-          const code = input.charCodeAt(i);
-          if (code < 128) {
-            output += isEscapeSafe(code) ? ch : BYTE_HEX[code];
-          } else if (code < 55296 || code > 57343) {
-            output += percentEncodeNonAscii(code);
-          } else if (code <= 56319 && i + 1 < input.length) {
-            const low = input.charCodeAt(i + 1);
-            if (low >= 56320 && low <= 57343) {
-              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
-              i++;
-            } else {
-              output += percentEncodeNonAscii(65533);
-            }
-          } else {
-            output += percentEncodeNonAscii(65533);
-          }
+          output += escape(input[i]);
         }
       }
       return output;
@@ -3549,18 +3374,14 @@ var require_utils = __commonJS({
     function recomposeAuthority(component) {
       const uriTokens = [];
       if (component.userinfo !== void 0) {
-        uriTokens.push(encodeUserinfo(component.userinfo));
+        uriTokens.push(component.userinfo);
         uriTokens.push("@");
       }
       if (component.host !== void 0) {
-        let host = component.host;
+        let host = unescape(component.host);
         if (!isIPv4(host)) {
-          let ipV6res = normalizeIPv6(host);
-          if (ipV6res.isIPV6 !== true && ipV6res.isIPVFuture !== true) {
-            host = normalizePercentEncoding(host, true);
-            ipV6res = normalizeIPv6(host);
-          }
-          if (ipV6res.isIPV6 === true || ipV6res.isIPVFuture === true) {
+          const ipV6res = normalizeIPv6(host);
+          if (ipV6res.isIPV6 === true) {
             host = `[${ipV6res.escapedHost}]`;
           } else {
             host = reescapeHostDelimiters(host, false);
@@ -3580,11 +3401,6 @@ var require_utils = __commonJS({
       reescapeHostDelimiters,
       normalizePercentEncoding,
       normalizePathEncoding,
-      serializePathEncoding,
-      normalizeQueryFragmentEncoding,
-      encodeUserinfo,
-      encodeQuery,
-      encodeFragment,
       escapePreservingEscapes,
       removeDotSegments,
       isIPv4,
@@ -3595,12 +3411,12 @@ var require_utils = __commonJS({
   }
 });
 
-// node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/lib/schemes.js
+// node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
-    var URN_REG = /^([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-./:;=@]|%[\da-f]{2})+)$/iu;
+    var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
     var supportedSchemeNames = (
       /** @type {const} */
       [
@@ -3661,10 +3477,9 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        const [path, query] = wsComponent.resourceName.split("?");
         wsComponent.path = path && path !== "/" ? path : void 0;
-        wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
+        wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
       wsComponent.fragment = void 0;
@@ -3676,7 +3491,7 @@ var require_schemes = __commonJS({
         return urnComponent;
       }
       const matches = urnComponent.path.match(URN_REG);
-      if (matches && matches[0] === urnComponent.path) {
+      if (matches) {
         const scheme = options.scheme || urnComponent.scheme || "urn";
         urnComponent.nid = matches[1].toLowerCase();
         urnComponent.nss = matches[2];
@@ -3806,21 +3621,12 @@ var require_schemes = __commonJS({
   }
 });
 
-// node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/index.js
+// node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "node_modules/.pnpm/fast-uri@3.1.6/node_modules/fast-uri/index.js"(exports, module) {
+  "node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
-    var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, serializePathEncoding, normalizeQueryFragmentEncoding, encodeQuery, encodeFragment, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
+    var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
-    var VALID_SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*$/u;
-    var MALFORMED_SCHEME_ERROR = "URI scheme is malformed.";
-    function decodeValidScheme(scheme) {
-      const decodedScheme = unescape(String(scheme));
-      if (!VALID_SCHEME.test(decodedScheme)) {
-        throw new TypeError(MALFORMED_SCHEME_ERROR);
-      }
-      return decodedScheme;
-    }
     function normalize(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
@@ -3833,34 +3639,12 @@ var require_fast_uri = __commonJS({
     }
     function resolve(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
-      const {
-        parsed: baseParsed,
-        malformedAuthorityOrPort: baseMalformed,
-        malformedPercentEncoding: baseMalformedPercentEncoding,
-        malformedSchemeSpecific: baseMalformedSchemeSpecific,
-        malformedHost: baseMalformedHost,
-        malformedScheme: baseMalformedScheme
-      } = parseWithStatus(baseURI, schemelessOptions);
-      const {
-        parsed: relativeParsed,
-        malformedAuthorityOrPort: relativeMalformed,
-        malformedPercentEncoding: relativeMalformedPercentEncoding,
-        malformedSchemeSpecific: relativeMalformedSchemeSpecific,
-        malformedHost: relativeMalformedHost,
-        malformedScheme: relativeMalformedScheme
-      } = parseWithStatus(relativeURI, schemelessOptions);
-      if (baseMalformed || relativeMalformed || baseMalformedPercentEncoding || relativeMalformedPercentEncoding || baseMalformedSchemeSpecific || relativeMalformedSchemeSpecific || baseMalformedHost || relativeMalformedHost || baseMalformedScheme || relativeMalformedScheme) {
+      const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
+      const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
+      if (baseMalformed || relativeMalformed) {
         throw new Error(baseParsed.error || relativeParsed.error || "URI is malformed.");
       }
       const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true);
-      const resolvedSchemeHandler = getSchemeHandler(options && options.scheme || resolved.scheme);
-      const resolvedHost = resolved.host;
-      const resolvedHostIsIP = resolvedHost !== void 0 && resolvedHost !== "" && (isIPv4(resolvedHost) || normalizeIPv6(resolvedHost).isIPV6);
-      canonicalizeHost(resolved, options || {}, resolvedSchemeHandler, resolvedHostIsIP);
-      const encodedASCIIHost = resolvedHost && resolvedHost.indexOf("%") !== -1 && !new RegExp("\\P{ASCII}", "u").test(resolvedHost);
-      if (resolved.error && !encodedASCIIHost) {
-        throw new Error(resolved.error);
-      }
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
@@ -3920,7 +3704,7 @@ var require_fast_uri = __commonJS({
     function equal(uriA, uriB, options) {
       const normalizedA = normalizeComparableURI(uriA, options);
       const normalizedB = normalizeComparableURI(uriB, options);
-      return normalizedA !== void 0 && normalizedB !== void 0 && normalizedA === normalizedB;
+      return normalizedA !== void 0 && normalizedB !== void 0 && normalizedA.toLowerCase() === normalizedB.toLowerCase();
     }
     function serialize(cmpts, opts) {
       const component = {
@@ -3941,22 +3725,19 @@ var require_fast_uri = __commonJS({
       };
       const options = Object.assign({}, opts);
       const uriTokens = [];
-      if (component.scheme) {
-        component.scheme = decodeValidScheme(component.scheme);
-      }
       const schemeHandler = getSchemeHandler(options.scheme || component.scheme);
       if (schemeHandler && schemeHandler.serialize) schemeHandler.serialize(component, options);
-      const hasAuthority = component.userinfo !== void 0 || component.host !== void 0 || component.port !== void 0;
-      const pathNoScheme = !options.skipEscape && component.scheme === void 0 && !hasAuthority;
       if (component.path !== void 0) {
         if (!options.skipEscape) {
-          component.path = serializePathEncoding(component.path, pathNoScheme);
+          component.path = escapePreservingEscapes(component.path);
+          if (component.scheme !== void 0) {
+            component.path = component.path.split("%3A").join(":");
+          }
         } else {
           component.path = normalizePercentEncoding(component.path);
         }
       }
       if (options.reference !== "suffix" && component.scheme) {
-        component.scheme = decodeValidScheme(component.scheme);
         uriTokens.push(component.scheme, ":");
       }
       const authority = recomposeAuthority(component);
@@ -3974,19 +3755,16 @@ var require_fast_uri = __commonJS({
         if (!options.absolutePath && (!schemeHandler || !schemeHandler.absolutePath)) {
           s = removeDotSegments(s);
         }
-        if (pathNoScheme) {
-          s = serializePathEncoding(s, true);
-        }
         if (authority === void 0 && s[0] === "/" && s[1] === "/") {
           s = "/%2F" + s.slice(2);
         }
         uriTokens.push(s);
       }
       if (component.query !== void 0) {
-        uriTokens.push("?", encodeQuery(component.query));
+        uriTokens.push("?", component.query);
       }
       if (component.fragment !== void 0) {
-        uriTokens.push("#", encodeFragment(component.fragment));
+        uriTokens.push("#", component.fragment);
       }
       return uriTokens.join("");
     }
@@ -4002,32 +3780,6 @@ var require_fast_uri = __commonJS({
       }
       return void 0;
     }
-    function hasMalformedPercentEncoding(component) {
-      if (component === void 0) return false;
-      let percent = component.indexOf("%");
-      while (percent !== -1) {
-        if (percent + 2 >= component.length || !/^[\da-f]{2}$/iu.test(component.slice(percent + 1, percent + 3))) {
-          return true;
-        }
-        percent = component.indexOf("%", percent + 3);
-      }
-      return false;
-    }
-    function hasMalformedComponentPercentEncoding(matches) {
-      const host = matches[4];
-      return hasMalformedPercentEncoding(matches[3]) || host !== void 0 && !(host[0] === "[" && host[host.length - 1] === "]") && hasMalformedPercentEncoding(host) || hasMalformedPercentEncoding(matches[6]) || hasMalformedPercentEncoding(matches[7]) || hasMalformedPercentEncoding(matches[8]);
-    }
-    function canonicalizeHost(parsed, options, schemeHandler, isIP) {
-      if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport) && parsed.host && parsed.host[0] !== "[" && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
-        try {
-          parsed.host = new URL("http://" + parsed.host).hostname;
-        } catch (e) {
-          parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
-          return true;
-        }
-      }
-      return false;
-    }
     function parseWithStatus(uri, opts) {
       const options = Object.assign({}, opts);
       const parsed = {
@@ -4040,11 +3792,6 @@ var require_fast_uri = __commonJS({
         fragment: void 0
       };
       let malformedAuthorityOrPort = false;
-      let malformedPercentEncoding = false;
-      let malformedSchemeSpecific = false;
-      let malformedHost = false;
-      let malformedIPLiteral = false;
-      let malformedScheme = false;
       let isIP = false;
       if (options.reference === "suffix") {
         if (options.scheme) {
@@ -4081,19 +3828,6 @@ var require_fast_uri = __commonJS({
         parsed.path = matches[6] || "";
         parsed.query = matches[7];
         parsed.fragment = matches[8];
-        if (parsed.scheme !== void 0) {
-          const decodedScheme = unescape(parsed.scheme);
-          if (VALID_SCHEME.test(decodedScheme)) {
-            parsed.scheme = decodedScheme.toLowerCase();
-          } else {
-            parsed.error = parsed.error || MALFORMED_SCHEME_ERROR;
-            malformedScheme = true;
-          }
-        }
-        malformedPercentEncoding = hasMalformedComponentPercentEncoding(matches);
-        if (malformedPercentEncoding) {
-          parsed.error = parsed.error || "URI contains malformed percent-encoding.";
-        }
         if (isNaN(parsed.port)) {
           parsed.port = matches[5];
         }
@@ -4105,15 +3839,9 @@ var require_fast_uri = __commonJS({
         if (parsed.host) {
           const ipv4result = isIPv4(parsed.host);
           if (ipv4result === false) {
-            const bracketedIPLiteral = parsed.host[0] === "[" && parsed.host[parsed.host.length - 1] === "]";
             const ipv6result = normalizeIPv6(parsed.host);
-            isIP = ipv6result.isIPV6 || ipv6result.isIPVFuture === true;
-            malformedIPLiteral = bracketedIPLiteral && ipv6result.error === true;
-            parsed.host = isIP ? ipv6result.host : ipv6result.host.toLowerCase();
-            if (malformedIPLiteral) {
-              parsed.error = parsed.error || "URI host is malformed.";
-              malformedAuthorityOrPort = true;
-            }
+            parsed.host = ipv6result.host.toLowerCase();
+            isIP = ipv6result.isIPV6;
           } else {
             isIP = true;
           }
@@ -4131,34 +3859,42 @@ var require_fast_uri = __commonJS({
           parsed.error = parsed.error || "URI is not a " + options.reference + " reference.";
         }
         const schemeHandler = getSchemeHandler(options.scheme || parsed.scheme);
-        malformedHost = canonicalizeHost(parsed, options, schemeHandler, isIP);
+        if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport)) {
+          if (parsed.host && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
+            try {
+              parsed.host = new URL("http://" + parsed.host).hostname;
+            } catch (e) {
+              parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
+            }
+          }
+        }
         if (!schemeHandler || schemeHandler && !schemeHandler.skipNormalize) {
           if (uri.indexOf("%") !== -1) {
-            if (parsed.host !== void 0 && !malformedIPLiteral) {
-              const host = isIP ? parsed.host : normalizePercentEncoding(parsed.host, true);
-              parsed.host = reescapeHostDelimiters(host, isIP);
+            if (parsed.scheme !== void 0) {
+              parsed.scheme = unescape(parsed.scheme);
+            }
+            if (parsed.host !== void 0) {
+              parsed.host = reescapeHostDelimiters(unescape(parsed.host), isIP);
             }
           }
           if (parsed.path) {
             parsed.path = normalizePathEncoding(parsed.path);
           }
-          if (parsed.query) {
-            parsed.query = normalizeQueryFragmentEncoding(parsed.query);
-          }
           if (parsed.fragment) {
-            parsed.fragment = normalizeQueryFragmentEncoding(parsed.fragment);
+            try {
+              parsed.fragment = encodeURI(decodeURIComponent(parsed.fragment));
+            } catch {
+              parsed.error = parsed.error || "URI malformed";
+            }
           }
         }
         if (schemeHandler && schemeHandler.parse) {
           schemeHandler.parse(parsed, options);
-          if (schemeHandler === SCHEMES.urn && parsed.nid === void 0) {
-            malformedSchemeSpecific = true;
-          }
         }
       } else {
         parsed.error = parsed.error || "URI can not be parsed.";
       }
-      return { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme };
+      return { parsed, malformedAuthorityOrPort };
     }
     function parse(uri, opts) {
       return parseWithStatus(uri, opts).parsed;
@@ -4167,28 +3903,20 @@ var require_fast_uri = __commonJS({
       return normalizeStringWithStatus(uri, opts).normalized;
     }
     function normalizeStringWithStatus(uri, opts) {
-      const { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = parseWithStatus(uri, opts);
+      const { parsed, malformedAuthorityOrPort } = parseWithStatus(uri, opts);
       return {
-        normalized: malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? uri : serialize(parsed, opts),
-        malformedAuthorityOrPort,
-        malformedPercentEncoding,
-        malformedSchemeSpecific,
-        malformedHost,
-        malformedScheme
+        normalized: malformedAuthorityOrPort ? uri : serialize(parsed, opts),
+        malformedAuthorityOrPort
       };
     }
     function normalizeComparableURI(uri, opts) {
-      if (typeof uri !== "string" && typeof uri !== "object") {
-        return void 0;
+      if (typeof uri === "string") {
+        const { normalized, malformedAuthorityOrPort } = normalizeStringWithStatus(uri, opts);
+        return malformedAuthorityOrPort ? void 0 : normalized;
       }
-      let value;
-      try {
-        value = typeof uri === "string" ? uri : serialize(uri, opts);
-      } catch {
-        return void 0;
+      if (typeof uri === "object") {
+        return serialize(uri, opts);
       }
-      const { normalized, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = normalizeStringWithStatus(value, opts);
-      return malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? void 0 : normalized;
     }
     var fastUri = {
       SCHEMES,
@@ -4205,9 +3933,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/uri.js
+// node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -4216,9 +3944,9 @@ var require_uri = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/core.js
+// node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/core.js"(exports) {
+  "node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4827,9 +4555,9 @@ var require_core = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/id.js
+// node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4842,9 +4570,9 @@ var require_id = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/ref.js
+// node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4964,9 +4692,9 @@ var require_ref = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/index.js
+// node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -4985,9 +4713,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5017,9 +4745,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5045,9 +4773,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js
+// node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str) {
@@ -5071,9 +4799,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5103,9 +4831,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/pattern.js
+// node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5140,9 +4868,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5169,9 +4897,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/required.js
+// node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5251,9 +4979,9 @@ var require_required = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5280,9 +5008,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/equal.js
+// node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5291,9 +5019,9 @@ var require_equal = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5358,9 +5086,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/const.js
+// node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5387,9 +5115,9 @@ var require_const = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/enum.js
+// node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5436,9 +5164,9 @@ var require_enum = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/index.js
+// node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5474,9 +5202,9 @@ var require_validation = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5527,9 +5255,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items.js
+// node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5584,9 +5312,9 @@ var require_items = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5601,9 +5329,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5636,9 +5364,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/contains.js
+// node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5730,9 +5458,9 @@ var require_contains = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5824,9 +5552,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5867,9 +5595,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5973,9 +5701,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/properties.js
+// node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -6031,9 +5759,9 @@ var require_properties = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -6105,9 +5833,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/not.js
+// node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6136,9 +5864,9 @@ var require_not = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -6153,9 +5881,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6211,9 +5939,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6238,9 +5966,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/if.js
+// node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6307,9 +6035,9 @@ var require_if = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6325,9 +6053,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/index.js
+// node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6373,9 +6101,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
 var require_dynamicAnchor = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicAnchor = void 0;
@@ -6408,9 +6136,9 @@ var require_dynamicAnchor = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
 var require_dynamicRef = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicRef = void 0;
@@ -6454,9 +6182,9 @@ var require_dynamicRef = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
 var require_recursiveAnchor = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6475,9 +6203,9 @@ var require_recursiveAnchor = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
 var require_recursiveRef = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicRef_1 = require_dynamicRef();
@@ -6490,9 +6218,9 @@ var require_recursiveRef = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/index.js
+// node_modules/ajv/dist/vocabularies/dynamic/index.js
 var require_dynamic = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6504,9 +6232,9 @@ var require_dynamic = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
+// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
 var require_dependentRequired = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6521,9 +6249,9 @@ var require_dependentRequired = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
+// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
 var require_dependentSchemas = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6537,9 +6265,9 @@ var require_dependentSchemas = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitContains.js
+// node_modules/ajv/dist/vocabularies/validation/limitContains.js
 var require_limitContains = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6557,9 +6285,9 @@ var require_limitContains = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/next.js
+// node_modules/ajv/dist/vocabularies/next.js
 var require_next = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/next.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependentRequired_1 = require_dependentRequired();
@@ -6570,9 +6298,9 @@ var require_next = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
 var require_unevaluatedProperties = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6636,9 +6364,9 @@ var require_unevaluatedProperties = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
 var require_unevaluatedItems = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6680,9 +6408,9 @@ var require_unevaluatedItems = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/index.js
+// node_modules/ajv/dist/vocabularies/unevaluated/index.js
 var require_unevaluated = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var unevaluatedProperties_1 = require_unevaluatedProperties();
@@ -6692,9 +6420,9 @@ var require_unevaluated = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/format.js
+// node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6782,9 +6510,9 @@ var require_format = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/index.js
+// node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6793,9 +6521,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/metadata.js
+// node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6816,9 +6544,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/draft2020.js
+// node_modules/ajv/dist/vocabularies/draft2020.js
 var require_draft2020 = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6844,9 +6572,9 @@ var require_draft2020 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/types.js
+// node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6858,9 +6586,9 @@ var require_types = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/index.js
+// node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6963,9 +6691,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
 var require_schema = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/schema",
@@ -7023,9 +6751,9 @@ var require_schema = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
 var require_applicator2 = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/applicator",
@@ -7076,9 +6804,9 @@ var require_applicator2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
 var require_unevaluated2 = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
@@ -7096,9 +6824,9 @@ var require_unevaluated2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
 var require_content = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/content",
@@ -7117,9 +6845,9 @@ var require_content = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
 var require_core3 = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/core",
@@ -7173,9 +6901,9 @@ var require_core3 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
 var require_format_annotation = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
@@ -7192,9 +6920,9 @@ var require_format_annotation = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
 var require_meta_data = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
@@ -7233,9 +6961,9 @@ var require_meta_data = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
 var require_validation2 = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/validation",
@@ -7328,9 +7056,9 @@ var require_validation2 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/index.js
+// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
 var require_json_schema_2020_12 = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
+  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var metaSchema = require_schema();
@@ -7363,9 +7091,9 @@ var require_json_schema_2020_12 = __commonJS({
   }
 });
 
-// node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/2020.js
+// node_modules/ajv/dist/2020.js
 var require__ = __commonJS({
-  "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/2020.js"(exports, module) {
+  "node_modules/ajv/dist/2020.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
@@ -7460,7 +7188,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
-    model_guidance: "\u4E8C\u7EF4\u7B1B\u5361\u5C14\u51FD\u6570\u66F2\u7EBF\uFF1B\u6570\u503C\u53EF\u79FB\u52A8\u66F2\u7EBF\u4E0A\u7684\u70B9\u6216\u6539\u53D8\u6574\u6761\u66F2\u7EBF"
+    model_guidance: "\u51FD\u6570\u56FE\uFF1A\u9759\u6001\u516C\u5F0F\u6700\u591A\u4E24\u6570\u79FB\u52A8A/B\u70B9\uFF1B\u542B\u6570\u503C\u7684\u516C\u5F0F\u6539\u53D8\u66F2\u7EBF"
   },
   unit_circle_projection: {
     parts: ["whole", "unit_circle", "moving_point", "radius", "projection_line", "primary_curve", "primary_control"],
@@ -7568,6 +7296,19 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     student_controls: ["slider"],
     required_features: ["polygon_pieces", "rigid_rearrangement", "area_relation"],
     model_guidance: "\u7ECF\u8FC7\u9A8C\u8BC1\u7684\u591A\u8FB9\u5F62\u62C6\u5206\u4E0E\u521A\u4F53\u91CD\u6392\uFF0C\u7528\u8FDB\u5EA6\u6570\u503C\u63A7\u5236\u79FB\u52A8"
+  },
+  circle_area_rearrangement: {
+    parts: ["whole", "primary_control"],
+    number_inputs: ["progress"],
+    number_input_policies: [{ kind: "normalized_progress" }],
+    parameter_names: ["title", "radius"],
+    model_parameter_names: ["title", "radius"],
+    required_model_schema_parameters: [],
+    semantic_parameters: ["radius"],
+    output_kinds: ["geometry"],
+    student_controls: ["slider"],
+    required_features: ["circle_area_rearrangement"],
+    model_guidance: "\u5706\u9762\u79EF\uFF1A\u6247\u5F62\u7B49\u79EF\u91CD\u6392\uFF0C\u5E95\u8D8B\u8FD1\u03C0r\u3001\u9AD8\u8D8B\u8FD1r"
   },
   process_diagram: {
     parts: ["whole", "first_step", "current_step", "last_step"],
@@ -7918,16 +7659,8 @@ function validateBoardContent(kind, value, path, numberCount, resourceCount) {
         const number = positiveIndex(item, `${path}.numbers[${index}]`);
         if (number > numberCount) fail("LESSON_PLAN_NUMBER_REFERENCE", `${path}.numbers[${index}]`, "number reference is unavailable");
       });
-      if (visualCapability === "function_plot" && numbers.length > 1) {
-        const visualParameters = record(content.parameters ?? {}, `${path}.parameters`);
-        const hasCurveExpression = visualParameters.expression_tokens !== void 0;
-        if (!hasCurveExpression) {
-          fail(
-            "LESSON_PLAN_EXPRESSION",
-            `${path}.parameters.expression_tokens`,
-            "a function plot with multiple numeric inputs must define how those inputs change the whole curve"
-          );
-        }
+      if (visualCapability === "function_plot" && numbers.length > 2 && content.parameters?.expression_tokens === void 0) {
+        fail("LESSON_PLAN_EXPRESSION", `${path}.numbers`, "static curves support at most two independent sample points");
       }
     }
   }
@@ -8143,12 +7876,10 @@ function resolveLessonPlan(value, options = {}) {
               );
               for (const number of curveNumbers) visuallyBoundNumbers.add(number);
               if (curveNumbers.length === 0) {
-                const movingPointNumber = visualContent.numbers?.[0];
-                if (movingPointNumber !== void 0) visuallyBoundNumbers.add(movingPointNumber);
+                for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
               }
             } else if (visualContent.capability === "function_plot") {
-              const movingPointNumber = visualContent.numbers?.[0];
-              if (movingPointNumber !== void 0) visuallyBoundNumbers.add(movingPointNumber);
+              for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
             } else {
               for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
             }
@@ -8626,10 +8357,122 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   return resolveLessonPlan(assembled, options).plan;
 }
 
-// node_modules/.pnpm/octos-lesson-language@https+++codeload.github.com+alan0x+octos-lesson-language+tar.gz+4_ed9571987195fc2223acec7dd495e2d0/node_modules/octos-lesson-language/dist/packages/core/src/index.js
+// src/teaching-contracts.ts
+function affineTokens(tokens) {
+  const stack = [];
+  for (const token of tokens) {
+    if (token.kind === "input") stack.push(1);
+    else if (["literal", "constant", "number"].includes(token.kind)) stack.push(0);
+    else if (token.kind === "negate") continue;
+    else if (token.kind === "operator") {
+      const b = stack.pop(), a = stack.pop();
+      if (a === void 0 || b === void 0) return false;
+      if (token.operator === "add" || token.operator === "subtract") stack.push(Math.max(a, b));
+      else if (token.operator === "multiply") stack.push(a + b);
+      else if (token.operator === "divide" && b === 0) stack.push(a);
+      else return false;
+    } else return false;
+  }
+  return stack.length === 1 && stack[0] <= 1;
+}
+function fixedLineSamples(visual) {
+  const tokens = visual.parameters?.expression_tokens;
+  return visual.capability === "function_plot" && visual.numbers?.length === 2 && Array.isArray(tokens) && !tokens.some((t) => t.kind === "number") && affineTokens(tokens);
+}
+function normalizePlotInputInstructions(plan) {
+  const visuals = plan.sections.flatMap((s) => s.moments.flatMap((m) => m.actions)).filter((a) => a.action === "create" && a.kind === "visual").map((a) => a.content);
+  if (visuals.length !== 1 || visuals[0].capability !== "function_plot" || visuals[0].numbers?.length !== 2) return;
+  const tokens = visuals[0].parameters?.expression_tokens;
+  if (Array.isArray(tokens) && tokens.some((t) => t.kind === "number")) return;
+  const samplesFixedLine = fixedLineSamples(visuals[0]);
+  for (const section of plan.sections) for (const moment of section.moments) {
+    moment.narration = moment.narration.replace(
+      /(?:移动|调整|拖动|拖拽)点\s*([AB])\s*(?:或|和|、)\s*(?:点\s*)?([AB])(?:的)?(?:位置|横坐标)/g,
+      (_match, first, second) => `\u8C03\u6574\u70B9 ${first} \u6216\u70B9 ${second} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
+    ).replace(
+      /(?:直接)?拖(?:动|拽)(?:图上|图中|曲线上)?(?:的)?点\s*([AB])/g,
+      (_match, label) => `\u8C03\u6574\u70B9 ${label} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
+    );
+    if (samplesFixedLine) {
+      moment.narration = moment.narration.replace(
+        /[^。！？!?；;]*斜率如何保持不变或发生变化[^。！？!?；;]*/g,
+        "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u5982\u4F55\u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:纵向|高度|纵坐标).{0,12}(?:变大|改变|变化).{0,12}(?:横向|横坐标).{0,12}不变[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:看看|观察).{0,36}(?:斜率|倾斜程度).{0,32}(?:变化|改变)[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:调整|移动|拖动|拖拽).{0,36}点.{0,36}(?:观察|看看).{0,36}(?:斜率|倾斜程度)[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      );
+    }
+  }
+  if (samplesFixedLine) for (const section of plan.sections) {
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target") continue;
+      activity.prompt = activity.prompt.replace(/观察.{0,24}斜率.{0,12}(?:变化|改变)/g, "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8").replace(/改变.{0,16}(?:倾斜程度|斜率)/g, "\u9A8C\u8BC1\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8");
+      activity.hints = activity.hints.map((hint) => /变陡|变平缓|(?:倾斜程度|倾斜状态|陡峭程度|比值).{0,16}(?:改变|变化)|(?:改变|变化).{0,16}(?:倾斜程度|斜率|陡峭程度|比值)/.test(hint) ? "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u7684\u6BD4\u503C\u662F\u5426\u4FDD\u6301\u4E0D\u53D8" : hint);
+      if (activity.success_message && !/不变|保持/.test(activity.success_message) && /(?:改变|变化|更新|影响).{0,20}(?:倾斜程度|斜率|陡峭程度|比值)|(?:倾斜程度|斜率|陡峭程度|比值).{0,20}(?:改变|变化|更新|影响)|如何随.{0,20}变化/.test(activity.success_message)) {
+        activity.success_message = "\u5B8C\u6210\uFF01\u79FB\u52A8\u53D6\u6837\u70B9\u540E\uFF0C\u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8\u3002";
+      }
+    }
+  }
+}
+function validateTeachingClaims(plan) {
+  const plots = plan.sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).filter((action) => action.action === "create" && action.kind === "visual").map((action) => action.content).filter((visual) => visual.capability === "function_plot");
+  const hasCircleArea = plan.sections.some((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "circle_area_rearrangement")));
+  const onlyFixedLineSamples = plots.length === 1 && fixedLineSamples(plots[0]);
+  for (const [si, section] of plan.sections.entries()) {
+    for (const [mi, moment] of section.moments.entries()) {
+      const text = moment.narration ?? "";
+      const claims = text.split(/[。！？!?；;]/);
+      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
+      }
+      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text) && !/滑块|滑杆/.test(text)) {
+        throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "use the point's horizontal-coordinate slider; directly dragging plot points is unavailable");
+      }
+      if (onlyFixedLineSamples && claims.some((claim) => /(?:斜率|倾斜角度|倾斜程度|倾斜方向|陡峭程度)(?:的数值)?(?:就|也|会|将|随之|随点移动|发生|而|从而|不断|逐渐|产生|有所|明显|直接|可以|能够|能|\s|[，,]){0,8}(?:改变|变化)(?!量|率)|(?:改变|变化)(?:了|着|其|它的|直线的|连线的|割线的|两点连线的|\s){0,5}(?:斜率|倾斜角度|倾斜程度|陡峭程度)/.test(claim) && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
+      }
+      if (/(?:斜率|k).{0,10}越大.{0,12}越陡/.test(text) && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text)) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
+      }
+    }
+    for (const [mi, moment] of section.moments.entries()) {
+      const visuals = moment.actions.filter((a) => a.action === "create" && a.kind === "visual");
+      for (const action of visuals) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const visual = action.content;
+        const text = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
+        const path = `$plan.sections[${si}].moments[${mi}]`;
+        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text) && /证明|推导|拼|重排|prove|derive/i.test(text)) {
+          throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path, "circle area requires circle_area_rearrangement; polygon recipes cannot prove pi*r^2");
+        }
+        if (visual.capability !== "function_plot") continue;
+        const tokens = visual.parameters?.expression_tokens;
+        const dynamic = Array.isArray(tokens) && tokens.some((t) => t?.kind === "number");
+        const count = dynamic ? 0 : new Set(visual.numbers ?? []).size;
+        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text)) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "moving the whole curve requires formula number references; static sample inputs only move points");
+        }
+        if (/两个点|两点|two points/i.test(text) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text) && count !== 2) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and content.numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
+        }
+        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text)) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "plot points use sliders; direct point dragging is unavailable");
+        }
+      }
+    }
+  }
+}
+
+// node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var import__ = __toESM(require__(), 1);
 
-// node_modules/.pnpm/octos-lesson-language@https+++codeload.github.com+alan0x+octos-lesson-language+tar.gz+4_ed9571987195fc2223acec7dd495e2d0/node_modules/octos-lesson-language/dist/schema/authoring/v0.1.schema.json
+// node_modules/octos-lesson-language/dist/schema/authoring/v0.1.schema.json
 var v0_1_schema_default = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://octos.dev/schema/lesson/authoring/0.1",
@@ -9050,6 +8893,7 @@ var v0_1_schema_default = {
               radius: { type: "number", exclusiveMinimum: 0 },
               start_angle: { type: "number" },
               end_angle: { type: "number" },
+              filled: { type: "boolean" },
               label: { type: "string" }
             }
           }
@@ -9285,7 +9129,7 @@ var v0_1_schema_default = {
   }
 };
 
-// node_modules/.pnpm/octos-lesson-language@https+++codeload.github.com+alan0x+octos-lesson-language+tar.gz+4_ed9571987195fc2223acec7dd495e2d0/node_modules/octos-lesson-language/dist/packages/core/src/math-expression.js
+// node_modules/octos-lesson-language/dist/packages/core/src/math-expression.js
 var FUNCTIONS = {
   abs: Math.abs,
   acos: Math.acos,
@@ -9459,7 +9303,7 @@ function evaluateMathExpression(expression, variables) {
   return result;
 }
 
-// node_modules/.pnpm/octos-lesson-language@https+++codeload.github.com+alan0x+octos-lesson-language+tar.gz+4_ed9571987195fc2223acec7dd495e2d0/node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
+// node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_ACTION_NAMES = [
   "write",
   "revise",
@@ -9511,7 +9355,7 @@ function collectBindingCapabilities() {
 }
 var OLL_CANONICAL_BINDING_CAPABILITIES = collectBindingCapabilities();
 
-// node_modules/.pnpm/octos-lesson-language@https+++codeload.github.com+alan0x+octos-lesson-language+tar.gz+4_ed9571987195fc2223acec7dd495e2d0/node_modules/octos-lesson-language/dist/packages/core/src/index.js
+// node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
 var validateAuthoringDocument = ajv.compile(v0_1_schema_default);
 var ALIAS_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
@@ -10074,6 +9918,8 @@ function validateGeometryContent(action, path, variables) {
           fail2("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/radius`, "Radius must be greater than zero");
       }
       if (field === "arcs") {
+        if (item.filled !== void 0 && typeof item.filled !== "boolean")
+          fail2("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/filled`, "Sector fill must be boolean");
         requireFiniteNumber(item.start_angle, `${itemPath}/start_angle`);
         requireFiniteNumber(item.end_angle, `${itemPath}/end_angle`);
       }
@@ -11142,6 +10988,90 @@ function canonicalizeState(state) {
   };
 }
 
+// src/function-viewport.ts
+function niceRange(values, includeZero = true) {
+  const finite = values.filter((v) => Number.isFinite(v) && Math.abs(v) < 1e12).sort((a, b) => a - b);
+  if (!finite.length) throw new Error("function has no finite teaching viewport");
+  let low = finite[Math.floor((finite.length - 1) * 0.02)];
+  let high = finite[Math.ceil((finite.length - 1) * 0.98)];
+  if (includeZero) {
+    low = Math.min(low, 0);
+    high = Math.max(high, 0);
+  }
+  const span = high - low;
+  const pad3 = span > 1e-9 ? span * 0.12 : Math.max(1, Math.abs(low) * 0.2);
+  const rawStep = (span + 2 * pad3) / 6;
+  const unit = 10 ** Math.floor(Math.log10(rawStep));
+  const step = [1, 2, 5, 10].map((n) => n * unit).find((n) => n >= rawStep);
+  return { min: Math.floor((low - pad3) / step) * step, max: Math.ceil((high + pad3) / step) * step };
+}
+function quadratic(evaluate2) {
+  const y0 = evaluate2(0), y1 = evaluate2(1), ym = evaluate2(-1);
+  const a = (y1 + ym - 2 * y0) / 2, b = (y1 - ym) / 2;
+  if (![a, b, y0].every(Number.isFinite) || Math.abs(a) < 1e-9) return;
+  for (const x of [-2, 0.37, 2, 3]) {
+    const expected = a * x * x + b * x + y0, actual = evaluate2(x);
+    if (!Number.isFinite(actual) || Math.abs(expected - actual) > 1e-8 * Math.max(1, Math.abs(expected))) return;
+  }
+  const vertex = -b / (2 * a), value = evaluate2(vertex);
+  if (Number.isFinite(vertex) && Number.isFinite(value)) return { vertex, value, a };
+}
+function functionViewport(expressions, parameters2, requestedX) {
+  const evaluators = expressions.map((e) => compileMathExpression(e, ["x", ...parameters2.map((p) => p.name)]));
+  const initial = Object.fromEntries(parameters2.map((p) => [p.name, p.initial]));
+  const states = [initial, ...parameters2.flatMap((p) => [p.min, p.max].map((v) => ({ ...initial, [p.name]: v })))];
+  const evaluate2 = (index, state, x2) => {
+    try {
+      return evaluators[index]({ ...state, x: x2 });
+    } catch {
+      return NaN;
+    }
+  };
+  const vertices = states.flatMap((state) => evaluators.flatMap((_, i) => {
+    const q = quadratic((x2) => evaluate2(i, state, x2));
+    return q ? [q] : [];
+  }));
+  const identity = expressions.some((e) => e.replace(/[()\s]/g, "") === "x");
+  if (!requestedX && identity && expressions.length > 1 && expressions.some((e) => /\b(?:ln|log)\s*\(/.test(e))) {
+    return { x: { min: -2, max: 6 }, y: { min: -2, max: 6 } };
+  }
+  if (!requestedX && expressions.length === 1 && parameters2.length === 0) {
+    const y0 = evaluate2(0, initial, 0), y1 = evaluate2(0, initial, 1);
+    const rate = Math.log(y1 / y0), intercept = Math.log(y0);
+    if (y0 > 0 && y1 > 0 && Number.isFinite(rate) && Math.abs(rate) > 1e-6 && [-2, -1, 0.37, 2, 3].every((t) => {
+      const expected = Math.exp(intercept + rate * t), actual = evaluate2(0, initial, t);
+      return Number.isFinite(actual) && Math.abs(actual - expected) < 1e-8 * Math.max(1, expected);
+    })) {
+      const center = -intercept / rate, radius = 2 / Math.abs(rate);
+      return { x: { min: Math.min(0, center - radius), max: Math.max(0, center + radius) }, y: { min: -1, max: 8 } };
+    }
+  }
+  let x = requestedX ?? { min: -4, max: 4 };
+  if (!requestedX && vertices.length) {
+    x = { min: Math.min(-4, ...vertices.map((q) => q.vertex - 2)), max: Math.max(4, ...vertices.map((q) => q.vertex + 2)) };
+  } else if (!requestedX && expressions.some((e) => /\b(sin|cos|tan)\s*\(/.test(e))) {
+    x = { min: -Math.PI * 2, max: Math.PI * 2 };
+  }
+  const sample = (range) => Array.from({ length: 121 }, (_, i) => range.min + (range.max - range.min) * i / 120).flatMap((t) => evaluators.map((_, index) => evaluate2(index, initial, t)));
+  let values = sample(x);
+  if (!requestedX && !vertices.length && values.filter(Number.isFinite).length < values.length * 0.7) {
+    const positive = { min: 0, max: 8 }, alternative = sample(positive);
+    if (alternative.filter(Number.isFinite).length > values.filter(Number.isFinite).length) {
+      x = positive;
+      values = alternative;
+    }
+  }
+  if (vertices.length === states.length * evaluators.length) {
+    values = vertices.flatMap((q) => [q.value, q.value + q.a * 9]);
+  }
+  const y = expressions.length === 1 && /^tan\(x\)$/.test(expressions[0].replace(/\s/g, "")) ? { min: -4, max: 4 } : niceRange(values);
+  for (const q of vertices) {
+    y.min = Math.min(y.min, q.value - 1);
+    y.max = Math.max(y.max, q.value + 1);
+  }
+  return { x, y };
+}
+
 // src/scene3d-surfaces.ts
 var DOMAIN_CANDIDATE_HALF_SPANS = [2, 5, 10, 20, 50, 100];
 var DOMAIN_REFINEMENT_STEPS = 12;
@@ -11288,6 +11218,22 @@ function normalizedVisualIdentity(content, includeNumbers = true) {
     ...includeNumbers ? { numbers: content.numbers ?? [] } : {}
   }));
 }
+function separateInitialSamples(plan) {
+  const words = JSON.stringify(plan.sections.map((s) => s.moments.map((m) => m.narration)));
+  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合/.test(words)) return;
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    const visual = action.content;
+    if (visual.capability !== "function_plot" || visual.numbers?.length !== 2) continue;
+    const tokens = visual.parameters?.expression_tokens;
+    if (Array.isArray(tokens) && tokens.some((t) => t && typeof t === "object" && "kind" in t && t.kind === "number")) continue;
+    const a = plan.numbers?.[visual.numbers[0] - 1], b = plan.numbers?.[visual.numbers[1] - 1];
+    if (!a || !b || a === b || Math.abs(a.initial - b.initial) > 1e-8) continue;
+    const step = b.student_control?.step ?? (b.max - b.min) / 200;
+    const delta = Math.max(step, Math.round((b.max - b.min) / 5 / step) * step);
+    b.initial = b.initial + delta <= b.max ? b.initial + delta : Math.max(b.min, b.initial - delta);
+  }
+}
 function mergeEquivalentVisualInputs(plan) {
   const groups = /* @__PURE__ */ new Map();
   for (const section of plan.sections) {
@@ -11388,57 +11334,6 @@ function evaluate(expression, variables, values, path) {
     );
   }
 }
-function numericCombinations(entries) {
-  return entries.reduce(
-    (combinations, entry) => combinations.flatMap((combination) => entry.values.map((value) => ({ ...combination, [entry.name]: value }))),
-    [{}]
-  );
-}
-function paddedNumericRange(values, fallback) {
-  const finite = values.filter((value) => Number.isFinite(value) && Math.abs(value) <= 1e12).sort((a, b) => a - b);
-  if (finite.length === 0) return fallback;
-  const low = finite[Math.floor((finite.length - 1) * 0.02)];
-  const high = finite[Math.ceil((finite.length - 1) * 0.98)];
-  const span = high - low;
-  const padding = span > 1e-9 ? span * 0.12 : Math.max(0.5, Math.abs(low) * 0.2);
-  return { min: low - padding, max: high + padding };
-}
-function deterministicFunctionViewport(expressions, variables, parameterValues, requestedX, path) {
-  const evaluators = expressions.map((expression) => compileMathExpression(expression, variables));
-  const candidates = requestedX ? [requestedX] : [
-    { min: -4, max: 4 },
-    { min: 0.05, max: 8 },
-    { min: -10, max: 10 }
-  ];
-  let best;
-  for (const xRange of candidates) {
-    const values = [];
-    let attempts = 0;
-    for (let index = 0; index <= 120; index += 1) {
-      const x = xRange.min + (xRange.max - xRange.min) * index / 120;
-      for (const parameters2 of parameterValues) {
-        for (const evaluator of evaluators) {
-          attempts += 1;
-          try {
-            const value = evaluator({ x, ...parameters2 });
-            if (Number.isFinite(value) && Math.abs(value) <= 1e12) values.push(value);
-          } catch {
-          }
-        }
-      }
-    }
-    const ratio = attempts > 0 ? values.length / attempts : 0;
-    if (!best || ratio > best.ratio) best = { x: xRange, values, ratio };
-    if (ratio >= 0.75) {
-      best = { x: xRange, values, ratio };
-      break;
-    }
-  }
-  if (!best || best.values.length < 8) {
-    fail3("LESSON_PLAN_CAPABILITY_PARAMETER", path, "function has no stable finite viewport");
-  }
-  return { x: best.x, y: paddedNumericRange(best.values, { min: -1, max: 1 }) };
-}
 function mathExpressionToOll(expression) {
   const operators = {
     add: "+",
@@ -11526,13 +11421,6 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       "a function plot requires an explicit mathematical expression"
     );
   }
-  if ((content.numbers?.length ?? 0) > 1 && dynamicTokens === void 0) {
-    fail3(
-      "LESSON_PLAN_CAPABILITY_PARAMETER",
-      `${path}.expression_tokens`,
-      "a function plot with multiple numeric inputs must define how those inputs change the whole curve"
-    );
-  }
   const dynamicNumbers = dynamicTokens === void 0 ? [] : [...new Set(dynamicTokens.flatMap((token) => token.kind === "number" ? [token.number] : []))];
   if (dynamicNumbers.length > LESSON_PLAN_CAPABILITY_NUMBER_LIMITS.function_plot) {
     fail3(
@@ -11550,11 +11438,11 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
         "function_plot numbers must exactly match the number references in expression_tokens"
       );
     }
-    if (dynamicNumbers.length === 0 && declaredNumbers.length > 1) {
+    if (dynamicNumbers.length === 0 && declaredNumbers.length > 2) {
       fail3(
         "LESSON_PLAN_CAPABILITY_PARAMETER",
         `${path}.numbers`,
-        "a function curve without numeric parameters can use at most one number as its moving sample"
+        "a static function supports at most two independent sample points"
       );
     }
   }
@@ -11567,33 +11455,31 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   if (curveLabels.length > 0 && curveLabels.length !== expressions.length) {
     fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.curve_labels`, "curve label count must equal expression count");
   }
-  const number = dynamicTokens === void 0 || dynamicNumbers.length === 0 ? content.numbers?.[0] : void 0;
+  const sampleNumbers = dynamicNumbers.length === 0 ? [...new Set(content.numbers ?? [])] : [];
+  if (sampleNumbers.length > 2) fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "static curves support at most two sample points");
+  const number = sampleNumbers[0];
   const definition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
   let requestedX = input.x_min !== void 0 || input.x_max !== void 0 ? {
     min: optionalNumber(input.x_min, -4, `${path}.x_min`),
     max: optionalNumber(input.x_max, 4, `${path}.x_max`)
   } : void 0;
   if (requestedX) assertRange(requestedX.min, requestedX.max, `${path}.x_range`);
-  if (definition) {
+  for (const sampleNumber of sampleNumbers) {
+    const definition2 = numberDefinition(plan, sampleNumber, `${path}.numbers`);
     requestedX = {
-      min: Math.min(requestedX?.min ?? definition.min, definition.min),
-      max: Math.max(requestedX?.max ?? definition.max, definition.max)
+      min: Math.min(requestedX?.min ?? definition2.min, definition2.min),
+      max: Math.max(requestedX?.max ?? definition2.max, definition2.max)
     };
   }
-  const parameterValues = numericCombinations(dynamicNumbers.map((numberIndex) => {
-    const item = numberDefinition(plan, numberIndex, `${path}.numbers`);
-    return {
-      name: variableAlias(numberIndex),
-      values: [item.min, (item.min + item.max) / 2, item.max]
-    };
-  }));
-  const viewport = deterministicFunctionViewport(
-    expressions,
-    expressionVariables,
-    parameterValues,
-    requestedX,
-    `${path}.expression`
-  );
+  let viewport;
+  try {
+    viewport = functionViewport(expressions, dynamicNumbers.map((index) => {
+      const item = numberDefinition(plan, index, `${path}.numbers`);
+      return { name: variableAlias(index), initial: item.initial, min: item.min, max: item.max };
+    }), requestedX);
+  } catch (error) {
+    fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, error instanceof Error ? error.message : "invalid viewport");
+  }
   const requestedY = input.y_min !== void 0 || input.y_max !== void 0 ? {
     min: optionalNumber(input.y_min, viewport.y.min, `${path}.y_min`),
     max: optionalNumber(input.y_max, viewport.y.max, `${path}.y_max`)
@@ -11602,6 +11488,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   const plotContent = {
     title: optionalText(input.title, "\u51FD\u6570\u56FE\u50CF", `${path}.title`),
     axes: {
+      ...expressions.length > 1 && expressions.some((e) => e.replace(/[()\s]/g, "") === "x") ? { equal_scale: true } : {},
       x: { min: viewport.x.min, max: viewport.x.max, label: "x" },
       y: { min: requestedY.min, max: requestedY.max, label: "y" }
     },
@@ -11611,17 +11498,43 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       label: curveLabels[index] ?? (index === 0 ? optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`) : `y = ${item}`)
     }))
   };
-  if (number && definition) {
-    for (const x of [definition.min, definition.initial, definition.max]) {
-      evaluate(expression, ["x"], { x }, `${path}.expression`);
+  if (sampleNumbers.length) {
+    plotContent.points = sampleNumbers.map((sampleNumber, index) => {
+      const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+      for (const x of [d.min, d.initial, d.max]) evaluate(expression, ["x"], { x }, `${path}.expression`);
+      return {
+        as: index === 0 ? "moving-point" : "second-point",
+        x: d.initial,
+        y: evaluate(expression, ["x"], { x: d.initial }, `${path}.expression`),
+        label: sampleNumbers.length === 2 ? index === 0 ? "A" : "B" : "P(x, y)"
+      };
+    });
+    plotContent.bindings = sampleNumbers.flatMap((sampleNumber, index) => {
+      const point = index === 0 ? "moving-point" : "second-point";
+      const variable = variableAlias(sampleNumber);
+      return [
+        { target: `${point}.x`, expression: variable },
+        { target: `${point}.y`, expression: replaceIdentifier(expression, "x", variable) }
+      ];
+    });
+    if (sampleNumbers.length === 2) plotContent.measurement = "secant";
+  }
+  if (!sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
+    const initialVariables = Object.fromEntries(dynamicNumbers.map((index) => [variableAlias(index), numberDefinition(plan, index, path).initial]));
+    const xs = [0, 1];
+    const ys = xs.map((x) => {
+      try {
+        return evaluate(expression, expressionVariables, { ...initialVariables, x }, path);
+      } catch {
+        return NaN;
+      }
+    });
+    if (ys.every(Number.isFinite)) {
+      plotContent.points = xs.map((x, index) => ({ as: index ? "reference-b" : "reference-a", x, y: ys[index], label: index ? "B" : "A" }));
+      plotContent.bindings = xs.map((x, index) => ({ target: `${index ? "reference-b" : "reference-a"}.y`, expression: replaceIdentifier(expression, "x", String(x)) }));
+      plotContent.measurement = "secant";
+      plotContent.sample_input = "fixed_x";
     }
-    const y = evaluate(expression, ["x"], { x: definition.initial }, `${path}.expression`);
-    const variable = variableAlias(number);
-    plotContent.points = [{ as: "moving-point", x: definition.initial, y, label: "P(x, y)" }];
-    plotContent.bindings = [
-      { target: "moving-point.x", expression: variable },
-      { target: "moving-point.y", expression: replaceIdentifier(expression, "x", variable) }
-    ];
   }
   return {
     actions: [{ do: "write", as: base, kind: "plot", role, content: plotContent, place: placement }],
@@ -12210,6 +12123,48 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
     ])
   };
 }
+function compileCircleArea(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "radius"], path);
+  const r = optionalNumber(input.radius, 2, `${path}.radius`);
+  if (r <= 0 || r > 1e6) fail3("LESSON_PLAN_CAPABILITY_PARAMETER", path, "radius must be positive and bounded");
+  const number = content.numbers?.[0];
+  const d = number ? numberDefinition(plan, number, path) : void 0;
+  const variable = number ? variableAlias(number) : void 0;
+  const progress = variable && d ? `(${variable}-${d.min})/(${d.max - d.min})` : "0";
+  const initial = d ? (d.initial - d.min) / (d.max - d.min) : 0;
+  const actions = [];
+  for (const [panel, n] of [8, 16].entries()) {
+    const id = panel === 0 ? base : `${base}-refined`;
+    const angle = 2 * Math.PI / n, chord = 2 * r * Math.sin(angle / 2), height = r * Math.cos(angle / 2);
+    const points = [];
+    const arcs = [];
+    const bindings = [];
+    for (let i = 0; i < n; i++) {
+      const center = `center-${i}`, sector = `sector-${i}`;
+      const up = i % 2 === 0;
+      const endX = i / 2 * chord, endY = up ? 0 : height;
+      const start = i * angle, end = (up ? Math.PI / 2 : -Math.PI / 2) - angle / 2;
+      points.push({ as: center, x: endX * initial, y: endY * initial, visible: false });
+      arcs.push({ as: sector, center, radius: r, start_angle: start + (end - start) * initial, end_angle: start + angle + (end - start) * initial, filled: true });
+      if (variable) bindings.push(
+        { target: `${center}.x`, expression: `${endX}*(${progress})` },
+        { target: `${center}.y`, expression: `${endY}*(${progress})` },
+        { target: `${sector}.start_angle`, expression: linearExpression(start, end, progress) },
+        { target: `${sector}.end_angle`, expression: linearExpression(start + angle, end + angle, progress) }
+      );
+    }
+    actions.push({ do: "write", as: id, kind: "geometry", role, place: panel === 0 ? placement : { relation: "below", anchor: base, gap: "normal" }, content: {
+      title: `${n} \u7B49\u5206\u5706\u7684\u9762\u79EF\u91CD\u6392`,
+      caption: `\u534A\u5F84 r=${r}\uFF1B\u6BCF\u5757\u5747\u4E3A\u771F\u5B9E\u6247\u5F62\uFF0C\u91CD\u6392\u9762\u79EF\u4E0D\u53D8\u3002\u6709\u9650\u7B49\u5206\u7684\u8FB9\u7F18\u4ECD\u5F2F\u66F2\uFF1B\u7B49\u5206\u8D8A\u7EC6\uFF0C\u5E95\u8D8B\u8FD1 \u03C0r\uFF0C\u9AD8\u8D8B\u8FD1 r\uFF0C\u9762\u79EF\u4E3A \u03C0r\xB2\u3002`,
+      axes: { x: { min: -r * 1.3, max: Math.PI * r + r }, y: { min: -r * 1.3, max: r * 1.6 }, equal_scale: true },
+      points,
+      arcs,
+      ...bindings.length ? { bindings } : {}
+    } });
+  }
+  return { actions, whole: base, parts: new Map([["whole", base], ...variable ? [["primary_control", base]] : []]) };
+}
 function compileProcessDiagram(base, content, role, placement, _plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "steps"], path);
@@ -12247,7 +12202,8 @@ var VISUAL_COMPILERS = {
   implicit_surface_with_section: compileImplicitSurface,
   coordinate_circle: compileCoordinateCircle,
   geometric_rearrangement: compileGeometricRearrangement,
-  process_diagram: compileProcessDiagram
+  process_diagram: compileProcessDiagram,
+  circle_area_rearrangement: compileCircleArea
 };
 function intersectProgramRange(definition, allowedMin, allowedMax) {
   let min = Math.max(definition.min, allowedMin);
@@ -12426,8 +12382,11 @@ function compilePlainContent(kind, content, options, path) {
 function compileLessonPlan(value, options = {}) {
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
+  normalizePlotInputInstructions(plan);
+  validateTeachingClaims(plan);
   normalizeProgramOwnedNumberRanges(plan);
   mergeEquivalentVisualInputs(plan);
+  separateInitialSamples(plan);
   const resolvedReferences = new Map(resolved.references.map((item) => [item.path, item]));
   const wholeTargets = /* @__PURE__ */ new Map();
   const partTargets = /* @__PURE__ */ new Map();
@@ -12945,7 +12904,7 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
     properties.section_axis = { enum: ["x", "y", "z"] };
   }
   if (uses("implicit_surface_with_section")) properties.level = { type: "number" };
-  if (uses("circle_and_arc") || uses("coordinate_circle")) properties.radius = { type: "number", minimum: 0 };
+  if (modelParameters.has("radius")) properties.radius = { type: "number", minimum: 0 };
   if (uses("circle_and_arc")) properties.angle = { type: "number" };
   if (uses("coordinate_circle")) {
     properties.center_x = { type: "number" };
@@ -13438,34 +13397,34 @@ function completedJsonObjectProperty(source, propertyName) {
 
 // src/lesson-plan-generation.ts
 var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002
-- visual_recipes \u6BCF\u9879\u4F9D\u6B21\u662F [features, numbers, purpose]\u3002course_visuals \u53EA\u5217\u771F\u6B63\u9700\u8981\u7684\u4E3B\u8981\u753B\u9762\u5E76\u9009\u62E9\u5176\u4E2D\u7684 features\uFF1B\u540C\u4E00\u753B\u9762\u540E\u7EED\u590D\u7528\uFF0C\u53EA\u6709\u786E\u9700\u5E76\u6392\u6BD4\u8F83\u624D\u5EFA comparison\uFF0Csupporting/comparison \u90FD\u6307\u5411\u8F83\u65E9\u753B\u9762\u3002
-- \u56FE\u5F62\u62C6\u5206\u79FB\u52A8\u8BC1\u660E\u4F7F\u7528 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1Bordered_process_steps \u53EA\u662F\u9759\u6001\u6D41\u7A0B\u3002
+- visual_recipes \u4E3A [features,numbers,purpose]\u3002course_visuals \u9009\u5176\u4E2D features\uFF0C\u53EA\u5217\u5FC5\u8981\u753B\u9762\uFF1B\u540E\u7EED\u590D\u7528\uFF0C\u786E\u9700\u5E76\u6392\u624D\u5EFA comparison\uFF0Csupporting/comparison \u6307\u5411\u8F83\u65E9\u753B\u9762\u3002
+- \u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002ordered_process_steps \u4EC5\u662F\u9759\u6001\u6D41\u7A0B\u3002
 - numbers \u53EA\u5199\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3001\u8303\u56F4\u548C\u521D\u503C\uFF0C\u987A\u5E8F\u4F9D visual_recipes \u7684 numbers\uFF1B\u63A7\u4EF6\u4E0E\u6B65\u957F\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- request_coverage \u6309 request_parts \u7684\u539F\u987A\u5E8F\u9010\u9879\u8986\u76D6\u3002\u53EF\u843D\u5B9E\u5199 teach \u548C\u7AE0\u8282\uFF1B\u5F53\u524D\u80FD\u529B\u4E0D\u80FD\u5B8C\u6574\u5B9E\u73B0\u5219\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u548C\u539F\u56E0\uFF0C\u4E0D\u80FD\u7528\u6587\u5B57\u6216\u9519\u8BEF\u753B\u9762\u66FF\u4EE3\u3002
-- sections \u53EF\u542B\u591A\u8282\uFF0C\u6BCF\u8282\u53EF\u6709\u65C1\u767D\u3001\u677F\u4E66\u3001\u52A8\u753B\u548C\u7EC3\u4E60\uFF1Bclose \u53EA\u603B\u7ED3\u3002
+- request_coverage \u4F9D request_parts \u987A\u5E8F\u8986\u76D6\uFF1A\u53EF\u5B9E\u73B0\u5199 teach+\u7AE0\u8282\uFF1B\u4E0D\u80FD\u5B8C\u6574\u5B9E\u73B0\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u53CA\u539F\u56E0\uFF0C\u7981\u6B62\u9519\u8BEF\u66FF\u4EE3\u3002
+- \u5355\u4E3B\u9898\u9ED8\u8BA4\u4E00\u8282\uFF0C\u8282\u5185\u5B8C\u6210\u89E3\u91CA\u3001\u6F14\u793A\u4E0E\u68C0\u67E5\uFF0C\u907F\u514D\u91CD\u590D\u5F00\u573A/\u603B\u7ED3\uFF1B\u4E3A\u4EC0\u4E48\u987B\u63A8\u5BFC\uFF0C\u600E\u4E48\u7B97\u987B\u6B65\u9AA4\u4E0E\u68C0\u9A8C\uFF0C\u662F\u4EC0\u4E48\u987B\u76F4\u89C9\u4E0E\u8FB9\u754C\u3002\u4E0D\u731C\u5E74\u7EA7\uFF1B\u591A\u4E3B\u9898\u624D\u5206\u8282\uFF0Cclose \u53EA\u603B\u7ED3\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
 var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5B9A\u7684\u4E00\u8282\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u6216\u5BF9\u8C61\u5F15\u7528\u3002
 - \u5FC5\u987B\u843D\u5B9E\u76EE\u5F55\u5206\u914D\u7684 request_parts\u3002\u65C1\u767D\u4E0E\u5BF9\u5E94\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002
 - \u76EE\u5F55\u4E2D\u672C\u8282 create \u7684\u753B\u9762\u6309\u987A\u5E8F\u5199\u5165 course_visual_creates \u5E76\u6307\u5B9A moment\uFF1Breuse \u7684\u753B\u9762\u4E0D\u5F97\u91CD\u5EFA\u3002\u76EE\u5F55\u58F0\u660E\u7684\u516C\u5F0F\u548C\u7B14\u8BB0\u5206\u522B\u6309\u987A\u5E8F\u5199\u5165 reusable_math_creates\u3001reusable_note_creates\uFF1B\u7A7A\u6E05\u5355\u7701\u7565\u3002
 - focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\uFF0C\u8865\u9F50\u5361\u7247\u7528\u9014\u3001\u4F4D\u7F6E\u3001\u9ED8\u8BA4\u65F6\u673A\u548C\u52A8\u4F5C\u987A\u5E8F\u3002
-- \u5C0F\u6570\u6309 Schema \u7684 mantissa\u3001scale \u586B\u5199\uFF0C\u4F8B\u5982 -1.5 \u4E3A -15\u30011\uFF1B6.283 \u4E3A 6283\u30013\u3002
+- \u5C0F\u6570\u7528 mantissa/scale\uFF0C\u5982 -1.5\u2192-15/1\u3002
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- function_plot \u7684 parameters.formulas \u59CB\u7EC8\u662F\u516C\u5F0F\u6570\u7EC4\uFF0C\u6BCF\u9879\u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u5355\u6761\u66F2\u7EBF\u53EF\u5F15\u7528 n1\u3001n2\uFF0C\u4F8B\u5982 (x-n1)^2+n2\uFF1B\u6BD4\u8F83\u591A\u6761\u66F2\u7EBF\u65F6\u586B\u5199\u591A\u4E2A\u4E0D\u542B n1\u3001n2 \u7684\u9759\u6001\u516C\u5F0F\uFF0C\u4F8B\u5982 ["x", "x^2", "sin(x)"]\u3002\u6BCF\u6761\u516C\u5F0F\u90FD\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u9010\u6761\u89E3\u6790\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002\u51FD\u6570\u56FE\u548C\u4E09\u7EF4\u66F2\u9762\u90FD\u4E0D\u586B\u5199\u89C6\u7A97\u3001\u91C7\u6837\u5BC6\u5EA6\u6216\u7F51\u683C\u7CBE\u5EA6\u3002
-- animations \u53EA\u51B3\u5B9A\u6F14\u793A\u54EA\u4E2A\u6570\u503C\u3001\u76EE\u6807\u503C\u548C\u6559\u5B66\u8282\u594F\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u7F13\u52A8\u65B9\u5F0F\u3002
-- geometric_rearrangement \u7684\u6570\u503C\u8868\u793A\u91CD\u6392\u8FDB\u5EA6\uFF1Bconstruction \u4ECE Schema \u9009\u62E9\u3002process_diagram \u6CA1\u6709\u6570\u503C\u6216\u52A8\u753B\u3002
+- function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
+- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002
+- geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF1B\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
 var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D\uFF0C\u5FC5\u987B\u5148\u5B8C\u6210 outline\uFF0C\u518D\u4F9D\u636E\u8FD9\u4E2A outline \u7F16\u5199 first_section\u3002first_section \u53EA\u80FD\u843D\u5B9E outline.sections[0]\uFF1A
 - outline \u662F\u552F\u4E00\u8BFE\u7A0B\u5B89\u6392\uFF1B\u4E0D\u5F97\u5728 first_section \u589E\u52A0 outline \u6CA1\u6709\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\uFF0C\u4E5F\u4E0D\u5F97\u9057\u6F0F\u7B2C\u4E00\u8282\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\u548C\u53EF\u590D\u7528\u677F\u4E66\u3002
 - first_section \u53EA\u5199 moments \u4EE5\u53CA\u53EF\u9009\u7684 number_activities\u3001scene3d_activities\u3002\u65C1\u767D\u4E0E\u5BF9\u5E94\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002
-- outline \u4E2D\u7B2C\u4E00\u8282\u65B0\u5EFA\u7684\u4E3B\u8981\u753B\u9762\uFF0C\u6309 course_visuals \u7684\u4F4D\u7F6E\u5199\u8FDB\u5BF9\u5E94 moment \u7684 visual_creates\uFF1Acourse_visual \u586B\u5176\u4ECE 1 \u5F00\u59CB\u7684\u4F4D\u7F6E\uFF0Ccontent.parameters \u53EA\u586B\u5199\u8BE5\u753B\u9762\u6240\u9700\u7684\u6570\u5B66\u5185\u5BB9\uFF0Ccontent.numbers \u4F7F\u7528 outline.numbers \u7684\u4F4D\u7F6E\u3002\u753B\u9762\u80FD\u529B\u7531\u7A0B\u5E8F\u6839\u636E outline.required_features \u786E\u5B9A\uFF0Cfirst_section \u4E0D\u518D\u91CD\u590D\u9009\u62E9\u3002\u4E0D\u5F97\u91CD\u5EFA outline \u58F0\u660E\u4E3A\u590D\u7528\u7684\u65E7\u753B\u9762\u3002
-- outline \u4E2D\u7B2C\u4E00\u8282\u58F0\u660E\u7684\u53EF\u590D\u7528\u516C\u5F0F\u548C\u7B14\u8BB0\uFF0C\u6309 reusable_items \u7684\u4F4D\u7F6E\u5199\u8FDB\u5BF9\u5E94 moment \u7684 math_creates \u548C note_creates\uFF0C\u5E76\u7528 reusable_item \u586B\u5176\u4ECE 1 \u5F00\u59CB\u7684\u4F4D\u7F6E\uFF1B\u5176\u4ED6\u53EA\u5728\u5F53\u524D\u8BB2\u89E3\u4E2D\u51FA\u73B0\u7684\u516C\u5F0F\u6216\u7B14\u8BB0\u4E5F\u53EF\u5199\u5165\u8FD9\u4E24\u4E2A\u6570\u7EC4\uFF0C\u4F46\u4E0D\u586B reusable_item\u3002\u7A0B\u5E8F\u628A\u4F4D\u7F6E\u8F6C\u6362\u4E3A\u7A33\u5B9A\u5F15\u7528\u3002
+- \u7B2C\u4E00\u8282\u65B0\u753B\u9762\u5199\u5165 moment.visual_creates\uFF1Bcourse_visual\u3001content.numbers \u5206\u522B\u5F15\u7528 outline.course_visuals\u3001outline.numbers \u7684\u4ECE1\u5F00\u59CB\u4F4D\u7F6E\u3002content.parameters \u4EC5\u5199\u6570\u5B66\u5185\u5BB9\uFF0C\u80FD\u529B\u7531\u7A0B\u5E8F\u786E\u5B9A\uFF1B\u590D\u7528\u753B\u9762\u4E0D\u91CD\u5EFA\u3002
+- \u7B2C\u4E00\u8282\u516C\u5F0F/\u7B14\u8BB0\u5199\u5165 moment.math_creates/note_creates\uFF1B\u53EF\u590D\u7528\u9879\u7528 reusable_item \u5F15\u7528\u76EE\u5F55\u4E2D\u4ECE1\u5F00\u59CB\u7684\u4F4D\u7F6E\uFF0C\u4E34\u65F6\u9879\u4E0D\u586B\u3002\u7A0B\u5E8F\u751F\u6210\u7A33\u5B9A\u5F15\u7528\u3002
 - first_section \u4F7F\u7528 outline \u4E2D\u6570\u503C\u548C\u753B\u9762\u7684\u5148\u540E\u987A\u5E8F\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u3001\u5BF9\u8C61\u5F15\u7528\u3001course_visual_creates \u6216 reusable_board_creates\u3002
 - focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\uFF0C\u8865\u9F50\u5361\u7247\u7528\u9014\u3001\u4F4D\u7F6E\u3001\u9ED8\u8BA4\u65F6\u673A\u548C\u52A8\u4F5C\u987A\u5E8F\u3002
-- \u5C0F\u6570\u6309 Schema \u7684 mantissa\u3001scale \u586B\u5199\uFF0C\u4F8B\u5982 -1.5 \u4E3A -15\u30011\uFF1B6.283 \u4E3A 6283\u30013\u3002
+- \u5C0F\u6570\u7528 mantissa/scale\uFF0C\u5982 -1.5\u2192-15/1\u3002
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- function_plot \u7684 parameters.formulas \u59CB\u7EC8\u662F\u516C\u5F0F\u6570\u7EC4\uFF0C\u6BCF\u9879\u53EA\u5199\u4E2D\u7F00\u516C\u5F0F\u53F3\u4FA7\uFF1Ax \u662F\u6A2A\u8F74\uFF0Cn1\u3001n2 \u662F\u8BFE\u7A0B\u7B2C 1\u30012 \u4E2A\u6570\u503C\uFF1B\u652F\u6301 + - * / ^\u3001\u62EC\u53F7\u3001pi\u3001e \u548C\u5E38\u89C1\u5355\u53C2\u6570\u51FD\u6570\u3002\u5355\u6761\u66F2\u7EBF\u53EF\u5F15\u7528 n1\u3001n2\uFF0C\u4F8B\u5982 (x-n1)^2+n2\uFF1B\u6BD4\u8F83\u591A\u6761\u66F2\u7EBF\u65F6\u586B\u5199\u591A\u4E2A\u4E0D\u542B n1\u3001n2 \u7684\u9759\u6001\u516C\u5F0F\uFF0C\u4F8B\u5982 ["x", "x^2", "sin(x)"]\u3002\u6BCF\u6761\u516C\u5F0F\u90FD\u5FC5\u987B\u4F9D\u8D56 x\uFF1B\u7A0B\u5E8F\u9010\u6761\u89E3\u6790\u3001\u7ED1\u5B9A\u63A7\u4EF6\u5E76\u8BA1\u7B97\u5750\u6807\u8303\u56F4\u3002\u51FD\u6570\u56FE\u548C\u4E09\u7EF4\u66F2\u9762\u90FD\u4E0D\u586B\u5199\u89C6\u7A97\u3001\u91C7\u6837\u5BC6\u5EA6\u6216\u7F51\u683C\u7CBE\u5EA6\u3002
-- animations \u53EA\u51B3\u5B9A\u6F14\u793A\u54EA\u4E2A\u6570\u503C\u3001\u76EE\u6807\u503C\u548C\u6559\u5B66\u8282\u594F\uFF1B\u7A0B\u5E8F\u7EDF\u4E00\u751F\u6210\u7F13\u52A8\u65B9\u5F0F\u3002
-- geometric_rearrangement \u7684\u6570\u503C\u8868\u793A\u91CD\u6392\u8FDB\u5EA6\uFF1Bconstruction \u4ECE Schema \u9009\u62E9\u3002process_diagram \u6CA1\u6709\u6570\u503C\u6216\u52A8\u753B\u3002`;
+- function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
+- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002
+- geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF1B\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002`;
 var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
 ${BOOTSTRAP_FIRST_SECTION_PROMPT}
@@ -14876,6 +14835,12 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
         "formal section generation cannot create course visuals through optional moment arrays"
       );
     }
+    const transientCreates = (collection) => (originalMoment[collection] ?? []).map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
+      const transient = { ...entry };
+      if (candidate.reusable_board_creates !== void 0) delete transient.reusable_item;
+      return transient;
+    });
     const moment = {
       ...originalMoment,
       ...candidate.course_visual_creates === void 0 ? {} : {
@@ -14883,11 +14848,11 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
       },
       ...candidate.reusable_board_creates === void 0 ? {} : {
         math_creates: [
-          ...originalMoment.math_creates ?? [],
+          ...transientCreates("math_creates"),
           ...fixedReusableCreates.get(momentIndex + 1)?.math_creates ?? []
         ],
         note_creates: [
-          ...originalMoment.note_creates ?? [],
+          ...transientCreates("note_creates"),
           ...fixedReusableCreates.get(momentIndex + 1)?.note_creates ?? []
         ]
       }
@@ -15333,7 +15298,58 @@ function partialModelResponse(error) {
   const value = error.partialResponse;
   return typeof value === "string" && value.trim() ? value : void 0;
 }
+function locallyUnsupportedLessonRequest(request) {
+  const asksForFourDimensions = /(?:四|4)\s*维|(?:four|4)[ -]?dimensional|\b4d\b/i.test(request);
+  const asksForHypercube = /超立方体|正八胞体|tesseract|hypercube/i.test(request);
+  const asksForRotation = /旋转|转动|rotation|rotate/i.test(request);
+  if (asksForFourDimensions && asksForHypercube && asksForRotation) {
+    return "\u5F53\u524D\u767D\u677F\u53EA\u80FD\u6267\u884C\u4E8C\u7EF4\u56FE\u5F62\u548C\u4E09\u7EF4\u573A\u666F\uFF0C\u4E0D\u80FD\u7CBE\u786E\u6A21\u62DF\u56DB\u7EF4\u8D85\u7ACB\u65B9\u4F53\u7684\u56DB\u7EF4\u65CB\u8F6C\u3002\u4F60\u53EF\u4EE5\u6539\u95EE\u5B83\u7684\u4E09\u7EF4\u6295\u5F71\u539F\u7406\u6216\u57FA\u672C\u7ED3\u6784\u3002";
+  }
+  return void 0;
+}
+function requestsTwoIndependentPoints(request) {
+  return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
+}
+function prepareTwoPointOutline(outline, request) {
+  if (!requestsTwoIndependentPoints(request)) return;
+  outline.numbers ??= [];
+  while (outline.numbers.length < 2) {
+    const index = outline.numbers.length;
+    outline.numbers.push({
+      initial: index === 0 ? -1 : 2,
+      min: -5,
+      max: 5,
+      label: index === 0 ? "A\u70B9\u7684x\u5750\u6807" : "B\u70B9\u7684x\u5750\u6807",
+      student_control: { kind: "slider", step: 0.25 }
+    });
+  }
+  outline.numbers.slice(0, 2).forEach((number, index) => {
+    number.label = index === 0 ? "A\u70B9\u7684x\u5750\u6807" : "B\u70B9\u7684x\u5750\u6807";
+    number.student_control = { kind: "slider", step: number.student_control?.step ?? 0.25 };
+  });
+}
+function specializeTwoPointDraft(draft, outline, request) {
+  if (!requestsTwoIndependentPoints(request) || (outline.numbers?.length ?? 0) < 2) return;
+  for (const moment of draft.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    const content = action.content;
+    if (content.capability !== "function_plot") continue;
+    const tokens = content.parameters?.expression_tokens;
+    if (Array.isArray(tokens)) {
+      content.parameters.expression_tokens = tokens.map((token) => token.kind === "number" ? { kind: "literal", value: outline.numbers?.[token.number - 1]?.initial ?? 0 } : token);
+    }
+    content.numbers = [1, 2];
+  }
+}
 async function generateLessonPlanWithModel(model, input, options = {}) {
+  const unsupportedResponse = locallyUnsupportedLessonRequest(input.learner_request);
+  if (unsupportedResponse) {
+    return {
+      disposition: "unsupported",
+      learner_response: unsupportedResponse,
+      model_calls: 0
+    };
+  }
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");
   let context = inputContext(input);
   const fixedRequestParts = requestParts(input);
@@ -15439,6 +15455,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       ),
       fixedRequestParts.length
     );
+    prepareTwoPointOutline(outline, input.learner_request);
     try {
       bootstrappedFirstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
@@ -15449,6 +15466,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         1,
         true
       );
+      specializeTwoPointDraft(bootstrappedFirstSection, outline, input.learner_request);
     } catch (error) {
       sectionErrors.set(1, error);
       await options.on_rejected_part?.({
@@ -15556,6 +15574,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     }
   }
   if (!outline) throw outlineError;
+  prepareTwoPointOutline(outline, input.learner_request);
   await options.on_outline_ready?.({
     sections: outline.sections.length,
     course_visuals: outline.course_visuals?.length ?? 0,
@@ -15574,7 +15593,9 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   }
   const visualsForSection = (section) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
+    const established = visual.create_section < section ? (drafts[visual.create_section - 1]?.moments ?? []).flatMap((m) => m.actions).filter((a) => a.action === "create" && a.kind === "visual").map((a) => a.content).filter((v) => v.capability === visual.capability) : [];
     return [{
+      ...established.length === 1 && fixedLineSamples(established[0]) ? { sample_slope: "constant" } : {},
       course_visual: index + 1,
       capability: visual.capability,
       mode: visual.create_section === section ? "create" : "reuse",
@@ -15625,6 +15646,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         section,
         true
       );
+      specializeTwoPointDraft(candidate, outline, input.learner_request);
     } catch (error) {
       const previousError = sectionErrors.get(section);
       sectionErrors.set(section, error);

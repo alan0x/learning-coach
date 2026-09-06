@@ -418,6 +418,7 @@
               "radius": {"type": "number", "exclusiveMinimum": 0},
               "start_angle": {"type": "number"},
               "end_angle": {"type": "number"},
+              "filled": {"type": "boolean"},
               "label": {"type": "string"}
             }
           }

@@ -1,3 +1,4 @@
+import { fixedLineSamples } from "./teaching-contracts.js";
 import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
@@ -13,6 +14,7 @@ import {
   type LessonPlanOutline,
   type LessonPlanAction,
   type LessonPlanMathExpression,
+  type LessonPlanMathToken,
   type LessonPlanReference,
   type LessonPlanSectionDraft,
   type LessonPlanVisualContent,
@@ -118,36 +120,36 @@ export interface NonLessonPlanResponse {
 export type LessonPlanGenerationResult = GeneratedLessonPlan | NonLessonPlanResponse;
 
 const OUTLINE_SYSTEM_PROMPT = `设计完整课程目录，不生成 OLL、执行 ID、组件名或自由对象名。
-- visual_recipes 每项依次是 [features, numbers, purpose]。course_visuals 只列真正需要的主要画面并选择其中的 features；同一画面后续复用，只有确需并排比较才建 comparison，supporting/comparison 都指向较早画面。
-- 图形拆分移动证明使用 polygon_pieces、rigid_rearrangement、area_relation；ordered_process_steps 只是静态流程。
+- visual_recipes 为 [features,numbers,purpose]。course_visuals 选其中 features，只列必要画面；后续复用，确需并排才建 comparison，supporting/comparison 指向较早画面。
+- 多边形重排选 polygon_pieces、rigid_rearrangement、area_relation；圆面积选 circle_area_rearrangement。ordered_process_steps 仅是静态流程。
 - numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。
-- request_coverage 按 request_parts 的原顺序逐项覆盖。可落实写 teach 和章节；当前能力不能完整实现则写 unsupported、空章节和原因，不能用文字或错误画面替代。
-- sections 可含多节，每节可有旁白、板书、动画和练习；close 只总结。
+- request_coverage 依 request_parts 顺序覆盖：可实现写 teach+章节；不能完整实现写 unsupported、空章节及原因，禁止错误替代。
+- 单主题默认一节，节内完成解释、演示与检查，避免重复开场/总结；为什么须推导，怎么算须步骤与检验，是什么须直觉与边界。不猜年级；多主题才分节，close 只总结。
 只返回符合响应 Schema 的 JSON。`;
 
 const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 OLL、执行 ID、变量名、对象名或对象引用。
 - 必须落实目录分配的 request_parts。旁白与对应板书和动作放在同一 moment；可见文字直接对学习者说话，不能写“让学生……”。
 - 目录中本节 create 的画面按顺序写入 course_visual_creates 并指定 moment；reuse 的画面不得重建。目录声明的公式和笔记分别按顺序写入 reusable_math_creates、reusable_note_creates；空清单省略。
 - focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象，补齐卡片用途、位置、默认时机和动作顺序。
-- 小数按 Schema 的 mantissa、scale 填写，例如 -1.5 为 -15、1；6.283 为 6283、3。
+- 小数用 mantissa/scale，如 -1.5→-15/1。
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
-- function_plot 的 parameters.formulas 始终是公式数组，每项只写中缀公式右侧：x 是横轴，n1、n2 是课程第 1、2 个数值；支持 + - * / ^、括号、pi、e 和常见单参数函数。单条曲线可引用 n1、n2，例如 (x-n1)^2+n2；比较多条曲线时填写多个不含 n1、n2 的静态公式，例如 ["x", "x^2", "sin(x)"]。每条公式都必须依赖 x；程序逐条解析、绑定控件并计算坐标范围。函数图和三维曲面都不填写视窗、采样密度或网格精度。
-- animations 只决定演示哪个数值、目标值和教学节奏；程序统一生成缓动方式。
-- geometric_rearrangement 的数值表示重排进度；construction 从 Schema 选择。process_diagram 没有数值或动画。
+- function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
+- animations 只写数值、目标和节奏；程序生成缓动。
+- geometric_rearrangement 仅用于指定多边形证明；圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
 只返回符合响应 Schema 的 JSON。`;
 
 const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 outline，再依据这个 outline 编写 first_section。first_section 只能落实 outline.sections[0]：
 - outline 是唯一课程安排；不得在 first_section 增加 outline 没有声明的主要画面，也不得遗漏第一节声明的主要画面和可复用板书。
 - first_section 只写 moments 以及可选的 number_activities、scene3d_activities。旁白与对应板书和动作放在同一 moment；可见文字直接对学习者说话，不能写“让学生……”。
-- outline 中第一节新建的主要画面，按 course_visuals 的位置写进对应 moment 的 visual_creates：course_visual 填其从 1 开始的位置，content.parameters 只填写该画面所需的数学内容，content.numbers 使用 outline.numbers 的位置。画面能力由程序根据 outline.required_features 确定，first_section 不再重复选择。不得重建 outline 声明为复用的旧画面。
-- outline 中第一节声明的可复用公式和笔记，按 reusable_items 的位置写进对应 moment 的 math_creates 和 note_creates，并用 reusable_item 填其从 1 开始的位置；其他只在当前讲解中出现的公式或笔记也可写入这两个数组，但不填 reusable_item。程序把位置转换为稳定引用。
+- 第一节新画面写入 moment.visual_creates；course_visual、content.numbers 分别引用 outline.course_visuals、outline.numbers 的从1开始位置。content.parameters 仅写数学内容，能力由程序确定；复用画面不重建。
+- 第一节公式/笔记写入 moment.math_creates/note_creates；可复用项用 reusable_item 引用目录中从1开始的位置，临时项不填。程序生成稳定引用。
 - first_section 使用 outline 中数值和画面的先后顺序，不生成 OLL、执行 ID、变量名、对象名、对象引用、course_visual_creates 或 reusable_board_creates。
 - focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象，补齐卡片用途、位置、默认时机和动作顺序。
-- 小数按 Schema 的 mantissa、scale 填写，例如 -1.5 为 -15、1；6.283 为 6283、3。
+- 小数用 mantissa/scale，如 -1.5→-15/1。
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
-- function_plot 的 parameters.formulas 始终是公式数组，每项只写中缀公式右侧：x 是横轴，n1、n2 是课程第 1、2 个数值；支持 + - * / ^、括号、pi、e 和常见单参数函数。单条曲线可引用 n1、n2，例如 (x-n1)^2+n2；比较多条曲线时填写多个不含 n1、n2 的静态公式，例如 ["x", "x^2", "sin(x)"]。每条公式都必须依赖 x；程序逐条解析、绑定控件并计算坐标范围。函数图和三维曲面都不填写视窗、采样密度或网格精度。
-- animations 只决定演示哪个数值、目标值和教学节奏；程序统一生成缓动方式。
-- geometric_rearrangement 的数值表示重排进度；construction 从 Schema 选择。process_diagram 没有数值或动画。`;
+- function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
+- animations 只写数值、目标和节奏；程序生成缓动。
+- geometric_rearrangement 仅用于指定多边形证明；圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
 
 const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
@@ -1942,6 +1944,18 @@ function lowerModelSectionDraft(
         "formal section generation cannot create course visuals through optional moment arrays",
       );
     }
+    const transientCreates = (collection: "math_creates" | "note_creates"): unknown[] => (
+      ((originalMoment[collection] as unknown[] | undefined) ?? []).map((entry) => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
+        const transient = { ...(entry as Record<string, unknown>) };
+        // The root reusable_board_creates object is the exact, outline-owned
+        // source for reusable math and note cards. A model may repeat a stale
+        // reusable position on an ordinary moment card; keeping that position
+        // can point at a different declared board kind and force a model repair.
+        if (candidate.reusable_board_creates !== undefined) delete transient.reusable_item;
+        return transient;
+      })
+    );
     const moment: Record<string, unknown> = {
       ...originalMoment,
       ...(candidate.course_visual_creates === undefined ? {} : {
@@ -1949,11 +1963,11 @@ function lowerModelSectionDraft(
       }),
       ...(candidate.reusable_board_creates === undefined ? {} : {
         math_creates: [
-          ...((originalMoment.math_creates as unknown[] | undefined) ?? []),
+          ...transientCreates("math_creates"),
           ...(fixedReusableCreates.get(momentIndex + 1)?.math_creates ?? []),
         ],
         note_creates: [
-          ...((originalMoment.note_creates as unknown[] | undefined) ?? []),
+          ...transientCreates("note_creates"),
           ...(fixedReusableCreates.get(momentIndex + 1)?.note_creates ?? []),
         ],
       }),
@@ -2487,11 +2501,74 @@ function partialModelResponse(error: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+function locallyUnsupportedLessonRequest(request: string): string | undefined {
+  const asksForFourDimensions = /(?:四|4)\s*维|(?:four|4)[ -]?dimensional|\b4d\b/i.test(request);
+  const asksForHypercube = /超立方体|正八胞体|tesseract|hypercube/i.test(request);
+  const asksForRotation = /旋转|转动|rotation|rotate/i.test(request);
+  if (asksForFourDimensions && asksForHypercube && asksForRotation) {
+    return "当前白板只能执行二维图形和三维场景，不能精确模拟四维超立方体的四维旋转。你可以改问它的三维投影原理或基本结构。";
+  }
+  return undefined;
+}
+
+function requestsTwoIndependentPoints(request: string): boolean {
+  return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
+}
+
+function prepareTwoPointOutline(outline: LessonPlanOutline, request: string): void {
+  if (!requestsTwoIndependentPoints(request)) return;
+  outline.numbers ??= [];
+  while (outline.numbers.length < 2) {
+    const index = outline.numbers.length;
+    outline.numbers.push({
+      initial: index === 0 ? -1 : 2,
+      min: -5,
+      max: 5,
+      label: index === 0 ? "A点的x坐标" : "B点的x坐标",
+      student_control: { kind: "slider", step: 0.25 },
+    });
+  }
+  outline.numbers.slice(0, 2).forEach((number, index) => {
+    number.label = index === 0 ? "A点的x坐标" : "B点的x坐标";
+    number.student_control = { kind: "slider", step: number.student_control?.step ?? 0.25 };
+  });
+}
+
+function specializeTwoPointDraft(
+  draft: LessonPlanSectionDraft,
+  outline: LessonPlanOutline,
+  request: string,
+): void {
+  if (!requestsTwoIndependentPoints(request) || (outline.numbers?.length ?? 0) < 2) return;
+  for (const moment of draft.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    const content = action.content as LessonPlanVisualContent;
+    if (content.capability !== "function_plot") continue;
+    const tokens = content.parameters?.expression_tokens;
+    if (Array.isArray(tokens)) {
+      content.parameters!.expression_tokens = (tokens as LessonPlanMathToken[]).map((token) => (
+        token.kind === "number"
+          ? { kind: "literal", value: outline.numbers?.[token.number - 1]?.initial ?? 0 }
+          : token
+      ));
+    }
+    content.numbers = [1, 2];
+  }
+}
+
 export async function generateLessonPlanWithModel(
   model: LessonPlanModelCall,
   input: LessonPlanGenerationInput,
   options: GenerateLessonPlanOptions = {},
 ): Promise<LessonPlanGenerationResult> {
+  const unsupportedResponse = locallyUnsupportedLessonRequest(input.learner_request);
+  if (unsupportedResponse) {
+    return {
+      disposition: "unsupported",
+      learner_response: unsupportedResponse,
+      model_calls: 0,
+    };
+  }
   const maxAttempts = positiveInteger(options.max_attempts_per_part, 3, "max_attempts_per_part");
   let context = inputContext(input);
   const fixedRequestParts = requestParts(input);
@@ -2615,6 +2692,7 @@ export async function generateLessonPlanWithModel(
       ),
       fixedRequestParts.length,
     );
+    prepareTwoPointOutline(outline, input.learner_request);
     try {
       bootstrappedFirstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
@@ -2625,6 +2703,7 @@ export async function generateLessonPlanWithModel(
         1,
         true,
       );
+      specializeTwoPointDraft(bootstrappedFirstSection, outline, input.learner_request);
     } catch (error) {
       sectionErrors.set(1, error);
       await options.on_rejected_part?.({
@@ -2745,6 +2824,7 @@ export async function generateLessonPlanWithModel(
     }
   }
   if (!outline) throw outlineError;
+  prepareTwoPointOutline(outline, input.learner_request);
   await options.on_outline_ready?.({
     sections: outline.sections.length,
     course_visuals: outline.course_visuals?.length ?? 0,
@@ -2768,7 +2848,14 @@ export async function generateLessonPlanWithModel(
 
   const visualsForSection = (section: number) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
+    const established = visual.create_section < section
+      ? (drafts[visual.create_section - 1]?.moments ?? []).flatMap(m => m.actions)
+        .filter(a => a.action === "create" && a.kind === "visual")
+        .map(a => (a as {content:LessonPlanVisualContent}).content)
+        .filter(v => v.capability === visual.capability)
+      : [];
     return [{
+      ...(established.length === 1 && fixedLineSamples(established[0]) ? {sample_slope:"constant"} : {}),
       course_visual: index + 1,
       capability: visual.capability,
       mode: visual.create_section === section ? "create" : "reuse",
@@ -2826,6 +2913,7 @@ export async function generateLessonPlanWithModel(
         section,
         true,
       );
+      specializeTwoPointDraft(candidate, outline, input.learner_request);
     } catch (error) {
       const previousError = sectionErrors.get(section);
       sectionErrors.set(section, error);

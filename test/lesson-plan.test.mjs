@@ -501,7 +501,7 @@ function samplePlan(capability) {
 }
 
 test("every registered visual capability has a fixed valid Lesson Plan sample", () => {
-  assert.equal(capabilities.length, 10);
+  assert.equal(capabilities.length, 11);
   assert.deepEqual([...LESSON_PLAN_CAPABILITY_NAMES].sort(), [...capabilities].sort());
   for (const capability of capabilities) {
     assert.deepEqual(
@@ -541,6 +541,7 @@ test("all fixed capability samples compile through the complete OLL validation p
     implicit_surface_with_section: ["scene3d"],
     coordinate_circle: ["geometry"],
     geometric_rearrangement: ["geometry"],
+    circle_area_rearrangement: ["geometry", "geometry"],
     process_diagram: ["diagram"],
   };
   for (const capability of capabilities) {
@@ -1075,12 +1076,12 @@ test("an animated or assessed number must drive at least one visual", () => {
   const visual = staticMultiNumberPlot.sections[0].moments[0].actions[0].content;
   delete visual.parameters.expression_tokens;
   visual.parameters.expression = "x^2";
-  assert.throws(
-    () => compileAndValidateLessonPlan(staticMultiNumberPlot),
-    (error) => error instanceof LessonPlanError
-      && error.code === "LESSON_PLAN_EXPRESSION"
-      && /change the whole curve/u.test(error.message),
-  );
+  staticMultiNumberPlot.sections[0].purpose = "观察两点";
+  staticMultiNumberPlot.sections[0].moments[0].narration = "通过两个滑块观察 A、B 两个采样点。";
+  const compiled = compileAndValidateLessonPlan(staticMultiNumberPlot);
+  const plot = compiled.lesson.steps[0].beats[0].actions.find(action => action.kind === "plot");
+  assert.equal(plot.content.points.length, 2);
+  assert.equal(plot.content.measurement, "secant");
 });
 
 test("eight complete previously tested courses compile without model-authored identity", () => {
@@ -3234,6 +3235,13 @@ test("the accepted outline keeps authority over reusable items in the exact firs
       placement: { relation: "below", gap: "normal" },
     },
   };
+  drafts[0].moments[0].note_creates ??= [];
+  drafts[0].moments[0].note_creates.push({
+    role: "temporary_note",
+    content: { title: "临时观察", items: ["这张卡片不属于复用目录。"] },
+    placement: { relation: "below", gap: "normal" },
+    reusable_item: 2,
+  });
 
   const calls = [];
   const generated = await generateLessonPlanWithModel(async (request) => {
@@ -3260,10 +3268,10 @@ test("the accepted outline keeps authority over reusable items in the exact firs
   ]);
   assert.equal(generated.outline.course_visuals[0].reusable_item, 2);
   assert.equal(
-    generated.lesson.steps[0].beats[0].actions.filter(
+    generated.lesson.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions).filter(
       (action) => action.do === "write" && action.kind === "note",
     ).length,
-    1,
+    3,
   );
   assert.equal(
     generated.lesson.steps[0].beats[0].actions.filter(
@@ -3741,12 +3749,12 @@ test("the staged model path lowers positional curve tokens into a multi-number p
   );
   assert.equal(rejectedParts.length, 1);
   assert.equal(rejectedParts[0].section, 1);
-  assert.equal(rejectedParts[0].error.code, "LESSON_PLAN_CAPABILITY_PARAMETER");
-  assert.match(rejectedParts[0].error.message, /at most one number as its moving sample/u);
+  assert.equal(rejectedParts[0].error.code, "LESSON_PLAN_INTERACTION_MISMATCH");
+  assert.match(rejectedParts[0].error.message, /moving the whole curve/u);
   const repairedCall = calls.filter((call) => call.label === "lesson-plan-section"
     && call.section === 1).at(-1);
   assert.match(repairedCall.prompt, /previous_validation_error/u);
-  assert.match(repairedCall.prompt, /at most one number as its moving sample/u);
+  assert.match(repairedCall.prompt, /moving the whole curve/u);
   const plot = generated.lesson.steps[0].beats[0].actions.find(
     (action) => action.do === "write" && action.kind === "plot",
   );
@@ -4044,4 +4052,212 @@ test("an explicitly unsupported request stops before any section model call", as
     model_calls: 1,
   });
   assert.deepEqual(calls, ["lesson-plan-bootstrap"]);
+});
+
+
+test("automatic quadratic viewport keeps reachable vertices without flattening the initial curve", () => {
+  const plan = structuredClone(completeLessonPlanFixtures.quadratic_translation);
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.content?.capability === "function_plot") {
+      for (const key of ["x_min", "x_max", "y_min", "y_max"]) delete action.content.parameters[key];
+    }
+  }
+  const {lesson} = compileAndValidateLessonPlan(plan);
+  const plot = lesson.steps.flatMap(s=>s.beats.flatMap(b=>b.actions)).find(a=>a.kind === "plot").content;
+  assert.ok(plot.axes.x.min < -5 && plot.axes.x.max > 5);
+  assert.ok(plot.axes.y.min < -5 && plot.axes.y.max > 5);
+  assert.ok(plot.axes.y.max-plot.axes.y.min <= 40, "parameter extremes must not flatten the lesson");
+});
+
+
+test("circle area uses true sectors whose total area is invariant during rearrangement", () => {
+  const compiled = compileAndValidateLessonPlan(samplePlan("circle_area_rearrangement"));
+  const panels = compiled.lesson.steps[0].beats[0].actions.filter(a => a.kind === "geometry");
+  assert.deepEqual(panels.map(p => p.content.arcs.length), [8, 16]);
+  for (const {content} of panels) {
+    for (const progress of [0, .25, .5, 1]) {
+      let area = 0;
+      for (const arc of content.arcs) {
+        assert.equal(arc.filled, true);
+        const angle = key => {
+          const binding = content.bindings.find(b => b.target === `${arc.as}.${key}`);
+          return binding ? evaluateMathExpression(binding.expression, {number_01:progress}) : arc[key];
+        };
+        area += arc.radius ** 2 * (angle("end_angle") - angle("start_angle")) / 2;
+      }
+      assert.ok(Math.abs(area - Math.PI * content.arcs[0].radius ** 2) < 1e-9);
+    }
+  }
+});
+
+test("circle proof cannot be substituted with polygon rearrangement", () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.sections[0].moments[0].narration = "把圆拼成矩形，推导圆的面积公式。";
+  assert.throws(() => compileAndValidateLessonPlan(plan), error => error.code === "LESSON_PLAN_TEACHING_MISMATCH");
+});
+
+test("two independent point claims require two sample inputs", () => {
+  const plan = samplePlan("function_plot");
+  plan.sections[0].moments[0].narration = "移动两个点观察割线。";
+  assert.throws(() => compileAndValidateLessonPlan(plan), error => error.code === "LESSON_PLAN_INTERACTION_MISMATCH");
+});
+
+test("slope parameter lessons supply fixed reference points with computed secant feedback", () => {
+  const plan = samplePlan("function_plot");
+  plan.title = "斜率是什么";
+  const visual = plan.sections[0].moments[0].actions[0].content;
+  delete visual.parameters.expression;
+  delete visual.parameters.expressions;
+  visual.parameters.expression_tokens = [
+    {kind:"number",number:1}, {kind:"input"}, {kind:"operator",operator:"multiply"},
+  ];
+  const compiled = compileAndValidateLessonPlan(plan);
+  const plot = compiled.lesson.steps[0].beats[0].actions.find(a => a.kind === "plot");
+  assert.equal(plot.content.points.length, 2);
+  assert.equal(plot.content.sample_input, "fixed_x");
+  assert.equal(plot.content.measurement, "secant");
+});
+
+
+test("default two-point controls begin apart but remain independently bound", () => {
+  const plan = structuredClone(completeLessonPlanFixtures.quadratic_translation);
+  const visual = plan.sections[0].moments[0].actions[0].content;
+  delete visual.parameters.expression_tokens;
+  visual.parameters.expression = "x^2";
+  plan.sections[0].purpose = "比较两点";
+  plan.sections[0].moments[0].narration = "分别移动 A、B 观察割线。";
+  const compiled = compileAndValidateLessonPlan(plan);
+  const [a,b] = compiled.lesson.lesson.variables;
+  assert.notEqual(a.initial,b.initial);
+  const plot = compiled.lesson.steps[0].beats[0].actions.find(a => a.kind === "plot").content;
+  const values = {[a.as]:1,[b.as]:3};
+  const pointX = plot.bindings.filter(binding => binding.target.endsWith(".x"));
+  assert.deepEqual(pointX.map(binding => evaluateMathExpression(binding.expression,values)),[1,3]);
+});
+
+test("a later chapter cannot claim that fixed-line sampling changes its slope", () => {
+  const plan = structuredClone(completeLessonPlanFixtures.quadratic_translation);
+  const visual = plan.sections[0].moments[0].actions[0].content;
+  visual.parameters.expression_tokens = [{kind:"input"}];
+  plan.sections[0].purpose = "固定直线上的点";
+  plan.sections[0].moments[0].narration = "移动两点观察斜率保持不变。";
+  plan.sections[1].moments[0].narration = "移动点 B，直线的斜率随之改变。";
+  assert.throws(() => compileAndValidateLessonPlan(plan),error => error.code === "LESSON_PLAN_TEACHING_MISMATCH");
+});
+
+
+test("fixed-line slope definitions may refer to coordinate changes", () => {
+  const plan = structuredClone(completeLessonPlanFixtures.quadratic_translation);
+  plan.sections[0].moments[0].actions[0].content.parameters.expression_tokens = [{kind:"input"}];
+  plan.sections[0].purpose = "固定直线上的点";
+  plan.sections[0].moments[0].narration = "斜率表示纵坐标变化量与横坐标变化量的比值。";
+  assert.doesNotThrow(() => compileAndValidateLessonPlan(plan));
+});
+
+
+test("common function viewports show their main teaching region", async () => {
+  const bundle = await build({entryPoints:[resolve(root,"src/function-viewport.ts")],bundle:true,platform:"node",format:"esm",write:false,logLevel:"silent"});
+  const {functionViewport} = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].contents).toString("base64")}`);
+  for (const expression of ["x","x^2","sin(x)","tan(x)","ln(x)","sqrt(x)","exp(x)","1/x"]) {
+    const view=functionViewport([expression],[]);
+    assert.ok(view.x.min<=0 && view.x.max>0,expression);
+    assert.ok(view.y.min<=0 && view.y.max>0,expression);
+    assert.ok(view.y.max-view.y.min<=24,expression);
+  }
+  const inverse=functionViewport(["2^x","ln(x)/ln(2)","x"],[]);
+  assert.deepEqual(inverse.x,inverse.y);
+});
+
+test("later narration must not promise direct dragging of plot points", () => {
+  const plan = structuredClone(completeLessonPlanFixtures.quadratic_translation);
+  plan.sections[1].moments[0].narration = "现在拖动点 B。";
+  assert.throws(() => compileAndValidateLessonPlan(plan),error => error.code === "LESSON_PLAN_INTERACTION_MISMATCH");
+});
+
+test("finite circle rearrangement must not claim an exact rectangle", () => {
+  const plan=samplePlan("circle_area_rearrangement");
+  plan.sections[0].moments[0].narration="拼成图形的高正好等于半径 r，底等于 πr。";
+  assert.throws(() => compileAndValidateLessonPlan(plan),error => error.code === "LESSON_PLAN_TEACHING_MISMATCH");
+  plan.sections[0].moments[0].narration="等分越来越细时，底趋近 πr，高趋近 r。";
+  assert.doesNotThrow(() => compileAndValidateLessonPlan(plan));
+});
+
+
+test("known two-point input wording is normalized without a model repair", () => {
+  const plan=structuredClone(completeLessonPlanFixtures.quadratic_translation);
+  plan.sections[0].moments[0].actions[0].content.parameters.expression_tokens=[{kind:"input"}];
+  plan.sections[0].purpose="观察固定直线";
+  plan.sections[0].moments[0].narration="请直接拖动点 B，斜率保持不变。";
+  const compiled=compileAndValidateLessonPlan(plan);
+  assert.match(compiled.lesson.steps[0].beats[0].say,/调整点 B 的横坐标滑块/);
+  assert.match(compiled.lesson.steps[0].beats[0].say,/斜率保持不变/);
+});
+
+test("fixed-line sample narration is normalized to the interaction that exists", () => {
+  const plan=structuredClone(completeLessonPlanFixtures.quadratic_translation);
+  plan.sections[0].moments[0].actions[0].content.parameters.expression_tokens=[{kind:"input"}];
+  plan.sections[0].purpose="观察固定直线";
+  plan.sections[0].moments[0].narration="现在请调整点 A 或点 B 的位置，观察纵向与横向变化量如何影响斜率的大小。";
+  const activity=plan.sections.flatMap(section=>section.student_activities??[])[0];
+  activity.prompt="请调整点 A，观察斜率如何变化。";
+  activity.hints=["注意直线的倾斜状态会相应改变。","纵向与横向距离的比值也会随之改变。"];
+  activity.success_message="很好！你成功移动了点 B，直线的斜率已经更新。";
+  const compiled=compileAndValidateLessonPlan(plan);
+  assert.match(compiled.lesson.steps[0].beats[0].say,/横坐标滑块/);
+  assert.match(compiled.lesson.steps[0].beats[0].say,/Δx 与 Δy 同比例变化/);
+  assert.match(compiled.lesson.steps[0].beats[0].say,/斜率保持不变/);
+  assert.doesNotMatch(compiled.lesson.steps[0].beats[0].say,/斜率数值会发生怎样的变化/);
+  assert.match(compiled.lesson.lesson.tasks[0].prompt,/斜率保持不变/);
+  assert.match(compiled.lesson.lesson.tasks[0].hints[0],/比值是否保持不变/);
+  assert.match(compiled.lesson.lesson.tasks[0].hints[1],/比值是否保持不变/);
+  assert.match(compiled.lesson.lesson.tasks[0].success_message,/斜率保持不变/);
+});
+
+test("a precise four-dimensional hypercube rotation is rejected before a model call", async () => {
+  let calls=0;
+  const generated=await generateLessonPlanWithModel(async () => {
+    calls+=1;
+    throw new Error("model should not be called");
+  },{
+    turn_id:"turn-local-unsupported-hypercube",
+    learner_request:"画出四维超立方体的精确四维旋转",
+    request_parts:["画出四维超立方体的精确四维旋转"],
+  });
+  assert.equal(calls,0);
+  assert.equal(generated.disposition,"unsupported");
+  assert.equal(generated.model_calls,0);
+  assert.match(generated.learner_response,/不能精确模拟/);
+});
+
+test("an explicit two-point request converts a mistaken curve parameter into two sample controls", async () => {
+  const plan=structuredClone(completeLessonPlanFixtures.quadratic_translation);
+  const drafts=plan.sections.map(({moments,student_activities},index)=>toModelSectionDraft({
+    version:plan.version,
+    section:index+1,
+    moments,
+    ...(student_activities?{student_activities}:{}),
+  }));
+  const outline=stagedOutline(plan,drafts);
+  drafts[0].course_visual_creates.visual_1.content.parameters.formulas=["x-n1-1"];
+  drafts[0].moments[0].narration="移动点 A 或点 B 的位置，观察纵向高度差变大而横向距离不变。";
+  const rejections=[];
+  const generated=await generateLessonPlanWithModel(async request=>{
+    if(request.label==="lesson-plan-bootstrap")return bootstrapModelResponse(request,outline,drafts[0]);
+    return sectionModelResponse(request,drafts);
+  },{
+    turn_id:"turn-two-independent-points",
+    learner_request:"用两个可以分别移动的点解释斜率。",
+    request_parts:["用两个可以分别移动的点解释斜率。"],
+  },{on_rejected_part:event=>rejections.push(event)});
+  assert.deepEqual(rejections,[]);
+  const plot=generated.lesson.steps.flatMap(step=>step.beats).flatMap(beat=>beat.actions)
+    .find(action=>action.do==="write"&&action.kind==="plot").content;
+  assert.equal(generated.lesson.lesson.variables[0].control.kind,"slider");
+  assert.equal(generated.lesson.lesson.variables[1].control.kind,"slider");
+  assert.equal(plot.points.length,2);
+  assert.equal(plot.bindings.filter(binding=>binding.target.endsWith(".x")).length,2);
+  assert.equal(plot.bindings.filter(binding=>binding.target.endsWith(".y")).length,2);
+  assert.equal(plot.measurement,"secant");
+  assert.doesNotMatch(plot.curves[0].expression,/number_0[12]/);
+  assert.match(generated.lesson.steps[0].beats[0].say,/斜率保持不变/);
 });

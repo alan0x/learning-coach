@@ -24,7 +24,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
-    model_guidance: "二维笛卡尔函数曲线；数值可移动曲线上的点或改变整条曲线",
+    model_guidance: "函数图：静态公式最多两数移动A/B点；含数值的公式改变曲线",
   },
   unit_circle_projection: {
     parts: ["whole", "unit_circle", "moving_point", "radius", "projection_line", "primary_curve", "primary_control"],
@@ -132,6 +132,19 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     student_controls: ["slider"],
     required_features: ["polygon_pieces", "rigid_rearrangement", "area_relation"],
     model_guidance: "经过验证的多边形拆分与刚体重排，用进度数值控制移动",
+  },
+  circle_area_rearrangement: {
+    parts: ["whole", "primary_control"],
+    number_inputs: ["progress"],
+    number_input_policies: [{kind:"normalized_progress"}],
+    parameter_names: ["title", "radius"],
+    model_parameter_names: ["title", "radius"],
+    required_model_schema_parameters: [],
+    semantic_parameters: ["radius"],
+    output_kinds: ["geometry"],
+    student_controls: ["slider"],
+    required_features: ["circle_area_rearrangement"],
+    model_guidance: "圆面积：扇形等积重排，底趋近πr、高趋近r",
   },
   process_diagram: {
     parts: ["whole", "first_step", "current_step", "last_step"],
@@ -812,17 +825,9 @@ function validateBoardContent(kind: LessonPlanBoardKind, value: unknown, path: s
         const number = positiveIndex(item, `${path}.numbers[${index}]`);
         if (number > numberCount) fail("LESSON_PLAN_NUMBER_REFERENCE", `${path}.numbers[${index}]`, "number reference is unavailable");
       });
-      if (visualCapability === "function_plot"
-        && numbers.length > 1) {
-        const visualParameters = record(content.parameters ?? {}, `${path}.parameters`);
-        const hasCurveExpression = visualParameters.expression_tokens !== undefined;
-        if (!hasCurveExpression) {
-          fail(
-            "LESSON_PLAN_EXPRESSION",
-            `${path}.parameters.expression_tokens`,
-            "a function plot with multiple numeric inputs must define how those inputs change the whole curve",
-          );
-        }
+      if (visualCapability === "function_plot" && numbers.length > 2
+        && (content.parameters as Record<string, unknown>)?.expression_tokens === undefined) {
+        fail("LESSON_PLAN_EXPRESSION", `${path}.numbers`, "static curves support at most two independent sample points");
       }
     }
   }
@@ -1063,12 +1068,10 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
               );
               for (const number of curveNumbers) visuallyBoundNumbers.add(number);
               if (curveNumbers.length === 0) {
-                const movingPointNumber = visualContent.numbers?.[0];
-                if (movingPointNumber !== undefined) visuallyBoundNumbers.add(movingPointNumber);
+                for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
               }
             } else if (visualContent.capability === "function_plot") {
-              const movingPointNumber = visualContent.numbers?.[0];
-              if (movingPointNumber !== undefined) visuallyBoundNumbers.add(movingPointNumber);
+              for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
             } else {
               for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
             }

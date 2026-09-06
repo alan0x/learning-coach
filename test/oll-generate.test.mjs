@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
 import { createServer } from "node:http";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -2474,4 +2474,27 @@ test("complete lessons reject a missing request source before model generation",
   } finally {
     await rm(workDirectory, { recursive: true, force: true });
   }
+});
+
+
+test("the skill executable runs when invoked through the local skills symlink", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "coach-symlink-entry-"));
+  try {
+    const entry = join(directory, "main");
+    await symlink(resolve(root, "main"), entry);
+    const child = spawn(process.execPath, [entry, "oll_generate_lesson"], {
+      cwd: directory,
+      env: {...process.env,OCTOS_WORK_DIR:directory},
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    child.stdout.on("data", chunk => { stdout += chunk; });
+    child.stderr.resume();
+    child.stdin.end("invalid json");
+    const code = await new Promise((resolve,reject) => {
+      child.once("error",reject);child.once("close",resolve);
+    });
+    assert.equal(code,1);
+    assert.equal(JSON.parse(stdout).success,false);
+  } finally { await rm(directory,{recursive:true,force:true}); }
 });

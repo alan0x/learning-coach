@@ -1,0 +1,870 @@
+{
+  "suite": "数学自然输入质量回归",
+  "version": 1,
+  "source": "原数学完整课程集的12个详细提示原样保留；期望仅供离线评审，禁止注入模型输入。",
+  "cases": [
+    {
+      "id": "M01-linear-system-detailed",
+      "topic_id": "M01-linear-system",
+      "variant": "detailed",
+      "prompt": "我会解单个一次方程，但不理解二元一次方程组为什么对应两条直线。请上一节完整的课：先用图像解释交点为什么就是公共解，再用方程组 2x+y=7、x-y=2 演示代入法，最后总结图像法与代数法的对应关系。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "两条函数曲线",
+        "交点含义",
+        "代入消元步骤",
+        "完整总结"
+      ]
+    },
+    {
+      "id": "M01-linear-system-question",
+      "topic_id": "M01-linear-system",
+      "variant": "question",
+      "prompt": "为什么两条直线的交点是方程组的解？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "二元一次方程组",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M01-linear-system-topic",
+      "topic_id": "M01-linear-system",
+      "variant": "topic",
+      "prompt": "二元一次方程组",
+      "request_source": "self_contained",
+      "review_targets": [
+        "二元一次方程组",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M01-linear-system-confused",
+      "topic_id": "M01-linear-system",
+      "variant": "confused",
+      "prompt": "方程组的图像我看不懂",
+      "request_source": "self_contained",
+      "review_targets": [
+        "二元一次方程组",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M01-linear-system-context",
+      "topic_id": "M01-linear-system",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "2x+y=7，x-y=2",
+      "request_source": "contextual",
+      "review_targets": [
+        "二元一次方程组",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M02-quadratic-translation-detailed",
+      "topic_id": "M02-quadratic-translation",
+      "variant": "detailed",
+      "prompt": "请上一节完整的课解释 y=(x-h)^2+k。先从 y=x^2 的顶点出发，说明 h 和 k 分别怎样改变整条抛物线，再让我通过控件改变 h、k 观察顶点移动，最后用 y=(x-3)^2-2 检查我是否理解。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "整条抛物线随 h、k 改变",
+        "两个有效控件",
+        "顶点坐标",
+        "练习反馈"
+      ]
+    },
+    {
+      "id": "M02-quadratic-translation-question",
+      "topic_id": "M02-quadratic-translation",
+      "variant": "question",
+      "prompt": "抛物线怎么平移？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "二次函数平移",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M02-quadratic-translation-topic",
+      "topic_id": "M02-quadratic-translation",
+      "variant": "topic",
+      "prompt": "二次函数平移",
+      "request_source": "self_contained",
+      "review_targets": [
+        "二次函数平移",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M02-quadratic-translation-confused",
+      "topic_id": "M02-quadratic-translation",
+      "variant": "confused",
+      "prompt": "h 和 k 的正负我总弄反",
+      "request_source": "self_contained",
+      "review_targets": [
+        "二次函数平移",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M02-quadratic-translation-context",
+      "topic_id": "M02-quadratic-translation",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "y=(x-3)^2-2",
+      "request_source": "contextual",
+      "review_targets": [
+        "二次函数平移",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M03-exp-log-inverse-detailed",
+      "topic_id": "M03-exp-log-inverse",
+      "variant": "detailed",
+      "prompt": "我总是记不住指数函数和对数函数的关系。请上一节完整的课，同时画出 y=2^x、y=log_2(x) 和 y=x，解释两条函数为什么关于 y=x 对称，再用 2^3=8 与 log_2(8)=3 对照，最后总结互为反函数是什么意思。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "多条静态函数曲线",
+        "关于 y=x 对称",
+        "数值对应",
+        "反函数总结"
+      ]
+    },
+    {
+      "id": "M03-exp-log-inverse-question",
+      "topic_id": "M03-exp-log-inverse",
+      "variant": "question",
+      "prompt": "指数和对数有什么关系？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "指数与对数",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M03-exp-log-inverse-topic",
+      "topic_id": "M03-exp-log-inverse",
+      "variant": "topic",
+      "prompt": "指数与对数",
+      "request_source": "self_contained",
+      "review_targets": [
+        "指数与对数",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M03-exp-log-inverse-confused",
+      "topic_id": "M03-exp-log-inverse",
+      "variant": "confused",
+      "prompt": "反函数的对称性我看不懂",
+      "request_source": "self_contained",
+      "review_targets": [
+        "指数与对数",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M03-exp-log-inverse-context",
+      "topic_id": "M03-exp-log-inverse",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "2^3=8，log_2(8)=3",
+      "request_source": "contextual",
+      "review_targets": [
+        "指数与对数",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M04-unit-circle-sine-detailed",
+      "topic_id": "M04-unit-circle-sine",
+      "variant": "detailed",
+      "prompt": "请上一节完整的课，结合单位圆和 y=sin(x) 的函数图像解释角度旋转如何变成周期波动。先说明圆上点的纵坐标，再同步演示动点和正弦曲线上的点，最后让我把角度调到正弦值最大的地方。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "单位圆与正弦图联动",
+        "共享角度",
+        "动画",
+        "学生操作任务"
+      ]
+    },
+    {
+      "id": "M04-unit-circle-sine-question",
+      "topic_id": "M04-unit-circle-sine",
+      "variant": "question",
+      "prompt": "转圈怎么变成正弦波？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "单位圆与正弦",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M04-unit-circle-sine-topic",
+      "topic_id": "M04-unit-circle-sine",
+      "variant": "topic",
+      "prompt": "单位圆与正弦",
+      "request_source": "self_contained",
+      "review_targets": [
+        "单位圆与正弦",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M04-unit-circle-sine-confused",
+      "topic_id": "M04-unit-circle-sine",
+      "variant": "confused",
+      "prompt": "正弦函数的周期我不理解",
+      "request_source": "self_contained",
+      "review_targets": [
+        "单位圆与正弦",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M04-unit-circle-sine-context",
+      "topic_id": "M04-unit-circle-sine",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "单位圆上的点 P=(cosθ,sinθ)",
+      "request_source": "contextual",
+      "review_targets": [
+        "单位圆与正弦",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M05-pythagorean-rearrangement-detailed",
+      "topic_id": "M05-pythagorean-rearrangement",
+      "variant": "detailed",
+      "prompt": "请用图形和公式上一节完整的勾股定理课程。先用四个全等直角三角形的面积拼接证明 a^2+b^2=c^2，再通过 3、4、5 三角形验证，最后让我拖动重排过程并总结证明为什么成立。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "面积拼接",
+        "刚体重排控件",
+        "3-4-5 验证",
+        "公式总结"
+      ]
+    },
+    {
+      "id": "M05-pythagorean-rearrangement-question",
+      "topic_id": "M05-pythagorean-rearrangement",
+      "variant": "question",
+      "prompt": "勾股定理为什么成立？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "勾股定理",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M05-pythagorean-rearrangement-topic",
+      "topic_id": "M05-pythagorean-rearrangement",
+      "variant": "topic",
+      "prompt": "勾股定理",
+      "request_source": "self_contained",
+      "review_targets": [
+        "勾股定理",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M05-pythagorean-rearrangement-confused",
+      "topic_id": "M05-pythagorean-rearrangement",
+      "variant": "confused",
+      "prompt": "三角形面积证明我不懂",
+      "request_source": "self_contained",
+      "review_targets": [
+        "勾股定理",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M05-pythagorean-rearrangement-context",
+      "topic_id": "M05-pythagorean-rearrangement",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "直角边长3、4，斜边长5",
+      "request_source": "contextual",
+      "review_targets": [
+        "勾股定理",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M06-arc-length-detailed",
+      "topic_id": "M06-arc-length",
+      "variant": "detailed",
+      "prompt": "请上一节完整的课解释弧长公式从哪里来。先从整圆周长 2πr 出发，说明圆心角占整周的比例，再用可调的半径 r 和圆心角 n 演示弧长变化，最后推导并应用 l=nπr/180。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "圆和圆弧",
+        "角度与半径控件",
+        "比例推导",
+        "公式应用"
+      ]
+    },
+    {
+      "id": "M06-arc-length-question",
+      "topic_id": "M06-arc-length",
+      "variant": "question",
+      "prompt": "弧长怎么算？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "弧长公式",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M06-arc-length-topic",
+      "topic_id": "M06-arc-length",
+      "variant": "topic",
+      "prompt": "弧长公式",
+      "request_source": "self_contained",
+      "review_targets": [
+        "弧长公式",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M06-arc-length-confused",
+      "topic_id": "M06-arc-length",
+      "variant": "confused",
+      "prompt": "圆心角和弧长的关系我不懂",
+      "request_source": "self_contained",
+      "review_targets": [
+        "弧长公式",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M06-arc-length-context",
+      "topic_id": "M06-arc-length",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "半径2，圆心角60°",
+      "request_source": "contextual",
+      "review_targets": [
+        "弧长公式",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M07-euclidean-algorithm-detailed",
+      "topic_id": "M07-euclidean-algorithm",
+      "variant": "detailed",
+      "prompt": "请上一节完整的课，用欧几里得算法求 252 和 105 的最大公约数。先解释为什么 gcd(a,b)=gcd(b,r)，再按顺序展示每一次除法，最后总结算法何时停止以及答案为什么是 21。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "短流程图或清晰步骤",
+        "三次除法",
+        "停止条件",
+        "最大公约数结论"
+      ]
+    },
+    {
+      "id": "M07-euclidean-algorithm-question",
+      "topic_id": "M07-euclidean-algorithm",
+      "variant": "question",
+      "prompt": "最大公约数怎么求？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "欧几里得算法",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M07-euclidean-algorithm-topic",
+      "topic_id": "M07-euclidean-algorithm",
+      "variant": "topic",
+      "prompt": "欧几里得算法",
+      "request_source": "self_contained",
+      "review_targets": [
+        "欧几里得算法",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M07-euclidean-algorithm-confused",
+      "topic_id": "M07-euclidean-algorithm",
+      "variant": "confused",
+      "prompt": "辗转相除为什么有效？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "欧几里得算法",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M07-euclidean-algorithm-context",
+      "topic_id": "M07-euclidean-algorithm",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "252=105×2+42",
+      "request_source": "contextual",
+      "review_targets": [
+        "欧几里得算法",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M08-arithmetic-series-detailed",
+      "topic_id": "M08-arithmetic-series",
+      "variant": "detailed",
+      "prompt": "请上一节完整的课，解释等差数列前 n 项和公式是怎么推导出来的。先写出正序和倒序并首尾配对，再推导 S_n=n(a_1+a_n)/2，最后用 1+2+…+100 算出结果。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "正序倒序",
+        "首尾配对",
+        "通项公式推导",
+        "1 到 100 示例"
+      ]
+    },
+    {
+      "id": "M08-arithmetic-series-question",
+      "topic_id": "M08-arithmetic-series",
+      "variant": "question",
+      "prompt": "等差数列求和公式为什么成立？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "等差数列求和",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M08-arithmetic-series-topic",
+      "topic_id": "M08-arithmetic-series",
+      "variant": "topic",
+      "prompt": "等差数列求和",
+      "request_source": "self_contained",
+      "review_targets": [
+        "等差数列求和",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M08-arithmetic-series-confused",
+      "topic_id": "M08-arithmetic-series",
+      "variant": "confused",
+      "prompt": "数列首尾配对我不懂",
+      "request_source": "self_contained",
+      "review_targets": [
+        "等差数列求和",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M08-arithmetic-series-context",
+      "topic_id": "M08-arithmetic-series",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "1+2+…+100",
+      "request_source": "contextual",
+      "review_targets": [
+        "等差数列求和",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M09-derivative-tangent-detailed",
+      "topic_id": "M09-derivative-tangent",
+      "variant": "detailed",
+      "prompt": "请上一节完整的课解释导数为什么表示切线斜率。以 y=x^2 在 x=1 附近为例，先比较割线逐渐靠近切线的过程，再推导 f'(1)=2，并同时展示抛物线和切线 y=2x-1，最后总结极限、导数和切线之间的关系。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "抛物线与切线",
+        "割线到切线的概念",
+        "导数计算",
+        "关系总结"
+      ]
+    },
+    {
+      "id": "M09-derivative-tangent-question",
+      "topic_id": "M09-derivative-tangent",
+      "variant": "question",
+      "prompt": "导数为什么是切线斜率？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "导数与切线",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M09-derivative-tangent-topic",
+      "topic_id": "M09-derivative-tangent",
+      "variant": "topic",
+      "prompt": "导数与切线",
+      "request_source": "self_contained",
+      "review_targets": [
+        "导数与切线",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M09-derivative-tangent-confused",
+      "topic_id": "M09-derivative-tangent",
+      "variant": "confused",
+      "prompt": "导数看不懂",
+      "request_source": "self_contained",
+      "review_targets": [
+        "导数与切线",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M09-derivative-tangent-context",
+      "topic_id": "M09-derivative-tangent",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "y=x^2，在x=1附近取割线",
+      "request_source": "contextual",
+      "review_targets": [
+        "导数与切线",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M10-binomial-probability-detailed",
+      "topic_id": "M10-binomial-probability",
+      "variant": "detailed",
+      "prompt": "请上一节完整的课解释为什么重复抛 5 次公平硬币，恰好出现 2 次正面的概率是 C(5,2)/2^5。先解释样本总数，再解释为什么要选位置，列出不同正面次数的概率，最后总结二项分布公式中每一项的含义。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "样本空间",
+        "组合数",
+        "概率表或板书",
+        "二项分布公式"
+      ]
+    },
+    {
+      "id": "M10-binomial-probability-question",
+      "topic_id": "M10-binomial-probability",
+      "variant": "question",
+      "prompt": "抛五次硬币两次正面的概率是多少？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "二项分布",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M10-binomial-probability-topic",
+      "topic_id": "M10-binomial-probability",
+      "variant": "topic",
+      "prompt": "二项分布",
+      "request_source": "self_contained",
+      "review_targets": [
+        "二项分布",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M10-binomial-probability-confused",
+      "topic_id": "M10-binomial-probability",
+      "variant": "confused",
+      "prompt": "二项分布为什么要乘组合数？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "二项分布",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M10-binomial-probability-context",
+      "topic_id": "M10-binomial-probability",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "5次独立公平抛硬币，恰好2次正面",
+      "request_source": "contextual",
+      "review_targets": [
+        "二项分布",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M11-paraboloid-section-detailed",
+      "topic_id": "M11-paraboloid-section",
+      "variant": "detailed",
+      "prompt": "二元函数的图像我一直想象不出来。请上一节完整的课，用可以旋转的三维图像解释 z=x^2+y^2，再用可调的水平截面 z=k 说明截线为什么是圆，最后让我自己旋转和缩放观察。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "旋转抛物面",
+        "可调水平截面",
+        "真实截线",
+        "视角交互"
+      ]
+    },
+    {
+      "id": "M11-paraboloid-section-question",
+      "topic_id": "M11-paraboloid-section",
+      "variant": "question",
+      "prompt": "二元函数的图像是什么样？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "旋转抛物面",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M11-paraboloid-section-topic",
+      "topic_id": "M11-paraboloid-section",
+      "variant": "topic",
+      "prompt": "旋转抛物面",
+      "request_source": "self_contained",
+      "review_targets": [
+        "旋转抛物面",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M11-paraboloid-section-confused",
+      "topic_id": "M11-paraboloid-section",
+      "variant": "confused",
+      "prompt": "二元函数想象不出来",
+      "request_source": "self_contained",
+      "review_targets": [
+        "旋转抛物面",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M11-paraboloid-section-context",
+      "topic_id": "M11-paraboloid-section",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "z=x^2+y^2，水平截面z=k",
+      "request_source": "contextual",
+      "review_targets": [
+        "旋转抛物面",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M12-sphere-section-detailed",
+      "topic_id": "M12-sphere-section",
+      "variant": "detailed",
+      "prompt": "请上一节完整的课解释球面 x^2+y^2+z^2=9 的水平截面。先展示可以旋转的球面，再把截面设为 z=k 并推导 x^2+y^2=9-k^2，最后让我改变 k，观察截面半径如何从 3 逐渐缩小到 0。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "完整球面",
+        "可调截面",
+        "真实圆形交线",
+        "截面半径推导"
+      ]
+    },
+    {
+      "id": "M12-sphere-section-question",
+      "topic_id": "M12-sphere-section",
+      "variant": "question",
+      "prompt": "球切一刀是什么形状？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "球面截面",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M12-sphere-section-topic",
+      "topic_id": "M12-sphere-section",
+      "variant": "topic",
+      "prompt": "球面截面",
+      "request_source": "self_contained",
+      "review_targets": [
+        "球面截面",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M12-sphere-section-confused",
+      "topic_id": "M12-sphere-section",
+      "variant": "confused",
+      "prompt": "球面截线的半径变化我不懂",
+      "request_source": "self_contained",
+      "review_targets": [
+        "球面截面",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "M12-sphere-section-context",
+      "topic_id": "M12-sphere-section",
+      "variant": "context",
+      "prompt": "这一步为什么？",
+      "fixed_context": "x^2+y^2+z^2=9，截面z=k",
+      "request_source": "contextual",
+      "review_targets": [
+        "球面截面",
+        "数学正确",
+        "图文一致",
+        "有必要解释链"
+      ]
+    },
+    {
+      "id": "circle-area",
+      "variant": "special",
+      "prompt": "圆的面积为什么是πr²？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "真实扇形重排",
+        "面积守恒",
+        "πr与r的来源",
+        "有限形状与极限区别"
+      ]
+    },
+    {
+      "id": "slope",
+      "variant": "special",
+      "prompt": "斜率是什么？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "斜率Δy/Δx",
+        "绝对值与陡峭程度",
+        "图文一致"
+      ]
+    },
+    {
+      "id": "two-points",
+      "variant": "special",
+      "prompt": "用两个可以分别移动的点解释斜率。",
+      "request_source": "self_contained",
+      "review_targets": [
+        "两个独立控件",
+        "A/B点",
+        "割线反馈",
+        "重合点保护"
+      ]
+    },
+    {
+      "id": "vague",
+      "variant": "special",
+      "prompt": "数学不会",
+      "request_source": "self_contained",
+      "review_targets": [
+        "澄清或主题选择"
+      ]
+    },
+    {
+      "id": "noise",
+      "variant": "special",
+      "prompt": "嗯",
+      "request_source": "self_contained",
+      "review_targets": [
+        "ignore"
+      ]
+    },
+    {
+      "id": "wrong-premise",
+      "variant": "special",
+      "prompt": "负斜率越大，直线越陡，对吗？",
+      "request_source": "self_contained",
+      "review_targets": [
+        "纠正前提"
+      ]
+    },
+    {
+      "id": "unsupported",
+      "variant": "special",
+      "prompt": "画出四维超立方体的精确四维旋转",
+      "request_source": "self_contained",
+      "review_targets": [
+        "诚实表达能力边界"
+      ]
+    }
+  ]
+}
