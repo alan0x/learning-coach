@@ -2460,14 +2460,18 @@ export function parseSelectionModelResponse(
       const level = finiteOutput("level");
       const samples = 12;
       const object = sceneKind === "surface"
-        ? {
-            as: "selected-function",
-            kind: "surface",
-            expression,
-            ...selectionSurfaceDomain(expression),
-            samples,
-            color: "teal",
-          }
+        ? (() => {
+            const viewport = selectionSurfaceDomain(expression);
+            return {
+              as: "selected-function",
+              kind: "surface",
+              expression,
+              x_range: viewport.x,
+              y_range: viewport.y,
+              samples,
+              color: "teal",
+            };
+          })()
         : buildImplicitSurfaceObject({
             as: "selected-function",
             expression,
