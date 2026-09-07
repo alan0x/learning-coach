@@ -142,7 +142,7 @@
     },
     {
       "name": "oll_enhance_selection",
-      "description": "Create a separate explanation or validated 2D/3D function visualization beside an immutable student-ink selection. Return an explicit unsupported result when the selected expression cannot be rendered safely. Use only when [[LEARNING_SELECTION]] requires this exact tool. Copy the source identity fields exactly, describe only the selected image, and never rewrite or replace the source ink.",
+      "description": "Answer a question about an immutable ink selection. When the client declares board_writing, checks and requested rewrites can return concise handwriting content; explicit plot requests still return validated 2D/3D visualizations. Copy the source identity fields exactly and never replace the source ink.",
       "concurrency_class": "exclusive",
       "env": [
         "OLL_PROVIDER",
@@ -163,6 +163,7 @@
         "OLL_TOTAL_TIMEOUT_MS",
         "OLL_MAX_TOKENS",
         "OLL_MODEL_REQUEST_ATTEMPTS",
+        "OLL_SELECTION_THINKING_LEVEL",
         "OLL_THINKING_LEVEL",
         "VERTEX_REQUEST_ATTEMPTS",
         "OCTOS_WORK_DIR",
@@ -172,6 +173,7 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "capabilities": { "type": "array", "items": { "type": "string", "enum": ["board_writing"] }, "maxItems": 1 },
           "turn_id": { "type": "string" },
           "learner_request": { "type": "string" },
           "source": {
@@ -437,8 +439,8 @@
     },
     {
       "id": "learning.selection.enhance",
-      "label": "解释白板选区",
-      "description": "根据学生保留不变的笔迹选区生成旁侧解释、二维函数图或三维函数图；无法安全绘制时返回明确原因。",
+      "label": "辅助白板选区",
+      "description": "根据保留不变的笔迹选区生成简短板书、解释或明确请求的二维/三维图形；无法安全处理时返回明确原因。",
       "tags": ["learning", "selection"],
       "surfaces": ["learning.selection"],
       "execution": "sync",
@@ -446,6 +448,7 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "capabilities": { "type": "array", "items": { "type": "string", "enum": ["board_writing"] }, "maxItems": 1 },
           "paths": {
             "type": "array",
             "minItems": 1,
