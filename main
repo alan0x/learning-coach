@@ -8173,6 +8173,160 @@ function buildImplicitSurfaceObject(input) {
   };
 }
 
+// src/selection-plot-routing.ts
+var MATH_FUNCTION_NAMES = /* @__PURE__ */ new Set([
+  "abs",
+  "acos",
+  "asin",
+  "atan",
+  "ceil",
+  "cos",
+  "exp",
+  "floor",
+  "ln",
+  "log",
+  "round",
+  "sin",
+  "sqrt",
+  "tan"
+]);
+var MATH_CONSTANT_NAMES = /* @__PURE__ */ new Set(["pi", "e"]);
+var PLOT_VARIABLES = ["x", "y", "z"];
+var SelectionPlotFormError = class extends Error {
+  constructor(reasonCode, message, alternatives) {
+    super(message);
+    this.reasonCode = reasonCode;
+    this.alternatives = alternatives;
+  }
+  reasonCode;
+  alternatives;
+};
+function scanIdentifiers(expression) {
+  return [...expression.matchAll(/(?<![a-z0-9_.])[a-z][a-z0-9_]*/giu)].map((match) => match[0].toLowerCase());
+}
+function usedPlotVariables(identifiers) {
+  return PLOT_VARIABLES.filter((variable) => identifiers.includes(variable));
+}
+function compileUniverse(variables) {
+  const highest = variables.reduce(
+    (maximum, variable) => Math.max(maximum, PLOT_VARIABLES.indexOf(variable)),
+    0
+  );
+  return PLOT_VARIABLES.slice(0, highest + 1);
+}
+function implicitDifference(lhs, rhs) {
+  if (/^\d+(?:\.\d+)?$/u.test(rhs)) {
+    return Number(rhs) === 0 ? lhs : `${lhs}-${rhs}`;
+  }
+  return `(${lhs})-(${rhs})`;
+}
+function analyzeSelectionPlotForm(source) {
+  const parts = source.split("=").map((part) => part.trim());
+  if (parts.length > 2) {
+    throw new SelectionPlotFormError(
+      "unsupported_representation",
+      "\u7B49\u5F0F\u5305\u542B\u591A\u4E2A\u7B49\u53F7\uFF0C\u65E0\u6CD5\u786E\u5B9A\u552F\u4E00\u7684\u7B49\u91CF\u5173\u7CFB",
+      ["\u6846\u9009\u53EA\u542B\u4E00\u4E2A\u7B49\u53F7\u7684\u5B8C\u6574\u516C\u5F0F\u540E\u91CD\u8BD5"]
+    );
+  }
+  if (parts.some((part) => !part)) {
+    throw new SelectionPlotFormError(
+      "unsupported_representation",
+      "\u7B49\u53F7\u4E24\u4FA7\u90FD\u9700\u8981\u6709\u8868\u8FBE\u5F0F",
+      ["\u786E\u8BA4\u6846\u9009\u8303\u56F4\u5305\u542B\u7B49\u53F7\u4E24\u4FA7\u7684\u5B8C\u6574\u516C\u5F0F"]
+    );
+  }
+  const identifiers = parts.flatMap(scanIdentifiers);
+  const unknown = [...new Set(identifiers.filter((name) => !MATH_FUNCTION_NAMES.has(name) && !MATH_CONSTANT_NAMES.has(name) && !PLOT_VARIABLES.includes(name)))];
+  if (unknown.length > 0) {
+    throw new SelectionPlotFormError(
+      "unsupported_variables",
+      `\u8868\u8FBE\u5F0F\u5305\u542B\u4E0D\u652F\u6301\u7684\u53D8\u91CF\u6216\u51FD\u6570 ${unknown.map((name) => `\u300C${name}\u300D`).join("\u3001")}\uFF0C\u5F53\u524D\u53EA\u652F\u6301 x\u3001y\u3001z \u4E09\u4E2A\u53D8\u91CF`,
+      [
+        "\u628A\u4E0D\u652F\u6301\u7684\u53D8\u91CF\u66FF\u6362\u4E3A\u5177\u4F53\u6570\u503C\u540E\u91CD\u8BD5",
+        "\u591A\u4F59\u53D8\u91CF\u53EF\u56FA\u5B9A\u53D6\u503C\u540E\u6539\u5199\u4E3A F(x,y,z)=0 \u7684\u9690\u5F0F\u5F62\u5F0F"
+      ]
+    );
+  }
+  const variables = usedPlotVariables(identifiers);
+  const universe = compileUniverse(variables);
+  for (const part of parts) {
+    try {
+      compileMathExpression(part, universe);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new SelectionPlotFormError(
+        "unsupported_representation",
+        `\u8868\u8FBE\u5F0F\u300C${part}\u300D\u65E0\u6CD5\u5B89\u5168\u89E3\u6790\uFF1A${message}`,
+        [
+          "\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F",
+          "\u53EF\u6539\u5199\u4E3A y=f(x)\u3001z=f(x,y) \u6216 F(x,y,z)=0 \u7684\u5F62\u5F0F\u540E\u91CD\u8BD5"
+        ]
+      );
+    }
+  }
+  const usesZ = variables.includes("z");
+  if (parts.length === 2) {
+    const [lhs, rhs] = parts;
+    const lhsVariables = usedPlotVariables(scanIdentifiers(lhs));
+    const rhsVariables = usedPlotVariables(scanIdentifiers(rhs));
+    const without = (variable) => (side) => !side.includes(variable);
+    if (lhs.toLowerCase() === "y" && without("y")(rhsVariables) && !usesZ) {
+      return { kind: "plot", expression: rhs };
+    }
+    if (rhs.toLowerCase() === "y" && without("y")(lhsVariables) && !usesZ) {
+      return { kind: "plot", expression: lhs };
+    }
+    if (lhs.toLowerCase() === "z" && without("z")(rhsVariables)) {
+      return { kind: "surface", expression: rhs };
+    }
+    if (rhs.toLowerCase() === "z" && without("z")(lhsVariables)) {
+      return { kind: "surface", expression: lhs };
+    }
+    const difference = implicitDifference(lhs, rhs);
+    return usesZ ? { kind: "implicit_surface", expression: difference, level: 0 } : { kind: "implicit_plot", expression: difference, level: 0 };
+  }
+  if (usesZ) {
+    return { kind: "implicit_surface", expression: parts[0], level: 0 };
+  }
+  if (variables.includes("y")) {
+    return { kind: "surface", expression: parts[0] };
+  }
+  return { kind: "plot", expression: parts[0] };
+}
+function routeSelectionPlot(sources) {
+  const seen = /* @__PURE__ */ new Set();
+  let firstFailure;
+  for (const source of sources) {
+    const trimmed = source?.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    try {
+      return analyzeSelectionPlotForm(trimmed);
+    } catch (error) {
+      if (!(error instanceof SelectionPlotFormError)) throw error;
+      firstFailure ??= error;
+    }
+  }
+  if (firstFailure) {
+    return {
+      kind: "unsupported",
+      reasonCode: firstFailure.reasonCode,
+      reason: firstFailure.message,
+      alternatives: firstFailure.alternatives
+    };
+  }
+  return {
+    kind: "unsupported",
+    reasonCode: "unreadable_expression",
+    reason: "\u6CA1\u6709\u8BC6\u522B\u5230\u53EF\u4EE5\u7ED8\u5236\u7684\u6570\u5B66\u8868\u8FBE\u5F0F",
+    alternatives: [
+      "\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F",
+      "\u4F7F\u7528\u201C\u95EE\u5C0F\u7AE0\u9C7C\u201D\u8BA9\u5B83\u89E3\u91CA\u6216\u6539\u5199\u4E3A\u53EF\u7ED8\u5236\u5F62\u5F0F"
+    ]
+  };
+}
+
 // src/json-stream.ts
 function withJsonPropertyOrdering(value) {
   if (Array.isArray(value)) return value.map(withJsonPropertyOrdering);
@@ -10014,13 +10168,6 @@ function parseSelectionModelResponse(raw, input) {
   }
   const output = value;
   const nonEmpty = (name) => requireNonEmptyString(output[name], name);
-  const finiteOutput = (name) => {
-    const number = output[name];
-    if (typeof number !== "number" || !Number.isFinite(number)) {
-      throw new Error(`${name} must be a finite number`);
-    }
-    return number;
-  };
   const reusableRecognition = hasReusableSelectionRecognition(input);
   const kind = reusableRecognition ? input.content_hint : nonEmpty("interpretation_kind");
   if (!["text", "math", "geometry", "data", "unknown"].includes(kind)) {
@@ -10037,13 +10184,31 @@ function parseSelectionModelResponse(raw, input) {
   let response;
   const visualizationRequested = input.tool_id === "generate-plot" || input.tool_id === "custom-question";
   const alternatives = Array.isArray(output.alternatives) ? output.alternatives.map((item, index) => requireNonEmptyString(item, `alternatives[${index}]`)).slice(0, 4) : [];
-  const unsupported = (reasonCode, reason) => ({
+  const unsupported = (reasonCode, reason, fallbackAlternatives) => ({
     kind: "unsupported",
     title: "\u5F53\u524D\u65E0\u6CD5\u751F\u6210\u8FD9\u4E2A\u51FD\u6570\u56FE\u50CF",
     text: reason,
     reason_code: reasonCode,
-    alternatives: alternatives.length > 0 ? alternatives : ["\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F", "\u4F7F\u7528\u201C\u95EE\u5C0F\u7AE0\u9C7C\u201D\u8BA9\u5B83\u89E3\u91CA\u6216\u6539\u5199\u4E3A\u53EF\u7ED8\u5236\u5F62\u5F0F"]
+    alternatives: alternatives.length > 0 ? alternatives : [...fallbackAlternatives ?? ["\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F", "\u4F7F\u7528\u201C\u95EE\u5C0F\u7AE0\u9C7C\u201D\u8BA9\u5B83\u89E3\u91CA\u6216\u6539\u5199\u4E3A\u53EF\u7ED8\u5236\u5F62\u5F0F"]]
   });
+  const failureAlternatives = {
+    unreadable_expression: [
+      "\u91CD\u65B0\u6846\u9009\u4E00\u4E2A\u6E05\u6670\u3001\u5B8C\u6574\u7684\u516C\u5F0F\u540E\u91CD\u8BD5",
+      "\u4F7F\u7528\u201C\u95EE\u5C0F\u7AE0\u9C7C\u201D\u8BA9\u5B83\u5148\u8BC6\u522B\u5E76\u8F6C\u5199\u516C\u5F0F"
+    ],
+    unsupported_variables: [
+      "\u8868\u8FBE\u5F0F\u53EA\u652F\u6301 x\u3001y\u3001z \u4E09\u4E2A\u53D8\u91CF\uFF0C\u8BF7\u628A\u5176\u4ED6\u53D8\u91CF\u66FF\u6362\u4E3A\u5177\u4F53\u6570\u503C",
+      "\u591A\u4F59\u53D8\u91CF\u53EF\u56FA\u5B9A\u53D6\u503C\u540E\u6539\u5199\u4E3A F(x,y,z)=0 \u7684\u9690\u5F0F\u5F62\u5F0F"
+    ],
+    unsupported_representation: [
+      "\u53EF\u6539\u5199\u4E3A y=f(x)\u3001z=f(x,y) \u6216 F(x,y,z)=0 \u7684\u9690\u5F0F\u5F62\u5F0F\u540E\u91CD\u8BD5",
+      "\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F"
+    ],
+    unsafe_complexity: [
+      "\u5C1D\u8BD5\u7B80\u5316\u8868\u8FBE\u5F0F\u3001\u51CF\u5C11\u5D4C\u5957\u5C42\u7EA7\u540E\u91CD\u8BD5",
+      "\u6846\u9009\u8868\u8FBE\u5F0F\u4E2D\u8F83\u7B80\u5355\u7684\u90E8\u5206\u5206\u522B\u7ED8\u5236"
+    ]
+  };
   const failureReasonCode = (error) => {
     if (confidence === "low") return "unreadable_expression";
     const message = error instanceof Error ? error.message : String(error);
@@ -10058,6 +10223,70 @@ function parseSelectionModelResponse(raw, input) {
   if (input.tool_id === "check-and-suggest" && boardWriting && responseKind !== "board_writing") {
     throw new Error("Checking with board writing capability requires board_writing");
   }
+  const modelExpression = typeof output.expression === "string" && output.expression.trim() ? output.expression.trim() : void 0;
+  const buildRoutedVisualization = () => {
+    const route = routeSelectionPlot([interpretationContent, modelExpression]);
+    if (route.kind === "unsupported") {
+      return unsupported(route.reasonCode, route.reason, route.alternatives);
+    }
+    if (route.kind === "plot") {
+      const viewport = selectionExplicitViewport(route.expression);
+      return {
+        kind: "plot",
+        plot_kind: "explicit",
+        title,
+        text,
+        expression: route.expression,
+        x_range: viewport.x,
+        y_range: viewport.y
+      };
+    }
+    if (route.kind === "implicit_plot") {
+      const viewport = implicitSurfaceDomain(route.expression, ["x", "y"], route.level);
+      return {
+        kind: "plot",
+        plot_kind: "implicit",
+        title,
+        text,
+        expression: route.expression,
+        level: route.level,
+        samples: 80,
+        x_range: viewport.x,
+        y_range: viewport.y
+      };
+    }
+    const samples = 12;
+    const object = route.kind === "surface" ? (() => {
+      const viewport = selectionSurfaceDomain(route.expression);
+      return {
+        as: "selected-function",
+        kind: "surface",
+        expression: route.expression,
+        x_range: viewport.x,
+        y_range: viewport.y,
+        samples,
+        color: "teal"
+      };
+    })() : buildImplicitSurfaceObject({
+      as: "selected-function",
+      expression: route.expression,
+      level: route.level,
+      samples,
+      color: "teal"
+    });
+    return {
+      kind: "scene3d",
+      title,
+      text,
+      content: {
+        title,
+        fallback: text,
+        axes: true,
+        camera: { yaw: 0.65, pitch: 0.45, zoom: 1 },
+        objects: [object]
+      }
+    };
+  };
   try {
     if (responseKind === "board_writing") {
       if (!boardWriting || !["check-and-suggest", "custom-question"].includes(input.tool_id)) {
@@ -10072,85 +10301,26 @@ function parseSelectionModelResponse(raw, input) {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a plot response`);
       }
-      const expression = nonEmpty("expression");
-      if (responseKind === "plot") {
-        const viewport = selectionExplicitViewport(expression);
-        response = {
-          kind: "plot",
-          plot_kind: "explicit",
-          title,
-          text,
-          expression,
-          x_range: viewport.x,
-          y_range: viewport.y
-        };
-      } else {
-        const level = finiteOutput("level");
-        const viewport = implicitSurfaceDomain(expression, ["x", "y"], level);
-        response = {
-          kind: "plot",
-          plot_kind: "implicit",
-          title,
-          text,
-          expression,
-          level,
-          samples: 80,
-          x_range: viewport.x,
-          y_range: viewport.y
-        };
-      }
+      response = buildRoutedVisualization();
     } else if (responseKind === "scene3d") {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a 3D response`);
       }
-      const sceneKind = nonEmpty("scene_kind");
-      if (sceneKind !== "surface" && sceneKind !== "implicit_surface") {
-        throw new Error("scene_kind is invalid");
-      }
-      const expression = nonEmpty("expression");
-      const level = finiteOutput("level");
-      const samples = 12;
-      const object = sceneKind === "surface" ? (() => {
-        const viewport = selectionSurfaceDomain(expression);
-        return {
-          as: "selected-function",
-          kind: "surface",
-          expression,
-          x_range: viewport.x,
-          y_range: viewport.y,
-          samples,
-          color: "teal"
-        };
-      })() : buildImplicitSurfaceObject({
-        as: "selected-function",
-        expression,
-        level,
-        samples,
-        color: "teal"
-      });
-      response = {
-        kind: "scene3d",
-        title,
-        text,
-        content: {
-          title,
-          fallback: text,
-          axes: true,
-          camera: { yaw: 0.65, pitch: 0.45, zoom: 1 },
-          objects: [object]
-        }
-      };
+      response = buildRoutedVisualization();
     } else if (responseKind === "unsupported") {
-      const reasonCode = nonEmpty("reason_code");
-      if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
-        throw new Error("reason_code is invalid");
+      const corrected = visualizationRequested ? buildRoutedVisualization() : void 0;
+      if (corrected && corrected.kind !== "unsupported") {
+        response = corrected;
+      } else {
+        const reasonCode = nonEmpty("reason_code");
+        if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
+          throw new Error("reason_code is invalid");
+        }
+        response = corrected && alternatives.length === 0 ? corrected : unsupported(reasonCode, text, failureAlternatives[reasonCode]);
       }
-      response = unsupported(reasonCode, text);
     } else if (responseKind === "explanation") {
-      response = visualizationRequested && input.tool_id === "generate-plot" ? unsupported(
-        confidence === "low" ? "unreadable_expression" : "unsupported_representation",
-        text
-      ) : {
+      const explanationFailure = confidence === "low" ? "unreadable_expression" : "unsupported_representation";
+      response = visualizationRequested && input.tool_id === "generate-plot" ? unsupported(explanationFailure, text, failureAlternatives[explanationFailure]) : {
         kind: "explanation",
         title,
         text,
@@ -10161,9 +10331,11 @@ function parseSelectionModelResponse(raw, input) {
     }
   } catch (error) {
     if (!visualizationRequested || responseKind === "board_writing") throw error;
+    const reasonCode = failureReasonCode(error);
     response = unsupported(
-      failureReasonCode(error),
-      `\u5DF2\u7ECF\u8BC6\u522B\u5230\u201C${interpretationContent}\u201D\uFF0C\u4F46\u5F53\u524D\u65E0\u6CD5\u5B89\u5168\u5730\u751F\u6210\u5B83\u7684\u56FE\u50CF\u3002`
+      reasonCode,
+      `\u5DF2\u7ECF\u8BC6\u522B\u5230\u201C${interpretationContent}\u201D\uFF0C\u4F46\u5F53\u524D\u65E0\u6CD5\u5B89\u5168\u5730\u751F\u6210\u5B83\u7684\u56FE\u50CF\u3002`,
+      failureAlternatives[reasonCode]
     );
   }
   return {
@@ -10532,6 +10704,7 @@ export {
   parseSelectionToolInput,
   probeStructuredModelSchema,
   probeVertexSchema,
+  routeSelectionPlot,
   selectionRequestSystemPrompt,
   selectionResponseSchema,
   selectionSystemPrompt,

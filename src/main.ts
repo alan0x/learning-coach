@@ -12,6 +12,10 @@ import {
   buildImplicitSurfaceObject,
   implicitSurfaceDomain,
 } from "./scene3d-surfaces.js";
+import { routeSelectionPlot } from "./selection-plot-routing.js";
+
+export { routeSelectionPlot } from "./selection-plot-routing.js";
+export type { SelectionPlotRoute } from "./selection-plot-routing.js";
 import {
   completedJsonObjectProperty,
   withJsonPropertyOrdering,
@@ -2339,13 +2343,6 @@ export function parseSelectionModelResponse(
   }
   const output = value as Record<string, unknown>;
   const nonEmpty = (name: string) => requireNonEmptyString(output[name], name);
-  const finiteOutput = (name: string): number => {
-    const number = output[name];
-    if (typeof number !== "number" || !Number.isFinite(number)) {
-      throw new Error(`${name} must be a finite number`);
-    }
-    return number;
-  };
   const reusableRecognition = hasReusableSelectionRecognition(input);
   const kind = (reusableRecognition
     ? input.content_hint
@@ -2378,6 +2375,7 @@ export function parseSelectionModelResponse(
   const unsupported = (
     reasonCode: Extract<SelectionEnhancementArtifact["response"], { kind: "unsupported" }>["reason_code"],
     reason: string,
+    fallbackAlternatives?: readonly string[],
   ): SelectionEnhancementArtifact["response"] => ({
     kind: "unsupported",
     title: "当前无法生成这个函数图像",
@@ -2385,8 +2383,30 @@ export function parseSelectionModelResponse(
     reason_code: reasonCode,
     alternatives: alternatives.length > 0
       ? alternatives
-      : ["确认框选范围只包含一个完整公式", "使用“问小章鱼”让它解释或改写为可绘制形式"],
+      : [...(fallbackAlternatives
+        ?? ["确认框选范围只包含一个完整公式", "使用“问小章鱼”让它解释或改写为可绘制形式"])],
   });
+  const failureAlternatives: Record<
+    Extract<SelectionEnhancementArtifact["response"], { kind: "unsupported" }>["reason_code"],
+    readonly string[]
+  > = {
+    unreadable_expression: [
+      "重新框选一个清晰、完整的公式后重试",
+      "使用“问小章鱼”让它先识别并转写公式",
+    ],
+    unsupported_variables: [
+      "表达式只支持 x、y、z 三个变量，请把其他变量替换为具体数值",
+      "多余变量可固定取值后改写为 F(x,y,z)=0 的隐式形式",
+    ],
+    unsupported_representation: [
+      "可改写为 y=f(x)、z=f(x,y) 或 F(x,y,z)=0 的隐式形式后重试",
+      "确认框选范围只包含一个完整公式",
+    ],
+    unsafe_complexity: [
+      "尝试简化表达式、减少嵌套层级后重试",
+      "框选表达式中较简单的部分分别绘制",
+    ],
+  };
   const failureReasonCode = (error: unknown): Extract<
     SelectionEnhancementArtifact["response"],
     { kind: "unsupported" }
@@ -2406,6 +2426,76 @@ export function parseSelectionModelResponse(
   if (input.tool_id === "check-and-suggest" && boardWriting && responseKind !== "board_writing") {
     throw new Error("Checking with board writing capability requires board_writing");
   }
+  // The program owns plot routing: the model's response_kind and expression
+  // are hints, while the recognized content is analyzed first.
+  const modelExpression = typeof output.expression === "string" && output.expression.trim()
+    ? output.expression.trim()
+    : undefined;
+  const buildRoutedVisualization = (): SelectionEnhancementArtifact["response"] => {
+    const route = routeSelectionPlot([interpretationContent, modelExpression]);
+    if (route.kind === "unsupported") {
+      return unsupported(route.reasonCode, route.reason, route.alternatives);
+    }
+    if (route.kind === "plot") {
+      const viewport = selectionExplicitViewport(route.expression);
+      return {
+        kind: "plot",
+        plot_kind: "explicit",
+        title,
+        text,
+        expression: route.expression,
+        x_range: viewport.x,
+        y_range: viewport.y,
+      };
+    }
+    if (route.kind === "implicit_plot") {
+      const viewport = implicitSurfaceDomain(route.expression, ["x", "y"], route.level);
+      return {
+        kind: "plot",
+        plot_kind: "implicit",
+        title,
+        text,
+        expression: route.expression,
+        level: route.level,
+        samples: 80,
+        x_range: viewport.x,
+        y_range: viewport.y,
+      };
+    }
+    const samples = 12;
+    const object = route.kind === "surface"
+      ? (() => {
+          const viewport = selectionSurfaceDomain(route.expression);
+          return {
+            as: "selected-function",
+            kind: "surface",
+            expression: route.expression,
+            x_range: viewport.x,
+            y_range: viewport.y,
+            samples,
+            color: "teal",
+          };
+        })()
+      : buildImplicitSurfaceObject({
+          as: "selected-function",
+          expression: route.expression,
+          level: route.level,
+          samples,
+          color: "teal",
+        });
+    return {
+      kind: "scene3d",
+      title,
+      text,
+      content: {
+        title,
+        fallback: text,
+        axes: true,
+        camera: { yaw: .65, pitch: .45, zoom: 1 },
+        objects: [object],
+      },
+    };
+  };
   try {
     if (responseKind === "board_writing") {
       if (!boardWriting || !["check-and-suggest", "custom-question"].includes(input.tool_id)) {
@@ -2421,91 +2511,36 @@ export function parseSelectionModelResponse(
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a plot response`);
       }
-      const expression = nonEmpty("expression");
-      if (responseKind === "plot") {
-        const viewport = selectionExplicitViewport(expression);
-        response = {
-          kind: "plot",
-          plot_kind: "explicit",
-          title,
-          text,
-          expression,
-          x_range: viewport.x,
-          y_range: viewport.y,
-        };
-      } else {
-        const level = finiteOutput("level");
-        const viewport = implicitSurfaceDomain(expression, ["x", "y"], level);
-        response = {
-          kind: "plot",
-          plot_kind: "implicit",
-          title,
-          text,
-          expression,
-          level,
-          samples: 80,
-          x_range: viewport.x,
-          y_range: viewport.y,
-        };
-      }
+      response = buildRoutedVisualization();
     } else if (responseKind === "scene3d") {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a 3D response`);
       }
-      const sceneKind = nonEmpty("scene_kind");
-      if (sceneKind !== "surface" && sceneKind !== "implicit_surface") {
-        throw new Error("scene_kind is invalid");
-      }
-      const expression = nonEmpty("expression");
-      const level = finiteOutput("level");
-      const samples = 12;
-      const object = sceneKind === "surface"
-        ? (() => {
-            const viewport = selectionSurfaceDomain(expression);
-            return {
-              as: "selected-function",
-              kind: "surface",
-              expression,
-              x_range: viewport.x,
-              y_range: viewport.y,
-              samples,
-              color: "teal",
-            };
-          })()
-        : buildImplicitSurfaceObject({
-            as: "selected-function",
-            expression,
-            level,
-            samples,
-            color: "teal",
-          });
-      response = {
-        kind: "scene3d",
-        title,
-        text,
-        content: {
-          title,
-          fallback: text,
-          axes: true,
-          camera: { yaw: .65, pitch: .45, zoom: 1 },
-          objects: [object],
-        },
-      };
+      response = buildRoutedVisualization();
     } else if (responseKind === "unsupported") {
-      const reasonCode = nonEmpty("reason_code") as Extract<
-        SelectionEnhancementArtifact["response"],
-        { kind: "unsupported" }
-      >["reason_code"];
-      if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
-        throw new Error("reason_code is invalid");
+      // A model-declared failure can still be wrong; route the recognized
+      // content before trusting it.
+      const corrected = visualizationRequested ? buildRoutedVisualization() : undefined;
+      if (corrected && corrected.kind !== "unsupported") {
+        response = corrected;
+      } else {
+        const reasonCode = nonEmpty("reason_code") as Extract<
+          SelectionEnhancementArtifact["response"],
+          { kind: "unsupported" }
+        >["reason_code"];
+        if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
+          throw new Error("reason_code is invalid");
+        }
+        response = corrected && alternatives.length === 0
+          ? corrected
+          : unsupported(reasonCode, text, failureAlternatives[reasonCode]);
       }
-      response = unsupported(reasonCode, text);
     } else if (responseKind === "explanation") {
+      const explanationFailure = confidence === "low"
+        ? "unreadable_expression"
+        : "unsupported_representation";
       response = visualizationRequested && input.tool_id === "generate-plot"
-        ? unsupported(
-            confidence === "low" ? "unreadable_expression" : "unsupported_representation",
-            text,
-          )
+        ? unsupported(explanationFailure, text, failureAlternatives[explanationFailure])
         : {
             kind: "explanation",
             title,
@@ -2517,9 +2552,11 @@ export function parseSelectionModelResponse(
     }
   } catch (error) {
     if (!visualizationRequested || responseKind === "board_writing") throw error;
+    const reasonCode = failureReasonCode(error);
     response = unsupported(
-      failureReasonCode(error),
+      reasonCode,
       `已经识别到“${interpretationContent}”，但当前无法安全地生成它的图像。`,
+      failureAlternatives[reasonCode],
     );
   }
   return {
