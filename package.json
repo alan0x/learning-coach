@@ -17,7 +17,7 @@
     "eval:lesson-plan": "node scripts/eval-lesson-plan-generation.mjs"
   },
   "dependencies": {
-    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#ac109ef0a494a99524191c42f348c06376256d75"
+    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#7a1b3f4d8413a8feba2e550dc9247fa2fb3d7db3"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"
