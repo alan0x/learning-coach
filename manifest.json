@@ -466,6 +466,10 @@
             "type": "string",
             "enum": ["explain", "check-and-suggest", "generate-plot", "custom-question"]
           },
+          "delivery_mode": {
+            "type": "string",
+            "enum": ["card", "board-writing"]
+          },
           "board": { "type": "object" },
           "recognized_content": { "type": "string" },
           "recognition_confidence": {
