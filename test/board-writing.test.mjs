@@ -35,6 +35,34 @@ test("wire input preserves supported capabilities through schema and artifact pa
   assert.deepEqual(parseSelectionToolInput(JSON.stringify(input)).capabilities, []);
 });
 
+test("wire input freezes the requested answer surface", () => {
+  const board = parseSelectionToolInput(JSON.stringify({
+    ...input,
+    capabilities: ["board_writing"],
+    delivery_mode: "board-writing",
+  }));
+  assert.equal(board.delivery_mode, "board-writing");
+  assert.deepEqual(selectionResponseSchema(board).properties.response_kind.enum, ["board_writing"]);
+
+  const card = parseSelectionToolInput(JSON.stringify({
+    ...input,
+    capabilities: ["board_writing"],
+    delivery_mode: "card",
+  }));
+  assert.equal(card.delivery_mode, "card");
+  assert.ok(!selectionResponseSchema(card).properties.response_kind.enum.includes("board_writing"));
+  assert.throws(() => parseSelectionToolInput(JSON.stringify({
+    ...input,
+    tool_id: "generate-plot",
+    content_hint: "math",
+    delivery_mode: "board-writing",
+  })), /invalid for this tool_id/);
+  assert.throws(() => parseSelectionToolInput(JSON.stringify({
+    ...input,
+    delivery_mode: "board-writing",
+  })), /requires the board_writing capability/);
+});
+
 test("invalid writing cannot silently become a plotting failure card", () => {
   assert.throws(() => parseSelectionModelResponse(JSON.stringify({ ...output, text: "x".repeat(501) }), { ...input, capabilities: ["board_writing"] }), /budget/);
 });

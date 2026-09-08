@@ -77,6 +77,7 @@ const CLIENT_TIMING_FIELDS = [
 
 type SelectionContentKind = "text" | "math" | "geometry" | "data" | "unknown";
 type SelectionToolId = "explain" | "check-and-suggest" | "generate-plot" | "custom-question";
+type SelectionDeliveryMode = "card" | "board-writing";
 
 interface SelectionBoardTargetRef {
   target_id: string;
@@ -95,6 +96,7 @@ interface SelectionToolInput {
   capabilities?: string[];
   turn_id: string;
   learner_request: string;
+  delivery_mode?: SelectionDeliveryMode;
   source: {
     source_id: string;
     document_id: string;
@@ -484,6 +486,24 @@ export function parseSelectionToolInput(raw: string): SelectionToolInput {
   if (toolId === "generate-plot" && contentHint !== "math") {
     throw new Error("generate-plot requires content_hint=math");
   }
+  const deliveryMode = input.delivery_mode;
+  const capabilities = Array.isArray(input.capabilities)
+    ? input.capabilities.filter((value): value is string => value === "board_writing")
+    : [];
+  if (
+    deliveryMode !== undefined
+    && deliveryMode !== "card"
+    && deliveryMode !== "board-writing"
+  ) throw new Error("delivery_mode is invalid");
+  if (deliveryMode === "board-writing" && !["check-and-suggest", "custom-question"].includes(String(toolId))) {
+    throw new Error("delivery_mode=board-writing is invalid for this tool_id");
+  }
+  if (deliveryMode === "board-writing" && !capabilities.includes("board_writing")) {
+    throw new Error("delivery_mode=board-writing requires the board_writing capability");
+  }
+  if (deliveryMode === "card" && toolId === "check-and-suggest" && capabilities.includes("board_writing")) {
+    throw new Error("capable check-and-suggest requests require delivery_mode=board-writing");
+  }
   const boardValue = input.board;
   if (!boardValue || typeof boardValue !== "object" || Array.isArray(boardValue)) {
     throw new Error("board must be an object");
@@ -570,7 +590,8 @@ export function parseSelectionToolInput(raw: string): SelectionToolInput {
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: truncate(requireNonEmptyString(input.learner_request, "learner_request"))!,
-    capabilities: Array.isArray(input.capabilities) ? input.capabilities.filter((value): value is string => value === "board_writing") : [],
+    ...(deliveryMode ? { delivery_mode: deliveryMode } : {}),
+    capabilities,
     source: {
       source_id: requireNonEmptyString(source.source_id, "source.source_id"),
       document_id: requireNonEmptyString(source.document_id, "source.document_id"),
@@ -2165,8 +2186,12 @@ export function selectionResponseSchema(input: SelectionToolInput): JsonSchema {
   }
   if (input.capabilities?.includes("board_writing") && (input.tool_id === "custom-question" || input.tool_id === "check-and-suggest")) {
     // Use text for newline-separated writing, avoiding another required field.
-    schema.properties.response_kind = { type: "string", enum: input.tool_id === "check-and-suggest"
-      ? ["board_writing"] : ["explanation", "board_writing", "plot", "implicit_plot", "scene3d", "unsupported"] };
+    const allowedKinds = input.tool_id === "check-and-suggest" || input.delivery_mode === "board-writing"
+      ? ["board_writing"]
+      : input.delivery_mode === "card"
+        ? ["explanation", "plot", "implicit_plot", "scene3d", "unsupported"]
+        : ["explanation", "board_writing", "plot", "implicit_plot", "scene3d", "unsupported"];
+    schema.properties.response_kind = { type: "string", enum: allowedKinds };
     if (!schema.required.includes("response_kind")) schema.required.push("response_kind");
     delete schema.properties.items;
     schema.required = schema.required.filter((field) => !["items", "scene_kind", "expression", "level", "reason_code", "alternatives"].includes(field));
@@ -2187,6 +2212,12 @@ export function selectionRequestSystemPrompt(input: SelectionToolInput): string 
     return selectionSystemPrompt(input.tool_id);
   }
   const writing = `只依据本次选区及所选上下文回答，不操作原稿。沿用可信识别；模糊字符不得猜填，说明无法确认并请重选，不输出推测公式。检查建议、改写、纠错、转写用 board_writing；text 包含完整批注：简短说明后换行写公式，不能把公式放在其他字段。使用线性记法，无 Markdown。等价整理不是纠错。为绘图整理三变量方程时优先移项为 F(x,y,z)=0，保持变量和定义域，不引入分数幂。`;
+  if (input.delivery_mode === "board-writing") {
+    return `${writing}\n本次 delivery_mode 已确定为 board-writing，必须返回 board_writing。`;
+  }
+  if (input.delivery_mode === "card") {
+    return `${selectionSystemPrompt(input.tool_id)}\n本次 delivery_mode 已确定为 card，不得返回 board_writing。`;
+  }
   return input.tool_id === "check-and-suggest" ? writing
     : `${writing}\n“改成可以绘图的形式”只整理公式，不绘图。普通问题用 explanation。仅明确要求现在绘图时：y=f(x) 用 plot、expression=f；F(x,y)=c 用 implicit_plot、expression=F、level=c；z=f(x,y) 用 scene3d/surface、expression=f；F(x,y,z)=c 用 scene3d/implicit_surface、expression=F、level=c。绘图表达式仅用数字、x/y/z、pi/e、+ - * / ^、括号及 abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan，显式写乘号。程序计算视口，无法表达用 unsupported 并说明原因。`;
 }
@@ -2425,6 +2456,12 @@ export function parseSelectionModelResponse(
     : output.response_kind;
   if (input.tool_id === "check-and-suggest" && boardWriting && responseKind !== "board_writing") {
     throw new Error("Checking with board writing capability requires board_writing");
+  }
+  if (input.delivery_mode === "board-writing" && responseKind !== "board_writing") {
+    throw new Error("delivery_mode=board-writing requires board_writing");
+  }
+  if (input.delivery_mode === "card" && responseKind === "board_writing") {
+    throw new Error("delivery_mode=card forbids board_writing");
   }
   // The program owns plot routing: the model's response_kind and expression
   // are hints, while the recognized content is analyzed first.
