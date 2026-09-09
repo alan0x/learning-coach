@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.1 - 2026-09-08
+
+- Declared the selection delivery mode accepted by the whiteboard action.
+- Updated the OLL runtime contract for wheel input through auxiliary cards.
+
 ## 0.14.0 - 2026-08-29
 
 - Replaced model-owned low-level lesson identity with the deterministic Lesson Plan compiler and capability registry.

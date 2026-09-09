@@ -2198,6 +2198,89 @@ test("selection tool writes a source-linked artifact without producing a lesson"
   }
 });
 
+test("selection surface scenes follow the client x_range/y_range contract", async () => {
+  const sessionWorkspace = await mkdtemp(join(tmpdir(), "learning-coach-surface-"));
+  const workDirectory = join(sessionWorkspace, "skill-output");
+  await mkdir(workDirectory, { recursive: true });
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const modelResponse = {
+    response_kind: "scene3d",
+    scene_kind: "surface",
+    title: "抛物面",
+    text: "这是所选公式对应的三维曲面。",
+    items: [],
+    expression: "x^2+y^2",
+    level: 0,
+    reason_code: "unsupported_representation",
+    alternatives: [],
+  };
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    response.writeHead(200, { "content-type": "application/json" });
+    if (request.url === "/token") {
+      response.end(JSON.stringify({ access_token: "vertex-test-token" }));
+      return;
+    }
+    response.end(vertexPayload(modelResponse));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    const result = await runTool({
+      tool: "oll_enhance_selection",
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+        token_uri: `http://127.0.0.1:${address.port}/token`,
+      },
+      workDirectory,
+      input: {
+        turn_id: "selection-surface",
+        learner_request: "生成函数图像",
+        source: {
+          source_id: "selection-surface-source",
+          document_id: "ink-1",
+          document_version: 11,
+          bounds: { x: 120, y: 80, width: 300, height: 90 },
+          checksum: { algorithm: "sha-256", value: "b".repeat(64) },
+        },
+        content_hint: "math",
+        tool_id: "generate-plot",
+        board: { board_id: "learning-board-session-1", revision: 16, targets: [] },
+        recognized_content: "z = x^2+y^2",
+        recognition_confidence: "high",
+      },
+    });
+    assert.equal(result.exitCode, 0, result.stderr);
+    const protocol = JSON.parse(result.stdout);
+    const artifact = JSON.parse(await readFile(protocol.files_to_send[0], "utf8"));
+    assert.equal(artifact.response.kind, "scene3d", JSON.stringify(artifact.response));
+    const object = artifact.response.content.objects[0];
+    assert.equal(object.kind, "surface");
+    assert.equal(object.expression, "x^2+y^2");
+    // The client validates surface objects with finiteRange(x_range)/finiteRange(y_range).
+    for (const field of ["x_range", "y_range"]) {
+      assert.equal(typeof object[field], "object", field);
+      assert.ok(Number.isFinite(object[field].min), field);
+      assert.ok(Number.isFinite(object[field].max), field);
+      assert.ok(object[field].min < object[field].max, field);
+    }
+    assert.deepEqual(object.x_range, { min: -2, max: 2 });
+    assert.deepEqual(object.y_range, { min: -2, max: 2 });
+    assert.equal("x" in object, false);
+    assert.equal("y" in object, false);
+    assert.equal(object.samples, 12);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(sessionWorkspace, { recursive: true, force: true });
+  }
+});
+
 test("camera lessons send one image only to the first outline request and reuse its observation", async () => {
   const sessionWorkspace = await mkdtemp(join(tmpdir(), "learning-coach-camera-lesson-"));
   const workDirectory = join(sessionWorkspace, "skill-output");

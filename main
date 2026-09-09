@@ -8173,6 +8173,160 @@ function buildImplicitSurfaceObject(input) {
   };
 }
 
+// src/selection-plot-routing.ts
+var MATH_FUNCTION_NAMES = /* @__PURE__ */ new Set([
+  "abs",
+  "acos",
+  "asin",
+  "atan",
+  "ceil",
+  "cos",
+  "exp",
+  "floor",
+  "ln",
+  "log",
+  "round",
+  "sin",
+  "sqrt",
+  "tan"
+]);
+var MATH_CONSTANT_NAMES = /* @__PURE__ */ new Set(["pi", "e"]);
+var PLOT_VARIABLES = ["x", "y", "z"];
+var SelectionPlotFormError = class extends Error {
+  constructor(reasonCode, message, alternatives) {
+    super(message);
+    this.reasonCode = reasonCode;
+    this.alternatives = alternatives;
+  }
+  reasonCode;
+  alternatives;
+};
+function scanIdentifiers(expression) {
+  return [...expression.matchAll(/(?<![a-z0-9_.])[a-z][a-z0-9_]*/giu)].map((match) => match[0].toLowerCase());
+}
+function usedPlotVariables(identifiers) {
+  return PLOT_VARIABLES.filter((variable) => identifiers.includes(variable));
+}
+function compileUniverse(variables) {
+  const highest = variables.reduce(
+    (maximum, variable) => Math.max(maximum, PLOT_VARIABLES.indexOf(variable)),
+    0
+  );
+  return PLOT_VARIABLES.slice(0, highest + 1);
+}
+function implicitDifference(lhs, rhs) {
+  if (/^\d+(?:\.\d+)?$/u.test(rhs)) {
+    return Number(rhs) === 0 ? lhs : `${lhs}-${rhs}`;
+  }
+  return `(${lhs})-(${rhs})`;
+}
+function analyzeSelectionPlotForm(source) {
+  const parts = source.split("=").map((part) => part.trim());
+  if (parts.length > 2) {
+    throw new SelectionPlotFormError(
+      "unsupported_representation",
+      "\u7B49\u5F0F\u5305\u542B\u591A\u4E2A\u7B49\u53F7\uFF0C\u65E0\u6CD5\u786E\u5B9A\u552F\u4E00\u7684\u7B49\u91CF\u5173\u7CFB",
+      ["\u6846\u9009\u53EA\u542B\u4E00\u4E2A\u7B49\u53F7\u7684\u5B8C\u6574\u516C\u5F0F\u540E\u91CD\u8BD5"]
+    );
+  }
+  if (parts.some((part) => !part)) {
+    throw new SelectionPlotFormError(
+      "unsupported_representation",
+      "\u7B49\u53F7\u4E24\u4FA7\u90FD\u9700\u8981\u6709\u8868\u8FBE\u5F0F",
+      ["\u786E\u8BA4\u6846\u9009\u8303\u56F4\u5305\u542B\u7B49\u53F7\u4E24\u4FA7\u7684\u5B8C\u6574\u516C\u5F0F"]
+    );
+  }
+  const identifiers = parts.flatMap(scanIdentifiers);
+  const unknown = [...new Set(identifiers.filter((name) => !MATH_FUNCTION_NAMES.has(name) && !MATH_CONSTANT_NAMES.has(name) && !PLOT_VARIABLES.includes(name)))];
+  if (unknown.length > 0) {
+    throw new SelectionPlotFormError(
+      "unsupported_variables",
+      `\u8868\u8FBE\u5F0F\u5305\u542B\u4E0D\u652F\u6301\u7684\u53D8\u91CF\u6216\u51FD\u6570 ${unknown.map((name) => `\u300C${name}\u300D`).join("\u3001")}\uFF0C\u5F53\u524D\u53EA\u652F\u6301 x\u3001y\u3001z \u4E09\u4E2A\u53D8\u91CF`,
+      [
+        "\u628A\u4E0D\u652F\u6301\u7684\u53D8\u91CF\u66FF\u6362\u4E3A\u5177\u4F53\u6570\u503C\u540E\u91CD\u8BD5",
+        "\u591A\u4F59\u53D8\u91CF\u53EF\u56FA\u5B9A\u53D6\u503C\u540E\u6539\u5199\u4E3A F(x,y,z)=0 \u7684\u9690\u5F0F\u5F62\u5F0F"
+      ]
+    );
+  }
+  const variables = usedPlotVariables(identifiers);
+  const universe = compileUniverse(variables);
+  for (const part of parts) {
+    try {
+      compileMathExpression(part, universe);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new SelectionPlotFormError(
+        "unsupported_representation",
+        `\u8868\u8FBE\u5F0F\u300C${part}\u300D\u65E0\u6CD5\u5B89\u5168\u89E3\u6790\uFF1A${message}`,
+        [
+          "\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F",
+          "\u53EF\u6539\u5199\u4E3A y=f(x)\u3001z=f(x,y) \u6216 F(x,y,z)=0 \u7684\u5F62\u5F0F\u540E\u91CD\u8BD5"
+        ]
+      );
+    }
+  }
+  const usesZ = variables.includes("z");
+  if (parts.length === 2) {
+    const [lhs, rhs] = parts;
+    const lhsVariables = usedPlotVariables(scanIdentifiers(lhs));
+    const rhsVariables = usedPlotVariables(scanIdentifiers(rhs));
+    const without = (variable) => (side) => !side.includes(variable);
+    if (lhs.toLowerCase() === "y" && without("y")(rhsVariables) && !usesZ) {
+      return { kind: "plot", expression: rhs };
+    }
+    if (rhs.toLowerCase() === "y" && without("y")(lhsVariables) && !usesZ) {
+      return { kind: "plot", expression: lhs };
+    }
+    if (lhs.toLowerCase() === "z" && without("z")(rhsVariables)) {
+      return { kind: "surface", expression: rhs };
+    }
+    if (rhs.toLowerCase() === "z" && without("z")(lhsVariables)) {
+      return { kind: "surface", expression: lhs };
+    }
+    const difference = implicitDifference(lhs, rhs);
+    return usesZ ? { kind: "implicit_surface", expression: difference, level: 0 } : { kind: "implicit_plot", expression: difference, level: 0 };
+  }
+  if (usesZ) {
+    return { kind: "implicit_surface", expression: parts[0], level: 0 };
+  }
+  if (variables.includes("y")) {
+    return { kind: "surface", expression: parts[0] };
+  }
+  return { kind: "plot", expression: parts[0] };
+}
+function routeSelectionPlot(sources) {
+  const seen = /* @__PURE__ */ new Set();
+  let firstFailure;
+  for (const source of sources) {
+    const trimmed = source?.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    try {
+      return analyzeSelectionPlotForm(trimmed);
+    } catch (error) {
+      if (!(error instanceof SelectionPlotFormError)) throw error;
+      firstFailure ??= error;
+    }
+  }
+  if (firstFailure) {
+    return {
+      kind: "unsupported",
+      reasonCode: firstFailure.reasonCode,
+      reason: firstFailure.message,
+      alternatives: firstFailure.alternatives
+    };
+  }
+  return {
+    kind: "unsupported",
+    reasonCode: "unreadable_expression",
+    reason: "\u6CA1\u6709\u8BC6\u522B\u5230\u53EF\u4EE5\u7ED8\u5236\u7684\u6570\u5B66\u8868\u8FBE\u5F0F",
+    alternatives: [
+      "\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F",
+      "\u4F7F\u7528\u201C\u95EE\u5C0F\u7AE0\u9C7C\u201D\u8BA9\u5B83\u89E3\u91CA\u6216\u6539\u5199\u4E3A\u53EF\u7ED8\u5236\u5F62\u5F0F"
+    ]
+  };
+}
+
 // src/json-stream.ts
 function withJsonPropertyOrdering(value) {
   if (Array.isArray(value)) return value.map(withJsonPropertyOrdering);
@@ -8484,6 +8638,18 @@ function parseSelectionToolInput(raw) {
   if (toolId === "generate-plot" && contentHint !== "math") {
     throw new Error("generate-plot requires content_hint=math");
   }
+  const deliveryMode = input.delivery_mode;
+  const capabilities = Array.isArray(input.capabilities) ? input.capabilities.filter((value) => value === "board_writing") : [];
+  if (deliveryMode !== void 0 && deliveryMode !== "card" && deliveryMode !== "board-writing") throw new Error("delivery_mode is invalid");
+  if (deliveryMode === "board-writing" && !["check-and-suggest", "custom-question"].includes(String(toolId))) {
+    throw new Error("delivery_mode=board-writing is invalid for this tool_id");
+  }
+  if (deliveryMode === "board-writing" && !capabilities.includes("board_writing")) {
+    throw new Error("delivery_mode=board-writing requires the board_writing capability");
+  }
+  if (deliveryMode === "card" && toolId === "check-and-suggest" && capabilities.includes("board_writing")) {
+    throw new Error("capable check-and-suggest requests require delivery_mode=board-writing");
+  }
   const boardValue = input.board;
   if (!boardValue || typeof boardValue !== "object" || Array.isArray(boardValue)) {
     throw new Error("board must be an object");
@@ -8565,6 +8731,8 @@ function parseSelectionToolInput(raw) {
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: truncate(requireNonEmptyString(input.learner_request, "learner_request")),
+    ...deliveryMode ? { delivery_mode: deliveryMode } : {},
+    capabilities,
     source: {
       source_id: requireNonEmptyString(source.source_id, "source.source_id"),
       document_id: requireNonEmptyString(source.document_id, "source.document_id"),
@@ -9847,6 +10015,8 @@ var SELECTION_VISUALIZATION_SYSTEM_PROMPT = `\u5F53 tool_id \u4E3A generate-plot
 - \u4E09\u53D8\u91CF\u9690\u5F0F\u65B9\u7A0B F(x,y,z)=c\uFF1Aresponse_kind=scene3d\uFF0Cscene_kind=implicit_surface\uFF0Cexpression \u5199 F(x,y,z)\uFF0Clevel \u5199 c\u3002
 - \u8D85\u8FC7\u4E09\u4E2A\u72EC\u7ACB\u53D8\u91CF\u3001\u65E0\u6CD5\u53EF\u9760\u8BC6\u522B\u3001\u65E0\u6CD5\u8F6C\u4E3A\u4E0A\u8FF0\u5B89\u5168\u8868\u8FBE\u5F0F\u6216\u5728\u5408\u7406\u6709\u9650\u8303\u56F4\u5185\u65E0\u6CD5\u7ED8\u5236\uFF1Aresponse_kind=unsupported\uFF0C\u7ED9\u51FA\u51C6\u786E\u539F\u56E0\u548C\u53EF\u64CD\u4F5C\u7684 alternatives\uFF0C\u4E0D\u80FD\u5047\u88C5\u5DF2\u7ECF\u7ED8\u5236\u3002
 \u5750\u6807\u8303\u56F4\u548C\u4E09\u7EF4\u7F51\u683C\u7CBE\u5EA6\u7531\u7A0B\u5E8F\u6839\u636E\u8868\u8FBE\u5F0F\u6309\u7EDF\u4E00\u9884\u7B97\u8BA1\u7B97\uFF0C\u4E0D\u8981\u586B\u5199\u5750\u6807\u8303\u56F4\u6216\u91C7\u6837\u5BC6\u5EA6\u3002\u4EE3\u7801\u4F1A\u518D\u6B21\u6821\u9A8C\u8868\u8FBE\u5F0F\uFF0C\u65E0\u6CD5\u5728\u5B89\u5168\u6709\u9650\u8303\u56F4\u5185\u627E\u5230\u56FE\u5F62\u65F6\u4E0D\u4F1A\u7ED8\u5236\u3002\u975E\u7ED8\u56FE\u8BF7\u6C42\u4F7F\u7528 explanation\u3002`;
+var SELECTION_CUSTOM_QUESTION_SYSTEM_PROMPT = `\u9ED8\u8BA4 response_kind=explanation\uFF0C\u76F4\u63A5\u5B8C\u6210 learner_request\u3002\u6539\u5199\u3001\u7EA0\u9519\u3001\u8F6C\u5199\u6216\u201C\u6539\u6210\u53EF\u4EE5\u7ED8\u56FE\u7684\u5F62\u5F0F\u201D\u53EA\u7ED9\u7B80\u77ED\u8BF4\u660E\u4E0E\u516C\u5F0F\uFF0C\u4E0D\u4E3B\u52A8\u7ED8\u56FE\uFF1B\u7B49\u4EF7\u6574\u7406\u4E0D\u662F\u7EA0\u9519\uFF0C\u539F\u5F0F\u6B63\u786E\u5C31\u5982\u5B9E\u8BF4\u660E\uFF0C\u4E0D\u4E3A\u4F5C\u56FE\u6539\u53D8\u6570\u5B66\u542B\u4E49\u3002
+\u4EC5\u660E\u786E\u8981\u6C42\u73B0\u5728\u7ED8\u56FE\u65F6\uFF1Ay=f(x) \u7528 plot\u3001expression=f(x)\uFF1BF(x,y)=c \u7528 implicit_plot\u3001expression=F\u3001level=c\uFF1Bz=f(x,y) \u7528 scene3d/surface\uFF1BF(x,y,z)=c \u7528 scene3d/implicit_surface\u3001expression=F\u3001level=c\u3002\u8868\u8FBE\u5F0F\u4EC5\u7528\u6570\u5B57\u3001x/y/z\u3001pi/e\u3001+ - * / ^\u3001\u62EC\u53F7\u53CA abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan\uFF0C\u663E\u5F0F\u5199\u4E58\u53F7\u3002\u7A0B\u5E8F\u8BA1\u7B97\u89C6\u53E3\u4E0E\u91C7\u6837\u3002\u4E0D\u652F\u6301\u6216\u8BC6\u522B\u4E0D\u6E05\u65F6\u5982\u5B9E\u8BF4\u660E\uFF0C\u4E0D\u5047\u88C5\u5DF2\u753B\u56FE\u3002`;
 function hasReusableSelectionRecognition(input) {
   return input.content_hint !== "unknown" && Boolean(input.recognized_content?.trim()) && (input.recognition_confidence === "high" || input.recognition_confidence === "medium");
 }
@@ -9873,12 +10043,39 @@ function selectionResponseSchema(input) {
       "interpretation_confidence"
     ].includes(field));
   }
+  if (input.capabilities?.includes("board_writing") && (input.tool_id === "custom-question" || input.tool_id === "check-and-suggest")) {
+    const allowedKinds = input.tool_id === "check-and-suggest" || input.delivery_mode === "board-writing" ? ["board_writing"] : input.delivery_mode === "card" ? ["explanation", "plot", "implicit_plot", "scene3d", "unsupported"] : ["explanation", "board_writing", "plot", "implicit_plot", "scene3d", "unsupported"];
+    schema.properties.response_kind = { type: "string", enum: allowedKinds };
+    if (!schema.required.includes("response_kind")) schema.required.push("response_kind");
+    delete schema.properties.items;
+    schema.required = schema.required.filter((field) => !["items", "scene_kind", "expression", "level", "reason_code", "alternatives"].includes(field));
+  }
   return schema;
 }
 function selectionSystemPrompt(toolId) {
   return toolId === "explain" || toolId === "check-and-suggest" ? SELECTION_BASE_SYSTEM_PROMPT : `${SELECTION_BASE_SYSTEM_PROMPT}
 
-${SELECTION_VISUALIZATION_SYSTEM_PROMPT}`;
+${toolId === "custom-question" ? SELECTION_CUSTOM_QUESTION_SYSTEM_PROMPT : SELECTION_VISUALIZATION_SYSTEM_PROMPT}`;
+}
+function selectionRequestSystemPrompt(input) {
+  if (!input.capabilities?.includes("board_writing") || !["custom-question", "check-and-suggest"].includes(input.tool_id)) {
+    return selectionSystemPrompt(input.tool_id);
+  }
+  const writing = `\u53EA\u4F9D\u636E\u672C\u6B21\u9009\u533A\u53CA\u6240\u9009\u4E0A\u4E0B\u6587\u56DE\u7B54\uFF0C\u4E0D\u64CD\u4F5C\u539F\u7A3F\u3002\u6CBF\u7528\u53EF\u4FE1\u8BC6\u522B\uFF1B\u6A21\u7CCA\u5B57\u7B26\u4E0D\u5F97\u731C\u586B\uFF0C\u8BF4\u660E\u65E0\u6CD5\u786E\u8BA4\u5E76\u8BF7\u91CD\u9009\uFF0C\u4E0D\u8F93\u51FA\u63A8\u6D4B\u516C\u5F0F\u3002\u68C0\u67E5\u5EFA\u8BAE\u3001\u6539\u5199\u3001\u7EA0\u9519\u3001\u8F6C\u5199\u7528 board_writing\uFF1Btext \u5305\u542B\u5B8C\u6574\u6279\u6CE8\uFF1A\u7B80\u77ED\u8BF4\u660E\u540E\u6362\u884C\u5199\u516C\u5F0F\uFF0C\u4E0D\u80FD\u628A\u516C\u5F0F\u653E\u5728\u5176\u4ED6\u5B57\u6BB5\u3002\u4F7F\u7528\u7EBF\u6027\u8BB0\u6CD5\uFF0C\u65E0 Markdown\u3002\u7B49\u4EF7\u6574\u7406\u4E0D\u662F\u7EA0\u9519\u3002\u4E3A\u7ED8\u56FE\u6574\u7406\u4E09\u53D8\u91CF\u65B9\u7A0B\u65F6\u4F18\u5148\u79FB\u9879\u4E3A F(x,y,z)=0\uFF0C\u4FDD\u6301\u53D8\u91CF\u548C\u5B9A\u4E49\u57DF\uFF0C\u4E0D\u5F15\u5165\u5206\u6570\u5E42\u3002`;
+  if (input.delivery_mode === "board-writing") {
+    return `${writing}
+\u672C\u6B21 delivery_mode \u5DF2\u786E\u5B9A\u4E3A board-writing\uFF0C\u5FC5\u987B\u8FD4\u56DE board_writing\u3002`;
+  }
+  if (input.delivery_mode === "card") {
+    return `${selectionSystemPrompt(input.tool_id)}
+\u672C\u6B21 delivery_mode \u5DF2\u786E\u5B9A\u4E3A card\uFF0C\u4E0D\u5F97\u8FD4\u56DE board_writing\u3002`;
+  }
+  return input.tool_id === "check-and-suggest" ? writing : `${writing}
+\u201C\u6539\u6210\u53EF\u4EE5\u7ED8\u56FE\u7684\u5F62\u5F0F\u201D\u53EA\u6574\u7406\u516C\u5F0F\uFF0C\u4E0D\u7ED8\u56FE\u3002\u666E\u901A\u95EE\u9898\u7528 explanation\u3002\u4EC5\u660E\u786E\u8981\u6C42\u73B0\u5728\u7ED8\u56FE\u65F6\uFF1Ay=f(x) \u7528 plot\u3001expression=f\uFF1BF(x,y)=c \u7528 implicit_plot\u3001expression=F\u3001level=c\uFF1Bz=f(x,y) \u7528 scene3d/surface\u3001expression=f\uFF1BF(x,y,z)=c \u7528 scene3d/implicit_surface\u3001expression=F\u3001level=c\u3002\u7ED8\u56FE\u8868\u8FBE\u5F0F\u4EC5\u7528\u6570\u5B57\u3001x/y/z\u3001pi/e\u3001+ - * / ^\u3001\u62EC\u53F7\u53CA abs/acos/asin/atan/ceil/cos/exp/floor/ln/log/round/sin/sqrt/tan\uFF0C\u663E\u5F0F\u5199\u4E58\u53F7\u3002\u7A0B\u5E8F\u8BA1\u7B97\u89C6\u53E3\uFF0C\u65E0\u6CD5\u8868\u8FBE\u7528 unsupported \u5E76\u8BF4\u660E\u539F\u56E0\u3002`;
+}
+function selectionThinkingOverride(input, client) {
+  if (process.env.OLL_SELECTION_THINKING_LEVEL?.trim() || process.env.OLL_THINKING_LEVEL?.trim()) return void 0;
+  return client.provider === "vertex" && client.model === "gemini-3.6-flash" && input.capabilities?.includes("board_writing") && ["custom-question", "check-and-suggest"].includes(input.tool_id) ? "MINIMAL" : void 0;
 }
 function selectionOutputPath(input) {
   const workDirectory = resolve(process.env.OCTOS_WORK_DIR?.trim() || process.cwd());
@@ -9993,13 +10190,6 @@ function parseSelectionModelResponse(raw, input) {
   }
   const output = value;
   const nonEmpty = (name) => requireNonEmptyString(output[name], name);
-  const finiteOutput = (name) => {
-    const number = output[name];
-    if (typeof number !== "number" || !Number.isFinite(number)) {
-      throw new Error(`${name} must be a finite number`);
-    }
-    return number;
-  };
   const reusableRecognition = hasReusableSelectionRecognition(input);
   const kind = reusableRecognition ? input.content_hint : nonEmpty("interpretation_kind");
   if (!["text", "math", "geometry", "data", "unknown"].includes(kind)) {
@@ -10016,13 +10206,31 @@ function parseSelectionModelResponse(raw, input) {
   let response;
   const visualizationRequested = input.tool_id === "generate-plot" || input.tool_id === "custom-question";
   const alternatives = Array.isArray(output.alternatives) ? output.alternatives.map((item, index) => requireNonEmptyString(item, `alternatives[${index}]`)).slice(0, 4) : [];
-  const unsupported = (reasonCode, reason) => ({
+  const unsupported = (reasonCode, reason, fallbackAlternatives) => ({
     kind: "unsupported",
     title: "\u5F53\u524D\u65E0\u6CD5\u751F\u6210\u8FD9\u4E2A\u51FD\u6570\u56FE\u50CF",
     text: reason,
     reason_code: reasonCode,
-    alternatives: alternatives.length > 0 ? alternatives : ["\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F", "\u4F7F\u7528\u201C\u95EE\u5C0F\u7AE0\u9C7C\u201D\u8BA9\u5B83\u89E3\u91CA\u6216\u6539\u5199\u4E3A\u53EF\u7ED8\u5236\u5F62\u5F0F"]
+    alternatives: alternatives.length > 0 ? alternatives : [...fallbackAlternatives ?? ["\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F", "\u4F7F\u7528\u201C\u95EE\u5C0F\u7AE0\u9C7C\u201D\u8BA9\u5B83\u89E3\u91CA\u6216\u6539\u5199\u4E3A\u53EF\u7ED8\u5236\u5F62\u5F0F"]]
   });
+  const failureAlternatives = {
+    unreadable_expression: [
+      "\u91CD\u65B0\u6846\u9009\u4E00\u4E2A\u6E05\u6670\u3001\u5B8C\u6574\u7684\u516C\u5F0F\u540E\u91CD\u8BD5",
+      "\u4F7F\u7528\u201C\u95EE\u5C0F\u7AE0\u9C7C\u201D\u8BA9\u5B83\u5148\u8BC6\u522B\u5E76\u8F6C\u5199\u516C\u5F0F"
+    ],
+    unsupported_variables: [
+      "\u8868\u8FBE\u5F0F\u53EA\u652F\u6301 x\u3001y\u3001z \u4E09\u4E2A\u53D8\u91CF\uFF0C\u8BF7\u628A\u5176\u4ED6\u53D8\u91CF\u66FF\u6362\u4E3A\u5177\u4F53\u6570\u503C",
+      "\u591A\u4F59\u53D8\u91CF\u53EF\u56FA\u5B9A\u53D6\u503C\u540E\u6539\u5199\u4E3A F(x,y,z)=0 \u7684\u9690\u5F0F\u5F62\u5F0F"
+    ],
+    unsupported_representation: [
+      "\u53EF\u6539\u5199\u4E3A y=f(x)\u3001z=f(x,y) \u6216 F(x,y,z)=0 \u7684\u9690\u5F0F\u5F62\u5F0F\u540E\u91CD\u8BD5",
+      "\u786E\u8BA4\u6846\u9009\u8303\u56F4\u53EA\u5305\u542B\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F"
+    ],
+    unsafe_complexity: [
+      "\u5C1D\u8BD5\u7B80\u5316\u8868\u8FBE\u5F0F\u3001\u51CF\u5C11\u5D4C\u5957\u5C42\u7EA7\u540E\u91CD\u8BD5",
+      "\u6846\u9009\u8868\u8FBE\u5F0F\u4E2D\u8F83\u7B80\u5355\u7684\u90E8\u5206\u5206\u522B\u7ED8\u5236"
+    ]
+  };
   const failureReasonCode = (error) => {
     if (confidence === "low") return "unreadable_expression";
     const message = error instanceof Error ? error.message : String(error);
@@ -10032,87 +10240,115 @@ function parseSelectionModelResponse(raw, input) {
     }
     return "unsupported_representation";
   };
-  const responseKind = input.tool_id === "explain" || input.tool_id === "check-and-suggest" ? "explanation" : output.response_kind;
+  const boardWriting = input.capabilities?.includes("board_writing") === true;
+  const responseKind = input.tool_id === "explain" || input.tool_id === "check-and-suggest" && !boardWriting ? "explanation" : output.response_kind;
+  if (input.tool_id === "check-and-suggest" && boardWriting && responseKind !== "board_writing") {
+    throw new Error("Checking with board writing capability requires board_writing");
+  }
+  if (input.delivery_mode === "board-writing" && responseKind !== "board_writing") {
+    throw new Error("delivery_mode=board-writing requires board_writing");
+  }
+  if (input.delivery_mode === "card" && responseKind === "board_writing") {
+    throw new Error("delivery_mode=card forbids board_writing");
+  }
+  const modelExpression = typeof output.expression === "string" && output.expression.trim() ? output.expression.trim() : void 0;
+  const buildRoutedVisualization = () => {
+    const route = routeSelectionPlot([interpretationContent, modelExpression]);
+    if (route.kind === "unsupported") {
+      return unsupported(route.reasonCode, route.reason, route.alternatives);
+    }
+    if (route.kind === "plot") {
+      const viewport = selectionExplicitViewport(route.expression);
+      return {
+        kind: "plot",
+        plot_kind: "explicit",
+        title,
+        text,
+        expression: route.expression,
+        x_range: viewport.x,
+        y_range: viewport.y
+      };
+    }
+    if (route.kind === "implicit_plot") {
+      const viewport = implicitSurfaceDomain(route.expression, ["x", "y"], route.level);
+      return {
+        kind: "plot",
+        plot_kind: "implicit",
+        title,
+        text,
+        expression: route.expression,
+        level: route.level,
+        samples: 80,
+        x_range: viewport.x,
+        y_range: viewport.y
+      };
+    }
+    const samples = 12;
+    const object = route.kind === "surface" ? (() => {
+      const viewport = selectionSurfaceDomain(route.expression);
+      return {
+        as: "selected-function",
+        kind: "surface",
+        expression: route.expression,
+        x_range: viewport.x,
+        y_range: viewport.y,
+        samples,
+        color: "teal"
+      };
+    })() : buildImplicitSurfaceObject({
+      as: "selected-function",
+      expression: route.expression,
+      level: route.level,
+      samples,
+      color: "teal"
+    });
+    return {
+      kind: "scene3d",
+      title,
+      text,
+      content: {
+        title,
+        fallback: text,
+        axes: true,
+        camera: { yaw: 0.65, pitch: 0.45, zoom: 1 },
+        objects: [object]
+      }
+    };
+  };
   try {
-    if (responseKind === "plot" || responseKind === "implicit_plot") {
+    if (responseKind === "board_writing") {
+      if (!boardWriting || !["check-and-suggest", "custom-question"].includes(input.tool_id)) {
+        throw new Error("Client does not support board writing");
+      }
+      const lines = text.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
+      if (!lines.length || lines.length > 8 || text.length > 500 || lines.some((line) => line.length > 160 || /[\u0000-\u0008\u000b-\u001f\u007f]/u.test(line))) {
+        throw new Error("Board writing exceeds text budget");
+      }
+      response = { kind: "board_writing", title, text, lines };
+    } else if (responseKind === "plot" || responseKind === "implicit_plot") {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a plot response`);
       }
-      const expression = nonEmpty("expression");
-      if (responseKind === "plot") {
-        const viewport = selectionExplicitViewport(expression);
-        response = {
-          kind: "plot",
-          plot_kind: "explicit",
-          title,
-          text,
-          expression,
-          x_range: viewport.x,
-          y_range: viewport.y
-        };
-      } else {
-        const level = finiteOutput("level");
-        const viewport = implicitSurfaceDomain(expression, ["x", "y"], level);
-        response = {
-          kind: "plot",
-          plot_kind: "implicit",
-          title,
-          text,
-          expression,
-          level,
-          samples: 80,
-          x_range: viewport.x,
-          y_range: viewport.y
-        };
-      }
+      response = buildRoutedVisualization();
     } else if (responseKind === "scene3d") {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a 3D response`);
       }
-      const sceneKind = nonEmpty("scene_kind");
-      if (sceneKind !== "surface" && sceneKind !== "implicit_surface") {
-        throw new Error("scene_kind is invalid");
-      }
-      const expression = nonEmpty("expression");
-      const level = finiteOutput("level");
-      const samples = 12;
-      const object = sceneKind === "surface" ? {
-        as: "selected-function",
-        kind: "surface",
-        expression,
-        ...selectionSurfaceDomain(expression),
-        samples,
-        color: "teal"
-      } : buildImplicitSurfaceObject({
-        as: "selected-function",
-        expression,
-        level,
-        samples,
-        color: "teal"
-      });
-      response = {
-        kind: "scene3d",
-        title,
-        text,
-        content: {
-          title,
-          fallback: text,
-          axes: true,
-          camera: { yaw: 0.65, pitch: 0.45, zoom: 1 },
-          objects: [object]
-        }
-      };
+      response = buildRoutedVisualization();
     } else if (responseKind === "unsupported") {
-      const reasonCode = nonEmpty("reason_code");
-      if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
-        throw new Error("reason_code is invalid");
+      const corrected = visualizationRequested ? buildRoutedVisualization() : void 0;
+      if (corrected && corrected.kind !== "unsupported") {
+        response = corrected;
+      } else {
+        const reasonCode = nonEmpty("reason_code");
+        if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
+          throw new Error("reason_code is invalid");
+        }
+        response = corrected && alternatives.length === 0 ? corrected : unsupported(reasonCode, text, failureAlternatives[reasonCode]);
       }
-      response = unsupported(reasonCode, text);
     } else if (responseKind === "explanation") {
-      response = visualizationRequested && input.tool_id === "generate-plot" ? unsupported(
-        confidence === "low" ? "unreadable_expression" : "unsupported_representation",
-        text
-      ) : {
+      const explanationFailure = confidence === "low" ? "unreadable_expression" : "unsupported_representation";
+      response = visualizationRequested && input.tool_id === "generate-plot" ? unsupported(explanationFailure, text, failureAlternatives[explanationFailure]) : {
         kind: "explanation",
         title,
         text,
@@ -10122,15 +10358,17 @@ function parseSelectionModelResponse(raw, input) {
       throw new Error("response_kind is invalid");
     }
   } catch (error) {
-    if (!visualizationRequested) throw error;
+    if (!visualizationRequested || responseKind === "board_writing") throw error;
+    const reasonCode = failureReasonCode(error);
     response = unsupported(
-      failureReasonCode(error),
-      `\u5DF2\u7ECF\u8BC6\u522B\u5230\u201C${interpretationContent}\u201D\uFF0C\u4F46\u5F53\u524D\u65E0\u6CD5\u5B89\u5168\u5730\u751F\u6210\u5B83\u7684\u56FE\u50CF\u3002`
+      reasonCode,
+      `\u5DF2\u7ECF\u8BC6\u522B\u5230\u201C${interpretationContent}\u201D\uFF0C\u4F46\u5F53\u524D\u65E0\u6CD5\u5B89\u5168\u5730\u751F\u6210\u5B83\u7684\u56FE\u50CF\u3002`,
+      failureAlternatives[reasonCode]
     );
   }
   return {
     profile: "octos.selection-enhancement",
-    version: "0.2",
+    version: response.kind === "board_writing" ? "0.3" : "0.2",
     turn_id: input.turn_id,
     created_at: (/* @__PURE__ */ new Date()).toISOString(),
     source: structuredClone(input.source),
@@ -10152,7 +10390,8 @@ async function generateSelectionEnhancement(client, input) {
     maxTokens: Math.min(client.maxTokens, 4096),
     responseSchema: selectionResponseSchema(input),
     media,
-    systemPrompt: selectionSystemPrompt(input.tool_id),
+    systemPrompt: selectionRequestSystemPrompt(input),
+    thinkingLevel: selectionThinkingOverride(input, client),
     prompt: JSON.stringify({
       learner_request: input.learner_request,
       tool_id: input.tool_id,
@@ -10489,6 +10728,13 @@ export {
   createStructuredModelClient,
   createStructuredModelRouter,
   createVertexClient,
+  parseSelectionModelResponse,
+  parseSelectionToolInput,
   probeStructuredModelSchema,
-  probeVertexSchema
+  probeVertexSchema,
+  routeSelectionPlot,
+  selectionRequestSystemPrompt,
+  selectionResponseSchema,
+  selectionSystemPrompt,
+  selectionThinkingOverride
 };

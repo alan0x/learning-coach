@@ -27,3 +27,13 @@ test("the text lesson action accepts established context for a short follow-up",
   assert.equal(action.input_schema.properties.learner_context.type, "string");
   assert.equal(action.input_schema.required.includes("learner_context"), false);
 });
+
+test("the selection action declares the delivery mode sent by the whiteboard", async () => {
+  const manifest = JSON.parse(await readFile(new URL("manifest.json", projectRoot), "utf8"));
+  const action = manifest.actions.find(({ id }) => id === "learning.selection.enhance");
+
+  assert.deepEqual(action.input_schema.properties.delivery_mode, {
+    type: "string",
+    enum: ["card", "board-writing"],
+  });
+});
