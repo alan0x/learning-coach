@@ -13460,6 +13460,22 @@ var CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `\u7528\u6237\u63D0\u4EA4\u4E86\u
 - \u56FE\u7247\u90E8\u5206\u53EF\u8BFB\u65F6\uFF0C\u628A\u4E0D\u786E\u5B9A\u5185\u5BB9\u4FDD\u7559\u5728 uncertainties \u4E2D\uFF0C\u4E0D\u8981\u628A\u731C\u6D4B\u5F53\u6210\u786E\u5B9A\u4E8B\u5B9E\u3002
 
 ${ADMISSION_BOOTSTRAP_SYSTEM_PROMPT}`;
+var SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT = `\u7528\u6237\u63D0\u4EA4\u4E86\u4E00\u6BB5\u6587\u5B57\u6216\u8BED\u97F3\uFF0C\u540C\u65F6\u9644\u5E26\u4E86\u4E00\u5F20\u521A\u521A\u4ECE\u767D\u677F\u6846\u9009\u51FA\u7684\u624B\u5199\u5185\u5BB9\u56FE\u7247\u3002\u53EA\u8BFB\u53D6\u8FD9\u4E2A\u9009\u533A\uFF0C\u4E0D\u8981\u628A\u9009\u533A\u4E4B\u5916\u7684\u767D\u677F\u5185\u5BB9\u5F53\u4F5C\u8F93\u5165\u3002
+- image_observation \u5FC5\u987B\u5FE0\u5B9E\u8BB0\u5F55\u9009\u533A\u662F\u5426\u770B\u6E05\u3001\u5B9E\u9645\u770B\u5230\u4E86\u4EC0\u4E48\u3001\u54EA\u4E9B\u7B14\u753B\u6216\u7B26\u53F7\u4E0D\u786E\u5B9A\u3002\u4E0D\u8981\u8865\u5199\u56FE\u7247\u4E2D\u4E0D\u5B58\u5728\u7684\u9898\u76EE\u3001\u516C\u5F0F\u6216\u6587\u5B57\u3002
+- \u9009\u533A\u662F\u7528\u6237\u660E\u786E\u6307\u5B9A\u7684\u5B66\u4E60\u5BF9\u8C61\u3002request_parts \u4F7F\u7528\u201C\u8FD9\u4E2A\u3001\u8FD9\u91CC\u3001\u8FD9\u4E2A\u516C\u5F0F\u201D\u7B49\u6307\u4EE3\u65F6\uFF0C\u5FC5\u987B\u4F7F\u7528 image_observation \u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\u3002
+- \u5982\u679C request_parts \u5DF2\u7ECF\u7ED9\u51FA\u5177\u4F53\u6559\u5B66\u8981\u6C42\uFF0C\u5C06\u5B83\u4E0E\u9009\u533A\u5185\u5BB9\u5408\u5E76\u7406\u89E3\uFF1B\u4E0D\u8981\u7528\u65E0\u5173\u77E5\u8BC6\u66FF\u6362\u9009\u533A\u91CC\u7684\u8868\u8FBE\u5F0F\u3002
+- \u9009\u533A\u65E0\u6CD5\u770B\u6E05\u4E14\u6587\u5B57\u53C8\u4E0D\u80FD\u72EC\u7ACB\u786E\u5B9A\u4E3B\u9898\u65F6\uFF0C\u8FD4\u56DE clarify\uFF0C\u8981\u6C42\u7528\u6237\u91CD\u65B0\u6846\u9009\u6216\u5199\u5927\u4E00\u4E9B\uFF0Ccourse \u5FC5\u987B\u4E3A null\u3002
+- \u9009\u533A\u90E8\u5206\u53EF\u8BFB\u65F6\uFF0C\u628A\u4E0D\u786E\u5B9A\u5185\u5BB9\u4FDD\u7559\u5728 uncertainties \u4E2D\uFF0C\u4E0D\u8981\u628A\u731C\u6D4B\u5F53\u6210\u786E\u5B9A\u4E8B\u5B9E\u3002
+
+${ADMISSION_OUTLINE_SYSTEM_PROMPT}`;
+var SELECTION_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `\u7528\u6237\u63D0\u4EA4\u4E86\u4E00\u6BB5\u6587\u5B57\u6216\u8BED\u97F3\uFF0C\u540C\u65F6\u9644\u5E26\u4E86\u4E00\u5F20\u521A\u521A\u4ECE\u767D\u677F\u6846\u9009\u51FA\u7684\u624B\u5199\u5185\u5BB9\u56FE\u7247\u3002\u53EA\u8BFB\u53D6\u8FD9\u4E2A\u9009\u533A\uFF0C\u4E0D\u8981\u628A\u9009\u533A\u4E4B\u5916\u7684\u767D\u677F\u5185\u5BB9\u5F53\u4F5C\u8F93\u5165\u3002
+- image_observation \u5FC5\u987B\u5FE0\u5B9E\u8BB0\u5F55\u9009\u533A\u662F\u5426\u770B\u6E05\u3001\u5B9E\u9645\u770B\u5230\u4E86\u4EC0\u4E48\u3001\u54EA\u4E9B\u7B14\u753B\u6216\u7B26\u53F7\u4E0D\u786E\u5B9A\u3002\u4E0D\u8981\u8865\u5199\u56FE\u7247\u4E2D\u4E0D\u5B58\u5728\u7684\u9898\u76EE\u3001\u516C\u5F0F\u6216\u6587\u5B57\u3002
+- \u9009\u533A\u662F\u7528\u6237\u660E\u786E\u6307\u5B9A\u7684\u5B66\u4E60\u5BF9\u8C61\u3002request_parts \u4F7F\u7528\u201C\u8FD9\u4E2A\u3001\u8FD9\u91CC\u3001\u8FD9\u4E2A\u516C\u5F0F\u201D\u7B49\u6307\u4EE3\u65F6\uFF0C\u5FC5\u987B\u4F7F\u7528 image_observation \u786E\u5B9A\u8BFE\u7A0B\u4E3B\u9898\u3002
+- \u5982\u679C request_parts \u5DF2\u7ECF\u7ED9\u51FA\u5177\u4F53\u6559\u5B66\u8981\u6C42\uFF0C\u5C06\u5B83\u4E0E\u9009\u533A\u5185\u5BB9\u5408\u5E76\u7406\u89E3\uFF1B\u4E0D\u8981\u7528\u65E0\u5173\u77E5\u8BC6\u66FF\u6362\u9009\u533A\u91CC\u7684\u8868\u8FBE\u5F0F\u3002
+- \u9009\u533A\u65E0\u6CD5\u770B\u6E05\u4E14\u6587\u5B57\u53C8\u4E0D\u80FD\u72EC\u7ACB\u786E\u5B9A\u4E3B\u9898\u65F6\uFF0C\u8FD4\u56DE clarify\uFF0C\u8981\u6C42\u7528\u6237\u91CD\u65B0\u6846\u9009\u6216\u5199\u5927\u4E00\u4E9B\uFF0Ccourse \u5FC5\u987B\u4E3A null\u3002
+- \u9009\u533A\u90E8\u5206\u53EF\u8BFB\u65F6\uFF0C\u628A\u4E0D\u786E\u5B9A\u5185\u5BB9\u4FDD\u7559\u5728 uncertainties \u4E2D\uFF0C\u4E0D\u8981\u628A\u731C\u6D4B\u5F53\u6210\u786E\u5B9A\u4E8B\u5B9E\u3002
+
+${ADMISSION_BOOTSTRAP_SYSTEM_PROMPT}`;
 function cameraObservation(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new LessonPlanError("LESSON_PLAN_CAMERA_OBSERVATION", "$lessonPlanAdmission.image_observation", "expected an object");
@@ -15417,14 +15433,14 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     return { course: envelope.course };
   };
   try {
-    const observeCamera = input.camera_input === true && stableCameraObservation === void 0;
+    const observeCamera = (input.camera_input === true || input.selection_input === true) && stableCameraObservation === void 0;
     modelCalls += 1;
     const raw = await model({
       label: "lesson-plan-bootstrap",
       part: "bootstrap",
       attempt: 1,
       turn_id: input.turn_id,
-      system_prompt: observeCamera ? CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT,
+      system_prompt: observeCamera ? input.selection_input === true ? SELECTION_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT,
       prompt: JSON.stringify({
         course_context: compactModelContext(context),
         request_parts: fixedRequestParts,
@@ -15479,7 +15495,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   } catch (error) {
     const partialResponse = partialModelResponse(error);
     if (partialResponse) {
-      if (input.camera_input === true && stableCameraObservation === void 0) {
+      if ((input.camera_input === true || input.selection_input === true) && stableCameraObservation === void 0) {
         const partialObservation = completedJsonObjectProperty(partialResponse, "image_observation");
         if (partialObservation !== void 0) {
           try {
@@ -15508,10 +15524,10 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       }
     }
     if (!outline && !canFallBackFromBootstrap(error) && !partialResponse) throw error;
-    if (input.camera_input === true && stableCameraObservation === void 0) {
+    if ((input.camera_input === true || input.selection_input === true) && stableCameraObservation === void 0) {
       return {
         disposition: "clarify",
-        learner_response: "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002",
+        learner_response: input.selection_input === true ? "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002" : "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002",
         model_calls: modelCalls
       };
     }
@@ -15523,7 +15539,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     });
   }
   for (let attempt = 1; !outline && attempt <= maxAttempts; attempt += 1) {
-    const observeCamera = input.camera_input === true && stableCameraObservation === void 0;
+    const observeCamera = (input.camera_input === true || input.selection_input === true) && stableCameraObservation === void 0;
     try {
       modelCalls += 1;
       const raw = await model({
@@ -15531,7 +15547,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         part: "outline",
         attempt,
         turn_id: input.turn_id,
-        system_prompt: observeCamera ? CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
+        system_prompt: observeCamera ? input.selection_input === true ? SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT : CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
         prompt: JSON.stringify({
           course_context: compactModelContext(stableCameraObservation ? { ...context, camera_observation: stableCameraObservation } : context),
           request_parts: fixedRequestParts,
@@ -15567,7 +15583,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       if (observeCamera && stableCameraObservation === void 0) {
         return {
           disposition: "clarify",
-          learner_response: "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002",
+          learner_response: input.selection_input === true ? "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002" : "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002",
           model_calls: modelCalls
         };
       }

@@ -3431,6 +3431,29 @@ test("a malformed first camera response asks for a clearer frame without resendi
   });
 });
 
+test("a malformed first ink-selection response asks the learner to rewrite or reselect", async () => {
+  const calls = [];
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    calls.push(request);
+    return "not-json";
+  }, {
+    turn_id: "turn-selection-malformed",
+    learner_request: "请讲讲这个公式怎么解",
+    request_parts: ["请讲讲这个公式怎么解"],
+    input_modality: "voice",
+    selection_input: true,
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].include_camera_media, true);
+  assert.match(calls[0].system_prompt, /白板框选出的手写内容/);
+  assert.deepEqual(generated, {
+    disposition: "clarify",
+    learner_response: "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。",
+    model_calls: 1,
+  });
+});
+
 test("provider output failures are not retried by the lesson authoring loop", async () => {
   const plan = completeLessonPlanFixtures.unit_circle_to_sine;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({

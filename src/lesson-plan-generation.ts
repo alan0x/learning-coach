@@ -53,6 +53,7 @@ export interface LessonPlanGenerationInput {
   request_parts?: string[];
   input_modality?: "text" | "voice";
   camera_input?: boolean;
+  selection_input?: boolean;
 }
 
 export interface CameraLessonObservation {
@@ -188,6 +189,24 @@ const CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户提交了一段文字或
 - 如果 request_parts 使用“这个、这里、这道题、我手上的内容”等指代，使用 image_observation 确定主题。
 - 图片无法看清且文字又不能独立确定主题时，返回 clarify 和简短追问，course 必须为 null。
 - 图片部分可读时，把不确定内容保留在 uncertainties 中，不要把猜测当成确定事实。
+
+${ADMISSION_BOOTSTRAP_SYSTEM_PROMPT}`;
+
+const SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT = `用户提交了一段文字或语音，同时附带了一张刚刚从白板框选出的手写内容图片。只读取这个选区，不要把选区之外的白板内容当作输入。
+- image_observation 必须忠实记录选区是否看清、实际看到了什么、哪些笔画或符号不确定。不要补写图片中不存在的题目、公式或文字。
+- 选区是用户明确指定的学习对象。request_parts 使用“这个、这里、这个公式”等指代时，必须使用 image_observation 确定课程主题。
+- 如果 request_parts 已经给出具体教学要求，将它与选区内容合并理解；不要用无关知识替换选区里的表达式。
+- 选区无法看清且文字又不能独立确定主题时，返回 clarify，要求用户重新框选或写大一些，course 必须为 null。
+- 选区部分可读时，把不确定内容保留在 uncertainties 中，不要把猜测当成确定事实。
+
+${ADMISSION_OUTLINE_SYSTEM_PROMPT}`;
+
+const SELECTION_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户提交了一段文字或语音，同时附带了一张刚刚从白板框选出的手写内容图片。只读取这个选区，不要把选区之外的白板内容当作输入。
+- image_observation 必须忠实记录选区是否看清、实际看到了什么、哪些笔画或符号不确定。不要补写图片中不存在的题目、公式或文字。
+- 选区是用户明确指定的学习对象。request_parts 使用“这个、这里、这个公式”等指代时，必须使用 image_observation 确定课程主题。
+- 如果 request_parts 已经给出具体教学要求，将它与选区内容合并理解；不要用无关知识替换选区里的表达式。
+- 选区无法看清且文字又不能独立确定主题时，返回 clarify，要求用户重新框选或写大一些，course 必须为 null。
+- 选区部分可读时，把不确定内容保留在 uncertainties 中，不要把猜测当成确定事实。
 
 ${ADMISSION_BOOTSTRAP_SYSTEM_PROMPT}`;
 
@@ -2646,7 +2665,8 @@ export async function generateLessonPlanWithModel(
   // It is speculative only in transport shape: the outline is validated first
   // and remains the sole authority for narrowing the section.
   try {
-    const observeCamera = input.camera_input === true && stableCameraObservation === undefined;
+    const observeCamera = (input.camera_input === true || input.selection_input === true)
+      && stableCameraObservation === undefined;
     modelCalls += 1;
     const raw = await model({
       label: "lesson-plan-bootstrap",
@@ -2654,7 +2674,9 @@ export async function generateLessonPlanWithModel(
       attempt: 1,
       turn_id: input.turn_id,
       system_prompt: observeCamera
-        ? CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT
+        ? input.selection_input === true
+          ? SELECTION_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT
+          : CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT
         : admissionInput
           ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT
           : BOOTSTRAP_SYSTEM_PROMPT,
@@ -2716,7 +2738,8 @@ export async function generateLessonPlanWithModel(
   } catch (error) {
     const partialResponse = partialModelResponse(error);
     if (partialResponse) {
-      if (input.camera_input === true && stableCameraObservation === undefined) {
+      if ((input.camera_input === true || input.selection_input === true)
+        && stableCameraObservation === undefined) {
         const partialObservation = completedJsonObjectProperty(partialResponse, "image_observation");
         if (partialObservation !== undefined) {
           try {
@@ -2745,10 +2768,13 @@ export async function generateLessonPlanWithModel(
       }
     }
     if (!outline && !canFallBackFromBootstrap(error) && !partialResponse) throw error;
-    if (input.camera_input === true && stableCameraObservation === undefined) {
+    if ((input.camera_input === true || input.selection_input === true)
+      && stableCameraObservation === undefined) {
       return {
         disposition: "clarify",
-        learner_response: "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。",
+        learner_response: input.selection_input === true
+          ? "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。"
+          : "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。",
         model_calls: modelCalls,
       };
     }
@@ -2763,7 +2789,8 @@ export async function generateLessonPlanWithModel(
   // A malformed/truncated combined response falls back once to the proven
   // outline-only path. The large combined request itself is never repeated.
   for (let attempt = 1; !outline && attempt <= maxAttempts; attempt += 1) {
-    const observeCamera = input.camera_input === true && stableCameraObservation === undefined;
+    const observeCamera = (input.camera_input === true || input.selection_input === true)
+      && stableCameraObservation === undefined;
     try {
       modelCalls += 1;
       const raw = await model({
@@ -2772,7 +2799,9 @@ export async function generateLessonPlanWithModel(
         attempt,
         turn_id: input.turn_id,
         system_prompt: observeCamera
-          ? CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT
+          ? input.selection_input === true
+            ? SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT
+            : CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT
           : admissionInput
             ? ADMISSION_OUTLINE_SYSTEM_PROMPT
             : OUTLINE_SYSTEM_PROMPT,
@@ -2817,7 +2846,9 @@ export async function generateLessonPlanWithModel(
       if (observeCamera && stableCameraObservation === undefined) {
         return {
           disposition: "clarify",
-          learner_response: "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。",
+          learner_response: input.selection_input === true
+            ? "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。"
+            : "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。",
           model_calls: modelCalls,
         };
       }

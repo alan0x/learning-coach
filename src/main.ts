@@ -38,12 +38,13 @@ const LEARN_TRACE_SCHEMA = "octos.learn.trace.v1";
 interface ToolInput {
   turn_id: string;
   learner_request: string;
-  request_source: "self_contained" | "current_image";
+  request_source: "self_contained" | "current_image" | "ink_selection";
   language?: string;
   tutor_context?: string;
   learner_context?: string;
   input_modality?: "text" | "voice";
   camera_media?: string;
+  selection_media?: string;
   client_timing?: ClientTiming;
 }
 
@@ -357,10 +358,12 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     throw new Error("Tool input must be a JSON object");
   }
   const input = candidate as Record<string, unknown>;
-  if (input.request_source !== "self_contained" && input.request_source !== "current_image") {
+  if (input.request_source !== "self_contained"
+    && input.request_source !== "current_image"
+    && input.request_source !== "ink_selection") {
     throw new ToolExecutionError(
       "LESSON_REQUEST_SOURCE_UNSUPPORTED",
-      "Complete lesson generation accepts self_contained or current_image requests only",
+      "Complete lesson generation accepts self_contained, current_image, or ink_selection requests only",
     );
   }
   const allowedFields = new Set([
@@ -372,6 +375,7 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     "learner_context",
     "input_modality",
     "camera_media",
+    "selection_media",
     "client_timing",
   ]);
   for (const field of Object.keys(input)) {
@@ -390,10 +394,35 @@ function parseCompleteLessonInput(raw: string): ToolInput {
       "input_modality must be text or voice",
     );
   }
-  if (input.request_source === "self_contained" && input.camera_media !== undefined) {
+  if (input.request_source === "self_contained"
+    && (input.camera_media !== undefined || input.selection_media !== undefined)) {
+    throw new ToolExecutionError(
+      "LESSON_IMAGE_UNEXPECTED",
+      "self_contained lesson input cannot include image media",
+    );
+  }
+  if (input.request_source === "current_image" && input.selection_media !== undefined) {
+    throw new ToolExecutionError(
+      "LESSON_SELECTION_IMAGE_UNEXPECTED",
+      "current_image lesson input cannot include selection_media",
+    );
+  }
+  if (input.request_source === "ink_selection" && input.camera_media !== undefined) {
     throw new ToolExecutionError(
       "LESSON_CAMERA_IMAGE_UNEXPECTED",
-      "self_contained lesson input cannot include camera_media",
+      "ink_selection lesson input cannot include camera_media",
+    );
+  }
+  if (input.request_source === "current_image" && input.camera_media === undefined) {
+    throw new ToolExecutionError(
+      "LESSON_CAMERA_IMAGE_REQUIRED",
+      "Camera lesson generation requires one camera image",
+    );
+  }
+  if (input.request_source === "ink_selection" && input.selection_media === undefined) {
+    throw new ToolExecutionError(
+      "LESSON_SELECTION_IMAGE_REQUIRED",
+      "Selection lesson generation requires one selection image",
     );
   }
   return {
@@ -410,6 +439,9 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     input_modality: input.input_modality === "voice" ? "voice" : "text",
     ...(typeof input.camera_media === "string"
       ? { camera_media: requireNonEmptyString(input.camera_media, "camera_media") }
+      : {}),
+    ...(typeof input.selection_media === "string"
+      ? { selection_media: requireNonEmptyString(input.selection_media, "selection_media") }
       : {}),
     ...(input.client_timing !== undefined
       ? { client_timing: parseClientTiming(input.client_timing) }
@@ -2810,13 +2842,21 @@ async function main(): Promise<void> {
       });
     }
     const modelRouter = await createStructuredModelRouter();
-    const cameraMedia = input.request_source === "current_image"
+    const lessonImageMedia = input.request_source === "current_image"
       ? await workspaceImageMedia(input.camera_media, "camera_media")
-      : undefined;
-    if (input.request_source === "current_image" && !cameraMedia) {
+      : input.request_source === "ink_selection"
+        ? await workspaceImageMedia(input.selection_media, "selection_media")
+        : undefined;
+    if (input.request_source === "current_image" && !lessonImageMedia) {
       throw new ToolExecutionError(
         "LESSON_CAMERA_IMAGE_REQUIRED",
         "Camera lesson generation requires one camera image",
+      );
+    }
+    if (input.request_source === "ink_selection" && !lessonImageMedia) {
+      throw new ToolExecutionError(
+        "LESSON_SELECTION_IMAGE_REQUIRED",
+        "Selection lesson generation requires one selection image",
       );
     }
     let publishedParts = 0;
@@ -2856,7 +2896,7 @@ async function main(): Promise<void> {
           lessonPlanPart: request.part,
           lessonPlanSection: request.section,
           lessonPlanAttempt: request.attempt,
-          ...(request.include_camera_media ? { media: cameraMedia } : {}),
+          ...(request.include_camera_media ? { media: lessonImageMedia } : {}),
         }),
         {
           turn_id: input.turn_id,
@@ -2866,6 +2906,7 @@ async function main(): Promise<void> {
           tutor_context: input.tutor_context,
           input_modality: input.input_modality,
           camera_input: input.request_source === "current_image",
+          selection_input: input.request_source === "ink_selection",
         },
         {
           compile: { language: input.language },
@@ -2915,7 +2956,9 @@ async function main(): Promise<void> {
           authoring_strategy: "lesson_plan",
           lesson_plan_model_calls: generatedLessonPlan.model_calls,
           published_parts: 0,
-          ...(input.request_source === "current_image" ? { request_source: "current_image" } : {}),
+          ...(input.request_source === "self_contained"
+            ? {}
+            : { request_source: input.request_source }),
         });
         return;
       }
@@ -2940,8 +2983,11 @@ async function main(): Promise<void> {
         lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
         published_parts: publishedParts,
         ...(generatedLessonPlan.camera_observation
-          ? { camera_observation: generatedLessonPlan.camera_observation }
+          ? input.request_source === "ink_selection"
+            ? { selection_observation: generatedLessonPlan.camera_observation }
+            : { camera_observation: generatedLessonPlan.camera_observation }
           : {}),
+        ...(input.request_source === "self_contained" ? {} : { request_source: input.request_source }),
       });
       return;
     }

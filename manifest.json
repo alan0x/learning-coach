@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -51,8 +51,8 @@
           },
           "request_source": {
             "type": "string",
-            "enum": ["self_contained", "current_image"],
-            "description": "Whether the lesson uses only the request or also one current camera frame."
+            "enum": ["self_contained", "current_image", "ink_selection"],
+            "description": "Whether the lesson uses only the request, one current camera frame, or one explicit whiteboard ink selection."
           },
           "language": {
             "type": "string",
@@ -74,6 +74,10 @@
           "camera_media": {
             "type": "string",
             "description": "Workspace-relative image path materialized by the camera action."
+          },
+          "selection_media": {
+            "type": "string",
+            "description": "Workspace-relative image path materialized by the ink-selection lesson action."
           },
           "client_timing": {
             "type": "object",
@@ -403,6 +407,59 @@
         "tool": "oll_generate_lesson",
         "input_mode": "file_each",
         "file_argument": "camera_media",
+        "file_materialization": "workspace_relative"
+      }
+    },
+    {
+      "id": "learning.lesson.generate-from-selection",
+      "label": "根据手写选区生成白板课程",
+      "description": "把用户框选的手写内容与当前文字或语音要求直接交给课程生成器，不经过通用对话模型的工具选择。",
+      "tags": ["learning", "lesson", "generation", "selection", "ink"],
+      "surfaces": ["learning.selection"],
+      "execution": "background",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": { "type": "string" }
+          },
+          "turn_id": { "type": "string" },
+          "learner_request": { "type": "string" },
+          "request_source": {
+            "type": "string",
+            "enum": ["ink_selection"]
+          },
+          "language": { "type": "string" },
+          "input_modality": {
+            "type": "string",
+            "enum": ["text", "voice"]
+          },
+          "client_timing": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "submitted_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "audio_upload_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "audio_upload_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "media_upload_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "media_upload_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "voice_admission_started_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "voice_admission_completed_at_epoch_ms": { "type": "integer", "minimum": 0 },
+              "skill_invocation_started_at_epoch_ms": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "required": ["paths", "turn_id", "learner_request", "request_source"]
+      },
+      "binding": {
+        "type": "tool",
+        "tool": "oll_generate_lesson",
+        "input_mode": "file_each",
+        "file_argument": "selection_media",
         "file_materialization": "workspace_relative"
       }
     },

@@ -2487,7 +2487,7 @@ test("complete lessons reject explicit board follow-up input instead of falling 
     });
 
     assert.equal(result.exitCode, 1);
-    assert.match(result.stderr, /Complete lesson generation accepts self_contained or current_image requests only/);
+    assert.match(result.stderr, /Complete lesson generation accepts self_contained, current_image, or ink_selection requests only/);
     const protocol = JSON.parse(result.stdout);
     assert.equal(protocol.success, false);
     assert.equal(protocol.retryable, false);
@@ -2529,7 +2529,7 @@ test("old board-reference fields cannot bypass the complete-lesson source bounda
     });
 
     assert.equal(result.exitCode, 1);
-    assert.match(result.stderr, /Complete lesson generation accepts self_contained or current_image requests only/);
+    assert.match(result.stderr, /Complete lesson generation accepts self_contained, current_image, or ink_selection requests only/);
     assert.equal(JSON.parse(result.stdout).success, false);
   } finally {
     await rm(workDirectory, { recursive: true, force: true });
@@ -2551,9 +2551,39 @@ test("complete lessons reject a missing request source before model generation",
     });
 
     assert.equal(result.exitCode, 1);
-    assert.match(result.stderr, /Complete lesson generation accepts self_contained or current_image requests only/);
+    assert.match(result.stderr, /Complete lesson generation accepts self_contained, current_image, or ink_selection requests only/);
     const protocol = JSON.parse(result.stdout);
     assert.equal(protocol.success, false);
+  } finally {
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});
+
+test("ink-selection lessons require one materialized selection image", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-missing-selection-image-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  try {
+    const result = await runTool({
+      baseUrl: "http://127.0.0.1:1",
+      serviceAccount: {
+        project_id: "test-project",
+        client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+      },
+      workDirectory,
+      input: {
+        turn_id: "turn-missing-selection-image",
+        learner_request: "请讲讲这个公式怎么解",
+        request_source: "ink_selection",
+        input_modality: "voice",
+      },
+    });
+
+    assert.equal(result.exitCode, 1);
+    assert.match(result.stderr, /Selection lesson generation requires one selection image/);
+    const protocol = JSON.parse(result.stdout);
+    assert.equal(protocol.success, false);
+    assert.equal(protocol.error_code, "LESSON_SELECTION_IMAGE_REQUIRED");
   } finally {
     await rm(workDirectory, { recursive: true, force: true });
   }
