@@ -125,7 +125,7 @@ const OUTLINE_SYSTEM_PROMPT = `设计完整课程目录，不生成 OLL、执行
 - 多边形重排选 polygon_pieces、rigid_rearrangement、area_relation；圆面积选 circle_area_rearrangement。ordered_process_steps 仅是静态流程。
 - numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。
 - request_coverage 依 request_parts 顺序覆盖：可实现写 teach+章节；不能完整实现写 unsupported、空章节及原因，禁止错误替代。
-- 单主题默认一节，节内完成解释、演示与检查，避免重复开场/总结；为什么须推导，怎么算须步骤与检验，是什么须直觉与边界。不猜年级；多主题才分节，close 只总结。
+- 按独立教学目标和学习进程分节，不按主题数或画面数分节。每节只承担一个完成后可验证的目标；连续推导及须同步观察的画面留在同一节的多个 moment。简单问题能围绕一个目标讲清时用 1 节；若须分别建立直觉、纠错或解释原理、推导或演示、应用、检查掌握中的多个目标，拆成 2–4 节。不要为凑节数重复开场、定义或总结，也不要把本应独立的推导、应用和检查全塞进一节。为什么须推导，怎么算须步骤与检验，是什么须直觉与边界。不猜年级；close 只总结。
 只返回符合响应 Schema 的 JSON。`;
 
 const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 OLL、执行 ID、变量名、对象名或对象引用。
