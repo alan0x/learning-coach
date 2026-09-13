@@ -2589,6 +2589,11 @@ test("the live path validates the combined outline before publishing its first s
   assert.deepEqual(prefixes, [1, 2, 3]);
   assert.equal(generated.lesson.steps.length, 3);
   assert.equal(calls[0].part, "bootstrap");
+  assert.match(calls[0].system_prompt, /按独立教学目标和学习进程分节/u);
+  assert.match(calls[0].system_prompt, /简单问题能围绕一个目标讲清时用 1 节/u);
+  assert.match(calls[0].system_prompt, /拆成 2–4 节/u);
+  assert.match(calls[0].system_prompt, /连续推导及须同步观察的画面留在同一节/u);
+  assert.doesNotMatch(calls[0].system_prompt, /单主题默认一节/u);
   const bootstrapCourseSchema = calls[0].response_schema.properties.course
     ?? calls[0].response_schema;
   assert.ok(bootstrapCourseSchema.properties.outline.properties.course_visuals);
