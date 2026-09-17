@@ -243,6 +243,7 @@ function actionCollectionSchemas(
   allowedCapabilities: LessonPlanCapability[],
   reusableCount: number,
   numberCount: number,
+  allowedNumberIndexes: number[] = Array.from({ length: numberCount }, (_unused, index) => index + 1),
   courseVisualPositions: number[] = [],
   includeVisualCreates = true,
   includeVisualCapability = true,
@@ -284,7 +285,7 @@ function actionCollectionSchemas(
               maxItems: Math.max(...allowedCapabilities.map(
                 (capability) => LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability],
               )),
-              items: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
+              items: { enum: allowedNumberIndexes },
             },
           } : {}),
         }, [
@@ -309,10 +310,10 @@ function actionCollectionSchemas(
       intent: string(160),
     }, ["intent"])),
     points: collection(modelAction({ timing }, [])),
-    ...(numberCount > 0 ? {
+    ...(allowedNumberIndexes.length > 0 ? {
       animations: collection(modelAction({
         timing,
-        number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
+        number: { enum: allowedNumberIndexes },
         end_value: { type: "number" },
         duration_intent: { enum: ["brief", "normal", "extended"] },
       }, ["number", "end_value"])),
@@ -323,6 +324,7 @@ function actionCollectionSchemas(
 function courseVisualCreatesSchema(
   outline: LessonPlanOutline,
   sectionIndex: number,
+  allowedNumberIndexes: number[],
 ): LessonPlanJsonSchema | undefined {
   const numberCount = outline.numbers?.length ?? 0;
   const entries = (outline.course_visuals ?? [])
@@ -346,7 +348,7 @@ function courseVisualCreatesSchema(
           numbers: {
             type: "array",
             maxItems: numberLimit,
-            items: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
+            items: { enum: allowedNumberIndexes },
           },
         } : {}),
       }, ["parameters"]),
@@ -403,10 +405,10 @@ function activityCommonSchema(): Record<string, unknown> {
   };
 }
 
-function numberActivitySchema(numberCount: number): LessonPlanJsonSchema {
+function numberActivitySchema(allowedNumberIndexes: number[]): LessonPlanJsonSchema {
   return object({
     ...activityCommonSchema(),
-    number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
+    number: { enum: allowedNumberIndexes },
     ...decimalIntegerFields("value"),
   }, [
     "prompt", "number", "value_mantissa", "value_scale", "hints",
@@ -610,14 +612,21 @@ export function coerceLessonPlanOutlineModelNumbers(value: unknown, requestPartC
 export function buildLessonPlanSectionDraftJsonSchema(
   outlineValue: unknown,
   sectionIndex: number,
+  allowedNumberIndexes?: number[],
 ): LessonPlanJsonSchema {
-  return vertexCompatible(lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex));
+  return vertexCompatible(lessonPlanSectionDraftShapeJsonSchema(
+    outlineValue,
+    sectionIndex,
+    false,
+    allowedNumberIndexes,
+  ));
 }
 
 function lessonPlanSectionDraftShapeJsonSchema(
   outlineValue: unknown,
   sectionIndex: number,
   bootstrapPermissive = false,
+  suppliedNumberIndexes?: number[],
 ): LessonPlanJsonSchema {
   const outline = outlineShape(outlineValue);
   if (!Number.isInteger(sectionIndex) || sectionIndex < 1 || sectionIndex > outline.sections.length) {
@@ -630,9 +639,19 @@ function lessonPlanSectionDraftShapeJsonSchema(
   }
   const reusableCount = section.reusable_items?.length ?? 0;
   const numberCount = outline.numbers?.length ?? 0;
+  const allowedNumberIndexes = suppliedNumberIndexes === undefined
+    ? Array.from({ length: numberCount }, (_unused, index) => index + 1)
+    : [...new Set(suppliedNumberIndexes)].sort((left, right) => left - right);
+  if (allowedNumberIndexes.some((index) => !Number.isInteger(index) || index < 1 || index > numberCount)) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_NUMBER_REFERENCE",
+      "$allowedNumberIndexes",
+      "allowed number indexes must reference outline numbers",
+    );
+  }
   const courseVisualCreates = bootstrapPermissive
     ? undefined
-    : courseVisualCreatesSchema(outline, sectionIndex);
+    : courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes);
   const reusableBoardCreates = bootstrapPermissive
     ? undefined
     : reusableBoardCreatesSchema(outline, sectionIndex);
@@ -640,6 +659,7 @@ function lessonPlanSectionDraftShapeJsonSchema(
     allowedCapabilities,
     bootstrapPermissive ? 24 : 0,
     numberCount,
+    allowedNumberIndexes,
     bootstrapPermissive
       ? Array.from({ length: 16 }, (_unused, index) => index + 1)
       : (outline.course_visuals ?? [])
@@ -649,7 +669,7 @@ function lessonPlanSectionDraftShapeJsonSchema(
     bootstrapPermissive,
     !bootstrapPermissive,
   );
-  const supportsNumberActivity = Array.isArray(outline.numbers) && outline.numbers.length > 0;
+  const supportsNumberActivity = allowedNumberIndexes.length > 0;
   const sectionVisualCapabilities = (outline.course_visuals ?? [])
     .filter((visual) => visual.use_sections.includes(sectionIndex))
     .map((visual) => visual.capability);
@@ -661,7 +681,7 @@ function lessonPlanSectionDraftShapeJsonSchema(
       number_activities: {
         type: "array",
         maxItems: 16,
-        items: numberActivitySchema(numberCount),
+        items: numberActivitySchema(allowedNumberIndexes),
       },
     } : {}),
     ...(supportsScene3dActivity ? {
@@ -698,10 +718,11 @@ export function coerceLessonPlanSectionModelNumbers(
   value: unknown,
   outlineValue: unknown,
   sectionIndex: number,
+  allowedNumberIndexes?: number[],
 ): unknown {
   return coerceModelNumbers(
     value,
-    lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex),
+    lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, false, allowedNumberIndexes),
     "$lessonPlanModelSection",
   );
 }

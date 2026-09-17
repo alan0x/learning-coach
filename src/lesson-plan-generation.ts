@@ -96,11 +96,12 @@ export interface GenerateLessonPlanOptions {
     error: { code: string; path?: string; message: string };
   }) => void | Promise<void>;
   on_program_adjustment?: (event: {
-    kind: "visual_removed" | "duplicate_board_item_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
     board_kind?: "math" | "note";
+    number?: number;
     reason: string;
   }) => void | Promise<void>;
 }
@@ -1020,22 +1021,24 @@ function sanitizeNonessentialVisuals(
   outline: LessonPlanOutline;
   drafts: LessonPlanSectionDraft[];
   adjustments: Array<{
-    kind: "visual_removed" | "duplicate_board_item_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
     board_kind?: "math" | "note";
+    number?: number;
     reason: string;
   }>;
 } {
   const outline = structuredClone(outlineValue);
   const drafts = structuredClone(draftValues);
   const adjustments: Array<{
-    kind: "visual_removed" | "duplicate_board_item_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
     board_kind?: "math" | "note";
+    number?: number;
     reason: string;
   }> = [];
   const courseVisualPositionBySlot = new Map<string, number>();
@@ -1431,10 +1434,18 @@ function normalizeExecutableNumberInteractions(
     if (!visuallyBound.has(index + 1)) delete number.student_control;
   });
   for (const section of drafts) {
-    for (const moment of section.moments) {
-      moment.actions = moment.actions.filter((action) => (
-        action.action !== "animate" || visuallyBound.has(action.number)
-      ));
+    for (const [momentOffset, moment] of section.moments.entries()) {
+      moment.actions = moment.actions.filter((action) => {
+        if (action.action !== "animate" || visuallyBound.has(action.number)) return true;
+        sanitized.adjustments.push({
+          kind: "number_interaction_removed",
+          section: section.section,
+          moment: momentOffset + 1,
+          number: action.number,
+          reason: "number_not_bound_to_any_executable_visual",
+        });
+        return false;
+      });
       if (moment.actions.length === 0) {
         // Removing a dead animation can leave a narration-only moment. OLL
         // requires an executable action per beat, so keep the narration and
@@ -1455,7 +1466,26 @@ function normalizeExecutableNumberInteractions(
         token.kind === "number" ? [token.number] : []
       )));
       if (numberControls.length === 0
-        || [...expressionNumbers].some((number) => !visuallyBound.has(number))) return [];
+        || [...expressionNumbers].some((number) => !visuallyBound.has(number))) {
+        sanitized.adjustments.push({
+          kind: "number_interaction_removed",
+          section: section.section,
+          number: activity.number_controls[0]?.number,
+          reason: "activity_depends_on_number_without_an_executable_visual",
+        });
+        return [];
+      }
+      if (numberControls.length !== activity.number_controls.length) {
+        for (const control of activity.number_controls) {
+          if (visuallyBound.has(control.number)) continue;
+          sanitized.adjustments.push({
+            kind: "number_interaction_removed",
+            section: section.section,
+            number: control.number,
+            reason: "activity_control_not_bound_to_any_executable_visual",
+          });
+        }
+      }
       return [{ ...activity, number_controls: numberControls }];
     });
     if (section.student_activities.length === 0) delete section.student_activities;
@@ -2410,8 +2440,37 @@ function requestParts(input: LessonPlanGenerationInput): string[] {
   });
 }
 
-function sectionPromptContext(outline: LessonPlanOutline, sectionNumber: number): Record<string, unknown> {
+function executableNumberIndexesForSection(
+  outline: LessonPlanOutline,
+  drafts: LessonPlanSectionDraft[],
+  sectionNumber: number,
+): number[] {
+  const all = (outline.numbers ?? []).map((_number, index) => index + 1);
+  const courseVisuals = outline.course_visuals ?? [];
+  if (courseVisuals.some((visual) => visual.create_section === sectionNumber)) return all;
+  const indexes = new Set<number>();
+  for (const visual of courseVisuals) {
+    if (!visual.use_sections.includes(sectionNumber) || visual.create_section >= sectionNumber) continue;
+    const source = drafts[visual.create_section - 1];
+    for (const moment of source?.moments ?? []) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        if (action.content.capability !== visual.capability
+          || action.reusable_item !== visual.reusable_item) continue;
+        for (const number of action.content.numbers ?? []) indexes.add(number);
+      }
+    }
+  }
+  return [...indexes].sort((left, right) => left - right);
+}
+
+function sectionPromptContext(
+  outline: LessonPlanOutline,
+  sectionNumber: number,
+  allowedNumberIndexes: readonly number[],
+): Record<string, unknown> {
   const section = outline.sections[sectionNumber - 1];
+  const allowedNumbers = new Set(allowedNumberIndexes);
   return {
     title: outline.title,
     goals: outline.goals,
@@ -2423,7 +2482,7 @@ function sectionPromptContext(outline: LessonPlanOutline, sectionNumber: number)
         min: number.min,
         max: number.max,
         ...(number.unit === undefined ? {} : { unit: number.unit }),
-      })),
+      })).filter(({ number }) => allowedNumbers.has(number)),
     } : {}),
     section: {
       section: sectionNumber,
@@ -2906,6 +2965,7 @@ export async function generateLessonPlanWithModel(
     sectionAttempts.set(section, attempt);
     if (attempt > maxAttempts) throw sectionErrors.get(section);
     let raw: string;
+    const allowedNumberIndexes = executableNumberIndexesForSection(outline, drafts, section);
     try {
       raw = await model({
         label: "lesson-plan-section",
@@ -2916,14 +2976,14 @@ export async function generateLessonPlanWithModel(
         system_prompt: SECTION_SYSTEM_PROMPT,
         prompt: JSON.stringify({
           course_context: compactModelContext(context),
-          course_and_section: sectionPromptContext(outline, section),
+          course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes),
           visuals_for_section: visualsForSection(section),
           assigned_request_parts: assignedRequestParts(section),
           ...(sectionErrors.has(section)
             ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) }
             : {}),
         }),
-        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section),
+        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes),
       });
       modelCalls += 1;
     } catch (error) {
@@ -2939,6 +2999,7 @@ export async function generateLessonPlanWithModel(
           pruneModelNulls(parseModelJson(raw, `lessonPlanSection${section}`)),
           outline,
           section,
+          allowedNumberIndexes,
         ),
         outline,
         section,

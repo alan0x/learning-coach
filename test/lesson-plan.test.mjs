@@ -374,7 +374,12 @@ function makeSamplePlanModelCompatible(plan) {
 }
 
 function samplePlan(capability) {
-  const hasNumber = capability !== "process_diagram";
+  const numberCount = capability === "process_diagram"
+    ? 0
+    : capability === "rectangle_unit_square_array"
+      ? 2
+      : 1;
+  const hasNumber = numberCount > 0;
   const is3d = capability === "cube_with_section"
     || capability === "function_surface_with_section"
     || capability === "implicit_surface_with_section";
@@ -390,7 +395,7 @@ function samplePlan(capability) {
           : capability === "implicit_surface_with_section"
             ? { expression: "x^2+y^2+z^2", level: 1, section_axis: "z" }
             : {},
-        ...(hasNumber ? { numbers: [1] } : {}),
+        ...(hasNumber ? { numbers: Array.from({ length: numberCount }, (_unused, index) => index + 1) } : {}),
       },
       placement: { relation: "new_region" },
       reusable_item: 1,
@@ -406,7 +411,7 @@ function samplePlan(capability) {
     firstMomentActions.push({
       action: "animate",
       number: 1,
-      end_value: 0.75,
+      end_value: capability === "rectangle_unit_square_array" ? 6 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -418,13 +423,21 @@ function samplePlan(capability) {
     title: `Fixed sample: ${capability}`,
     goals: ["Explain the visual relation", "Let the learner inspect it"],
     ...(hasNumber ? {
-      numbers: [{
-        initial: capability === "coordinate_circle" ? 1 : 0,
-        min: capability === "coordinate_circle" ? 0.25 : capability === "geometric_rearrangement" ? 0 : -1,
-        max: capability === "coordinate_circle" ? 3 : 1,
-        label: "main value",
-        student_control: { kind: "slider", step: 0.05 },
-      }],
+      numbers: Array.from({ length: numberCount }, (_unused, index) => capability === "rectangle_unit_square_array"
+        ? {
+            initial: index === 0 ? 5 : 3,
+            min: 1,
+            max: index === 0 ? 10 : 8,
+            label: index === 0 ? "columns / length" : "rows / width",
+            student_control: { kind: "slider", step: 0.25 },
+          }
+        : {
+            initial: capability === "coordinate_circle" ? 1 : 0,
+            min: capability === "coordinate_circle" ? 0.25 : capability === "geometric_rearrangement" ? 0 : -1,
+            max: capability === "coordinate_circle" ? 3 : 1,
+            label: index === 0 ? "main value" : `value ${index + 1}`,
+            student_control: { kind: "slider", step: 0.05 },
+          }),
     } : {}),
     sections: [
       {
@@ -501,7 +514,7 @@ function samplePlan(capability) {
 }
 
 test("every registered visual capability has a fixed valid Lesson Plan sample", () => {
-  assert.equal(capabilities.length, 11);
+  assert.equal(capabilities.length, 12);
   assert.deepEqual([...LESSON_PLAN_CAPABILITY_NAMES].sort(), [...capabilities].sort());
   for (const capability of capabilities) {
     assert.deepEqual(
@@ -540,6 +553,7 @@ test("all fixed capability samples compile through the complete OLL validation p
     function_surface_with_section: ["scene3d"],
     implicit_surface_with_section: ["scene3d"],
     coordinate_circle: ["geometry"],
+    rectangle_unit_square_array: ["geometry"],
     geometric_rearrangement: ["geometry"],
     circle_area_rearrangement: ["geometry", "geometry"],
     process_diagram: ["diagram"],
@@ -666,6 +680,77 @@ test("coordinate circle radius controls are compiled into a real visual binding"
   assert.deepEqual(geometry.content.bindings, [
     { target: "circle.radius", expression: "number_01" },
   ]);
+});
+
+test("unit-square rectangle arrays compile rows, columns, and two integer controls", () => {
+  const plan = samplePlan("coordinate_circle");
+  plan.title = "Rectangle area from unit squares";
+  plan.numbers = [
+    {
+      initial: 5,
+      min: 1,
+      max: 8,
+      label: "columns / length",
+      student_control: { kind: "slider", step: 0.25 },
+    },
+    {
+      initial: 3,
+      min: 1,
+      max: 8,
+      label: "rows / width",
+      student_control: { kind: "slider", step: 0.25 },
+    },
+  ];
+  plan.sections[0].reusable_items[0].capability = "rectangle_unit_square_array";
+  const visual = plan.sections[0].moments[0].actions.find(
+    (action) => action.action === "create" && action.kind === "visual",
+  );
+  visual.content = {
+    capability: "rectangle_unit_square_array",
+    parameters: { title: "5 × 3 unit-square rectangle" },
+    numbers: [1, 2],
+  };
+  plan.sections[0].moments[0].actions.find(
+    (action) => action.action === "animate",
+  ).end_value = 6;
+  plan.sections[0].student_activities = [
+    {
+      kind: "number_target",
+      prompt: "Set the length to 6.",
+      number_controls: [{ number: 1, controls: ["slider"] }],
+      value: 6,
+      tolerance: 0.1,
+      hints: ["Move the length slider."],
+    },
+    {
+      kind: "number_target",
+      prompt: "Set the width to 4.",
+      number_controls: [{ number: 2, controls: ["slider"] }],
+      value: 4,
+      tolerance: 0.1,
+      hints: ["Move the width slider."],
+    },
+  ];
+
+  const compiled = compileAndValidateLessonPlan(plan);
+  const geometry = compiled.lesson.steps[0].beats[0].actions.find(
+    (action) => action.do === "write" && action.kind === "geometry",
+  );
+  assert.equal(compiled.lesson.lesson.variables[0].control.step, 1);
+  assert.equal(compiled.lesson.lesson.variables[1].control.step, 1);
+  assert.equal(geometry.content.polygons[0].as, "interior");
+  assert.equal(geometry.content.segments.filter((segment) => segment.as.startsWith("column-")).length, 9);
+  assert.equal(geometry.content.segments.filter((segment) => segment.as.startsWith("row-")).length, 9);
+  assert.ok(geometry.content.bindings.some(
+    (binding) => binding.target === "boundary-top-right.x" && binding.expression === "number_01",
+  ));
+  assert.ok(geometry.content.bindings.some(
+    (binding) => binding.target === "boundary-top-right.y" && binding.expression === "number_02",
+  ));
+  assert.deepEqual(
+    compiled.lesson.lesson.tasks.map((task) => task.allowed_operations[0].variable),
+    ["number_01", "number_02"],
+  );
 });
 
 test("geometric rearrangement moves congruent pieces with deterministic bindings", () => {
@@ -2071,6 +2156,20 @@ test("the staged model path generates sections in order and repairs only the inv
     ...(student_activities ? { student_activities } : {}),
   }));
   Object.assign(outline, modelCourseVisualStructure(plan, drafts));
+  drafts[0].moments[0].animations.push({
+    number: 1,
+    end_value: 1,
+    duration_intent: "brief",
+    easing: "linear",
+    timing: "during_speech",
+  });
+  drafts[0].number_activities.push({
+    ...structuredClone(drafts[2].number_activities[0]),
+    prompt: "请把角度调到 1.5 rad。",
+    success_message: "角度已经调到 1.5 rad。",
+    value_mantissa: 1_500_000,
+    value_scale: 6,
+  });
   // The model-facing contract can identify a reusable item from the current
   // section after creating it. The program must lower that positional
   // reference to the actual local item instead of treating it as a future
@@ -2172,6 +2271,12 @@ test("the staged model path generates sections in order and repairs only the inv
   const repairedSectionCall = calls.filter((call) => call.label === "lesson-plan-section"
     && call.section === 2).at(-1);
   assert.match(repairedSectionCall.prompt, /previous_validation_error/u);
+  const sectionTwoPrompt = JSON.parse(repairedSectionCall.prompt);
+  assert.equal(
+    "number_state_at_start" in sectionTwoPrompt.course_and_section,
+    false,
+    "runtime number state belongs to the compiler/player, not the model prompt",
+  );
   assert.equal(generated.lesson.steps.length, 3);
   assert.equal(typeof generated.outline.numbers[0].initial, "number");
   assert.ok(
@@ -3851,7 +3956,10 @@ test("the staged model path lowers several static formulas into one multi-curve 
     "y = log₄(x), compact",
   ];
 
+  const calls = [];
+  const programAdjustments = [];
   const generated = await generateLessonPlanWithModel(async (request) => {
+    calls.push(request);
     if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, drafts[0]);
     if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return sectionModelResponse(request, drafts);
@@ -3859,6 +3967,8 @@ test("the staged model path lowers several static formulas into one multi-curve 
     turn_id: "turn-static-function-comparison",
     learner_request: "把 y=x、y=x^2 和 y=log(x) 画在同一个坐标系中。",
     request_parts: ["把 y=x、y=x^2 和 y=log(x) 画在同一个坐标系中。"],
+  }, {
+    on_program_adjustment: (adjustment) => programAdjustments.push(adjustment),
   });
 
   const plot = generated.lesson.steps[0].beats[0].actions.find(
@@ -3889,6 +3999,24 @@ test("the staged model path lowers several static formulas into one multi-curve 
     "an unbound model number must not leave a dead animation",
   );
   assert.equal(generated.lesson.lesson.activities, undefined);
+  const laterSectionCall = calls.find((call) => (
+    call.label === "lesson-plan-section" && call.section === 2
+  ));
+  const laterSectionPrompt = JSON.parse(laterSectionCall.prompt);
+  const laterMomentProperties = laterSectionCall.response_schema
+    .properties.moments.items.properties;
+  assert.deepEqual(laterSectionPrompt.course_and_section.numbers, []);
+  assert.equal("number_state_at_start" in laterSectionPrompt.course_and_section, false);
+  assert.equal("animations" in laterMomentProperties, false);
+  assert.equal("number_activities" in laterSectionCall.response_schema.properties, false);
+  assert.ok(programAdjustments.some((adjustment) => (
+    adjustment.kind === "number_interaction_removed"
+      && adjustment.reason === "number_not_bound_to_any_executable_visual"
+  )));
+  assert.ok(programAdjustments.some((adjustment) => (
+    adjustment.kind === "number_interaction_removed"
+      && adjustment.reason === "activity_depends_on_number_without_an_executable_visual"
+  )));
 
   const noisyDrafts = structuredClone(drafts);
   const noisyVisual = noisyDrafts[0].course_visual_creates.visual_1.content;
