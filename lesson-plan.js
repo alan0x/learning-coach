@@ -28,9 +28,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/ajv/dist/compile/codegen/code.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -182,9 +182,9 @@ var require_code = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/scope.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -327,9 +327,9 @@ var require_scope = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -1047,9 +1047,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/util.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "node_modules/ajv/dist/compile/util.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1214,9 +1214,9 @@ var require_util = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/names.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "node_modules/ajv/dist/compile/names.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1253,9 +1253,9 @@ var require_names = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/errors.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "node_modules/ajv/dist/compile/errors.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1375,9 +1375,9 @@ var require_errors = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/boolSchema.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1426,9 +1426,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/rules.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "node_modules/ajv/dist/compile/rules.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1457,9 +1457,9 @@ var require_rules = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/applicability.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1480,9 +1480,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/dataType.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1664,9 +1664,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/defaults.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1701,9 +1701,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/code.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1834,9 +1834,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/keyword.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1952,9 +1952,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/subschema.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2035,9 +2035,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// node_modules/fast-deep-equal/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "node_modules/fast-deep-equal/index.js"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2070,9 +2070,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// node_modules/json-schema-traverse/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "node_modules/json-schema-traverse/index.js"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2158,9 +2158,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/resolve.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2314,9 +2314,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2822,9 +2822,9 @@ var require_validate = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/validation_error.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2838,9 +2838,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/ref_error.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2855,9 +2855,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "node_modules/ajv/dist/compile/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3079,9 +3079,9 @@ var require_compile = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/data.json
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3098,9 +3098,9 @@ var require_data = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/utils.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -3411,9 +3411,9 @@ var require_utils = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/schemes.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
     var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
@@ -3621,9 +3621,9 @@ var require_schemes = __commonJS({
   }
 });
 
-// node_modules/fast-uri/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "node_modules/fast-uri/index.js"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -3933,9 +3933,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/uri.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -3944,9 +3944,9 @@ var require_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/core.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "node_modules/ajv/dist/core.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4555,9 +4555,9 @@ var require_core = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/id.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4570,9 +4570,9 @@ var require_id = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/ref.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4692,9 +4692,9 @@ var require_ref = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -4713,9 +4713,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4745,9 +4745,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4773,9 +4773,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/ucs2length.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str) {
@@ -4799,9 +4799,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4831,9 +4831,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/pattern.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4868,9 +4868,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4897,9 +4897,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/required.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4979,9 +4979,9 @@ var require_required = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5008,9 +5008,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/equal.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5019,9 +5019,9 @@ var require_equal = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5086,9 +5086,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/const.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5115,9 +5115,9 @@ var require_const = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/enum.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5164,9 +5164,9 @@ var require_enum = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5202,9 +5202,9 @@ var require_validation = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5255,9 +5255,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5312,9 +5312,9 @@ var require_items = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5329,9 +5329,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5364,9 +5364,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/contains.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5458,9 +5458,9 @@ var require_contains = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5552,9 +5552,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5595,9 +5595,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5701,9 +5701,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/properties.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -5759,9 +5759,9 @@ var require_properties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5833,9 +5833,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/not.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5864,9 +5864,9 @@ var require_not = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5881,9 +5881,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5939,9 +5939,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5966,9 +5966,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/if.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6035,9 +6035,9 @@ var require_if = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6053,9 +6053,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6101,9 +6101,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
 var require_dynamicAnchor = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicAnchor = void 0;
@@ -6136,9 +6136,9 @@ var require_dynamicAnchor = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
 var require_dynamicRef = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dynamicRef = void 0;
@@ -6182,9 +6182,9 @@ var require_dynamicRef = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
 var require_recursiveAnchor = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6203,9 +6203,9 @@ var require_recursiveAnchor = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
 var require_recursiveRef = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicRef_1 = require_dynamicRef();
@@ -6218,9 +6218,9 @@ var require_recursiveRef = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/dynamic/index.js
 var require_dynamic = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dynamicAnchor_1 = require_dynamicAnchor();
@@ -6232,9 +6232,9 @@ var require_dynamic = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
 var require_dependentRequired = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6249,9 +6249,9 @@ var require_dependentRequired = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
 var require_dependentSchemas = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependencies_1 = require_dependencies();
@@ -6265,9 +6265,9 @@ var require_dependentSchemas = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitContains.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/limitContains.js
 var require_limitContains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6285,9 +6285,9 @@ var require_limitContains = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/next.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/next.js
 var require_next = __commonJS({
-  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/next.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dependentRequired_1 = require_dependentRequired();
@@ -6298,9 +6298,9 @@ var require_next = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
 var require_unevaluatedProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6364,9 +6364,9 @@ var require_unevaluatedProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
 var require_unevaluatedItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6408,9 +6408,9 @@ var require_unevaluatedItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/unevaluated/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/unevaluated/index.js
 var require_unevaluated = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var unevaluatedProperties_1 = require_unevaluatedProperties();
@@ -6420,9 +6420,9 @@ var require_unevaluated = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/format.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6510,9 +6510,9 @@ var require_format = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6521,9 +6521,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/metadata.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6544,9 +6544,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/draft2020.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/draft2020.js
 var require_draft2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6572,9 +6572,9 @@ var require_draft2020 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/types.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6586,9 +6586,9 @@ var require_types = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6691,9 +6691,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
 var require_schema = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/schema",
@@ -6751,9 +6751,9 @@ var require_schema = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
 var require_applicator2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/applicator",
@@ -6804,9 +6804,9 @@ var require_applicator2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
 var require_unevaluated2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
@@ -6824,9 +6824,9 @@ var require_unevaluated2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
 var require_content = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/content",
@@ -6845,9 +6845,9 @@ var require_content = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
 var require_core3 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/core",
@@ -6901,9 +6901,9 @@ var require_core3 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
 var require_format_annotation = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
@@ -6920,9 +6920,9 @@ var require_format_annotation = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
 var require_meta_data = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
@@ -6961,9 +6961,9 @@ var require_meta_data = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
 var require_validation2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
     module.exports = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $id: "https://json-schema.org/draft/2020-12/meta/validation",
@@ -7056,9 +7056,9 @@ var require_validation2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/index.js
 var require_json_schema_2020_12 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var metaSchema = require_schema();
@@ -7091,9 +7091,9 @@ var require_json_schema_2020_12 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/2020.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/2020.js
 var require__ = __commonJS({
-  "node_modules/ajv/dist/2020.js"(exports, module) {
+  "../../../Users/alan0x/Documents/projects/learning-coach/node_modules/ajv/dist/2020.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
@@ -7280,6 +7280,19 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     student_controls: ["slider"],
     required_features: ["coordinate_circle"],
     model_guidance: "\u5750\u6807\u7CFB\u4E2D\u7684\u5706\uFF0C\u53EF\u7528\u6570\u503C\u6539\u53D8\u534A\u5F84"
+  },
+  rectangle_unit_square_array: {
+    parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
+    number_inputs: ["columns_or_length", "rows_or_width"],
+    number_input_policies: [{ kind: "positive_integer", max: 8 }, { kind: "positive_integer", max: 8 }],
+    parameter_names: ["title"],
+    model_parameter_names: ["title"],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["geometry"],
+    student_controls: ["slider"],
+    required_features: ["unit_square_array", "row_column_count", "area_boundary_comparison"],
+    model_guidance: "\u5355\u4F4D\u6B63\u65B9\u5F62\u6309\u884C\u5217\u94FA\u6EE1\u957F\u65B9\u5F62\uFF1B\u4E24\u4E2A\u6574\u6570\u4F9D\u6B21\u63A7\u5236\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09\u548C\u884C\u6570\uFF08\u5BBD\uFF09\uFF0C\u7528\u4E8E\u9762\u79EF\u3001\u5468\u957F\u4E0E\u5E73\u65B9\u5355\u4F4D\u6559\u5B66"
   },
   geometric_rearrangement: {
     parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "primary_control"],
@@ -8469,10 +8482,10 @@ function validateTeachingClaims(plan) {
   }
 }
 
-// node_modules/octos-lesson-language/dist/packages/core/src/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var import__ = __toESM(require__(), 1);
 
-// node_modules/octos-lesson-language/dist/schema/authoring/v0.1.schema.json
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/octos-lesson-language/dist/schema/authoring/v0.1.schema.json
 var v0_1_schema_default = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://octos.dev/schema/lesson/authoring/0.1",
@@ -9129,7 +9142,7 @@ var v0_1_schema_default = {
   }
 };
 
-// node_modules/octos-lesson-language/dist/packages/core/src/math-expression.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/octos-lesson-language/dist/packages/core/src/math-expression.js
 var FUNCTIONS = {
   abs: Math.abs,
   acos: Math.acos,
@@ -9303,7 +9316,7 @@ function evaluateMathExpression(expression, variables) {
   return result;
 }
 
-// node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_ACTION_NAMES = [
   "write",
   "revise",
@@ -9355,7 +9368,7 @@ function collectBindingCapabilities() {
 }
 var OLL_CANONICAL_BINDING_CAPABILITIES = collectBindingCapabilities();
 
-// node_modules/octos-lesson-language/dist/packages/core/src/index.js
+// ../../../Users/alan0x/Documents/projects/learning-coach/node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
 var validateAuthoringDocument = ajv.compile(v0_1_schema_default);
 var ALIAS_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
@@ -11966,6 +11979,122 @@ function compileCoordinateCircle(base, content, role, placement, plan, path) {
     ])
   };
 }
+function minimumExpression(value, variable) {
+  return `((${value})+(${variable})-abs((${value})-(${variable})))/2`;
+}
+function compileRectangleUnitSquareArray(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title"], path);
+  const columnNumber = content.numbers?.[0];
+  const rowNumber = content.numbers?.[1];
+  if (!columnNumber || !rowNumber) {
+    fail3(
+      "LESSON_PLAN_CAPABILITY_PARAMETER",
+      `${path}.numbers`,
+      "a unit-square rectangle requires column and row numbers"
+    );
+  }
+  const columnDefinition = numberDefinition(plan, columnNumber, `${path}.numbers[0]`);
+  const rowDefinition = numberDefinition(plan, rowNumber, `${path}.numbers[1]`);
+  const columnVariable = variableAlias(columnNumber);
+  const rowVariable = variableAlias(rowNumber);
+  const columns = Math.round(columnDefinition.initial);
+  const rows = Math.round(rowDefinition.initial);
+  const maximumColumns = Math.round(columnDefinition.max);
+  const maximumRows = Math.round(rowDefinition.max);
+  const points = [
+    { as: "boundary-bottom-left", x: 0, y: 0, visible: false },
+    { as: "boundary-bottom-right", x: columns, y: 0, visible: false },
+    { as: "boundary-top-right", x: columns, y: rows, visible: false },
+    { as: "boundary-top-left", x: 0, y: rows, visible: false },
+    { as: "unit-bottom-left", x: 0, y: 0, visible: false },
+    { as: "unit-bottom-right", x: 1, y: 0, visible: false },
+    { as: "unit-top-right", x: 1, y: 1, visible: false },
+    { as: "unit-top-left", x: 0, y: 1, visible: false }
+  ];
+  const segments = [];
+  const bindings = [
+    { target: "boundary-bottom-right.x", expression: columnVariable },
+    { target: "boundary-top-right.x", expression: columnVariable },
+    { target: "boundary-top-right.y", expression: rowVariable },
+    { target: "boundary-top-left.y", expression: rowVariable }
+  ];
+  for (let column = 0; column <= maximumColumns; column += 1) {
+    const x = Math.min(column, columns);
+    points.push(
+      { as: `column-${column}-bottom`, x, y: 0, visible: false },
+      { as: `column-${column}-top`, x, y: rows, visible: false }
+    );
+    segments.push({
+      as: `column-${column}`,
+      from: `column-${column}-bottom`,
+      to: `column-${column}-top`,
+      style: column === 0 || column === maximumColumns ? "solid" : "dashed"
+    });
+    bindings.push(
+      { target: `column-${column}-bottom.x`, expression: minimumExpression(column, columnVariable) },
+      { target: `column-${column}-top.x`, expression: minimumExpression(column, columnVariable) },
+      { target: `column-${column}-top.y`, expression: rowVariable }
+    );
+  }
+  for (let row = 0; row <= maximumRows; row += 1) {
+    const y = Math.min(row, rows);
+    points.push(
+      { as: `row-${row}-left`, x: 0, y, visible: false },
+      { as: `row-${row}-right`, x: columns, y, visible: false }
+    );
+    segments.push({
+      as: `row-${row}`,
+      from: `row-${row}-left`,
+      to: `row-${row}-right`,
+      style: row === 0 || row === maximumRows ? "solid" : "dashed"
+    });
+    bindings.push(
+      { target: `row-${row}-left.y`, expression: minimumExpression(row, rowVariable) },
+      { target: `row-${row}-right.x`, expression: columnVariable },
+      { target: `row-${row}-right.y`, expression: minimumExpression(row, rowVariable) }
+    );
+  }
+  const geometry = {
+    title: optionalText(input.title, "\u5355\u4F4D\u6B63\u65B9\u5F62\u94FA\u6210\u957F\u65B9\u5F62", `${path}.title`),
+    caption: "\u6BCF\u4E2A\u5C0F\u65B9\u683C\u9762\u79EF\u4E3A 1 \u5E73\u65B9\u5355\u4F4D\uFF1B\u6BCF\u884C\u65B9\u683C\u6570 \xD7 \u884C\u6570 = \u65B9\u683C\u603B\u6570 = \u957F\u65B9\u5F62\u9762\u79EF\u3002",
+    axes: {
+      x: { min: -0.75, max: maximumColumns + 0.75, label: "\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09" },
+      y: { min: -0.75, max: maximumRows + 0.75, label: "\u884C\u6570\uFF08\u5BBD\uFF09" },
+      equal_scale: true
+    },
+    points,
+    polygons: [
+      {
+        as: "interior",
+        points: ["boundary-bottom-left", "boundary-bottom-right", "boundary-top-right", "boundary-top-left"],
+        tone: "primary"
+      },
+      {
+        as: "unit-square",
+        points: ["unit-bottom-left", "unit-bottom-right", "unit-top-right", "unit-top-left"],
+        label: "1 \u5E73\u65B9\u5355\u4F4D",
+        tone: "accent"
+      }
+    ],
+    segments,
+    bindings
+  };
+  return {
+    actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }],
+    whole: base,
+    parts: /* @__PURE__ */ new Map([
+      ["whole", base],
+      ["unit_square", `${base}#unit-square`],
+      ["row", `${base}#row-1`],
+      ["column", `${base}#column-1`],
+      ["interior", `${base}#interior`],
+      ["boundary", `${base}#interior`],
+      ["primary_control", `${base}#interior`],
+      ["secondary_control", `${base}#interior`]
+    ])
+  };
+}
 function rearrangementRecipe(construction, first, second, path) {
   if (!LESSON_PLAN_CAPABILITY_REGISTRY.geometric_rearrangement.parameter_options.construction.includes(construction)) {
     fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
@@ -12201,6 +12330,7 @@ var VISUAL_COMPILERS = {
   function_surface_with_section: compileFunctionSurface,
   implicit_surface_with_section: compileImplicitSurface,
   coordinate_circle: compileCoordinateCircle,
+  rectangle_unit_square_array: compileRectangleUnitSquareArray,
   geometric_rearrangement: compileGeometricRearrangement,
   process_diagram: compileProcessDiagram,
   circle_area_rearrangement: compileCircleArea
@@ -12231,6 +12361,20 @@ function positiveProgramRange(definition) {
   if (definition.student_control) {
     definition.student_control.step = (definition.max - definition.min) / 200;
   }
+}
+function positiveIntegerProgramRange(definition, maximum) {
+  const min = Math.max(1, Math.ceil(definition.min));
+  const max = Math.min(maximum, Math.floor(definition.max));
+  if (min <= max) {
+    definition.min = min;
+    definition.max = max;
+    definition.initial = Math.min(max, Math.max(min, Math.round(definition.initial)));
+  } else {
+    definition.min = 1;
+    definition.max = maximum;
+    definition.initial = Math.min(maximum, Math.max(1, Math.round(definition.initial)));
+  }
+  if (definition.student_control) definition.student_control.step = 1;
 }
 function surfaceSectionProgramRange(content, path) {
   const input = parameters(content);
@@ -12305,6 +12449,9 @@ function normalizeProgramOwnedNumberRanges(plan) {
             constrained.add(numberIndex);
           } else if (policy.kind === "positive") {
             positiveProgramRange(definition);
+            constrained.add(numberIndex);
+          } else if (policy.kind === "positive_integer") {
+            positiveIntegerProgramRange(definition, policy.max);
             constrained.add(numberIndex);
           } else if (policy.kind === "surface_section") {
             const allowed = surfaceSectionProgramRange(content, path);
@@ -12934,7 +13081,7 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
 function modelAction(properties, required) {
   return object(properties, required);
 }
-function actionCollectionSchemas(allowedCapabilities, reusableCount, numberCount, courseVisualPositions = [], includeVisualCreates = true, includeVisualCapability = true) {
+function actionCollectionSchemas(allowedCapabilities, reusableCount, numberCount, allowedNumberIndexes = Array.from({ length: numberCount }, (_unused, index) => index + 1), courseVisualPositions = [], includeVisualCreates = true, includeVisualCapability = true) {
   const timing = { enum: timingNames };
   const collection = (items) => ({ type: "array", items });
   const createCommon = {
@@ -12961,7 +13108,7 @@ function actionCollectionSchemas(allowedCapabilities, reusableCount, numberCount
               maxItems: Math.max(...allowedCapabilities.map(
                 (capability2) => LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2]
               )),
-              items: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) }
+              items: { enum: allowedNumberIndexes }
             }
           } : {}
         }, [
@@ -12986,17 +13133,17 @@ function actionCollectionSchemas(allowedCapabilities, reusableCount, numberCount
       intent: string(160)
     }, ["intent"])),
     points: collection(modelAction({ timing }, [])),
-    ...numberCount > 0 ? {
+    ...allowedNumberIndexes.length > 0 ? {
       animations: collection(modelAction({
         timing,
-        number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
+        number: { enum: allowedNumberIndexes },
         end_value: { type: "number" },
         duration_intent: { enum: ["brief", "normal", "extended"] }
       }, ["number", "end_value"]))
     } : {}
   };
 }
-function courseVisualCreatesSchema(outline, sectionIndex) {
+function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes) {
   const numberCount = outline.numbers?.length ?? 0;
   const entries = (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex);
   if (entries.length === 0) return void 0;
@@ -13017,7 +13164,7 @@ function courseVisualCreatesSchema(outline, sectionIndex) {
           numbers: {
             type: "array",
             maxItems: numberLimit,
-            items: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) }
+            items: { enum: allowedNumberIndexes }
           }
         } : {}
       }, ["parameters"])
@@ -13065,10 +13212,10 @@ function activityCommonSchema() {
     success_message: string(480)
   };
 }
-function numberActivitySchema(numberCount) {
+function numberActivitySchema(allowedNumberIndexes) {
   return object({
     ...activityCommonSchema(),
-    number: { enum: Array.from({ length: numberCount }, (_unused, index) => index + 1) },
+    number: { enum: allowedNumberIndexes },
     ...decimalIntegerFields("value")
   }, [
     "prompt",
@@ -13247,10 +13394,15 @@ function coerceLessonPlanOutlineModelNumbers(value, requestPartCount = 0) {
   }
   return coerceModelNumbers(value, lessonPlanOutlineShapeJsonSchema(requestPartCount), "$lessonPlanOutline");
 }
-function buildLessonPlanSectionDraftJsonSchema(outlineValue, sectionIndex) {
-  return vertexCompatible(lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex));
+function buildLessonPlanSectionDraftJsonSchema(outlineValue, sectionIndex, allowedNumberIndexes) {
+  return vertexCompatible(lessonPlanSectionDraftShapeJsonSchema(
+    outlineValue,
+    sectionIndex,
+    false,
+    allowedNumberIndexes
+  ));
 }
-function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, bootstrapPermissive = false) {
+function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, bootstrapPermissive = false, suppliedNumberIndexes) {
   const outline = outlineShape(outlineValue);
   if (!Number.isInteger(sectionIndex) || sectionIndex < 1 || sectionIndex > outline.sections.length) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$section", "section is outside the outline");
@@ -13262,17 +13414,26 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
   }
   const reusableCount = section.reusable_items?.length ?? 0;
   const numberCount = outline.numbers?.length ?? 0;
-  const courseVisualCreates = bootstrapPermissive ? void 0 : courseVisualCreatesSchema(outline, sectionIndex);
+  const allowedNumberIndexes = suppliedNumberIndexes === void 0 ? Array.from({ length: numberCount }, (_unused, index) => index + 1) : [...new Set(suppliedNumberIndexes)].sort((left, right) => left - right);
+  if (allowedNumberIndexes.some((index) => !Number.isInteger(index) || index < 1 || index > numberCount)) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_NUMBER_REFERENCE",
+      "$allowedNumberIndexes",
+      "allowed number indexes must reference outline numbers"
+    );
+  }
+  const courseVisualCreates = bootstrapPermissive ? void 0 : courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes);
   const reusableBoardCreates = bootstrapPermissive ? void 0 : reusableBoardCreatesSchema(outline, sectionIndex);
   const actionCollections = actionCollectionSchemas(
     allowedCapabilities,
     bootstrapPermissive ? 24 : 0,
     numberCount,
+    allowedNumberIndexes,
     bootstrapPermissive ? Array.from({ length: 16 }, (_unused, index) => index + 1) : (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex).map(({ position }) => position),
     bootstrapPermissive,
     !bootstrapPermissive
   );
-  const supportsNumberActivity = Array.isArray(outline.numbers) && outline.numbers.length > 0;
+  const supportsNumberActivity = allowedNumberIndexes.length > 0;
   const sectionVisualCapabilities = (outline.course_visuals ?? []).filter((visual) => visual.use_sections.includes(sectionIndex)).map((visual) => visual.capability);
   const supportsScene3dActivity = [...allowedCapabilities, ...sectionVisualCapabilities].some((capability2) => LESSON_PLAN_CAPABILITY_REGISTRY[capability2].output_kinds.includes("scene3d"));
   const activityProperties = {
@@ -13280,7 +13441,7 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
       number_activities: {
         type: "array",
         maxItems: 16,
-        items: numberActivitySchema(numberCount)
+        items: numberActivitySchema(allowedNumberIndexes)
       }
     } : {},
     ...supportsScene3dActivity ? {
@@ -13312,10 +13473,10 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
   ]);
   return schema;
 }
-function coerceLessonPlanSectionModelNumbers(value, outlineValue, sectionIndex) {
+function coerceLessonPlanSectionModelNumbers(value, outlineValue, sectionIndex, allowedNumberIndexes) {
   return coerceModelNumbers(
     value,
-    lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex),
+    lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, false, allowedNumberIndexes),
     "$lessonPlanModelSection"
   );
 }
@@ -14432,8 +14593,18 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
     if (!visuallyBound.has(index + 1)) delete number.student_control;
   });
   for (const section of drafts) {
-    for (const moment of section.moments) {
-      moment.actions = moment.actions.filter((action) => action.action !== "animate" || visuallyBound.has(action.number));
+    for (const [momentOffset, moment] of section.moments.entries()) {
+      moment.actions = moment.actions.filter((action) => {
+        if (action.action !== "animate" || visuallyBound.has(action.number)) return true;
+        sanitized.adjustments.push({
+          kind: "number_interaction_removed",
+          section: section.section,
+          moment: momentOffset + 1,
+          number: action.number,
+          reason: "number_not_bound_to_any_executable_visual"
+        });
+        return false;
+      });
       if (moment.actions.length === 0) {
         moment.actions.push({
           action: "teacher_expression",
@@ -14447,7 +14618,26 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
       if (activity.kind !== "number_target") return [activity];
       const numberControls = activity.number_controls.filter(({ number }) => visuallyBound.has(number));
       const expressionNumbers = new Set((activity.expression ?? []).flatMap((token) => token.kind === "number" ? [token.number] : []));
-      if (numberControls.length === 0 || [...expressionNumbers].some((number) => !visuallyBound.has(number))) return [];
+      if (numberControls.length === 0 || [...expressionNumbers].some((number) => !visuallyBound.has(number))) {
+        sanitized.adjustments.push({
+          kind: "number_interaction_removed",
+          section: section.section,
+          number: activity.number_controls[0]?.number,
+          reason: "activity_depends_on_number_without_an_executable_visual"
+        });
+        return [];
+      }
+      if (numberControls.length !== activity.number_controls.length) {
+        for (const control of activity.number_controls) {
+          if (visuallyBound.has(control.number)) continue;
+          sanitized.adjustments.push({
+            kind: "number_interaction_removed",
+            section: section.section,
+            number: control.number,
+            reason: "activity_control_not_bound_to_any_executable_visual"
+          });
+        }
+      }
       return [{ ...activity, number_controls: numberControls }];
     });
     if (section.student_activities.length === 0) delete section.student_activities;
@@ -15227,8 +15417,27 @@ function requestParts(input) {
     return part;
   });
 }
-function sectionPromptContext(outline, sectionNumber) {
+function executableNumberIndexesForSection(outline, drafts, sectionNumber) {
+  const all = (outline.numbers ?? []).map((_number, index) => index + 1);
+  const courseVisuals = outline.course_visuals ?? [];
+  if (courseVisuals.some((visual) => visual.create_section === sectionNumber)) return all;
+  const indexes = /* @__PURE__ */ new Set();
+  for (const visual of courseVisuals) {
+    if (!visual.use_sections.includes(sectionNumber) || visual.create_section >= sectionNumber) continue;
+    const source = drafts[visual.create_section - 1];
+    for (const moment of source?.moments ?? []) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        if (action.content.capability !== visual.capability || action.reusable_item !== visual.reusable_item) continue;
+        for (const number of action.content.numbers ?? []) indexes.add(number);
+      }
+    }
+  }
+  return [...indexes].sort((left, right) => left - right);
+}
+function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes) {
   const section = outline.sections[sectionNumber - 1];
+  const allowedNumbers = new Set(allowedNumberIndexes);
   return {
     title: outline.title,
     goals: outline.goals,
@@ -15240,7 +15449,7 @@ function sectionPromptContext(outline, sectionNumber) {
         min: number.min,
         max: number.max,
         ...number.unit === void 0 ? {} : { unit: number.unit }
-      }))
+      })).filter(({ number }) => allowedNumbers.has(number))
     } : {},
     section: {
       section: sectionNumber,
@@ -15628,6 +15837,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     sectionAttempts.set(section, attempt);
     if (attempt > maxAttempts) throw sectionErrors.get(section);
     let raw;
+    const allowedNumberIndexes = executableNumberIndexesForSection(outline, drafts, section);
     try {
       raw = await model({
         label: "lesson-plan-section",
@@ -15638,12 +15848,12 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         system_prompt: SECTION_SYSTEM_PROMPT,
         prompt: JSON.stringify({
           course_context: compactModelContext(context),
-          course_and_section: sectionPromptContext(outline, section),
+          course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes),
           visuals_for_section: visualsForSection(section),
           assigned_request_parts: assignedRequestParts(section),
           ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
         }),
-        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section)
+        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes)
       });
       modelCalls += 1;
     } catch (error) {
@@ -15656,7 +15866,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         coerceLessonPlanSectionModelNumbers(
           pruneModelNulls(parseModelJson(raw, `lessonPlanSection${section}`)),
           outline,
-          section
+          section,
+          allowedNumberIndexes
         ),
         outline,
         section,

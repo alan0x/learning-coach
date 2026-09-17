@@ -898,6 +898,134 @@ function compileCoordinateCircle(
   };
 }
 
+function minimumExpression(value: number, variable: string): string {
+  return `((${value})+(${variable})-abs((${value})-(${variable})))/2`;
+}
+
+function compileRectangleUnitSquareArray(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title"], path);
+  const columnNumber = content.numbers?.[0];
+  const rowNumber = content.numbers?.[1];
+  if (!columnNumber || !rowNumber) {
+    fail(
+      "LESSON_PLAN_CAPABILITY_PARAMETER",
+      `${path}.numbers`,
+      "a unit-square rectangle requires column and row numbers",
+    );
+  }
+  const columnDefinition = numberDefinition(plan, columnNumber, `${path}.numbers[0]`);
+  const rowDefinition = numberDefinition(plan, rowNumber, `${path}.numbers[1]`);
+  const columnVariable = variableAlias(columnNumber);
+  const rowVariable = variableAlias(rowNumber);
+  const columns = Math.round(columnDefinition.initial);
+  const rows = Math.round(rowDefinition.initial);
+  const maximumColumns = Math.round(columnDefinition.max);
+  const maximumRows = Math.round(rowDefinition.max);
+
+  const points: Array<Record<string, unknown>> = [
+    { as: "boundary-bottom-left", x: 0, y: 0, visible: false },
+    { as: "boundary-bottom-right", x: columns, y: 0, visible: false },
+    { as: "boundary-top-right", x: columns, y: rows, visible: false },
+    { as: "boundary-top-left", x: 0, y: rows, visible: false },
+    { as: "unit-bottom-left", x: 0, y: 0, visible: false },
+    { as: "unit-bottom-right", x: 1, y: 0, visible: false },
+    { as: "unit-top-right", x: 1, y: 1, visible: false },
+    { as: "unit-top-left", x: 0, y: 1, visible: false },
+  ];
+  const segments: Array<Record<string, unknown>> = [];
+  const bindings: Array<{ target: string; expression: string }> = [
+    { target: "boundary-bottom-right.x", expression: columnVariable },
+    { target: "boundary-top-right.x", expression: columnVariable },
+    { target: "boundary-top-right.y", expression: rowVariable },
+    { target: "boundary-top-left.y", expression: rowVariable },
+  ];
+
+  for (let column = 0; column <= maximumColumns; column += 1) {
+    const x = Math.min(column, columns);
+    points.push(
+      { as: `column-${column}-bottom`, x, y: 0, visible: false },
+      { as: `column-${column}-top`, x, y: rows, visible: false },
+    );
+    segments.push({
+      as: `column-${column}`,
+      from: `column-${column}-bottom`,
+      to: `column-${column}-top`,
+      style: column === 0 || column === maximumColumns ? "solid" : "dashed",
+    });
+    bindings.push(
+      { target: `column-${column}-bottom.x`, expression: minimumExpression(column, columnVariable) },
+      { target: `column-${column}-top.x`, expression: minimumExpression(column, columnVariable) },
+      { target: `column-${column}-top.y`, expression: rowVariable },
+    );
+  }
+  for (let row = 0; row <= maximumRows; row += 1) {
+    const y = Math.min(row, rows);
+    points.push(
+      { as: `row-${row}-left`, x: 0, y, visible: false },
+      { as: `row-${row}-right`, x: columns, y, visible: false },
+    );
+    segments.push({
+      as: `row-${row}`,
+      from: `row-${row}-left`,
+      to: `row-${row}-right`,
+      style: row === 0 || row === maximumRows ? "solid" : "dashed",
+    });
+    bindings.push(
+      { target: `row-${row}-left.y`, expression: minimumExpression(row, rowVariable) },
+      { target: `row-${row}-right.x`, expression: columnVariable },
+      { target: `row-${row}-right.y`, expression: minimumExpression(row, rowVariable) },
+    );
+  }
+
+  const geometry = {
+    title: optionalText(input.title, "单位正方形铺成长方形", `${path}.title`),
+    caption: "每个小方格面积为 1 平方单位；每行方格数 × 行数 = 方格总数 = 长方形面积。",
+    axes: {
+      x: { min: -0.75, max: maximumColumns + 0.75, label: "每行方格数（长）" },
+      y: { min: -0.75, max: maximumRows + 0.75, label: "行数（宽）" },
+      equal_scale: true,
+    },
+    points,
+    polygons: [
+      {
+        as: "interior",
+        points: ["boundary-bottom-left", "boundary-bottom-right", "boundary-top-right", "boundary-top-left"],
+        tone: "primary",
+      },
+      {
+        as: "unit-square",
+        points: ["unit-bottom-left", "unit-bottom-right", "unit-top-right", "unit-top-left"],
+        label: "1 平方单位",
+        tone: "accent",
+      },
+    ],
+    segments,
+    bindings,
+  };
+  return {
+    actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }],
+    whole: base,
+    parts: new Map([
+      ["whole", base],
+      ["unit_square", `${base}#unit-square`],
+      ["row", `${base}#row-1`],
+      ["column", `${base}#column-1`],
+      ["interior", `${base}#interior`],
+      ["boundary", `${base}#interior`],
+      ["primary_control", `${base}#interior`],
+      ["secondary_control", `${base}#interior`],
+    ]),
+  };
+}
+
 type RigidPose = { x: number; y: number; angle?: number };
 type RigidPiece = {
   points: Array<[number, number]>;
@@ -1185,6 +1313,7 @@ const VISUAL_COMPILERS = {
   function_surface_with_section: compileFunctionSurface,
   implicit_surface_with_section: compileImplicitSurface,
   coordinate_circle: compileCoordinateCircle,
+  rectangle_unit_square_array: compileRectangleUnitSquareArray,
   geometric_rearrangement: compileGeometricRearrangement,
   process_diagram: compileProcessDiagram,
   circle_area_rearrangement: compileCircleArea,
@@ -1221,6 +1350,24 @@ function positiveProgramRange(definition: NonNullable<LessonPlan["numbers"]>[num
   if (definition.student_control) {
     definition.student_control.step = (definition.max - definition.min) / 200;
   }
+}
+
+function positiveIntegerProgramRange(
+  definition: NonNullable<LessonPlan["numbers"]>[number],
+  maximum: number,
+): void {
+  const min = Math.max(1, Math.ceil(definition.min));
+  const max = Math.min(maximum, Math.floor(definition.max));
+  if (min <= max) {
+    definition.min = min;
+    definition.max = max;
+    definition.initial = Math.min(max, Math.max(min, Math.round(definition.initial)));
+  } else {
+    definition.min = 1;
+    definition.max = maximum;
+    definition.initial = Math.min(maximum, Math.max(1, Math.round(definition.initial)));
+  }
+  if (definition.student_control) definition.student_control.step = 1;
 }
 
 function surfaceSectionProgramRange(content: LessonPlanVisualContent, path: string): { min: number; max: number } {
@@ -1306,6 +1453,9 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
             constrained.add(numberIndex);
           } else if (policy.kind === "positive") {
             positiveProgramRange(definition);
+            constrained.add(numberIndex);
+          } else if (policy.kind === "positive_integer") {
+            positiveIntegerProgramRange(definition, policy.max);
             constrained.add(numberIndex);
           } else if (policy.kind === "surface_section") {
             const allowed = surfaceSectionProgramRange(content, path);
