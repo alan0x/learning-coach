@@ -193,19 +193,19 @@ const CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户提交了一段文字或
 
 ${ADMISSION_BOOTSTRAP_SYSTEM_PROMPT}`;
 
-const SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT = `用户提交了一段文字或语音，同时附带了一张刚刚从白板框选出的手写内容图片。只读取这个选区，不要把选区之外的白板内容当作输入。
-- image_observation 必须忠实记录选区是否看清、实际看到了什么、哪些笔画或符号不确定。不要补写图片中不存在的题目、公式或文字。
-- 选区是用户明确指定的学习对象。request_parts 使用“这个、这里、这个公式”等指代时，必须使用 image_observation 确定课程主题。
-- 如果 request_parts 已经给出具体教学要求，将它与选区内容合并理解；不要用无关知识替换选区里的表达式。
+const SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT = `用户提交了一段文字或语音，同时附带了一张刚刚从白板框选出的手写内容图片（包含手写笔迹，也可能包含被手写圈选/框选的白板卡片、公式或图表）。只读取这个选区，不要把选区之外的白板内容当作输入。
+- image_observation 必须忠实记录选区是否看清、实际看到了什么（包括白板卡片中的文字、LaTeX公式、图表或手写笔迹）。不要补写图片中不存在的题目、公式或文字。
+- 选区是用户明确指定的学习对象。若用户用手写线条/笔迹圈出或指向了某张卡片/公式，应重点理解被圈出/指向的白板卡片与核心知识点。request_parts 使用“这个、这里、这个公式”等指代时，必须结合 image_observation 与 request_parts 确定课程主题。
+- 如果 request_parts 已经给出具体教学要求或选中的白板内容，将它与选区内容合并理解；不要用无关知识替换选区里的表达式。
 - 选区无法看清且文字又不能独立确定主题时，返回 clarify，要求用户重新框选或写大一些，course 必须为 null。
 - 选区部分可读时，把不确定内容保留在 uncertainties 中，不要把猜测当成确定事实。
 
 ${ADMISSION_OUTLINE_SYSTEM_PROMPT}`;
 
-const SELECTION_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户提交了一段文字或语音，同时附带了一张刚刚从白板框选出的手写内容图片。只读取这个选区，不要把选区之外的白板内容当作输入。
-- image_observation 必须忠实记录选区是否看清、实际看到了什么、哪些笔画或符号不确定。不要补写图片中不存在的题目、公式或文字。
-- 选区是用户明确指定的学习对象。request_parts 使用“这个、这里、这个公式”等指代时，必须使用 image_observation 确定课程主题。
-- 如果 request_parts 已经给出具体教学要求，将它与选区内容合并理解；不要用无关知识替换选区里的表达式。
+const SELECTION_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT = `用户提交了一段文字或语音，同时附带了一张刚刚从白板框选出的手写内容图片（包含手写笔迹，也可能包含被手写圈选/框选的白板卡片、公式或图表）。只读取这个选区，不要把选区之外的白板内容当作输入。
+- image_observation 必须忠实记录选区是否看清、实际看到了什么（包括白板卡片中的文字、LaTeX公式、图表或手写笔迹）。不要补写图片中不存在的题目、公式或文字。
+- 选区是用户明确指定的学习对象。若用户用手写线条/笔迹圈出或指向了某张卡片/公式，应重点理解被圈出/指向的白板卡片与核心知识点。request_parts 使用“这个、这里、这个公式”等指代时，必须结合 image_observation 与 request_parts 确定课程主题。
+- 如果 request_parts 已经给出具体教学要求或选中的白板内容，将它与选区内容合并理解；不要用无关知识替换选区里的表达式。
 - 选区无法看清且文字又不能独立确定主题时，返回 clarify，要求用户重新框选或写大一些，course 必须为 null。
 - 选区部分可读时，把不确定内容保留在 uncertainties 中，不要把猜测当成确定事实。
 
