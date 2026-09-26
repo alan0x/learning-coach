@@ -6,7 +6,7 @@
     "package_version": "0.1.0-rc.1",
     "patch": {
       "path": "patches/oll-runtime.patch",
-      "sha256": "9c08f361eb1486a5388d7375878d8d60b9cff0a7c594a893f0ab498ac9b16921"
+      "sha256": "b6e30b2be4ebb93e75e5ae701eb43730b1d6de9341428accdf4d936291a9fb58"
     }
   },
   "profile": {
