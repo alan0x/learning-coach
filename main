@@ -7285,6 +7285,7 @@ var v0_1_schema_default = {
       required: ["as", "prompt", "availability", "allowed_operations", "completion", "hints"],
       additionalProperties: false,
       properties: {
+        start: { $ref: "#/$defs/phaseStart" },
         as: { $ref: "#/$defs/alias" },
         prompt: { type: "string", minLength: 1, maxLength: 480 },
         availability: {
@@ -7387,11 +7388,22 @@ var v0_1_schema_default = {
         }
       }
     },
+    phaseStart: {
+      type: "object",
+      required: ["kind"],
+      additionalProperties: false,
+      properties: {
+        kind: { enum: ["continue", "replay", "practice"] },
+        variables: { type: "array", minItems: 1, maxItems: 16, uniqueItems: true, items: { type: "string" } },
+        values: { type: "object", additionalProperties: { type: "number" } }
+      }
+    },
     beat: {
       type: "object",
       required: ["key", "actions"],
       additionalProperties: false,
       properties: {
+        start: { $ref: "#/$defs/phaseStart" },
         key: { $ref: "#/$defs/alias" },
         say: { type: "string", maxLength: 1200 },
         delivery: { enum: ["neutral", "patient", "encouraging", "careful", "emphatic"] },
@@ -7568,7 +7580,7 @@ var v0_1_schema_default = {
             properties: {
               as: { $ref: "#/$defs/alias" },
               center: { $ref: "#/$defs/alias" },
-              radius: { type: "number", exclusiveMinimum: 0 },
+              radius: { type: "number", minimum: 0 },
               label: { type: "string" }
             }
           }
@@ -7597,7 +7609,7 @@ var v0_1_schema_default = {
             properties: {
               as: { $ref: "#/$defs/alias" },
               center: { $ref: "#/$defs/alias" },
-              radius: { type: "number", exclusiveMinimum: 0 },
+              radius: { type: "number", minimum: 0 },
               start_angle: { type: "number" },
               end_angle: { type: "number" },
               filled: { type: "boolean" },
@@ -7779,7 +7791,18 @@ var v0_1_schema_default = {
       additionalProperties: false,
       properties: {
         target: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$" },
-        expression: { type: "string", minLength: 1, maxLength: 256 }
+        expression: { type: "string", minLength: 1, maxLength: 256 },
+        allow_zero: { const: true },
+        label: {
+          type: "object",
+          required: ["precision"],
+          additionalProperties: false,
+          properties: {
+            precision: { type: "integer", minimum: 0, maximum: 6 },
+            prefix: { type: "string", maxLength: 64 },
+            suffix: { type: "string", maxLength: 64 }
+          }
+        }
       }
     },
     geometryAxis: {
@@ -8001,6 +8024,18 @@ function compileMathExpression(expression, allowedVariables) {
 }
 
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
+var OLL_NODE_KINDS = [
+  "text",
+  "math",
+  "shape",
+  "diagram",
+  "geometry",
+  "plot",
+  "scene3d",
+  "image",
+  "table",
+  "note"
+];
 var OLL_ACTION_NAMES = [
   "write",
   "revise",
@@ -8045,6 +8080,31 @@ function collectBindingCapabilities() {
   ])));
 }
 var OLL_CANONICAL_BINDING_CAPABILITIES = collectBindingCapabilities();
+
+// node_modules/octos-lesson-language/dist/packages/core/src/execution-requirements.js
+var OLL_EXECUTION_FEATURES = Object.freeze({
+  "canonical:0.1": "0.1.0",
+  ...Object.fromEntries(OLL_NODE_KINDS.map((kind) => [`node:${kind}`, "0.1.0"])),
+  ...Object.fromEntries([
+    "board.create",
+    "board.revise",
+    "board.emphasize",
+    "board.connect",
+    "board.group",
+    "board.focus",
+    "teacher.point",
+    "teacher.expression",
+    "lesson.variable.animate"
+  ].map((op) => [`action:${op}`, "0.1.0"])),
+  "variables": "0.1.0",
+  "value-bindings": "0.1.0",
+  "binding-labels": "0.2.0",
+  "bound-zero-radius": "0.2.0",
+  "action:lesson.phase.start": "0.2.0",
+  "practice-start": "0.2.0",
+  "student-tasks:expression_target": "0.1.0",
+  "student-tasks:scene3d_view_target": "0.1.0"
+});
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });

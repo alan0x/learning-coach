@@ -1,6 +1,8 @@
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./teaching-contracts.js";
 import { functionViewport } from "./function-viewport.js";
 import {
+  applyLessonOpeningPolicy,
+  type LessonOpeningPolicy,
   compileMathExpression,
   normalizeAuthoringLesson,
   reduceCanonicalEvents,
@@ -36,6 +38,8 @@ import {
 } from "./scene3d-surfaces.js";
 
 export interface CompileLessonPlanOptions extends ResolveLessonPlanOptions {
+  construction_rules?: "legacy" | "explicit-v1";
+  opening_policy?: LessonOpeningPolicy;
   language?: string;
   adaptation_context_refs?: string[];
   board_context?: { board_id: string; revision: number };
@@ -298,7 +302,7 @@ function compileFunctionPlot(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_min", "x_max", "y_min", "y_max"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
   const dynamicTokens = input.expression_tokens as LessonPlanMathExpression | undefined;
   if (dynamicTokens !== undefined
     && !dynamicTokens.some((token) => token.kind === "input")) {
@@ -409,8 +413,8 @@ function compileFunctionPlot(
     title: optionalText(input.title, "函数图像", `${path}.title`),
     axes: {
       ...(expressions.length > 1 && expressions.some(e => e.replace(/[()\s]/g, "") === "x") ? {equal_scale:true} : {}),
-      x: { min: viewport.x.min, max: viewport.x.max, label: "x" },
-      y: { min: requestedY.min, max: requestedY.max, label: "y" },
+      x: { min: viewport.x.min, max: viewport.x.max, label: optionalText(input.x_label, "x", `${path}.x_label`) },
+      y: { min: requestedY.min, max: requestedY.max, label: optionalText(input.y_label, "y", `${path}.y_label`) },
     },
     curves: expressions.map((item, index) => ({
       as: index === 0 ? "primary-curve" : `curve-${pad(index + 1)}`,
@@ -437,7 +441,7 @@ function compileFunctionPlot(
   }
   // Slope lessons with curve parameters still need visible reference points.
   // Their x positions are fixed; the parameter sliders change the curve.
-  if (!sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
+  if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
     const initialVariables = Object.fromEntries(dynamicNumbers.map(index =>
       [variableAlias(index), numberDefinition(plan, index, path).initial]));
     const xs = [0, 1];
@@ -748,7 +752,7 @@ function compileFunctionSurface(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "x_min", "x_max", "y_min", "y_max", "samples", "section_axis"], path);
+  allowParameterKeys(input, ["title", "expression", "x_min", "x_max", "y_min", "y_max", "samples", "section_axis", "section_value"], path);
   const expression = safeFunctionExpression(input.expression, "x^2+y^2", ["x", "y"], `${path}.expression`);
   const xMin = optionalNumber(input.x_min, -2, `${path}.x_min`);
   const xMax = optionalNumber(input.x_max, 2, `${path}.x_max`);
@@ -760,7 +764,7 @@ function compileFunctionSurface(
   const axis = input.section_axis ?? "z";
   if (axis !== "x" && axis !== "y" && axis !== "z") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
   const number = content.numbers?.[0];
-  const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 1;
+  const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : optionalNumber(input.section_value, 1, `${path}.section_value`);
   const variable = number ? variableAlias(number) : undefined;
   const sceneContent: Record<string, unknown> = {
     title: optionalText(input.title, "函数曲面与截面", `${path}.title`),
@@ -862,20 +866,26 @@ function compileCoordinateCircle(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "center_x", "center_y", "radius"], path);
+  allowParameterKeys(input, ["title", "center_x", "center_y", "radius", "radius_expression"], path);
   const centerX = optionalNumber(input.center_x, 0, `${path}.center_x`);
   const centerY = optionalNumber(input.center_y, 0, `${path}.center_y`);
   const number = content.numbers?.[0];
   const radiusDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : undefined;
-  const radius = radiusDefinition?.initial ?? optionalNumber(input.radius, 1, `${path}.radius`);
-  if (radius <= 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius`, "radius must be positive");
-  if (radiusDefinition && radiusDefinition.min <= 0) {
+  const formula = input.radius_expression === undefined ? undefined : safeFunctionExpression(input.radius_expression, "n1", ["n1"], `${path}.radius_expression`);
+  if (formula && !radiusDefinition) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius_expression`, "radius_expression requires a shared number");
+  const radiusAt = (value: number) => formula ? evaluate(formula, ["n1"], { n1: value }, `${path}.radius_expression`) : value;
+  const radius = radiusDefinition ? radiusAt(radiusDefinition.initial) : optionalNumber(input.radius, 1, `${path}.radius`);
+  if (radius < 0 || (!formula && radius === 0)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius`, "radius must be positive");
+  if (!formula && radiusDefinition && radiusDefinition.min <= 0) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers[0]`, "a bound radius must stay positive");
   }
   const variable = number ? variableAlias(number) : undefined;
-  const maximumRadius = radiusDefinition
-    ? Math.max(Math.abs(radiusDefinition.min), Math.abs(radiusDefinition.max))
-    : radius;
+  const sampledRadii = radiusDefinition && formula ? Array.from({ length: 201 }, (_, i) =>
+    radiusAt(radiusDefinition.min + (radiusDefinition.max - radiusDefinition.min) * i / 200)) : [];
+  if (sampledRadii.some(value => !Number.isFinite(value) || value < 0)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius_expression`, "radius expression has an invalid sampled value");
+  // A bounded viewport sample is not a proof of the continuous mathematical domain.
+  const maximumRadius = formula ? Math.max(radius, ...sampledRadii, 1)
+    : radiusDefinition ? Math.max(Math.abs(radiusDefinition.min), Math.abs(radiusDefinition.max)) : radius;
   const extent = maximumRadius * 1.5;
   const geometry = {
     title: optionalText(input.title, "坐标系中的圆", `${path}.title`),
@@ -886,7 +896,8 @@ function compileCoordinateCircle(
     },
     points: [{ as: "center", x: centerX, y: centerY, label: `(${centerX}, ${centerY})` }],
     circles: [{ as: "circle", center: "center", radius, label: variable ? "半径 r" : `r = ${radius}` }],
-    ...(variable ? { bindings: [{ target: "circle.radius", expression: variable }] } : {}),
+    ...(variable ? { bindings: [{ target: "circle.radius", expression: formula ? replaceIdentifier(formula, "n1", variable) : variable,
+      ...(formula ? { allow_zero: true, label: { prefix: "r = ", precision: 2 } } : {}) }] } : {}),
   };
   return {
     actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }],
@@ -1451,7 +1462,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
           if (policy.kind === "bounded") {
             intersectProgramRange(definition, policy.min, policy.max);
             constrained.add(numberIndex);
-          } else if (policy.kind === "positive") {
+          } else if (policy.kind === "positive" && !(content.capability === "coordinate_circle" && content.parameters?.radius_expression !== undefined)) {
             positiveProgramRange(definition);
             constrained.add(numberIndex);
           } else if (policy.kind === "positive_integer") {
@@ -1692,6 +1703,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       }
       beats.push({
         key: `moment-${pad(momentIndex)}`,
+        ...(moment.restart_numbers?.length ? { start: { kind: "replay" as const, variables: moment.restart_numbers.map(variableAlias) } } : {}),
         ...(moment.narration ? { say: moment.narration } : {}),
         ...(moment.delivery ? { delivery: moment.delivery } : {}),
         actions,
@@ -1709,6 +1721,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     });
     if (seenTaskSemantics.has(semanticKey)) return;
     seenTaskSemantics.add(semanticKey);
+    if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
+      task.start = { kind: "practice", variables: task.allowed_operations.flatMap(operation =>
+        operation.kind === "variable_change" ? [operation.variable] : []) };
+    }
     tasks.push(task);
   };
   plan.sections.forEach((section, sectionOffset) => {
@@ -1812,7 +1828,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     steps,
     close: { summary: plan.close.summary, focus: closeFocus },
   };
-  return { lesson, resolved };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved };
 }
 
 function expressionReferencesVariable(expression: unknown, variable: string): boolean {

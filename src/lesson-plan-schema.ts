@@ -171,6 +171,8 @@ function visualParametersSchema(
   if (modelParameters.has("title")) properties.title = string(240);
   if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
   if (uses("function_plot")) {
+    properties.x_label = string(32);
+    properties.y_label = string(32);
     properties.formulas = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
@@ -179,10 +181,12 @@ function visualParametersSchema(
     properties.expression = string(256);
     properties.section_axis = { enum: ["x", "y", "z"] };
   }
+  if (uses("function_surface_with_section")) properties.section_value = { type: "number" };
   if (uses("implicit_surface_with_section")) properties.level = { type: "number" };
   if (modelParameters.has("radius")) properties.radius = { type: "number", minimum: 0 };
   if (uses("circle_and_arc")) properties.angle = { type: "number" };
   if (uses("coordinate_circle")) {
+    properties.radius_expression = string(256);
     properties.center_x = { type: "number" };
     properties.center_y = { type: "number" };
   }
@@ -700,6 +704,7 @@ function lessonPlanSectionDraftShapeJsonSchema(
       items: object({
         narration: string(),
         delivery: { enum: deliveryNames },
+        ...(allowedNumberIndexes.length ? { restart_numbers: { type: "array", minItems: 1, maxItems: 16, items: { enum: allowedNumberIndexes } } } : {}),
         ...actionCollections,
       }, ["narration", "delivery"]),
     },
