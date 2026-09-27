@@ -103,6 +103,7 @@
       "required": ["as", "prompt", "availability", "allowed_operations", "completion", "hints"],
       "additionalProperties": false,
       "properties": {
+        "start": {"$ref": "#/$defs/phaseStart"},
         "as": {"$ref": "#/$defs/alias"},
         "prompt": {"type": "string", "minLength": 1, "maxLength": 480},
         "availability": {
@@ -205,11 +206,20 @@
         }
       }
     },
+    "phaseStart": {
+      "type": "object", "required": ["kind"], "additionalProperties": false,
+      "properties": {
+        "kind": {"enum": ["continue", "replay", "practice"]},
+        "variables": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string"}},
+        "values": {"type": "object", "additionalProperties": {"type": "number"}}
+      }
+    },
     "beat": {
       "type": "object",
       "required": ["key", "actions"],
       "additionalProperties": false,
       "properties": {
+        "start": {"$ref": "#/$defs/phaseStart"},
         "key": {"$ref": "#/$defs/alias"},
         "say": {"type": "string", "maxLength": 1200},
         "delivery": {"enum": ["neutral", "patient", "encouraging", "careful", "emphatic"]},
@@ -386,7 +396,7 @@
             "properties": {
               "as": {"$ref": "#/$defs/alias"},
               "center": {"$ref": "#/$defs/alias"},
-              "radius": {"type": "number", "exclusiveMinimum": 0},
+              "radius": {"type": "number", "minimum": 0},
               "label": {"type": "string"}
             }
           }
@@ -415,7 +425,7 @@
             "properties": {
               "as": {"$ref": "#/$defs/alias"},
               "center": {"$ref": "#/$defs/alias"},
-              "radius": {"type": "number", "exclusiveMinimum": 0},
+              "radius": {"type": "number", "minimum": 0},
               "start_angle": {"type": "number"},
               "end_angle": {"type": "number"},
               "filled": {"type": "boolean"},
@@ -597,7 +607,16 @@
       "additionalProperties": false,
       "properties": {
         "target": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$"},
-        "expression": {"type": "string", "minLength": 1, "maxLength": 256}
+        "expression": {"type": "string", "minLength": 1, "maxLength": 256},
+        "allow_zero": {"const": true},
+        "label": {
+          "type": "object", "required": ["precision"], "additionalProperties": false,
+          "properties": {
+            "precision": {"type": "integer", "minimum": 0, "maximum": 6},
+            "prefix": {"type": "string", "maxLength": 64},
+            "suffix": {"type": "string", "maxLength": 64}
+          }
+        }
       }
     },
     "geometryAxis": {
