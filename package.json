@@ -14,10 +14,11 @@
     "contract:lesson-plan-vertex": "node scripts/check-lesson-plan-vertex-schema.mjs",
     "probe:provider-schema": "npm run build && node scripts/probe-structured-provider.mjs",
     "eval:visual": "npm run build && node scripts/eval-visual-generation.mjs",
-    "eval:lesson-plan": "node scripts/eval-lesson-plan-generation.mjs"
+    "eval:lesson-plan": "node scripts/eval-lesson-plan-generation.mjs",
+    "postinstall": "node scripts/apply-oll-runtime-patch.mjs"
   },
   "dependencies": {
-    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#9599d46e8fe3327d2fed0dd9432c8178b9f03273"
+    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#2b93d67ffc30075edb3d3f34b848f799a46717f2"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"

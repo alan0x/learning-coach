@@ -17,8 +17,8 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels"],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label"],
     required_model_schema_parameters: ["formulas"],
     semantic_parameters: ["expression", "expressions", "expression_tokens"],
     output_kinds: ["plot"],
@@ -82,8 +82,8 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     parts: ["whole", "surface", "section", "intersection", "primary_control"],
     number_inputs: ["section_position"],
     number_input_policies: [{ kind: "surface_section" }],
-    parameter_names: ["title", "expression", "samples", "section_axis", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "section_axis"],
+    parameter_names: ["title", "expression", "samples", "section_axis", "section_value", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "section_axis", "section_value"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
     output_kinds: ["scene3d"],
@@ -108,14 +108,14 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     parts: ["whole", "circle", "center", "radius", "primary_control"],
     number_inputs: ["radius"],
     number_input_policies: [{ kind: "positive" }],
-    parameter_names: ["title", "radius", "center_x", "center_y"],
-    model_parameter_names: ["title", "radius", "center_x", "center_y"],
+    parameter_names: ["title", "radius", "radius_expression", "center_x", "center_y"],
+    model_parameter_names: ["title", "radius", "radius_expression", "center_x", "center_y"],
     required_model_schema_parameters: [],
-    semantic_parameters: ["radius", "center_x", "center_y"],
+    semantic_parameters: ["radius", "radius_expression", "center_x", "center_y"],
     output_kinds: ["geometry"],
     student_controls: ["slider"],
     required_features: ["coordinate_circle"],
-    model_guidance: "坐标系中的圆，可用数值改变半径",
+    model_guidance: "坐标系中的圆；共享数值可通过 radius_expression（例如 sqrt(n1)）驱动半径",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -400,6 +400,7 @@ export type LessonPlanAction =
   | LessonPlanAnimateAction;
 
 export interface LessonPlanMoment {
+  restart_numbers?: number[];
   narration?: string;
   delivery?: LessonPlanDelivery;
   actions: LessonPlanAction[];
@@ -1040,7 +1041,15 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
       const momentIndex = momentOffset + 1;
       const momentPath = `${path}.moments[${momentOffset}]`;
       const moment = record(rawMoment, momentPath);
-      allowedKeys(moment, ["narration", "delivery", "actions"], momentPath);
+      allowedKeys(moment, ["narration", "delivery", "actions", "restart_numbers"], momentPath);
+      if (moment.restart_numbers !== undefined) {
+        const restarts = array(moment.restart_numbers, `${momentPath}.restart_numbers`);
+        if (!restarts.length || new Set(restarts).size !== restarts.length) fail("LESSON_PLAN_PHASE_START", momentPath, "restart_numbers must be nonempty and unique");
+        for (const number of restarts) {
+          const index = positiveIndex(number, `${momentPath}.restart_numbers`);
+          if (index > rawNumbers.length) fail("LESSON_PLAN_PHASE_START", momentPath, "unknown restart number");
+        }
+      }
       optionalString(moment.narration, `${momentPath}.narration`);
       if (moment.delivery !== undefined && (typeof moment.delivery !== "string" || !deliveries.has(moment.delivery as LessonPlanDelivery))) fail("LESSON_PLAN_DELIVERY", `${momentPath}.delivery`, "unsupported delivery");
       const actions = array(moment.actions, `${momentPath}.actions`);

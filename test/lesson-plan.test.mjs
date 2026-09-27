@@ -4417,3 +4417,110 @@ test("an explicit two-point request converts a mistaken curve parameter into two
   assert.doesNotMatch(plot.curves[0].expression,/number_0[12]/);
   assert.match(generated.lesson.steps[0].beats[0].say,/斜率保持不变/);
 });
+
+
+test("independent replay and practice starts are explicit without changing legacy defaults", () => {
+  const plan = samplePlan("coordinate_circle");
+  const legacy = compileAndValidateLessonPlan(plan);
+  assert.equal(legacy.lesson.lesson.tasks[0].start, undefined);
+  assert.equal(legacy.lesson.steps[1].beats[0].start, undefined);
+  plan.sections[1].moments[0].restart_numbers = [1];
+  const compiled = compileAndValidateLessonPlan(plan, { construction_rules: "explicit-v1" });
+  assert.deepEqual(compiled.lesson.steps[1].beats[0].start, { kind: "replay", variables: ["number_01"] });
+  assert.deepEqual(compiled.lesson.lesson.tasks[0].start, { kind: "practice", variables: ["number_01"] });
+  plan.sections[1].moments[0].restart_numbers = [99];
+  assert.throws(() => compileAndValidateLessonPlan(plan), /unknown restart number/);
+});
+
+test("circle radius formula reads its shared number without replacing it with radius or narrowing height", () => {
+  const plan = samplePlan("coordinate_circle");
+  plan.numbers[0] = { ...plan.numbers[0], initial: 1, min: 0, max: 8 };
+  const visual = plan.sections[0].moments[0].actions.find(action => action.kind === "visual");
+  visual.content.parameters = { radius_expression: "sqrt(n1)" };
+  const compiled = compileAndValidateLessonPlan(plan);
+  const circle = compiled.lesson.steps[0].beats[0].actions.find(action => action.kind === "geometry");
+  assert.equal(compiled.lesson.lesson.variables[0].min, 0);
+  assert.deepEqual(circle.content.bindings, [{ target: "circle.radius", expression: "sqrt(number_01)", allow_zero: true, label: { prefix: "r = ", precision: 2 } }]);
+  assert.ok(circle.content.axes.x.max >= Math.sqrt(8));
+  visual.content.parameters.radius_expression = "sqrt(unknown)";
+  assert.throws(() => compileAndValidateLessonPlan(plan), /Unknown variable/);
+});
+
+
+test("live shared-height response survives generation sanitization and retains global request", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/shared-height-circle-generation.json"), "utf8"));
+  const responses = [...fixture.responses];
+  const calls = [];
+  const generated = await generateLessonPlanWithModel(async request => {
+    calls.push(request);
+    assert.equal(JSON.parse(request.prompt).course_context.learner_request, fixture.input.learner_request);
+    assert.ok(responses.length, "unexpected repair call");
+    return responses.shift();
+  }, { ...fixture.input, turn_id: "replay-height-circle" });
+  assert.equal(calls.length, 4);
+  assert.equal(responses.length, 0);
+  const writes = generated.lesson.steps.flatMap(s => s.beats).flatMap(b => b.actions).filter(a => a.do === "write");
+  const circle = writes.find(a => a.kind === "geometry");
+  assert.equal(circle.content.bindings[0].expression, "sqrt(number_01)");
+  assert.equal(circle.content.bindings[0].allow_zero, true);
+  assert.ok(writes.find(a => a.kind === "scene3d").content.bindings.some(b => b.expression === "number_01"));
+});
+
+test("static section zero and comparison axis labels are respected without invented secant", () => {
+  const plan = samplePlan("function_surface_with_section");
+  delete plan.numbers;
+  delete plan.sections[0].student_activities;
+  plan.sections[0].moments[0].actions = plan.sections[0].moments[0].actions.filter(a => a.action !== "animate");
+  const visual = plan.sections[0].moments[0].actions.find(a => a.kind === "visual");
+  delete visual.content.numbers;
+  visual.content.parameters = { expression: "x^2-y^2", section_axis: "x", section_value: 0 };
+  const scene = compileAndValidateLessonPlan(plan).lesson.steps[0].beats[0].actions.find(a => a.kind === "scene3d");
+  assert.equal(scene.content.sections[0].value, 0);
+  const comparison = samplePlan("function_plot");
+  delete comparison.numbers;
+  delete comparison.sections[0].student_activities;
+  comparison.sections[0].moments[0].actions = comparison.sections[0].moments[0].actions.filter(a => a.action !== "animate");
+  comparison.title = "slope tangent comparison";
+  const plotVisual = comparison.sections[0].moments[0].actions.find(a => a.kind === "visual");
+  delete plotVisual.content.numbers;
+  plotVisual.content.parameters = { expressions: ["x^2+1", "2*x"], x_label: "x", y_label: "z" };
+  const plot = compileAndValidateLessonPlan(comparison).lesson.steps[0].beats[0].actions.find(a => a.kind === "plot");
+  assert.equal(plot.content.axes.y.label, "z");
+  assert.equal(plot.content.points, undefined);
+  assert.equal(plot.content.curves.length, 2);
+});
+
+
+test("later practice retains controls of earlier persistent visuals without a focus declaration", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/later-practice-generation.json"), "utf8"));
+  const responses = [...fixture.responses];
+  let inspected = false;
+  await generateLessonPlanWithModel(async request => {
+    if (request.section === 4) {
+      const prompt = JSON.parse(request.prompt);
+      assert.deepEqual(prompt.visuals_for_section, []);
+      assert.deepEqual(prompt.course_and_section.numbers.map(n => n.number), [1]);
+      assert.ok(request.response_schema.properties.number_activities);
+      inspected = true;
+    }
+    assert.ok(responses.length, "unexpected repair call");
+    return responses.shift();
+  }, { ...fixture.input, turn_id: "replay-later-practice" });
+  assert.equal(inspected, true);
+});
+
+test("new construction supplies opening context without advancing delayed visual content", () => {
+  const plan = samplePlan("process_diagram");
+  plan.sections[0].moments[0].actions[0].timing = "after_speech";
+  const legacy = compileAndValidateLessonPlan(plan).lesson;
+  const current = compileAndValidateLessonPlan(plan, { construction_rules: "explicit-v1" }).lesson;
+  const preserved = compileAndValidateLessonPlan(plan, { construction_rules: "explicit-v1", opening_policy: { kind: "preserve" } }).lesson;
+  const first = current.steps[0].beats[0];
+  assert.equal(first.actions[0].as, "opening-title");
+  assert.equal(first.actions[0].when, "before_speech");
+  assert.deepEqual(first.actions.slice(1), legacy.steps[0].beats[0].actions);
+  assert.deepEqual(preserved.steps[0].beats[0].actions, legacy.steps[0].beats[0].actions);
+  assert.equal(first.say, legacy.steps[0].beats[0].say);
+});

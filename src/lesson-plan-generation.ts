@@ -122,6 +122,7 @@ export interface NonLessonPlanResponse {
 export type LessonPlanGenerationResult = GeneratedLessonPlan | NonLessonPlanResponse;
 
 const OUTLINE_SYSTEM_PROMPT = `设计完整课程目录，不生成 OLL、执行 ID、组件名或自由对象名。
+- 需要同步对照的图复用同一共享数值，并通过 supporting/comparison 声明关联；不要用两个独立 main 图表示同一联动关系。
 - visual_recipes 为 [features,numbers,purpose]。course_visuals 选其中 features，只列必要画面；后续复用，确需并排才建 comparison，supporting/comparison 指向较早画面。
 - 多边形重排选 polygon_pieces、rigid_rearrangement、area_relation；圆面积选 circle_area_rearrangement。ordered_process_steps 仅是静态流程。
 - numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。
@@ -136,7 +137,9 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - 小数用 mantissa/scale，如 -1.5→-15/1。
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
 - function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
-- animations 只写数值、目标和节奏；程序生成缓动。
+- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置。
+- 课中由教师演示：写“我把高度从 1 调到 4，请观察”，不写“请你调到 4”却同时播放教师动画；学生操作留给课后 number_activities。
+- 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 仅用于指定多边形证明；圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
 只返回符合响应 Schema 的 JSON。`;
 
@@ -150,7 +153,9 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 
 - 小数用 mantissa/scale，如 -1.5→-15/1。
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
 - function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
-- animations 只写数值、目标和节奏；程序生成缓动。
+- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置。
+- 课中由教师演示：写“我把高度从 1 调到 4，请观察”，不写“请你调到 4”却同时播放教师动画；学生操作留给课后 number_activities。
+- 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 仅用于指定多边形证明；圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
 
 const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
@@ -1098,7 +1103,11 @@ function sanitizeNonessentialVisuals(
   });
   for (const entry of visualEntries) {
     const incompatible = (entry.content.numbers ?? []).some((number, index) => {
-      const next = visualNumberPurpose(entry.content.capability, index);
+      // A declared radius formula maps an input quantity to radius; its input
+      // is not itself a radius. Keep shared height/time/etc. controls intact.
+      const next = entry.content.capability === "coordinate_circle"
+        && entry.content.parameters?.radius_expression !== undefined
+        ? "generic" : visualNumberPurpose(entry.content.capability, index);
       const current = establishedPurposes.get(number);
       if (!current || compatibleVisualNumberPurpose(current, next)) {
         if (!current || current === "generic") establishedPurposes.set(number, next);
@@ -1968,7 +1977,7 @@ function lowerModelSectionDraft(
     }
   }
   const createdCourseVisuals = new Set<number>();
-  const momentKeys = new Set(["narration", "delivery", ...Object.keys(modelActionCollections)]);
+  const momentKeys = new Set(["narration", "delivery", "restart_numbers", ...Object.keys(modelActionCollections)]);
   const moments = candidate.moments.map((momentValue, momentIndex) => {
     const path = `$lessonPlanModelSection.moments[${momentIndex}]`;
     if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) {
@@ -2083,6 +2092,7 @@ function lowerModelSectionDraft(
     }
     return {
       narration: moment.narration,
+      ...(moment.restart_numbers !== undefined ? { restart_numbers: moment.restart_numbers } : {}),
       delivery: moment.delivery,
       actions: ordered.map((item) => item.action),
     };
@@ -2399,8 +2409,7 @@ function inputContext(input: LessonPlanGenerationInput): Record<string, unknown>
 
 function compactModelContext(context: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(context).filter(([key, value]) => key !== "learner_request"
-      && key !== "input_modality"
+    Object.entries(context).filter(([key, value]) => key !== "input_modality"
       && value !== null
       && value !== undefined),
   );
@@ -2450,7 +2459,9 @@ function executableNumberIndexesForSection(
   if (courseVisuals.some((visual) => visual.create_section === sectionNumber)) return all;
   const indexes = new Set<number>();
   for (const visual of courseVisuals) {
-    if (!visual.use_sections.includes(sectionNumber) || visual.create_section >= sectionNumber) continue;
+    // Earlier visuals and their controls remain on the board. A later practice
+    // may use them even when its outline does not focus that visual.
+    if (visual.create_section >= sectionNumber) continue;
     const source = drafts[visual.create_section - 1];
     for (const moment of source?.moments ?? []) {
       for (const action of moment.actions) {
@@ -2562,7 +2573,7 @@ function compilePrefix(
   };
   const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
-  return compileAndValidateLessonPlan(prefixPlan, options);
+  return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
 
 function canFallBackFromBootstrap(error: unknown): boolean {
@@ -3089,7 +3100,7 @@ export async function generateLessonPlanWithModel(
     try {
       const normalized = normalizeExecutableNumberInteractions(outline, drafts);
       const plan = assembleLessonPlan(normalized.outline, normalized.drafts, options.compile);
-      compiled = compileAndValidateLessonPlan(plan, options.compile);
+      compiled = compileAndValidateLessonPlan(plan, { ...options.compile, construction_rules: "explicit-v1" });
       compiledOutline = normalized.outline;
       compiledDrafts = normalized.drafts;
       programAdjustments = normalized.adjustments;

@@ -7181,8 +7181,8 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels"],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label"],
     required_model_schema_parameters: ["formulas"],
     semantic_parameters: ["expression", "expressions", "expression_tokens"],
     output_kinds: ["plot"],
@@ -7246,8 +7246,8 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     parts: ["whole", "surface", "section", "intersection", "primary_control"],
     number_inputs: ["section_position"],
     number_input_policies: [{ kind: "surface_section" }],
-    parameter_names: ["title", "expression", "samples", "section_axis", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "section_axis"],
+    parameter_names: ["title", "expression", "samples", "section_axis", "section_value", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "section_axis", "section_value"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
     output_kinds: ["scene3d"],
@@ -7272,14 +7272,14 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     parts: ["whole", "circle", "center", "radius", "primary_control"],
     number_inputs: ["radius"],
     number_input_policies: [{ kind: "positive" }],
-    parameter_names: ["title", "radius", "center_x", "center_y"],
-    model_parameter_names: ["title", "radius", "center_x", "center_y"],
+    parameter_names: ["title", "radius", "radius_expression", "center_x", "center_y"],
+    model_parameter_names: ["title", "radius", "radius_expression", "center_x", "center_y"],
     required_model_schema_parameters: [],
-    semantic_parameters: ["radius", "center_x", "center_y"],
+    semantic_parameters: ["radius", "radius_expression", "center_x", "center_y"],
     output_kinds: ["geometry"],
     student_controls: ["slider"],
     required_features: ["coordinate_circle"],
-    model_guidance: "\u5750\u6807\u7CFB\u4E2D\u7684\u5706\uFF0C\u53EF\u7528\u6570\u503C\u6539\u53D8\u534A\u5F84"
+    model_guidance: "\u5750\u6807\u7CFB\u4E2D\u7684\u5706\uFF1B\u5171\u4EAB\u6570\u503C\u53EF\u901A\u8FC7 radius_expression\uFF08\u4F8B\u5982 sqrt(n1)\uFF09\u9A71\u52A8\u534A\u5F84"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -7849,7 +7849,15 @@ function resolveLessonPlan(value, options = {}) {
       const momentIndex = momentOffset + 1;
       const momentPath = `${path}.moments[${momentOffset}]`;
       const moment = record(rawMoment, momentPath);
-      allowedKeys(moment, ["narration", "delivery", "actions"], momentPath);
+      allowedKeys(moment, ["narration", "delivery", "actions", "restart_numbers"], momentPath);
+      if (moment.restart_numbers !== void 0) {
+        const restarts = array(moment.restart_numbers, `${momentPath}.restart_numbers`);
+        if (!restarts.length || new Set(restarts).size !== restarts.length) fail("LESSON_PLAN_PHASE_START", momentPath, "restart_numbers must be nonempty and unique");
+        for (const number of restarts) {
+          const index = positiveIndex(number, `${momentPath}.restart_numbers`);
+          if (index > rawNumbers.length) fail("LESSON_PLAN_PHASE_START", momentPath, "unknown restart number");
+        }
+      }
       optionalString(moment.narration, `${momentPath}.narration`);
       if (moment.delivery !== void 0 && (typeof moment.delivery !== "string" || !deliveries.has(moment.delivery))) fail("LESSON_PLAN_DELIVERY", `${momentPath}.delivery`, "unsupported delivery");
       const actions = array(moment.actions, `${momentPath}.actions`);
@@ -8591,6 +8599,7 @@ var v0_1_schema_default = {
       required: ["as", "prompt", "availability", "allowed_operations", "completion", "hints"],
       additionalProperties: false,
       properties: {
+        start: { $ref: "#/$defs/phaseStart" },
         as: { $ref: "#/$defs/alias" },
         prompt: { type: "string", minLength: 1, maxLength: 480 },
         availability: {
@@ -8693,11 +8702,22 @@ var v0_1_schema_default = {
         }
       }
     },
+    phaseStart: {
+      type: "object",
+      required: ["kind"],
+      additionalProperties: false,
+      properties: {
+        kind: { enum: ["continue", "replay", "practice"] },
+        variables: { type: "array", minItems: 1, maxItems: 16, uniqueItems: true, items: { type: "string" } },
+        values: { type: "object", additionalProperties: { type: "number" } }
+      }
+    },
     beat: {
       type: "object",
       required: ["key", "actions"],
       additionalProperties: false,
       properties: {
+        start: { $ref: "#/$defs/phaseStart" },
         key: { $ref: "#/$defs/alias" },
         say: { type: "string", maxLength: 1200 },
         delivery: { enum: ["neutral", "patient", "encouraging", "careful", "emphatic"] },
@@ -8874,7 +8894,7 @@ var v0_1_schema_default = {
             properties: {
               as: { $ref: "#/$defs/alias" },
               center: { $ref: "#/$defs/alias" },
-              radius: { type: "number", exclusiveMinimum: 0 },
+              radius: { type: "number", minimum: 0 },
               label: { type: "string" }
             }
           }
@@ -8903,7 +8923,7 @@ var v0_1_schema_default = {
             properties: {
               as: { $ref: "#/$defs/alias" },
               center: { $ref: "#/$defs/alias" },
-              radius: { type: "number", exclusiveMinimum: 0 },
+              radius: { type: "number", minimum: 0 },
               start_angle: { type: "number" },
               end_angle: { type: "number" },
               filled: { type: "boolean" },
@@ -9085,7 +9105,18 @@ var v0_1_schema_default = {
       additionalProperties: false,
       properties: {
         target: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$" },
-        expression: { type: "string", minLength: 1, maxLength: 256 }
+        expression: { type: "string", minLength: 1, maxLength: 256 },
+        allow_zero: { const: true },
+        label: {
+          type: "object",
+          required: ["precision"],
+          additionalProperties: false,
+          properties: {
+            precision: { type: "integer", minimum: 0, maximum: 6 },
+            prefix: { type: "string", maxLength: 64 },
+            suffix: { type: "string", maxLength: 64 }
+          }
+        }
       }
     },
     geometryAxis: {
@@ -9317,6 +9348,18 @@ function evaluateMathExpression(expression, variables) {
 }
 
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
+var OLL_NODE_KINDS = [
+  "text",
+  "math",
+  "shape",
+  "diagram",
+  "geometry",
+  "plot",
+  "scene3d",
+  "image",
+  "table",
+  "note"
+];
 var OLL_ACTION_NAMES = [
   "write",
   "revise",
@@ -9367,6 +9410,58 @@ function collectBindingCapabilities() {
   ])));
 }
 var OLL_CANONICAL_BINDING_CAPABILITIES = collectBindingCapabilities();
+
+// node_modules/octos-lesson-language/dist/packages/core/src/execution-requirements.js
+var OLL_EXECUTION_FEATURES = Object.freeze({
+  "canonical:0.1": "0.1.0",
+  ...Object.fromEntries(OLL_NODE_KINDS.map((kind) => [`node:${kind}`, "0.1.0"])),
+  ...Object.fromEntries([
+    "board.create",
+    "board.revise",
+    "board.emphasize",
+    "board.connect",
+    "board.group",
+    "board.focus",
+    "teacher.point",
+    "teacher.expression",
+    "lesson.variable.animate"
+  ].map((op) => [`action:${op}`, "0.1.0"])),
+  "variables": "0.1.0",
+  "value-bindings": "0.1.0",
+  "binding-labels": "0.2.0",
+  "bound-zero-radius": "0.2.0",
+  "action:lesson.phase.start": "0.2.0",
+  "practice-start": "0.2.0",
+  "student-tasks:expression_target": "0.1.0",
+  "student-tasks:scene3d_view_target": "0.1.0"
+});
+
+// node_modules/octos-lesson-language/dist/packages/core/src/opening.js
+function applyLessonOpeningPolicy(source, policy = { kind: "preserve" }) {
+  const result = structuredClone(source);
+  if (policy.kind === "preserve" || source.board_context?.references.length)
+    return result;
+  const first = result.steps[0]?.beats[0];
+  if (!first?.say?.trim())
+    return result;
+  if (policy.kind === "introduction") {
+    const introduction = first.actions.find((a) => a.do === "write" && a.as === policy.alias);
+    if (!introduction || introduction.do !== "write" || !["text", "math", "note"].includes(introduction.kind))
+      throw new Error("Opening introduction must explicitly identify a text, math or note write in the first beat");
+    if (introduction.content.bindings)
+      throw new Error("Opening introduction cannot have value bindings");
+    introduction.when = "before_speech";
+    return result;
+  }
+  if (first.actions.some((a) => a.do === "write" && a.when !== "after_speech"))
+    return result;
+  const aliases = new Set(result.steps.flatMap((s) => s.beats).flatMap((b) => b.actions).flatMap((a) => "as" in a ? [a.as] : []));
+  let alias = "opening-title", suffix = 1;
+  while (aliases.has(alias))
+    alias = `opening-title-${suffix++}`;
+  first.actions.unshift({ do: "write", as: alias, kind: "note", role: "explanation", content: { title: source.lesson.title, items: ["\u672C\u8BFE\u5BFC\u5165"] }, place: { relation: "new_region" }, when: "before_speech" });
+  return result;
+}
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
@@ -9575,6 +9670,37 @@ function validateScene3dStudentTask(task, path, scene3dCameras) {
     fail2("OLL_INVALID_STUDENT_TASK", `${path}/success_message`, "Task success_message must not be empty");
   }
 }
+function resolvePhaseStart(policy, variables, path) {
+  requireObject(policy, path);
+  if (Object.keys(policy).some((key) => !["kind", "variables", "values"].includes(key))) {
+    fail2("OLL_INVALID_PHASE_START", path, "Unknown phase start field");
+  }
+  if (policy.kind === "continue") {
+    if (policy.variables !== void 0 || policy.values !== void 0)
+      fail2("OLL_INVALID_PHASE_START", path, "Continuation inherits state without reset targets");
+    return {};
+  }
+  if (policy.kind !== "replay" && policy.kind !== "practice")
+    fail2("OLL_INVALID_PHASE_START", path, "Unknown phase kind");
+  if (!Array.isArray(policy.variables) || !policy.variables.length || new Set(policy.variables).size !== policy.variables.length) {
+    fail2("OLL_INVALID_PHASE_START", path, "Independent phases require distinct selected variables");
+  }
+  if (policy.values !== void 0)
+    requireObject(policy.values, `${path}/values`);
+  if (Object.keys(policy.values ?? {}).some((alias) => !policy.variables.includes(alias))) {
+    fail2("OLL_INVALID_PHASE_START", path, "Start values must belong to selected variables");
+  }
+  return Object.fromEntries(policy.variables.map((alias) => {
+    const variable = variables.find((candidate) => candidate.as === alias);
+    if (!variable)
+      fail2("OLL_INVALID_PHASE_START", path, `Unknown start variable '${alias}'`);
+    const value = policy.values && Object.hasOwn(policy.values, alias) ? policy.values[alias] : variable.initial;
+    if (!Number.isFinite(value) || value < variable.min || value > variable.max) {
+      fail2("OLL_INVALID_PHASE_START", path, `Start value for '${alias}' is outside its domain`);
+    }
+    return [alias, value];
+  }));
+}
 function validateStudentTasks(document, variables, availableControls, scene3dCameras) {
   const taskAliases = /* @__PURE__ */ new Set();
   for (const [index, task] of (document.lesson.tasks ?? []).entries()) {
@@ -9592,6 +9718,10 @@ function validateStudentTasks(document, variables, availableControls, scene3dCam
       fail2("OLL_INVALID_STUDENT_TASK", `${path}/availability/kind`, `Unsupported task availability '${String(task.availability.kind)}'`);
     }
     requireObject(task.completion, `${path}/completion`);
+    if (task.start && (task.start.kind !== "practice" || task.completion.kind !== "expression_target")) {
+      fail2("OLL_INVALID_PHASE_START", `${path}/start`, "Practice starts currently require an expression task");
+    }
+    const startValues = task.start ? resolvePhaseStart(task.start, document.lesson.variables ?? [], `${path}/start`) : {};
     if (task.completion.kind === "scene3d_view_target") {
       validateScene3dStudentTask(task, path, scene3dCameras);
       continue;
@@ -9634,7 +9764,10 @@ function validateStudentTasks(document, variables, availableControls, scene3dCam
       fail2("OLL_INVALID_STUDENT_TASK", `${path}/completion/tolerance`, "Task tolerance must be greater than zero");
     try {
       const evaluate2 = compileMathExpression(expressionTask.completion.expression, variables.keys());
-      const initial = evaluate2(Object.fromEntries(variables));
+      if (task.start && [...allowedVariables].some((alias) => !Object.hasOwn(startValues, alias))) {
+        throw new Error("Practice start must specify all task variables");
+      }
+      const initial = evaluate2({ ...Object.fromEntries(variables), ...startValues });
       if (!Number.isFinite(initial) || !Number.isFinite(target))
         throw new Error("Task completion result is not finite");
       const referenced = new Set(referencedMathVariables(expressionTask.completion.expression, variables.keys()));
@@ -9737,16 +9870,30 @@ function validateValueBindings(action, path, variables) {
   requireArray(action.content.bindings, `${path}/content/bindings`);
   const targets = bindableTargets(action);
   const seen = /* @__PURE__ */ new Set();
+  const labeled = /* @__PURE__ */ new Set();
   action.content.bindings.forEach((binding, index) => {
     const bindingPath = `${path}/content/bindings/${index}`;
     requireObject(binding, bindingPath);
     for (const field of Object.keys(binding)) {
-      if (field !== "target" && field !== "expression")
+      if (!["target", "expression", "label", "allow_zero"].includes(field))
         fail2("OLL_INVALID_BINDING", `${bindingPath}/${field}`, `Unknown binding field '${field}'`);
     }
     const { alias, property } = splitBindingTarget(binding.target, `${bindingPath}/target`);
     if (!targets.get(alias)?.has(property)) {
       fail2("OLL_REFERENCE_NOT_FOUND", `${bindingPath}/target`, `Binding target '${binding.target}' is not a supported numeric field`);
+    }
+    if (binding.allow_zero !== void 0 && (binding.allow_zero !== true || property !== "radius")) {
+      fail2("OLL_INVALID_BINDING", `${bindingPath}/allow_zero`, "allow_zero is only valid on radius bindings and must be true");
+    }
+    if (binding.label !== void 0) {
+      requireObject(binding.label, `${bindingPath}/label`);
+      const label = binding.label;
+      if (Object.keys(label).some((key) => !["prefix", "suffix", "precision"].includes(key)) || !Number.isInteger(label.precision) || Number(label.precision) < 0 || Number(label.precision) > 6 || [label.prefix, label.suffix].some((value) => value !== void 0 && (typeof value !== "string" || value.length > 64))) {
+        fail2("OLL_INVALID_BINDING", `${bindingPath}/label`, "Label requires precision 0..6 and optional prefix/suffix up to 64 characters");
+      }
+      if (labeled.has(alias))
+        fail2("OLL_INVALID_BINDING", `${bindingPath}/label`, "A fragment may have only one generated label");
+      labeled.add(alias);
     }
     if (seen.has(binding.target))
       fail2("OLL_INVALID_BINDING", `${bindingPath}/target`, `Binding target '${binding.target}' is duplicated`);
@@ -9927,8 +10074,9 @@ function validateGeometryContent(action, path, variables) {
         requirePointReference(item[reference], `${itemPath}/${reference}`);
       if (field === "circles" || field === "arcs") {
         const radius = requireFiniteNumber(item.radius, `${itemPath}/radius`);
-        if (radius <= 0)
-          fail2("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/radius`, "Radius must be greater than zero");
+        const zeroAllowed = radius === 0 && (content.bindings ?? []).some((binding) => binding.target === `${item.as}.radius` && binding.allow_zero === true);
+        if (radius < 0 || radius === 0 && !zeroAllowed)
+          fail2("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/radius`, "Radius must be positive unless explicitly bound with allow_zero");
       }
       if (field === "arcs") {
         if (item.filled !== void 0 && typeof item.filled !== "boolean")
@@ -10381,6 +10529,11 @@ function validateAuthoringLesson(document, resourceContext = null) {
         fail2("OLL_DUPLICATE_ALIAS", `${beatPath}/key`, `Beat '${beat.key}' is duplicated`);
       beatKeys.add(beat.key);
       requireArray(beat.actions, `${beatPath}/actions`);
+      if (beat.start) {
+        if (beat.start.kind === "practice")
+          fail2("OLL_INVALID_PHASE_START", `${beatPath}/start`, "Practice belongs on a student task");
+        resolvePhaseStart(beat.start, document.lesson.variables ?? [], `${beatPath}/start`);
+      }
       beat.actions.forEach((action, actionIndex) => {
         const actionPath = `${beatPath}/actions/${actionIndex}`;
         requireObject(action, actionPath);
@@ -10530,7 +10683,9 @@ function normalizeAddressableContent(_host, nodeId, content) {
       const { alias, property } = splitBindingTarget(binding.target, "content.bindings.target");
       return {
         target: `${nodeId}:fragment:${alias}.${property}`,
-        expression: binding.expression
+        expression: binding.expression,
+        ...binding.label !== void 0 ? { label: structuredClone(binding.label) } : {},
+        ...binding.allow_zero === true ? { allow_zero: true } : {}
       };
     });
   }
@@ -10717,6 +10872,8 @@ function normalizeAuthoringLesson(document, host) {
   const registry = buildCanonicalRegistry(document, host);
   const canonicalLesson = structuredClone(document.lesson);
   for (const candidate of canonicalLesson.tasks ?? []) {
+    if (candidate.start)
+      candidate.start.values = resolvePhaseStart(candidate.start, document.lesson.variables ?? [], `/lesson/tasks/${candidate.as}/start`);
     const task = candidate;
     if (task.completion.kind !== "scene3d_view_target")
       continue;
@@ -10760,6 +10917,17 @@ function normalizeAuthoringLesson(document, host) {
             const phase = action.when ?? "during_speech";
             stage[phase].push(normalizeAction(action, { host, registry, sequence, beatIndex, actionIndex }));
           });
+          if (beat.start?.kind === "replay") {
+            stage.before_speech.unshift({
+              action_id: `${stableId(host, "step", step.key)}:beat:${beat.key}:phase-start`,
+              op: "lesson.phase.start",
+              transition: {
+                kind: "replay",
+                values: resolvePhaseStart(beat.start, document.lesson.variables ?? [], `/steps/${stepIndex}/beats/${beatIndex}/start`),
+                source_path: `/steps/${stepIndex}/beats/${beatIndex}/start`
+              }
+            });
+          }
           return {
             id: `${stableId(host, "step", step.key)}:beat:${beat.key}`,
             ...beat.say ? { narration: { text: beat.say, ...beat.delivery ? { delivery: beat.delivery } : {} } } : {},
@@ -10836,14 +11004,24 @@ function bindingTarget(content, target) {
   }
   fail2("OLL_REFERENCE_NOT_FOUND", "content.bindings.target", `Canonical binding target '${target}' was not found`);
 }
+function formatBoundNumericLabel(value, format) {
+  if (!Number.isFinite(value) || !Number.isInteger(format.precision) || format.precision < 0 || format.precision > 6) {
+    fail2("OLL_INVALID_BINDING", "binding.label", "Cannot format a non-finite value or invalid precision");
+  }
+  const rounded = Number(value.toFixed(format.precision));
+  return `${format.prefix ?? ""}${Object.is(rounded, -0) ? 0 : rounded}${format.suffix ?? ""}`;
+}
 function evaluateContentBindings(content, variables) {
   const evaluated = structuredClone(content);
   for (const binding of Array.isArray(evaluated.bindings) ? evaluated.bindings : []) {
     const { record: record2, property } = bindingTarget(evaluated, binding.target);
     try {
       record2[property] = evaluateMathExpression(binding.expression, variables);
-      if (property === "radius" && record2[property] <= 0)
-        throw new Error("Bound radius must be greater than zero");
+      if (property === "radius" && (record2[property] < 0 || record2[property] === 0 && binding.allow_zero !== true)) {
+        throw new Error("Bound radius must be positive unless explicitly allowed to degenerate to zero");
+      }
+      if (binding.label)
+        record2.label = formatBoundNumericLabel(record2[property], binding.label);
     } catch (error) {
       const message = error instanceof Error ? error.message : "binding evaluation failed";
       fail2("OLL_BINDING_EVALUATION_FAILED", "content.bindings.expression", message);
@@ -10924,6 +11102,10 @@ function applyCanonicalAction(state, action) {
   } else if (action.op === "teacher.expression") {
     if (!action.expression)
       fail2("OLL_INVALID_EVENT", "action.expression", "teacher.expression requires expression");
+  } else if (action.op === "lesson.phase.start") {
+    if (!action.transition)
+      fail2("OLL_INVALID_EVENT", "action.transition", "Phase start requires transition targets");
+    Object.assign(state, setLessonVariables(state, action.transition.values));
   } else if (action.op === "lesson.variable.animate") {
     if (!action.animation)
       fail2("OLL_INVALID_EVENT", "action.animation", "lesson.variable.animate requires animation");
@@ -10936,14 +11118,19 @@ function applyCanonicalAction(state, action) {
   return true;
 }
 function setLessonVariable(state, alias, value) {
-  const variable = state.variables?.[alias];
-  if (!variable)
-    fail2("OLL_REFERENCE_NOT_FOUND", `variables/${alias}`, `Variable '${alias}' is not defined`);
-  if (!Number.isFinite(value) || value < variable.min || value > variable.max) {
-    fail2("OLL_INVALID_VARIABLE", `variables/${alias}/value`, `Variable '${alias}' must be between ${variable.min} and ${variable.max}`);
-  }
+  return setLessonVariables(state, { [alias]: value });
+}
+function setLessonVariables(state, changes) {
   const updated = structuredClone(state);
-  updated.variables[alias].value = value;
+  for (const [alias, value] of Object.entries(changes)) {
+    const variable = updated.variables?.[alias];
+    if (!variable)
+      fail2("OLL_REFERENCE_NOT_FOUND", `variables/${alias}`, `Variable '${alias}' is not defined`);
+    if (!Number.isFinite(value) || value < variable.min || value > variable.max) {
+      fail2("OLL_INVALID_VARIABLE", `variables/${alias}/value`, `Variable '${alias}' must be between ${variable.min} and ${variable.max}`);
+    }
+    variable.value = value;
+  }
   const values = bindingValues(updated);
   for (const node of Object.values(updated.nodes)) {
     node.content = evaluateContentBindings(node.content, values);
@@ -11412,7 +11599,7 @@ function scaledAngleExpression(variable, scale) {
 }
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_min", "x_max", "y_min", "y_max"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
   const dynamicTokens = input.expression_tokens;
   if (dynamicTokens !== void 0 && !dynamicTokens.some((token) => token.kind === "input")) {
     fail3(
@@ -11502,8 +11689,8 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     title: optionalText(input.title, "\u51FD\u6570\u56FE\u50CF", `${path}.title`),
     axes: {
       ...expressions.length > 1 && expressions.some((e) => e.replace(/[()\s]/g, "") === "x") ? { equal_scale: true } : {},
-      x: { min: viewport.x.min, max: viewport.x.max, label: "x" },
-      y: { min: requestedY.min, max: requestedY.max, label: "y" }
+      x: { min: viewport.x.min, max: viewport.x.max, label: optionalText(input.x_label, "x", `${path}.x_label`) },
+      y: { min: requestedY.min, max: requestedY.max, label: optionalText(input.y_label, "y", `${path}.y_label`) }
     },
     curves: expressions.map((item, index) => ({
       as: index === 0 ? "primary-curve" : `curve-${pad2(index + 1)}`,
@@ -11532,7 +11719,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     });
     if (sampleNumbers.length === 2) plotContent.measurement = "secant";
   }
-  if (!sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
+  if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
     const initialVariables = Object.fromEntries(dynamicNumbers.map((index) => [variableAlias(index), numberDefinition(plan, index, path).initial]));
     const xs = [0, 1];
     const ys = xs.map((x) => {
@@ -11823,7 +12010,7 @@ function compileCubeWithSection(base, content, role, placement, plan, path) {
 }
 function compileFunctionSurface(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "x_min", "x_max", "y_min", "y_max", "samples", "section_axis"], path);
+  allowParameterKeys(input, ["title", "expression", "x_min", "x_max", "y_min", "y_max", "samples", "section_axis", "section_value"], path);
   const expression = safeFunctionExpression(input.expression, "x^2+y^2", ["x", "y"], `${path}.expression`);
   const xMin = optionalNumber(input.x_min, -2, `${path}.x_min`);
   const xMax = optionalNumber(input.x_max, 2, `${path}.x_max`);
@@ -11835,7 +12022,7 @@ function compileFunctionSurface(base, content, role, placement, plan, path) {
   const axis = input.section_axis ?? "z";
   if (axis !== "x" && axis !== "y" && axis !== "z") fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
   const number = content.numbers?.[0];
-  const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 1;
+  const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : optionalNumber(input.section_value, 1, `${path}.section_value`);
   const variable = number ? variableAlias(number) : void 0;
   const sceneContent = {
     title: optionalText(input.title, "\u51FD\u6570\u66F2\u9762\u4E0E\u622A\u9762", `${path}.title`),
@@ -11943,18 +12130,23 @@ function compileImplicitSurface(base, content, role, placement, plan, path) {
 }
 function compileCoordinateCircle(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "center_x", "center_y", "radius"], path);
+  allowParameterKeys(input, ["title", "center_x", "center_y", "radius", "radius_expression"], path);
   const centerX = optionalNumber(input.center_x, 0, `${path}.center_x`);
   const centerY = optionalNumber(input.center_y, 0, `${path}.center_y`);
   const number = content.numbers?.[0];
   const radiusDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
-  const radius = radiusDefinition?.initial ?? optionalNumber(input.radius, 1, `${path}.radius`);
-  if (radius <= 0) fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius`, "radius must be positive");
-  if (radiusDefinition && radiusDefinition.min <= 0) {
+  const formula = input.radius_expression === void 0 ? void 0 : safeFunctionExpression(input.radius_expression, "n1", ["n1"], `${path}.radius_expression`);
+  if (formula && !radiusDefinition) fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius_expression`, "radius_expression requires a shared number");
+  const radiusAt = (value) => formula ? evaluate(formula, ["n1"], { n1: value }, `${path}.radius_expression`) : value;
+  const radius = radiusDefinition ? radiusAt(radiusDefinition.initial) : optionalNumber(input.radius, 1, `${path}.radius`);
+  if (radius < 0 || !formula && radius === 0) fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius`, "radius must be positive");
+  if (!formula && radiusDefinition && radiusDefinition.min <= 0) {
     fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers[0]`, "a bound radius must stay positive");
   }
   const variable = number ? variableAlias(number) : void 0;
-  const maximumRadius = radiusDefinition ? Math.max(Math.abs(radiusDefinition.min), Math.abs(radiusDefinition.max)) : radius;
+  const sampledRadii = radiusDefinition && formula ? Array.from({ length: 201 }, (_, i) => radiusAt(radiusDefinition.min + (radiusDefinition.max - radiusDefinition.min) * i / 200)) : [];
+  if (sampledRadii.some((value) => !Number.isFinite(value) || value < 0)) fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius_expression`, "radius expression has an invalid sampled value");
+  const maximumRadius = formula ? Math.max(radius, ...sampledRadii, 1) : radiusDefinition ? Math.max(Math.abs(radiusDefinition.min), Math.abs(radiusDefinition.max)) : radius;
   const extent = maximumRadius * 1.5;
   const geometry = {
     title: optionalText(input.title, "\u5750\u6807\u7CFB\u4E2D\u7684\u5706", `${path}.title`),
@@ -11965,7 +12157,11 @@ function compileCoordinateCircle(base, content, role, placement, plan, path) {
     },
     points: [{ as: "center", x: centerX, y: centerY, label: `(${centerX}, ${centerY})` }],
     circles: [{ as: "circle", center: "center", radius, label: variable ? "\u534A\u5F84 r" : `r = ${radius}` }],
-    ...variable ? { bindings: [{ target: "circle.radius", expression: variable }] } : {}
+    ...variable ? { bindings: [{
+      target: "circle.radius",
+      expression: formula ? replaceIdentifier(formula, "n1", variable) : variable,
+      ...formula ? { allow_zero: true, label: { prefix: "r = ", precision: 2 } } : {}
+    }] } : {}
   };
   return {
     actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }],
@@ -12447,7 +12643,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
           if (policy.kind === "bounded") {
             intersectProgramRange(definition, policy.min, policy.max);
             constrained.add(numberIndex);
-          } else if (policy.kind === "positive") {
+          } else if (policy.kind === "positive" && !(content.capability === "coordinate_circle" && content.parameters?.radius_expression !== void 0)) {
             positiveProgramRange(definition);
             constrained.add(numberIndex);
           } else if (policy.kind === "positive_integer") {
@@ -12678,6 +12874,7 @@ function compileLessonPlan(value, options = {}) {
       }
       beats.push({
         key: `moment-${pad2(momentIndex)}`,
+        ...moment.restart_numbers?.length ? { start: { kind: "replay", variables: moment.restart_numbers.map(variableAlias) } } : {},
         ...moment.narration ? { say: moment.narration } : {},
         ...moment.delivery ? { delivery: moment.delivery } : {},
         actions
@@ -12694,6 +12891,9 @@ function compileLessonPlan(value, options = {}) {
     });
     if (seenTaskSemantics.has(semanticKey)) return;
     seenTaskSemantics.add(semanticKey);
+    if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
+      task.start = { kind: "practice", variables: task.allowed_operations.flatMap((operation) => operation.kind === "variable_change" ? [operation.variable] : []) };
+    }
     tasks.push(task);
   };
   plan.sections.forEach((section, sectionOffset) => {
@@ -12802,7 +13002,7 @@ function compileLessonPlan(value, options = {}) {
     steps,
     close: { summary: plan.close.summary, focus: closeFocus }
   };
-  return { lesson, resolved };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved };
 }
 function expressionReferencesVariable(expression, variable) {
   if (typeof expression !== "string") return false;
@@ -13042,6 +13242,8 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
   if (modelParameters.has("title")) properties.title = string(240);
   if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
   if (uses("function_plot")) {
+    properties.x_label = string(32);
+    properties.y_label = string(32);
     properties.formulas = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
     properties.curve_label = string(160);
     properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
@@ -13050,10 +13252,12 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
     properties.expression = string(256);
     properties.section_axis = { enum: ["x", "y", "z"] };
   }
+  if (uses("function_surface_with_section")) properties.section_value = { type: "number" };
   if (uses("implicit_surface_with_section")) properties.level = { type: "number" };
   if (modelParameters.has("radius")) properties.radius = { type: "number", minimum: 0 };
   if (uses("circle_and_arc")) properties.angle = { type: "number" };
   if (uses("coordinate_circle")) {
+    properties.radius_expression = string(256);
     properties.center_x = { type: "number" };
     properties.center_y = { type: "number" };
   }
@@ -13460,6 +13664,7 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
       items: object({
         narration: string(),
         delivery: { enum: deliveryNames },
+        ...allowedNumberIndexes.length ? { restart_numbers: { type: "array", minItems: 1, maxItems: 16, items: { enum: allowedNumberIndexes } } } : {},
         ...actionCollections
       }, ["narration", "delivery"])
     },
@@ -13558,6 +13763,7 @@ function completedJsonObjectProperty(source, propertyName) {
 
 // src/lesson-plan-generation.ts
 var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002
+- \u9700\u8981\u540C\u6B65\u5BF9\u7167\u7684\u56FE\u590D\u7528\u540C\u4E00\u5171\u4EAB\u6570\u503C\uFF0C\u5E76\u901A\u8FC7 supporting/comparison \u58F0\u660E\u5173\u8054\uFF1B\u4E0D\u8981\u7528\u4E24\u4E2A\u72EC\u7ACB main \u56FE\u8868\u793A\u540C\u4E00\u8054\u52A8\u5173\u7CFB\u3002
 - visual_recipes \u4E3A [features,numbers,purpose]\u3002course_visuals \u9009\u5176\u4E2D features\uFF0C\u53EA\u5217\u5FC5\u8981\u753B\u9762\uFF1B\u540E\u7EED\u590D\u7528\uFF0C\u786E\u9700\u5E76\u6392\u624D\u5EFA comparison\uFF0Csupporting/comparison \u6307\u5411\u8F83\u65E9\u753B\u9762\u3002
 - \u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002ordered_process_steps \u4EC5\u662F\u9759\u6001\u6D41\u7A0B\u3002
 - numbers \u53EA\u5199\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3001\u8303\u56F4\u548C\u521D\u503C\uFF0C\u987A\u5E8F\u4F9D visual_recipes \u7684 numbers\uFF1B\u63A7\u4EF6\u4E0E\u6B65\u957F\u7531\u7A0B\u5E8F\u751F\u6210\u3002
@@ -13571,7 +13777,9 @@ var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5
 - \u5C0F\u6570\u7528 mantissa/scale\uFF0C\u5982 -1.5\u2192-15/1\u3002
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002
+- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\u3002
+- \u8BFE\u4E2D\u7531\u6559\u5E08\u6F14\u793A\uFF1A\u5199\u201C\u6211\u628A\u9AD8\u5EA6\u4ECE 1 \u8C03\u5230 4\uFF0C\u8BF7\u89C2\u5BDF\u201D\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u5374\u540C\u65F6\u64AD\u653E\u6559\u5E08\u52A8\u753B\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\u3002
+- \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
 - geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF1B\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
 var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D\uFF0C\u5FC5\u987B\u5148\u5B8C\u6210 outline\uFF0C\u518D\u4F9D\u636E\u8FD9\u4E2A outline \u7F16\u5199 first_section\u3002first_section \u53EA\u80FD\u843D\u5B9E outline.sections[0]\uFF1A
@@ -13584,7 +13792,9 @@ var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D
 - \u5C0F\u6570\u7528 mantissa/scale\uFF0C\u5982 -1.5\u2192-15/1\u3002
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002
+- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\u3002
+- \u8BFE\u4E2D\u7531\u6559\u5E08\u6F14\u793A\uFF1A\u5199\u201C\u6211\u628A\u9AD8\u5EA6\u4ECE 1 \u8C03\u5230 4\uFF0C\u8BF7\u89C2\u5BDF\u201D\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u5374\u540C\u65F6\u64AD\u653E\u6559\u5E08\u52A8\u753B\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\u3002
+- \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
 - geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF1B\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002`;
 var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
@@ -14310,7 +14520,7 @@ function sanitizeNonessentialVisuals(outlineValue, draftValues) {
   });
   for (const entry of visualEntries) {
     const incompatible = (entry.content.numbers ?? []).some((number, index) => {
-      const next = visualNumberPurpose(entry.content.capability, index);
+      const next = entry.content.capability === "coordinate_circle" && entry.content.parameters?.radius_expression !== void 0 ? "generic" : visualNumberPurpose(entry.content.capability, index);
       const current = establishedPurposes.get(number);
       if (!current || compatibleVisualNumberPurpose(current, next)) {
         if (!current || current === "generic") establishedPurposes.set(number, next);
@@ -15020,7 +15230,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
     }
   }
   const createdCourseVisuals = /* @__PURE__ */ new Set();
-  const momentKeys = /* @__PURE__ */ new Set(["narration", "delivery", ...Object.keys(modelActionCollections)]);
+  const momentKeys = /* @__PURE__ */ new Set(["narration", "delivery", "restart_numbers", ...Object.keys(modelActionCollections)]);
   const moments = candidate.moments.map((momentValue, momentIndex) => {
     const path = `$lessonPlanModelSection.moments[${momentIndex}]`;
     if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) {
@@ -15123,6 +15333,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
     }
     return {
       narration: moment.narration,
+      ...moment.restart_numbers !== void 0 ? { restart_numbers: moment.restart_numbers } : {},
       delivery: moment.delivery,
       actions: ordered.map((item) => item.action)
     };
@@ -15394,7 +15605,7 @@ function inputContext(input) {
 }
 function compactModelContext(context) {
   return Object.fromEntries(
-    Object.entries(context).filter(([key, value]) => key !== "learner_request" && key !== "input_modality" && value !== null && value !== void 0)
+    Object.entries(context).filter(([key, value]) => key !== "input_modality" && value !== null && value !== void 0)
   );
 }
 var requestSentenceBoundary = /(?:\r?\n+|[。！？!?；;]+)/u;
@@ -15423,7 +15634,7 @@ function executableNumberIndexesForSection(outline, drafts, sectionNumber) {
   if (courseVisuals.some((visual) => visual.create_section === sectionNumber)) return all;
   const indexes = /* @__PURE__ */ new Set();
   for (const visual of courseVisuals) {
-    if (!visual.use_sections.includes(sectionNumber) || visual.create_section >= sectionNumber) continue;
+    if (visual.create_section >= sectionNumber) continue;
     const source = drafts[visual.create_section - 1];
     for (const moment of source?.moments ?? []) {
       for (const action of moment.actions) {
@@ -15511,7 +15722,7 @@ function compilePrefix(outline, drafts, options) {
   };
   const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
-  return compileAndValidateLessonPlan(prefixPlan, options);
+  return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
 function canFallBackFromBootstrap(error) {
   if (error instanceof LessonPlanError) return true;
@@ -15946,7 +16157,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     try {
       const normalized = normalizeExecutableNumberInteractions(outline, drafts);
       const plan = assembleLessonPlan(normalized.outline, normalized.drafts, options.compile);
-      compiled = compileAndValidateLessonPlan(plan, options.compile);
+      compiled = compileAndValidateLessonPlan(plan, { ...options.compile, construction_rules: "explicit-v1" });
       compiledOutline = normalized.outline;
       compiledDrafts = normalized.drafts;
       programAdjustments = normalized.adjustments;
