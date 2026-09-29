@@ -271,6 +271,29 @@ function place(
   };
 }
 
+const SPEECH_PHASE_ORDER = { before_speech: 0, during_speech: 1, after_speech: 2 } as const;
+
+/**
+ * A focus declared after the moment has written a formula or note must frame
+ * that card too: the narration is about what was just written, and a focus
+ * naming only the diagram left the new card outside the camera on small
+ * displays. Deterministic and local to one moment; no model round trip.
+ */
+export function includeWrittenCardsInFocus(actions: AuthoringAction[]): void {
+  const phase = (action: AuthoringAction) =>
+    SPEECH_PHASE_ORDER[((action as { when?: keyof typeof SPEECH_PHASE_ORDER }).when) ?? "during_speech"] ?? 1;
+  actions.forEach((action, index) => {
+    if (action.do !== "focus") return;
+    const focus = action as AuthoringAction & { targets: string[] };
+    for (const earlier of actions.slice(0, index)) {
+      const write = earlier as AuthoringAction & { as?: string; kind?: string };
+      if (write.do !== "write" || !write.as || !["math", "note", "text"].includes(String(write.kind))) continue;
+      if (phase(write) > phase(action) || focus.targets.includes(write.as)) continue;
+      focus.targets.push(write.as);
+    }
+  });
+}
+
 function actionWhen(timing: unknown): { when?: "before_speech" | "during_speech" | "after_speech" } {
   return timing ? { when: timing as "before_speech" | "during_speech" | "after_speech" } : {};
 }
@@ -1701,6 +1724,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       if (actions.length === 0) {
         fail("LESSON_PLAN_COMPILER_EMPTY_BEAT", `${momentPath}.actions`, "OLL requires at least one action per moment");
       }
+      includeWrittenCardsInFocus(actions);
       beats.push({
         key: `moment-${pad(momentIndex)}`,
         ...(moment.restart_numbers?.length ? { start: { kind: "replay" as const, variables: moment.restart_numbers.map(variableAlias) } } : {}),

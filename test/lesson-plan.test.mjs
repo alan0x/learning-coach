@@ -32,6 +32,7 @@ const {
   buildLessonPlanSectionDraftJsonSchema,
   compileAndValidateLessonPlan,
   deriveLessonRequestParts,
+  includeWrittenCardsInFocus,
   generateLessonPlanWithModel,
   matchLessonPlanCapability,
   resolveLessonPlan,
@@ -4523,4 +4524,24 @@ test("new construction supplies opening context without advancing delayed visual
   assert.deepEqual(first.actions.slice(1), legacy.steps[0].beats[0].actions);
   assert.deepEqual(preserved.steps[0].beats[0].actions, legacy.steps[0].beats[0].actions);
   assert.equal(first.say, legacy.steps[0].beats[0].say);
+});
+
+test("a focus frames the formulas and notes its moment wrote before it", () => {
+  const actions = [
+    { do: "write", as: "formula", kind: "math", when: "during_speech" },
+    { do: "write", as: "later-note", kind: "note", when: "after_speech" },
+    { do: "write", as: "diagram-card", kind: "plot", when: "during_speech" },
+    { do: "focus", targets: ["circle"], when: "during_speech" },
+    { do: "write", as: "after-focus", kind: "note", when: "during_speech" },
+  ];
+  includeWrittenCardsInFocus(actions);
+  // The formula written before the focus joins it; a card written later in
+  // the moment, or after speech, and non-text kinds are left alone.
+  assert.deepEqual(actions[3].targets, ["circle", "formula"]);
+  const repeated = [
+    { do: "write", as: "formula", kind: "math" },
+    { do: "focus", targets: ["formula", "circle"] },
+  ];
+  includeWrittenCardsInFocus(repeated);
+  assert.deepEqual(repeated[1].targets, ["formula", "circle"]);
 });

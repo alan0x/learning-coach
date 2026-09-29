@@ -138,7 +138,7 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
 - function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置。
-- 课中由教师演示：写“我把高度从 1 调到 4，请观察”，不写“请你调到 4”却同时播放教师动画；学生操作留给课后 number_activities。
+- 课中由教师演示：写“我把高度从 1 调到 4，请观察”并配动画；课中学生无法操作，不写“请你调到 4”“请你拖动滑块”；学生操作留给课后 number_activities，邀请只放在最后一个 moment。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 仅用于指定多边形证明；圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
 只返回符合响应 Schema 的 JSON。`;
@@ -154,7 +154,7 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
 - function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置。
-- 课中由教师演示：写“我把高度从 1 调到 4，请观察”，不写“请你调到 4”却同时播放教师动画；学生操作留给课后 number_activities。
+- 课中由教师演示：写“我把高度从 1 调到 4，请观察”并配动画；课中学生无法操作，不写“请你调到 4”“请你拖动滑块”；学生操作留给课后 number_activities，邀请只放在最后一个 moment。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 仅用于指定多边形证明；圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
 
