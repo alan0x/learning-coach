@@ -31,6 +31,7 @@ const {
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
   compileAndValidateLessonPlan,
+  compileLessonPlan,
   deriveLessonRequestParts,
   includeWrittenCardsInFocus,
   generateLessonPlanWithModel,
@@ -4544,4 +4545,26 @@ test("a focus frames the formulas and notes its moment wrote before it", () => {
   ];
   includeWrittenCardsInFocus(repeated);
   assert.deepEqual(repeated[1].targets, ["formula", "circle"]);
+});
+
+test("a thinking question compiles to an after-lesson reflection anchored to its card", () => {
+  const plan = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
+  plan.sections[1].student_activities = [{
+    kind: "reflection",
+    prompt: "当 θ 增大到 π 时，sin θ 会怎样变化？",
+    answer: "从 1 减小到 0。",
+    reference: { source: "local_board_item", moment: 1, item: 2 },
+  }];
+  const { lesson } = compileLessonPlan(plan);
+  assert.deepEqual(lesson.lesson.reflections, [{
+    as: "section-02-reflection-01",
+    prompt: "当 θ 增大到 π 时，sin θ 会怎样变化？",
+    answer: "从 1 减小到 0。",
+    anchor: "section-02-moment-01-item-02",
+    availability: { kind: "after_lesson" },
+  }]);
+  assert.equal(lesson.lesson.tasks?.some((task) => task.prompt.includes("sin θ 会怎样")) ?? false, false,
+    "a thinking question is not a practice task");
+  const validated = compileAndValidateLessonPlan(plan);
+  assert.equal(validated.lesson.lesson.reflections?.length, 1, "the pinned OLL validator accepts the reflection");
 });

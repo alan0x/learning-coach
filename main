@@ -7226,6 +7226,12 @@ var v0_1_schema_default = {
           maxItems: 16,
           items: { $ref: "#/$defs/studentTask" }
         },
+        reflections: {
+          type: "array",
+          minItems: 1,
+          maxItems: 8,
+          items: { $ref: "#/$defs/reflection" }
+        },
         adaptation: {
           type: "object",
           properties: {
@@ -7277,6 +7283,23 @@ var v0_1_schema_default = {
               target_id: { type: "string", minLength: 1 }
             }
           }
+        }
+      }
+    },
+    reflection: {
+      type: "object",
+      required: ["as", "prompt", "answer", "anchor", "availability"],
+      additionalProperties: false,
+      properties: {
+        as: { $ref: "#/$defs/alias" },
+        prompt: { type: "string", minLength: 1, maxLength: 480 },
+        answer: { type: "string", minLength: 1, maxLength: 960 },
+        anchor: { $ref: "#/$defs/alias" },
+        availability: {
+          type: "object",
+          required: ["kind"],
+          additionalProperties: false,
+          properties: { kind: { const: "after_lesson" } }
         }
       }
     },
@@ -8103,7 +8126,8 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "action:lesson.phase.start": "0.2.0",
   "practice-start": "0.2.0",
   "student-tasks:expression_target": "0.1.0",
-  "student-tasks:scene3d_view_target": "0.1.0"
+  "student-tasks:scene3d_view_target": "0.1.0",
+  "reflections": "0.3.0"
 });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js

@@ -1737,6 +1737,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   });
 
   const tasks: NonNullable<AuthoringLesson["lesson"]["tasks"]> = [];
+  const reflections: NonNullable<AuthoringLesson["lesson"]["reflections"]> = [];
   const seenTaskSemantics = new Set<string>();
   const addTask = (task: NonNullable<AuthoringLesson["lesson"]["tasks"]>[number]): void => {
     const semanticKey = JSON.stringify({
@@ -1755,6 +1756,17 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     const sectionPath = `$lessonPlan.sections[${sectionOffset}]`;
     section.student_activities?.forEach((activity, activityOffset) => {
       const activityPath = `${sectionPath}.student_activities[${activityOffset}]`;
+      if (activity.kind === "reflection") {
+        const anchor = resolvedReference(`${activityPath}.reference`);
+        reflections.push({
+          as: `section-${pad(sectionOffset + 1)}-reflection-${pad(activityOffset + 1)}`,
+          prompt: activity.prompt,
+          answer: activity.answer,
+          anchor: wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias,
+          availability: { kind: "after_lesson" },
+        });
+        return;
+      }
       const common = {
         as: `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`,
         prompt: activity.prompt,
@@ -1848,6 +1860,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         })),
       } : {}),
       ...(tasks.length ? { tasks } : {}),
+      ...(reflections.length ? { reflections } : {}),
     },
     steps,
     close: { summary: plan.close.summary, focus: closeFocus },

@@ -8003,6 +8003,14 @@ function resolveLessonPlan(value, options = {}) {
     activities.forEach((entry, index) => {
       const activityPath = `${path}.student_activities[${index}]`;
       const activity = record(entry, activityPath);
+      if (activity.kind === "reflection") {
+        allowedKeys(activity, ["kind", "prompt", "answer", "reference"], activityPath);
+        nonEmptyString(activity.prompt, `${activityPath}.prompt`, 480);
+        nonEmptyString(activity.answer, `${activityPath}.answer`, 960);
+        const target = resolveReference(activity.reference, `${activityPath}.reference`, sectionIndex, rawMoments.length);
+        if (target.kind !== "board_item") fail("LESSON_PLAN_ACTIVITY", `${activityPath}.reference`, "a thinking question must sit by a board card");
+        return;
+      }
       if (activity.kind === "number_target") {
         allowedKeys(activity, [
           "kind",
@@ -8540,6 +8548,12 @@ var v0_1_schema_default = {
           maxItems: 16,
           items: { $ref: "#/$defs/studentTask" }
         },
+        reflections: {
+          type: "array",
+          minItems: 1,
+          maxItems: 8,
+          items: { $ref: "#/$defs/reflection" }
+        },
         adaptation: {
           type: "object",
           properties: {
@@ -8591,6 +8605,23 @@ var v0_1_schema_default = {
               target_id: { type: "string", minLength: 1 }
             }
           }
+        }
+      }
+    },
+    reflection: {
+      type: "object",
+      required: ["as", "prompt", "answer", "anchor", "availability"],
+      additionalProperties: false,
+      properties: {
+        as: { $ref: "#/$defs/alias" },
+        prompt: { type: "string", minLength: 1, maxLength: 480 },
+        answer: { type: "string", minLength: 1, maxLength: 960 },
+        anchor: { $ref: "#/$defs/alias" },
+        availability: {
+          type: "object",
+          required: ["kind"],
+          additionalProperties: false,
+          properties: { kind: { const: "after_lesson" } }
         }
       }
     },
@@ -9433,7 +9464,8 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "action:lesson.phase.start": "0.2.0",
   "practice-start": "0.2.0",
   "student-tasks:expression_target": "0.1.0",
-  "student-tasks:scene3d_view_target": "0.1.0"
+  "student-tasks:scene3d_view_target": "0.1.0",
+  "reflections": "0.3.0"
 });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/opening.js
@@ -9700,6 +9732,33 @@ function resolvePhaseStart(policy, variables, path) {
     }
     return [alias, value];
   }));
+}
+function validateReflections(document, registry) {
+  const reflections = document.lesson.reflections;
+  if (reflections === void 0)
+    return;
+  requireArray(reflections, "/lesson/reflections");
+  const taskAliases = new Set((document.lesson.tasks ?? []).map((task) => task.as));
+  const aliases = /* @__PURE__ */ new Set();
+  reflections.forEach((reflection, index) => {
+    const path = `/lesson/reflections/${index}`;
+    requireObject(reflection, path);
+    requireAlias(reflection.as, `${path}/as`);
+    if (aliases.has(reflection.as) || taskAliases.has(reflection.as)) {
+      fail2("OLL_DUPLICATE_ALIAS", `${path}/as`, `Reflection '${reflection.as}' is duplicated`);
+    }
+    aliases.add(reflection.as);
+    for (const field of ["prompt", "answer"]) {
+      if (typeof reflection[field] !== "string" || !reflection[field].trim()) {
+        fail2("OLL_INVALID_REFLECTION", `${path}/${field}`, `Reflection ${field} must not be empty`);
+      }
+    }
+    requireObject(reflection.availability, `${path}/availability`);
+    if (reflection.availability.kind !== "after_lesson") {
+      fail2("OLL_INVALID_REFLECTION", `${path}/availability/kind`, `Unsupported reflection availability '${String(reflection.availability.kind)}'`);
+    }
+    resolveLocal(registry, reflection.anchor, `${path}/anchor`, ["node"]);
+  });
 }
 function validateStudentTasks(document, variables, availableControls, scene3dCameras) {
   const taskAliases = /* @__PURE__ */ new Set();
@@ -10626,6 +10685,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
     });
   });
   validateStudentTasks(document, lessonVariables, availableStudentControls, scene3dCameras);
+  validateReflections(document, registry);
   if (document.close?.focus) {
     for (let index = 0; index < document.close.focus.length; index += 1) {
       resolveLocal(registry, document.close.focus[index], `/close/focus/${index}`, ["node", "group", "connection"]);
@@ -10871,6 +10931,9 @@ function normalizeAuthoringLesson(document, host) {
   }
   const registry = buildCanonicalRegistry(document, host);
   const canonicalLesson = structuredClone(document.lesson);
+  for (const reflection of canonicalLesson.reflections ?? []) {
+    reflection.anchor = requireRegistryId(registry, reflection.anchor);
+  }
   for (const candidate of canonicalLesson.tasks ?? []) {
     if (candidate.start)
       candidate.start.values = resolvePhaseStart(candidate.start, document.lesson.variables ?? [], `/lesson/tasks/${candidate.as}/start`);
@@ -12898,6 +12961,7 @@ function compileLessonPlan(value, options = {}) {
     steps.push({ key: `section-${pad2(sectionIndex)}`, purpose: section.purpose, beats });
   });
   const tasks = [];
+  const reflections = [];
   const seenTaskSemantics = /* @__PURE__ */ new Set();
   const addTask = (task) => {
     const semanticKey = JSON.stringify({
@@ -12915,6 +12979,17 @@ function compileLessonPlan(value, options = {}) {
     const sectionPath = `$lessonPlan.sections[${sectionOffset}]`;
     section.student_activities?.forEach((activity, activityOffset) => {
       const activityPath = `${sectionPath}.student_activities[${activityOffset}]`;
+      if (activity.kind === "reflection") {
+        const anchor = resolvedReference(`${activityPath}.reference`);
+        reflections.push({
+          as: `section-${pad2(sectionOffset + 1)}-reflection-${pad2(activityOffset + 1)}`,
+          prompt: activity.prompt,
+          answer: activity.answer,
+          anchor: wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias,
+          availability: { kind: "after_lesson" }
+        });
+        return;
+      }
       const common = {
         as: `section-${pad2(sectionOffset + 1)}-task-${pad2(activityOffset + 1)}`,
         prompt: activity.prompt,
@@ -13012,7 +13087,8 @@ function compileLessonPlan(value, options = {}) {
           } : {}
         }))
       } : {},
-      ...tasks.length ? { tasks } : {}
+      ...tasks.length ? { tasks } : {},
+      ...reflections.length ? { reflections } : {}
     },
     steps,
     close: { summary: plan.close.summary, focus: closeFocus }
@@ -13656,6 +13732,15 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
   const sectionVisualCapabilities = (outline.course_visuals ?? []).filter((visual) => visual.use_sections.includes(sectionIndex)).map((visual) => visual.capability);
   const supportsScene3dActivity = [...allowedCapabilities, ...sectionVisualCapabilities].some((capability2) => LESSON_PLAN_CAPABILITY_REGISTRY[capability2].output_kinds.includes("scene3d"));
   const activityProperties = {
+    // Thinking questions close later sections; the bootstrap request that
+    // produces the first playable section stays as small as before.
+    ...bootstrapPermissive ? {} : {
+      reflection_activities: {
+        type: "array",
+        maxItems: 2,
+        items: object({ prompt: string(), answer: string() }, ["prompt", "answer"])
+      }
+    },
     ...supportsNumberActivity ? {
       number_activities: {
         type: "array",
@@ -13793,7 +13878,8 @@ var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\u3002
-- \u8BFE\u4E2D\u7531\u6559\u5E08\u6F14\u793A\uFF1A\u5199\u201C\u6211\u628A\u9AD8\u5EA6\u4ECE 1 \u8C03\u5230 4\uFF0C\u8BF7\u89C2\u5BDF\u201D\u5E76\u914D\u52A8\u753B\uFF1B\u8BFE\u4E2D\u5B66\u751F\u65E0\u6CD5\u64CD\u4F5C\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u6ED1\u5757\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u5728\u6700\u540E\u4E00\u4E2A moment\u3002
+- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002
+- \u601D\u8003\u9898\u8BFE\u4E2D\u53EA\u95EE\u4E0D\u7B54\uFF1B\u9898\u4E0E\u53C2\u8003\u7B54\u6848\u5199\u5165 reflection_activities\uFF0C\u8BFE\u540E\u4EE5\u6536\u8D77\u7684\u7B54\u6848\u5361\u7247\u51FA\u73B0\u3002
 - \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
 - geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF1B\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
@@ -13808,7 +13894,7 @@ var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\u3002
-- \u8BFE\u4E2D\u7531\u6559\u5E08\u6F14\u793A\uFF1A\u5199\u201C\u6211\u628A\u9AD8\u5EA6\u4ECE 1 \u8C03\u5230 4\uFF0C\u8BF7\u89C2\u5BDF\u201D\u5E76\u914D\u52A8\u753B\uFF1B\u8BFE\u4E2D\u5B66\u751F\u65E0\u6CD5\u64CD\u4F5C\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u6ED1\u5757\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u5728\u6700\u540E\u4E00\u4E2A moment\u3002
+- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002
 - \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
 - geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF1B\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002`;
 var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
@@ -14748,7 +14834,7 @@ function sanitizeNonessentialVisuals(outlineValue, draftValues) {
     }
     if (section.student_activities) {
       section.student_activities = section.student_activities.flatMap((activity) => {
-        if (activity.kind !== "scene3d_view") return [activity];
+        if (activity.kind !== "scene3d_view" && activity.kind !== "reflection") return [activity];
         const reference = normalizeReference(activity.reference, sectionNumber);
         return reference ? [{ ...activity, reference }] : [];
       });
@@ -15117,7 +15203,8 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
     "course_visual_creates",
     "reusable_board_creates",
     "number_activities",
-    "scene3d_activities"
+    "scene3d_activities",
+    "reflection_activities"
   ]);
   for (const key of Object.keys(candidate)) {
     if (!allowedRoot.has(key)) throw new LessonPlanError("LESSON_PLAN_UNKNOWN_FIELD", `$lessonPlanModelSection.${key}`, "unknown field");
@@ -15133,6 +15220,9 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
   }
   if (candidate.scene3d_activities !== void 0 && !Array.isArray(candidate.scene3d_activities)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.scene3d_activities", "expected an array");
+  }
+  if (candidate.reflection_activities !== void 0 && !Array.isArray(candidate.reflection_activities)) {
+    throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.reflection_activities", "expected an array");
   }
   const courseVisuals = outline.course_visuals ?? [];
   const courseVisualsToCreate = courseVisuals.map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === expectedSection);
@@ -15380,6 +15470,26 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
   };
   collectActivities(candidate.number_activities ?? [], "number_target", "$lessonPlanModelSection.number_activities");
   collectActivities(candidate.scene3d_activities ?? [], "scene3d_view", "$lessonPlanModelSection.scene3d_activities");
+  let questionCard;
+  moments.forEach((moment, momentOffset) => {
+    let item = 0;
+    for (const action of moment.actions ?? []) {
+      if (action.action !== "create") continue;
+      item += 1;
+      if (action.kind === "note" || action.kind === "math") {
+        questionCard = { source: "local_board_item", moment: momentOffset + 1, item };
+      }
+    }
+  });
+  (candidate.reflection_activities ?? []).forEach((value2, index) => {
+    const itemPath = `$lessonPlanModelSection.reflection_activities[${index}]`;
+    if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) {
+      throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", itemPath, "expected an object");
+    }
+    const { prompt, answer } = value2;
+    if (!questionCard) return;
+    activities.push({ order: activities.length + 1, activity: { kind: "reflection", prompt, answer, reference: structuredClone(questionCard) } });
+  });
   activities.sort((left, right) => left.order - right.order);
   let latestBoardReference;
   let latestVisualReference;

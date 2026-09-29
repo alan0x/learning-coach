@@ -414,6 +414,14 @@ export interface LessonPlanReusableItem {
 
 export type LessonPlanStudentActivity =
   | {
+    /** A thinking question: asked in class, answered after the lesson in a collapsed card. */
+    kind: "reflection";
+    prompt: string;
+    answer: string;
+    /** The board card that poses the question; the card opens under it. */
+    reference: LessonPlanReference;
+  }
+  | {
     kind: "number_target";
     prompt: string;
     number_controls: Array<{
@@ -1200,6 +1208,14 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
     activities.forEach((entry, index) => {
       const activityPath = `${path}.student_activities[${index}]`;
       const activity = record(entry, activityPath);
+      if (activity.kind === "reflection") {
+        allowedKeys(activity, ["kind", "prompt", "answer", "reference"], activityPath);
+        nonEmptyString(activity.prompt, `${activityPath}.prompt`, 480);
+        nonEmptyString(activity.answer, `${activityPath}.answer`, 960);
+        const target = resolveReference(activity.reference, `${activityPath}.reference`, sectionIndex, rawMoments.length);
+        if (target.kind !== "board_item") fail("LESSON_PLAN_ACTIVITY", `${activityPath}.reference`, "a thinking question must sit by a board card");
+        return;
+      }
       if (activity.kind === "number_target") {
         allowedKeys(activity, [
           "kind", "prompt", "number_controls", "expression", "value", "tolerance",

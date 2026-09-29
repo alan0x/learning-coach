@@ -138,7 +138,8 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
 - function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置。
-- 课中由教师演示：写“我把高度从 1 调到 4，请观察”并配动画；课中学生无法操作，不写“请你调到 4”“请你拖动滑块”；学生操作留给课后 number_activities，邀请只放在最后一个 moment。
+- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。
+- 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 仅用于指定多边形证明；圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
 只返回符合响应 Schema 的 JSON。`;
@@ -154,7 +155,7 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
 - function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置。
-- 课中由教师演示：写“我把高度从 1 调到 4，请观察”并配动画；课中学生无法操作，不写“请你调到 4”“请你拖动滑块”；学生操作留给课后 number_activities，邀请只放在最后一个 moment。
+- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 仅用于指定多边形证明；圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
 
@@ -1347,7 +1348,7 @@ function sanitizeNonessentialVisuals(
     }
     if (section.student_activities) {
       section.student_activities = section.student_activities.flatMap((activity) => {
-        if (activity.kind !== "scene3d_view") return [activity];
+        if (activity.kind !== "scene3d_view" && activity.kind !== "reflection") return [activity];
         const reference = normalizeReference(activity.reference, sectionNumber);
         return reference ? [{ ...activity, reference }] : [];
       });
@@ -1835,7 +1836,7 @@ function lowerModelSectionDraft(
   const candidate = root as Record<string, unknown>;
   const allowedRoot = new Set([
     "version", "section", "moments", "course_visual_creates", "reusable_board_creates",
-    "number_activities", "scene3d_activities",
+    "number_activities", "scene3d_activities", "reflection_activities",
   ]);
   for (const key of Object.keys(candidate)) {
     if (!allowedRoot.has(key)) throw new LessonPlanError("LESSON_PLAN_UNKNOWN_FIELD", `$lessonPlanModelSection.${key}`, "unknown field");
@@ -1851,6 +1852,9 @@ function lowerModelSectionDraft(
   }
   if (candidate.scene3d_activities !== undefined && !Array.isArray(candidate.scene3d_activities)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.scene3d_activities", "expected an array");
+  }
+  if (candidate.reflection_activities !== undefined && !Array.isArray(candidate.reflection_activities)) {
+    throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.reflection_activities", "expected an array");
   }
   const courseVisuals = outline.course_visuals ?? [];
   const courseVisualsToCreate = courseVisuals
@@ -2124,6 +2128,28 @@ function lowerModelSectionDraft(
   };
   collectActivities(candidate.number_activities ?? [], "number_target", "$lessonPlanModelSection.number_activities");
   collectActivities(candidate.scene3d_activities ?? [], "scene3d_view", "$lessonPlanModelSection.scene3d_activities");
+  // A thinking question sits by the last formula or note this section wrote
+  // (the program chooses the card; the model writes only question and answer).
+  let questionCard: Record<string, unknown> | undefined;
+  (moments as Array<{ actions?: Array<Record<string, unknown>> }>).forEach((moment, momentOffset) => {
+    let item = 0;
+    for (const action of moment.actions ?? []) {
+      if (action.action !== "create") continue;
+      item += 1;
+      if (action.kind === "note" || action.kind === "math") {
+        questionCard = { source: "local_board_item", moment: momentOffset + 1, item };
+      }
+    }
+  });
+  (candidate.reflection_activities as unknown[] | undefined ?? []).forEach((value, index) => {
+    const itemPath = `$lessonPlanModelSection.reflection_activities[${index}]`;
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", itemPath, "expected an object");
+    }
+    const { prompt, answer } = value as Record<string, unknown>;
+    if (!questionCard) return;
+    activities.push({ order: activities.length + 1, activity: { kind: "reflection", prompt, answer, reference: structuredClone(questionCard) } });
+  });
   activities.sort((left, right) => left.order - right.order);
   let latestBoardReference: Record<string, unknown> | undefined;
   let latestVisualReference: Record<string, unknown> | undefined;

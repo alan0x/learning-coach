@@ -681,6 +681,15 @@ function lessonPlanSectionDraftShapeJsonSchema(
     LESSON_PLAN_CAPABILITY_REGISTRY[capability].output_kinds.includes("scene3d" as never)
   ));
   const activityProperties: Record<string, unknown> = {
+    // Thinking questions close later sections; the bootstrap request that
+    // produces the first playable section stays as small as before.
+    ...(bootstrapPermissive ? {} : {
+      reflection_activities: {
+        type: "array",
+        maxItems: 2,
+        items: object({ prompt: string(), answer: string() }, ["prompt", "answer"]),
+      },
+    }),
     ...(supportsNumberActivity ? {
       number_activities: {
         type: "array",
