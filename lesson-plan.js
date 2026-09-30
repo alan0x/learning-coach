@@ -9138,6 +9138,7 @@ var v0_1_schema_default = {
         target: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$" },
         expression: { type: "string", minLength: 1, maxLength: 256 },
         allow_zero: { const: true },
+        hide_when_undefined: { const: true },
         label: {
           type: "object",
           required: ["precision"],
@@ -9465,7 +9466,8 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "practice-start": "0.2.0",
   "student-tasks:expression_target": "0.1.0",
   "student-tasks:scene3d_view_target": "0.1.0",
-  "reflections": "0.3.0"
+  "reflections": "0.3.0",
+  "binding-hide-undefined": "0.3.0"
 });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/opening.js
@@ -9934,12 +9936,15 @@ function validateValueBindings(action, path, variables) {
     const bindingPath = `${path}/content/bindings/${index}`;
     requireObject(binding, bindingPath);
     for (const field of Object.keys(binding)) {
-      if (!["target", "expression", "label", "allow_zero"].includes(field))
+      if (!["target", "expression", "label", "allow_zero", "hide_when_undefined"].includes(field))
         fail2("OLL_INVALID_BINDING", `${bindingPath}/${field}`, `Unknown binding field '${field}'`);
     }
     const { alias, property } = splitBindingTarget(binding.target, `${bindingPath}/target`);
     if (!targets.get(alias)?.has(property)) {
       fail2("OLL_REFERENCE_NOT_FOUND", `${bindingPath}/target`, `Binding target '${binding.target}' is not a supported numeric field`);
+    }
+    if (binding.hide_when_undefined !== void 0 && (binding.hide_when_undefined !== true || action.kind !== "plot" && action.kind !== "geometry" || !["x", "y"].includes(property))) {
+      fail2("OLL_INVALID_BINDING", `${bindingPath}/hide_when_undefined`, "hide_when_undefined is only valid on point x/y bindings and must be true");
     }
     if (binding.allow_zero !== void 0 && (binding.allow_zero !== true || property !== "radius")) {
       fail2("OLL_INVALID_BINDING", `${bindingPath}/allow_zero`, "allow_zero is only valid on radius bindings and must be true");
@@ -10745,7 +10750,8 @@ function normalizeAddressableContent(_host, nodeId, content) {
         target: `${nodeId}:fragment:${alias}.${property}`,
         expression: binding.expression,
         ...binding.label !== void 0 ? { label: structuredClone(binding.label) } : {},
-        ...binding.allow_zero === true ? { allow_zero: true } : {}
+        ...binding.allow_zero === true ? { allow_zero: true } : {},
+        ...binding.hide_when_undefined === true ? { hide_when_undefined: true } : {}
       };
     });
   }
@@ -11077,7 +11083,23 @@ function formatBoundNumericLabel(value, format) {
 function evaluateContentBindings(content, variables) {
   const evaluated = structuredClone(content);
   for (const binding of Array.isArray(evaluated.bindings) ? evaluated.bindings : []) {
+    if (binding.hide_when_undefined === true)
+      delete bindingTarget(evaluated, binding.target).record.binding_undefined;
+  }
+  for (const binding of Array.isArray(evaluated.bindings) ? evaluated.bindings : []) {
     const { record: record2, property } = bindingTarget(evaluated, binding.target);
+    if (binding.hide_when_undefined === true) {
+      let value;
+      try {
+        value = evaluateMathExpression(binding.expression, variables);
+      } catch {
+        value = void 0;
+      }
+      if (value === void 0 || !Number.isFinite(value)) {
+        record2.binding_undefined = true;
+        continue;
+      }
+    }
     try {
       record2[property] = evaluateMathExpression(binding.expression, variables);
       if (property === "radius" && (record2[property] < 0 || record2[property] === 0 && binding.allow_zero !== true)) {

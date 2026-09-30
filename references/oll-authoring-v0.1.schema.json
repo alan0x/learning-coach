@@ -632,6 +632,7 @@
         "target": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$"},
         "expression": {"type": "string", "minLength": 1, "maxLength": 256},
         "allow_zero": {"const": true},
+        "hide_when_undefined": {"const": true},
         "label": {
           "type": "object", "required": ["precision"], "additionalProperties": false,
           "properties": {

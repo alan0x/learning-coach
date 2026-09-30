@@ -7816,6 +7816,7 @@ var v0_1_schema_default = {
         target: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*$" },
         expression: { type: "string", minLength: 1, maxLength: 256 },
         allow_zero: { const: true },
+        hide_when_undefined: { const: true },
         label: {
           type: "object",
           required: ["precision"],
@@ -8127,7 +8128,8 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "practice-start": "0.2.0",
   "student-tasks:expression_target": "0.1.0",
   "student-tasks:scene3d_view_target": "0.1.0",
-  "reflections": "0.3.0"
+  "reflections": "0.3.0",
+  "binding-hide-undefined": "0.3.0"
 });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
