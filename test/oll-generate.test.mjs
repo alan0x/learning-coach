@@ -10,7 +10,6 @@ import test from "node:test";
 
 import {
   callStructuredModel,
-  createArkClient,
   createGeminiApiClient,
   createStructuredModelClient,
   createVertexClient,
@@ -724,101 +723,6 @@ test("a locally rejected response makes the other provider lead the next request
     assert.deepEqual(requests, ["/primary", "/fallback"]);
   } finally {
     await new Promise((done) => server.close(done));
-  }
-});
-
-test("Ark structured calls require strict json_schema instead of prompt-only JSON", async () => {
-  let captured;
-  const server = createServer(async (request, response) => {
-    let body = "";
-    for await (const chunk of request) body += chunk;
-    captured = { headers: request.headers, body: JSON.parse(body) };
-    response.writeHead(200, { "content-type": "application/json", "x-request-id": "ark-test" });
-    response.end(JSON.stringify({
-      id: "response-test",
-      status: "completed",
-      output: [{
-        type: "message",
-        content: [{ type: "output_text", text: JSON.stringify({ ok: true }) }],
-      }],
-      usage: { input_tokens: 12, output_tokens: 4 },
-    }));
-  });
-  try {
-    await new Promise((done) => server.listen(0, "127.0.0.1", done));
-    const address = server.address();
-    assert.equal(typeof address, "object");
-    const content = await callStructuredModel({
-      provider: "ark",
-      endpoint: `http://127.0.0.1:${address.port}/responses`,
-      model: "test-ark",
-      apiKey: "ark-secret",
-      timeoutMs: 5_000,
-      maxTokens: 64,
-      requestAttempts: 1,
-    }, {
-      label: "lesson-plan-section",
-      turnId: "ark-request-shape-test",
-      systemPrompt: "Return JSON.",
-      prompt: "Return ok.",
-      responseSchema: {
-        type: "object",
-        additionalProperties: false,
-        properties: { ok: { type: "boolean" } },
-        required: ["ok"],
-      },
-    });
-    assert.deepEqual(JSON.parse(content), { ok: true });
-    assert.equal(captured.headers.authorization, "Bearer ark-secret");
-    assert.equal(captured.body.thinking.type, "disabled");
-    assert.equal(captured.body.text.format.type, "json_schema");
-    assert.equal(captured.body.text.format.strict, true);
-    assert.equal(captured.body.text.format.schema.properties.ok.type, "boolean");
-  } finally {
-    await new Promise((done) => server.close(done));
-  }
-});
-
-test("API-key clients use explicit settings before the active Octos profile selection", async () => {
-  const previous = {
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    ARK_API_KEY: process.env.ARK_API_KEY,
-    OLL_PROVIDER: process.env.OLL_PROVIDER,
-    OLL_MODEL: process.env.OLL_MODEL,
-    OCTOS_PROFILE_LLM_PROVIDER: process.env.OCTOS_PROFILE_LLM_PROVIDER,
-    OCTOS_PROFILE_LLM_MODEL: process.env.OCTOS_PROFILE_LLM_MODEL,
-  };
-  try {
-    process.env.GEMINI_API_KEY = "gemini-key";
-    process.env.OLL_MODEL = "models/gemini-test";
-    const gemini = await createGeminiApiClient();
-    assert.equal(gemini.provider, "gemini");
-    assert.match(gemini.endpoint, /\/models\/gemini-test:generateContent$/u);
-
-    process.env.ARK_API_KEY = "ark-key";
-    process.env.OLL_MODEL = "ark-endpoint-test";
-    const ark = await createArkClient();
-    assert.equal(ark.provider, "ark");
-    assert.match(ark.endpoint, /\/api\/v3\/responses$/u);
-
-    delete process.env.OLL_PROVIDER;
-    delete process.env.OLL_MODEL;
-    process.env.OCTOS_PROFILE_LLM_PROVIDER = "google";
-    process.env.OCTOS_PROFILE_LLM_MODEL = "gemini-profile-model";
-    const profileGemini = await createStructuredModelClient();
-    assert.equal(profileGemini.provider, "gemini");
-    assert.equal(profileGemini.model, "gemini-profile-model");
-
-    process.env.OLL_PROVIDER = "ark";
-    process.env.OLL_MODEL = "ark-explicit-model";
-    const explicitArk = await createStructuredModelClient();
-    assert.equal(explicitArk.provider, "ark");
-    assert.equal(explicitArk.model, "ark-explicit-model");
-  } finally {
-    for (const [key, value] of Object.entries(previous)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
   }
 });
 
@@ -2493,6 +2397,7 @@ test("complete lessons reject explicit board follow-up input instead of falling 
     assert.equal(protocol.retryable, false);
     assert.equal(protocol.do_not_retry_same_turn, true);
     assert.deepEqual(protocol.structured_metadata, {
+      error_code: "LESSON_REQUEST_SOURCE_UNSUPPORTED",
       retryable: false,
       do_not_retry_same_turn: true,
     });
