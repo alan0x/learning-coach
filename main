@@ -9169,9 +9169,23 @@ function routeTrace(client) {
     ...client.routeSource === "profile" && client.configRevision ? { config_revision: client.configRevision } : {}
   };
 }
-function requestErrorCode(provider, status) {
+function hasInvalidGeminiApiKeyReason(body) {
+  try {
+    const payload = JSON.parse(body);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+    const error = payload.error;
+    if (!error || typeof error !== "object" || Array.isArray(error)) return false;
+    const details = error.details;
+    return Array.isArray(details) && details.some((detail) => !!detail && typeof detail === "object" && !Array.isArray(detail) && detail.reason === "API_KEY_INVALID");
+  } catch {
+    return false;
+  }
+}
+function requestErrorCode(provider, status, body) {
   if (provider === "gemini") {
-    if (status === 401 || status === 403) return "GEMINI_AUTH_FAILED";
+    if (status === 401 || status === 403 || status === 400 && hasInvalidGeminiApiKeyReason(body)) {
+      return "GEMINI_AUTH_FAILED";
+    }
     if (status === 404) return "GEMINI_MODEL_NOT_FOUND";
     if (status === 429) return "GEMINI_RATE_LIMITED";
   }
@@ -9711,7 +9725,7 @@ async function callStreamingBootstrapModel(client, request) {
           continue;
         }
         throw new ToolExecutionError(
-          requestErrorCode(provider, status),
+          requestErrorCode(provider, status, body),
           `${providerName} ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`
         );
       }
@@ -9896,7 +9910,7 @@ async function callStructuredModel(client, request) {
       if (response.ok) break;
       const retryable = status === 429 || status >= 500;
       if (!retryable || requestAttempt === client.requestAttempts) {
-        const code = requestErrorCode(provider, status);
+        const code = requestErrorCode(provider, status, body);
         throw new ToolExecutionError(
           code,
           `${providerName} ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`

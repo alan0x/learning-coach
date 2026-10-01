@@ -18,13 +18,13 @@ async function withEnv(values, run) {
 }
 function profile(extra = {}) { return { OCTOS_PROFILE_LLM_PROVIDER: "google", OCTOS_PROFILE_LLM_MODEL: "gemini-test", ...extra }; }
 const request = label => ({ label, turnId: "route-test", prompt: "Return ok", systemPrompt: "JSON only", responseSchema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] } });
-async function fixture(run, status = 200) {
+async function fixture(run, status = 200, errorBody) {
   const received = [];
   const server = createServer(async (req, res) => {
     let body = ""; for await (const chunk of req) body += chunk;
     received.push({ url: req.url, body, key: req.headers["x-goog-api-key"] });
     res.writeHead(status, { "content-type": "application/json", "retry-after": "0.001" });
-    res.end(status === 200 ? JSON.stringify({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: '{"ok":true}' }] } }] }) : '{"error":{"message":"fixture rejection"}}');
+    res.end(status === 200 ? JSON.stringify({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: '{"ok":true}' }] } }] }) : errorBody ?? '{"error":{"message":"fixture rejection"}}');
   });
   await new Promise(r => server.listen(0, "127.0.0.1", r));
   try { await run(`http://127.0.0.1:${server.address().port}`, received); }
@@ -94,6 +94,22 @@ for (const [status, code, attempts] of [[401,"GEMINI_AUTH_FAILED",1],[403,"GEMIN
       assert.equal(received.length, attempts);
     }), status);
   });
+}
+
+for (const label of ["lesson-plan-bootstrap", "lesson-plan-section"]) {
+  for (const [description, body, code] of [
+    ["typed invalid-key reason", JSON.stringify({ error: { code: 400, status: "INVALID_ARGUMENT", details: [{ "@type": "type.googleapis.com/google.rpc.ErrorInfo", reason: "API_KEY_INVALID", domain: "googleapis.com" }] } }), "GEMINI_AUTH_FAILED"],
+    ["unstructured reason text", JSON.stringify({ error: { message: "API_KEY_INVALID" } }), "GEMINI_SCHEMA_REJECTED"],
+    ["other structured reason", JSON.stringify({ error: { details: [{ reason: "SCHEMA_INVALID" }] } }), "GEMINI_SCHEMA_REJECTED"],
+    ["malformed body", "API_KEY_INVALID", "GEMINI_SCHEMA_REJECTED"],
+  ]) {
+    test(`HTTP 400 ${description} for ${label}: ${code}, no retry`, async () => {
+      await fixture(async (base, received) => withEnv(profile({ GEMINI_API_KEY: "fixture-key", GEMINI_BASE_URL: base, OLL_MODEL_REQUEST_ATTEMPTS: "2" }), async () => {
+        await assert.rejects(callStructuredModel(await createStructuredModelClient(), request(label)), { code });
+        assert.equal(received.length, 1);
+      }), 400, body);
+    });
+  }
 }
 
 test("all five tool entry paths use the same profile route", async () => {

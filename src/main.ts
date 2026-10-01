@@ -1021,9 +1021,27 @@ function routeTrace(client: StructuredModelClient): Record<string, unknown> {
   };
 }
 
-function requestErrorCode(provider: StructuredModelProvider, status: number): string {
+function hasInvalidGeminiApiKeyReason(body: string): boolean {
+  try {
+    const payload: unknown = JSON.parse(body);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+    const error = (payload as Record<string, unknown>).error;
+    if (!error || typeof error !== "object" || Array.isArray(error)) return false;
+    const details = (error as Record<string, unknown>).details;
+    return Array.isArray(details) && details.some((detail: unknown) => (
+      !!detail && typeof detail === "object" && !Array.isArray(detail)
+      && (detail as Record<string, unknown>).reason === "API_KEY_INVALID"
+    ));
+  } catch {
+    return false;
+  }
+}
+
+function requestErrorCode(provider: StructuredModelProvider, status: number, body: string): string {
   if (provider === "gemini") {
-    if (status === 401 || status === 403) return "GEMINI_AUTH_FAILED";
+    if (status === 401 || status === 403 || (status === 400 && hasInvalidGeminiApiKeyReason(body))) {
+      return "GEMINI_AUTH_FAILED";
+    }
     if (status === 404) return "GEMINI_MODEL_NOT_FOUND";
     if (status === 429) return "GEMINI_RATE_LIMITED";
   }
@@ -1689,7 +1707,7 @@ async function callStreamingBootstrapModel(
           continue;
         }
         throw new ToolExecutionError(
-          requestErrorCode(provider, status),
+          requestErrorCode(provider, status, body),
           `${providerName} ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`,
         );
       }
@@ -1906,7 +1924,7 @@ export async function callStructuredModel(
       if (response.ok) break;
       const retryable = status === 429 || status >= 500;
       if (!retryable || requestAttempt === client.requestAttempts) {
-        const code = requestErrorCode(provider, status);
+        const code = requestErrorCode(provider, status, body);
         throw new ToolExecutionError(
           code,
           `${providerName} ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`,
