@@ -7,8 +7,8 @@ import { build } from "esbuild";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const provider = process.env.OLL_PROVIDER?.trim().toLowerCase();
-if (!provider || !["vertex", "gemini", "ark"].includes(provider)) {
-  throw new Error("OLL_PROVIDER must be vertex, gemini, or ark");
+if (!provider || !["vertex", "gemini"].includes(provider)) {
+  throw new Error("OLL_PROVIDER must be vertex or gemini");
 }
 const repetitions = Number(process.env.PROVIDER_SCHEMA_PROBE_REPETITIONS ?? 10);
 if (!Number.isSafeInteger(repetitions) || repetitions < 1 || repetitions > 100) {

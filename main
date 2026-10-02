@@ -8961,19 +8961,15 @@ function vertexEndpoint(project, location, model) {
   return `${base}/projects/${encodeURIComponent(project)}/locations/${encodeURIComponent(location)}/publishers/google/models/${encodeURIComponent(model)}:generateContent`;
 }
 function directGeminiEndpoint(model) {
-  const base = (process.env.GEMINI_BASE_URL || "https://generativelanguage.googleapis.com/v1beta").replace(/\/+$/, "");
+  const base = (process.env.OCTOS_PROFILE_LLM_BASE_URL?.trim() || process.env.GEMINI_BASE_URL || "https://generativelanguage.googleapis.com/v1beta").replace(/\/+$/, "");
   const normalizedModel = model.replace(/^models\//u, "");
   return `${base}/models/${encodeURIComponent(normalizedModel)}:generateContent`;
-}
-function arkEndpoint() {
-  const base = (process.env.ARK_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3").replace(/\/+$/, "");
-  return `${base}/responses`;
 }
 function modelProvider(client) {
   return client.provider ?? "vertex";
 }
 function providerLabel(provider) {
-  return provider === "vertex" ? "Vertex" : provider === "gemini" ? "Gemini API" : "Ark";
+  return provider === "vertex" ? "Vertex" : "Gemini API";
 }
 function providerErrorCode(provider, suffix) {
   return `${provider.toUpperCase()}_${suffix}`;
@@ -8998,58 +8994,7 @@ function geminiResponseContent(payload, provider) {
   }
   return text;
 }
-function arkResponseContent(payload) {
-  const root = isRecord(payload) ? payload : {};
-  if (root.status === "incomplete") {
-    throw new ToolExecutionError(
-      providerErrorCode("ark", "RESPONSE_TRUNCATED"),
-      "Ark response was incomplete"
-    );
-  }
-  const output = Array.isArray(root.output) ? root.output : [];
-  const text = output.flatMap((item) => {
-    if (!isRecord(item) || item.type !== "message" || !Array.isArray(item.content)) return [];
-    return item.content.flatMap((content) => isRecord(content) && content.type === "output_text" && typeof content.text === "string" ? [content.text] : []);
-  }).join("").trim();
-  if (!text) {
-    throw new ToolExecutionError(
-      providerErrorCode("ark", "RESPONSE_EMPTY"),
-      `Ark response contains no JSON text (status=${String(root.status ?? "unknown")})`
-    );
-  }
-  return text;
-}
-function arkThinkingType() {
-  const value = process.env.ARK_THINKING_TYPE?.trim().toLowerCase() || "disabled";
-  if (value === "disabled" || value === "enabled" || value === "auto") return value;
-  throw new Error(`ARK_THINKING_TYPE must be disabled, enabled, or auto; received ${value}`);
-}
 function structuredModelRequestBody(client, request, thinkingLevel) {
-  const provider = modelProvider(client);
-  if (provider === "ark") {
-    const content = [{ type: "input_text", text: request.prompt }];
-    if (request.media) content.push({
-      type: "input_image",
-      image_url: `data:${request.media.mimeType};base64,${request.media.data}`,
-      detail: "auto"
-    });
-    return JSON.stringify({
-      model: client.model,
-      instructions: request.systemPrompt,
-      input: [{ type: "message", role: "user", content }],
-      thinking: { type: arkThinkingType() },
-      stream: false,
-      max_output_tokens: request.maxTokens ?? client.maxTokens,
-      text: {
-        format: request.responseSchema ? {
-          type: "json_schema",
-          name: request.label.replaceAll("-", "_"),
-          strict: true,
-          schema: request.responseSchema
-        } : { type: "json_object" }
-      }
-    });
-  }
   const userParts = [{ text: request.prompt }];
   if (request.media) userParts.push({
     inlineData: { mimeType: request.media.mimeType, data: request.media.data }
@@ -9077,20 +9022,17 @@ function structuredModelHeaders(client) {
       } : {}
     };
   }
-  if (client.provider === "gemini") {
-    return { "x-goog-api-key": client.apiKey, "content-type": "application/json" };
-  }
-  return { authorization: `Bearer ${client.apiKey}`, "content-type": "application/json" };
+  return { "x-goog-api-key": client.apiKey, "content-type": "application/json" };
 }
 function vertexPaygoMode() {
   const value = process.env.VERTEX_PAYGO_MODE?.trim().toLowerCase() || "standard";
   if (value === "standard" || value === "priority") return value;
   throw new Error(`VERTEX_PAYGO_MODE must be standard or priority; received ${value}`);
 }
-async function createVertexClient() {
+async function createVertexClient(route = resolveLessonModelRoute()) {
   const hostAccessToken = process.env.VERTEX_ACCESS_TOKEN?.trim();
   const account = hostAccessToken ? void 0 : parseServiceAccount();
-  const model = configuredModel() || DEFAULT_MODEL;
+  const model = route.model;
   const project = requireNonEmptyString(
     process.env.GOOGLE_CLOUD_PROJECT?.trim() || account?.project_id,
     "GOOGLE_CLOUD_PROJECT"
@@ -9130,6 +9072,8 @@ async function createVertexClient() {
   }
   return {
     provider: "vertex",
+    routeSource: route.source,
+    configRevision: route.configRevision,
     endpoint: vertexEndpoint(project, location, model),
     model,
     accessToken,
@@ -9162,68 +9106,90 @@ function apiKeyClientLimits() {
     deadlineAt: Date.now() + totalTimeoutMs
   };
 }
-async function createGeminiApiClient() {
-  const apiKey = requireNonEmptyString(process.env.GEMINI_API_KEY, "GEMINI_API_KEY");
-  const model = configuredModel() || DEFAULT_MODEL;
+function resolveLessonModelRoute(env = process.env) {
+  const profileFamily = env.OCTOS_PROFILE_LLM_PROVIDER?.trim();
+  const source = profileFamily ? "profile" : "env";
+  const family = profileFamily || env.OLL_PROVIDER?.trim() || "vertex";
+  const normalized = family.toLowerCase();
+  const provider = normalized === "google" || normalized === "gemini" ? "gemini" : ["vertex", "vertex-ai", "vertexai"].includes(normalized) ? "vertex" : void 0;
+  if (!provider) {
+    throw new ToolExecutionError("LESSON_MODEL_UNSUPPORTED", `Unsupported lesson model family: ${family}`);
+  }
+  const model = source === "profile" ? env.OCTOS_PROFILE_LLM_MODEL?.trim() : env.OLL_MODEL?.trim() || DEFAULT_MODEL;
+  if (!model) {
+    throw new ToolExecutionError("LESSON_MODEL_NOT_CONFIGURED", "A profile lesson model must be selected");
+  }
+  if (source === "profile") {
+    const ignored = [
+      ...env.OLL_PROVIDER?.trim() && env.OLL_PROVIDER.trim().toLowerCase() !== provider ? ["OLL_PROVIDER"] : [],
+      ...env.OLL_MODEL?.trim() && env.OLL_MODEL.trim() !== model ? ["OLL_MODEL"] : []
+    ];
+    if (ignored.length) stageLog({ stage: "model-route", status: "ignored_server_override", variables: ignored });
+  }
+  return Object.freeze({
+    source,
+    provider,
+    model,
+    ...source === "profile" && env.OCTOS_PROFILE_LLM_CONFIG_REVISION?.trim() ? { configRevision: env.OCTOS_PROFILE_LLM_CONFIG_REVISION.trim() } : {}
+  });
+}
+async function createGeminiApiClient(route = resolveLessonModelRoute()) {
+  const apiType = process.env.OCTOS_PROFILE_LLM_API_TYPE?.trim().toLowerCase();
+  if (apiType && apiType !== "gemini") {
+    throw new ToolExecutionError("LESSON_MODEL_UNSUPPORTED", `Unsupported Gemini lesson protocol: ${apiType}`);
+  }
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) throw new ToolExecutionError("LESSON_CREDENTIAL_MISSING", "Gemini API key is not configured");
   return {
     provider: "gemini",
-    endpoint: directGeminiEndpoint(model),
-    model,
+    routeSource: route.source,
+    configRevision: route.configRevision,
+    endpoint: directGeminiEndpoint(route.model),
+    model: route.model,
     apiKey,
     ...apiKeyClientLimits()
   };
 }
-async function createArkClient() {
-  const apiKey = requireNonEmptyString(process.env.ARK_API_KEY, "ARK_API_KEY");
-  const model = requireNonEmptyString(configuredModel(), "OLL_MODEL or OCTOS_PROFILE_LLM_MODEL");
-  return {
-    provider: "ark",
-    endpoint: arkEndpoint(),
-    model,
-    apiKey,
-    ...apiKeyClientLimits()
-  };
+async function createStructuredModelClient(route = resolveLessonModelRoute()) {
+  return route.provider === "vertex" ? createVertexClient(route) : createGeminiApiClient(route);
 }
-async function createStructuredModelClient() {
-  const provider = configuredProvider();
-  return createStructuredModelClientFor(provider);
-}
-function configuredModel() {
-  return process.env.OLL_MODEL?.trim() || process.env.OCTOS_PROFILE_LLM_MODEL?.trim() || void 0;
-}
-function configuredProvider() {
-  const explicit = process.env.OLL_PROVIDER?.trim().toLowerCase();
-  if (explicit) return explicit;
-  const profileProvider = process.env.OCTOS_PROFILE_LLM_PROVIDER?.trim().toLowerCase();
-  if (!profileProvider) return "vertex";
-  if (profileProvider === "google" || profileProvider === "gemini") return "gemini";
-  if (profileProvider === "vertex" || profileProvider === "vertex-ai" || profileProvider === "vertexai") {
-    return "vertex";
-  }
-  if (profileProvider === "ark" || profileProvider === "volcengine" || profileProvider === "bytedance") {
-    return "ark";
-  }
-  return profileProvider;
-}
-async function createStructuredModelClientFor(provider) {
-  if (provider === "vertex") return createVertexClient();
-  if (provider === "gemini") return createGeminiApiClient();
-  if (provider === "ark") return createArkClient();
-  throw new Error(`OLL_PROVIDER must be vertex, gemini, or ark; received ${provider}`);
-}
-function configuredFallbackProvider(primaryProvider) {
+function configuredFallbackProvider(route) {
+  if (route.source === "profile") return void 0;
   const value = process.env.OLL_FALLBACK_PROVIDER?.trim().toLowerCase();
   if (!value) return void 0;
   if (value !== "vertex" && value !== "gemini") {
     throw new Error(`OLL_FALLBACK_PROVIDER must be vertex or gemini; received ${value}`);
   }
-  if (value === primaryProvider) {
-    throw new Error("OLL_FALLBACK_PROVIDER must differ from OLL_PROVIDER");
-  }
-  if (primaryProvider === "ark") {
-    throw new Error("OLL_FALLBACK_PROVIDER is supported only when OLL_PROVIDER is vertex or gemini");
-  }
+  if (value === route.provider) throw new Error("OLL_FALLBACK_PROVIDER must differ from OLL_PROVIDER");
   return value;
+}
+function routeTrace(client) {
+  return {
+    route_source: client.routeSource ?? "env",
+    ...client.routeSource === "profile" && client.configRevision ? { config_revision: client.configRevision } : {}
+  };
+}
+function hasInvalidGeminiApiKeyReason(body) {
+  try {
+    const payload = JSON.parse(body);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+    const error = payload.error;
+    if (!error || typeof error !== "object" || Array.isArray(error)) return false;
+    const details = error.details;
+    return Array.isArray(details) && details.some((detail) => !!detail && typeof detail === "object" && !Array.isArray(detail) && detail.reason === "API_KEY_INVALID");
+  } catch {
+    return false;
+  }
+}
+function requestErrorCode(provider, status, body) {
+  if (provider === "gemini") {
+    if (status === 401 || status === 403 || status === 400 && hasInvalidGeminiApiKeyReason(body)) {
+      return "GEMINI_AUTH_FAILED";
+    }
+    if (status === 404) return "GEMINI_MODEL_NOT_FOUND";
+    if (status === 429) return "GEMINI_RATE_LIMITED";
+  }
+  return providerErrorCode(provider, status === 400 ? "SCHEMA_REJECTED" : "REQUEST_FAILED");
 }
 function requestWithSignal(request, signal) {
   return {
@@ -9390,12 +9356,11 @@ var HedgedStructuredModelRouter = class {
     throw firstCompleted.reason;
   }
 };
-async function createStructuredModelRouter() {
-  const primaryClient = await createStructuredModelClient();
-  const primaryProvider = modelProvider(primaryClient);
-  const fallbackProvider = configuredFallbackProvider(primaryProvider);
-  const fallbackClient = fallbackProvider ? await createStructuredModelClientFor(fallbackProvider) : void 0;
-  const hedgeDelayMs = parsePositiveInteger(
+async function createStructuredModelRouter(route = resolveLessonModelRoute()) {
+  const primaryClient = await createStructuredModelClient(route);
+  const fallbackProvider = configuredFallbackProvider(route);
+  const fallbackClient = fallbackProvider ? await createStructuredModelClient(Object.freeze({ ...route, provider: fallbackProvider })) : void 0;
+  const hedgeDelayMs = route.source === "profile" ? 12e3 : parsePositiveInteger(
     process.env.OLL_HEDGE_DELAY_MS,
     12e3,
     "OLL_HEDGE_DELAY_MS"
@@ -9692,7 +9657,6 @@ async function callStreamingBootstrapModel(client, request) {
   const deadlineAt = requestDeadline(client);
   const thinkingLevel = request.thinkingLevel ?? configuredThinkingLevel(request.label);
   const provider = modelProvider(client);
-  if (provider === "ark") throw new Error("Ark bootstrap streaming is not supported");
   const providerName = providerLabel(provider);
   const orderedRequest = request.responseSchema ? {
     ...request,
@@ -9702,6 +9666,7 @@ async function callStreamingBootstrapModel(client, request) {
   const diagnostics = orderedRequest.responseSchema ? schemaDiagnostics(orderedRequest.responseSchema) : { sha256: "none", bytes: 0 };
   stageLog({
     stage: "model-call",
+    ...routeTrace(client),
     turn_id: request.turnId,
     label: request.label,
     status: "started",
@@ -9760,7 +9725,7 @@ async function callStreamingBootstrapModel(client, request) {
           continue;
         }
         throw new ToolExecutionError(
-          status === 400 ? providerErrorCode(provider, "SCHEMA_REJECTED") : providerErrorCode(provider, "REQUEST_FAILED"),
+          requestErrorCode(provider, status, body),
           `${providerName} ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`
         );
       }
@@ -9770,6 +9735,7 @@ async function callStreamingBootstrapModel(client, request) {
         provider,
         (milestone, elapsedMs) => stageLog({
           stage: "model-stream",
+          ...routeTrace(client),
           turn_id: request.turnId,
           label: request.label,
           status: milestone,
@@ -9786,6 +9752,7 @@ async function callStreamingBootstrapModel(client, request) {
       };
       stageLog({
         stage: "model-call",
+        ...routeTrace(client),
         turn_id: request.turnId,
         label: request.label,
         status: "completed",
@@ -9836,6 +9803,7 @@ async function callStreamingBootstrapModel(client, request) {
     );
     stageLog({
       stage: "model-call",
+      ...routeTrace(client),
       turn_id: request.turnId,
       label: request.label,
       status: "failed",
@@ -9868,13 +9836,14 @@ async function callStructuredModel(client, request) {
   const diagnostics = request.responseSchema ? schemaDiagnostics(request.responseSchema) : { sha256: "none", bytes: 0 };
   stageLog({
     stage: "model-call",
+    ...routeTrace(client),
     turn_id: request.turnId,
     label: request.label,
     status: "started",
     provider,
     model: client.model,
     ...provider === "vertex" ? { vertex_paygo_mode: client.paygoMode ?? "standard" } : {},
-    thinking_level: provider === "ark" ? arkThinkingType() : thinkingLevel ?? "UNSPECIFIED",
+    thinking_level: thinkingLevel ?? "UNSPECIFIED",
     schema_sha256: diagnostics.sha256,
     schema_bytes: diagnostics.bytes,
     prompt_bytes: Buffer.byteLength(request.prompt),
@@ -9941,7 +9910,7 @@ async function callStructuredModel(client, request) {
       if (response.ok) break;
       const retryable = status === 429 || status >= 500;
       if (!retryable || requestAttempt === client.requestAttempts) {
-        const code = status === 400 ? providerErrorCode(provider, "SCHEMA_REJECTED") : providerErrorCode(provider, "REQUEST_FAILED");
+        const code = requestErrorCode(provider, status, body);
         throw new ToolExecutionError(
           code,
           `${providerName} ${request.label} failed (${status}): ${body.slice(0, MAX_ERROR_BODY_LENGTH)}`
@@ -9962,32 +9931,31 @@ async function callStructuredModel(client, request) {
       process.stderr.write(`learning-coach: raw ${providerName} ${request.label} payload: ${JSON.stringify(payload).slice(0, 16e3)}
 `);
     }
-    const content = provider === "ark" ? arkResponseContent(payload) : geminiResponseContent(payload, provider);
+    const content = geminiResponseContent(payload, provider);
     const root = isRecord(payload) ? payload : {};
     const candidates = Array.isArray(root.candidates) ? root.candidates : [];
     const firstCandidate = isRecord(candidates[0]) ? candidates[0] : {};
-    const usage = provider === "ark" ? isRecord(root.usage) ? root.usage : {} : isRecord(root.usageMetadata) ? root.usageMetadata : {};
-    const arkOutputDetails = isRecord(usage.output_tokens_details) ? usage.output_tokens_details : {};
+    const usage = isRecord(root.usageMetadata) ? root.usageMetadata : {};
     const metric = (name) => {
       const value = usage[name];
       return typeof value === "number" && Number.isFinite(value) ? value : void 0;
     };
     stageLog({
       stage: "model-call",
+      ...routeTrace(client),
       turn_id: request.turnId,
       label: request.label,
       status: "completed",
       provider,
+      model: client.model,
       http_status: status,
       ...provider === "vertex" ? { vertex_paygo_mode: client.paygoMode ?? "standard" } : {},
       request_attempts: usedAttempts,
       ...requestId ? { request_id: requestId } : {},
-      ...(provider === "ark" ? root.status : firstCandidate.finishReason) === void 0 ? {} : { finish_reason: provider === "ark" ? root.status : firstCandidate.finishReason },
-      ...metric(provider === "ark" ? "input_tokens" : "promptTokenCount") === void 0 ? {} : { prompt_tokens: metric(provider === "ark" ? "input_tokens" : "promptTokenCount") },
-      ...metric(provider === "ark" ? "output_tokens" : "candidatesTokenCount") === void 0 ? {} : { candidate_tokens: metric(provider === "ark" ? "output_tokens" : "candidatesTokenCount") },
-      ...(provider === "ark" ? typeof arkOutputDetails.reasoning_tokens === "number" ? arkOutputDetails.reasoning_tokens : void 0 : metric("thoughtsTokenCount")) === void 0 ? {} : {
-        thought_tokens: provider === "ark" ? arkOutputDetails.reasoning_tokens : metric("thoughtsTokenCount")
-      },
+      ...firstCandidate.finishReason === void 0 ? {} : { finish_reason: firstCandidate.finishReason },
+      ...metric("promptTokenCount") === void 0 ? {} : { prompt_tokens: metric("promptTokenCount") },
+      ...metric("candidatesTokenCount") === void 0 ? {} : { candidate_tokens: metric("candidatesTokenCount") },
+      ...metric("thoughtsTokenCount") === void 0 ? {} : { thought_tokens: metric("thoughtsTokenCount") },
       ...metric("cachedContentTokenCount") === void 0 ? {} : { cached_content_tokens: metric("cachedContentTokenCount") },
       ...metric("totalTokenCount") === void 0 ? {} : { total_tokens: metric("totalTokenCount") },
       ...typeof usage.trafficType === "string" ? { traffic_type: usage.trafficType } : {},
@@ -10010,10 +9978,12 @@ async function callStructuredModel(client, request) {
     ) : error;
     stageLog({
       stage: "model-call",
+      ...routeTrace(client),
       turn_id: request.turnId,
       label: request.label,
       status: "failed",
       provider,
+      model: client.model,
       http_status: status || null,
       elapsed_ms: Date.now() - startedAt,
       error_code: surfacedError instanceof ToolExecutionError ? surfacedError.code : "MODEL_RESPONSE_FAILED",
@@ -10620,9 +10590,10 @@ async function main() {
     const rawInput = Buffer.concat(chunks).toString("utf8");
     const traceTurnId = traceTurnIdFromRawInput(rawInput);
     if (traceTurnId) beginStageTrace(traceTurnId, invokedTool, startedAt);
+    const route = resolveLessonModelRoute();
     if (invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME) {
       const input2 = parseSelectionClassificationInput(rawInput);
-      const client = await createStructuredModelClient();
+      const client = await createStructuredModelClient(route);
       const classification = await classifySelection(client, input2);
       stageLog({
         stage: "selection-classification",
@@ -10639,7 +10610,7 @@ async function main() {
     }
     if (invokedTool === SELECTION_TOOL_NAME) {
       const input2 = parseSelectionToolInput(rawInput);
-      const client = await createStructuredModelClient();
+      const client = await createStructuredModelClient(route);
       const artifact = await generateSelectionEnhancement(client, input2);
       const artifactPath = selectionOutputPath(input2);
       await mkdir(dirname(artifactPath), { recursive: true });
@@ -10668,7 +10639,7 @@ async function main() {
         skill_process_started_at_epoch_ms: startedAt
       });
     }
-    const modelRouter = await createStructuredModelRouter();
+    const modelRouter = await createStructuredModelRouter(route);
     const lessonImageMedia = input.request_source === "current_image" ? await workspaceImageMedia(input.camera_media, "camera_media") : input.request_source === "ink_selection" ? await workspaceImageMedia(input.selection_media, "selection_media") : void 0;
     if (input.request_source === "current_image" && !lessonImageMedia) {
       throw new ToolExecutionError(
@@ -10799,7 +10770,7 @@ async function main() {
       });
       emit({
         success: true,
-        output: `Validated OLL lesson generated through the Lesson Plan path with ${configuredModel() || DEFAULT_MODEL}.`,
+        output: `Validated OLL lesson generated through the Lesson Plan path with ${route.model}.`,
         files_to_send: [artifactPath],
         authoring_strategy: "lesson_plan",
         lesson_plan_model_calls: generatedLessonPlan.model_calls,
@@ -10821,18 +10792,16 @@ async function main() {
     process.stderr.write(`learning-coach: ${message}
 `);
     const terminalForTurn = invokedTool === TOOL_NAME;
+    const errorCode = error instanceof ToolExecutionError ? error.code : invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME ? "SELECTION_CLASSIFICATION_FAILED" : invokedTool === SELECTION_TOOL_NAME ? "SELECTION_ENHANCEMENT_FAILED" : "LESSON_GENERATION_FAILED";
     emit({
       success: false,
-      error_code: error instanceof ToolExecutionError ? error.code : invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME ? "SELECTION_CLASSIFICATION_FAILED" : invokedTool === SELECTION_TOOL_NAME ? "SELECTION_ENHANCEMENT_FAILED" : "LESSON_GENERATION_FAILED",
+      error_code: errorCode,
       output: terminalForTurn ? "\u8FD9\u6B21\u8BFE\u7A0B\u6CA1\u6709\u751F\u6210\u6210\u529F\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002" : message,
-      ...terminalForTurn ? {
-        retryable: false,
-        do_not_retry_same_turn: true,
-        structured_metadata: {
-          retryable: false,
-          do_not_retry_same_turn: true
-        }
-      } : {}
+      structured_metadata: {
+        error_code: errorCode,
+        ...terminalForTurn ? { retryable: false, do_not_retry_same_turn: true } : {}
+      },
+      ...terminalForTurn ? { retryable: false, do_not_retry_same_turn: true } : {}
     });
     process.exitCode = 1;
   }
@@ -10843,7 +10812,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
 export {
   HedgedStructuredModelRouter,
   callStructuredModel,
-  createArkClient,
   createGeminiApiClient,
   createStructuredModelClient,
   createStructuredModelRouter,
@@ -10852,6 +10820,7 @@ export {
   parseSelectionToolInput,
   probeStructuredModelSchema,
   probeVertexSchema,
+  resolveLessonModelRoute,
   routeSelectionPlot,
   selectionRequestSystemPrompt,
   selectionResponseSchema,
