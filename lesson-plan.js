@@ -8386,6 +8386,97 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   return resolveLessonPlan(assembled, options).plan;
 }
 
+// src/compiled-visual-reuse.ts
+function cardIdentity(kind, content) {
+  const fragments = /* @__PURE__ */ new Map();
+  const collect = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(collect);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    const record2 = value;
+    if (typeof record2.as === "string" && !fragments.has(record2.as)) fragments.set(record2.as, `part-${fragments.size}`);
+    Object.values(record2).forEach(collect);
+  };
+  collect(content);
+  const localReference = (value) => {
+    const [head, ...tail] = value.split(".");
+    return [fragments.get(head) ?? head, ...tail].join(".");
+  };
+  const normalize = (value, key = "", path = "") => {
+    if (typeof value === "string") {
+      if (key === "expression") return value.replace(/\s+/gu, "");
+      if (["as", "target", "from", "to", "center"].includes(key)) return localReference(value);
+      if (kind === "plot" && path.startsWith("axes.") && key === "label" && ["x", "y", "\u03B8"].includes(value)) return "coordinate";
+      return value;
+    }
+    if (Array.isArray(value)) return value.map((child) => normalize(child, key, path));
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(Object.entries(value).filter(([name]) => {
+      if (!path && name === "title") return false;
+      if (kind === "plot") {
+        if (path.startsWith("axes.") && ["min", "max"].includes(name)) return false;
+        if ((path === "curves" || path === "points") && ["label", "color"].includes(name)) return false;
+      }
+      return true;
+    }).sort(([a], [b]) => a.localeCompare(b)).map(([name, child]) => [name, normalize(child, name, path ? `${path}.${name}` : name)]));
+  };
+  return { identity: JSON.stringify([kind, normalize(content)]), fragments };
+}
+var CompiledVisualRegistry = class {
+  cards = /* @__PURE__ */ new Map();
+  reuse(visual) {
+    if (this.cards.size === 0) {
+      for (const action of visual.actions) {
+        if (action.do !== "write" || !["plot", "geometry", "scene3d", "diagram"].includes(action.kind)) continue;
+        const cards = this.cards.get(action.kind) ?? [];
+        cards.push({ node: action.as, content: action.content });
+        this.cards.set(action.kind, cards);
+      }
+      return visual;
+    }
+    const aliases = /* @__PURE__ */ new Map();
+    const reused = /* @__PURE__ */ new Set();
+    const pending = [];
+    for (const action of visual.actions) {
+      if (action.do !== "write" || !["plot", "geometry", "scene3d", "diagram"].includes(action.kind)) continue;
+      const priorCards = this.cards.get(action.kind) ?? [];
+      const content = action.content;
+      const signature = priorCards.length ? cardIdentity(action.kind, content) : void 0;
+      const existing = signature ? priorCards.find((card) => {
+        card.signature ??= cardIdentity(action.kind, card.content);
+        return card.signature.identity === signature.identity;
+      }) : void 0;
+      if (existing && signature) {
+        reused.add(action.as);
+        aliases.set(action.as, existing.node);
+        const oldFragments = new Map([...existing.signature.fragments].map(([name, canonical]) => [canonical, name]));
+        for (const [name, canonical] of signature.fragments) aliases.set(`${action.as}#${name}`, `${existing.node}#${oldFragments.get(canonical)}`);
+      } else pending.push([action.kind, { node: action.as, content, signature }]);
+    }
+    for (const [kind, card] of pending) {
+      const cards = this.cards.get(kind) ?? [];
+      cards.push(card);
+      this.cards.set(kind, cards);
+    }
+    if (!reused.size) return visual;
+    const reference = (value) => aliases.get(value) ?? value;
+    const remap = (value, key = "") => {
+      if (typeof value === "string") return ["target", "targets", "from", "to", "anchor", "members"].includes(key) ? reference(value) : value;
+      if (Array.isArray(value)) return value.map((child) => remap(child, key));
+      if (!value || typeof value !== "object") return value;
+      return Object.fromEntries(Object.entries(value).map(([name, child]) => [name, remap(child, name)]));
+    };
+    return {
+      actions: visual.actions.map((action) => action.do === "write" && reused.has(action.as) ? { do: "focus", targets: [reference(action.as)], intent: "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762" } : remap(action)),
+      whole: reference(visual.whole),
+      ...visual.primaryScene ? { primaryScene: reference(visual.primaryScene) } : {},
+      parts: new Map([...visual.parts].map(([name, target]) => [name, reference(target)]))
+    };
+  }
+};
+
 // src/teaching-contracts.ts
 function affineTokens(tokens) {
   const stack = [];
@@ -12834,6 +12925,15 @@ function compileLessonPlan(value, options = {}) {
   const partTargets = /* @__PURE__ */ new Map();
   const primaryScenes = /* @__PURE__ */ new Map();
   const reusableVisuals = /* @__PURE__ */ new Map();
+  let renderedVisuals;
+  const reuseCompiledVisual = (visual) => {
+    if (reusableVisuals.size === 0) return visual;
+    if (!renderedVisuals) {
+      renderedVisuals = new CompiledVisualRegistry();
+      for (const earlier of reusableVisuals.values()) renderedVisuals.reuse(earlier);
+    }
+    return renderedVisuals.reuse(visual);
+  };
   const resolvedReference = (path) => {
     const item = resolvedReferences.get(path);
     if (!item) fail3("LESSON_PLAN_COMPILER_REFERENCE", path, "validated reference was not recorded");
@@ -12879,7 +12979,9 @@ function compileLessonPlan(value, options = {}) {
                 "an explicit comparison must differ in teaching content, not only in title, viewport, camera, color, sampling, or layout"
               );
             }
-            const visual = existing ?? compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`);
+            const visual = existing ?? reuseCompiledVisual(
+              compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`)
+            );
             if (existing) {
               actions.push({
                 do: "focus",
