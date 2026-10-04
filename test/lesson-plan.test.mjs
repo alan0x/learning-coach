@@ -4568,3 +4568,75 @@ test("a thinking question compiles to an after-lesson reflection anchored to its
   const validated = compileAndValidateLessonPlan(plan);
   assert.equal(validated.lesson.lesson.reflections?.length, 1, "the pinned OLL validator accepts the reflection");
 });
+
+
+function appendStandaloneGraph(plan, parameters, numbers = [1]) {
+  plan.sections[1].moments.push({ narration: "Continue observing the same mathematical state.", actions: [
+    { action: "create", kind: "visual", role: "later_graph", content: { capability: "function_plot", parameters, numbers },
+      placement: { relation: "new_region" } },
+    { action: "point_at", reference: localBoardItem(2, 1) },
+    { action: "point_at", reference: { ...localBoardItem(2, 1), part: { kind: "capability", role: "primary_curve" } } },
+  ] });
+}
+
+const allActions = lesson => lesson.steps.flatMap(step => step.beats.flatMap(beat => beat.actions));
+
+test("composite subviews are reused across chapters with whole and fragment references redirected", () => {
+  for (const projection of ["sin", "cos"]) {
+    const plan = samplePlan("unit_circle_projection");
+    plan.sections[0].moments[0].actions[0].content.parameters = { projection };
+    appendStandaloneGraph(plan, { expression: `${projection}(x)`, title: "Another title", y_min: -1.5, y_max: 1.5 });
+    const lesson = compileAndValidateLessonPlan(plan).lesson;
+    const actions = allActions(lesson);
+    const plots = actions.filter(a => a.do === "write" && a.kind === "plot");
+    assert.equal(plots.length, 1, projection);
+    const reused = lesson.steps[1].beats[1].actions;
+    assert.equal(reused[0].do, "focus");
+    assert.deepEqual(reused[0].targets, [plots[0].as]);
+    assert.equal(reused[1].target, plots[0].as);
+    assert.equal(reused[2].target, `${plots[0].as}#primary-curve`);
+    assert.equal(actions.filter(a => a.do === "write" && a.kind === "geometry").length, 1);
+    assert.equal(actions.filter(a => a.do === "connect").length, 1);
+  }
+});
+
+test("rendered-card reuse applies to a physics composite without discarding its dimensional axes", () => {
+  const plan = samplePlan("spring_and_mass");
+  appendStandaloneGraph(plan, { expression: "cos(x)", x_label: "相位", y_label: "位移" });
+  const lesson = compileAndValidateLessonPlan(plan).lesson;
+  assert.equal(allActions(lesson).filter(a => a.do === "write" && a.kind === "plot").length, 1);
+});
+
+test("same expression with a different binding, curve, measurement or dimensional axes remains distinct", () => {
+  for (const variant of ["function", "binding", "extra_curve", "axes", "measurement"]) {
+    const plan = samplePlan("unit_circle_projection");
+    plan.sections[0].moments[0].actions[0].content.parameters = { projection: "cos" };
+    let numbers = [1];
+    const parameters = { expression: "cos(x)" };
+    if (variant === "function") parameters.expression = "sin(x)";
+    if (variant === "extra_curve") { delete parameters.expression; parameters.expressions = ["cos(x)", "sin(x)"]; }
+    if (variant === "axes") parameters.y_label = "distance (m)";
+    if (["binding", "measurement"].includes(variant)) {
+      plan.numbers.push({ ...structuredClone(plan.numbers[0]), label: "Independent input", unit: "m" });
+      numbers = variant === "binding" ? [2] : [1, 2];
+    }
+    appendStandaloneGraph(plan, parameters, numbers);
+    const lesson = compileAndValidateLessonPlan(plan).lesson;
+    assert.equal(allActions(lesson).filter(a => a.do === "write" && a.kind === "plot").length, 2, variant);
+  }
+});
+
+test("an earlier standalone view can be reused by a later composite without breaking connections", () => {
+  const plan = samplePlan("function_plot");
+  plan.sections[0].moments[0].actions[0].content.parameters = { expression: "sin(x)" };
+  plan.sections[1].moments.push({ narration: "Relate this graph to a new geometric view.", actions: [
+    { action: "create", kind: "visual", role: "composite", content: { capability: "unit_circle_projection", parameters: { projection: "sin" }, numbers: [1] }, placement: { relation: "new_region" } },
+  ] });
+  const lesson = compileAndValidateLessonPlan(plan).lesson;
+  const actions = allActions(lesson);
+  const plots = actions.filter(a => a.do === "write" && a.kind === "plot");
+  assert.equal(plots.length, 1);
+  const connection = actions.find(a => a.do === "connect");
+  assert.equal(connection.to, plots[0].as);
+  assert.ok(actions.find(a => a.do === "group").members.includes(plots[0].as));
+});

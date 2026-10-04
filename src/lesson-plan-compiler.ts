@@ -1,3 +1,4 @@
+import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./teaching-contracts.js";
 import { functionViewport } from "./function-viewport.js";
 import {
@@ -55,13 +56,6 @@ export const LESSON_PLAN_SCENE_INITIAL_CAMERAS = {
 export interface CompiledLessonPlan {
   lesson: AuthoringLesson;
   resolved: ResolvedLessonPlan;
-}
-
-interface CompiledVisual {
-  actions: AuthoringAction[];
-  whole: string;
-  primaryScene?: string;
-  parts: Map<string, string>;
 }
 
 function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbers = true): string {
@@ -1592,6 +1586,18 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const partTargets = new Map<string, Map<string, string>>();
   const primaryScenes = new Map<string, string>();
   const reusableVisuals = new Map<string, CompiledVisual>();
+  let renderedVisuals: CompiledVisualRegistry | undefined;
+  const reuseCompiledVisual = (visual: CompiledVisual, distinct: boolean, path: string) => {
+    // The first component cannot duplicate earlier content. Initialize the
+    // subview registry only when a different component is actually requested.
+    if (reusableVisuals.size === 0) return visual;
+    if (!renderedVisuals) {
+      renderedVisuals = new CompiledVisualRegistry();
+      for (const earlier of reusableVisuals.values()) renderedVisuals.reuse(earlier, false, () => fail("LESSON_PLAN_COMPILER", path, "unexpected initial comparison"));
+    }
+    return renderedVisuals.reuse(visual, distinct, () => fail("LESSON_PLAN_COURSE_VISUAL", path,
+      "an explicit comparison must differ in teaching content, not only in presentation"));
+  };
 
   const resolvedReference = (path: string): ResolvedLessonPlanReference => {
     const item = resolvedReferences.get(path);
@@ -1640,7 +1646,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               );
             }
             const visual = existing
-              ?? compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`);
+              ?? reuseCompiledVisual(
+                compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`),
+                Boolean(item.distinct_visual), `${actionPath}.content.parameters`,
+              );
             if (existing) {
               actions.push({
                 do: "focus",
