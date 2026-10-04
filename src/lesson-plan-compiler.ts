@@ -1587,16 +1587,15 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const primaryScenes = new Map<string, string>();
   const reusableVisuals = new Map<string, CompiledVisual>();
   let renderedVisuals: CompiledVisualRegistry | undefined;
-  const reuseCompiledVisual = (visual: CompiledVisual, distinct: boolean, path: string) => {
+  const reuseCompiledVisual = (visual: CompiledVisual) => {
     // The first component cannot duplicate earlier content. Initialize the
     // subview registry only when a different component is actually requested.
     if (reusableVisuals.size === 0) return visual;
     if (!renderedVisuals) {
       renderedVisuals = new CompiledVisualRegistry();
-      for (const earlier of reusableVisuals.values()) renderedVisuals.reuse(earlier, false, () => fail("LESSON_PLAN_COMPILER", path, "unexpected initial comparison"));
+      for (const earlier of reusableVisuals.values()) renderedVisuals.reuse(earlier);
     }
-    return renderedVisuals.reuse(visual, distinct, () => fail("LESSON_PLAN_COURSE_VISUAL", path,
-      "an explicit comparison must differ in teaching content, not only in presentation"));
+    return renderedVisuals.reuse(visual);
   };
 
   const resolvedReference = (path: string): ResolvedLessonPlanReference => {
@@ -1648,7 +1647,6 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             const visual = existing
               ?? reuseCompiledVisual(
                 compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`),
-                Boolean(item.distinct_visual), `${actionPath}.content.parameters`,
               );
             if (existing) {
               actions.push({

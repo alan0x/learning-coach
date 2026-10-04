@@ -59,7 +59,7 @@ function cardIdentity(kind: string, content: Record<string, unknown>) {
 export class CompiledVisualRegistry {
   private readonly cards = new Map<string, RenderedVisual[]>();
 
-  reuse(visual: CompiledVisual, distinct: boolean, onInvalidComparison: () => never): CompiledVisual {
+  reuse(visual: CompiledVisual): CompiledVisual {
     if (this.cards.size === 0) {
       for (const action of visual.actions) {
         if (action.do !== "write" || !["plot", "geometry", "scene3d", "diagram"].includes(action.kind)) continue;
@@ -72,10 +72,8 @@ export class CompiledVisualRegistry {
     const aliases = new Map<string, string>();
     const reused = new Set<string>();
     const pending: Array<[string, RenderedVisual]> = [];
-    let cardCount = 0;
     for (const action of visual.actions) {
       if (action.do !== "write" || !["plot", "geometry", "scene3d", "diagram"].includes(action.kind)) continue;
-      cardCount += 1;
       const priorCards = this.cards.get(action.kind) ?? [];
       const content = action.content as Record<string, unknown>;
       // The first card of a kind has nothing to match. Defer its identity work
@@ -92,7 +90,6 @@ export class CompiledVisualRegistry {
         for (const [name, canonical] of signature.fragments) aliases.set(`${action.as}#${name}`, `${existing.node}#${oldFragments.get(canonical)!}`);
       } else pending.push([action.kind, { node: action.as, content, signature }]);
     }
-    if (distinct && cardCount > 0 && reused.size === cardCount) onInvalidComparison();
     for (const [kind, card] of pending) {
       const cards = this.cards.get(kind) ?? [];
       cards.push(card);

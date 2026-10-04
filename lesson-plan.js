@@ -8426,7 +8426,7 @@ function cardIdentity(kind, content) {
 }
 var CompiledVisualRegistry = class {
   cards = /* @__PURE__ */ new Map();
-  reuse(visual, distinct, onInvalidComparison) {
+  reuse(visual) {
     if (this.cards.size === 0) {
       for (const action of visual.actions) {
         if (action.do !== "write" || !["plot", "geometry", "scene3d", "diagram"].includes(action.kind)) continue;
@@ -8439,10 +8439,8 @@ var CompiledVisualRegistry = class {
     const aliases = /* @__PURE__ */ new Map();
     const reused = /* @__PURE__ */ new Set();
     const pending = [];
-    let cardCount = 0;
     for (const action of visual.actions) {
       if (action.do !== "write" || !["plot", "geometry", "scene3d", "diagram"].includes(action.kind)) continue;
-      cardCount += 1;
       const priorCards = this.cards.get(action.kind) ?? [];
       const content = action.content;
       const signature = priorCards.length ? cardIdentity(action.kind, content) : void 0;
@@ -8457,7 +8455,6 @@ var CompiledVisualRegistry = class {
         for (const [name, canonical] of signature.fragments) aliases.set(`${action.as}#${name}`, `${existing.node}#${oldFragments.get(canonical)}`);
       } else pending.push([action.kind, { node: action.as, content, signature }]);
     }
-    if (distinct && cardCount > 0 && reused.size === cardCount) onInvalidComparison();
     for (const [kind, card] of pending) {
       const cards = this.cards.get(kind) ?? [];
       cards.push(card);
@@ -12929,17 +12926,13 @@ function compileLessonPlan(value, options = {}) {
   const primaryScenes = /* @__PURE__ */ new Map();
   const reusableVisuals = /* @__PURE__ */ new Map();
   let renderedVisuals;
-  const reuseCompiledVisual = (visual, distinct, path) => {
+  const reuseCompiledVisual = (visual) => {
     if (reusableVisuals.size === 0) return visual;
     if (!renderedVisuals) {
       renderedVisuals = new CompiledVisualRegistry();
-      for (const earlier of reusableVisuals.values()) renderedVisuals.reuse(earlier, false, () => fail3("LESSON_PLAN_COMPILER", path, "unexpected initial comparison"));
+      for (const earlier of reusableVisuals.values()) renderedVisuals.reuse(earlier);
     }
-    return renderedVisuals.reuse(visual, distinct, () => fail3(
-      "LESSON_PLAN_COURSE_VISUAL",
-      path,
-      "an explicit comparison must differ in teaching content, not only in presentation"
-    ));
+    return renderedVisuals.reuse(visual);
   };
   const resolvedReference = (path) => {
     const item = resolvedReferences.get(path);
@@ -12987,9 +12980,7 @@ function compileLessonPlan(value, options = {}) {
               );
             }
             const visual = existing ?? reuseCompiledVisual(
-              compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`),
-              Boolean(item.distinct_visual),
-              `${actionPath}.content.parameters`
+              compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`)
             );
             if (existing) {
               actions.push({

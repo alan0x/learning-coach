@@ -4640,3 +4640,24 @@ test("an earlier standalone view can be reused by a later composite without brea
   assert.equal(connection.to, plots[0].as);
   assert.ok(actions.find(a => a.do === "group").members.includes(plots[0].as));
 });
+
+
+test("cross-component duplicate comparison is resolved without another model request", async () => {
+  const plan = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
+  plan.sections.push({ purpose: "Return to the same graph", moments: [{ narration: "继续观察函数图像。", actions: [
+    { action: "create", kind: "visual", role: "comparison", content: { capability: "function_plot", parameters: { expression: "sin(x)" }, numbers: [1] }, placement: { relation: "new_region" } },
+  ] }] });
+  const drafts = plan.sections.map(({moments,student_activities},index)=>toModelSectionDraft({version:plan.version,section:index+1,moments,...student_activities?{student_activities}:{}}));
+  const outline = stagedOutline(plan, drafts);
+  outline.course_visuals[1].relation = "comparison";
+  const calls = [], rejections = [];
+  const generated = await generateLessonPlanWithModel(async request => {
+    calls.push({label:request.label,section:request.section});
+    return request.label === "lesson-plan-bootstrap" ? bootstrapModelResponse(request,outline,drafts[0])
+      : request.label === "lesson-plan-outline" ? JSON.stringify(outline) : sectionModelResponse(request,drafts);
+  }, {turn_id:"turn-cross-component-comparison-reuse",learner_request:"结合单位圆与函数图讲解周期变化。"}, {on_rejected_part:event=>rejections.push(event)});
+  assert.equal(generated.model_calls, 4);
+  assert.equal(calls.length, 4);
+  assert.deepEqual(rejections, []);
+  assert.equal(allActions(generated.lesson).filter(a=>a.do==="write"&&a.kind==="plot").length, 1);
+});
