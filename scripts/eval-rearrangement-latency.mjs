@@ -22,6 +22,7 @@ await mkdir(outputDir, { recursive: true });
 const temporary = await mkdtemp(resolve(tmpdir(), "rearrangement-baseline-"));
 const baselinePath = resolve(temporary, "lesson-plan.mjs");
 await writeFile(baselinePath, execFileSync("git", ["show", `${baselineRef}:lesson-plan.js`], { cwd: root, maxBuffer: 4_000_000 }));
+const candidateRef = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
 const versions = {
   baseline: await import(pathToFileURL(baselinePath).href),
   candidate: await import(pathToFileURL(resolve(root, "lesson-plan.js")).href),
@@ -37,7 +38,8 @@ const route = resolveLessonModelRoute();
 const results = [];
 const report = async () => writeFile(resolve(outputDir, "results.json"), JSON.stringify({
   baseline_ref: baselineRef,
-  candidate_ref: execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(),
+  candidate_ref: candidateRef,
+  completed: results.length === cases.length * repeat * 2,
   provider: route.provider, model: route.model, repetitions: repeat,
   note: "Timing includes local validation and all semantic repair attempts. Compiled status alone does not certify prose correctness; review saved lessons separately.",
   results,

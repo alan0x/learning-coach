@@ -1089,7 +1089,8 @@ function compileGeometricRearrangement(
   const progressExpression = progressDefinition && progressVariable
     ? `((${progressVariable})-(${progressDefinition.min}))/((${progressDefinition.max})-(${progressDefinition.min}))`
     : "0";
-  const recipe = rearrangementRecipe(construction, legA, legB, path);
+  const recipe = rearrangementRecipe(construction, legA, legB);
+  if (!recipe) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
   const facts = REARRANGEMENT_CONSTRUCTIONS[construction as RearrangementConstruction];
   const progressInitial = progressDefinition
     ? (progressDefinition.initial - progressDefinition.min) / (progressDefinition.max - progressDefinition.min)
@@ -1190,7 +1191,9 @@ function compileGeometricRearrangement(
   const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1);
   const margin = span * 0.1;
   const geometry = {
-    title: optionalText(input.title, recipe.title, `${path}.title`),
+    // A fixed recipe owns its name just as it owns its shapes and proof;
+    // a model-authored title must not identify it as a different construction.
+    title: recipe.title,
     caption: facts.caption,
     axes: {
       x: { min: Math.min(...xs) - margin, max: Math.max(...xs) + margin },

@@ -7206,9 +7206,9 @@ var REARRANGEMENT_CONSTRUCTIONS = {
 };
 var REARRANGEMENT_FACTS = REARRANGEMENT_CONSTRUCTIONS;
 var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
-function rearrangementRecipe(construction, first, second, path) {
+function rearrangementRecipe(construction, first, second) {
   const definition = REARRANGEMENT_CONSTRUCTIONS[construction];
-  if (!definition) throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
+  if (!definition) return void 0;
   const gap = Math.max(first, second) * 0.35;
   if (construction === "right_triangle_square") {
     const side = first + second;
@@ -7249,7 +7249,7 @@ function rearrangementRecipe(construction, first, second, path) {
       ]
     };
   }
-  throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
+  return void 0;
 }
 
 // src/lesson-plan.ts
@@ -12685,7 +12685,8 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
   const progressDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
   const progressVariable = number ? variableAlias(number) : void 0;
   const progressExpression = progressDefinition && progressVariable ? `((${progressVariable})-(${progressDefinition.min}))/((${progressDefinition.max})-(${progressDefinition.min}))` : "0";
-  const recipe = rearrangementRecipe(construction, legA, legB, path);
+  const recipe = rearrangementRecipe(construction, legA, legB);
+  if (!recipe) fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
   const facts = REARRANGEMENT_CONSTRUCTIONS[construction];
   const progressInitial = progressDefinition ? (progressDefinition.initial - progressDefinition.min) / (progressDefinition.max - progressDefinition.min) : 0;
   const pieces = recipe.pieces.map((piece, index) => ({ ...piece, role: `piece-${index + 1}` }));
@@ -12783,7 +12784,9 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
   const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1);
   const margin = span * 0.1;
   const geometry = {
-    title: optionalText(input.title, recipe.title, `${path}.title`),
+    // A fixed recipe owns its name just as it owns its shapes and proof;
+    // a model-authored title must not identify it as a different construction.
+    title: recipe.title,
     caption: facts.caption,
     axes: {
       x: { min: Math.min(...xs) - margin, max: Math.max(...xs) + margin },

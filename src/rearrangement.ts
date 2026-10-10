@@ -1,5 +1,3 @@
-import { LessonPlanError } from "./lesson-plan.js";
-
 /** One definition supplies the compiler labels and the model's compact teaching facts. */
 export const REARRANGEMENT_CONSTRUCTIONS = {
   right_triangle_square: {
@@ -62,10 +60,9 @@ export function rearrangementRecipe(
   construction: unknown,
   first: number,
   second: number,
-  path: string,
-): RearrangementRecipe {
+): RearrangementRecipe | undefined {
   const definition = REARRANGEMENT_CONSTRUCTIONS[construction as RearrangementConstruction];
-  if (!definition) throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
+  if (!definition) return undefined;
   const gap = Math.max(first, second) * 0.35;
   if (construction === "right_triangle_square") {
     const side = first + second;
@@ -106,6 +103,6 @@ export function rearrangementRecipe(
       ],
     };
   }
-  throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
+  return undefined;
 }
 

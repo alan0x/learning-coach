@@ -4846,3 +4846,17 @@ test("a bad later proof repairs only that section and keeps the published prefix
   assert.equal(rejected[0].section, 2);
   assert.deepEqual(generated.lesson.steps[0], prefixes[0].compiled.lesson.steps[0]);
 });
+
+
+test("the fixed rearrangement owns its visual title without changing the requested course title", () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.title = "用图形理解勾股定理";
+  plan.sections[0].moments[0].actions[0].content.parameters = {
+    construction: "square_area_identity", title: "四个直角三角形证明勾股定理",
+  };
+  const compiled = compileAndValidateLessonPlan(plan);
+  const geometry = compiled.lesson.steps[0].beats[0].actions.find(a => a.kind === "geometry").content;
+  assert.equal(geometry.title, "正方形分块与面积恒等式");
+  assert.match(geometry.caption, /两个正方形.*两个 ab 矩形/);
+  assert.equal(compiled.lesson.lesson.title, plan.title);
+});
