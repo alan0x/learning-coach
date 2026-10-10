@@ -1,4 +1,4 @@
-import { fixedLineSamples } from "./teaching-contracts.js";
+import { fixedLineSamples, REARRANGEMENT_FACTS } from "./teaching-contracts.js";
 import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
@@ -141,7 +141,7 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。
 - 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
-- geometric_rearrangement 仅用于指定多边形证明；圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
+- geometric_rearrangement 仅用于指定多边形证明，construction 须与要讲的结论相符：right_triangle_square=四个直角三角形证勾股c²=a²+b²；square_area_identity=a²、b²与两个ab矩形（无三角形）证(a+b)²；triangle_to_rectangle=三角形面积ab/2。标题与旁白只描述所选构造实际画出的图形与结论，复用时依 visuals_for_section 的 pieces/shows。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
 只返回符合响应 Schema 的 JSON。`;
 
 const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 outline，再依据这个 outline 编写 first_section。first_section 只能落实 outline.sections[0]：
@@ -157,7 +157,7 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置。
 - 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
-- geometric_rearrangement 仅用于指定多边形证明；圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
+- geometric_rearrangement 仅用于指定多边形证明，construction 须与要讲的结论相符：right_triangle_square=四个直角三角形证勾股c²=a²+b²；square_area_identity=a²、b²与两个ab矩形（无三角形）证(a+b)²；triangle_to_rectangle=三角形面积ab/2。标题与旁白只描述所选构造实际画出的图形与结论，复用时依 visuals_for_section 的 pieces/shows。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
 
 const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
@@ -2973,6 +2973,11 @@ export async function generateLessonPlanWithModel(
     };
   }
 
+  const rearrangementFacts = (visual: LessonPlanVisualContent) => {
+    const construction = visual.parameters?.construction ?? "right_triangle_square";
+    const facts = REARRANGEMENT_FACTS[construction as keyof typeof REARRANGEMENT_FACTS];
+    return facts ? { construction, pieces: facts.pieces, shows: facts.shows } : {};
+  };
   const visualsForSection = (section: number) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
     const established = visual.create_section < section
@@ -2987,6 +2992,8 @@ export async function generateLessonPlanWithModel(
       capability: visual.capability,
       mode: visual.create_section === section ? "create" : "reuse",
       relation: visual.relation,
+      ...(established.length === 1 && established[0].capability === "geometric_rearrangement"
+        ? rearrangementFacts(established[0]) : {}),
       ...(visual.related_visual === undefined ? {} : { related_visual: visual.related_visual }),
     }];
   });

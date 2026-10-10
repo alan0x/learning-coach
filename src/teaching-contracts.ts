@@ -7,6 +7,13 @@ export const TEACHING_CONTRACTS = {
   function_plot: {static_sample_limit:2, input:"slider", feedback:"secant", singularity:"undefined"},
 } as const;
 
+/** What each rearrangement actually draws and proves; mirrors rearrangementRecipe in the compiler. */
+export const REARRANGEMENT_FACTS = {
+  right_triangle_square: {pieces: "4个全等直角三角形（两直角边a、b）", shows: "c² = a² + b²（勾股定理）"},
+  square_area_identity: {pieces: "a²、b²两个正方形和两个ab矩形，无三角形", shows: "(a+b)² = a² + 2ab + b²（完全平方公式）"},
+  triangle_to_rectangle: {pieces: "2个全等直角三角形拼成矩形", shows: "三角形面积 = ab/2"},
+} as const;
+
 // Conservative polynomial-degree check over the already validated postfix tokens.
 function affineTokens(tokens: LessonPlanMathToken[]): boolean {
   const stack: number[] = [];

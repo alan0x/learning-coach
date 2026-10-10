@@ -7308,7 +7308,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     output_kinds: ["geometry"],
     student_controls: ["slider"],
     required_features: ["polygon_pieces", "rigid_rearrangement", "area_relation"],
-    model_guidance: "\u7ECF\u8FC7\u9A8C\u8BC1\u7684\u591A\u8FB9\u5F62\u62C6\u5206\u4E0E\u521A\u4F53\u91CD\u6392\uFF0C\u7528\u8FDB\u5EA6\u6570\u503C\u63A7\u5236\u79FB\u52A8"
+    model_guidance: "\u591A\u8FB9\u5F62\u62C6\u5206\u4E0E\u521A\u4F53\u91CD\u6392\uFF0C\u8FDB\u5EA6\u6570\u503C\u63A7\u5236\u79FB\u52A8\uFF1Bconstruction\uFF1Aright_triangle_square=\u56DB\u76F4\u89D2\u4E09\u89D2\u5F62\u8BC1\u52FE\u80A1\uFF0Csquare_area_identity=a\xB2\u3001b\xB2\u3001\u4E24\u4E2Aab\u77E9\u5F62\u8BC1(a+b)\xB2\uFF0Ctriangle_to_rectangle=\u4E09\u89D2\u5F62\u9762\u79EFab/2"
   },
   circle_area_rearrangement: {
     parts: ["whole", "primary_control"],
@@ -8478,6 +8478,11 @@ var CompiledVisualRegistry = class {
 };
 
 // src/teaching-contracts.ts
+var REARRANGEMENT_FACTS = {
+  right_triangle_square: { pieces: "4\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\uFF08\u4E24\u76F4\u89D2\u8FB9a\u3001b\uFF09", shows: "c\xB2 = a\xB2 + b\xB2\uFF08\u52FE\u80A1\u5B9A\u7406\uFF09" },
+  square_area_identity: { pieces: "a\xB2\u3001b\xB2\u4E24\u4E2A\u6B63\u65B9\u5F62\u548C\u4E24\u4E2Aab\u77E9\u5F62\uFF0C\u65E0\u4E09\u89D2\u5F62", shows: "(a+b)\xB2 = a\xB2 + 2ab + b\xB2\uFF08\u5B8C\u5168\u5E73\u65B9\u516C\u5F0F\uFF09" },
+  triangle_to_rectangle: { pieces: "2\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u62FC\u6210\u77E9\u5F62", shows: "\u4E09\u89D2\u5F62\u9762\u79EF = ab/2" }
+};
 function affineTokens(tokens) {
   const stack = [];
   for (const token of tokens) {
@@ -14005,7 +14010,7 @@ var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5
 - \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002
 - \u601D\u8003\u9898\u8BFE\u4E2D\u53EA\u95EE\u4E0D\u7B54\uFF1B\u9898\u4E0E\u53C2\u8003\u7B54\u6848\u5199\u5165 reflection_activities\uFF0C\u8BFE\u540E\u4EE5\u6536\u8D77\u7684\u7B54\u6848\u5361\u7247\u51FA\u73B0\u3002
 - \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
-- geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF1B\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002
+- geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF0Cconstruction \u987B\u4E0E\u8981\u8BB2\u7684\u7ED3\u8BBA\u76F8\u7B26\uFF1Aright_triangle_square=\u56DB\u4E2A\u76F4\u89D2\u4E09\u89D2\u5F62\u8BC1\u52FE\u80A1c\xB2=a\xB2+b\xB2\uFF1Bsquare_area_identity=a\xB2\u3001b\xB2\u4E0E\u4E24\u4E2Aab\u77E9\u5F62\uFF08\u65E0\u4E09\u89D2\u5F62\uFF09\u8BC1(a+b)\xB2\uFF1Btriangle_to_rectangle=\u4E09\u89D2\u5F62\u9762\u79EFab/2\u3002\u6807\u9898\u4E0E\u65C1\u767D\u53EA\u63CF\u8FF0\u6240\u9009\u6784\u9020\u5B9E\u9645\u753B\u51FA\u7684\u56FE\u5F62\u4E0E\u7ED3\u8BBA\uFF0C\u590D\u7528\u65F6\u4F9D visuals_for_section \u7684 pieces/shows\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
 var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D\uFF0C\u5FC5\u987B\u5148\u5B8C\u6210 outline\uFF0C\u518D\u4F9D\u636E\u8FD9\u4E2A outline \u7F16\u5199 first_section\u3002first_section \u53EA\u80FD\u843D\u5B9E outline.sections[0]\uFF1A
 - outline \u662F\u552F\u4E00\u8BFE\u7A0B\u5B89\u6392\uFF1B\u4E0D\u5F97\u5728 first_section \u589E\u52A0 outline \u6CA1\u6709\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\uFF0C\u4E5F\u4E0D\u5F97\u9057\u6F0F\u7B2C\u4E00\u8282\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\u548C\u53EF\u590D\u7528\u677F\u4E66\u3002
@@ -14020,7 +14025,7 @@ var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D
 - animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\u3002
 - \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002
 - \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
-- geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF1B\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002`;
+- geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF0Cconstruction \u987B\u4E0E\u8981\u8BB2\u7684\u7ED3\u8BBA\u76F8\u7B26\uFF1Aright_triangle_square=\u56DB\u4E2A\u76F4\u89D2\u4E09\u89D2\u5F62\u8BC1\u52FE\u80A1c\xB2=a\xB2+b\xB2\uFF1Bsquare_area_identity=a\xB2\u3001b\xB2\u4E0E\u4E24\u4E2Aab\u77E9\u5F62\uFF08\u65E0\u4E09\u89D2\u5F62\uFF09\u8BC1(a+b)\xB2\uFF1Btriangle_to_rectangle=\u4E09\u89D2\u5F62\u9762\u79EFab/2\u3002\u6807\u9898\u4E0E\u65C1\u767D\u53EA\u63CF\u8FF0\u6240\u9009\u6784\u9020\u5B9E\u9645\u753B\u51FA\u7684\u56FE\u5F62\u4E0E\u7ED3\u8BBA\uFF0C\u590D\u7528\u65F6\u4F9D visuals_for_section \u7684 pieces/shows\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002`;
 var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
 ${BOOTSTRAP_FIRST_SECTION_PROMPT}
@@ -16276,6 +16281,11 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       model_calls: modelCalls
     };
   }
+  const rearrangementFacts = (visual) => {
+    const construction = visual.parameters?.construction ?? "right_triangle_square";
+    const facts = REARRANGEMENT_FACTS[construction];
+    return facts ? { construction, pieces: facts.pieces, shows: facts.shows } : {};
+  };
   const visualsForSection = (section) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
     const established = visual.create_section < section ? (drafts[visual.create_section - 1]?.moments ?? []).flatMap((m) => m.actions).filter((a) => a.action === "create" && a.kind === "visual").map((a) => a.content).filter((v) => v.capability === visual.capability) : [];
@@ -16285,6 +16295,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       capability: visual.capability,
       mode: visual.create_section === section ? "create" : "reuse",
       relation: visual.relation,
+      ...established.length === 1 && established[0].capability === "geometric_rearrangement" ? rearrangementFacts(established[0]) : {},
       ...visual.related_visual === void 0 ? {} : { related_visual: visual.related_visual }
     }];
   });
