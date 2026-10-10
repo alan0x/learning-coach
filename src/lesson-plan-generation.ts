@@ -2993,9 +2993,9 @@ export async function generateLessonPlanWithModel(
     const source = visual.create_section < section
       ? drafts[visual.create_section - 1]?.moments.flatMap(m => m.actions)
         .find(a => a.action === "create" && a.kind === "visual"
-          && a.reusable_item === visual.reusable_item && a.content.capability === visual.capability)
+          && a.reusable_item === visual.reusable_item && (a.content as LessonPlanVisualContent).capability === visual.capability)
       : undefined;
-    const established = source?.action === "create" && source.kind === "visual" ? source.content : undefined;
+    const established = source?.action === "create" && source.kind === "visual" ? source.content as LessonPlanVisualContent : undefined;
     let facts: Record<string, unknown> = {};
     if (established?.capability === "geometric_rearrangement") {
       const construction = (established.parameters?.construction ?? "right_triangle_square") as RearrangementConstruction;

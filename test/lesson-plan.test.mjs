@@ -4769,3 +4769,80 @@ test("two rearrangements in one section retain their own facts, controls and con
   assert.equal(result.model_calls, 2);
   assert.equal(calls.length, 2);
 });
+
+
+test("observed rearrangement contradictions are checked across reuse, board math and practice", () => {
+  const cases = [
+    ["square_area_identity", "内部包含四个完全相同的直角三角形，重新摆放后证明勾股定理。"],
+    ["right_triangle_square", "这个大正方形的边长为斜边c，所以它的总面积为c的平方。"],
+    ["right_triangle_square", "中间小正方形的边长为b−a，其面积为(b−a)²。"],
+  ];
+  for (const [construction, narration] of cases) {
+    const plan = samplePlan("geometric_rearrangement");
+    plan.sections[0].moments[0].actions[0].content.parameters = { construction, leg_a: 3, leg_b: 4 };
+    plan.sections[1].moments[0].narration = narration;
+    assert.throws(() => compileAndValidateLessonPlan(plan), error =>
+      error.code === "LESSON_PLAN_TEACHING_MISMATCH" && error.path.includes("sections[1]"));
+  }
+  const plan = samplePlan("geometric_rearrangement");
+  plan.sections[1].moments[0].actions[1].kind = "math";
+  plan.sections[1].moments[0].actions[1].content = { latex: "S_{\\text{大正方形}} = c^2" };
+  assert.throws(() => compileAndValidateLessonPlan(plan), /LESSON_PLAN|right_triangle_square/);
+  plan.sections[1].moments[0].actions[1].content = { latex: "(a+b)^2-4\\times ab/2=c^2=a^2+b^2" };
+  plan.sections[0].student_activities[0].prompt = "拖动滑块改变斜边的长度。";
+  assert.throws(() => compileAndValidateLessonPlan(plan), error =>
+    error.code === "LESSON_PLAN_TEACHING_MISMATCH" && error.path.includes("student_activities"));
+  plan.sections[0].student_activities[0].prompt = "拖动拼接进度滑块，将拼块完全拼合成斜边正方形。";
+  assert.throws(() => compileAndValidateLessonPlan(plan), /end:.*a²和b²/);
+});
+
+test("a reflection tied to the diagram's explanation cannot reintroduce the wrong proof", () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.sections[1].student_activities = [{ kind: "reflection", reference: localBoardItem(1, 1),
+    prompt: "如何计算这个外框的面积？", answer: "这个大正方形的边长是c。" }];
+  assert.throws(() => compileAndValidateLessonPlan(plan), error =>
+    error.code === "LESSON_PLAN_TEACHING_MISMATCH" && error.path.includes("student_activities"));
+});
+
+test("rearrangement guards allow algebra supplements, negation, hypothetical proofs and numeric applications", () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.title = "用完全平方公式辅助理解勾股定理";
+  plan.sections[0].moments[0].actions[0].content.parameters = { construction: "square_area_identity" };
+  plan.sections[1].moments[0].narration = "这张图没有四个全等直角三角形，只展示完全平方公式。另一种证明中图中有四个全等直角三角形。";
+  compileAndValidateLessonPlan(plan);
+  plan.sections[0].moments[0].actions[0].content.parameters = { construction: "right_triangle_square" };
+  plan.sections[1].moments[0].narration = "这个大正方形的边长不是c，而是a+b。假设另一张图中大正方形的边长是c，就需要不同的构造。已知直角边3和4，算得斜边5。";
+  compileAndValidateLessonPlan(plan);
+  plan.sections[0].student_activities[0].prompt = "把进度调到一半，观察四块三角形的移动。";
+  compileAndValidateLessonPlan(plan);
+});
+
+test("a bad later proof repairs only that section and keeps the published prefix", async () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.sections[0].moments[0].actions.find(a => a.action === "animate").end_value = 1;
+  const { drafts, outline } = rearrangementGenerationFixture(plan);
+  const bad = structuredClone(drafts[1]);
+  bad.moments[0].narration = "这个大正方形的边长为斜边c，所以面积为c²。";
+  drafts[1].moments[0].narration = "外框边长a+b；比较初态c²和终态a²+b²的留白面积。";
+  const calls = [], rejected = [], prefixes = [];
+  const generated = await generateLessonPlanWithModel(async request => {
+    calls.push({ part: request.part, section: request.section, attempt: request.attempt });
+    if (request.part === "bootstrap") return bootstrapModelResponse(request, outline, drafts[0]);
+    if (request.attempt === 1) return sectionModelResponse(request, [drafts[0], bad]);
+    const prompt = JSON.parse(request.prompt);
+    assert.match(JSON.parse(prompt.previous_validation_error).message, /外框边长a\+b/);
+    assert.equal(prompt.visuals_for_section[0].progress.current_value, 1);
+    return sectionModelResponse(request, drafts);
+  }, { turn_id: "rearrangement-repair", learner_request: "请用图形解释勾股定理" }, {
+    on_rejected_part: event => rejected.push(event), on_playable_prefix: event => prefixes.push(event),
+  });
+  assert.deepEqual(calls, [
+    { part: "bootstrap", section: undefined, attempt: 1 },
+    { part: "section", section: 2, attempt: 1 },
+    { part: "section", section: 2, attempt: 2 },
+  ]);
+  assert.equal(generated.model_calls, 3);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].section, 2);
+  assert.deepEqual(generated.lesson.steps[0], prefixes[0].compiled.lesson.steps[0]);
+});
