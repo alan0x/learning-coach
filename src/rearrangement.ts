@@ -36,6 +36,11 @@ export const REARRANGEMENT_CONSTRUCTIONS = {
 export type RearrangementConstruction = keyof typeof REARRANGEMENT_CONSTRUCTIONS;
 export const REARRANGEMENT_FACTS = REARRANGEMENT_CONSTRUCTIONS;
 
+/** Short catalog text, derived from the same endpoint facts used by the renderer. */
+export const REARRANGEMENT_MODEL_GUIDANCE = "刚体重排，数值只控制进度，a、b固定；" + Object.entries(REARRANGEMENT_CONSTRUCTIONS)
+  .map(([name, facts]) => `${name}：${facts.pieces}；${facts.container}；起点${facts.initial}，终点${facts.final}；${facts.shows}`)
+  .join("。") + "。只比较两个端点的面积，不声称移动途中留白形状不变。";
+
 export type RigidPose = { x: number; y: number; angle?: number };
 type RigidPiece = {
   points: Array<[number, number]>;

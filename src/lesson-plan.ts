@@ -1,3 +1,4 @@
+import { REARRANGEMENT_MODEL_GUIDANCE } from "./rearrangement.js";
 export const LESSON_PLAN_VERSION = "0.1" as const;
 
 export const PROCESS_DIAGRAM_CONTRACT = {
@@ -144,7 +145,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     output_kinds: ["geometry"],
     student_controls: ["slider"],
     required_features: ["polygon_pieces", "rigid_rearrangement", "area_relation"],
-    model_guidance: "多边形拆分与刚体重排，进度数值控制移动；construction：right_triangle_square=四直角三角形证勾股，square_area_identity=a²、b²、两个ab矩形证(a+b)²，triangle_to_rectangle=三角形面积ab/2",
+    model_guidance: REARRANGEMENT_MODEL_GUIDANCE,
   },
   circle_area_rearrangement: {
     parts: ["whole", "primary_control"],

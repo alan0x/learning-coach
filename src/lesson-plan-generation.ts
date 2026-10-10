@@ -1,4 +1,5 @@
-import { fixedLineSamples, REARRANGEMENT_FACTS } from "./teaching-contracts.js";
+import { fixedLineSamples } from "./teaching-contracts.js";
+import { REARRANGEMENT_FACTS, REARRANGEMENT_MODEL_GUIDANCE, type RearrangementConstruction } from "./rearrangement.js";
 import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
@@ -141,7 +142,7 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。
 - 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
-- geometric_rearrangement 仅用于指定多边形证明，construction 须与要讲的结论相符：right_triangle_square=四个直角三角形证勾股c²=a²+b²；square_area_identity=a²、b²与两个ab矩形（无三角形）证(a+b)²；triangle_to_rectangle=三角形面积ab/2。标题与旁白只描述所选构造实际画出的图形与结论，复用时依 visuals_for_section 的 pieces/shows。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
+- geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
 只返回符合响应 Schema 的 JSON。`;
 
 const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 outline，再依据这个 outline 编写 first_section。first_section 只能落实 outline.sections[0]：
@@ -157,7 +158,7 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置。
 - 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
-- geometric_rearrangement 仅用于指定多边形证明，construction 须与要讲的结论相符：right_triangle_square=四个直角三角形证勾股c²=a²+b²；square_area_identity=a²、b²与两个ab矩形（无三角形）证(a+b)²；triangle_to_rectangle=三角形面积ab/2。标题与旁白只描述所选构造实际画出的图形与结论，复用时依 visuals_for_section 的 pieces/shows。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
+- geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
 
 const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
@@ -2505,6 +2506,7 @@ function sectionPromptContext(
   outline: LessonPlanOutline,
   sectionNumber: number,
   allowedNumberIndexes: readonly number[],
+  currentNumbers: Map<number, number>,
 ): Record<string, unknown> {
   const section = outline.sections[sectionNumber - 1];
   const allowedNumbers = new Set(allowedNumberIndexes);
@@ -2516,6 +2518,7 @@ function sectionPromptContext(
         number: index + 1,
         label: number.label,
         initial: number.initial,
+        current_value: currentNumbers.get(index + 1) ?? number.initial,
         min: number.min,
         max: number.max,
         ...(number.unit === undefined ? {} : { unit: number.unit }),
@@ -2973,27 +2976,48 @@ export async function generateLessonPlanWithModel(
     };
   }
 
-  const rearrangementFacts = (visual: LessonPlanVisualContent) => {
-    const construction = visual.parameters?.construction ?? "right_triangle_square";
-    const facts = REARRANGEMENT_FACTS[construction as keyof typeof REARRANGEMENT_FACTS];
-    return facts ? { construction, pieces: facts.pieces, shows: facts.shows } : {};
+  // Teacher animation state only: optional student practice is not run while
+  // subsequent sections play. Retries must never include the rejected draft.
+  const currentNumbersBefore = (section: number): Map<number, number> => {
+    const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+    for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
+      for (const number of moment.restart_numbers ?? []) state.set(number, outline.numbers![number - 1].initial);
+      for (const action of moment.actions) if (action.action === "animate") state.set(action.number, action.end_value);
+    }
+    return state;
   };
-  const visualsForSection = (section: number) => (outline.course_visuals ?? []).flatMap((visual, index) => {
+  const visualsForSection = (section: number, state: Map<number, number>) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
-    const established = visual.create_section < section
-      ? (drafts[visual.create_section - 1]?.moments ?? []).flatMap(m => m.actions)
-        .filter(a => a.action === "create" && a.kind === "visual")
-        .map(a => (a as {content:LessonPlanVisualContent}).content)
-        .filter(v => v.capability === visual.capability)
-      : [];
+    // Two comparisons can share a capability while having different recipes,
+    // parameters and controls. Match the assigned reusable slot, not the type.
+    const source = visual.create_section < section
+      ? drafts[visual.create_section - 1]?.moments.flatMap(m => m.actions)
+        .find(a => a.action === "create" && a.kind === "visual"
+          && a.reusable_item === visual.reusable_item && a.content.capability === visual.capability)
+      : undefined;
+    const established = source?.action === "create" && source.kind === "visual" ? source.content : undefined;
+    let facts: Record<string, unknown> = {};
+    if (established?.capability === "geometric_rearrangement") {
+      const construction = (established.parameters?.construction ?? "right_triangle_square") as RearrangementConstruction;
+      const definition = REARRANGEMENT_FACTS[construction];
+      const number = established.numbers?.[0];
+      const range = number ? outline.numbers?.[number - 1] : undefined;
+      facts = definition ? {
+        construction, pieces: definition.pieces, shows: definition.shows,
+        container: definition.container, at_start: definition.initial, at_end: definition.final, proof: definition.proof,
+        fixed_legs: { a: established.parameters?.leg_a ?? 3, b: established.parameters?.leg_b ?? 2 },
+        ...(range && number ? { progress: { number, current_value: state.get(number),
+          normalized: ((state.get(number) ?? range.initial) - range.min) / (range.max - range.min),
+          changes: "只移动拼块，不能改变边长或验证另一组三边长度" } } : {}),
+      } : {};
+    }
     return [{
-      ...(established.length === 1 && fixedLineSamples(established[0]) ? {sample_slope:"constant"} : {}),
-      course_visual: index + 1,
-      capability: visual.capability,
-      mode: visual.create_section === section ? "create" : "reuse",
-      relation: visual.relation,
-      ...(established.length === 1 && established[0].capability === "geometric_rearrangement"
-        ? rearrangementFacts(established[0]) : {}),
+      ...(established && fixedLineSamples(established) ? { sample_slope: "constant" } : {}),
+      course_visual: index + 1, capability: visual.capability,
+      mode: visual.create_section === section ? "create" : "reuse", relation: visual.relation,
+      ...facts,
+      ...(visual.create_section === section && visual.capability === "geometric_rearrangement"
+        ? { construction_choices: REARRANGEMENT_MODEL_GUIDANCE } : {}),
       ...(visual.related_visual === undefined ? {} : { related_visual: visual.related_visual }),
     }];
   });
@@ -3010,6 +3034,7 @@ export async function generateLessonPlanWithModel(
     if (attempt > maxAttempts) throw sectionErrors.get(section);
     let raw: string;
     const allowedNumberIndexes = executableNumberIndexesForSection(outline, drafts, section);
+    const currentNumbers = currentNumbersBefore(section);
     try {
       raw = await model({
         label: "lesson-plan-section",
@@ -3020,8 +3045,8 @@ export async function generateLessonPlanWithModel(
         system_prompt: SECTION_SYSTEM_PROMPT,
         prompt: JSON.stringify({
           course_context: compactModelContext(context),
-          course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes),
-          visuals_for_section: visualsForSection(section),
+          course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers),
+          visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
           ...(sectionErrors.has(section)
             ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) }

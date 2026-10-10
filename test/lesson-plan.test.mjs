@@ -263,6 +263,7 @@ function toModelSectionDraft(draft) {
     });
     return {
       narration: moment.narration ?? "",
+      ...(moment.restart_numbers ? { restart_numbers: moment.restart_numbers } : {}),
       delivery: moment.delivery ?? "neutral",
       ...grouped,
     };
@@ -4691,4 +4692,80 @@ test("Pythagorean labels name the actual triangle sides, outer frame and endpoin
     const outer = (a+b)**2, triangles = 4*a*b/2;
     assert.ok(Math.abs(outer-triangles-(a*a+b*b)) < 1e-9);
   }
+});
+
+
+function rearrangementGenerationFixture(plan) {
+  makeSamplePlanModelCompatible(plan);
+  const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
+    version: plan.version, section: index + 1, moments,
+    ...(student_activities ? { student_activities } : {}),
+  }));
+  return { drafts, outline: stagedOutline(plan, drafts) };
+}
+
+test("reused rearrangement context carries endpoint facts and teacher state without another call", async () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.sections[0].moments[0].actions[0].content.parameters = { construction: "right_triangle_square", leg_a: 3, leg_b: 4 };
+  plan.sections[0].moments[0].actions.find(a => a.action === "animate").end_value = 1;
+  const { drafts, outline } = rearrangementGenerationFixture(plan);
+  drafts[1].moments[0].restart_numbers = [1];
+  drafts[1].moments[0].animations.push({ number: 1, end_value: 1, duration_intent: "brief", timing: "during_speech" });
+  const calls = [], prefixes = [], rejected = [];
+  const generated = await generateLessonPlanWithModel(async request => {
+    calls.push(request);
+    if (request.part === "bootstrap") return bootstrapModelResponse(request, outline, drafts[0]);
+    const context = JSON.parse(request.prompt);
+    const facts = context.visuals_for_section[0];
+    assert.equal(facts.construction, "right_triangle_square");
+    assert.match(facts.container, /边长a\+b/);
+    assert.match(facts.at_start, /面积c²/);
+    assert.match(facts.at_end, /a²和b²/);
+    assert.deepEqual(facts.fixed_legs, { a: 3, b: 4 });
+    assert.equal(facts.progress.current_value, 1);
+    assert.equal(facts.progress.normalized, 1);
+    assert.match(facts.progress.changes, /不能改变边长/);
+    assert.equal(context.course_and_section.numbers[0].current_value, 1);
+    return sectionModelResponse(request, drafts);
+  }, { turn_id: "rearrangement-state", learner_request: "用图形解释勾股定理" }, {
+    on_playable_prefix: event => prefixes.push(event), on_rejected_part: event => rejected.push(event),
+  });
+  assert.equal(generated.model_calls, 2);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(rejected, []);
+  assert.equal(prefixes[0].completed_sections, 1);
+  assert.deepEqual(generated.lesson.steps[0], prefixes[0].compiled.lesson.steps[0]);
+  assert.deepEqual(generated.lesson.steps[1].beats[0].start, { kind: "replay", variables: ["number_01"] });
+  assert.equal(generated.lesson.steps[1].beats[0].actions.find(a => a.do === "animate").value, 1);
+});
+
+test("two rearrangements in one section retain their own facts, controls and constructions", async () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.numbers.push({ ...plan.numbers[0], label: "second progress", initial: 0.25 });
+  plan.sections[0].moments[0].actions[0].content.parameters = { construction: "right_triangle_square", leg_a: 3, leg_b: 4 };
+  const comparison = structuredClone(plan.sections[0].moments[0].actions[0]);
+  comparison.content.parameters = { construction: "square_area_identity", leg_a: 2, leg_b: 5 };
+  comparison.content.numbers = [2]; comparison.reusable_item = 2; comparison.distinct_visual = true;
+  plan.sections[0].reusable_items.push({ ...plan.sections[0].reusable_items[0] });
+  plan.sections[0].moments[0].actions.splice(1, 0, comparison);
+  const { drafts, outline } = rearrangementGenerationFixture(plan);
+  outline.course_visuals[1].relation = "comparison";
+  const calls = [];
+  const result = await generateLessonPlanWithModel(async request => {
+    calls.push(request);
+    if (request.part === "bootstrap") return bootstrapModelResponse(request, outline, drafts[0]);
+    const [first, second] = JSON.parse(request.prompt).visuals_for_section;
+    assert.equal(first.construction, "right_triangle_square");
+    assert.equal(second.construction, "square_area_identity");
+    assert.deepEqual(first.fixed_legs, { a: 3, b: 4 });
+    assert.deepEqual(second.fixed_legs, { a: 2, b: 5 });
+    assert.equal(first.progress.number, 1);
+    assert.equal(first.progress.current_value, 0.75);
+    assert.equal(second.progress.number, 2);
+    assert.equal(second.progress.current_value, 0.25);
+    assert.match(second.pieces, /无三角形/);
+    return sectionModelResponse(request, drafts);
+  }, { turn_id: "rearrangement-two-facts", learner_request: "比较两种面积拼图" }, { max_attempts_per_part: 1 });
+  assert.equal(result.model_calls, 2);
+  assert.equal(calls.length, 2);
 });
