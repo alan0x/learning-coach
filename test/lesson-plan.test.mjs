@@ -760,7 +760,7 @@ test("geometric rearrangement moves congruent pieces with deterministic bindings
   const geometry = compiled.lesson.steps[0].beats[0].actions.find(
     (action) => action.do === "write" && action.kind === "geometry",
   );
-  assert.equal(geometry.content.bindings.length, 24);
+  assert.equal(geometry.content.bindings.length, 26);
   const piece2Y = geometry.content.bindings.find(
     (binding) => binding.target === "piece-2-point-1.y",
   );
@@ -4660,4 +4660,35 @@ test("cross-component duplicate comparison is resolved without another model req
   assert.equal(calls.length, 4);
   assert.deepEqual(rejections, []);
   assert.equal(allActions(generated.lesson).filter(a=>a.do==="write"&&a.kind==="plot").length, 1);
+});
+
+
+test("Pythagorean labels name the actual triangle sides, outer frame and endpoint proof", () => {
+  for (const [a, b] of [[3, 4], [4, 3], [2, 2], [0.5, 7]]) {
+    const plan = samplePlan("geometric_rearrangement");
+    plan.sections[0].moments[0].actions[0].content.parameters = { construction: "right_triangle_square", leg_a: a, leg_b: b };
+    plan.sections[1].moments[0].actions[0].reference = reusable(1, 1, { kind: "capability", role: "hypotenuse" });
+    const compiled = compileAndValidateLessonPlan(plan);
+    const g = compiled.lesson.steps[0].beats[0].actions.find(a => a.kind === "geometry").content;
+    const bindings = new Map(g.bindings.map(b => [b.target, b.expression]));
+    const coordinate = (alias, progress) => {
+      const p = g.points.find(p => p.as === alias);
+      return ["x", "y"].map(axis => bindings.has(`${alias}.${axis}`)
+        ? evaluateMathExpression(bindings.get(`${alias}.${axis}`), { number_01: progress }) : p[axis]);
+    };
+    for (const progress of [0, 0.5, 1]) for (const [id, label, length] of [
+      ["leg-a", "a", a], ["leg-b", "b", b], ["hypotenuse", "c", Math.hypot(a, b)], ["target-edge-3", "a+b", a+b],
+    ]) {
+      const segment = g.segments.find(s => s.as === id);
+      assert.equal(segment.label, label);
+      const from = coordinate(segment.from, progress), to = coordinate(segment.to, progress);
+      assert.ok(Math.abs(Math.hypot(to[0]-from[0], to[1]-from[1]) - length) < 1e-9);
+    }
+    assert.equal(g.segments.filter(s => s.as.startsWith("right-angle-")).length, 2);
+    assert.match(g.caption, /起点留白 c².*终点留白 a²\+b²/);
+    assert.ok(g.points.find(p => p.as === "central-area"));
+    // Pythagoras follows from the two endpoint gaps, independent of leg order.
+    const outer = (a+b)**2, triangles = 4*a*b/2;
+    assert.ok(Math.abs(outer-triangles-(a*a+b*b)) < 1e-9);
+  }
 });

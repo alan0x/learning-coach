@@ -1,3 +1,4 @@
+import { rearrangementRecipe, REARRANGEMENT_CONSTRUCTIONS, type RearrangementConstruction, type RigidPose } from "./rearrangement.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./teaching-contracts.js";
 import { functionViewport } from "./function-viewport.js";
@@ -1054,74 +1055,6 @@ function compileRectangleUnitSquareArray(
   };
 }
 
-type RigidPose = { x: number; y: number; angle?: number };
-type RigidPiece = {
-  points: Array<[number, number]>;
-  start: RigidPose;
-  end: RigidPose;
-  label: string;
-  tone: "primary" | "secondary" | "accent" | "neutral";
-};
-type RearrangementRecipe = {
-  title: string;
-  relation: string;
-  target: Array<[number, number]>;
-  pieces: RigidPiece[];
-};
-
-function rearrangementRecipe(
-  construction: unknown,
-  first: number,
-  second: number,
-  path: string,
-): RearrangementRecipe {
-  if (!LESSON_PLAN_CAPABILITY_REGISTRY.geometric_rearrangement.parameter_options.construction
-    .includes(construction as never)) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
-  }
-  const gap = Math.max(first, second) * 0.35;
-  if (construction === "right_triangle_square") {
-    const side = first + second;
-    return {
-      title: "直角三角形重排与面积关系",
-      relation: "c² = a² + b²",
-      target: [[0, 0], [side, 0], [side, side], [0, side]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, label: "三角形 1", tone: "primary" },
-        { points: [[0, 0], [0, first], [-second, 0]], start: { x: side, y: 0 }, end: { x: side, y: second }, label: "三角形 2", tone: "secondary" },
-        { points: [[0, 0], [-first, 0], [0, -second]], start: { x: side, y: side }, end: { x: first, y: second }, label: "三角形 3", tone: "accent" },
-        { points: [[0, 0], [0, -first], [second, 0]], start: { x: 0, y: side }, end: { x: first, y: side }, label: "三角形 4", tone: "neutral" },
-      ],
-    };
-  }
-  if (construction === "square_area_identity") {
-    const side = first + second;
-    return {
-      title: "正方形分块与面积恒等式",
-      relation: "(a+b)² = a² + 2ab + b²",
-      target: [[0, 0], [side, 0], [side, side], [0, side]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [first, first], [0, first]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "a²", tone: "primary" },
-        { points: [[0, 0], [second, 0], [second, first], [0, first]], start: { x: first + gap, y: 0 }, end: { x: first, y: 0 }, label: "ab", tone: "secondary" },
-        { points: [[0, 0], [first, 0], [first, second], [0, second]], start: { x: 0, y: side + gap }, end: { x: 0, y: first }, label: "ab", tone: "accent" },
-        { points: [[0, 0], [second, 0], [second, second], [0, second]], start: { x: side + gap, y: side + gap }, end: { x: first, y: first }, label: "b²", tone: "neutral" },
-      ],
-    };
-  }
-  if (construction === "triangle_to_rectangle") {
-    return {
-      title: "两个全等三角形拼成长方形",
-      relation: "S△ = ab / 2",
-      target: [[0, 0], [first, 0], [first, second], [0, second]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "三角形 1", tone: "primary" },
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: first + gap, y: 0 }, end: { x: first, y: second, angle: Math.PI }, label: "三角形 2", tone: "accent" },
-      ],
-    };
-  }
-  fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
-}
-
 function transformedPoint(point: [number, number], pose: RigidPose): [number, number] {
   const angle = pose.angle ?? 0;
   return [
@@ -1157,6 +1090,7 @@ function compileGeometricRearrangement(
     ? `((${progressVariable})-(${progressDefinition.min}))/((${progressDefinition.max})-(${progressDefinition.min}))`
     : "0";
   const recipe = rearrangementRecipe(construction, legA, legB, path);
+  const facts = REARRANGEMENT_CONSTRUCTIONS[construction as RearrangementConstruction];
   const progressInitial = progressDefinition
     ? (progressDefinition.initial - progressDefinition.min) / (progressDefinition.max - progressDefinition.min)
     : 0;
@@ -1197,9 +1131,30 @@ function compileGeometricRearrangement(
       from: `target-point-${pointIndex + 1}`,
       to: `target-point-${(pointIndex + 1) % recipe.target.length + 1}`,
       style: "dashed",
-      ...(pointIndex === 0 ? { label: recipe.relation } : {}),
+      ...(pointIndex === 2 ? { label: construction === "triangle_to_rectangle" ? "a" : "a+b" } : {}),
     })),
   ];
+  // The representative triangle stays fixed in the Pythagorean recipe; labels
+  // also follow its existing point bindings in the other triangle recipe.
+  if (construction !== "square_area_identity") {
+    segments.push(
+      { as: "leg-a", from: "piece-1-point-1", to: "piece-1-point-2", style: "solid", label: "a" },
+      { as: "leg-b", from: "piece-1-point-1", to: "piece-1-point-3", style: "solid", label: "b" },
+      { as: "hypotenuse", from: "piece-1-point-2", to: "piece-1-point-3", style: "solid", label: "c" },
+    );
+    if (construction === "right_triangle_square") {
+      const marker = Math.min(legA, legB) * 0.12;
+      const pose = pieces[0].start;
+      for (const [index, point] of [[marker, 0], [marker, marker], [0, marker]].entries()) {
+        const [x, y] = transformedPoint(point as [number, number], pose);
+        points.push({ as: `right-angle-point-${index + 1}`, x, y, visible: false });
+      }
+      segments.push(
+        { as: "right-angle-1", from: "right-angle-point-1", to: "right-angle-point-2", style: "solid" },
+        { as: "right-angle-2", from: "right-angle-point-2", to: "right-angle-point-3", style: "solid" },
+      );
+    }
+  }
   const bindings = progressVariable
     ? pieces.flatMap((piece) => piece.points.flatMap(([localX, localY], pointIndex) => {
         const translateX = linearExpression(piece.start.x, piece.end.x, progressExpression);
@@ -1212,6 +1167,18 @@ function compileGeometricRearrangement(
         ];
       }))
     : [];
+  if (construction === "right_triangle_square") {
+    // A focus anchor in the initial c² gap and the final b² gap. The whole
+    // outer square is not the central area; intermediate poses make no area claim.
+    const start = (legA + legB) / 2;
+    const endX = legA + legB / 2, endY = legB / 2;
+    points.push({ as: "central-area", x: start + (endX - start) * progressInitial,
+      y: start + (endY - start) * progressInitial, visible: false });
+    if (progressVariable) bindings.push(
+      { target: "central-area.x", expression: linearExpression(start, endX, progressExpression) },
+      { target: "central-area.y", expression: linearExpression(start, endY, progressExpression) },
+    );
+  }
   const endpointPoints = [
     ...recipe.target,
     ...pieces.flatMap((piece) => [piece.start, piece.end].flatMap((pose) => (
@@ -1224,6 +1191,7 @@ function compileGeometricRearrangement(
   const margin = span * 0.1;
   const geometry = {
     title: optionalText(input.title, recipe.title, `${path}.title`),
+    caption: facts.caption,
     axes: {
       x: { min: Math.min(...xs) - margin, max: Math.max(...xs) + margin },
       y: { min: Math.min(...ys) - margin, max: Math.max(...ys) + margin },
@@ -1240,7 +1208,10 @@ function compileGeometricRearrangement(
     parts: new Map([
       ["whole", base], ["target_shape", `${base}#target-shape`], ["outer_square", `${base}#target-shape`],
       ...pieces.map((piece, index) => [`piece_${index + 1}`, `${base}#${piece.role}`] as [string, string]),
-      ["central_area", `${base}#target-shape`],
+      ["central_area", `${base}#${construction === "right_triangle_square" ? "central-area" : "target-shape"}`],
+      ...(construction !== "square_area_identity" ? [
+        ["leg_a", `${base}#leg-a`], ["leg_b", `${base}#leg-b`], ["hypotenuse", `${base}#hypotenuse`],
+      ] as Array<[string, string]> : []),
       ...(progressVariable ? [["primary_control", base]] as Array<[string, string]> : []),
     ]),
   };

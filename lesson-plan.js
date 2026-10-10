@@ -7295,7 +7295,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     model_guidance: "\u5355\u4F4D\u6B63\u65B9\u5F62\u6309\u884C\u5217\u94FA\u6EE1\u957F\u65B9\u5F62\uFF1B\u4E24\u4E2A\u6574\u6570\u4F9D\u6B21\u63A7\u5236\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09\u548C\u884C\u6570\uFF08\u5BBD\uFF09\uFF0C\u7528\u4E8E\u9762\u79EF\u3001\u5468\u957F\u4E0E\u5E73\u65B9\u5355\u4F4D\u6559\u5B66"
   },
   geometric_rearrangement: {
-    parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "primary_control"],
+    parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "leg_a", "leg_b", "hypotenuse", "primary_control"],
     number_inputs: ["progress"],
     number_input_policies: [{ kind: "normalized_progress" }],
     parameter_names: ["title", "construction", "leg_a", "leg_b"],
@@ -8386,6 +8386,86 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   return resolveLessonPlan(assembled, options).plan;
 }
 
+// src/rearrangement.ts
+var REARRANGEMENT_CONSTRUCTIONS = {
+  right_triangle_square: {
+    title: "\u76F4\u89D2\u4E09\u89D2\u5F62\u91CD\u6392\u4E0E\u9762\u79EF\u5173\u7CFB",
+    pieces: "4\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\uFF08\u4E24\u76F4\u89D2\u8FB9a\u3001b\uFF0C\u659C\u8FB9c\uFF09",
+    shows: "c\xB2 = a\xB2 + b\xB2",
+    container: "\u5916\u6846\u8FB9\u957Fa+b\uFF0C\u9762\u79EF(a+b)\xB2\uFF1B\u4E0D\u662F\u8FB9\u957Fc\u7684\u6B63\u65B9\u5F62",
+    initial: "\u56DB\u4E2A\u4E09\u89D2\u5F62\u56F4\u4F4F\u8FB9\u957Fc\u7684\u6B63\u65B9\u5F62\u7559\u767D\uFF0C\u9762\u79EFc\xB2",
+    final: "\u4E09\u89D2\u5F62\u62FC\u6210\u4E24\u4E2Aab\u77E9\u5F62\uFF0C\u7559\u767D\u4E3Aa\xB2\u548Cb\xB2\u4E24\u4E2A\u6B63\u65B9\u5F62",
+    proof: "\u6BD4\u8F83\u4E24\u4E2A\u7AEF\u70B9\uFF1A(a+b)\xB2 \u2212 4\xD7ab/2 = c\xB2 = a\xB2+b\xB2",
+    caption: "\u5916\u6846\u8FB9\u957F a+b\u3002\u8D77\u70B9\u7559\u767D c\xB2 \u2192 \u7EC8\u70B9\u7559\u767D a\xB2+b\xB2\uFF1B\u56DB\u4E2A\u4E09\u89D2\u5F62\u7684\u603B\u9762\u79EF\u59CB\u7EC8\u4E3A 4\xD7ab/2\u3002\u6BD4\u8F83\u4E24\u79CD\u5E03\u5C40\u7684\u7559\u767D\uFF1Ac\xB2 = a\xB2+b\xB2\u3002"
+  },
+  square_area_identity: {
+    title: "\u6B63\u65B9\u5F62\u5206\u5757\u4E0E\u9762\u79EF\u6052\u7B49\u5F0F",
+    pieces: "a\xB2\u3001b\xB2\u4E24\u4E2A\u6B63\u65B9\u5F62\u548C\u4E24\u4E2Aab\u77E9\u5F62\uFF0C\u65E0\u4E09\u89D2\u5F62",
+    shows: "(a+b)\xB2 = a\xB2 + 2ab + b\xB2",
+    container: "\u5916\u6846\u8FB9\u957Fa+b\uFF0C\u9762\u79EF(a+b)\xB2",
+    initial: "\u56DB\u5757\u5206\u79BB\uFF1Aa\xB2\u3001ab\u3001ab\u3001b\xB2",
+    final: "\u56DB\u5757\u586B\u6EE1\u8FB9\u957Fa+b\u7684\u6B63\u65B9\u5F62",
+    proof: "\u6574\u5757\u9762\u79EF\u7B49\u4E8E\u56DB\u5757\u9762\u79EF\u4E4B\u548C\uFF1A(a+b)\xB2=a\xB2+2ab+b\xB2",
+    caption: "a\xB2\u3001b\xB2 \u4E24\u4E2A\u6B63\u65B9\u5F62\u4E0E\u4E24\u4E2A ab \u77E9\u5F62\u62FC\u5408\uFF0C\u5F97\u5230\u8FB9\u957F a+b \u7684\u6B63\u65B9\u5F62\uFF1A(a+b)\xB2 = a\xB2+2ab+b\xB2\u3002"
+  },
+  triangle_to_rectangle: {
+    title: "\u4E24\u4E2A\u5168\u7B49\u4E09\u89D2\u5F62\u62FC\u6210\u957F\u65B9\u5F62",
+    pieces: "2\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u62FC\u6210\u77E9\u5F62",
+    shows: "S\u25B3 = ab / 2",
+    container: "\u5916\u6846\u662F\u8FB9\u957Fa\u3001b\u7684\u77E9\u5F62\uFF0C\u9762\u79EFab",
+    initial: "\u4E24\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u5206\u79BB",
+    final: "\u4E24\u4E2A\u4E09\u89D2\u5F62\u586B\u6EE1\u77E9\u5F62",
+    proof: "\u4E24\u4E2A\u5168\u7B49\u4E09\u89D2\u5F62\u7684\u9762\u79EF\u4E4B\u548C\u4E3Aab\uFF0C\u6240\u4EE5\u6BCF\u4E2A\u9762\u79EFab/2",
+    caption: "\u4E24\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u62FC\u6210\u8FB9\u957F a\u3001b \u7684\u77E9\u5F62\uFF1B\u6BCF\u4E2A\u4E09\u89D2\u5F62\u9762\u79EF S\u25B3 = ab/2\u3002"
+  }
+};
+var REARRANGEMENT_FACTS = REARRANGEMENT_CONSTRUCTIONS;
+function rearrangementRecipe(construction, first, second, path) {
+  const definition = REARRANGEMENT_CONSTRUCTIONS[construction];
+  if (!definition) throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
+  const gap = Math.max(first, second) * 0.35;
+  if (construction === "right_triangle_square") {
+    const side = first + second;
+    return {
+      title: definition.title,
+      relation: definition.shows,
+      target: [[0, 0], [side, 0], [side, side], [0, side]],
+      pieces: [
+        { points: [[0, 0], [first, 0], [0, second]], start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
+        { points: [[0, 0], [0, first], [-second, 0]], start: { x: side, y: 0 }, end: { x: side, y: second }, label: "\u4E09\u89D2\u5F62 2", tone: "secondary" },
+        { points: [[0, 0], [-first, 0], [0, -second]], start: { x: side, y: side }, end: { x: first, y: second }, label: "\u4E09\u89D2\u5F62 3", tone: "accent" },
+        { points: [[0, 0], [0, -first], [second, 0]], start: { x: 0, y: side }, end: { x: first, y: side }, label: "\u4E09\u89D2\u5F62 4", tone: "neutral" }
+      ]
+    };
+  }
+  if (construction === "square_area_identity") {
+    const side = first + second;
+    return {
+      title: definition.title,
+      relation: definition.shows,
+      target: [[0, 0], [side, 0], [side, side], [0, side]],
+      pieces: [
+        { points: [[0, 0], [first, 0], [first, first], [0, first]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "a\xB2", tone: "primary" },
+        { points: [[0, 0], [second, 0], [second, first], [0, first]], start: { x: first + gap, y: 0 }, end: { x: first, y: 0 }, label: "ab", tone: "secondary" },
+        { points: [[0, 0], [first, 0], [first, second], [0, second]], start: { x: 0, y: side + gap }, end: { x: 0, y: first }, label: "ab", tone: "accent" },
+        { points: [[0, 0], [second, 0], [second, second], [0, second]], start: { x: side + gap, y: side + gap }, end: { x: first, y: first }, label: "b\xB2", tone: "neutral" }
+      ]
+    };
+  }
+  if (construction === "triangle_to_rectangle") {
+    return {
+      title: definition.title,
+      relation: definition.shows,
+      target: [[0, 0], [first, 0], [first, second], [0, second]],
+      pieces: [
+        { points: [[0, 0], [first, 0], [0, second]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
+        { points: [[0, 0], [first, 0], [0, second]], start: { x: first + gap, y: 0 }, end: { x: first, y: second, angle: Math.PI }, label: "\u4E09\u89D2\u5F62 2", tone: "accent" }
+      ]
+    };
+  }
+  throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
+}
+
 // src/compiled-visual-reuse.ts
 function cardIdentity(kind, content) {
   const fragments = /* @__PURE__ */ new Map();
@@ -8478,11 +8558,6 @@ var CompiledVisualRegistry = class {
 };
 
 // src/teaching-contracts.ts
-var REARRANGEMENT_FACTS = {
-  right_triangle_square: { pieces: "4\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\uFF08\u4E24\u76F4\u89D2\u8FB9a\u3001b\uFF09", shows: "c\xB2 = a\xB2 + b\xB2\uFF08\u52FE\u80A1\u5B9A\u7406\uFF09" },
-  square_area_identity: { pieces: "a\xB2\u3001b\xB2\u4E24\u4E2A\u6B63\u65B9\u5F62\u548C\u4E24\u4E2Aab\u77E9\u5F62\uFF0C\u65E0\u4E09\u89D2\u5F62", shows: "(a+b)\xB2 = a\xB2 + 2ab + b\xB2\uFF08\u5B8C\u5168\u5E73\u65B9\u516C\u5F0F\uFF09" },
-  triangle_to_rectangle: { pieces: "2\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u62FC\u6210\u77E9\u5F62", shows: "\u4E09\u89D2\u5F62\u9762\u79EF = ab/2" }
-};
 function affineTokens(tokens) {
   const stack = [];
   for (const token of tokens) {
@@ -12486,52 +12561,6 @@ function compileRectangleUnitSquareArray(base, content, role, placement, plan, p
     ])
   };
 }
-function rearrangementRecipe(construction, first, second, path) {
-  if (!LESSON_PLAN_CAPABILITY_REGISTRY.geometric_rearrangement.parameter_options.construction.includes(construction)) {
-    fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
-  }
-  const gap = Math.max(first, second) * 0.35;
-  if (construction === "right_triangle_square") {
-    const side = first + second;
-    return {
-      title: "\u76F4\u89D2\u4E09\u89D2\u5F62\u91CD\u6392\u4E0E\u9762\u79EF\u5173\u7CFB",
-      relation: "c\xB2 = a\xB2 + b\xB2",
-      target: [[0, 0], [side, 0], [side, side], [0, side]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
-        { points: [[0, 0], [0, first], [-second, 0]], start: { x: side, y: 0 }, end: { x: side, y: second }, label: "\u4E09\u89D2\u5F62 2", tone: "secondary" },
-        { points: [[0, 0], [-first, 0], [0, -second]], start: { x: side, y: side }, end: { x: first, y: second }, label: "\u4E09\u89D2\u5F62 3", tone: "accent" },
-        { points: [[0, 0], [0, -first], [second, 0]], start: { x: 0, y: side }, end: { x: first, y: side }, label: "\u4E09\u89D2\u5F62 4", tone: "neutral" }
-      ]
-    };
-  }
-  if (construction === "square_area_identity") {
-    const side = first + second;
-    return {
-      title: "\u6B63\u65B9\u5F62\u5206\u5757\u4E0E\u9762\u79EF\u6052\u7B49\u5F0F",
-      relation: "(a+b)\xB2 = a\xB2 + 2ab + b\xB2",
-      target: [[0, 0], [side, 0], [side, side], [0, side]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [first, first], [0, first]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "a\xB2", tone: "primary" },
-        { points: [[0, 0], [second, 0], [second, first], [0, first]], start: { x: first + gap, y: 0 }, end: { x: first, y: 0 }, label: "ab", tone: "secondary" },
-        { points: [[0, 0], [first, 0], [first, second], [0, second]], start: { x: 0, y: side + gap }, end: { x: 0, y: first }, label: "ab", tone: "accent" },
-        { points: [[0, 0], [second, 0], [second, second], [0, second]], start: { x: side + gap, y: side + gap }, end: { x: first, y: first }, label: "b\xB2", tone: "neutral" }
-      ]
-    };
-  }
-  if (construction === "triangle_to_rectangle") {
-    return {
-      title: "\u4E24\u4E2A\u5168\u7B49\u4E09\u89D2\u5F62\u62FC\u6210\u957F\u65B9\u5F62",
-      relation: "S\u25B3 = ab / 2",
-      target: [[0, 0], [first, 0], [first, second], [0, second]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: first + gap, y: 0 }, end: { x: first, y: second, angle: Math.PI }, label: "\u4E09\u89D2\u5F62 2", tone: "accent" }
-      ]
-    };
-  }
-  fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
-}
 function transformedPoint(point, pose) {
   const angle = pose.angle ?? 0;
   return [
@@ -12556,6 +12585,7 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
   const progressVariable = number ? variableAlias(number) : void 0;
   const progressExpression = progressDefinition && progressVariable ? `((${progressVariable})-(${progressDefinition.min}))/((${progressDefinition.max})-(${progressDefinition.min}))` : "0";
   const recipe = rearrangementRecipe(construction, legA, legB, path);
+  const facts = REARRANGEMENT_CONSTRUCTIONS[construction];
   const progressInitial = progressDefinition ? (progressDefinition.initial - progressDefinition.min) / (progressDefinition.max - progressDefinition.min) : 0;
   const pieces = recipe.pieces.map((piece, index) => ({ ...piece, role: `piece-${index + 1}` }));
   const targetPoints = recipe.target.map(([x, y], index) => ({
@@ -12597,9 +12627,28 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
       from: `target-point-${pointIndex + 1}`,
       to: `target-point-${(pointIndex + 1) % recipe.target.length + 1}`,
       style: "dashed",
-      ...pointIndex === 0 ? { label: recipe.relation } : {}
+      ...pointIndex === 2 ? { label: construction === "triangle_to_rectangle" ? "a" : "a+b" } : {}
     }))
   ];
+  if (construction !== "square_area_identity") {
+    segments.push(
+      { as: "leg-a", from: "piece-1-point-1", to: "piece-1-point-2", style: "solid", label: "a" },
+      { as: "leg-b", from: "piece-1-point-1", to: "piece-1-point-3", style: "solid", label: "b" },
+      { as: "hypotenuse", from: "piece-1-point-2", to: "piece-1-point-3", style: "solid", label: "c" }
+    );
+    if (construction === "right_triangle_square") {
+      const marker = Math.min(legA, legB) * 0.12;
+      const pose = pieces[0].start;
+      for (const [index, point] of [[marker, 0], [marker, marker], [0, marker]].entries()) {
+        const [x, y] = transformedPoint(point, pose);
+        points.push({ as: `right-angle-point-${index + 1}`, x, y, visible: false });
+      }
+      segments.push(
+        { as: "right-angle-1", from: "right-angle-point-1", to: "right-angle-point-2", style: "solid" },
+        { as: "right-angle-2", from: "right-angle-point-2", to: "right-angle-point-3", style: "solid" }
+      );
+    }
+  }
   const bindings = progressVariable ? pieces.flatMap((piece) => piece.points.flatMap(([localX, localY], pointIndex) => {
     const translateX = linearExpression(piece.start.x, piece.end.x, progressExpression);
     const translateY = linearExpression(piece.start.y, piece.end.y, progressExpression);
@@ -12610,6 +12659,20 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
       { target: `${target}.y`, expression: `(${translateY})+(${localX})*sin(${angle})+(${localY})*cos(${angle})` }
     ];
   })) : [];
+  if (construction === "right_triangle_square") {
+    const start = (legA + legB) / 2;
+    const endX = legA + legB / 2, endY = legB / 2;
+    points.push({
+      as: "central-area",
+      x: start + (endX - start) * progressInitial,
+      y: start + (endY - start) * progressInitial,
+      visible: false
+    });
+    if (progressVariable) bindings.push(
+      { target: "central-area.x", expression: linearExpression(start, endX, progressExpression) },
+      { target: "central-area.y", expression: linearExpression(start, endY, progressExpression) }
+    );
+  }
   const endpointPoints = [
     ...recipe.target,
     ...pieces.flatMap((piece) => [piece.start, piece.end].flatMap((pose) => piece.points.map((point) => transformedPoint(point, pose))))
@@ -12620,6 +12683,7 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
   const margin = span * 0.1;
   const geometry = {
     title: optionalText(input.title, recipe.title, `${path}.title`),
+    caption: facts.caption,
     axes: {
       x: { min: Math.min(...xs) - margin, max: Math.max(...xs) + margin },
       y: { min: Math.min(...ys) - margin, max: Math.max(...ys) + margin },
@@ -12638,7 +12702,12 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
       ["target_shape", `${base}#target-shape`],
       ["outer_square", `${base}#target-shape`],
       ...pieces.map((piece, index) => [`piece_${index + 1}`, `${base}#${piece.role}`]),
-      ["central_area", `${base}#target-shape`],
+      ["central_area", `${base}#${construction === "right_triangle_square" ? "central-area" : "target-shape"}`],
+      ...construction !== "square_area_identity" ? [
+        ["leg_a", `${base}#leg-a`],
+        ["leg_b", `${base}#leg-b`],
+        ["hypotenuse", `${base}#hypotenuse`]
+      ] : [],
       ...progressVariable ? [["primary_control", base]] : []
     ])
   };

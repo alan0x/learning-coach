@@ -131,7 +131,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     model_guidance: "单位正方形按行列铺满长方形；两个整数依次控制每行方格数（长）和行数（宽），用于面积、周长与平方单位教学",
   },
   geometric_rearrangement: {
-    parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "primary_control"],
+    parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "leg_a", "leg_b", "hypotenuse", "primary_control"],
     number_inputs: ["progress"],
     number_input_policies: [{ kind: "normalized_progress" }],
     parameter_names: ["title", "construction", "leg_a", "leg_b"],
