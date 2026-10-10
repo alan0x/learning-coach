@@ -4860,3 +4860,23 @@ test("the fixed rearrangement owns its visual title without changing the request
   assert.match(geometry.caption, /两个正方形.*两个 ab 矩形/);
   assert.equal(compiled.lesson.lesson.title, plan.title);
 });
+
+
+test("real BYOK rearrangement responses preserve labeled geometry and an explicit second demonstration", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/rearrangement-replay-generation.json"), "utf8"));
+  const responses = [...fixture.responses], prefixes = [];
+  const generated = await generateLessonPlanWithModel(async () => {
+    assert.ok(responses.length, "unexpected repair call");
+    return responses.shift();
+  }, fixture.input, { on_playable_prefix: event => prefixes.push(event) });
+  assert.equal(responses.length, 0);
+  assert.equal(generated.model_calls, 2);
+  assert.deepEqual(prefixes.map(p => p.completed_sections), [1, 2]);
+  assert.deepEqual(generated.lesson.steps[0], prefixes[0].compiled.lesson.steps[0]);
+  const geometry = generated.lesson.steps[0].beats.flatMap(b => b.actions).find(a => a.kind === "geometry").content;
+  assert.deepEqual(geometry.segments.filter(s => ["leg-a", "leg-b", "hypotenuse"].includes(s.as)).map(s => s.label), ["a", "b", "c"]);
+  const replay = generated.lesson.steps[1].beats.find(b => b.start?.kind === "replay");
+  assert.deepEqual(replay.start.variables, ["number_01"]);
+  assert.equal(replay.actions.find(a => a.do === "animate").value, 1);
+});
