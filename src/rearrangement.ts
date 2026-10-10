@@ -4,6 +4,7 @@ import { LessonPlanError } from "./lesson-plan.js";
 export const REARRANGEMENT_CONSTRUCTIONS = {
   right_triangle_square: {
     title: "直角三角形重排与面积关系",
+    catalog: "4全等直角三角形；外框a+b；留白c²→a²+b²（勾股）",
     pieces: "4个全等直角三角形（两直角边a、b，斜边c）",
     shows: "c² = a² + b²",
     container: "外框边长a+b，面积(a+b)²；不是边长c的正方形",
@@ -14,6 +15,7 @@ export const REARRANGEMENT_CONSTRUCTIONS = {
   },
   square_area_identity: {
     title: "正方形分块与面积恒等式",
+    catalog: "a²、b²、ab、ab四块（无三角形）→边长a+b正方形，证(a+b)²=a²+2ab+b²",
     pieces: "a²、b²两个正方形和两个ab矩形，无三角形",
     shows: "(a+b)² = a² + 2ab + b²",
     container: "外框边长a+b，面积(a+b)²",
@@ -24,6 +26,7 @@ export const REARRANGEMENT_CONSTRUCTIONS = {
   },
   triangle_to_rectangle: {
     title: "两个全等三角形拼成长方形",
+    catalog: "2全等直角三角形→ab矩形，每块面积ab/2",
     pieces: "2个全等直角三角形拼成矩形",
     shows: "S△ = ab / 2",
     container: "外框是边长a、b的矩形，面积ab",
@@ -37,9 +40,8 @@ export type RearrangementConstruction = keyof typeof REARRANGEMENT_CONSTRUCTIONS
 export const REARRANGEMENT_FACTS = REARRANGEMENT_CONSTRUCTIONS;
 
 /** Short catalog text, derived from the same endpoint facts used by the renderer. */
-export const REARRANGEMENT_MODEL_GUIDANCE = "刚体重排，数值只控制进度，a、b固定；" + Object.entries(REARRANGEMENT_CONSTRUCTIONS)
-  .map(([name, facts]) => `${name}：${facts.pieces}；${facts.container}；起点${facts.initial}，终点${facts.final}；${facts.shows}`)
-  .join("。") + "。只比较两个端点的面积，不声称移动途中留白形状不变。";
+export const REARRANGEMENT_MODEL_GUIDANCE = "重排进度，不改边长；" + Object.entries(REARRANGEMENT_CONSTRUCTIONS)
+  .map(([name, facts]) => `${name}：${facts.catalog}`).join("；") + "。面积只比较端点。";
 
 export type RigidPose = { x: number; y: number; angle?: number };
 type RigidPiece = {

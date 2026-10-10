@@ -4724,7 +4724,7 @@ test("reused rearrangement context carries endpoint facts and teacher state with
     assert.deepEqual(facts.fixed_legs, { a: 3, b: 4 });
     assert.equal(facts.progress.current_value, 1);
     assert.equal(facts.progress.normalized, 1);
-    assert.match(facts.progress.changes, /不能改变边长/);
+    assert.match(request.system_prompt, /a、b固定，控件只改变重排进度/);
     assert.equal(context.course_and_section.numbers[0].current_value, 1);
     return sectionModelResponse(request, drafts);
   }, { turn_id: "rearrangement-state", learner_request: "用图形解释勾股定理" }, {
