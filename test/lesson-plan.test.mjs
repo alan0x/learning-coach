@@ -263,6 +263,7 @@ function toModelSectionDraft(draft) {
     });
     return {
       narration: moment.narration ?? "",
+      ...(moment.restart_numbers ? { restart_numbers: moment.restart_numbers } : {}),
       delivery: moment.delivery ?? "neutral",
       ...grouped,
     };
@@ -760,7 +761,7 @@ test("geometric rearrangement moves congruent pieces with deterministic bindings
   const geometry = compiled.lesson.steps[0].beats[0].actions.find(
     (action) => action.do === "write" && action.kind === "geometry",
   );
-  assert.equal(geometry.content.bindings.length, 24);
+  assert.equal(geometry.content.bindings.length, 26);
   const piece2Y = geometry.content.bindings.find(
     (binding) => binding.target === "piece-2-point-1.y",
   );
@@ -4660,4 +4661,222 @@ test("cross-component duplicate comparison is resolved without another model req
   assert.equal(calls.length, 4);
   assert.deepEqual(rejections, []);
   assert.equal(allActions(generated.lesson).filter(a=>a.do==="write"&&a.kind==="plot").length, 1);
+});
+
+
+test("Pythagorean labels name the actual triangle sides, outer frame and endpoint proof", () => {
+  for (const [a, b] of [[3, 4], [4, 3], [2, 2], [0.5, 7]]) {
+    const plan = samplePlan("geometric_rearrangement");
+    plan.sections[0].moments[0].actions[0].content.parameters = { construction: "right_triangle_square", leg_a: a, leg_b: b };
+    plan.sections[1].moments[0].actions[0].reference = reusable(1, 1, { kind: "capability", role: "hypotenuse" });
+    const compiled = compileAndValidateLessonPlan(plan);
+    const g = compiled.lesson.steps[0].beats[0].actions.find(a => a.kind === "geometry").content;
+    const bindings = new Map(g.bindings.map(b => [b.target, b.expression]));
+    const coordinate = (alias, progress) => {
+      const p = g.points.find(p => p.as === alias);
+      return ["x", "y"].map(axis => bindings.has(`${alias}.${axis}`)
+        ? evaluateMathExpression(bindings.get(`${alias}.${axis}`), { number_01: progress }) : p[axis]);
+    };
+    for (const progress of [0, 0.5, 1]) for (const [id, label, length] of [
+      ["leg-a", "a", a], ["leg-b", "b", b], ["hypotenuse", "c", Math.hypot(a, b)], ["target-edge-3", "a+b", a+b],
+    ]) {
+      const segment = g.segments.find(s => s.as === id);
+      assert.equal(segment.label, label);
+      const from = coordinate(segment.from, progress), to = coordinate(segment.to, progress);
+      assert.ok(Math.abs(Math.hypot(to[0]-from[0], to[1]-from[1]) - length) < 1e-9);
+    }
+    assert.equal(g.segments.filter(s => s.as.startsWith("right-angle-")).length, 2);
+    assert.match(g.caption, /起点留白 c².*终点留白 a²\+b²/);
+    assert.ok(g.points.find(p => p.as === "central-area"));
+    // Pythagoras follows from the two endpoint gaps, independent of leg order.
+    const outer = (a+b)**2, triangles = 4*a*b/2;
+    assert.ok(Math.abs(outer-triangles-(a*a+b*b)) < 1e-9);
+  }
+});
+
+
+function rearrangementGenerationFixture(plan) {
+  makeSamplePlanModelCompatible(plan);
+  const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
+    version: plan.version, section: index + 1, moments,
+    ...(student_activities ? { student_activities } : {}),
+  }));
+  return { drafts, outline: stagedOutline(plan, drafts) };
+}
+
+test("reused rearrangement context carries endpoint facts and teacher state without another call", async () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.sections[0].moments[0].actions[0].content.parameters = { construction: "right_triangle_square", leg_a: 3, leg_b: 4 };
+  plan.sections[0].moments[0].actions.find(a => a.action === "animate").end_value = 1;
+  const { drafts, outline } = rearrangementGenerationFixture(plan);
+  drafts[1].moments[0].restart_numbers = [1];
+  drafts[1].moments[0].animations.push({ number: 1, end_value: 1, duration_intent: "brief", timing: "during_speech" });
+  const calls = [], prefixes = [], rejected = [];
+  const generated = await generateLessonPlanWithModel(async request => {
+    calls.push(request);
+    if (request.part === "bootstrap") return bootstrapModelResponse(request, outline, drafts[0]);
+    const context = JSON.parse(request.prompt);
+    const facts = context.visuals_for_section[0];
+    assert.equal(facts.construction, "right_triangle_square");
+    assert.match(facts.container, /边长a\+b/);
+    assert.match(facts.at_start, /面积c²/);
+    assert.match(facts.at_end, /a²和b²/);
+    assert.deepEqual(facts.fixed_legs, { a: 3, b: 4 });
+    assert.equal(facts.progress.current_value, 1);
+    assert.equal(facts.progress.normalized, 1);
+    assert.match(request.system_prompt, /a、b固定，控件只改变重排进度/);
+    assert.equal(context.course_and_section.numbers[0].current_value, 1);
+    return sectionModelResponse(request, drafts);
+  }, { turn_id: "rearrangement-state", learner_request: "用图形解释勾股定理" }, {
+    on_playable_prefix: event => prefixes.push(event), on_rejected_part: event => rejected.push(event),
+  });
+  assert.equal(generated.model_calls, 2);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(rejected, []);
+  assert.equal(prefixes[0].completed_sections, 1);
+  assert.deepEqual(generated.lesson.steps[0], prefixes[0].compiled.lesson.steps[0]);
+  assert.deepEqual(generated.lesson.steps[1].beats[0].start, { kind: "replay", variables: ["number_01"] });
+  assert.equal(generated.lesson.steps[1].beats[0].actions.find(a => a.do === "animate").value, 1);
+});
+
+test("two rearrangements in one section retain their own facts, controls and constructions", async () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.numbers.push({ ...plan.numbers[0], label: "second progress", initial: 0.25 });
+  plan.sections[0].moments[0].actions[0].content.parameters = { construction: "right_triangle_square", leg_a: 3, leg_b: 4 };
+  const comparison = structuredClone(plan.sections[0].moments[0].actions[0]);
+  comparison.content.parameters = { construction: "square_area_identity", leg_a: 2, leg_b: 5 };
+  comparison.content.numbers = [2]; comparison.reusable_item = 2; comparison.distinct_visual = true;
+  plan.sections[0].reusable_items.push({ ...plan.sections[0].reusable_items[0] });
+  plan.sections[0].moments[0].actions.splice(1, 0, comparison);
+  const { drafts, outline } = rearrangementGenerationFixture(plan);
+  outline.course_visuals[1].relation = "comparison";
+  const calls = [];
+  const result = await generateLessonPlanWithModel(async request => {
+    calls.push(request);
+    if (request.part === "bootstrap") return bootstrapModelResponse(request, outline, drafts[0]);
+    const [first, second] = JSON.parse(request.prompt).visuals_for_section;
+    assert.equal(first.construction, "right_triangle_square");
+    assert.equal(second.construction, "square_area_identity");
+    assert.deepEqual(first.fixed_legs, { a: 3, b: 4 });
+    assert.deepEqual(second.fixed_legs, { a: 2, b: 5 });
+    assert.equal(first.progress.number, 1);
+    assert.equal(first.progress.current_value, 0.75);
+    assert.equal(second.progress.number, 2);
+    assert.equal(second.progress.current_value, 0.25);
+    assert.match(second.pieces, /无三角形/);
+    return sectionModelResponse(request, drafts);
+  }, { turn_id: "rearrangement-two-facts", learner_request: "比较两种面积拼图" }, { max_attempts_per_part: 1 });
+  assert.equal(result.model_calls, 2);
+  assert.equal(calls.length, 2);
+});
+
+
+test("observed rearrangement contradictions are checked across reuse, board math and practice", () => {
+  const cases = [
+    ["square_area_identity", "内部包含四个完全相同的直角三角形，重新摆放后证明勾股定理。"],
+    ["right_triangle_square", "这个大正方形的边长为斜边c，所以它的总面积为c的平方。"],
+    ["right_triangle_square", "中间小正方形的边长为b−a，其面积为(b−a)²。"],
+  ];
+  for (const [construction, narration] of cases) {
+    const plan = samplePlan("geometric_rearrangement");
+    plan.sections[0].moments[0].actions[0].content.parameters = { construction, leg_a: 3, leg_b: 4 };
+    plan.sections[1].moments[0].narration = narration;
+    assert.throws(() => compileAndValidateLessonPlan(plan), error =>
+      error.code === "LESSON_PLAN_TEACHING_MISMATCH" && error.path.includes("sections[1]"));
+  }
+  const plan = samplePlan("geometric_rearrangement");
+  plan.sections[1].moments[0].actions[1].kind = "math";
+  plan.sections[1].moments[0].actions[1].content = { latex: "S_{\\text{大正方形}} = c^2" };
+  assert.throws(() => compileAndValidateLessonPlan(plan), /LESSON_PLAN|right_triangle_square/);
+  plan.sections[1].moments[0].actions[1].content = { latex: "(a+b)^2-4\\times ab/2=c^2=a^2+b^2" };
+  plan.sections[0].student_activities[0].prompt = "拖动滑块改变斜边的长度。";
+  assert.throws(() => compileAndValidateLessonPlan(plan), error =>
+    error.code === "LESSON_PLAN_TEACHING_MISMATCH" && error.path.includes("student_activities"));
+  plan.sections[0].student_activities[0].prompt = "拖动拼接进度滑块，将拼块完全拼合成斜边正方形。";
+  assert.throws(() => compileAndValidateLessonPlan(plan), /end:.*a²和b²/);
+});
+
+test("a reflection tied to the diagram's explanation cannot reintroduce the wrong proof", () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.sections[1].student_activities = [{ kind: "reflection", reference: localBoardItem(1, 1),
+    prompt: "如何计算这个外框的面积？", answer: "这个大正方形的边长是c。" }];
+  assert.throws(() => compileAndValidateLessonPlan(plan), error =>
+    error.code === "LESSON_PLAN_TEACHING_MISMATCH" && error.path.includes("student_activities"));
+});
+
+test("rearrangement guards allow algebra supplements, negation, hypothetical proofs and numeric applications", () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.title = "用完全平方公式辅助理解勾股定理";
+  plan.sections[0].moments[0].actions[0].content.parameters = { construction: "square_area_identity" };
+  plan.sections[1].moments[0].narration = "这张图没有四个全等直角三角形，只展示完全平方公式。另一种证明中图中有四个全等直角三角形。";
+  compileAndValidateLessonPlan(plan);
+  plan.sections[0].moments[0].actions[0].content.parameters = { construction: "right_triangle_square" };
+  plan.sections[1].moments[0].narration = "这个大正方形的边长不是c，而是a+b。假设另一张图中大正方形的边长是c，就需要不同的构造。已知直角边3和4，算得斜边5。";
+  compileAndValidateLessonPlan(plan);
+  plan.sections[0].student_activities[0].prompt = "把进度调到一半，观察四块三角形的移动。";
+  compileAndValidateLessonPlan(plan);
+});
+
+test("a bad later proof repairs only that section and keeps the published prefix", async () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.sections[0].moments[0].actions.find(a => a.action === "animate").end_value = 1;
+  const { drafts, outline } = rearrangementGenerationFixture(plan);
+  const bad = structuredClone(drafts[1]);
+  bad.moments[0].narration = "这个大正方形的边长为斜边c，所以面积为c²。";
+  drafts[1].moments[0].narration = "外框边长a+b；比较初态c²和终态a²+b²的留白面积。";
+  const calls = [], rejected = [], prefixes = [];
+  const generated = await generateLessonPlanWithModel(async request => {
+    calls.push({ part: request.part, section: request.section, attempt: request.attempt });
+    if (request.part === "bootstrap") return bootstrapModelResponse(request, outline, drafts[0]);
+    if (request.attempt === 1) return sectionModelResponse(request, [drafts[0], bad]);
+    const prompt = JSON.parse(request.prompt);
+    assert.match(JSON.parse(prompt.previous_validation_error).message, /外框边长a\+b/);
+    assert.equal(prompt.visuals_for_section[0].progress.current_value, 1);
+    return sectionModelResponse(request, drafts);
+  }, { turn_id: "rearrangement-repair", learner_request: "请用图形解释勾股定理" }, {
+    on_rejected_part: event => rejected.push(event), on_playable_prefix: event => prefixes.push(event),
+  });
+  assert.deepEqual(calls, [
+    { part: "bootstrap", section: undefined, attempt: 1 },
+    { part: "section", section: 2, attempt: 1 },
+    { part: "section", section: 2, attempt: 2 },
+  ]);
+  assert.equal(generated.model_calls, 3);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].section, 2);
+  assert.deepEqual(generated.lesson.steps[0], prefixes[0].compiled.lesson.steps[0]);
+});
+
+
+test("the fixed rearrangement owns its visual title without changing the requested course title", () => {
+  const plan = samplePlan("geometric_rearrangement");
+  plan.title = "用图形理解勾股定理";
+  plan.sections[0].moments[0].actions[0].content.parameters = {
+    construction: "square_area_identity", title: "四个直角三角形证明勾股定理",
+  };
+  const compiled = compileAndValidateLessonPlan(plan);
+  const geometry = compiled.lesson.steps[0].beats[0].actions.find(a => a.kind === "geometry").content;
+  assert.equal(geometry.title, "正方形分块与面积恒等式");
+  assert.match(geometry.caption, /两个正方形.*两个 ab 矩形/);
+  assert.equal(compiled.lesson.lesson.title, plan.title);
+});
+
+
+test("real BYOK rearrangement responses preserve labeled geometry and an explicit second demonstration", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/rearrangement-replay-generation.json"), "utf8"));
+  const responses = [...fixture.responses], prefixes = [];
+  const generated = await generateLessonPlanWithModel(async () => {
+    assert.ok(responses.length, "unexpected repair call");
+    return responses.shift();
+  }, fixture.input, { on_playable_prefix: event => prefixes.push(event) });
+  assert.equal(responses.length, 0);
+  assert.equal(generated.model_calls, 2);
+  assert.deepEqual(prefixes.map(p => p.completed_sections), [1, 2]);
+  assert.deepEqual(generated.lesson.steps[0], prefixes[0].compiled.lesson.steps[0]);
+  const geometry = generated.lesson.steps[0].beats.flatMap(b => b.actions).find(a => a.kind === "geometry").content;
+  assert.deepEqual(geometry.segments.filter(s => ["leg-a", "leg-b", "hypotenuse"].includes(s.as)).map(s => s.label), ["a", "b", "c"]);
+  const replay = generated.lesson.steps[1].beats.find(b => b.start?.kind === "replay");
+  assert.deepEqual(replay.start.variables, ["number_01"]);
+  assert.equal(replay.actions.find(a => a.do === "animate").value, 1);
 });

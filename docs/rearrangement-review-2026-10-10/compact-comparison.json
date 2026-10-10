@@ -1,0 +1,143 @@
+{
+  "baseline_ref": "bc136fc77e8e7117ed08da4a2023bd669648179c",
+  "candidate_ref": "30ac5c7b96189dd878c7b8fb682579f6aa3d98a8",
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "repetitions": 3,
+  "note": "Timing includes local validation and all semantic repair attempts. Compiled status alone does not certify prose correctness; review saved lessons separately.",
+  "results": [
+    {
+      "case": "pythagoras",
+      "run": 1,
+      "version": "baseline",
+      "first_playable_ms": 14180,
+      "total_ms": 22076,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "pythagoras",
+      "run": 1,
+      "version": "candidate",
+      "first_playable_ms": 13623,
+      "total_ms": 22330,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "square-identity",
+      "run": 1,
+      "version": "candidate",
+      "first_playable_ms": 12211,
+      "total_ms": 19371,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "square-identity",
+      "run": 1,
+      "version": "baseline",
+      "first_playable_ms": 11424,
+      "total_ms": 22844,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "pythagoras",
+      "run": 2,
+      "version": "candidate",
+      "first_playable_ms": 13074,
+      "total_ms": 21467,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "pythagoras",
+      "run": 2,
+      "version": "baseline",
+      "first_playable_ms": 16081,
+      "total_ms": 22597,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "square-identity",
+      "run": 2,
+      "version": "baseline",
+      "first_playable_ms": 12576,
+      "total_ms": 22642,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "square-identity",
+      "run": 2,
+      "version": "candidate",
+      "first_playable_ms": 11586,
+      "total_ms": 20354,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "pythagoras",
+      "run": 3,
+      "version": "baseline",
+      "first_playable_ms": 15825,
+      "total_ms": 25540,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "pythagoras",
+      "run": 3,
+      "version": "candidate",
+      "first_playable_ms": 19105,
+      "total_ms": 29198,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "square-identity",
+      "run": 3,
+      "version": "candidate",
+      "first_playable_ms": 11831,
+      "total_ms": 20177,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    },
+    {
+      "case": "square-identity",
+      "run": 3,
+      "version": "baseline",
+      "first_playable_ms": 14657,
+      "total_ms": 24821,
+      "model_calls": 2,
+      "semantic_rejections": [],
+      "status": "compiled",
+      "sections": 2
+    }
+  ],
+  "completed": true
+}

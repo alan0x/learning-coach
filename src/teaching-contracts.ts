@@ -1,4 +1,4 @@
-import { LessonPlanError, type LessonPlan, type LessonPlanMathToken, type LessonPlanVisualContent } from "./lesson-plan.js";
+import { LessonPlanError, type LessonPlan, type LessonPlanMathToken, type LessonPlanVisualContent, type LessonPlanReference } from "./lesson-plan.js";
 
 /** Program-only facts. Never serialized into model catalogs or response schemas. */
 export const TEACHING_CONTRACTS = {
@@ -6,6 +6,9 @@ export const TEACHING_CONTRACTS = {
   geometric_rearrangement: {constructions:["right_triangle_square","square_area_identity","triangle_to_rectangle"], excludes:["circle_area_proof"]},
   function_plot: {static_sample_limit:2, input:"slider", feedback:"secant", singularity:"undefined"},
 } as const;
+
+import { REARRANGEMENT_FACTS, type RearrangementConstruction } from "./rearrangement.js";
+export { REARRANGEMENT_FACTS } from "./rearrangement.js";
 
 // Conservative polynomial-degree check over the already validated postfix tokens.
 function affineTokens(tokens: LessonPlanMathToken[]): boolean {
@@ -81,8 +84,108 @@ export function normalizePlotInputInstructions(plan: LessonPlan): void {
   }
 }
 
+/** Match actual teaching references, never a course-title keyword. */
+function validateRearrangementClaims(plan: LessonPlan): void {
+  const local = new Map<string, LessonPlanVisualContent>();
+  const reusable = new Map<string, LessonPlanVisualContent>();
+  const byNumber = new Map<number, Set<LessonPlanVisualContent>>();
+  const relatedLocal = new Map<string, Set<LessonPlanVisualContent>>();
+  const relatedReusable = new Map<string, Set<LessonPlanVisualContent>>();
+  const lookup = (reference: LessonPlanReference, section: number) => {
+    if (reference.source === "reusable") {
+      const key = `${reference.section}:${reference.item}`, visual = reusable.get(key);
+      return visual ? [visual] : [...(relatedReusable.get(key) ?? [])];
+    }
+    if (reference.source === "local_board_item") {
+      const key = `${section}:${reference.moment}:${reference.item}`, visual = local.get(key);
+      return visual ? [visual] : [...(relatedLocal.get(key) ?? [])];
+    }
+    return [];
+  };
+  const check = (text: string, visuals: Set<LessonPlanVisualContent>, path: string): void => {
+    // A comparison may discuss either construction; do not infer which one from prose.
+    if (visuals.size !== 1) return;
+    const visual = [...visuals][0];
+    if (visual.capability !== "geometric_rearrangement") return;
+    const construction = (visual.parameters?.construction ?? "right_triangle_square") as RearrangementConstruction;
+    const facts = REARRANGEMENT_FACTS[construction];
+    if (!facts) return; // Parameter validation reports unknown constructions.
+    const claims = text.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1")
+      .split(/[。！？!?；;\n]/u).filter(claim =>
+      !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
+    const wrongPieces = construction === "square_area_identity" && claims.some(claim =>
+      /(?:这(?:个|张|些|幅)|图中|图里|内部|里面|画面|包含).{0,20}(?:四|4)\s*(?:个|块|片)?(?:完全相同的|全等的|全等|完全相同|一样的)?(?:直角)?三角形/u.test(claim));
+    const wrongFrame = construction === "right_triangle_square" && claims.some(claim =>
+      /(?:外框|外侧正方形|这个大正方形|大正方形)(?:的)?边长.{0,8}(?:是|为|等于|就是).{0,4}(?:斜边\s*)?c(?![a-z])/iu.test(claim)
+      || /(?:中间|中央|中心).{0,8}(?:正方形|留白).{0,8}(?:边长|面积).{0,8}(?:b\s*[-−]\s*a|a\s*[-−]\s*b)/iu.test(claim)
+      || /(?:S_?\{?(?:大正方形|外框)\}?|S[（(](?:大正方形|外框)[）)])\s*=\s*c(?:²|\^\{?2\}?)/u.test(claim));
+    const wrongControl = claims.some(claim =>
+      /(?:拖动|拖拽|调整|滑动).{0,12}(?:滑块|滑杆|进度).{0,16}(?:改变|调整).{0,8}(?:边长|三边|斜边|直角边)/u.test(claim));
+    const wrongFinal = construction === "right_triangle_square" && claims.some(claim =>
+      /(?:拼成|拼合成|填满).{0,8}斜边正方形/u.test(claim));
+    if (wrongPieces || wrongFrame || wrongControl || wrongFinal) {
+      throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path,
+        `${construction}: ${facts.pieces}; ${facts.container}; start: ${facts.initial}; end: ${facts.final}; ${facts.proof}. The control moves pieces only, not side lengths. Correct this section without replacing the established visual.`);
+    }
+  };
+  for (const [si, section] of plan.sections.entries()) {
+    for (const [mi, moment] of section.moments.entries()) {
+      const selected = new Set<LessonPlanVisualContent>();
+      let item = 0;
+      for (const action of moment.actions) {
+        if (action.action !== "create") continue;
+        item += 1;
+        if (action.kind !== "visual") continue;
+        const visual = action.content as LessonPlanVisualContent;
+        local.set(`${si + 1}:${mi + 1}:${item}`, visual);
+        if (action.reusable_item) reusable.set(`${si + 1}:${action.reusable_item}`, visual);
+        selected.add(visual);
+        for (const number of visual.numbers ?? []) {
+          const bound = byNumber.get(number) ?? new Set();
+          bound.add(visual); byNumber.set(number, bound);
+        }
+      }
+      for (const action of moment.actions) {
+        const refs = action.action === "focus" ? action.references
+          : action.action === "point_at" || action.action === "emphasize" || action.action === "revise" ? [action.reference] : [];
+        for (const ref of refs) for (const visual of lookup(ref, si + 1)) selected.add(visual);
+        if (action.action === "animate") for (const visual of byNumber.get(action.number) ?? []) selected.add(visual);
+      }
+      const path = `$lessonPlan.sections[${si}].moments[${mi}]`;
+      check(moment.narration ?? "", selected, path);
+      let boardItem = 0;
+      for (const [ai, action] of moment.actions.entries()) {
+        if (action.action === "create") {
+          boardItem += 1;
+          if (action.kind !== "visual") {
+            relatedLocal.set(`${si + 1}:${mi + 1}:${boardItem}`, new Set(selected));
+            if (action.reusable_item) relatedReusable.set(`${si + 1}:${action.reusable_item}`, new Set(selected));
+          }
+        }
+        if ((action.action !== "create" && action.action !== "revise") || action.kind === "visual") continue;
+        // Include board math and notes only in the moment teaching this visual.
+        const content = action.content as { latex?: string; text?: string; title?: string; items?: string[] };
+        check([content.latex, content.text, content.title, ...(content.items ?? [])].filter(Boolean).join("\n"),
+          selected, `${path}.actions[${ai}]`);
+      }
+    }
+    for (const [ai, activity] of (section.student_activities ?? []).entries()) {
+      const selected = new Set<LessonPlanVisualContent>();
+      if (activity.kind === "number_target") {
+        for (const control of activity.number_controls) for (const visual of byNumber.get(control.number) ?? []) selected.add(visual);
+      } else {
+        for (const visual of lookup(activity.reference, si + 1)) selected.add(visual);
+      }
+      check(activity.kind === "reflection" ? `${activity.prompt}\n${activity.answer}`
+        : [activity.prompt, ...activity.hints, activity.success_message].filter(Boolean).join("\n"),
+        selected, `$lessonPlan.sections[${si}].student_activities[${ai}]`);
+    }
+  }
+}
+
 /** Narrow guards for known severe failures, not a claim to parse all prose. */
 export function validateTeachingClaims(plan: LessonPlan): void {
+  validateRearrangementClaims(plan);
   const plots = plan.sections.flatMap(section => section.moments.flatMap(moment => moment.actions))
     .filter(action => action.action === "create" && action.kind === "visual")
     .map(action => (action as {content:LessonPlanVisualContent}).content)

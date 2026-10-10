@@ -1,0 +1,689 @@
+{
+  "input": "请给我上一节勾股定理的课程，请使用图形辅助。",
+  "lesson": {
+    "dsl": "octos.lesson",
+    "version": "0.1",
+    "profile": "authoring",
+    "lesson": {
+      "mode": "explain",
+      "language": "zh-CN",
+      "title": "直观理解勾股定理：面积割补与等积重排",
+      "goals": [
+        "理解直角三角形中两直角边与斜边的长度平方关系",
+        "通过四个全等直角三角形的刚体拼摆直观验证 a^2 + b^2 = c^2",
+        "掌握勾股定理的标准表达式并能应用于已知两边求第三边"
+      ],
+      "adaptation": {
+        "strategies": [
+          "利用几何面积割补的动态演变建立代数关系的直观支撑",
+          "以同一外框面积为基准，对比不同重排状态下的未覆盖留白区域",
+          "由几何直观过渡到代数符号证明，最后结合典型勾股数进行练习"
+        ]
+      },
+      "variables": [
+        {
+          "as": "number_01",
+          "initial": 0,
+          "min": 0,
+          "max": 1,
+          "label": "重排进度",
+          "control": {
+            "kind": "slider",
+            "step": 0.005
+          }
+        }
+      ],
+      "tasks": [
+        {
+          "as": "section-01-task-01",
+          "prompt": "请把重排进度调到 1。",
+          "availability": {
+            "kind": "after_lesson"
+          },
+          "hints": [
+            "拖动左下角的滑杆，观察数值和画面同步变化。"
+          ],
+          "hint_after_attempts": 2,
+          "success_message": "完成，重排进度已经调到 1。",
+          "allowed_operations": [
+            {
+              "kind": "variable_change",
+              "variable": "number_01",
+              "controls": [
+                "slider"
+              ]
+            }
+          ],
+          "completion": {
+            "kind": "expression_target",
+            "expression": "number_01",
+            "value": 1,
+            "tolerance": 0.0025
+          },
+          "start": {
+            "kind": "practice",
+            "variables": [
+              "number_01"
+            ]
+          }
+        }
+      ],
+      "reflections": [
+        {
+          "as": "section-02-reflection-02",
+          "prompt": "如果一个三角形的三边长分别为 5、12、13，它一定是直角三角形吗？为什么？",
+          "answer": "是的。因为 5^2 + 12^2 = 25 + 144 = 169，而 13^2 = 169，满足 a^2 + b^2 = c^2，根据勾股定理的逆定理，该三角形是以 13 为斜边的直角三角形。",
+          "anchor": "section-02-moment-04-item-02",
+          "availability": {
+            "kind": "after_lesson"
+          }
+        }
+      ]
+    },
+    "steps": [
+      {
+        "key": "section-01",
+        "purpose": "通过大正方形内四个全等直角三角形的拼摆留白演变，直观观察并推导 a^2 + b^2 = c^2",
+        "beats": [
+          {
+            "key": "moment-01",
+            "say": "这是一个边长为 a 加 b 的大正方形，我们在它的四个角各放置一个全等的直角三角形，直角边分别为 a 和 b，斜边为 c。",
+            "delivery": "neutral",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-01-moment-01-item-01",
+                "kind": "geometry",
+                "role": "main_visual",
+                "content": {
+                  "title": "直角三角形重排与面积关系",
+                  "caption": "外框边长 a+b。起点留白 c² → 终点留白 a²+b²；四个三角形的总面积始终为 4×ab/2。比较两种布局的留白：c² = a²+b²。",
+                  "axes": {
+                    "x": {
+                      "min": -0.7000000000000001,
+                      "max": 7.7
+                    },
+                    "y": {
+                      "min": -0.7000000000000001,
+                      "max": 7.7
+                    },
+                    "equal_scale": true
+                  },
+                  "points": [
+                    {
+                      "as": "target-point-1",
+                      "x": 0,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "target-point-2",
+                      "x": 7,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "target-point-3",
+                      "x": 7,
+                      "y": 7,
+                      "visible": false
+                    },
+                    {
+                      "as": "target-point-4",
+                      "x": 0,
+                      "y": 7,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-1-point-1",
+                      "x": 0,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-1-point-2",
+                      "x": 3,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-1-point-3",
+                      "x": 0,
+                      "y": 4,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-2-point-1",
+                      "x": 7,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-2-point-2",
+                      "x": 7,
+                      "y": 3,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-2-point-3",
+                      "x": 3,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-3-point-1",
+                      "x": 7,
+                      "y": 7,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-3-point-2",
+                      "x": 4,
+                      "y": 7,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-3-point-3",
+                      "x": 7,
+                      "y": 3,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-4-point-1",
+                      "x": 0,
+                      "y": 7,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-4-point-2",
+                      "x": 0,
+                      "y": 4,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-4-point-3",
+                      "x": 4,
+                      "y": 7,
+                      "visible": false
+                    },
+                    {
+                      "as": "right-angle-point-1",
+                      "x": 0.36,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "right-angle-point-2",
+                      "x": 0.36,
+                      "y": 0.36,
+                      "visible": false
+                    },
+                    {
+                      "as": "right-angle-point-3",
+                      "x": 0,
+                      "y": 0.36,
+                      "visible": false
+                    },
+                    {
+                      "as": "central-area",
+                      "x": 3.5,
+                      "y": 3.5,
+                      "visible": false
+                    }
+                  ],
+                  "polygons": [
+                    {
+                      "as": "target-shape",
+                      "points": [
+                        "target-point-1",
+                        "target-point-2",
+                        "target-point-3",
+                        "target-point-4"
+                      ],
+                      "tone": "neutral"
+                    },
+                    {
+                      "as": "piece-1",
+                      "points": [
+                        "piece-1-point-1",
+                        "piece-1-point-2",
+                        "piece-1-point-3"
+                      ],
+                      "label": "三角形 1",
+                      "tone": "primary"
+                    },
+                    {
+                      "as": "piece-2",
+                      "points": [
+                        "piece-2-point-1",
+                        "piece-2-point-2",
+                        "piece-2-point-3"
+                      ],
+                      "label": "三角形 2",
+                      "tone": "secondary"
+                    },
+                    {
+                      "as": "piece-3",
+                      "points": [
+                        "piece-3-point-1",
+                        "piece-3-point-2",
+                        "piece-3-point-3"
+                      ],
+                      "label": "三角形 3",
+                      "tone": "accent"
+                    },
+                    {
+                      "as": "piece-4",
+                      "points": [
+                        "piece-4-point-1",
+                        "piece-4-point-2",
+                        "piece-4-point-3"
+                      ],
+                      "label": "三角形 4",
+                      "tone": "neutral"
+                    }
+                  ],
+                  "segments": [
+                    {
+                      "as": "target-edge-1",
+                      "from": "target-point-1",
+                      "to": "target-point-2",
+                      "style": "dashed"
+                    },
+                    {
+                      "as": "target-edge-2",
+                      "from": "target-point-2",
+                      "to": "target-point-3",
+                      "style": "dashed"
+                    },
+                    {
+                      "as": "target-edge-3",
+                      "from": "target-point-3",
+                      "to": "target-point-4",
+                      "style": "dashed",
+                      "label": "a+b"
+                    },
+                    {
+                      "as": "target-edge-4",
+                      "from": "target-point-4",
+                      "to": "target-point-1",
+                      "style": "dashed"
+                    },
+                    {
+                      "as": "leg-a",
+                      "from": "piece-1-point-1",
+                      "to": "piece-1-point-2",
+                      "style": "solid",
+                      "label": "a"
+                    },
+                    {
+                      "as": "leg-b",
+                      "from": "piece-1-point-1",
+                      "to": "piece-1-point-3",
+                      "style": "solid",
+                      "label": "b"
+                    },
+                    {
+                      "as": "hypotenuse",
+                      "from": "piece-1-point-2",
+                      "to": "piece-1-point-3",
+                      "style": "solid",
+                      "label": "c"
+                    },
+                    {
+                      "as": "right-angle-1",
+                      "from": "right-angle-point-1",
+                      "to": "right-angle-point-2",
+                      "style": "solid"
+                    },
+                    {
+                      "as": "right-angle-2",
+                      "from": "right-angle-point-2",
+                      "to": "right-angle-point-3",
+                      "style": "solid"
+                    }
+                  ],
+                  "bindings": [
+                    {
+                      "target": "piece-1-point-1.x",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-1.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-2.x",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-2.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-3.x",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(4)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-3.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(4)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-1.x",
+                      "expression": "(7+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-1.y",
+                      "expression": "(0+(4)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-2.x",
+                      "expression": "(7+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-2.y",
+                      "expression": "(0+(4)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-3.x",
+                      "expression": "(7+(0)*(((number_01)-(0))/((1)-(0))))+(-4)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-3.y",
+                      "expression": "(0+(4)*(((number_01)-(0))/((1)-(0))))+(-4)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-1.x",
+                      "expression": "(7+(-4)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-1.y",
+                      "expression": "(7+(-3)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-2.x",
+                      "expression": "(7+(-4)*(((number_01)-(0))/((1)-(0))))+(-3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-2.y",
+                      "expression": "(7+(-3)*(((number_01)-(0))/((1)-(0))))+(-3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-3.x",
+                      "expression": "(7+(-4)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(-4)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-3.y",
+                      "expression": "(7+(-3)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(-4)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-1.x",
+                      "expression": "(0+(3)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-1.y",
+                      "expression": "(7+(0)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-2.x",
+                      "expression": "(0+(3)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(-3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-2.y",
+                      "expression": "(7+(0)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(-3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-3.x",
+                      "expression": "(0+(3)*(((number_01)-(0))/((1)-(0))))+(4)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-3.y",
+                      "expression": "(7+(0)*(((number_01)-(0))/((1)-(0))))+(4)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "central-area.x",
+                      "expression": "3.5+(1.5)*(((number_01)-(0))/((1)-(0)))"
+                    },
+                    {
+                      "target": "central-area.y",
+                      "expression": "3.5+(-1.5)*(((number_01)-(0))/((1)-(0)))"
+                    }
+                  ]
+                },
+                "place": {
+                  "relation": "new_region",
+                  "region_role": "section-01"
+                },
+                "when": "before_speech"
+              },
+              {
+                "do": "write",
+                "as": "section-01-moment-01-item-02",
+                "kind": "math",
+                "role": "derivation",
+                "content": {
+                  "latex": "S_{\\text{留白}} = c^2"
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-01-moment-01-item-01"
+                },
+                "when": "after_speech"
+              },
+              {
+                "do": "write",
+                "as": "section-01-moment-01-item-03",
+                "kind": "note",
+                "role": "explanation",
+                "content": {
+                  "title": "赵爽弦图与等积留白",
+                  "items": [
+                    "外框总面积为 (a + b)^2",
+                    "包含 4 个全等的直角三角形",
+                    "中央空白部分是一个边长为 c 的正方形"
+                  ]
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-01-moment-01-item-02"
+                },
+                "when": "after_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-02",
+            "say": "现在保持大正方形总面积和 4 个直角三角形的总面积不变，我们平移重排这些三角形。观察留白部分是如何转化的。",
+            "delivery": "careful",
+            "actions": [
+              {
+                "do": "animate",
+                "variable": "number_01",
+                "value": 1,
+                "easing": "linear",
+                "duration_intent": "extended",
+                "when": "during_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-03",
+            "say": "重排完成后，外框和三角形的总面积丝毫未变。原本中央的 c 平方区域，现在精准地分成了两个小正方形：边长为 a 的 a 平方，以及边长为 b 的 b 平方。",
+            "delivery": "emphatic",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-01-moment-03-item-01",
+                "kind": "math",
+                "role": "derivation",
+                "content": {
+                  "latex": "a^2 + b^2 = c^2"
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-01-moment-01-item-03"
+                },
+                "when": "after_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-04",
+            "say": "由于重排前后留白总面积恒等，因此直角三角形两直角边的平方和，必然恒等于斜边的平方。你可以亲自拖动进度滑块，重放拼摆过程。",
+            "delivery": "encouraging",
+            "actions": [
+              {
+                "do": "focus",
+                "targets": [
+                  "section-01-moment-03-item-01"
+                ],
+                "intent": "继续观察当前画面",
+                "when": "after_speech"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "section-02",
+        "purpose": "运用勾股定理建立方程，求解直角三角形未知边长并总结判定条件",
+        "beats": [
+          {
+            "key": "moment-01",
+            "say": "上一节中，我们通过图形重排直观见证了勾股定理的几何本质：在直角三角形中，两条直角边的平方和等于斜边的平方。",
+            "delivery": "neutral",
+            "actions": [
+              {
+                "do": "point",
+                "target": "section-01-moment-01-item-01",
+                "when": "during_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-02",
+            "say": "现在，我们正式写出勾股定理的代数表达式：a的平方加b的平方等于c的平方，其中c必须是直角所对的斜边。",
+            "delivery": "emphatic",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-02-moment-02-item-01",
+                "kind": "math",
+                "role": "derivation",
+                "content": {
+                  "latex": "a^2 + b^2 = c^2"
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-01-moment-01-item-01"
+                },
+                "when": "during_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-03",
+            "say": "有了这个关系式，只要知道直角三角形的任意两边，就能精确求出第三边。例如当直角边分别等于3和4时，斜边c的平方就等于9加16，即25，因此斜边c为5。",
+            "delivery": "patient",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-02-moment-03-item-01",
+                "kind": "math",
+                "role": "derivation",
+                "content": {
+                  "latex": "c = \\sqrt{a^2 + b^2} = \\sqrt{3^2 + 4^2} = 5"
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-02-moment-02-item-01"
+                },
+                "when": "during_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-04",
+            "say": "反过来，如果已知斜边与其中一条直角边，也可以通过移项开方，求出另一条直角边的长度。",
+            "delivery": "careful",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-02-moment-04-item-01",
+                "kind": "math",
+                "role": "derivation",
+                "content": {
+                  "latex": "a = \\sqrt{c^2 - b^2}"
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-02-moment-03-item-01"
+                },
+                "when": "during_speech"
+              },
+              {
+                "do": "write",
+                "as": "section-02-moment-04-item-02",
+                "kind": "note",
+                "role": "explanation",
+                "content": {
+                  "title": "勾股定理应用要点",
+                  "items": [
+                    "必须在直角三角形中成立",
+                    "c 必须对应直角所对的最长边（斜边）",
+                    "知二求一：已知两边可解第三边"
+                  ]
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-02-moment-04-item-01"
+                },
+                "when": "after_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-05",
+            "start": {
+              "kind": "replay",
+              "variables": [
+                "number_01"
+              ]
+            },
+            "say": "为了巩固图形与公式的联系，我们可以再次回放图形的拼接演变，观察斜边正方形与两直角边正方形的等积转换过程。",
+            "delivery": "encouraging",
+            "actions": [
+              {
+                "do": "animate",
+                "variable": "number_01",
+                "value": 1,
+                "easing": "linear",
+                "duration_intent": "normal",
+                "when": "during_speech"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "close": {
+      "summary": "本课程利用面积等积重排直观证明了勾股定理：在任意直角三角形中，两直角边的平方和恒等于斜边的平方（a^2 + b^2 = c^2）。这一关系将直角三角形的边长度量与二维几何面积紧密联系在一起。",
+      "focus": [
+        "section-01-moment-01-item-01"
+      ]
+    }
+  },
+  "visuals": [
+    {
+      "capability": "geometric_rearrangement",
+      "parameters": {
+        "construction": "right_triangle_square",
+        "leg_a": 3,
+        "leg_b": 4
+      },
+      "numbers": [
+        1
+      ]
+    }
+  ]
+}

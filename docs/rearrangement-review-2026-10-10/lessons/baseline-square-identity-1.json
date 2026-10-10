@@ -1,0 +1,724 @@
+{
+  "input": "请用图形拼接解释为什么(a+b)²=a²+2ab+b²，再用一个数值例子说明。",
+  "lesson": {
+    "dsl": "octos.lesson",
+    "version": "0.1",
+    "profile": "authoring",
+    "lesson": {
+      "mode": "explain",
+      "language": "zh-CN",
+      "title": "完全平方公式的几何解释与数值验证",
+      "goals": [
+        "理解边长为 (a+b) 的大正方形如何被分割为边长 a 的正方形、边长 b 的正方形以及两个长宽分别为 a 和 b 的矩形",
+        "掌握等式 (a+b)² = a² + 2ab + b² 的几何意义与代数推导",
+        "能够代入具体数值验证完全平方公式并解释各项对应的面积块"
+      ],
+      "adaptation": {
+        "strategies": [
+          "通过大正方形的分割重排动画直观呈现四块面积的组合过程",
+          "结合几何图形与代数展开式建立数形对应关系",
+          "选用简明的整数实例加深计算理解与面积块对应"
+        ]
+      },
+      "variables": [
+        {
+          "as": "number_01",
+          "initial": 0,
+          "min": 0,
+          "max": 1,
+          "label": "拼接进度",
+          "control": {
+            "kind": "slider",
+            "step": 0.005
+          }
+        }
+      ],
+      "tasks": [
+        {
+          "as": "section-01-task-01",
+          "prompt": "拖动滑块观察图形的分割与拼接，体验四块面积组合为完整大正方形的过程：",
+          "availability": {
+            "kind": "after_lesson"
+          },
+          "hints": [
+            "将滑块向右移动即可看到大正方形拆解为 a²、b² 和两个 ab",
+            "将滑块拉回左侧即可复原为完整的大正方形"
+          ],
+          "hint_after_attempts": 2,
+          "success_message": "很好！你已经清楚地观察到了大正方形是由 a²、b² 和两个 ab 组成的！",
+          "allowed_operations": [
+            {
+              "kind": "variable_change",
+              "variable": "number_01",
+              "controls": [
+                "slider"
+              ]
+            }
+          ],
+          "completion": {
+            "kind": "expression_target",
+            "expression": "number_01",
+            "value": 1,
+            "tolerance": 0.0025
+          },
+          "start": {
+            "kind": "practice",
+            "variables": [
+              "number_01"
+            ]
+          }
+        }
+      ],
+      "reflections": [
+        {
+          "as": "section-02-reflection-02",
+          "prompt": "如果选取 a = 4, b = 1，图形中两块长方形的总面积是多少？大正方形的总面积又是多少？",
+          "answer": "两块长方形每个面积为 4×1 = 4，总面积为 2×4 = 8；大正方形总边长为 4+1 = 5，总面积为 (4+1)² = 25。各项之和 4² + 2×4×1 + 1² = 16 + 8 + 1 = 25。",
+          "anchor": "section-02-moment-05-item-01",
+          "availability": {
+            "kind": "after_lesson"
+          }
+        }
+      ]
+    },
+    "steps": [
+      {
+        "key": "section-01",
+        "purpose": "用正方形面积分割与重排直观推导完全平方公式 (a+b)² = a² + 2ab + b²",
+        "beats": [
+          {
+            "key": "moment-01",
+            "say": "我们来看一个边长为 a 加 b 的大正方形，它的总面积就是 a 加 b 的平方。",
+            "delivery": "patient",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-01-moment-01-item-01",
+                "kind": "geometry",
+                "role": "main_visual",
+                "content": {
+                  "title": "正方形分块与面积恒等式",
+                  "axes": {
+                    "x": {
+                      "min": -5.26,
+                      "max": 9.260000000000002
+                    },
+                    "y": {
+                      "min": -1.2100000000000002,
+                      "max": 9.260000000000002
+                    },
+                    "equal_scale": true
+                  },
+                  "points": [
+                    {
+                      "as": "target-point-1",
+                      "x": 0,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "target-point-2",
+                      "x": 5,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "target-point-3",
+                      "x": 5,
+                      "y": 5,
+                      "visible": false
+                    },
+                    {
+                      "as": "target-point-4",
+                      "x": 0,
+                      "y": 5,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-1-point-1",
+                      "x": -4.05,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-1-point-2",
+                      "x": -1.0499999999999998,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-1-point-3",
+                      "x": -1.0499999999999998,
+                      "y": 3,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-1-point-4",
+                      "x": -4.05,
+                      "y": 3,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-2-point-1",
+                      "x": 4.05,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-2-point-2",
+                      "x": 6.05,
+                      "y": 0,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-2-point-3",
+                      "x": 6.05,
+                      "y": 3,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-2-point-4",
+                      "x": 4.05,
+                      "y": 3,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-3-point-1",
+                      "x": 0,
+                      "y": 6.05,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-3-point-2",
+                      "x": 3,
+                      "y": 6.05,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-3-point-3",
+                      "x": 3,
+                      "y": 8.05,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-3-point-4",
+                      "x": 0,
+                      "y": 8.05,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-4-point-1",
+                      "x": 6.05,
+                      "y": 6.05,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-4-point-2",
+                      "x": 8.05,
+                      "y": 6.05,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-4-point-3",
+                      "x": 8.05,
+                      "y": 8.05,
+                      "visible": false
+                    },
+                    {
+                      "as": "piece-4-point-4",
+                      "x": 6.05,
+                      "y": 8.05,
+                      "visible": false
+                    }
+                  ],
+                  "polygons": [
+                    {
+                      "as": "target-shape",
+                      "points": [
+                        "target-point-1",
+                        "target-point-2",
+                        "target-point-3",
+                        "target-point-4"
+                      ],
+                      "tone": "neutral"
+                    },
+                    {
+                      "as": "piece-1",
+                      "points": [
+                        "piece-1-point-1",
+                        "piece-1-point-2",
+                        "piece-1-point-3",
+                        "piece-1-point-4"
+                      ],
+                      "label": "a²",
+                      "tone": "primary"
+                    },
+                    {
+                      "as": "piece-2",
+                      "points": [
+                        "piece-2-point-1",
+                        "piece-2-point-2",
+                        "piece-2-point-3",
+                        "piece-2-point-4"
+                      ],
+                      "label": "ab",
+                      "tone": "secondary"
+                    },
+                    {
+                      "as": "piece-3",
+                      "points": [
+                        "piece-3-point-1",
+                        "piece-3-point-2",
+                        "piece-3-point-3",
+                        "piece-3-point-4"
+                      ],
+                      "label": "ab",
+                      "tone": "accent"
+                    },
+                    {
+                      "as": "piece-4",
+                      "points": [
+                        "piece-4-point-1",
+                        "piece-4-point-2",
+                        "piece-4-point-3",
+                        "piece-4-point-4"
+                      ],
+                      "label": "b²",
+                      "tone": "neutral"
+                    }
+                  ],
+                  "segments": [
+                    {
+                      "as": "target-edge-1",
+                      "from": "target-point-1",
+                      "to": "target-point-2",
+                      "style": "dashed",
+                      "label": "(a+b)² = a² + 2ab + b²"
+                    },
+                    {
+                      "as": "target-edge-2",
+                      "from": "target-point-2",
+                      "to": "target-point-3",
+                      "style": "dashed"
+                    },
+                    {
+                      "as": "target-edge-3",
+                      "from": "target-point-3",
+                      "to": "target-point-4",
+                      "style": "dashed"
+                    },
+                    {
+                      "as": "target-edge-4",
+                      "from": "target-point-4",
+                      "to": "target-point-1",
+                      "style": "dashed"
+                    }
+                  ],
+                  "bindings": [
+                    {
+                      "target": "piece-1-point-1.x",
+                      "expression": "(-4.05+(4.05)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-1.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-2.x",
+                      "expression": "(-4.05+(4.05)*(((number_01)-(0))/((1)-(0))))+(3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-2.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-3.x",
+                      "expression": "(-4.05+(4.05)*(((number_01)-(0))/((1)-(0))))+(3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-3.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-4.x",
+                      "expression": "(-4.05+(4.05)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-1-point-4.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-1.x",
+                      "expression": "(4.05+(-1.0499999999999998)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-1.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-2.x",
+                      "expression": "(4.05+(-1.0499999999999998)*(((number_01)-(0))/((1)-(0))))+(2)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-2.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(2)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-3.x",
+                      "expression": "(4.05+(-1.0499999999999998)*(((number_01)-(0))/((1)-(0))))+(2)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-3.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(2)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-4.x",
+                      "expression": "(4.05+(-1.0499999999999998)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-2-point-4.y",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-1.x",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-1.y",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-2.x",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-2.y",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-3.x",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(3)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(2)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-3.y",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(3)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(2)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-4.x",
+                      "expression": "(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(2)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-3-point-4.y",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(2)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-1.x",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-1.y",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-2.x",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(2)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-2.y",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(2)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-3.x",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(2)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(2)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-3.y",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(2)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(2)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-4.x",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(0)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))-(2)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    },
+                    {
+                      "target": "piece-4-point-4.y",
+                      "expression": "(6.05+(-3.05)*(((number_01)-(0))/((1)-(0))))+(0)*sin(0+(0)*(((number_01)-(0))/((1)-(0))))+(2)*cos(0+(0)*(((number_01)-(0))/((1)-(0))))"
+                    }
+                  ]
+                },
+                "place": {
+                  "relation": "new_region",
+                  "region_role": "section-01"
+                },
+                "when": "before_speech"
+              },
+              {
+                "do": "write",
+                "as": "section-01-moment-01-item-02",
+                "kind": "math",
+                "role": "derivation",
+                "content": {
+                  "latex": "S = (a + b)^2"
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-01-moment-01-item-01"
+                },
+                "when": "during_speech"
+              },
+              {
+                "do": "focus",
+                "targets": [
+                  "section-01-moment-01-item-01",
+                  "section-01-moment-01-item-02"
+                ],
+                "intent": "展示整体大正方形及其边长",
+                "when": "during_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-02",
+            "say": "如果我们将每条边分割成长度为 a 和 b 的两段，整个大正方形就会被划分成四个独立的矩形区域。",
+            "delivery": "neutral",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-01-moment-02-item-01",
+                "kind": "note",
+                "role": "explanation",
+                "content": {
+                  "title": "图形分割组成",
+                  "items": [
+                    "1 个边长为 a 的正方形：面积为 a²",
+                    "1 个边长为 b 的正方形：面积为 b²",
+                    "2 个长宽为 a 和 b 的长方形：每个面积为 ab"
+                  ]
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-01-moment-01-item-02"
+                },
+                "when": "during_speech"
+              },
+              {
+                "do": "animate",
+                "variable": "number_01",
+                "value": 1,
+                "easing": "linear",
+                "duration_intent": "normal",
+                "when": "during_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-03",
+            "say": "观察这四个部分：左上是一个边长为 a 的正方形，右下是一个边长为 b 的正方形，剩下两个是对称的长宽分别为 a 和 b 的长方形。",
+            "delivery": "careful",
+            "actions": [
+              {
+                "do": "point",
+                "target": "section-01-moment-01-item-01",
+                "when": "during_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-04",
+            "say": "将这四部分的面积加在一起，就是 a 方加上两个 ab 再加上 b 方。因此，(a+b)² 就等于 a² + 2ab + b²。",
+            "delivery": "emphatic",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-01-moment-04-item-01",
+                "kind": "math",
+                "role": "derivation",
+                "content": {
+                  "latex": "(a + b)^2 = a^2 + 2ab + b^2"
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-01-moment-02-item-01"
+                },
+                "when": "after_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-05",
+            "say": "现在，你可以尝试拖动滑块，亲自观察大正方形在整体与四块分割之间的拼接过程。",
+            "delivery": "encouraging",
+            "actions": [
+              {
+                "do": "focus",
+                "targets": [
+                  "section-01-moment-04-item-01"
+                ],
+                "intent": "继续观察当前画面",
+                "when": "after_speech"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "section-02",
+        "purpose": "代入具体数值（如 a=3, b=2）计算并验证公式，对应各个几何块面积",
+        "beats": [
+          {
+            "key": "moment-01",
+            "say": "在前一节中，我们通过图形拼接看到了大正方形被划分为四块面积。现在，我们选取具体的数值 a 等于 3、b 等于 2，来验证这一几何与代数关系。",
+            "delivery": "neutral",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-02-moment-01-item-01",
+                "kind": "math",
+                "role": "derivation",
+                "content": {
+                  "latex": "(a + b)^2 = a^2 + 2ab + b^2"
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-01-moment-01-item-01"
+                },
+                "when": "before_speech"
+              },
+              {
+                "do": "focus",
+                "targets": [
+                  "section-01-moment-01-item-01",
+                  "section-02-moment-01-item-01"
+                ],
+                "intent": "引入具体数值 a=3, b=2 验证完全平方公式",
+                "when": "during_speech"
+              },
+              {
+                "do": "point",
+                "target": "section-01-moment-01-item-01",
+                "when": "during_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-02",
+            "say": "整个大正方形的边长是 a 加 b，也就是 3 加 2 等于 5。因此，大正方形的总面积是 5 的平方，即 25。",
+            "delivery": "patient",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-02-moment-02-item-01",
+                "kind": "math",
+                "role": "derivation",
+                "content": {
+                  "latex": "(3 + 2)^2 = 5^2 = 25"
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-02-moment-01-item-01"
+                },
+                "when": "after_speech"
+              },
+              {
+                "do": "point",
+                "target": "section-01-moment-01-item-01",
+                "when": "during_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-03",
+            "say": "现在我们观察拼接过程。随着四块拼合，我们可以分别计算每一块具体的面积大小。",
+            "delivery": "encouraging",
+            "actions": [
+              {
+                "do": "animate",
+                "variable": "number_01",
+                "value": 1,
+                "easing": "linear",
+                "duration_intent": "normal",
+                "when": "during_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-04",
+            "say": "边长为 3 的小正方形面积是 3 的平方，等于 9；边长为 2 的小正方形面积是 2 的平方，等于 4；两个长宽为 3 和 2 的矩形，每个面积是 6，合起来就是两个 6 等于 12。",
+            "delivery": "careful",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-02-moment-04-item-01",
+                "kind": "math",
+                "role": "derivation",
+                "content": {
+                  "latex": "3^2 + 2 \\times (3 \\times 2) + 2^2 = 9 + 12 + 4"
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-02-moment-02-item-01"
+                },
+                "when": "during_speech"
+              },
+              {
+                "do": "point",
+                "target": "section-01-moment-01-item-01",
+                "when": "after_speech"
+              }
+            ]
+          },
+          {
+            "key": "moment-05",
+            "say": "把 9、12 和 4 相加，刚好得到 25。这与直接计算 5 的平方完全一致，清晰展现了 a 平方加 2ab 加 b 平方的各项对应关系。课后你也可以拖动滑块复习拼接过程。",
+            "delivery": "emphatic",
+            "actions": [
+              {
+                "do": "write",
+                "as": "section-02-moment-05-item-01",
+                "kind": "note",
+                "role": "explanation",
+                "content": {
+                  "title": "数值验证 (a=3, b=2)",
+                  "items": [
+                    "总边长：a + b = 3 + 2 = 5",
+                    "总面积：(3 + 2)² = 25",
+                    "四块分解：3² + 2×(3×2) + 2² = 9 + 12 + 4 = 25"
+                  ]
+                },
+                "place": {
+                  "relation": "below",
+                  "anchor": "section-02-moment-04-item-01"
+                },
+                "when": "after_speech"
+              },
+              {
+                "do": "focus",
+                "targets": [
+                  "section-01-moment-01-item-01"
+                ],
+                "intent": "总结代数和与几何块面积的一致性",
+                "when": "during_speech"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "close": {
+      "summary": "通过边长为 a+b 的大正方形几何剖分，我们直观地看到大正方形由一个 a² 正方形、一个 b² 正方形和两个面积为 ab 的矩形组成，从几何和代数两方面理解了完全平方公式。",
+      "focus": [
+        "section-01-moment-01-item-01"
+      ]
+    }
+  },
+  "visuals": [
+    {
+      "capability": "geometric_rearrangement",
+      "parameters": {
+        "construction": "square_area_identity"
+      },
+      "numbers": [
+        1
+      ]
+    }
+  ]
+}

@@ -7168,6 +7168,90 @@ var require__ = __commonJS({
   }
 });
 
+// src/rearrangement.ts
+var REARRANGEMENT_CONSTRUCTIONS = {
+  right_triangle_square: {
+    title: "\u76F4\u89D2\u4E09\u89D2\u5F62\u91CD\u6392\u4E0E\u9762\u79EF\u5173\u7CFB",
+    catalog: "4\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\uFF1B\u5916\u6846a+b\uFF1B\u7559\u767Dc\xB2\u2192a\xB2+b\xB2\uFF08\u52FE\u80A1\uFF09",
+    pieces: "4\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\uFF08\u4E24\u76F4\u89D2\u8FB9a\u3001b\uFF0C\u659C\u8FB9c\uFF09",
+    shows: "c\xB2 = a\xB2 + b\xB2",
+    container: "\u5916\u6846\u8FB9\u957Fa+b\uFF0C\u9762\u79EF(a+b)\xB2\uFF1B\u4E0D\u662F\u8FB9\u957Fc\u7684\u6B63\u65B9\u5F62",
+    initial: "\u56DB\u4E2A\u4E09\u89D2\u5F62\u56F4\u4F4F\u8FB9\u957Fc\u7684\u6B63\u65B9\u5F62\u7559\u767D\uFF0C\u9762\u79EFc\xB2",
+    final: "\u4E09\u89D2\u5F62\u62FC\u6210\u4E24\u4E2Aab\u77E9\u5F62\uFF0C\u7559\u767D\u4E3Aa\xB2\u548Cb\xB2\u4E24\u4E2A\u6B63\u65B9\u5F62",
+    proof: "\u6BD4\u8F83\u4E24\u4E2A\u7AEF\u70B9\uFF1A(a+b)\xB2 \u2212 4\xD7ab/2 = c\xB2 = a\xB2+b\xB2",
+    caption: "\u5916\u6846\u8FB9\u957F a+b\u3002\u8D77\u70B9\u7559\u767D c\xB2 \u2192 \u7EC8\u70B9\u7559\u767D a\xB2+b\xB2\uFF1B\u56DB\u4E2A\u4E09\u89D2\u5F62\u7684\u603B\u9762\u79EF\u59CB\u7EC8\u4E3A 4\xD7ab/2\u3002\u6BD4\u8F83\u4E24\u79CD\u5E03\u5C40\u7684\u7559\u767D\uFF1Ac\xB2 = a\xB2+b\xB2\u3002"
+  },
+  square_area_identity: {
+    title: "\u6B63\u65B9\u5F62\u5206\u5757\u4E0E\u9762\u79EF\u6052\u7B49\u5F0F",
+    catalog: "a\xB2\u3001b\xB2\u3001ab\u3001ab\u56DB\u5757\uFF08\u65E0\u4E09\u89D2\u5F62\uFF09\u2192\u8FB9\u957Fa+b\u6B63\u65B9\u5F62\uFF0C\u8BC1(a+b)\xB2=a\xB2+2ab+b\xB2",
+    pieces: "a\xB2\u3001b\xB2\u4E24\u4E2A\u6B63\u65B9\u5F62\u548C\u4E24\u4E2Aab\u77E9\u5F62\uFF0C\u65E0\u4E09\u89D2\u5F62",
+    shows: "(a+b)\xB2 = a\xB2 + 2ab + b\xB2",
+    container: "\u5916\u6846\u8FB9\u957Fa+b\uFF0C\u9762\u79EF(a+b)\xB2",
+    initial: "\u56DB\u5757\u5206\u79BB\uFF1Aa\xB2\u3001ab\u3001ab\u3001b\xB2",
+    final: "\u56DB\u5757\u586B\u6EE1\u8FB9\u957Fa+b\u7684\u6B63\u65B9\u5F62",
+    proof: "\u6574\u5757\u9762\u79EF\u7B49\u4E8E\u56DB\u5757\u9762\u79EF\u4E4B\u548C\uFF1A(a+b)\xB2=a\xB2+2ab+b\xB2",
+    caption: "a\xB2\u3001b\xB2 \u4E24\u4E2A\u6B63\u65B9\u5F62\u4E0E\u4E24\u4E2A ab \u77E9\u5F62\u62FC\u5408\uFF0C\u5F97\u5230\u8FB9\u957F a+b \u7684\u6B63\u65B9\u5F62\uFF1A(a+b)\xB2 = a\xB2+2ab+b\xB2\u3002"
+  },
+  triangle_to_rectangle: {
+    title: "\u4E24\u4E2A\u5168\u7B49\u4E09\u89D2\u5F62\u62FC\u6210\u957F\u65B9\u5F62",
+    catalog: "2\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u2192ab\u77E9\u5F62\uFF0C\u6BCF\u5757\u9762\u79EFab/2",
+    pieces: "2\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u62FC\u6210\u77E9\u5F62",
+    shows: "S\u25B3 = ab / 2",
+    container: "\u5916\u6846\u662F\u8FB9\u957Fa\u3001b\u7684\u77E9\u5F62\uFF0C\u9762\u79EFab",
+    initial: "\u4E24\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u5206\u79BB",
+    final: "\u4E24\u4E2A\u4E09\u89D2\u5F62\u586B\u6EE1\u77E9\u5F62",
+    proof: "\u4E24\u4E2A\u5168\u7B49\u4E09\u89D2\u5F62\u7684\u9762\u79EF\u4E4B\u548C\u4E3Aab\uFF0C\u6240\u4EE5\u6BCF\u4E2A\u9762\u79EFab/2",
+    caption: "\u4E24\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u62FC\u6210\u8FB9\u957F a\u3001b \u7684\u77E9\u5F62\uFF1B\u6BCF\u4E2A\u4E09\u89D2\u5F62\u9762\u79EF S\u25B3 = ab/2\u3002"
+  }
+};
+var REARRANGEMENT_FACTS = REARRANGEMENT_CONSTRUCTIONS;
+var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
+function rearrangementRecipe(construction, first, second) {
+  const definition = REARRANGEMENT_CONSTRUCTIONS[construction];
+  if (!definition) return void 0;
+  const gap = Math.max(first, second) * 0.35;
+  if (construction === "right_triangle_square") {
+    const side = first + second;
+    return {
+      title: definition.title,
+      relation: definition.shows,
+      target: [[0, 0], [side, 0], [side, side], [0, side]],
+      pieces: [
+        { points: [[0, 0], [first, 0], [0, second]], start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
+        { points: [[0, 0], [0, first], [-second, 0]], start: { x: side, y: 0 }, end: { x: side, y: second }, label: "\u4E09\u89D2\u5F62 2", tone: "secondary" },
+        { points: [[0, 0], [-first, 0], [0, -second]], start: { x: side, y: side }, end: { x: first, y: second }, label: "\u4E09\u89D2\u5F62 3", tone: "accent" },
+        { points: [[0, 0], [0, -first], [second, 0]], start: { x: 0, y: side }, end: { x: first, y: side }, label: "\u4E09\u89D2\u5F62 4", tone: "neutral" }
+      ]
+    };
+  }
+  if (construction === "square_area_identity") {
+    const side = first + second;
+    return {
+      title: definition.title,
+      relation: definition.shows,
+      target: [[0, 0], [side, 0], [side, side], [0, side]],
+      pieces: [
+        { points: [[0, 0], [first, 0], [first, first], [0, first]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "a\xB2", tone: "primary" },
+        { points: [[0, 0], [second, 0], [second, first], [0, first]], start: { x: first + gap, y: 0 }, end: { x: first, y: 0 }, label: "ab", tone: "secondary" },
+        { points: [[0, 0], [first, 0], [first, second], [0, second]], start: { x: 0, y: side + gap }, end: { x: 0, y: first }, label: "ab", tone: "accent" },
+        { points: [[0, 0], [second, 0], [second, second], [0, second]], start: { x: side + gap, y: side + gap }, end: { x: first, y: first }, label: "b\xB2", tone: "neutral" }
+      ]
+    };
+  }
+  if (construction === "triangle_to_rectangle") {
+    return {
+      title: definition.title,
+      relation: definition.shows,
+      target: [[0, 0], [first, 0], [first, second], [0, second]],
+      pieces: [
+        { points: [[0, 0], [first, 0], [0, second]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
+        { points: [[0, 0], [first, 0], [0, second]], start: { x: first + gap, y: 0 }, end: { x: first, y: second, angle: Math.PI }, label: "\u4E09\u89D2\u5F62 2", tone: "accent" }
+      ]
+    };
+  }
+  return void 0;
+}
+
 // src/lesson-plan.ts
 var LESSON_PLAN_VERSION = "0.1";
 var PROCESS_DIAGRAM_CONTRACT = {
@@ -7295,7 +7379,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     model_guidance: "\u5355\u4F4D\u6B63\u65B9\u5F62\u6309\u884C\u5217\u94FA\u6EE1\u957F\u65B9\u5F62\uFF1B\u4E24\u4E2A\u6574\u6570\u4F9D\u6B21\u63A7\u5236\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09\u548C\u884C\u6570\uFF08\u5BBD\uFF09\uFF0C\u7528\u4E8E\u9762\u79EF\u3001\u5468\u957F\u4E0E\u5E73\u65B9\u5355\u4F4D\u6559\u5B66"
   },
   geometric_rearrangement: {
-    parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "primary_control"],
+    parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "leg_a", "leg_b", "hypotenuse", "primary_control"],
     number_inputs: ["progress"],
     number_input_policies: [{ kind: "normalized_progress" }],
     parameter_names: ["title", "construction", "leg_a", "leg_b"],
@@ -7308,7 +7392,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     output_kinds: ["geometry"],
     student_controls: ["slider"],
     required_features: ["polygon_pieces", "rigid_rearrangement", "area_relation"],
-    model_guidance: "\u7ECF\u8FC7\u9A8C\u8BC1\u7684\u591A\u8FB9\u5F62\u62C6\u5206\u4E0E\u521A\u4F53\u91CD\u6392\uFF0C\u7528\u8FDB\u5EA6\u6570\u503C\u63A7\u5236\u79FB\u52A8"
+    model_guidance: REARRANGEMENT_MODEL_GUIDANCE
   },
   circle_area_rearrangement: {
     parts: ["whole", "primary_control"],
@@ -8540,7 +8624,104 @@ function normalizePlotInputInstructions(plan) {
     }
   }
 }
+function validateRearrangementClaims(plan) {
+  const local = /* @__PURE__ */ new Map();
+  const reusable = /* @__PURE__ */ new Map();
+  const byNumber = /* @__PURE__ */ new Map();
+  const relatedLocal = /* @__PURE__ */ new Map();
+  const relatedReusable = /* @__PURE__ */ new Map();
+  const lookup = (reference, section) => {
+    if (reference.source === "reusable") {
+      const key = `${reference.section}:${reference.item}`, visual = reusable.get(key);
+      return visual ? [visual] : [...relatedReusable.get(key) ?? []];
+    }
+    if (reference.source === "local_board_item") {
+      const key = `${section}:${reference.moment}:${reference.item}`, visual = local.get(key);
+      return visual ? [visual] : [...relatedLocal.get(key) ?? []];
+    }
+    return [];
+  };
+  const check = (text, visuals, path) => {
+    if (visuals.size !== 1) return;
+    const visual = [...visuals][0];
+    if (visual.capability !== "geometric_rearrangement") return;
+    const construction = visual.parameters?.construction ?? "right_triangle_square";
+    const facts = REARRANGEMENT_FACTS[construction];
+    if (!facts) return;
+    const claims = text.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
+    const wrongPieces = construction === "square_area_identity" && claims.some((claim) => /(?:这(?:个|张|些|幅)|图中|图里|内部|里面|画面|包含).{0,20}(?:四|4)\s*(?:个|块|片)?(?:完全相同的|全等的|全等|完全相同|一样的)?(?:直角)?三角形/u.test(claim));
+    const wrongFrame = construction === "right_triangle_square" && claims.some((claim) => /(?:外框|外侧正方形|这个大正方形|大正方形)(?:的)?边长.{0,8}(?:是|为|等于|就是).{0,4}(?:斜边\s*)?c(?![a-z])/iu.test(claim) || /(?:中间|中央|中心).{0,8}(?:正方形|留白).{0,8}(?:边长|面积).{0,8}(?:b\s*[-−]\s*a|a\s*[-−]\s*b)/iu.test(claim) || /(?:S_?\{?(?:大正方形|外框)\}?|S[（(](?:大正方形|外框)[）)])\s*=\s*c(?:²|\^\{?2\}?)/u.test(claim));
+    const wrongControl = claims.some((claim) => /(?:拖动|拖拽|调整|滑动).{0,12}(?:滑块|滑杆|进度).{0,16}(?:改变|调整).{0,8}(?:边长|三边|斜边|直角边)/u.test(claim));
+    const wrongFinal = construction === "right_triangle_square" && claims.some((claim) => /(?:拼成|拼合成|填满).{0,8}斜边正方形/u.test(claim));
+    if (wrongPieces || wrongFrame || wrongControl || wrongFinal) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_TEACHING_MISMATCH",
+        path,
+        `${construction}: ${facts.pieces}; ${facts.container}; start: ${facts.initial}; end: ${facts.final}; ${facts.proof}. The control moves pieces only, not side lengths. Correct this section without replacing the established visual.`
+      );
+    }
+  };
+  for (const [si, section] of plan.sections.entries()) {
+    for (const [mi, moment] of section.moments.entries()) {
+      const selected = /* @__PURE__ */ new Set();
+      let item = 0;
+      for (const action of moment.actions) {
+        if (action.action !== "create") continue;
+        item += 1;
+        if (action.kind !== "visual") continue;
+        const visual = action.content;
+        local.set(`${si + 1}:${mi + 1}:${item}`, visual);
+        if (action.reusable_item) reusable.set(`${si + 1}:${action.reusable_item}`, visual);
+        selected.add(visual);
+        for (const number of visual.numbers ?? []) {
+          const bound = byNumber.get(number) ?? /* @__PURE__ */ new Set();
+          bound.add(visual);
+          byNumber.set(number, bound);
+        }
+      }
+      for (const action of moment.actions) {
+        const refs = action.action === "focus" ? action.references : action.action === "point_at" || action.action === "emphasize" || action.action === "revise" ? [action.reference] : [];
+        for (const ref of refs) for (const visual of lookup(ref, si + 1)) selected.add(visual);
+        if (action.action === "animate") for (const visual of byNumber.get(action.number) ?? []) selected.add(visual);
+      }
+      const path = `$lessonPlan.sections[${si}].moments[${mi}]`;
+      check(moment.narration ?? "", selected, path);
+      let boardItem = 0;
+      for (const [ai, action] of moment.actions.entries()) {
+        if (action.action === "create") {
+          boardItem += 1;
+          if (action.kind !== "visual") {
+            relatedLocal.set(`${si + 1}:${mi + 1}:${boardItem}`, new Set(selected));
+            if (action.reusable_item) relatedReusable.set(`${si + 1}:${action.reusable_item}`, new Set(selected));
+          }
+        }
+        if (action.action !== "create" && action.action !== "revise" || action.kind === "visual") continue;
+        const content = action.content;
+        check(
+          [content.latex, content.text, content.title, ...content.items ?? []].filter(Boolean).join("\n"),
+          selected,
+          `${path}.actions[${ai}]`
+        );
+      }
+    }
+    for (const [ai, activity] of (section.student_activities ?? []).entries()) {
+      const selected = /* @__PURE__ */ new Set();
+      if (activity.kind === "number_target") {
+        for (const control of activity.number_controls) for (const visual of byNumber.get(control.number) ?? []) selected.add(visual);
+      } else {
+        for (const visual of lookup(activity.reference, si + 1)) selected.add(visual);
+      }
+      check(
+        activity.kind === "reflection" ? `${activity.prompt}
+${activity.answer}` : [activity.prompt, ...activity.hints, activity.success_message].filter(Boolean).join("\n"),
+        selected,
+        `$lessonPlan.sections[${si}].student_activities[${ai}]`
+      );
+    }
+  }
+}
 function validateTeachingClaims(plan) {
+  validateRearrangementClaims(plan);
   const plots = plan.sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).filter((action) => action.action === "create" && action.kind === "visual").map((action) => action.content).filter((visual) => visual.capability === "function_plot");
   const hasCircleArea = plan.sections.some((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "circle_area_rearrangement")));
   const onlyFixedLineSamples = plots.length === 1 && fixedLineSamples(plots[0]);
@@ -12481,52 +12662,6 @@ function compileRectangleUnitSquareArray(base, content, role, placement, plan, p
     ])
   };
 }
-function rearrangementRecipe(construction, first, second, path) {
-  if (!LESSON_PLAN_CAPABILITY_REGISTRY.geometric_rearrangement.parameter_options.construction.includes(construction)) {
-    fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
-  }
-  const gap = Math.max(first, second) * 0.35;
-  if (construction === "right_triangle_square") {
-    const side = first + second;
-    return {
-      title: "\u76F4\u89D2\u4E09\u89D2\u5F62\u91CD\u6392\u4E0E\u9762\u79EF\u5173\u7CFB",
-      relation: "c\xB2 = a\xB2 + b\xB2",
-      target: [[0, 0], [side, 0], [side, side], [0, side]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
-        { points: [[0, 0], [0, first], [-second, 0]], start: { x: side, y: 0 }, end: { x: side, y: second }, label: "\u4E09\u89D2\u5F62 2", tone: "secondary" },
-        { points: [[0, 0], [-first, 0], [0, -second]], start: { x: side, y: side }, end: { x: first, y: second }, label: "\u4E09\u89D2\u5F62 3", tone: "accent" },
-        { points: [[0, 0], [0, -first], [second, 0]], start: { x: 0, y: side }, end: { x: first, y: side }, label: "\u4E09\u89D2\u5F62 4", tone: "neutral" }
-      ]
-    };
-  }
-  if (construction === "square_area_identity") {
-    const side = first + second;
-    return {
-      title: "\u6B63\u65B9\u5F62\u5206\u5757\u4E0E\u9762\u79EF\u6052\u7B49\u5F0F",
-      relation: "(a+b)\xB2 = a\xB2 + 2ab + b\xB2",
-      target: [[0, 0], [side, 0], [side, side], [0, side]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [first, first], [0, first]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "a\xB2", tone: "primary" },
-        { points: [[0, 0], [second, 0], [second, first], [0, first]], start: { x: first + gap, y: 0 }, end: { x: first, y: 0 }, label: "ab", tone: "secondary" },
-        { points: [[0, 0], [first, 0], [first, second], [0, second]], start: { x: 0, y: side + gap }, end: { x: 0, y: first }, label: "ab", tone: "accent" },
-        { points: [[0, 0], [second, 0], [second, second], [0, second]], start: { x: side + gap, y: side + gap }, end: { x: first, y: first }, label: "b\xB2", tone: "neutral" }
-      ]
-    };
-  }
-  if (construction === "triangle_to_rectangle") {
-    return {
-      title: "\u4E24\u4E2A\u5168\u7B49\u4E09\u89D2\u5F62\u62FC\u6210\u957F\u65B9\u5F62",
-      relation: "S\u25B3 = ab / 2",
-      target: [[0, 0], [first, 0], [first, second], [0, second]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: first + gap, y: 0 }, end: { x: first, y: second, angle: Math.PI }, label: "\u4E09\u89D2\u5F62 2", tone: "accent" }
-      ]
-    };
-  }
-  fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
-}
 function transformedPoint(point, pose) {
   const angle = pose.angle ?? 0;
   return [
@@ -12550,7 +12685,9 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
   const progressDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
   const progressVariable = number ? variableAlias(number) : void 0;
   const progressExpression = progressDefinition && progressVariable ? `((${progressVariable})-(${progressDefinition.min}))/((${progressDefinition.max})-(${progressDefinition.min}))` : "0";
-  const recipe = rearrangementRecipe(construction, legA, legB, path);
+  const recipe = rearrangementRecipe(construction, legA, legB);
+  if (!recipe) fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
+  const facts = REARRANGEMENT_CONSTRUCTIONS[construction];
   const progressInitial = progressDefinition ? (progressDefinition.initial - progressDefinition.min) / (progressDefinition.max - progressDefinition.min) : 0;
   const pieces = recipe.pieces.map((piece, index) => ({ ...piece, role: `piece-${index + 1}` }));
   const targetPoints = recipe.target.map(([x, y], index) => ({
@@ -12592,9 +12729,28 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
       from: `target-point-${pointIndex + 1}`,
       to: `target-point-${(pointIndex + 1) % recipe.target.length + 1}`,
       style: "dashed",
-      ...pointIndex === 0 ? { label: recipe.relation } : {}
+      ...pointIndex === 2 ? { label: construction === "triangle_to_rectangle" ? "a" : "a+b" } : {}
     }))
   ];
+  if (construction !== "square_area_identity") {
+    segments.push(
+      { as: "leg-a", from: "piece-1-point-1", to: "piece-1-point-2", style: "solid", label: "a" },
+      { as: "leg-b", from: "piece-1-point-1", to: "piece-1-point-3", style: "solid", label: "b" },
+      { as: "hypotenuse", from: "piece-1-point-2", to: "piece-1-point-3", style: "solid", label: "c" }
+    );
+    if (construction === "right_triangle_square") {
+      const marker = Math.min(legA, legB) * 0.12;
+      const pose = pieces[0].start;
+      for (const [index, point] of [[marker, 0], [marker, marker], [0, marker]].entries()) {
+        const [x, y] = transformedPoint(point, pose);
+        points.push({ as: `right-angle-point-${index + 1}`, x, y, visible: false });
+      }
+      segments.push(
+        { as: "right-angle-1", from: "right-angle-point-1", to: "right-angle-point-2", style: "solid" },
+        { as: "right-angle-2", from: "right-angle-point-2", to: "right-angle-point-3", style: "solid" }
+      );
+    }
+  }
   const bindings = progressVariable ? pieces.flatMap((piece) => piece.points.flatMap(([localX, localY], pointIndex) => {
     const translateX = linearExpression(piece.start.x, piece.end.x, progressExpression);
     const translateY = linearExpression(piece.start.y, piece.end.y, progressExpression);
@@ -12605,6 +12761,20 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
       { target: `${target}.y`, expression: `(${translateY})+(${localX})*sin(${angle})+(${localY})*cos(${angle})` }
     ];
   })) : [];
+  if (construction === "right_triangle_square") {
+    const start = (legA + legB) / 2;
+    const endX = legA + legB / 2, endY = legB / 2;
+    points.push({
+      as: "central-area",
+      x: start + (endX - start) * progressInitial,
+      y: start + (endY - start) * progressInitial,
+      visible: false
+    });
+    if (progressVariable) bindings.push(
+      { target: "central-area.x", expression: linearExpression(start, endX, progressExpression) },
+      { target: "central-area.y", expression: linearExpression(start, endY, progressExpression) }
+    );
+  }
   const endpointPoints = [
     ...recipe.target,
     ...pieces.flatMap((piece) => [piece.start, piece.end].flatMap((pose) => piece.points.map((point) => transformedPoint(point, pose))))
@@ -12614,7 +12784,10 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
   const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1);
   const margin = span * 0.1;
   const geometry = {
-    title: optionalText(input.title, recipe.title, `${path}.title`),
+    // A fixed recipe owns its name just as it owns its shapes and proof;
+    // a model-authored title must not identify it as a different construction.
+    title: recipe.title,
+    caption: facts.caption,
     axes: {
       x: { min: Math.min(...xs) - margin, max: Math.max(...xs) + margin },
       y: { min: Math.min(...ys) - margin, max: Math.max(...ys) + margin },
@@ -12633,7 +12806,12 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
       ["target_shape", `${base}#target-shape`],
       ["outer_square", `${base}#target-shape`],
       ...pieces.map((piece, index) => [`piece_${index + 1}`, `${base}#${piece.role}`]),
-      ["central_area", `${base}#target-shape`],
+      ["central_area", `${base}#${construction === "right_triangle_square" ? "central-area" : "target-shape"}`],
+      ...construction !== "square_area_identity" ? [
+        ["leg_a", `${base}#leg-a`],
+        ["leg_b", `${base}#leg-b`],
+        ["hypotenuse", `${base}#hypotenuse`]
+      ] : [],
       ...progressVariable ? [["primary_control", base]] : []
     ])
   };
@@ -14001,11 +14179,11 @@ var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5
 - \u5C0F\u6570\u7528 mantissa/scale\uFF0C\u5982 -1.5\u2192-15/1\u3002
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\u3002
+- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002
 - \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002
 - \u601D\u8003\u9898\u8BFE\u4E2D\u53EA\u95EE\u4E0D\u7B54\uFF1B\u9898\u4E0E\u53C2\u8003\u7B54\u6848\u5199\u5165 reflection_activities\uFF0C\u8BFE\u540E\u4EE5\u6536\u8D77\u7684\u7B54\u6848\u5361\u7247\u51FA\u73B0\u3002
 - \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
-- geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF1B\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002
+- geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
 var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D\uFF0C\u5FC5\u987B\u5148\u5B8C\u6210 outline\uFF0C\u518D\u4F9D\u636E\u8FD9\u4E2A outline \u7F16\u5199 first_section\u3002first_section \u53EA\u80FD\u843D\u5B9E outline.sections[0]\uFF1A
 - outline \u662F\u552F\u4E00\u8BFE\u7A0B\u5B89\u6392\uFF1B\u4E0D\u5F97\u5728 first_section \u589E\u52A0 outline \u6CA1\u6709\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\uFF0C\u4E5F\u4E0D\u5F97\u9057\u6F0F\u7B2C\u4E00\u8282\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\u548C\u53EF\u590D\u7528\u677F\u4E66\u3002
@@ -14017,10 +14195,10 @@ var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D
 - \u5C0F\u6570\u7528 mantissa/scale\uFF0C\u5982 -1.5\u2192-15/1\u3002
 - number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\u3002
+- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002
 - \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002
 - \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
-- geometric_rearrangement \u4EC5\u7528\u4E8E\u6307\u5B9A\u591A\u8FB9\u5F62\u8BC1\u660E\uFF1B\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002`;
+- geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002`;
 var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
 ${BOOTSTRAP_FIRST_SECTION_PROMPT}
@@ -15895,7 +16073,7 @@ function executableNumberIndexesForSection(outline, drafts, sectionNumber) {
   }
   return [...indexes].sort((left, right) => left - right);
 }
-function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes) {
+function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, currentNumbers) {
   const section = outline.sections[sectionNumber - 1];
   const allowedNumbers = new Set(allowedNumberIndexes);
   return {
@@ -15906,6 +16084,7 @@ function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes) {
         number: index + 1,
         label: number.label,
         initial: number.initial,
+        current_value: currentNumbers.get(index + 1) ?? number.initial,
         min: number.min,
         max: number.max,
         ...number.unit === void 0 ? {} : { unit: number.unit }
@@ -16276,15 +16455,47 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       model_calls: modelCalls
     };
   }
-  const visualsForSection = (section) => (outline.course_visuals ?? []).flatMap((visual, index) => {
+  const currentNumbersBefore = (section) => {
+    const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+    for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
+      for (const number of moment.restart_numbers ?? []) state.set(number, outline.numbers[number - 1].initial);
+      for (const action of moment.actions) if (action.action === "animate") state.set(action.number, action.end_value);
+    }
+    return state;
+  };
+  const visualsForSection = (section, state) => (outline.course_visuals ?? []).flatMap((visual, index) => {
     if (!visual.use_sections.includes(section)) return [];
-    const established = visual.create_section < section ? (drafts[visual.create_section - 1]?.moments ?? []).flatMap((m) => m.actions).filter((a) => a.action === "create" && a.kind === "visual").map((a) => a.content).filter((v) => v.capability === visual.capability) : [];
+    const source = visual.create_section < section ? drafts[visual.create_section - 1]?.moments.flatMap((m) => m.actions).find((a) => a.action === "create" && a.kind === "visual" && a.reusable_item === visual.reusable_item && a.content.capability === visual.capability) : void 0;
+    const established = source?.action === "create" && source.kind === "visual" ? source.content : void 0;
+    let facts = {};
+    if (established?.capability === "geometric_rearrangement") {
+      const construction = established.parameters?.construction ?? "right_triangle_square";
+      const definition = REARRANGEMENT_FACTS[construction];
+      const number = established.numbers?.[0];
+      const range = number ? outline.numbers?.[number - 1] : void 0;
+      facts = definition ? {
+        construction,
+        pieces: definition.pieces,
+        shows: definition.shows,
+        container: definition.container,
+        at_start: definition.initial,
+        at_end: definition.final,
+        fixed_legs: { a: established.parameters?.leg_a ?? 3, b: established.parameters?.leg_b ?? 2 },
+        ...range && number ? { progress: {
+          number,
+          current_value: state.get(number),
+          normalized: ((state.get(number) ?? range.initial) - range.min) / (range.max - range.min)
+        } } : {}
+      } : {};
+    }
     return [{
-      ...established.length === 1 && fixedLineSamples(established[0]) ? { sample_slope: "constant" } : {},
+      ...established && fixedLineSamples(established) ? { sample_slope: "constant" } : {},
       course_visual: index + 1,
       capability: visual.capability,
       mode: visual.create_section === section ? "create" : "reuse",
       relation: visual.relation,
+      ...facts,
+      ...visual.create_section === section && visual.capability === "geometric_rearrangement" ? { construction_choices: REARRANGEMENT_MODEL_GUIDANCE } : {},
       ...visual.related_visual === void 0 ? {} : { related_visual: visual.related_visual }
     }];
   });
@@ -16298,6 +16509,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     if (attempt > maxAttempts) throw sectionErrors.get(section);
     let raw;
     const allowedNumberIndexes = executableNumberIndexesForSection(outline, drafts, section);
+    const currentNumbers = currentNumbersBefore(section);
     try {
       raw = await model({
         label: "lesson-plan-section",
@@ -16308,8 +16520,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         system_prompt: SECTION_SYSTEM_PROMPT,
         prompt: JSON.stringify({
           course_context: compactModelContext(context),
-          course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes),
-          visuals_for_section: visualsForSection(section),
+          course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers),
+          visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
           ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
         }),

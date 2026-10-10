@@ -1,0 +1,52 @@
+{
+  "initial": {
+    "baseline": {
+      "n": 6,
+      "first_p50_ms": 14072.0,
+      "total_p50_ms": 22680.5,
+      "first_p90_ms": 25230,
+      "total_p90_ms": 33539,
+      "model_calls": 12,
+      "rejected": 0,
+      "failed": 0
+    },
+    "candidate": {
+      "n": 6,
+      "first_p50_ms": 14604.0,
+      "total_p50_ms": 25574.5,
+      "first_p90_ms": 19937,
+      "total_p90_ms": 29695,
+      "model_calls": 13,
+      "rejected": 1,
+      "failed": 0
+    }
+  },
+  "compact": {
+    "baseline": {
+      "n": 6,
+      "first_p50_ms": 14418.5,
+      "total_p50_ms": 22743.0,
+      "first_p90_ms": 16081,
+      "total_p90_ms": 25540,
+      "model_calls": 12,
+      "rejected": 0,
+      "failed": 0
+    },
+    "candidate": {
+      "n": 6,
+      "first_p50_ms": 12642.5,
+      "total_p50_ms": 20910.5,
+      "first_p90_ms": 19105,
+      "total_p90_ms": 29198,
+      "model_calls": 12,
+      "rejected": 0,
+      "failed": 0
+    }
+  },
+  "manual_review": "按保存的数据核查主证明、数值应用、构造选择与重演状态；不是浏览器音画验收。",
+  "final_cleanup_replay": {
+    "courses": 6,
+    "model_requests_identical": true,
+    "lesson_changes": "仅一节画面标题改为程序提供的中性构造名。"
+  }
+}
