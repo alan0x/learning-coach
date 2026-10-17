@@ -7594,6 +7594,26 @@ var v0_1_schema_default = {
             }
           }
         },
+        regular_polygons: {
+          type: "array",
+          maxItems: 8,
+          items: {
+            type: "object",
+            required: ["as", "center", "radius", "sides", "relation"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              center: { $ref: "#/$defs/alias" },
+              radius: { type: "number", exclusiveMinimum: 0 },
+              sides: { type: "integer", minimum: 3, maximum: 384 },
+              relation: { enum: ["inscribed", "circumscribed"] },
+              rotation: { type: "number" },
+              label: { type: "string" },
+              tone: { enum: ["primary", "secondary", "accent", "neutral"] },
+              show_measurements: { type: "boolean" }
+            }
+          }
+        },
         circles: {
           type: "array",
           items: {
@@ -8075,6 +8095,7 @@ var OLL_BINDING_CAPABILITIES = {
   geometry: {
     points: ["x", "y"],
     circles: ["radius"],
+    regular_polygons: ["sides", "radius", "rotation"],
     arcs: ["radius", "start_angle", "end_angle"]
   },
   plot: {
@@ -8121,6 +8142,7 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
     "lesson.variable.animate"
   ].map((op) => [`action:${op}`, "0.1.0"])),
   "variables": "0.1.0",
+  "geometry:regular-polygons": "0.4.0",
   "value-bindings": "0.1.0",
   "binding-labels": "0.2.0",
   "bound-zero-radius": "0.2.0",

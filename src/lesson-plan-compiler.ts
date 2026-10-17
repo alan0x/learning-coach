@@ -575,6 +575,38 @@ function compileUnitCircleProjection(
   };
 }
 
+function compileCirclePolygonBounds(
+  base: string, content: LessonPlanVisualContent, role: string,
+  placement: ReturnType<typeof place>, plan: LessonPlan, path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "radius"], path);
+  const radius = optionalNumber(input.radius, 2, `${path}.radius`);
+  if (radius <= 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius`, "radius must be positive");
+  const number = content.numbers?.[0];
+  const definition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : undefined;
+  const sides = definition?.initial ?? 6;
+  // The outer polygon fits even at the smallest permitted side count.
+  const extent = radius / Math.cos(Math.PI / (definition?.min ?? sides)) * 1.18;
+  const geometry = {
+    title: optionalText(input.title, "圆与正多边形的周长夹逼", `${path}.title`),
+    axes: { x: { min: -extent, max: extent, label: "x" }, y: { min: -extent, max: extent, label: "y" }, equal_scale: true },
+    points: [{ as: "center", x: 0, y: 0, label: "O" }],
+    circles: [{ as: "circle", center: "center", radius, label: `r = ${radius}` }],
+    regular_polygons: [
+      { as: "inscribed", center: "center", radius, sides, relation: "inscribed", tone: "primary", label: "内接正多边形", show_measurements: true },
+      { as: "circumscribed", center: "center", radius, sides, relation: "circumscribed", tone: "accent", label: "外切正多边形", show_measurements: true },
+    ],
+    caption: "绿色内接周长 < 圆周长 < 橙色外切周长。除以直径 2r：n sin(π/n) < π < n tan(π/n)。显示值为近似值；边数增加时上下界共同逼近 π。",
+    ...(number ? { bindings: [
+      { target: "inscribed.sides", expression: `round(${variableAlias(number)})` },
+      { target: "circumscribed.sides", expression: `round(${variableAlias(number)})` },
+    ] } : {}),
+  };
+  return { actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }], whole: base,
+    parts: new Map([["whole", base], ["circle", `${base}#circle`], ["inscribed_polygon", `${base}#inscribed`], ["circumscribed_polygon", `${base}#circumscribed`], ["primary_control", base]]) };
+}
+
 function compileCircleAndArc(
   base: string,
   content: LessonPlanVisualContent,
@@ -1310,6 +1342,7 @@ const VISUAL_COMPILERS = {
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_and_arc: compileCircleAndArc,
+  circle_polygon_bounds: compileCirclePolygonBounds,
   spring_and_mass: compileSpringAndMass,
   cube_with_section: compileCubeWithSection,
   function_surface_with_section: compileFunctionSurface,
@@ -1438,6 +1471,7 @@ function surfaceSectionProgramRange(content: LessonPlanVisualContent, path: stri
  */
 function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
   const constrained = new Set<number>();
+  const integerSides = new Set<number>();
   for (const [sectionIndex, section] of plan.sections.entries()) {
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
@@ -1450,7 +1484,16 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
           const policy = policies[inputIndex];
           if (!definition || !policy) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
-          if (policy.kind === "bounded") {
+          if (policy.kind === "side_count") {
+            integerSides.add(numberIndex);
+            intersectProgramRange(definition, 3, 384);
+            definition.min = Math.ceil(definition.min);
+            definition.max = Math.floor(definition.max);
+            if (definition.min >= definition.max) { definition.min = 3; definition.max = 384; }
+            definition.initial = Math.min(definition.max, Math.max(definition.min, Math.round(definition.initial)));
+            if (definition.student_control) definition.student_control.step = 1;
+            constrained.add(numberIndex);
+          } else if (policy.kind === "bounded") {
             intersectProgramRange(definition, policy.min, policy.max);
             constrained.add(numberIndex);
           } else if (policy.kind === "positive" && !(content.capability === "coordinate_circle" && content.parameters?.radius_expression !== undefined)) {
@@ -1476,7 +1519,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
       for (const action of moment.actions) {
         if (action.action !== "animate" || !constrained.has(action.number)) continue;
         const definition = plan.numbers![action.number - 1]!;
-        action.end_value = Math.min(definition.max, Math.max(definition.min, action.end_value));
+        action.end_value = Math.min(definition.max, Math.max(definition.min, integerSides.has(action.number) ? Math.round(action.end_value) : action.end_value));
       }
     }
     for (const activity of section.student_activities ?? []) {
@@ -1485,7 +1528,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
       if (!number || !constrained.has(number)) continue;
       const definition = plan.numbers![number - 1]!;
       const original = activity.value;
-      activity.value = Math.min(definition.max, Math.max(definition.min, activity.value));
+      activity.value = Math.min(definition.max, Math.max(definition.min, integerSides.has(number) ? Math.round(activity.value) : activity.value));
       activity.tolerance = Math.max(
         (definition.student_control?.step ?? (definition.max - definition.min) / 200) / 2,
         (definition.max - definition.min) / 1_000,

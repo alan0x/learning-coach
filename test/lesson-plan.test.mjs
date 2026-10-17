@@ -414,7 +414,7 @@ function samplePlan(capability) {
     firstMomentActions.push({
       action: "animate",
       number: 1,
-      end_value: capability === "rectangle_unit_square_array" ? 6 : 0.75,
+      end_value: capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -426,7 +426,9 @@ function samplePlan(capability) {
     title: `Fixed sample: ${capability}`,
     goals: ["Explain the visual relation", "Let the learner inspect it"],
     ...(hasNumber ? {
-      numbers: Array.from({ length: numberCount }, (_unused, index) => capability === "rectangle_unit_square_array"
+      numbers: Array.from({ length: numberCount }, (_unused, index) => capability === "circle_polygon_bounds"
+        ? { initial: 6, min: 6, max: 96, label: "多边形边数", unit: "边", student_control: {kind:"slider",step:1} }
+        : capability === "rectangle_unit_square_array"
         ? {
             initial: index === 0 ? 5 : 3,
             min: 1,
@@ -474,7 +476,7 @@ function samplePlan(capability) {
             kind: "number_target",
             prompt: "Move the main value to one half.",
             number_controls: [{ number: 1, controls: ["slider"] }],
-            value: 0.5,
+            value: capability === "circle_polygon_bounds" ? 96 : 0.5,
             tolerance: 0.02,
             hints: ["Watch the numeric value."],
           }],
@@ -517,7 +519,7 @@ function samplePlan(capability) {
 }
 
 test("every registered visual capability has a fixed valid Lesson Plan sample", () => {
-  assert.equal(capabilities.length, 12);
+  assert.equal(capabilities.length, 13);
   assert.deepEqual([...LESSON_PLAN_CAPABILITY_NAMES].sort(), [...capabilities].sort());
   for (const capability of capabilities) {
     assert.deepEqual(
@@ -551,6 +553,7 @@ test("all fixed capability samples compile through the complete OLL validation p
     function_plot: ["plot"],
     unit_circle_projection: ["geometry", "plot"],
     circle_and_arc: ["geometry"],
+    circle_polygon_bounds: ["geometry"],
     spring_and_mass: ["geometry", "plot"],
     cube_with_section: ["scene3d"],
     function_surface_with_section: ["scene3d"],
@@ -571,6 +574,24 @@ test("all fixed capability samples compile through the complete OLL validation p
     assert.deepEqual(writtenKinds, expectedKinds[capability], capability);
   }
   assert.deepEqual(Object.keys(expectedKinds).sort(), [...capabilities].sort());
+});
+
+test("polygon bounds is a separate capability with integral side count, no angle interaction", () => {
+  assert.equal(matchLessonPlanCapability(["inscribed_regular_polygon", "circumscribed_regular_polygon", "perimeter_bounds"]), "circle_polygon_bounds");
+  const plan = samplePlan("circle_polygon_bounds");
+  Object.assign(plan.numbers[0], { initial: 6, min: 6, max: 96, label: "多边形边数", unit: "边", student_control: {kind:"slider", step:.45} });
+  plan.sections[0].student_activities[0].value = 47.7;
+  plan.sections[0].moments[0].actions.find(a=>a.action === "animate").end_value = 95.7;
+  const compiled = compileAndValidateLessonPlan(plan);
+  assert.equal(compiled.lesson.lesson.tasks[0].completion.value, 48);
+  const geometry = compiled.lesson.steps[0].beats[0].actions.find(a=>a.do==="write" && a.kind==="geometry").content;
+  assert.equal(compiled.lesson.lesson.variables[0].control.step, 1);
+  assert.equal(geometry.regular_polygons.length, 2);
+  assert.deepEqual(geometry.regular_polygons.map(p=>p.relation), ["inscribed", "circumscribed"]);
+  assert.ok(geometry.points.every(p=>!p.interaction));
+  assert.equal(geometry.arcs, undefined);
+  assert.ok(geometry.bindings.every(b=>b.target.endsWith(".sides") && b.expression==="round(number_01)"));
+  assert.equal(geometry.circles[0].radius, 2);
 });
 
 test("a complete lesson compiles a cylinder as an implicit surface instead of a paraboloid", () => {

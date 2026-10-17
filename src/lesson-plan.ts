@@ -40,6 +40,19 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     required_features: ["unit_circle", "projection", "cartesian_function_curve"],
     model_guidance: "单位圆动点、投影线和正弦或余弦曲线共享同一个角度",
   },
+  circle_polygon_bounds: {
+    parts: ["whole", "circle", "inscribed_polygon", "circumscribed_polygon", "primary_control"],
+    number_inputs: ["side_count"],
+    number_input_policies: [{ kind: "side_count" }],
+    parameter_names: ["title", "radius"],
+    model_parameter_names: ["title", "radius"],
+    required_model_schema_parameters: [],
+    semantic_parameters: ["radius"],
+    output_kinds: ["geometry"],
+    student_controls: ["slider"],
+    required_features: ["inscribed_regular_polygon", "circumscribed_regular_polygon", "perimeter_bounds"],
+    model_guidance: "圆周率/割圆术：固定圆与内接、外切正多边形，整数边数3..384，周长与周长÷直径上下界实时计算；边数不是角度",
+  },
   circle_and_arc: {
     parts: ["whole", "circle", "arc", "radius", "primary_control"],
     number_inputs: ["angle", "radius"],
@@ -51,7 +64,7 @@ export const LESSON_PLAN_CAPABILITY_REGISTRY = {
     output_kinds: ["geometry"],
     student_controls: ["slider", "geometry_point"],
     required_features: ["circle", "arc"],
-    model_guidance: "圆、圆心角、半径和圆弧；两个数值依次控制角度和半径",
+    model_guidance: "圆、圆心角、半径和圆弧；两个数值依次控制角度和半径；不支持用边数冒充角度或用圆弧冒充正多边形",
   },
   spring_and_mass: {
     parts: ["whole", "spring", "mass", "equilibrium", "force_arrow", "primary_curve", "moving_point", "primary_control"],
