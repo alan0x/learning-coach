@@ -125,6 +125,7 @@ export type LessonPlanGenerationResult = GeneratedLessonPlan | NonLessonPlanResp
 const OUTLINE_SYSTEM_PROMPT = `设计完整课程目录，不生成 OLL、执行 ID、组件名或自由对象名。
 - 需要同步对照的图复用同一共享数值，并通过 supporting/comparison 声明关联；不要用两个独立 main 图表示同一联动关系。
 - visual_recipes 为 [features,numbers,purpose]。course_visuals 选其中 features，只列必要画面；后续复用，确需并排才建 comparison，supporting/comparison 指向较早画面。
+- 选择图形特征时，以本节需要展示的数学关系为依据；不能仅因讲解中出现某个数学对象，就选用包含该对象的图形特征。
 - 多边形重排选 polygon_pieces、rigid_rearrangement、area_relation；圆面积选 circle_area_rearrangement。ordered_process_steps 仅是静态流程。
 - numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。
 - request_coverage 依 request_parts 顺序覆盖：可实现写 teach+章节；不能完整实现写 unsupported、空章节及原因，禁止错误替代。
@@ -141,6 +142,7 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。
 - 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。
 - 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。
+- 圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
 只返回符合响应 Schema 的 JSON。`;
@@ -157,6 +159,7 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 
 - function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。
 - 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。
+- 圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
 
@@ -935,11 +938,12 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
   };
 }
 
-type VisualNumberPurpose = "angle" | "radius" | "section" | "progress" | "generic";
+type VisualNumberPurpose = "side_count" | "angle" | "radius" | "section" | "progress" | "generic";
 
 function visualNumberPurpose(capability: keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY, index: number): VisualNumberPurpose {
   const input = LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs[index] as string | undefined;
   if (!input || input.startsWith("curve_parameter_")) return "generic";
+  if (input === "side_count") return "side_count";
   if (input === "angle" || input === "phase") return "angle";
   if (input === "radius") return "radius";
   if (input === "section_height" || input === "section_position") return "section";
@@ -3009,6 +3013,13 @@ export async function generateLessonPlanWithModel(
         ...(range && number ? { progress: { number, current_value: state.get(number),
           normalized: ((state.get(number) ?? range.initial) - range.min) / (range.max - range.min) } } : {}),
       } : {};
+    }
+    if (visual.capability === "circle_polygon_bounds") {
+      facts = { circle_fixed: true, radius: established?.parameters?.radius ?? 2,
+        side_count: { min: 3, max: 384, integer: true },
+        pi_lower: "n*sin(pi/n)", pi_upper: "n*tan(pi/n)",
+        n96: { lower: 3.1410319508905093, upper: 3.142714599645368 },
+        caution: "Use the actual regular polygons, not circle_and_arc; displayed bounds are approximations, not exact historical rational bounds." };
     }
     return [{
       ...(established && fixedLineSamples(established) ? { sample_slope: "constant" } : {}),

@@ -410,6 +410,21 @@
             }
           }
         },
+        "regular_polygons": {
+          "type": "array", "maxItems": 8,
+          "items": {
+            "type": "object", "required": ["as", "center", "radius", "sides", "relation"], "additionalProperties": false,
+            "properties": {
+              "as": {"$ref": "#/$defs/alias"}, "center": {"$ref": "#/$defs/alias"},
+              "radius": {"type": "number", "exclusiveMinimum": 0},
+              "sides": {"type": "integer", "minimum": 3, "maximum": 384},
+              "relation": {"enum": ["inscribed", "circumscribed"]},
+              "rotation": {"type": "number"}, "label": {"type": "string"},
+              "tone": {"enum": ["primary", "secondary", "accent", "neutral"]},
+              "show_measurements": {"type": "boolean"}
+            }
+          }
+        },
         "circles": {
           "type": "array",
           "items": {

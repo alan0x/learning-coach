@@ -7287,6 +7287,19 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     required_features: ["unit_circle", "projection", "cartesian_function_curve"],
     model_guidance: "\u5355\u4F4D\u5706\u52A8\u70B9\u3001\u6295\u5F71\u7EBF\u548C\u6B63\u5F26\u6216\u4F59\u5F26\u66F2\u7EBF\u5171\u4EAB\u540C\u4E00\u4E2A\u89D2\u5EA6"
   },
+  circle_polygon_bounds: {
+    parts: ["whole", "circle", "inscribed_polygon", "circumscribed_polygon", "primary_control"],
+    number_inputs: ["side_count"],
+    number_input_policies: [{ kind: "side_count" }],
+    parameter_names: ["title", "radius"],
+    model_parameter_names: ["title", "radius"],
+    required_model_schema_parameters: [],
+    semantic_parameters: ["radius"],
+    output_kinds: ["geometry"],
+    student_controls: ["slider"],
+    required_features: ["inscribed_regular_polygon", "circumscribed_regular_polygon", "perimeter_bounds"],
+    model_guidance: "\u5706\u5468\u7387/\u5272\u5706\u672F\uFF1A\u56FA\u5B9A\u5706\u4E0E\u5185\u63A5\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\uFF0C\u6574\u6570\u8FB9\u65703..384\uFF0C\u5468\u957F\u4E0E\u5468\u957F\xF7\u76F4\u5F84\u4E0A\u4E0B\u754C\u5B9E\u65F6\u8BA1\u7B97\uFF1B\u8FB9\u6570\u4E0D\u662F\u89D2\u5EA6\u3002\u9002\u5408\u5706\u5468\u7387\u6570\u503C\u8BA1\u7B97\u3001\u5272\u5706\u6CD5\u548C\u4E0A\u4E0B\u754C\u903C\u8FD1\uFF0C\u4F8B\u5982\u2018\u5706\u5468\u7387\u662F\u4EC0\u4E48\uFF0C\u5B83\u662F\u5982\u4F55\u8BA1\u7B97\u7684\u2019\uFF1B\u540C\u4E00\u753B\u9762\u4E2D\u7684\u56FA\u5B9A\u5706\u53EF\u4F9B\u5B9A\u4E49\u90E8\u5206\u8BB2\u89E3\u590D\u7528\uFF0C\u914D\u5408\u5468\u957F\u4E0E\u76F4\u5F84\u6BD4\u503C\u516C\u5F0F\uFF0C\u518D\u901A\u8FC7\u589E\u52A0\u591A\u8FB9\u5F62\u8FB9\u6570\u89E3\u91CA\u8BA1\u7B97\u8FC7\u7A0B"
+  },
   circle_and_arc: {
     parts: ["whole", "circle", "arc", "radius", "primary_control"],
     number_inputs: ["angle", "radius"],
@@ -7298,7 +7311,7 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     output_kinds: ["geometry"],
     student_controls: ["slider", "geometry_point"],
     required_features: ["circle", "arc"],
-    model_guidance: "\u5706\u3001\u5706\u5FC3\u89D2\u3001\u534A\u5F84\u548C\u5706\u5F27\uFF1B\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u63A7\u5236\u89D2\u5EA6\u548C\u534A\u5F84"
+    model_guidance: "\u5706\u3001\u5706\u5FC3\u89D2\u3001\u534A\u5F84\u548C\u5706\u5F27\uFF1B\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u63A7\u5236\u89D2\u5EA6\u548C\u534A\u5F84\uFF1B\u4E0D\u652F\u6301\u7528\u8FB9\u6570\u5192\u5145\u89D2\u5EA6\u6216\u7528\u5706\u5F27\u5192\u5145\u6B63\u591A\u8FB9\u5F62\u3002\u9002\u5408\u9700\u8981\u89C2\u5BDF\u5706\u5FC3\u89D2\u3001\u5706\u5F27\u6216\u5F27\u957F\u5173\u7CFB\u7684\u8BB2\u89E3\uFF1B\u82E5\u53EA\u9700\u8981\u5C55\u793A\u6574\u5706\u3001\u89E3\u91CA\u5706\u5468\u957F\u4E0E\u76F4\u5F84\u7684\u6BD4\u503C\uFF0C\u4E0D\u5E94\u4EC5\u56E0\u6D89\u53CA\u2018\u5706\u2019\u5C31\u9009\u62E9\u672C\u80FD\u529B\uFF1B\u672C\u80FD\u529B\u7ED8\u5236\u5706\u3001\u5706\u5F27\u4E0E\u534A\u5F84\uFF0C\u4E0D\u4F1A\u5C55\u793A\u5468\u957F\u4E0E\u76F4\u5F84\u7684\u6BD4\u503C"
   },
   spring_and_mass: {
     parts: ["whole", "spring", "mass", "equilibrium", "force_arrow", "primary_curve", "moving_point", "primary_control"],
@@ -9188,6 +9201,26 @@ var v0_1_schema_default = {
             }
           }
         },
+        regular_polygons: {
+          type: "array",
+          maxItems: 8,
+          items: {
+            type: "object",
+            required: ["as", "center", "radius", "sides", "relation"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              center: { $ref: "#/$defs/alias" },
+              radius: { type: "number", exclusiveMinimum: 0 },
+              sides: { type: "integer", minimum: 3, maximum: 384 },
+              relation: { enum: ["inscribed", "circumscribed"] },
+              rotation: { type: "number" },
+              label: { type: "string" },
+              tone: { enum: ["primary", "secondary", "accent", "neutral"] },
+              show_measurements: { type: "boolean" }
+            }
+          }
+        },
         circles: {
           type: "array",
           items: {
@@ -9679,6 +9712,7 @@ var OLL_BINDING_CAPABILITIES = {
   geometry: {
     points: ["x", "y"],
     circles: ["radius"],
+    regular_polygons: ["sides", "radius", "rotation"],
     arcs: ["radius", "start_angle", "end_angle"]
   },
   plot: {
@@ -9731,6 +9765,7 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
     "lesson.variable.animate"
   ].map((op) => [`action:${op}`, "0.1.0"])),
   "variables": "0.1.0",
+  "geometry:regular-polygons": "0.4.0",
   "value-bindings": "0.1.0",
   "binding-labels": "0.2.0",
   "bound-zero-radius": "0.2.0",
@@ -10284,7 +10319,7 @@ function validateContentFragments(content, path) {
 }
 function collectAddressableContent(content) {
   const result = validateContentFragments(content, "/content");
-  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "polygons", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
+  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "polygons", "regular_polygons", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
     if (!content?.[field])
       continue;
     for (const item of content[field]) {
@@ -10391,6 +10426,25 @@ function validateGeometryContent(action, path, variables) {
       if (new Set(polygon.points).size < 3) {
         fail2("OLL_INVALID_OPERATION_PAYLOAD", `${polygonPath}/points`, "A geometry polygon requires at least three distinct points");
       }
+    });
+  }
+  if (content.regular_polygons !== void 0) {
+    requireArray(content.regular_polygons, `${path}/content/regular_polygons`);
+    if (content.regular_polygons.length > 8)
+      fail2("OLL_INVALID_OPERATION_PAYLOAD", path, "At most 8 regular polygons");
+    content.regular_polygons.forEach((polygon, index) => {
+      const p = `${path}/content/regular_polygons/${index}`;
+      requireObject(polygon, p);
+      requireAlias(polygon.as, `${p}/as`);
+      requirePointReference(polygon.center, `${p}/center`);
+      const radius = requireFiniteNumber(polygon.radius, `${p}/radius`);
+      const sides = requireFiniteNumber(polygon.sides, `${p}/sides`);
+      if (radius <= 0 || !Number.isInteger(sides) || sides < 3 || sides > 384)
+        fail2("OLL_INVALID_OPERATION_PAYLOAD", p, "Regular polygons require positive radius and integer sides 3..384");
+      if (polygon.relation !== "inscribed" && polygon.relation !== "circumscribed")
+        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${p}/relation`, "Expected inscribed or circumscribed");
+      if (polygon.rotation !== void 0)
+        requireFiniteNumber(polygon.rotation, `${p}/rotation`);
     });
   }
   for (const [field, references] of [
@@ -10975,7 +11029,7 @@ function stableId(host, type, alias) {
 }
 function normalizeAddressableContent(_host, nodeId, content) {
   const clone = structuredClone(content);
-  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "polygons", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
+  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "polygons", "regular_polygons", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
     if (!Array.isArray(clone?.[field]))
       continue;
     clone[field] = clone[field].map((item) => {
@@ -10987,7 +11041,7 @@ function normalizeAddressableContent(_host, nodeId, content) {
         normalized.from = `${nodeId}:fragment:${item.from}`;
         normalized.to = `${nodeId}:fragment:${item.to}`;
       }
-      if (field === "circles") {
+      if (field === "circles" || field === "regular_polygons") {
         normalized.center = `${nodeId}:fragment:${item.center}`;
       }
       if (field === "segments") {
@@ -11376,6 +11430,9 @@ function evaluateContentBindings(content, variables) {
       record2[property] = evaluateMathExpression(binding.expression, variables);
       if (property === "radius" && (record2[property] < 0 || record2[property] === 0 && binding.allow_zero !== true)) {
         throw new Error("Bound radius must be positive unless explicitly allowed to degenerate to zero");
+      }
+      if (property === "sides" && (record2[property] < 3 || record2[property] > 384)) {
+        throw new Error("Bound polygon sides must be in 3..384");
       }
       if (binding.label)
         record2.label = formatBoundNumericLabel(record2[property], binding.label);
@@ -12199,6 +12256,36 @@ function compileUnitCircleProjection(base, content, role, placement, plan, path)
     ])
   };
 }
+function compileCirclePolygonBounds(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "radius"], path);
+  const radius = optionalNumber(input.radius, 2, `${path}.radius`);
+  if (radius <= 0) fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius`, "radius must be positive");
+  const number = content.numbers?.[0];
+  const definition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
+  const sides = definition?.initial ?? 6;
+  const extent = radius / Math.cos(Math.PI / (definition?.min ?? sides)) * 1.18;
+  const geometry = {
+    title: optionalText(input.title, "\u5706\u4E0E\u6B63\u591A\u8FB9\u5F62\u7684\u5468\u957F\u5939\u903C", `${path}.title`),
+    axes: { x: { min: -extent, max: extent, label: "x" }, y: { min: -extent, max: extent, label: "y" }, equal_scale: true },
+    points: [{ as: "center", x: 0, y: 0, label: "O" }],
+    circles: [{ as: "circle", center: "center", radius, label: `r = ${radius}` }],
+    regular_polygons: [
+      { as: "inscribed", center: "center", radius, sides, relation: "inscribed", tone: "primary", label: "\u5185\u63A5\u6B63\u591A\u8FB9\u5F62", show_measurements: true },
+      { as: "circumscribed", center: "center", radius, sides, relation: "circumscribed", tone: "accent", label: "\u5916\u5207\u6B63\u591A\u8FB9\u5F62", show_measurements: true }
+    ],
+    caption: "\u7EFF\u8272\u5185\u63A5\u5468\u957F < \u5706\u5468\u957F < \u6A59\u8272\u5916\u5207\u5468\u957F\u3002\u9664\u4EE5\u76F4\u5F84 2r\uFF1An sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002\u663E\u793A\u503C\u4E3A\u8FD1\u4F3C\u503C\uFF1B\u8FB9\u6570\u589E\u52A0\u65F6\u4E0A\u4E0B\u754C\u5171\u540C\u903C\u8FD1 \u03C0\u3002",
+    ...number ? { bindings: [
+      { target: "inscribed.sides", expression: `round(${variableAlias(number)})` },
+      { target: "circumscribed.sides", expression: `round(${variableAlias(number)})` }
+    ] } : {}
+  };
+  return {
+    actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }],
+    whole: base,
+    parts: /* @__PURE__ */ new Map([["whole", base], ["circle", `${base}#circle`], ["inscribed_polygon", `${base}#inscribed`], ["circumscribed_polygon", `${base}#circumscribed`], ["primary_control", base]])
+  };
+}
 function compileCircleAndArc(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "radius", "angle"], path);
@@ -12889,6 +12976,7 @@ var VISUAL_COMPILERS = {
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_and_arc: compileCircleAndArc,
+  circle_polygon_bounds: compileCirclePolygonBounds,
   spring_and_mass: compileSpringAndMass,
   cube_with_section: compileCubeWithSection,
   function_surface_with_section: compileFunctionSurface,
@@ -12997,6 +13085,7 @@ function surfaceSectionProgramRange(content, path) {
 }
 function normalizeProgramOwnedNumberRanges(plan) {
   const constrained = /* @__PURE__ */ new Set();
+  const integerSides = /* @__PURE__ */ new Set();
   for (const [sectionIndex, section] of plan.sections.entries()) {
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
@@ -13008,7 +13097,19 @@ function normalizeProgramOwnedNumberRanges(plan) {
           const policy = policies[inputIndex];
           if (!definition || !policy) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
-          if (policy.kind === "bounded") {
+          if (policy.kind === "side_count") {
+            integerSides.add(numberIndex);
+            intersectProgramRange(definition, 3, 384);
+            definition.min = Math.ceil(definition.min);
+            definition.max = Math.floor(definition.max);
+            if (definition.min >= definition.max) {
+              definition.min = 3;
+              definition.max = 384;
+            }
+            definition.initial = Math.min(definition.max, Math.max(definition.min, Math.round(definition.initial)));
+            if (definition.student_control) definition.student_control.step = 1;
+            constrained.add(numberIndex);
+          } else if (policy.kind === "bounded") {
             intersectProgramRange(definition, policy.min, policy.max);
             constrained.add(numberIndex);
           } else if (policy.kind === "positive" && !(content.capability === "coordinate_circle" && content.parameters?.radius_expression !== void 0)) {
@@ -13034,7 +13135,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
       for (const action of moment.actions) {
         if (action.action !== "animate" || !constrained.has(action.number)) continue;
         const definition = plan.numbers[action.number - 1];
-        action.end_value = Math.min(definition.max, Math.max(definition.min, action.end_value));
+        action.end_value = Math.min(definition.max, Math.max(definition.min, integerSides.has(action.number) ? Math.round(action.end_value) : action.end_value));
       }
     }
     for (const activity of section.student_activities ?? []) {
@@ -13043,7 +13144,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
       if (!number || !constrained.has(number)) continue;
       const definition = plan.numbers[number - 1];
       const original = activity.value;
-      activity.value = Math.min(definition.max, Math.max(definition.min, activity.value));
+      activity.value = Math.min(definition.max, Math.max(definition.min, integerSides.has(number) ? Math.round(activity.value) : activity.value));
       activity.tolerance = Math.max(
         (definition.student_control?.step ?? (definition.max - definition.min) / 200) / 2,
         (definition.max - definition.min) / 1e3,
@@ -14167,6 +14268,7 @@ function completedJsonObjectProperty(source, propertyName) {
 var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002
 - \u9700\u8981\u540C\u6B65\u5BF9\u7167\u7684\u56FE\u590D\u7528\u540C\u4E00\u5171\u4EAB\u6570\u503C\uFF0C\u5E76\u901A\u8FC7 supporting/comparison \u58F0\u660E\u5173\u8054\uFF1B\u4E0D\u8981\u7528\u4E24\u4E2A\u72EC\u7ACB main \u56FE\u8868\u793A\u540C\u4E00\u8054\u52A8\u5173\u7CFB\u3002
 - visual_recipes \u4E3A [features,numbers,purpose]\u3002course_visuals \u9009\u5176\u4E2D features\uFF0C\u53EA\u5217\u5FC5\u8981\u753B\u9762\uFF1B\u540E\u7EED\u590D\u7528\uFF0C\u786E\u9700\u5E76\u6392\u624D\u5EFA comparison\uFF0Csupporting/comparison \u6307\u5411\u8F83\u65E9\u753B\u9762\u3002
+- \u9009\u62E9\u56FE\u5F62\u7279\u5F81\u65F6\uFF0C\u4EE5\u672C\u8282\u9700\u8981\u5C55\u793A\u7684\u6570\u5B66\u5173\u7CFB\u4E3A\u4F9D\u636E\uFF1B\u4E0D\u80FD\u4EC5\u56E0\u8BB2\u89E3\u4E2D\u51FA\u73B0\u67D0\u4E2A\u6570\u5B66\u5BF9\u8C61\uFF0C\u5C31\u9009\u7528\u5305\u542B\u8BE5\u5BF9\u8C61\u7684\u56FE\u5F62\u7279\u5F81\u3002
 - \u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002ordered_process_steps \u4EC5\u662F\u9759\u6001\u6D41\u7A0B\u3002
 - numbers \u53EA\u5199\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3001\u8303\u56F4\u548C\u521D\u503C\uFF0C\u987A\u5E8F\u4F9D visual_recipes \u7684 numbers\uFF1B\u63A7\u4EF6\u4E0E\u6B65\u957F\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - request_coverage \u4F9D request_parts \u987A\u5E8F\u8986\u76D6\uFF1A\u53EF\u5B9E\u73B0\u5199 teach+\u7AE0\u8282\uFF1B\u4E0D\u80FD\u5B8C\u6574\u5B9E\u73B0\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u53CA\u539F\u56E0\uFF0C\u7981\u6B62\u9519\u8BEF\u66FF\u4EE3\u3002
@@ -14182,6 +14284,7 @@ var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5
 - animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002
 - \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002
 - \u601D\u8003\u9898\u8BFE\u4E2D\u53EA\u95EE\u4E0D\u7B54\uFF1B\u9898\u4E0E\u53C2\u8003\u7B54\u6848\u5199\u5165 reflection_activities\uFF0C\u8BFE\u540E\u4EE5\u6536\u8D77\u7684\u7B54\u6848\u5361\u7247\u51FA\u73B0\u3002
+- \u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002
 - \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
 - geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002
 \u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
@@ -14197,6 +14300,7 @@ var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D
 - function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
 - animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002
 - \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002
+- \u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002
 - \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
 - geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002`;
 var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
@@ -14817,6 +14921,7 @@ function lowerModelBoardContent(kind, value, numberCount) {
 function visualNumberPurpose(capability2, index) {
   const input = LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs[index];
   if (!input || input.startsWith("curve_parameter_")) return "generic";
+  if (input === "side_count") return "side_count";
   if (input === "angle" || input === "phase") return "angle";
   if (input === "radius") return "radius";
   if (input === "section_height" || input === "section_position") return "section";
@@ -16487,6 +16592,17 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
           normalized: ((state.get(number) ?? range.initial) - range.min) / (range.max - range.min)
         } } : {}
       } : {};
+    }
+    if (visual.capability === "circle_polygon_bounds") {
+      facts = {
+        circle_fixed: true,
+        radius: established?.parameters?.radius ?? 2,
+        side_count: { min: 3, max: 384, integer: true },
+        pi_lower: "n*sin(pi/n)",
+        pi_upper: "n*tan(pi/n)",
+        n96: { lower: 3.1410319508905093, upper: 3.142714599645368 },
+        caution: "Use the actual regular polygons, not circle_and_arc; displayed bounds are approximations, not exact historical rational bounds."
+      };
     }
     return [{
       ...established && fixedLineSamples(established) ? { sample_slope: "constant" } : {},
