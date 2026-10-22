@@ -60,11 +60,14 @@ test("teacher profile and learner background reach the model with rules that bou
   assert.match(camera.system_prompt, /teacher_profile 是本次授课预设老师的基础设定/u);
 });
 
-test("the tool and all three complete-lesson actions declare the new optional fields", async () => {
+test("all three complete-lesson actions declare the host fields; the agent-facing tool does not", async () => {
   const manifest = JSON.parse(await readFile(resolve(root, "manifest.json"), "utf8"));
-  const schemas = [manifest.tools.find((tool) => tool.name === "oll_generate_lesson").input_schema,
-    ...["learning.lesson.generate", "learning.lesson.generate-from-camera", "learning.lesson.generate-from-selection"]
-      .map((id) => manifest.actions.find((action) => action.id === id).input_schema)];
+  // The agent model fills tool arguments itself; host facts must not be invented there.
+  const tool = manifest.tools.find((entry) => entry.name === "oll_generate_lesson").input_schema;
+  assert.equal(tool.properties.teacher_profile, undefined);
+  assert.equal(tool.properties.learner_background, undefined);
+  const schemas = ["learning.lesson.generate", "learning.lesson.generate-from-camera", "learning.lesson.generate-from-selection"]
+    .map((id) => manifest.actions.find((action) => action.id === id).input_schema);
   for (const schema of schemas) {
     assert.equal(schema.properties.teacher_profile.type, "string");
     assert.equal(schema.properties.learner_background.type, "string");

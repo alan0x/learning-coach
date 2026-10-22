@@ -66,8 +66,6 @@
             "type": "string",
             "description": "Tentative learner background relevant to the requested explanation."
           },
-          "teacher_profile": { "type": "string", "description": "Optional preset teacher settings from the host product (style, focus, responses). Shapes organization and wording; never changes the mathematics or overrides the learner's explicit request." },
-          "learner_background": { "type": "string", "description": "Optional learner background and prior learning facts from the host product, with sources. Only stated facts may be cited; it is never a new request." },
           "input_modality": {
             "type": "string",
             "enum": ["text", "voice"],
