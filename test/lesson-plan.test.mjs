@@ -4901,3 +4901,30 @@ test("real BYOK rearrangement responses preserve labeled geometry and an explici
   assert.deepEqual(replay.start.variables, ["number_01"]);
   assert.equal(replay.actions.find(a => a.do === "animate").value, 1);
 });
+
+test("plot text shows a lesson number's symbol instead of its formula placeholder", () => {
+  const plan = samplePlan("function_plot");
+  plan.numbers[0].label = "常数项b";
+  plan.sections[0].moments[0].actions[0].content.parameters = {
+    title: "y = 2x + n1",
+    curve_label: "直线 y = 2x + n1",
+    expression_tokens: [
+      { kind: "literal", value: 2 },
+      { kind: "input" },
+      { kind: "operator", operator: "multiply" },
+      { kind: "number", number: 1 },
+      { kind: "operator", operator: "add" },
+    ],
+  };
+  const plot = compileAndValidateLessonPlan(plan).lesson.steps[0].beats[0].actions
+    .find((action) => action.do === "write" && action.kind === "plot");
+  assert.equal(plot.content.title, "y = 2x + b");
+  assert.equal(plot.content.curves[0].label, "直线 y = 2x + b");
+
+  // A label without a trailing letter is shown whole; unknown placeholders stay.
+  plan.numbers[0].label = "截距";
+  plan.sections[0].moments[0].actions[0].content.parameters.title = "y = 2x + n1（n2 不存在）";
+  const fallback = compileAndValidateLessonPlan(plan).lesson.steps[0].beats[0].actions
+    .find((action) => action.do === "write" && action.kind === "plot");
+  assert.equal(fallback.content.title, "y = 2x + 截距（n2 不存在）");
+});

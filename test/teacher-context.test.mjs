@@ -82,3 +82,10 @@ test("all three complete-lesson actions declare the host fields; the agent-facin
     assert.ok(!(schema.required ?? []).includes("teacher_profile") && !(schema.required ?? []).includes("learner_background"));
   }
 });
+
+test("a practice invitation names the practice's own target, not one already reached", async () => {
+  // The compiler swaps a target equal to the slider's resting value for a
+  // reachable one; the narration must not have promised the original value.
+  const plain = await firstRequest({});
+  assert.match(plain.system_prompt, /邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值/u);
+});
