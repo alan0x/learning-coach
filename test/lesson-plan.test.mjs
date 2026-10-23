@@ -4928,3 +4928,15 @@ test("plot text shows a lesson number's symbol instead of its formula placeholde
     .find((action) => action.do === "write" && action.kind === "plot");
   assert.equal(fallback.content.title, "y = 2x + 截距（n2 不存在）");
 });
+
+test("steepness check rejects the signed-k claim but not the learner's question or its rejection", () => {
+  const withNarration = narration => {
+    const plan = samplePlan("function_plot");
+    plan.sections[0].moments[0].narration = narration;
+    return () => compileAndValidateLessonPlan(plan);
+  };
+  assert.throws(withNarration("斜率 k 越大，直线就越陡。"), error => error.code === "LESSON_PLAN_TEACHING_MISMATCH");
+  assert.doesNotThrow(withNarration("你问：斜率 k 越大，直线就一定越陡吗？我们先看 k 从 1 变到 3。"));
+  assert.doesNotThrow(withNarration("斜率 k 越大，直线不一定越陡，因为负斜率也可能很陡。"));
+  assert.doesNotThrow(withNarration("k 为正时，斜率越大直线越陡。"));
+});

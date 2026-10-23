@@ -8751,7 +8751,8 @@ function validateTeachingClaims(plan) {
       if (onlyFixedLineSamples && claims.some((claim) => /(?:斜率|倾斜角度|倾斜程度|倾斜方向|陡峭程度)(?:的数值)?(?:就|也|会|将|随之|随点移动|发生|而|从而|不断|逐渐|产生|有所|明显|直接|可以|能够|能|\s|[，,]){0,8}(?:改变|变化)(?!量|率)|(?:改变|变化)(?:了|着|其|它的|直线的|连线的|割线的|两点连线的|\s){0,5}(?:斜率|倾斜角度|倾斜程度|陡峭程度)/.test(claim) && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
       }
-      if (/(?:斜率|k).{0,10}越大.{0,12}越陡/.test(text) && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text)) {
+      const steepnessClaim = (text.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
+      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text)) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
       }
     }
