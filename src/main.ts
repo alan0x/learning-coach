@@ -42,6 +42,8 @@ interface ToolInput {
   language?: string;
   tutor_context?: string;
   learner_context?: string;
+  teacher_profile?: string;
+  learner_background?: string;
   input_modality?: "text" | "voice";
   camera_media?: string;
   selection_media?: string;
@@ -378,6 +380,8 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     "language",
     "tutor_context",
     "learner_context",
+    "teacher_profile",
+    "learner_background",
     "input_modality",
     "camera_media",
     "selection_media",
@@ -440,6 +444,12 @@ function parseCompleteLessonInput(raw: string): ToolInput {
       : {}),
     ...(typeof input.learner_context === "string"
       ? { learner_context: truncate(input.learner_context) }
+      : {}),
+    ...(typeof input.teacher_profile === "string" && input.teacher_profile.trim()
+      ? { teacher_profile: truncate(input.teacher_profile) }
+      : {}),
+    ...(typeof input.learner_background === "string" && input.learner_background.trim()
+      ? { learner_background: truncate(input.learner_background) }
       : {}),
     input_modality: input.input_modality === "voice" ? "voice" : "text",
     ...(typeof input.camera_media === "string"
@@ -2857,6 +2867,8 @@ async function main(): Promise<void> {
           language: input.language,
           learner_context: input.learner_context,
           tutor_context: input.tutor_context,
+          teacher_profile: input.teacher_profile,
+          learner_background: input.learner_background,
           input_modality: input.input_modality,
           camera_input: input.request_source === "current_image",
           selection_input: input.request_source === "ink_selection",

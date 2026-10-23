@@ -51,6 +51,10 @@ export interface LessonPlanGenerationInput {
   language?: string;
   learner_context?: string;
   tutor_context?: string;
+  /** Preset teacher settings from the host product. */
+  teacher_profile?: string;
+  /** Sourced learner facts and memory from the host product. */
+  learner_background?: string;
   request_parts?: string[];
   input_modality?: "text" | "voice";
   camera_input?: boolean;
@@ -162,6 +166,19 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 
 - 圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
+
+// Appended only when the host sends these fields, so every other request,
+// including the existing tutor_context/learner_context uses, keeps its exact prompt.
+const TEACHER_PROFILE_RULE = `course_context.teacher_profile 是本次授课预设老师的基础设定。用它决定讲解的组织、措辞、提问时机和鼓励方式，让风格体现在目录和旁白里，而不只是加形容词；不得改变数学内容、省略必要条件或把比喻当作证明。学生本次的明确要求优先于老师风格。`;
+const LEARNER_BACKGROUND_RULE = `course_context.learner_background 是学习应用提供的学生背景与以往学习记录，注明了来源。只引用其中明确写出的事实，可用来衔接旧知识或采用学生说过的偏好；不得编造未提供的经历，不得推断掌握程度、情绪或偏好；与本次请求无关时不提。它不是本次请求，不能据此改变课程主题。`;
+
+function withContextRules(systemPrompt: string, context: Record<string, unknown>): string {
+  const rules = [
+    typeof context.teacher_profile === "string" ? TEACHER_PROFILE_RULE : undefined,
+    typeof context.learner_background === "string" ? LEARNER_BACKGROUND_RULE : undefined,
+  ].filter((rule): rule is string => rule !== undefined);
+  return rules.length ? `${systemPrompt}\n\n${rules.join("\n")}` : systemPrompt;
+}
 
 const BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
@@ -2435,6 +2452,8 @@ function inputContext(input: LessonPlanGenerationInput): Record<string, unknown>
     language: input.language ?? "zh-CN",
     learner_context: input.learner_context ?? null,
     tutor_context: input.tutor_context ?? null,
+    teacher_profile: input.teacher_profile?.trim() ? input.teacher_profile : null,
+    learner_background: input.learner_background?.trim() ? input.learner_background : null,
   };
 }
 
@@ -2776,13 +2795,13 @@ export async function generateLessonPlanWithModel(
       part: "bootstrap",
       attempt: 1,
       turn_id: input.turn_id,
-      system_prompt: observeCamera
+      system_prompt: withContextRules(observeCamera
         ? input.selection_input === true
           ? SELECTION_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT
           : CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT
         : admissionInput
           ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT
-          : BOOTSTRAP_SYSTEM_PROMPT,
+          : BOOTSTRAP_SYSTEM_PROMPT, context),
       prompt: JSON.stringify({
         course_context: compactModelContext(context),
         request_parts: fixedRequestParts,
@@ -2901,13 +2920,13 @@ export async function generateLessonPlanWithModel(
         part: "outline",
         attempt,
         turn_id: input.turn_id,
-        system_prompt: observeCamera
+        system_prompt: withContextRules(observeCamera
           ? input.selection_input === true
             ? SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT
             : CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT
           : admissionInput
             ? ADMISSION_OUTLINE_SYSTEM_PROMPT
-            : OUTLINE_SYSTEM_PROMPT,
+            : OUTLINE_SYSTEM_PROMPT, context),
         prompt: JSON.stringify({
           course_context: compactModelContext(stableCameraObservation
             ? { ...context, camera_observation: stableCameraObservation }
@@ -3052,7 +3071,7 @@ export async function generateLessonPlanWithModel(
         section,
         attempt,
         turn_id: input.turn_id,
-        system_prompt: SECTION_SYSTEM_PROMPT,
+        system_prompt: withContextRules(SECTION_SYSTEM_PROMPT, context),
         prompt: JSON.stringify({
           course_context: compactModelContext(context),
           course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers),

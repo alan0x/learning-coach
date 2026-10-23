@@ -14303,6 +14303,17 @@ var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D
 - \u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002
 - \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
 - geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002`;
+var TEACHER_PROFILE_RULE = `course_context.teacher_profile \u662F\u672C\u6B21\u6388\u8BFE\u9884\u8BBE\u8001\u5E08\u7684\u57FA\u7840\u8BBE\u5B9A\u3002\u7528\u5B83\u51B3\u5B9A\u8BB2\u89E3\u7684\u7EC4\u7EC7\u3001\u63AA\u8F9E\u3001\u63D0\u95EE\u65F6\u673A\u548C\u9F13\u52B1\u65B9\u5F0F\uFF0C\u8BA9\u98CE\u683C\u4F53\u73B0\u5728\u76EE\u5F55\u548C\u65C1\u767D\u91CC\uFF0C\u800C\u4E0D\u53EA\u662F\u52A0\u5F62\u5BB9\u8BCD\uFF1B\u4E0D\u5F97\u6539\u53D8\u6570\u5B66\u5185\u5BB9\u3001\u7701\u7565\u5FC5\u8981\u6761\u4EF6\u6216\u628A\u6BD4\u55BB\u5F53\u4F5C\u8BC1\u660E\u3002\u5B66\u751F\u672C\u6B21\u7684\u660E\u786E\u8981\u6C42\u4F18\u5148\u4E8E\u8001\u5E08\u98CE\u683C\u3002`;
+var LEARNER_BACKGROUND_RULE = `course_context.learner_background \u662F\u5B66\u4E60\u5E94\u7528\u63D0\u4F9B\u7684\u5B66\u751F\u80CC\u666F\u4E0E\u4EE5\u5F80\u5B66\u4E60\u8BB0\u5F55\uFF0C\u6CE8\u660E\u4E86\u6765\u6E90\u3002\u53EA\u5F15\u7528\u5176\u4E2D\u660E\u786E\u5199\u51FA\u7684\u4E8B\u5B9E\uFF0C\u53EF\u7528\u6765\u8854\u63A5\u65E7\u77E5\u8BC6\u6216\u91C7\u7528\u5B66\u751F\u8BF4\u8FC7\u7684\u504F\u597D\uFF1B\u4E0D\u5F97\u7F16\u9020\u672A\u63D0\u4F9B\u7684\u7ECF\u5386\uFF0C\u4E0D\u5F97\u63A8\u65AD\u638C\u63E1\u7A0B\u5EA6\u3001\u60C5\u7EEA\u6216\u504F\u597D\uFF1B\u4E0E\u672C\u6B21\u8BF7\u6C42\u65E0\u5173\u65F6\u4E0D\u63D0\u3002\u5B83\u4E0D\u662F\u672C\u6B21\u8BF7\u6C42\uFF0C\u4E0D\u80FD\u636E\u6B64\u6539\u53D8\u8BFE\u7A0B\u4E3B\u9898\u3002`;
+function withContextRules(systemPrompt, context) {
+  const rules = [
+    typeof context.teacher_profile === "string" ? TEACHER_PROFILE_RULE : void 0,
+    typeof context.learner_background === "string" ? LEARNER_BACKGROUND_RULE : void 0
+  ].filter((rule) => rule !== void 0);
+  return rules.length ? `${systemPrompt}
+
+${rules.join("\n")}` : systemPrompt;
+}
 var BOOTSTRAP_SYSTEM_PROMPT = `${OUTLINE_SYSTEM_PROMPT}
 
 ${BOOTSTRAP_FIRST_SECTION_PROMPT}
@@ -16132,7 +16143,9 @@ function inputContext(input) {
     input_modality: input.input_modality ?? null,
     language: input.language ?? "zh-CN",
     learner_context: input.learner_context ?? null,
-    tutor_context: input.tutor_context ?? null
+    tutor_context: input.tutor_context ?? null,
+    teacher_profile: input.teacher_profile?.trim() ? input.teacher_profile : null,
+    learner_background: input.learner_background?.trim() ? input.learner_background : null
   };
 }
 function compactModelContext(context) {
@@ -16393,7 +16406,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       part: "bootstrap",
       attempt: 1,
       turn_id: input.turn_id,
-      system_prompt: observeCamera ? input.selection_input === true ? SELECTION_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT,
+      system_prompt: withContextRules(observeCamera ? input.selection_input === true ? SELECTION_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : CAMERA_ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : admissionInput ? ADMISSION_BOOTSTRAP_SYSTEM_PROMPT : BOOTSTRAP_SYSTEM_PROMPT, context),
       prompt: JSON.stringify({
         course_context: compactModelContext(context),
         request_parts: fixedRequestParts,
@@ -16500,7 +16513,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         part: "outline",
         attempt,
         turn_id: input.turn_id,
-        system_prompt: observeCamera ? input.selection_input === true ? SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT : CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT,
+        system_prompt: withContextRules(observeCamera ? input.selection_input === true ? SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT : CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT, context),
         prompt: JSON.stringify({
           course_context: compactModelContext(stableCameraObservation ? { ...context, camera_observation: stableCameraObservation } : context),
           request_parts: fixedRequestParts,
@@ -16633,7 +16646,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         section,
         attempt,
         turn_id: input.turn_id,
-        system_prompt: SECTION_SYSTEM_PROMPT,
+        system_prompt: withContextRules(SECTION_SYSTEM_PROMPT, context),
         prompt: JSON.stringify({
           course_context: compactModelContext(context),
           course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers),
