@@ -12015,6 +12015,13 @@ function numberDefinition(plan, index, path) {
   if (!definition) fail3("LESSON_PLAN_NUMBER_REFERENCE", path, "number reference is unavailable");
   return definition;
 }
+function namedNumbers(text, plan) {
+  return text.replace(/\bn([1-9])\b/gu, (placeholder, digit) => {
+    const label = plan.numbers?.[Number(digit) - 1]?.label?.trim();
+    if (!label) return placeholder;
+    return /([A-Za-z\u03b1-\u03c9])$/u.exec(label)?.[1] ?? label;
+  });
+}
 function angleScaleForUnit(unit) {
   if (!unit) return 1;
   const normalized = unit.trim().toLowerCase();
@@ -12079,7 +12086,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   const expressions = rawExpressions.map((expression2, index) => safeFunctionExpression(expression2, "", expressionVariables, `${path}.expressions[${index}]`));
   const expression = expressions[0];
   if (!expression) fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expressions`, "at least one function expression is required");
-  const curveLabels = input.curve_labels === void 0 ? [] : optionalStringArray(input.curve_labels, [], `${path}.curve_labels`);
+  const curveLabels = input.curve_labels === void 0 ? [] : optionalStringArray(input.curve_labels, [], `${path}.curve_labels`).map((label) => namedNumbers(label, plan));
   if (curveLabels.length > 0 && curveLabels.length !== expressions.length) {
     fail3("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.curve_labels`, "curve label count must equal expression count");
   }
@@ -12114,16 +12121,16 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   } : viewport.y;
   assertRange(requestedY.min, requestedY.max, `${path}.y_range`);
   const plotContent = {
-    title: optionalText(input.title, "\u51FD\u6570\u56FE\u50CF", `${path}.title`),
+    title: namedNumbers(optionalText(input.title, "\u51FD\u6570\u56FE\u50CF", `${path}.title`), plan),
     axes: {
       ...expressions.length > 1 && expressions.some((e) => e.replace(/[()\s]/g, "") === "x") ? { equal_scale: true } : {},
-      x: { min: viewport.x.min, max: viewport.x.max, label: optionalText(input.x_label, "x", `${path}.x_label`) },
-      y: { min: requestedY.min, max: requestedY.max, label: optionalText(input.y_label, "y", `${path}.y_label`) }
+      x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
+      y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) }
     },
     curves: expressions.map((item, index) => ({
       as: index === 0 ? "primary-curve" : `curve-${pad2(index + 1)}`,
       expression: item,
-      label: curveLabels[index] ?? (index === 0 ? optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`) : `y = ${item}`)
+      label: curveLabels[index] ?? (index === 0 ? namedNumbers(optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`), plan) : `y = ${item}`)
     }))
   };
   if (sampleNumbers.length) {
