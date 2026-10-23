@@ -210,7 +210,12 @@ export function validateTeachingClaims(plan: LessonPlan): void {
         && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH",`$plan.sections[${si}].moments[${mi}]`,"moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
       }
-      if (/(?:斜率|k).{0,10}越大.{0,12}越陡/.test(text) && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text)) {
+      // Only a stated claim counts: repeating the learner's question ("k 越大就越陡吗？")
+      // or rejecting it ("不一定越陡") is the start of the correct explanation.
+      const steepnessClaim = (text.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some(sentence =>
+        /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence)
+        && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
+      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text)) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH",`$plan.sections[${si}].moments[${mi}]`,"steepness depends on absolute slope; larger signed k is not always steeper");
       }
     }
