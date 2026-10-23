@@ -49,6 +49,7 @@ test("teacher profile and learner background reach the model with rules that bou
   assert.match(withProfile.system_prompt, /学生本次的明确要求优先于老师风格/u);
   assert.match(withProfile.system_prompt, /每一节都要让设定中的具体做法能被听出来/u);
   assert.match(withProfile.system_prompt, /小习惯全课最多出现一次/u);
+  assert.match(withProfile.system_prompt, /全课只用这一个，不再引入第二个比喻/u);
   assert.doesNotMatch(withProfile.system_prompt, /learner_background/u);
   assert.equal(JSON.parse(withProfile.prompt).course_context.teacher_profile, profile);
 
@@ -56,9 +57,10 @@ test("teacher profile and learner background reach the model with rules that bou
   assert.match(both.system_prompt, /只引用其中明确写出的事实/u);
   assert.match(both.system_prompt, /不得编造未提供的经历/u);
   // Relevant facts are named once, at the start of the first section, and never as mastery.
-  assert.match(both.system_prompt, /在第一节开头用对学生说话的方式明确提起一到两条/u);
+  assert.match(both.system_prompt, /在第一节开头用对学生说话的方式明确提起最相关的一到两条（不超过两条）/u);
   assert.match(both.system_prompt, /第二节及以后不再复述这些背景/u);
   assert.match(both.system_prompt, /不说成学会或理解/u);
+  assert.match(both.system_prompt, /用不上的不提。用自己的话说，不套用固定句式/u);
   assert.equal(JSON.parse(both.prompt).course_context.learner_background, background);
 
   const camera = await firstRequest({ teacher_profile: profile, camera_input: true });
