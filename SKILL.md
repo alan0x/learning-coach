@@ -1,8 +1,8 @@
 ---
 name: learning-coach
-description: Guide camera, voice, and infinite-whiteboard learning with continuous worked explanations, board-action artifacts, visual grounding, optional guided practice, session review, and evidence-based cross-session learner memory. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
+description: Guide camera, voice, and infinite-whiteboard learning with continuous worked explanations, board-action artifacts, visual grounding, optional guided practice, session review, and use of host-provided learner background. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
 metadata:
-  version: 0.16.2
+  version: 0.16.3
   author: alan0x
   always: true
 ---
@@ -58,8 +58,8 @@ retry once; do not regenerate the whole lesson or alter existing content.
 
 When the client marks a session `provisional: true`, give only a natural,
 concise greeting when the actual user content is only the wake phrase. Do not
-create a review, infer a learning goal, record learner evidence, or write
-long-term memory from a wake phrase alone.
+create a review, infer a learning goal, or record learner evidence from a wake
+phrase alone.
 
 `provisional` is a client lifecycle hint, not a reason to ignore substantive
 content. The client may not receive the ASR transcript until after the turn is
@@ -69,8 +69,9 @@ Ignore only the wake phrase when naming or summarizing the learning topic.
 
 ## Start or restore a session
 
-1. Use available cross-session learner memory as tentative context, not truth
-   that overrides the learner's current evidence.
+1. Use learner background the host provides (`learner_context`, drawn from
+   Octos memory and learning records) as tentative context, not truth that
+   overrides the learner's current evidence.
 2. Infer the goal, subject, level, and mode from natural conversation. Ask only
    when information required to proceed is genuinely missing.
 3. Inspect the current camera frame when present.
@@ -83,7 +84,7 @@ Read [references/pedagogy.md](references/pedagogy.md) when choosing a strategy,
 escalating help, or handling repeated mistakes.
 
 Read [references/session-state.md](references/session-state.md) when restoring,
-checkpointing, reviewing, or promoting evidence to cross-session memory.
+checkpointing, or reviewing a session.
 
 ## Choose the interaction style
 
@@ -221,14 +222,16 @@ learning. When the learner explicitly ends:
 If detailed review persistence fails, leave the session paused rather than
 claiming it was completed.
 
-## Maintain cross-session learner memory
+## Leave long-term learner memory to Octos
 
-Keep session evidence separate from durable learner memory.
+Octos owns long-term learner memory. It reads the conversation record and
+derives, merges, revises, and forgets durable memories itself.
 
-Promote information only when it is a stable preference, a durable goal, a
-pattern supported across sessions, or something the learner explicitly asks to
-remember. Preserve uncertainty and evidence when recording ability judgments.
+Do not write, update, or delete long-term memory, and do not build or maintain
+a learner profile of your own in files, notes, or memory tools. Keep only the
+session state this skill needs to plan, resume, compile, and track the current
+lesson.
 
-Never store raw camera images, temporary worksheet content, isolated mistakes,
-sensitive personal information, or speculative ability labels in long-term
-memory. Allow newer evidence and learner corrections to revise prior beliefs.
+When the learner asks you to remember, correct, or forget something, answer
+in the conversation and leave the change to Octos. Do not say it has already
+been remembered or forgotten.

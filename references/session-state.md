@@ -1,8 +1,7 @@
-# Session State and Learner Memory Reference
+# Session State Reference
 
 Load this reference when restoring, checkpointing, reviewing, or finalizing a
-learning session, or when deciding whether session evidence belongs in
-cross-session learner memory.
+learning session.
 
 ## State layers
 
@@ -10,13 +9,14 @@ Keep these layers distinct:
 
 1. **User Profile**: identity, language, permissions, and general product
    preferences.
-2. **Learning Profile**: evidence-based knowledge about learning goals,
-   competencies, recurring obstacles, and teaching preferences across sessions.
+2. **Long-term learner memory**: goals, preferences, and patterns across
+   sessions. Octos owns it; the coach only reads what the host provides.
 3. **Learning Session**: one topic-specific conversation, its camera frames,
    attempts, feedback, and review.
 
-Never copy temporary session content into the Learning Profile merely to make
-it available later.
+Do not write session content into long-term memory or into a learner profile
+of your own to make it available later. See
+[Long-term memory](#long-term-memory).
 
 ## Client context blocks
 
@@ -66,7 +66,7 @@ A wake-only session starts as `provisional`.
 
 - Give a short greeting.
 - Do not infer a learning goal or write learner observations.
-- Do not create a title, review, or long-term memory.
+- Do not create a title or review.
 - Treat the first substantive non-wake utterance as the start of learning even
   if the marker still says `provisional: true`; the client learns this only
   after ASR completes.
@@ -132,7 +132,7 @@ Record concise evidence:
 Use `correct`, `partial`, `incorrect`, or `uncertain`. Prefer `uncertain` when
 visual or verbal evidence is ambiguous.
 
-An observation is local to the session until promotion criteria are met. Keep:
+An observation stays in the session. Keep:
 
 - neutral description;
 - related concept;
@@ -152,46 +152,24 @@ Write `review.md` with:
 4. Mistakes or unresolved uncertainty.
 5. Transfer or retrieval result.
 6. One bounded next activity.
-7. Candidate cross-session memories, if any, with evidence.
 
 Avoid unsupported mastery percentages.
 
 Do not create a review for a provisional session.
 
-## Learning Profile promotion
+## Long-term memory
 
-The Learning Profile is a logical cross-session view backed by existing
-long-term memory. Promote an item only when one of these is true:
+Octos owns long-term learner memory. It reads the conversation record and
+derives, merges, revises, and forgets durable memories itself. The coach does
+not write, update, or delete long-term memory, does not promote observations
+or reviews into it, and does not keep its own cross-session learner profile.
 
-- the learner explicitly asks to remember it;
-- it is a stable teaching preference;
-- it is a durable learning goal;
-- evidence from multiple sessions supports the same pattern;
-- it is clearly useful across future sessions and low risk.
+The session workspace files above stay: planning, resuming, compiling, and
+task tracking rely on them.
 
-Prefer records shaped conceptually like:
-
-```json
-{
-  "kind": "learning_preference",
-  "statement": "Learns formulas more effectively from a concrete example first",
-  "confidence": "medium",
-  "evidence_sessions": ["learn-...", "learn-..."],
-  "updated_at": "RFC3339 timestamp"
-}
-```
-
-Do not invent precision. Use low, medium, or high confidence and allow newer
-evidence to revise or remove an earlier belief.
-
-Never promote:
-
-- raw camera images;
-- temporary worksheet content;
-- a single wrong answer;
-- guesses based on unreadable visual content;
-- sensitive personal information;
-- fixed ability labels.
+When the learner asks to remember, correct, or forget something, answer in
+the conversation and leave the change to Octos. Do not say it has already been
+remembered or forgotten.
 
 ## Restoring a session
 
@@ -201,7 +179,8 @@ When restoring:
 2. Verify that the confirmed reference frame still exists before relying on it.
 3. Briefly restate the last meaningful step.
 4. Ask whether the learner wants to continue that step or redirect.
-5. Use relevant Learning Profile information softly; do not recite a dossier.
+5. Use relevant learner background from the host softly; do not recite a
+   dossier.
 
 When a learner opens a completed session, continue naturally and mark it active
 only after the learner chooses to resume work.
