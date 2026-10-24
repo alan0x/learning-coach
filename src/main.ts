@@ -13,6 +13,7 @@ import {
   implicitSurfaceDomain,
 } from "./scene3d-surfaces.js";
 import { routeSelectionPlot } from "./selection-plot-routing.js";
+import { TOPIC_ANALYSIS_TOOL_NAME, TopicAnalysisError, analyzeTopics, loadTopicCatalog, parseTopicAnalysisInput, submitTopicAnalysis } from "./topic-analysis.js";
 
 export { routeSelectionPlot } from "./selection-plot-routing.js";
 export type { SelectionPlotRoute } from "./selection-plot-routing.js";
@@ -235,7 +236,9 @@ export interface StructuredModelRequest {
     | "lesson-plan-outline"
     | "lesson-plan-section"
     | "selection-enhancement"
-    | "selection-classification";
+    | "selection-classification"
+    | "topic-analysis-search"
+    | "topic-analysis-result";
   turnId: string;
   systemPrompt: string;
   prompt: string;
@@ -299,7 +302,9 @@ function configuredThinkingLevel(
       ? "OLL_SECTION_THINKING_LEVEL"
       : label === "selection-enhancement"
         ? "OLL_SELECTION_THINKING_LEVEL"
-        : "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL";
+        : label === "topic-analysis-search" || label === "topic-analysis-result"
+          ? "OLL_TOPIC_ANALYSIS_THINKING_LEVEL"
+          : "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL";
   const safeDefault: ThinkingLevel = "LOW";
   return parseThinkingLevel(process.env[environmentName], environmentName)
     ?? parseThinkingLevel(process.env.OLL_THINKING_LEVEL, "OLL_THINKING_LEVEL")
@@ -2740,20 +2745,51 @@ function emitArtifactProgress(path: string, kind: string, message: string): void
   process.stderr.write(`${JSON.stringify({ type: "artifact", path, kind, message })}\n`);
 }
 
+/** Background topic analysis: the result (or why there is none) goes straight
+ * back to the Octos Learn history service, so the learner's page may close. */
+async function runTopicAnalysis(rawInput: string, startedAt: number): Promise<void> {
+  const input = parseTopicAnalysisInput(rawInput);
+  const asciiDetail = (error: unknown) => safeError(error).replace(/[^\x20-\x7e]/g, "?").slice(0, 200) || undefined;
+  let submitted: Awaited<ReturnType<typeof submitTopicAnalysis>>;
+  try {
+    const client = await createStructuredModelClient(resolveLessonModelRoute());
+    const result = await analyzeTopics(input.input, loadTopicCatalog(), (request) => callStructuredModel(client, {
+      ...request, turnId: `topics-${input.job_id.slice(0, 16)}`, maxTokens: Math.min(client.maxTokens, 8192),
+    }));
+    submitted = await submitTopicAnalysis(input, { result });
+  } catch (error) {
+    const failure = error instanceof TopicAnalysisError ? error.failure : "analysis-turn-failed";
+    stageLog({ stage: "topic-analysis", status: "failed", failure, elapsed_ms: Date.now() - startedAt });
+    submitted = await submitTopicAnalysis(input, { failure, detail: asciiDetail(error) });
+    emit({ success: false, output: `Topic analysis failed (${failure}); the history service ${submitted.recorded ? "recorded it" : `did not record it (${submitted.status})`}.` });
+    process.exitCode = 1;
+    return;
+  }
+  stageLog({ stage: "topic-analysis", status: submitted.recorded ? "completed" : "rejected", http_status: submitted.status, elapsed_ms: Date.now() - startedAt });
+  emit({ success: submitted.recorded, output: submitted.recorded ? "Topic analysis submitted to the history service."
+    : `The history service did not accept the analysis (${submitted.status}${submitted.error ? `: ${submitted.error}` : ""}).` });
+  if (!submitted.recorded) process.exitCode = 1;
+}
+
 async function main(): Promise<void> {
   const startedAt = Date.now();
   const invokedTool = process.argv[2];
   try {
     if (invokedTool !== TOOL_NAME
       && invokedTool !== SELECTION_TOOL_NAME
-      && invokedTool !== SELECTION_CLASSIFICATION_TOOL_NAME) {
+      && invokedTool !== SELECTION_CLASSIFICATION_TOOL_NAME
+      && invokedTool !== TOPIC_ANALYSIS_TOOL_NAME) {
       throw new Error(
-        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}', '${SELECTION_TOOL_NAME}', or '${SELECTION_CLASSIFICATION_TOOL_NAME}'`,
+        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}', '${SELECTION_TOOL_NAME}', '${SELECTION_CLASSIFICATION_TOOL_NAME}', or '${TOPIC_ANALYSIS_TOOL_NAME}'`,
       );
     }
     const chunks: Buffer[] = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
     const rawInput = Buffer.concat(chunks).toString("utf8");
+    if (invokedTool === TOPIC_ANALYSIS_TOOL_NAME) {
+      await runTopicAnalysis(rawInput, startedAt);
+      return;
+    }
     const traceTurnId = traceTurnIdFromRawInput(rawInput);
     if (traceTurnId) beginStageTrace(traceTurnId, invokedTool, startedAt);
     const route = resolveLessonModelRoute();
