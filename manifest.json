@@ -327,7 +327,8 @@
         "OCTOS_WORK_DIR",
         "OCTOS_SESSION_WORKSPACE",
         "OLL_TOPIC_ANALYSIS_THINKING_LEVEL",
-        "OCTOS_LEARN_HISTORY_URL"
+        "OCTOS_LEARN_HISTORY_URL",
+        "NODE_EXTRA_CA_CERTS"
       ],
       "input_schema": {
         "type": "object",
