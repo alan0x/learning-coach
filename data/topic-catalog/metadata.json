@@ -1,0 +1,29 @@
+{
+  "repository": "https://github.com/withmarbleapp/os-taxonomy",
+  "commit": "c7ed549758d9fb430c4af54886c658e78162a0b1",
+  "taxonomy_version": "v1",
+  "topics_sha256": "15806a0b74445c52651e84c882104f630eb96ea9195c0befe8469587a0180fc0",
+  "dependencies_sha256": "11ad9439a9f078c082538862e09405b42d08f73d62f811458df4ccbf6cb4b18d",
+  "clusters_sha256": "7bae0dbd339c33cb39859adff99f93e14799cae89dd4abe0eef67a46c3cc18e2",
+  "catalog_sha256": "2c4803c89d0601978503e14b05bc51e278f3b846cf85efe91f69f3a875c1f270",
+  "dependency_catalog_sha256": "736e1d4208bdec10cc5721cd8ec55108dfa9405b4d36521f2ac63798de57b6fd",
+  "cluster_catalog_sha256": "168487cedcab45bd940366102429f0a90ba070f4caaddc1f0fc3b1fccd8da174",
+  "topic_count": 1833,
+  "dependency_count": 3846,
+  "cluster_count": 176,
+  "subjects": {
+    "Computing": 50,
+    "English": 331,
+    "Geography": 22,
+    "History": 109,
+    "Learning to Learn": 18,
+    "Life Skills": 43,
+    "Mathematics": 567,
+    "Personal & Social Development": 117,
+    "Science": 576
+  },
+  "projection": "topics: id, subject, domain, type, name, description, evidence, ageRangeStart, ageRangeEnd; dependencies: topicId, prerequisiteId, strength, reason; clusters: subject, domain, ageRangeStart, summary; original text unchanged; curriculum standards, teaching research and assessment prompts excluded",
+  "database_license": "ODbL-1.0",
+  "content_license": "CC-BY-SA-4.0",
+  "attribution": "Marble Skill Taxonomy (v1) · © Generative Spark, Inc. (Marble) · https://withmarble.com"
+}

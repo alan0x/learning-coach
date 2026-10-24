@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.16.5",
+  "version": "0.17.0",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -299,6 +299,47 @@
           "board"
         ]
       }
+    },
+    {
+      "name": "oll_analyze_topics",
+      "description": "Octos Learn maintenance: classify frozen learning material against the bundled topic catalog and hand the result back to the Octos Learn history service. Invoked only by the learning.topics.analyze background action.",
+      "contexts": ["octos-learn-maintenance"],
+      "concurrency_class": "safe",
+      "env": [
+        "OLL_PROVIDER",
+        "OCTOS_PROFILE_LLM_PROVIDER",
+        "OCTOS_PROFILE_LLM_MODEL",
+        "OCTOS_PROFILE_LLM_BASE_URL",
+        "OCTOS_PROFILE_LLM_API_TYPE",
+        "OCTOS_PROFILE_LLM_CONFIG_REVISION",
+        "VERTEX_SA_JSON",
+        "VERTEX_ACCESS_TOKEN",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_LOCATION",
+        "VERTEX_BASE_URL",
+        "GEMINI_API_KEY",
+        "GEMINI_BASE_URL",
+        "OLL_MODEL",
+        "OLL_TIMEOUT_MS",
+        "OLL_TOTAL_TIMEOUT_MS",
+        "OLL_MODEL_REQUEST_ATTEMPTS",
+        "VERTEX_REQUEST_ATTEMPTS",
+        "OCTOS_WORK_DIR",
+        "OCTOS_SESSION_WORKSPACE",
+        "OLL_TOPIC_ANALYSIS_THINKING_LEVEL",
+        "OCTOS_LEARN_HISTORY_URL",
+        "NODE_EXTRA_CA_CERTS"
+      ],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["job_id", "capability", "input"],
+        "properties": {
+          "job_id": { "type": "string", "description": "Octos Learn analysis job id." },
+          "capability": { "type": "string", "description": "Single-use capability issued by the Octos Learn history service for this job." },
+          "input": { "type": "object", "description": "Frozen analysis material from the Octos Learn history service." }
+        }
+      }
     }
   ],
   "actions": [
@@ -558,6 +599,29 @@
         "input_mode": "file_each",
         "file_argument": "selection_media",
         "file_materialization": "workspace_relative"
+      }
+    },
+    {
+      "id": "learning.topics.analyze",
+      "label": "分析学习记录对应的知识点",
+      "description": "Octos Learn 在后台把一节课或一次提问对应到知识点目录，结果直接交回学习记录服务；不依赖页面保持打开，也不读写长期记忆。",
+      "tags": ["learning", "topics", "maintenance"],
+      "surfaces": ["learning.maintenance"],
+      "execution": "background",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["job_id", "capability", "input"],
+        "properties": {
+          "job_id": { "type": "string", "description": "Octos Learn analysis job id." },
+          "capability": { "type": "string", "description": "Single-use capability issued by the Octos Learn history service for this job." },
+          "input": { "type": "object", "description": "Frozen analysis material from the Octos Learn history service." }
+        }
+      },
+      "binding": {
+        "type": "tool",
+        "tool": "oll_analyze_topics",
+        "input_mode": "single"
       }
     }
   ]

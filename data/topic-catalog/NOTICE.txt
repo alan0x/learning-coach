@@ -1,0 +1,11 @@
+Marble Skill Taxonomy (v1) · © Generative Spark, Inc. (Marble) · https://withmarble.com
+Source: https://github.com/withmarbleapp/os-taxonomy/tree/c7ed549758d9fb430c4af54886c658e78162a0b1
+
+This copy (shared with Octos Learn's learning-history service) keeps every topic (all subjects)
+with the upstream names, descriptions and evidence unchanged; prerequisites and clusters are not included.
+The database (including this projection) is licensed under ODbL 1.0:
+https://github.com/withmarbleapp/os-taxonomy/blob/c7ed549758d9fb430c4af54886c658e78162a0b1/LICENSE
+The authored textual content is licensed under CC BY-SA 4.0:
+https://github.com/withmarbleapp/os-taxonomy/blob/c7ed549758d9fb430c4af54886c658e78162a0b1/LICENSE-CONTENT
+Curriculum-standard records, teaching-research text and assessment prompts are not included.
+This notice applies to this catalog, not to the application code.
