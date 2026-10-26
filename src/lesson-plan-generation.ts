@@ -132,7 +132,7 @@ const OUTLINE_SYSTEM_PROMPT = `设计完整课程目录，不生成 OLL、执行
 - 选择图形特征时，以本节需要展示的数学关系为依据；不能仅因讲解中出现某个数学对象，就选用包含该对象的图形特征。
 - 多边形重排选 polygon_pieces、rigid_rearrangement、area_relation；圆面积选 circle_area_rearrangement。ordered_process_steps 仅是静态流程。
 - numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。
-- request_coverage 依 request_parts 顺序覆盖：可实现写 teach+章节；不能完整实现写 unsupported、空章节及原因，禁止错误替代。
+- request_coverage 依 request_parts 顺序覆盖：可实现写 teach+章节。只是要求的互动或画面形式做不到（如可自由拖动顶点的任意三角形），但数学内容能用已有画面讲对时，写 teach 并换成可实现的画面，在第一节旁白里用一句话说明换成了什么；只有数学内容本身无法正确呈现时才写 unsupported、空章节及原因，禁止错误替代。
 - 按独立教学目标和学习进程分节，不按主题数或画面数分节。每节只承担一个完成后可验证的目标；连续推导及须同步观察的画面留在同一节的多个 moment。简单问题能围绕一个目标讲清时用 1 节；若须分别建立直觉、纠错或解释原理、推导或演示、应用、检查掌握中的多个目标，拆成 2–4 节。不要为凑节数重复开场、定义或总结，也不要把本应独立的推导、应用和检查全塞进一节。为什么须推导，怎么算须步骤与检验，是什么须直觉与边界。不猜年级；close 只总结。
 只返回符合响应 Schema 的 JSON。`;
 
@@ -144,7 +144,7 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
 - function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。
-- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。
+- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。
 - 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。
 - 圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
@@ -162,7 +162,7 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 
 - number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
 - function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。
-- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。
+- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。
 - 圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
