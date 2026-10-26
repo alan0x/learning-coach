@@ -4921,6 +4921,11 @@ test("plot text shows a lesson number's symbol instead of its formula placeholde
   assert.equal(plot.content.title, "y = 2x + b");
   assert.equal(plot.content.curves[0].label, "直线 y = 2x + b");
 
+  // Spoken narration gets the same treatment: learners never hear "n1".
+  plan.sections[0].moments[0].narration = "现在看屏幕上的直线 y=2x+n1，当 n1 变大时直线向上平移。";
+  const said = compileAndValidateLessonPlan(plan).lesson.steps[0].beats[0].say;
+  assert.equal(said, "现在看屏幕上的直线 y=2x+b，当 b 变大时直线向上平移。");
+
   // A label without a trailing letter is shown whole; unknown placeholders stay.
   plan.numbers[0].label = "截距";
   plan.sections[0].moments[0].actions[0].content.parameters.title = "y = 2x + n1（n2 不存在）";

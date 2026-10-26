@@ -13364,7 +13364,9 @@ function compileLessonPlan(value, options = {}) {
       beats.push({
         key: `moment-${pad2(momentIndex)}`,
         ...moment.restart_numbers?.length ? { start: { kind: "replay", variables: moment.restart_numbers.map(variableAlias) } } : {},
-        ...moment.narration ? { say: moment.narration } : {},
+        // The model sometimes writes a formula placeholder (n1) in spoken or
+        // written text; learners hear and read the number's own symbol.
+        ...moment.narration ? { say: namedNumbers(moment.narration, plan) } : {},
         ...moment.delivery ? { delivery: moment.delivery } : {},
         actions
       });
@@ -13394,8 +13396,8 @@ function compileLessonPlan(value, options = {}) {
         const anchor = resolvedReference(`${activityPath}.reference`);
         reflections.push({
           as: `section-${pad2(sectionOffset + 1)}-reflection-${pad2(activityOffset + 1)}`,
-          prompt: activity.prompt,
-          answer: activity.answer,
+          prompt: namedNumbers(activity.prompt, plan),
+          answer: namedNumbers(activity.answer, plan),
           anchor: wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias,
           availability: { kind: "after_lesson" }
         });
@@ -13403,11 +13405,11 @@ function compileLessonPlan(value, options = {}) {
       }
       const common = {
         as: `section-${pad2(sectionOffset + 1)}-task-${pad2(activityOffset + 1)}`,
-        prompt: activity.prompt,
+        prompt: namedNumbers(activity.prompt, plan),
         availability: { kind: "after_lesson" },
-        hints: [...activity.hints],
+        hints: activity.hints.map((hint) => namedNumbers(hint, plan)),
         ...activity.hint_after_attempts ? { hint_after_attempts: activity.hint_after_attempts } : {},
-        ...activity.success_message ? { success_message: activity.success_message } : {}
+        ...activity.success_message ? { success_message: namedNumbers(activity.success_message, plan) } : {}
       };
       if (activity.kind === "number_target") {
         const firstNumber = activity.number_controls[0]?.number;
