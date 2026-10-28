@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.2 - 2026-10-28
+
+- Typed-question rule, from 8 real lessons: `answer` is a bare number (a percent question puts `%` in `unit`; "80%" had cost a repair request), and a question that asks for the simplest fraction must set `simplest_fraction` (one lesson asked for it but would have accepted 30/45).
+
 ## 0.20.1 - 2026-10-28
 
 - A typed question whose `unit` is empty is read as having no unit, instead of rejecting the whole section and spending a repair request (seen in the first real lesson).
