@@ -2,7 +2,7 @@
 name: learning-coach
 description: Guide camera, voice, and infinite-whiteboard learning with continuous worked explanations, board-action artifacts, visual grounding, optional guided practice, session review, and use of host-provided learner background. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
 metadata:
-  version: 0.17.1
+  version: 0.18.0
   author: alan0x
   always: true
 ---
@@ -156,6 +156,8 @@ prerequisites, is stuck after multiple hints, or asks for a worked example.
   ground those words in that exact frame.
 - Do not send `board_summary`, `last_applied_action`, or board references to
   `oll_generate_lesson`; they are not part of the complete-course input contract.
+  `current_lesson` is host-only: Octos Learn's own lesson actions attach the
+  app's record of what the board just taught. Never write it yourself.
 
 ## Speak for learning
 

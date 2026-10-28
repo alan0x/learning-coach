@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.0 - 2026-10-28
+
+- The three complete-lesson actions accept an optional `current_lesson`: the host's summary of what the same board just taught (titles, sections, thinking questions with reference answers, practice). With it, a follow-up such as "I don't get the reflection question" is taught directly instead of being asked to describe itself again; requests without it keep their exact prompts.
+
 ## 0.17.1 - 2026-10-26
 
 - Narration, practice prompts, hints and success messages show a lesson number's own symbol instead of a formula placeholder such as `n1`.
