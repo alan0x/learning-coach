@@ -2,7 +2,7 @@
 name: learning-coach
 description: Guide camera, voice, and infinite-whiteboard learning with continuous worked explanations, board-action artifacts, visual grounding, optional guided practice, session review, and use of host-provided learner background. Activate for explicit tutoring requests or when the client sends a [[LEARNING_SESSION]] marker. Do not apply teaching behavior to ordinary assistant conversations without learning intent.
 metadata:
-  version: 0.17.1
+  version: 0.18.0
   author: alan0x
   always: true
 ---
@@ -156,6 +156,9 @@ prerequisites, is stuck after multiple hints, or asks for a worked example.
   ground those words in that exact frame.
 - Do not send `board_summary`, `last_applied_action`, or board references to
   `oll_generate_lesson`; they are not part of the complete-course input contract.
+  The host product's lesson actions may send `current_lesson`, its own summary
+  of what the same board just taught, so a follow-up such as "the reflection
+  question" is answered instead of being asked to repeat itself.
 
 ## Speak for learning
 

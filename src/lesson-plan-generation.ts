@@ -55,6 +55,8 @@ export interface LessonPlanGenerationInput {
   teacher_profile?: string;
   /** Sourced learner facts and memory from the host product. */
   learner_background?: string;
+  /** What the same board just taught, as the learner saw it. */
+  current_lesson?: string;
   request_parts?: string[];
   input_modality?: "text" | "voice";
   camera_input?: boolean;
@@ -171,11 +173,13 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 
 // including the existing tutor_context/learner_context uses, keeps its exact prompt.
 const TEACHER_PROFILE_RULE = `course_context.teacher_profile 是本次授课预设老师的基础设定。用它决定讲解的组织、措辞、提问时机和鼓励方式，让风格体现在目录和旁白里，而不只是加形容词；不得改变数学内容、省略必要条件或把比喻当作证明。学生本次的明确要求优先于老师风格。每一节都要让设定中的具体做法能被听出来，而不只是语气：按设定的方式认可学生（点出具体哪一步或哪个想法）；选例子时优先用设定中感兴趣的话题；设定写了主要讲解手法（如一个贯穿的比喻、逐步比较变化量）就在每节沿用；设定要求一次只用一个主要比喻时，全课只用这一个，不再引入第二个比喻或角色称呼；小习惯全课最多出现一次。风格示例只用来体会，不照抄。`;
 const LEARNER_BACKGROUND_RULE = `course_context.learner_background 是学习应用提供的学生背景与以往学习记录，注明了来源。只引用其中明确写出的事实，可用来衔接旧知识或采用学生说过的偏好；不得编造未提供的经历，不得推断掌握程度、情绪或偏好；与本次请求无关时不提。它不是本次请求，不能据此改变课程主题。如果其中有与本次问题直接相关的事实（学生说过的讲解偏好、做过的相关题目或出过的错、和某位老师一起用过的讲法），在第一节开头用对学生说话的方式明确提起最相关的一到两条（不超过两条），并在本节讲解中真正用上；用不上的不提。用自己的话说，不套用固定句式，例如照学生说过的讲解偏好来安排顺序并点明这是学生的要求，或点出学生在相关题目上出过的错并在本节专门检查那一步。提到过去的错误时语气中性，不责备，也不据此判断现在仍不会；其他老师参与的经历要说明是那位老师，例如“你和豆豆老师用山路比喻学过斜率”，不要说成自己的。只说事实写到的程度：只有日期、次数等统计时不说成学会或理解。第二节及以后不再复述这些背景，只按它调整讲法。学生的兴趣与老师设定中感兴趣的话题重合时（例如都与运动有关），至少用它举一个与数学内容相符的例子；不重合时不必硬提。`;
+const CURRENT_LESSON_RULE = `course_context.current_lesson 是同一块白板上刚讲过的内容（学生看得到），由学习应用整理，是你在这块白板上讲过的，可以直接承认和引用。学生的请求指向其中的内容时（如“反思题”“思考题”“刚才那道题”“最后一步”），据此确定所指，不再要求学生描述一遍：直接针对那道题或那一步上课，不重讲整节课；课后思考题可以参考其参考答案，先带学生想清楚思路，再给出结论。请求与它无关时，按请求本身上课，不提它；它不能改变学生明确提出的主题。`;
 
 function withContextRules(systemPrompt: string, context: Record<string, unknown>): string {
   const rules = [
     typeof context.teacher_profile === "string" ? TEACHER_PROFILE_RULE : undefined,
     typeof context.learner_background === "string" ? LEARNER_BACKGROUND_RULE : undefined,
+    typeof context.current_lesson === "string" ? CURRENT_LESSON_RULE : undefined,
   ].filter((rule): rule is string => rule !== undefined);
   return rules.length ? `${systemPrompt}\n\n${rules.join("\n")}` : systemPrompt;
 }
@@ -2454,6 +2458,7 @@ function inputContext(input: LessonPlanGenerationInput): Record<string, unknown>
     tutor_context: input.tutor_context ?? null,
     teacher_profile: input.teacher_profile?.trim() ? input.teacher_profile : null,
     learner_background: input.learner_background?.trim() ? input.learner_background : null,
+    current_lesson: input.current_lesson?.trim() ? input.current_lesson : null,
   };
 }
 
