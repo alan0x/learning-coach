@@ -46,6 +46,7 @@ interface ToolInput {
   teacher_profile?: string;
   learner_background?: string;
   current_lesson?: string;
+  teacher_experiences?: string;
   input_modality?: "text" | "voice";
   camera_media?: string;
   selection_media?: string;
@@ -389,6 +390,7 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     "teacher_profile",
     "learner_background",
     "current_lesson",
+    "teacher_experiences",
     "input_modality",
     "camera_media",
     "selection_media",
@@ -460,6 +462,9 @@ function parseCompleteLessonInput(raw: string): ToolInput {
       : {}),
     ...(typeof input.current_lesson === "string" && input.current_lesson.trim()
       ? { current_lesson: truncate(input.current_lesson) }
+      : {}),
+    ...(typeof input.teacher_experiences === "string" && input.teacher_experiences.trim()
+      ? { teacher_experiences: truncate(input.teacher_experiences) }
       : {}),
     input_modality: input.input_modality === "voice" ? "voice" : "text",
     ...(typeof input.camera_media === "string"
@@ -2911,6 +2916,7 @@ async function main(): Promise<void> {
           teacher_profile: input.teacher_profile,
           learner_background: input.learner_background,
           current_lesson: input.current_lesson,
+          teacher_experiences: input.teacher_experiences,
           input_modality: input.input_modality,
           camera_input: input.request_source === "current_image",
           selection_input: input.request_source === "ink_selection",

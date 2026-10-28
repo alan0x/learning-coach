@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.0 - 2026-10-28
+
+- The three complete-lesson actions accept an optional `teacher_experiences`: a few facts from the preset teacher's own everyday life. The teacher may mention one, in a sentence or two and only when it makes the concept concrete, then use it as the setting for the example; most lessons mention none, and no new life facts may be invented. Requests without it keep their exact prompts.
+
 ## 0.18.0 - 2026-10-28
 
 - The three complete-lesson actions accept an optional `current_lesson`: the host's summary of what the same board just taught (titles, sections, thinking questions with reference answers, practice). With it, a follow-up such as "I don't get the reflection question" is taught directly instead of being asked to describe itself again; requests without it keep their exact prompts.

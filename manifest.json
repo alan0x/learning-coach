@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -364,6 +364,7 @@
           "teacher_profile": { "type": "string", "description": "Optional preset teacher settings from the host product (style, focus, responses). Shapes organization and wording; never changes the mathematics or overrides the learner's explicit request." },
           "learner_background": { "type": "string", "description": "Optional learner background and prior learning facts from the host product, with sources. Only stated facts may be cited; it is never a new request." },
           "current_lesson": { "type": "string", "description": "Optional summary of what the same board just taught (titles, sections, thinking questions with reference answers, practice), as the learner saw it. Resolves follow-ups such as 'the reflection question'; it is never a new request." },
+          "teacher_experiences": { "type": "string", "description": "Optional facts from the preset teacher's own (fictional, everyday) life. The teacher may mention at most one, briefly and only when it makes the concept concrete; most lessons mention none." },
           "learner_context": {
             "type": "string",
             "description": "Optional nearby problem statement or established math context for a short follow-up question."
@@ -425,6 +426,7 @@
           "teacher_profile": { "type": "string", "description": "Optional preset teacher settings from the host product (style, focus, responses). Shapes organization and wording; never changes the mathematics or overrides the learner's explicit request." },
           "learner_background": { "type": "string", "description": "Optional learner background and prior learning facts from the host product, with sources. Only stated facts may be cited; it is never a new request." },
           "current_lesson": { "type": "string", "description": "Optional summary of what the same board just taught (titles, sections, thinking questions with reference answers, practice), as the learner saw it. Resolves follow-ups such as 'the reflection question'; it is never a new request." },
+          "teacher_experiences": { "type": "string", "description": "Optional facts from the preset teacher's own (fictional, everyday) life. The teacher may mention at most one, briefly and only when it makes the concept concrete; most lessons mention none." },
           "input_modality": {
             "type": "string",
             "enum": ["text", "voice"]
@@ -484,6 +486,7 @@
           "teacher_profile": { "type": "string", "description": "Optional preset teacher settings from the host product (style, focus, responses). Shapes organization and wording; never changes the mathematics or overrides the learner's explicit request." },
           "learner_background": { "type": "string", "description": "Optional learner background and prior learning facts from the host product, with sources. Only stated facts may be cited; it is never a new request." },
           "current_lesson": { "type": "string", "description": "Optional summary of what the same board just taught (titles, sections, thinking questions with reference answers, practice), as the learner saw it. Resolves follow-ups such as 'the reflection question'; it is never a new request." },
+          "teacher_experiences": { "type": "string", "description": "Optional facts from the preset teacher's own (fictional, everyday) life. The teacher may mention at most one, briefly and only when it makes the concept concrete; most lessons mention none." },
           "input_modality": {
             "type": "string",
             "enum": ["text", "voice"]

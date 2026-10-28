@@ -4946,7 +4946,7 @@ test("steepness check rejects the signed-k claim but not the learner's question 
   assert.doesNotThrow(withNarration("k 为正时，斜率越大直线越陡。"));
 });
 
-test("the board's current lesson reaches the planning call only; sections follow the outline", async () => {
+test("the board's current lesson and the teacher's experiences reach the planning call only; sections follow the outline", async () => {
   const plan = completeLessonPlanFixtures.unit_circle_to_sine;
   const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
     version: plan.version,
@@ -4957,7 +4957,10 @@ test("the board's current lesson reaches the planning call only; sections follow
   const outline = stagedOutline(plan, drafts);
   const seen = [];
   await generateLessonPlanWithModel(async (request) => {
-    seen.push({ label: request.label, lesson: JSON.parse(request.prompt).course_context.current_lesson ?? null, rule: /current_lesson 是同一块白板/u.test(request.system_prompt) });
+    const context = JSON.parse(request.prompt).course_context;
+    seen.push({ label: request.label, lesson: context.current_lesson ?? null, experiences: context.teacher_experiences ?? null,
+      rule: /current_lesson 是同一块白板/u.test(request.system_prompt) && /teacher_experiences 是这位老师/u.test(request.system_prompt),
+      later: /不补充新的地点、人物或经历/u.test(request.system_prompt) });
     if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, drafts[0]);
     if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
     return sectionModelResponse(request, drafts);
@@ -4965,12 +4968,15 @@ test("the board's current lesson reaches the planning call only; sections follow
     turn_id: "turn-current-lesson-sections",
     learner_request: "反思题我不会",
     current_lesson: "本白板刚讲过的内容（学生看得到）：\n最近一节课：单位圆",
+    teacher_experiences: "- 我在观星塔值夜，每隔一小时记一次气温。",
   });
   assert.equal(seen[0].label, "lesson-plan-bootstrap");
-  assert.ok(seen[0].lesson && seen[0].rule);
+  assert.ok(seen[0].lesson && seen[0].experiences && seen[0].rule);
   const sections = seen.filter((call) => call.label === "lesson-plan-section");
   assert.ok(sections.length > 0);
-  for (const call of sections) assert.ok(call.lesson === null && !call.rule);
+  for (const call of sections) assert.ok(call.lesson === null && call.experiences === null && !call.rule);
+  // Later sections keep the limits on carrying the experience forward.
+  assert.ok(sections.every((call) => call.later));
 });
 
 test("a first section written after the planning call still sees the board's current lesson", async () => {
