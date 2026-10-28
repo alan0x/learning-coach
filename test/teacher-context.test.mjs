@@ -92,6 +92,7 @@ test("a teacher's own experiences are optional, brief, and never invented beyond
   assert.match(withExperiences.system_prompt, /另外补充的细节和数字要与本课 outline 里的数值一致/u);
   assert.match(withExperiences.system_prompt, /两者冲突时不提经历/u);
   assert.doesNotMatch(withExperiences.system_prompt, /真实经历/u);
+  assert.match(withExperiences.system_prompt, /老师现在仍在学院任教/u);
   assert.match(withExperiences.system_prompt, /不能编出新的地点、人物、职业或经历/u);
   assert.match(withExperiences.system_prompt, /不要说成是和学生一起经历的/u);
   assert.equal(JSON.parse(withExperiences.prompt).course_context.teacher_experiences, experiences);
