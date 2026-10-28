@@ -74,8 +74,10 @@ test("the board's current lesson resolves a follow-up that points back at it", a
   const followUp = await firstRequest({ learner_request: "我不知道反思题，你能给我讲讲吗？", current_lesson: lesson });
   assert.ok(followUp.system_prompt.startsWith(plain.system_prompt));
   assert.match(followUp.system_prompt, /current_lesson 是同一块白板上刚讲过的内容/u);
-  assert.match(followUp.system_prompt, /不再要求学生描述一遍/u);
+  assert.match(followUp.system_prompt, /也不要求学生再描述一遍/u);
   assert.match(followUp.system_prompt, /不能改变学生明确提出的主题/u);
+  assert.match(followUp.system_prompt, /应生成课程（generate_lesson），不要判为需要追问/u);
+  assert.match(followUp.system_prompt, /附带了图片或选区时，“这道题”“这里”指图片或选区里的内容/u);
   assert.equal(JSON.parse(followUp.prompt).course_context.current_lesson, lesson);
   assert.doesNotMatch(plain.system_prompt, /current_lesson/u);
 });
@@ -93,7 +95,7 @@ test("all three complete-lesson actions declare the host fields; the agent-facin
     assert.equal(schema.properties.teacher_profile.type, "string");
     assert.equal(schema.properties.learner_background.type, "string");
     assert.equal(schema.properties.current_lesson.type, "string");
-    assert.ok(!(schema.required ?? []).includes("teacher_profile") && !(schema.required ?? []).includes("learner_background"));
+    for (const field of ["teacher_profile", "learner_background", "current_lesson"]) assert.ok(!(schema.required ?? []).includes(field));
   }
 });
 

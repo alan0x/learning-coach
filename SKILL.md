@@ -156,9 +156,8 @@ prerequisites, is stuck after multiple hints, or asks for a worked example.
   ground those words in that exact frame.
 - Do not send `board_summary`, `last_applied_action`, or board references to
   `oll_generate_lesson`; they are not part of the complete-course input contract.
-  The host product's lesson actions may send `current_lesson`, its own summary
-  of what the same board just taught, so a follow-up such as "the reflection
-  question" is answered instead of being asked to repeat itself.
+  `current_lesson` is host-only: Octos Learn's own lesson actions attach the
+  app's record of what the board just taught. Never write it yourself.
 
 ## Speak for learning
 

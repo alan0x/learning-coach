@@ -4945,3 +4945,30 @@ test("steepness check rejects the signed-k claim but not the learner's question 
   assert.doesNotThrow(withNarration("斜率 k 越大，直线不一定越陡，因为负斜率也可能很陡。"));
   assert.doesNotThrow(withNarration("k 为正时，斜率越大直线越陡。"));
 });
+
+test("the board's current lesson reaches the planning call only; sections follow the outline", async () => {
+  const plan = completeLessonPlanFixtures.unit_circle_to_sine;
+  const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
+    version: plan.version,
+    section: index + 1,
+    moments,
+    ...(student_activities ? { student_activities } : {}),
+  }));
+  const outline = stagedOutline(plan, drafts);
+  const seen = [];
+  await generateLessonPlanWithModel(async (request) => {
+    seen.push({ label: request.label, lesson: JSON.parse(request.prompt).course_context.current_lesson ?? null, rule: /current_lesson 是同一块白板/u.test(request.system_prompt) });
+    if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, drafts[0]);
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
+    return sectionModelResponse(request, drafts);
+  }, {
+    turn_id: "turn-current-lesson-sections",
+    learner_request: "反思题我不会",
+    current_lesson: "本白板刚讲过的内容（学生看得到）：\n最近一节课：单位圆",
+  });
+  assert.equal(seen[0].label, "lesson-plan-bootstrap");
+  assert.ok(seen[0].lesson && seen[0].rule);
+  const sections = seen.filter((call) => call.label === "lesson-plan-section");
+  assert.ok(sections.length > 0);
+  for (const call of sections) assert.ok(call.lesson === null && !call.rule);
+});
