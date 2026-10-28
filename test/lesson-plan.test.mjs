@@ -4972,3 +4972,30 @@ test("the board's current lesson reaches the planning call only; sections follow
   assert.ok(sections.length > 0);
   for (const call of sections) assert.ok(call.lesson === null && !call.rule);
 });
+
+test("a first section written after the planning call still sees the board's current lesson", async () => {
+  const plan = completeLessonPlanFixtures.unit_circle_to_sine;
+  const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({
+    version: plan.version,
+    section: index + 1,
+    moments,
+    ...(student_activities ? { student_activities } : {}),
+  }));
+  const outline = stagedOutline(plan, drafts);
+  const seen = [];
+  await generateLessonPlanWithModel(async (request) => {
+    seen.push({ label: request.label, section: request.section, lesson: JSON.parse(request.prompt).course_context.current_lesson ?? null });
+    // The bootstrap answers with an outline only, so section 1 is written separately.
+    if (request.label === "lesson-plan-bootstrap") return JSON.stringify({ outline });
+    if (request.label === "lesson-plan-outline") return JSON.stringify(outline);
+    return sectionModelResponse(request, drafts);
+  }, {
+    turn_id: "turn-current-lesson-first-section",
+    learner_request: "反思题我不会",
+    current_lesson: "本白板刚讲过的内容（学生看得到）：\n最近一节课：单位圆",
+  }).catch(() => undefined);
+  const first = seen.find((call) => call.label === "lesson-plan-section" && call.section === 1);
+  assert.ok(first, JSON.stringify(seen.map((call) => [call.label, call.section])));
+  assert.ok(first.lesson);
+  for (const call of seen.filter((entry) => entry.label === "lesson-plan-section" && entry.section > 1)) assert.equal(call.lesson, null);
+});
