@@ -613,6 +613,26 @@ export function coerceLessonPlanOutlineModelNumbers(value: unknown, requestPartC
   return coerceModelNumbers(value, lessonPlanOutlineShapeJsonSchema(requestPartCount), "$lessonPlanOutline");
 }
 
+function answerActivitiesSchema(): LessonPlanJsonSchema {
+  return {
+    type: "array",
+    maxItems: 2,
+    items: object({
+      prompt: string(480),
+      answer: string(64),
+      check: string(256),
+      unit: string(16),
+      simplest_fraction: { type: "boolean" },
+      hints: { type: "array", minItems: 1, maxItems: 3, items: string(480) },
+    }, ["prompt", "answer", "check", "hints"]),
+  };
+}
+
+/** The practice-only request that follows a one-section lesson. */
+export function buildLessonPlanPracticeJsonSchema(): LessonPlanJsonSchema {
+  return object({ answer_activities: answerActivitiesSchema() }, ["answer_activities"]);
+}
+
 export function buildLessonPlanSectionDraftJsonSchema(
   outlineValue: unknown,
   sectionIndex: number,
@@ -689,18 +709,7 @@ function lessonPlanSectionDraftShapeJsonSchema(
         maxItems: 2,
         items: object({ prompt: string(), answer: string() }, ["prompt", "answer"]),
       },
-      answer_activities: {
-        type: "array",
-        maxItems: 2,
-        items: object({
-          prompt: string(480),
-          answer: string(64),
-          check: string(256),
-          unit: string(16),
-          simplest_fraction: { type: "boolean" },
-          hints: { type: "array", minItems: 1, maxItems: 3, items: string(480) },
-        }, ["prompt", "answer", "check", "hints"]),
-      },
+      answer_activities: answerActivitiesSchema(),
     }),
     ...(supportsNumberActivity ? {
       number_activities: {

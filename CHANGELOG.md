@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.0 - 2026-10-28
+
+- A one-section lesson gets practice too: once its section is playable, one small request (`part: "practice"`, schema `answer_activities` only) asks for 0–2 typed questions about what the section taught, placed by its last formula or note. A question whose answer disagrees with its arithmetic is dropped, not repaired, and any failure delivers the lesson exactly as before. The first request and every multi-section lesson's requests are byte-identical to 0.20.2.
+
 ## 0.20.2 - 2026-10-28
 
 - Typed-question rule, from 8 real lessons: `answer` is a bare number (a percent question puts `%` in `unit`; "80%" had cost a repair request), and a question that asks for the simplest fraction must set `simplest_fraction` (one lesson asked for it but would have accepted 30/45).

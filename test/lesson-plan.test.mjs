@@ -4564,6 +4564,46 @@ test("a later section's typed question becomes a numeric answer task; the first 
   assert.ok(task.anchor.startsWith("section-03-"), "the question sits by a card of its own section");
 });
 
+test("a one-section lesson asks for practice after it is playable; bad or failed practice never costs the lesson", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/later-practice-generation.json"), "utf8"));
+  const bootstrap = JSON.parse(fixture.responses[0]);
+  const outline = bootstrap.outline;
+  outline.sections = [outline.sections[0]];
+  outline.request_coverage = outline.request_coverage.map(item => ({ ...item, sections: [1] }));
+  outline.course_visuals = outline.course_visuals.filter(v => v.use_sections.includes(1)).map(v => ({ ...v, use_sections: [1] }));
+  const generate = async (practiceResponse) => {
+    const events = [];
+    const result = await generateLessonPlanWithModel(async request => {
+      events.push(request.part);
+      if (request.part === "bootstrap") return JSON.stringify(bootstrap);
+      assert.equal(request.part, "practice");
+      assert.deepEqual(Object.keys(request.response_schema.properties), ["answer_activities"]);
+      assert.ok(JSON.parse(request.prompt).lesson.taught.length > 0);
+      return practiceResponse();
+    }, { ...fixture.input, turn_id: "one-section-practice" }, {
+      on_playable_prefix: () => { events.push("playable"); },
+    });
+    return { events, tasks: result.lesson.lesson.tasks ?? [], steps: result.lesson.steps.length };
+  };
+
+  const good = await generate(() => JSON.stringify({ answer_activities: [
+    { prompt: "当 y₀ = 2 时，截线在 x = 0 处的 z 值是多少？", answer: "4", check: "0^2+2^2", unit: "", hints: ["把 x = 0、y₀ = 2 代入。"] },
+    { prompt: "答案和算式不一致的题", answer: "5", check: "2+2", hints: ["不会出现。"] },
+  ] }));
+  assert.deepEqual(good.events, ["bootstrap", "playable", "practice"], "practice waits until the section can play");
+  assert.equal(good.steps, 1);
+  assert.deepEqual(good.tasks.map(task => [task.completion.kind, task.completion.answer]), [["numeric_answer", "4"]],
+    "a question that disagrees with its arithmetic is dropped, not repaired");
+  assert.ok(good.tasks[0].anchor.startsWith("section-01-"));
+
+  for (const failure of [() => "not json", () => { throw new Error("provider unavailable"); }, () => JSON.stringify({ answer_activities: [] })]) {
+    const result = await generate(failure);
+    assert.equal(result.steps, 1);
+    assert.equal(result.tasks.length, 0, "the lesson is delivered exactly as before");
+  }
+});
+
 test("new construction supplies opening context without advancing delayed visual content", () => {
   const plan = samplePlan("process_diagram");
   plan.sections[0].moments[0].actions[0].timing = "after_speech";

@@ -254,7 +254,7 @@ export interface StructuredModelRequest {
   thinkingLevel?: ThinkingLevel;
   signal?: AbortSignal;
   media?: { mimeType: "image/png" | "image/jpeg" | "image/webp"; data: string };
-  lessonPlanPart?: "bootstrap" | "outline" | "section";
+  lessonPlanPart?: "bootstrap" | "outline" | "section" | "practice";
   lessonPlanSection?: number;
   lessonPlanAttempt?: number;
 }

@@ -868,7 +868,8 @@ test("the complete-lesson command accepts an outline and first section in one mo
     assert.equal(completed.authoring_strategy, "lesson_plan");
     assert.equal(completed.lesson_plan_sections, 1);
     assert.equal(completed.published_parts, 1);
-    assert.equal(modelCalls, 1);
+    // One combined response, then the practice request a one-section lesson makes.
+    assert.equal(modelCalls, 2);
     const lesson = JSON.parse(await readFile(completed.files_to_send[0], "utf8"));
     assert.equal(lesson.dsl, "octos.lesson");
     assert.equal(lesson.steps.length, 1);
@@ -2290,7 +2291,10 @@ test("camera lessons send one image only to the first outline request and reuse 
       },
     });
     assert.equal(result.exitCode, 0, result.stderr);
-    assert.equal(requests.length, 3);
+    // The fourth request is the one-section lesson's practice; it never resends the image.
+    assert.equal(requests.length, 4);
+    assert.equal(requests[3].contents[0].parts.length, 1);
+    assert.ok(requests[3].generationConfig.responseJsonSchema.properties.answer_activities);
     assert.equal(requests[0].contents[0].parts.length, 2);
     assert.equal(requests[0].contents[0].parts[1].inlineData.mimeType, "image/png");
     assert.equal(requests[1].contents[0].parts.length, 1);
