@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.1 - 2026-10-28
+
+- A typed question whose `unit` is empty is read as having no unit, instead of rejecting the whole section and spending a repair request (seen in the first real lesson).
+
 ## 0.20.0 - 2026-10-28
 
 - Later sections may end with up to two typed numeric questions (`answer_activities`): the learner types a whole number, decimal, fraction or mixed number after the lesson and the program checks it, so topics without a draggable visual can be practised and lit on the star map. The model writes both the answer and plain arithmetic for it (`check`); a question whose answer differs from its arithmetic is rejected. The first playable request is unchanged. Requires OLL player 0.5.0 (`student-tasks:numeric_answer`).

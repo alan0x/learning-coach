@@ -16125,12 +16125,13 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
     const card = questionCard ?? lastCard;
     if (!card) return;
     const { prompt, answer, check, unit, simplest_fraction, hints } = value2;
+    const hasUnit = unit !== void 0 && !(typeof unit === "string" && !unit.trim());
     activities.push({ order: activities.length + 1, activity: {
       kind: "numeric_answer",
       prompt,
       answer,
       check,
-      ...unit !== void 0 ? { unit } : {},
+      ...hasUnit ? { unit } : {},
       ...simplest_fraction !== void 0 ? { simplest_fraction } : {},
       hints,
       reference: structuredClone(card)

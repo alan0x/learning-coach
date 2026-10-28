@@ -2196,9 +2196,11 @@ function lowerModelSectionDraft(
     const card = questionCard ?? lastCard;
     if (!card) return;
     const { prompt, answer, check, unit, simplest_fraction, hints } = value as Record<string, unknown>;
+    // An empty unit means the answer has none, not a malformed question.
+    const hasUnit = unit !== undefined && !(typeof unit === "string" && !unit.trim());
     activities.push({ order: activities.length + 1, activity: {
       kind: "numeric_answer", prompt, answer, check,
-      ...(unit !== undefined ? { unit } : {}),
+      ...(hasUnit ? { unit } : {}),
       ...(simplest_fraction !== undefined ? { simplest_fraction } : {}),
       hints, reference: structuredClone(card),
     } });

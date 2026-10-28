@@ -4544,6 +4544,7 @@ test("a later section's typed question becomes a numeric answer task; the first 
     prompt: "截线 g(x) = x^2 + 1 在 x = 3 处的切线斜率是多少？",
     answer: "6",
     check: "2*3",
+    unit: "",
     hints: ["先求 g'(x)，再代入 x = 3。"],
   }];
   responses[2] = JSON.stringify(third);
@@ -4558,6 +4559,7 @@ test("a later section's typed question becomes a numeric answer task; the first 
   assert.ok(schemas.filter(call => call.section >= 2).every(call => call.properties.includes("answer_activities")));
   const task = generated.lesson.lesson.tasks.find(candidate => candidate.completion.kind === "numeric_answer");
   assert.equal(task.completion.answer, "6");
+  assert.equal("unit" in task.completion, false, "an empty unit is no unit, not a rejected section");
   assert.deepEqual(task.allowed_operations, [{ kind: "answer_entry" }]);
   assert.ok(task.anchor.startsWith("section-03-"), "the question sits by a card of its own section");
 });
