@@ -4591,6 +4591,44 @@ test("a thinking question compiles to an after-lesson reflection anchored to its
   assert.equal(validated.lesson.lesson.reflections?.length, 1, "the pinned OLL validator accepts the reflection");
 });
 
+test("a typed question compiles to a numeric answer task by its card, checked against its arithmetic", () => {
+  const plan = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
+  plan.sections[1].student_activities = [{
+    kind: "numeric_answer",
+    prompt: "一个圆的半径是 3/4，直径是多少？写成最简分数。",
+    answer: "1 1/2",
+    check: "2 * 3/4",
+    simplest_fraction: true,
+    reference: { source: "local_board_item", moment: 1, item: 2 },
+    hints: ["直径是半径的 2 倍。"],
+  }];
+  const { lesson } = compileLessonPlan(plan);
+  const task = lesson.lesson.tasks?.find((candidate) => candidate.completion.kind === "numeric_answer");
+  assert.deepEqual(task, {
+    as: "section-02-task-01",
+    prompt: "一个圆的半径是 3/4，直径是多少？写成最简分数。",
+    availability: { kind: "after_lesson" },
+    hints: ["直径是半径的 2 倍。"],
+    anchor: "section-02-moment-01-item-02",
+    allowed_operations: [{ kind: "answer_entry" }],
+    completion: { kind: "numeric_answer", answer: "1 1/2", form: "simplest_fraction" },
+  });
+  const validated = compileAndValidateLessonPlan(plan);
+  assert.ok(validated.lesson.lesson.tasks?.some((candidate) => candidate.completion.kind === "numeric_answer"),
+    "the OLL validator accepts the numeric answer task");
+
+  const rejects = (change, pattern) => {
+    const copy = structuredClone(plan);
+    change(copy.sections[1].student_activities[0]);
+    assert.throws(() => compileLessonPlan(copy), pattern);
+  };
+  rejects((activity) => { activity.answer = "1 1/4"; }, /does not equal its check/);
+  rejects((activity) => { activity.check = "2 * r"; }, /arithmetic on numbers only/);
+  rejects((activity) => { activity.answer = "6/4"; activity.check = "6/4"; }, /lowest terms/);
+  rejects((activity) => { activity.answer = "one and a half"; }, /whole number, decimal, fraction or mixed number/);
+  rejects((activity) => { activity.reference = { source: "close" }; }, /reference|board card/);
+});
+
 
 function appendStandaloneGraph(plan, parameters, numbers = [1]) {
   plan.sections[1].moments.push({ narration: "Continue observing the same mathematical state.", actions: [

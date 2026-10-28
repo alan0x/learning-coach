@@ -1381,7 +1381,7 @@ function sanitizeNonessentialVisuals(
     }
     if (section.student_activities) {
       section.student_activities = section.student_activities.flatMap((activity) => {
-        if (activity.kind !== "scene3d_view" && activity.kind !== "reflection") return [activity];
+        if (activity.kind === "number_target") return [activity];
         const reference = normalizeReference(activity.reference, sectionNumber);
         return reference ? [{ ...activity, reference }] : [];
       });

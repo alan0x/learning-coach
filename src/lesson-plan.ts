@@ -1,3 +1,5 @@
+import { compileMathExpression, isSimplestFraction, parseNumericAnswer } from "octos-lesson-language";
+
 import { REARRANGEMENT_MODEL_GUIDANCE } from "./rearrangement.js";
 export const LESSON_PLAN_VERSION = "0.1" as const;
 
@@ -445,6 +447,22 @@ export type LessonPlanStudentActivity =
     expression?: LessonPlanMathExpression;
     value: number;
     tolerance: number;
+    hints: string[];
+    hint_after_attempts?: number;
+    success_message?: string;
+  }
+  | {
+    /** A question answered by typing a number; the program checks the answer. */
+    kind: "numeric_answer";
+    prompt: string;
+    /** Whole number, decimal, fraction or mixed number, as a learner would type it. */
+    answer: string;
+    /** Arithmetic that gives the answer; the program evaluates it and rejects a mismatch. */
+    check: string;
+    unit?: string;
+    simplest_fraction?: boolean;
+    /** The board card that poses the question; the task opens under it. */
+    reference: LessonPlanReference;
     hints: string[];
     hint_after_attempts?: number;
     success_message?: string;
@@ -1276,6 +1294,14 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
         if (zoom < 0.2 || zoom > 5) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.zoom`, "zoom is outside the supported range");
         if (finiteNumber(activity.angular_tolerance, `${activityPath}.angular_tolerance`) <= 0) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.angular_tolerance`, "angular tolerance must be positive");
         if (finiteNumber(activity.zoom_tolerance, `${activityPath}.zoom_tolerance`) <= 0) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.zoom_tolerance`, "zoom tolerance must be positive");
+      } else if (activity.kind === "numeric_answer") {
+        allowedKeys(activity, [
+          "kind", "prompt", "answer", "check", "unit", "simplest_fraction", "reference",
+          "hints", "hint_after_attempts", "success_message",
+        ], activityPath);
+        const target = resolveReference(activity.reference, `${activityPath}.reference`, sectionIndex, rawMoments.length);
+        if (target.kind !== "board_item") fail("LESSON_PLAN_ACTIVITY", `${activityPath}.reference`, "a typed question must sit by a board card");
+        validateNumericAnswerActivity(activity, activityPath);
       } else {
         fail("LESSON_PLAN_ACTIVITY", `${activityPath}.kind`, "unsupported student activity");
       }
@@ -1318,6 +1344,35 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
     sections: resolvedSections,
     references,
   };
+}
+
+/**
+ * The model writes both the answer and the arithmetic behind it. The program
+ * evaluates that arithmetic, so a slip between the two never reaches a learner
+ * as a wrong expected answer. It cannot tell whether the arithmetic models a
+ * word problem correctly; that stays with the lesson's review.
+ */
+function validateNumericAnswerActivity(activity: Record<string, unknown>, path: string): void {
+  nonEmptyString(activity.answer, `${path}.answer`, 64);
+  const expected = parseNumericAnswer(activity.answer as string);
+  if (!expected) fail("LESSON_PLAN_ACTIVITY", `${path}.answer`, "answer must be a whole number, decimal, fraction or mixed number");
+  nonEmptyString(activity.check, `${path}.check`, 256);
+  let checked: number;
+  try {
+    checked = compileMathExpression(activity.check as string, [])({});
+  } catch (error) {
+    fail("LESSON_PLAN_ACTIVITY", `${path}.check`, `check must be arithmetic on numbers only: ${(error as Error).message}`);
+  }
+  if (!Number.isFinite(checked!) || Math.abs(checked! - expected!.value) > 1e-9 * Math.max(1, Math.abs(expected!.value))) {
+    fail("LESSON_PLAN_ACTIVITY", `${path}.answer`, `answer ${String(activity.answer)} does not equal its check ${String(activity.check)}`);
+  }
+  optionalString(activity.unit, `${path}.unit`, 16);
+  if (activity.simplest_fraction !== undefined && typeof activity.simplest_fraction !== "boolean") {
+    fail("LESSON_PLAN_ACTIVITY", `${path}.simplest_fraction`, "expected a boolean");
+  }
+  if (activity.simplest_fraction && !isSimplestFraction(expected!)) {
+    fail("LESSON_PLAN_ACTIVITY", `${path}.answer`, "a simplest-fraction answer must itself be in lowest terms");
+  }
 }
 
 export function validateLessonPlan(value: unknown, options: ResolveLessonPlanOptions = {}): LessonPlan {
