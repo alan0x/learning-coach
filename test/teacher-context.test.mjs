@@ -82,6 +82,23 @@ test("the board's current lesson resolves a follow-up that points back at it", a
   assert.doesNotMatch(plain.system_prompt, /current_lesson/u);
 });
 
+test("a teacher's own experiences are optional, brief, and never invented beyond what is given", async () => {
+  const plain = await firstRequest({});
+  const experiences = "- 我在观星塔值夜，每隔一小时记一次气温，天亮前后最冷。";
+  const withExperiences = await firstRequest({ teacher_profile: profile, teacher_experiences: experiences });
+  assert.ok(withExperiences.system_prompt.startsWith(plain.system_prompt));
+  assert.match(withExperiences.system_prompt, /用不上就不提，大多数课都不会提/u);
+  assert.match(withExperiences.system_prompt, /全课最多提一段/u);
+  assert.match(withExperiences.system_prompt, /另外补充的细节和数字要与本课 outline 里的数值一致/u);
+  assert.match(withExperiences.system_prompt, /两者冲突时不提经历/u);
+  assert.doesNotMatch(withExperiences.system_prompt, /真实经历/u);
+  assert.match(withExperiences.system_prompt, /不能编出新的地点、人物、职业或经历/u);
+  assert.match(withExperiences.system_prompt, /不要说成是和学生一起经历的/u);
+  assert.equal(JSON.parse(withExperiences.prompt).course_context.teacher_experiences, experiences);
+  assert.doesNotMatch(plain.system_prompt, /teacher_experiences/u);
+  assert.equal((await firstRequest({ teacher_experiences: " " })).system_prompt, plain.system_prompt);
+});
+
 test("all three complete-lesson actions declare the host fields; the agent-facing tool does not", async () => {
   const manifest = JSON.parse(await readFile(resolve(root, "manifest.json"), "utf8"));
   // The agent model fills tool arguments itself; host facts must not be invented there.
@@ -89,13 +106,15 @@ test("all three complete-lesson actions declare the host fields; the agent-facin
   assert.equal(tool.properties.teacher_profile, undefined);
   assert.equal(tool.properties.learner_background, undefined);
   assert.equal(tool.properties.current_lesson, undefined);
+  assert.equal(tool.properties.teacher_experiences, undefined);
   const schemas = ["learning.lesson.generate", "learning.lesson.generate-from-camera", "learning.lesson.generate-from-selection"]
     .map((id) => manifest.actions.find((action) => action.id === id).input_schema);
   for (const schema of schemas) {
     assert.equal(schema.properties.teacher_profile.type, "string");
     assert.equal(schema.properties.learner_background.type, "string");
     assert.equal(schema.properties.current_lesson.type, "string");
-    for (const field of ["teacher_profile", "learner_background", "current_lesson"]) assert.ok(!(schema.required ?? []).includes(field));
+    assert.equal(schema.properties.teacher_experiences.type, "string");
+    for (const field of ["teacher_profile", "learner_background", "current_lesson", "teacher_experiences"]) assert.ok(!(schema.required ?? []).includes(field));
   }
 });
 
