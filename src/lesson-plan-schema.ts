@@ -689,6 +689,18 @@ function lessonPlanSectionDraftShapeJsonSchema(
         maxItems: 2,
         items: object({ prompt: string(), answer: string() }, ["prompt", "answer"]),
       },
+      answer_activities: {
+        type: "array",
+        maxItems: 2,
+        items: object({
+          prompt: string(480),
+          answer: string(64),
+          check: string(256),
+          unit: string(16),
+          simplest_fraction: { type: "boolean" },
+          hints: { type: "array", minItems: 1, maxItems: 3, items: string(480) },
+        }, ["prompt", "answer", "check", "hints"]),
+      },
     }),
     ...(supportsNumberActivity ? {
       number_activities: {

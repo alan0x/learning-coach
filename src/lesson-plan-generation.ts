@@ -150,6 +150,7 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。
 - 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。
 - 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。
+- 本节讲了能算出确定数值的内容（计算、换算、读数、代入求值）时，写 1 道 answer_activities 让学生课后填数：用课中没算过的新数，课中不说答案。answer 写学生会输入的形式（整数、小数、分数 3/4、带分数 2 3/4）；check 写只含数字的算式（如 2*3/4），程序核对它与 answer 相等；要求最简分数时 simplest_fraction 为 true；unit 只写单位；hints 写 1–2 条不给出答案的提示。
 - 圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
@@ -1869,7 +1870,7 @@ function lowerModelSectionDraft(
   const candidate = root as Record<string, unknown>;
   const allowedRoot = new Set([
     "version", "section", "moments", "course_visual_creates", "reusable_board_creates",
-    "number_activities", "scene3d_activities", "reflection_activities",
+    "number_activities", "scene3d_activities", "reflection_activities", "answer_activities",
   ]);
   for (const key of Object.keys(candidate)) {
     if (!allowedRoot.has(key)) throw new LessonPlanError("LESSON_PLAN_UNKNOWN_FIELD", `$lessonPlanModelSection.${key}`, "unknown field");
@@ -1888,6 +1889,9 @@ function lowerModelSectionDraft(
   }
   if (candidate.reflection_activities !== undefined && !Array.isArray(candidate.reflection_activities)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.reflection_activities", "expected an array");
+  }
+  if (candidate.answer_activities !== undefined && !Array.isArray(candidate.answer_activities)) {
+    throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.answer_activities", "expected an array");
   }
   const courseVisuals = outline.course_visuals ?? [];
   const courseVisualsToCreate = courseVisuals
@@ -2163,15 +2167,16 @@ function lowerModelSectionDraft(
   collectActivities(candidate.scene3d_activities ?? [], "scene3d_view", "$lessonPlanModelSection.scene3d_activities");
   // A thinking question sits by the last formula or note this section wrote
   // (the program chooses the card; the model writes only question and answer).
+  // A typed question prefers that card too, otherwise the last card of any kind.
   let questionCard: Record<string, unknown> | undefined;
+  let lastCard: Record<string, unknown> | undefined;
   (moments as Array<{ actions?: Array<Record<string, unknown>> }>).forEach((moment, momentOffset) => {
     let item = 0;
     for (const action of moment.actions ?? []) {
       if (action.action !== "create") continue;
       item += 1;
-      if (action.kind === "note" || action.kind === "math") {
-        questionCard = { source: "local_board_item", moment: momentOffset + 1, item };
-      }
+      lastCard = { source: "local_board_item", moment: momentOffset + 1, item };
+      if (action.kind === "note" || action.kind === "math") questionCard = lastCard;
     }
   });
   (candidate.reflection_activities as unknown[] | undefined ?? []).forEach((value, index) => {
@@ -2182,6 +2187,21 @@ function lowerModelSectionDraft(
     const { prompt, answer } = value as Record<string, unknown>;
     if (!questionCard) return;
     activities.push({ order: activities.length + 1, activity: { kind: "reflection", prompt, answer, reference: structuredClone(questionCard) } });
+  });
+  (candidate.answer_activities as unknown[] | undefined ?? []).forEach((value, index) => {
+    const itemPath = `$lessonPlanModelSection.answer_activities[${index}]`;
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", itemPath, "expected an object");
+    }
+    const card = questionCard ?? lastCard;
+    if (!card) return;
+    const { prompt, answer, check, unit, simplest_fraction, hints } = value as Record<string, unknown>;
+    activities.push({ order: activities.length + 1, activity: {
+      kind: "numeric_answer", prompt, answer, check,
+      ...(unit !== undefined ? { unit } : {}),
+      ...(simplest_fraction !== undefined ? { simplest_fraction } : {}),
+      hints, reference: structuredClone(card),
+    } });
   });
   activities.sort((left, right) => left.order - right.order);
   let latestBoardReference: Record<string, unknown> | undefined;

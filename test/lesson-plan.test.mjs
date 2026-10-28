@@ -4535,6 +4535,33 @@ test("later practice retains controls of earlier persistent visuals without a fo
   assert.equal(inspected, true);
 });
 
+test("a later section's typed question becomes a numeric answer task; the first playable request stays unchanged", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/later-practice-generation.json"), "utf8"));
+  const responses = [...fixture.responses];
+  const third = JSON.parse(responses[2]);
+  third.answer_activities = [{
+    prompt: "截线 g(x) = x^2 + 1 在 x = 3 处的切线斜率是多少？",
+    answer: "6",
+    check: "2*3",
+    hints: ["先求 g'(x)，再代入 x = 3。"],
+  }];
+  responses[2] = JSON.stringify(third);
+  const schemas = [];
+  const generated = await generateLessonPlanWithModel(async request => {
+    schemas.push({ section: request.section, properties: Object.keys(request.response_schema.properties) });
+    assert.ok(responses.length, "unexpected repair call");
+    return responses.shift();
+  }, { ...fixture.input, turn_id: "replay-typed-question" });
+  const firstRequest = schemas[0];
+  assert.equal(firstRequest.properties.includes("answer_activities"), false, "the bootstrap request does not grow");
+  assert.ok(schemas.filter(call => call.section >= 2).every(call => call.properties.includes("answer_activities")));
+  const task = generated.lesson.lesson.tasks.find(candidate => candidate.completion.kind === "numeric_answer");
+  assert.equal(task.completion.answer, "6");
+  assert.deepEqual(task.allowed_operations, [{ kind: "answer_entry" }]);
+  assert.ok(task.anchor.startsWith("section-03-"), "the question sits by a card of its own section");
+});
+
 test("new construction supplies opening context without advancing delayed visual content", () => {
   const plan = samplePlan("process_diagram");
   plan.sections[0].moments[0].actions[0].timing = "after_speech";
