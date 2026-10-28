@@ -128,6 +128,7 @@
       "properties": {
         "start": {"$ref": "#/$defs/phaseStart"},
         "as": {"$ref": "#/$defs/alias"},
+        "anchor": {"$ref": "#/$defs/alias"},
         "prompt": {"type": "string", "minLength": 1, "maxLength": 480},
         "availability": {
           "type": "object",
@@ -170,6 +171,14 @@
                     "items": {"enum": ["orbit", "zoom", "preset", "reset"]}
                   }
                 }
+              },
+              {
+                "type": "object",
+                "required": ["kind"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "answer_entry"}
+                }
               }
             ]
           }
@@ -201,6 +210,18 @@
                 "angular_tolerance": {"type": "number", "exclusiveMinimum": 0},
                 "zoom_tolerance": {"type": "number", "exclusiveMinimum": 0}
               }
+            },
+            {
+              "type": "object",
+              "required": ["kind", "answer"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {"const": "numeric_answer"},
+                "answer": {"type": "string", "minLength": 1, "maxLength": 64},
+                "tolerance": {"type": "number", "minimum": 0},
+                "unit": {"type": "string", "minLength": 1, "maxLength": 16},
+                "form": {"enum": ["any", "simplest_fraction"]}
+              }
             }
           ]
         },
@@ -212,7 +233,10 @@
         },
         "hint_after_attempts": {"type": "integer", "minimum": 1, "maximum": 20},
         "success_message": {"type": "string", "minLength": 1, "maxLength": 480}
-      }
+      },
+      "if": {"properties": {"completion": {"properties": {"kind": {"const": "numeric_answer"}}, "required": ["kind"]}}, "required": ["completion"]},
+      "then": {"required": ["anchor"]},
+      "else": {"not": {"required": ["anchor"]}}
     },
     "step": {
       "type": "object",

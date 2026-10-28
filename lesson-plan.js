@@ -2230,8 +2230,8 @@ var require_resolve = __commonJS({
       }
       return count;
     }
-    function getFullPath(resolver, id = "", normalize) {
-      if (normalize !== false)
+    function getFullPath(resolver, id = "", normalize2) {
+      if (normalize2 !== false)
         id = normalizeId(id);
       const p = resolver.parse(id);
       return _getFullPath(resolver, p);
@@ -3627,7 +3627,7 @@ var require_fast_uri = __commonJS({
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
-    function normalize(uri, options) {
+    function normalize2(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
         normalizeString(uri, options);
@@ -3920,7 +3920,7 @@ var require_fast_uri = __commonJS({
     }
     var fastUri = {
       SCHEMES,
-      normalize,
+      normalize: normalize2,
       resolve,
       resolveComponent,
       equal,
@@ -7168,1620 +7168,77 @@ var require__ = __commonJS({
   }
 });
 
-// src/rearrangement.ts
-var REARRANGEMENT_CONSTRUCTIONS = {
-  right_triangle_square: {
-    title: "\u76F4\u89D2\u4E09\u89D2\u5F62\u91CD\u6392\u4E0E\u9762\u79EF\u5173\u7CFB",
-    catalog: "4\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\uFF1B\u5916\u6846a+b\uFF1B\u7559\u767Dc\xB2\u2192a\xB2+b\xB2\uFF08\u52FE\u80A1\uFF09",
-    pieces: "4\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\uFF08\u4E24\u76F4\u89D2\u8FB9a\u3001b\uFF0C\u659C\u8FB9c\uFF09",
-    shows: "c\xB2 = a\xB2 + b\xB2",
-    container: "\u5916\u6846\u8FB9\u957Fa+b\uFF0C\u9762\u79EF(a+b)\xB2\uFF1B\u4E0D\u662F\u8FB9\u957Fc\u7684\u6B63\u65B9\u5F62",
-    initial: "\u56DB\u4E2A\u4E09\u89D2\u5F62\u56F4\u4F4F\u8FB9\u957Fc\u7684\u6B63\u65B9\u5F62\u7559\u767D\uFF0C\u9762\u79EFc\xB2",
-    final: "\u4E09\u89D2\u5F62\u62FC\u6210\u4E24\u4E2Aab\u77E9\u5F62\uFF0C\u7559\u767D\u4E3Aa\xB2\u548Cb\xB2\u4E24\u4E2A\u6B63\u65B9\u5F62",
-    proof: "\u6BD4\u8F83\u4E24\u4E2A\u7AEF\u70B9\uFF1A(a+b)\xB2 \u2212 4\xD7ab/2 = c\xB2 = a\xB2+b\xB2",
-    caption: "\u5916\u6846\u8FB9\u957F a+b\u3002\u8D77\u70B9\u7559\u767D c\xB2 \u2192 \u7EC8\u70B9\u7559\u767D a\xB2+b\xB2\uFF1B\u56DB\u4E2A\u4E09\u89D2\u5F62\u7684\u603B\u9762\u79EF\u59CB\u7EC8\u4E3A 4\xD7ab/2\u3002\u6BD4\u8F83\u4E24\u79CD\u5E03\u5C40\u7684\u7559\u767D\uFF1Ac\xB2 = a\xB2+b\xB2\u3002"
-  },
-  square_area_identity: {
-    title: "\u6B63\u65B9\u5F62\u5206\u5757\u4E0E\u9762\u79EF\u6052\u7B49\u5F0F",
-    catalog: "a\xB2\u3001b\xB2\u3001ab\u3001ab\u56DB\u5757\uFF08\u65E0\u4E09\u89D2\u5F62\uFF09\u2192\u8FB9\u957Fa+b\u6B63\u65B9\u5F62\uFF0C\u8BC1(a+b)\xB2=a\xB2+2ab+b\xB2",
-    pieces: "a\xB2\u3001b\xB2\u4E24\u4E2A\u6B63\u65B9\u5F62\u548C\u4E24\u4E2Aab\u77E9\u5F62\uFF0C\u65E0\u4E09\u89D2\u5F62",
-    shows: "(a+b)\xB2 = a\xB2 + 2ab + b\xB2",
-    container: "\u5916\u6846\u8FB9\u957Fa+b\uFF0C\u9762\u79EF(a+b)\xB2",
-    initial: "\u56DB\u5757\u5206\u79BB\uFF1Aa\xB2\u3001ab\u3001ab\u3001b\xB2",
-    final: "\u56DB\u5757\u586B\u6EE1\u8FB9\u957Fa+b\u7684\u6B63\u65B9\u5F62",
-    proof: "\u6574\u5757\u9762\u79EF\u7B49\u4E8E\u56DB\u5757\u9762\u79EF\u4E4B\u548C\uFF1A(a+b)\xB2=a\xB2+2ab+b\xB2",
-    caption: "a\xB2\u3001b\xB2 \u4E24\u4E2A\u6B63\u65B9\u5F62\u4E0E\u4E24\u4E2A ab \u77E9\u5F62\u62FC\u5408\uFF0C\u5F97\u5230\u8FB9\u957F a+b \u7684\u6B63\u65B9\u5F62\uFF1A(a+b)\xB2 = a\xB2+2ab+b\xB2\u3002"
-  },
-  triangle_to_rectangle: {
-    title: "\u4E24\u4E2A\u5168\u7B49\u4E09\u89D2\u5F62\u62FC\u6210\u957F\u65B9\u5F62",
-    catalog: "2\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u2192ab\u77E9\u5F62\uFF0C\u6BCF\u5757\u9762\u79EFab/2",
-    pieces: "2\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u62FC\u6210\u77E9\u5F62",
-    shows: "S\u25B3 = ab / 2",
-    container: "\u5916\u6846\u662F\u8FB9\u957Fa\u3001b\u7684\u77E9\u5F62\uFF0C\u9762\u79EFab",
-    initial: "\u4E24\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u5206\u79BB",
-    final: "\u4E24\u4E2A\u4E09\u89D2\u5F62\u586B\u6EE1\u77E9\u5F62",
-    proof: "\u4E24\u4E2A\u5168\u7B49\u4E09\u89D2\u5F62\u7684\u9762\u79EF\u4E4B\u548C\u4E3Aab\uFF0C\u6240\u4EE5\u6BCF\u4E2A\u9762\u79EFab/2",
-    caption: "\u4E24\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u62FC\u6210\u8FB9\u957F a\u3001b \u7684\u77E9\u5F62\uFF1B\u6BCF\u4E2A\u4E09\u89D2\u5F62\u9762\u79EF S\u25B3 = ab/2\u3002"
-  }
+// node_modules/octos-lesson-language/dist/packages/core/src/numeric-answer.js
+var FULL_WIDTH = {
+  "\uFF0D": "-",
+  "\u2212": "-",
+  "\u2013": "-",
+  "\uFF0F": "/",
+  "\xF7": "/",
+  "\uFF0E": ".",
+  "\u3002": ".",
+  "\uFF0C": ",",
+  "\u3000": " "
 };
-var REARRANGEMENT_FACTS = REARRANGEMENT_CONSTRUCTIONS;
-var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
-function rearrangementRecipe(construction, first, second) {
-  const definition = REARRANGEMENT_CONSTRUCTIONS[construction];
-  if (!definition) return void 0;
-  const gap = Math.max(first, second) * 0.35;
-  if (construction === "right_triangle_square") {
-    const side = first + second;
-    return {
-      title: definition.title,
-      relation: definition.shows,
-      target: [[0, 0], [side, 0], [side, side], [0, side]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
-        { points: [[0, 0], [0, first], [-second, 0]], start: { x: side, y: 0 }, end: { x: side, y: second }, label: "\u4E09\u89D2\u5F62 2", tone: "secondary" },
-        { points: [[0, 0], [-first, 0], [0, -second]], start: { x: side, y: side }, end: { x: first, y: second }, label: "\u4E09\u89D2\u5F62 3", tone: "accent" },
-        { points: [[0, 0], [0, -first], [second, 0]], start: { x: 0, y: side }, end: { x: first, y: side }, label: "\u4E09\u89D2\u5F62 4", tone: "neutral" }
-      ]
-    };
+function normalize(text) {
+  return text.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 65248)).replace(/[－−–／÷．。，　]/g, (char) => FULL_WIDTH[char]).trim().replace(/\s+/g, " ").replace(/\s*\/\s*/g, "/").replace(/^-\s+/, "-");
+}
+var INTEGER = /^(-?)(\d{1,3}(?:,\d{3})+|\d+)$/;
+var DECIMAL = /^(-?)(\d{1,3}(?:,\d{3})+|\d*)\.(\d+)$/;
+var FRACTION = /^(-?)(\d+)\/(\d+)$/;
+var MIXED = /^(-?)(\d+) (\d+)\/(\d+)$/;
+function safe(...values) {
+  return values.every(Number.isSafeInteger);
+}
+function parseNumericAnswer(text) {
+  if (typeof text !== "string" || text.length > 64)
+    return void 0;
+  const written = normalize(text);
+  let match = INTEGER.exec(written);
+  if (match) {
+    const value = Number(match[2].replace(/,/g, ""));
+    if (!safe(value))
+      return void 0;
+    return { value: match[1] && value !== 0 ? -value : value, form: "integer" };
   }
-  if (construction === "square_area_identity") {
-    const side = first + second;
-    return {
-      title: definition.title,
-      relation: definition.shows,
-      target: [[0, 0], [side, 0], [side, side], [0, side]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [first, first], [0, first]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "a\xB2", tone: "primary" },
-        { points: [[0, 0], [second, 0], [second, first], [0, first]], start: { x: first + gap, y: 0 }, end: { x: first, y: 0 }, label: "ab", tone: "secondary" },
-        { points: [[0, 0], [first, 0], [first, second], [0, second]], start: { x: 0, y: side + gap }, end: { x: 0, y: first }, label: "ab", tone: "accent" },
-        { points: [[0, 0], [second, 0], [second, second], [0, second]], start: { x: side + gap, y: side + gap }, end: { x: first, y: first }, label: "b\xB2", tone: "neutral" }
-      ]
-    };
+  match = DECIMAL.exec(written);
+  if (match) {
+    const value = Number(`${match[2].replace(/,/g, "") || "0"}.${match[3]}`);
+    if (!Number.isFinite(value))
+      return void 0;
+    return { value: match[1] && value !== 0 ? -value : value, form: "decimal" };
   }
-  if (construction === "triangle_to_rectangle") {
-    return {
-      title: definition.title,
-      relation: definition.shows,
-      target: [[0, 0], [first, 0], [first, second], [0, second]],
-      pieces: [
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
-        { points: [[0, 0], [first, 0], [0, second]], start: { x: first + gap, y: 0 }, end: { x: first, y: second, angle: Math.PI }, label: "\u4E09\u89D2\u5F62 2", tone: "accent" }
-      ]
-    };
+  match = FRACTION.exec(written);
+  if (match) {
+    const numerator = Number(match[2]), denominator = Number(match[3]);
+    if (!safe(numerator, denominator) || denominator === 0)
+      return void 0;
+    const value = numerator / denominator;
+    return { value: match[1] && value !== 0 ? -value : value, form: "fraction", numerator, denominator };
+  }
+  match = MIXED.exec(written);
+  if (match) {
+    const whole = Number(match[2]), numerator = Number(match[3]), denominator = Number(match[4]);
+    if (!safe(whole, numerator, denominator) || denominator === 0 || numerator === 0 || numerator >= denominator || !safe(whole * denominator + numerator))
+      return void 0;
+    const value = (whole * denominator + numerator) / denominator;
+    return { value: match[1] ? -value : value, form: "mixed", numerator, denominator };
   }
   return void 0;
 }
-
-// src/lesson-plan.ts
-var LESSON_PLAN_VERSION = "0.1";
-var PROCESS_DIAGRAM_CONTRACT = {
-  min_steps: 2,
-  max_steps: 8,
-  max_step_characters: 80,
-  max_title_characters: 120
-};
-var LESSON_PLAN_CAPABILITY_REGISTRY = {
-  function_plot: {
-    parts: ["whole", "primary_curve", "moving_point", "primary_control"],
-    number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
-    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label"],
-    required_model_schema_parameters: ["formulas"],
-    semantic_parameters: ["expression", "expressions", "expression_tokens"],
-    output_kinds: ["plot"],
-    student_controls: ["slider"],
-    required_features: ["cartesian_function_curve"],
-    model_guidance: "\u51FD\u6570\u56FE\uFF1A\u9759\u6001\u516C\u5F0F\u6700\u591A\u4E24\u6570\u79FB\u52A8A/B\u70B9\uFF1B\u542B\u6570\u503C\u7684\u516C\u5F0F\u6539\u53D8\u66F2\u7EBF"
-  },
-  unit_circle_projection: {
-    parts: ["whole", "unit_circle", "moving_point", "radius", "projection_line", "primary_curve", "primary_control"],
-    number_inputs: ["angle"],
-    number_input_policies: [{ kind: "angle" }],
-    parameter_names: ["title", "projection"],
-    model_parameter_names: ["title", "projection"],
-    required_model_schema_parameters: ["projection"],
-    semantic_parameters: ["projection"],
-    output_kinds: ["geometry", "plot"],
-    student_controls: ["slider", "geometry_point"],
-    required_features: ["unit_circle", "projection", "cartesian_function_curve"],
-    model_guidance: "\u5355\u4F4D\u5706\u52A8\u70B9\u3001\u6295\u5F71\u7EBF\u548C\u6B63\u5F26\u6216\u4F59\u5F26\u66F2\u7EBF\u5171\u4EAB\u540C\u4E00\u4E2A\u89D2\u5EA6"
-  },
-  circle_polygon_bounds: {
-    parts: ["whole", "circle", "inscribed_polygon", "circumscribed_polygon", "primary_control"],
-    number_inputs: ["side_count"],
-    number_input_policies: [{ kind: "side_count" }],
-    parameter_names: ["title", "radius"],
-    model_parameter_names: ["title", "radius"],
-    required_model_schema_parameters: [],
-    semantic_parameters: ["radius"],
-    output_kinds: ["geometry"],
-    student_controls: ["slider"],
-    required_features: ["inscribed_regular_polygon", "circumscribed_regular_polygon", "perimeter_bounds"],
-    model_guidance: "\u5706\u5468\u7387/\u5272\u5706\u672F\uFF1A\u56FA\u5B9A\u5706\u4E0E\u5185\u63A5\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\uFF0C\u6574\u6570\u8FB9\u65703..384\uFF0C\u5468\u957F\u4E0E\u5468\u957F\xF7\u76F4\u5F84\u4E0A\u4E0B\u754C\u5B9E\u65F6\u8BA1\u7B97\uFF1B\u8FB9\u6570\u4E0D\u662F\u89D2\u5EA6\u3002\u9002\u5408\u5706\u5468\u7387\u6570\u503C\u8BA1\u7B97\u3001\u5272\u5706\u6CD5\u548C\u4E0A\u4E0B\u754C\u903C\u8FD1\uFF0C\u4F8B\u5982\u2018\u5706\u5468\u7387\u662F\u4EC0\u4E48\uFF0C\u5B83\u662F\u5982\u4F55\u8BA1\u7B97\u7684\u2019\uFF1B\u540C\u4E00\u753B\u9762\u4E2D\u7684\u56FA\u5B9A\u5706\u53EF\u4F9B\u5B9A\u4E49\u90E8\u5206\u8BB2\u89E3\u590D\u7528\uFF0C\u914D\u5408\u5468\u957F\u4E0E\u76F4\u5F84\u6BD4\u503C\u516C\u5F0F\uFF0C\u518D\u901A\u8FC7\u589E\u52A0\u591A\u8FB9\u5F62\u8FB9\u6570\u89E3\u91CA\u8BA1\u7B97\u8FC7\u7A0B"
-  },
-  circle_and_arc: {
-    parts: ["whole", "circle", "arc", "radius", "primary_control"],
-    number_inputs: ["angle", "radius"],
-    number_input_policies: [{ kind: "angle" }, { kind: "positive" }],
-    parameter_names: ["title", "radius", "angle"],
-    model_parameter_names: ["title", "radius", "angle"],
-    required_model_schema_parameters: [],
-    semantic_parameters: ["radius", "angle"],
-    output_kinds: ["geometry"],
-    student_controls: ["slider", "geometry_point"],
-    required_features: ["circle", "arc"],
-    model_guidance: "\u5706\u3001\u5706\u5FC3\u89D2\u3001\u534A\u5F84\u548C\u5706\u5F27\uFF1B\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u63A7\u5236\u89D2\u5EA6\u548C\u534A\u5F84\uFF1B\u4E0D\u652F\u6301\u7528\u8FB9\u6570\u5192\u5145\u89D2\u5EA6\u6216\u7528\u5706\u5F27\u5192\u5145\u6B63\u591A\u8FB9\u5F62\u3002\u9002\u5408\u9700\u8981\u89C2\u5BDF\u5706\u5FC3\u89D2\u3001\u5706\u5F27\u6216\u5F27\u957F\u5173\u7CFB\u7684\u8BB2\u89E3\uFF1B\u82E5\u53EA\u9700\u8981\u5C55\u793A\u6574\u5706\u3001\u89E3\u91CA\u5706\u5468\u957F\u4E0E\u76F4\u5F84\u7684\u6BD4\u503C\uFF0C\u4E0D\u5E94\u4EC5\u56E0\u6D89\u53CA\u2018\u5706\u2019\u5C31\u9009\u62E9\u672C\u80FD\u529B\uFF1B\u672C\u80FD\u529B\u7ED8\u5236\u5706\u3001\u5706\u5F27\u4E0E\u534A\u5F84\uFF0C\u4E0D\u4F1A\u5C55\u793A\u5468\u957F\u4E0E\u76F4\u5F84\u7684\u6BD4\u503C"
-  },
-  spring_and_mass: {
-    parts: ["whole", "spring", "mass", "equilibrium", "force_arrow", "primary_curve", "moving_point", "primary_control"],
-    number_inputs: ["phase"],
-    number_input_policies: [{ kind: "angle" }],
-    parameter_names: ["title"],
-    model_parameter_names: ["title"],
-    required_model_schema_parameters: [],
-    semantic_parameters: [],
-    output_kinds: ["geometry", "plot"],
-    student_controls: ["slider"],
-    required_features: ["spring_mass", "cartesian_function_curve"],
-    model_guidance: "\u5F39\u7C27\u3001\u7269\u4F53\u3001\u5E73\u8861\u4F4D\u7F6E\u3001\u56DE\u590D\u529B\u548C\u4F59\u5F26\u53D8\u5316\u66F2\u7EBF\u5171\u4EAB\u76F8\u4F4D"
-  },
-  cube_with_section: {
-    parts: ["whole", "solid", "vertex", "edge", "face", "section", "primary_control"],
-    number_inputs: ["section_height"],
-    number_input_policies: [{ kind: "bounded", min: -1, max: 1 }],
-    parameter_names: ["title"],
-    model_parameter_names: ["title"],
-    required_model_schema_parameters: [],
-    semantic_parameters: [],
-    output_kinds: ["scene3d"],
-    student_controls: ["slider", "scene3d_view"],
-    required_features: ["solid_3d", "section_plane"],
-    model_guidance: "\u53EF\u65CB\u8F6C\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u53EF\u53D8\u6C34\u5E73\u622A\u9762"
-  },
-  function_surface_with_section: {
-    parts: ["whole", "surface", "section", "intersection", "primary_control"],
-    number_inputs: ["section_position"],
-    number_input_policies: [{ kind: "surface_section" }],
-    parameter_names: ["title", "expression", "samples", "section_axis", "section_value", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "section_axis", "section_value"],
-    required_model_schema_parameters: ["expression", "section_axis"],
-    semantic_parameters: ["expression", "section_axis"],
-    output_kinds: ["scene3d"],
-    student_controls: ["slider", "scene3d_view"],
-    required_features: ["function_surface_3d", "section_plane"],
-    model_guidance: "\u53EF\u65CB\u8F6C\u4E09\u7EF4\u51FD\u6570\u66F2\u9762\u3001\u53EF\u53D8\u622A\u9762\u548C\u771F\u5B9E\u4EA4\u7EBF"
-  },
-  implicit_surface_with_section: {
-    parts: ["whole", "surface", "section", "intersection", "primary_control"],
-    number_inputs: ["section_position"],
-    number_input_policies: [{ kind: "surface_section" }],
-    parameter_names: ["title", "expression", "level", "section_axis"],
-    model_parameter_names: ["title", "expression", "level", "section_axis"],
-    required_model_schema_parameters: ["expression", "section_axis"],
-    semantic_parameters: ["expression", "level", "section_axis"],
-    output_kinds: ["scene3d"],
-    student_controls: ["slider", "scene3d_view"],
-    required_features: ["implicit_surface_3d", "section_plane"],
-    model_guidance: "\u4E09\u53D8\u91CF\u9690\u5F0F\u66F2\u9762 F(x,y,z)=c\uFF0C\u4EE5\u53CA\u5782\u76F4\u4E8E x\u3001y \u6216 z \u8F74\u7684\u53EF\u53D8\u622A\u9762\u548C\u771F\u5B9E\u4EA4\u7EBF"
-  },
-  coordinate_circle: {
-    parts: ["whole", "circle", "center", "radius", "primary_control"],
-    number_inputs: ["radius"],
-    number_input_policies: [{ kind: "positive" }],
-    parameter_names: ["title", "radius", "radius_expression", "center_x", "center_y"],
-    model_parameter_names: ["title", "radius", "radius_expression", "center_x", "center_y"],
-    required_model_schema_parameters: [],
-    semantic_parameters: ["radius", "radius_expression", "center_x", "center_y"],
-    output_kinds: ["geometry"],
-    student_controls: ["slider"],
-    required_features: ["coordinate_circle"],
-    model_guidance: "\u5750\u6807\u7CFB\u4E2D\u7684\u5706\uFF1B\u5171\u4EAB\u6570\u503C\u53EF\u901A\u8FC7 radius_expression\uFF08\u4F8B\u5982 sqrt(n1)\uFF09\u9A71\u52A8\u534A\u5F84"
-  },
-  rectangle_unit_square_array: {
-    parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
-    number_inputs: ["columns_or_length", "rows_or_width"],
-    number_input_policies: [{ kind: "positive_integer", max: 8 }, { kind: "positive_integer", max: 8 }],
-    parameter_names: ["title"],
-    model_parameter_names: ["title"],
-    required_model_schema_parameters: [],
-    semantic_parameters: [],
-    output_kinds: ["geometry"],
-    student_controls: ["slider"],
-    required_features: ["unit_square_array", "row_column_count", "area_boundary_comparison"],
-    model_guidance: "\u5355\u4F4D\u6B63\u65B9\u5F62\u6309\u884C\u5217\u94FA\u6EE1\u957F\u65B9\u5F62\uFF1B\u4E24\u4E2A\u6574\u6570\u4F9D\u6B21\u63A7\u5236\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09\u548C\u884C\u6570\uFF08\u5BBD\uFF09\uFF0C\u7528\u4E8E\u9762\u79EF\u3001\u5468\u957F\u4E0E\u5E73\u65B9\u5355\u4F4D\u6559\u5B66"
-  },
-  geometric_rearrangement: {
-    parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "leg_a", "leg_b", "hypotenuse", "primary_control"],
-    number_inputs: ["progress"],
-    number_input_policies: [{ kind: "normalized_progress" }],
-    parameter_names: ["title", "construction", "leg_a", "leg_b"],
-    model_parameter_names: ["title", "construction", "leg_a", "leg_b"],
-    required_model_schema_parameters: ["construction"],
-    parameter_options: {
-      construction: ["right_triangle_square", "square_area_identity", "triangle_to_rectangle"]
-    },
-    semantic_parameters: ["construction", "leg_a", "leg_b"],
-    output_kinds: ["geometry"],
-    student_controls: ["slider"],
-    required_features: ["polygon_pieces", "rigid_rearrangement", "area_relation"],
-    model_guidance: REARRANGEMENT_MODEL_GUIDANCE
-  },
-  circle_area_rearrangement: {
-    parts: ["whole", "primary_control"],
-    number_inputs: ["progress"],
-    number_input_policies: [{ kind: "normalized_progress" }],
-    parameter_names: ["title", "radius"],
-    model_parameter_names: ["title", "radius"],
-    required_model_schema_parameters: [],
-    semantic_parameters: ["radius"],
-    output_kinds: ["geometry"],
-    student_controls: ["slider"],
-    required_features: ["circle_area_rearrangement"],
-    model_guidance: "\u5706\u9762\u79EF\uFF1A\u6247\u5F62\u7B49\u79EF\u91CD\u6392\uFF0C\u5E95\u8D8B\u8FD1\u03C0r\u3001\u9AD8\u8D8B\u8FD1r"
-  },
-  process_diagram: {
-    parts: ["whole", "first_step", "current_step", "last_step"],
-    number_inputs: [],
-    number_input_policies: [],
-    parameter_names: ["title", "steps"],
-    model_parameter_names: ["title", "steps"],
-    required_model_schema_parameters: ["steps"],
-    semantic_parameters: ["steps"],
-    output_kinds: ["diagram"],
-    student_controls: [],
-    required_features: ["ordered_process_steps"],
-    model_guidance: "\u6982\u5FF5\u6216\u6B65\u9AA4\u6D41\u7A0B\u56FE\uFF1B\u6CA1\u6709\u51E0\u4F55\u79FB\u52A8\uFF0C\u4E5F\u4E0D\u63A5\u53D7\u6570\u503C\u8F93\u5165"
-  }
-};
-var LESSON_PLAN_CAPABILITY_NAMES = Object.keys(LESSON_PLAN_CAPABILITY_REGISTRY);
-var LESSON_PLAN_VISUAL_FEATURES = [...new Set(
-  LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features])
-)];
-var LESSON_PLAN_CAPABILITIES = Object.fromEntries(
-  LESSON_PLAN_CAPABILITY_NAMES.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].parts])
-);
-var LESSON_PLAN_CAPABILITY_NUMBER_INPUTS = Object.fromEntries(
-  LESSON_PLAN_CAPABILITY_NAMES.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].number_inputs])
-);
-var LESSON_PLAN_CAPABILITY_NUMBER_LIMITS = Object.fromEntries(
-  LESSON_PLAN_CAPABILITY_NAMES.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].number_inputs.length])
-);
-function matchLessonPlanCapability(features) {
-  const requested = [...new Set(features)];
-  if (requested.length === 0) {
-    throw new LessonPlanError(
-      "LESSON_PLAN_CAPABILITY_REQUIREMENTS",
-      "$lessonPlanOutline.course_visuals.required_features",
-      "a visual requires at least one controlled feature"
-    );
-  }
-  const candidates = LESSON_PLAN_CAPABILITY_NAMES.map((capability2) => {
-    const provided = LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features;
-    return {
-      capability: capability2,
-      // The model describes the features it needs; it does not select an
-      // execution program. A program may provide fixed companion features
-      // the model omitted, but it may never omit a requested feature.
-      extra: provided.filter((feature) => !requested.includes(feature)).length,
-      matches: requested.every((feature) => provided.includes(feature))
-    };
-  }).filter((candidate) => candidate.matches).sort((left, right) => left.extra - right.extra || left.capability.localeCompare(right.capability));
-  if (candidates.length === 0) {
-    throw new LessonPlanError(
-      "LESSON_PLAN_UNSUPPORTED_REQUIREMENT",
-      "$lessonPlanOutline.course_visuals.required_features",
-      `no installed visual capability provides: ${requested.join(", ")}`
-    );
-  }
-  const best = candidates[0];
-  const equallySpecific = candidates.filter((candidate) => candidate.extra === best.extra);
-  if (equallySpecific.length > 1) {
-    throw new LessonPlanError(
-      "LESSON_PLAN_CAPABILITY_REQUIREMENTS",
-      "$lessonPlanOutline.course_visuals.required_features",
-      `visual requirements are ambiguous between: ${equallySpecific.map((candidate) => candidate.capability).join(", ")}`
-    );
-  }
-  return best.capability;
+function greatestCommonDivisor(left, right) {
+  while (right)
+    [left, right] = [right, left % right];
+  return left;
 }
-var LessonPlanError = class extends Error {
-  code;
-  path;
-  constructor(code, path, message) {
-    super(`${path}: ${message}`);
-    this.name = "LessonPlanError";
-    this.code = code;
-    this.path = path;
-  }
-};
-var FORBIDDEN_PARAMETER_KEYS = /* @__PURE__ */ new Set([
-  "id",
-  "as",
-  "key",
-  "target",
-  "targets",
-  "anchor",
-  "variable",
-  "variables",
-  "binding",
-  "bindings",
-  "members",
-  "node_id",
-  "target_id",
-  "action_id",
-  "lesson_id",
-  "board_id",
-  "base_revision"
-]);
-var timings = /* @__PURE__ */ new Set(["before_speech", "during_speech", "after_speech"]);
-var deliveries = /* @__PURE__ */ new Set(["neutral", "patient", "encouraging", "careful", "emphatic"]);
-var boardKinds = /* @__PURE__ */ new Set(["text", "math", "shape", "note", "table", "image", "visual"]);
-var emphasisValues = /* @__PURE__ */ new Set(["focus", "supporting", "warning", "resolved"]);
-var teacherExpressions = /* @__PURE__ */ new Set(["neutral", "encouraging", "careful", "celebrating"]);
-function fail(code, path, message) {
-  throw new LessonPlanError(code, path, message);
-}
-function record(value, path) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    fail("LESSON_PLAN_TYPE", path, "expected an object");
-  }
-  return value;
-}
-function array(value, path) {
-  if (!Array.isArray(value)) fail("LESSON_PLAN_TYPE", path, "expected an array");
-  return value;
-}
-function allowedKeys(value, allowed, path) {
-  const allowedSet = new Set(allowed);
-  for (const key of Object.keys(value)) {
-    if (!allowedSet.has(key)) fail("LESSON_PLAN_UNKNOWN_FIELD", `${path}.${key}`, "unknown field");
-  }
-}
-function nonEmptyString(value, path, max = 1200) {
-  if (typeof value !== "string" || value.trim().length === 0 || value.length > max) {
-    fail("LESSON_PLAN_STRING", path, `expected a non-empty string of at most ${max} characters`);
-  }
-  return value;
-}
-function optionalString(value, path, max = 1200) {
-  return value === void 0 ? void 0 : nonEmptyString(value, path, max);
-}
-function finiteNumber(value, path) {
-  if (typeof value !== "number" || !Number.isFinite(value)) fail("LESSON_PLAN_NUMBER", path, "expected a finite number");
-  return value;
-}
-function positiveIndex(value, path) {
-  if (!Number.isInteger(value) || value < 1) fail("LESSON_PLAN_INDEX", path, "expected a positive integer index");
-  return value;
-}
-function optionalTiming(value, path) {
-  if (value === void 0) return void 0;
-  if (typeof value !== "string" || !timings.has(value)) fail("LESSON_PLAN_TIMING", path, "unsupported timing");
-  return value;
-}
-function validateParameters(value, path) {
-  if (value === null || typeof value === "string" || typeof value === "boolean") return;
-  if (typeof value === "number") {
-    finiteNumber(value, path);
-    return;
-  }
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => validateParameters(item, `${path}[${index}]`));
-    return;
-  }
-  const object2 = record(value, path);
-  for (const [key, item] of Object.entries(object2)) {
-    if (FORBIDDEN_PARAMETER_KEYS.has(key) || key.endsWith("_id")) {
-      fail("LESSON_PLAN_MODEL_ID", `${path}.${key}`, "business identity fields are not allowed in model-authored parameters");
-    }
-    validateParameters(item, `${path}.${key}`);
-  }
-}
-function validateMathExpression(value, path, numberCount, allowInput = false) {
-  const tokens = array(value, path);
-  if (tokens.length === 0 || tokens.length > 128) fail("LESSON_PLAN_EXPRESSION", path, "expected 1 to 128 expression tokens");
-  let stackDepth = 0;
-  const numbers = /* @__PURE__ */ new Set();
-  tokens.forEach((entry, index) => {
-    const tokenPath = `${path}[${index}]`;
-    const token = record(entry, tokenPath);
-    const kind = token.kind;
-    if (kind === "input") {
-      allowedKeys(token, ["kind"], tokenPath);
-      if (!allowInput) fail("LESSON_PLAN_EXPRESSION", tokenPath, "an independent input is not allowed here");
-      stackDepth += 1;
-    } else if (kind === "number") {
-      allowedKeys(token, ["kind", "number"], tokenPath);
-      const number = positiveIndex(token.number, `${tokenPath}.number`);
-      if (number > numberCount) fail("LESSON_PLAN_NUMBER_REFERENCE", `${tokenPath}.number`, "number reference is unavailable");
-      numbers.add(number);
-      stackDepth += 1;
-    } else if (kind === "literal") {
-      allowedKeys(token, ["kind", "value"], tokenPath);
-      finiteNumber(token.value, `${tokenPath}.value`);
-      stackDepth += 1;
-    } else if (kind === "constant") {
-      allowedKeys(token, ["kind", "name"], tokenPath);
-      if (!["pi", "e"].includes(String(token.name))) fail("LESSON_PLAN_EXPRESSION", `${tokenPath}.name`, "unsupported constant");
-      stackDepth += 1;
-    } else if (kind === "negate") {
-      allowedKeys(token, ["kind"], tokenPath);
-      if (stackDepth < 1) fail("LESSON_PLAN_EXPRESSION", tokenPath, "negate requires one earlier value");
-    } else if (kind === "operator") {
-      allowedKeys(token, ["kind", "operator"], tokenPath);
-      if (!["add", "subtract", "multiply", "divide", "power"].includes(String(token.operator))) fail("LESSON_PLAN_EXPRESSION", `${tokenPath}.operator`, "unsupported operator");
-      if (stackDepth < 2) fail("LESSON_PLAN_EXPRESSION", tokenPath, "binary operator requires two earlier values");
-      stackDepth -= 1;
-    } else if (kind === "function") {
-      allowedKeys(token, ["kind", "name"], tokenPath);
-      if (!["abs", "acos", "asin", "atan", "ceil", "cos", "exp", "floor", "ln", "log", "round", "sin", "sqrt", "tan"].includes(String(token.name))) fail("LESSON_PLAN_EXPRESSION", `${tokenPath}.name`, "unsupported function");
-      if (stackDepth < 1) fail("LESSON_PLAN_EXPRESSION", tokenPath, "function requires one earlier value");
-    } else {
-      fail("LESSON_PLAN_EXPRESSION", `${tokenPath}.kind`, "unsupported expression token");
-    }
-  });
-  if (stackDepth !== 1) fail("LESSON_PLAN_EXPRESSION", path, "expression tokens must produce exactly one result");
-  return [...numbers];
-}
-function capability(value, path) {
-  if (typeof value !== "string" || !(value in LESSON_PLAN_CAPABILITIES)) {
-    fail("LESSON_PLAN_CAPABILITY", path, "unsupported capability");
-  }
-  return value;
-}
-function validatePart(value, path) {
-  const part = record(value, path);
-  const kind = part.kind;
-  if (kind === "capability") {
-    allowedKeys(part, ["kind", "role"], path);
-    return { kind, role: nonEmptyString(part.role, `${path}.role`, 80) };
-  }
-  if (kind === "index") {
-    allowedKeys(part, ["kind", "index"], path);
-    return { kind, index: positiveIndex(part.index, `${path}.index`) };
-  }
-  fail("LESSON_PLAN_PART", `${path}.kind`, "unsupported part reference");
-}
-function validateReference(value, path) {
-  const ref = record(value, path);
-  const part = ref.part === void 0 ? void 0 : validatePart(ref.part, `${path}.part`);
-  if (ref.source === "local_board_item" || ref.source === "local_connection" || ref.source === "local_group") {
-    allowedKeys(ref, ["source", "moment", "item", "part"], path);
-    return {
-      source: ref.source,
-      moment: positiveIndex(ref.moment, `${path}.moment`),
-      item: positiveIndex(ref.item, `${path}.item`),
-      ...part ? { part } : {}
-    };
-  }
-  if (ref.source === "reusable") {
-    allowedKeys(ref, ["source", "section", "item", "part"], path);
-    return {
-      source: "reusable",
-      section: positiveIndex(ref.section, `${path}.section`),
-      item: positiveIndex(ref.item, `${path}.item`),
-      ...part ? { part } : {}
-    };
-  }
-  if (ref.source === "host") {
-    allowedKeys(ref, ["source", "reference", "part"], path);
-    return {
-      source: "host",
-      reference: positiveIndex(ref.reference, `${path}.reference`),
-      ...part ? { part } : {}
-    };
-  }
-  fail("LESSON_PLAN_REFERENCE", `${path}.source`, "unsupported reference source");
-}
-function validatePlacement(value, path) {
-  const placement = record(value, path);
-  allowedKeys(placement, ["relation", "reference", "align", "gap"], path);
-  const relation = placement.relation;
-  const relations = /* @__PURE__ */ new Set(["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"]);
-  if (typeof relation !== "string" || !relations.has(relation)) fail("LESSON_PLAN_PLACEMENT", `${path}.relation`, "unsupported placement relation");
-  const reference = placement.reference === void 0 ? void 0 : validateReference(placement.reference, `${path}.reference`);
-  if (relation === "new_region" && reference) fail("LESSON_PLAN_PLACEMENT", `${path}.reference`, "new_region cannot have a reference");
-  if (relation !== "new_region" && !reference) fail("LESSON_PLAN_PLACEMENT", `${path}.reference`, "relative placement requires a reference");
-  if (placement.align !== void 0 && !["start", "center", "end"].includes(String(placement.align))) fail("LESSON_PLAN_PLACEMENT", `${path}.align`, "unsupported alignment");
-  if (placement.gap !== void 0 && !["tight", "normal", "wide"].includes(String(placement.gap))) fail("LESSON_PLAN_PLACEMENT", `${path}.gap`, "unsupported gap");
-  return placement;
-}
-function validateBoardContent(kind, value, path, numberCount, resourceCount) {
-  const content = record(value, path);
-  if (kind === "text" || kind === "shape") {
-    allowedKeys(content, ["text"], path);
-    nonEmptyString(content.text, `${path}.text`);
-  } else if (kind === "math") {
-    allowedKeys(content, ["latex"], path);
-    nonEmptyString(content.latex, `${path}.latex`);
-  } else if (kind === "note") {
-    allowedKeys(content, ["title", "items"], path);
-    nonEmptyString(content.title, `${path}.title`, 240);
-    const items = array(content.items, `${path}.items`);
-    if (items.length === 0) fail("LESSON_PLAN_CONTENT", `${path}.items`, "note requires at least one item");
-    items.forEach((item, index) => nonEmptyString(item, `${path}.items[${index}]`));
-  } else if (kind === "table") {
-    allowedKeys(content, ["columns", "rows"], path);
-    const columns = array(content.columns, `${path}.columns`);
-    if (columns.length === 0) fail("LESSON_PLAN_CONTENT", `${path}.columns`, "table requires columns");
-    columns.forEach((item, index) => nonEmptyString(item, `${path}.columns[${index}]`));
-    const rows = array(content.rows, `${path}.rows`);
-    rows.forEach((row, rowIndex) => {
-      const cells = array(row, `${path}.rows[${rowIndex}]`);
-      if (cells.length !== columns.length) fail("LESSON_PLAN_CONTENT", `${path}.rows[${rowIndex}]`, "row width must equal column count");
-      cells.forEach((cell, columnIndex) => {
-        if (typeof cell === "number") finiteNumber(cell, `${path}.rows[${rowIndex}][${columnIndex}]`);
-        else nonEmptyString(cell, `${path}.rows[${rowIndex}][${columnIndex}]`);
-      });
-    });
-  } else if (kind === "image") {
-    allowedKeys(content, ["resource", "alt"], path);
-    const index = positiveIndex(content.resource, `${path}.resource`);
-    if (index > resourceCount) fail("LESSON_PLAN_IMAGE_RESOURCE", `${path}.resource`, "image resource is unavailable");
-    optionalString(content.alt, `${path}.alt`, 480);
-  } else {
-    allowedKeys(content, ["capability", "parameters", "numbers"], path);
-    const visualCapability = capability(content.capability, `${path}.capability`);
-    if (content.parameters !== void 0) {
-      validateParameters(content.parameters, `${path}.parameters`);
-      if (visualCapability === "function_plot") {
-        const visualParameters = record(content.parameters, `${path}.parameters`);
-        const expressionFields = ["expression", "expressions", "expression_tokens"].filter((field) => visualParameters[field] !== void 0);
-        if (expressionFields.length !== 1) {
-          fail(
-            "LESSON_PLAN_EXPRESSION",
-            `${path}.parameters`,
-            "a function plot requires exactly one explicit mathematical expression"
-          );
-        }
-        if (visualParameters.expression_tokens !== void 0) {
-          const expressionTokens = array(
-            visualParameters.expression_tokens,
-            `${path}.parameters.expression_tokens`
-          );
-          if (!expressionTokens.some((token) => token !== null && typeof token === "object" && !Array.isArray(token) && token.kind === "input")) {
-            fail(
-              "LESSON_PLAN_PLOT_INPUT",
-              `${path}.parameters.expression_tokens`,
-              "a parameterized function curve must explicitly depend on the plot input; a lesson number cannot replace the horizontal-axis input"
-            );
-          }
-          validateMathExpression(
-            visualParameters.expression_tokens,
-            `${path}.parameters.expression_tokens`,
-            numberCount,
-            true
-          );
-        }
-      }
-    } else if (visualCapability === "function_plot") {
-      fail(
-        "LESSON_PLAN_EXPRESSION",
-        `${path}.parameters`,
-        "a function plot requires an explicit mathematical expression"
-      );
-    }
-    if (content.numbers !== void 0) {
-      const numbers = array(content.numbers, `${path}.numbers`);
-      if (numbers.length > 16) fail("LESSON_PLAN_CONTENT", `${path}.numbers`, "too many number references");
-      numbers.forEach((item, index) => {
-        const number = positiveIndex(item, `${path}.numbers[${index}]`);
-        if (number > numberCount) fail("LESSON_PLAN_NUMBER_REFERENCE", `${path}.numbers[${index}]`, "number reference is unavailable");
-      });
-      if (visualCapability === "function_plot" && numbers.length > 2 && content.parameters?.expression_tokens === void 0) {
-        fail("LESSON_PLAN_EXPRESSION", `${path}.numbers`, "static curves support at most two independent sample points");
-      }
-    }
-  }
-  return content;
-}
-function pad(index) {
-  return String(index).padStart(2, "0");
-}
-function localKey(section, moment, kind, item) {
-  return `${section}:${moment}:${kind}:${item}`;
-}
-function reusableKey(section, item) {
-  return `${section}:${item}`;
-}
-function assertPart(target, part, path) {
-  if (!part) return;
-  if (part.kind === "capability") {
-    if (!target.capability) fail("LESSON_PLAN_PART", path, "capability part requires a visual capability target");
-    const roles = LESSON_PLAN_CAPABILITIES[target.capability];
-    if (!roles.includes(part.role)) fail("LESSON_PLAN_PART", path, `capability '${target.capability}' has no part '${part.role}'`);
-  } else if (part.kind === "index") {
-    if (!target.hostParts) fail("LESSON_PLAN_PART", path, "index parts are only available on host nodes");
-    if (part.index > target.hostParts.size) fail("LESSON_PLAN_PART", path, "host part is unavailable");
-  }
-}
-function validateLessonPlanNumbers(value, path) {
-  const numbers = value === void 0 ? [] : array(value, path);
-  if (numbers.length > 16) fail("LESSON_PLAN_NUMBERS", path, "expected at most 16 numeric states");
-  numbers.forEach((entry, index) => {
-    const numberPath = `${path}[${index}]`;
-    const number = record(entry, numberPath);
-    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], numberPath);
-    const initial = finiteNumber(number.initial, `${numberPath}.initial`);
-    const min = finiteNumber(number.min, `${numberPath}.min`);
-    const max = finiteNumber(number.max, `${numberPath}.max`);
-    if (!(min < max && initial >= min && initial <= max)) {
-      fail("LESSON_PLAN_NUMBER_RANGE", numberPath, "expected min < max and initial inside the range");
-    }
-    optionalString(number.label, `${numberPath}.label`, 80);
-    optionalString(number.unit, `${numberPath}.unit`, 32);
-    if (number.student_control === void 0) return;
-    const controlPath = `${numberPath}.student_control`;
-    const control = record(number.student_control, controlPath);
-    allowedKeys(control, ["kind", "step"], controlPath);
-    if (control.kind !== "slider") fail("LESSON_PLAN_CONTROL", `${controlPath}.kind`, "only slider is supported");
-    if (control.step === void 0) return;
-    const step = finiteNumber(control.step, `${controlPath}.step`);
-    if (step <= 0 || step > max - min) {
-      fail("LESSON_PLAN_CONTROL", `${controlPath}.step`, "step must be positive and inside the range");
-    }
-    if ((max - min) / step > 1e3) {
-      fail(
-        "LESSON_PLAN_CONTROL_RESOLUTION",
-        `${controlPath}.step`,
-        "a slider cannot expose more than 1000 distinct intervals; use a coarser step or a smaller range"
-      );
-    }
-  });
-  return numbers;
-}
-function resolveLessonPlan(value, options = {}) {
-  const root = record(value, "$lessonPlan");
-  allowedKeys(root, ["version", "title", "goals", "teaching_strategies", "numbers", "sections", "close"], "$lessonPlan");
-  if (root.version !== LESSON_PLAN_VERSION) fail("LESSON_PLAN_VERSION", "$lessonPlan.version", `expected '${LESSON_PLAN_VERSION}'`);
-  nonEmptyString(root.title, "$lessonPlan.title", 160);
-  const goals = array(root.goals, "$lessonPlan.goals");
-  if (goals.length < 1 || goals.length > 8) fail("LESSON_PLAN_GOALS", "$lessonPlan.goals", "expected 1 to 8 goals");
-  goals.forEach((goal, index) => nonEmptyString(goal, `$lessonPlan.goals[${index}]`, 480));
-  if (root.teaching_strategies !== void 0) {
-    const strategies = array(root.teaching_strategies, "$lessonPlan.teaching_strategies");
-    if (strategies.length > 16) fail("LESSON_PLAN_STRATEGIES", "$lessonPlan.teaching_strategies", "expected at most 16 strategies");
-    strategies.forEach((strategy, index) => nonEmptyString(strategy, `$lessonPlan.teaching_strategies[${index}]`, 240));
-  }
-  const rawNumbers = validateLessonPlanNumbers(root.numbers, "$lessonPlan.numbers");
-  const hostReferences = options.host_references ?? [];
-  const imageResources = options.image_resources ?? [];
-  imageResources.forEach((resource, index) => {
-    nonEmptyString(resource.asset_id, `$options.image_resources[${index}].asset_id`);
-  });
-  const hosts = /* @__PURE__ */ new Map();
-  hostReferences.forEach((host, index) => {
-    nonEmptyString(host.target_id, `$options.host_references[${index}].target_id`);
-    if (!["node", "connection", "group"].includes(host.type)) {
-      fail("LESSON_PLAN_HOST_REFERENCE", `$options.host_references[${index}].type`, "unsupported host reference type");
-    }
-    optionalString(host.label, `$options.host_references[${index}].label`, 160);
-    if (host.type !== "node" && (host.parts?.length ?? 0) > 0) {
-      fail("LESSON_PLAN_HOST_REFERENCE", `$options.host_references[${index}].parts`, "only host nodes can expose parts");
-    }
-    hosts.set(index + 1, {
-      id: host.target_id,
-      authoringAlias: `host-${pad(index + 1)}`,
-      kind: "host",
-      hostParts: new Set(host.parts ?? [])
-    });
-  });
-  const rawSections = array(root.sections, "$lessonPlan.sections");
-  if (rawSections.length < 1 || rawSections.length > 24) fail("LESSON_PLAN_SECTIONS", "$lessonPlan.sections", "expected 1 to 24 sections");
-  const locals = /* @__PURE__ */ new Map();
-  const reusables = /* @__PURE__ */ new Map();
-  const references = [];
-  const visuallyBoundNumbers = /* @__PURE__ */ new Set();
-  const requiredVisualNumberUses = [];
-  const resolvedSections = [];
-  const resolveReference = (raw, path, sectionIndex, momentIndex) => {
-    const ref = validateReference(raw, path);
-    let target;
-    if (ref.source === "host") {
-      target = hosts.get(ref.reference);
-      if (!target) fail("LESSON_PLAN_HOST_REFERENCE", path, "host reference is unavailable");
-    } else if (ref.source === "reusable") {
-      if (ref.section > sectionIndex) fail("LESSON_PLAN_REFERENCE_ORDER", path, "reusable references cannot point to a future section");
-      target = reusables.get(reusableKey(ref.section, ref.item));
-      if (!target) fail("LESSON_PLAN_REFERENCE", path, "reusable item has not been filled");
-    } else {
-      if (ref.moment > momentIndex) fail("LESSON_PLAN_REFERENCE_ORDER", path, "local references cannot point to a future moment");
-      const kind = ref.source === "local_board_item" ? "board_item" : ref.source === "local_connection" ? "connection" : "group";
-      target = locals.get(localKey(sectionIndex, ref.moment, kind, ref.item));
-      if (!target) fail("LESSON_PLAN_REFERENCE", path, "local item does not exist");
-    }
-    assertPart(target, ref.part, `${path}.part`);
-    references.push({
-      path,
-      target_id: target.id,
-      authoring_alias: target.authoringAlias,
-      target_kind: target.kind,
-      ...target.boardKind ? { board_kind: target.boardKind } : {},
-      ...target.capability ? { capability: target.capability } : {},
-      ...ref.part ? { part: ref.part } : {}
-    });
-    return target;
-  };
-  rawSections.forEach((rawSection, sectionOffset) => {
-    const sectionIndex = sectionOffset + 1;
-    const path = `$lessonPlan.sections[${sectionOffset}]`;
-    const section = record(rawSection, path);
-    allowedKeys(section, ["purpose", "reusable_items", "moments", "student_activities"], path);
-    nonEmptyString(section.purpose, `${path}.purpose`, 480);
-    const reusableDeclarations = section.reusable_items === void 0 ? [] : array(section.reusable_items, `${path}.reusable_items`);
-    if (reusableDeclarations.length > 32) fail("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
-    const declarations = reusableDeclarations.map((entry, declarationOffset) => {
-      const declarationPath = `${path}.reusable_items[${declarationOffset}]`;
-      const declaration = record(entry, declarationPath);
-      allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
-      if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
-      if (declaration.kind === "board_item") {
-        if (typeof declaration.board_kind !== "string" || !boardKinds.has(declaration.board_kind)) fail("LESSON_PLAN_REUSABLE", `${declarationPath}.board_kind`, "board_item requires a supported board_kind");
-        if (declaration.board_kind === "visual") capability(declaration.capability, `${declarationPath}.capability`);
-        else if (declaration.capability !== void 0) fail("LESSON_PLAN_REUSABLE", `${declarationPath}.capability`, "only visual board items declare a capability");
-      } else if (declaration.board_kind !== void 0 || declaration.capability !== void 0) {
-        fail("LESSON_PLAN_REUSABLE", declarationPath, "connection and group declarations do not use board_kind or capability");
-      }
-      return declaration;
-    });
-    const assigned = /* @__PURE__ */ new Map();
-    const assignReusable = (slotValue, target, assignmentPath) => {
-      if (slotValue === void 0) return;
-      const slot = positiveIndex(slotValue, assignmentPath);
-      const declaration = declarations[slot - 1];
-      if (!declaration) fail("LESSON_PLAN_REUSABLE", assignmentPath, "reusable slot is not declared");
-      if (assigned.has(slot)) fail("LESSON_PLAN_REUSABLE", assignmentPath, "reusable slot is filled more than once");
-      if (declaration.kind !== target.kind) fail("LESSON_PLAN_REUSABLE", assignmentPath, "reusable slot kind does not match the created item");
-      if (target.kind === "board_item") {
-        if (declaration.board_kind !== target.boardKind) fail("LESSON_PLAN_REUSABLE", assignmentPath, "reusable board kind does not match");
-        if (declaration.capability !== target.capability) fail("LESSON_PLAN_REUSABLE", assignmentPath, "reusable capability does not match");
-      }
-      assigned.set(slot, target);
-    };
-    const rawMoments = array(section.moments, `${path}.moments`);
-    if (rawMoments.length < 1 || rawMoments.length > 12) fail("LESSON_PLAN_MOMENTS", `${path}.moments`, "expected 1 to 12 moments");
-    const resolvedMoments = [];
-    rawMoments.forEach((rawMoment, momentOffset) => {
-      const momentIndex = momentOffset + 1;
-      const momentPath = `${path}.moments[${momentOffset}]`;
-      const moment = record(rawMoment, momentPath);
-      allowedKeys(moment, ["narration", "delivery", "actions", "restart_numbers"], momentPath);
-      if (moment.restart_numbers !== void 0) {
-        const restarts = array(moment.restart_numbers, `${momentPath}.restart_numbers`);
-        if (!restarts.length || new Set(restarts).size !== restarts.length) fail("LESSON_PLAN_PHASE_START", momentPath, "restart_numbers must be nonempty and unique");
-        for (const number of restarts) {
-          const index = positiveIndex(number, `${momentPath}.restart_numbers`);
-          if (index > rawNumbers.length) fail("LESSON_PLAN_PHASE_START", momentPath, "unknown restart number");
-        }
-      }
-      optionalString(moment.narration, `${momentPath}.narration`);
-      if (moment.delivery !== void 0 && (typeof moment.delivery !== "string" || !deliveries.has(moment.delivery))) fail("LESSON_PLAN_DELIVERY", `${momentPath}.delivery`, "unsupported delivery");
-      const actions = array(moment.actions, `${momentPath}.actions`);
-      if (actions.length > 48) fail("LESSON_PLAN_ACTIONS", `${momentPath}.actions`, "expected at most 48 ordered actions");
-      const boardItemIds = [];
-      const connectionIds = [];
-      const groupIds = [];
-      let boardItemIndex = 0;
-      let connectionIndex = 0;
-      let groupIndex = 0;
-      actions.forEach((entry, actionOffset) => {
-        const itemPath = `${momentPath}.actions[${actionOffset}]`;
-        const action = record(entry, itemPath);
-        const actionKind = action.action;
-        if (actionKind === "create") {
-          allowedKeys(action, ["action", "kind", "role", "content", "timing", "placement", "reusable_item", "distinct_visual"], itemPath);
-          if (typeof action.kind !== "string" || !boardKinds.has(action.kind)) fail("LESSON_PLAN_BOARD_KIND", `${itemPath}.kind`, "unsupported board item kind");
-          const kind = action.kind;
-          nonEmptyString(action.role, `${itemPath}.role`, 80);
-          optionalTiming(action.timing, `${itemPath}.timing`);
-          const placement = validatePlacement(action.placement, `${itemPath}.placement`);
-          if (placement.reference) resolveReference(placement.reference, `${itemPath}.placement.reference`, sectionIndex, momentIndex);
-          const content = validateBoardContent(kind, action.content, `${itemPath}.content`, rawNumbers.length, imageResources.length);
-          if (action.distinct_visual !== void 0) {
-            if (kind !== "visual" || typeof action.distinct_visual !== "boolean") {
-              fail("LESSON_PLAN_COURSE_VISUAL", `${itemPath}.distinct_visual`, "distinct_visual is only valid on visual creates");
-            }
-          }
-          if (kind === "visual") {
-            const visualContent = content;
-            if (visualContent.capability === "function_plot" && visualContent.parameters?.expression_tokens !== void 0) {
-              const curveNumbers = validateMathExpression(
-                visualContent.parameters.expression_tokens,
-                `${itemPath}.content.parameters.expression_tokens`,
-                rawNumbers.length,
-                true
-              );
-              for (const number of curveNumbers) visuallyBoundNumbers.add(number);
-              if (curveNumbers.length === 0) {
-                for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
-              }
-            } else if (visualContent.capability === "function_plot") {
-              for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
-            } else {
-              for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
-            }
-          }
-          boardItemIndex += 1;
-          const id = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-item-${pad(boardItemIndex)}`;
-          const target = { id, authoringAlias: id, kind: "board_item", boardKind: kind };
-          if (kind === "visual") target.capability = content.capability;
-          locals.set(localKey(sectionIndex, momentIndex, "board_item", boardItemIndex), target);
-          boardItemIds.push(id);
-          assignReusable(action.reusable_item, target, `${itemPath}.reusable_item`);
-        } else if (actionKind === "revise") {
-          allowedKeys(action, ["action", "reference", "kind", "content", "reason", "timing"], itemPath);
-          const target = resolveReference(action.reference, `${itemPath}.reference`, sectionIndex, momentIndex);
-          if (typeof action.kind !== "string" || !boardKinds.has(action.kind)) fail("LESSON_PLAN_BOARD_KIND", `${itemPath}.kind`, "unsupported revision board kind");
-          const revisionKind = action.kind;
-          if (target.kind !== "board_item" || !target.boardKind) fail("LESSON_PLAN_ACTION_TARGET", `${itemPath}.reference`, "revise requires a board item created by this lesson; host board references are read-only");
-          if (target.boardKind !== revisionKind) fail("LESSON_PLAN_ACTION_TARGET", `${itemPath}.kind`, "revision kind must match the board item");
-          validateBoardContent(revisionKind, action.content, `${itemPath}.content`, rawNumbers.length, imageResources.length);
-          nonEmptyString(action.reason, `${itemPath}.reason`, 480);
-          optionalTiming(action.timing, `${itemPath}.timing`);
-        } else if (actionKind === "emphasize") {
-          allowedKeys(action, ["action", "reference", "emphasis", "timing"], itemPath);
-          resolveReference(action.reference, `${itemPath}.reference`, sectionIndex, momentIndex);
-          if (typeof action.emphasis !== "string" || !emphasisValues.has(action.emphasis)) fail("LESSON_PLAN_EMPHASIS", `${itemPath}.emphasis`, "unsupported emphasis");
-          optionalTiming(action.timing, `${itemPath}.timing`);
-        } else if (actionKind === "connect") {
-          allowedKeys(action, ["action", "from_ref", "to_ref", "relation", "label", "timing", "reusable_item"], itemPath);
-          resolveReference(action.from_ref, `${itemPath}.from_ref`, sectionIndex, momentIndex);
-          resolveReference(action.to_ref, `${itemPath}.to_ref`, sectionIndex, momentIndex);
-          nonEmptyString(action.relation, `${itemPath}.relation`, 80);
-          optionalString(action.label, `${itemPath}.label`, 160);
-          optionalTiming(action.timing, `${itemPath}.timing`);
-          connectionIndex += 1;
-          const id = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-connection-${pad(connectionIndex)}`;
-          const target = { id, authoringAlias: id, kind: "connection" };
-          locals.set(localKey(sectionIndex, momentIndex, "connection", connectionIndex), target);
-          connectionIds.push(id);
-          assignReusable(action.reusable_item, target, `${itemPath}.reusable_item`);
-        } else if (actionKind === "group") {
-          allowedKeys(action, ["action", "role", "label", "members", "timing", "reusable_item"], itemPath);
-          nonEmptyString(action.role, `${itemPath}.role`, 80);
-          nonEmptyString(action.label, `${itemPath}.label`, 160);
-          const members = array(action.members, `${itemPath}.members`);
-          if (members.length === 0) fail("LESSON_PLAN_GROUP", `${itemPath}.members`, "group requires members");
-          members.forEach((member, index) => resolveReference(member, `${itemPath}.members[${index}]`, sectionIndex, momentIndex));
-          optionalTiming(action.timing, `${itemPath}.timing`);
-          groupIndex += 1;
-          const id = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-group-${pad(groupIndex)}`;
-          const target = { id, authoringAlias: id, kind: "group" };
-          locals.set(localKey(sectionIndex, momentIndex, "group", groupIndex), target);
-          groupIds.push(id);
-          assignReusable(action.reusable_item, target, `${itemPath}.reusable_item`);
-        } else if (actionKind === "focus") {
-          allowedKeys(action, ["action", "references", "intent", "timing"], itemPath);
-          const refs = array(action.references, `${itemPath}.references`);
-          if (refs.length === 0) fail("LESSON_PLAN_FOCUS", `${itemPath}.references`, "focus requires references");
-          refs.forEach((ref, index) => resolveReference(ref, `${itemPath}.references[${index}]`, sectionIndex, momentIndex));
-          nonEmptyString(action.intent, `${itemPath}.intent`, 160);
-          optionalTiming(action.timing, `${itemPath}.timing`);
-        } else if (actionKind === "point_at") {
-          allowedKeys(action, ["action", "reference", "timing"], itemPath);
-          resolveReference(action.reference, `${itemPath}.reference`, sectionIndex, momentIndex);
-          optionalTiming(action.timing, `${itemPath}.timing`);
-        } else if (actionKind === "teacher_expression") {
-          allowedKeys(action, ["action", "expression", "timing"], itemPath);
-          if (typeof action.expression !== "string" || !teacherExpressions.has(action.expression)) fail("LESSON_PLAN_EXPRESSION", `${itemPath}.expression`, "unsupported teacher expression");
-          optionalTiming(action.timing, `${itemPath}.timing`);
-        } else if (actionKind === "animate") {
-          allowedKeys(action, ["action", "number", "end_value", "easing", "duration_intent", "timing"], itemPath);
-          const number = positiveIndex(action.number, `${itemPath}.number`);
-          requiredVisualNumberUses.push({ number, path: `${itemPath}.number` });
-          if (number > rawNumbers.length) fail("LESSON_PLAN_NUMBER_REFERENCE", `${itemPath}.number`, "number reference is unavailable");
-          const end = finiteNumber(action.end_value, `${itemPath}.end_value`);
-          const definition = record(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
-          if (end < Number(definition.min) || end > Number(definition.max)) fail("LESSON_PLAN_ANIMATION", `${itemPath}.end_value`, "animation end is outside the number range");
-          if (action.easing !== void 0 && !["linear", "ease_in_out"].includes(String(action.easing))) fail("LESSON_PLAN_ANIMATION", `${itemPath}.easing`, "unsupported easing");
-          if (action.duration_intent !== void 0 && !["brief", "normal", "extended"].includes(String(action.duration_intent))) fail("LESSON_PLAN_ANIMATION", `${itemPath}.duration_intent`, "unsupported duration intent");
-          optionalTiming(action.timing, `${itemPath}.timing`);
-        } else {
-          fail("LESSON_PLAN_ACTION", `${itemPath}.action`, "unsupported action");
-        }
-      });
-      resolvedMoments.push({
-        index: momentIndex,
-        moment_id: `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}`,
-        board_item_ids: boardItemIds,
-        connection_ids: connectionIds,
-        group_ids: groupIds
-      });
-    });
-    const resolvedReusable = declarations.map((declaration, declarationOffset) => {
-      const slot = declarationOffset + 1;
-      const target = assigned.get(slot);
-      if (!target) fail("LESSON_PLAN_REUSABLE_UNFILLED", `${path}.reusable_items[${declarationOffset}]`, "declared reusable item was not created");
-      reusables.set(reusableKey(sectionIndex, slot), target);
-      return { index: slot, target_id: target.id, target_kind: declaration.kind };
-    });
-    const activities = section.student_activities === void 0 ? [] : array(section.student_activities, `${path}.student_activities`);
-    activities.forEach((entry, index) => {
-      const activityPath = `${path}.student_activities[${index}]`;
-      const activity = record(entry, activityPath);
-      if (activity.kind === "reflection") {
-        allowedKeys(activity, ["kind", "prompt", "answer", "reference"], activityPath);
-        nonEmptyString(activity.prompt, `${activityPath}.prompt`, 480);
-        nonEmptyString(activity.answer, `${activityPath}.answer`, 960);
-        const target = resolveReference(activity.reference, `${activityPath}.reference`, sectionIndex, rawMoments.length);
-        if (target.kind !== "board_item") fail("LESSON_PLAN_ACTIVITY", `${activityPath}.reference`, "a thinking question must sit by a board card");
-        return;
-      }
-      if (activity.kind === "number_target") {
-        allowedKeys(activity, [
-          "kind",
-          "prompt",
-          "number_controls",
-          "expression",
-          "value",
-          "tolerance",
-          "hints",
-          "hint_after_attempts",
-          "success_message"
-        ], activityPath);
-        const numberControls = array(activity.number_controls, `${activityPath}.number_controls`);
-        if (numberControls.length === 0) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.number_controls`, "number task requires at least one controllable number");
-        const seenNumbers = /* @__PURE__ */ new Set();
-        numberControls.forEach((entry2, controlIndex) => {
-          const controlPath = `${activityPath}.number_controls[${controlIndex}]`;
-          const control = record(entry2, controlPath);
-          allowedKeys(control, ["number", "controls"], controlPath);
-          const number = positiveIndex(control.number, `${controlPath}.number`);
-          requiredVisualNumberUses.push({ number, path: `${controlPath}.number` });
-          if (number > rawNumbers.length) fail("LESSON_PLAN_NUMBER_REFERENCE", `${controlPath}.number`, "number reference is unavailable");
-          if (seenNumbers.has(number)) fail("LESSON_PLAN_ACTIVITY", `${controlPath}.number`, "each number may appear only once in a task");
-          seenNumbers.add(number);
-          const controls = array(control.controls, `${controlPath}.controls`);
-          if (controls.length === 0 || controls.some((item) => !["slider", "geometry_point"].includes(String(item)))) fail("LESSON_PLAN_ACTIVITY", `${controlPath}.controls`, "unsupported number controls");
-        });
-        if (activity.expression !== void 0) validateMathExpression(activity.expression, `${activityPath}.expression`, rawNumbers.length);
-        else if (numberControls.length !== 1) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.expression`, "tasks with multiple numbers require an explicit expression");
-        finiteNumber(activity.value, `${activityPath}.value`);
-        if (finiteNumber(activity.tolerance, `${activityPath}.tolerance`) <= 0) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.tolerance`, "tolerance must be positive");
-      } else if (activity.kind === "scene3d_view") {
-        allowedKeys(activity, [
-          "kind",
-          "reference",
-          "prompt",
-          "controls",
-          "match",
-          "yaw",
-          "pitch",
-          "zoom",
-          "angular_tolerance",
-          "zoom_tolerance",
-          "hints",
-          "hint_after_attempts",
-          "success_message"
-        ], activityPath);
-        const target = resolveReference(activity.reference, `${activityPath}.reference`, sectionIndex, rawMoments.length);
-        if (target.kind !== "board_item" || target.boardKind !== "visual" || !target.capability || !LESSON_PLAN_CAPABILITY_REGISTRY[target.capability].output_kinds.includes("scene3d")) {
-          fail("LESSON_PLAN_ACTIVITY", `${activityPath}.reference`, "scene3d_view requires a 3D visual target");
-        }
-        const controls = array(activity.controls, `${activityPath}.controls`);
-        if (controls.length === 0 || controls.some((item) => !["orbit", "zoom", "preset", "reset"].includes(String(item)))) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.controls`, "unsupported scene controls");
-        if (!["view_direction", "camera_pose"].includes(String(activity.match))) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.match`, "unsupported 3D match mode");
-        finiteNumber(activity.yaw, `${activityPath}.yaw`);
-        const pitch = finiteNumber(activity.pitch, `${activityPath}.pitch`);
-        if (pitch < -Math.PI / 2 || pitch > Math.PI / 2) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.pitch`, "pitch is outside the supported range");
-        const zoom = finiteNumber(activity.zoom, `${activityPath}.zoom`);
-        if (zoom < 0.2 || zoom > 5) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.zoom`, "zoom is outside the supported range");
-        if (finiteNumber(activity.angular_tolerance, `${activityPath}.angular_tolerance`) <= 0) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.angular_tolerance`, "angular tolerance must be positive");
-        if (finiteNumber(activity.zoom_tolerance, `${activityPath}.zoom_tolerance`) <= 0) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.zoom_tolerance`, "zoom tolerance must be positive");
-      } else {
-        fail("LESSON_PLAN_ACTIVITY", `${activityPath}.kind`, "unsupported student activity");
-      }
-      nonEmptyString(activity.prompt, `${activityPath}.prompt`, 480);
-      const hints = array(activity.hints, `${activityPath}.hints`);
-      if (hints.length === 0) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.hints`, "activity requires hints");
-      hints.forEach((hint, hintIndex) => nonEmptyString(hint, `${activityPath}.hints[${hintIndex}]`, 480));
-      if (activity.hint_after_attempts !== void 0) positiveIndex(activity.hint_after_attempts, `${activityPath}.hint_after_attempts`);
-      optionalString(activity.success_message, `${activityPath}.success_message`, 480);
-    });
-    resolvedSections.push({
-      index: sectionIndex,
-      section_id: `section-${pad(sectionIndex)}`,
-      moments: resolvedMoments,
-      reusable_items: resolvedReusable
-    });
-  });
-  const close = record(root.close, "$lessonPlan.close");
-  allowedKeys(close, ["summary", "focus"], "$lessonPlan.close");
-  nonEmptyString(close.summary, "$lessonPlan.close.summary", 1200);
-  const closeFocus = array(close.focus, "$lessonPlan.close.focus");
-  if (closeFocus.length === 0) fail("LESSON_PLAN_CLOSE", "$lessonPlan.close.focus", "close requires focus references");
-  closeFocus.forEach((ref, index) => resolveReference(ref, `$lessonPlan.close.focus[${index}]`, rawSections.length + 1, 0));
-  for (const use of requiredVisualNumberUses) {
-    if (!visuallyBoundNumbers.has(use.number)) {
-      fail(
-        "LESSON_PLAN_UNBOUND_NUMBER",
-        use.path,
-        `number ${use.number} is animated or assigned to a student task but does not drive any visual`
-      );
-    }
-  }
-  return {
-    plan: structuredClone(value),
-    numbers: rawNumbers.map((_entry, index) => ({ index: index + 1, variable_id: `number_${pad(index + 1)}` })),
-    sections: resolvedSections,
-    references
-  };
-}
-function validateLessonPlan(value, options = {}) {
-  return resolveLessonPlan(value, options).plan;
-}
-function validateLessonPlanOutline(value, expectedRequestParts = 0) {
-  const outline = record(value, "$lessonPlanOutline");
-  allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
-  if (expectedRequestParts > 0 && outline.course_visuals === void 0) {
-    fail(
-      "LESSON_PLAN_COURSE_VISUAL",
-      "$lessonPlanOutline.course_visuals",
-      "a model-authored outline must explicitly declare its course visuals, or an empty list for a text-only course"
-    );
-  }
-  if (outline.version !== LESSON_PLAN_VERSION) {
-    fail("LESSON_PLAN_VERSION", "$lessonPlanOutline.version", `expected '${LESSON_PLAN_VERSION}'`);
-  }
-  nonEmptyString(outline.title, "$lessonPlanOutline.title", 160);
-  const goals = array(outline.goals, "$lessonPlanOutline.goals");
-  if (goals.length < 1 || goals.length > 8) fail("LESSON_PLAN_GOALS", "$lessonPlanOutline.goals", "expected 1 to 8 goals");
-  goals.forEach((goal, index) => nonEmptyString(goal, `$lessonPlanOutline.goals[${index}]`, 480));
-  if (outline.teaching_strategies !== void 0) {
-    const strategies = array(outline.teaching_strategies, "$lessonPlanOutline.teaching_strategies");
-    if (strategies.length > 16) fail("LESSON_PLAN_STRATEGIES", "$lessonPlanOutline.teaching_strategies", "expected at most 16 strategies");
-    strategies.forEach((strategy, index) => nonEmptyString(strategy, `$lessonPlanOutline.teaching_strategies[${index}]`, 240));
-  }
-  const numbers = validateLessonPlanNumbers(outline.numbers, "$lessonPlanOutline.numbers");
-  const sections = array(outline.sections, "$lessonPlanOutline.sections");
-  if (sections.length < 1 || sections.length > 24) fail("LESSON_PLAN_SECTIONS", "$lessonPlanOutline.sections", "expected 1 to 24 sections");
-  const declarationsBySection = [];
-  sections.forEach((entry, index) => {
-    const path = `$lessonPlanOutline.sections[${index}]`;
-    const section = record(entry, path);
-    allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
-    nonEmptyString(section.purpose, `${path}.purpose`, 480);
-    const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
-    const seenCapabilities = /* @__PURE__ */ new Set();
-    allowedCapabilities.forEach((item, capabilityIndex) => {
-      const value2 = capability(item, `${path}.allowed_capabilities[${capabilityIndex}]`);
-      if (seenCapabilities.has(value2)) fail("LESSON_PLAN_CAPABILITY", `${path}.allowed_capabilities[${capabilityIndex}]`, "capability is duplicated");
-      seenCapabilities.add(value2);
-    });
-    const declarations = section.reusable_items === void 0 ? [] : array(section.reusable_items, `${path}.reusable_items`);
-    if (declarations.length > 32) fail("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
-    declarationsBySection.push(declarations.map((declarationValue, declarationIndex) => {
-      const declarationPath = `${path}.reusable_items[${declarationIndex}]`;
-      const declaration = record(declarationValue, declarationPath);
-      allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
-      if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
-      if (declaration.kind === "board_item") {
-        if (typeof declaration.board_kind !== "string" || !boardKinds.has(declaration.board_kind)) fail("LESSON_PLAN_REUSABLE", `${declarationPath}.board_kind`, "board_item requires a supported board_kind");
-        if (declaration.board_kind === "visual") {
-          const declaredCapability = capability(declaration.capability, `${declarationPath}.capability`);
-          if (!seenCapabilities.has(declaredCapability)) fail("LESSON_PLAN_CAPABILITY", `${declarationPath}.capability`, "reusable capability is not allowed for this section");
-        } else if (declaration.capability !== void 0) {
-          fail("LESSON_PLAN_REUSABLE", `${declarationPath}.capability`, "only visual board items declare a capability");
-        }
-      } else if (declaration.board_kind !== void 0 || declaration.capability !== void 0) {
-        fail("LESSON_PLAN_REUSABLE", declarationPath, "connection and group declarations do not use board_kind or capability");
-      }
-      return declaration;
-    }));
-  });
-  const courseVisuals = outline.course_visuals === void 0 ? [] : array(outline.course_visuals, "$lessonPlanOutline.course_visuals");
-  if (courseVisuals.length > 32) {
-    fail("LESSON_PLAN_COURSE_VISUAL", "$lessonPlanOutline.course_visuals", "expected at most 32 course visuals");
-  }
-  const firstVisualByCapability = /* @__PURE__ */ new Map();
-  courseVisuals.forEach((entry, index) => {
-    const path = `$lessonPlanOutline.course_visuals[${index}]`;
-    const visual = record(entry, path);
-    allowedKeys(visual, ["capability", "create_section", "use_sections", "relation", "related_visual", "reusable_item"], path);
-    const visualCapability = capability(visual.capability, `${path}.capability`);
-    const createSection = positiveIndex(visual.create_section, `${path}.create_section`);
-    if (createSection > sections.length) fail("LESSON_PLAN_COURSE_VISUAL", `${path}.create_section`, "creation section is unavailable");
-    const reusableItem = positiveIndex(visual.reusable_item, `${path}.reusable_item`);
-    const declaration = declarationsBySection[createSection - 1]?.[reusableItem - 1];
-    if (declaration?.kind !== "board_item" || declaration.board_kind !== "visual" || declaration.capability !== visualCapability) {
-      fail("LESSON_PLAN_COURSE_VISUAL", `${path}.reusable_item`, "course visual must map to a matching visual reusable item");
-    }
-    const uses = array(visual.use_sections, `${path}.use_sections`);
-    const seenUses = /* @__PURE__ */ new Set();
-    uses.forEach((sectionValue, useIndex) => {
-      const section = positiveIndex(sectionValue, `${path}.use_sections[${useIndex}]`);
-      if (section < createSection || section > sections.length) {
-        fail("LESSON_PLAN_COURSE_VISUAL", `${path}.use_sections[${useIndex}]`, "a visual can only be used from its creation section onward");
-      }
-      if (seenUses.has(section)) fail("LESSON_PLAN_COURSE_VISUAL", `${path}.use_sections[${useIndex}]`, "use section is duplicated");
-      seenUses.add(section);
-    });
-    if (!seenUses.has(createSection)) fail("LESSON_PLAN_COURSE_VISUAL", `${path}.use_sections`, "use sections must include the creation section");
-    if (!["primary", "supporting", "comparison"].includes(String(visual.relation))) {
-      fail("LESSON_PLAN_COURSE_VISUAL", `${path}.relation`, "unsupported visual relation");
-    }
-    const firstPosition = firstVisualByCapability.get(visualCapability);
-    if (firstPosition !== void 0 && visual.relation !== "comparison") {
-      fail(
-        "LESSON_PLAN_COURSE_VISUAL",
-        path,
-        `capability '${visualCapability}' already has course visual ${firstPosition}; reuse it or declare an explicit comparison`
-      );
-    }
-    if (firstPosition === void 0) firstVisualByCapability.set(visualCapability, index + 1);
-    if (visual.related_visual !== void 0) {
-      const related = positiveIndex(visual.related_visual, `${path}.related_visual`);
-      if (related >= index + 1) {
-        fail("LESSON_PLAN_COURSE_VISUAL", `${path}.related_visual`, "a related visual must be an earlier course visual");
-      }
-    } else if (visual.relation !== "primary") {
-      fail("LESSON_PLAN_COURSE_VISUAL", `${path}.related_visual`, "supporting and comparison visuals require a related visual position");
-    }
-  });
-  if (expectedRequestParts > 0 || outline.request_coverage !== void 0) {
-    const coverage = array(outline.request_coverage, "$lessonPlanOutline.request_coverage");
-    if (expectedRequestParts > 0 && coverage.length !== expectedRequestParts) {
-      fail("LESSON_PLAN_REQUEST_COVERAGE", "$lessonPlanOutline.request_coverage", `expected exactly ${expectedRequestParts} request coverage entries`);
-    }
-    const seen = /* @__PURE__ */ new Set();
-    coverage.forEach((entry, index) => {
-      const path = `$lessonPlanOutline.request_coverage[${index}]`;
-      const item = record(entry, path);
-      allowedKeys(item, ["request_part", "treatment", "sections", "reason"], path);
-      const requestPart = positiveIndex(item.request_part, `${path}.request_part`);
-      if (expectedRequestParts > 0 && requestPart > expectedRequestParts) fail("LESSON_PLAN_REQUEST_COVERAGE", `${path}.request_part`, "request part is unavailable");
-      if (seen.has(requestPart)) fail("LESSON_PLAN_REQUEST_COVERAGE", `${path}.request_part`, "request part is duplicated");
-      seen.add(requestPart);
-      if (item.treatment !== "teach" && item.treatment !== "unsupported") fail("LESSON_PLAN_REQUEST_COVERAGE", `${path}.treatment`, "unsupported treatment");
-      const coveredSections = array(item.sections, `${path}.sections`);
-      const seenSections = /* @__PURE__ */ new Set();
-      coveredSections.forEach((sectionValue, sectionIndex) => {
-        const section = positiveIndex(sectionValue, `${path}.sections[${sectionIndex}]`);
-        if (section > sections.length) fail("LESSON_PLAN_REQUEST_COVERAGE", `${path}.sections[${sectionIndex}]`, "section is unavailable");
-        if (seenSections.has(section)) fail("LESSON_PLAN_REQUEST_COVERAGE", `${path}.sections[${sectionIndex}]`, "section is duplicated");
-        seenSections.add(section);
-      });
-      if (item.treatment === "teach") {
-        if (coveredSections.length === 0) fail("LESSON_PLAN_REQUEST_COVERAGE", `${path}.sections`, "a taught request part must map to at least one section");
-        if (item.reason !== void 0) nonEmptyString(item.reason, `${path}.reason`, 480);
-      } else {
-        if (coveredSections.length !== 0) fail("LESSON_PLAN_REQUEST_COVERAGE", `${path}.sections`, "an unsupported request part cannot map to a lesson section");
-        nonEmptyString(item.reason, `${path}.reason`, 480);
-      }
-    });
-    if (expectedRequestParts > 0) {
-      for (let requestPart = 1; requestPart <= expectedRequestParts; requestPart += 1) {
-        if (!seen.has(requestPart)) fail("LESSON_PLAN_REQUEST_COVERAGE", "$lessonPlanOutline.request_coverage", `request part ${requestPart} is missing`);
-      }
-    }
-  }
-  const close = record(outline.close, "$lessonPlanOutline.close");
-  allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
-  nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
-  const closeFocus = array(close.focus, "$lessonPlanOutline.close.focus");
-  if (closeFocus.length === 0) fail("LESSON_PLAN_CLOSE", "$lessonPlanOutline.close.focus", "close requires focus references");
-  closeFocus.forEach((value2, index) => {
-    const path = `$lessonPlanOutline.close.focus[${index}]`;
-    const reference = validateReference(value2, path);
-    if (reference.source !== "reusable" && reference.source !== "host") {
-      fail("LESSON_PLAN_OUTLINE_REFERENCE", `${path}.source`, "the outline can only focus a declared reusable item or a host reference");
-    }
-    if (reference.source === "reusable") {
-      if (reference.section > sections.length) fail("LESSON_PLAN_REFERENCE", `${path}.section`, "reusable section is unavailable");
-      const declaration = declarationsBySection[reference.section - 1]?.[reference.item - 1];
-      if (!declaration) fail("LESSON_PLAN_REFERENCE", `${path}.item`, "reusable item is not declared");
-      if (reference.part?.kind === "capability") {
-        if (!declaration.capability) fail("LESSON_PLAN_PART", `${path}.part`, "capability part requires a visual reusable item");
-        const roles = LESSON_PLAN_CAPABILITIES[declaration.capability];
-        if (!roles.includes(reference.part.role)) fail("LESSON_PLAN_PART", `${path}.part.role`, "capability part is unavailable");
-      } else if (reference.part) {
-        fail("LESSON_PLAN_PART", `${path}.part`, "index parts are only available on host references");
-      }
-    }
-  });
-  return structuredClone(value);
-}
-function assembleLessonPlan(outlineValue, draftValues, options = {}) {
-  const outline = record(validateLessonPlanOutline(outlineValue), "$lessonPlanOutline");
-  allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
-  if (outline.version !== LESSON_PLAN_VERSION) {
-    fail("LESSON_PLAN_VERSION", "$lessonPlanOutline.version", `expected '${LESSON_PLAN_VERSION}'`);
-  }
-  nonEmptyString(outline.title, "$lessonPlanOutline.title", 160);
-  const goals = array(outline.goals, "$lessonPlanOutline.goals");
-  const sections = array(outline.sections, "$lessonPlanOutline.sections");
-  if (sections.length < 1 || sections.length > 24) {
-    fail("LESSON_PLAN_SECTIONS", "$lessonPlanOutline.sections", "expected 1 to 24 sections");
-  }
-  sections.forEach((entry, index) => {
-    const path = `$lessonPlanOutline.sections[${index}]`;
-    const section = record(entry, path);
-    allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
-    nonEmptyString(section.purpose, `${path}.purpose`, 480);
-    const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
-    const seenCapabilities = /* @__PURE__ */ new Set();
-    allowedCapabilities.forEach((item, capabilityIndex) => {
-      const value = capability(item, `${path}.allowed_capabilities[${capabilityIndex}]`);
-      if (seenCapabilities.has(value)) fail("LESSON_PLAN_CAPABILITY", `${path}.allowed_capabilities[${capabilityIndex}]`, "capability is duplicated");
-      seenCapabilities.add(value);
-    });
-    if (section.reusable_items !== void 0) {
-      array(section.reusable_items, `${path}.reusable_items`).forEach((entry2, reusableIndex) => {
-        const declaration = record(entry2, `${path}.reusable_items[${reusableIndex}]`);
-        if (declaration.capability !== void 0) {
-          const value = capability(declaration.capability, `${path}.reusable_items[${reusableIndex}].capability`);
-          if (!seenCapabilities.has(value)) fail("LESSON_PLAN_CAPABILITY", `${path}.reusable_items[${reusableIndex}].capability`, "reusable capability is not allowed for this section");
-        }
-      });
-    }
-  });
-  const close = record(outline.close, "$lessonPlanOutline.close");
-  allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
-  nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
-  const outlineFocus = array(close.focus, "$lessonPlanOutline.close.focus");
-  if (outlineFocus.length === 0) fail("LESSON_PLAN_CLOSE", "$lessonPlanOutline.close.focus", "close requires focus references");
-  outlineFocus.forEach((value, index) => {
-    const reference = validateReference(value, `$lessonPlanOutline.close.focus[${index}]`);
-    if (reference.source !== "reusable" && reference.source !== "host") {
-      fail(
-        "LESSON_PLAN_OUTLINE_REFERENCE",
-        `$lessonPlanOutline.close.focus[${index}].source`,
-        "the outline can only focus a declared reusable item or a host reference"
-      );
-    }
-  });
-  const drafts = array(draftValues, "$lessonPlanSectionDrafts");
-  if (drafts.length !== sections.length) {
-    fail("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanSectionDrafts", "expected exactly one draft for every outline section");
-  }
-  const bySection = /* @__PURE__ */ new Map();
-  drafts.forEach((entry, index) => {
-    const path = `$lessonPlanSectionDrafts[${index}]`;
-    const draft = record(entry, path);
-    allowedKeys(draft, ["version", "section", "moments", "student_activities"], path);
-    if (draft.version !== LESSON_PLAN_VERSION) fail("LESSON_PLAN_VERSION", `${path}.version`, `expected '${LESSON_PLAN_VERSION}'`);
-    const section = positiveIndex(draft.section, `${path}.section`);
-    if (section > sections.length) fail("LESSON_PLAN_SECTION_DRAFTS", `${path}.section`, "section is outside the outline");
-    if (bySection.has(section)) fail("LESSON_PLAN_SECTION_DRAFTS", `${path}.section`, "section draft is duplicated");
-    array(draft.moments, `${path}.moments`);
-    if (draft.student_activities !== void 0) array(draft.student_activities, `${path}.student_activities`);
-    const outlineSection = sections[section - 1];
-    const allowedCapabilities = new Set(array(outlineSection.allowed_capabilities, `$lessonPlanOutline.sections[${section - 1}].allowed_capabilities`));
-    array(draft.moments, `${path}.moments`).forEach((momentValue, momentIndex) => {
-      const moment = record(momentValue, `${path}.moments[${momentIndex}]`);
-      array(moment.actions, `${path}.moments[${momentIndex}].actions`).forEach((actionValue, actionIndex) => {
-        const action = record(actionValue, `${path}.moments[${momentIndex}].actions[${actionIndex}]`);
-        if (action.action !== "create" || action.kind !== "visual") return;
-        const content = record(action.content, `${path}.moments[${momentIndex}].actions[${actionIndex}].content`);
-        if (!allowedCapabilities.has(content.capability)) {
-          fail("LESSON_PLAN_CAPABILITY", `${path}.moments[${momentIndex}].actions[${actionIndex}].content.capability`, "visual capability is not allowed by the course outline");
-        }
-      });
-    });
-    bySection.set(section, draft);
-  });
-  const assembled = {
-    version: outline.version,
-    title: outline.title,
-    goals: structuredClone(goals),
-    ...outline.teaching_strategies === void 0 ? {} : { teaching_strategies: structuredClone(outline.teaching_strategies) },
-    ...outline.numbers === void 0 ? {} : { numbers: structuredClone(outline.numbers) },
-    sections: sections.map((entry, index) => {
-      const section = entry;
-      const draft = bySection.get(index + 1);
-      if (!draft) fail("LESSON_PLAN_SECTION_DRAFTS", `$lessonPlanSectionDrafts`, `section ${index + 1} is missing`);
-      return {
-        purpose: section.purpose,
-        ...section.reusable_items === void 0 ? {} : { reusable_items: structuredClone(section.reusable_items) },
-        moments: structuredClone(draft.moments),
-        ...draft.student_activities === void 0 ? {} : { student_activities: structuredClone(draft.student_activities) }
-      };
-    }),
-    close: structuredClone(close)
-  };
-  return resolveLessonPlan(assembled, options).plan;
-}
-
-// src/compiled-visual-reuse.ts
-function cardIdentity(kind, content) {
-  const fragments = /* @__PURE__ */ new Map();
-  const collect = (value) => {
-    if (Array.isArray(value)) {
-      value.forEach(collect);
-      return;
-    }
-    if (!value || typeof value !== "object") return;
-    const record2 = value;
-    if (typeof record2.as === "string" && !fragments.has(record2.as)) fragments.set(record2.as, `part-${fragments.size}`);
-    Object.values(record2).forEach(collect);
-  };
-  collect(content);
-  const localReference = (value) => {
-    const [head, ...tail] = value.split(".");
-    return [fragments.get(head) ?? head, ...tail].join(".");
-  };
-  const normalize = (value, key = "", path = "") => {
-    if (typeof value === "string") {
-      if (key === "expression") return value.replace(/\s+/gu, "");
-      if (["as", "target", "from", "to", "center"].includes(key)) return localReference(value);
-      if (kind === "plot" && path.startsWith("axes.") && key === "label" && ["x", "y", "\u03B8"].includes(value)) return "coordinate";
-      return value;
-    }
-    if (Array.isArray(value)) return value.map((child) => normalize(child, key, path));
-    if (!value || typeof value !== "object") return value;
-    return Object.fromEntries(Object.entries(value).filter(([name]) => {
-      if (!path && name === "title") return false;
-      if (kind === "plot") {
-        if (path.startsWith("axes.") && ["min", "max"].includes(name)) return false;
-        if ((path === "curves" || path === "points") && ["label", "color"].includes(name)) return false;
-      }
-      return true;
-    }).sort(([a], [b]) => a.localeCompare(b)).map(([name, child]) => [name, normalize(child, name, path ? `${path}.${name}` : name)]));
-  };
-  return { identity: JSON.stringify([kind, normalize(content)]), fragments };
-}
-var CompiledVisualRegistry = class {
-  cards = /* @__PURE__ */ new Map();
-  reuse(visual) {
-    if (this.cards.size === 0) {
-      for (const action of visual.actions) {
-        if (action.do !== "write" || !["plot", "geometry", "scene3d", "diagram"].includes(action.kind)) continue;
-        const cards = this.cards.get(action.kind) ?? [];
-        cards.push({ node: action.as, content: action.content });
-        this.cards.set(action.kind, cards);
-      }
-      return visual;
-    }
-    const aliases = /* @__PURE__ */ new Map();
-    const reused = /* @__PURE__ */ new Set();
-    const pending = [];
-    for (const action of visual.actions) {
-      if (action.do !== "write" || !["plot", "geometry", "scene3d", "diagram"].includes(action.kind)) continue;
-      const priorCards = this.cards.get(action.kind) ?? [];
-      const content = action.content;
-      const signature = priorCards.length ? cardIdentity(action.kind, content) : void 0;
-      const existing = signature ? priorCards.find((card) => {
-        card.signature ??= cardIdentity(action.kind, card.content);
-        return card.signature.identity === signature.identity;
-      }) : void 0;
-      if (existing && signature) {
-        reused.add(action.as);
-        aliases.set(action.as, existing.node);
-        const oldFragments = new Map([...existing.signature.fragments].map(([name, canonical]) => [canonical, name]));
-        for (const [name, canonical] of signature.fragments) aliases.set(`${action.as}#${name}`, `${existing.node}#${oldFragments.get(canonical)}`);
-      } else pending.push([action.kind, { node: action.as, content, signature }]);
-    }
-    for (const [kind, card] of pending) {
-      const cards = this.cards.get(kind) ?? [];
-      cards.push(card);
-      this.cards.set(kind, cards);
-    }
-    if (!reused.size) return visual;
-    const reference = (value) => aliases.get(value) ?? value;
-    const remap = (value, key = "") => {
-      if (typeof value === "string") return ["target", "targets", "from", "to", "anchor", "members"].includes(key) ? reference(value) : value;
-      if (Array.isArray(value)) return value.map((child) => remap(child, key));
-      if (!value || typeof value !== "object") return value;
-      return Object.fromEntries(Object.entries(value).map(([name, child]) => [name, remap(child, name)]));
-    };
-    return {
-      actions: visual.actions.map((action) => action.do === "write" && reused.has(action.as) ? { do: "focus", targets: [reference(action.as)], intent: "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762" } : remap(action)),
-      whole: reference(visual.whole),
-      ...visual.primaryScene ? { primaryScene: reference(visual.primaryScene) } : {},
-      parts: new Map([...visual.parts].map(([name, target]) => [name, reference(target)]))
-    };
-  }
-};
-
-// src/teaching-contracts.ts
-function affineTokens(tokens) {
-  const stack = [];
-  for (const token of tokens) {
-    if (token.kind === "input") stack.push(1);
-    else if (["literal", "constant", "number"].includes(token.kind)) stack.push(0);
-    else if (token.kind === "negate") continue;
-    else if (token.kind === "operator") {
-      const b = stack.pop(), a = stack.pop();
-      if (a === void 0 || b === void 0) return false;
-      if (token.operator === "add" || token.operator === "subtract") stack.push(Math.max(a, b));
-      else if (token.operator === "multiply") stack.push(a + b);
-      else if (token.operator === "divide" && b === 0) stack.push(a);
-      else return false;
-    } else return false;
-  }
-  return stack.length === 1 && stack[0] <= 1;
-}
-function fixedLineSamples(visual) {
-  const tokens = visual.parameters?.expression_tokens;
-  return visual.capability === "function_plot" && visual.numbers?.length === 2 && Array.isArray(tokens) && !tokens.some((t) => t.kind === "number") && affineTokens(tokens);
-}
-function normalizePlotInputInstructions(plan) {
-  const visuals = plan.sections.flatMap((s) => s.moments.flatMap((m) => m.actions)).filter((a) => a.action === "create" && a.kind === "visual").map((a) => a.content);
-  if (visuals.length !== 1 || visuals[0].capability !== "function_plot" || visuals[0].numbers?.length !== 2) return;
-  const tokens = visuals[0].parameters?.expression_tokens;
-  if (Array.isArray(tokens) && tokens.some((t) => t.kind === "number")) return;
-  const samplesFixedLine = fixedLineSamples(visuals[0]);
-  for (const section of plan.sections) for (const moment of section.moments) {
-    moment.narration = moment.narration.replace(
-      /(?:移动|调整|拖动|拖拽)点\s*([AB])\s*(?:或|和|、)\s*(?:点\s*)?([AB])(?:的)?(?:位置|横坐标)/g,
-      (_match, first, second) => `\u8C03\u6574\u70B9 ${first} \u6216\u70B9 ${second} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
-    ).replace(
-      /(?:直接)?拖(?:动|拽)(?:图上|图中|曲线上)?(?:的)?点\s*([AB])/g,
-      (_match, label) => `\u8C03\u6574\u70B9 ${label} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
-    );
-    if (samplesFixedLine) {
-      moment.narration = moment.narration.replace(
-        /[^。！？!?；;]*斜率如何保持不变或发生变化[^。！？!?；;]*/g,
-        "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u5982\u4F55\u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      ).replace(
-        /[^。！？!?；;]*(?:纵向|高度|纵坐标).{0,12}(?:变大|改变|变化).{0,12}(?:横向|横坐标).{0,12}不变[^。！？!?；;]*/g,
-        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      ).replace(
-        /[^。！？!?；;]*(?:看看|观察).{0,36}(?:斜率|倾斜程度).{0,32}(?:变化|改变)[^。！？!?；;]*/g,
-        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      ).replace(
-        /[^。！？!?；;]*(?:调整|移动|拖动|拖拽).{0,36}点.{0,36}(?:观察|看看).{0,36}(?:斜率|倾斜程度)[^。！？!?；;]*/g,
-        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      );
-    }
-  }
-  if (samplesFixedLine) for (const section of plan.sections) {
-    for (const activity of section.student_activities ?? []) {
-      if (activity.kind !== "number_target") continue;
-      activity.prompt = activity.prompt.replace(/观察.{0,24}斜率.{0,12}(?:变化|改变)/g, "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8").replace(/改变.{0,16}(?:倾斜程度|斜率)/g, "\u9A8C\u8BC1\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8");
-      activity.hints = activity.hints.map((hint) => /变陡|变平缓|(?:倾斜程度|倾斜状态|陡峭程度|比值).{0,16}(?:改变|变化)|(?:改变|变化).{0,16}(?:倾斜程度|斜率|陡峭程度|比值)/.test(hint) ? "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u7684\u6BD4\u503C\u662F\u5426\u4FDD\u6301\u4E0D\u53D8" : hint);
-      if (activity.success_message && !/不变|保持/.test(activity.success_message) && /(?:改变|变化|更新|影响).{0,20}(?:倾斜程度|斜率|陡峭程度|比值)|(?:倾斜程度|斜率|陡峭程度|比值).{0,20}(?:改变|变化|更新|影响)|如何随.{0,20}变化/.test(activity.success_message)) {
-        activity.success_message = "\u5B8C\u6210\uFF01\u79FB\u52A8\u53D6\u6837\u70B9\u540E\uFF0C\u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8\u3002";
-      }
-    }
-  }
-}
-function validateRearrangementClaims(plan) {
-  const local = /* @__PURE__ */ new Map();
-  const reusable = /* @__PURE__ */ new Map();
-  const byNumber = /* @__PURE__ */ new Map();
-  const relatedLocal = /* @__PURE__ */ new Map();
-  const relatedReusable = /* @__PURE__ */ new Map();
-  const lookup = (reference, section) => {
-    if (reference.source === "reusable") {
-      const key = `${reference.section}:${reference.item}`, visual = reusable.get(key);
-      return visual ? [visual] : [...relatedReusable.get(key) ?? []];
-    }
-    if (reference.source === "local_board_item") {
-      const key = `${section}:${reference.moment}:${reference.item}`, visual = local.get(key);
-      return visual ? [visual] : [...relatedLocal.get(key) ?? []];
-    }
-    return [];
-  };
-  const check = (text, visuals, path) => {
-    if (visuals.size !== 1) return;
-    const visual = [...visuals][0];
-    if (visual.capability !== "geometric_rearrangement") return;
-    const construction = visual.parameters?.construction ?? "right_triangle_square";
-    const facts = REARRANGEMENT_FACTS[construction];
-    if (!facts) return;
-    const claims = text.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
-    const wrongPieces = construction === "square_area_identity" && claims.some((claim) => /(?:这(?:个|张|些|幅)|图中|图里|内部|里面|画面|包含).{0,20}(?:四|4)\s*(?:个|块|片)?(?:完全相同的|全等的|全等|完全相同|一样的)?(?:直角)?三角形/u.test(claim));
-    const wrongFrame = construction === "right_triangle_square" && claims.some((claim) => /(?:外框|外侧正方形|这个大正方形|大正方形)(?:的)?边长.{0,8}(?:是|为|等于|就是).{0,4}(?:斜边\s*)?c(?![a-z])/iu.test(claim) || /(?:中间|中央|中心).{0,8}(?:正方形|留白).{0,8}(?:边长|面积).{0,8}(?:b\s*[-−]\s*a|a\s*[-−]\s*b)/iu.test(claim) || /(?:S_?\{?(?:大正方形|外框)\}?|S[（(](?:大正方形|外框)[）)])\s*=\s*c(?:²|\^\{?2\}?)/u.test(claim));
-    const wrongControl = claims.some((claim) => /(?:拖动|拖拽|调整|滑动).{0,12}(?:滑块|滑杆|进度).{0,16}(?:改变|调整).{0,8}(?:边长|三边|斜边|直角边)/u.test(claim));
-    const wrongFinal = construction === "right_triangle_square" && claims.some((claim) => /(?:拼成|拼合成|填满).{0,8}斜边正方形/u.test(claim));
-    if (wrongPieces || wrongFrame || wrongControl || wrongFinal) {
-      throw new LessonPlanError(
-        "LESSON_PLAN_TEACHING_MISMATCH",
-        path,
-        `${construction}: ${facts.pieces}; ${facts.container}; start: ${facts.initial}; end: ${facts.final}; ${facts.proof}. The control moves pieces only, not side lengths. Correct this section without replacing the established visual.`
-      );
-    }
-  };
-  for (const [si, section] of plan.sections.entries()) {
-    for (const [mi, moment] of section.moments.entries()) {
-      const selected = /* @__PURE__ */ new Set();
-      let item = 0;
-      for (const action of moment.actions) {
-        if (action.action !== "create") continue;
-        item += 1;
-        if (action.kind !== "visual") continue;
-        const visual = action.content;
-        local.set(`${si + 1}:${mi + 1}:${item}`, visual);
-        if (action.reusable_item) reusable.set(`${si + 1}:${action.reusable_item}`, visual);
-        selected.add(visual);
-        for (const number of visual.numbers ?? []) {
-          const bound = byNumber.get(number) ?? /* @__PURE__ */ new Set();
-          bound.add(visual);
-          byNumber.set(number, bound);
-        }
-      }
-      for (const action of moment.actions) {
-        const refs = action.action === "focus" ? action.references : action.action === "point_at" || action.action === "emphasize" || action.action === "revise" ? [action.reference] : [];
-        for (const ref of refs) for (const visual of lookup(ref, si + 1)) selected.add(visual);
-        if (action.action === "animate") for (const visual of byNumber.get(action.number) ?? []) selected.add(visual);
-      }
-      const path = `$lessonPlan.sections[${si}].moments[${mi}]`;
-      check(moment.narration ?? "", selected, path);
-      let boardItem = 0;
-      for (const [ai, action] of moment.actions.entries()) {
-        if (action.action === "create") {
-          boardItem += 1;
-          if (action.kind !== "visual") {
-            relatedLocal.set(`${si + 1}:${mi + 1}:${boardItem}`, new Set(selected));
-            if (action.reusable_item) relatedReusable.set(`${si + 1}:${action.reusable_item}`, new Set(selected));
-          }
-        }
-        if (action.action !== "create" && action.action !== "revise" || action.kind === "visual") continue;
-        const content = action.content;
-        check(
-          [content.latex, content.text, content.title, ...content.items ?? []].filter(Boolean).join("\n"),
-          selected,
-          `${path}.actions[${ai}]`
-        );
-      }
-    }
-    for (const [ai, activity] of (section.student_activities ?? []).entries()) {
-      const selected = /* @__PURE__ */ new Set();
-      if (activity.kind === "number_target") {
-        for (const control of activity.number_controls) for (const visual of byNumber.get(control.number) ?? []) selected.add(visual);
-      } else {
-        for (const visual of lookup(activity.reference, si + 1)) selected.add(visual);
-      }
-      check(
-        activity.kind === "reflection" ? `${activity.prompt}
-${activity.answer}` : [activity.prompt, ...activity.hints, activity.success_message].filter(Boolean).join("\n"),
-        selected,
-        `$lessonPlan.sections[${si}].student_activities[${ai}]`
-      );
-    }
-  }
-}
-function validateTeachingClaims(plan) {
-  validateRearrangementClaims(plan);
-  const plots = plan.sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).filter((action) => action.action === "create" && action.kind === "visual").map((action) => action.content).filter((visual) => visual.capability === "function_plot");
-  const hasCircleArea = plan.sections.some((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "circle_area_rearrangement")));
-  const onlyFixedLineSamples = plots.length === 1 && fixedLineSamples(plots[0]);
-  for (const [si, section] of plan.sections.entries()) {
-    for (const [mi, moment] of section.moments.entries()) {
-      const text = moment.narration ?? "";
-      const claims = text.split(/[。！？!?；;]/);
-      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
-      }
-      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text) && !/滑块|滑杆/.test(text)) {
-        throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "use the point's horizontal-coordinate slider; directly dragging plot points is unavailable");
-      }
-      if (onlyFixedLineSamples && claims.some((claim) => /(?:斜率|倾斜角度|倾斜程度|倾斜方向|陡峭程度)(?:的数值)?(?:就|也|会|将|随之|随点移动|发生|而|从而|不断|逐渐|产生|有所|明显|直接|可以|能够|能|\s|[，,]){0,8}(?:改变|变化)(?!量|率)|(?:改变|变化)(?:了|着|其|它的|直线的|连线的|割线的|两点连线的|\s){0,5}(?:斜率|倾斜角度|倾斜程度|陡峭程度)/.test(claim) && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
-      }
-      const steepnessClaim = (text.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
-      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text)) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
-      }
-    }
-    for (const [mi, moment] of section.moments.entries()) {
-      const visuals = moment.actions.filter((a) => a.action === "create" && a.kind === "visual");
-      for (const action of visuals) {
-        if (action.action !== "create" || action.kind !== "visual") continue;
-        const visual = action.content;
-        const text = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
-        const path = `$plan.sections[${si}].moments[${mi}]`;
-        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text) && /证明|推导|拼|重排|prove|derive/i.test(text)) {
-          throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path, "circle area requires circle_area_rearrangement; polygon recipes cannot prove pi*r^2");
-        }
-        if (visual.capability !== "function_plot") continue;
-        const tokens = visual.parameters?.expression_tokens;
-        const dynamic = Array.isArray(tokens) && tokens.some((t) => t?.kind === "number");
-        const count = dynamic ? 0 : new Set(visual.numbers ?? []).size;
-        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text)) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "moving the whole curve requires formula number references; static sample inputs only move points");
-        }
-        if (/两个点|两点|two points/i.test(text) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text) && count !== 2) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and content.numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
-        }
-        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text)) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "plot points use sliders; direct point dragging is unavailable");
-        }
-      }
-    }
-  }
+function isSimplestFraction(answer) {
+  if (answer.form === "integer")
+    return true;
+  if (answer.form === "decimal")
+    return false;
+  if (answer.form === "fraction" && answer.denominator === 1)
+    return false;
+  return greatestCommonDivisor(answer.numerator, answer.denominator) === 1;
 }
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
@@ -8918,6 +7375,7 @@ var v0_1_schema_default = {
       properties: {
         start: { $ref: "#/$defs/phaseStart" },
         as: { $ref: "#/$defs/alias" },
+        anchor: { $ref: "#/$defs/alias" },
         prompt: { type: "string", minLength: 1, maxLength: 480 },
         availability: {
           type: "object",
@@ -8960,6 +7418,14 @@ var v0_1_schema_default = {
                     items: { enum: ["orbit", "zoom", "preset", "reset"] }
                   }
                 }
+              },
+              {
+                type: "object",
+                required: ["kind"],
+                additionalProperties: false,
+                properties: {
+                  kind: { const: "answer_entry" }
+                }
               }
             ]
           }
@@ -8991,6 +7457,18 @@ var v0_1_schema_default = {
                 angular_tolerance: { type: "number", exclusiveMinimum: 0 },
                 zoom_tolerance: { type: "number", exclusiveMinimum: 0 }
               }
+            },
+            {
+              type: "object",
+              required: ["kind", "answer"],
+              additionalProperties: false,
+              properties: {
+                kind: { const: "numeric_answer" },
+                answer: { type: "string", minLength: 1, maxLength: 64 },
+                tolerance: { type: "number", minimum: 0 },
+                unit: { type: "string", minLength: 1, maxLength: 16 },
+                form: { enum: ["any", "simplest_fraction"] }
+              }
             }
           ]
         },
@@ -9002,7 +7480,10 @@ var v0_1_schema_default = {
         },
         hint_after_attempts: { type: "integer", minimum: 1, maximum: 20 },
         success_message: { type: "string", minLength: 1, maxLength: 480 }
-      }
+      },
+      if: { properties: { completion: { properties: { kind: { const: "numeric_answer" } }, required: ["kind"] } }, required: ["completion"] },
+      then: { required: ["anchor"] },
+      else: { not: { required: ["anchor"] } }
     },
     step: {
       type: "object",
@@ -9774,6 +8255,7 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "practice-start": "0.2.0",
   "student-tasks:expression_target": "0.1.0",
   "student-tasks:scene3d_view_target": "0.1.0",
+  "student-tasks:numeric_answer": "0.5.0",
   "reflections": "0.3.0",
   "binding-hide-undefined": "0.3.0"
 });
@@ -9867,32 +8349,32 @@ var OllError = class extends Error {
     this.path = path;
   }
 };
-function fail2(code, path, message) {
+function fail(code, path, message) {
   throw new OllError(code, path, message);
 }
 function requireObject(value, path) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    fail2("OLL_INVALID_TYPE", path, "Expected an object");
+    fail("OLL_INVALID_TYPE", path, "Expected an object");
   }
 }
 function requireArray(value, path) {
   if (!Array.isArray(value) || value.length === 0) {
-    fail2("OLL_INVALID_TYPE", path, "Expected a non-empty array");
+    fail("OLL_INVALID_TYPE", path, "Expected a non-empty array");
   }
 }
 function requireString(value, path) {
   if (typeof value !== "string" || value.length === 0) {
-    fail2("OLL_INVALID_TYPE", path, "Expected a non-empty string");
+    fail("OLL_INVALID_TYPE", path, "Expected a non-empty string");
   }
 }
 function requireAlias(value, path) {
   if (typeof value !== "string" || !ALIAS_PATTERN.test(value)) {
-    fail2("OLL_INVALID_ALIAS", path, `Invalid local alias '${String(value)}'`);
+    fail("OLL_INVALID_ALIAS", path, `Invalid local alias '${String(value)}'`);
   }
 }
 function requireVariableAlias(value, path) {
   if (typeof value !== "string" || !VARIABLE_PATTERN.test(value)) {
-    fail2("OLL_INVALID_VARIABLE", path, `Invalid variable alias '${String(value)}'`);
+    fail("OLL_INVALID_VARIABLE", path, `Invalid variable alias '${String(value)}'`);
   }
 }
 function validateLessonVariables(document) {
@@ -9902,20 +8384,20 @@ function validateLessonVariables(document) {
     requireObject(variable, path);
     requireVariableAlias(variable.as, `${path}/as`);
     if (RESERVED_MATH_NAMES.has(variable.as))
-      fail2("OLL_INVALID_VARIABLE", `${path}/as`, `Variable '${variable.as}' uses a reserved math name`);
+      fail("OLL_INVALID_VARIABLE", `${path}/as`, `Variable '${variable.as}' uses a reserved math name`);
     if (values.has(variable.as))
-      fail2("OLL_DUPLICATE_ALIAS", `${path}/as`, `Variable '${variable.as}' is duplicated`);
+      fail("OLL_DUPLICATE_ALIAS", `${path}/as`, `Variable '${variable.as}' is duplicated`);
     const initial = requireFiniteNumber(variable.initial, `${path}/initial`);
     const min = requireFiniteNumber(variable.min, `${path}/min`);
     const max = requireFiniteNumber(variable.max, `${path}/max`);
     if (max <= min)
-      fail2("OLL_INVALID_VARIABLE", path, "Variable max must be greater than min");
+      fail("OLL_INVALID_VARIABLE", path, "Variable max must be greater than min");
     if (initial < min || initial > max)
-      fail2("OLL_INVALID_VARIABLE", `${path}/initial`, "Variable initial value is outside its range");
+      fail("OLL_INVALID_VARIABLE", `${path}/initial`, "Variable initial value is outside its range");
     if (variable.control?.step !== void 0) {
       const step = requireFiniteNumber(variable.control.step, `${path}/control/step`);
       if (step <= 0 || step > max - min)
-        fail2("OLL_INVALID_VARIABLE", `${path}/control/step`, "Slider step must be greater than zero and no larger than the variable range");
+        fail("OLL_INVALID_VARIABLE", `${path}/control/step`, "Slider step must be greater than zero and no larger than the variable range");
     }
     values.set(variable.as, initial);
   }
@@ -9946,7 +8428,7 @@ function validateScene3dStudentTask(task, path, scene3dCameras) {
   requireAlias(completion.node, `${path}/completion/node`);
   const initial = scene3dCameras.get(completion.node);
   if (!initial)
-    fail2("OLL_REFERENCE_NOT_FOUND", `${path}/completion/node`, `3D scene '${completion.node}' is not declared`);
+    fail("OLL_REFERENCE_NOT_FOUND", `${path}/completion/node`, `3D scene '${completion.node}' is not declared`);
   const target = {
     kind: "scene3d_view_target",
     node: completion.node,
@@ -9960,13 +8442,13 @@ function validateScene3dStudentTask(task, path, scene3dCameras) {
   const angularTolerance = target.angular_tolerance;
   const zoomTolerance = target.zoom_tolerance;
   if (completion.match !== void 0 && completion.match !== "view_direction" && completion.match !== "camera_pose") {
-    fail2("OLL_INVALID_STUDENT_TASK", `${path}/completion/match`, `Unsupported 3D view match '${String(completion.match)}'`);
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/match`, `Unsupported 3D view match '${String(completion.match)}'`);
   }
   if (target.pitch < -Math.PI / 2 || target.pitch > Math.PI / 2 || target.zoom < 0.2 || target.zoom > 5) {
-    fail2("OLL_INVALID_STUDENT_TASK", `${path}/completion`, "3D target view is outside the supported camera range");
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion`, "3D target view is outside the supported camera range");
   }
   if (angularTolerance <= 0 || angularTolerance > Math.PI || zoomTolerance <= 0 || zoomTolerance > 4.8) {
-    fail2("OLL_INVALID_STUDENT_TASK", `${path}/completion`, "3D task tolerances must be positive and within the camera range");
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion`, "3D task tolerances must be positive and within the camera range");
   }
   requireArray(task.allowed_operations, `${path}/allowed_operations`);
   const controls = /* @__PURE__ */ new Set();
@@ -9974,21 +8456,21 @@ function validateScene3dStudentTask(task, path, scene3dCameras) {
     const operationPath = `${path}/allowed_operations/${operationIndex}`;
     requireObject(operation, operationPath);
     if (operation.kind !== "scene3d_view" || operation.node !== completion.node) {
-      fail2("OLL_INVALID_STUDENT_TASK", operationPath, "3D view tasks must reference the completion scene");
+      fail("OLL_INVALID_STUDENT_TASK", operationPath, "3D view tasks must reference the completion scene");
     }
     requireArray(operation.controls, `${operationPath}/controls`);
     operation.controls.forEach((control, controlIndex) => {
       if (!["orbit", "zoom", "preset", "reset"].includes(String(control))) {
-        fail2("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Unsupported 3D task control '${String(control)}'`);
+        fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Unsupported 3D task control '${String(control)}'`);
       }
       if (controls.has(String(control))) {
-        fail2("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `3D task control '${String(control)}' is duplicated`);
+        fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `3D task control '${String(control)}' is duplicated`);
       }
       controls.add(String(control));
     });
   });
   if (scene3dViewTargetScore(initial, target) <= 1) {
-    fail2("OLL_INVALID_STUDENT_TASK", `${path}/completion`, "3D task is already complete at the initial camera view");
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion`, "3D task is already complete at the initial camera view");
   }
   const presets = [
     { yaw: 0.72, pitch: 0.55, zoom: 1 },
@@ -9999,46 +8481,74 @@ function validateScene3dStudentTask(task, path, scene3dCameras) {
   const orbitReachable = controls.has("orbit") && (target.match === "view_direction" || Math.abs(initial.zoom - target.zoom) <= zoomTolerance || controls.has("zoom"));
   const zoomOnlyReachable = controls.has("zoom") && scene3dViewTargetScore({ ...initial, zoom: target.zoom }, target) <= 1;
   if (!presetReachable && !orbitReachable && !zoomOnlyReachable) {
-    fail2("OLL_INVALID_STUDENT_TASK", `${path}/allowed_operations`, "No allowed 3D control can reach the target view");
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/allowed_operations`, "No allowed 3D control can reach the target view");
   }
+  validateTaskFeedback(task, path);
+}
+function validateAnswerStudentTask(task, path, registry) {
+  resolveLocal(registry, task.anchor, `${path}/anchor`, ["node"]);
+  requireArray(task.allowed_operations, `${path}/allowed_operations`);
+  if (task.allowed_operations.length !== 1 || task.allowed_operations[0]?.kind !== "answer_entry") {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/allowed_operations`, "Numeric answer tasks allow exactly one answer_entry operation");
+  }
+  const completion = task.completion;
+  const expected = typeof completion.answer === "string" ? parseNumericAnswer(completion.answer) : void 0;
+  if (!expected) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/answer`, "Expected answer must be a whole number, decimal, fraction or mixed number");
+  }
+  if (completion.tolerance !== void 0 && requireFiniteNumber(completion.tolerance, `${path}/completion/tolerance`) < 0) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/tolerance`, "Answer tolerance must not be negative");
+  }
+  if (completion.form !== void 0 && completion.form !== "any" && completion.form !== "simplest_fraction") {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/form`, `Unsupported answer form '${String(completion.form)}'`);
+  }
+  if (completion.form === "simplest_fraction" && !isSimplestFraction(expected)) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/answer`, "Expected answer is not written in its simplest form");
+  }
+  if (completion.unit !== void 0 && (typeof completion.unit !== "string" || !completion.unit.trim() || completion.unit.length > 16)) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/unit`, "Answer unit must be 1 to 16 characters");
+  }
+  validateTaskFeedback(task, path);
+}
+function validateTaskFeedback(task, path) {
   requireArray(task.hints, `${path}/hints`);
   if (task.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
-    fail2("OLL_INVALID_STUDENT_TASK", `${path}/hints`, "Task hints must not be empty");
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/hints`, "Task hints must not be empty");
   }
   if (task.hint_after_attempts !== void 0 && (!Number.isInteger(task.hint_after_attempts) || task.hint_after_attempts < 1 || task.hint_after_attempts > 20)) {
-    fail2("OLL_INVALID_STUDENT_TASK", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20");
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20");
   }
   if (task.success_message !== void 0 && (typeof task.success_message !== "string" || !task.success_message.trim())) {
-    fail2("OLL_INVALID_STUDENT_TASK", `${path}/success_message`, "Task success_message must not be empty");
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/success_message`, "Task success_message must not be empty");
   }
 }
 function resolvePhaseStart(policy, variables, path) {
   requireObject(policy, path);
   if (Object.keys(policy).some((key) => !["kind", "variables", "values"].includes(key))) {
-    fail2("OLL_INVALID_PHASE_START", path, "Unknown phase start field");
+    fail("OLL_INVALID_PHASE_START", path, "Unknown phase start field");
   }
   if (policy.kind === "continue") {
     if (policy.variables !== void 0 || policy.values !== void 0)
-      fail2("OLL_INVALID_PHASE_START", path, "Continuation inherits state without reset targets");
+      fail("OLL_INVALID_PHASE_START", path, "Continuation inherits state without reset targets");
     return {};
   }
   if (policy.kind !== "replay" && policy.kind !== "practice")
-    fail2("OLL_INVALID_PHASE_START", path, "Unknown phase kind");
+    fail("OLL_INVALID_PHASE_START", path, "Unknown phase kind");
   if (!Array.isArray(policy.variables) || !policy.variables.length || new Set(policy.variables).size !== policy.variables.length) {
-    fail2("OLL_INVALID_PHASE_START", path, "Independent phases require distinct selected variables");
+    fail("OLL_INVALID_PHASE_START", path, "Independent phases require distinct selected variables");
   }
   if (policy.values !== void 0)
     requireObject(policy.values, `${path}/values`);
   if (Object.keys(policy.values ?? {}).some((alias) => !policy.variables.includes(alias))) {
-    fail2("OLL_INVALID_PHASE_START", path, "Start values must belong to selected variables");
+    fail("OLL_INVALID_PHASE_START", path, "Start values must belong to selected variables");
   }
   return Object.fromEntries(policy.variables.map((alias) => {
     const variable = variables.find((candidate) => candidate.as === alias);
     if (!variable)
-      fail2("OLL_INVALID_PHASE_START", path, `Unknown start variable '${alias}'`);
+      fail("OLL_INVALID_PHASE_START", path, `Unknown start variable '${alias}'`);
     const value = policy.values && Object.hasOwn(policy.values, alias) ? policy.values[alias] : variable.initial;
     if (!Number.isFinite(value) || value < variable.min || value > variable.max) {
-      fail2("OLL_INVALID_PHASE_START", path, `Start value for '${alias}' is outside its domain`);
+      fail("OLL_INVALID_PHASE_START", path, `Start value for '${alias}' is outside its domain`);
     }
     return [alias, value];
   }));
@@ -10055,44 +8565,48 @@ function validateReflections(document, registry) {
     requireObject(reflection, path);
     requireAlias(reflection.as, `${path}/as`);
     if (aliases.has(reflection.as) || taskAliases.has(reflection.as)) {
-      fail2("OLL_DUPLICATE_ALIAS", `${path}/as`, `Reflection '${reflection.as}' is duplicated`);
+      fail("OLL_DUPLICATE_ALIAS", `${path}/as`, `Reflection '${reflection.as}' is duplicated`);
     }
     aliases.add(reflection.as);
     for (const field of ["prompt", "answer"]) {
       if (typeof reflection[field] !== "string" || !reflection[field].trim()) {
-        fail2("OLL_INVALID_REFLECTION", `${path}/${field}`, `Reflection ${field} must not be empty`);
+        fail("OLL_INVALID_REFLECTION", `${path}/${field}`, `Reflection ${field} must not be empty`);
       }
     }
     requireObject(reflection.availability, `${path}/availability`);
     if (reflection.availability.kind !== "after_lesson") {
-      fail2("OLL_INVALID_REFLECTION", `${path}/availability/kind`, `Unsupported reflection availability '${String(reflection.availability.kind)}'`);
+      fail("OLL_INVALID_REFLECTION", `${path}/availability/kind`, `Unsupported reflection availability '${String(reflection.availability.kind)}'`);
     }
     resolveLocal(registry, reflection.anchor, `${path}/anchor`, ["node"]);
   });
 }
-function validateStudentTasks(document, variables, availableControls, scene3dCameras) {
+function validateStudentTasks(document, variables, availableControls, scene3dCameras, registry) {
   const taskAliases = /* @__PURE__ */ new Set();
   for (const [index, task] of (document.lesson.tasks ?? []).entries()) {
     const path = `/lesson/tasks/${index}`;
     requireObject(task, path);
     requireAlias(task.as, `${path}/as`);
     if (taskAliases.has(task.as))
-      fail2("OLL_DUPLICATE_ALIAS", `${path}/as`, `Student task '${task.as}' is duplicated`);
+      fail("OLL_DUPLICATE_ALIAS", `${path}/as`, `Student task '${task.as}' is duplicated`);
     taskAliases.add(task.as);
     if (typeof task.prompt !== "string" || !task.prompt.trim()) {
-      fail2("OLL_INVALID_STUDENT_TASK", `${path}/prompt`, "Student task prompt must not be empty");
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/prompt`, "Student task prompt must not be empty");
     }
     requireObject(task.availability, `${path}/availability`);
     if (task.availability.kind !== "after_lesson") {
-      fail2("OLL_INVALID_STUDENT_TASK", `${path}/availability/kind`, `Unsupported task availability '${String(task.availability.kind)}'`);
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/availability/kind`, `Unsupported task availability '${String(task.availability.kind)}'`);
     }
     requireObject(task.completion, `${path}/completion`);
     if (task.start && (task.start.kind !== "practice" || task.completion.kind !== "expression_target")) {
-      fail2("OLL_INVALID_PHASE_START", `${path}/start`, "Practice starts currently require an expression task");
+      fail("OLL_INVALID_PHASE_START", `${path}/start`, "Practice starts currently require an expression task");
     }
     const startValues = task.start ? resolvePhaseStart(task.start, document.lesson.variables ?? [], `${path}/start`) : {};
     if (task.completion.kind === "scene3d_view_target") {
       validateScene3dStudentTask(task, path, scene3dCameras);
+      continue;
+    }
+    if (task.completion.kind === "numeric_answer") {
+      validateAnswerStudentTask(task, path, registry);
       continue;
     }
     const expressionTask = task;
@@ -10102,27 +8616,27 @@ function validateStudentTasks(document, variables, availableControls, scene3dCam
       const operationPath = `${path}/allowed_operations/${operationIndex}`;
       requireObject(operation, operationPath);
       if (operation.kind !== "variable_change") {
-        fail2("OLL_INVALID_STUDENT_TASK", `${operationPath}/kind`, `Unsupported student task operation '${String(operation.kind)}'`);
+        fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/kind`, `Unsupported student task operation '${String(operation.kind)}'`);
       }
       requireVariableAlias(operation.variable, `${operationPath}/variable`);
       if (!variables.has(operation.variable)) {
-        fail2("OLL_REFERENCE_NOT_FOUND", `${operationPath}/variable`, `Variable '${operation.variable}' is not declared`);
+        fail("OLL_REFERENCE_NOT_FOUND", `${operationPath}/variable`, `Variable '${operation.variable}' is not declared`);
       }
       if (allowedVariables.has(operation.variable)) {
-        fail2("OLL_INVALID_STUDENT_TASK", `${operationPath}/variable`, `Variable '${operation.variable}' has duplicate allowed-operation entries`);
+        fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/variable`, `Variable '${operation.variable}' has duplicate allowed-operation entries`);
       }
       allowedVariables.add(operation.variable);
       requireArray(operation.controls, `${operationPath}/controls`);
       const controls = /* @__PURE__ */ new Set();
       operation.controls.forEach((control, controlIndex) => {
         if (control !== "slider" && control !== "geometry_point") {
-          fail2("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Unsupported task control '${String(control)}'`);
+          fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Unsupported task control '${String(control)}'`);
         }
         if (controls.has(control)) {
-          fail2("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Task control '${control}' is duplicated`);
+          fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Task control '${control}' is duplicated`);
         }
         if (!availableControls.get(operation.variable)?.has(control)) {
-          fail2("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Task control '${control}' is not available for variable '${operation.variable}' in this lesson`);
+          fail("OLL_INVALID_STUDENT_TASK", `${operationPath}/controls/${controlIndex}`, `Task control '${control}' is not available for variable '${operation.variable}' in this lesson`);
         }
         controls.add(control);
       });
@@ -10130,7 +8644,7 @@ function validateStudentTasks(document, variables, availableControls, scene3dCam
     const target = requireFiniteNumber(expressionTask.completion.value, `${path}/completion/value`);
     const tolerance = requireFiniteNumber(expressionTask.completion.tolerance, `${path}/completion/tolerance`);
     if (tolerance <= 0)
-      fail2("OLL_INVALID_STUDENT_TASK", `${path}/completion/tolerance`, "Task tolerance must be greater than zero");
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/tolerance`, "Task tolerance must be greater than zero");
     try {
       const evaluate2 = compileMathExpression(expressionTask.completion.expression, variables.keys());
       if (task.start && [...allowedVariables].some((alias) => !Object.hasOwn(startValues, alias))) {
@@ -10190,31 +8704,22 @@ function validateStudentTasks(document, variables, availableControls, scene3dCam
         }
       }
     } catch (error) {
-      fail2("OLL_INVALID_STUDENT_TASK", `${path}/completion/expression`, `Invalid task completion expression: ${error.message}`);
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/expression`, `Invalid task completion expression: ${error.message}`);
     }
-    requireArray(task.hints, `${path}/hints`);
-    if (task.hints.some((hint) => typeof hint !== "string" || !hint.trim())) {
-      fail2("OLL_INVALID_STUDENT_TASK", `${path}/hints`, "Task hints must not be empty");
-    }
-    if (task.hint_after_attempts !== void 0 && (!Number.isInteger(task.hint_after_attempts) || task.hint_after_attempts < 1 || task.hint_after_attempts > 20)) {
-      fail2("OLL_INVALID_STUDENT_TASK", `${path}/hint_after_attempts`, "hint_after_attempts must be an integer from 1 to 20");
-    }
-    if (task.success_message !== void 0 && (typeof task.success_message !== "string" || !task.success_message.trim())) {
-      fail2("OLL_INVALID_STUDENT_TASK", `${path}/success_message`, "Task success_message must not be empty");
-    }
+    validateTaskFeedback(task, path);
   }
 }
 function splitBindingTarget(value, path) {
   if (typeof value !== "string")
-    fail2("OLL_INVALID_BINDING", path, "Binding target must be a string");
+    fail("OLL_INVALID_BINDING", path, "Binding target must be a string");
   const separator = value.lastIndexOf(".");
   if (separator <= 0 || separator === value.length - 1)
-    fail2("OLL_INVALID_BINDING", path, `Invalid binding target '${value}'`);
+    fail("OLL_INVALID_BINDING", path, `Invalid binding target '${value}'`);
   const alias = value.slice(0, separator);
   const property = value.slice(separator + 1);
   requireAlias(alias, path);
   if (!/^[a-z_][a-z0-9_]*$/.test(property))
-    fail2("OLL_INVALID_BINDING", path, `Invalid binding property '${property}'`);
+    fail("OLL_INVALID_BINDING", path, `Invalid binding property '${property}'`);
   return { alias, property };
 }
 function bindableTargets(action) {
@@ -10234,7 +8739,7 @@ function validateValueBindings(action, path, variables) {
   if (action.content.bindings === void 0)
     return;
   if (action.kind !== "geometry" && action.kind !== "plot" && action.kind !== "scene3d") {
-    fail2("OLL_INVALID_BINDING", `${path}/content/bindings`, "Bindings are only supported on geometry, plot, and scene3d nodes");
+    fail("OLL_INVALID_BINDING", `${path}/content/bindings`, "Bindings are only supported on geometry, plot, and scene3d nodes");
   }
   requireArray(action.content.bindings, `${path}/content/bindings`);
   const targets = bindableTargets(action);
@@ -10245,30 +8750,30 @@ function validateValueBindings(action, path, variables) {
     requireObject(binding, bindingPath);
     for (const field of Object.keys(binding)) {
       if (!["target", "expression", "label", "allow_zero", "hide_when_undefined"].includes(field))
-        fail2("OLL_INVALID_BINDING", `${bindingPath}/${field}`, `Unknown binding field '${field}'`);
+        fail("OLL_INVALID_BINDING", `${bindingPath}/${field}`, `Unknown binding field '${field}'`);
     }
     const { alias, property } = splitBindingTarget(binding.target, `${bindingPath}/target`);
     if (!targets.get(alias)?.has(property)) {
-      fail2("OLL_REFERENCE_NOT_FOUND", `${bindingPath}/target`, `Binding target '${binding.target}' is not a supported numeric field`);
+      fail("OLL_REFERENCE_NOT_FOUND", `${bindingPath}/target`, `Binding target '${binding.target}' is not a supported numeric field`);
     }
     if (binding.hide_when_undefined !== void 0 && (binding.hide_when_undefined !== true || action.kind !== "plot" && action.kind !== "geometry" || !["x", "y"].includes(property))) {
-      fail2("OLL_INVALID_BINDING", `${bindingPath}/hide_when_undefined`, "hide_when_undefined is only valid on point x/y bindings and must be true");
+      fail("OLL_INVALID_BINDING", `${bindingPath}/hide_when_undefined`, "hide_when_undefined is only valid on point x/y bindings and must be true");
     }
     if (binding.allow_zero !== void 0 && (binding.allow_zero !== true || property !== "radius")) {
-      fail2("OLL_INVALID_BINDING", `${bindingPath}/allow_zero`, "allow_zero is only valid on radius bindings and must be true");
+      fail("OLL_INVALID_BINDING", `${bindingPath}/allow_zero`, "allow_zero is only valid on radius bindings and must be true");
     }
     if (binding.label !== void 0) {
       requireObject(binding.label, `${bindingPath}/label`);
       const label = binding.label;
       if (Object.keys(label).some((key) => !["prefix", "suffix", "precision"].includes(key)) || !Number.isInteger(label.precision) || Number(label.precision) < 0 || Number(label.precision) > 6 || [label.prefix, label.suffix].some((value) => value !== void 0 && (typeof value !== "string" || value.length > 64))) {
-        fail2("OLL_INVALID_BINDING", `${bindingPath}/label`, "Label requires precision 0..6 and optional prefix/suffix up to 64 characters");
+        fail("OLL_INVALID_BINDING", `${bindingPath}/label`, "Label requires precision 0..6 and optional prefix/suffix up to 64 characters");
       }
       if (labeled.has(alias))
-        fail2("OLL_INVALID_BINDING", `${bindingPath}/label`, "A fragment may have only one generated label");
+        fail("OLL_INVALID_BINDING", `${bindingPath}/label`, "A fragment may have only one generated label");
       labeled.add(alias);
     }
     if (seen.has(binding.target))
-      fail2("OLL_INVALID_BINDING", `${bindingPath}/target`, `Binding target '${binding.target}' is duplicated`);
+      fail("OLL_INVALID_BINDING", `${bindingPath}/target`, `Binding target '${binding.target}' is duplicated`);
     seen.add(binding.target);
     requireString(binding.expression, `${bindingPath}/expression`);
     try {
@@ -10278,18 +8783,18 @@ function validateValueBindings(action, path, variables) {
         throw new Error("result is not finite");
     } catch (error) {
       const message = error instanceof Error ? error.message : "invalid expression";
-      fail2("OLL_INVALID_BINDING", `${bindingPath}/expression`, message);
+      fail("OLL_INVALID_BINDING", `${bindingPath}/expression`, message);
     }
   });
 }
 function splitTarget(value, path) {
   if (typeof value !== "string") {
-    fail2("OLL_INVALID_REFERENCE", path, "Reference must be a string");
+    fail("OLL_INVALID_REFERENCE", path, "Reference must be a string");
   }
   const [alias, fragment, ...rest] = value.split("#");
   requireAlias(alias, path);
   if (rest.length > 0 || fragment !== void 0 && !fragment) {
-    fail2("OLL_INVALID_REFERENCE", path, `Invalid reference '${value}'`);
+    fail("OLL_INVALID_REFERENCE", path, `Invalid reference '${value}'`);
   }
   if (fragment !== void 0)
     requireAlias(fragment, path);
@@ -10298,7 +8803,7 @@ function splitTarget(value, path) {
 function register(registry, alias, type, path, fragments = []) {
   requireAlias(alias, path);
   if (registry.has(alias)) {
-    fail2("OLL_DUPLICATE_ALIAS", path, `Alias '${alias}' is already defined`);
+    fail("OLL_DUPLICATE_ALIAS", path, `Alias '${alias}' is already defined`);
   }
   registry.set(alias, { type, fragments: new Set(fragments) });
 }
@@ -10312,7 +8817,7 @@ function validateContentFragments(content, path) {
     requireObject(fragment, fragmentPath);
     requireAlias(fragment.as, `${fragmentPath}/as`);
     if (seen.has(fragment.as)) {
-      fail2("OLL_DUPLICATE_ALIAS", `${fragmentPath}/as`, `Fragment '${fragment.as}' is duplicated`);
+      fail("OLL_DUPLICATE_ALIAS", `${fragmentPath}/as`, `Fragment '${fragment.as}' is duplicated`);
     }
     seen.add(fragment.as);
     return fragment.as;
@@ -10335,7 +8840,7 @@ function validateStructuredContent(content, path, addressable) {
     content.edges.forEach((edge, index) => {
       for (const field of ["from", "to"]) {
         if (!addressable.has(edge[field])) {
-          fail2("OLL_REFERENCE_NOT_FOUND", `${path}/edges/${index}/${field}`, `Diagram element '${edge[field]}' is not defined`);
+          fail("OLL_REFERENCE_NOT_FOUND", `${path}/edges/${index}/${field}`, `Diagram element '${edge[field]}' is not defined`);
         }
       }
     });
@@ -10346,7 +8851,7 @@ function validateStructuredContent(content, path, addressable) {
         return;
       region.members.forEach((member, memberIndex) => {
         if (!addressable.has(member)) {
-          fail2("OLL_REFERENCE_NOT_FOUND", `${path}/regions/${regionIndex}/members/${memberIndex}`, `Diagram element '${member}' is not defined`);
+          fail("OLL_REFERENCE_NOT_FOUND", `${path}/regions/${regionIndex}/members/${memberIndex}`, `Diagram element '${member}' is not defined`);
         }
       });
     });
@@ -10355,7 +8860,7 @@ function validateStructuredContent(content, path, addressable) {
 function requireFiniteNumber(value, path) {
   const number = Number(value);
   if (!Number.isFinite(number))
-    fail2("OLL_INVALID_OPERATION_PAYLOAD", path, "Expected a finite number");
+    fail("OLL_INVALID_OPERATION_PAYLOAD", path, "Expected a finite number");
   return number;
 }
 function validateGeometryContent(action, path, variables) {
@@ -10369,10 +8874,10 @@ function validateGeometryContent(action, path, variables) {
     const min = requireFiniteNumber(content.axes[axisName].min, `${axisPath}/min`);
     const max = requireFiniteNumber(content.axes[axisName].max, `${axisPath}/max`);
     if (max <= min)
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", axisPath, "Geometry axis max must be greater than min");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", axisPath, "Geometry axis max must be greater than min");
   }
   if (content.axes.equal_scale !== true) {
-    fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/axes/equal_scale`, "Geometry requires equal_scale=true");
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/axes/equal_scale`, "Geometry requires equal_scale=true");
   }
   requireArray(content.points, `${path}/content/points`);
   const pointAliases = /* @__PURE__ */ new Set();
@@ -10391,48 +8896,48 @@ function validateGeometryContent(action, path, variables) {
     const interactionPath = `${path}/content/points/${index}/interaction`;
     requireObject(point.interaction, interactionPath);
     if (point.interaction.kind !== "angle_control") {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${interactionPath}/kind`, "Geometry point interaction kind must be 'angle_control'");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${interactionPath}/kind`, "Geometry point interaction kind must be 'angle_control'");
     }
     requireVariableAlias(point.interaction.variable, `${interactionPath}/variable`);
     if (!variables.has(point.interaction.variable)) {
-      fail2("OLL_REFERENCE_NOT_FOUND", `${interactionPath}/variable`, `Lesson variable '${point.interaction.variable}' is not defined`);
+      fail("OLL_REFERENCE_NOT_FOUND", `${interactionPath}/variable`, `Lesson variable '${point.interaction.variable}' is not defined`);
     }
     requireAlias(point.interaction.center, `${interactionPath}/center`);
     if (!pointAliases.has(point.interaction.center)) {
-      fail2("OLL_REFERENCE_NOT_FOUND", `${interactionPath}/center`, `Geometry point '${point.interaction.center}' is not defined`);
+      fail("OLL_REFERENCE_NOT_FOUND", `${interactionPath}/center`, `Geometry point '${point.interaction.center}' is not defined`);
     }
     if (point.interaction.center === point.as) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${interactionPath}/center`, "An angle control point cannot use itself as its center");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${interactionPath}/center`, "An angle control point cannot use itself as its center");
     }
   });
   const requirePointReference = (value, referencePath) => {
     requireAlias(value, referencePath);
     if (!pointAliases.has(value)) {
-      fail2("OLL_REFERENCE_NOT_FOUND", referencePath, `Geometry point '${value}' is not defined`);
+      fail("OLL_REFERENCE_NOT_FOUND", referencePath, `Geometry point '${value}' is not defined`);
     }
   };
   if (content.polygons !== void 0) {
     if (!Array.isArray(content.polygons)) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/polygons`, "Expected an array");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/polygons`, "Expected an array");
     }
     content.polygons.forEach((polygon, index) => {
       const polygonPath = `${path}/content/polygons/${index}`;
       requireObject(polygon, polygonPath);
       if (!Array.isArray(polygon.points) || polygon.points.length < 3) {
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${polygonPath}/points`, "A geometry polygon requires at least three points");
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${polygonPath}/points`, "A geometry polygon requires at least three points");
       }
       polygon.points.forEach((point, pointIndex) => {
         requirePointReference(point, `${polygonPath}/points/${pointIndex}`);
       });
       if (new Set(polygon.points).size < 3) {
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${polygonPath}/points`, "A geometry polygon requires at least three distinct points");
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${polygonPath}/points`, "A geometry polygon requires at least three distinct points");
       }
     });
   }
   if (content.regular_polygons !== void 0) {
     requireArray(content.regular_polygons, `${path}/content/regular_polygons`);
     if (content.regular_polygons.length > 8)
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", path, "At most 8 regular polygons");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", path, "At most 8 regular polygons");
     content.regular_polygons.forEach((polygon, index) => {
       const p = `${path}/content/regular_polygons/${index}`;
       requireObject(polygon, p);
@@ -10441,9 +8946,9 @@ function validateGeometryContent(action, path, variables) {
       const radius = requireFiniteNumber(polygon.radius, `${p}/radius`);
       const sides = requireFiniteNumber(polygon.sides, `${p}/sides`);
       if (radius <= 0 || !Number.isInteger(sides) || sides < 3 || sides > 384)
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", p, "Regular polygons require positive radius and integer sides 3..384");
+        fail("OLL_INVALID_OPERATION_PAYLOAD", p, "Regular polygons require positive radius and integer sides 3..384");
       if (polygon.relation !== "inscribed" && polygon.relation !== "circumscribed")
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${p}/relation`, "Expected inscribed or circumscribed");
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${p}/relation`, "Expected inscribed or circumscribed");
       if (polygon.rotation !== void 0)
         requireFiniteNumber(polygon.rotation, `${p}/rotation`);
     });
@@ -10456,7 +8961,7 @@ function validateGeometryContent(action, path, variables) {
     if (content[field] === void 0)
       continue;
     if (!Array.isArray(content[field])) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/${field}`, "Expected an array");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/${field}`, "Expected an array");
     }
     content[field].forEach((item, index) => {
       const itemPath = `${path}/content/${field}/${index}`;
@@ -10467,11 +8972,11 @@ function validateGeometryContent(action, path, variables) {
         const radius = requireFiniteNumber(item.radius, `${itemPath}/radius`);
         const zeroAllowed = radius === 0 && (content.bindings ?? []).some((binding) => binding.target === `${item.as}.radius` && binding.allow_zero === true);
         if (radius < 0 || radius === 0 && !zeroAllowed)
-          fail2("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/radius`, "Radius must be positive unless explicitly bound with allow_zero");
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/radius`, "Radius must be positive unless explicitly bound with allow_zero");
       }
       if (field === "arcs") {
         if (item.filled !== void 0 && typeof item.filled !== "boolean")
-          fail2("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/filled`, "Sector fill must be boolean");
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${itemPath}/filled`, "Sector fill must be boolean");
         requireFiniteNumber(item.start_angle, `${itemPath}/start_angle`);
         requireFiniteNumber(item.end_angle, `${itemPath}/end_angle`);
       }
@@ -10488,14 +8993,14 @@ function validateScene3dContent(action, path, variables) {
   const pitch = requireFiniteNumber(content.camera.pitch, `${path}/content/camera/pitch`);
   const zoom = requireFiniteNumber(content.camera.zoom, `${path}/content/camera/zoom`);
   if (pitch < -Math.PI / 2 || pitch > Math.PI / 2) {
-    fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/camera/pitch`, "3D camera pitch must be between -pi/2 and pi/2");
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/camera/pitch`, "3D camera pitch must be between -pi/2 and pi/2");
   }
   if (zoom < 0.2 || zoom > 5) {
-    fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/camera/zoom`, "3D camera zoom must be from 0.2 to 5");
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/camera/zoom`, "3D camera zoom must be from 0.2 to 5");
   }
   requireArray(content.objects, `${path}/content/objects`);
   if (content.objects.length === 0 || content.objects.length > 24) {
-    fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/objects`, "A 3D scene requires 1 to 24 objects");
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/objects`, "A 3D scene requires 1 to 24 objects");
   }
   const aliases = /* @__PURE__ */ new Set();
   const objectAliases = /* @__PURE__ */ new Set();
@@ -10509,7 +9014,7 @@ function validateScene3dContent(action, path, variables) {
     requireObject(value, sizePath);
     for (const axis of ["x", "y", "z"]) {
       if (requireFiniteNumber(value[axis], `${sizePath}/${axis}`) <= 0)
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${sizePath}/${axis}`, "3D size must be greater than zero");
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${sizePath}/${axis}`, "3D size must be greater than zero");
     }
   };
   const range = (value, rangePath) => {
@@ -10517,7 +9022,7 @@ function validateScene3dContent(action, path, variables) {
     const min = requireFiniteNumber(value.min, `${rangePath}/min`);
     const max = requireFiniteNumber(value.max, `${rangePath}/max`);
     if (max <= min)
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", rangePath, "3D range max must be greater than min");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", rangePath, "3D range max must be greater than min");
     return { min, max };
   };
   content.objects.forEach((rawObject, index) => {
@@ -10526,15 +9031,15 @@ function validateScene3dContent(action, path, variables) {
     const object2 = rawObject;
     requireAlias(object2.as, `${objectPath}/as`);
     if (aliases.has(object2.as))
-      fail2("OLL_DUPLICATE_ALIAS", `${objectPath}/as`, `3D object '${object2.as}' is duplicated`);
+      fail("OLL_DUPLICATE_ALIAS", `${objectPath}/as`, `3D object '${object2.as}' is duplicated`);
     aliases.add(object2.as);
     objectAliases.add(object2.as);
     const objectKind = String(object2.kind);
     if (!["box", "sphere", "cylinder", "cone", "surface", "implicit_surface"].includes(objectKind)) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/kind`, `Unknown 3D object kind '${object2.kind}'`);
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/kind`, `Unknown 3D object kind '${object2.kind}'`);
     }
     if (object2.color !== void 0 && (typeof object2.color !== "string" || !/^(#[0-9a-fA-F]{6}|teal|blue|purple|orange|red|gray)$/.test(object2.color))) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/color`, "3D colors must use a safe palette name or six-digit hex value");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/color`, "3D colors must use a safe palette name or six-digit hex value");
     }
     if (objectKind === "box") {
       point(object2.center, `${objectPath}/center`);
@@ -10543,11 +9048,11 @@ function validateScene3dContent(action, path, variables) {
       point(object2.center, `${objectPath}/center`);
       const radius = requireFiniteNumber(object2.radius, `${objectPath}/radius`);
       if (radius <= 0)
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/radius`, "3D radius must be greater than zero");
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/radius`, "3D radius must be greater than zero");
       if (objectKind !== "sphere") {
         const height = requireFiniteNumber(object2.height, `${objectPath}/height`);
         if (height <= 0)
-          fail2("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/height`, "3D height must be greater than zero");
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/height`, "3D height must be greater than zero");
       }
     } else if (objectKind === "implicit_surface") {
       requireString(object2.expression, `${objectPath}/expression`);
@@ -10557,7 +9062,7 @@ function validateScene3dContent(action, path, variables) {
       const level = object2.level === void 0 ? 0 : requireFiniteNumber(object2.level, `${objectPath}/level`);
       const sampleCount = Number(object2.samples ?? 12);
       if (!Number.isInteger(sampleCount) || sampleCount < 4 || sampleCount > 18) {
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/samples`, "3D implicit surface samples must be an integer from 4 to 18");
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/samples`, "3D implicit surface samples must be an integer from 4 to 18");
       }
       try {
         const variableNames = ["x", "y", "z", ...variables.keys()];
@@ -10580,7 +9085,7 @@ function validateScene3dContent(action, path, variables) {
           throw new Error("the requested level is outside the sampled value range");
         }
       } catch (error) {
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/expression`, `Invalid 3D implicit surface expression: ${error.message}`);
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/expression`, `Invalid 3D implicit surface expression: ${error.message}`);
       }
     } else {
       requireString(object2.expression, `${objectPath}/expression`);
@@ -10588,7 +9093,7 @@ function validateScene3dContent(action, path, variables) {
       const yRange = range(object2.y_range, `${objectPath}/y_range`);
       const sampleCount = Number(object2.samples ?? 12);
       if (!Number.isInteger(sampleCount) || sampleCount < 4 || sampleCount > 24) {
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/samples`, "3D surface samples must be an integer from 4 to 24");
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/samples`, "3D surface samples must be an integer from 4 to 24");
       }
       try {
         const variableNames = ["x", "y", ...variables.keys()];
@@ -10601,54 +9106,54 @@ function validateScene3dContent(action, path, variables) {
           }
         }
       } catch (error) {
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/expression`, `Invalid 3D surface expression: ${error.message}`);
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/expression`, `Invalid 3D surface expression: ${error.message}`);
       }
     }
   });
   if (content.sections !== void 0) {
     requireArray(content.sections, `${path}/content/sections`);
     if (content.sections.length > 8)
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/sections`, "A 3D scene supports at most 8 sections");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/sections`, "A 3D scene supports at most 8 sections");
     content.sections.forEach((rawSection, index) => {
       const sectionPath = `${path}/content/sections/${index}`;
       requireObject(rawSection, sectionPath);
       const section = rawSection;
       requireAlias(section.as, `${sectionPath}/as`);
       if (aliases.has(section.as))
-        fail2("OLL_DUPLICATE_ALIAS", `${sectionPath}/as`, `3D element '${section.as}' is duplicated`);
+        fail("OLL_DUPLICATE_ALIAS", `${sectionPath}/as`, `3D element '${section.as}' is duplicated`);
       aliases.add(section.as);
       if (!["x", "y", "z"].includes(String(section.axis)))
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${sectionPath}/axis`, "3D section axis must be x, y, or z");
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${sectionPath}/axis`, "3D section axis must be x, y, or z");
       requireFiniteNumber(section.value, `${sectionPath}/value`);
       const display = String(section.display ?? "plane");
       if (!["plane", "intersection", "plane_and_intersection"].includes(display)) {
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${sectionPath}/display`, `Unknown 3D section display '${display}'`);
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${sectionPath}/display`, `Unknown 3D section display '${display}'`);
       }
       if (section.targets !== void 0) {
         requireArray(section.targets, `${sectionPath}/targets`);
         if (section.targets.length === 0 || section.targets.length > 24) {
-          fail2("OLL_INVALID_OPERATION_PAYLOAD", `${sectionPath}/targets`, "3D section targets must contain 1 to 24 objects");
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${sectionPath}/targets`, "3D section targets must contain 1 to 24 objects");
         }
         const seenTargets = /* @__PURE__ */ new Set();
         section.targets.forEach((target, targetIndex) => {
           requireAlias(target, `${sectionPath}/targets/${targetIndex}`);
           if (!objectAliases.has(target)) {
-            fail2("OLL_REFERENCE_NOT_FOUND", `${sectionPath}/targets/${targetIndex}`, `3D section target '${String(target)}' does not exist`);
+            fail("OLL_REFERENCE_NOT_FOUND", `${sectionPath}/targets/${targetIndex}`, `3D section target '${String(target)}' does not exist`);
           }
           if (seenTargets.has(target)) {
-            fail2("OLL_INVALID_OPERATION_PAYLOAD", `${sectionPath}/targets/${targetIndex}`, `3D section target '${String(target)}' is duplicated`);
+            fail("OLL_INVALID_OPERATION_PAYLOAD", `${sectionPath}/targets/${targetIndex}`, `3D section target '${String(target)}' is duplicated`);
           }
           seenTargets.add(target);
         });
       } else if (display !== "plane") {
-        fail2("OLL_REFERENCE_NOT_FOUND", `${sectionPath}/targets`, `3D section display '${display}' requires at least one target object`);
+        fail("OLL_REFERENCE_NOT_FOUND", `${sectionPath}/targets`, `3D section display '${display}' requires at least one target object`);
       }
     });
   }
   if (content.highlights !== void 0) {
     requireArray(content.highlights, `${path}/content/highlights`);
     if (content.highlights.length > 24) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/highlights`, "A 3D scene supports at most 24 highlights");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/highlights`, "A 3D scene supports at most 24 highlights");
     }
     content.highlights.forEach((rawHighlight, index) => {
       const highlightPath = `${path}/content/highlights/${index}`;
@@ -10656,15 +9161,15 @@ function validateScene3dContent(action, path, variables) {
       const highlight = rawHighlight;
       requireAlias(highlight.as, `${highlightPath}/as`);
       if (aliases.has(highlight.as))
-        fail2("OLL_DUPLICATE_ALIAS", `${highlightPath}/as`, `3D element '${highlight.as}' is duplicated`);
+        fail("OLL_DUPLICATE_ALIAS", `${highlightPath}/as`, `3D element '${highlight.as}' is duplicated`);
       aliases.add(highlight.as);
       if (!["point", "edge", "face"].includes(String(highlight.kind))) {
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${highlightPath}/kind`, `Unknown 3D highlight kind '${String(highlight.kind)}'`);
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${highlightPath}/kind`, `Unknown 3D highlight kind '${String(highlight.kind)}'`);
       }
       requireArray(highlight.points, `${highlightPath}/points`);
       const requiredCount = highlight.kind === "point" ? 1 : highlight.kind === "edge" ? 2 : 3;
       if (highlight.points.length < requiredCount || highlight.kind !== "face" && highlight.points.length !== requiredCount || highlight.points.length > 12) {
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${highlightPath}/points`, `3D ${String(highlight.kind)} highlight has an invalid point count`);
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${highlightPath}/points`, `3D ${String(highlight.kind)} highlight has an invalid point count`);
       }
       highlight.points.forEach((rawPoint, pointIndex) => point(rawPoint, `${highlightPath}/points/${pointIndex}`));
     });
@@ -10681,7 +9186,7 @@ function validatePlotContent(action, path, variables) {
     const min = requireFiniteNumber(value.min, `${rangePath}/min`);
     const max = requireFiniteNumber(value.max, `${rangePath}/max`);
     if (max <= min) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", rangePath, "Plot range max must be greater than min");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", rangePath, "Plot range max must be greater than min");
     }
     return { min, max };
   };
@@ -10697,14 +9202,14 @@ function validatePlotContent(action, path, variables) {
       try {
         compileMathExpression(expression, ["x", ...variables.keys()]);
       } catch (error) {
-        fail2("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/expression`, `Invalid plot expression: ${error.message}`);
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/expression`, `Invalid plot expression: ${error.message}`);
       }
       return;
     }
     const level = curve.level === void 0 ? 0 : requireFiniteNumber(curve.level, `${curvePath}/level`);
     const sampleCount = Number(curve.samples ?? 80);
     if (!Number.isInteger(sampleCount) || sampleCount < 16 || sampleCount > 200) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/samples`, "Implicit plot samples must be an integer from 16 to 200");
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/samples`, "Implicit plot samples must be an integer from 16 to 200");
     }
     try {
       const evaluate2 = compileMathExpression(curve.expression, ["x", "y", ...variables.keys()]);
@@ -10726,7 +9231,7 @@ function validatePlotContent(action, path, variables) {
         throw new Error("the requested level has no visible contour in the plot range");
       }
     } catch (error) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/expression`, `Invalid implicit plot expression: ${error.message}`);
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/expression`, `Invalid implicit plot expression: ${error.message}`);
     }
   });
 }
@@ -10735,32 +9240,32 @@ function validateImageResource(action, path, resourceContext) {
     return;
   const assetId = action.content?.asset_id;
   if (typeof assetId !== "string" || assetId.length === 0) {
-    fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/asset_id`, "Image requires a controlled asset_id");
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/asset_id`, "Image requires a controlled asset_id");
   }
   if (!resourceContext)
     return;
   const asset = resourceContext.assets?.find((candidate) => candidate.asset_id === assetId);
   if (!asset)
-    fail2("OLL_RESOURCE_DENIED", `${path}/content/asset_id`, `Asset '${assetId}' is not available in Session Context`);
+    fail("OLL_RESOURCE_DENIED", `${path}/content/asset_id`, `Asset '${assetId}' is not available in Session Context`);
   const allowedRegions = new Set((asset.regions ?? []).map((region) => region.region_id));
   (action.content.regions ?? []).forEach((region, index) => {
     if (!allowedRegions.has(region.source_region)) {
-      fail2("OLL_RESOURCE_DENIED", `${path}/content/regions/${index}/source_region`, `Region '${region.source_region}' is not available for '${assetId}'`);
+      fail("OLL_RESOURCE_DENIED", `${path}/content/regions/${index}/source_region`, `Region '${region.source_region}' is not available for '${assetId}'`);
     }
   });
 }
-function validatePlacement2(place2, path, registry) {
+function validatePlacement(place2, path, registry) {
   requireObject(place2, path);
   if (!PLACEMENT_RELATIONS.has(place2.relation)) {
-    fail2("OLL_INVALID_PLACEMENT", `${path}/relation`, `Unknown placement relation '${place2.relation}'`);
+    fail("OLL_INVALID_PLACEMENT", `${path}/relation`, `Unknown placement relation '${place2.relation}'`);
   }
   for (const forbidden of ["x", "y", "width", "height", "zoom", "duration_ms"]) {
     if (forbidden in place2)
-      fail2("OLL_INVALID_PLACEMENT", `${path}/${forbidden}`, `Authoring Profile cannot set '${forbidden}'`);
+      fail("OLL_INVALID_PLACEMENT", `${path}/${forbidden}`, `Authoring Profile cannot set '${forbidden}'`);
   }
   if (place2.relation === "new_region") {
     if (place2.anchor !== void 0)
-      fail2("OLL_INVALID_PLACEMENT", `${path}/anchor`, "new_region cannot use an anchor");
+      fail("OLL_INVALID_PLACEMENT", `${path}/anchor`, "new_region cannot use an anchor");
   } else {
     resolveLocal(registry, place2.anchor, `${path}/anchor`, ["node", "group"]);
   }
@@ -10768,7 +9273,7 @@ function validatePlacement2(place2, path, registry) {
 function validateActionPayload(action, path) {
   for (const field of Object.keys(action)) {
     if (!ACTION_FIELDS.has(field))
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/${field}`, `Unknown action field '${field}'`);
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/${field}`, `Unknown action field '${field}'`);
   }
   if (action.do === "write") {
     requireAlias(action.as, `${path}/as`);
@@ -10780,7 +9285,7 @@ function validateActionPayload(action, path) {
     requireString(action.target, `${path}/target`);
     requireObject(action.content, `${path}/content`);
     if (action.content.bindings !== void 0) {
-      fail2("OLL_INVALID_BINDING", `${path}/content/bindings`, "Authoring bindings must be declared when a geometry or plot node is created");
+      fail("OLL_INVALID_BINDING", `${path}/content/bindings`, "Authoring bindings must be declared when a geometry or plot node is created");
     }
     requireString(action.reason, `${path}/reason`);
   } else if (action.do === "emphasize") {
@@ -10807,10 +9312,10 @@ function validateActionPayload(action, path) {
     requireVariableAlias(action.variable, `${path}/variable`);
     requireFiniteNumber(action.value, `${path}/value`);
     if (action.easing !== void 0 && !ANIMATION_EASINGS.has(action.easing)) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/easing`, `Unknown animation easing '${action.easing}'`);
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/easing`, `Unknown animation easing '${action.easing}'`);
     }
     if (action.duration_intent !== void 0 && !ANIMATION_DURATION_INTENTS.has(action.duration_intent)) {
-      fail2("OLL_INVALID_OPERATION_PAYLOAD", `${path}/duration_intent`, `Unknown animation duration intent '${action.duration_intent}'`);
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/duration_intent`, `Unknown animation duration intent '${action.duration_intent}'`);
     }
   }
 }
@@ -10818,13 +9323,13 @@ function resolveLocal(registry, value, path, allowedTypes = null) {
   const { alias, fragment } = splitTarget(value, path);
   const entry = registry.get(alias);
   if (!entry) {
-    fail2("OLL_REFERENCE_NOT_FOUND", path, `Alias '${alias}' is not defined before use`);
+    fail("OLL_REFERENCE_NOT_FOUND", path, `Alias '${alias}' is not defined before use`);
   }
   if (allowedTypes && !allowedTypes.includes(entry.type)) {
-    fail2("OLL_INVALID_REFERENCE", path, `Alias '${alias}' has type '${entry.type}'`);
+    fail("OLL_INVALID_REFERENCE", path, `Alias '${alias}' has type '${entry.type}'`);
   }
   if (fragment && !entry.fragments.has(fragment)) {
-    fail2("OLL_REFERENCE_NOT_FOUND", path, `Fragment '${fragment}' does not exist on '${alias}'`);
+    fail("OLL_REFERENCE_NOT_FOUND", path, `Fragment '${fragment}' does not exist on '${alias}'`);
   }
   return { alias, fragment, type: entry.type };
 }
@@ -10843,7 +9348,7 @@ function validateAuthoringSchema(document) {
 function validateAuthoringLesson(document, resourceContext = null) {
   requireObject(document, "");
   if (document.dsl !== "octos.lesson" || document.version !== "0.1" || document.profile !== "authoring") {
-    fail2("OLL_UNSUPPORTED_PROFILE", "", "Expected octos.lesson 0.1 Authoring Profile");
+    fail("OLL_UNSUPPORTED_PROFILE", "", "Expected octos.lesson 0.1 Authoring Profile");
   }
   requireObject(document.lesson, "/lesson");
   requireArray(document.lesson.goals, "/lesson/goals");
@@ -10862,23 +9367,23 @@ function validateAuthoringLesson(document, resourceContext = null) {
   if (document.board_context) {
     requireString(document.board_context.board_id, "/board_context/board_id");
     if (!Number.isSafeInteger(document.board_context.revision) || document.board_context.revision < 0) {
-      fail2("OLL_INVALID_REFERENCE", "/board_context/revision", "Board revision must be a non-negative integer");
+      fail("OLL_INVALID_REFERENCE", "/board_context/revision", "Board revision must be a non-negative integer");
     }
     if (!Array.isArray(document.board_context.references)) {
-      fail2("OLL_INVALID_REFERENCE", "/board_context/references", "Board references must be an array");
+      fail("OLL_INVALID_REFERENCE", "/board_context/references", "Board references must be an array");
     }
     document.board_context.references.forEach((reference, index) => {
       const path = `/board_context/references/${index}`;
       requireAlias(reference.as, `${path}/as`);
       if (registry.has(reference.as)) {
-        fail2("OLL_DUPLICATE_ALIAS", `${path}/as`, `Alias '${reference.as}' is already defined`);
+        fail("OLL_DUPLICATE_ALIAS", `${path}/as`, `Alias '${reference.as}' is already defined`);
       }
       if (!["node", "group", "connection"].includes(reference.type)) {
-        fail2("OLL_INVALID_REFERENCE", `${path}/type`, `Unknown reference type '${reference.type}'`);
+        fail("OLL_INVALID_REFERENCE", `${path}/type`, `Unknown reference type '${reference.type}'`);
       }
       requireString(reference.target_id, `${path}/target_id`);
       if (!Array.isArray(reference.fragments)) {
-        fail2("OLL_INVALID_REFERENCE", `${path}/fragments`, "Reference fragments must be an array");
+        fail("OLL_INVALID_REFERENCE", `${path}/fragments`, "Reference fragments must be an array");
       }
       const fragmentIds = /* @__PURE__ */ new Map();
       reference.fragments.forEach((fragment, fragmentIndex) => {
@@ -10886,12 +9391,12 @@ function validateAuthoringLesson(document, resourceContext = null) {
         requireAlias(fragment.as, `${fragmentPath}/as`);
         requireString(fragment.target_id, `${fragmentPath}/target_id`);
         if (fragmentIds.has(fragment.as)) {
-          fail2("OLL_DUPLICATE_ALIAS", `${fragmentPath}/as`, `Fragment '${fragment.as}' is duplicated`);
+          fail("OLL_DUPLICATE_ALIAS", `${fragmentPath}/as`, `Fragment '${fragment.as}' is duplicated`);
         }
         fragmentIds.set(fragment.as, fragment.target_id);
       });
       if (reference.type !== "node" && fragmentIds.size > 0) {
-        fail2("OLL_INVALID_REFERENCE", `${path}/fragments`, "Only node references can expose fragments");
+        fail("OLL_INVALID_REFERENCE", `${path}/fragments`, "Only node references can expose fragments");
       }
       registry.set(reference.as, {
         type: reference.type,
@@ -10908,7 +9413,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
     requireObject(step, stepPath);
     requireAlias(step.key, `${stepPath}/key`);
     if (stepKeys.has(step.key))
-      fail2("OLL_DUPLICATE_ALIAS", `${stepPath}/key`, `Step '${step.key}' is duplicated`);
+      fail("OLL_DUPLICATE_ALIAS", `${stepPath}/key`, `Step '${step.key}' is duplicated`);
     stepKeys.add(step.key);
     requireArray(step.beats, `${stepPath}/beats`);
     const beatKeys = /* @__PURE__ */ new Set();
@@ -10917,33 +9422,33 @@ function validateAuthoringLesson(document, resourceContext = null) {
       requireObject(beat, beatPath);
       requireAlias(beat.key, `${beatPath}/key`);
       if (beatKeys.has(beat.key))
-        fail2("OLL_DUPLICATE_ALIAS", `${beatPath}/key`, `Beat '${beat.key}' is duplicated`);
+        fail("OLL_DUPLICATE_ALIAS", `${beatPath}/key`, `Beat '${beat.key}' is duplicated`);
       beatKeys.add(beat.key);
       requireArray(beat.actions, `${beatPath}/actions`);
       if (beat.start) {
         if (beat.start.kind === "practice")
-          fail2("OLL_INVALID_PHASE_START", `${beatPath}/start`, "Practice belongs on a student task");
+          fail("OLL_INVALID_PHASE_START", `${beatPath}/start`, "Practice belongs on a student task");
         resolvePhaseStart(beat.start, document.lesson.variables ?? [], `${beatPath}/start`);
       }
       beat.actions.forEach((action, actionIndex) => {
         const actionPath = `${beatPath}/actions/${actionIndex}`;
         requireObject(action, actionPath);
         if (!ACTIONS.has(action.do))
-          fail2("OLL_INVALID_OPERATION", `${actionPath}/do`, `Unknown action '${action.do}'`);
+          fail("OLL_INVALID_OPERATION", `${actionPath}/do`, `Unknown action '${action.do}'`);
         validateActionPayload(action, actionPath);
         const phase = action.when ?? "during_speech";
         if (!PHASES.has(phase))
-          fail2("OLL_INVALID_PHASE", `${actionPath}/when`, `Unknown phase '${phase}'`);
+          fail("OLL_INVALID_PHASE", `${actionPath}/when`, `Unknown phase '${phase}'`);
         if (action.do === "write") {
           requireAlias(action.as, `${actionPath}/as`);
           requireObject(action.content, `${actionPath}/content`);
-          validatePlacement2(action.place, `${actionPath}/place`, registry);
+          validatePlacement(action.place, `${actionPath}/place`, registry);
           const fragments = collectAddressableContent(action.content);
           const uniqueFragments = /* @__PURE__ */ new Set();
           for (const fragment of fragments) {
             requireAlias(fragment, `${actionPath}/content`);
             if (uniqueFragments.has(fragment))
-              fail2("OLL_DUPLICATE_ALIAS", `${actionPath}/content`, `Fragment '${fragment}' is duplicated`);
+              fail("OLL_DUPLICATE_ALIAS", `${actionPath}/content`, `Fragment '${fragment}' is duplicated`);
             uniqueFragments.add(fragment);
           }
           validateStructuredContent(action.content, `${actionPath}/content`, uniqueFragments);
@@ -10976,9 +9481,9 @@ function validateAuthoringLesson(document, resourceContext = null) {
         if (action.do === "animate") {
           const variable = document.lesson.variables?.find((candidate) => candidate.as === action.variable);
           if (!variable)
-            fail2("OLL_REFERENCE_NOT_FOUND", `${actionPath}/variable`, `Variable '${action.variable}' is not declared`);
+            fail("OLL_REFERENCE_NOT_FOUND", `${actionPath}/variable`, `Variable '${action.variable}' is not declared`);
           if (action.value < variable.min || action.value > variable.max) {
-            fail2("OLL_INVALID_VARIABLE", `${actionPath}/value`, `Animation target for '${action.variable}' is outside its range`);
+            fail("OLL_INVALID_VARIABLE", `${actionPath}/value`, `Animation target for '${action.variable}' is outside its range`);
           }
           return;
         }
@@ -10989,7 +9494,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
         if (action.do === "revise") {
           const resolved = resolveLocal(registry, action.target, `${actionPath}/target`, ["node"]);
           if (registry.get(resolved.alias)?.external) {
-            fail2("OLL_INVALID_REFERENCE", `${actionPath}/target`, "External board references are read-only");
+            fail("OLL_INVALID_REFERENCE", `${actionPath}/target`, "External board references are read-only");
           }
           return;
         }
@@ -11016,7 +9521,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
       });
     });
   });
-  validateStudentTasks(document, lessonVariables, availableStudentControls, scene3dCameras);
+  validateStudentTasks(document, lessonVariables, availableStudentControls, scene3dCameras, registry);
   validateReflections(document, registry);
   if (document.close?.focus) {
     for (let index = 0; index < document.close.focus.length; index += 1) {
@@ -11121,7 +9626,7 @@ function canonicalTarget(registry, value) {
   const { alias, fragment } = splitTarget(value, "target");
   const entry = registry.get(alias);
   if (!entry)
-    fail2("OLL_REFERENCE_NOT_FOUND", "target", `Unknown alias '${alias}'`);
+    fail("OLL_REFERENCE_NOT_FOUND", "target", `Unknown alias '${alias}'`);
   if (entry.type === "group")
     return { group_id: entry.id };
   if (entry.type === "connection")
@@ -11136,13 +9641,13 @@ function canonicalTarget(registry, value) {
 function requireRegistryId(registry, alias) {
   const id = registry.get(alias)?.id;
   if (!id)
-    fail2("OLL_REFERENCE_NOT_FOUND", "target", `No canonical ID exists for alias '${alias}'`);
+    fail("OLL_REFERENCE_NOT_FOUND", "target", `No canonical ID exists for alias '${alias}'`);
   return id;
 }
 function requireCanonicalId(target) {
   const id = target.node_id ?? target.group_id ?? target.connection_id;
   if (!id)
-    fail2("OLL_REFERENCE_NOT_FOUND", "target", "Canonical target has no addressable ID");
+    fail("OLL_REFERENCE_NOT_FOUND", "target", "Canonical target has no addressable ID");
   return id;
 }
 function normalizePlacement(registry, place2) {
@@ -11245,21 +9750,21 @@ function normalizeAction(action, context) {
       }
     };
   }
-  fail2("OLL_INVALID_OPERATION", "action", "Unsupported authoring action");
+  fail("OLL_INVALID_OPERATION", "action", "Unsupported authoring action");
 }
 function normalizeAuthoringLesson(document, host) {
   validateAuthoringLesson(document, host?.resourceContext);
   requireObject(host, "host");
   for (const field of ["lessonId", "boardId", "baseRevision"]) {
     if (host[field] === void 0 || host[field] === null)
-      fail2("OLL_MISSING_HOST_FIELD", `host/${field}`, `Missing host field '${field}'`);
+      fail("OLL_MISSING_HOST_FIELD", `host/${field}`, `Missing host field '${field}'`);
   }
   if (document.board_context) {
     if (document.board_context.board_id !== host.boardId) {
-      fail2("OLL_INVALID_REFERENCE", "/board_context/board_id", "Board context does not match the host board");
+      fail("OLL_INVALID_REFERENCE", "/board_context/board_id", "Board context does not match the host board");
     }
     if (document.board_context.revision !== host.baseRevision) {
-      fail2("OLL_INVALID_REFERENCE", "/board_context/revision", "Board context revision does not match the host revision");
+      fail("OLL_INVALID_REFERENCE", "/board_context/revision", "Board context revision does not match the host revision");
     }
   }
   const registry = buildCanonicalRegistry(document, host);
@@ -11270,6 +9775,11 @@ function normalizeAuthoringLesson(document, host) {
   for (const candidate of canonicalLesson.tasks ?? []) {
     if (candidate.start)
       candidate.start.values = resolvePhaseStart(candidate.start, document.lesson.variables ?? [], `/lesson/tasks/${candidate.as}/start`);
+    if (candidate.completion.kind === "numeric_answer") {
+      const answerTask = candidate;
+      answerTask.anchor = requireRegistryId(registry, answerTask.anchor);
+      continue;
+    }
     const task = candidate;
     if (task.completion.kind !== "scene3d_view_target")
       continue;
@@ -11354,9 +9864,9 @@ function normalizeAuthoringLesson(document, host) {
 }
 function createSemanticBoardState(open) {
   if (open.event !== "lesson.open")
-    fail2("OLL_INVALID_EVENT", "/0/event", "First event must be lesson.open");
+    fail("OLL_INVALID_EVENT", "/0/event", "First event must be lesson.open");
   if (!open.board)
-    fail2("OLL_INVALID_EVENT", "/0/board", "lesson.open must include board state");
+    fail("OLL_INVALID_EVENT", "/0/board", "lesson.open must include board state");
   const variables = Object.fromEntries((open.lesson?.variables ?? []).map((variable) => [
     variable.as,
     {
@@ -11388,7 +9898,7 @@ function bindingValues(state) {
 function bindingTarget(content, target) {
   const separator = target.lastIndexOf(".");
   if (separator <= 0)
-    fail2("OLL_INVALID_BINDING", "content.bindings.target", `Invalid canonical binding target '${target}'`);
+    fail("OLL_INVALID_BINDING", "content.bindings.target", `Invalid canonical binding target '${target}'`);
   const fragmentId = target.slice(0, separator);
   const property = target.slice(separator + 1);
   for (const [field, properties] of Object.entries(OLL_CANONICAL_BINDING_CAPABILITIES)) {
@@ -11396,13 +9906,13 @@ function bindingTarget(content, target) {
     if (record2 && properties.includes(property))
       return { record: record2, property };
     if (record2)
-      fail2("OLL_INVALID_BINDING", "content.bindings.target", `Property '${property}' cannot be bound on '${field}'`);
+      fail("OLL_INVALID_BINDING", "content.bindings.target", `Property '${property}' cannot be bound on '${field}'`);
   }
-  fail2("OLL_REFERENCE_NOT_FOUND", "content.bindings.target", `Canonical binding target '${target}' was not found`);
+  fail("OLL_REFERENCE_NOT_FOUND", "content.bindings.target", `Canonical binding target '${target}' was not found`);
 }
 function formatBoundNumericLabel(value, format) {
   if (!Number.isFinite(value) || !Number.isInteger(format.precision) || format.precision < 0 || format.precision > 6) {
-    fail2("OLL_INVALID_BINDING", "binding.label", "Cannot format a non-finite value or invalid precision");
+    fail("OLL_INVALID_BINDING", "binding.label", "Cannot format a non-finite value or invalid precision");
   }
   const rounded = Number(value.toFixed(format.precision));
   return `${format.prefix ?? ""}${Object.is(rounded, -0) ? 0 : rounded}${format.suffix ?? ""}`;
@@ -11439,7 +9949,7 @@ function evaluateContentBindings(content, variables) {
         record2.label = formatBoundNumericLabel(record2[property], binding.label);
     } catch (error) {
       const message = error instanceof Error ? error.message : "binding evaluation failed";
-      fail2("OLL_BINDING_EVALUATION_FAILED", "content.bindings.expression", message);
+      fail("OLL_BINDING_EVALUATION_FAILED", "content.bindings.expression", message);
     }
   }
   return evaluated;
@@ -11460,74 +9970,74 @@ function applyCanonicalAction(state, action) {
     return false;
   if (action.op === "board.create") {
     if (!action.node)
-      fail2("OLL_INVALID_EVENT", "action.node", "board.create requires node");
+      fail("OLL_INVALID_EVENT", "action.node", "board.create requires node");
     if (state.nodes[action.node.id])
-      fail2("OLL_DUPLICATE_NODE_ID", "action.node.id", `Node '${action.node.id}' already exists`);
+      fail("OLL_DUPLICATE_NODE_ID", "action.node.id", `Node '${action.node.id}' already exists`);
     const anchor = action.node.placement?.anchor;
     if (anchor && !state.nodes[anchor] && !state.groups[anchor])
-      fail2("OLL_REFERENCE_NOT_FOUND", "action.node.placement.anchor", `Anchor '${anchor}' not found`);
+      fail("OLL_REFERENCE_NOT_FOUND", "action.node.placement.anchor", `Anchor '${anchor}' not found`);
     const node = structuredClone(action.node);
     node.content = evaluateContentBindings(node.content, bindingValues(state));
     state.nodes[action.node.id] = node;
   } else if (action.op === "board.connect") {
     if (!action.connection)
-      fail2("OLL_INVALID_EVENT", "action.connection", "board.connect requires connection");
+      fail("OLL_INVALID_EVENT", "action.connection", "board.connect requires connection");
     if (state.connections[action.connection.id])
-      fail2("OLL_DUPLICATE_CONNECTION_ID", "action.connection.id", `Connection '${action.connection.id}' already exists`);
+      fail("OLL_DUPLICATE_CONNECTION_ID", "action.connection.id", `Connection '${action.connection.id}' already exists`);
     if (!canonicalTargetExists(state, action.connection.from))
-      fail2("OLL_REFERENCE_NOT_FOUND", "action.connection.from", "Connection source not found");
+      fail("OLL_REFERENCE_NOT_FOUND", "action.connection.from", "Connection source not found");
     if (!canonicalTargetExists(state, action.connection.to))
-      fail2("OLL_REFERENCE_NOT_FOUND", "action.connection.to", "Connection target not found");
+      fail("OLL_REFERENCE_NOT_FOUND", "action.connection.to", "Connection target not found");
     state.connections[action.connection.id] = structuredClone(action.connection);
   } else if (action.op === "board.group") {
     if (!action.group)
-      fail2("OLL_INVALID_EVENT", "action.group", "board.group requires group");
+      fail("OLL_INVALID_EVENT", "action.group", "board.group requires group");
     if (state.groups[action.group.id])
-      fail2("OLL_DUPLICATE_GROUP_ID", "action.group.id", `Group '${action.group.id}' already exists`);
+      fail("OLL_DUPLICATE_GROUP_ID", "action.group.id", `Group '${action.group.id}' already exists`);
     for (const member of action.group.members ?? []) {
       if (!state.nodes[member] && !state.groups[member])
-        fail2("OLL_REFERENCE_NOT_FOUND", "action.group.members", `Group member '${member}' not found`);
+        fail("OLL_REFERENCE_NOT_FOUND", "action.group.members", `Group member '${member}' not found`);
     }
     state.groups[action.group.id] = structuredClone(action.group);
   } else if (action.op === "board.focus") {
     if (!action.focus)
-      fail2("OLL_INVALID_EVENT", "action.focus", "board.focus requires focus");
+      fail("OLL_INVALID_EVENT", "action.focus", "board.focus requires focus");
     for (const target of action.focus.targets) {
       if (!state.nodes[target] && !state.groups[target] && !state.connections[target])
-        fail2("OLL_REFERENCE_NOT_FOUND", "action.focus.targets", `Focus target '${target}' not found`);
+        fail("OLL_REFERENCE_NOT_FOUND", "action.focus.targets", `Focus target '${target}' not found`);
     }
     state.focus = [...action.focus.targets];
   } else if (action.op === "board.revise") {
     if (!action.target?.node_id || !action.revision)
-      fail2("OLL_INVALID_EVENT", "action", "board.revise requires a node target and revision");
+      fail("OLL_INVALID_EVENT", "action", "board.revise requires a node target and revision");
     const node = state.nodes[action.target.node_id];
     if (!node)
-      fail2("OLL_REFERENCE_NOT_FOUND", "action.target", `Node '${action.target.node_id}' not found`);
+      fail("OLL_REFERENCE_NOT_FOUND", "action.target", `Node '${action.target.node_id}' not found`);
     node.content = evaluateContentBindings(action.revision.content, bindingValues(state));
   } else if (action.op === "board.emphasize") {
     if (!action.target || !action.emphasis)
-      fail2("OLL_INVALID_EVENT", "action.target", "board.emphasize requires target and emphasis");
+      fail("OLL_INVALID_EVENT", "action.target", "board.emphasize requires target and emphasis");
     const target = action.target.node_id ? state.nodes[action.target.node_id] : action.target.connection_id ? state.connections[action.target.connection_id] : action.target.group_id ? state.groups[action.target.group_id] : void 0;
     if (!target)
-      fail2("OLL_REFERENCE_NOT_FOUND", "action.target", "Emphasis target not found");
+      fail("OLL_REFERENCE_NOT_FOUND", "action.target", "Emphasis target not found");
     target.emphasis = [...target.emphasis ?? [], { target: action.target, emphasis: action.emphasis }];
   } else if (action.op === "teacher.point") {
     if (!canonicalTargetExists(state, action.target))
-      fail2("OLL_REFERENCE_NOT_FOUND", "action.target", "Point target not found");
+      fail("OLL_REFERENCE_NOT_FOUND", "action.target", "Point target not found");
   } else if (action.op === "teacher.expression") {
     if (!action.expression)
-      fail2("OLL_INVALID_EVENT", "action.expression", "teacher.expression requires expression");
+      fail("OLL_INVALID_EVENT", "action.expression", "teacher.expression requires expression");
   } else if (action.op === "lesson.phase.start") {
     if (!action.transition)
-      fail2("OLL_INVALID_EVENT", "action.transition", "Phase start requires transition targets");
+      fail("OLL_INVALID_EVENT", "action.transition", "Phase start requires transition targets");
     Object.assign(state, setLessonVariables(state, action.transition.values));
   } else if (action.op === "lesson.variable.animate") {
     if (!action.animation)
-      fail2("OLL_INVALID_EVENT", "action.animation", "lesson.variable.animate requires animation");
+      fail("OLL_INVALID_EVENT", "action.animation", "lesson.variable.animate requires animation");
     const updated = setLessonVariable(state, action.animation.variable, action.animation.to);
     Object.assign(state, updated);
   } else {
-    fail2("OLL_INVALID_OPERATION", "action.op", `Unknown canonical operation '${action.op}'`);
+    fail("OLL_INVALID_OPERATION", "action.op", `Unknown canonical operation '${action.op}'`);
   }
   state.applied_actions.push(action.action_id);
   return true;
@@ -11540,9 +10050,9 @@ function setLessonVariables(state, changes) {
   for (const [alias, value] of Object.entries(changes)) {
     const variable = updated.variables?.[alias];
     if (!variable)
-      fail2("OLL_REFERENCE_NOT_FOUND", `variables/${alias}`, `Variable '${alias}' is not defined`);
+      fail("OLL_REFERENCE_NOT_FOUND", `variables/${alias}`, `Variable '${alias}' is not defined`);
     if (!Number.isFinite(value) || value < variable.min || value > variable.max) {
-      fail2("OLL_INVALID_VARIABLE", `variables/${alias}/value`, `Variable '${alias}' must be between ${variable.min} and ${variable.max}`);
+      fail("OLL_INVALID_VARIABLE", `variables/${alias}/value`, `Variable '${alias}' must be between ${variable.min} and ${variable.max}`);
     }
     variable.value = value;
   }
@@ -11561,7 +10071,7 @@ function commitCanonicalStep(state, stepId) {
 }
 function applyLessonClose(state, event) {
   if (event.event !== "lesson.close")
-    fail2("OLL_INVALID_EVENT", "event", "Expected lesson.close");
+    fail("OLL_INVALID_EVENT", "event", "Expected lesson.close");
   state.focus = [...event.result?.suggested_focus ?? state.focus];
 }
 function reduceCanonicalEvents(events) {
@@ -11574,9 +10084,9 @@ function reduceCanonicalEvents(events) {
       continue;
     }
     if (event.event !== "lesson.step")
-      fail2("OLL_INVALID_EVENT", "event", `Unexpected event '${event.event}'`);
+      fail("OLL_INVALID_EVENT", "event", `Unexpected event '${event.event}'`);
     if (!event.step)
-      fail2("OLL_INVALID_EVENT", "event.step", "lesson.step must include a step");
+      fail("OLL_INVALID_EVENT", "event.step", "lesson.step must include a step");
     const step = event.step;
     if (state.applied_steps.includes(step.id))
       continue;
@@ -11601,6 +10111,1660 @@ function canonicalizeState(state) {
     ...state.variables ? { variables: sortObject(state.variables) } : {},
     applied_actions: [...state.applied_actions]
   };
+}
+
+// src/rearrangement.ts
+var REARRANGEMENT_CONSTRUCTIONS = {
+  right_triangle_square: {
+    title: "\u76F4\u89D2\u4E09\u89D2\u5F62\u91CD\u6392\u4E0E\u9762\u79EF\u5173\u7CFB",
+    catalog: "4\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\uFF1B\u5916\u6846a+b\uFF1B\u7559\u767Dc\xB2\u2192a\xB2+b\xB2\uFF08\u52FE\u80A1\uFF09",
+    pieces: "4\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\uFF08\u4E24\u76F4\u89D2\u8FB9a\u3001b\uFF0C\u659C\u8FB9c\uFF09",
+    shows: "c\xB2 = a\xB2 + b\xB2",
+    container: "\u5916\u6846\u8FB9\u957Fa+b\uFF0C\u9762\u79EF(a+b)\xB2\uFF1B\u4E0D\u662F\u8FB9\u957Fc\u7684\u6B63\u65B9\u5F62",
+    initial: "\u56DB\u4E2A\u4E09\u89D2\u5F62\u56F4\u4F4F\u8FB9\u957Fc\u7684\u6B63\u65B9\u5F62\u7559\u767D\uFF0C\u9762\u79EFc\xB2",
+    final: "\u4E09\u89D2\u5F62\u62FC\u6210\u4E24\u4E2Aab\u77E9\u5F62\uFF0C\u7559\u767D\u4E3Aa\xB2\u548Cb\xB2\u4E24\u4E2A\u6B63\u65B9\u5F62",
+    proof: "\u6BD4\u8F83\u4E24\u4E2A\u7AEF\u70B9\uFF1A(a+b)\xB2 \u2212 4\xD7ab/2 = c\xB2 = a\xB2+b\xB2",
+    caption: "\u5916\u6846\u8FB9\u957F a+b\u3002\u8D77\u70B9\u7559\u767D c\xB2 \u2192 \u7EC8\u70B9\u7559\u767D a\xB2+b\xB2\uFF1B\u56DB\u4E2A\u4E09\u89D2\u5F62\u7684\u603B\u9762\u79EF\u59CB\u7EC8\u4E3A 4\xD7ab/2\u3002\u6BD4\u8F83\u4E24\u79CD\u5E03\u5C40\u7684\u7559\u767D\uFF1Ac\xB2 = a\xB2+b\xB2\u3002"
+  },
+  square_area_identity: {
+    title: "\u6B63\u65B9\u5F62\u5206\u5757\u4E0E\u9762\u79EF\u6052\u7B49\u5F0F",
+    catalog: "a\xB2\u3001b\xB2\u3001ab\u3001ab\u56DB\u5757\uFF08\u65E0\u4E09\u89D2\u5F62\uFF09\u2192\u8FB9\u957Fa+b\u6B63\u65B9\u5F62\uFF0C\u8BC1(a+b)\xB2=a\xB2+2ab+b\xB2",
+    pieces: "a\xB2\u3001b\xB2\u4E24\u4E2A\u6B63\u65B9\u5F62\u548C\u4E24\u4E2Aab\u77E9\u5F62\uFF0C\u65E0\u4E09\u89D2\u5F62",
+    shows: "(a+b)\xB2 = a\xB2 + 2ab + b\xB2",
+    container: "\u5916\u6846\u8FB9\u957Fa+b\uFF0C\u9762\u79EF(a+b)\xB2",
+    initial: "\u56DB\u5757\u5206\u79BB\uFF1Aa\xB2\u3001ab\u3001ab\u3001b\xB2",
+    final: "\u56DB\u5757\u586B\u6EE1\u8FB9\u957Fa+b\u7684\u6B63\u65B9\u5F62",
+    proof: "\u6574\u5757\u9762\u79EF\u7B49\u4E8E\u56DB\u5757\u9762\u79EF\u4E4B\u548C\uFF1A(a+b)\xB2=a\xB2+2ab+b\xB2",
+    caption: "a\xB2\u3001b\xB2 \u4E24\u4E2A\u6B63\u65B9\u5F62\u4E0E\u4E24\u4E2A ab \u77E9\u5F62\u62FC\u5408\uFF0C\u5F97\u5230\u8FB9\u957F a+b \u7684\u6B63\u65B9\u5F62\uFF1A(a+b)\xB2 = a\xB2+2ab+b\xB2\u3002"
+  },
+  triangle_to_rectangle: {
+    title: "\u4E24\u4E2A\u5168\u7B49\u4E09\u89D2\u5F62\u62FC\u6210\u957F\u65B9\u5F62",
+    catalog: "2\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u2192ab\u77E9\u5F62\uFF0C\u6BCF\u5757\u9762\u79EFab/2",
+    pieces: "2\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u62FC\u6210\u77E9\u5F62",
+    shows: "S\u25B3 = ab / 2",
+    container: "\u5916\u6846\u662F\u8FB9\u957Fa\u3001b\u7684\u77E9\u5F62\uFF0C\u9762\u79EFab",
+    initial: "\u4E24\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u5206\u79BB",
+    final: "\u4E24\u4E2A\u4E09\u89D2\u5F62\u586B\u6EE1\u77E9\u5F62",
+    proof: "\u4E24\u4E2A\u5168\u7B49\u4E09\u89D2\u5F62\u7684\u9762\u79EF\u4E4B\u548C\u4E3Aab\uFF0C\u6240\u4EE5\u6BCF\u4E2A\u9762\u79EFab/2",
+    caption: "\u4E24\u4E2A\u5168\u7B49\u76F4\u89D2\u4E09\u89D2\u5F62\u62FC\u6210\u8FB9\u957F a\u3001b \u7684\u77E9\u5F62\uFF1B\u6BCF\u4E2A\u4E09\u89D2\u5F62\u9762\u79EF S\u25B3 = ab/2\u3002"
+  }
+};
+var REARRANGEMENT_FACTS = REARRANGEMENT_CONSTRUCTIONS;
+var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
+function rearrangementRecipe(construction, first, second) {
+  const definition = REARRANGEMENT_CONSTRUCTIONS[construction];
+  if (!definition) return void 0;
+  const gap = Math.max(first, second) * 0.35;
+  if (construction === "right_triangle_square") {
+    const side = first + second;
+    return {
+      title: definition.title,
+      relation: definition.shows,
+      target: [[0, 0], [side, 0], [side, side], [0, side]],
+      pieces: [
+        { points: [[0, 0], [first, 0], [0, second]], start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
+        { points: [[0, 0], [0, first], [-second, 0]], start: { x: side, y: 0 }, end: { x: side, y: second }, label: "\u4E09\u89D2\u5F62 2", tone: "secondary" },
+        { points: [[0, 0], [-first, 0], [0, -second]], start: { x: side, y: side }, end: { x: first, y: second }, label: "\u4E09\u89D2\u5F62 3", tone: "accent" },
+        { points: [[0, 0], [0, -first], [second, 0]], start: { x: 0, y: side }, end: { x: first, y: side }, label: "\u4E09\u89D2\u5F62 4", tone: "neutral" }
+      ]
+    };
+  }
+  if (construction === "square_area_identity") {
+    const side = first + second;
+    return {
+      title: definition.title,
+      relation: definition.shows,
+      target: [[0, 0], [side, 0], [side, side], [0, side]],
+      pieces: [
+        { points: [[0, 0], [first, 0], [first, first], [0, first]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "a\xB2", tone: "primary" },
+        { points: [[0, 0], [second, 0], [second, first], [0, first]], start: { x: first + gap, y: 0 }, end: { x: first, y: 0 }, label: "ab", tone: "secondary" },
+        { points: [[0, 0], [first, 0], [first, second], [0, second]], start: { x: 0, y: side + gap }, end: { x: 0, y: first }, label: "ab", tone: "accent" },
+        { points: [[0, 0], [second, 0], [second, second], [0, second]], start: { x: side + gap, y: side + gap }, end: { x: first, y: first }, label: "b\xB2", tone: "neutral" }
+      ]
+    };
+  }
+  if (construction === "triangle_to_rectangle") {
+    return {
+      title: definition.title,
+      relation: definition.shows,
+      target: [[0, 0], [first, 0], [first, second], [0, second]],
+      pieces: [
+        { points: [[0, 0], [first, 0], [0, second]], start: { x: -first - gap, y: 0 }, end: { x: 0, y: 0 }, label: "\u4E09\u89D2\u5F62 1", tone: "primary" },
+        { points: [[0, 0], [first, 0], [0, second]], start: { x: first + gap, y: 0 }, end: { x: first, y: second, angle: Math.PI }, label: "\u4E09\u89D2\u5F62 2", tone: "accent" }
+      ]
+    };
+  }
+  return void 0;
+}
+
+// src/lesson-plan.ts
+var LESSON_PLAN_VERSION = "0.1";
+var PROCESS_DIAGRAM_CONTRACT = {
+  min_steps: 2,
+  max_steps: 8,
+  max_step_characters: 80,
+  max_title_characters: 120
+};
+var LESSON_PLAN_CAPABILITY_REGISTRY = {
+  function_plot: {
+    parts: ["whole", "primary_curve", "moving_point", "primary_control"],
+    number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label"],
+    required_model_schema_parameters: ["formulas"],
+    semantic_parameters: ["expression", "expressions", "expression_tokens"],
+    output_kinds: ["plot"],
+    student_controls: ["slider"],
+    required_features: ["cartesian_function_curve"],
+    model_guidance: "\u51FD\u6570\u56FE\uFF1A\u9759\u6001\u516C\u5F0F\u6700\u591A\u4E24\u6570\u79FB\u52A8A/B\u70B9\uFF1B\u542B\u6570\u503C\u7684\u516C\u5F0F\u6539\u53D8\u66F2\u7EBF"
+  },
+  unit_circle_projection: {
+    parts: ["whole", "unit_circle", "moving_point", "radius", "projection_line", "primary_curve", "primary_control"],
+    number_inputs: ["angle"],
+    number_input_policies: [{ kind: "angle" }],
+    parameter_names: ["title", "projection"],
+    model_parameter_names: ["title", "projection"],
+    required_model_schema_parameters: ["projection"],
+    semantic_parameters: ["projection"],
+    output_kinds: ["geometry", "plot"],
+    student_controls: ["slider", "geometry_point"],
+    required_features: ["unit_circle", "projection", "cartesian_function_curve"],
+    model_guidance: "\u5355\u4F4D\u5706\u52A8\u70B9\u3001\u6295\u5F71\u7EBF\u548C\u6B63\u5F26\u6216\u4F59\u5F26\u66F2\u7EBF\u5171\u4EAB\u540C\u4E00\u4E2A\u89D2\u5EA6"
+  },
+  circle_polygon_bounds: {
+    parts: ["whole", "circle", "inscribed_polygon", "circumscribed_polygon", "primary_control"],
+    number_inputs: ["side_count"],
+    number_input_policies: [{ kind: "side_count" }],
+    parameter_names: ["title", "radius"],
+    model_parameter_names: ["title", "radius"],
+    required_model_schema_parameters: [],
+    semantic_parameters: ["radius"],
+    output_kinds: ["geometry"],
+    student_controls: ["slider"],
+    required_features: ["inscribed_regular_polygon", "circumscribed_regular_polygon", "perimeter_bounds"],
+    model_guidance: "\u5706\u5468\u7387/\u5272\u5706\u672F\uFF1A\u56FA\u5B9A\u5706\u4E0E\u5185\u63A5\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\uFF0C\u6574\u6570\u8FB9\u65703..384\uFF0C\u5468\u957F\u4E0E\u5468\u957F\xF7\u76F4\u5F84\u4E0A\u4E0B\u754C\u5B9E\u65F6\u8BA1\u7B97\uFF1B\u8FB9\u6570\u4E0D\u662F\u89D2\u5EA6\u3002\u9002\u5408\u5706\u5468\u7387\u6570\u503C\u8BA1\u7B97\u3001\u5272\u5706\u6CD5\u548C\u4E0A\u4E0B\u754C\u903C\u8FD1\uFF0C\u4F8B\u5982\u2018\u5706\u5468\u7387\u662F\u4EC0\u4E48\uFF0C\u5B83\u662F\u5982\u4F55\u8BA1\u7B97\u7684\u2019\uFF1B\u540C\u4E00\u753B\u9762\u4E2D\u7684\u56FA\u5B9A\u5706\u53EF\u4F9B\u5B9A\u4E49\u90E8\u5206\u8BB2\u89E3\u590D\u7528\uFF0C\u914D\u5408\u5468\u957F\u4E0E\u76F4\u5F84\u6BD4\u503C\u516C\u5F0F\uFF0C\u518D\u901A\u8FC7\u589E\u52A0\u591A\u8FB9\u5F62\u8FB9\u6570\u89E3\u91CA\u8BA1\u7B97\u8FC7\u7A0B"
+  },
+  circle_and_arc: {
+    parts: ["whole", "circle", "arc", "radius", "primary_control"],
+    number_inputs: ["angle", "radius"],
+    number_input_policies: [{ kind: "angle" }, { kind: "positive" }],
+    parameter_names: ["title", "radius", "angle"],
+    model_parameter_names: ["title", "radius", "angle"],
+    required_model_schema_parameters: [],
+    semantic_parameters: ["radius", "angle"],
+    output_kinds: ["geometry"],
+    student_controls: ["slider", "geometry_point"],
+    required_features: ["circle", "arc"],
+    model_guidance: "\u5706\u3001\u5706\u5FC3\u89D2\u3001\u534A\u5F84\u548C\u5706\u5F27\uFF1B\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u63A7\u5236\u89D2\u5EA6\u548C\u534A\u5F84\uFF1B\u4E0D\u652F\u6301\u7528\u8FB9\u6570\u5192\u5145\u89D2\u5EA6\u6216\u7528\u5706\u5F27\u5192\u5145\u6B63\u591A\u8FB9\u5F62\u3002\u9002\u5408\u9700\u8981\u89C2\u5BDF\u5706\u5FC3\u89D2\u3001\u5706\u5F27\u6216\u5F27\u957F\u5173\u7CFB\u7684\u8BB2\u89E3\uFF1B\u82E5\u53EA\u9700\u8981\u5C55\u793A\u6574\u5706\u3001\u89E3\u91CA\u5706\u5468\u957F\u4E0E\u76F4\u5F84\u7684\u6BD4\u503C\uFF0C\u4E0D\u5E94\u4EC5\u56E0\u6D89\u53CA\u2018\u5706\u2019\u5C31\u9009\u62E9\u672C\u80FD\u529B\uFF1B\u672C\u80FD\u529B\u7ED8\u5236\u5706\u3001\u5706\u5F27\u4E0E\u534A\u5F84\uFF0C\u4E0D\u4F1A\u5C55\u793A\u5468\u957F\u4E0E\u76F4\u5F84\u7684\u6BD4\u503C"
+  },
+  spring_and_mass: {
+    parts: ["whole", "spring", "mass", "equilibrium", "force_arrow", "primary_curve", "moving_point", "primary_control"],
+    number_inputs: ["phase"],
+    number_input_policies: [{ kind: "angle" }],
+    parameter_names: ["title"],
+    model_parameter_names: ["title"],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["geometry", "plot"],
+    student_controls: ["slider"],
+    required_features: ["spring_mass", "cartesian_function_curve"],
+    model_guidance: "\u5F39\u7C27\u3001\u7269\u4F53\u3001\u5E73\u8861\u4F4D\u7F6E\u3001\u56DE\u590D\u529B\u548C\u4F59\u5F26\u53D8\u5316\u66F2\u7EBF\u5171\u4EAB\u76F8\u4F4D"
+  },
+  cube_with_section: {
+    parts: ["whole", "solid", "vertex", "edge", "face", "section", "primary_control"],
+    number_inputs: ["section_height"],
+    number_input_policies: [{ kind: "bounded", min: -1, max: 1 }],
+    parameter_names: ["title"],
+    model_parameter_names: ["title"],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["scene3d"],
+    student_controls: ["slider", "scene3d_view"],
+    required_features: ["solid_3d", "section_plane"],
+    model_guidance: "\u53EF\u65CB\u8F6C\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u53EF\u53D8\u6C34\u5E73\u622A\u9762"
+  },
+  function_surface_with_section: {
+    parts: ["whole", "surface", "section", "intersection", "primary_control"],
+    number_inputs: ["section_position"],
+    number_input_policies: [{ kind: "surface_section" }],
+    parameter_names: ["title", "expression", "samples", "section_axis", "section_value", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "section_axis", "section_value"],
+    required_model_schema_parameters: ["expression", "section_axis"],
+    semantic_parameters: ["expression", "section_axis"],
+    output_kinds: ["scene3d"],
+    student_controls: ["slider", "scene3d_view"],
+    required_features: ["function_surface_3d", "section_plane"],
+    model_guidance: "\u53EF\u65CB\u8F6C\u4E09\u7EF4\u51FD\u6570\u66F2\u9762\u3001\u53EF\u53D8\u622A\u9762\u548C\u771F\u5B9E\u4EA4\u7EBF"
+  },
+  implicit_surface_with_section: {
+    parts: ["whole", "surface", "section", "intersection", "primary_control"],
+    number_inputs: ["section_position"],
+    number_input_policies: [{ kind: "surface_section" }],
+    parameter_names: ["title", "expression", "level", "section_axis"],
+    model_parameter_names: ["title", "expression", "level", "section_axis"],
+    required_model_schema_parameters: ["expression", "section_axis"],
+    semantic_parameters: ["expression", "level", "section_axis"],
+    output_kinds: ["scene3d"],
+    student_controls: ["slider", "scene3d_view"],
+    required_features: ["implicit_surface_3d", "section_plane"],
+    model_guidance: "\u4E09\u53D8\u91CF\u9690\u5F0F\u66F2\u9762 F(x,y,z)=c\uFF0C\u4EE5\u53CA\u5782\u76F4\u4E8E x\u3001y \u6216 z \u8F74\u7684\u53EF\u53D8\u622A\u9762\u548C\u771F\u5B9E\u4EA4\u7EBF"
+  },
+  coordinate_circle: {
+    parts: ["whole", "circle", "center", "radius", "primary_control"],
+    number_inputs: ["radius"],
+    number_input_policies: [{ kind: "positive" }],
+    parameter_names: ["title", "radius", "radius_expression", "center_x", "center_y"],
+    model_parameter_names: ["title", "radius", "radius_expression", "center_x", "center_y"],
+    required_model_schema_parameters: [],
+    semantic_parameters: ["radius", "radius_expression", "center_x", "center_y"],
+    output_kinds: ["geometry"],
+    student_controls: ["slider"],
+    required_features: ["coordinate_circle"],
+    model_guidance: "\u5750\u6807\u7CFB\u4E2D\u7684\u5706\uFF1B\u5171\u4EAB\u6570\u503C\u53EF\u901A\u8FC7 radius_expression\uFF08\u4F8B\u5982 sqrt(n1)\uFF09\u9A71\u52A8\u534A\u5F84"
+  },
+  rectangle_unit_square_array: {
+    parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
+    number_inputs: ["columns_or_length", "rows_or_width"],
+    number_input_policies: [{ kind: "positive_integer", max: 8 }, { kind: "positive_integer", max: 8 }],
+    parameter_names: ["title"],
+    model_parameter_names: ["title"],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["geometry"],
+    student_controls: ["slider"],
+    required_features: ["unit_square_array", "row_column_count", "area_boundary_comparison"],
+    model_guidance: "\u5355\u4F4D\u6B63\u65B9\u5F62\u6309\u884C\u5217\u94FA\u6EE1\u957F\u65B9\u5F62\uFF1B\u4E24\u4E2A\u6574\u6570\u4F9D\u6B21\u63A7\u5236\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09\u548C\u884C\u6570\uFF08\u5BBD\uFF09\uFF0C\u7528\u4E8E\u9762\u79EF\u3001\u5468\u957F\u4E0E\u5E73\u65B9\u5355\u4F4D\u6559\u5B66"
+  },
+  geometric_rearrangement: {
+    parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "leg_a", "leg_b", "hypotenuse", "primary_control"],
+    number_inputs: ["progress"],
+    number_input_policies: [{ kind: "normalized_progress" }],
+    parameter_names: ["title", "construction", "leg_a", "leg_b"],
+    model_parameter_names: ["title", "construction", "leg_a", "leg_b"],
+    required_model_schema_parameters: ["construction"],
+    parameter_options: {
+      construction: ["right_triangle_square", "square_area_identity", "triangle_to_rectangle"]
+    },
+    semantic_parameters: ["construction", "leg_a", "leg_b"],
+    output_kinds: ["geometry"],
+    student_controls: ["slider"],
+    required_features: ["polygon_pieces", "rigid_rearrangement", "area_relation"],
+    model_guidance: REARRANGEMENT_MODEL_GUIDANCE
+  },
+  circle_area_rearrangement: {
+    parts: ["whole", "primary_control"],
+    number_inputs: ["progress"],
+    number_input_policies: [{ kind: "normalized_progress" }],
+    parameter_names: ["title", "radius"],
+    model_parameter_names: ["title", "radius"],
+    required_model_schema_parameters: [],
+    semantic_parameters: ["radius"],
+    output_kinds: ["geometry"],
+    student_controls: ["slider"],
+    required_features: ["circle_area_rearrangement"],
+    model_guidance: "\u5706\u9762\u79EF\uFF1A\u6247\u5F62\u7B49\u79EF\u91CD\u6392\uFF0C\u5E95\u8D8B\u8FD1\u03C0r\u3001\u9AD8\u8D8B\u8FD1r"
+  },
+  process_diagram: {
+    parts: ["whole", "first_step", "current_step", "last_step"],
+    number_inputs: [],
+    number_input_policies: [],
+    parameter_names: ["title", "steps"],
+    model_parameter_names: ["title", "steps"],
+    required_model_schema_parameters: ["steps"],
+    semantic_parameters: ["steps"],
+    output_kinds: ["diagram"],
+    student_controls: [],
+    required_features: ["ordered_process_steps"],
+    model_guidance: "\u6982\u5FF5\u6216\u6B65\u9AA4\u6D41\u7A0B\u56FE\uFF1B\u6CA1\u6709\u51E0\u4F55\u79FB\u52A8\uFF0C\u4E5F\u4E0D\u63A5\u53D7\u6570\u503C\u8F93\u5165"
+  }
+};
+var LESSON_PLAN_CAPABILITY_NAMES = Object.keys(LESSON_PLAN_CAPABILITY_REGISTRY);
+var LESSON_PLAN_VISUAL_FEATURES = [...new Set(
+  LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features])
+)];
+var LESSON_PLAN_CAPABILITIES = Object.fromEntries(
+  LESSON_PLAN_CAPABILITY_NAMES.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].parts])
+);
+var LESSON_PLAN_CAPABILITY_NUMBER_INPUTS = Object.fromEntries(
+  LESSON_PLAN_CAPABILITY_NAMES.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].number_inputs])
+);
+var LESSON_PLAN_CAPABILITY_NUMBER_LIMITS = Object.fromEntries(
+  LESSON_PLAN_CAPABILITY_NAMES.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].number_inputs.length])
+);
+function matchLessonPlanCapability(features) {
+  const requested = [...new Set(features)];
+  if (requested.length === 0) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_CAPABILITY_REQUIREMENTS",
+      "$lessonPlanOutline.course_visuals.required_features",
+      "a visual requires at least one controlled feature"
+    );
+  }
+  const candidates = LESSON_PLAN_CAPABILITY_NAMES.map((capability2) => {
+    const provided = LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features;
+    return {
+      capability: capability2,
+      // The model describes the features it needs; it does not select an
+      // execution program. A program may provide fixed companion features
+      // the model omitted, but it may never omit a requested feature.
+      extra: provided.filter((feature) => !requested.includes(feature)).length,
+      matches: requested.every((feature) => provided.includes(feature))
+    };
+  }).filter((candidate) => candidate.matches).sort((left, right) => left.extra - right.extra || left.capability.localeCompare(right.capability));
+  if (candidates.length === 0) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_UNSUPPORTED_REQUIREMENT",
+      "$lessonPlanOutline.course_visuals.required_features",
+      `no installed visual capability provides: ${requested.join(", ")}`
+    );
+  }
+  const best = candidates[0];
+  const equallySpecific = candidates.filter((candidate) => candidate.extra === best.extra);
+  if (equallySpecific.length > 1) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_CAPABILITY_REQUIREMENTS",
+      "$lessonPlanOutline.course_visuals.required_features",
+      `visual requirements are ambiguous between: ${equallySpecific.map((candidate) => candidate.capability).join(", ")}`
+    );
+  }
+  return best.capability;
+}
+var LessonPlanError = class extends Error {
+  code;
+  path;
+  constructor(code, path, message) {
+    super(`${path}: ${message}`);
+    this.name = "LessonPlanError";
+    this.code = code;
+    this.path = path;
+  }
+};
+var FORBIDDEN_PARAMETER_KEYS = /* @__PURE__ */ new Set([
+  "id",
+  "as",
+  "key",
+  "target",
+  "targets",
+  "anchor",
+  "variable",
+  "variables",
+  "binding",
+  "bindings",
+  "members",
+  "node_id",
+  "target_id",
+  "action_id",
+  "lesson_id",
+  "board_id",
+  "base_revision"
+]);
+var timings = /* @__PURE__ */ new Set(["before_speech", "during_speech", "after_speech"]);
+var deliveries = /* @__PURE__ */ new Set(["neutral", "patient", "encouraging", "careful", "emphatic"]);
+var boardKinds = /* @__PURE__ */ new Set(["text", "math", "shape", "note", "table", "image", "visual"]);
+var emphasisValues = /* @__PURE__ */ new Set(["focus", "supporting", "warning", "resolved"]);
+var teacherExpressions = /* @__PURE__ */ new Set(["neutral", "encouraging", "careful", "celebrating"]);
+function fail2(code, path, message) {
+  throw new LessonPlanError(code, path, message);
+}
+function record(value, path) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    fail2("LESSON_PLAN_TYPE", path, "expected an object");
+  }
+  return value;
+}
+function array(value, path) {
+  if (!Array.isArray(value)) fail2("LESSON_PLAN_TYPE", path, "expected an array");
+  return value;
+}
+function allowedKeys(value, allowed, path) {
+  const allowedSet = new Set(allowed);
+  for (const key of Object.keys(value)) {
+    if (!allowedSet.has(key)) fail2("LESSON_PLAN_UNKNOWN_FIELD", `${path}.${key}`, "unknown field");
+  }
+}
+function nonEmptyString(value, path, max = 1200) {
+  if (typeof value !== "string" || value.trim().length === 0 || value.length > max) {
+    fail2("LESSON_PLAN_STRING", path, `expected a non-empty string of at most ${max} characters`);
+  }
+  return value;
+}
+function optionalString(value, path, max = 1200) {
+  return value === void 0 ? void 0 : nonEmptyString(value, path, max);
+}
+function finiteNumber(value, path) {
+  if (typeof value !== "number" || !Number.isFinite(value)) fail2("LESSON_PLAN_NUMBER", path, "expected a finite number");
+  return value;
+}
+function positiveIndex(value, path) {
+  if (!Number.isInteger(value) || value < 1) fail2("LESSON_PLAN_INDEX", path, "expected a positive integer index");
+  return value;
+}
+function optionalTiming(value, path) {
+  if (value === void 0) return void 0;
+  if (typeof value !== "string" || !timings.has(value)) fail2("LESSON_PLAN_TIMING", path, "unsupported timing");
+  return value;
+}
+function validateParameters(value, path) {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return;
+  if (typeof value === "number") {
+    finiteNumber(value, path);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => validateParameters(item, `${path}[${index}]`));
+    return;
+  }
+  const object2 = record(value, path);
+  for (const [key, item] of Object.entries(object2)) {
+    if (FORBIDDEN_PARAMETER_KEYS.has(key) || key.endsWith("_id")) {
+      fail2("LESSON_PLAN_MODEL_ID", `${path}.${key}`, "business identity fields are not allowed in model-authored parameters");
+    }
+    validateParameters(item, `${path}.${key}`);
+  }
+}
+function validateMathExpression(value, path, numberCount, allowInput = false) {
+  const tokens = array(value, path);
+  if (tokens.length === 0 || tokens.length > 128) fail2("LESSON_PLAN_EXPRESSION", path, "expected 1 to 128 expression tokens");
+  let stackDepth = 0;
+  const numbers = /* @__PURE__ */ new Set();
+  tokens.forEach((entry, index) => {
+    const tokenPath = `${path}[${index}]`;
+    const token = record(entry, tokenPath);
+    const kind = token.kind;
+    if (kind === "input") {
+      allowedKeys(token, ["kind"], tokenPath);
+      if (!allowInput) fail2("LESSON_PLAN_EXPRESSION", tokenPath, "an independent input is not allowed here");
+      stackDepth += 1;
+    } else if (kind === "number") {
+      allowedKeys(token, ["kind", "number"], tokenPath);
+      const number = positiveIndex(token.number, `${tokenPath}.number`);
+      if (number > numberCount) fail2("LESSON_PLAN_NUMBER_REFERENCE", `${tokenPath}.number`, "number reference is unavailable");
+      numbers.add(number);
+      stackDepth += 1;
+    } else if (kind === "literal") {
+      allowedKeys(token, ["kind", "value"], tokenPath);
+      finiteNumber(token.value, `${tokenPath}.value`);
+      stackDepth += 1;
+    } else if (kind === "constant") {
+      allowedKeys(token, ["kind", "name"], tokenPath);
+      if (!["pi", "e"].includes(String(token.name))) fail2("LESSON_PLAN_EXPRESSION", `${tokenPath}.name`, "unsupported constant");
+      stackDepth += 1;
+    } else if (kind === "negate") {
+      allowedKeys(token, ["kind"], tokenPath);
+      if (stackDepth < 1) fail2("LESSON_PLAN_EXPRESSION", tokenPath, "negate requires one earlier value");
+    } else if (kind === "operator") {
+      allowedKeys(token, ["kind", "operator"], tokenPath);
+      if (!["add", "subtract", "multiply", "divide", "power"].includes(String(token.operator))) fail2("LESSON_PLAN_EXPRESSION", `${tokenPath}.operator`, "unsupported operator");
+      if (stackDepth < 2) fail2("LESSON_PLAN_EXPRESSION", tokenPath, "binary operator requires two earlier values");
+      stackDepth -= 1;
+    } else if (kind === "function") {
+      allowedKeys(token, ["kind", "name"], tokenPath);
+      if (!["abs", "acos", "asin", "atan", "ceil", "cos", "exp", "floor", "ln", "log", "round", "sin", "sqrt", "tan"].includes(String(token.name))) fail2("LESSON_PLAN_EXPRESSION", `${tokenPath}.name`, "unsupported function");
+      if (stackDepth < 1) fail2("LESSON_PLAN_EXPRESSION", tokenPath, "function requires one earlier value");
+    } else {
+      fail2("LESSON_PLAN_EXPRESSION", `${tokenPath}.kind`, "unsupported expression token");
+    }
+  });
+  if (stackDepth !== 1) fail2("LESSON_PLAN_EXPRESSION", path, "expression tokens must produce exactly one result");
+  return [...numbers];
+}
+function capability(value, path) {
+  if (typeof value !== "string" || !(value in LESSON_PLAN_CAPABILITIES)) {
+    fail2("LESSON_PLAN_CAPABILITY", path, "unsupported capability");
+  }
+  return value;
+}
+function validatePart(value, path) {
+  const part = record(value, path);
+  const kind = part.kind;
+  if (kind === "capability") {
+    allowedKeys(part, ["kind", "role"], path);
+    return { kind, role: nonEmptyString(part.role, `${path}.role`, 80) };
+  }
+  if (kind === "index") {
+    allowedKeys(part, ["kind", "index"], path);
+    return { kind, index: positiveIndex(part.index, `${path}.index`) };
+  }
+  fail2("LESSON_PLAN_PART", `${path}.kind`, "unsupported part reference");
+}
+function validateReference(value, path) {
+  const ref = record(value, path);
+  const part = ref.part === void 0 ? void 0 : validatePart(ref.part, `${path}.part`);
+  if (ref.source === "local_board_item" || ref.source === "local_connection" || ref.source === "local_group") {
+    allowedKeys(ref, ["source", "moment", "item", "part"], path);
+    return {
+      source: ref.source,
+      moment: positiveIndex(ref.moment, `${path}.moment`),
+      item: positiveIndex(ref.item, `${path}.item`),
+      ...part ? { part } : {}
+    };
+  }
+  if (ref.source === "reusable") {
+    allowedKeys(ref, ["source", "section", "item", "part"], path);
+    return {
+      source: "reusable",
+      section: positiveIndex(ref.section, `${path}.section`),
+      item: positiveIndex(ref.item, `${path}.item`),
+      ...part ? { part } : {}
+    };
+  }
+  if (ref.source === "host") {
+    allowedKeys(ref, ["source", "reference", "part"], path);
+    return {
+      source: "host",
+      reference: positiveIndex(ref.reference, `${path}.reference`),
+      ...part ? { part } : {}
+    };
+  }
+  fail2("LESSON_PLAN_REFERENCE", `${path}.source`, "unsupported reference source");
+}
+function validatePlacement2(value, path) {
+  const placement = record(value, path);
+  allowedKeys(placement, ["relation", "reference", "align", "gap"], path);
+  const relation = placement.relation;
+  const relations = /* @__PURE__ */ new Set(["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"]);
+  if (typeof relation !== "string" || !relations.has(relation)) fail2("LESSON_PLAN_PLACEMENT", `${path}.relation`, "unsupported placement relation");
+  const reference = placement.reference === void 0 ? void 0 : validateReference(placement.reference, `${path}.reference`);
+  if (relation === "new_region" && reference) fail2("LESSON_PLAN_PLACEMENT", `${path}.reference`, "new_region cannot have a reference");
+  if (relation !== "new_region" && !reference) fail2("LESSON_PLAN_PLACEMENT", `${path}.reference`, "relative placement requires a reference");
+  if (placement.align !== void 0 && !["start", "center", "end"].includes(String(placement.align))) fail2("LESSON_PLAN_PLACEMENT", `${path}.align`, "unsupported alignment");
+  if (placement.gap !== void 0 && !["tight", "normal", "wide"].includes(String(placement.gap))) fail2("LESSON_PLAN_PLACEMENT", `${path}.gap`, "unsupported gap");
+  return placement;
+}
+function validateBoardContent(kind, value, path, numberCount, resourceCount) {
+  const content = record(value, path);
+  if (kind === "text" || kind === "shape") {
+    allowedKeys(content, ["text"], path);
+    nonEmptyString(content.text, `${path}.text`);
+  } else if (kind === "math") {
+    allowedKeys(content, ["latex"], path);
+    nonEmptyString(content.latex, `${path}.latex`);
+  } else if (kind === "note") {
+    allowedKeys(content, ["title", "items"], path);
+    nonEmptyString(content.title, `${path}.title`, 240);
+    const items = array(content.items, `${path}.items`);
+    if (items.length === 0) fail2("LESSON_PLAN_CONTENT", `${path}.items`, "note requires at least one item");
+    items.forEach((item, index) => nonEmptyString(item, `${path}.items[${index}]`));
+  } else if (kind === "table") {
+    allowedKeys(content, ["columns", "rows"], path);
+    const columns = array(content.columns, `${path}.columns`);
+    if (columns.length === 0) fail2("LESSON_PLAN_CONTENT", `${path}.columns`, "table requires columns");
+    columns.forEach((item, index) => nonEmptyString(item, `${path}.columns[${index}]`));
+    const rows = array(content.rows, `${path}.rows`);
+    rows.forEach((row, rowIndex) => {
+      const cells = array(row, `${path}.rows[${rowIndex}]`);
+      if (cells.length !== columns.length) fail2("LESSON_PLAN_CONTENT", `${path}.rows[${rowIndex}]`, "row width must equal column count");
+      cells.forEach((cell, columnIndex) => {
+        if (typeof cell === "number") finiteNumber(cell, `${path}.rows[${rowIndex}][${columnIndex}]`);
+        else nonEmptyString(cell, `${path}.rows[${rowIndex}][${columnIndex}]`);
+      });
+    });
+  } else if (kind === "image") {
+    allowedKeys(content, ["resource", "alt"], path);
+    const index = positiveIndex(content.resource, `${path}.resource`);
+    if (index > resourceCount) fail2("LESSON_PLAN_IMAGE_RESOURCE", `${path}.resource`, "image resource is unavailable");
+    optionalString(content.alt, `${path}.alt`, 480);
+  } else {
+    allowedKeys(content, ["capability", "parameters", "numbers"], path);
+    const visualCapability = capability(content.capability, `${path}.capability`);
+    if (content.parameters !== void 0) {
+      validateParameters(content.parameters, `${path}.parameters`);
+      if (visualCapability === "function_plot") {
+        const visualParameters = record(content.parameters, `${path}.parameters`);
+        const expressionFields = ["expression", "expressions", "expression_tokens"].filter((field) => visualParameters[field] !== void 0);
+        if (expressionFields.length !== 1) {
+          fail2(
+            "LESSON_PLAN_EXPRESSION",
+            `${path}.parameters`,
+            "a function plot requires exactly one explicit mathematical expression"
+          );
+        }
+        if (visualParameters.expression_tokens !== void 0) {
+          const expressionTokens = array(
+            visualParameters.expression_tokens,
+            `${path}.parameters.expression_tokens`
+          );
+          if (!expressionTokens.some((token) => token !== null && typeof token === "object" && !Array.isArray(token) && token.kind === "input")) {
+            fail2(
+              "LESSON_PLAN_PLOT_INPUT",
+              `${path}.parameters.expression_tokens`,
+              "a parameterized function curve must explicitly depend on the plot input; a lesson number cannot replace the horizontal-axis input"
+            );
+          }
+          validateMathExpression(
+            visualParameters.expression_tokens,
+            `${path}.parameters.expression_tokens`,
+            numberCount,
+            true
+          );
+        }
+      }
+    } else if (visualCapability === "function_plot") {
+      fail2(
+        "LESSON_PLAN_EXPRESSION",
+        `${path}.parameters`,
+        "a function plot requires an explicit mathematical expression"
+      );
+    }
+    if (content.numbers !== void 0) {
+      const numbers = array(content.numbers, `${path}.numbers`);
+      if (numbers.length > 16) fail2("LESSON_PLAN_CONTENT", `${path}.numbers`, "too many number references");
+      numbers.forEach((item, index) => {
+        const number = positiveIndex(item, `${path}.numbers[${index}]`);
+        if (number > numberCount) fail2("LESSON_PLAN_NUMBER_REFERENCE", `${path}.numbers[${index}]`, "number reference is unavailable");
+      });
+      if (visualCapability === "function_plot" && numbers.length > 2 && content.parameters?.expression_tokens === void 0) {
+        fail2("LESSON_PLAN_EXPRESSION", `${path}.numbers`, "static curves support at most two independent sample points");
+      }
+    }
+  }
+  return content;
+}
+function pad(index) {
+  return String(index).padStart(2, "0");
+}
+function localKey(section, moment, kind, item) {
+  return `${section}:${moment}:${kind}:${item}`;
+}
+function reusableKey(section, item) {
+  return `${section}:${item}`;
+}
+function assertPart(target, part, path) {
+  if (!part) return;
+  if (part.kind === "capability") {
+    if (!target.capability) fail2("LESSON_PLAN_PART", path, "capability part requires a visual capability target");
+    const roles = LESSON_PLAN_CAPABILITIES[target.capability];
+    if (!roles.includes(part.role)) fail2("LESSON_PLAN_PART", path, `capability '${target.capability}' has no part '${part.role}'`);
+  } else if (part.kind === "index") {
+    if (!target.hostParts) fail2("LESSON_PLAN_PART", path, "index parts are only available on host nodes");
+    if (part.index > target.hostParts.size) fail2("LESSON_PLAN_PART", path, "host part is unavailable");
+  }
+}
+function validateLessonPlanNumbers(value, path) {
+  const numbers = value === void 0 ? [] : array(value, path);
+  if (numbers.length > 16) fail2("LESSON_PLAN_NUMBERS", path, "expected at most 16 numeric states");
+  numbers.forEach((entry, index) => {
+    const numberPath = `${path}[${index}]`;
+    const number = record(entry, numberPath);
+    allowedKeys(number, ["initial", "min", "max", "label", "unit", "student_control"], numberPath);
+    const initial = finiteNumber(number.initial, `${numberPath}.initial`);
+    const min = finiteNumber(number.min, `${numberPath}.min`);
+    const max = finiteNumber(number.max, `${numberPath}.max`);
+    if (!(min < max && initial >= min && initial <= max)) {
+      fail2("LESSON_PLAN_NUMBER_RANGE", numberPath, "expected min < max and initial inside the range");
+    }
+    optionalString(number.label, `${numberPath}.label`, 80);
+    optionalString(number.unit, `${numberPath}.unit`, 32);
+    if (number.student_control === void 0) return;
+    const controlPath = `${numberPath}.student_control`;
+    const control = record(number.student_control, controlPath);
+    allowedKeys(control, ["kind", "step"], controlPath);
+    if (control.kind !== "slider") fail2("LESSON_PLAN_CONTROL", `${controlPath}.kind`, "only slider is supported");
+    if (control.step === void 0) return;
+    const step = finiteNumber(control.step, `${controlPath}.step`);
+    if (step <= 0 || step > max - min) {
+      fail2("LESSON_PLAN_CONTROL", `${controlPath}.step`, "step must be positive and inside the range");
+    }
+    if ((max - min) / step > 1e3) {
+      fail2(
+        "LESSON_PLAN_CONTROL_RESOLUTION",
+        `${controlPath}.step`,
+        "a slider cannot expose more than 1000 distinct intervals; use a coarser step or a smaller range"
+      );
+    }
+  });
+  return numbers;
+}
+function resolveLessonPlan(value, options = {}) {
+  const root = record(value, "$lessonPlan");
+  allowedKeys(root, ["version", "title", "goals", "teaching_strategies", "numbers", "sections", "close"], "$lessonPlan");
+  if (root.version !== LESSON_PLAN_VERSION) fail2("LESSON_PLAN_VERSION", "$lessonPlan.version", `expected '${LESSON_PLAN_VERSION}'`);
+  nonEmptyString(root.title, "$lessonPlan.title", 160);
+  const goals = array(root.goals, "$lessonPlan.goals");
+  if (goals.length < 1 || goals.length > 8) fail2("LESSON_PLAN_GOALS", "$lessonPlan.goals", "expected 1 to 8 goals");
+  goals.forEach((goal, index) => nonEmptyString(goal, `$lessonPlan.goals[${index}]`, 480));
+  if (root.teaching_strategies !== void 0) {
+    const strategies = array(root.teaching_strategies, "$lessonPlan.teaching_strategies");
+    if (strategies.length > 16) fail2("LESSON_PLAN_STRATEGIES", "$lessonPlan.teaching_strategies", "expected at most 16 strategies");
+    strategies.forEach((strategy, index) => nonEmptyString(strategy, `$lessonPlan.teaching_strategies[${index}]`, 240));
+  }
+  const rawNumbers = validateLessonPlanNumbers(root.numbers, "$lessonPlan.numbers");
+  const hostReferences = options.host_references ?? [];
+  const imageResources = options.image_resources ?? [];
+  imageResources.forEach((resource, index) => {
+    nonEmptyString(resource.asset_id, `$options.image_resources[${index}].asset_id`);
+  });
+  const hosts = /* @__PURE__ */ new Map();
+  hostReferences.forEach((host, index) => {
+    nonEmptyString(host.target_id, `$options.host_references[${index}].target_id`);
+    if (!["node", "connection", "group"].includes(host.type)) {
+      fail2("LESSON_PLAN_HOST_REFERENCE", `$options.host_references[${index}].type`, "unsupported host reference type");
+    }
+    optionalString(host.label, `$options.host_references[${index}].label`, 160);
+    if (host.type !== "node" && (host.parts?.length ?? 0) > 0) {
+      fail2("LESSON_PLAN_HOST_REFERENCE", `$options.host_references[${index}].parts`, "only host nodes can expose parts");
+    }
+    hosts.set(index + 1, {
+      id: host.target_id,
+      authoringAlias: `host-${pad(index + 1)}`,
+      kind: "host",
+      hostParts: new Set(host.parts ?? [])
+    });
+  });
+  const rawSections = array(root.sections, "$lessonPlan.sections");
+  if (rawSections.length < 1 || rawSections.length > 24) fail2("LESSON_PLAN_SECTIONS", "$lessonPlan.sections", "expected 1 to 24 sections");
+  const locals = /* @__PURE__ */ new Map();
+  const reusables = /* @__PURE__ */ new Map();
+  const references = [];
+  const visuallyBoundNumbers = /* @__PURE__ */ new Set();
+  const requiredVisualNumberUses = [];
+  const resolvedSections = [];
+  const resolveReference = (raw, path, sectionIndex, momentIndex) => {
+    const ref = validateReference(raw, path);
+    let target;
+    if (ref.source === "host") {
+      target = hosts.get(ref.reference);
+      if (!target) fail2("LESSON_PLAN_HOST_REFERENCE", path, "host reference is unavailable");
+    } else if (ref.source === "reusable") {
+      if (ref.section > sectionIndex) fail2("LESSON_PLAN_REFERENCE_ORDER", path, "reusable references cannot point to a future section");
+      target = reusables.get(reusableKey(ref.section, ref.item));
+      if (!target) fail2("LESSON_PLAN_REFERENCE", path, "reusable item has not been filled");
+    } else {
+      if (ref.moment > momentIndex) fail2("LESSON_PLAN_REFERENCE_ORDER", path, "local references cannot point to a future moment");
+      const kind = ref.source === "local_board_item" ? "board_item" : ref.source === "local_connection" ? "connection" : "group";
+      target = locals.get(localKey(sectionIndex, ref.moment, kind, ref.item));
+      if (!target) fail2("LESSON_PLAN_REFERENCE", path, "local item does not exist");
+    }
+    assertPart(target, ref.part, `${path}.part`);
+    references.push({
+      path,
+      target_id: target.id,
+      authoring_alias: target.authoringAlias,
+      target_kind: target.kind,
+      ...target.boardKind ? { board_kind: target.boardKind } : {},
+      ...target.capability ? { capability: target.capability } : {},
+      ...ref.part ? { part: ref.part } : {}
+    });
+    return target;
+  };
+  rawSections.forEach((rawSection, sectionOffset) => {
+    const sectionIndex = sectionOffset + 1;
+    const path = `$lessonPlan.sections[${sectionOffset}]`;
+    const section = record(rawSection, path);
+    allowedKeys(section, ["purpose", "reusable_items", "moments", "student_activities"], path);
+    nonEmptyString(section.purpose, `${path}.purpose`, 480);
+    const reusableDeclarations = section.reusable_items === void 0 ? [] : array(section.reusable_items, `${path}.reusable_items`);
+    if (reusableDeclarations.length > 32) fail2("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
+    const declarations = reusableDeclarations.map((entry, declarationOffset) => {
+      const declarationPath = `${path}.reusable_items[${declarationOffset}]`;
+      const declaration = record(entry, declarationPath);
+      allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
+      if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail2("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
+      if (declaration.kind === "board_item") {
+        if (typeof declaration.board_kind !== "string" || !boardKinds.has(declaration.board_kind)) fail2("LESSON_PLAN_REUSABLE", `${declarationPath}.board_kind`, "board_item requires a supported board_kind");
+        if (declaration.board_kind === "visual") capability(declaration.capability, `${declarationPath}.capability`);
+        else if (declaration.capability !== void 0) fail2("LESSON_PLAN_REUSABLE", `${declarationPath}.capability`, "only visual board items declare a capability");
+      } else if (declaration.board_kind !== void 0 || declaration.capability !== void 0) {
+        fail2("LESSON_PLAN_REUSABLE", declarationPath, "connection and group declarations do not use board_kind or capability");
+      }
+      return declaration;
+    });
+    const assigned = /* @__PURE__ */ new Map();
+    const assignReusable = (slotValue, target, assignmentPath) => {
+      if (slotValue === void 0) return;
+      const slot = positiveIndex(slotValue, assignmentPath);
+      const declaration = declarations[slot - 1];
+      if (!declaration) fail2("LESSON_PLAN_REUSABLE", assignmentPath, "reusable slot is not declared");
+      if (assigned.has(slot)) fail2("LESSON_PLAN_REUSABLE", assignmentPath, "reusable slot is filled more than once");
+      if (declaration.kind !== target.kind) fail2("LESSON_PLAN_REUSABLE", assignmentPath, "reusable slot kind does not match the created item");
+      if (target.kind === "board_item") {
+        if (declaration.board_kind !== target.boardKind) fail2("LESSON_PLAN_REUSABLE", assignmentPath, "reusable board kind does not match");
+        if (declaration.capability !== target.capability) fail2("LESSON_PLAN_REUSABLE", assignmentPath, "reusable capability does not match");
+      }
+      assigned.set(slot, target);
+    };
+    const rawMoments = array(section.moments, `${path}.moments`);
+    if (rawMoments.length < 1 || rawMoments.length > 12) fail2("LESSON_PLAN_MOMENTS", `${path}.moments`, "expected 1 to 12 moments");
+    const resolvedMoments = [];
+    rawMoments.forEach((rawMoment, momentOffset) => {
+      const momentIndex = momentOffset + 1;
+      const momentPath = `${path}.moments[${momentOffset}]`;
+      const moment = record(rawMoment, momentPath);
+      allowedKeys(moment, ["narration", "delivery", "actions", "restart_numbers"], momentPath);
+      if (moment.restart_numbers !== void 0) {
+        const restarts = array(moment.restart_numbers, `${momentPath}.restart_numbers`);
+        if (!restarts.length || new Set(restarts).size !== restarts.length) fail2("LESSON_PLAN_PHASE_START", momentPath, "restart_numbers must be nonempty and unique");
+        for (const number of restarts) {
+          const index = positiveIndex(number, `${momentPath}.restart_numbers`);
+          if (index > rawNumbers.length) fail2("LESSON_PLAN_PHASE_START", momentPath, "unknown restart number");
+        }
+      }
+      optionalString(moment.narration, `${momentPath}.narration`);
+      if (moment.delivery !== void 0 && (typeof moment.delivery !== "string" || !deliveries.has(moment.delivery))) fail2("LESSON_PLAN_DELIVERY", `${momentPath}.delivery`, "unsupported delivery");
+      const actions = array(moment.actions, `${momentPath}.actions`);
+      if (actions.length > 48) fail2("LESSON_PLAN_ACTIONS", `${momentPath}.actions`, "expected at most 48 ordered actions");
+      const boardItemIds = [];
+      const connectionIds = [];
+      const groupIds = [];
+      let boardItemIndex = 0;
+      let connectionIndex = 0;
+      let groupIndex = 0;
+      actions.forEach((entry, actionOffset) => {
+        const itemPath = `${momentPath}.actions[${actionOffset}]`;
+        const action = record(entry, itemPath);
+        const actionKind = action.action;
+        if (actionKind === "create") {
+          allowedKeys(action, ["action", "kind", "role", "content", "timing", "placement", "reusable_item", "distinct_visual"], itemPath);
+          if (typeof action.kind !== "string" || !boardKinds.has(action.kind)) fail2("LESSON_PLAN_BOARD_KIND", `${itemPath}.kind`, "unsupported board item kind");
+          const kind = action.kind;
+          nonEmptyString(action.role, `${itemPath}.role`, 80);
+          optionalTiming(action.timing, `${itemPath}.timing`);
+          const placement = validatePlacement2(action.placement, `${itemPath}.placement`);
+          if (placement.reference) resolveReference(placement.reference, `${itemPath}.placement.reference`, sectionIndex, momentIndex);
+          const content = validateBoardContent(kind, action.content, `${itemPath}.content`, rawNumbers.length, imageResources.length);
+          if (action.distinct_visual !== void 0) {
+            if (kind !== "visual" || typeof action.distinct_visual !== "boolean") {
+              fail2("LESSON_PLAN_COURSE_VISUAL", `${itemPath}.distinct_visual`, "distinct_visual is only valid on visual creates");
+            }
+          }
+          if (kind === "visual") {
+            const visualContent = content;
+            if (visualContent.capability === "function_plot" && visualContent.parameters?.expression_tokens !== void 0) {
+              const curveNumbers = validateMathExpression(
+                visualContent.parameters.expression_tokens,
+                `${itemPath}.content.parameters.expression_tokens`,
+                rawNumbers.length,
+                true
+              );
+              for (const number of curveNumbers) visuallyBoundNumbers.add(number);
+              if (curveNumbers.length === 0) {
+                for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
+              }
+            } else if (visualContent.capability === "function_plot") {
+              for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
+            } else {
+              for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
+            }
+          }
+          boardItemIndex += 1;
+          const id = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-item-${pad(boardItemIndex)}`;
+          const target = { id, authoringAlias: id, kind: "board_item", boardKind: kind };
+          if (kind === "visual") target.capability = content.capability;
+          locals.set(localKey(sectionIndex, momentIndex, "board_item", boardItemIndex), target);
+          boardItemIds.push(id);
+          assignReusable(action.reusable_item, target, `${itemPath}.reusable_item`);
+        } else if (actionKind === "revise") {
+          allowedKeys(action, ["action", "reference", "kind", "content", "reason", "timing"], itemPath);
+          const target = resolveReference(action.reference, `${itemPath}.reference`, sectionIndex, momentIndex);
+          if (typeof action.kind !== "string" || !boardKinds.has(action.kind)) fail2("LESSON_PLAN_BOARD_KIND", `${itemPath}.kind`, "unsupported revision board kind");
+          const revisionKind = action.kind;
+          if (target.kind !== "board_item" || !target.boardKind) fail2("LESSON_PLAN_ACTION_TARGET", `${itemPath}.reference`, "revise requires a board item created by this lesson; host board references are read-only");
+          if (target.boardKind !== revisionKind) fail2("LESSON_PLAN_ACTION_TARGET", `${itemPath}.kind`, "revision kind must match the board item");
+          validateBoardContent(revisionKind, action.content, `${itemPath}.content`, rawNumbers.length, imageResources.length);
+          nonEmptyString(action.reason, `${itemPath}.reason`, 480);
+          optionalTiming(action.timing, `${itemPath}.timing`);
+        } else if (actionKind === "emphasize") {
+          allowedKeys(action, ["action", "reference", "emphasis", "timing"], itemPath);
+          resolveReference(action.reference, `${itemPath}.reference`, sectionIndex, momentIndex);
+          if (typeof action.emphasis !== "string" || !emphasisValues.has(action.emphasis)) fail2("LESSON_PLAN_EMPHASIS", `${itemPath}.emphasis`, "unsupported emphasis");
+          optionalTiming(action.timing, `${itemPath}.timing`);
+        } else if (actionKind === "connect") {
+          allowedKeys(action, ["action", "from_ref", "to_ref", "relation", "label", "timing", "reusable_item"], itemPath);
+          resolveReference(action.from_ref, `${itemPath}.from_ref`, sectionIndex, momentIndex);
+          resolveReference(action.to_ref, `${itemPath}.to_ref`, sectionIndex, momentIndex);
+          nonEmptyString(action.relation, `${itemPath}.relation`, 80);
+          optionalString(action.label, `${itemPath}.label`, 160);
+          optionalTiming(action.timing, `${itemPath}.timing`);
+          connectionIndex += 1;
+          const id = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-connection-${pad(connectionIndex)}`;
+          const target = { id, authoringAlias: id, kind: "connection" };
+          locals.set(localKey(sectionIndex, momentIndex, "connection", connectionIndex), target);
+          connectionIds.push(id);
+          assignReusable(action.reusable_item, target, `${itemPath}.reusable_item`);
+        } else if (actionKind === "group") {
+          allowedKeys(action, ["action", "role", "label", "members", "timing", "reusable_item"], itemPath);
+          nonEmptyString(action.role, `${itemPath}.role`, 80);
+          nonEmptyString(action.label, `${itemPath}.label`, 160);
+          const members = array(action.members, `${itemPath}.members`);
+          if (members.length === 0) fail2("LESSON_PLAN_GROUP", `${itemPath}.members`, "group requires members");
+          members.forEach((member, index) => resolveReference(member, `${itemPath}.members[${index}]`, sectionIndex, momentIndex));
+          optionalTiming(action.timing, `${itemPath}.timing`);
+          groupIndex += 1;
+          const id = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-group-${pad(groupIndex)}`;
+          const target = { id, authoringAlias: id, kind: "group" };
+          locals.set(localKey(sectionIndex, momentIndex, "group", groupIndex), target);
+          groupIds.push(id);
+          assignReusable(action.reusable_item, target, `${itemPath}.reusable_item`);
+        } else if (actionKind === "focus") {
+          allowedKeys(action, ["action", "references", "intent", "timing"], itemPath);
+          const refs = array(action.references, `${itemPath}.references`);
+          if (refs.length === 0) fail2("LESSON_PLAN_FOCUS", `${itemPath}.references`, "focus requires references");
+          refs.forEach((ref, index) => resolveReference(ref, `${itemPath}.references[${index}]`, sectionIndex, momentIndex));
+          nonEmptyString(action.intent, `${itemPath}.intent`, 160);
+          optionalTiming(action.timing, `${itemPath}.timing`);
+        } else if (actionKind === "point_at") {
+          allowedKeys(action, ["action", "reference", "timing"], itemPath);
+          resolveReference(action.reference, `${itemPath}.reference`, sectionIndex, momentIndex);
+          optionalTiming(action.timing, `${itemPath}.timing`);
+        } else if (actionKind === "teacher_expression") {
+          allowedKeys(action, ["action", "expression", "timing"], itemPath);
+          if (typeof action.expression !== "string" || !teacherExpressions.has(action.expression)) fail2("LESSON_PLAN_EXPRESSION", `${itemPath}.expression`, "unsupported teacher expression");
+          optionalTiming(action.timing, `${itemPath}.timing`);
+        } else if (actionKind === "animate") {
+          allowedKeys(action, ["action", "number", "end_value", "easing", "duration_intent", "timing"], itemPath);
+          const number = positiveIndex(action.number, `${itemPath}.number`);
+          requiredVisualNumberUses.push({ number, path: `${itemPath}.number` });
+          if (number > rawNumbers.length) fail2("LESSON_PLAN_NUMBER_REFERENCE", `${itemPath}.number`, "number reference is unavailable");
+          const end = finiteNumber(action.end_value, `${itemPath}.end_value`);
+          const definition = record(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
+          if (end < Number(definition.min) || end > Number(definition.max)) fail2("LESSON_PLAN_ANIMATION", `${itemPath}.end_value`, "animation end is outside the number range");
+          if (action.easing !== void 0 && !["linear", "ease_in_out"].includes(String(action.easing))) fail2("LESSON_PLAN_ANIMATION", `${itemPath}.easing`, "unsupported easing");
+          if (action.duration_intent !== void 0 && !["brief", "normal", "extended"].includes(String(action.duration_intent))) fail2("LESSON_PLAN_ANIMATION", `${itemPath}.duration_intent`, "unsupported duration intent");
+          optionalTiming(action.timing, `${itemPath}.timing`);
+        } else {
+          fail2("LESSON_PLAN_ACTION", `${itemPath}.action`, "unsupported action");
+        }
+      });
+      resolvedMoments.push({
+        index: momentIndex,
+        moment_id: `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}`,
+        board_item_ids: boardItemIds,
+        connection_ids: connectionIds,
+        group_ids: groupIds
+      });
+    });
+    const resolvedReusable = declarations.map((declaration, declarationOffset) => {
+      const slot = declarationOffset + 1;
+      const target = assigned.get(slot);
+      if (!target) fail2("LESSON_PLAN_REUSABLE_UNFILLED", `${path}.reusable_items[${declarationOffset}]`, "declared reusable item was not created");
+      reusables.set(reusableKey(sectionIndex, slot), target);
+      return { index: slot, target_id: target.id, target_kind: declaration.kind };
+    });
+    const activities = section.student_activities === void 0 ? [] : array(section.student_activities, `${path}.student_activities`);
+    activities.forEach((entry, index) => {
+      const activityPath = `${path}.student_activities[${index}]`;
+      const activity = record(entry, activityPath);
+      if (activity.kind === "reflection") {
+        allowedKeys(activity, ["kind", "prompt", "answer", "reference"], activityPath);
+        nonEmptyString(activity.prompt, `${activityPath}.prompt`, 480);
+        nonEmptyString(activity.answer, `${activityPath}.answer`, 960);
+        const target = resolveReference(activity.reference, `${activityPath}.reference`, sectionIndex, rawMoments.length);
+        if (target.kind !== "board_item") fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.reference`, "a thinking question must sit by a board card");
+        return;
+      }
+      if (activity.kind === "number_target") {
+        allowedKeys(activity, [
+          "kind",
+          "prompt",
+          "number_controls",
+          "expression",
+          "value",
+          "tolerance",
+          "hints",
+          "hint_after_attempts",
+          "success_message"
+        ], activityPath);
+        const numberControls = array(activity.number_controls, `${activityPath}.number_controls`);
+        if (numberControls.length === 0) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.number_controls`, "number task requires at least one controllable number");
+        const seenNumbers = /* @__PURE__ */ new Set();
+        numberControls.forEach((entry2, controlIndex) => {
+          const controlPath = `${activityPath}.number_controls[${controlIndex}]`;
+          const control = record(entry2, controlPath);
+          allowedKeys(control, ["number", "controls"], controlPath);
+          const number = positiveIndex(control.number, `${controlPath}.number`);
+          requiredVisualNumberUses.push({ number, path: `${controlPath}.number` });
+          if (number > rawNumbers.length) fail2("LESSON_PLAN_NUMBER_REFERENCE", `${controlPath}.number`, "number reference is unavailable");
+          if (seenNumbers.has(number)) fail2("LESSON_PLAN_ACTIVITY", `${controlPath}.number`, "each number may appear only once in a task");
+          seenNumbers.add(number);
+          const controls = array(control.controls, `${controlPath}.controls`);
+          if (controls.length === 0 || controls.some((item) => !["slider", "geometry_point"].includes(String(item)))) fail2("LESSON_PLAN_ACTIVITY", `${controlPath}.controls`, "unsupported number controls");
+        });
+        if (activity.expression !== void 0) validateMathExpression(activity.expression, `${activityPath}.expression`, rawNumbers.length);
+        else if (numberControls.length !== 1) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.expression`, "tasks with multiple numbers require an explicit expression");
+        finiteNumber(activity.value, `${activityPath}.value`);
+        if (finiteNumber(activity.tolerance, `${activityPath}.tolerance`) <= 0) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.tolerance`, "tolerance must be positive");
+      } else if (activity.kind === "scene3d_view") {
+        allowedKeys(activity, [
+          "kind",
+          "reference",
+          "prompt",
+          "controls",
+          "match",
+          "yaw",
+          "pitch",
+          "zoom",
+          "angular_tolerance",
+          "zoom_tolerance",
+          "hints",
+          "hint_after_attempts",
+          "success_message"
+        ], activityPath);
+        const target = resolveReference(activity.reference, `${activityPath}.reference`, sectionIndex, rawMoments.length);
+        if (target.kind !== "board_item" || target.boardKind !== "visual" || !target.capability || !LESSON_PLAN_CAPABILITY_REGISTRY[target.capability].output_kinds.includes("scene3d")) {
+          fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.reference`, "scene3d_view requires a 3D visual target");
+        }
+        const controls = array(activity.controls, `${activityPath}.controls`);
+        if (controls.length === 0 || controls.some((item) => !["orbit", "zoom", "preset", "reset"].includes(String(item)))) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.controls`, "unsupported scene controls");
+        if (!["view_direction", "camera_pose"].includes(String(activity.match))) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.match`, "unsupported 3D match mode");
+        finiteNumber(activity.yaw, `${activityPath}.yaw`);
+        const pitch = finiteNumber(activity.pitch, `${activityPath}.pitch`);
+        if (pitch < -Math.PI / 2 || pitch > Math.PI / 2) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.pitch`, "pitch is outside the supported range");
+        const zoom = finiteNumber(activity.zoom, `${activityPath}.zoom`);
+        if (zoom < 0.2 || zoom > 5) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.zoom`, "zoom is outside the supported range");
+        if (finiteNumber(activity.angular_tolerance, `${activityPath}.angular_tolerance`) <= 0) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.angular_tolerance`, "angular tolerance must be positive");
+        if (finiteNumber(activity.zoom_tolerance, `${activityPath}.zoom_tolerance`) <= 0) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.zoom_tolerance`, "zoom tolerance must be positive");
+      } else if (activity.kind === "numeric_answer") {
+        allowedKeys(activity, [
+          "kind",
+          "prompt",
+          "answer",
+          "check",
+          "unit",
+          "simplest_fraction",
+          "reference",
+          "hints",
+          "hint_after_attempts",
+          "success_message"
+        ], activityPath);
+        const target = resolveReference(activity.reference, `${activityPath}.reference`, sectionIndex, rawMoments.length);
+        if (target.kind !== "board_item") fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.reference`, "a typed question must sit by a board card");
+        validateNumericAnswerActivity(activity, activityPath);
+      } else {
+        fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.kind`, "unsupported student activity");
+      }
+      nonEmptyString(activity.prompt, `${activityPath}.prompt`, 480);
+      const hints = array(activity.hints, `${activityPath}.hints`);
+      if (hints.length === 0) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.hints`, "activity requires hints");
+      hints.forEach((hint, hintIndex) => nonEmptyString(hint, `${activityPath}.hints[${hintIndex}]`, 480));
+      if (activity.hint_after_attempts !== void 0) positiveIndex(activity.hint_after_attempts, `${activityPath}.hint_after_attempts`);
+      optionalString(activity.success_message, `${activityPath}.success_message`, 480);
+    });
+    resolvedSections.push({
+      index: sectionIndex,
+      section_id: `section-${pad(sectionIndex)}`,
+      moments: resolvedMoments,
+      reusable_items: resolvedReusable
+    });
+  });
+  const close = record(root.close, "$lessonPlan.close");
+  allowedKeys(close, ["summary", "focus"], "$lessonPlan.close");
+  nonEmptyString(close.summary, "$lessonPlan.close.summary", 1200);
+  const closeFocus = array(close.focus, "$lessonPlan.close.focus");
+  if (closeFocus.length === 0) fail2("LESSON_PLAN_CLOSE", "$lessonPlan.close.focus", "close requires focus references");
+  closeFocus.forEach((ref, index) => resolveReference(ref, `$lessonPlan.close.focus[${index}]`, rawSections.length + 1, 0));
+  for (const use of requiredVisualNumberUses) {
+    if (!visuallyBoundNumbers.has(use.number)) {
+      fail2(
+        "LESSON_PLAN_UNBOUND_NUMBER",
+        use.path,
+        `number ${use.number} is animated or assigned to a student task but does not drive any visual`
+      );
+    }
+  }
+  return {
+    plan: structuredClone(value),
+    numbers: rawNumbers.map((_entry, index) => ({ index: index + 1, variable_id: `number_${pad(index + 1)}` })),
+    sections: resolvedSections,
+    references
+  };
+}
+function validateNumericAnswerActivity(activity, path) {
+  nonEmptyString(activity.answer, `${path}.answer`, 64);
+  const expected = parseNumericAnswer(activity.answer);
+  if (!expected) fail2("LESSON_PLAN_ACTIVITY", `${path}.answer`, "answer must be a whole number, decimal, fraction or mixed number");
+  nonEmptyString(activity.check, `${path}.check`, 256);
+  let checked;
+  try {
+    checked = compileMathExpression(activity.check, [])({});
+  } catch (error) {
+    fail2("LESSON_PLAN_ACTIVITY", `${path}.check`, `check must be arithmetic on numbers only: ${error.message}`);
+  }
+  if (!Number.isFinite(checked) || Math.abs(checked - expected.value) > 1e-9 * Math.max(1, Math.abs(expected.value))) {
+    fail2("LESSON_PLAN_ACTIVITY", `${path}.answer`, `answer ${String(activity.answer)} does not equal its check ${String(activity.check)}`);
+  }
+  optionalString(activity.unit, `${path}.unit`, 16);
+  if (activity.simplest_fraction !== void 0 && typeof activity.simplest_fraction !== "boolean") {
+    fail2("LESSON_PLAN_ACTIVITY", `${path}.simplest_fraction`, "expected a boolean");
+  }
+  if (activity.simplest_fraction && !isSimplestFraction(expected)) {
+    fail2("LESSON_PLAN_ACTIVITY", `${path}.answer`, "a simplest-fraction answer must itself be in lowest terms");
+  }
+}
+function validateLessonPlan(value, options = {}) {
+  return resolveLessonPlan(value, options).plan;
+}
+function validateLessonPlanOutline(value, expectedRequestParts = 0) {
+  const outline = record(value, "$lessonPlanOutline");
+  allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
+  if (expectedRequestParts > 0 && outline.course_visuals === void 0) {
+    fail2(
+      "LESSON_PLAN_COURSE_VISUAL",
+      "$lessonPlanOutline.course_visuals",
+      "a model-authored outline must explicitly declare its course visuals, or an empty list for a text-only course"
+    );
+  }
+  if (outline.version !== LESSON_PLAN_VERSION) {
+    fail2("LESSON_PLAN_VERSION", "$lessonPlanOutline.version", `expected '${LESSON_PLAN_VERSION}'`);
+  }
+  nonEmptyString(outline.title, "$lessonPlanOutline.title", 160);
+  const goals = array(outline.goals, "$lessonPlanOutline.goals");
+  if (goals.length < 1 || goals.length > 8) fail2("LESSON_PLAN_GOALS", "$lessonPlanOutline.goals", "expected 1 to 8 goals");
+  goals.forEach((goal, index) => nonEmptyString(goal, `$lessonPlanOutline.goals[${index}]`, 480));
+  if (outline.teaching_strategies !== void 0) {
+    const strategies = array(outline.teaching_strategies, "$lessonPlanOutline.teaching_strategies");
+    if (strategies.length > 16) fail2("LESSON_PLAN_STRATEGIES", "$lessonPlanOutline.teaching_strategies", "expected at most 16 strategies");
+    strategies.forEach((strategy, index) => nonEmptyString(strategy, `$lessonPlanOutline.teaching_strategies[${index}]`, 240));
+  }
+  const numbers = validateLessonPlanNumbers(outline.numbers, "$lessonPlanOutline.numbers");
+  const sections = array(outline.sections, "$lessonPlanOutline.sections");
+  if (sections.length < 1 || sections.length > 24) fail2("LESSON_PLAN_SECTIONS", "$lessonPlanOutline.sections", "expected 1 to 24 sections");
+  const declarationsBySection = [];
+  sections.forEach((entry, index) => {
+    const path = `$lessonPlanOutline.sections[${index}]`;
+    const section = record(entry, path);
+    allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
+    nonEmptyString(section.purpose, `${path}.purpose`, 480);
+    const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
+    const seenCapabilities = /* @__PURE__ */ new Set();
+    allowedCapabilities.forEach((item, capabilityIndex) => {
+      const value2 = capability(item, `${path}.allowed_capabilities[${capabilityIndex}]`);
+      if (seenCapabilities.has(value2)) fail2("LESSON_PLAN_CAPABILITY", `${path}.allowed_capabilities[${capabilityIndex}]`, "capability is duplicated");
+      seenCapabilities.add(value2);
+    });
+    const declarations = section.reusable_items === void 0 ? [] : array(section.reusable_items, `${path}.reusable_items`);
+    if (declarations.length > 32) fail2("LESSON_PLAN_REUSABLE", `${path}.reusable_items`, "expected at most 32 reusable items");
+    declarationsBySection.push(declarations.map((declarationValue, declarationIndex) => {
+      const declarationPath = `${path}.reusable_items[${declarationIndex}]`;
+      const declaration = record(declarationValue, declarationPath);
+      allowedKeys(declaration, ["kind", "board_kind", "capability"], declarationPath);
+      if (!["board_item", "connection", "group"].includes(String(declaration.kind))) fail2("LESSON_PLAN_REUSABLE", `${declarationPath}.kind`, "unsupported reusable item kind");
+      if (declaration.kind === "board_item") {
+        if (typeof declaration.board_kind !== "string" || !boardKinds.has(declaration.board_kind)) fail2("LESSON_PLAN_REUSABLE", `${declarationPath}.board_kind`, "board_item requires a supported board_kind");
+        if (declaration.board_kind === "visual") {
+          const declaredCapability = capability(declaration.capability, `${declarationPath}.capability`);
+          if (!seenCapabilities.has(declaredCapability)) fail2("LESSON_PLAN_CAPABILITY", `${declarationPath}.capability`, "reusable capability is not allowed for this section");
+        } else if (declaration.capability !== void 0) {
+          fail2("LESSON_PLAN_REUSABLE", `${declarationPath}.capability`, "only visual board items declare a capability");
+        }
+      } else if (declaration.board_kind !== void 0 || declaration.capability !== void 0) {
+        fail2("LESSON_PLAN_REUSABLE", declarationPath, "connection and group declarations do not use board_kind or capability");
+      }
+      return declaration;
+    }));
+  });
+  const courseVisuals = outline.course_visuals === void 0 ? [] : array(outline.course_visuals, "$lessonPlanOutline.course_visuals");
+  if (courseVisuals.length > 32) {
+    fail2("LESSON_PLAN_COURSE_VISUAL", "$lessonPlanOutline.course_visuals", "expected at most 32 course visuals");
+  }
+  const firstVisualByCapability = /* @__PURE__ */ new Map();
+  courseVisuals.forEach((entry, index) => {
+    const path = `$lessonPlanOutline.course_visuals[${index}]`;
+    const visual = record(entry, path);
+    allowedKeys(visual, ["capability", "create_section", "use_sections", "relation", "related_visual", "reusable_item"], path);
+    const visualCapability = capability(visual.capability, `${path}.capability`);
+    const createSection = positiveIndex(visual.create_section, `${path}.create_section`);
+    if (createSection > sections.length) fail2("LESSON_PLAN_COURSE_VISUAL", `${path}.create_section`, "creation section is unavailable");
+    const reusableItem = positiveIndex(visual.reusable_item, `${path}.reusable_item`);
+    const declaration = declarationsBySection[createSection - 1]?.[reusableItem - 1];
+    if (declaration?.kind !== "board_item" || declaration.board_kind !== "visual" || declaration.capability !== visualCapability) {
+      fail2("LESSON_PLAN_COURSE_VISUAL", `${path}.reusable_item`, "course visual must map to a matching visual reusable item");
+    }
+    const uses = array(visual.use_sections, `${path}.use_sections`);
+    const seenUses = /* @__PURE__ */ new Set();
+    uses.forEach((sectionValue, useIndex) => {
+      const section = positiveIndex(sectionValue, `${path}.use_sections[${useIndex}]`);
+      if (section < createSection || section > sections.length) {
+        fail2("LESSON_PLAN_COURSE_VISUAL", `${path}.use_sections[${useIndex}]`, "a visual can only be used from its creation section onward");
+      }
+      if (seenUses.has(section)) fail2("LESSON_PLAN_COURSE_VISUAL", `${path}.use_sections[${useIndex}]`, "use section is duplicated");
+      seenUses.add(section);
+    });
+    if (!seenUses.has(createSection)) fail2("LESSON_PLAN_COURSE_VISUAL", `${path}.use_sections`, "use sections must include the creation section");
+    if (!["primary", "supporting", "comparison"].includes(String(visual.relation))) {
+      fail2("LESSON_PLAN_COURSE_VISUAL", `${path}.relation`, "unsupported visual relation");
+    }
+    const firstPosition = firstVisualByCapability.get(visualCapability);
+    if (firstPosition !== void 0 && visual.relation !== "comparison") {
+      fail2(
+        "LESSON_PLAN_COURSE_VISUAL",
+        path,
+        `capability '${visualCapability}' already has course visual ${firstPosition}; reuse it or declare an explicit comparison`
+      );
+    }
+    if (firstPosition === void 0) firstVisualByCapability.set(visualCapability, index + 1);
+    if (visual.related_visual !== void 0) {
+      const related = positiveIndex(visual.related_visual, `${path}.related_visual`);
+      if (related >= index + 1) {
+        fail2("LESSON_PLAN_COURSE_VISUAL", `${path}.related_visual`, "a related visual must be an earlier course visual");
+      }
+    } else if (visual.relation !== "primary") {
+      fail2("LESSON_PLAN_COURSE_VISUAL", `${path}.related_visual`, "supporting and comparison visuals require a related visual position");
+    }
+  });
+  if (expectedRequestParts > 0 || outline.request_coverage !== void 0) {
+    const coverage = array(outline.request_coverage, "$lessonPlanOutline.request_coverage");
+    if (expectedRequestParts > 0 && coverage.length !== expectedRequestParts) {
+      fail2("LESSON_PLAN_REQUEST_COVERAGE", "$lessonPlanOutline.request_coverage", `expected exactly ${expectedRequestParts} request coverage entries`);
+    }
+    const seen = /* @__PURE__ */ new Set();
+    coverage.forEach((entry, index) => {
+      const path = `$lessonPlanOutline.request_coverage[${index}]`;
+      const item = record(entry, path);
+      allowedKeys(item, ["request_part", "treatment", "sections", "reason"], path);
+      const requestPart = positiveIndex(item.request_part, `${path}.request_part`);
+      if (expectedRequestParts > 0 && requestPart > expectedRequestParts) fail2("LESSON_PLAN_REQUEST_COVERAGE", `${path}.request_part`, "request part is unavailable");
+      if (seen.has(requestPart)) fail2("LESSON_PLAN_REQUEST_COVERAGE", `${path}.request_part`, "request part is duplicated");
+      seen.add(requestPart);
+      if (item.treatment !== "teach" && item.treatment !== "unsupported") fail2("LESSON_PLAN_REQUEST_COVERAGE", `${path}.treatment`, "unsupported treatment");
+      const coveredSections = array(item.sections, `${path}.sections`);
+      const seenSections = /* @__PURE__ */ new Set();
+      coveredSections.forEach((sectionValue, sectionIndex) => {
+        const section = positiveIndex(sectionValue, `${path}.sections[${sectionIndex}]`);
+        if (section > sections.length) fail2("LESSON_PLAN_REQUEST_COVERAGE", `${path}.sections[${sectionIndex}]`, "section is unavailable");
+        if (seenSections.has(section)) fail2("LESSON_PLAN_REQUEST_COVERAGE", `${path}.sections[${sectionIndex}]`, "section is duplicated");
+        seenSections.add(section);
+      });
+      if (item.treatment === "teach") {
+        if (coveredSections.length === 0) fail2("LESSON_PLAN_REQUEST_COVERAGE", `${path}.sections`, "a taught request part must map to at least one section");
+        if (item.reason !== void 0) nonEmptyString(item.reason, `${path}.reason`, 480);
+      } else {
+        if (coveredSections.length !== 0) fail2("LESSON_PLAN_REQUEST_COVERAGE", `${path}.sections`, "an unsupported request part cannot map to a lesson section");
+        nonEmptyString(item.reason, `${path}.reason`, 480);
+      }
+    });
+    if (expectedRequestParts > 0) {
+      for (let requestPart = 1; requestPart <= expectedRequestParts; requestPart += 1) {
+        if (!seen.has(requestPart)) fail2("LESSON_PLAN_REQUEST_COVERAGE", "$lessonPlanOutline.request_coverage", `request part ${requestPart} is missing`);
+      }
+    }
+  }
+  const close = record(outline.close, "$lessonPlanOutline.close");
+  allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
+  nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
+  const closeFocus = array(close.focus, "$lessonPlanOutline.close.focus");
+  if (closeFocus.length === 0) fail2("LESSON_PLAN_CLOSE", "$lessonPlanOutline.close.focus", "close requires focus references");
+  closeFocus.forEach((value2, index) => {
+    const path = `$lessonPlanOutline.close.focus[${index}]`;
+    const reference = validateReference(value2, path);
+    if (reference.source !== "reusable" && reference.source !== "host") {
+      fail2("LESSON_PLAN_OUTLINE_REFERENCE", `${path}.source`, "the outline can only focus a declared reusable item or a host reference");
+    }
+    if (reference.source === "reusable") {
+      if (reference.section > sections.length) fail2("LESSON_PLAN_REFERENCE", `${path}.section`, "reusable section is unavailable");
+      const declaration = declarationsBySection[reference.section - 1]?.[reference.item - 1];
+      if (!declaration) fail2("LESSON_PLAN_REFERENCE", `${path}.item`, "reusable item is not declared");
+      if (reference.part?.kind === "capability") {
+        if (!declaration.capability) fail2("LESSON_PLAN_PART", `${path}.part`, "capability part requires a visual reusable item");
+        const roles = LESSON_PLAN_CAPABILITIES[declaration.capability];
+        if (!roles.includes(reference.part.role)) fail2("LESSON_PLAN_PART", `${path}.part.role`, "capability part is unavailable");
+      } else if (reference.part) {
+        fail2("LESSON_PLAN_PART", `${path}.part`, "index parts are only available on host references");
+      }
+    }
+  });
+  return structuredClone(value);
+}
+function assembleLessonPlan(outlineValue, draftValues, options = {}) {
+  const outline = record(validateLessonPlanOutline(outlineValue), "$lessonPlanOutline");
+  allowedKeys(outline, ["version", "title", "goals", "teaching_strategies", "numbers", "request_coverage", "course_visuals", "sections", "close"], "$lessonPlanOutline");
+  if (outline.version !== LESSON_PLAN_VERSION) {
+    fail2("LESSON_PLAN_VERSION", "$lessonPlanOutline.version", `expected '${LESSON_PLAN_VERSION}'`);
+  }
+  nonEmptyString(outline.title, "$lessonPlanOutline.title", 160);
+  const goals = array(outline.goals, "$lessonPlanOutline.goals");
+  const sections = array(outline.sections, "$lessonPlanOutline.sections");
+  if (sections.length < 1 || sections.length > 24) {
+    fail2("LESSON_PLAN_SECTIONS", "$lessonPlanOutline.sections", "expected 1 to 24 sections");
+  }
+  sections.forEach((entry, index) => {
+    const path = `$lessonPlanOutline.sections[${index}]`;
+    const section = record(entry, path);
+    allowedKeys(section, ["purpose", "allowed_capabilities", "reusable_items"], path);
+    nonEmptyString(section.purpose, `${path}.purpose`, 480);
+    const allowedCapabilities = array(section.allowed_capabilities, `${path}.allowed_capabilities`);
+    const seenCapabilities = /* @__PURE__ */ new Set();
+    allowedCapabilities.forEach((item, capabilityIndex) => {
+      const value = capability(item, `${path}.allowed_capabilities[${capabilityIndex}]`);
+      if (seenCapabilities.has(value)) fail2("LESSON_PLAN_CAPABILITY", `${path}.allowed_capabilities[${capabilityIndex}]`, "capability is duplicated");
+      seenCapabilities.add(value);
+    });
+    if (section.reusable_items !== void 0) {
+      array(section.reusable_items, `${path}.reusable_items`).forEach((entry2, reusableIndex) => {
+        const declaration = record(entry2, `${path}.reusable_items[${reusableIndex}]`);
+        if (declaration.capability !== void 0) {
+          const value = capability(declaration.capability, `${path}.reusable_items[${reusableIndex}].capability`);
+          if (!seenCapabilities.has(value)) fail2("LESSON_PLAN_CAPABILITY", `${path}.reusable_items[${reusableIndex}].capability`, "reusable capability is not allowed for this section");
+        }
+      });
+    }
+  });
+  const close = record(outline.close, "$lessonPlanOutline.close");
+  allowedKeys(close, ["summary", "focus"], "$lessonPlanOutline.close");
+  nonEmptyString(close.summary, "$lessonPlanOutline.close.summary", 1200);
+  const outlineFocus = array(close.focus, "$lessonPlanOutline.close.focus");
+  if (outlineFocus.length === 0) fail2("LESSON_PLAN_CLOSE", "$lessonPlanOutline.close.focus", "close requires focus references");
+  outlineFocus.forEach((value, index) => {
+    const reference = validateReference(value, `$lessonPlanOutline.close.focus[${index}]`);
+    if (reference.source !== "reusable" && reference.source !== "host") {
+      fail2(
+        "LESSON_PLAN_OUTLINE_REFERENCE",
+        `$lessonPlanOutline.close.focus[${index}].source`,
+        "the outline can only focus a declared reusable item or a host reference"
+      );
+    }
+  });
+  const drafts = array(draftValues, "$lessonPlanSectionDrafts");
+  if (drafts.length !== sections.length) {
+    fail2("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanSectionDrafts", "expected exactly one draft for every outline section");
+  }
+  const bySection = /* @__PURE__ */ new Map();
+  drafts.forEach((entry, index) => {
+    const path = `$lessonPlanSectionDrafts[${index}]`;
+    const draft = record(entry, path);
+    allowedKeys(draft, ["version", "section", "moments", "student_activities"], path);
+    if (draft.version !== LESSON_PLAN_VERSION) fail2("LESSON_PLAN_VERSION", `${path}.version`, `expected '${LESSON_PLAN_VERSION}'`);
+    const section = positiveIndex(draft.section, `${path}.section`);
+    if (section > sections.length) fail2("LESSON_PLAN_SECTION_DRAFTS", `${path}.section`, "section is outside the outline");
+    if (bySection.has(section)) fail2("LESSON_PLAN_SECTION_DRAFTS", `${path}.section`, "section draft is duplicated");
+    array(draft.moments, `${path}.moments`);
+    if (draft.student_activities !== void 0) array(draft.student_activities, `${path}.student_activities`);
+    const outlineSection = sections[section - 1];
+    const allowedCapabilities = new Set(array(outlineSection.allowed_capabilities, `$lessonPlanOutline.sections[${section - 1}].allowed_capabilities`));
+    array(draft.moments, `${path}.moments`).forEach((momentValue, momentIndex) => {
+      const moment = record(momentValue, `${path}.moments[${momentIndex}]`);
+      array(moment.actions, `${path}.moments[${momentIndex}].actions`).forEach((actionValue, actionIndex) => {
+        const action = record(actionValue, `${path}.moments[${momentIndex}].actions[${actionIndex}]`);
+        if (action.action !== "create" || action.kind !== "visual") return;
+        const content = record(action.content, `${path}.moments[${momentIndex}].actions[${actionIndex}].content`);
+        if (!allowedCapabilities.has(content.capability)) {
+          fail2("LESSON_PLAN_CAPABILITY", `${path}.moments[${momentIndex}].actions[${actionIndex}].content.capability`, "visual capability is not allowed by the course outline");
+        }
+      });
+    });
+    bySection.set(section, draft);
+  });
+  const assembled = {
+    version: outline.version,
+    title: outline.title,
+    goals: structuredClone(goals),
+    ...outline.teaching_strategies === void 0 ? {} : { teaching_strategies: structuredClone(outline.teaching_strategies) },
+    ...outline.numbers === void 0 ? {} : { numbers: structuredClone(outline.numbers) },
+    sections: sections.map((entry, index) => {
+      const section = entry;
+      const draft = bySection.get(index + 1);
+      if (!draft) fail2("LESSON_PLAN_SECTION_DRAFTS", `$lessonPlanSectionDrafts`, `section ${index + 1} is missing`);
+      return {
+        purpose: section.purpose,
+        ...section.reusable_items === void 0 ? {} : { reusable_items: structuredClone(section.reusable_items) },
+        moments: structuredClone(draft.moments),
+        ...draft.student_activities === void 0 ? {} : { student_activities: structuredClone(draft.student_activities) }
+      };
+    }),
+    close: structuredClone(close)
+  };
+  return resolveLessonPlan(assembled, options).plan;
+}
+
+// src/compiled-visual-reuse.ts
+function cardIdentity(kind, content) {
+  const fragments = /* @__PURE__ */ new Map();
+  const collect = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(collect);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    const record2 = value;
+    if (typeof record2.as === "string" && !fragments.has(record2.as)) fragments.set(record2.as, `part-${fragments.size}`);
+    Object.values(record2).forEach(collect);
+  };
+  collect(content);
+  const localReference = (value) => {
+    const [head, ...tail] = value.split(".");
+    return [fragments.get(head) ?? head, ...tail].join(".");
+  };
+  const normalize2 = (value, key = "", path = "") => {
+    if (typeof value === "string") {
+      if (key === "expression") return value.replace(/\s+/gu, "");
+      if (["as", "target", "from", "to", "center"].includes(key)) return localReference(value);
+      if (kind === "plot" && path.startsWith("axes.") && key === "label" && ["x", "y", "\u03B8"].includes(value)) return "coordinate";
+      return value;
+    }
+    if (Array.isArray(value)) return value.map((child) => normalize2(child, key, path));
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(Object.entries(value).filter(([name]) => {
+      if (!path && name === "title") return false;
+      if (kind === "plot") {
+        if (path.startsWith("axes.") && ["min", "max"].includes(name)) return false;
+        if ((path === "curves" || path === "points") && ["label", "color"].includes(name)) return false;
+      }
+      return true;
+    }).sort(([a], [b]) => a.localeCompare(b)).map(([name, child]) => [name, normalize2(child, name, path ? `${path}.${name}` : name)]));
+  };
+  return { identity: JSON.stringify([kind, normalize2(content)]), fragments };
+}
+var CompiledVisualRegistry = class {
+  cards = /* @__PURE__ */ new Map();
+  reuse(visual) {
+    if (this.cards.size === 0) {
+      for (const action of visual.actions) {
+        if (action.do !== "write" || !["plot", "geometry", "scene3d", "diagram"].includes(action.kind)) continue;
+        const cards = this.cards.get(action.kind) ?? [];
+        cards.push({ node: action.as, content: action.content });
+        this.cards.set(action.kind, cards);
+      }
+      return visual;
+    }
+    const aliases = /* @__PURE__ */ new Map();
+    const reused = /* @__PURE__ */ new Set();
+    const pending = [];
+    for (const action of visual.actions) {
+      if (action.do !== "write" || !["plot", "geometry", "scene3d", "diagram"].includes(action.kind)) continue;
+      const priorCards = this.cards.get(action.kind) ?? [];
+      const content = action.content;
+      const signature = priorCards.length ? cardIdentity(action.kind, content) : void 0;
+      const existing = signature ? priorCards.find((card) => {
+        card.signature ??= cardIdentity(action.kind, card.content);
+        return card.signature.identity === signature.identity;
+      }) : void 0;
+      if (existing && signature) {
+        reused.add(action.as);
+        aliases.set(action.as, existing.node);
+        const oldFragments = new Map([...existing.signature.fragments].map(([name, canonical]) => [canonical, name]));
+        for (const [name, canonical] of signature.fragments) aliases.set(`${action.as}#${name}`, `${existing.node}#${oldFragments.get(canonical)}`);
+      } else pending.push([action.kind, { node: action.as, content, signature }]);
+    }
+    for (const [kind, card] of pending) {
+      const cards = this.cards.get(kind) ?? [];
+      cards.push(card);
+      this.cards.set(kind, cards);
+    }
+    if (!reused.size) return visual;
+    const reference = (value) => aliases.get(value) ?? value;
+    const remap = (value, key = "") => {
+      if (typeof value === "string") return ["target", "targets", "from", "to", "anchor", "members"].includes(key) ? reference(value) : value;
+      if (Array.isArray(value)) return value.map((child) => remap(child, key));
+      if (!value || typeof value !== "object") return value;
+      return Object.fromEntries(Object.entries(value).map(([name, child]) => [name, remap(child, name)]));
+    };
+    return {
+      actions: visual.actions.map((action) => action.do === "write" && reused.has(action.as) ? { do: "focus", targets: [reference(action.as)], intent: "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762" } : remap(action)),
+      whole: reference(visual.whole),
+      ...visual.primaryScene ? { primaryScene: reference(visual.primaryScene) } : {},
+      parts: new Map([...visual.parts].map(([name, target]) => [name, reference(target)]))
+    };
+  }
+};
+
+// src/teaching-contracts.ts
+function affineTokens(tokens) {
+  const stack = [];
+  for (const token of tokens) {
+    if (token.kind === "input") stack.push(1);
+    else if (["literal", "constant", "number"].includes(token.kind)) stack.push(0);
+    else if (token.kind === "negate") continue;
+    else if (token.kind === "operator") {
+      const b = stack.pop(), a = stack.pop();
+      if (a === void 0 || b === void 0) return false;
+      if (token.operator === "add" || token.operator === "subtract") stack.push(Math.max(a, b));
+      else if (token.operator === "multiply") stack.push(a + b);
+      else if (token.operator === "divide" && b === 0) stack.push(a);
+      else return false;
+    } else return false;
+  }
+  return stack.length === 1 && stack[0] <= 1;
+}
+function fixedLineSamples(visual) {
+  const tokens = visual.parameters?.expression_tokens;
+  return visual.capability === "function_plot" && visual.numbers?.length === 2 && Array.isArray(tokens) && !tokens.some((t) => t.kind === "number") && affineTokens(tokens);
+}
+function normalizePlotInputInstructions(plan) {
+  const visuals = plan.sections.flatMap((s) => s.moments.flatMap((m) => m.actions)).filter((a) => a.action === "create" && a.kind === "visual").map((a) => a.content);
+  if (visuals.length !== 1 || visuals[0].capability !== "function_plot" || visuals[0].numbers?.length !== 2) return;
+  const tokens = visuals[0].parameters?.expression_tokens;
+  if (Array.isArray(tokens) && tokens.some((t) => t.kind === "number")) return;
+  const samplesFixedLine = fixedLineSamples(visuals[0]);
+  for (const section of plan.sections) for (const moment of section.moments) {
+    moment.narration = moment.narration.replace(
+      /(?:移动|调整|拖动|拖拽)点\s*([AB])\s*(?:或|和|、)\s*(?:点\s*)?([AB])(?:的)?(?:位置|横坐标)/g,
+      (_match, first, second) => `\u8C03\u6574\u70B9 ${first} \u6216\u70B9 ${second} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
+    ).replace(
+      /(?:直接)?拖(?:动|拽)(?:图上|图中|曲线上)?(?:的)?点\s*([AB])/g,
+      (_match, label) => `\u8C03\u6574\u70B9 ${label} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
+    );
+    if (samplesFixedLine) {
+      moment.narration = moment.narration.replace(
+        /[^。！？!?；;]*斜率如何保持不变或发生变化[^。！？!?；;]*/g,
+        "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u5982\u4F55\u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:纵向|高度|纵坐标).{0,12}(?:变大|改变|变化).{0,12}(?:横向|横坐标).{0,12}不变[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:看看|观察).{0,36}(?:斜率|倾斜程度).{0,32}(?:变化|改变)[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:调整|移动|拖动|拖拽).{0,36}点.{0,36}(?:观察|看看).{0,36}(?:斜率|倾斜程度)[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      );
+    }
+  }
+  if (samplesFixedLine) for (const section of plan.sections) {
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target") continue;
+      activity.prompt = activity.prompt.replace(/观察.{0,24}斜率.{0,12}(?:变化|改变)/g, "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8").replace(/改变.{0,16}(?:倾斜程度|斜率)/g, "\u9A8C\u8BC1\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8");
+      activity.hints = activity.hints.map((hint) => /变陡|变平缓|(?:倾斜程度|倾斜状态|陡峭程度|比值).{0,16}(?:改变|变化)|(?:改变|变化).{0,16}(?:倾斜程度|斜率|陡峭程度|比值)/.test(hint) ? "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u7684\u6BD4\u503C\u662F\u5426\u4FDD\u6301\u4E0D\u53D8" : hint);
+      if (activity.success_message && !/不变|保持/.test(activity.success_message) && /(?:改变|变化|更新|影响).{0,20}(?:倾斜程度|斜率|陡峭程度|比值)|(?:倾斜程度|斜率|陡峭程度|比值).{0,20}(?:改变|变化|更新|影响)|如何随.{0,20}变化/.test(activity.success_message)) {
+        activity.success_message = "\u5B8C\u6210\uFF01\u79FB\u52A8\u53D6\u6837\u70B9\u540E\uFF0C\u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8\u3002";
+      }
+    }
+  }
+}
+function validateRearrangementClaims(plan) {
+  const local = /* @__PURE__ */ new Map();
+  const reusable = /* @__PURE__ */ new Map();
+  const byNumber = /* @__PURE__ */ new Map();
+  const relatedLocal = /* @__PURE__ */ new Map();
+  const relatedReusable = /* @__PURE__ */ new Map();
+  const lookup = (reference, section) => {
+    if (reference.source === "reusable") {
+      const key = `${reference.section}:${reference.item}`, visual = reusable.get(key);
+      return visual ? [visual] : [...relatedReusable.get(key) ?? []];
+    }
+    if (reference.source === "local_board_item") {
+      const key = `${section}:${reference.moment}:${reference.item}`, visual = local.get(key);
+      return visual ? [visual] : [...relatedLocal.get(key) ?? []];
+    }
+    return [];
+  };
+  const check = (text, visuals, path) => {
+    if (visuals.size !== 1) return;
+    const visual = [...visuals][0];
+    if (visual.capability !== "geometric_rearrangement") return;
+    const construction = visual.parameters?.construction ?? "right_triangle_square";
+    const facts = REARRANGEMENT_FACTS[construction];
+    if (!facts) return;
+    const claims = text.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
+    const wrongPieces = construction === "square_area_identity" && claims.some((claim) => /(?:这(?:个|张|些|幅)|图中|图里|内部|里面|画面|包含).{0,20}(?:四|4)\s*(?:个|块|片)?(?:完全相同的|全等的|全等|完全相同|一样的)?(?:直角)?三角形/u.test(claim));
+    const wrongFrame = construction === "right_triangle_square" && claims.some((claim) => /(?:外框|外侧正方形|这个大正方形|大正方形)(?:的)?边长.{0,8}(?:是|为|等于|就是).{0,4}(?:斜边\s*)?c(?![a-z])/iu.test(claim) || /(?:中间|中央|中心).{0,8}(?:正方形|留白).{0,8}(?:边长|面积).{0,8}(?:b\s*[-−]\s*a|a\s*[-−]\s*b)/iu.test(claim) || /(?:S_?\{?(?:大正方形|外框)\}?|S[（(](?:大正方形|外框)[）)])\s*=\s*c(?:²|\^\{?2\}?)/u.test(claim));
+    const wrongControl = claims.some((claim) => /(?:拖动|拖拽|调整|滑动).{0,12}(?:滑块|滑杆|进度).{0,16}(?:改变|调整).{0,8}(?:边长|三边|斜边|直角边)/u.test(claim));
+    const wrongFinal = construction === "right_triangle_square" && claims.some((claim) => /(?:拼成|拼合成|填满).{0,8}斜边正方形/u.test(claim));
+    if (wrongPieces || wrongFrame || wrongControl || wrongFinal) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_TEACHING_MISMATCH",
+        path,
+        `${construction}: ${facts.pieces}; ${facts.container}; start: ${facts.initial}; end: ${facts.final}; ${facts.proof}. The control moves pieces only, not side lengths. Correct this section without replacing the established visual.`
+      );
+    }
+  };
+  for (const [si, section] of plan.sections.entries()) {
+    for (const [mi, moment] of section.moments.entries()) {
+      const selected = /* @__PURE__ */ new Set();
+      let item = 0;
+      for (const action of moment.actions) {
+        if (action.action !== "create") continue;
+        item += 1;
+        if (action.kind !== "visual") continue;
+        const visual = action.content;
+        local.set(`${si + 1}:${mi + 1}:${item}`, visual);
+        if (action.reusable_item) reusable.set(`${si + 1}:${action.reusable_item}`, visual);
+        selected.add(visual);
+        for (const number of visual.numbers ?? []) {
+          const bound = byNumber.get(number) ?? /* @__PURE__ */ new Set();
+          bound.add(visual);
+          byNumber.set(number, bound);
+        }
+      }
+      for (const action of moment.actions) {
+        const refs = action.action === "focus" ? action.references : action.action === "point_at" || action.action === "emphasize" || action.action === "revise" ? [action.reference] : [];
+        for (const ref of refs) for (const visual of lookup(ref, si + 1)) selected.add(visual);
+        if (action.action === "animate") for (const visual of byNumber.get(action.number) ?? []) selected.add(visual);
+      }
+      const path = `$lessonPlan.sections[${si}].moments[${mi}]`;
+      check(moment.narration ?? "", selected, path);
+      let boardItem = 0;
+      for (const [ai, action] of moment.actions.entries()) {
+        if (action.action === "create") {
+          boardItem += 1;
+          if (action.kind !== "visual") {
+            relatedLocal.set(`${si + 1}:${mi + 1}:${boardItem}`, new Set(selected));
+            if (action.reusable_item) relatedReusable.set(`${si + 1}:${action.reusable_item}`, new Set(selected));
+          }
+        }
+        if (action.action !== "create" && action.action !== "revise" || action.kind === "visual") continue;
+        const content = action.content;
+        check(
+          [content.latex, content.text, content.title, ...content.items ?? []].filter(Boolean).join("\n"),
+          selected,
+          `${path}.actions[${ai}]`
+        );
+      }
+    }
+    for (const [ai, activity] of (section.student_activities ?? []).entries()) {
+      const selected = /* @__PURE__ */ new Set();
+      if (activity.kind === "number_target") {
+        for (const control of activity.number_controls) for (const visual of byNumber.get(control.number) ?? []) selected.add(visual);
+      } else {
+        for (const visual of lookup(activity.reference, si + 1)) selected.add(visual);
+      }
+      check(
+        activity.kind === "reflection" ? `${activity.prompt}
+${activity.answer}` : [activity.prompt, ...activity.hints, activity.success_message].filter(Boolean).join("\n"),
+        selected,
+        `$lessonPlan.sections[${si}].student_activities[${ai}]`
+      );
+    }
+  }
+}
+function validateTeachingClaims(plan) {
+  validateRearrangementClaims(plan);
+  const plots = plan.sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).filter((action) => action.action === "create" && action.kind === "visual").map((action) => action.content).filter((visual) => visual.capability === "function_plot");
+  const hasCircleArea = plan.sections.some((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "circle_area_rearrangement")));
+  const onlyFixedLineSamples = plots.length === 1 && fixedLineSamples(plots[0]);
+  for (const [si, section] of plan.sections.entries()) {
+    for (const [mi, moment] of section.moments.entries()) {
+      const text = moment.narration ?? "";
+      const claims = text.split(/[。！？!?；;]/);
+      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
+      }
+      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text) && !/滑块|滑杆/.test(text)) {
+        throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "use the point's horizontal-coordinate slider; directly dragging plot points is unavailable");
+      }
+      if (onlyFixedLineSamples && claims.some((claim) => /(?:斜率|倾斜角度|倾斜程度|倾斜方向|陡峭程度)(?:的数值)?(?:就|也|会|将|随之|随点移动|发生|而|从而|不断|逐渐|产生|有所|明显|直接|可以|能够|能|\s|[，,]){0,8}(?:改变|变化)(?!量|率)|(?:改变|变化)(?:了|着|其|它的|直线的|连线的|割线的|两点连线的|\s){0,5}(?:斜率|倾斜角度|倾斜程度|陡峭程度)/.test(claim) && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
+      }
+      const steepnessClaim = (text.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
+      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text)) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
+      }
+    }
+    for (const [mi, moment] of section.moments.entries()) {
+      const visuals = moment.actions.filter((a) => a.action === "create" && a.kind === "visual");
+      for (const action of visuals) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const visual = action.content;
+        const text = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
+        const path = `$plan.sections[${si}].moments[${mi}]`;
+        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text) && /证明|推导|拼|重排|prove|derive/i.test(text)) {
+          throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path, "circle area requires circle_area_rearrangement; polygon recipes cannot prove pi*r^2");
+        }
+        if (visual.capability !== "function_plot") continue;
+        const tokens = visual.parameters?.expression_tokens;
+        const dynamic = Array.isArray(tokens) && tokens.some((t) => t?.kind === "number");
+        const count = dynamic ? 0 : new Set(visual.numbers ?? []).size;
+        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text)) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "moving the whole curve requires formula number references; static sample inputs only move points");
+        }
+        if (/两个点|两点|two points/i.test(text) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text) && count !== 2) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and content.numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
+        }
+        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text)) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "plot points use sliders; direct point dragging is unavailable");
+        }
+      }
+    }
+  }
 }
 
 // src/function-viewport.ts
@@ -11820,14 +11984,14 @@ function normalizedVisualIdentity(content, includeNumbers = true) {
   const parameters2 = Object.fromEntries(
     LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].semantic_parameters.filter((name) => sourceParameters[name] !== void 0).map((name) => [name, sourceParameters[name]])
   );
-  const normalize = (value) => {
-    if (Array.isArray(value)) return value.map(normalize);
+  const normalize2 = (value) => {
+    if (Array.isArray(value)) return value.map(normalize2);
     if (!value || typeof value !== "object") return value;
     return Object.fromEntries(
-      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, child]) => [key, normalize(child)])
+      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, child]) => [key, normalize2(child)])
     );
   };
-  return JSON.stringify(normalize({
+  return JSON.stringify(normalize2({
     capability: content.capability,
     parameters: parameters2,
     ...includeNumbers ? { numbers: content.numbers ?? [] } : {}
@@ -13428,6 +13592,19 @@ function compileLessonPlan(value, options = {}) {
             tolerance: activity.tolerance
           }
         });
+      } else if (activity.kind === "numeric_answer") {
+        const anchor = resolvedReference(`${activityPath}.reference`);
+        addTask({
+          ...common,
+          anchor: wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias,
+          allowed_operations: [{ kind: "answer_entry" }],
+          completion: {
+            kind: "numeric_answer",
+            answer: activity.answer,
+            ...activity.unit ? { unit: activity.unit } : {},
+            ...activity.simplest_fraction ? { form: "simplest_fraction" } : {}
+          }
+        });
       } else {
         const resolvedTarget = resolvedReference(`${activityPath}.reference`);
         const node = primaryScenes.get(resolvedTarget.authoring_alias) ?? wholeTargets.get(resolvedTarget.authoring_alias) ?? resolvedTarget.authoring_alias;
@@ -14152,6 +14329,18 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
         type: "array",
         maxItems: 2,
         items: object({ prompt: string(), answer: string() }, ["prompt", "answer"])
+      },
+      answer_activities: {
+        type: "array",
+        maxItems: 2,
+        items: object({
+          prompt: string(480),
+          answer: string(64),
+          check: string(256),
+          unit: string(16),
+          simplest_fraction: { type: "boolean" },
+          hints: { type: "array", minItems: 1, maxItems: 3, items: string(480) }
+        }, ["prompt", "answer", "check", "hints"])
       }
     },
     ...supportsNumberActivity ? {
@@ -14294,6 +14483,7 @@ var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5
 - animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002
 - \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u6ED1\u6746\u6240\u5728\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002
 - \u601D\u8003\u9898\u8BFE\u4E2D\u53EA\u95EE\u4E0D\u7B54\uFF1B\u9898\u4E0E\u53C2\u8003\u7B54\u6848\u5199\u5165 reflection_activities\uFF0C\u8BFE\u540E\u4EE5\u6536\u8D77\u7684\u7B54\u6848\u5361\u7247\u51FA\u73B0\u3002
+- \u672C\u8282\u8BB2\u4E86\u80FD\u7B97\u51FA\u786E\u5B9A\u6570\u503C\u7684\u5185\u5BB9\uFF08\u8BA1\u7B97\u3001\u6362\u7B97\u3001\u8BFB\u6570\u3001\u4EE3\u5165\u6C42\u503C\uFF09\u65F6\uFF0C\u5199 1 \u9053 answer_activities \u8BA9\u5B66\u751F\u8BFE\u540E\u586B\u6570\uFF1A\u7528\u8BFE\u4E2D\u6CA1\u7B97\u8FC7\u7684\u65B0\u6570\uFF0C\u8BFE\u4E2D\u4E0D\u8BF4\u7B54\u6848\u3002answer \u5199\u5B66\u751F\u4F1A\u8F93\u5165\u7684\u5F62\u5F0F\uFF08\u6574\u6570\u3001\u5C0F\u6570\u3001\u5206\u6570 3/4\u3001\u5E26\u5206\u6570 2 3/4\uFF09\uFF1Bcheck \u5199\u53EA\u542B\u6570\u5B57\u7684\u7B97\u5F0F\uFF08\u5982 2*3/4\uFF09\uFF0C\u7A0B\u5E8F\u6838\u5BF9\u5B83\u4E0E answer \u76F8\u7B49\uFF1B\u8981\u6C42\u6700\u7B80\u5206\u6570\u65F6 simplest_fraction \u4E3A true\uFF1Bunit \u53EA\u5199\u5355\u4F4D\uFF1Bhints \u5199 1\u20132 \u6761\u4E0D\u7ED9\u51FA\u7B54\u6848\u7684\u63D0\u793A\u3002
 - \u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002
 - \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
 - geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002
@@ -15267,7 +15457,7 @@ function sanitizeNonessentialVisuals(outlineValue, draftValues) {
     }
     if (section.student_activities) {
       section.student_activities = section.student_activities.flatMap((activity) => {
-        if (activity.kind !== "scene3d_view" && activity.kind !== "reflection") return [activity];
+        if (activity.kind === "number_target") return [activity];
         const reference = normalizeReference(activity.reference, sectionNumber);
         return reference ? [{ ...activity, reference }] : [];
       });
@@ -15637,7 +15827,8 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
     "reusable_board_creates",
     "number_activities",
     "scene3d_activities",
-    "reflection_activities"
+    "reflection_activities",
+    "answer_activities"
   ]);
   for (const key of Object.keys(candidate)) {
     if (!allowedRoot.has(key)) throw new LessonPlanError("LESSON_PLAN_UNKNOWN_FIELD", `$lessonPlanModelSection.${key}`, "unknown field");
@@ -15656,6 +15847,9 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
   }
   if (candidate.reflection_activities !== void 0 && !Array.isArray(candidate.reflection_activities)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.reflection_activities", "expected an array");
+  }
+  if (candidate.answer_activities !== void 0 && !Array.isArray(candidate.answer_activities)) {
+    throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.answer_activities", "expected an array");
   }
   const courseVisuals = outline.course_visuals ?? [];
   const courseVisualsToCreate = courseVisuals.map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === expectedSection);
@@ -15904,14 +16098,14 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
   collectActivities(candidate.number_activities ?? [], "number_target", "$lessonPlanModelSection.number_activities");
   collectActivities(candidate.scene3d_activities ?? [], "scene3d_view", "$lessonPlanModelSection.scene3d_activities");
   let questionCard;
+  let lastCard;
   moments.forEach((moment, momentOffset) => {
     let item = 0;
     for (const action of moment.actions ?? []) {
       if (action.action !== "create") continue;
       item += 1;
-      if (action.kind === "note" || action.kind === "math") {
-        questionCard = { source: "local_board_item", moment: momentOffset + 1, item };
-      }
+      lastCard = { source: "local_board_item", moment: momentOffset + 1, item };
+      if (action.kind === "note" || action.kind === "math") questionCard = lastCard;
     }
   });
   (candidate.reflection_activities ?? []).forEach((value2, index) => {
@@ -15922,6 +16116,25 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
     const { prompt, answer } = value2;
     if (!questionCard) return;
     activities.push({ order: activities.length + 1, activity: { kind: "reflection", prompt, answer, reference: structuredClone(questionCard) } });
+  });
+  (candidate.answer_activities ?? []).forEach((value2, index) => {
+    const itemPath = `$lessonPlanModelSection.answer_activities[${index}]`;
+    if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) {
+      throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", itemPath, "expected an object");
+    }
+    const card = questionCard ?? lastCard;
+    if (!card) return;
+    const { prompt, answer, check, unit, simplest_fraction, hints } = value2;
+    activities.push({ order: activities.length + 1, activity: {
+      kind: "numeric_answer",
+      prompt,
+      answer,
+      check,
+      ...unit !== void 0 ? { unit } : {},
+      ...simplest_fraction !== void 0 ? { simplest_fraction } : {},
+      hints,
+      reference: structuredClone(card)
+    } });
   });
   activities.sort((left, right) => left.order - right.order);
   let latestBoardReference;
