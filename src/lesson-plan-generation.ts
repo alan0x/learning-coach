@@ -18,6 +18,7 @@ import {
   type LessonPlanMathToken,
   type LessonPlanReference,
   type LessonPlanSectionDraft,
+  type LessonPlanStudentActivity,
   type LessonPlanVisualContent,
   type LessonPlanVisualFeature,
 } from "./lesson-plan.js";
@@ -35,6 +36,7 @@ import {
   buildCameraLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanBootstrapJsonSchema,
   buildLessonPlanOutlineJsonSchema,
+  buildLessonPlanPracticeJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
   coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
@@ -77,7 +79,7 @@ export interface LessonPlanModelRequest {
   system_prompt: string;
   prompt: string;
   response_schema: LessonPlanJsonSchema;
-  part: "bootstrap" | "outline" | "section";
+  part: "bootstrap" | "outline" | "section" | "practice";
   section?: number;
   attempt: number;
   include_camera_media?: boolean;
@@ -130,6 +132,8 @@ export interface NonLessonPlanResponse {
 
 export type LessonPlanGenerationResult = GeneratedLessonPlan | NonLessonPlanResponse;
 
+const ANSWER_ACTIVITY_RULE = "answer 只写一个数（整数、小数、分数 3/4、带分数 2 3/4），不带单位或 %，百分数题写百分号前的数并把 % 写入 unit；check 写只含数字的算式（如 2*3/4），程序核对它与 answer 相等；题目要求最简分数时 simplest_fraction 必须为 true，否则没约分的答案也算对；unit 只写单位，没有就省略；hints 写 1–2 条不给出答案的提示。";
+
 const OUTLINE_SYSTEM_PROMPT = `设计完整课程目录，不生成 OLL、执行 ID、组件名或自由对象名。
 - 需要同步对照的图复用同一共享数值，并通过 supporting/comparison 声明关联；不要用两个独立 main 图表示同一联动关系。
 - visual_recipes 为 [features,numbers,purpose]。course_visuals 选其中 features，只列必要画面；后续复用，确需并排才建 comparison，supporting/comparison 指向较早画面。
@@ -150,6 +154,7 @@ const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 
 - animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。
 - 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。
 - 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。
+- 本节讲了能算出确定数值的内容（计算、换算、读数、代入求值）时，写 1 道 answer_activities 让学生课后填数：用课中没算过的新数，课中不说答案。${ANSWER_ACTIVITY_RULE}
 - 圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。
 - 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
 - geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
@@ -179,6 +184,13 @@ const CURRENT_LESSON_RULE = `course_context.current_lesson 是同一块白板上
 const TEACHER_EXPERIENCES_RULE = `course_context.teacher_experiences 是这位老师人物设定里的一些日常生活经历，由学习应用提供，讲的时候就当作老师自己的经历来说；老师现在仍在学院任教，在学院里的事就按现在的生活说（如“我在观星塔值夜时”），不要说成“以前在学院时”。像一位真实的老师那样，只在某段经历能让本课的概念变得具体、或说明它在生活里怎么用时，才自然地提起一次（例如“我有一次……”），用一两句话说完，接着就把它当作后面例子或问题的情境；用不上就不提，大多数课都不会提。全课最多提一段：要提就在规划课程时决定，在第一节提起，并在 outline 里写明后面各节沿用这个情境，后面各节不再另提经历。只能用其中写到的经历：经历里本来的数字可以照说，另外补充的细节和数字要与本课 outline 里的数值一致；不能编出新的地点、人物、职业或经历；不要说成是和学生一起经历的；不让经历代替讲解，也不改变数学内容。老师设定里有贯穿全课的主要比喻或手法时，经历只能用来引出它，或在不冲突时作为例子的情境，不能再加第二个比喻；两者冲突时不提经历。`;
 // Later sections no longer see the experiences; the outline says whether one
 // sets the scene, and these limits still apply while it is carried on.
+// A one-section lesson has no later section to carry practice, so after its
+// section is playable one small request asks only for typed questions.
+const PRACTICE_SYSTEM_PROMPT = `学生刚学完 lesson.taught 里的这一节课。只为它写课后填数题 answer_activities，不写讲解。
+- 这节讲了能算出确定数值的内容（计算、换算、读数、代入求值）时写 1–2 道，否则返回空数组。题目只考这节讲过的方法，用课中没算过的新数，难度和课中例子相当。
+- ${ANSWER_ACTIVITY_RULE}
+只返回符合响应 Schema 的 JSON。`;
+
 const LATER_SECTION_EXPERIENCE_RULE = `这节课可能沿用了老师在第一节提起的一段自己的经历作为情境。如果 outline 写明沿用，就按 outline 继续这个情境，不再提新的经历，不补充新的地点、人物或经历，也不说成是和学生一起经历的；outline 没写就不提。`;
 
 function withContextRules(systemPrompt: string, context: Record<string, unknown>): string {
@@ -1381,7 +1393,7 @@ function sanitizeNonessentialVisuals(
     }
     if (section.student_activities) {
       section.student_activities = section.student_activities.flatMap((activity) => {
-        if (activity.kind !== "scene3d_view" && activity.kind !== "reflection") return [activity];
+        if (activity.kind === "number_target") return [activity];
         const reference = normalizeReference(activity.reference, sectionNumber);
         return reference ? [{ ...activity, reference }] : [];
       });
@@ -1856,6 +1868,44 @@ function reconcileBootstrapFirstSectionPositions(
   return root;
 }
 
+/** A model's typed question as a plan activity by the given board card. */
+function lowerAnswerActivity(value: Record<string, unknown>, card: Record<string, unknown>): Record<string, unknown> {
+  const { prompt, answer, check, unit, simplest_fraction, hints } = value;
+  // An empty unit means the answer has none, not a malformed question.
+  const hasUnit = unit !== undefined && !(typeof unit === "string" && !unit.trim());
+  return {
+    kind: "numeric_answer", prompt, answer, check,
+    ...(hasUnit ? { unit } : {}),
+    ...(simplest_fraction !== undefined ? { simplest_fraction } : {}),
+    hints, reference: structuredClone(card),
+  };
+}
+
+/** The card a typed question sits by: the last formula or note, else the last card. */
+function practiceCard(draft: LessonPlanSectionDraft): Record<string, unknown> | undefined {
+  let questionCard: Record<string, unknown> | undefined;
+  let lastCard: Record<string, unknown> | undefined;
+  draft.moments.forEach((moment, momentOffset) => {
+    let item = 0;
+    for (const action of moment.actions) {
+      if (action.action !== "create") continue;
+      item += 1;
+      lastCard = { source: "local_board_item", moment: momentOffset + 1, item };
+      if (action.kind === "note" || action.kind === "math") questionCard = lastCard;
+    }
+  });
+  return questionCard ?? lastCard;
+}
+
+/** What a section taught, as the practice request reads it. */
+function taughtContent(draft: LessonPlanSectionDraft): unknown[] {
+  return draft.moments.map((moment) => ({
+    narration: moment.narration,
+    written: moment.actions.flatMap((action) =>
+      action.action === "create" && (action.kind === "math" || action.kind === "note") ? [action.content] : []),
+  }));
+}
+
 function lowerModelSectionDraft(
   value: unknown,
   outline: LessonPlanOutline,
@@ -1869,7 +1919,7 @@ function lowerModelSectionDraft(
   const candidate = root as Record<string, unknown>;
   const allowedRoot = new Set([
     "version", "section", "moments", "course_visual_creates", "reusable_board_creates",
-    "number_activities", "scene3d_activities", "reflection_activities",
+    "number_activities", "scene3d_activities", "reflection_activities", "answer_activities",
   ]);
   for (const key of Object.keys(candidate)) {
     if (!allowedRoot.has(key)) throw new LessonPlanError("LESSON_PLAN_UNKNOWN_FIELD", `$lessonPlanModelSection.${key}`, "unknown field");
@@ -1888,6 +1938,9 @@ function lowerModelSectionDraft(
   }
   if (candidate.reflection_activities !== undefined && !Array.isArray(candidate.reflection_activities)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.reflection_activities", "expected an array");
+  }
+  if (candidate.answer_activities !== undefined && !Array.isArray(candidate.answer_activities)) {
+    throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection.answer_activities", "expected an array");
   }
   const courseVisuals = outline.course_visuals ?? [];
   const courseVisualsToCreate = courseVisuals
@@ -2163,15 +2216,16 @@ function lowerModelSectionDraft(
   collectActivities(candidate.scene3d_activities ?? [], "scene3d_view", "$lessonPlanModelSection.scene3d_activities");
   // A thinking question sits by the last formula or note this section wrote
   // (the program chooses the card; the model writes only question and answer).
+  // A typed question prefers that card too, otherwise the last card of any kind.
   let questionCard: Record<string, unknown> | undefined;
+  let lastCard: Record<string, unknown> | undefined;
   (moments as Array<{ actions?: Array<Record<string, unknown>> }>).forEach((moment, momentOffset) => {
     let item = 0;
     for (const action of moment.actions ?? []) {
       if (action.action !== "create") continue;
       item += 1;
-      if (action.kind === "note" || action.kind === "math") {
-        questionCard = { source: "local_board_item", moment: momentOffset + 1, item };
-      }
+      lastCard = { source: "local_board_item", moment: momentOffset + 1, item };
+      if (action.kind === "note" || action.kind === "math") questionCard = lastCard;
     }
   });
   (candidate.reflection_activities as unknown[] | undefined ?? []).forEach((value, index) => {
@@ -2182,6 +2236,15 @@ function lowerModelSectionDraft(
     const { prompt, answer } = value as Record<string, unknown>;
     if (!questionCard) return;
     activities.push({ order: activities.length + 1, activity: { kind: "reflection", prompt, answer, reference: structuredClone(questionCard) } });
+  });
+  (candidate.answer_activities as unknown[] | undefined ?? []).forEach((value, index) => {
+    const itemPath = `$lessonPlanModelSection.answer_activities[${index}]`;
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", itemPath, "expected an object");
+    }
+    const card = questionCard ?? lastCard;
+    if (!card) return;
+    activities.push({ order: activities.length + 1, activity: lowerAnswerActivity(value as Record<string, unknown>, card) });
   });
   activities.sort((left, right) => left.order - right.order);
   let latestBoardReference: Record<string, unknown> | undefined;
@@ -3183,6 +3246,51 @@ export async function generateLessonPlanWithModel(
       model_calls: modelCalls,
     };
   }
+
+  // Practice is optional: any failure leaves the lesson as it was, and a
+  // question that fails its checks is dropped rather than repaired.
+  const addSingleSectionPractice = async (): Promise<void> => {
+    const draft = drafts[0];
+    const card = draft && practiceCard(draft);
+    if (!draft || !card) return;
+    const reject = (error: unknown) => options.on_rejected_part?.({
+      label: "lesson-plan-section", section: 1, attempt: 1, error: rejectionDetails(error),
+    });
+    let items: unknown[];
+    try {
+      const raw = await model({
+        label: "lesson-plan-section",
+        part: "practice",
+        section: 1,
+        attempt: 1,
+        turn_id: input.turn_id,
+        system_prompt: withContextRules(PRACTICE_SYSTEM_PROMPT, laterSectionContext),
+        prompt: JSON.stringify({
+          course_context: compactModelContext(laterSectionContext),
+          lesson: { title: outline.title, goals: outline.goals, taught: taughtContent(draft) },
+        }),
+        response_schema: buildLessonPlanPracticeJsonSchema(),
+      });
+      modelCalls += 1;
+      const parsed = pruneModelNulls(parseModelJson(raw, "lessonPlanPractice")) as Record<string, unknown> | undefined;
+      items = Array.isArray(parsed?.answer_activities) ? parsed.answer_activities.slice(0, 2) : [];
+    } catch (error) {
+      await reject(error);
+      return;
+    }
+    for (const item of items) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+      const activity = lowerAnswerActivity(item as Record<string, unknown>, card) as unknown as LessonPlanStudentActivity;
+      const candidate = { ...draft, student_activities: [...(drafts[0]!.student_activities ?? []), activity] };
+      try {
+        compilePrefix(outline, [candidate], options.compile);
+        drafts[0] = candidate;
+      } catch (error) {
+        await reject(error);
+      }
+    }
+  };
+  if (outline.sections.length === 1) await addSingleSectionPractice();
 
   // Later sections keep the existing proven progressive path and are
   // published one by one while section 1 can already play.

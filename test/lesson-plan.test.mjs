@@ -4535,6 +4535,75 @@ test("later practice retains controls of earlier persistent visuals without a fo
   assert.equal(inspected, true);
 });
 
+test("a later section's typed question becomes a numeric answer task; the first playable request stays unchanged", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/later-practice-generation.json"), "utf8"));
+  const responses = [...fixture.responses];
+  const third = JSON.parse(responses[2]);
+  third.answer_activities = [{
+    prompt: "截线 g(x) = x^2 + 1 在 x = 3 处的切线斜率是多少？",
+    answer: "6",
+    check: "2*3",
+    unit: "",
+    hints: ["先求 g'(x)，再代入 x = 3。"],
+  }];
+  responses[2] = JSON.stringify(third);
+  const schemas = [];
+  const generated = await generateLessonPlanWithModel(async request => {
+    schemas.push({ section: request.section, properties: Object.keys(request.response_schema.properties) });
+    assert.ok(responses.length, "unexpected repair call");
+    return responses.shift();
+  }, { ...fixture.input, turn_id: "replay-typed-question" });
+  const firstRequest = schemas[0];
+  assert.equal(firstRequest.properties.includes("answer_activities"), false, "the bootstrap request does not grow");
+  assert.ok(schemas.filter(call => call.section >= 2).every(call => call.properties.includes("answer_activities")));
+  const task = generated.lesson.lesson.tasks.find(candidate => candidate.completion.kind === "numeric_answer");
+  assert.equal(task.completion.answer, "6");
+  assert.equal("unit" in task.completion, false, "an empty unit is no unit, not a rejected section");
+  assert.deepEqual(task.allowed_operations, [{ kind: "answer_entry" }]);
+  assert.ok(task.anchor.startsWith("section-03-"), "the question sits by a card of its own section");
+});
+
+test("a one-section lesson asks for practice after it is playable; bad or failed practice never costs the lesson", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/later-practice-generation.json"), "utf8"));
+  const bootstrap = JSON.parse(fixture.responses[0]);
+  const outline = bootstrap.outline;
+  outline.sections = [outline.sections[0]];
+  outline.request_coverage = outline.request_coverage.map(item => ({ ...item, sections: [1] }));
+  outline.course_visuals = outline.course_visuals.filter(v => v.use_sections.includes(1)).map(v => ({ ...v, use_sections: [1] }));
+  const generate = async (practiceResponse) => {
+    const events = [];
+    const result = await generateLessonPlanWithModel(async request => {
+      events.push(request.part);
+      if (request.part === "bootstrap") return JSON.stringify(bootstrap);
+      assert.equal(request.part, "practice");
+      assert.deepEqual(Object.keys(request.response_schema.properties), ["answer_activities"]);
+      assert.ok(JSON.parse(request.prompt).lesson.taught.length > 0);
+      return practiceResponse();
+    }, { ...fixture.input, turn_id: "one-section-practice" }, {
+      on_playable_prefix: () => { events.push("playable"); },
+    });
+    return { events, tasks: result.lesson.lesson.tasks ?? [], steps: result.lesson.steps.length };
+  };
+
+  const good = await generate(() => JSON.stringify({ answer_activities: [
+    { prompt: "当 y₀ = 2 时，截线在 x = 0 处的 z 值是多少？", answer: "4", check: "0^2+2^2", unit: "", hints: ["把 x = 0、y₀ = 2 代入。"] },
+    { prompt: "答案和算式不一致的题", answer: "5", check: "2+2", hints: ["不会出现。"] },
+  ] }));
+  assert.deepEqual(good.events, ["bootstrap", "playable", "practice"], "practice waits until the section can play");
+  assert.equal(good.steps, 1);
+  assert.deepEqual(good.tasks.map(task => [task.completion.kind, task.completion.answer]), [["numeric_answer", "4"]],
+    "a question that disagrees with its arithmetic is dropped, not repaired");
+  assert.ok(good.tasks[0].anchor.startsWith("section-01-"));
+
+  for (const failure of [() => "not json", () => { throw new Error("provider unavailable"); }, () => JSON.stringify({ answer_activities: [] })]) {
+    const result = await generate(failure);
+    assert.equal(result.steps, 1);
+    assert.equal(result.tasks.length, 0, "the lesson is delivered exactly as before");
+  }
+});
+
 test("new construction supplies opening context without advancing delayed visual content", () => {
   const plan = samplePlan("process_diagram");
   plan.sections[0].moments[0].actions[0].timing = "after_speech";
@@ -4589,6 +4658,44 @@ test("a thinking question compiles to an after-lesson reflection anchored to its
     "a thinking question is not a practice task");
   const validated = compileAndValidateLessonPlan(plan);
   assert.equal(validated.lesson.lesson.reflections?.length, 1, "the pinned OLL validator accepts the reflection");
+});
+
+test("a typed question compiles to a numeric answer task by its card, checked against its arithmetic", () => {
+  const plan = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
+  plan.sections[1].student_activities = [{
+    kind: "numeric_answer",
+    prompt: "一个圆的半径是 3/4，直径是多少？写成最简分数。",
+    answer: "1 1/2",
+    check: "2 * 3/4",
+    simplest_fraction: true,
+    reference: { source: "local_board_item", moment: 1, item: 2 },
+    hints: ["直径是半径的 2 倍。"],
+  }];
+  const { lesson } = compileLessonPlan(plan);
+  const task = lesson.lesson.tasks?.find((candidate) => candidate.completion.kind === "numeric_answer");
+  assert.deepEqual(task, {
+    as: "section-02-task-01",
+    prompt: "一个圆的半径是 3/4，直径是多少？写成最简分数。",
+    availability: { kind: "after_lesson" },
+    hints: ["直径是半径的 2 倍。"],
+    anchor: "section-02-moment-01-item-02",
+    allowed_operations: [{ kind: "answer_entry" }],
+    completion: { kind: "numeric_answer", answer: "1 1/2", form: "simplest_fraction" },
+  });
+  const validated = compileAndValidateLessonPlan(plan);
+  assert.ok(validated.lesson.lesson.tasks?.some((candidate) => candidate.completion.kind === "numeric_answer"),
+    "the OLL validator accepts the numeric answer task");
+
+  const rejects = (change, pattern) => {
+    const copy = structuredClone(plan);
+    change(copy.sections[1].student_activities[0]);
+    assert.throws(() => compileLessonPlan(copy), pattern);
+  };
+  rejects((activity) => { activity.answer = "1 1/4"; }, /does not equal its check/);
+  rejects((activity) => { activity.check = "2 * r"; }, /arithmetic on numbers only/);
+  rejects((activity) => { activity.answer = "6/4"; activity.check = "6/4"; }, /lowest terms/);
+  rejects((activity) => { activity.answer = "one and a half"; }, /whole number, decimal, fraction or mixed number/);
+  rejects((activity) => { activity.reference = { source: "close" }; }, /reference|board card/);
 });
 
 

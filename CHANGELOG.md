@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.21.0 - 2026-10-28
+
+- A one-section lesson gets practice too: once its section is playable, one small request (`part: "practice"`, schema `answer_activities` only) asks for 0–2 typed questions about what the section taught, placed by its last formula or note. A question whose answer disagrees with its arithmetic is dropped, not repaired, and any failure delivers the lesson exactly as before. The first request and every multi-section lesson's requests are byte-identical to 0.20.2.
+
+## 0.20.2 - 2026-10-28
+
+- Typed-question rule, from 8 real lessons: `answer` is a bare number (a percent question puts `%` in `unit`; "80%" had cost a repair request), and a question that asks for the simplest fraction must set `simplest_fraction` (one lesson asked for it but would have accepted 30/45).
+
+## 0.20.1 - 2026-10-28
+
+- A typed question whose `unit` is empty is read as having no unit, instead of rejecting the whole section and spending a repair request (seen in the first real lesson).
+
+## 0.20.0 - 2026-10-28
+
+- Later sections may end with up to two typed numeric questions (`answer_activities`): the learner types a whole number, decimal, fraction or mixed number after the lesson and the program checks it, so topics without a draggable visual can be practised and lit on the star map. The model writes both the answer and plain arithmetic for it (`check`); a question whose answer differs from its arithmetic is rejected. The first playable request is unchanged. Requires OLL player 0.5.0 (`student-tasks:numeric_answer`).
+
 ## 0.19.0 - 2026-10-28
 
 - The three complete-lesson actions accept an optional `teacher_experiences`: a few facts from the preset teacher's own everyday life. The teacher may mention one, in a sentence or two and only when it makes the concept concrete, then use it as the setting for the example; most lessons mention none, and no new life facts may be invented. Requests without it keep their exact prompts.

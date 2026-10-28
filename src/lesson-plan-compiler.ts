@@ -1829,7 +1829,20 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             tolerance: activity.tolerance,
           },
         });
-      } else {
+      } else if (activity.kind === "numeric_answer") {
+        const anchor = resolvedReference(`${activityPath}.reference`);
+        addTask({
+          ...common,
+          anchor: wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias,
+          allowed_operations: [{ kind: "answer_entry" }],
+          completion: {
+            kind: "numeric_answer",
+            answer: activity.answer,
+            ...(activity.unit ? { unit: activity.unit } : {}),
+            ...(activity.simplest_fraction ? { form: "simplest_fraction" as const } : {}),
+          },
+        });
+} else {
         const resolvedTarget = resolvedReference(`${activityPath}.reference`);
         const node = primaryScenes.get(resolvedTarget.authoring_alias)
           ?? wholeTargets.get(resolvedTarget.authoring_alias)
