@@ -48,6 +48,8 @@ export function normalizePlotInputInstructions(plan: LessonPlan): void {
   const samplesFixedLine = fixedLineSamples(visuals[0]);
   for (const section of plan.sections) for (const moment of section.moments) {
     moment.narration = moment.narration
+      .replace(/(?:directly\s+)?drag(?:ging)?\s+(?:the\s+)?point\s+([AB])\b/gi,
+        (_match, label: string) => `adjusting the horizontal-coordinate slider for point ${label}`)
       .replace(/(?:移动|调整|拖动|拖拽)点\s*([AB])\s*(?:或|和|、)\s*(?:点\s*)?([AB])(?:的)?(?:位置|横坐标)/g,
         (_match, first:string, second:string) => `调整点 ${first} 或点 ${second} 的横坐标滑块`)
       .replace(/(?:直接)?拖(?:动|拽)(?:图上|图中|曲线上)?(?:的)?点\s*([AB])/g,
@@ -197,6 +199,24 @@ export function validateTeachingClaims(plan: LessonPlan): void {
     for (const [mi, moment] of section.moments.entries()) {
       const text = moment.narration ?? "";
       const claims = text.split(/[。！？!?；;]/);
+      // Match the same bounded severe claims in English; formulas and all
+      // numerical/construction checks remain language-independent.
+      const englishClaims = text.split(/(?<=[.!?;])\s+/u).filter(claim =>
+        !/\?\s*$/.test(claim) && !/\b(?:not|never|cannot|can't|doesn't|isn't|don't|whether|if)\b/i.test(claim));
+      if (hasCircleArea && englishClaims.some(claim =>
+        /\b(?:base|height)\b.{0,25}\b(?:exactly|equals?|is)\b.{0,15}(?:πr|pi\s*\*?\s*r|radius|\br\b)/i.test(claim))
+        && !/\b(?:approach|tend|limit|infinite|finer|approx|curved)\w*\b/i.test(section.moments.slice(0,mi+1).map(moment=>moment.narration).join(" "))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH",`$plan.sections[${si}].moments[${mi}]`,"finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
+      }
+      if (onlyFixedLineSamples && englishClaims.some(claim =>
+        /\b(?:slope|steepness)\b.{0,20}\b(?:changes?|changing|varies|varying)\b/i.test(claim)
+        && !/\b(?:unchanged|constant|fixed|invariant|remains?|stays?)\b/i.test(claim))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH",`$plan.sections[${si}].moments[${mi}]`,"moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
+      }
+      if (plots.length && englishClaims.some(claim=>/\b(?:larger|greater|increas\w*)\s+(?:signed\s+)?(?:slope|k)\b.{0,45}\bsteeper\b/i.test(claim))
+        && !/\b(?:absolute|positive|magnitude)\b|k\s*>\s*0/i.test(text)) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH",`$plan.sections[${si}].moments[${mi}]`,"steepness depends on absolute slope; larger signed k is not always steeper");
+      }
       if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text)
         && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0,mi+1).map(m => m.narration).join(" "))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH",`$plan.sections[${si}].moments[${mi}]`,"finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");

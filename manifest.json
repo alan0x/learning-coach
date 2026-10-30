@@ -56,7 +56,7 @@
           },
           "language": {
             "type": "string",
-            "description": "Lesson language, normally zh-CN."
+            "description": "Language selected by the host for this lesson, for example zh-CN or en-US. Use it for every student-facing title, narration, label, hint, feedback, and clarification."
           },
           "tutor_context": {
             "type": "string",
