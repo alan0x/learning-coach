@@ -11466,6 +11466,86 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   return resolveLessonPlan(assembled, options).plan;
 }
 
+// src/lesson-text.ts
+var EN = {
+  "\u51FD\u6570\u56FE\u50CF": "Function graph",
+  "\u5355\u4F4D\u5706\u4E0E\u6295\u5F71": "Unit circle and projection",
+  "{{v0}}\u51FD\u6570\u56FE\u50CF": "{{v0}} function graph",
+  "\u6B63\u5F26": "Sine",
+  "\u4F59\u5F26": "Cosine",
+  "\u65CB\u8F6C\u89D2\u4E0E\u5468\u671F\u6CE2\u52A8": "Rotation angle and periodic variation",
+  "\u5355\u4F4D\u5706\u4E0E\u51FD\u6570\u56FE\u50CF": "Unit circle and function graph",
+  "\u5706\u4E0E\u6B63\u591A\u8FB9\u5F62\u7684\u5468\u957F\u5939\u903C": "Bounding a circle's circumference with regular polygons",
+  "\u5185\u63A5\u6B63\u591A\u8FB9\u5F62": "Inscribed regular polygon",
+  "\u5916\u5207\u6B63\u591A\u8FB9\u5F62": "Circumscribed regular polygon",
+  "\u7EFF\u8272\u5185\u63A5\u5468\u957F < \u5706\u5468\u957F < \u6A59\u8272\u5916\u5207\u5468\u957F\u3002\u9664\u4EE5\u76F4\u5F84 2r\uFF1An sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002\u663E\u793A\u503C\u4E3A\u8FD1\u4F3C\u503C\uFF1B\u8FB9\u6570\u589E\u52A0\u65F6\u4E0A\u4E0B\u754C\u5171\u540C\u903C\u8FD1 \u03C0\u3002": "Green inscribed perimeter < circle circumference < orange circumscribed perimeter. Dividing by the diameter 2r gives n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n). Displayed values are approximations; both bounds approach \u03C0 as the number of sides increases.",
+  "\u5706\u3001\u5706\u5FC3\u89D2\u4E0E\u5706\u5F27": "Circle, central angle, and arc",
+  "\u534A\u5F84 r": "Radius r",
+  "\u5706\u5F27": "Arc",
+  "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8": "Oscillation of a spring and mass",
+  "\u4F4D\u79FB": "Displacement",
+  "\u56FA\u5B9A\u7AEF": "Fixed end",
+  "\u5E73\u8861\u4F4D\u7F6E": "Equilibrium position",
+  "\u7269\u4F53": "Mass",
+  "\u56DE\u590D\u529B": "Restoring force",
+  "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316": "Displacement versus phase",
+  "\u76F8\u4F4D": "Phase",
+  "\u5F53\u524D\u72B6\u6001": "Current state",
+  "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB": "Displacement at the same instant",
+  "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF": "Spring motion and function graph",
+  "\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u4E0E\u622A\u9762": "Cube, vertices, edges, faces, and sections",
+  "\u4E00\u4E2A\u4E2D\u5FC3\u5728\u539F\u70B9\u3001\u8FB9\u957F\u4E3A 2 \u7684\u6B63\u65B9\u4F53\uFF0C\u6807\u51FA\u4E86\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u6C34\u5E73\u622A\u9762\u3002": "A cube centred at the origin with side length 2, showing a vertex, an edge, a face, and a horizontal section.",
+  "\u6B63\u65B9\u4F53": "Cube",
+  "\u6C34\u5E73\u622A\u9762": "Horizontal section",
+  "\u9876\u70B9": "Vertex",
+  "\u68F1": "Edge",
+  "\u9762": "Face",
+  "\u51FD\u6570\u66F2\u9762\u4E0E\u622A\u9762": "Function surface and section",
+  "\u51FD\u6570\u66F2\u9762 z={{v0}} \u4E0E\u53EF\u53D8\u622A\u9762\u3002": "Function surface z={{v0}} with a variable section.",
+  "\u622A\u9762": "Section",
+  "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762": "Implicit surface and section",
+  "\u9690\u5F0F\u66F2\u9762 {{v0}}={{v1}} \u4E0E\u53EF\u53D8\u8F74\u5411\u622A\u9762\u3002": "Implicit surface {{v0}}={{v1}} with a variable axis-aligned section.",
+  "\u5750\u6807\u7CFB\u4E2D\u7684\u5706": "Circle in a coordinate system",
+  "\u5355\u4F4D\u6B63\u65B9\u5F62\u94FA\u6210\u957F\u65B9\u5F62": "Tiling a rectangle with unit squares",
+  "\u6BCF\u4E2A\u5C0F\u65B9\u683C\u9762\u79EF\u4E3A 1 \u5E73\u65B9\u5355\u4F4D\uFF1B\u6BCF\u884C\u65B9\u683C\u6570 \xD7 \u884C\u6570 = \u65B9\u683C\u603B\u6570 = \u957F\u65B9\u5F62\u9762\u79EF\u3002": "Each square has an area of 1 square unit. Squares per row \xD7 number of rows = total squares = area of the rectangle.",
+  "\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09": "Squares per row (length)",
+  "\u884C\u6570\uFF08\u5BBD\uFF09": "Number of rows (width)",
+  "1 \u5E73\u65B9\u5355\u4F4D": "1 square unit",
+  "{{v0}} \u7B49\u5206\u5706\u7684\u9762\u79EF\u91CD\u6392": "Rearranging a circle divided into {{v0}} sectors",
+  "\u534A\u5F84 r={{v0}}\uFF1B\u6BCF\u5757\u5747\u4E3A\u771F\u5B9E\u6247\u5F62\uFF0C\u91CD\u6392\u9762\u79EF\u4E0D\u53D8\u3002\u6709\u9650\u7B49\u5206\u7684\u8FB9\u7F18\u4ECD\u5F2F\u66F2\uFF1B\u7B49\u5206\u8D8A\u7EC6\uFF0C\u5E95\u8D8B\u8FD1 \u03C0r\uFF0C\u9AD8\u8D8B\u8FD1 r\uFF0C\u9762\u79EF\u4E3A \u03C0r\xB2\u3002": "Radius r={{v0}}. Each piece is a true sector, and rearranging preserves area. With finitely many sectors the edges remain curved. As the sectors become finer, the base approaches \u03C0r and the height approaches r; the area is \u03C0r\xB2.",
+  "\u5F00\u59CB": "Start",
+  "\u89C2\u5BDF\u53D8\u5316": "Observe the change",
+  "\u5F97\u5230\u7ED3\u8BBA": "Draw a conclusion",
+  "\u4E0B\u4E00\u6B65": "Next step",
+  "\u8FC7\u7A0B\u56FE": "Process diagram",
+  "\u6570\u503C": "the value",
+  "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002": "Set {{v0}} to {{v1}}{{v2}}.",
+  "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002": "Done: {{v0}} is now {{v1}}{{v2}}.",
+  "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762": "Continue observing the same existing visual",
+  "\u7EE7\u7EED\u89C2\u5BDF\u5F53\u524D\u753B\u9762": "Continue observing the current visual",
+  "\u62D6\u52A8\u5DE6\u4E0B\u89D2\u7684\u6ED1\u6746\uFF0C\u89C2\u5BDF\u6570\u503C\u548C\u753B\u9762\u540C\u6B65\u53D8\u5316\u3002": "Drag the slider at the bottom left and watch the value and visual change together.",
+  "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002": "This lesson cannot be generated in full yet because it includes visuals or interactions that are not supported.",
+  "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5728\u540C\u4E00\u5F20\u51FD\u6570\u56FE\u4E2D\u540C\u65F6\u5C55\u793A\u9759\u6001\u66F2\u7EBF\u548C\u7531\u63A7\u4EF6\u6539\u53D8\u7684\u53E6\u4E00\u6761\u66F2\u7EBF\u3002": "A static curve and another curve changed by a control cannot yet be shown together in the same graph.",
+  "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002": "The rest of the lesson is still being generated.",
+  "\u5F53\u524D\u767D\u677F\u53EA\u80FD\u6267\u884C\u4E8C\u7EF4\u56FE\u5F62\u548C\u4E09\u7EF4\u573A\u666F\uFF0C\u4E0D\u80FD\u7CBE\u786E\u6A21\u62DF\u56DB\u7EF4\u8D85\u7ACB\u65B9\u4F53\u7684\u56DB\u7EF4\u65CB\u8F6C\u3002\u4F60\u53EF\u4EE5\u6539\u95EE\u5B83\u7684\u4E09\u7EF4\u6295\u5F71\u539F\u7406\u6216\u57FA\u672C\u7ED3\u6784\u3002": "The board supports 2D diagrams and 3D scenes, but cannot accurately simulate a 4D hypercube rotating in four dimensions. You can ask about its 3D projections or basic structure instead.",
+  "A\u70B9\u7684x\u5750\u6807": "x-coordinate of point A",
+  "B\u70B9\u7684x\u5750\u6807": "x-coordinate of point B",
+  "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",
+  "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read this camera image reliably. Place the question or object in the centre and try again.",
+  "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF1A{{v0}}": "This lesson cannot be generated in full yet: {{v0}}"
+};
+function lessonText(language, source, values = {}) {
+  const message = /^en(?:-|$)/i.test(language ?? "") ? EN[source] ?? source : source;
+  return message.replace(/\{\{(\w+)\}\}/g, (token, key) => String(values[key] ?? token));
+}
+var languages = /* @__PURE__ */ new WeakMap();
+function setLessonTextLanguage(plan, language) {
+  languages.set(plan, language);
+}
+function compileText(plan, source, values) {
+  return lessonText(languages.get(plan), source, values);
+}
+
 // src/compiled-visual-reuse.ts
 function cardIdentity(kind, content) {
   const fragments = /* @__PURE__ */ new Map();
@@ -11587,6 +11667,9 @@ function normalizePlotInputInstructions(plan) {
   const samplesFixedLine = fixedLineSamples(visuals[0]);
   for (const section of plan.sections) for (const moment of section.moments) {
     moment.narration = moment.narration.replace(
+      /(?:directly\s+)?drag(?:ging)?\s+(?:the\s+)?point\s+([AB])\b/gi,
+      (_match, label) => `adjusting the horizontal-coordinate slider for point ${label}`
+    ).replace(
       /(?:移动|调整|拖动|拖拽)点\s*([AB])\s*(?:或|和|、)\s*(?:点\s*)?([AB])(?:的)?(?:位置|横坐标)/g,
       (_match, first, second) => `\u8C03\u6574\u70B9 ${first} \u6216\u70B9 ${second} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
     ).replace(
@@ -11725,6 +11808,16 @@ function validateTeachingClaims(plan) {
     for (const [mi, moment] of section.moments.entries()) {
       const text = moment.narration ?? "";
       const claims = text.split(/[。！？!?；;]/);
+      const englishClaims = text.split(/(?<=[.!?;])\s+/u).filter((claim) => !/\?\s*$/.test(claim) && !/\b(?:not|never|cannot|can't|doesn't|isn't|don't|whether|if)\b/i.test(claim));
+      if (hasCircleArea && englishClaims.some((claim) => /\b(?:base|height)\b.{0,25}\b(?:exactly|equals?|is)\b.{0,15}(?:πr|pi\s*\*?\s*r|radius|\br\b)/i.test(claim)) && !/\b(?:approach|tend|limit|infinite|finer|approx|curved)\w*\b/i.test(section.moments.slice(0, mi + 1).map((moment2) => moment2.narration).join(" "))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
+      }
+      if (onlyFixedLineSamples && englishClaims.some((claim) => /\b(?:slope|steepness)\b.{0,20}\b(?:changes?|changing|varies|varying)\b/i.test(claim) && !/\b(?:unchanged|constant|fixed|invariant|remains?|stays?)\b/i.test(claim))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
+      }
+      if (plots.length && englishClaims.some((claim) => /\b(?:larger|greater|increas\w*)\s+(?:signed\s+)?(?:slope|k)\b.{0,45}\bsteeper\b/i.test(claim)) && !/\b(?:absolute|positive|magnitude)\b|k\s*>\s*0/i.test(text)) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
+      }
       if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
       }
@@ -11999,7 +12092,7 @@ function normalizedVisualIdentity(content, includeNumbers = true) {
 }
 function separateInitialSamples(plan) {
   const words = JSON.stringify(plan.sections.map((s) => s.moments.map((m) => m.narration)));
-  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合/.test(words)) return;
+  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
     const visual = action.content;
@@ -12286,7 +12379,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   } : viewport.y;
   assertRange(requestedY.min, requestedY.max, `${path}.y_range`);
   const plotContent = {
-    title: namedNumbers(optionalText(input.title, "\u51FD\u6570\u56FE\u50CF", `${path}.title`), plan),
+    title: namedNumbers(optionalText(input.title, compileText(plan, "\u51FD\u6570\u56FE\u50CF"), `${path}.title`), plan),
     axes: {
       ...expressions.length > 1 && expressions.some((e) => e.replace(/[()\s]/g, "") === "x") ? { equal_scale: true } : {},
       x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
@@ -12362,7 +12455,7 @@ function compileUnitCircleProjection(base, content, role, placement, plan, path)
   const plot = `${base}-plot`;
   const link = `${base}-link`;
   const geometry = {
-    title: optionalText(input.title, "\u5355\u4F4D\u5706\u4E0E\u6295\u5F71", `${path}.title`),
+    title: optionalText(input.title, compileText(plan, "\u5355\u4F4D\u5706\u4E0E\u6295\u5F71"), `${path}.title`),
     axes: {
       x: { min: -1.25, max: 1.25, label: "x" },
       y: { min: -1.25, max: 1.25, label: "y" },
@@ -12398,7 +12491,7 @@ function compileUnitCircleProjection(base, content, role, placement, plan, path)
   const plotAngleMin = angleDefinition ? angleDefinition.min * angleScale : 0;
   const plotAngleMax = angleDefinition ? angleDefinition.max * angleScale : Math.PI * 2;
   const plotContent = {
-    title: `${functionName === "sin" ? "\u6B63\u5F26" : "\u4F59\u5F26"}\u51FD\u6570\u56FE\u50CF`,
+    title: compileText(plan, "{{v0}}\u51FD\u6570\u56FE\u50CF", { v0: compileText(plan, functionName === "sin" ? "\u6B63\u5F26" : "\u4F59\u5F26") }),
     axes: { x: { min: plotAngleMin, max: plotAngleMax, label: "\u03B8" }, y: { min: -1.2, max: 1.2, label: "y" } },
     curves: [{ as: "primary-curve", expression: `${functionName}(x)`, label: `y = ${functionName}(x)` }],
     points: [{ as: "moving-point", x: theta, y: Math[functionName](theta), label: `P(\u03B8, ${functionName}(\u03B8))` }],
@@ -12413,8 +12506,8 @@ function compileUnitCircleProjection(base, content, role, placement, plan, path)
     actions: [
       { do: "write", as: circle, kind: "geometry", role, content: geometry, place: placement },
       { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: circle, gap: "normal" } },
-      { do: "connect", as: link, from: circle, to: plot, relation: "maps_to", label: "\u65CB\u8F6C\u89D2\u4E0E\u5468\u671F\u6CE2\u52A8" },
-      { do: "group", as: base, role, label: "\u5355\u4F4D\u5706\u4E0E\u51FD\u6570\u56FE\u50CF", members: [circle, plot] }
+      { do: "connect", as: link, from: circle, to: plot, relation: "maps_to", label: compileText(plan, "\u65CB\u8F6C\u89D2\u4E0E\u5468\u671F\u6CE2\u52A8") },
+      { do: "group", as: base, role, label: compileText(plan, "\u5355\u4F4D\u5706\u4E0E\u51FD\u6570\u56FE\u50CF"), members: [circle, plot] }
     ],
     whole: base,
     parts: new Map([
@@ -12438,15 +12531,15 @@ function compileCirclePolygonBounds(base, content, role, placement, plan, path) 
   const sides = definition?.initial ?? 6;
   const extent = radius / Math.cos(Math.PI / (definition?.min ?? sides)) * 1.18;
   const geometry = {
-    title: optionalText(input.title, "\u5706\u4E0E\u6B63\u591A\u8FB9\u5F62\u7684\u5468\u957F\u5939\u903C", `${path}.title`),
+    title: optionalText(input.title, compileText(plan, "\u5706\u4E0E\u6B63\u591A\u8FB9\u5F62\u7684\u5468\u957F\u5939\u903C"), `${path}.title`),
     axes: { x: { min: -extent, max: extent, label: "x" }, y: { min: -extent, max: extent, label: "y" }, equal_scale: true },
     points: [{ as: "center", x: 0, y: 0, label: "O" }],
     circles: [{ as: "circle", center: "center", radius, label: `r = ${radius}` }],
     regular_polygons: [
-      { as: "inscribed", center: "center", radius, sides, relation: "inscribed", tone: "primary", label: "\u5185\u63A5\u6B63\u591A\u8FB9\u5F62", show_measurements: true },
-      { as: "circumscribed", center: "center", radius, sides, relation: "circumscribed", tone: "accent", label: "\u5916\u5207\u6B63\u591A\u8FB9\u5F62", show_measurements: true }
+      { as: "inscribed", center: "center", radius, sides, relation: "inscribed", tone: "primary", label: compileText(plan, "\u5185\u63A5\u6B63\u591A\u8FB9\u5F62"), show_measurements: true },
+      { as: "circumscribed", center: "center", radius, sides, relation: "circumscribed", tone: "accent", label: compileText(plan, "\u5916\u5207\u6B63\u591A\u8FB9\u5F62"), show_measurements: true }
     ],
-    caption: "\u7EFF\u8272\u5185\u63A5\u5468\u957F < \u5706\u5468\u957F < \u6A59\u8272\u5916\u5207\u5468\u957F\u3002\u9664\u4EE5\u76F4\u5F84 2r\uFF1An sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002\u663E\u793A\u503C\u4E3A\u8FD1\u4F3C\u503C\uFF1B\u8FB9\u6570\u589E\u52A0\u65F6\u4E0A\u4E0B\u754C\u5171\u540C\u903C\u8FD1 \u03C0\u3002",
+    caption: compileText(plan, "\u7EFF\u8272\u5185\u63A5\u5468\u957F < \u5706\u5468\u957F < \u6A59\u8272\u5916\u5207\u5468\u957F\u3002\u9664\u4EE5\u76F4\u5F84 2r\uFF1An sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002\u663E\u793A\u503C\u4E3A\u8FD1\u4F3C\u503C\uFF1B\u8FB9\u6570\u589E\u52A0\u65F6\u4E0A\u4E0B\u754C\u5171\u540C\u903C\u8FD1 \u03C0\u3002"),
     ...number ? { bindings: [
       { target: "inscribed.sides", expression: `round(${variableAlias(number)})` },
       { target: "circumscribed.sides", expression: `round(${variableAlias(number)})` }
@@ -12478,7 +12571,7 @@ function compileCircleAndArc(base, content, role, placement, plan, path) {
   const radiusExpression = radiusVariable ?? String(radius);
   const maximumRadius = radiusDefinition ? Math.max(Math.abs(radiusDefinition.min), Math.abs(radiusDefinition.max)) : radius;
   const geometry = {
-    title: optionalText(input.title, "\u5706\u3001\u5706\u5FC3\u89D2\u4E0E\u5706\u5F27", `${path}.title`),
+    title: optionalText(input.title, compileText(plan, "\u5706\u3001\u5706\u5FC3\u89D2\u4E0E\u5706\u5F27"), `${path}.title`),
     axes: {
       x: { min: -maximumRadius * 1.25, max: maximumRadius * 1.25, label: "x" },
       y: { min: -maximumRadius * 1.25, max: maximumRadius * 1.25, label: "y" },
@@ -12494,9 +12587,9 @@ function compileCircleAndArc(base, content, role, placement, plan, path) {
         ...angleVariable ? { interaction: { kind: "angle_control", variable: angleVariable, center: "center" } } : {}
       }
     ],
-    circles: [{ as: "circle", center: "center", radius, label: radiusVariable ? "\u534A\u5F84 r" : `r = ${radius}` }],
+    circles: [{ as: "circle", center: "center", radius, label: radiusVariable ? compileText(plan, "\u534A\u5F84 r") : `r = ${radius}` }],
     segments: [{ as: "radius", from: "center", to: "moving-point", style: "solid" }],
-    arcs: [{ as: "arc", center: "center", radius, start_angle: 0, end_angle: angle, label: "\u5706\u5F27" }],
+    arcs: [{ as: "arc", center: "center", radius, start_angle: 0, end_angle: angle, label: compileText(plan, "\u5706\u5F27") }],
     ...angleVariable || radiusVariable ? {
       bindings: [
         ...angleExpression ? [
@@ -12537,17 +12630,17 @@ function compileSpringAndMass(base, content, role, placement, plan, path) {
   const plotPhaseMin = phaseDefinition ? phaseDefinition.min * phaseScale : 0;
   const plotPhaseMax = phaseDefinition ? phaseDefinition.max * phaseScale : Math.PI * 2;
   const geometry = {
-    title: optionalText(input.title, "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8", `${path}.title`),
-    axes: { x: { min: -1.5, max: 1.5, label: "\u4F4D\u79FB" }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
+    title: optionalText(input.title, compileText(plan, "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8"), `${path}.title`),
+    axes: { x: { min: -1.5, max: 1.5, label: compileText(plan, "\u4F4D\u79FB") }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
     points: [
-      { as: "anchor", x: -1.25, y: 0, label: "\u56FA\u5B9A\u7AEF" },
-      { as: "equilibrium", x: 0, y: 0, label: "\u5E73\u8861\u4F4D\u7F6E" },
-      { as: "mass", x: Math.cos(phase), y: 0, label: "\u7269\u4F53" },
+      { as: "anchor", x: -1.25, y: 0, label: compileText(plan, "\u56FA\u5B9A\u7AEF") },
+      { as: "equilibrium", x: 0, y: 0, label: compileText(plan, "\u5E73\u8861\u4F4D\u7F6E") },
+      { as: "mass", x: Math.cos(phase), y: 0, label: compileText(plan, "\u7269\u4F53") },
       { as: "force-tip", x: Math.cos(phase) * 0.5, y: 0, visible: false }
     ],
     segments: [
       { as: "spring", from: "anchor", to: "mass", style: "solid" },
-      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: "\u56DE\u590D\u529B" }
+      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: compileText(plan, "\u56DE\u590D\u529B") }
     ],
     ...variable ? {
       bindings: [
@@ -12557,10 +12650,10 @@ function compileSpringAndMass(base, content, role, placement, plan, path) {
     } : {}
   };
   const plotContent = {
-    title: "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316",
-    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: "\u76F8\u4F4D" }, y: { min: -1.2, max: 1.2, label: "\u4F4D\u79FB" } },
+    title: compileText(plan, "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316"),
+    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: compileText(plan, "\u76F8\u4F4D") }, y: { min: -1.2, max: 1.2, label: compileText(plan, "\u4F4D\u79FB") } },
     curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
-    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: "\u5F53\u524D\u72B6\u6001" }],
+    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: compileText(plan, "\u5F53\u524D\u72B6\u6001") }],
     ...variable ? {
       bindings: [
         { target: "moving-point.x", expression: phaseExpression },
@@ -12572,8 +12665,8 @@ function compileSpringAndMass(base, content, role, placement, plan, path) {
     actions: [
       { do: "write", as: motion, kind: "geometry", role, content: geometry, place: placement },
       { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: motion, gap: "normal" } },
-      { do: "connect", as: `${base}-link`, from: motion, to: plot, relation: "same_state", label: "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB" },
-      { do: "group", as: base, role, label: "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF", members: [motion, plot] }
+      { do: "connect", as: `${base}-link`, from: motion, to: plot, relation: "same_state", label: compileText(plan, "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB") },
+      { do: "group", as: base, role, label: compileText(plan, "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF"), members: [motion, plot] }
     ],
     whole: base,
     parts: new Map([
@@ -12595,14 +12688,14 @@ function compileCubeWithSection(base, content, role, placement, plan, path) {
   const height = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
   const variable = number ? variableAlias(number) : void 0;
   const sceneContent = {
-    title: optionalText(input.title, "\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u4E0E\u622A\u9762", `${path}.title`),
-    fallback: "\u4E00\u4E2A\u4E2D\u5FC3\u5728\u539F\u70B9\u3001\u8FB9\u957F\u4E3A 2 \u7684\u6B63\u65B9\u4F53\uFF0C\u6807\u51FA\u4E86\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u6C34\u5E73\u622A\u9762\u3002",
+    title: optionalText(input.title, compileText(plan, "\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u4E0E\u622A\u9762"), `${path}.title`),
+    fallback: compileText(plan, "\u4E00\u4E2A\u4E2D\u5FC3\u5728\u539F\u70B9\u3001\u8FB9\u957F\u4E3A 2 \u7684\u6B63\u65B9\u4F53\uFF0C\u6807\u51FA\u4E86\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u6C34\u5E73\u622A\u9762\u3002"),
     axes: true,
     camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.cube_with_section },
     objects: [{
       as: "solid",
       kind: "box",
-      label: "\u6B63\u65B9\u4F53",
+      label: compileText(plan, "\u6B63\u65B9\u4F53"),
       color: "teal",
       center: { x: 0, y: 0, z: 0 },
       size: { x: 2, y: 2, z: 2 }
@@ -12613,13 +12706,13 @@ function compileCubeWithSection(base, content, role, placement, plan, path) {
       value: height,
       targets: ["solid"],
       display: "plane_and_intersection",
-      label: "\u6C34\u5E73\u622A\u9762",
+      label: compileText(plan, "\u6C34\u5E73\u622A\u9762"),
       color: "orange"
     }],
     highlights: [
-      { as: "vertex", kind: "point", points: [{ x: -1, y: -1, z: 1 }], label: "\u9876\u70B9", color: "red" },
-      { as: "edge", kind: "edge", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }], label: "\u68F1", color: "orange" },
-      { as: "face", kind: "face", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 }], label: "\u9762", color: "purple" }
+      { as: "vertex", kind: "point", points: [{ x: -1, y: -1, z: 1 }], label: compileText(plan, "\u9876\u70B9"), color: "red" },
+      { as: "edge", kind: "edge", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }], label: compileText(plan, "\u68F1"), color: "orange" },
+      { as: "face", kind: "face", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 }], label: compileText(plan, "\u9762"), color: "purple" }
     ],
     ...variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}
   };
@@ -12655,8 +12748,8 @@ function compileFunctionSurface(base, content, role, placement, plan, path) {
   const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : optionalNumber(input.section_value, 1, `${path}.section_value`);
   const variable = number ? variableAlias(number) : void 0;
   const sceneContent = {
-    title: optionalText(input.title, "\u51FD\u6570\u66F2\u9762\u4E0E\u622A\u9762", `${path}.title`),
-    fallback: `\u51FD\u6570\u66F2\u9762 z=${expression} \u4E0E\u53EF\u53D8\u622A\u9762\u3002`,
+    title: optionalText(input.title, compileText(plan, "\u51FD\u6570\u66F2\u9762\u4E0E\u622A\u9762"), `${path}.title`),
+    fallback: compileText(plan, "\u51FD\u6570\u66F2\u9762 z={{v0}} \u4E0E\u53EF\u53D8\u622A\u9762\u3002", { v0: expression }),
     axes: true,
     camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.function_surface_with_section },
     objects: [{
@@ -12675,7 +12768,7 @@ function compileFunctionSurface(base, content, role, placement, plan, path) {
       value: sectionValue,
       targets: ["surface"],
       display: "plane_and_intersection",
-      label: "\u622A\u9762",
+      label: compileText(plan, "\u622A\u9762"),
       color: "orange"
     }],
     ...variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}
@@ -12729,8 +12822,8 @@ function compileImplicitSurface(base, content, role, placement, plan, path) {
   const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
   const variable = number ? variableAlias(number) : void 0;
   const sceneContent = {
-    title: optionalText(input.title, "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762", `${path}.title`),
-    fallback: `\u9690\u5F0F\u66F2\u9762 ${expression}=${level} \u4E0E\u53EF\u53D8\u8F74\u5411\u622A\u9762\u3002`,
+    title: optionalText(input.title, compileText(plan, "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762"), `${path}.title`),
+    fallback: compileText(plan, "\u9690\u5F0F\u66F2\u9762 {{v0}}={{v1}} \u4E0E\u53EF\u53D8\u8F74\u5411\u622A\u9762\u3002", { v0: expression, v1: level }),
     axes: true,
     camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.implicit_surface_with_section },
     objects: [surface],
@@ -12740,7 +12833,7 @@ function compileImplicitSurface(base, content, role, placement, plan, path) {
       value: sectionValue,
       targets: ["surface"],
       display: "plane_and_intersection",
-      label: "\u622A\u9762",
+      label: compileText(plan, "\u622A\u9762"),
       color: "orange"
     }],
     ...variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}
@@ -12779,14 +12872,14 @@ function compileCoordinateCircle(base, content, role, placement, plan, path) {
   const maximumRadius = formula ? Math.max(radius, ...sampledRadii, 1) : radiusDefinition ? Math.max(Math.abs(radiusDefinition.min), Math.abs(radiusDefinition.max)) : radius;
   const extent = maximumRadius * 1.5;
   const geometry = {
-    title: optionalText(input.title, "\u5750\u6807\u7CFB\u4E2D\u7684\u5706", `${path}.title`),
+    title: optionalText(input.title, compileText(plan, "\u5750\u6807\u7CFB\u4E2D\u7684\u5706"), `${path}.title`),
     axes: {
       x: { min: centerX - extent, max: centerX + extent, label: "x" },
       y: { min: centerY - extent, max: centerY + extent, label: "y" },
       equal_scale: true
     },
     points: [{ as: "center", x: centerX, y: centerY, label: `(${centerX}, ${centerY})` }],
-    circles: [{ as: "circle", center: "center", radius, label: variable ? "\u534A\u5F84 r" : `r = ${radius}` }],
+    circles: [{ as: "circle", center: "center", radius, label: variable ? compileText(plan, "\u534A\u5F84 r") : `r = ${radius}` }],
     ...variable ? { bindings: [{
       target: "circle.radius",
       expression: formula ? replaceIdentifier(formula, "n1", variable) : variable,
@@ -12882,11 +12975,11 @@ function compileRectangleUnitSquareArray(base, content, role, placement, plan, p
     );
   }
   const geometry = {
-    title: optionalText(input.title, "\u5355\u4F4D\u6B63\u65B9\u5F62\u94FA\u6210\u957F\u65B9\u5F62", `${path}.title`),
-    caption: "\u6BCF\u4E2A\u5C0F\u65B9\u683C\u9762\u79EF\u4E3A 1 \u5E73\u65B9\u5355\u4F4D\uFF1B\u6BCF\u884C\u65B9\u683C\u6570 \xD7 \u884C\u6570 = \u65B9\u683C\u603B\u6570 = \u957F\u65B9\u5F62\u9762\u79EF\u3002",
+    title: optionalText(input.title, compileText(plan, "\u5355\u4F4D\u6B63\u65B9\u5F62\u94FA\u6210\u957F\u65B9\u5F62"), `${path}.title`),
+    caption: compileText(plan, "\u6BCF\u4E2A\u5C0F\u65B9\u683C\u9762\u79EF\u4E3A 1 \u5E73\u65B9\u5355\u4F4D\uFF1B\u6BCF\u884C\u65B9\u683C\u6570 \xD7 \u884C\u6570 = \u65B9\u683C\u603B\u6570 = \u957F\u65B9\u5F62\u9762\u79EF\u3002"),
     axes: {
-      x: { min: -0.75, max: maximumColumns + 0.75, label: "\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09" },
-      y: { min: -0.75, max: maximumRows + 0.75, label: "\u884C\u6570\uFF08\u5BBD\uFF09" },
+      x: { min: -0.75, max: maximumColumns + 0.75, label: compileText(plan, "\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09") },
+      y: { min: -0.75, max: maximumRows + 0.75, label: compileText(plan, "\u884C\u6570\uFF08\u5BBD\uFF09") },
       equal_scale: true
     },
     points,
@@ -12899,7 +12992,7 @@ function compileRectangleUnitSquareArray(base, content, role, placement, plan, p
       {
         as: "unit-square",
         points: ["unit-bottom-left", "unit-bottom-right", "unit-top-right", "unit-top-left"],
-        label: "1 \u5E73\u65B9\u5355\u4F4D",
+        label: compileText(plan, "1 \u5E73\u65B9\u5355\u4F4D"),
         tone: "accent"
       }
     ],
@@ -13107,8 +13200,8 @@ function compileCircleArea(base, content, role, placement, plan, path) {
       );
     }
     actions.push({ do: "write", as: id, kind: "geometry", role, place: panel === 0 ? placement : { relation: "below", anchor: base, gap: "normal" }, content: {
-      title: `${n} \u7B49\u5206\u5706\u7684\u9762\u79EF\u91CD\u6392`,
-      caption: `\u534A\u5F84 r=${r}\uFF1B\u6BCF\u5757\u5747\u4E3A\u771F\u5B9E\u6247\u5F62\uFF0C\u91CD\u6392\u9762\u79EF\u4E0D\u53D8\u3002\u6709\u9650\u7B49\u5206\u7684\u8FB9\u7F18\u4ECD\u5F2F\u66F2\uFF1B\u7B49\u5206\u8D8A\u7EC6\uFF0C\u5E95\u8D8B\u8FD1 \u03C0r\uFF0C\u9AD8\u8D8B\u8FD1 r\uFF0C\u9762\u79EF\u4E3A \u03C0r\xB2\u3002`,
+      title: compileText(plan, "{{v0}} \u7B49\u5206\u5706\u7684\u9762\u79EF\u91CD\u6392", { v0: n }),
+      caption: compileText(plan, "\u534A\u5F84 r={{v0}}\uFF1B\u6BCF\u5757\u5747\u4E3A\u771F\u5B9E\u6247\u5F62\uFF0C\u91CD\u6392\u9762\u79EF\u4E0D\u53D8\u3002\u6709\u9650\u7B49\u5206\u7684\u8FB9\u7F18\u4ECD\u5F2F\u66F2\uFF1B\u7B49\u5206\u8D8A\u7EC6\uFF0C\u5E95\u8D8B\u8FD1 \u03C0r\uFF0C\u9AD8\u8D8B\u8FD1 r\uFF0C\u9762\u79EF\u4E3A \u03C0r\xB2\u3002", { v0: r }),
       axes: { x: { min: -r * 1.3, max: Math.PI * r + r }, y: { min: -r * 1.3, max: r * 1.6 }, equal_scale: true },
       points,
       arcs,
@@ -13117,16 +13210,16 @@ function compileCircleArea(base, content, role, placement, plan, path) {
   }
   return { actions, whole: base, parts: new Map([["whole", base], ...variable ? [["primary_control", base]] : []]) };
 }
-function compileProcessDiagram(base, content, role, placement, _plan, path) {
+function compileProcessDiagram(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "steps"], path);
-  const steps = optionalStringArray(input.steps, ["\u5F00\u59CB", "\u89C2\u5BDF\u53D8\u5316", "\u5F97\u5230\u7ED3\u8BBA"], `${path}.steps`);
+  const steps = optionalStringArray(input.steps, [compileText(plan, "\u5F00\u59CB"), compileText(plan, "\u89C2\u5BDF\u53D8\u5316"), compileText(plan, "\u5F97\u5230\u7ED3\u8BBA")], `${path}.steps`);
   const elements = steps.map((label, index) => ({ as: `step-${pad2(index + 1)}`, label }));
   const edges = steps.slice(1).map((_label, index) => ({
     as: `edge-${pad2(index + 1)}`,
     from: `step-${pad2(index + 1)}`,
     to: `step-${pad2(index + 2)}`,
-    label: "\u4E0B\u4E00\u6B65"
+    label: compileText(plan, "\u4E0B\u4E00\u6B65")
   }));
   const first = `${base}#step-01`;
   const last = `${base}#step-${pad2(steps.length)}`;
@@ -13137,7 +13230,7 @@ function compileProcessDiagram(base, content, role, placement, _plan, path) {
       as: base,
       kind: "diagram",
       role,
-      content: { title: optionalText(input.title, "\u8FC7\u7A0B\u56FE", `${path}.title`), elements, edges },
+      content: { title: optionalText(input.title, compileText(plan, "\u8FC7\u7A0B\u56FE"), `${path}.title`), elements, edges },
       place: placement
     }],
     whole: base,
@@ -13324,10 +13417,10 @@ function normalizeProgramOwnedNumberRanges(plan) {
       );
       if (activity.value !== original) {
         const value = Number(activity.value.toPrecision(12));
-        const label = definition.label?.trim() || "\u6570\u503C";
+        const label = definition.label?.trim() || compileText(plan, "\u6570\u503C");
         const unit = definition.unit?.trim();
-        activity.prompt = `\u8BF7\u628A${label}\u8C03\u5230 ${value}${unit ? ` ${unit}` : ""}\u3002`;
-        activity.success_message = `\u5B8C\u6210\uFF0C${label}\u5DF2\u7ECF\u8C03\u5230 ${value}${unit ? ` ${unit}` : ""}\u3002`;
+        activity.prompt = compileText(plan, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: value, v2: unit ? ` ${unit}` : "" });
+        activity.success_message = compileText(plan, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: value, v2: unit ? ` ${unit}` : "" });
       }
     }
   }
@@ -13366,6 +13459,7 @@ function compilePlainContent(kind, content, options, path) {
 function compileLessonPlan(value, options = {}) {
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
+  setLessonTextLanguage(plan, options.language);
   normalizePlotInputInstructions(plan);
   validateTeachingClaims(plan);
   normalizeProgramOwnedNumberRanges(plan);
@@ -13437,7 +13531,7 @@ function compileLessonPlan(value, options = {}) {
               actions.push({
                 do: "focus",
                 targets: [existing.whole],
-                intent: "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762",
+                intent: compileText(plan, "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762"),
                 ...actionWhen(item.timing)
               });
             } else {
@@ -14521,6 +14615,7 @@ var PRACTICE_SYSTEM_PROMPT = `\u5B66\u751F\u521A\u5B66\u5B8C lesson.taught \u91C
 var LATER_SECTION_EXPERIENCE_RULE = `\u8FD9\u8282\u8BFE\u53EF\u80FD\u6CBF\u7528\u4E86\u8001\u5E08\u5728\u7B2C\u4E00\u8282\u63D0\u8D77\u7684\u4E00\u6BB5\u81EA\u5DF1\u7684\u7ECF\u5386\u4F5C\u4E3A\u60C5\u5883\u3002\u5982\u679C outline \u5199\u660E\u6CBF\u7528\uFF0C\u5C31\u6309 outline \u7EE7\u7EED\u8FD9\u4E2A\u60C5\u5883\uFF0C\u4E0D\u518D\u63D0\u65B0\u7684\u7ECF\u5386\uFF0C\u4E0D\u8865\u5145\u65B0\u7684\u5730\u70B9\u3001\u4EBA\u7269\u6216\u7ECF\u5386\uFF0C\u4E5F\u4E0D\u8BF4\u6210\u662F\u548C\u5B66\u751F\u4E00\u8D77\u7ECF\u5386\u7684\uFF1Boutline \u6CA1\u5199\u5C31\u4E0D\u63D0\u3002`;
 function withContextRules(systemPrompt, context) {
   const rules = [
+    typeof context.language === "string" && /^en(?:-|$)/i.test(context.language) ? "Output language: English (course_context.language). Write every student-facing title, goal, narration, board label, hint, question, answer explanation, feedback, summary, and learner_response in English. Preserve formulas, identifiers, and quoted source material. Express spoken mathematics in natural English. Teacher profiles, learner background, previous lessons, and Chinese examples do not override this output language." : void 0,
     typeof context.teacher_profile === "string" ? TEACHER_PROFILE_RULE : void 0,
     typeof context.learner_background === "string" ? LEARNER_BACKGROUND_RULE : void 0,
     typeof context.current_lesson === "string" ? CURRENT_LESSON_RULE : void 0,
@@ -15634,7 +15729,7 @@ function lowerIntegerDecimal(record2, prefix, path) {
   delete record2[`${prefix}_scale`];
   return Number(mantissa) / 10 ** Number(scale);
 }
-function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection) {
+function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language) {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
   lowered.hint_after_attempts = PROGRAM_HINT_AFTER_ATTEMPTS;
@@ -15686,11 +15781,11 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
       }
       reachableValue = alternative;
       const formattedValue = Number(reachableValue.toPrecision(12));
-      const label = definition.label?.trim() || "\u6570\u503C";
+      const label = definition.label?.trim() || lessonText(language, "\u6570\u503C");
       const unit = definition.unit?.trim();
-      lowered.prompt = `\u8BF7\u628A${label}\u8C03\u5230 ${formattedValue}${unit ? ` ${unit}` : ""}\u3002`;
-      lowered.hints = ["\u62D6\u52A8\u5DE6\u4E0B\u89D2\u7684\u6ED1\u6746\uFF0C\u89C2\u5BDF\u6570\u503C\u548C\u753B\u9762\u540C\u6B65\u53D8\u5316\u3002"];
-      lowered.success_message = `\u5B8C\u6210\uFF0C${label}\u5DF2\u7ECF\u8C03\u5230 ${formattedValue}${unit ? ` ${unit}` : ""}\u3002`;
+      lowered.prompt = lessonText(language, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formattedValue, v2: unit ? ` ${unit}` : "" });
+      lowered.hints = [lessonText(language, "\u62D6\u52A8\u5DE6\u4E0B\u89D2\u7684\u6ED1\u6746\uFF0C\u89C2\u5BDF\u6570\u503C\u548C\u753B\u9762\u540C\u6B65\u53D8\u5316\u3002")];
+      lowered.success_message = lessonText(language, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formattedValue, v2: unit ? ` ${unit}` : "" });
     }
     const precision = 10 ** 12;
     lowered.value = Math.round(reachableValue * precision) / precision;
@@ -15858,7 +15953,7 @@ function taughtContent(draft) {
     written: moment.actions.flatMap((action) => action.action === "create" && (action.kind === "math" || action.kind === "note") ? [action.content] : [])
   }));
 }
-function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReusableCreates = false) {
+function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReusableCreates = false, language) {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection", "expected an object");
@@ -16136,7 +16231,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
       if (kind === "number_target" && lowered.reference !== void 0) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -16345,7 +16440,7 @@ function lowerModelSectionDraft(value, outline, expectedSection, requireFixedReu
       moment.actions.push({
         action: "focus",
         references: [structuredClone(latestBoardReference)],
-        intent: "\u7EE7\u7EED\u89C2\u5BDF\u5F53\u524D\u753B\u9762",
+        intent: lessonText(language, "\u7EE7\u7EED\u89C2\u5BDF\u5F53\u524D\u753B\u9762"),
         timing: "after_speech"
       });
     }
@@ -16491,13 +16586,13 @@ function sectionPromptContext(outline, sectionNumber, allowedNumberIndexes, curr
     }))
   };
 }
-function unsupportedSectionResponse(error, previousError) {
+function unsupportedSectionResponse(error, previousError, language) {
   if (!(error instanceof LessonPlanError)) return void 0;
   if (error.code === "LESSON_PLAN_UNSUPPORTED_REQUIREMENT") {
-    return "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002";
+    return lessonText(language, "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002");
   }
   if (error.code === "LESSON_PLAN_EXPRESSION" && /multi-curve comparison currently supports static formulas only/u.test(error.message) && previousError instanceof LessonPlanError && previousError.code === error.code && previousError.message === error.message) {
-    return "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5728\u540C\u4E00\u5F20\u51FD\u6570\u56FE\u4E2D\u540C\u65F6\u5C55\u793A\u9759\u6001\u66F2\u7EBF\u548C\u7531\u63A7\u4EF6\u6539\u53D8\u7684\u53E6\u4E00\u6761\u66F2\u7EBF\u3002";
+    return lessonText(language, "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5728\u540C\u4E00\u5F20\u51FD\u6570\u56FE\u4E2D\u540C\u65F6\u5C55\u793A\u9759\u6001\u66F2\u7EBF\u548C\u7531\u63A7\u4EF6\u6539\u53D8\u7684\u53E6\u4E00\u6761\u66F2\u7EBF\u3002");
   }
   return void 0;
 }
@@ -16529,7 +16624,7 @@ function compilePrefix(outline, drafts, options) {
   const prefixOutline = {
     ...prefixOutlineBase,
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
-    close: { summary: "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002", focus: [focus] }
+    close: { summary: lessonText(options?.language, "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002"), focus: [focus] }
   };
   const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
@@ -16545,19 +16640,19 @@ function partialModelResponse(error) {
   const value = error.partialResponse;
   return typeof value === "string" && value.trim() ? value : void 0;
 }
-function locallyUnsupportedLessonRequest(request) {
+function locallyUnsupportedLessonRequest(request, language) {
   const asksForFourDimensions = /(?:四|4)\s*维|(?:four|4)[ -]?dimensional|\b4d\b/i.test(request);
   const asksForHypercube = /超立方体|正八胞体|tesseract|hypercube/i.test(request);
   const asksForRotation = /旋转|转动|rotation|rotate/i.test(request);
   if (asksForFourDimensions && asksForHypercube && asksForRotation) {
-    return "\u5F53\u524D\u767D\u677F\u53EA\u80FD\u6267\u884C\u4E8C\u7EF4\u56FE\u5F62\u548C\u4E09\u7EF4\u573A\u666F\uFF0C\u4E0D\u80FD\u7CBE\u786E\u6A21\u62DF\u56DB\u7EF4\u8D85\u7ACB\u65B9\u4F53\u7684\u56DB\u7EF4\u65CB\u8F6C\u3002\u4F60\u53EF\u4EE5\u6539\u95EE\u5B83\u7684\u4E09\u7EF4\u6295\u5F71\u539F\u7406\u6216\u57FA\u672C\u7ED3\u6784\u3002";
+    return lessonText(language, "\u5F53\u524D\u767D\u677F\u53EA\u80FD\u6267\u884C\u4E8C\u7EF4\u56FE\u5F62\u548C\u4E09\u7EF4\u573A\u666F\uFF0C\u4E0D\u80FD\u7CBE\u786E\u6A21\u62DF\u56DB\u7EF4\u8D85\u7ACB\u65B9\u4F53\u7684\u56DB\u7EF4\u65CB\u8F6C\u3002\u4F60\u53EF\u4EE5\u6539\u95EE\u5B83\u7684\u4E09\u7EF4\u6295\u5F71\u539F\u7406\u6216\u57FA\u672C\u7ED3\u6784\u3002");
   }
   return void 0;
 }
 function requestsTwoIndependentPoints(request) {
   return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
 }
-function prepareTwoPointOutline(outline, request) {
+function prepareTwoPointOutline(outline, request, language) {
   if (!requestsTwoIndependentPoints(request)) return;
   outline.numbers ??= [];
   while (outline.numbers.length < 2) {
@@ -16566,12 +16661,12 @@ function prepareTwoPointOutline(outline, request) {
       initial: index === 0 ? -1 : 2,
       min: -5,
       max: 5,
-      label: index === 0 ? "A\u70B9\u7684x\u5750\u6807" : "B\u70B9\u7684x\u5750\u6807",
+      label: index === 0 ? lessonText(language, "A\u70B9\u7684x\u5750\u6807") : lessonText(language, "B\u70B9\u7684x\u5750\u6807"),
       student_control: { kind: "slider", step: 0.25 }
     });
   }
   outline.numbers.slice(0, 2).forEach((number, index) => {
-    number.label = index === 0 ? "A\u70B9\u7684x\u5750\u6807" : "B\u70B9\u7684x\u5750\u6807";
+    number.label = index === 0 ? lessonText(language, "A\u70B9\u7684x\u5750\u6807") : lessonText(language, "B\u70B9\u7684x\u5750\u6807");
     number.student_control = { kind: "slider", step: number.student_control?.step ?? 0.25 };
   });
 }
@@ -16589,7 +16684,8 @@ function specializeTwoPointDraft(draft, outline, request) {
   }
 }
 async function generateLessonPlanWithModel(model, input, options = {}) {
-  const unsupportedResponse = locallyUnsupportedLessonRequest(input.learner_request);
+  options = { ...options, compile: { ...options.compile, language: input.language ?? options.compile?.language } };
+  const unsupportedResponse = locallyUnsupportedLessonRequest(input.learner_request, input.language);
   if (unsupportedResponse) {
     return {
       disposition: "unsupported",
@@ -16702,7 +16798,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       ),
       fixedRequestParts.length
     );
-    prepareTwoPointOutline(outline, input.learner_request);
+    prepareTwoPointOutline(outline, input.learner_request, input.language);
     try {
       bootstrappedFirstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
@@ -16711,7 +16807,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         ),
         outline,
         1,
-        true
+        true,
+        input.language
       );
       specializeTwoPointDraft(bootstrappedFirstSection, outline, input.learner_request);
     } catch (error) {
@@ -16758,7 +16855,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     if ((input.camera_input === true || input.selection_input === true) && stableCameraObservation === void 0) {
       return {
         disposition: "clarify",
-        learner_response: input.selection_input === true ? "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002" : "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002",
+        learner_response: input.selection_input === true ? lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002") : lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002"),
         model_calls: modelCalls
       };
     }
@@ -16814,14 +16911,14 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       if (observeCamera && stableCameraObservation === void 0) {
         return {
           disposition: "clarify",
-          learner_response: input.selection_input === true ? "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002" : "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002",
+          learner_response: input.selection_input === true ? lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002") : lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002"),
           model_calls: modelCalls
         };
       }
     }
   }
   if (!outline) throw outlineError;
-  prepareTwoPointOutline(outline, input.learner_request);
+  prepareTwoPointOutline(outline, input.learner_request, input.language);
   await options.on_outline_ready?.({
     sections: outline.sections.length,
     course_visuals: outline.course_visuals?.length ?? 0,
@@ -16831,7 +16928,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
   if (unsupported) {
     const reason = unsupported.reason?.trim();
-    const learnerResponse = reason && reason.length <= 480 && !/\$lesson|LESSON_PLAN_|already exhausted|do not call|internal attempts/iu.test(reason) ? `\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF1A${reason}` : "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002";
+    const learnerResponse = reason && reason.length <= 480 && !/\$lesson|LESSON_PLAN_|already exhausted|do not call|internal attempts/iu.test(reason) ? lessonText(input.language, "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF1A{{v0}}", { v0: reason }) : lessonText(input.language, "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002");
     return {
       disposition: "unsupported",
       learner_response: learnerResponse,
@@ -16940,7 +17037,8 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         ),
         outline,
         section,
-        true
+        true,
+        input.language
       );
       specializeTwoPointDraft(candidate, outline, input.learner_request);
     } catch (error) {
@@ -16952,7 +17050,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         attempt,
         error: rejectionDetails(error)
       });
-      if (unsupportedSectionResponse(error, previousError)) throw error;
+      if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
       return generateSection(section);
     }
     return candidate;
@@ -16969,7 +17067,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         return;
       } catch (error) {
         const previousError = sectionErrors.get(section);
-        if (unsupportedSectionResponse(error, previousError)) throw error;
+        if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
         sectionErrors.set(section, error);
         await options.on_rejected_part?.({
@@ -16985,7 +17083,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
   try {
     await acceptSection(1, bootstrappedFirstSection);
   } catch (error) {
-    const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(1));
+    const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(1), input.language);
     if (!learnerResponse) throw error;
     return {
       disposition: "unsupported",
@@ -17042,7 +17140,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     try {
       await acceptSection(section);
     } catch (error) {
-      const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(section));
+      const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(section), input.language);
       if (!learnerResponse) throw error;
       return {
         disposition: "unsupported",

@@ -1,3 +1,4 @@
+import { lessonText } from "./lesson-text.js";
 import { fixedLineSamples } from "./teaching-contracts.js";
 import { REARRANGEMENT_FACTS, REARRANGEMENT_MODEL_GUIDANCE, type RearrangementConstruction } from "./rearrangement.js";
 import {
@@ -195,6 +196,9 @@ const LATER_SECTION_EXPERIENCE_RULE = `这节课可能沿用了老师在第一�
 
 function withContextRules(systemPrompt: string, context: Record<string, unknown>): string {
   const rules = [
+    typeof context.language === "string" && /^en(?:-|$)/i.test(context.language)
+      ? "Output language: English (course_context.language). Write every student-facing title, goal, narration, board label, hint, question, answer explanation, feedback, summary, and learner_response in English. Preserve formulas, identifiers, and quoted source material. Express spoken mathematics in natural English. Teacher profiles, learner background, previous lessons, and Chinese examples do not override this output language."
+      : undefined,
     typeof context.teacher_profile === "string" ? TEACHER_PROFILE_RULE : undefined,
     typeof context.learner_background === "string" ? LEARNER_BACKGROUND_RULE : undefined,
     typeof context.current_lesson === "string" ? CURRENT_LESSON_RULE : undefined,
@@ -1611,6 +1615,7 @@ function lowerModelActivityNumbers(
   path: string,
   outline: LessonPlanOutline,
   expectedSection: number,
+  language?: string,
 ): Record<string, unknown> {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
@@ -1675,11 +1680,11 @@ function lowerModelActivityNumbers(
       }
       reachableValue = alternative;
       const formattedValue = Number(reachableValue.toPrecision(12));
-      const label = definition.label?.trim() || "数值";
+      const label = definition.label?.trim() || lessonText(language, "数值");
       const unit = definition.unit?.trim();
-      lowered.prompt = `请把${label}调到 ${formattedValue}${unit ? ` ${unit}` : ""}。`;
-      lowered.hints = ["拖动左下角的滑杆，观察数值和画面同步变化。"];
-      lowered.success_message = `完成，${label}已经调到 ${formattedValue}${unit ? ` ${unit}` : ""}。`;
+      lowered.prompt = lessonText(language, "请把{{v0}}调到 {{v1}}{{v2}}。", { v0: label, v1: formattedValue, v2: unit ? ` ${unit}` : "" });
+      lowered.hints = [lessonText(language, "拖动左下角的滑杆，观察数值和画面同步变化。")];
+      lowered.success_message = lessonText(language, "完成，{{v0}}已经调到 {{v1}}{{v2}}。", { v0: label, v1: formattedValue, v2: unit ? ` ${unit}` : "" });
     }
     const precision = 10 ** 12;
     lowered.value = Math.round(reachableValue * precision) / precision;
@@ -1911,6 +1916,7 @@ function lowerModelSectionDraft(
   outline: LessonPlanOutline,
   expectedSection: number,
   requireFixedReusableCreates = false,
+  language?: string,
 ): LessonPlanSectionDraft {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) {
@@ -2208,7 +2214,7 @@ function lowerModelSectionDraft(
       if (kind === "number_target" && lowered.reference !== undefined) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -2461,7 +2467,7 @@ function lowerModelSectionDraft(
       moment.actions.push({
         action: "focus",
         references: [structuredClone(latestBoardReference)],
-        intent: "继续观察当前画面",
+        intent: lessonText(language, "继续观察当前画面"),
         timing: "after_speech",
       });
     }
@@ -2642,17 +2648,17 @@ function sectionPromptContext(
   };
 }
 
-function unsupportedSectionResponse(error: unknown, previousError?: unknown): string | undefined {
+function unsupportedSectionResponse(error: unknown, previousError?: unknown, language?: string): string | undefined {
   if (!(error instanceof LessonPlanError)) return undefined;
   if (error.code === "LESSON_PLAN_UNSUPPORTED_REQUIREMENT") {
-    return "目前还不能完整生成这节课，因为其中包含尚未支持的画面或互动。";
+    return lessonText(language, "目前还不能完整生成这节课，因为其中包含尚未支持的画面或互动。");
   }
   if (error.code === "LESSON_PLAN_EXPRESSION"
     && /multi-curve comparison currently supports static formulas only/u.test(error.message)
     && previousError instanceof LessonPlanError
     && previousError.code === error.code
     && previousError.message === error.message) {
-    return "目前还不能在同一张函数图中同时展示静态曲线和由控件改变的另一条曲线。";
+    return lessonText(language, "目前还不能在同一张函数图中同时展示静态曲线和由控件改变的另一条曲线。");
   }
   return undefined;
 }
@@ -2697,7 +2703,7 @@ function compilePrefix(
   const prefixOutline: LessonPlanOutline = {
     ...prefixOutlineBase,
     sections: structuredClone(outline.sections.slice(0, sectionCount)),
-    close: { summary: "课程内容仍在继续生成。", focus: [focus] },
+    close: { summary: lessonText(options?.language, "课程内容仍在继续生成。"), focus: [focus] },
   };
   const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
@@ -2718,12 +2724,12 @@ function partialModelResponse(error: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
-function locallyUnsupportedLessonRequest(request: string): string | undefined {
+function locallyUnsupportedLessonRequest(request: string, language?: string): string | undefined {
   const asksForFourDimensions = /(?:四|4)\s*维|(?:four|4)[ -]?dimensional|\b4d\b/i.test(request);
   const asksForHypercube = /超立方体|正八胞体|tesseract|hypercube/i.test(request);
   const asksForRotation = /旋转|转动|rotation|rotate/i.test(request);
   if (asksForFourDimensions && asksForHypercube && asksForRotation) {
-    return "当前白板只能执行二维图形和三维场景，不能精确模拟四维超立方体的四维旋转。你可以改问它的三维投影原理或基本结构。";
+    return lessonText(language, "当前白板只能执行二维图形和三维场景，不能精确模拟四维超立方体的四维旋转。你可以改问它的三维投影原理或基本结构。");
   }
   return undefined;
 }
@@ -2732,7 +2738,7 @@ function requestsTwoIndependentPoints(request: string): boolean {
   return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
 }
 
-function prepareTwoPointOutline(outline: LessonPlanOutline, request: string): void {
+function prepareTwoPointOutline(outline: LessonPlanOutline, request: string, language?: string): void {
   if (!requestsTwoIndependentPoints(request)) return;
   outline.numbers ??= [];
   while (outline.numbers.length < 2) {
@@ -2741,12 +2747,12 @@ function prepareTwoPointOutline(outline: LessonPlanOutline, request: string): vo
       initial: index === 0 ? -1 : 2,
       min: -5,
       max: 5,
-      label: index === 0 ? "A点的x坐标" : "B点的x坐标",
+      label: index === 0 ? lessonText(language, "A点的x坐标") : lessonText(language, "B点的x坐标"),
       student_control: { kind: "slider", step: 0.25 },
     });
   }
   outline.numbers.slice(0, 2).forEach((number, index) => {
-    number.label = index === 0 ? "A点的x坐标" : "B点的x坐标";
+    number.label = index === 0 ? lessonText(language, "A点的x坐标") : lessonText(language, "B点的x坐标");
     number.student_control = { kind: "slider", step: number.student_control?.step ?? 0.25 };
   });
 }
@@ -2778,7 +2784,8 @@ export async function generateLessonPlanWithModel(
   input: LessonPlanGenerationInput,
   options: GenerateLessonPlanOptions = {},
 ): Promise<LessonPlanGenerationResult> {
-  const unsupportedResponse = locallyUnsupportedLessonRequest(input.learner_request);
+  options = { ...options, compile: { ...options.compile, language: input.language ?? options.compile?.language } };
+  const unsupportedResponse = locallyUnsupportedLessonRequest(input.learner_request, input.language);
   if (unsupportedResponse) {
     return {
       disposition: "unsupported",
@@ -2912,7 +2919,7 @@ export async function generateLessonPlanWithModel(
       ),
       fixedRequestParts.length,
     );
-    prepareTwoPointOutline(outline, input.learner_request);
+    prepareTwoPointOutline(outline, input.learner_request, input.language);
     try {
       bootstrappedFirstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
@@ -2922,6 +2929,7 @@ export async function generateLessonPlanWithModel(
         outline,
         1,
         true,
+        input.language,
       );
       specializeTwoPointDraft(bootstrappedFirstSection, outline, input.learner_request);
     } catch (error) {
@@ -2971,8 +2979,8 @@ export async function generateLessonPlanWithModel(
       return {
         disposition: "clarify",
         learner_response: input.selection_input === true
-          ? "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。"
-          : "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。",
+          ? lessonText(input.language, "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。")
+          : lessonText(input.language, "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。"),
         model_calls: modelCalls,
       };
     }
@@ -3045,15 +3053,15 @@ export async function generateLessonPlanWithModel(
         return {
           disposition: "clarify",
           learner_response: input.selection_input === true
-            ? "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。"
-            : "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。",
+            ? lessonText(input.language, "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。")
+            : lessonText(input.language, "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。"),
           model_calls: modelCalls,
         };
       }
     }
   }
   if (!outline) throw outlineError;
-  prepareTwoPointOutline(outline, input.learner_request);
+  prepareTwoPointOutline(outline, input.learner_request, input.language);
   await options.on_outline_ready?.({
     sections: outline.sections.length,
     course_visuals: outline.course_visuals?.length ?? 0,
@@ -3066,8 +3074,8 @@ export async function generateLessonPlanWithModel(
     const learnerResponse = reason
       && reason.length <= 480
       && !/\$lesson|LESSON_PLAN_|already exhausted|do not call|internal attempts/iu.test(reason)
-      ? `目前还不能完整生成这节课：${reason}`
-      : "目前还不能完整生成这节课，因为其中包含尚未支持的画面或互动。";
+      ? lessonText(input.language, "目前还不能完整生成这节课：{{v0}}", { v0: reason })
+      : lessonText(input.language, "目前还不能完整生成这节课，因为其中包含尚未支持的画面或互动。");
     return {
       disposition: "unsupported",
       learner_response: learnerResponse,
@@ -3186,6 +3194,7 @@ export async function generateLessonPlanWithModel(
         outline,
         section,
         true,
+        input.language,
       );
       specializeTwoPointDraft(candidate, outline, input.learner_request);
     } catch (error) {
@@ -3197,7 +3206,7 @@ export async function generateLessonPlanWithModel(
         attempt,
         error: rejectionDetails(error),
       });
-      if (unsupportedSectionResponse(error, previousError)) throw error;
+      if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
       return generateSection(section);
     }
     return candidate;
@@ -3218,7 +3227,7 @@ export async function generateLessonPlanWithModel(
         return;
       } catch (error) {
         const previousError = sectionErrors.get(section);
-        if (unsupportedSectionResponse(error, previousError)) throw error;
+        if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
         sectionErrors.set(section, error);
         await options.on_rejected_part?.({
@@ -3238,7 +3247,7 @@ export async function generateLessonPlanWithModel(
   try {
     await acceptSection(1, bootstrappedFirstSection);
   } catch (error) {
-    const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(1));
+    const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(1), input.language);
     if (!learnerResponse) throw error;
     return {
       disposition: "unsupported",
@@ -3298,7 +3307,7 @@ export async function generateLessonPlanWithModel(
     try {
       await acceptSection(section);
     } catch (error) {
-      const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(section));
+      const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(section), input.language);
       if (!learnerResponse) throw error;
       return {
         disposition: "unsupported",

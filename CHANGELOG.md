@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.0 - 2026-10-30
+
+- Lessons and selection assistance follow the host's `language` (`zh-CN` or `en-US`). For English, every existing generation call (first request, later sections, practice, selection) carries an output-language rule; no translation request is added and Chinese requests are byte-identical to 0.21.0. Compiler-owned fallback text (titles, labels, captions, hints, prompts and learner responses) uses the lesson language; numbers, formulas and construction checks are unchanged. The same narrow teaching-claim guards now also read English narration. `learning.selection.enhance` declares `language`, so hosts send it only to this version or later.
+
 ## 0.21.0 - 2026-10-28
 
 - A one-section lesson gets practice too: once its section is playable, one small request (`part: "practice"`, schema `answer_activities` only) asks for 0–2 typed questions about what the section taught, placed by its last formula or note. A question whose answer disagrees with its arithmetic is dropped, not repaired, and any failure delivers the lesson exactly as before. The first request and every multi-section lesson's requests are byte-identical to 0.20.2.

@@ -1,3 +1,4 @@
+import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { rearrangementRecipe, REARRANGEMENT_CONSTRUCTIONS, type RearrangementConstruction, type RigidPose } from "./rearrangement.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./teaching-contracts.js";
@@ -84,7 +85,7 @@ function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbe
 
 function separateInitialSamples(plan: LessonPlan): void {
   const words = JSON.stringify(plan.sections.map(s => s.moments.map(m => m.narration)));
-  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合/.test(words)) return;
+  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
     const visual = action.content as LessonPlanVisualContent;
@@ -439,7 +440,7 @@ function compileFunctionPlot(
     : viewport.y;
   assertRange(requestedY.min, requestedY.max, `${path}.y_range`);
   const plotContent: Record<string, unknown> = {
-    title: namedNumbers(optionalText(input.title, "函数图像", `${path}.title`), plan),
+    title: namedNumbers(optionalText(input.title, compileText(plan, "函数图像"), `${path}.title`), plan),
     axes: {
       ...(expressions.length > 1 && expressions.some(e => e.replace(/[()\s]/g, "") === "x") ? {equal_scale:true} : {}),
       x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
@@ -519,7 +520,7 @@ function compileUnitCircleProjection(
   const plot = `${base}-plot`;
   const link = `${base}-link`;
   const geometry: Record<string, unknown> = {
-    title: optionalText(input.title, "单位圆与投影", `${path}.title`),
+    title: optionalText(input.title, compileText(plan, "单位圆与投影"), `${path}.title`),
     axes: {
       x: { min: -1.25, max: 1.25, label: "x" },
       y: { min: -1.25, max: 1.25, label: "y" },
@@ -555,7 +556,7 @@ function compileUnitCircleProjection(
   const plotAngleMin = angleDefinition ? angleDefinition.min * angleScale : 0;
   const plotAngleMax = angleDefinition ? angleDefinition.max * angleScale : Math.PI * 2;
   const plotContent: Record<string, unknown> = {
-    title: `${functionName === "sin" ? "正弦" : "余弦"}函数图像`,
+    title: compileText(plan, "{{v0}}函数图像", { v0: compileText(plan, functionName === "sin" ? "正弦" : "余弦") }),
     axes: { x: { min: plotAngleMin, max: plotAngleMax, label: "θ" }, y: { min: -1.2, max: 1.2, label: "y" } },
     curves: [{ as: "primary-curve", expression: `${functionName}(x)`, label: `y = ${functionName}(x)` }],
     points: [{ as: "moving-point", x: theta, y: Math[functionName](theta), label: `P(θ, ${functionName}(θ))` }],
@@ -570,8 +571,8 @@ function compileUnitCircleProjection(
     actions: [
       { do: "write", as: circle, kind: "geometry", role, content: geometry, place: placement },
       { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: circle, gap: "normal" } },
-      { do: "connect", as: link, from: circle, to: plot, relation: "maps_to", label: "旋转角与周期波动" },
-      { do: "group", as: base, role, label: "单位圆与函数图像", members: [circle, plot] },
+      { do: "connect", as: link, from: circle, to: plot, relation: "maps_to", label: compileText(plan, "旋转角与周期波动") },
+      { do: "group", as: base, role, label: compileText(plan, "单位圆与函数图像"), members: [circle, plot] },
     ],
     whole: base,
     parts: new Map([
@@ -600,15 +601,15 @@ function compileCirclePolygonBounds(
   // The outer polygon fits even at the smallest permitted side count.
   const extent = radius / Math.cos(Math.PI / (definition?.min ?? sides)) * 1.18;
   const geometry = {
-    title: optionalText(input.title, "圆与正多边形的周长夹逼", `${path}.title`),
+    title: optionalText(input.title, compileText(plan, "圆与正多边形的周长夹逼"), `${path}.title`),
     axes: { x: { min: -extent, max: extent, label: "x" }, y: { min: -extent, max: extent, label: "y" }, equal_scale: true },
     points: [{ as: "center", x: 0, y: 0, label: "O" }],
     circles: [{ as: "circle", center: "center", radius, label: `r = ${radius}` }],
     regular_polygons: [
-      { as: "inscribed", center: "center", radius, sides, relation: "inscribed", tone: "primary", label: "内接正多边形", show_measurements: true },
-      { as: "circumscribed", center: "center", radius, sides, relation: "circumscribed", tone: "accent", label: "外切正多边形", show_measurements: true },
+      { as: "inscribed", center: "center", radius, sides, relation: "inscribed", tone: "primary", label: compileText(plan, "内接正多边形"), show_measurements: true },
+      { as: "circumscribed", center: "center", radius, sides, relation: "circumscribed", tone: "accent", label: compileText(plan, "外切正多边形"), show_measurements: true },
     ],
-    caption: "绿色内接周长 < 圆周长 < 橙色外切周长。除以直径 2r：n sin(π/n) < π < n tan(π/n)。显示值为近似值；边数增加时上下界共同逼近 π。",
+    caption: compileText(plan, "绿色内接周长 < 圆周长 < 橙色外切周长。除以直径 2r：n sin(π/n) < π < n tan(π/n)。显示值为近似值；边数增加时上下界共同逼近 π。"),
     ...(number ? { bindings: [
       { target: "inscribed.sides", expression: `round(${variableAlias(number)})` },
       { target: "circumscribed.sides", expression: `round(${variableAlias(number)})` },
@@ -647,7 +648,7 @@ function compileCircleAndArc(
     ? Math.max(Math.abs(radiusDefinition.min), Math.abs(radiusDefinition.max))
     : radius;
   const geometry: Record<string, unknown> = {
-    title: optionalText(input.title, "圆、圆心角与圆弧", `${path}.title`),
+    title: optionalText(input.title, compileText(plan, "圆、圆心角与圆弧"), `${path}.title`),
     axes: {
       x: { min: -maximumRadius * 1.25, max: maximumRadius * 1.25, label: "x" },
       y: { min: -maximumRadius * 1.25, max: maximumRadius * 1.25, label: "y" },
@@ -663,9 +664,9 @@ function compileCircleAndArc(
         ...(angleVariable ? { interaction: { kind: "angle_control", variable: angleVariable, center: "center" } } : {}),
       },
     ],
-    circles: [{ as: "circle", center: "center", radius, label: radiusVariable ? "半径 r" : `r = ${radius}` }],
+    circles: [{ as: "circle", center: "center", radius, label: radiusVariable ? compileText(plan, "半径 r") : `r = ${radius}` }],
     segments: [{ as: "radius", from: "center", to: "moving-point", style: "solid" }],
-    arcs: [{ as: "arc", center: "center", radius, start_angle: 0, end_angle: angle, label: "圆弧" }],
+    arcs: [{ as: "arc", center: "center", radius, start_angle: 0, end_angle: angle, label: compileText(plan, "圆弧") }],
     ...((angleVariable || radiusVariable) ? {
       bindings: [
         ...(angleExpression ? [
@@ -711,17 +712,17 @@ function compileSpringAndMass(
   const plotPhaseMin = phaseDefinition ? phaseDefinition.min * phaseScale : 0;
   const plotPhaseMax = phaseDefinition ? phaseDefinition.max * phaseScale : Math.PI * 2;
   const geometry: Record<string, unknown> = {
-    title: optionalText(input.title, "弹簧振子的往复运动", `${path}.title`),
-    axes: { x: { min: -1.5, max: 1.5, label: "位移" }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
+    title: optionalText(input.title, compileText(plan, "弹簧振子的往复运动"), `${path}.title`),
+    axes: { x: { min: -1.5, max: 1.5, label: compileText(plan, "位移") }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
     points: [
-      { as: "anchor", x: -1.25, y: 0, label: "固定端" },
-      { as: "equilibrium", x: 0, y: 0, label: "平衡位置" },
-      { as: "mass", x: Math.cos(phase), y: 0, label: "物体" },
+      { as: "anchor", x: -1.25, y: 0, label: compileText(plan, "固定端") },
+      { as: "equilibrium", x: 0, y: 0, label: compileText(plan, "平衡位置") },
+      { as: "mass", x: Math.cos(phase), y: 0, label: compileText(plan, "物体") },
       { as: "force-tip", x: Math.cos(phase) * 0.5, y: 0, visible: false },
     ],
     segments: [
       { as: "spring", from: "anchor", to: "mass", style: "solid" },
-      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: "回复力" },
+      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: compileText(plan, "回复力") },
     ],
     ...(variable ? {
       bindings: [
@@ -731,10 +732,10 @@ function compileSpringAndMass(
     } : {}),
   };
   const plotContent: Record<string, unknown> = {
-    title: "位移随相位变化",
-    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: "相位" }, y: { min: -1.2, max: 1.2, label: "位移" } },
+    title: compileText(plan, "位移随相位变化"),
+    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: compileText(plan, "相位") }, y: { min: -1.2, max: 1.2, label: compileText(plan, "位移") } },
     curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
-    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: "当前状态" }],
+    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: compileText(plan, "当前状态") }],
     ...(variable ? {
       bindings: [
         { target: "moving-point.x", expression: phaseExpression },
@@ -746,8 +747,8 @@ function compileSpringAndMass(
     actions: [
       { do: "write", as: motion, kind: "geometry", role, content: geometry, place: placement },
       { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: motion, gap: "normal" } },
-      { do: "connect", as: `${base}-link`, from: motion, to: plot, relation: "same_state", label: "同一时刻的位移" },
-      { do: "group", as: base, role, label: "弹簧运动与函数图像", members: [motion, plot] },
+      { do: "connect", as: `${base}-link`, from: motion, to: plot, relation: "same_state", label: compileText(plan, "同一时刻的位移") },
+      { do: "group", as: base, role, label: compileText(plan, "弹簧运动与函数图像"), members: [motion, plot] },
     ],
     whole: base,
     parts: new Map([
@@ -773,22 +774,22 @@ function compileCubeWithSection(
   const height = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
   const variable = number ? variableAlias(number) : undefined;
   const sceneContent: Record<string, unknown> = {
-    title: optionalText(input.title, "正方体、顶点、棱、面与截面", `${path}.title`),
-    fallback: "一个中心在原点、边长为 2 的正方体，标出了顶点、棱、面和水平截面。",
+    title: optionalText(input.title, compileText(plan, "正方体、顶点、棱、面与截面"), `${path}.title`),
+    fallback: compileText(plan, "一个中心在原点、边长为 2 的正方体，标出了顶点、棱、面和水平截面。"),
     axes: true,
     camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.cube_with_section },
     objects: [{
-      as: "solid", kind: "box", label: "正方体", color: "teal",
+      as: "solid", kind: "box", label: compileText(plan, "正方体"), color: "teal",
       center: { x: 0, y: 0, z: 0 }, size: { x: 2, y: 2, z: 2 },
     }],
     sections: [{
       as: "section", axis: "z", value: height, targets: ["solid"],
-      display: "plane_and_intersection", label: "水平截面", color: "orange",
+      display: "plane_and_intersection", label: compileText(plan, "水平截面"), color: "orange",
     }],
     highlights: [
-      { as: "vertex", kind: "point", points: [{ x: -1, y: -1, z: 1 }], label: "顶点", color: "red" },
-      { as: "edge", kind: "edge", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }], label: "棱", color: "orange" },
-      { as: "face", kind: "face", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 }], label: "面", color: "purple" },
+      { as: "vertex", kind: "point", points: [{ x: -1, y: -1, z: 1 }], label: compileText(plan, "顶点"), color: "red" },
+      { as: "edge", kind: "edge", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }], label: compileText(plan, "棱"), color: "orange" },
+      { as: "face", kind: "face", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 }], label: compileText(plan, "面"), color: "purple" },
     ],
     ...(variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}),
   };
@@ -828,8 +829,8 @@ function compileFunctionSurface(
   const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : optionalNumber(input.section_value, 1, `${path}.section_value`);
   const variable = number ? variableAlias(number) : undefined;
   const sceneContent: Record<string, unknown> = {
-    title: optionalText(input.title, "函数曲面与截面", `${path}.title`),
-    fallback: `函数曲面 z=${expression} 与可变截面。`,
+    title: optionalText(input.title, compileText(plan, "函数曲面与截面"), `${path}.title`),
+    fallback: compileText(plan, "函数曲面 z={{v0}} 与可变截面。", { v0: expression }),
     axes: true,
     camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.function_surface_with_section },
     objects: [{
@@ -838,7 +839,7 @@ function compileFunctionSurface(
     }],
     sections: [{
       as: "section", axis, value: sectionValue, targets: ["surface"],
-      display: "plane_and_intersection", label: "截面", color: "orange",
+      display: "plane_and_intersection", label: compileText(plan, "截面"), color: "orange",
     }],
     ...(variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}),
   };
@@ -896,14 +897,14 @@ function compileImplicitSurface(
   const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
   const variable = number ? variableAlias(number) : undefined;
   const sceneContent: Record<string, unknown> = {
-    title: optionalText(input.title, "隐式曲面与截面", `${path}.title`),
-    fallback: `隐式曲面 ${expression}=${level} 与可变轴向截面。`,
+    title: optionalText(input.title, compileText(plan, "隐式曲面与截面"), `${path}.title`),
+    fallback: compileText(plan, "隐式曲面 {{v0}}={{v1}} 与可变轴向截面。", { v0: expression, v1: level }),
     axes: true,
     camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.implicit_surface_with_section },
     objects: [surface],
     sections: [{
       as: "section", axis, value: sectionValue, targets: ["surface"],
-      display: "plane_and_intersection", label: "截面", color: "orange",
+      display: "plane_and_intersection", label: compileText(plan, "截面"), color: "orange",
     }],
     ...(variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}),
   };
@@ -949,14 +950,14 @@ function compileCoordinateCircle(
     : radiusDefinition ? Math.max(Math.abs(radiusDefinition.min), Math.abs(radiusDefinition.max)) : radius;
   const extent = maximumRadius * 1.5;
   const geometry = {
-    title: optionalText(input.title, "坐标系中的圆", `${path}.title`),
+    title: optionalText(input.title, compileText(plan, "坐标系中的圆"), `${path}.title`),
     axes: {
       x: { min: centerX - extent, max: centerX + extent, label: "x" },
       y: { min: centerY - extent, max: centerY + extent, label: "y" },
       equal_scale: true,
     },
     points: [{ as: "center", x: centerX, y: centerY, label: `(${centerX}, ${centerY})` }],
-    circles: [{ as: "circle", center: "center", radius, label: variable ? "半径 r" : `r = ${radius}` }],
+    circles: [{ as: "circle", center: "center", radius, label: variable ? compileText(plan, "半径 r") : `r = ${radius}` }],
     ...(variable ? { bindings: [{ target: "circle.radius", expression: formula ? replaceIdentifier(formula, "n1", variable) : variable,
       ...(formula ? { allow_zero: true, label: { prefix: "r = ", precision: 2 } } : {}) }] } : {}),
   };
@@ -1058,11 +1059,11 @@ function compileRectangleUnitSquareArray(
   }
 
   const geometry = {
-    title: optionalText(input.title, "单位正方形铺成长方形", `${path}.title`),
-    caption: "每个小方格面积为 1 平方单位；每行方格数 × 行数 = 方格总数 = 长方形面积。",
+    title: optionalText(input.title, compileText(plan, "单位正方形铺成长方形"), `${path}.title`),
+    caption: compileText(plan, "每个小方格面积为 1 平方单位；每行方格数 × 行数 = 方格总数 = 长方形面积。"),
     axes: {
-      x: { min: -0.75, max: maximumColumns + 0.75, label: "每行方格数（长）" },
-      y: { min: -0.75, max: maximumRows + 0.75, label: "行数（宽）" },
+      x: { min: -0.75, max: maximumColumns + 0.75, label: compileText(plan, "每行方格数（长）") },
+      y: { min: -0.75, max: maximumRows + 0.75, label: compileText(plan, "行数（宽）") },
       equal_scale: true,
     },
     points,
@@ -1075,7 +1076,7 @@ function compileRectangleUnitSquareArray(
       {
         as: "unit-square",
         points: ["unit-bottom-left", "unit-bottom-right", "unit-top-right", "unit-top-left"],
-        label: "1 平方单位",
+        label: compileText(plan, "1 平方单位"),
         tone: "accent",
       },
     ],
@@ -1299,8 +1300,8 @@ function compileCircleArea(
       );
     }
     actions.push({do:"write",as:id,kind:"geometry",role,place:panel===0?placement:{relation:"below",anchor:base,gap:"normal"},content:{
-      title:`${n} 等分圆的面积重排`,
-      caption:`半径 r=${r}；每块均为真实扇形，重排面积不变。有限等分的边缘仍弯曲；等分越细，底趋近 πr，高趋近 r，面积为 πr²。`,
+      title:compileText(plan, "{{v0}} 等分圆的面积重排", { v0: n }),
+      caption:compileText(plan, "半径 r={{v0}}；每块均为真实扇形，重排面积不变。有限等分的边缘仍弯曲；等分越细，底趋近 πr，高趋近 r，面积为 πr²。", { v0: r }),
       axes:{x:{min:-r*1.3,max:Math.PI*r+r},y:{min:-r*1.3,max:r*1.6},equal_scale:true},
       points,arcs,...(bindings.length?{bindings}:{}),
     }});
@@ -1313,18 +1314,18 @@ function compileProcessDiagram(
   content: LessonPlanVisualContent,
   role: string,
   placement: ReturnType<typeof place>,
-  _plan: LessonPlan,
+  plan: LessonPlan,
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "steps"], path);
-  const steps = optionalStringArray(input.steps, ["开始", "观察变化", "得到结论"], `${path}.steps`);
+  const steps = optionalStringArray(input.steps, [compileText(plan, "开始"), compileText(plan, "观察变化"), compileText(plan, "得到结论")], `${path}.steps`);
   const elements = steps.map((label, index) => ({ as: `step-${pad(index + 1)}`, label }));
   const edges = steps.slice(1).map((_label, index) => ({
     as: `edge-${pad(index + 1)}`,
     from: `step-${pad(index + 1)}`,
     to: `step-${pad(index + 2)}`,
-    label: "下一步",
+    label: compileText(plan, "下一步"),
   }));
   const first = `${base}#step-01`;
   const last = `${base}#step-${pad(steps.length)}`;
@@ -1332,7 +1333,7 @@ function compileProcessDiagram(
   return {
     actions: [{
       do: "write", as: base, kind: "diagram", role,
-      content: { title: optionalText(input.title, "过程图", `${path}.title`), elements, edges },
+      content: { title: optionalText(input.title, compileText(plan, "过程图"), `${path}.title`), elements, edges },
       place: placement,
     }],
     whole: base,
@@ -1547,10 +1548,10 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
       );
       if (activity.value !== original) {
         const value = Number(activity.value.toPrecision(12));
-        const label = definition.label?.trim() || "数值";
+        const label = definition.label?.trim() || compileText(plan, "数值");
         const unit = definition.unit?.trim();
-        activity.prompt = `请把${label}调到 ${value}${unit ? ` ${unit}` : ""}。`;
-        activity.success_message = `完成，${label}已经调到 ${value}${unit ? ` ${unit}` : ""}。`;
+        activity.prompt = compileText(plan, "请把{{v0}}调到 {{v1}}{{v2}}。", { v0: label, v1: value, v2: unit ? ` ${unit}` : "" });
+        activity.success_message = compileText(plan, "完成，{{v0}}已经调到 {{v1}}{{v2}}。", { v0: label, v1: value, v2: unit ? ` ${unit}` : "" });
       }
     }
   }
@@ -1604,6 +1605,7 @@ function compilePlainContent(
 export function compileLessonPlan(value: unknown, options: CompileLessonPlanOptions = {}): CompiledLessonPlan {
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
+  setLessonTextLanguage(plan, options.language);
   normalizePlotInputInstructions(plan);
   validateTeachingClaims(plan);
   normalizeProgramOwnedNumberRanges(plan);
@@ -1680,7 +1682,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               actions.push({
                 do: "focus",
                 targets: [existing.whole],
-                intent: "继续观察已有的同一画面",
+                intent: compileText(plan, "继续观察已有的同一画面"),
                 ...actionWhen(item.timing),
               });
             } else {

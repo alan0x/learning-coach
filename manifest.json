@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -56,7 +56,7 @@
           },
           "language": {
             "type": "string",
-            "description": "Lesson language, normally zh-CN."
+            "description": "Language selected by the host for this lesson, for example zh-CN or en-US. Use it for every student-facing title, narration, label, hint, feedback, and clarification."
           },
           "tutor_context": {
             "type": "string",
@@ -179,6 +179,7 @@
         "properties": {
           "capabilities": { "type": "array", "items": { "type": "string", "enum": ["board_writing"] }, "maxItems": 1 },
           "turn_id": { "type": "string" },
+          "language": { "type": "string", "description": "Host-selected output language, e.g. zh-CN or en-US." },
           "learner_request": { "type": "string" },
           "source": {
             "type": "object",
@@ -567,6 +568,7 @@
           },
           "turn_id": { "type": "string" },
           "learner_request": { "type": "string" },
+          "language": { "type": "string", "description": "Host-selected output language, e.g. zh-CN or en-US. Preserve recognized source text." },
           "source": { "type": "object" },
           "content_hint": {
             "type": "string",

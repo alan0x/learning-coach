@@ -99,6 +99,7 @@ interface SelectionBoardTargetRef {
 }
 
 interface SelectionToolInput {
+  language?: string;
   capabilities?: string[];
   turn_id: string;
   learner_request: string;
@@ -652,6 +653,7 @@ export function parseSelectionToolInput(raw: string): SelectionToolInput {
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: truncate(requireNonEmptyString(input.learner_request, "learner_request"))!,
+    ...(typeof input.language === "string" ? { language: truncate(input.language) } : {}),
     ...(deliveryMode ? { delivery_mode: deliveryMode } : {}),
     capabilities,
     source: {
@@ -2217,6 +2219,11 @@ export function selectionSystemPrompt(toolId: SelectionToolInput["tool_id"]): st
 }
 
 export function selectionRequestSystemPrompt(input: SelectionToolInput): string {
+  const base = selectionRequestBaseSystemPrompt(input);
+  return /^en(?:-|$)/i.test(input.language ?? "") ? `${base}\nOutput language: English. Write every student-facing title, explanation, hint, feedback, and board annotation in English. Preserve formulas, identifiers, and original quoted or recognized text.` : base;
+}
+
+function selectionRequestBaseSystemPrompt(input: SelectionToolInput): string {
   if (!input.capabilities?.includes("board_writing") || !["custom-question", "check-and-suggest"].includes(input.tool_id)) {
     return selectionSystemPrompt(input.tool_id);
   }

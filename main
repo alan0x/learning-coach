@@ -9050,6 +9050,7 @@ function parseSelectionToolInput(raw) {
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: truncate(requireNonEmptyString(input.learner_request, "learner_request")),
+    ...typeof input.language === "string" ? { language: truncate(input.language) } : {},
     ...deliveryMode ? { delivery_mode: deliveryMode } : {},
     capabilities,
     source: {
@@ -10347,6 +10348,11 @@ function selectionSystemPrompt(toolId) {
 ${toolId === "custom-question" ? SELECTION_CUSTOM_QUESTION_SYSTEM_PROMPT : SELECTION_VISUALIZATION_SYSTEM_PROMPT}`;
 }
 function selectionRequestSystemPrompt(input) {
+  const base = selectionRequestBaseSystemPrompt(input);
+  return /^en(?:-|$)/i.test(input.language ?? "") ? `${base}
+Output language: English. Write every student-facing title, explanation, hint, feedback, and board annotation in English. Preserve formulas, identifiers, and original quoted or recognized text.` : base;
+}
+function selectionRequestBaseSystemPrompt(input) {
   if (!input.capabilities?.includes("board_writing") || !["custom-question", "check-and-suggest"].includes(input.tool_id)) {
     return selectionSystemPrompt(input.tool_id);
   }
