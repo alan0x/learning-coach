@@ -179,6 +179,7 @@
         "properties": {
           "capabilities": { "type": "array", "items": { "type": "string", "enum": ["board_writing"] }, "maxItems": 1 },
           "turn_id": { "type": "string" },
+          "language": { "type": "string", "description": "Host-selected output language, e.g. zh-CN or en-US." },
           "learner_request": { "type": "string" },
           "source": {
             "type": "object",
@@ -567,6 +568,7 @@
           },
           "turn_id": { "type": "string" },
           "learner_request": { "type": "string" },
+          "language": { "type": "string", "description": "Host-selected output language, e.g. zh-CN or en-US. Preserve recognized source text." },
           "source": { "type": "object" },
           "content_hint": {
             "type": "string",

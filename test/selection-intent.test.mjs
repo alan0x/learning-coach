@@ -21,3 +21,14 @@ test("explanation and checking retain their compact, non-visual prompt", () => {
   assert.equal(selectionSystemPrompt("check-and-suggest"), explanation);
   assert.doesNotMatch(explanation, /implicit_surface/u);
 });
+
+test("selection output language never changes recognized source or execution instructions", async () => {
+  const { selectionRequestSystemPrompt } = await import("../main");
+  const request = { tool_id: "explain", language: "en-US" };
+  const english = selectionRequestSystemPrompt(request);
+  const legacy = selectionRequestSystemPrompt({ tool_id: "explain" });
+  assert.ok(english.startsWith(legacy));
+  assert.match(english, /Output language: English/);
+  assert.match(english, /Preserve formulas, identifiers, and original quoted or recognized text/);
+  assert.equal(selectionRequestSystemPrompt({ ...request, language: "zh-CN" }), legacy);
+});
