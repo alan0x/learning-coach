@@ -23,6 +23,23 @@ import {
 } from "./json-stream.js";
 
 const TOOL_NAME = "oll_generate_lesson";
+import {
+  INK_TO_MATH_SCHEMA,
+  OCTO_QUESTION_SCHEMA,
+  REVIEW_SCHEMA,
+  TEACH_INK_TO_MATH_TOOL,
+  TEACH_OCTO_QUESTION_TOOL,
+  TEACH_REVIEW_TOOL,
+  inkToMathPrompts,
+  octoQuestionPrompts,
+  parseInkToMath,
+  parseInkToMathInput,
+  parseOctoQuestion,
+  parseOctoQuestionInput,
+  parseReview,
+  parseReviewInput,
+  reviewPrompts,
+} from "./learner-teaching.js";
 const SELECTION_TOOL_NAME = "oll_enhance_selection";
 const SELECTION_CLASSIFICATION_TOOL_NAME = "oll_classify_selection";
 const DEFAULT_MODEL = "gemini-3.6-flash";
@@ -241,7 +258,10 @@ export interface StructuredModelRequest {
     | "selection-enhancement"
     | "selection-classification"
     | "topic-analysis-search"
-    | "topic-analysis-result";
+    | "topic-analysis-result"
+    | "teach-octo-question"
+    | "teach-ink-to-math"
+    | "teach-review";
   turnId: string;
   systemPrompt: string;
   prompt: string;
@@ -2264,7 +2284,7 @@ function selectionOutputPath(input: SelectionToolInput): string {
 
 async function workspaceImageMedia(
   relativePath: string | undefined,
-  fieldName: "selection_media" | "camera_media",
+  fieldName: "selection_media" | "camera_media" | "ink_media",
 ): Promise<StructuredModelRequest["media"]> {
   if (!relativePath) return undefined;
   const sessionWorkspace = resolve(
@@ -2788,17 +2808,47 @@ async function runTopicAnalysis(rawInput: string, startedAt: number): Promise<vo
   if (!submitted.recorded) process.exitCode = 1;
 }
 
+const TEACH_TOOLS: string[] = [TEACH_OCTO_QUESTION_TOOL, TEACH_INK_TO_MATH_TOOL, TEACH_REVIEW_TOOL];
+
+/** Octo's question, a handwritten formula as LaTeX, or the lesson review, for a learner recording a lesson. */
+async function runTeachTool(
+  client: StructuredModelClient,
+  tool: string,
+  rawInput: string,
+): Promise<{ label: StructuredModelRequest["label"]; metadata: Record<string, unknown> }> {
+  if (tool === TEACH_OCTO_QUESTION_TOOL) {
+    const input = parseOctoQuestionInput(rawInput);
+    const raw = await callStructuredModel(client, {
+      label: "teach-octo-question", turnId: input.turn_id, maxTokens: Math.min(client.maxTokens, 512),
+      responseSchema: OCTO_QUESTION_SCHEMA, ...octoQuestionPrompts(input),
+    });
+    return { label: "teach-octo-question", metadata: { teach_octo_question: parseOctoQuestion(raw) } };
+  }
+  if (tool === TEACH_INK_TO_MATH_TOOL) {
+    const input = parseInkToMathInput(rawInput);
+    const media = await workspaceImageMedia(input.ink_media, "ink_media");
+    if (!media) throw new Error("Ink to math requires an image");
+    const raw = await callStructuredModel(client, {
+      label: "teach-ink-to-math", turnId: input.turn_id, maxTokens: Math.min(client.maxTokens, 512),
+      responseSchema: INK_TO_MATH_SCHEMA, media, ...inkToMathPrompts(input),
+    });
+    return { label: "teach-ink-to-math", metadata: { teach_ink_to_math: parseInkToMath(raw) } };
+  }
+  const input = parseReviewInput(rawInput);
+  const raw = await callStructuredModel(client, {
+    label: "teach-review", turnId: input.turn_id, maxTokens: Math.min(client.maxTokens, 2_048),
+    responseSchema: REVIEW_SCHEMA, ...reviewPrompts(input),
+  });
+  return { label: "teach-review", metadata: { teach_review: parseReview(raw, input) } };
+}
+
 async function main(): Promise<void> {
   const startedAt = Date.now();
   const invokedTool = process.argv[2];
   try {
-    if (invokedTool !== TOOL_NAME
-      && invokedTool !== SELECTION_TOOL_NAME
-      && invokedTool !== SELECTION_CLASSIFICATION_TOOL_NAME
-      && invokedTool !== TOPIC_ANALYSIS_TOOL_NAME) {
-      throw new Error(
-        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}', '${SELECTION_TOOL_NAME}', '${SELECTION_CLASSIFICATION_TOOL_NAME}', or '${TOPIC_ANALYSIS_TOOL_NAME}'`,
-      );
+    const tools = [TOOL_NAME, SELECTION_TOOL_NAME, SELECTION_CLASSIFICATION_TOOL_NAME, TOPIC_ANALYSIS_TOOL_NAME, ...TEACH_TOOLS];
+    if (!invokedTool || !tools.includes(invokedTool)) {
+      throw new Error(`Unknown tool '${invokedTool ?? ""}'. Expected one of: ${tools.join(", ")}`);
     }
     const chunks: Buffer[] = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
@@ -2810,6 +2860,13 @@ async function main(): Promise<void> {
     const traceTurnId = traceTurnIdFromRawInput(rawInput);
     if (traceTurnId) beginStageTrace(traceTurnId, invokedTool, startedAt);
     const route = resolveLessonModelRoute();
+    if (TEACH_TOOLS.includes(invokedTool)) {
+      const client = await createStructuredModelClient(route);
+      const { label, metadata } = await runTeachTool(client, invokedTool, rawInput);
+      stageLog({ stage: label, turn_id: traceTurnId, status: "completed", elapsed_ms: Date.now() - startedAt });
+      emit({ success: true, output: "Learner teaching help generated.", structured_metadata: metadata });
+      return;
+    }
     if (invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME) {
       const input = parseSelectionClassificationInput(rawInput);
       const client = await createStructuredModelClient(route);

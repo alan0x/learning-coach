@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.0 - 2026-10-31
+
+- Three sync actions for a learner recording their own lesson (surface `learning.teach`), each a single structured request: `learning.teach.octo-question` (Octo, as a curious student, asks one short question about the card just recorded), `learning.teach.ink-to-math` (a handwritten formula as KaTeX LaTeX exactly as written; unreadable handwriting is reported, link-capable commands are refused) and `learning.teach.review` (card-by-card feedback: math topics tell a slip from a misconception, topics that are not math are judged on clarity only, and a review that skips a card is refused). Replies are validated before they leave the skill; existing actions are unchanged.
+
 ## 0.22.0 - 2026-10-30
 
 - Lessons and selection assistance follow the host's `language` (`zh-CN` or `en-US`). For English, every existing generation call (first request, later sections, practice, selection) carries an output-language rule; no translation request is added and Chinese requests are byte-identical to 0.21.0. Compiler-owned fallback text (titles, labels, captions, hints, prompts and learner responses) uses the lesson language; numbers, formulas and construction checks are unchanged. The same narrow teaching-claim guards now also read English narration. `learning.selection.enhance` declares `language`, so hosts send it only to this version or later.
