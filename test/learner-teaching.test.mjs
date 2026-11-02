@@ -85,7 +85,7 @@ test("the review covers every card and tells a slip from a misconception", async
   const review = { cards: [
     { key: "card-1", status: "good", kind: "none", message: "Clear points to start from." },
     { key: "card-2", status: "check", kind: "slip", message: "Your fraction shows 6 over 3, which is 2, but you said 3 over 6. Say rise over run: 6 over 3." },
-  ], overall: "Nearly there: fix how you read the fraction on card 2." };
+  ], overall: "Nearly there: fix how you read the fraction on card 2.", personal_details: [] };
   const outcome = await run("oll_teach_review", { turn_id: "t3", lesson, cards }, [review]);
   assert.equal(outcome.exitCode, 0, outcome.stderr);
   assert.deepEqual(outcome.result.structured_metadata.teach_review, review);
@@ -94,11 +94,30 @@ test("the review covers every card and tells a slip from a misconception", async
 
 test("a review that skips a card or judges facts in a topic that is not math is refused", async () => {
   const partial = await run("oll_teach_review", { turn_id: "t3", lesson, cards },
-    [{ cards: [{ key: "card-1", status: "good", kind: "none", message: "Good." }], overall: "Good." }]);
+    [{ cards: [{ key: "card-1", status: "good", kind: "none", message: "Good." }], overall: "Good.", personal_details: [] }]);
   assert.equal(partial.result?.success, false);
   const other = { ...lesson, topic: "Dinosaurs", topic_type: "other" };
   const factual = await run("oll_teach_review", { turn_id: "t3", lesson: other, cards: cards.slice(0, 1) },
-    [{ cards: [{ key: "card-1", status: "check", kind: "misconception", message: "T. rex had small teeth." }], overall: "Check facts." }]);
+    [{ cards: [{ key: "card-1", status: "check", kind: "misconception", message: "T. rex had small teeth." }], overall: "Check facts.", personal_details: [] }]);
   assert.equal(factual.result?.success, false);
   assert.match(systemText(factual.prompts[0]), /never on whether facts are true/);
+});
+
+test("the review lists personal details the child said, only as the child's own words on that card", async () => {
+  const said = [{ ...cards[0], said: "Hi, I'm Jordan from Lincoln Elementary. Point A is at 1, 2." }, cards[1]];
+  const review = { cards: [
+    { key: "card-1", status: "good", kind: "none", message: "Clear points." },
+    { key: "card-2", status: "good", kind: "none", message: "Nice." },
+  ], overall: "Good lesson.", personal_details: [
+    { key: "card-1", quote: "Jordan", kind: "name" },
+    { key: "card-1", quote: "Lincoln Elementary", kind: "school" },
+    { key: "card-2", quote: "Springfield", kind: "place" },
+  ] };
+  const outcome = await run("oll_teach_review", { turn_id: "t4", lesson, cards: said }, [review]);
+  assert.equal(outcome.exitCode, 0, outcome.stderr);
+  assert.deepEqual(outcome.result.structured_metadata.teach_review.personal_details, [
+    { key: "card-1", quote: "Jordan", kind: "name" },
+    { key: "card-1", quote: "Lincoln Elementary", kind: "school" },
+  ]);
+  assert.match(systemText(outcome.prompts[0]), /personal_details/);
 });
