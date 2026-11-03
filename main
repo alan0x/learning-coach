@@ -8794,9 +8794,22 @@ var REVIEW_SCHEMA = {
         required: ["key", "status", "kind", "message"]
       }
     },
-    overall: { type: "string" }
+    overall: { type: "string" },
+    personal_details: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          key: { type: "string" },
+          quote: { type: "string" },
+          kind: { type: "string", enum: ["name", "school", "place", "age", "contact", "other"] }
+        },
+        required: ["key", "quote", "kind"]
+      }
+    }
   },
-  required: ["cards", "overall"]
+  required: ["cards", "overall", "personal_details"]
 };
 var SAFETY = "The learner is a child. Never ask for or mention personal details (names, school, home, age, contact). Never include links. Write only in the lesson language.";
 function octoQuestionPrompts(input) {
@@ -8836,6 +8849,7 @@ function reviewPrompts(input) {
       kinds,
       "Mark a card 'good' with kind 'none' when nothing needs fixing, with one short encouraging sentence about what works.",
       "Return one review for every card, in order, with each message at most 40 words, and one overall sentence.",
+      "The lesson will be shared, so also list in personal_details every personal detail in what the child said: a real person's name (theirs, a friend's, a teacher's), their school, town or address, their age or grade, or contact details. Give the card key and the exact words as said (copied, not paraphrased). Do not list the lesson's own content, famous people, or made-up names in a word problem. Never repeat these details in messages or overall.",
       SAFETY
     ].join(" "),
     prompt: JSON.stringify({ lesson: input.lesson, cards: input.cards })
@@ -8880,7 +8894,23 @@ function parseReview(raw, input) {
   });
   const expected = input.cards.map((card) => card.key);
   if (reviews.map((review) => review.key).join("|") !== expected.join("|")) throw new Error("the review must cover every card in order");
-  return { cards: reviews, overall: safeSentence(value.overall, "overall", 400) };
+  return { cards: reviews, overall: safeSentence(value.overall, "overall", 400), personal_details: parsePersonalDetails(value.personal_details, input) };
+}
+var DETAIL_KINDS = ["name", "school", "place", "age", "contact", "other"];
+function parsePersonalDetails(value, input) {
+  if (!Array.isArray(value)) throw new Error("personal_details must be a list");
+  const said = new Map(input.cards.map((card) => [card.key, card.said.toLowerCase()]));
+  const details = [];
+  value.forEach((entry, index) => {
+    const detail = object(entry, `personal_details[${index}]`);
+    const key = text(detail.key, `personal_details[${index}].key`, 64);
+    const quote = text(detail.quote, `personal_details[${index}].quote`, 200);
+    const kind = detail.kind;
+    if (!DETAIL_KINDS.includes(kind)) throw new Error(`personal_details[${index}].kind is invalid`);
+    if (!quote || !said.get(key)?.includes(quote.toLowerCase())) return;
+    if (!details.some((existing) => existing.key === key && existing.quote.toLowerCase() === quote.toLowerCase())) details.push({ key, quote, kind });
+  });
+  return details;
 }
 
 // src/main.ts

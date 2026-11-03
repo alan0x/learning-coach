@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.0 - 2026-11-01
+
+- `learning.teach.review` also returns `personal_details`: personal details the child said on each card (a real person's name, their school, town or address, age or grade, contact details) as the card key and the child's exact words, so the host can ask the child to remove them before the lesson is shared. A detail that is not the child's own words on that card is dropped. The review's messages still never repeat personal details. Other actions are unchanged.
+
 ## 0.23.0 - 2026-10-31
 
 - Three sync actions for a learner recording their own lesson (surface `learning.teach`), each a single structured request: `learning.teach.octo-question` (Octo, as a curious student, asks one short question about the card just recorded), `learning.teach.ink-to-math` (a handwritten formula as KaTeX LaTeX exactly as written; unreadable handwriting is reported, link-capable commands are refused) and `learning.teach.review` (card-by-card feedback: math topics tell a slip from a misconception, topics that are not math are judged on clarity only, and a review that skips a card is refused). Replies are validated before they leave the skill; existing actions are unchanged.
