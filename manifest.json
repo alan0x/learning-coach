@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -341,6 +341,168 @@
           "input": { "type": "object", "description": "Frozen analysis material from the Octos Learn history service." }
         }
       }
+    },
+    {
+      "name": "oll_teach_octo_question",
+      "description": "Ask one short question as Octo, a curious student, about the card a child just recorded in their own lesson. Never gives answers or asks for personal details.",
+      "concurrency_class": "exclusive",
+      "env": [
+        "OLL_PROVIDER",
+        "OCTOS_PROFILE_LLM_PROVIDER",
+        "OCTOS_PROFILE_LLM_MODEL",
+        "OCTOS_PROFILE_LLM_BASE_URL",
+        "OCTOS_PROFILE_LLM_API_TYPE",
+        "OCTOS_PROFILE_LLM_CONFIG_REVISION",
+        "VERTEX_SA_JSON",
+        "VERTEX_ACCESS_TOKEN",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_LOCATION",
+        "VERTEX_BASE_URL",
+        "GEMINI_API_KEY",
+        "GEMINI_BASE_URL",
+        "OLL_MODEL",
+        "OLL_TIMEOUT_MS",
+        "OLL_TOTAL_TIMEOUT_MS",
+        "OLL_MODEL_REQUEST_ATTEMPTS",
+        "OLL_THINKING_LEVEL",
+        "VERTEX_REQUEST_ATTEMPTS",
+        "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL",
+        "OCTOS_WORK_DIR",
+        "OCTOS_SESSION_WORKSPACE"
+      ],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "turn_id": {
+            "type": "string"
+          },
+          "lesson": {
+            "type": "object"
+          },
+          "cards": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "object"
+            }
+          },
+          "card_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "turn_id",
+          "lesson",
+          "cards",
+          "card_key"
+        ]
+      }
+    },
+    {
+      "name": "oll_teach_ink_to_math",
+      "description": "Transcribe a child's handwritten math, exactly as written, as KaTeX LaTeX for the child to confirm. Never solves or corrects it.",
+      "concurrency_class": "exclusive",
+      "env": [
+        "OLL_PROVIDER",
+        "OCTOS_PROFILE_LLM_PROVIDER",
+        "OCTOS_PROFILE_LLM_MODEL",
+        "OCTOS_PROFILE_LLM_BASE_URL",
+        "OCTOS_PROFILE_LLM_API_TYPE",
+        "OCTOS_PROFILE_LLM_CONFIG_REVISION",
+        "VERTEX_SA_JSON",
+        "VERTEX_ACCESS_TOKEN",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_LOCATION",
+        "VERTEX_BASE_URL",
+        "GEMINI_API_KEY",
+        "GEMINI_BASE_URL",
+        "OLL_MODEL",
+        "OLL_TIMEOUT_MS",
+        "OLL_TOTAL_TIMEOUT_MS",
+        "OLL_MODEL_REQUEST_ATTEMPTS",
+        "OLL_THINKING_LEVEL",
+        "VERTEX_REQUEST_ATTEMPTS",
+        "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL",
+        "OCTOS_WORK_DIR",
+        "OCTOS_SESSION_WORKSPACE"
+      ],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "turn_id": {
+            "type": "string"
+          },
+          "lesson": {
+            "type": "object"
+          },
+          "ink_media": {
+            "type": "string",
+            "description": "Workspace-local image path injected by the trusted skill action binding."
+          }
+        },
+        "required": [
+          "turn_id",
+          "lesson",
+          "ink_media"
+        ]
+      }
+    },
+    {
+      "name": "oll_teach_review",
+      "description": "Review a lesson a child recorded, card by card: math correctness for math topics (slip vs misconception), clarity only for other topics.",
+      "concurrency_class": "exclusive",
+      "env": [
+        "OLL_PROVIDER",
+        "OCTOS_PROFILE_LLM_PROVIDER",
+        "OCTOS_PROFILE_LLM_MODEL",
+        "OCTOS_PROFILE_LLM_BASE_URL",
+        "OCTOS_PROFILE_LLM_API_TYPE",
+        "OCTOS_PROFILE_LLM_CONFIG_REVISION",
+        "VERTEX_SA_JSON",
+        "VERTEX_ACCESS_TOKEN",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_LOCATION",
+        "VERTEX_BASE_URL",
+        "GEMINI_API_KEY",
+        "GEMINI_BASE_URL",
+        "OLL_MODEL",
+        "OLL_TIMEOUT_MS",
+        "OLL_TOTAL_TIMEOUT_MS",
+        "OLL_MODEL_REQUEST_ATTEMPTS",
+        "OLL_THINKING_LEVEL",
+        "VERTEX_REQUEST_ATTEMPTS",
+        "OLL_SELECTION_CLASSIFICATION_THINKING_LEVEL",
+        "OCTOS_WORK_DIR",
+        "OCTOS_SESSION_WORKSPACE"
+      ],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "turn_id": {
+            "type": "string"
+          },
+          "lesson": {
+            "type": "object"
+          },
+          "cards": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "turn_id",
+          "lesson",
+          "cards"
+        ]
+      }
     }
   ],
   "actions": [
@@ -629,6 +791,141 @@
       "binding": {
         "type": "tool",
         "tool": "oll_analyze_topics",
+        "input_mode": "single"
+      }
+    },
+    {
+      "id": "learning.teach.octo-question",
+      "label": "小章鱼提问",
+      "description": "孩子录完一张卡片后，小章鱼扮演好奇的学生提一个问题。",
+      "tags": [
+        "learning",
+        "teach"
+      ],
+      "surfaces": [
+        "learning.teach"
+      ],
+      "execution": "sync",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "turn_id": {
+            "type": "string"
+          },
+          "lesson": {
+            "type": "object"
+          },
+          "cards": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "object"
+            }
+          },
+          "card_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "turn_id",
+          "lesson",
+          "cards",
+          "card_key"
+        ]
+      },
+      "binding": {
+        "type": "tool",
+        "tool": "oll_teach_octo_question",
+        "input_mode": "single"
+      }
+    },
+    {
+      "id": "learning.teach.ink-to-math",
+      "label": "整理手写公式",
+      "description": "把孩子手写的数学原样转成排版公式，供孩子确认。",
+      "tags": [
+        "learning",
+        "teach"
+      ],
+      "surfaces": [
+        "learning.teach"
+      ],
+      "execution": "sync",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "turn_id": {
+            "type": "string"
+          },
+          "lesson": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "paths",
+          "turn_id",
+          "lesson"
+        ]
+      },
+      "binding": {
+        "type": "tool",
+        "tool": "oll_teach_ink_to_math",
+        "input_mode": "file_each",
+        "file_argument": "ink_media",
+        "file_materialization": "workspace_relative"
+      }
+    },
+    {
+      "id": "learning.teach.review",
+      "label": "检查学生讲的课",
+      "description": "按卡片检查孩子录好的课：数学主题检查正确性，其他主题只检查是否讲清楚。",
+      "tags": [
+        "learning",
+        "teach"
+      ],
+      "surfaces": [
+        "learning.teach"
+      ],
+      "execution": "sync",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "turn_id": {
+            "type": "string"
+          },
+          "lesson": {
+            "type": "object"
+          },
+          "cards": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "turn_id",
+          "lesson",
+          "cards"
+        ]
+      },
+      "binding": {
+        "type": "tool",
+        "tool": "oll_teach_review",
         "input_mode": "single"
       }
     }

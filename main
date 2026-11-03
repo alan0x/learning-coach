@@ -4337,7 +4337,7 @@ var require_core = __commonJS({
       errorsText(errors = this.errors, { separator = ", ", dataVar = "data" } = {}) {
         if (!errors || errors.length === 0)
           return "No errors";
-        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text, msg) => text + separator + msg);
+        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text2, msg) => text2 + separator + msg);
       }
       $dataMetaSchema(metaSchema, keywordsJsonPointers) {
         const rules = this.RULES.all;
@@ -8491,7 +8491,7 @@ function parseTopicAnalysisInput(raw) {
   }
   return { job_id: value.job_id, capability: value.capability, input };
 }
-var words = (text) => text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+var words = (text2) => text2.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 function loadTopicCatalog(directory = resolve(dirname(fileURLToPath(import.meta.url)), "data", "topic-catalog")) {
   const bytes = readFileSync(resolve(directory, "catalog.json"));
   const metadata = JSON.parse(readFileSync(resolve(directory, "metadata.json"), "utf8"));
@@ -8553,11 +8553,11 @@ var RESULT_RESPONSE_SCHEMA = {
   }
 };
 function parseModelJson(raw) {
-  const text = raw.trim();
-  const block = /^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i.exec(text);
+  const text2 = raw.trim();
+  const block = /^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i.exec(text2);
   let value;
   try {
-    value = JSON.parse(block ? block[1] : text);
+    value = JSON.parse(block ? block[1] : text2);
   } catch {
     throw new TopicAnalysisError("unparseable-analysis-result", "Model reply is not JSON");
   }
@@ -8682,13 +8682,205 @@ function completedObjectText(source, propertyName) {
   return void 0;
 }
 function completedJsonObjectProperty(source, propertyName) {
-  const text = completedObjectText(source, propertyName);
-  if (text === void 0) return void 0;
+  const text2 = completedObjectText(source, propertyName);
+  if (text2 === void 0) return void 0;
   try {
-    return JSON.parse(text);
+    return JSON.parse(text2);
   } catch {
     return void 0;
   }
+}
+
+// src/learner-teaching.ts
+var TEACH_OCTO_QUESTION_TOOL = "oll_teach_octo_question";
+var TEACH_INK_TO_MATH_TOOL = "oll_teach_ink_to_math";
+var TEACH_REVIEW_TOOL = "oll_teach_review";
+var TOPIC_TYPES = ["on_map_lit", "on_map_unlit", "math_off_map", "other"];
+function object(value, what) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${what} must be an object`);
+  return value;
+}
+function text(value, what, max = 4e3) {
+  if (typeof value !== "string") throw new Error(`${what} must be a string`);
+  const trimmed = value.trim();
+  if (trimmed.length > max) throw new Error(`${what} is too long`);
+  return trimmed;
+}
+function parseJson(raw, what) {
+  let value;
+  try {
+    value = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`${what} is not valid JSON: ${error.message}`);
+  }
+  return object(value, what);
+}
+function parseLesson(value) {
+  const lesson = object(value, "lesson");
+  const topicType = lesson.topic_type;
+  if (!TOPIC_TYPES.includes(topicType)) throw new Error("lesson.topic_type is invalid");
+  if (!Array.isArray(lesson.goals)) throw new Error("lesson.goals must be a list");
+  return {
+    language: text(lesson.language, "lesson.language", 32) || "en-US",
+    topic: text(lesson.topic, "lesson.topic", 200),
+    topic_type: topicType,
+    goals: lesson.goals.slice(0, 8).map((goal, index) => text(goal, `lesson.goals[${index}]`, 300))
+  };
+}
+function parseCards(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 8) throw new Error("cards must list one to eight cards");
+  return value.map((entry, index) => {
+    const card = object(entry, `cards[${index}]`);
+    if (!Array.isArray(card.board)) throw new Error(`cards[${index}].board must be a list`);
+    return {
+      key: text(card.key, `cards[${index}].key`, 64),
+      title: text(card.title, `cards[${index}].title`, 200),
+      said: text(card.said, `cards[${index}].said`, 2e3),
+      board: card.board.slice(0, 24).map((item, position) => text(item, `cards[${index}].board[${position}]`, 300))
+    };
+  });
+}
+function parseOctoQuestionInput(raw) {
+  const input = parseJson(raw, "Octo question input");
+  const cards = parseCards(input.cards);
+  const cardKey = text(input.card_key, "card_key", 64);
+  if (!cards.some((card) => card.key === cardKey)) throw new Error("card_key must name one of the cards");
+  return { turn_id: text(input.turn_id, "turn_id", 128), lesson: parseLesson(input.lesson), cards, card_key: cardKey };
+}
+function parseInkToMathInput(raw) {
+  const input = parseJson(raw, "Ink to math input");
+  const lesson = object(input.lesson, "lesson");
+  return {
+    turn_id: text(input.turn_id, "turn_id", 128),
+    lesson: { language: text(lesson.language, "lesson.language", 32) || "en-US" },
+    ink_media: text(input.ink_media, "ink_media", 512)
+  };
+}
+function parseReviewInput(raw) {
+  const input = parseJson(raw, "Review input");
+  return { turn_id: text(input.turn_id, "turn_id", 128), lesson: parseLesson(input.lesson), cards: parseCards(input.cards) };
+}
+var OCTO_QUESTION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: { question: { type: "string" } },
+  required: ["question"]
+};
+var INK_TO_MATH_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    latex: { type: "string" },
+    confidence: { type: "string", enum: ["high", "medium", "low"] },
+    readable: { type: "boolean" }
+  },
+  required: ["latex", "confidence", "readable"]
+};
+var REVIEW_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    cards: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          key: { type: "string" },
+          status: { type: "string", enum: ["good", "check"] },
+          kind: { type: "string", enum: ["none", "slip", "misconception", "unclear"] },
+          message: { type: "string" }
+        },
+        required: ["key", "status", "kind", "message"]
+      }
+    },
+    overall: { type: "string" }
+  },
+  required: ["cards", "overall"]
+};
+var SAFETY = "The learner is a child. Never ask for or mention personal details (names, school, home, age, contact). Never include links. Write only in the lesson language.";
+function octoQuestionPrompts(input) {
+  return {
+    systemPrompt: [
+      "You are Octo, a friendly octopus playing a curious student while a child teaches you a lesson card by card.",
+      "Ask exactly one short question (at most 25 words) about the card just recorded, the kind a curious classmate would ask, so the child explains a little more.",
+      "Do not state or hint at the answer, do not correct the child, do not praise at length, and do not ask about anything not on the cards.",
+      "For a topic that is not math, ask about what the child said, not about facts the child did not mention.",
+      SAFETY
+    ].join(" "),
+    prompt: JSON.stringify({ lesson: input.lesson, cards_so_far: input.cards, card_just_recorded: input.card_key })
+  };
+}
+function inkToMathPrompts(input) {
+  return {
+    systemPrompt: [
+      "Read only the handwritten math in the image and transcribe it as KaTeX-compatible LaTeX, exactly as written, including any mistakes.",
+      "Do not solve, simplify, complete or correct it. Use \\dfrac for stacked fractions.",
+      "If the handwriting is not math or cannot be read reliably, set readable to false, latex to an empty string and confidence to low."
+    ].join(" "),
+    prompt: JSON.stringify({ lesson_language: input.lesson.language, handwriting_image: "authoritative" })
+  };
+}
+function reviewPrompts(input) {
+  const scope = {
+    on_map_lit: "Check the math.",
+    on_map_unlit: "Check the math.",
+    math_off_map: "Check the math, but this topic is outside the course map: only flag errors you are certain of.",
+    other: "This topic is not math: comment only on clarity, never on whether facts are true, so use kind 'unclear' or 'none' only."
+  }[input.lesson.topic_type];
+  const kinds = input.lesson.topic_type === "other" ? "Mark a card 'check' with kind 'unclear' when the explanation is hard to follow, and say what to add." : "Mark a card 'check' with kind 'slip' when what the child said contradicts what the board shows (they wrote or graphed it correctly but said it wrong), 'misconception' when the method or result itself is wrong, or 'unclear' when the explanation skips a step. Say exactly what to fix, with the correct value.";
+  return {
+    systemPrompt: [
+      "You review a lesson a child recorded, card by card, and give kind, specific feedback the child can act on by re-recording a card.",
+      scope,
+      kinds,
+      "Mark a card 'good' with kind 'none' when nothing needs fixing, with one short encouraging sentence about what works.",
+      "Return one review for every card, in order, with each message at most 40 words, and one overall sentence.",
+      SAFETY
+    ].join(" "),
+    prompt: JSON.stringify({ lesson: input.lesson, cards: input.cards })
+  };
+}
+var LINK = /https?:\/\/|www\./i;
+function safeSentence(value, what, max) {
+  const sentence = text(value, what, max);
+  if (!sentence) throw new Error(`${what} is empty`);
+  if (LINK.test(sentence)) throw new Error(`${what} contains a link`);
+  return sentence;
+}
+function parseOctoQuestion(raw) {
+  const value = parseJson(raw, "Octo question");
+  return { question: safeSentence(value.question, "question", 240) };
+}
+var UNSAFE_LATEX = /\\(href|url|includegraphics|html\w*|class|style|data|def|newcommand|renewcommand|input|include)\b/i;
+function parseInkToMath(raw) {
+  const value = parseJson(raw, "Ink to math");
+  const confidence = value.confidence;
+  if (confidence !== "high" && confidence !== "medium" && confidence !== "low") throw new Error("confidence is invalid");
+  if (typeof value.readable !== "boolean") throw new Error("readable must be a boolean");
+  const latex = text(value.latex, "latex", 400);
+  if (UNSAFE_LATEX.test(latex)) throw new Error("latex uses a command that is not allowed");
+  if (value.readable && !latex) throw new Error("readable math needs latex");
+  return { latex: value.readable ? latex : "", confidence: value.readable ? confidence : "low", readable: value.readable };
+}
+function parseReview(raw, input) {
+  const value = parseJson(raw, "Review");
+  if (!Array.isArray(value.cards)) throw new Error("cards must be a list");
+  const reviews = value.cards.map((entry, index) => {
+    const card = object(entry, `cards[${index}]`);
+    const status = card.status;
+    const kind = card.kind;
+    if (status !== "good" && status !== "check") throw new Error(`cards[${index}].status is invalid`);
+    if (!["none", "slip", "misconception", "unclear"].includes(kind)) throw new Error(`cards[${index}].kind is invalid`);
+    if (status === "good" !== (kind === "none")) throw new Error(`cards[${index}] status and kind disagree`);
+    if (input.lesson.topic_type === "other" && (kind === "slip" || kind === "misconception")) {
+      throw new Error(`cards[${index}] judges facts in a topic that is not math`);
+    }
+    return { key: text(card.key, `cards[${index}].key`, 64), status, kind, message: safeSentence(card.message, `cards[${index}].message`, 400) };
+  });
+  const expected = input.cards.map((card) => card.key);
+  if (reviews.map((review) => review.key).join("|") !== expected.join("|")) throw new Error("the review must cover every card in order");
+  return { cards: reviews, overall: safeSentence(value.overall, "overall", 400) };
 }
 
 // src/main.ts
@@ -9193,14 +9385,14 @@ function geminiResponseContent(payload, provider) {
       `${label} response was truncated at maxOutputTokens`
     );
   }
-  const text = candidate.content?.parts?.map((part) => typeof part.text === "string" ? part.text : "").join("").trim();
-  if (!text) {
+  const text2 = candidate.content?.parts?.map((part) => typeof part.text === "string" ? part.text : "").join("").trim();
+  if (!text2) {
     throw new ToolExecutionError(
       providerErrorCode(provider, "RESPONSE_EMPTY"),
       `${label} response contains no JSON text (finishReason=${candidate.finishReason ?? "unknown"})`
     );
   }
-  return text;
+  return text2;
 }
 function structuredModelRequestBody(client, request, thinkingLevel) {
   const userParts = [{ text: request.prompt }];
@@ -9715,7 +9907,7 @@ async function probeStructuredModelSchema(client, schema, options = {}) {
   const startedAt = Date.now();
   const provider = modelProvider(client);
   try {
-    const text = await callStructuredModel(client, {
+    const text2 = await callStructuredModel(client, {
       label: options.label ?? "lesson-plan-outline",
       turnId: options.turnId ?? `provider-schema-probe-${Date.now()}`,
       systemPrompt: "Return exactly one minimal JSON value that satisfies the supplied response schema.",
@@ -9723,7 +9915,7 @@ async function probeStructuredModelSchema(client, schema, options = {}) {
       responseSchema: schema,
       maxTokens: options.maxTokens ?? Math.min(client.maxTokens, 4096)
     });
-    JSON.parse(text);
+    JSON.parse(text2);
     return {
       ok: true,
       provider,
@@ -9787,14 +9979,14 @@ async function readGeminiStructuredStream(response, startedAt, provider, onMiles
     const candidate = isRecord2(candidates[0]) ? candidates[0] : {};
     const candidateContent = isRecord2(candidate.content) ? candidate.content : {};
     const parts = Array.isArray(candidateContent.parts) ? candidateContent.parts : [];
-    const text = parts.map((part) => isRecord2(part) && typeof part.text === "string" ? part.text : "").join("");
-    if (text) {
+    const text2 = parts.map((part) => isRecord2(part) && typeof part.text === "string" ? part.text : "").join("");
+    if (text2) {
       chunks += 1;
       if (firstChunkMs === void 0) {
         firstChunkMs = Date.now() - startedAt;
         onMilestone?.("first-chunk", firstChunkMs);
       }
-      content += text;
+      content += text2;
       if (outlineCompletedMs === void 0 && completedJsonObjectProperty(content, "outline") !== void 0) {
         outlineCompletedMs = Date.now() - startedAt;
         onMilestone?.("outline-completed", outlineCompletedMs);
@@ -10495,7 +10687,7 @@ function parseSelectionModelResponse(raw, input) {
     throw new Error("interpretation_confidence is invalid");
   }
   const title = nonEmpty("title");
-  const text = nonEmpty("text");
+  const text2 = nonEmpty("text");
   const interpretationContent = reusableRecognition ? requireNonEmptyString(input.recognized_content, "recognized_content") : nonEmpty("interpretation_content");
   const items = Array.isArray(output.items) ? output.items.map((item, index) => requireNonEmptyString(item, `items[${index}]`)) : [];
   let response;
@@ -10558,7 +10750,7 @@ function parseSelectionModelResponse(raw, input) {
         kind: "plot",
         plot_kind: "explicit",
         title,
-        text,
+        text: text2,
         expression: route.expression,
         x_range: viewport.x,
         y_range: viewport.y
@@ -10570,7 +10762,7 @@ function parseSelectionModelResponse(raw, input) {
         kind: "plot",
         plot_kind: "implicit",
         title,
-        text,
+        text: text2,
         expression: route.expression,
         level: route.level,
         samples: 80,
@@ -10579,7 +10771,7 @@ function parseSelectionModelResponse(raw, input) {
       };
     }
     const samples = 12;
-    const object = route.kind === "surface" ? (() => {
+    const object2 = route.kind === "surface" ? (() => {
       const viewport = selectionSurfaceDomain(route.expression);
       return {
         as: "selected-function",
@@ -10600,13 +10792,13 @@ function parseSelectionModelResponse(raw, input) {
     return {
       kind: "scene3d",
       title,
-      text,
+      text: text2,
       content: {
         title,
-        fallback: text,
+        fallback: text2,
         axes: true,
         camera: { yaw: 0.65, pitch: 0.45, zoom: 1 },
-        objects: [object]
+        objects: [object2]
       }
     };
   };
@@ -10615,11 +10807,11 @@ function parseSelectionModelResponse(raw, input) {
       if (!boardWriting || !["check-and-suggest", "custom-question"].includes(input.tool_id)) {
         throw new Error("Client does not support board writing");
       }
-      const lines = text.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
-      if (!lines.length || lines.length > 8 || text.length > 500 || lines.some((line) => line.length > 160 || /[\u0000-\u0008\u000b-\u001f\u007f]/u.test(line))) {
+      const lines = text2.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
+      if (!lines.length || lines.length > 8 || text2.length > 500 || lines.some((line) => line.length > 160 || /[\u0000-\u0008\u000b-\u001f\u007f]/u.test(line))) {
         throw new Error("Board writing exceeds text budget");
       }
-      response = { kind: "board_writing", title, text, lines };
+      response = { kind: "board_writing", title, text: text2, lines };
     } else if (responseKind === "plot" || responseKind === "implicit_plot") {
       if (!visualizationRequested) {
         throw new Error(`${input.tool_id} cannot return a plot response`);
@@ -10639,14 +10831,14 @@ function parseSelectionModelResponse(raw, input) {
         if (!["unreadable_expression", "unsupported_variables", "unsupported_representation", "unsafe_complexity"].includes(reasonCode)) {
           throw new Error("reason_code is invalid");
         }
-        response = corrected && alternatives.length === 0 ? corrected : unsupported(reasonCode, text, failureAlternatives[reasonCode]);
+        response = corrected && alternatives.length === 0 ? corrected : unsupported(reasonCode, text2, failureAlternatives[reasonCode]);
       }
     } else if (responseKind === "explanation") {
       const explanationFailure = confidence === "low" ? "unreadable_expression" : "unsupported_representation";
-      response = visualizationRequested && input.tool_id === "generate-plot" ? unsupported(explanationFailure, text, failureAlternatives[explanationFailure]) : {
+      response = visualizationRequested && input.tool_id === "generate-plot" ? unsupported(explanationFailure, text2, failureAlternatives[explanationFailure]) : {
         kind: "explanation",
         title,
-        text,
+        text: text2,
         ...items.length > 0 ? { items } : {}
       };
     } else {
@@ -10813,14 +11005,50 @@ async function runTopicAnalysis(rawInput, startedAt) {
   emit({ success: submitted.recorded, output: submitted.recorded ? "Topic analysis submitted to the history service." : `The history service did not accept the analysis (${submitted.status}${submitted.error ? `: ${submitted.error}` : ""}).` });
   if (!submitted.recorded) process.exitCode = 1;
 }
+var TEACH_TOOLS = [TEACH_OCTO_QUESTION_TOOL, TEACH_INK_TO_MATH_TOOL, TEACH_REVIEW_TOOL];
+async function runTeachTool(client, tool, rawInput) {
+  if (tool === TEACH_OCTO_QUESTION_TOOL) {
+    const input2 = parseOctoQuestionInput(rawInput);
+    const raw2 = await callStructuredModel(client, {
+      label: "teach-octo-question",
+      turnId: input2.turn_id,
+      maxTokens: Math.min(client.maxTokens, 512),
+      responseSchema: OCTO_QUESTION_SCHEMA,
+      ...octoQuestionPrompts(input2)
+    });
+    return { label: "teach-octo-question", metadata: { teach_octo_question: parseOctoQuestion(raw2) } };
+  }
+  if (tool === TEACH_INK_TO_MATH_TOOL) {
+    const input2 = parseInkToMathInput(rawInput);
+    const media = await workspaceImageMedia(input2.ink_media, "ink_media");
+    if (!media) throw new Error("Ink to math requires an image");
+    const raw2 = await callStructuredModel(client, {
+      label: "teach-ink-to-math",
+      turnId: input2.turn_id,
+      maxTokens: Math.min(client.maxTokens, 512),
+      responseSchema: INK_TO_MATH_SCHEMA,
+      media,
+      ...inkToMathPrompts(input2)
+    });
+    return { label: "teach-ink-to-math", metadata: { teach_ink_to_math: parseInkToMath(raw2) } };
+  }
+  const input = parseReviewInput(rawInput);
+  const raw = await callStructuredModel(client, {
+    label: "teach-review",
+    turnId: input.turn_id,
+    maxTokens: Math.min(client.maxTokens, 2048),
+    responseSchema: REVIEW_SCHEMA,
+    ...reviewPrompts(input)
+  });
+  return { label: "teach-review", metadata: { teach_review: parseReview(raw, input) } };
+}
 async function main() {
   const startedAt = Date.now();
   const invokedTool = process.argv[2];
   try {
-    if (invokedTool !== TOOL_NAME && invokedTool !== SELECTION_TOOL_NAME && invokedTool !== SELECTION_CLASSIFICATION_TOOL_NAME && invokedTool !== TOPIC_ANALYSIS_TOOL_NAME) {
-      throw new Error(
-        `Unknown tool '${invokedTool ?? ""}'. Expected '${TOOL_NAME}', '${SELECTION_TOOL_NAME}', '${SELECTION_CLASSIFICATION_TOOL_NAME}', or '${TOPIC_ANALYSIS_TOOL_NAME}'`
-      );
+    const tools = [TOOL_NAME, SELECTION_TOOL_NAME, SELECTION_CLASSIFICATION_TOOL_NAME, TOPIC_ANALYSIS_TOOL_NAME, ...TEACH_TOOLS];
+    if (!invokedTool || !tools.includes(invokedTool)) {
+      throw new Error(`Unknown tool '${invokedTool ?? ""}'. Expected one of: ${tools.join(", ")}`);
     }
     const chunks = [];
     for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
@@ -10832,6 +11060,13 @@ async function main() {
     const traceTurnId = traceTurnIdFromRawInput(rawInput);
     if (traceTurnId) beginStageTrace(traceTurnId, invokedTool, startedAt);
     const route = resolveLessonModelRoute();
+    if (TEACH_TOOLS.includes(invokedTool)) {
+      const client = await createStructuredModelClient(route);
+      const { label, metadata } = await runTeachTool(client, invokedTool, rawInput);
+      stageLog({ stage: label, turn_id: traceTurnId, status: "completed", elapsed_ms: Date.now() - startedAt });
+      emit({ success: true, output: "Learner teaching help generated.", structured_metadata: metadata });
+      return;
+    }
     if (invokedTool === SELECTION_CLASSIFICATION_TOOL_NAME) {
       const input2 = parseSelectionClassificationInput(rawInput);
       const client = await createStructuredModelClient(route);
