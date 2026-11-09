@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const api = await import(new URL("../lesson-plan.js", import.meta.url));
-const { INSTALLED_PLUGINS, LESSON_PLAN_CAPABILITY_REGISTRY, RECIPE_CATALOG_ORDER, RECIPE_PLUGIN, promptSlot } = api;
+const { INSTALLED_PLUGINS, LESSON_PLAN_CAPABILITY_REGISTRY, PLUGIN_COMPILERS, RECIPE_CATALOG_ORDER, RECIPE_PLUGIN, promptSlot } = api;
 
 // Subject plugin plan §7: spring_and_mass goes to physics, process_diagram to
 // shared, every other existing recipe to math.
@@ -39,4 +39,11 @@ test("a prompt bullet joins the plugins' sentences and disappears when no plugin
   assert.equal(promptSlot("outline.visual_choice", "", [shared]), "- ordered_process_steps 仅是静态流程。");
   assert.equal(promptSlot("section.formulas", "", [shared]), "", "without math there is no formula rule");
   assert.equal(promptSlot("section.linked_numbers", "联动图引用同一 numbers；", [shared]), "- 联动图引用同一 numbers；");
+});
+
+test("each plugin compiles exactly the recipes it declares", () => {
+  assert.deepEqual(Object.keys(PLUGIN_COMPILERS).sort(), INSTALLED_PLUGINS.map((plugin) => plugin.manifest.id).sort());
+  for (const plugin of INSTALLED_PLUGINS) {
+    assert.deepEqual(Object.keys(PLUGIN_COMPILERS[plugin.manifest.id]).sort(), Object.keys(plugin.recipes).sort(), plugin.manifest.id);
+  }
 });

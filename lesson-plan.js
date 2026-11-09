@@ -9254,20 +9254,20 @@ function validateImageResource(action, path, resourceContext) {
     }
   });
 }
-function validatePlacement(place2, path, registry) {
-  requireObject(place2, path);
-  if (!PLACEMENT_RELATIONS.has(place2.relation)) {
-    fail("OLL_INVALID_PLACEMENT", `${path}/relation`, `Unknown placement relation '${place2.relation}'`);
+function validatePlacement(place5, path, registry) {
+  requireObject(place5, path);
+  if (!PLACEMENT_RELATIONS.has(place5.relation)) {
+    fail("OLL_INVALID_PLACEMENT", `${path}/relation`, `Unknown placement relation '${place5.relation}'`);
   }
   for (const forbidden of ["x", "y", "width", "height", "zoom", "duration_ms"]) {
-    if (forbidden in place2)
+    if (forbidden in place5)
       fail("OLL_INVALID_PLACEMENT", `${path}/${forbidden}`, `Authoring Profile cannot set '${forbidden}'`);
   }
-  if (place2.relation === "new_region") {
-    if (place2.anchor !== void 0)
+  if (place5.relation === "new_region") {
+    if (place5.anchor !== void 0)
       fail("OLL_INVALID_PLACEMENT", `${path}/anchor`, "new_region cannot use an anchor");
   } else {
-    resolveLocal(registry, place2.anchor, `${path}/anchor`, ["node", "group"]);
+    resolveLocal(registry, place5.anchor, `${path}/anchor`, ["node", "group"]);
   }
 }
 function validateActionPayload(action, path) {
@@ -9650,10 +9650,10 @@ function requireCanonicalId(target) {
     fail("OLL_REFERENCE_NOT_FOUND", "target", "Canonical target has no addressable ID");
   return id;
 }
-function normalizePlacement(registry, place2) {
-  const result = { ...place2 };
-  if (place2.anchor) {
-    const target = canonicalTarget(registry, place2.anchor);
+function normalizePlacement(registry, place5) {
+  const result = { ...place5 };
+  if (place5.anchor) {
+    const target = canonicalTarget(registry, place5.anchor);
     delete result.anchor;
     result.anchor = requireCanonicalId(target);
   }
@@ -11926,90 +11926,6 @@ function validateTeachingClaims(plan) {
   }
 }
 
-// src/function-viewport.ts
-function niceRange(values, includeZero = true) {
-  const finite = values.filter((v) => Number.isFinite(v) && Math.abs(v) < 1e12).sort((a, b) => a - b);
-  if (!finite.length) throw new Error("function has no finite teaching viewport");
-  let low = finite[Math.floor((finite.length - 1) * 0.02)];
-  let high = finite[Math.ceil((finite.length - 1) * 0.98)];
-  if (includeZero) {
-    low = Math.min(low, 0);
-    high = Math.max(high, 0);
-  }
-  const span = high - low;
-  const pad3 = span > 1e-9 ? span * 0.12 : Math.max(1, Math.abs(low) * 0.2);
-  const rawStep = (span + 2 * pad3) / 6;
-  const unit = 10 ** Math.floor(Math.log10(rawStep));
-  const step = [1, 2, 5, 10].map((n) => n * unit).find((n) => n >= rawStep);
-  return { min: Math.floor((low - pad3) / step) * step, max: Math.ceil((high + pad3) / step) * step };
-}
-function quadratic(evaluate2) {
-  const y0 = evaluate2(0), y1 = evaluate2(1), ym = evaluate2(-1);
-  const a = (y1 + ym - 2 * y0) / 2, b = (y1 - ym) / 2;
-  if (![a, b, y0].every(Number.isFinite) || Math.abs(a) < 1e-9) return;
-  for (const x of [-2, 0.37, 2, 3]) {
-    const expected = a * x * x + b * x + y0, actual = evaluate2(x);
-    if (!Number.isFinite(actual) || Math.abs(expected - actual) > 1e-8 * Math.max(1, Math.abs(expected))) return;
-  }
-  const vertex = -b / (2 * a), value = evaluate2(vertex);
-  if (Number.isFinite(vertex) && Number.isFinite(value)) return { vertex, value, a };
-}
-function functionViewport(expressions, parameters2, requestedX) {
-  const evaluators = expressions.map((e) => compileMathExpression(e, ["x", ...parameters2.map((p) => p.name)]));
-  const initial = Object.fromEntries(parameters2.map((p) => [p.name, p.initial]));
-  const states = [initial, ...parameters2.flatMap((p) => [p.min, p.max].map((v) => ({ ...initial, [p.name]: v })))];
-  const evaluate2 = (index, state, x2) => {
-    try {
-      return evaluators[index]({ ...state, x: x2 });
-    } catch {
-      return NaN;
-    }
-  };
-  const vertices = states.flatMap((state) => evaluators.flatMap((_, i) => {
-    const q = quadratic((x2) => evaluate2(i, state, x2));
-    return q ? [q] : [];
-  }));
-  const identity = expressions.some((e) => e.replace(/[()\s]/g, "") === "x");
-  if (!requestedX && identity && expressions.length > 1 && expressions.some((e) => /\b(?:ln|log)\s*\(/.test(e))) {
-    return { x: { min: -2, max: 6 }, y: { min: -2, max: 6 } };
-  }
-  if (!requestedX && expressions.length === 1 && parameters2.length === 0) {
-    const y0 = evaluate2(0, initial, 0), y1 = evaluate2(0, initial, 1);
-    const rate = Math.log(y1 / y0), intercept = Math.log(y0);
-    if (y0 > 0 && y1 > 0 && Number.isFinite(rate) && Math.abs(rate) > 1e-6 && [-2, -1, 0.37, 2, 3].every((t) => {
-      const expected = Math.exp(intercept + rate * t), actual = evaluate2(0, initial, t);
-      return Number.isFinite(actual) && Math.abs(actual - expected) < 1e-8 * Math.max(1, expected);
-    })) {
-      const center = -intercept / rate, radius = 2 / Math.abs(rate);
-      return { x: { min: Math.min(0, center - radius), max: Math.max(0, center + radius) }, y: { min: -1, max: 8 } };
-    }
-  }
-  let x = requestedX ?? { min: -4, max: 4 };
-  if (!requestedX && vertices.length) {
-    x = { min: Math.min(-4, ...vertices.map((q) => q.vertex - 2)), max: Math.max(4, ...vertices.map((q) => q.vertex + 2)) };
-  } else if (!requestedX && expressions.some((e) => /\b(sin|cos|tan)\s*\(/.test(e))) {
-    x = { min: -Math.PI * 2, max: Math.PI * 2 };
-  }
-  const sample = (range) => Array.from({ length: 121 }, (_, i) => range.min + (range.max - range.min) * i / 120).flatMap((t) => evaluators.map((_, index) => evaluate2(index, initial, t)));
-  let values = sample(x);
-  if (!requestedX && !vertices.length && values.filter(Number.isFinite).length < values.length * 0.7) {
-    const positive = { min: 0, max: 8 }, alternative = sample(positive);
-    if (alternative.filter(Number.isFinite).length > values.filter(Number.isFinite).length) {
-      x = positive;
-      values = alternative;
-    }
-  }
-  if (vertices.length === states.length * evaluators.length) {
-    values = vertices.flatMap((q) => [q.value, q.value + q.a * 9]);
-  }
-  const y = expressions.length === 1 && /^tan\(x\)$/.test(expressions[0].replace(/\s/g, "")) ? { min: -4, max: 4 } : niceRange(values);
-  for (const q of vertices) {
-    y.min = Math.min(y.min, q.value - 1);
-    y.max = Math.max(y.max, q.value + 1);
-  }
-  return { x, y };
-}
-
 // src/scene3d-surfaces.ts
 var DOMAIN_CANDIDATE_HALF_SPANS = [2, 5, 10, 20, 50, 100];
 var DOMAIN_REFINEMENT_STEPS = 12;
@@ -12132,68 +12048,12 @@ function buildImplicitSurfaceObject(input) {
   };
 }
 
-// src/lesson-plan-compiler.ts
+// src/recipe-kit.ts
 var LESSON_PLAN_SCENE_INITIAL_CAMERAS = {
   cube_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
   function_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
   implicit_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 }
 };
-function normalizedVisualIdentity(content, includeNumbers = true) {
-  const sourceParameters = content.parameters ?? {};
-  const parameters2 = Object.fromEntries(
-    LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].semantic_parameters.filter((name) => sourceParameters[name] !== void 0).map((name) => [name, sourceParameters[name]])
-  );
-  const normalize2 = (value) => {
-    if (Array.isArray(value)) return value.map(normalize2);
-    if (!value || typeof value !== "object") return value;
-    return Object.fromEntries(
-      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, child]) => [key, normalize2(child)])
-    );
-  };
-  return JSON.stringify(normalize2({
-    capability: content.capability,
-    parameters: parameters2,
-    ...includeNumbers ? { numbers: content.numbers ?? [] } : {}
-  }));
-}
-function separateInitialSamples(plan) {
-  const words = JSON.stringify(plan.sections.map((s) => s.moments.map((m) => m.narration)));
-  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
-  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
-    if (action.action !== "create" || action.kind !== "visual") continue;
-    const visual = action.content;
-    if (visual.capability !== "function_plot" || visual.numbers?.length !== 2) continue;
-    const tokens = visual.parameters?.expression_tokens;
-    if (Array.isArray(tokens) && tokens.some((t) => t && typeof t === "object" && "kind" in t && t.kind === "number")) continue;
-    const a = plan.numbers?.[visual.numbers[0] - 1], b = plan.numbers?.[visual.numbers[1] - 1];
-    if (!a || !b || a === b || Math.abs(a.initial - b.initial) > 1e-8) continue;
-    const step = b.student_control?.step ?? (b.max - b.min) / 200;
-    const delta = Math.max(step, Math.round((b.max - b.min) / 5 / step) * step);
-    b.initial = b.initial + delta <= b.max ? b.initial + delta : Math.max(b.min, b.initial - delta);
-  }
-}
-function mergeEquivalentVisualInputs(plan) {
-  const groups = /* @__PURE__ */ new Map();
-  for (const section of plan.sections) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
-        if (action.action !== "create" || action.kind !== "visual") continue;
-        const content = action.content;
-        const identity = normalizedVisualIdentity(content, false);
-        const group = groups.get(identity) ?? [];
-        group.push(content);
-        groups.set(identity, group);
-      }
-    }
-  }
-  for (const group of groups.values()) {
-    if (group.length < 2) continue;
-    const inputs = [...new Set(group.flatMap((content) => content.numbers ?? []))];
-    const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[group[0].capability];
-    if (inputs.length > limit) continue;
-    for (const content of group) content.numbers = [...inputs];
-  }
-}
 function fail3(code, path, message) {
   throw new LessonPlanError(code, path, message);
 }
@@ -12356,6 +12216,92 @@ function angleScaleForUnit(unit) {
 function scaledAngleExpression(variable, scale) {
   return scale === 1 ? variable : `(${variable})*pi/180`;
 }
+
+// src/function-viewport.ts
+function niceRange(values, includeZero = true) {
+  const finite = values.filter((v) => Number.isFinite(v) && Math.abs(v) < 1e12).sort((a, b) => a - b);
+  if (!finite.length) throw new Error("function has no finite teaching viewport");
+  let low = finite[Math.floor((finite.length - 1) * 0.02)];
+  let high = finite[Math.ceil((finite.length - 1) * 0.98)];
+  if (includeZero) {
+    low = Math.min(low, 0);
+    high = Math.max(high, 0);
+  }
+  const span = high - low;
+  const pad3 = span > 1e-9 ? span * 0.12 : Math.max(1, Math.abs(low) * 0.2);
+  const rawStep = (span + 2 * pad3) / 6;
+  const unit = 10 ** Math.floor(Math.log10(rawStep));
+  const step = [1, 2, 5, 10].map((n) => n * unit).find((n) => n >= rawStep);
+  return { min: Math.floor((low - pad3) / step) * step, max: Math.ceil((high + pad3) / step) * step };
+}
+function quadratic(evaluate2) {
+  const y0 = evaluate2(0), y1 = evaluate2(1), ym = evaluate2(-1);
+  const a = (y1 + ym - 2 * y0) / 2, b = (y1 - ym) / 2;
+  if (![a, b, y0].every(Number.isFinite) || Math.abs(a) < 1e-9) return;
+  for (const x of [-2, 0.37, 2, 3]) {
+    const expected = a * x * x + b * x + y0, actual = evaluate2(x);
+    if (!Number.isFinite(actual) || Math.abs(expected - actual) > 1e-8 * Math.max(1, Math.abs(expected))) return;
+  }
+  const vertex = -b / (2 * a), value = evaluate2(vertex);
+  if (Number.isFinite(vertex) && Number.isFinite(value)) return { vertex, value, a };
+}
+function functionViewport(expressions, parameters2, requestedX) {
+  const evaluators = expressions.map((e) => compileMathExpression(e, ["x", ...parameters2.map((p) => p.name)]));
+  const initial = Object.fromEntries(parameters2.map((p) => [p.name, p.initial]));
+  const states = [initial, ...parameters2.flatMap((p) => [p.min, p.max].map((v) => ({ ...initial, [p.name]: v })))];
+  const evaluate2 = (index, state, x2) => {
+    try {
+      return evaluators[index]({ ...state, x: x2 });
+    } catch {
+      return NaN;
+    }
+  };
+  const vertices = states.flatMap((state) => evaluators.flatMap((_, i) => {
+    const q = quadratic((x2) => evaluate2(i, state, x2));
+    return q ? [q] : [];
+  }));
+  const identity = expressions.some((e) => e.replace(/[()\s]/g, "") === "x");
+  if (!requestedX && identity && expressions.length > 1 && expressions.some((e) => /\b(?:ln|log)\s*\(/.test(e))) {
+    return { x: { min: -2, max: 6 }, y: { min: -2, max: 6 } };
+  }
+  if (!requestedX && expressions.length === 1 && parameters2.length === 0) {
+    const y0 = evaluate2(0, initial, 0), y1 = evaluate2(0, initial, 1);
+    const rate = Math.log(y1 / y0), intercept = Math.log(y0);
+    if (y0 > 0 && y1 > 0 && Number.isFinite(rate) && Math.abs(rate) > 1e-6 && [-2, -1, 0.37, 2, 3].every((t) => {
+      const expected = Math.exp(intercept + rate * t), actual = evaluate2(0, initial, t);
+      return Number.isFinite(actual) && Math.abs(actual - expected) < 1e-8 * Math.max(1, expected);
+    })) {
+      const center = -intercept / rate, radius = 2 / Math.abs(rate);
+      return { x: { min: Math.min(0, center - radius), max: Math.max(0, center + radius) }, y: { min: -1, max: 8 } };
+    }
+  }
+  let x = requestedX ?? { min: -4, max: 4 };
+  if (!requestedX && vertices.length) {
+    x = { min: Math.min(-4, ...vertices.map((q) => q.vertex - 2)), max: Math.max(4, ...vertices.map((q) => q.vertex + 2)) };
+  } else if (!requestedX && expressions.some((e) => /\b(sin|cos|tan)\s*\(/.test(e))) {
+    x = { min: -Math.PI * 2, max: Math.PI * 2 };
+  }
+  const sample = (range) => Array.from({ length: 121 }, (_, i) => range.min + (range.max - range.min) * i / 120).flatMap((t) => evaluators.map((_, index) => evaluate2(index, initial, t)));
+  let values = sample(x);
+  if (!requestedX && !vertices.length && values.filter(Number.isFinite).length < values.length * 0.7) {
+    const positive = { min: 0, max: 8 }, alternative = sample(positive);
+    if (alternative.filter(Number.isFinite).length > values.filter(Number.isFinite).length) {
+      x = positive;
+      values = alternative;
+    }
+  }
+  if (vertices.length === states.length * evaluators.length) {
+    values = vertices.flatMap((q) => [q.value, q.value + q.a * 9]);
+  }
+  const y = expressions.length === 1 && /^tan\(x\)$/.test(expressions[0].replace(/\s/g, "")) ? { min: -4, max: 4 } : niceRange(values);
+  for (const q of vertices) {
+    y.min = Math.min(y.min, q.value - 1);
+    y.max = Math.max(y.max, q.value + 1);
+  }
+  return { x, y };
+}
+
+// src/plugins/math-compilers.ts
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
@@ -12679,71 +12625,6 @@ function compileCircleAndArc(base, content, role, placement, plan, path) {
       ["arc", `${base}#arc`],
       ["radius", `${base}#radius`],
       ...angleVariable ? [["primary_control", `${base}#moving-point`]] : []
-    ])
-  };
-}
-function compileSpringAndMass(base, content, role, placement, plan, path) {
-  const input = parameters(content);
-  allowParameterKeys(input, ["title"], path);
-  const number = content.numbers?.[0];
-  const phaseDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
-  const phaseScale = angleScaleForUnit(phaseDefinition?.unit);
-  const phase = (phaseDefinition?.initial ?? 0) * phaseScale;
-  const variable = number ? variableAlias(number) : void 0;
-  const phaseExpression = variable ? scaledAngleExpression(variable, phaseScale) : void 0;
-  const motion = `${base}-motion`;
-  const plot = `${base}-plot`;
-  const plotPhaseMin = phaseDefinition ? phaseDefinition.min * phaseScale : 0;
-  const plotPhaseMax = phaseDefinition ? phaseDefinition.max * phaseScale : Math.PI * 2;
-  const geometry = {
-    title: optionalText(input.title, compileText(plan, "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8"), `${path}.title`),
-    axes: { x: { min: -1.5, max: 1.5, label: compileText(plan, "\u4F4D\u79FB") }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
-    points: [
-      { as: "anchor", x: -1.25, y: 0, label: compileText(plan, "\u56FA\u5B9A\u7AEF") },
-      { as: "equilibrium", x: 0, y: 0, label: compileText(plan, "\u5E73\u8861\u4F4D\u7F6E") },
-      { as: "mass", x: Math.cos(phase), y: 0, label: compileText(plan, "\u7269\u4F53") },
-      { as: "force-tip", x: Math.cos(phase) * 0.5, y: 0, visible: false }
-    ],
-    segments: [
-      { as: "spring", from: "anchor", to: "mass", style: "solid" },
-      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: compileText(plan, "\u56DE\u590D\u529B") }
-    ],
-    ...variable ? {
-      bindings: [
-        { target: "mass.x", expression: `cos(${phaseExpression})` },
-        { target: "force-tip.x", expression: `0.5*cos(${phaseExpression})` }
-      ]
-    } : {}
-  };
-  const plotContent = {
-    title: compileText(plan, "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316"),
-    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: compileText(plan, "\u76F8\u4F4D") }, y: { min: -1.2, max: 1.2, label: compileText(plan, "\u4F4D\u79FB") } },
-    curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
-    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: compileText(plan, "\u5F53\u524D\u72B6\u6001") }],
-    ...variable ? {
-      bindings: [
-        { target: "moving-point.x", expression: phaseExpression },
-        { target: "moving-point.y", expression: `cos(${phaseExpression})` }
-      ]
-    } : {}
-  };
-  return {
-    actions: [
-      { do: "write", as: motion, kind: "geometry", role, content: geometry, place: placement },
-      { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: motion, gap: "normal" } },
-      { do: "connect", as: `${base}-link`, from: motion, to: plot, relation: "same_state", label: compileText(plan, "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB") },
-      { do: "group", as: base, role, label: compileText(plan, "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF"), members: [motion, plot] }
-    ],
-    whole: base,
-    parts: new Map([
-      ["whole", base],
-      ["spring", `${motion}#spring`],
-      ["mass", `${motion}#mass`],
-      ["equilibrium", `${motion}#equilibrium`],
-      ["force_arrow", `${motion}#force-arrow`],
-      ["primary_curve", `${plot}#primary-curve`],
-      ["moving_point", `${plot}#moving-point`],
-      ...variable ? [["primary_control", `${plot}#moving-point`]] : []
     ])
   };
 }
@@ -13276,6 +13157,91 @@ function compileCircleArea(base, content, role, placement, plan, path) {
   }
   return { actions, whole: base, parts: new Map([["whole", base], ...variable ? [["primary_control", base]] : []]) };
 }
+var MATH_COMPILERS = {
+  function_plot: compileFunctionPlot,
+  unit_circle_projection: compileUnitCircleProjection,
+  circle_polygon_bounds: compileCirclePolygonBounds,
+  circle_and_arc: compileCircleAndArc,
+  cube_with_section: compileCubeWithSection,
+  function_surface_with_section: compileFunctionSurface,
+  implicit_surface_with_section: compileImplicitSurface,
+  coordinate_circle: compileCoordinateCircle,
+  rectangle_unit_square_array: compileRectangleUnitSquareArray,
+  geometric_rearrangement: compileGeometricRearrangement,
+  circle_area_rearrangement: compileCircleArea
+};
+
+// src/plugins/physics-compilers.ts
+function compileSpringAndMass(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title"], path);
+  const number = content.numbers?.[0];
+  const phaseDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
+  const phaseScale = angleScaleForUnit(phaseDefinition?.unit);
+  const phase = (phaseDefinition?.initial ?? 0) * phaseScale;
+  const variable = number ? variableAlias(number) : void 0;
+  const phaseExpression = variable ? scaledAngleExpression(variable, phaseScale) : void 0;
+  const motion = `${base}-motion`;
+  const plot = `${base}-plot`;
+  const plotPhaseMin = phaseDefinition ? phaseDefinition.min * phaseScale : 0;
+  const plotPhaseMax = phaseDefinition ? phaseDefinition.max * phaseScale : Math.PI * 2;
+  const geometry = {
+    title: optionalText(input.title, compileText(plan, "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8"), `${path}.title`),
+    axes: { x: { min: -1.5, max: 1.5, label: compileText(plan, "\u4F4D\u79FB") }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
+    points: [
+      { as: "anchor", x: -1.25, y: 0, label: compileText(plan, "\u56FA\u5B9A\u7AEF") },
+      { as: "equilibrium", x: 0, y: 0, label: compileText(plan, "\u5E73\u8861\u4F4D\u7F6E") },
+      { as: "mass", x: Math.cos(phase), y: 0, label: compileText(plan, "\u7269\u4F53") },
+      { as: "force-tip", x: Math.cos(phase) * 0.5, y: 0, visible: false }
+    ],
+    segments: [
+      { as: "spring", from: "anchor", to: "mass", style: "solid" },
+      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: compileText(plan, "\u56DE\u590D\u529B") }
+    ],
+    ...variable ? {
+      bindings: [
+        { target: "mass.x", expression: `cos(${phaseExpression})` },
+        { target: "force-tip.x", expression: `0.5*cos(${phaseExpression})` }
+      ]
+    } : {}
+  };
+  const plotContent = {
+    title: compileText(plan, "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316"),
+    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: compileText(plan, "\u76F8\u4F4D") }, y: { min: -1.2, max: 1.2, label: compileText(plan, "\u4F4D\u79FB") } },
+    curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
+    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: compileText(plan, "\u5F53\u524D\u72B6\u6001") }],
+    ...variable ? {
+      bindings: [
+        { target: "moving-point.x", expression: phaseExpression },
+        { target: "moving-point.y", expression: `cos(${phaseExpression})` }
+      ]
+    } : {}
+  };
+  return {
+    actions: [
+      { do: "write", as: motion, kind: "geometry", role, content: geometry, place: placement },
+      { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: motion, gap: "normal" } },
+      { do: "connect", as: `${base}-link`, from: motion, to: plot, relation: "same_state", label: compileText(plan, "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB") },
+      { do: "group", as: base, role, label: compileText(plan, "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF"), members: [motion, plot] }
+    ],
+    whole: base,
+    parts: new Map([
+      ["whole", base],
+      ["spring", `${motion}#spring`],
+      ["mass", `${motion}#mass`],
+      ["equilibrium", `${motion}#equilibrium`],
+      ["force_arrow", `${motion}#force-arrow`],
+      ["primary_curve", `${plot}#primary-curve`],
+      ["moving_point", `${plot}#moving-point`],
+      ...variable ? [["primary_control", `${plot}#moving-point`]] : []
+    ])
+  };
+}
+var PHYSICS_COMPILERS = {
+  spring_and_mass: compileSpringAndMass
+};
+
+// src/plugins/shared-compilers.ts
 function compileProcessDiagram(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "steps"], path);
@@ -13303,20 +13269,72 @@ function compileProcessDiagram(base, content, role, placement, plan, path) {
     parts: /* @__PURE__ */ new Map([["whole", base], ["first_step", first], ["current_step", current], ["last_step", last]])
   };
 }
+var SHARED_COMPILERS = {
+  process_diagram: compileProcessDiagram
+};
+
+// src/lesson-plan-compiler.ts
+function normalizedVisualIdentity(content, includeNumbers = true) {
+  const sourceParameters = content.parameters ?? {};
+  const parameters2 = Object.fromEntries(
+    LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].semantic_parameters.filter((name) => sourceParameters[name] !== void 0).map((name) => [name, sourceParameters[name]])
+  );
+  const normalize2 = (value) => {
+    if (Array.isArray(value)) return value.map(normalize2);
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(
+      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, child]) => [key, normalize2(child)])
+    );
+  };
+  return JSON.stringify(normalize2({
+    capability: content.capability,
+    parameters: parameters2,
+    ...includeNumbers ? { numbers: content.numbers ?? [] } : {}
+  }));
+}
+function separateInitialSamples(plan) {
+  const words = JSON.stringify(plan.sections.map((s) => s.moments.map((m) => m.narration)));
+  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    const visual = action.content;
+    if (visual.capability !== "function_plot" || visual.numbers?.length !== 2) continue;
+    const tokens = visual.parameters?.expression_tokens;
+    if (Array.isArray(tokens) && tokens.some((t) => t && typeof t === "object" && "kind" in t && t.kind === "number")) continue;
+    const a = plan.numbers?.[visual.numbers[0] - 1], b = plan.numbers?.[visual.numbers[1] - 1];
+    if (!a || !b || a === b || Math.abs(a.initial - b.initial) > 1e-8) continue;
+    const step = b.student_control?.step ?? (b.max - b.min) / 200;
+    const delta = Math.max(step, Math.round((b.max - b.min) / 5 / step) * step);
+    b.initial = b.initial + delta <= b.max ? b.initial + delta : Math.max(b.min, b.initial - delta);
+  }
+}
+function mergeEquivalentVisualInputs(plan) {
+  const groups = /* @__PURE__ */ new Map();
+  for (const section of plan.sections) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const content = action.content;
+        const identity = normalizedVisualIdentity(content, false);
+        const group = groups.get(identity) ?? [];
+        group.push(content);
+        groups.set(identity, group);
+      }
+    }
+  }
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const inputs = [...new Set(group.flatMap((content) => content.numbers ?? []))];
+    const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[group[0].capability];
+    if (inputs.length > limit) continue;
+    for (const content of group) content.numbers = [...inputs];
+  }
+}
+var PLUGIN_COMPILERS = { math: MATH_COMPILERS, physics: PHYSICS_COMPILERS, shared: SHARED_COMPILERS };
 var VISUAL_COMPILERS = {
-  function_plot: compileFunctionPlot,
-  unit_circle_projection: compileUnitCircleProjection,
-  circle_and_arc: compileCircleAndArc,
-  circle_polygon_bounds: compileCirclePolygonBounds,
-  spring_and_mass: compileSpringAndMass,
-  cube_with_section: compileCubeWithSection,
-  function_surface_with_section: compileFunctionSurface,
-  implicit_surface_with_section: compileImplicitSurface,
-  coordinate_circle: compileCoordinateCircle,
-  rectangle_unit_square_array: compileRectangleUnitSquareArray,
-  geometric_rearrangement: compileGeometricRearrangement,
-  process_diagram: compileProcessDiagram,
-  circle_area_rearrangement: compileCircleArea
+  ...MATH_COMPILERS,
+  ...PHYSICS_COMPILERS,
+  ...SHARED_COMPILERS
 };
 function intersectProgramRange(definition, allowedMin, allowedMax) {
   let min = Math.max(definition.min, allowedMin);
@@ -17274,6 +17292,7 @@ export {
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VISUAL_PARAMETER_NAMES,
   LessonPlanError,
+  PLUGIN_COMPILERS,
   PROCESS_DIAGRAM_CONTRACT,
   RECIPE_CATALOG_ORDER,
   RECIPE_PLUGIN,
