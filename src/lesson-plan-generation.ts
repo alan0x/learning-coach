@@ -10,6 +10,7 @@ import {
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VERSION,
   LessonPlanError,
+  validateNumericAnswerActivity,
   assembleLessonPlan,
   matchLessonPlanCapability,
   validateLessonPlanOutline,
@@ -108,7 +109,7 @@ export interface GenerateLessonPlanOptions {
     error: { code: string; path?: string; message: string };
   }) => void | Promise<void>;
   on_program_adjustment?: (event: {
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -1076,7 +1077,7 @@ function sanitizeNonessentialVisuals(
   outline: LessonPlanOutline;
   drafts: LessonPlanSectionDraft[];
   adjustments: Array<{
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -1088,7 +1089,7 @@ function sanitizeNonessentialVisuals(
   const outline = structuredClone(outlineValue);
   const drafts = structuredClone(draftValues);
   const adjustments: Array<{
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -3212,6 +3213,29 @@ export async function generateLessonPlanWithModel(
     return candidate;
   };
 
+  // A typed question is optional and the section never refers to its answer,
+  // so one whose answer fails its own check is dropped rather than costing a
+  // section rewrite (or, after a playable prefix, failing the whole lesson).
+  const dropUncheckedAnswerActivities = async (draft: LessonPlanSectionDraft, section: number): Promise<void> => {
+    if (!draft.student_activities?.length) return;
+    const kept: LessonPlanStudentActivity[] = [];
+    for (const [index, activity] of draft.student_activities.entries()) {
+      if (activity.kind === "numeric_answer") {
+        try {
+          validateNumericAnswerActivity(activity as unknown as Record<string, unknown>, `$lessonPlanSection${section}.student_activities[${index}]`);
+        } catch (error) {
+          if (!(error instanceof LessonPlanError)) throw error;
+          await options.on_program_adjustment?.({ kind: "answer_activity_removed", section, reason: error.message });
+          continue;
+        }
+      }
+      kept.push(activity);
+    }
+    if (kept.length === draft.student_activities.length) return;
+    if (kept.length) draft.student_activities = kept;
+    else delete draft.student_activities;
+  };
+
   const drafts: LessonPlanSectionDraft[] = [];
   const acceptSection = async (
     section: number,
@@ -3220,6 +3244,7 @@ export async function generateLessonPlanWithModel(
     let candidate = initialCandidate;
     while (true) {
       candidate ??= await generateSection(section);
+      await dropUncheckedAnswerActivities(candidate, section);
       drafts[section - 1] = candidate;
       try {
         const prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);

@@ -17068,11 +17068,31 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     }
     return candidate;
   };
+  const dropUncheckedAnswerActivities = async (draft, section) => {
+    if (!draft.student_activities?.length) return;
+    const kept = [];
+    for (const [index, activity] of draft.student_activities.entries()) {
+      if (activity.kind === "numeric_answer") {
+        try {
+          validateNumericAnswerActivity(activity, `$lessonPlanSection${section}.student_activities[${index}]`);
+        } catch (error) {
+          if (!(error instanceof LessonPlanError)) throw error;
+          await options.on_program_adjustment?.({ kind: "answer_activity_removed", section, reason: error.message });
+          continue;
+        }
+      }
+      kept.push(activity);
+    }
+    if (kept.length === draft.student_activities.length) return;
+    if (kept.length) draft.student_activities = kept;
+    else delete draft.student_activities;
+  };
   const drafts = [];
   const acceptSection = async (section, initialCandidate) => {
     let candidate = initialCandidate;
     while (true) {
       candidate ??= await generateSection(section);
+      await dropUncheckedAnswerActivities(candidate, section);
       drafts[section - 1] = candidate;
       try {
         const prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);

@@ -4564,6 +4564,35 @@ test("a later section's typed question becomes a numeric answer task; the first 
   assert.ok(task.anchor.startsWith("section-03-"), "the question sits by a card of its own section");
 });
 
+test("a later section's typed question that fails its check is dropped without a repair call", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/later-practice-generation.json"), "utf8"));
+  const responses = [...fixture.responses];
+  const third = JSON.parse(responses[2]);
+  // From the P0 baseline (M07): a step of the algorithm written as the check.
+  third.answer_activities = [
+    { prompt: "323 和 221 的最大公约数是多少？", answer: "17", check: "323-221*1", hints: ["继续辗转相除。"] },
+    { prompt: "x = 3 处的切线斜率是多少？", answer: "6", check: "2*3", hints: ["代入 x = 3。"] },
+  ];
+  responses[2] = JSON.stringify(third);
+  const adjustments = [];
+  const rejections = [];
+  const generated = await generateLessonPlanWithModel(async () => {
+    assert.ok(responses.length, "unexpected repair call");
+    return responses.shift();
+  }, { ...fixture.input, turn_id: "replay-dropped-question" }, {
+    on_program_adjustment: event => { adjustments.push(event); },
+    on_rejected_part: event => { rejections.push(event); },
+  });
+  assert.equal(responses.length, 0);
+  assert.deepEqual(rejections, [], "no section is rejected for an optional question");
+  assert.deepEqual(generated.lesson.lesson.tasks.filter(task => task.completion.kind === "numeric_answer").map(task => task.completion.answer), ["6"]);
+  const dropped = adjustments.filter(event => event.kind === "answer_activity_removed");
+  assert.equal(dropped.length, 1);
+  assert.equal(dropped[0].section, 3);
+  assert.match(dropped[0].reason, /answer 17 does not equal its check 323-221\*1/);
+});
+
 test("a one-section lesson asks for practice after it is playable; bad or failed practice never costs the lesson", async () => {
   const { readFile } = await import("node:fs/promises");
   const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/later-practice-generation.json"), "utf8"));

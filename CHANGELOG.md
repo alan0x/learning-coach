@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.2 - 2026-11-10
+
+- Typed questions (`answer_activities`) can no longer fail a lesson. In the P0 baseline, 4 of 120 lessons failed after section 1 was already playing, because a later section's optional question kept failing its answer check across all three section attempts.
+  - A decimal answer now matches when it is its `check` rounded to the places it writes (11.21 for 2.02/18.02*100). The learner's task gets the same half-unit tolerance, so typing the unrounded value is also accepted. Whole numbers, fractions and mixed numbers still must equal the check exactly. The typed-question rule asks for rounded answers as decimals, with the question stating the places.
+  - A question whose answer still fails its check is dropped when its section arrives (a `lesson-plan-program-adjustment` of kind `answer_activity_removed`), as single-section practice already does, instead of costing a section rewrite.
+
 ## 0.24.0 - 2026-11-01
 
 - `learning.teach.review` also returns `personal_details`: personal details the child said on each card (a real person's name, their school, town or address, age or grade, contact details) as the card key and the child's exact words, so the host can ask the child to remove them before the lesson is shared. A detail that is not the child's own words on that card is dropped. The review's messages still never repeat personal details. Other actions are unchanged.
