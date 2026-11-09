@@ -47,6 +47,7 @@ import {
   type LessonPlanJsonSchema,
 } from "./lesson-plan-schema.js";
 import { completedJsonObjectProperty } from "./json-stream.js";
+import { promptSlot } from "./plugins/index.js";
 
 export interface LessonPlanGenerationInput {
   turn_id: string;
@@ -135,47 +136,53 @@ export type LessonPlanGenerationResult = GeneratedLessonPlan | NonLessonPlanResp
 
 const ANSWER_ACTIVITY_RULE = "answer 只写一个数（整数、小数、分数 3/4、带分数 2 3/4），不带单位或 %，百分数题写百分号前的数并把 % 写入 unit；check 写只含数字的算式（如 2*3/4），程序核对它与 answer 相等；题目要求最简分数时 simplest_fraction 必须为 true，否则没约分的答案也算对；unit 只写单位，没有就省略；hints 写 1–2 条不给出答案的提示。";
 
-const OUTLINE_SYSTEM_PROMPT = `设计完整课程目录，不生成 OLL、执行 ID、组件名或自由对象名。
-- 需要同步对照的图复用同一共享数值，并通过 supporting/comparison 声明关联；不要用两个独立 main 图表示同一联动关系。
-- visual_recipes 为 [features,numbers,purpose]。course_visuals 选其中 features，只列必要画面；后续复用，确需并排才建 comparison，supporting/comparison 指向较早画面。
-- 选择图形特征时，以本节需要展示的数学关系为依据；不能仅因讲解中出现某个数学对象，就选用包含该对象的图形特征。
-- 多边形重排选 polygon_pieces、rigid_rearrangement、area_relation；圆面积选 circle_area_rearrangement。ordered_process_steps 仅是静态流程。
-- numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。
-- request_coverage 依 request_parts 顺序覆盖：可实现写 teach+章节。只是要求的互动或画面形式做不到（如可自由拖动顶点的任意三角形），但数学内容能用已有画面讲对时，写 teach 并换成可实现的画面，在第一节旁白里用一句话说明换成了什么；只有数学内容本身无法正确呈现时才写 unsupported、空章节及原因，禁止错误替代。
-- 按独立教学目标和学习进程分节，不按主题数或画面数分节。每节只承担一个完成后可验证的目标；连续推导及须同步观察的画面留在同一节的多个 moment。简单问题能围绕一个目标讲清时用 1 节；若须分别建立直觉、纠错或解释原理、推导或演示、应用、检查掌握中的多个目标，拆成 2–4 节。不要为凑节数重复开场、定义或总结，也不要把本应独立的推导、应用和检查全塞进一节。为什么须推导，怎么算须步骤与检验，是什么须直觉与边界。不猜年级；close 只总结。
-只返回符合响应 Schema 的 JSON。`;
+const OUTLINE_SYSTEM_PROMPT = [
+  `设计完整课程目录，不生成 OLL、执行 ID、组件名或自由对象名。`,
+  `- 需要同步对照的图复用同一共享数值，并通过 supporting/comparison 声明关联；不要用两个独立 main 图表示同一联动关系。`,
+  `- visual_recipes 为 [features,numbers,purpose]。course_visuals 选其中 features，只列必要画面；后续复用，确需并排才建 comparison，supporting/comparison 指向较早画面。`,
+  `- 选择图形特征时，以本节需要展示的数学关系为依据；不能仅因讲解中出现某个数学对象，就选用包含该对象的图形特征。`,
+  promptSlot("outline.visual_choice"),
+  `- numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。`,
+  `- request_coverage 依 request_parts 顺序覆盖：可实现写 teach+章节。只是要求的互动或画面形式做不到（如可自由拖动顶点的任意三角形），但数学内容能用已有画面讲对时，写 teach 并换成可实现的画面，在第一节旁白里用一句话说明换成了什么；只有数学内容本身无法正确呈现时才写 unsupported、空章节及原因，禁止错误替代。`,
+  `- 按独立教学目标和学习进程分节，不按主题数或画面数分节。每节只承担一个完成后可验证的目标；连续推导及须同步观察的画面留在同一节的多个 moment。简单问题能围绕一个目标讲清时用 1 节；若须分别建立直觉、纠错或解释原理、推导或演示、应用、检查掌握中的多个目标，拆成 2–4 节。不要为凑节数重复开场、定义或总结，也不要把本应独立的推导、应用和检查全塞进一节。为什么须推导，怎么算须步骤与检验，是什么须直觉与边界。不猜年级；close 只总结。`,
+  `只返回符合响应 Schema 的 JSON。`,
+].filter(Boolean).join("\n");
 
-const SECTION_SYSTEM_PROMPT = `只编写课程目录指定的一节，不生成 OLL、执行 ID、变量名、对象名或对象引用。
-- 必须落实目录分配的 request_parts。旁白与对应板书和动作放在同一 moment；可见文字直接对学习者说话，不能写“让学生……”。
-- 目录中本节 create 的画面按顺序写入 course_visual_creates 并指定 moment；reuse 的画面不得重建。目录声明的公式和笔记分别按顺序写入 reusable_math_creates、reusable_note_creates；空清单省略。
-- focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象，补齐卡片用途、位置、默认时机和动作顺序。
-- 小数用 mantissa/scale，如 -1.5→-15/1。
-- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
-- function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
-- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。
-- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。
-- 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。
-- 本节讲了能算出确定数值的内容（计算、换算、读数、代入求值）时，写 1 道 answer_activities 让学生课后填数：用课中没算过的新数，课中不说答案。${ANSWER_ACTIVITY_RULE}
-- 圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。
-- 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
-- geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。
-只返回符合响应 Schema 的 JSON。`;
+const SECTION_SYSTEM_PROMPT = [
+  `只编写课程目录指定的一节，不生成 OLL、执行 ID、变量名、对象名或对象引用。`,
+  `- 必须落实目录分配的 request_parts。旁白与对应板书和动作放在同一 moment；可见文字直接对学习者说话，不能写“让学生……”。`,
+  `- 目录中本节 create 的画面按顺序写入 course_visual_creates 并指定 moment；reuse 的画面不得重建。目录声明的公式和笔记分别按顺序写入 reusable_math_creates、reusable_note_creates；空清单省略。`,
+  `- focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象，补齐卡片用途、位置、默认时机和动作顺序。`,
+  `- 小数用 mantissa/scale，如 -1.5→-15/1。`,
+  `- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。`,
+  promptSlot("section.formulas"),
+  `- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。`,
+  `- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
+  `- 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。`,
+  `- 本节讲了能算出确定数值的内容（计算、换算、读数、代入求值）时，写 1 道 answer_activities 让学生课后填数：用课中没算过的新数，课中不说答案。${ANSWER_ACTIVITY_RULE}`,
+  promptSlot("section.bounds"),
+  promptSlot("section.linked_numbers", "联动图引用同一 numbers；"),
+  promptSlot("section.constructions"),
+  `只返回符合响应 Schema 的 JSON。`,
+].filter(Boolean).join("\n");
 
-const BOOTSTRAP_FIRST_SECTION_PROMPT = `在同一次回答中，必须先完成 outline，再依据这个 outline 编写 first_section。first_section 只能落实 outline.sections[0]：
-- outline 是唯一课程安排；不得在 first_section 增加 outline 没有声明的主要画面，也不得遗漏第一节声明的主要画面和可复用板书。
-- first_section 只写 moments 以及可选的 number_activities、scene3d_activities。旁白与对应板书和动作放在同一 moment；可见文字直接对学习者说话，不能写“让学生……”。
-- 第一节新画面写入 moment.visual_creates；course_visual、content.numbers 分别引用 outline.course_visuals、outline.numbers 的从1开始位置。content.parameters 仅写数学内容，能力由程序确定；复用画面不重建。
-- 第一节公式/笔记写入 moment.math_creates/note_creates；可复用项用 reusable_item 引用目录中从1开始的位置，临时项不填。程序生成稳定引用。
-- first_section 使用 outline 中数值和画面的先后顺序，不生成 OLL、执行 ID、变量名、对象名、对象引用、course_visual_creates 或 reusable_board_creates。
-- focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象，补齐卡片用途、位置、默认时机和动作顺序。
-- 小数用 mantissa/scale，如 -1.5→-15/1。
-- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。
-- function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。
-- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。
-- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。
-- 圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。
-- 联动图引用同一 numbers；半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。
-- geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。process_diagram 无数值/动画。`;
+const BOOTSTRAP_FIRST_SECTION_PROMPT = [
+  `在同一次回答中，必须先完成 outline，再依据这个 outline 编写 first_section。first_section 只能落实 outline.sections[0]：`,
+  `- outline 是唯一课程安排；不得在 first_section 增加 outline 没有声明的主要画面，也不得遗漏第一节声明的主要画面和可复用板书。`,
+  `- first_section 只写 moments 以及可选的 number_activities、scene3d_activities。旁白与对应板书和动作放在同一 moment；可见文字直接对学习者说话，不能写“让学生……”。`,
+  `- 第一节新画面写入 moment.visual_creates；course_visual、content.numbers 分别引用 outline.course_visuals、outline.numbers 的从1开始位置。content.parameters 仅写数学内容，能力由程序确定；复用画面不重建。`,
+  `- 第一节公式/笔记写入 moment.math_creates/note_creates；可复用项用 reusable_item 引用目录中从1开始的位置，临时项不填。程序生成稳定引用。`,
+  `- first_section 使用 outline 中数值和画面的先后顺序，不生成 OLL、执行 ID、变量名、对象名、对象引用、course_visual_creates 或 reusable_board_creates。`,
+  `- focuses 只写聚焦意图，points 只表示需要指示；程序选择真实对象，补齐卡片用途、位置、默认时机和动作顺序。`,
+  `- 小数用 mantissa/scale，如 -1.5→-15/1。`,
+  `- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。`,
+  promptSlot("section.formulas"),
+  `- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。`,
+  `- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
+  promptSlot("section.bounds"),
+  promptSlot("section.linked_numbers", "联动图引用同一 numbers；"),
+  promptSlot("section.constructions"),
+].filter(Boolean).join("\n");
 
 // Appended only when the host sends these fields, so every other request,
 // including the existing tutor_context/learner_context uses, keeps its exact prompt.
