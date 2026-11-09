@@ -153,10 +153,42 @@ export const MATH_RECIPES = {
   },
 } as const;
 
+// Provider-schema properties each recipe adds to a visual's parameters.
+// Strings carry no length keywords (the Vertex schema endpoint rejects them);
+// the Lesson Plan validator enforces the limits after generation.
+const text = { type: "string" } as const;
+const MATH_SCHEMA_PROPERTIES = {
+  function_plot: {
+    x_label: text,
+    y_label: text,
+    formulas: { type: "array", minItems: 1, maxItems: 8, items: text },
+    curve_label: text,
+    curve_labels: { type: "array", minItems: 1, maxItems: 8, items: text },
+  },
+  unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
+  circle_polygon_bounds: { radius: { type: "number", minimum: 0 } },
+  circle_and_arc: { radius: { type: "number", minimum: 0 }, angle: { type: "number" } },
+  function_surface_with_section: { expression: text, section_axis: { enum: ["x", "y", "z"] }, section_value: { type: "number" } },
+  implicit_surface_with_section: { expression: text, section_axis: { enum: ["x", "y", "z"] }, level: { type: "number" } },
+  coordinate_circle: {
+    radius: { type: "number", minimum: 0 },
+    radius_expression: text,
+    center_x: { type: "number" },
+    center_y: { type: "number" },
+  },
+  geometric_rearrangement: {
+    construction: { enum: [...MATH_RECIPES.geometric_rearrangement.parameter_options.construction] },
+    leg_a: { type: "number", minimum: 0 },
+    leg_b: { type: "number", minimum: 0 },
+  },
+  circle_area_rearrangement: { radius: { type: "number", minimum: 0 } },
+};
+
 export const MATH_PLUGIN = {
   manifest: { id: "math", version: "0.1.0", depends: { shared: "0.1.0" } },
   subject: { description: { "zh-CN": "数学：数与运算、代数、函数与图像、几何、统计与概率" } },
   recipes: MATH_RECIPES,
+  schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "多边形重排选 polygon_pieces、rigid_rearrangement、area_relation；圆面积选 circle_area_rearrangement。",
     "section.formulas": "function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。",

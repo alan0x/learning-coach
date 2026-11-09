@@ -47,3 +47,16 @@ test("each plugin compiles exactly the recipes it declares", () => {
     assert.deepEqual(Object.keys(PLUGIN_COMPILERS[plugin.manifest.id]).sort(), Object.keys(plugin.recipes).sort(), plugin.manifest.id);
   }
 });
+
+test("recipes that share a schema property declare it identically, and every property has a place in the order", () => {
+  const { RECIPE_SCHEMA_PROPERTIES, SCHEMA_PROPERTY_ORDER } = api;
+  const seen = new Map();
+  for (const [recipe, properties] of Object.entries(RECIPE_SCHEMA_PROPERTIES)) {
+    assert.ok(RECIPE_CATALOG_ORDER.includes(recipe), `${recipe} is a known recipe`);
+    for (const [name, schema] of Object.entries(properties)) {
+      if (seen.has(name)) assert.deepEqual(schema, seen.get(name).schema, `${name}: ${recipe} vs ${seen.get(name).recipe}`);
+      else seen.set(name, { recipe, schema });
+      assert.ok(SCHEMA_PROPERTY_ORDER.includes(name), `${name} has a fixed position`);
+    }
+  }
+});

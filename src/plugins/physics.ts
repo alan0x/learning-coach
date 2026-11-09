@@ -23,5 +23,6 @@ export const PHYSICS_PLUGIN = {
   manifest: { id: "physics", version: "0.1.0", depends: { shared: "0.1.0" } },
   subject: { description: { "zh-CN": "物理：运动与力、能量、电路、光、声、浮力等" } },
   recipes: PHYSICS_RECIPES,
+  schema_properties: {},
   prompt_rules: {},
 } as const satisfies CoachSubjectPlugin;

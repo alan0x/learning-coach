@@ -4336,7 +4336,7 @@ var require_core = __commonJS({
       errorsText(errors = this.errors, { separator = ", ", dataVar = "data" } = {}) {
         if (!errors || errors.length === 0)
           return "No errors";
-        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text, msg) => text + separator + msg);
+        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text2, msg) => text2 + separator + msg);
       }
       $dataMetaSchema(metaSchema, keywordsJsonPointers) {
         const rules = this.RULES.all;
@@ -7180,8 +7180,8 @@ var FULL_WIDTH = {
   "\uFF0C": ",",
   "\u3000": " "
 };
-function normalize(text) {
-  return text.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 65248)).replace(/[－−–／÷．。，　]/g, (char) => FULL_WIDTH[char]).trim().replace(/\s+/g, " ").replace(/\s*\/\s*/g, "/").replace(/^-\s+/, "-");
+function normalize(text2) {
+  return text2.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 65248)).replace(/[－−–／÷．。，　]/g, (char) => FULL_WIDTH[char]).trim().replace(/\s+/g, " ").replace(/\s*\/\s*/g, "/").replace(/^-\s+/, "-");
 }
 var INTEGER = /^(-?)(\d{1,3}(?:,\d{3})+|\d+)$/;
 var DECIMAL = /^(-?)(\d{1,3}(?:,\d{3})+|\d*)\.(\d+)$/;
@@ -7190,10 +7190,10 @@ var MIXED = /^(-?)(\d+) (\d+)\/(\d+)$/;
 function safe(...values) {
   return values.every(Number.isSafeInteger);
 }
-function parseNumericAnswer(text) {
-  if (typeof text !== "string" || text.length > 64)
+function parseNumericAnswer(text2) {
+  if (typeof text2 !== "string" || text2.length > 64)
     return void 0;
-  const written = normalize(text);
+  const written = normalize(text2);
   let match = INTEGER.exec(written);
   if (match) {
     const value = Number(match[2].replace(/,/g, ""));
@@ -10346,10 +10346,38 @@ var MATH_RECIPES = {
     model_guidance: "\u5706\u9762\u79EF\uFF1A\u6247\u5F62\u7B49\u79EF\u91CD\u6392\uFF0C\u5E95\u8D8B\u8FD1\u03C0r\u3001\u9AD8\u8D8B\u8FD1r"
   }
 };
+var text = { type: "string" };
+var MATH_SCHEMA_PROPERTIES = {
+  function_plot: {
+    x_label: text,
+    y_label: text,
+    formulas: { type: "array", minItems: 1, maxItems: 8, items: text },
+    curve_label: text,
+    curve_labels: { type: "array", minItems: 1, maxItems: 8, items: text }
+  },
+  unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
+  circle_polygon_bounds: { radius: { type: "number", minimum: 0 } },
+  circle_and_arc: { radius: { type: "number", minimum: 0 }, angle: { type: "number" } },
+  function_surface_with_section: { expression: text, section_axis: { enum: ["x", "y", "z"] }, section_value: { type: "number" } },
+  implicit_surface_with_section: { expression: text, section_axis: { enum: ["x", "y", "z"] }, level: { type: "number" } },
+  coordinate_circle: {
+    radius: { type: "number", minimum: 0 },
+    radius_expression: text,
+    center_x: { type: "number" },
+    center_y: { type: "number" }
+  },
+  geometric_rearrangement: {
+    construction: { enum: [...MATH_RECIPES.geometric_rearrangement.parameter_options.construction] },
+    leg_a: { type: "number", minimum: 0 },
+    leg_b: { type: "number", minimum: 0 }
+  },
+  circle_area_rearrangement: { radius: { type: "number", minimum: 0 } }
+};
 var MATH_PLUGIN = {
   manifest: { id: "math", version: "0.1.0", depends: { shared: "0.1.0" } },
   subject: { description: { "zh-CN": "\u6570\u5B66\uFF1A\u6570\u4E0E\u8FD0\u7B97\u3001\u4EE3\u6570\u3001\u51FD\u6570\u4E0E\u56FE\u50CF\u3001\u51E0\u4F55\u3001\u7EDF\u8BA1\u4E0E\u6982\u7387" } },
   recipes: MATH_RECIPES,
+  schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
     "section.formulas": "function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002",
@@ -10379,10 +10407,17 @@ var PHYSICS_PLUGIN = {
   manifest: { id: "physics", version: "0.1.0", depends: { shared: "0.1.0" } },
   subject: { description: { "zh-CN": "\u7269\u7406\uFF1A\u8FD0\u52A8\u4E0E\u529B\u3001\u80FD\u91CF\u3001\u7535\u8DEF\u3001\u5149\u3001\u58F0\u3001\u6D6E\u529B\u7B49" } },
   recipes: PHYSICS_RECIPES,
+  schema_properties: {},
   prompt_rules: {}
 };
 
 // src/plugins/shared.ts
+var PROCESS_DIAGRAM_CONTRACT = {
+  min_steps: 2,
+  max_steps: 8,
+  max_step_characters: 80,
+  max_title_characters: 120
+};
 var SHARED_RECIPES = {
   process_diagram: {
     parts: ["whole", "first_step", "current_step", "last_step"],
@@ -10401,6 +10436,12 @@ var SHARED_RECIPES = {
 var SHARED_PLUGIN = {
   manifest: { id: "shared", version: "0.1.0", depends: {} },
   recipes: SHARED_RECIPES,
+  schema_properties: {
+    process_diagram: {
+      // Strings carry no length keywords; the validator enforces them.
+      steps: { type: "array", minItems: PROCESS_DIAGRAM_CONTRACT.min_steps, maxItems: PROCESS_DIAGRAM_CONTRACT.max_steps, items: { type: "string" } }
+    }
+  },
   prompt_rules: {
     "outline.visual_choice": "ordered_process_steps \u4EC5\u662F\u9759\u6001\u6D41\u7A0B\u3002",
     "section.constructions": "process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002"
@@ -10431,19 +10472,39 @@ var PLUGIN_RECIPE_REGISTRY = Object.fromEntries(
 var RECIPE_PLUGIN = Object.fromEntries(
   INSTALLED_PLUGINS.flatMap((plugin) => Object.keys(plugin.recipes).map((name) => [name, plugin.manifest.id]))
 );
+var RECIPE_SCHEMA_PROPERTIES = Object.assign(
+  {},
+  ...INSTALLED_PLUGINS.map((plugin) => plugin.schema_properties)
+);
+var SCHEMA_PROPERTY_ORDER = [
+  "title",
+  "projection",
+  "x_label",
+  "y_label",
+  "formulas",
+  "curve_label",
+  "curve_labels",
+  "expression",
+  "section_axis",
+  "section_value",
+  "level",
+  "radius",
+  "angle",
+  "radius_expression",
+  "center_x",
+  "center_y",
+  "construction",
+  "leg_a",
+  "leg_b",
+  "steps"
+];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
-  const text = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
-  return text ? `- ${text}` : "";
+  const text2 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
+  return text2 ? `- ${text2}` : "";
 }
 
 // src/lesson-plan.ts
 var LESSON_PLAN_VERSION = "0.1";
-var PROCESS_DIAGRAM_CONTRACT = {
-  min_steps: 2,
-  max_steps: 8,
-  max_step_characters: 80,
-  max_title_characters: 120
-};
 var LESSON_PLAN_CAPABILITY_REGISTRY = PLUGIN_RECIPE_REGISTRY;
 var LESSON_PLAN_CAPABILITY_NAMES = Object.keys(LESSON_PLAN_CAPABILITY_REGISTRY);
 var LESSON_PLAN_VISUAL_FEATURES = [...new Set(
@@ -11786,14 +11847,14 @@ function validateRearrangementClaims(plan) {
     }
     return [];
   };
-  const check = (text, visuals, path) => {
+  const check = (text2, visuals, path) => {
     if (visuals.size !== 1) return;
     const visual = [...visuals][0];
     if (visual.capability !== "geometric_rearrangement") return;
     const construction = visual.parameters?.construction ?? "right_triangle_square";
     const facts = REARRANGEMENT_FACTS[construction];
     if (!facts) return;
-    const claims = text.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
+    const claims = text2.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
     const wrongPieces = construction === "square_area_identity" && claims.some((claim) => /(?:这(?:个|张|些|幅)|图中|图里|内部|里面|画面|包含).{0,20}(?:四|4)\s*(?:个|块|片)?(?:完全相同的|全等的|全等|完全相同|一样的)?(?:直角)?三角形/u.test(claim));
     const wrongFrame = construction === "right_triangle_square" && claims.some((claim) => /(?:外框|外侧正方形|这个大正方形|大正方形)(?:的)?边长.{0,8}(?:是|为|等于|就是).{0,4}(?:斜边\s*)?c(?![a-z])/iu.test(claim) || /(?:中间|中央|中心).{0,8}(?:正方形|留白).{0,8}(?:边长|面积).{0,8}(?:b\s*[-−]\s*a|a\s*[-−]\s*b)/iu.test(claim) || /(?:S_?\{?(?:大正方形|外框)\}?|S[（(](?:大正方形|外框)[）)])\s*=\s*c(?:²|\^\{?2\}?)/u.test(claim));
     const wrongControl = claims.some((claim) => /(?:拖动|拖拽|调整|滑动).{0,12}(?:滑块|滑杆|进度).{0,16}(?:改变|调整).{0,8}(?:边长|三边|斜边|直角边)/u.test(claim));
@@ -11872,29 +11933,29 @@ function validateTeachingClaims(plan) {
   const onlyFixedLineSamples = plots.length === 1 && fixedLineSamples(plots[0]);
   for (const [si, section] of plan.sections.entries()) {
     for (const [mi, moment] of section.moments.entries()) {
-      const text = moment.narration ?? "";
-      const claims = text.split(/[。！？!?；;]/);
-      const englishClaims = text.split(/(?<=[.!?;])\s+/u).filter((claim) => !/\?\s*$/.test(claim) && !/\b(?:not|never|cannot|can't|doesn't|isn't|don't|whether|if)\b/i.test(claim));
+      const text2 = moment.narration ?? "";
+      const claims = text2.split(/[。！？!?；;]/);
+      const englishClaims = text2.split(/(?<=[.!?;])\s+/u).filter((claim) => !/\?\s*$/.test(claim) && !/\b(?:not|never|cannot|can't|doesn't|isn't|don't|whether|if)\b/i.test(claim));
       if (hasCircleArea && englishClaims.some((claim) => /\b(?:base|height)\b.{0,25}\b(?:exactly|equals?|is)\b.{0,15}(?:πr|pi\s*\*?\s*r|radius|\br\b)/i.test(claim)) && !/\b(?:approach|tend|limit|infinite|finer|approx|curved)\w*\b/i.test(section.moments.slice(0, mi + 1).map((moment2) => moment2.narration).join(" "))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
       }
       if (onlyFixedLineSamples && englishClaims.some((claim) => /\b(?:slope|steepness)\b.{0,20}\b(?:changes?|changing|varies|varying)\b/i.test(claim) && !/\b(?:unchanged|constant|fixed|invariant|remains?|stays?)\b/i.test(claim))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
       }
-      if (plots.length && englishClaims.some((claim) => /\b(?:larger|greater|increas\w*)\s+(?:signed\s+)?(?:slope|k)\b.{0,45}\bsteeper\b/i.test(claim)) && !/\b(?:absolute|positive|magnitude)\b|k\s*>\s*0/i.test(text)) {
+      if (plots.length && englishClaims.some((claim) => /\b(?:larger|greater|increas\w*)\s+(?:signed\s+)?(?:slope|k)\b.{0,45}\bsteeper\b/i.test(claim)) && !/\b(?:absolute|positive|magnitude)\b|k\s*>\s*0/i.test(text2)) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
       }
-      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
+      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text2) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
       }
-      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text) && !/滑块|滑杆/.test(text)) {
+      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text2) && !/滑块|滑杆/.test(text2)) {
         throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "use the point's horizontal-coordinate slider; directly dragging plot points is unavailable");
       }
       if (onlyFixedLineSamples && claims.some((claim) => /(?:斜率|倾斜角度|倾斜程度|倾斜方向|陡峭程度)(?:的数值)?(?:就|也|会|将|随之|随点移动|发生|而|从而|不断|逐渐|产生|有所|明显|直接|可以|能够|能|\s|[，,]){0,8}(?:改变|变化)(?!量|率)|(?:改变|变化)(?:了|着|其|它的|直线的|连线的|割线的|两点连线的|\s){0,5}(?:斜率|倾斜角度|倾斜程度|陡峭程度)/.test(claim) && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
       }
-      const steepnessClaim = (text.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
-      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text)) {
+      const steepnessClaim = (text2.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
+      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text2)) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
       }
     }
@@ -11903,22 +11964,22 @@ function validateTeachingClaims(plan) {
       for (const action of visuals) {
         if (action.action !== "create" || action.kind !== "visual") continue;
         const visual = action.content;
-        const text = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
+        const text2 = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
         const path = `$plan.sections[${si}].moments[${mi}]`;
-        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text) && /证明|推导|拼|重排|prove|derive/i.test(text)) {
+        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text2) && /证明|推导|拼|重排|prove|derive/i.test(text2)) {
           throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path, "circle area requires circle_area_rearrangement; polygon recipes cannot prove pi*r^2");
         }
         if (visual.capability !== "function_plot") continue;
         const tokens = visual.parameters?.expression_tokens;
         const dynamic = Array.isArray(tokens) && tokens.some((t) => t?.kind === "number");
         const count = dynamic ? 0 : new Set(visual.numbers ?? []).size;
-        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text)) {
+        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text2)) {
           throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "moving the whole curve requires formula number references; static sample inputs only move points");
         }
-        if (/两个点|两点|two points/i.test(text) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text) && count !== 2) {
+        if (/两个点|两点|two points/i.test(text2) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text2) && count !== 2) {
           throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and content.numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
         }
-        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text)) {
+        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text2)) {
           throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "plot points use sliders; direct point dragging is unavailable");
         }
       }
@@ -12199,8 +12260,8 @@ function numberDefinition(plan, index, path) {
   if (!definition) fail3("LESSON_PLAN_NUMBER_REFERENCE", path, "number reference is unavailable");
   return definition;
 }
-function namedNumbers(text, plan) {
-  return text.replace(/\bn([1-9])\b/gu, (placeholder, digit) => {
+function namedNumbers(text2, plan) {
+  return text2.replace(/\bn([1-9])\b/gu, (placeholder, digit) => {
     const label = plan.numbers?.[Number(digit) - 1]?.label?.trim();
     if (!label) return placeholder;
     return /([A-Za-z\u03b1-\u03c9])$/u.exec(label)?.[1] ?? label;
@@ -14096,45 +14157,14 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
   const modelParameters = new Set(allowedCapabilities.flatMap(
     (capability2) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_parameter_names]
   ));
-  const properties = {};
-  const uses = (capability2) => allowedCapabilities.includes(capability2);
-  if (modelParameters.has("title")) properties.title = string(240);
-  if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
-  if (uses("function_plot")) {
-    properties.x_label = string(32);
-    properties.y_label = string(32);
-    properties.formulas = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
-    properties.curve_label = string(160);
-    properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
-  }
-  if (uses("function_surface_with_section") || uses("implicit_surface_with_section")) {
-    properties.expression = string(256);
-    properties.section_axis = { enum: ["x", "y", "z"] };
-  }
-  if (uses("function_surface_with_section")) properties.section_value = { type: "number" };
-  if (uses("implicit_surface_with_section")) properties.level = { type: "number" };
-  if (modelParameters.has("radius")) properties.radius = { type: "number", minimum: 0 };
-  if (uses("circle_and_arc")) properties.angle = { type: "number" };
-  if (uses("coordinate_circle")) {
-    properties.radius_expression = string(256);
-    properties.center_x = { type: "number" };
-    properties.center_y = { type: "number" };
-  }
-  if (uses("geometric_rearrangement")) {
-    properties.construction = {
-      enum: [...LESSON_PLAN_CAPABILITY_REGISTRY.geometric_rearrangement.parameter_options.construction]
-    };
-    properties.leg_a = { type: "number", minimum: 0 };
-    properties.leg_b = { type: "number", minimum: 0 };
-  }
-  if (uses("process_diagram")) {
-    properties.steps = {
-      type: "array",
-      minItems: PROCESS_DIAGRAM_CONTRACT.min_steps,
-      maxItems: PROCESS_DIAGRAM_CONTRACT.max_steps,
-      items: string(PROCESS_DIAGRAM_CONTRACT.max_step_characters)
-    };
-  }
+  const declared = {};
+  if (modelParameters.has("title")) declared.title = string(240);
+  for (const capability2 of allowedCapabilities) Object.assign(declared, RECIPE_SCHEMA_PROPERTIES[capability2]);
+  const order = SCHEMA_PROPERTY_ORDER;
+  const properties = Object.fromEntries([
+    ...order.filter((name) => name in declared),
+    ...Object.keys(declared).filter((name) => !order.includes(name))
+  ].map((name) => [name, declared[name]]));
   const required = allowedCapabilities.length === 1 ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters] : [];
   if ((requireDynamicPlotExpression || canonicalFunctionPlot) && !required.includes("formulas")) {
     required.push("formulas");
@@ -14638,10 +14668,10 @@ function completedObjectText(source, propertyName) {
   return void 0;
 }
 function completedJsonObjectProperty(source, propertyName) {
-  const text = completedObjectText(source, propertyName);
-  if (text === void 0) return void 0;
+  const text2 = completedObjectText(source, propertyName);
+  if (text2 === void 0) return void 0;
   try {
-    return JSON.parse(text);
+    return JSON.parse(text2);
   } catch {
     return void 0;
   }
@@ -17314,6 +17344,8 @@ export {
   PROCESS_DIAGRAM_CONTRACT,
   RECIPE_CATALOG_ORDER,
   RECIPE_PLUGIN,
+  RECIPE_SCHEMA_PROPERTIES,
+  SCHEMA_PROPERTY_ORDER,
   assembleLessonPlan,
   buildCameraLessonPlanAdmissionBootstrapJsonSchema,
   buildCameraLessonPlanAdmissionOutlineJsonSchema,

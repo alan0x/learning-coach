@@ -17,5 +17,7 @@ export interface CoachSubjectPlugin {
   subject?: { description: Readonly<Record<string, string>> };
   /** Recipe registry entries this plugin owns, keyed by capability name. */
   recipes: Readonly<Record<string, unknown>>;
+  /** Provider-schema properties each recipe adds to a visual's parameters. */
+  schema_properties: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   prompt_rules: Readonly<Partial<Record<PromptSlot, string>>>;
 }

@@ -4,6 +4,13 @@
 // and the recipe rules in its prompts from the installed plugins.
 import type { CoachSubjectPlugin } from "./types.js";
 
+export const PROCESS_DIAGRAM_CONTRACT = {
+  min_steps: 2,
+  max_steps: 8,
+  max_step_characters: 80,
+  max_title_characters: 120,
+} as const;
+
 export const SHARED_RECIPES = {
   process_diagram: {
     parts: ["whole", "first_step", "current_step", "last_step"],
@@ -23,6 +30,12 @@ export const SHARED_RECIPES = {
 export const SHARED_PLUGIN = {
   manifest: { id: "shared", version: "0.1.0", depends: {} },
   recipes: SHARED_RECIPES,
+  schema_properties: {
+    process_diagram: {
+      // Strings carry no length keywords; the validator enforces them.
+      steps: { type: "array", minItems: PROCESS_DIAGRAM_CONTRACT.min_steps, maxItems: PROCESS_DIAGRAM_CONTRACT.max_steps, items: { type: "string" } },
+    },
+  },
   prompt_rules: {
     "outline.visual_choice": "ordered_process_steps 仅是静态流程。",
     "section.constructions": "process_diagram 无数值/动画。",

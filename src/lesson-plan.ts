@@ -3,12 +3,7 @@ import { compileMathExpression, isSimplestFraction, parseNumericAnswer } from "o
 import { PLUGIN_RECIPE_REGISTRY } from "./plugins/index.js";
 export const LESSON_PLAN_VERSION = "0.1" as const;
 
-export const PROCESS_DIAGRAM_CONTRACT = {
-  min_steps: 2,
-  max_steps: 8,
-  max_step_characters: 80,
-  max_title_characters: 120,
-} as const;
+export { PROCESS_DIAGRAM_CONTRACT } from "./plugins/shared.js";
 
 /**
  * The single program-owned declaration for every deterministic visual,

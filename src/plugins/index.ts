@@ -42,6 +42,22 @@ export const RECIPE_PLUGIN = Object.fromEntries(
   INSTALLED_PLUGINS.flatMap((plugin) => Object.keys(plugin.recipes).map((name) => [name, plugin.manifest.id])),
 ) as Record<typeof RECIPE_CATALOG_ORDER[number], string>;
 
+/** Provider-schema properties per recipe, from the plugin that owns it. */
+export const RECIPE_SCHEMA_PROPERTIES: Readonly<Record<string, Readonly<Record<string, unknown>>>> = Object.assign(
+  {}, ...INSTALLED_PLUGINS.map((plugin) => plugin.schema_properties),
+);
+
+/**
+ * The order of visual parameter properties in provider schemas: the order
+ * before plugins existed, so every schema stays byte-identical. A property no
+ * entry lists goes after these, in the order the recipes declare it.
+ */
+export const SCHEMA_PROPERTY_ORDER = [
+  "title", "projection", "x_label", "y_label", "formulas", "curve_label", "curve_labels",
+  "expression", "section_axis", "section_value", "level", "radius", "angle",
+  "radius_expression", "center_x", "center_y", "construction", "leg_a", "leg_b", "steps",
+] as const;
+
 /** One prompt bullet: its core text and the installed plugins' sentences, or "" when empty. */
 export function promptSlot(slot: PromptSlot, core = "", plugins: readonly CoachSubjectPlugin[] = INSTALLED_PLUGINS): string {
   const text = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
