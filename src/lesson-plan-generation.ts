@@ -46,7 +46,7 @@ import {
 import { completedJsonObjectProperty } from "./json-stream.js";
 import { promptSlot } from "./plugins/index.js";
 import { SECTION_FACTS } from "./plugins/section-facts.js";
-import { RECIPE_HOOKS } from "./plugins/hooks.js";
+import { RECIPE_HOOKS, PLUGIN_HOOKS } from "./plugins/hooks.js";
 
 export interface LessonPlanGenerationInput {
   turn_id: string;
@@ -826,8 +826,8 @@ function sanitizeNonessentialVisuals(
   });
   for (const entry of visualEntries) {
     const incompatible = (entry.content.numbers ?? []).some((number, index) => {
-      const next = RECIPE_HOOKS[entry.content.capability]?.number_purpose?.(entry.content, index)
-        ?? visualNumberPurpose(entry.content.capability, index);
+      const next = RECIPE_HOOKS[entry.content.capability]?.free_number?.(entry.content, index)
+        ? "generic" : visualNumberPurpose(entry.content.capability, index);
       const current = establishedPurposes.get(number);
       if (!current || compatibleVisualNumberPurpose(current, next)) {
         if (!current || current === "generic") establishedPurposes.set(number, next);
@@ -2404,51 +2404,6 @@ function locallyUnsupportedLessonRequest(request: string, language?: string): st
   return undefined;
 }
 
-function requestsTwoIndependentPoints(request: string): boolean {
-  return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
-}
-
-function prepareTwoPointOutline(outline: LessonPlanOutline, request: string, language?: string): void {
-  if (!requestsTwoIndependentPoints(request)) return;
-  outline.numbers ??= [];
-  while (outline.numbers.length < 2) {
-    const index = outline.numbers.length;
-    outline.numbers.push({
-      initial: index === 0 ? -1 : 2,
-      min: -5,
-      max: 5,
-      label: index === 0 ? lessonText(language, "A点的x坐标") : lessonText(language, "B点的x坐标"),
-      student_control: { kind: "slider", step: 0.25 },
-    });
-  }
-  outline.numbers.slice(0, 2).forEach((number, index) => {
-    number.label = index === 0 ? lessonText(language, "A点的x坐标") : lessonText(language, "B点的x坐标");
-    number.student_control = { kind: "slider", step: number.student_control?.step ?? 0.25 };
-  });
-}
-
-function specializeTwoPointDraft(
-  draft: LessonPlanSectionDraft,
-  outline: LessonPlanOutline,
-  request: string,
-): void {
-  if (!requestsTwoIndependentPoints(request) || (outline.numbers?.length ?? 0) < 2) return;
-  for (const moment of draft.moments) for (const action of moment.actions) {
-    if (action.action !== "create" || action.kind !== "visual") continue;
-    const content = action.content as LessonPlanVisualContent;
-    if (content.capability !== "function_plot") continue;
-    const tokens = content.parameters?.expression_tokens;
-    if (Array.isArray(tokens)) {
-      content.parameters!.expression_tokens = (tokens as LessonPlanMathToken[]).map((token) => (
-        token.kind === "number"
-          ? { kind: "literal", value: outline.numbers?.[token.number - 1]?.initial ?? 0 }
-          : token
-      ));
-    }
-    content.numbers = [1, 2];
-  }
-}
-
 export async function generateLessonPlanWithModel(
   model: LessonPlanModelCall,
   input: LessonPlanGenerationInput,
@@ -2589,7 +2544,7 @@ export async function generateLessonPlanWithModel(
       ),
       fixedRequestParts.length,
     );
-    prepareTwoPointOutline(outline, input.learner_request, input.language);
+    for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
       bootstrappedFirstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
@@ -2601,7 +2556,7 @@ export async function generateLessonPlanWithModel(
         true,
         input.language,
       );
-      specializeTwoPointDraft(bootstrappedFirstSection, outline, input.learner_request);
+      for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(bootstrappedFirstSection, { outline, request: input.learner_request });
     } catch (error) {
       sectionErrors.set(1, error);
       await options.on_rejected_part?.({
@@ -2731,7 +2686,7 @@ export async function generateLessonPlanWithModel(
     }
   }
   if (!outline) throw outlineError;
-  prepareTwoPointOutline(outline, input.learner_request, input.language);
+  for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
   await options.on_outline_ready?.({
     sections: outline.sections.length,
     course_visuals: outline.course_visuals?.length ?? 0,
@@ -2847,7 +2802,7 @@ export async function generateLessonPlanWithModel(
         true,
         input.language,
       );
-      specializeTwoPointDraft(candidate, outline, input.learner_request);
+      for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(candidate, { outline, request: input.learner_request });
     } catch (error) {
       const previousError = sectionErrors.get(section);
       sectionErrors.set(section, error);

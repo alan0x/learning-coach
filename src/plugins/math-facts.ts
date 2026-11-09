@@ -1,7 +1,7 @@
 // Section facts of the math plugin: what a later section is told about a
 // math visual already planned or on the board.
 import { REARRANGEMENT_FACTS, REARRANGEMENT_MODEL_GUIDANCE, type RearrangementConstruction } from "../rearrangement.js";
-import { fixedLineSamples } from "../teaching-contracts.js";
+import { fixedLineSamples } from "./math-teaching-contracts.js";
 import type { SectionFactsHook } from "./section-facts.js";
 
 export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {

@@ -157,12 +157,7 @@ function modelReusableBoardSchema(): LessonPlanJsonSchema {
   }, ["kind", "board_kind"]);
 }
 
-function visualParametersSchema(
-  allowedCapabilities: LessonPlanCapability[],
-  numberCount = 0,
-  requireDynamicPlotExpression = false,
-  canonicalFunctionPlot = false,
-): LessonPlanJsonSchema {
+function visualParametersSchema(allowedCapabilities: LessonPlanCapability[]): LessonPlanJsonSchema {
   const modelParameters = new Set(allowedCapabilities.flatMap(
     (capability) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_parameter_names],
   ));
@@ -177,9 +172,6 @@ function visualParametersSchema(
   const required = allowedCapabilities.length === 1
     ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters]
     : [];
-  if ((requireDynamicPlotExpression || canonicalFunctionPlot) && !required.includes("formulas")) {
-    required.push("formulas");
-  }
   return object(properties, required);
 }
 
@@ -227,17 +219,8 @@ function actionCollectionSchemas(
     timing,
     ...(reusableCount > 0 ? { reusable_item: integer(1, reusableCount) } : {}),
   };
-  // When a section can only create a function plot and the course declares
-  // multiple numeric controls, a static curve cannot represent those controls.
-  // Make the mathematical dependency mandatory at the provider boundary. For
-  // mixed-capability sections the local validator below remains authoritative,
-  // because applying this requirement to every visual would also constrain
-  // unrelated geometry and 3D content.
   const requireVisualParameters = allowedCapabilities.length === 1
     && LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters.length > 0;
-  const requireDynamicPlotExpression = numberCount > 1
-    && allowedCapabilities.length === 1
-    && allowedCapabilities[0] === "function_plot";
   return {
     ...(allowedCapabilities.length && includeVisualCreates ? {
       visual_creates: collection(modelAction({
@@ -247,11 +230,7 @@ function actionCollectionSchemas(
           : {}),
         content: object({
           ...(includeVisualCapability ? { capability: { enum: allowedCapabilities } } : {}),
-          parameters: visualParametersSchema(
-            allowedCapabilities,
-            numberCount,
-            requireDynamicPlotExpression,
-          ),
+          parameters: visualParametersSchema(allowedCapabilities),
           ...(numberCount > 0 ? {
             numbers: {
               type: "array",
@@ -311,12 +290,7 @@ function courseVisualCreatesSchema(
       moment: integer(1, 12),
       timing: { enum: timingNames },
       content: object({
-        parameters: visualParametersSchema(
-          [capability],
-          numberCount,
-          false,
-          capability === "function_plot",
-        ),
+        parameters: visualParametersSchema([capability]),
         ...(numberCount > 0 && numberLimit > 0 ? {
           numbers: {
             type: "array",

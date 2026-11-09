@@ -10503,6 +10503,86 @@ function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   return text2 ? `- ${text2}` : "";
 }
 
+// src/lesson-text.ts
+var EN = {
+  "\u51FD\u6570\u56FE\u50CF": "Function graph",
+  "\u5355\u4F4D\u5706\u4E0E\u6295\u5F71": "Unit circle and projection",
+  "{{v0}}\u51FD\u6570\u56FE\u50CF": "{{v0}} function graph",
+  "\u6B63\u5F26": "Sine",
+  "\u4F59\u5F26": "Cosine",
+  "\u65CB\u8F6C\u89D2\u4E0E\u5468\u671F\u6CE2\u52A8": "Rotation angle and periodic variation",
+  "\u5355\u4F4D\u5706\u4E0E\u51FD\u6570\u56FE\u50CF": "Unit circle and function graph",
+  "\u5706\u4E0E\u6B63\u591A\u8FB9\u5F62\u7684\u5468\u957F\u5939\u903C": "Bounding a circle's circumference with regular polygons",
+  "\u5185\u63A5\u6B63\u591A\u8FB9\u5F62": "Inscribed regular polygon",
+  "\u5916\u5207\u6B63\u591A\u8FB9\u5F62": "Circumscribed regular polygon",
+  "\u7EFF\u8272\u5185\u63A5\u5468\u957F < \u5706\u5468\u957F < \u6A59\u8272\u5916\u5207\u5468\u957F\u3002\u9664\u4EE5\u76F4\u5F84 2r\uFF1An sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002\u663E\u793A\u503C\u4E3A\u8FD1\u4F3C\u503C\uFF1B\u8FB9\u6570\u589E\u52A0\u65F6\u4E0A\u4E0B\u754C\u5171\u540C\u903C\u8FD1 \u03C0\u3002": "Green inscribed perimeter < circle circumference < orange circumscribed perimeter. Dividing by the diameter 2r gives n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n). Displayed values are approximations; both bounds approach \u03C0 as the number of sides increases.",
+  "\u5706\u3001\u5706\u5FC3\u89D2\u4E0E\u5706\u5F27": "Circle, central angle, and arc",
+  "\u534A\u5F84 r": "Radius r",
+  "\u5706\u5F27": "Arc",
+  "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8": "Oscillation of a spring and mass",
+  "\u4F4D\u79FB": "Displacement",
+  "\u56FA\u5B9A\u7AEF": "Fixed end",
+  "\u5E73\u8861\u4F4D\u7F6E": "Equilibrium position",
+  "\u7269\u4F53": "Mass",
+  "\u56DE\u590D\u529B": "Restoring force",
+  "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316": "Displacement versus phase",
+  "\u76F8\u4F4D": "Phase",
+  "\u5F53\u524D\u72B6\u6001": "Current state",
+  "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB": "Displacement at the same instant",
+  "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF": "Spring motion and function graph",
+  "\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u4E0E\u622A\u9762": "Cube, vertices, edges, faces, and sections",
+  "\u4E00\u4E2A\u4E2D\u5FC3\u5728\u539F\u70B9\u3001\u8FB9\u957F\u4E3A 2 \u7684\u6B63\u65B9\u4F53\uFF0C\u6807\u51FA\u4E86\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u6C34\u5E73\u622A\u9762\u3002": "A cube centred at the origin with side length 2, showing a vertex, an edge, a face, and a horizontal section.",
+  "\u6B63\u65B9\u4F53": "Cube",
+  "\u6C34\u5E73\u622A\u9762": "Horizontal section",
+  "\u9876\u70B9": "Vertex",
+  "\u68F1": "Edge",
+  "\u9762": "Face",
+  "\u51FD\u6570\u66F2\u9762\u4E0E\u622A\u9762": "Function surface and section",
+  "\u51FD\u6570\u66F2\u9762 z={{v0}} \u4E0E\u53EF\u53D8\u622A\u9762\u3002": "Function surface z={{v0}} with a variable section.",
+  "\u622A\u9762": "Section",
+  "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762": "Implicit surface and section",
+  "\u9690\u5F0F\u66F2\u9762 {{v0}}={{v1}} \u4E0E\u53EF\u53D8\u8F74\u5411\u622A\u9762\u3002": "Implicit surface {{v0}}={{v1}} with a variable axis-aligned section.",
+  "\u5750\u6807\u7CFB\u4E2D\u7684\u5706": "Circle in a coordinate system",
+  "\u5355\u4F4D\u6B63\u65B9\u5F62\u94FA\u6210\u957F\u65B9\u5F62": "Tiling a rectangle with unit squares",
+  "\u6BCF\u4E2A\u5C0F\u65B9\u683C\u9762\u79EF\u4E3A 1 \u5E73\u65B9\u5355\u4F4D\uFF1B\u6BCF\u884C\u65B9\u683C\u6570 \xD7 \u884C\u6570 = \u65B9\u683C\u603B\u6570 = \u957F\u65B9\u5F62\u9762\u79EF\u3002": "Each square has an area of 1 square unit. Squares per row \xD7 number of rows = total squares = area of the rectangle.",
+  "\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09": "Squares per row (length)",
+  "\u884C\u6570\uFF08\u5BBD\uFF09": "Number of rows (width)",
+  "1 \u5E73\u65B9\u5355\u4F4D": "1 square unit",
+  "{{v0}} \u7B49\u5206\u5706\u7684\u9762\u79EF\u91CD\u6392": "Rearranging a circle divided into {{v0}} sectors",
+  "\u534A\u5F84 r={{v0}}\uFF1B\u6BCF\u5757\u5747\u4E3A\u771F\u5B9E\u6247\u5F62\uFF0C\u91CD\u6392\u9762\u79EF\u4E0D\u53D8\u3002\u6709\u9650\u7B49\u5206\u7684\u8FB9\u7F18\u4ECD\u5F2F\u66F2\uFF1B\u7B49\u5206\u8D8A\u7EC6\uFF0C\u5E95\u8D8B\u8FD1 \u03C0r\uFF0C\u9AD8\u8D8B\u8FD1 r\uFF0C\u9762\u79EF\u4E3A \u03C0r\xB2\u3002": "Radius r={{v0}}. Each piece is a true sector, and rearranging preserves area. With finitely many sectors the edges remain curved. As the sectors become finer, the base approaches \u03C0r and the height approaches r; the area is \u03C0r\xB2.",
+  "\u5F00\u59CB": "Start",
+  "\u89C2\u5BDF\u53D8\u5316": "Observe the change",
+  "\u5F97\u5230\u7ED3\u8BBA": "Draw a conclusion",
+  "\u4E0B\u4E00\u6B65": "Next step",
+  "\u8FC7\u7A0B\u56FE": "Process diagram",
+  "\u6570\u503C": "the value",
+  "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002": "Set {{v0}} to {{v1}}{{v2}}.",
+  "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002": "Done: {{v0}} is now {{v1}}{{v2}}.",
+  "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762": "Continue observing the same existing visual",
+  "\u7EE7\u7EED\u89C2\u5BDF\u5F53\u524D\u753B\u9762": "Continue observing the current visual",
+  "\u62D6\u52A8\u5DE6\u4E0B\u89D2\u7684\u6ED1\u6746\uFF0C\u89C2\u5BDF\u6570\u503C\u548C\u753B\u9762\u540C\u6B65\u53D8\u5316\u3002": "Drag the slider at the bottom left and watch the value and visual change together.",
+  "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002": "This lesson cannot be generated in full yet because it includes visuals or interactions that are not supported.",
+  "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5728\u540C\u4E00\u5F20\u51FD\u6570\u56FE\u4E2D\u540C\u65F6\u5C55\u793A\u9759\u6001\u66F2\u7EBF\u548C\u7531\u63A7\u4EF6\u6539\u53D8\u7684\u53E6\u4E00\u6761\u66F2\u7EBF\u3002": "A static curve and another curve changed by a control cannot yet be shown together in the same graph.",
+  "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002": "The rest of the lesson is still being generated.",
+  "\u5F53\u524D\u767D\u677F\u53EA\u80FD\u6267\u884C\u4E8C\u7EF4\u56FE\u5F62\u548C\u4E09\u7EF4\u573A\u666F\uFF0C\u4E0D\u80FD\u7CBE\u786E\u6A21\u62DF\u56DB\u7EF4\u8D85\u7ACB\u65B9\u4F53\u7684\u56DB\u7EF4\u65CB\u8F6C\u3002\u4F60\u53EF\u4EE5\u6539\u95EE\u5B83\u7684\u4E09\u7EF4\u6295\u5F71\u539F\u7406\u6216\u57FA\u672C\u7ED3\u6784\u3002": "The board supports 2D diagrams and 3D scenes, but cannot accurately simulate a 4D hypercube rotating in four dimensions. You can ask about its 3D projections or basic structure instead.",
+  "A\u70B9\u7684x\u5750\u6807": "x-coordinate of point A",
+  "B\u70B9\u7684x\u5750\u6807": "x-coordinate of point B",
+  "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",
+  "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read this camera image reliably. Place the question or object in the centre and try again.",
+  "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF1A{{v0}}": "This lesson cannot be generated in full yet: {{v0}}"
+};
+function lessonText(language, source, values = {}) {
+  const message = /^en(?:-|$)/i.test(language ?? "") ? EN[source] ?? source : source;
+  return message.replace(/\{\{(\w+)\}\}/g, (token, key) => String(values[key] ?? token));
+}
+var languages = /* @__PURE__ */ new WeakMap();
+function setLessonTextLanguage(plan, language) {
+  languages.set(plan, language);
+}
+function compileText(plan, source, values) {
+  return lessonText(languages.get(plan), source, values);
+}
+
 // src/recipe-kit.ts
 var LESSON_PLAN_SCENE_INITIAL_CAMERAS = {
   cube_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
@@ -10670,6 +10750,351 @@ function angleScaleForUnit(unit) {
 }
 function scaledAngleExpression(variable, scale) {
   return scale === 1 ? variable : `(${variable})*pi/180`;
+}
+
+// src/scene3d-surfaces.ts
+var DOMAIN_CANDIDATE_HALF_SPANS = [2, 5, 10, 20, 50, 100];
+var DOMAIN_REFINEMENT_STEPS = 12;
+var DOMAIN_MARGIN = 1.1;
+function expressionUsesVariable(expression, variable) {
+  return new RegExp(`(^|[^A-Za-z0-9_])${variable}([^A-Za-z0-9_]|$)`, "u").test(expression);
+}
+function sampleImplicitSurfaceStatus(evaluate2, variables, level, halfSpan, dependentVariables) {
+  const resolution = variables.length === 2 ? 18 : 10;
+  let minimum = Number.POSITIVE_INFINITY;
+  let maximum = Number.NEGATIVE_INFINITY;
+  const boundaryRanges = /* @__PURE__ */ new Map();
+  for (const variable of dependentVariables) {
+    boundaryRanges.set(`${variable}:min`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
+    boundaryRanges.set(`${variable}:max`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
+  }
+  const observe = (value, coordinates) => {
+    if (!Number.isFinite(value) || Math.abs(value) > 1e12) return;
+    minimum = Math.min(minimum, value);
+    maximum = Math.max(maximum, value);
+    for (const variable of dependentVariables) {
+      const coordinate = coordinates[variable];
+      const side = Math.abs((coordinate ?? 0) + halfSpan) < 1e-9 ? "min" : Math.abs((coordinate ?? 0) - halfSpan) < 1e-9 ? "max" : void 0;
+      if (!side) continue;
+      const range = boundaryRanges.get(`${variable}:${side}`);
+      range.minimum = Math.min(range.minimum, value);
+      range.maximum = Math.max(range.maximum, value);
+    }
+  };
+  for (let xIndex = 0; xIndex <= resolution; xIndex += 1) {
+    const x = -halfSpan + 2 * halfSpan * xIndex / resolution;
+    for (let yIndex = 0; yIndex <= resolution; yIndex += 1) {
+      const y = -halfSpan + 2 * halfSpan * yIndex / resolution;
+      const zIterations = variables.length === 3 ? resolution : 0;
+      for (let zIndex = 0; zIndex <= zIterations; zIndex += 1) {
+        const z = variables.length === 3 ? -halfSpan + 2 * halfSpan * zIndex / resolution : 0;
+        const coordinates = variables.length === 3 ? { x, y, z } : { x, y };
+        try {
+          observe(evaluate2(coordinates), coordinates);
+        } catch {
+        }
+      }
+    }
+  }
+  if (!(minimum <= level && maximum >= level)) return "absent";
+  const crossesBoundary = [...boundaryRanges.values()].some((range) => range.minimum <= level && range.maximum >= level);
+  return crossesBoundary ? "clipped" : "contained";
+}
+function implicitSurfaceDomain(expression, variables, level) {
+  if (!Number.isFinite(level)) throw new Error("Implicit surface level must be finite");
+  const evaluate2 = compileMathExpression(expression, [...variables]);
+  const dependentVariables = new Set(variables.filter((variable) => expressionUsesVariable(expression, variable)));
+  let firstVisibleHalfSpan;
+  let previousHalfSpan = 0;
+  for (const candidateHalfSpan of DOMAIN_CANDIDATE_HALF_SPANS) {
+    const status = sampleImplicitSurfaceStatus(
+      evaluate2,
+      variables,
+      level,
+      candidateHalfSpan,
+      dependentVariables
+    );
+    if (status !== "absent" && firstVisibleHalfSpan === void 0) {
+      firstVisibleHalfSpan = candidateHalfSpan;
+    }
+    if (status === "contained") {
+      let lower = previousHalfSpan;
+      let upper = candidateHalfSpan;
+      for (let step = 0; step < DOMAIN_REFINEMENT_STEPS; step += 1) {
+        const middle = (lower + upper) / 2;
+        const middleStatus = sampleImplicitSurfaceStatus(
+          evaluate2,
+          variables,
+          level,
+          middle,
+          dependentVariables
+        );
+        if (middleStatus === "contained") upper = middle;
+        else lower = middle;
+      }
+      const dependentHalfSpan = Math.max(2, upper * DOMAIN_MARGIN);
+      const rangeFor = (variable) => {
+        const halfSpan = dependentVariables.has(variable) ? dependentHalfSpan : Math.max(2, dependentHalfSpan);
+        return { min: -halfSpan, max: halfSpan };
+      };
+      return {
+        x: rangeFor("x"),
+        y: rangeFor("y"),
+        ...variables.length === 3 ? { z: rangeFor("z") } : {}
+      };
+    }
+    previousHalfSpan = candidateHalfSpan;
+  }
+  if (firstVisibleHalfSpan !== void 0) {
+    const range = { min: -firstVisibleHalfSpan, max: firstVisibleHalfSpan };
+    return { x: range, y: range, ...variables.length === 3 ? { z: range } : {} };
+  }
+  throw new Error("Implicit surface level is outside the program-selected viewport");
+}
+function buildImplicitSurfaceObject(input) {
+  const expression = input.expression.trim();
+  if (!expression) throw new Error("Implicit surface expression must not be empty");
+  const domain = implicitSurfaceDomain(expression, ["x", "y", "z"], input.level);
+  if (!domain.z) throw new Error("Implicit surface requires a three-dimensional viewport");
+  const samples = input.samples ?? 12;
+  if (!Number.isInteger(samples) || samples < 4 || samples > 24) {
+    throw new Error("Implicit surface samples must be an integer from 4 to 24");
+  }
+  return {
+    as: input.as,
+    kind: "implicit_surface",
+    expression,
+    level: input.level,
+    x_range: domain.x,
+    y_range: domain.y,
+    z_range: domain.z,
+    samples,
+    color: input.color ?? "teal",
+    ...input.label ? { label: input.label } : {}
+  };
+}
+
+// src/plugins/math-teaching-contracts.ts
+function affineTokens(tokens) {
+  const stack = [];
+  for (const token of tokens) {
+    if (token.kind === "input") stack.push(1);
+    else if (["literal", "constant", "number"].includes(token.kind)) stack.push(0);
+    else if (token.kind === "negate") continue;
+    else if (token.kind === "operator") {
+      const b = stack.pop(), a = stack.pop();
+      if (a === void 0 || b === void 0) return false;
+      if (token.operator === "add" || token.operator === "subtract") stack.push(Math.max(a, b));
+      else if (token.operator === "multiply") stack.push(a + b);
+      else if (token.operator === "divide" && b === 0) stack.push(a);
+      else return false;
+    } else return false;
+  }
+  return stack.length === 1 && stack[0] <= 1;
+}
+function fixedLineSamples(visual) {
+  const tokens = visual.parameters?.expression_tokens;
+  return visual.capability === "function_plot" && visual.numbers?.length === 2 && Array.isArray(tokens) && !tokens.some((t) => t.kind === "number") && affineTokens(tokens);
+}
+function normalizePlotInputInstructions(plan) {
+  const visuals = plan.sections.flatMap((s) => s.moments.flatMap((m) => m.actions)).filter((a) => a.action === "create" && a.kind === "visual").map((a) => a.content);
+  if (visuals.length !== 1 || visuals[0].capability !== "function_plot" || visuals[0].numbers?.length !== 2) return;
+  const tokens = visuals[0].parameters?.expression_tokens;
+  if (Array.isArray(tokens) && tokens.some((t) => t.kind === "number")) return;
+  const samplesFixedLine = fixedLineSamples(visuals[0]);
+  for (const section of plan.sections) for (const moment of section.moments) {
+    moment.narration = moment.narration.replace(
+      /(?:directly\s+)?drag(?:ging)?\s+(?:the\s+)?point\s+([AB])\b/gi,
+      (_match, label) => `adjusting the horizontal-coordinate slider for point ${label}`
+    ).replace(
+      /(?:移动|调整|拖动|拖拽)点\s*([AB])\s*(?:或|和|、)\s*(?:点\s*)?([AB])(?:的)?(?:位置|横坐标)/g,
+      (_match, first, second) => `\u8C03\u6574\u70B9 ${first} \u6216\u70B9 ${second} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
+    ).replace(
+      /(?:直接)?拖(?:动|拽)(?:图上|图中|曲线上)?(?:的)?点\s*([AB])/g,
+      (_match, label) => `\u8C03\u6574\u70B9 ${label} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
+    );
+    if (samplesFixedLine) {
+      moment.narration = moment.narration.replace(
+        /[^。！？!?；;]*斜率如何保持不变或发生变化[^。！？!?；;]*/g,
+        "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u5982\u4F55\u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:纵向|高度|纵坐标).{0,12}(?:变大|改变|变化).{0,12}(?:横向|横坐标).{0,12}不变[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:看看|观察).{0,36}(?:斜率|倾斜程度).{0,32}(?:变化|改变)[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:调整|移动|拖动|拖拽).{0,36}点.{0,36}(?:观察|看看).{0,36}(?:斜率|倾斜程度)[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      );
+    }
+  }
+  if (samplesFixedLine) for (const section of plan.sections) {
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target") continue;
+      activity.prompt = activity.prompt.replace(/观察.{0,24}斜率.{0,12}(?:变化|改变)/g, "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8").replace(/改变.{0,16}(?:倾斜程度|斜率)/g, "\u9A8C\u8BC1\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8");
+      activity.hints = activity.hints.map((hint) => /变陡|变平缓|(?:倾斜程度|倾斜状态|陡峭程度|比值).{0,16}(?:改变|变化)|(?:改变|变化).{0,16}(?:倾斜程度|斜率|陡峭程度|比值)/.test(hint) ? "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u7684\u6BD4\u503C\u662F\u5426\u4FDD\u6301\u4E0D\u53D8" : hint);
+      if (activity.success_message && !/不变|保持/.test(activity.success_message) && /(?:改变|变化|更新|影响).{0,20}(?:倾斜程度|斜率|陡峭程度|比值)|(?:倾斜程度|斜率|陡峭程度|比值).{0,20}(?:改变|变化|更新|影响)|如何随.{0,20}变化/.test(activity.success_message)) {
+        activity.success_message = "\u5B8C\u6210\uFF01\u79FB\u52A8\u53D6\u6837\u70B9\u540E\uFF0C\u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8\u3002";
+      }
+    }
+  }
+}
+function validateRearrangementClaims(plan) {
+  const local = /* @__PURE__ */ new Map();
+  const reusable = /* @__PURE__ */ new Map();
+  const byNumber = /* @__PURE__ */ new Map();
+  const relatedLocal = /* @__PURE__ */ new Map();
+  const relatedReusable = /* @__PURE__ */ new Map();
+  const lookup = (reference, section) => {
+    if (reference.source === "reusable") {
+      const key = `${reference.section}:${reference.item}`, visual = reusable.get(key);
+      return visual ? [visual] : [...relatedReusable.get(key) ?? []];
+    }
+    if (reference.source === "local_board_item") {
+      const key = `${section}:${reference.moment}:${reference.item}`, visual = local.get(key);
+      return visual ? [visual] : [...relatedLocal.get(key) ?? []];
+    }
+    return [];
+  };
+  const check = (text2, visuals, path) => {
+    if (visuals.size !== 1) return;
+    const visual = [...visuals][0];
+    if (visual.capability !== "geometric_rearrangement") return;
+    const construction = visual.parameters?.construction ?? "right_triangle_square";
+    const facts = REARRANGEMENT_FACTS[construction];
+    if (!facts) return;
+    const claims = text2.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
+    const wrongPieces = construction === "square_area_identity" && claims.some((claim) => /(?:这(?:个|张|些|幅)|图中|图里|内部|里面|画面|包含).{0,20}(?:四|4)\s*(?:个|块|片)?(?:完全相同的|全等的|全等|完全相同|一样的)?(?:直角)?三角形/u.test(claim));
+    const wrongFrame = construction === "right_triangle_square" && claims.some((claim) => /(?:外框|外侧正方形|这个大正方形|大正方形)(?:的)?边长.{0,8}(?:是|为|等于|就是).{0,4}(?:斜边\s*)?c(?![a-z])/iu.test(claim) || /(?:中间|中央|中心).{0,8}(?:正方形|留白).{0,8}(?:边长|面积).{0,8}(?:b\s*[-−]\s*a|a\s*[-−]\s*b)/iu.test(claim) || /(?:S_?\{?(?:大正方形|外框)\}?|S[（(](?:大正方形|外框)[）)])\s*=\s*c(?:²|\^\{?2\}?)/u.test(claim));
+    const wrongControl = claims.some((claim) => /(?:拖动|拖拽|调整|滑动).{0,12}(?:滑块|滑杆|进度).{0,16}(?:改变|调整).{0,8}(?:边长|三边|斜边|直角边)/u.test(claim));
+    const wrongFinal = construction === "right_triangle_square" && claims.some((claim) => /(?:拼成|拼合成|填满).{0,8}斜边正方形/u.test(claim));
+    if (wrongPieces || wrongFrame || wrongControl || wrongFinal) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_TEACHING_MISMATCH",
+        path,
+        `${construction}: ${facts.pieces}; ${facts.container}; start: ${facts.initial}; end: ${facts.final}; ${facts.proof}. The control moves pieces only, not side lengths. Correct this section without replacing the established visual.`
+      );
+    }
+  };
+  for (const [si, section] of plan.sections.entries()) {
+    for (const [mi, moment] of section.moments.entries()) {
+      const selected = /* @__PURE__ */ new Set();
+      let item = 0;
+      for (const action of moment.actions) {
+        if (action.action !== "create") continue;
+        item += 1;
+        if (action.kind !== "visual") continue;
+        const visual = action.content;
+        local.set(`${si + 1}:${mi + 1}:${item}`, visual);
+        if (action.reusable_item) reusable.set(`${si + 1}:${action.reusable_item}`, visual);
+        selected.add(visual);
+        for (const number of visual.numbers ?? []) {
+          const bound = byNumber.get(number) ?? /* @__PURE__ */ new Set();
+          bound.add(visual);
+          byNumber.set(number, bound);
+        }
+      }
+      for (const action of moment.actions) {
+        const refs = action.action === "focus" ? action.references : action.action === "point_at" || action.action === "emphasize" || action.action === "revise" ? [action.reference] : [];
+        for (const ref of refs) for (const visual of lookup(ref, si + 1)) selected.add(visual);
+        if (action.action === "animate") for (const visual of byNumber.get(action.number) ?? []) selected.add(visual);
+      }
+      const path = `$lessonPlan.sections[${si}].moments[${mi}]`;
+      check(moment.narration ?? "", selected, path);
+      let boardItem = 0;
+      for (const [ai, action] of moment.actions.entries()) {
+        if (action.action === "create") {
+          boardItem += 1;
+          if (action.kind !== "visual") {
+            relatedLocal.set(`${si + 1}:${mi + 1}:${boardItem}`, new Set(selected));
+            if (action.reusable_item) relatedReusable.set(`${si + 1}:${action.reusable_item}`, new Set(selected));
+          }
+        }
+        if (action.action !== "create" && action.action !== "revise" || action.kind === "visual") continue;
+        const content = action.content;
+        check(
+          [content.latex, content.text, content.title, ...content.items ?? []].filter(Boolean).join("\n"),
+          selected,
+          `${path}.actions[${ai}]`
+        );
+      }
+    }
+    for (const [ai, activity] of (section.student_activities ?? []).entries()) {
+      const selected = /* @__PURE__ */ new Set();
+      if (activity.kind === "number_target") {
+        for (const control of activity.number_controls) for (const visual of byNumber.get(control.number) ?? []) selected.add(visual);
+      } else {
+        for (const visual of lookup(activity.reference, si + 1)) selected.add(visual);
+      }
+      check(
+        activity.kind === "reflection" ? `${activity.prompt}
+${activity.answer}` : [activity.prompt, ...activity.hints, activity.success_message].filter(Boolean).join("\n"),
+        selected,
+        `$lessonPlan.sections[${si}].student_activities[${ai}]`
+      );
+    }
+  }
+}
+function validateTeachingClaims(plan) {
+  validateRearrangementClaims(plan);
+  const plots = plan.sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).filter((action) => action.action === "create" && action.kind === "visual").map((action) => action.content).filter((visual) => visual.capability === "function_plot");
+  const hasCircleArea = plan.sections.some((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "circle_area_rearrangement")));
+  const onlyFixedLineSamples = plots.length === 1 && fixedLineSamples(plots[0]);
+  for (const [si, section] of plan.sections.entries()) {
+    for (const [mi, moment] of section.moments.entries()) {
+      const text2 = moment.narration ?? "";
+      const claims = text2.split(/[。！？!?；;]/);
+      const englishClaims = text2.split(/(?<=[.!?;])\s+/u).filter((claim) => !/\?\s*$/.test(claim) && !/\b(?:not|never|cannot|can't|doesn't|isn't|don't|whether|if)\b/i.test(claim));
+      if (hasCircleArea && englishClaims.some((claim) => /\b(?:base|height)\b.{0,25}\b(?:exactly|equals?|is)\b.{0,15}(?:πr|pi\s*\*?\s*r|radius|\br\b)/i.test(claim)) && !/\b(?:approach|tend|limit|infinite|finer|approx|curved)\w*\b/i.test(section.moments.slice(0, mi + 1).map((moment2) => moment2.narration).join(" "))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
+      }
+      if (onlyFixedLineSamples && englishClaims.some((claim) => /\b(?:slope|steepness)\b.{0,20}\b(?:changes?|changing|varies|varying)\b/i.test(claim) && !/\b(?:unchanged|constant|fixed|invariant|remains?|stays?)\b/i.test(claim))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
+      }
+      if (plots.length && englishClaims.some((claim) => /\b(?:larger|greater|increas\w*)\s+(?:signed\s+)?(?:slope|k)\b.{0,45}\bsteeper\b/i.test(claim)) && !/\b(?:absolute|positive|magnitude)\b|k\s*>\s*0/i.test(text2)) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
+      }
+      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text2) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
+      }
+      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text2) && !/滑块|滑杆/.test(text2)) {
+        throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "use the point's horizontal-coordinate slider; directly dragging plot points is unavailable");
+      }
+      if (onlyFixedLineSamples && claims.some((claim) => /(?:斜率|倾斜角度|倾斜程度|倾斜方向|陡峭程度)(?:的数值)?(?:就|也|会|将|随之|随点移动|发生|而|从而|不断|逐渐|产生|有所|明显|直接|可以|能够|能|\s|[，,]){0,8}(?:改变|变化)(?!量|率)|(?:改变|变化)(?:了|着|其|它的|直线的|连线的|割线的|两点连线的|\s){0,5}(?:斜率|倾斜角度|倾斜程度|陡峭程度)/.test(claim) && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
+      }
+      const steepnessClaim = (text2.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
+      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text2)) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
+      }
+    }
+    for (const [mi, moment] of section.moments.entries()) {
+      const visuals = moment.actions.filter((a) => a.action === "create" && a.kind === "visual");
+      for (const action of visuals) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const visual = action.content;
+        const text2 = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
+        const path = `$plan.sections[${si}].moments[${mi}]`;
+        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text2) && /证明|推导|拼|重排|prove|derive/i.test(text2)) {
+          throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path, "circle area requires circle_area_rearrangement; polygon recipes cannot prove pi*r^2");
+        }
+        if (visual.capability !== "function_plot") continue;
+        const tokens = visual.parameters?.expression_tokens;
+        const dynamic = Array.isArray(tokens) && tokens.some((t) => t?.kind === "number");
+        const count = dynamic ? 0 : new Set(visual.numbers ?? []).size;
+        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text2)) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "moving the whole curve requires formula number references; static sample inputs only move points");
+        }
+        if (/两个点|两点|two points/i.test(text2) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text2) && count !== 2) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and content.numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
+        }
+        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text2)) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "plot points use sliders; direct point dragging is unavailable");
+        }
+      }
+    }
+  }
 }
 
 // src/plugins/math-formulas.ts
@@ -10858,36 +11283,104 @@ function parseModelFormula(rawFormula, numberCount, path) {
 }
 
 // src/plugins/math-hooks.ts
-function formulaNumbers(parameters2, numberCount, limit) {
-  if (!Array.isArray(parameters2.expression_tokens)) return [];
-  return [...new Set(parameters2.expression_tokens.flatMap((token) => token && typeof token === "object" && !Array.isArray(token) && token.kind === "number" && Number.isInteger(token.number) ? [Number(token.number)] : []))].filter((number) => number >= 1 && number <= numberCount).slice(0, limit);
+function formulaNumbers(parameters3, numberCount, limit) {
+  if (!Array.isArray(parameters3.expression_tokens)) return [];
+  return [...new Set(parameters3.expression_tokens.flatMap((token) => token && typeof token === "object" && !Array.isArray(token) && token.kind === "number" && Number.isInteger(token.number) ? [Number(token.number)] : []))].filter((number) => number >= 1 && number <= numberCount).slice(0, limit);
+}
+function separateInitialSamples(visual, plan) {
+  const words = JSON.stringify(plan.sections.map((s) => s.moments.map((m) => m.narration)));
+  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
+  if (visual.numbers?.length !== 2) return;
+  const tokens = visual.parameters?.expression_tokens;
+  if (Array.isArray(tokens) && tokens.some((t) => t && typeof t === "object" && "kind" in t && t.kind === "number")) return;
+  const a = plan.numbers?.[visual.numbers[0] - 1], b = plan.numbers?.[visual.numbers[1] - 1];
+  if (!a || !b || a === b || Math.abs(a.initial - b.initial) > 1e-8) return;
+  const step = b.student_control?.step ?? (b.max - b.min) / 200;
+  const delta = Math.max(step, Math.round((b.max - b.min) / 5 / step) * step);
+  b.initial = b.initial + delta <= b.max ? b.initial + delta : Math.max(b.min, b.initial - delta);
+}
+function surfaceSectionRange(content, path) {
+  const input = parameters(content);
+  if (content.capability === "implicit_surface_with_section") {
+    if (input.expression === void 0) {
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "an implicit surface requires an expression");
+    }
+    if (input.level === void 0) {
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.level`, "an implicit surface requires a level");
+    }
+    const expression2 = safeFunctionExpression(input.expression, "", ["x", "y", "z"], `${path}.expression`);
+    const level = optionalNumber(input.level, 0, `${path}.level`);
+    let domain;
+    try {
+      domain = implicitSurfaceDomain(expression2, ["x", "y", "z"], level);
+    } catch (error) {
+      fail2(
+        "LESSON_PLAN_CAPABILITY_PARAMETER",
+        `${path}.expression`,
+        error instanceof Error ? error.message : "implicit surface has no stable finite viewport"
+      );
+    }
+    const axis2 = input.section_axis ?? "z";
+    if (axis2 !== "x" && axis2 !== "y" && axis2 !== "z") {
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
+    }
+    return axis2 === "x" ? domain.x : axis2 === "y" ? domain.y : domain.z;
+  }
+  const xMin = optionalNumber(input.x_min, -2, `${path}.x_min`);
+  const xMax = optionalNumber(input.x_max, 2, `${path}.x_max`);
+  const yMin = optionalNumber(input.y_min, -2, `${path}.y_min`);
+  const yMax = optionalNumber(input.y_max, 2, `${path}.y_max`);
+  assertRange(xMin, xMax, `${path}.x_range`);
+  assertRange(yMin, yMax, `${path}.y_range`);
+  const axis = input.section_axis ?? "z";
+  if (axis === "x") return { min: xMin, max: xMax };
+  if (axis === "y") return { min: yMin, max: yMax };
+  const expression = safeFunctionExpression(input.expression, "x^2+y^2", ["x", "y"], `${path}.expression`);
+  const evaluateSurface = compileMathExpression(expression, ["x", "y"]);
+  const values = [];
+  for (let xIndex = 0; xIndex <= 20; xIndex += 1) {
+    const x = xMin + (xMax - xMin) * xIndex / 20;
+    for (let yIndex = 0; yIndex <= 20; yIndex += 1) {
+      const y = yMin + (yMax - yMin) * yIndex / 20;
+      try {
+        const z = evaluateSurface({ x, y });
+        if (Number.isFinite(z) && Math.abs(z) <= 1e12) values.push(z);
+      } catch {
+      }
+    }
+  }
+  if (values.length < 8) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "surface has no stable finite section range");
+  }
+  return { min: Math.min(...values), max: Math.max(...values) };
 }
 var MATH_HOOKS = {
   implicit_surface_with_section: {
-    lower_model_parameters(parameters2) {
-      if (typeof parameters2.expression !== "string") return;
-      const equation = parameters2.expression.split("=").map((part) => part.trim());
+    section_range: surfaceSectionRange,
+    lower_model_parameters(parameters3) {
+      if (typeof parameters3.expression !== "string") return;
+      const equation = parameters3.expression.split("=").map((part) => part.trim());
       if (equation.length === 2 && equation.every(Boolean)) {
         const rightLevel = Number(equation[1]);
         const leftLevel = Number(equation[0]);
         if (Number.isFinite(rightLevel)) {
-          parameters2.expression = equation[0];
-          parameters2.level = rightLevel;
+          parameters3.expression = equation[0];
+          parameters3.level = rightLevel;
         } else if (Number.isFinite(leftLevel)) {
-          parameters2.expression = equation[1];
-          parameters2.level = leftLevel;
+          parameters3.expression = equation[1];
+          parameters3.level = leftLevel;
         } else {
-          parameters2.expression = `(${equation[0]})-(${equation[1]})`;
-          parameters2.level = 0;
+          parameters3.expression = `(${equation[0]})-(${equation[1]})`;
+          parameters3.level = 0;
         }
-      } else if (parameters2.level === void 0) {
-        parameters2.level = 0;
+      } else if (parameters3.level === void 0) {
+        parameters3.level = 0;
       }
     }
   },
   function_plot: {
-    lower_model_parameters(parameters2, { numberCount }) {
-      const rawFormulas = parameters2.formulas !== void 0 ? parameters2.formulas : typeof parameters2.expression === "string" ? [parameters2.expression] : Array.isArray(parameters2.expressions) ? parameters2.expressions : void 0;
+    lower_model_parameters(parameters3, { numberCount }) {
+      const rawFormulas = parameters3.formulas !== void 0 ? parameters3.formulas : typeof parameters3.expression === "string" ? [parameters3.expression] : Array.isArray(parameters3.expressions) ? parameters3.expressions : void 0;
       if (rawFormulas === void 0) return;
       if (!Array.isArray(rawFormulas) || rawFormulas.length < 1 || rawFormulas.length > 8) {
         formulaError(
@@ -10895,17 +11388,17 @@ var MATH_HOOKS = {
           "expected one to eight formulas"
         );
       }
-      delete parameters2.formulas;
-      delete parameters2.expression;
-      delete parameters2.expressions;
-      delete parameters2.expression_tokens;
+      delete parameters3.formulas;
+      delete parameters3.expression;
+      delete parameters3.expressions;
+      delete parameters3.expression_tokens;
       const parsed = rawFormulas.map((formula, index) => parseModelFormula(
         formula,
         numberCount,
         `$lessonPlanSection.visual.parameters.formulas[${index}]`
       ));
       if (parsed.length === 1) {
-        parameters2.expression_tokens = parsed[0];
+        parameters3.expression_tokens = parsed[0];
         return;
       }
       if (parsed.some((expression) => expression.some((token) => token.kind === "number"))) {
@@ -10922,25 +11415,25 @@ var MATH_HOOKS = {
         seen.add(expression);
         retainedIndexes.push(index);
       });
-      parameters2.expressions = retainedIndexes.map((index) => canonical[index]);
-      if (Array.isArray(parameters2.curve_labels) && parameters2.curve_labels.length === canonical.length) {
-        parameters2.curve_labels = retainedIndexes.map((index) => parameters2.curve_labels[index]);
+      parameters3.expressions = retainedIndexes.map((index) => canonical[index]);
+      if (Array.isArray(parameters3.curve_labels) && parameters3.curve_labels.length === canonical.length) {
+        parameters3.curve_labels = retainedIndexes.map((index) => parameters3.curve_labels[index]);
       } else {
-        delete parameters2.curve_labels;
+        delete parameters3.curve_labels;
       }
-      delete parameters2.curve_label;
+      delete parameters3.curve_label;
       return { no_numbers: true };
     },
-    numbers_from_parameters: (parameters2, { numberCount, limit }) => formulaNumbers(parameters2, numberCount, limit),
-    validate_parameters(parameters2, { path, numberCount, fail: fail4, record: record2, array: array2, validateMathExpression: validateMathExpression2 }) {
-      if (parameters2 === void 0) {
+    numbers_from_parameters: (parameters3, { numberCount, limit }) => formulaNumbers(parameters3, numberCount, limit),
+    validate_parameters(parameters3, { path, numberCount, fail: fail4, record: record2, array: array2, validateMathExpression: validateMathExpression2 }) {
+      if (parameters3 === void 0) {
         fail4(
           "LESSON_PLAN_EXPRESSION",
           `${path}.parameters`,
           "a function plot requires an explicit mathematical expression"
         );
       }
-      const visualParameters = record2(parameters2, `${path}.parameters`);
+      const visualParameters = record2(parameters3, `${path}.parameters`);
       const expressionFields = ["expression", "expressions", "expression_tokens"].filter((field) => visualParameters[field] !== void 0);
       if (expressionFields.length !== 1) {
         fail4(
@@ -10974,17 +11467,60 @@ var MATH_HOOKS = {
         fail4("LESSON_PLAN_EXPRESSION", `${path}.numbers`, "static curves support at most two independent sample points");
       }
     },
+    before_compile: separateInitialSamples,
     bound_numbers(content, { path, numberCount, validateMathExpression: validateMathExpression2 }) {
       if (content.parameters?.expression_tokens === void 0) return void 0;
       const curveNumbers = validateMathExpression2(content.parameters.expression_tokens, path, numberCount, true);
       return curveNumbers.length ? curveNumbers : void 0;
     }
   },
+  function_surface_with_section: { section_range: surfaceSectionRange },
   coordinate_circle: {
     // A declared radius formula maps an input quantity to radius; its input
-    // is not itself a radius. Keep shared height/time/etc. controls intact.
-    number_purpose: (content) => content.parameters?.radius_expression !== void 0 ? "generic" : void 0
+    // is not itself a radius. Keep shared height/time/etc. controls intact,
+    // and give the input no radius range.
+    free_number: (content) => content.parameters?.radius_expression !== void 0
   }
+};
+function requestsTwoIndependentPoints(request) {
+  return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
+}
+function prepareTwoPointOutline(outline, request, language) {
+  if (!requestsTwoIndependentPoints(request)) return;
+  outline.numbers ??= [];
+  while (outline.numbers.length < 2) {
+    const index = outline.numbers.length;
+    outline.numbers.push({
+      initial: index === 0 ? -1 : 2,
+      min: -5,
+      max: 5,
+      label: index === 0 ? lessonText(language, "A\u70B9\u7684x\u5750\u6807") : lessonText(language, "B\u70B9\u7684x\u5750\u6807"),
+      student_control: { kind: "slider", step: 0.25 }
+    });
+  }
+  outline.numbers.slice(0, 2).forEach((number, index) => {
+    number.label = index === 0 ? lessonText(language, "A\u70B9\u7684x\u5750\u6807") : lessonText(language, "B\u70B9\u7684x\u5750\u6807");
+    number.student_control = { kind: "slider", step: number.student_control?.step ?? 0.25 };
+  });
+}
+function specializeTwoPointDraft(draft, outline, request) {
+  if (!requestsTwoIndependentPoints(request) || (outline.numbers?.length ?? 0) < 2) return;
+  for (const moment of draft.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    const content = action.content;
+    if (content.capability !== "function_plot") continue;
+    const tokens = content.parameters?.expression_tokens;
+    if (Array.isArray(tokens)) {
+      content.parameters.expression_tokens = tokens.map((token) => token.kind === "number" ? { kind: "literal", value: outline.numbers?.[token.number - 1]?.initial ?? 0 } : token);
+    }
+    content.numbers = [1, 2];
+  }
+}
+var MATH_PLUGIN_HOOKS = {
+  prepare_outline: (outline, { request, language }) => prepareTwoPointOutline(outline, request, language),
+  specialize_draft: (draft, { outline, request }) => specializeTwoPointDraft(draft, outline, request),
+  normalize_plan: normalizePlotInputInstructions,
+  check_plan: validateTeachingClaims
 };
 
 // src/plugins/shared-hooks.ts
@@ -11011,6 +11547,7 @@ var SHARED_HOOKS = {
 
 // src/plugins/hooks.ts
 var RECIPE_HOOKS = Object.assign(/* @__PURE__ */ Object.create(null), MATH_HOOKS, SHARED_HOOKS);
+var PLUGIN_HOOKS = [MATH_PLUGIN_HOOKS];
 
 // src/lesson-plan.ts
 var LESSON_PLAN_VERSION = "0.1";
@@ -12057,86 +12594,6 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   return resolveLessonPlan(assembled, options).plan;
 }
 
-// src/lesson-text.ts
-var EN = {
-  "\u51FD\u6570\u56FE\u50CF": "Function graph",
-  "\u5355\u4F4D\u5706\u4E0E\u6295\u5F71": "Unit circle and projection",
-  "{{v0}}\u51FD\u6570\u56FE\u50CF": "{{v0}} function graph",
-  "\u6B63\u5F26": "Sine",
-  "\u4F59\u5F26": "Cosine",
-  "\u65CB\u8F6C\u89D2\u4E0E\u5468\u671F\u6CE2\u52A8": "Rotation angle and periodic variation",
-  "\u5355\u4F4D\u5706\u4E0E\u51FD\u6570\u56FE\u50CF": "Unit circle and function graph",
-  "\u5706\u4E0E\u6B63\u591A\u8FB9\u5F62\u7684\u5468\u957F\u5939\u903C": "Bounding a circle's circumference with regular polygons",
-  "\u5185\u63A5\u6B63\u591A\u8FB9\u5F62": "Inscribed regular polygon",
-  "\u5916\u5207\u6B63\u591A\u8FB9\u5F62": "Circumscribed regular polygon",
-  "\u7EFF\u8272\u5185\u63A5\u5468\u957F < \u5706\u5468\u957F < \u6A59\u8272\u5916\u5207\u5468\u957F\u3002\u9664\u4EE5\u76F4\u5F84 2r\uFF1An sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002\u663E\u793A\u503C\u4E3A\u8FD1\u4F3C\u503C\uFF1B\u8FB9\u6570\u589E\u52A0\u65F6\u4E0A\u4E0B\u754C\u5171\u540C\u903C\u8FD1 \u03C0\u3002": "Green inscribed perimeter < circle circumference < orange circumscribed perimeter. Dividing by the diameter 2r gives n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n). Displayed values are approximations; both bounds approach \u03C0 as the number of sides increases.",
-  "\u5706\u3001\u5706\u5FC3\u89D2\u4E0E\u5706\u5F27": "Circle, central angle, and arc",
-  "\u534A\u5F84 r": "Radius r",
-  "\u5706\u5F27": "Arc",
-  "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8": "Oscillation of a spring and mass",
-  "\u4F4D\u79FB": "Displacement",
-  "\u56FA\u5B9A\u7AEF": "Fixed end",
-  "\u5E73\u8861\u4F4D\u7F6E": "Equilibrium position",
-  "\u7269\u4F53": "Mass",
-  "\u56DE\u590D\u529B": "Restoring force",
-  "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316": "Displacement versus phase",
-  "\u76F8\u4F4D": "Phase",
-  "\u5F53\u524D\u72B6\u6001": "Current state",
-  "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB": "Displacement at the same instant",
-  "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF": "Spring motion and function graph",
-  "\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u4E0E\u622A\u9762": "Cube, vertices, edges, faces, and sections",
-  "\u4E00\u4E2A\u4E2D\u5FC3\u5728\u539F\u70B9\u3001\u8FB9\u957F\u4E3A 2 \u7684\u6B63\u65B9\u4F53\uFF0C\u6807\u51FA\u4E86\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u6C34\u5E73\u622A\u9762\u3002": "A cube centred at the origin with side length 2, showing a vertex, an edge, a face, and a horizontal section.",
-  "\u6B63\u65B9\u4F53": "Cube",
-  "\u6C34\u5E73\u622A\u9762": "Horizontal section",
-  "\u9876\u70B9": "Vertex",
-  "\u68F1": "Edge",
-  "\u9762": "Face",
-  "\u51FD\u6570\u66F2\u9762\u4E0E\u622A\u9762": "Function surface and section",
-  "\u51FD\u6570\u66F2\u9762 z={{v0}} \u4E0E\u53EF\u53D8\u622A\u9762\u3002": "Function surface z={{v0}} with a variable section.",
-  "\u622A\u9762": "Section",
-  "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762": "Implicit surface and section",
-  "\u9690\u5F0F\u66F2\u9762 {{v0}}={{v1}} \u4E0E\u53EF\u53D8\u8F74\u5411\u622A\u9762\u3002": "Implicit surface {{v0}}={{v1}} with a variable axis-aligned section.",
-  "\u5750\u6807\u7CFB\u4E2D\u7684\u5706": "Circle in a coordinate system",
-  "\u5355\u4F4D\u6B63\u65B9\u5F62\u94FA\u6210\u957F\u65B9\u5F62": "Tiling a rectangle with unit squares",
-  "\u6BCF\u4E2A\u5C0F\u65B9\u683C\u9762\u79EF\u4E3A 1 \u5E73\u65B9\u5355\u4F4D\uFF1B\u6BCF\u884C\u65B9\u683C\u6570 \xD7 \u884C\u6570 = \u65B9\u683C\u603B\u6570 = \u957F\u65B9\u5F62\u9762\u79EF\u3002": "Each square has an area of 1 square unit. Squares per row \xD7 number of rows = total squares = area of the rectangle.",
-  "\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09": "Squares per row (length)",
-  "\u884C\u6570\uFF08\u5BBD\uFF09": "Number of rows (width)",
-  "1 \u5E73\u65B9\u5355\u4F4D": "1 square unit",
-  "{{v0}} \u7B49\u5206\u5706\u7684\u9762\u79EF\u91CD\u6392": "Rearranging a circle divided into {{v0}} sectors",
-  "\u534A\u5F84 r={{v0}}\uFF1B\u6BCF\u5757\u5747\u4E3A\u771F\u5B9E\u6247\u5F62\uFF0C\u91CD\u6392\u9762\u79EF\u4E0D\u53D8\u3002\u6709\u9650\u7B49\u5206\u7684\u8FB9\u7F18\u4ECD\u5F2F\u66F2\uFF1B\u7B49\u5206\u8D8A\u7EC6\uFF0C\u5E95\u8D8B\u8FD1 \u03C0r\uFF0C\u9AD8\u8D8B\u8FD1 r\uFF0C\u9762\u79EF\u4E3A \u03C0r\xB2\u3002": "Radius r={{v0}}. Each piece is a true sector, and rearranging preserves area. With finitely many sectors the edges remain curved. As the sectors become finer, the base approaches \u03C0r and the height approaches r; the area is \u03C0r\xB2.",
-  "\u5F00\u59CB": "Start",
-  "\u89C2\u5BDF\u53D8\u5316": "Observe the change",
-  "\u5F97\u5230\u7ED3\u8BBA": "Draw a conclusion",
-  "\u4E0B\u4E00\u6B65": "Next step",
-  "\u8FC7\u7A0B\u56FE": "Process diagram",
-  "\u6570\u503C": "the value",
-  "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002": "Set {{v0}} to {{v1}}{{v2}}.",
-  "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002": "Done: {{v0}} is now {{v1}}{{v2}}.",
-  "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762": "Continue observing the same existing visual",
-  "\u7EE7\u7EED\u89C2\u5BDF\u5F53\u524D\u753B\u9762": "Continue observing the current visual",
-  "\u62D6\u52A8\u5DE6\u4E0B\u89D2\u7684\u6ED1\u6746\uFF0C\u89C2\u5BDF\u6570\u503C\u548C\u753B\u9762\u540C\u6B65\u53D8\u5316\u3002": "Drag the slider at the bottom left and watch the value and visual change together.",
-  "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002": "This lesson cannot be generated in full yet because it includes visuals or interactions that are not supported.",
-  "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5728\u540C\u4E00\u5F20\u51FD\u6570\u56FE\u4E2D\u540C\u65F6\u5C55\u793A\u9759\u6001\u66F2\u7EBF\u548C\u7531\u63A7\u4EF6\u6539\u53D8\u7684\u53E6\u4E00\u6761\u66F2\u7EBF\u3002": "A static curve and another curve changed by a control cannot yet be shown together in the same graph.",
-  "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002": "The rest of the lesson is still being generated.",
-  "\u5F53\u524D\u767D\u677F\u53EA\u80FD\u6267\u884C\u4E8C\u7EF4\u56FE\u5F62\u548C\u4E09\u7EF4\u573A\u666F\uFF0C\u4E0D\u80FD\u7CBE\u786E\u6A21\u62DF\u56DB\u7EF4\u8D85\u7ACB\u65B9\u4F53\u7684\u56DB\u7EF4\u65CB\u8F6C\u3002\u4F60\u53EF\u4EE5\u6539\u95EE\u5B83\u7684\u4E09\u7EF4\u6295\u5F71\u539F\u7406\u6216\u57FA\u672C\u7ED3\u6784\u3002": "The board supports 2D diagrams and 3D scenes, but cannot accurately simulate a 4D hypercube rotating in four dimensions. You can ask about its 3D projections or basic structure instead.",
-  "A\u70B9\u7684x\u5750\u6807": "x-coordinate of point A",
-  "B\u70B9\u7684x\u5750\u6807": "x-coordinate of point B",
-  "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",
-  "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read this camera image reliably. Place the question or object in the centre and try again.",
-  "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF1A{{v0}}": "This lesson cannot be generated in full yet: {{v0}}"
-};
-function lessonText(language, source, values = {}) {
-  const message = /^en(?:-|$)/i.test(language ?? "") ? EN[source] ?? source : source;
-  return message.replace(/\{\{(\w+)\}\}/g, (token, key) => String(values[key] ?? token));
-}
-var languages = /* @__PURE__ */ new WeakMap();
-function setLessonTextLanguage(plan, language) {
-  languages.set(plan, language);
-}
-function compileText(plan, source, values) {
-  return lessonText(languages.get(plan), source, values);
-}
-
 // src/compiled-visual-reuse.ts
 function cardIdentity(kind, content) {
   const fragments = /* @__PURE__ */ new Map();
@@ -12228,351 +12685,6 @@ var CompiledVisualRegistry = class {
   }
 };
 
-// src/teaching-contracts.ts
-function affineTokens(tokens) {
-  const stack = [];
-  for (const token of tokens) {
-    if (token.kind === "input") stack.push(1);
-    else if (["literal", "constant", "number"].includes(token.kind)) stack.push(0);
-    else if (token.kind === "negate") continue;
-    else if (token.kind === "operator") {
-      const b = stack.pop(), a = stack.pop();
-      if (a === void 0 || b === void 0) return false;
-      if (token.operator === "add" || token.operator === "subtract") stack.push(Math.max(a, b));
-      else if (token.operator === "multiply") stack.push(a + b);
-      else if (token.operator === "divide" && b === 0) stack.push(a);
-      else return false;
-    } else return false;
-  }
-  return stack.length === 1 && stack[0] <= 1;
-}
-function fixedLineSamples(visual) {
-  const tokens = visual.parameters?.expression_tokens;
-  return visual.capability === "function_plot" && visual.numbers?.length === 2 && Array.isArray(tokens) && !tokens.some((t) => t.kind === "number") && affineTokens(tokens);
-}
-function normalizePlotInputInstructions(plan) {
-  const visuals = plan.sections.flatMap((s) => s.moments.flatMap((m) => m.actions)).filter((a) => a.action === "create" && a.kind === "visual").map((a) => a.content);
-  if (visuals.length !== 1 || visuals[0].capability !== "function_plot" || visuals[0].numbers?.length !== 2) return;
-  const tokens = visuals[0].parameters?.expression_tokens;
-  if (Array.isArray(tokens) && tokens.some((t) => t.kind === "number")) return;
-  const samplesFixedLine = fixedLineSamples(visuals[0]);
-  for (const section of plan.sections) for (const moment of section.moments) {
-    moment.narration = moment.narration.replace(
-      /(?:directly\s+)?drag(?:ging)?\s+(?:the\s+)?point\s+([AB])\b/gi,
-      (_match, label) => `adjusting the horizontal-coordinate slider for point ${label}`
-    ).replace(
-      /(?:移动|调整|拖动|拖拽)点\s*([AB])\s*(?:或|和|、)\s*(?:点\s*)?([AB])(?:的)?(?:位置|横坐标)/g,
-      (_match, first, second) => `\u8C03\u6574\u70B9 ${first} \u6216\u70B9 ${second} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
-    ).replace(
-      /(?:直接)?拖(?:动|拽)(?:图上|图中|曲线上)?(?:的)?点\s*([AB])/g,
-      (_match, label) => `\u8C03\u6574\u70B9 ${label} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
-    );
-    if (samplesFixedLine) {
-      moment.narration = moment.narration.replace(
-        /[^。！？!?；;]*斜率如何保持不变或发生变化[^。！？!?；;]*/g,
-        "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u5982\u4F55\u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      ).replace(
-        /[^。！？!?；;]*(?:纵向|高度|纵坐标).{0,12}(?:变大|改变|变化).{0,12}(?:横向|横坐标).{0,12}不变[^。！？!?；;]*/g,
-        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      ).replace(
-        /[^。！？!?；;]*(?:看看|观察).{0,36}(?:斜率|倾斜程度).{0,32}(?:变化|改变)[^。！？!?；;]*/g,
-        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      ).replace(
-        /[^。！？!?；;]*(?:调整|移动|拖动|拖拽).{0,36}点.{0,36}(?:观察|看看).{0,36}(?:斜率|倾斜程度)[^。！？!?；;]*/g,
-        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      );
-    }
-  }
-  if (samplesFixedLine) for (const section of plan.sections) {
-    for (const activity of section.student_activities ?? []) {
-      if (activity.kind !== "number_target") continue;
-      activity.prompt = activity.prompt.replace(/观察.{0,24}斜率.{0,12}(?:变化|改变)/g, "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8").replace(/改变.{0,16}(?:倾斜程度|斜率)/g, "\u9A8C\u8BC1\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8");
-      activity.hints = activity.hints.map((hint) => /变陡|变平缓|(?:倾斜程度|倾斜状态|陡峭程度|比值).{0,16}(?:改变|变化)|(?:改变|变化).{0,16}(?:倾斜程度|斜率|陡峭程度|比值)/.test(hint) ? "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u7684\u6BD4\u503C\u662F\u5426\u4FDD\u6301\u4E0D\u53D8" : hint);
-      if (activity.success_message && !/不变|保持/.test(activity.success_message) && /(?:改变|变化|更新|影响).{0,20}(?:倾斜程度|斜率|陡峭程度|比值)|(?:倾斜程度|斜率|陡峭程度|比值).{0,20}(?:改变|变化|更新|影响)|如何随.{0,20}变化/.test(activity.success_message)) {
-        activity.success_message = "\u5B8C\u6210\uFF01\u79FB\u52A8\u53D6\u6837\u70B9\u540E\uFF0C\u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8\u3002";
-      }
-    }
-  }
-}
-function validateRearrangementClaims(plan) {
-  const local = /* @__PURE__ */ new Map();
-  const reusable = /* @__PURE__ */ new Map();
-  const byNumber = /* @__PURE__ */ new Map();
-  const relatedLocal = /* @__PURE__ */ new Map();
-  const relatedReusable = /* @__PURE__ */ new Map();
-  const lookup = (reference, section) => {
-    if (reference.source === "reusable") {
-      const key = `${reference.section}:${reference.item}`, visual = reusable.get(key);
-      return visual ? [visual] : [...relatedReusable.get(key) ?? []];
-    }
-    if (reference.source === "local_board_item") {
-      const key = `${section}:${reference.moment}:${reference.item}`, visual = local.get(key);
-      return visual ? [visual] : [...relatedLocal.get(key) ?? []];
-    }
-    return [];
-  };
-  const check = (text2, visuals, path) => {
-    if (visuals.size !== 1) return;
-    const visual = [...visuals][0];
-    if (visual.capability !== "geometric_rearrangement") return;
-    const construction = visual.parameters?.construction ?? "right_triangle_square";
-    const facts = REARRANGEMENT_FACTS[construction];
-    if (!facts) return;
-    const claims = text2.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
-    const wrongPieces = construction === "square_area_identity" && claims.some((claim) => /(?:这(?:个|张|些|幅)|图中|图里|内部|里面|画面|包含).{0,20}(?:四|4)\s*(?:个|块|片)?(?:完全相同的|全等的|全等|完全相同|一样的)?(?:直角)?三角形/u.test(claim));
-    const wrongFrame = construction === "right_triangle_square" && claims.some((claim) => /(?:外框|外侧正方形|这个大正方形|大正方形)(?:的)?边长.{0,8}(?:是|为|等于|就是).{0,4}(?:斜边\s*)?c(?![a-z])/iu.test(claim) || /(?:中间|中央|中心).{0,8}(?:正方形|留白).{0,8}(?:边长|面积).{0,8}(?:b\s*[-−]\s*a|a\s*[-−]\s*b)/iu.test(claim) || /(?:S_?\{?(?:大正方形|外框)\}?|S[（(](?:大正方形|外框)[）)])\s*=\s*c(?:²|\^\{?2\}?)/u.test(claim));
-    const wrongControl = claims.some((claim) => /(?:拖动|拖拽|调整|滑动).{0,12}(?:滑块|滑杆|进度).{0,16}(?:改变|调整).{0,8}(?:边长|三边|斜边|直角边)/u.test(claim));
-    const wrongFinal = construction === "right_triangle_square" && claims.some((claim) => /(?:拼成|拼合成|填满).{0,8}斜边正方形/u.test(claim));
-    if (wrongPieces || wrongFrame || wrongControl || wrongFinal) {
-      throw new LessonPlanError(
-        "LESSON_PLAN_TEACHING_MISMATCH",
-        path,
-        `${construction}: ${facts.pieces}; ${facts.container}; start: ${facts.initial}; end: ${facts.final}; ${facts.proof}. The control moves pieces only, not side lengths. Correct this section without replacing the established visual.`
-      );
-    }
-  };
-  for (const [si, section] of plan.sections.entries()) {
-    for (const [mi, moment] of section.moments.entries()) {
-      const selected = /* @__PURE__ */ new Set();
-      let item = 0;
-      for (const action of moment.actions) {
-        if (action.action !== "create") continue;
-        item += 1;
-        if (action.kind !== "visual") continue;
-        const visual = action.content;
-        local.set(`${si + 1}:${mi + 1}:${item}`, visual);
-        if (action.reusable_item) reusable.set(`${si + 1}:${action.reusable_item}`, visual);
-        selected.add(visual);
-        for (const number of visual.numbers ?? []) {
-          const bound = byNumber.get(number) ?? /* @__PURE__ */ new Set();
-          bound.add(visual);
-          byNumber.set(number, bound);
-        }
-      }
-      for (const action of moment.actions) {
-        const refs = action.action === "focus" ? action.references : action.action === "point_at" || action.action === "emphasize" || action.action === "revise" ? [action.reference] : [];
-        for (const ref of refs) for (const visual of lookup(ref, si + 1)) selected.add(visual);
-        if (action.action === "animate") for (const visual of byNumber.get(action.number) ?? []) selected.add(visual);
-      }
-      const path = `$lessonPlan.sections[${si}].moments[${mi}]`;
-      check(moment.narration ?? "", selected, path);
-      let boardItem = 0;
-      for (const [ai, action] of moment.actions.entries()) {
-        if (action.action === "create") {
-          boardItem += 1;
-          if (action.kind !== "visual") {
-            relatedLocal.set(`${si + 1}:${mi + 1}:${boardItem}`, new Set(selected));
-            if (action.reusable_item) relatedReusable.set(`${si + 1}:${action.reusable_item}`, new Set(selected));
-          }
-        }
-        if (action.action !== "create" && action.action !== "revise" || action.kind === "visual") continue;
-        const content = action.content;
-        check(
-          [content.latex, content.text, content.title, ...content.items ?? []].filter(Boolean).join("\n"),
-          selected,
-          `${path}.actions[${ai}]`
-        );
-      }
-    }
-    for (const [ai, activity] of (section.student_activities ?? []).entries()) {
-      const selected = /* @__PURE__ */ new Set();
-      if (activity.kind === "number_target") {
-        for (const control of activity.number_controls) for (const visual of byNumber.get(control.number) ?? []) selected.add(visual);
-      } else {
-        for (const visual of lookup(activity.reference, si + 1)) selected.add(visual);
-      }
-      check(
-        activity.kind === "reflection" ? `${activity.prompt}
-${activity.answer}` : [activity.prompt, ...activity.hints, activity.success_message].filter(Boolean).join("\n"),
-        selected,
-        `$lessonPlan.sections[${si}].student_activities[${ai}]`
-      );
-    }
-  }
-}
-function validateTeachingClaims(plan) {
-  validateRearrangementClaims(plan);
-  const plots = plan.sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).filter((action) => action.action === "create" && action.kind === "visual").map((action) => action.content).filter((visual) => visual.capability === "function_plot");
-  const hasCircleArea = plan.sections.some((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "circle_area_rearrangement")));
-  const onlyFixedLineSamples = plots.length === 1 && fixedLineSamples(plots[0]);
-  for (const [si, section] of plan.sections.entries()) {
-    for (const [mi, moment] of section.moments.entries()) {
-      const text2 = moment.narration ?? "";
-      const claims = text2.split(/[。！？!?；;]/);
-      const englishClaims = text2.split(/(?<=[.!?;])\s+/u).filter((claim) => !/\?\s*$/.test(claim) && !/\b(?:not|never|cannot|can't|doesn't|isn't|don't|whether|if)\b/i.test(claim));
-      if (hasCircleArea && englishClaims.some((claim) => /\b(?:base|height)\b.{0,25}\b(?:exactly|equals?|is)\b.{0,15}(?:πr|pi\s*\*?\s*r|radius|\br\b)/i.test(claim)) && !/\b(?:approach|tend|limit|infinite|finer|approx|curved)\w*\b/i.test(section.moments.slice(0, mi + 1).map((moment2) => moment2.narration).join(" "))) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
-      }
-      if (onlyFixedLineSamples && englishClaims.some((claim) => /\b(?:slope|steepness)\b.{0,20}\b(?:changes?|changing|varies|varying)\b/i.test(claim) && !/\b(?:unchanged|constant|fixed|invariant|remains?|stays?)\b/i.test(claim))) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
-      }
-      if (plots.length && englishClaims.some((claim) => /\b(?:larger|greater|increas\w*)\s+(?:signed\s+)?(?:slope|k)\b.{0,45}\bsteeper\b/i.test(claim)) && !/\b(?:absolute|positive|magnitude)\b|k\s*>\s*0/i.test(text2)) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
-      }
-      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text2) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
-      }
-      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text2) && !/滑块|滑杆/.test(text2)) {
-        throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "use the point's horizontal-coordinate slider; directly dragging plot points is unavailable");
-      }
-      if (onlyFixedLineSamples && claims.some((claim) => /(?:斜率|倾斜角度|倾斜程度|倾斜方向|陡峭程度)(?:的数值)?(?:就|也|会|将|随之|随点移动|发生|而|从而|不断|逐渐|产生|有所|明显|直接|可以|能够|能|\s|[，,]){0,8}(?:改变|变化)(?!量|率)|(?:改变|变化)(?:了|着|其|它的|直线的|连线的|割线的|两点连线的|\s){0,5}(?:斜率|倾斜角度|倾斜程度|陡峭程度)/.test(claim) && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
-      }
-      const steepnessClaim = (text2.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
-      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text2)) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
-      }
-    }
-    for (const [mi, moment] of section.moments.entries()) {
-      const visuals = moment.actions.filter((a) => a.action === "create" && a.kind === "visual");
-      for (const action of visuals) {
-        if (action.action !== "create" || action.kind !== "visual") continue;
-        const visual = action.content;
-        const text2 = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
-        const path = `$plan.sections[${si}].moments[${mi}]`;
-        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text2) && /证明|推导|拼|重排|prove|derive/i.test(text2)) {
-          throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path, "circle area requires circle_area_rearrangement; polygon recipes cannot prove pi*r^2");
-        }
-        if (visual.capability !== "function_plot") continue;
-        const tokens = visual.parameters?.expression_tokens;
-        const dynamic = Array.isArray(tokens) && tokens.some((t) => t?.kind === "number");
-        const count = dynamic ? 0 : new Set(visual.numbers ?? []).size;
-        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text2)) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "moving the whole curve requires formula number references; static sample inputs only move points");
-        }
-        if (/两个点|两点|two points/i.test(text2) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text2) && count !== 2) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and content.numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
-        }
-        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text2)) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "plot points use sliders; direct point dragging is unavailable");
-        }
-      }
-    }
-  }
-}
-
-// src/scene3d-surfaces.ts
-var DOMAIN_CANDIDATE_HALF_SPANS = [2, 5, 10, 20, 50, 100];
-var DOMAIN_REFINEMENT_STEPS = 12;
-var DOMAIN_MARGIN = 1.1;
-function expressionUsesVariable(expression, variable) {
-  return new RegExp(`(^|[^A-Za-z0-9_])${variable}([^A-Za-z0-9_]|$)`, "u").test(expression);
-}
-function sampleImplicitSurfaceStatus(evaluate2, variables, level, halfSpan, dependentVariables) {
-  const resolution = variables.length === 2 ? 18 : 10;
-  let minimum = Number.POSITIVE_INFINITY;
-  let maximum = Number.NEGATIVE_INFINITY;
-  const boundaryRanges = /* @__PURE__ */ new Map();
-  for (const variable of dependentVariables) {
-    boundaryRanges.set(`${variable}:min`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
-    boundaryRanges.set(`${variable}:max`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
-  }
-  const observe = (value, coordinates) => {
-    if (!Number.isFinite(value) || Math.abs(value) > 1e12) return;
-    minimum = Math.min(minimum, value);
-    maximum = Math.max(maximum, value);
-    for (const variable of dependentVariables) {
-      const coordinate = coordinates[variable];
-      const side = Math.abs((coordinate ?? 0) + halfSpan) < 1e-9 ? "min" : Math.abs((coordinate ?? 0) - halfSpan) < 1e-9 ? "max" : void 0;
-      if (!side) continue;
-      const range = boundaryRanges.get(`${variable}:${side}`);
-      range.minimum = Math.min(range.minimum, value);
-      range.maximum = Math.max(range.maximum, value);
-    }
-  };
-  for (let xIndex = 0; xIndex <= resolution; xIndex += 1) {
-    const x = -halfSpan + 2 * halfSpan * xIndex / resolution;
-    for (let yIndex = 0; yIndex <= resolution; yIndex += 1) {
-      const y = -halfSpan + 2 * halfSpan * yIndex / resolution;
-      const zIterations = variables.length === 3 ? resolution : 0;
-      for (let zIndex = 0; zIndex <= zIterations; zIndex += 1) {
-        const z = variables.length === 3 ? -halfSpan + 2 * halfSpan * zIndex / resolution : 0;
-        const coordinates = variables.length === 3 ? { x, y, z } : { x, y };
-        try {
-          observe(evaluate2(coordinates), coordinates);
-        } catch {
-        }
-      }
-    }
-  }
-  if (!(minimum <= level && maximum >= level)) return "absent";
-  const crossesBoundary = [...boundaryRanges.values()].some((range) => range.minimum <= level && range.maximum >= level);
-  return crossesBoundary ? "clipped" : "contained";
-}
-function implicitSurfaceDomain(expression, variables, level) {
-  if (!Number.isFinite(level)) throw new Error("Implicit surface level must be finite");
-  const evaluate2 = compileMathExpression(expression, [...variables]);
-  const dependentVariables = new Set(variables.filter((variable) => expressionUsesVariable(expression, variable)));
-  let firstVisibleHalfSpan;
-  let previousHalfSpan = 0;
-  for (const candidateHalfSpan of DOMAIN_CANDIDATE_HALF_SPANS) {
-    const status = sampleImplicitSurfaceStatus(
-      evaluate2,
-      variables,
-      level,
-      candidateHalfSpan,
-      dependentVariables
-    );
-    if (status !== "absent" && firstVisibleHalfSpan === void 0) {
-      firstVisibleHalfSpan = candidateHalfSpan;
-    }
-    if (status === "contained") {
-      let lower = previousHalfSpan;
-      let upper = candidateHalfSpan;
-      for (let step = 0; step < DOMAIN_REFINEMENT_STEPS; step += 1) {
-        const middle = (lower + upper) / 2;
-        const middleStatus = sampleImplicitSurfaceStatus(
-          evaluate2,
-          variables,
-          level,
-          middle,
-          dependentVariables
-        );
-        if (middleStatus === "contained") upper = middle;
-        else lower = middle;
-      }
-      const dependentHalfSpan = Math.max(2, upper * DOMAIN_MARGIN);
-      const rangeFor = (variable) => {
-        const halfSpan = dependentVariables.has(variable) ? dependentHalfSpan : Math.max(2, dependentHalfSpan);
-        return { min: -halfSpan, max: halfSpan };
-      };
-      return {
-        x: rangeFor("x"),
-        y: rangeFor("y"),
-        ...variables.length === 3 ? { z: rangeFor("z") } : {}
-      };
-    }
-    previousHalfSpan = candidateHalfSpan;
-  }
-  if (firstVisibleHalfSpan !== void 0) {
-    const range = { min: -firstVisibleHalfSpan, max: firstVisibleHalfSpan };
-    return { x: range, y: range, ...variables.length === 3 ? { z: range } : {} };
-  }
-  throw new Error("Implicit surface level is outside the program-selected viewport");
-}
-function buildImplicitSurfaceObject(input) {
-  const expression = input.expression.trim();
-  if (!expression) throw new Error("Implicit surface expression must not be empty");
-  const domain = implicitSurfaceDomain(expression, ["x", "y", "z"], input.level);
-  if (!domain.z) throw new Error("Implicit surface requires a three-dimensional viewport");
-  const samples = input.samples ?? 12;
-  if (!Number.isInteger(samples) || samples < 4 || samples > 24) {
-    throw new Error("Implicit surface samples must be an integer from 4 to 24");
-  }
-  return {
-    as: input.as,
-    kind: "implicit_surface",
-    expression,
-    level: input.level,
-    x_range: domain.x,
-    y_range: domain.y,
-    z_range: domain.z,
-    samples,
-    color: input.color ?? "teal",
-    ...input.label ? { label: input.label } : {}
-  };
-}
-
 // src/function-viewport.ts
 function niceRange(values, includeZero = true) {
   const finite = values.filter((v) => Number.isFinite(v) && Math.abs(v) < 1e12).sort((a, b) => a - b);
@@ -12601,10 +12713,10 @@ function quadratic(evaluate2) {
   const vertex = -b / (2 * a), value = evaluate2(vertex);
   if (Number.isFinite(vertex) && Number.isFinite(value)) return { vertex, value, a };
 }
-function functionViewport(expressions, parameters2, requestedX) {
-  const evaluators = expressions.map((e) => compileMathExpression(e, ["x", ...parameters2.map((p) => p.name)]));
-  const initial = Object.fromEntries(parameters2.map((p) => [p.name, p.initial]));
-  const states = [initial, ...parameters2.flatMap((p) => [p.min, p.max].map((v) => ({ ...initial, [p.name]: v })))];
+function functionViewport(expressions, parameters3, requestedX) {
+  const evaluators = expressions.map((e) => compileMathExpression(e, ["x", ...parameters3.map((p) => p.name)]));
+  const initial = Object.fromEntries(parameters3.map((p) => [p.name, p.initial]));
+  const states = [initial, ...parameters3.flatMap((p) => [p.min, p.max].map((v) => ({ ...initial, [p.name]: v })))];
   const evaluate2 = (index, state, x2) => {
     try {
       return evaluators[index]({ ...state, x: x2 });
@@ -12620,7 +12732,7 @@ function functionViewport(expressions, parameters2, requestedX) {
   if (!requestedX && identity && expressions.length > 1 && expressions.some((e) => /\b(?:ln|log)\s*\(/.test(e))) {
     return { x: { min: -2, max: 6 }, y: { min: -2, max: 6 } };
   }
-  if (!requestedX && expressions.length === 1 && parameters2.length === 0) {
+  if (!requestedX && expressions.length === 1 && parameters3.length === 0) {
     const y0 = evaluate2(0, initial, 0), y1 = evaluate2(0, initial, 1);
     const rate = Math.log(y1 / y0), intercept = Math.log(y0);
     if (y0 > 0 && y1 > 0 && Number.isFinite(rate) && Math.abs(rate) > 1e-6 && [-2, -1, 0.37, 2, 3].every((t) => {
@@ -13632,7 +13744,7 @@ var SHARED_COMPILERS = {
 // src/lesson-plan-compiler.ts
 function normalizedVisualIdentity(content, includeNumbers = true) {
   const sourceParameters = content.parameters ?? {};
-  const parameters2 = Object.fromEntries(
+  const parameters3 = Object.fromEntries(
     LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].semantic_parameters.filter((name) => sourceParameters[name] !== void 0).map((name) => [name, sourceParameters[name]])
   );
   const normalize2 = (value) => {
@@ -13644,25 +13756,9 @@ function normalizedVisualIdentity(content, includeNumbers = true) {
   };
   return JSON.stringify(normalize2({
     capability: content.capability,
-    parameters: parameters2,
+    parameters: parameters3,
     ...includeNumbers ? { numbers: content.numbers ?? [] } : {}
   }));
-}
-function separateInitialSamples(plan) {
-  const words = JSON.stringify(plan.sections.map((s) => s.moments.map((m) => m.narration)));
-  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
-  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
-    if (action.action !== "create" || action.kind !== "visual") continue;
-    const visual = action.content;
-    if (visual.capability !== "function_plot" || visual.numbers?.length !== 2) continue;
-    const tokens = visual.parameters?.expression_tokens;
-    if (Array.isArray(tokens) && tokens.some((t) => t && typeof t === "object" && "kind" in t && t.kind === "number")) continue;
-    const a = plan.numbers?.[visual.numbers[0] - 1], b = plan.numbers?.[visual.numbers[1] - 1];
-    if (!a || !b || a === b || Math.abs(a.initial - b.initial) > 1e-8) continue;
-    const step = b.student_control?.step ?? (b.max - b.min) / 200;
-    const delta = Math.max(step, Math.round((b.max - b.min) / 5 / step) * step);
-    b.initial = b.initial + delta <= b.max ? b.initial + delta : Math.max(b.min, b.initial - delta);
-  }
 }
 function mergeEquivalentVisualInputs(plan) {
   const groups = /* @__PURE__ */ new Map();
@@ -13733,61 +13829,6 @@ function positiveIntegerProgramRange(definition, maximum) {
   }
   if (definition.student_control) definition.student_control.step = 1;
 }
-function surfaceSectionProgramRange(content, path) {
-  const input = parameters(content);
-  if (content.capability === "implicit_surface_with_section") {
-    if (input.expression === void 0) {
-      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "an implicit surface requires an expression");
-    }
-    if (input.level === void 0) {
-      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.level`, "an implicit surface requires a level");
-    }
-    const expression2 = safeFunctionExpression(input.expression, "", ["x", "y", "z"], `${path}.expression`);
-    const level = optionalNumber(input.level, 0, `${path}.level`);
-    let domain;
-    try {
-      domain = implicitSurfaceDomain(expression2, ["x", "y", "z"], level);
-    } catch (error) {
-      fail2(
-        "LESSON_PLAN_CAPABILITY_PARAMETER",
-        `${path}.expression`,
-        error instanceof Error ? error.message : "implicit surface has no stable finite viewport"
-      );
-    }
-    const axis2 = input.section_axis ?? "z";
-    if (axis2 !== "x" && axis2 !== "y" && axis2 !== "z") {
-      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
-    }
-    return axis2 === "x" ? domain.x : axis2 === "y" ? domain.y : domain.z;
-  }
-  const xMin = optionalNumber(input.x_min, -2, `${path}.x_min`);
-  const xMax = optionalNumber(input.x_max, 2, `${path}.x_max`);
-  const yMin = optionalNumber(input.y_min, -2, `${path}.y_min`);
-  const yMax = optionalNumber(input.y_max, 2, `${path}.y_max`);
-  assertRange(xMin, xMax, `${path}.x_range`);
-  assertRange(yMin, yMax, `${path}.y_range`);
-  const axis = input.section_axis ?? "z";
-  if (axis === "x") return { min: xMin, max: xMax };
-  if (axis === "y") return { min: yMin, max: yMax };
-  const expression = safeFunctionExpression(input.expression, "x^2+y^2", ["x", "y"], `${path}.expression`);
-  const evaluateSurface = compileMathExpression(expression, ["x", "y"]);
-  const values = [];
-  for (let xIndex = 0; xIndex <= 20; xIndex += 1) {
-    const x = xMin + (xMax - xMin) * xIndex / 20;
-    for (let yIndex = 0; yIndex <= 20; yIndex += 1) {
-      const y = yMin + (yMax - yMin) * yIndex / 20;
-      try {
-        const z = evaluateSurface({ x, y });
-        if (Number.isFinite(z) && Math.abs(z) <= 1e12) values.push(z);
-      } catch {
-      }
-    }
-  }
-  if (values.length < 8) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "surface has no stable finite section range");
-  }
-  return { min: Math.min(...values), max: Math.max(...values) };
-}
 function normalizeProgramOwnedNumberRanges(plan) {
   const constrained = /* @__PURE__ */ new Set();
   const integerSides = /* @__PURE__ */ new Set();
@@ -13801,6 +13842,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
           const definition = plan.numbers?.[numberIndex - 1];
           const policy = policies[inputIndex];
           if (!definition || !policy) continue;
+          if (RECIPE_HOOKS[content.capability]?.free_number?.(content, inputIndex)) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
           if (policy.kind === "side_count") {
             integerSides.add(numberIndex);
@@ -13817,15 +13859,15 @@ function normalizeProgramOwnedNumberRanges(plan) {
           } else if (policy.kind === "bounded") {
             intersectProgramRange(definition, policy.min, policy.max);
             constrained.add(numberIndex);
-          } else if (policy.kind === "positive" && !(content.capability === "coordinate_circle" && content.parameters?.radius_expression !== void 0)) {
+          } else if (policy.kind === "positive") {
             positiveProgramRange(definition);
             constrained.add(numberIndex);
           } else if (policy.kind === "positive_integer") {
             positiveIntegerProgramRange(definition, policy.max);
             constrained.add(numberIndex);
           } else if (policy.kind === "surface_section") {
-            const allowed = surfaceSectionProgramRange(content, path);
-            if (allowed.min < allowed.max) {
+            const allowed = RECIPE_HOOKS[content.capability]?.section_range?.(content, path);
+            if (allowed && allowed.min < allowed.max) {
               intersectProgramRange(definition, allowed.min, allowed.max);
               constrained.add(numberIndex);
             }
@@ -13900,11 +13942,15 @@ function compileLessonPlan(value, options = {}) {
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
   setLessonTextLanguage(plan, options.language);
-  normalizePlotInputInstructions(plan);
-  validateTeachingClaims(plan);
+  for (const hooks of PLUGIN_HOOKS) hooks.normalize_plan?.(plan);
+  for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
   normalizeProgramOwnedNumberRanges(plan);
   mergeEquivalentVisualInputs(plan);
-  separateInitialSamples(plan);
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    const visual = action.content;
+    RECIPE_HOOKS[visual.capability]?.before_compile?.(visual, plan);
+  }
   const resolvedReferences = new Map(resolved.references.map((item) => [item.path, item]));
   const wholeTargets = /* @__PURE__ */ new Map();
   const partTargets = /* @__PURE__ */ new Map();
@@ -14448,7 +14494,7 @@ function modelReusableBoardSchema() {
     board_kind: { enum: ["math", "note"] }
   }, ["kind", "board_kind"]);
 }
-function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDynamicPlotExpression = false, canonicalFunctionPlot = false) {
+function visualParametersSchema(allowedCapabilities) {
   const modelParameters = new Set(allowedCapabilities.flatMap(
     (capability2) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_parameter_names]
   ));
@@ -14461,9 +14507,6 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
     ...Object.keys(declared).filter((name) => !order.includes(name))
   ].map((name) => [name, declared[name]]));
   const required = allowedCapabilities.length === 1 ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters] : [];
-  if ((requireDynamicPlotExpression || canonicalFunctionPlot) && !required.includes("formulas")) {
-    required.push("formulas");
-  }
   return object(properties, required);
 }
 function modelAction(properties, required) {
@@ -14477,7 +14520,6 @@ function actionCollectionSchemas(allowedCapabilities, reusableCount, numberCount
     ...reusableCount > 0 ? { reusable_item: integer(1, reusableCount) } : {}
   };
   const requireVisualParameters = allowedCapabilities.length === 1 && LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters.length > 0;
-  const requireDynamicPlotExpression = numberCount > 1 && allowedCapabilities.length === 1 && allowedCapabilities[0] === "function_plot";
   return {
     ...allowedCapabilities.length && includeVisualCreates ? {
       visual_creates: collection(modelAction({
@@ -14485,11 +14527,7 @@ function actionCollectionSchemas(allowedCapabilities, reusableCount, numberCount
         ...courseVisualPositions.length > 0 ? { course_visual: { enum: courseVisualPositions } } : {},
         content: object({
           ...includeVisualCapability ? { capability: { enum: allowedCapabilities } } : {},
-          parameters: visualParametersSchema(
-            allowedCapabilities,
-            numberCount,
-            requireDynamicPlotExpression
-          ),
+          parameters: visualParametersSchema(allowedCapabilities),
           ...numberCount > 0 ? {
             numbers: {
               type: "array",
@@ -14542,12 +14580,7 @@ function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes) 
       moment: integer(1, 12),
       timing: { enum: timingNames },
       content: object({
-        parameters: visualParametersSchema(
-          [capability2],
-          numberCount,
-          false,
-          capability2 === "function_plot"
-        ),
+        parameters: visualParametersSchema([capability2]),
         ...numberCount > 0 && numberLimit > 0 ? {
           numbers: {
             type: "array",
@@ -15423,29 +15456,29 @@ function lowerModelBoardContent(kind, value, numberCount) {
     return lowered;
   }
   const capability2 = content.capability;
-  const parameters2 = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? { ...content.parameters } : {};
+  const parameters3 = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? { ...content.parameters } : {};
   const hooks = typeof capability2 === "string" ? RECIPE_HOOKS[capability2] : void 0;
-  const forceNoNumbers = hooks?.lower_model_parameters?.(parameters2, { numberCount })?.no_numbers === true;
-  if (typeof content.title === "string" && parameters2.title === void 0) parameters2.title = content.title;
+  const forceNoNumbers = hooks?.lower_model_parameters?.(parameters3, { numberCount })?.no_numbers === true;
+  if (typeof content.title === "string" && parameters3.title === void 0) parameters3.title = content.title;
   if (typeof capability2 === "string" && capability2 in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
     const allowedParameters = new Set(
       LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES[capability2]
     );
-    for (const key of Object.keys(parameters2)) {
-      if (!allowedParameters.has(key)) delete parameters2[key];
+    for (const key of Object.keys(parameters3)) {
+      if (!allowedParameters.has(key)) delete parameters3[key];
     }
   }
   const numberLimit = typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITY_NUMBER_LIMITS ? LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2] : 0;
   let validNumbers = Array.isArray(content.numbers) ? [...new Set(content.numbers.filter((number) => Number.isInteger(number) && Number(number) >= 1 && Number(number) <= numberCount))].slice(0, numberLimit) : [];
   if (forceNoNumbers) validNumbers = [];
-  const parameterNumbers = hooks?.numbers_from_parameters?.(parameters2, { numberCount, limit: numberLimit }) ?? [];
+  const parameterNumbers = hooks?.numbers_from_parameters?.(parameters3, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
   if (!forceNoNumbers && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
     validNumbers = [1];
   }
   return {
     ...capability2 === void 0 ? {} : { capability: capability2 },
-    ...Object.keys(parameters2).length === 0 ? {} : { parameters: parameters2 },
+    ...Object.keys(parameters3).length === 0 ? {} : { parameters: parameters3 },
     ...validNumbers.length === 0 ? {} : { numbers: validNumbers }
   };
 }
@@ -15545,7 +15578,7 @@ function sanitizeNonessentialVisuals(outlineValue, draftValues) {
   });
   for (const entry of visualEntries) {
     const incompatible = (entry.content.numbers ?? []).some((number, index) => {
-      const next = RECIPE_HOOKS[entry.content.capability]?.number_purpose?.(entry.content, index) ?? visualNumberPurpose(entry.content.capability, index);
+      const next = RECIPE_HOOKS[entry.content.capability]?.free_number?.(entry.content, index) ? "generic" : visualNumberPurpose(entry.content.capability, index);
       const current = establishedPurposes.get(number);
       if (!current || compatibleVisualNumberPurpose(current, next)) {
         if (!current || current === "generic") establishedPurposes.set(number, next);
@@ -16844,40 +16877,6 @@ function locallyUnsupportedLessonRequest(request, language) {
   }
   return void 0;
 }
-function requestsTwoIndependentPoints(request) {
-  return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
-}
-function prepareTwoPointOutline(outline, request, language) {
-  if (!requestsTwoIndependentPoints(request)) return;
-  outline.numbers ??= [];
-  while (outline.numbers.length < 2) {
-    const index = outline.numbers.length;
-    outline.numbers.push({
-      initial: index === 0 ? -1 : 2,
-      min: -5,
-      max: 5,
-      label: index === 0 ? lessonText(language, "A\u70B9\u7684x\u5750\u6807") : lessonText(language, "B\u70B9\u7684x\u5750\u6807"),
-      student_control: { kind: "slider", step: 0.25 }
-    });
-  }
-  outline.numbers.slice(0, 2).forEach((number, index) => {
-    number.label = index === 0 ? lessonText(language, "A\u70B9\u7684x\u5750\u6807") : lessonText(language, "B\u70B9\u7684x\u5750\u6807");
-    number.student_control = { kind: "slider", step: number.student_control?.step ?? 0.25 };
-  });
-}
-function specializeTwoPointDraft(draft, outline, request) {
-  if (!requestsTwoIndependentPoints(request) || (outline.numbers?.length ?? 0) < 2) return;
-  for (const moment of draft.moments) for (const action of moment.actions) {
-    if (action.action !== "create" || action.kind !== "visual") continue;
-    const content = action.content;
-    if (content.capability !== "function_plot") continue;
-    const tokens = content.parameters?.expression_tokens;
-    if (Array.isArray(tokens)) {
-      content.parameters.expression_tokens = tokens.map((token) => token.kind === "number" ? { kind: "literal", value: outline.numbers?.[token.number - 1]?.initial ?? 0 } : token);
-    }
-    content.numbers = [1, 2];
-  }
-}
 async function generateLessonPlanWithModel(model, input, options = {}) {
   options = { ...options, compile: { ...options.compile, language: input.language ?? options.compile?.language } };
   const unsupportedResponse = locallyUnsupportedLessonRequest(input.learner_request, input.language);
@@ -16993,7 +16992,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       ),
       fixedRequestParts.length
     );
-    prepareTwoPointOutline(outline, input.learner_request, input.language);
+    for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
       bootstrappedFirstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
@@ -17005,7 +17004,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         true,
         input.language
       );
-      specializeTwoPointDraft(bootstrappedFirstSection, outline, input.learner_request);
+      for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(bootstrappedFirstSection, { outline, request: input.learner_request });
     } catch (error) {
       sectionErrors.set(1, error);
       await options.on_rejected_part?.({
@@ -17113,7 +17112,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     }
   }
   if (!outline) throw outlineError;
-  prepareTwoPointOutline(outline, input.learner_request, input.language);
+  for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
   await options.on_outline_ready?.({
     sections: outline.sections.length,
     course_visuals: outline.course_visuals?.length ?? 0,
@@ -17210,7 +17209,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         true,
         input.language
       );
-      specializeTwoPointDraft(candidate, outline, input.learner_request);
+      for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(candidate, { outline, request: input.learner_request });
     } catch (error) {
       const previousError = sectionErrors.get(section);
       sectionErrors.set(section, error);

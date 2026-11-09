@@ -67,5 +67,5 @@ test("recipe hooks and section facts are keyed by known recipes, and unknown nam
     for (const recipe of Object.keys(table)) assert.ok(RECIPE_CATALOG_ORDER.includes(recipe), recipe);
     for (const name of ["constructor", "toString", "__proto__", "hasOwnProperty"]) assert.equal(table[name], undefined, name);
   }
-  assert.deepEqual(Object.keys(RECIPE_HOOKS).sort(), ["coordinate_circle", "function_plot", "implicit_surface_with_section", "process_diagram"]);
+  assert.deepEqual(Object.keys(RECIPE_HOOKS).sort(), ["coordinate_circle", "function_plot", "function_surface_with_section", "implicit_surface_with_section", "process_diagram"]);
 });

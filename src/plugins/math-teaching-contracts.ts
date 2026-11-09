@@ -1,4 +1,6 @@
-import { LessonPlanError, type LessonPlan, type LessonPlanMathToken, type LessonPlanVisualContent, type LessonPlanReference } from "./lesson-plan.js";
+// The math plugin's teaching guards: narrow checks that narration agrees with
+// what a function plot or a rearrangement actually shows.
+import { LessonPlanError, type LessonPlan, type LessonPlanMathToken, type LessonPlanVisualContent, type LessonPlanReference } from "../lesson-plan.js";
 
 /** Program-only facts. Never serialized into model catalogs or response schemas. */
 export const TEACHING_CONTRACTS = {
@@ -7,8 +9,8 @@ export const TEACHING_CONTRACTS = {
   function_plot: {static_sample_limit:2, input:"slider", feedback:"secant", singularity:"undefined"},
 } as const;
 
-import { REARRANGEMENT_FACTS, type RearrangementConstruction } from "./rearrangement.js";
-export { REARRANGEMENT_FACTS } from "./rearrangement.js";
+import { REARRANGEMENT_FACTS, type RearrangementConstruction } from "../rearrangement.js";
+export { REARRANGEMENT_FACTS } from "../rearrangement.js";
 
 // Conservative polynomial-degree check over the already validated postfix tokens.
 function affineTokens(tokens: LessonPlanMathToken[]): boolean {

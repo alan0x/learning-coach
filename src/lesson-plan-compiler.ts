@@ -1,11 +1,11 @@
 import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
-import { normalizePlotInputInstructions, validateTeachingClaims } from "./teaching-contracts.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
 import { LESSON_PLAN_CAPABILITY_REGISTRY, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
 import { implicitSurfaceDomain } from "./scene3d-surfaces.js";
 import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen, type VisualCompiler } from "./recipe-kit.js";
 import { MATH_COMPILERS } from "./plugins/math-compilers.js";
+import { PLUGIN_HOOKS, RECIPE_HOOKS } from "./plugins/hooks.js";
 import { PHYSICS_COMPILERS } from "./plugins/physics-compilers.js";
 import { SHARED_COMPILERS } from "./plugins/shared-compilers.js";
 
@@ -49,22 +49,6 @@ function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbe
   }));
 }
 
-function separateInitialSamples(plan: LessonPlan): void {
-  const words = JSON.stringify(plan.sections.map(s => s.moments.map(m => m.narration)));
-  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
-  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
-    if (action.action !== "create" || action.kind !== "visual") continue;
-    const visual = action.content as LessonPlanVisualContent;
-    if (visual.capability !== "function_plot" || visual.numbers?.length !== 2) continue;
-    const tokens = visual.parameters?.expression_tokens;
-    if (Array.isArray(tokens) && tokens.some(t => t && typeof t === "object" && "kind" in t && t.kind === "number")) continue;
-    const a = plan.numbers?.[visual.numbers[0]-1], b = plan.numbers?.[visual.numbers[1]-1];
-    if (!a || !b || a === b || Math.abs(a.initial-b.initial)>1e-8) continue;
-    const step = b.student_control?.step ?? (b.max-b.min)/200;
-    const delta = Math.max(step, Math.round((b.max-b.min)/5/step)*step);
-    b.initial = b.initial+delta <= b.max ? b.initial+delta : Math.max(b.min,b.initial-delta);
-  }
-}
 
 function mergeEquivalentVisualInputs(plan: LessonPlan): void {
   const groups = new Map<string, LessonPlanVisualContent[]>();
@@ -149,63 +133,6 @@ function positiveIntegerProgramRange(
   if (definition.student_control) definition.student_control.step = 1;
 }
 
-function surfaceSectionProgramRange(content: LessonPlanVisualContent, path: string): { min: number; max: number } {
-  const input = parameters(content);
-  if (content.capability === "implicit_surface_with_section") {
-    if (input.expression === undefined) {
-      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "an implicit surface requires an expression");
-    }
-    if (input.level === undefined) {
-      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.level`, "an implicit surface requires a level");
-    }
-    const expression = safeFunctionExpression(input.expression, "", ["x", "y", "z"], `${path}.expression`);
-    const level = optionalNumber(input.level, 0, `${path}.level`);
-    let domain: ReturnType<typeof implicitSurfaceDomain>;
-    try {
-      domain = implicitSurfaceDomain(expression, ["x", "y", "z"], level);
-    } catch (error) {
-      fail(
-        "LESSON_PLAN_CAPABILITY_PARAMETER",
-        `${path}.expression`,
-        error instanceof Error ? error.message : "implicit surface has no stable finite viewport",
-      );
-    }
-    const axis = input.section_axis ?? "z";
-    if (axis !== "x" && axis !== "y" && axis !== "z") {
-      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
-    }
-    return axis === "x" ? domain.x : axis === "y" ? domain.y : domain.z!;
-  }
-  const xMin = optionalNumber(input.x_min, -2, `${path}.x_min`);
-  const xMax = optionalNumber(input.x_max, 2, `${path}.x_max`);
-  const yMin = optionalNumber(input.y_min, -2, `${path}.y_min`);
-  const yMax = optionalNumber(input.y_max, 2, `${path}.y_max`);
-  assertRange(xMin, xMax, `${path}.x_range`);
-  assertRange(yMin, yMax, `${path}.y_range`);
-  const axis = input.section_axis ?? "z";
-  if (axis === "x") return { min: xMin, max: xMax };
-  if (axis === "y") return { min: yMin, max: yMax };
-  const expression = safeFunctionExpression(input.expression, "x^2+y^2", ["x", "y"], `${path}.expression`);
-  const evaluateSurface = compileMathExpression(expression, ["x", "y"]);
-  const values: number[] = [];
-  for (let xIndex = 0; xIndex <= 20; xIndex += 1) {
-    const x = xMin + (xMax - xMin) * xIndex / 20;
-    for (let yIndex = 0; yIndex <= 20; yIndex += 1) {
-      const y = yMin + (yMax - yMin) * yIndex / 20;
-      try {
-        const z = evaluateSurface({ x, y });
-        if (Number.isFinite(z) && Math.abs(z) <= 1e12) values.push(z);
-      } catch {
-        // The visual compiler will report an unusable expression if no stable
-        // finite section range can be found.
-      }
-    }
-  }
-  if (values.length < 8) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, "surface has no stable finite section range");
-  }
-  return { min: Math.min(...values), max: Math.max(...values) };
-}
 
 /**
  * Apply physical and rendering constraints after the model-authored teaching
@@ -227,6 +154,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
           const definition = plan.numbers?.[numberIndex - 1];
           const policy = policies[inputIndex];
           if (!definition || !policy) continue;
+          if (RECIPE_HOOKS[content.capability]?.free_number?.(content, inputIndex)) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
           if (policy.kind === "side_count") {
             integerSides.add(numberIndex);
@@ -240,15 +168,15 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
           } else if (policy.kind === "bounded") {
             intersectProgramRange(definition, policy.min, policy.max);
             constrained.add(numberIndex);
-          } else if (policy.kind === "positive" && !(content.capability === "coordinate_circle" && content.parameters?.radius_expression !== undefined)) {
+          } else if (policy.kind === "positive") {
             positiveProgramRange(definition);
             constrained.add(numberIndex);
           } else if (policy.kind === "positive_integer") {
             positiveIntegerProgramRange(definition, policy.max);
             constrained.add(numberIndex);
           } else if (policy.kind === "surface_section") {
-            const allowed = surfaceSectionProgramRange(content, path);
-            if (allowed.min < allowed.max) {
+            const allowed = RECIPE_HOOKS[content.capability]?.section_range?.(content, path);
+            if (allowed && allowed.min < allowed.max) {
               intersectProgramRange(definition, allowed.min, allowed.max);
               constrained.add(numberIndex);
             }
@@ -338,11 +266,15 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
   setLessonTextLanguage(plan, options.language);
-  normalizePlotInputInstructions(plan);
-  validateTeachingClaims(plan);
+  for (const hooks of PLUGIN_HOOKS) hooks.normalize_plan?.(plan);
+  for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
   normalizeProgramOwnedNumberRanges(plan);
   mergeEquivalentVisualInputs(plan);
-  separateInitialSamples(plan);
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    const visual = action.content as LessonPlanVisualContent;
+    RECIPE_HOOKS[visual.capability]?.before_compile?.(visual, plan);
+  }
   const resolvedReferences = new Map(resolved.references.map((item) => [item.path, item]));
   const wholeTargets = new Map<string, string>();
   const partTargets = new Map<string, Map<string, string>>();
