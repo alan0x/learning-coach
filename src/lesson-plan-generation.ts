@@ -1,6 +1,4 @@
 import { lessonText } from "./lesson-text.js";
-import { fixedLineSamples } from "./teaching-contracts.js";
-import { REARRANGEMENT_FACTS, REARRANGEMENT_MODEL_GUIDANCE, type RearrangementConstruction } from "./rearrangement.js";
 import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
@@ -48,6 +46,7 @@ import {
 } from "./lesson-plan-schema.js";
 import { completedJsonObjectProperty } from "./json-stream.js";
 import { promptSlot } from "./plugins/index.js";
+import { SECTION_FACTS } from "./plugins/section-facts.js";
 
 export interface LessonPlanGenerationInput {
   turn_id: string;
@@ -3110,34 +3109,15 @@ export async function generateLessonPlanWithModel(
           && a.reusable_item === visual.reusable_item && (a.content as LessonPlanVisualContent).capability === visual.capability)
       : undefined;
     const established = source?.action === "create" && source.kind === "visual" ? source.content as LessonPlanVisualContent : undefined;
-    let facts: Record<string, unknown> = {};
-    if (established?.capability === "geometric_rearrangement") {
-      const construction = (established.parameters?.construction ?? "right_triangle_square") as RearrangementConstruction;
-      const definition = REARRANGEMENT_FACTS[construction];
-      const number = established.numbers?.[0];
-      const range = number ? outline.numbers?.[number - 1] : undefined;
-      facts = definition ? {
-        construction, pieces: definition.pieces, shows: definition.shows,
-        container: definition.container, at_start: definition.initial, at_end: definition.final,
-        fixed_legs: { a: established.parameters?.leg_a ?? 3, b: established.parameters?.leg_b ?? 2 },
-        ...(range && number ? { progress: { number, current_value: state.get(number),
-          normalized: ((state.get(number) ?? range.initial) - range.min) / (range.max - range.min) } } : {}),
-      } : {};
-    }
-    if (visual.capability === "circle_polygon_bounds") {
-      facts = { circle_fixed: true, radius: established?.parameters?.radius ?? 2,
-        side_count: { min: 3, max: 384, integer: true },
-        pi_lower: "n*sin(pi/n)", pi_upper: "n*tan(pi/n)",
-        n96: { lower: 3.1410319508905093, upper: 3.142714599645368 },
-        caution: "Use the actual regular polygons, not circle_and_arc; displayed bounds are approximations, not exact historical rational bounds." };
-    }
+    const mode = visual.create_section === section ? "create" : "reuse";
+    const { lead = {}, facts = {} } = SECTION_FACTS[visual.capability]?.({
+      section, mode, established, numbers: outline.numbers, state,
+    }) ?? {};
     return [{
-      ...(established && fixedLineSamples(established) ? { sample_slope: "constant" } : {}),
+      ...lead,
       course_visual: index + 1, capability: visual.capability,
-      mode: visual.create_section === section ? "create" : "reuse", relation: visual.relation,
+      mode, relation: visual.relation,
       ...facts,
-      ...(visual.create_section === section && visual.capability === "geometric_rearrangement"
-        ? { construction_choices: REARRANGEMENT_MODEL_GUIDANCE } : {}),
       ...(visual.related_visual === undefined ? {} : { related_visual: visual.related_visual }),
     }];
   });

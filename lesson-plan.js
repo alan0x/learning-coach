@@ -14647,6 +14647,49 @@ function completedJsonObjectProperty(source, propertyName) {
   }
 }
 
+// src/plugins/math-facts.ts
+var MATH_SECTION_FACTS = {
+  function_plot: ({ established }) => established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {},
+  geometric_rearrangement: ({ mode, established, numbers, state }) => {
+    let facts = {};
+    if (established) {
+      const construction = established.parameters?.construction ?? "right_triangle_square";
+      const definition = REARRANGEMENT_FACTS[construction];
+      const number = established.numbers?.[0];
+      const range = number ? numbers?.[number - 1] : void 0;
+      facts = definition ? {
+        construction,
+        pieces: definition.pieces,
+        shows: definition.shows,
+        container: definition.container,
+        at_start: definition.initial,
+        at_end: definition.final,
+        fixed_legs: { a: established.parameters?.leg_a ?? 3, b: established.parameters?.leg_b ?? 2 },
+        ...range && number ? { progress: {
+          number,
+          current_value: state.get(number),
+          normalized: ((state.get(number) ?? range.initial) - range.min) / (range.max - range.min)
+        } } : {}
+      } : {};
+    }
+    return { facts: { ...facts, ...mode === "create" ? { construction_choices: REARRANGEMENT_MODEL_GUIDANCE } : {} } };
+  },
+  circle_polygon_bounds: ({ established }) => ({
+    facts: {
+      circle_fixed: true,
+      radius: established?.parameters?.radius ?? 2,
+      side_count: { min: 3, max: 384, integer: true },
+      pi_lower: "n*sin(pi/n)",
+      pi_upper: "n*tan(pi/n)",
+      n96: { lower: 3.1410319508905093, upper: 3.142714599645368 },
+      caution: "Use the actual regular polygons, not circle_and_arc; displayed bounds are approximations, not exact historical rational bounds."
+    }
+  })
+};
+
+// src/plugins/section-facts.ts
+var SECTION_FACTS = { ...MATH_SECTION_FACTS };
+
 // src/lesson-plan-generation.ts
 var ANSWER_ACTIVITY_RULE = "answer \u53EA\u5199\u4E00\u4E2A\u6570\uFF08\u6574\u6570\u3001\u5C0F\u6570\u3001\u5206\u6570 3/4\u3001\u5E26\u5206\u6570 2 3/4\uFF09\uFF0C\u4E0D\u5E26\u5355\u4F4D\u6216 %\uFF0C\u767E\u5206\u6570\u9898\u5199\u767E\u5206\u53F7\u524D\u7684\u6570\u5E76\u628A % \u5199\u5165 unit\uFF1Bcheck \u5199\u53EA\u542B\u6570\u5B57\u7684\u7B97\u5F0F\uFF08\u5982 2*3/4\uFF09\uFF0C\u7A0B\u5E8F\u6838\u5BF9\u5B83\u4E0E answer \u76F8\u7B49\uFF1B\u9898\u76EE\u8981\u6C42\u6700\u7B80\u5206\u6570\u65F6 simplest_fraction \u5FC5\u987B\u4E3A true\uFF0C\u5426\u5219\u6CA1\u7EA6\u5206\u7684\u7B54\u6848\u4E5F\u7B97\u5BF9\uFF1Bunit \u53EA\u5199\u5355\u4F4D\uFF0C\u6CA1\u6709\u5C31\u7701\u7565\uFF1Bhints \u5199 1\u20132 \u6761\u4E0D\u7ED9\u51FA\u7B54\u6848\u7684\u63D0\u793A\u3002";
 var OUTLINE_SYSTEM_PROMPT = [
@@ -17037,46 +17080,21 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     if (!visual.use_sections.includes(section)) return [];
     const source = visual.create_section < section ? drafts[visual.create_section - 1]?.moments.flatMap((m) => m.actions).find((a) => a.action === "create" && a.kind === "visual" && a.reusable_item === visual.reusable_item && a.content.capability === visual.capability) : void 0;
     const established = source?.action === "create" && source.kind === "visual" ? source.content : void 0;
-    let facts = {};
-    if (established?.capability === "geometric_rearrangement") {
-      const construction = established.parameters?.construction ?? "right_triangle_square";
-      const definition = REARRANGEMENT_FACTS[construction];
-      const number = established.numbers?.[0];
-      const range = number ? outline.numbers?.[number - 1] : void 0;
-      facts = definition ? {
-        construction,
-        pieces: definition.pieces,
-        shows: definition.shows,
-        container: definition.container,
-        at_start: definition.initial,
-        at_end: definition.final,
-        fixed_legs: { a: established.parameters?.leg_a ?? 3, b: established.parameters?.leg_b ?? 2 },
-        ...range && number ? { progress: {
-          number,
-          current_value: state.get(number),
-          normalized: ((state.get(number) ?? range.initial) - range.min) / (range.max - range.min)
-        } } : {}
-      } : {};
-    }
-    if (visual.capability === "circle_polygon_bounds") {
-      facts = {
-        circle_fixed: true,
-        radius: established?.parameters?.radius ?? 2,
-        side_count: { min: 3, max: 384, integer: true },
-        pi_lower: "n*sin(pi/n)",
-        pi_upper: "n*tan(pi/n)",
-        n96: { lower: 3.1410319508905093, upper: 3.142714599645368 },
-        caution: "Use the actual regular polygons, not circle_and_arc; displayed bounds are approximations, not exact historical rational bounds."
-      };
-    }
+    const mode = visual.create_section === section ? "create" : "reuse";
+    const { lead = {}, facts = {} } = SECTION_FACTS[visual.capability]?.({
+      section,
+      mode,
+      established,
+      numbers: outline.numbers,
+      state
+    }) ?? {};
     return [{
-      ...established && fixedLineSamples(established) ? { sample_slope: "constant" } : {},
+      ...lead,
       course_visual: index + 1,
       capability: visual.capability,
-      mode: visual.create_section === section ? "create" : "reuse",
+      mode,
       relation: visual.relation,
       ...facts,
-      ...visual.create_section === section && visual.capability === "geometric_rearrangement" ? { construction_choices: REARRANGEMENT_MODEL_GUIDANCE } : {},
       ...visual.related_visual === void 0 ? {} : { related_visual: visual.related_visual }
     }];
   });
