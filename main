@@ -7210,7 +7210,25 @@ var v0_1_schema_default = {
       required: ["mode", "language", "title", "goals"],
       additionalProperties: false,
       properties: {
-        mode: { const: "explain" },
+        mode: { enum: ["explain", "learner_taught"] },
+        author: {
+          type: "object",
+          required: ["kind", "learner_ref", "presented_by"],
+          additionalProperties: false,
+          properties: {
+            kind: { const: "learner" },
+            learner_ref: { type: "string", pattern: "^learner:[A-Za-z0-9_-]{1,64}$" },
+            presented_by: {
+              type: "object",
+              required: ["avatar_ref", "voice_ref"],
+              additionalProperties: false,
+              properties: {
+                avatar_ref: { type: "string", pattern: "^avatar:[a-z0-9-]{1,48}$" },
+                voice_ref: { type: "string", pattern: "^voice:[a-z0-9-]{1,48}$" }
+              }
+            }
+          }
+        },
         language: { type: "string", minLength: 2, maxLength: 32 },
         title: { type: "string", minLength: 1, maxLength: 160 },
         goals: { type: "array", minItems: 1, maxItems: 8, items: { type: "string" } },
@@ -7454,9 +7472,10 @@ var v0_1_schema_default = {
         key: { $ref: "#/$defs/alias" },
         say: { type: "string", maxLength: 1200 },
         delivery: { enum: ["neutral", "patient", "encouraging", "careful", "emphatic"] },
+        pace: { enum: ["continuous"] },
         actions: {
           type: "array",
-          minItems: 1,
+          minItems: 0,
           maxItems: 24,
           items: { $ref: "#/$defs/action" }
         }
@@ -7467,10 +7486,10 @@ var v0_1_schema_default = {
       required: ["do"],
       additionalProperties: false,
       properties: {
-        do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate"] },
+        do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7488,7 +7507,18 @@ var v0_1_schema_default = {
         value: { type: "number" },
         easing: { enum: ["linear", "ease_in_out"] },
         duration_intent: { enum: ["brief", "normal", "extended"] },
-        reason: { type: "string" }
+        reason: { type: "string" },
+        show: { type: "string" },
+        preset: { enum: ["front", "top", "side", "isometric"] },
+        source: {
+          type: "object",
+          required: ["selection", "confirmed_by"],
+          additionalProperties: false,
+          properties: {
+            selection: { type: "string", pattern: "^sel-[A-Za-z0-9_-]{1,96}$" },
+            confirmed_by: { const: "learner" }
+          }
+        }
       },
       allOf: [
         {
@@ -7501,6 +7531,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "image" } }
           },
           then: { properties: { content: { $ref: "#/$defs/imageContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "ink" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/inkContent" } } }
         },
         {
           if: {
@@ -7545,6 +7582,14 @@ var v0_1_schema_default = {
         },
         {
           if: { properties: { do: { const: "point" } } },
+          then: { required: ["target"] }
+        },
+        {
+          if: { properties: { do: { const: "hide" } } },
+          then: { required: ["target"] }
+        },
+        {
+          if: { properties: { do: { const: "view" } } },
           then: { required: ["target"] }
         },
         {
@@ -7701,6 +7746,7 @@ var v0_1_schema_default = {
         initial: { type: "number" },
         min: { type: "number" },
         max: { type: "number" },
+        wrap: { const: true },
         label: { type: "string", maxLength: 80 },
         unit: { type: "string", maxLength: 32 },
         control: {
@@ -7754,13 +7800,31 @@ var v0_1_schema_default = {
             additionalProperties: false,
             properties: {
               as: { $ref: "#/$defs/alias" },
-              kind: { enum: ["box", "sphere", "cylinder", "cone", "surface", "implicit_surface"] },
+              kind: { enum: ["box", "sphere", "cylinder", "cone", "surface", "implicit_surface", "prism", "pyramid", "frustum", "hemisphere", "torus", "tetrahedron", "octahedron", "dodecahedron", "icosahedron", "ellipsoid"] },
               label: { type: "string" },
               color: { type: "string" },
               center: { $ref: "#/$defs/point3d" },
               size: { $ref: "#/$defs/size3d" },
               radius: { type: "number", exclusiveMinimum: 0 },
               height: { type: "number", exclusiveMinimum: 0 },
+              sides: { type: "integer", minimum: 3, maximum: 12 },
+              top_radius: { type: "number", exclusiveMinimum: 0 },
+              tube: { type: "number", exclusiveMinimum: 0 },
+              radii: {
+                type: "object",
+                required: ["x", "y", "z"],
+                additionalProperties: false,
+                properties: { x: { type: "number", exclusiveMinimum: 0 }, y: { type: "number", exclusiveMinimum: 0 }, z: { type: "number", exclusiveMinimum: 0 } }
+              },
+              base: { type: "array", minItems: 3, maxItems: 12, items: {
+                type: "object",
+                required: ["x", "y"],
+                additionalProperties: false,
+                properties: { x: { type: "number" }, y: { type: "number" } }
+              } },
+              top_scale: { type: "number", minimum: 0, exclusiveMaximum: 1 },
+              unfold: { type: "number", minimum: 0, maximum: 1 },
+              face_targets: { type: "boolean" },
               expression: { type: "string", minLength: 1, maxLength: 256 },
               x_range: { $ref: "#/$defs/range3d" },
               y_range: { $ref: "#/$defs/range3d" },
@@ -7811,7 +7875,8 @@ var v0_1_schema_default = {
                 items: { $ref: "#/$defs/point3d" }
               },
               label: { type: "string" },
-              color: { type: "string" }
+              color: { type: "string" },
+              shown: { enum: ["always", "when_emphasized"] }
             }
           }
         },
@@ -7883,6 +7948,52 @@ var v0_1_schema_default = {
         label: { type: "string" }
       }
     },
+    inkContent: {
+      type: "object",
+      required: ["snapshot_id", "sha256", "alt"],
+      additionalProperties: false,
+      properties: {
+        snapshot_id: { type: "string", pattern: "^ink-snap:[A-Za-z0-9_.:@-]{1,96}$" },
+        sha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+        replay: { enum: ["stroke_order", "static"] },
+        shown_strokes: { type: "integer", minimum: 1 },
+        drawn_size: {
+          type: "object",
+          required: ["width", "height"],
+          additionalProperties: false,
+          properties: {
+            width: { type: "number", exclusiveMinimum: 0, maximum: 4e3 },
+            height: { type: "number", exclusiveMinimum: 0, maximum: 4e3 }
+          }
+        },
+        alt: { type: "string", minLength: 1, maxLength: 480 },
+        selections: {
+          type: "array",
+          maxItems: 24,
+          items: {
+            type: "object",
+            required: ["as", "selection_id"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              selection_id: { type: "string", pattern: "^sel-[A-Za-z0-9_-]{1,96}$" },
+              label: { type: "string" }
+            }
+          }
+        },
+        annotation: {
+          type: "object",
+          required: ["x", "y", "width", "height"],
+          additionalProperties: false,
+          properties: {
+            x: { type: "number", minimum: -0.5, maximum: 1.5 },
+            y: { type: "number", minimum: -0.5, maximum: 1.5 },
+            width: { type: "number", exclusiveMinimum: 0, maximum: 2 },
+            height: { type: "number", exclusiveMinimum: 0, maximum: 2 }
+          }
+        }
+      }
+    },
     imageContent: {
       type: "object",
       required: ["asset_id"],
@@ -7917,10 +8028,19 @@ var v0_1_schema_default = {
       required: ["relation"],
       additionalProperties: false,
       properties: {
-        relation: { enum: ["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"] },
+        relation: { enum: ["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay", "annotates", "replaces", "continues"] },
         anchor: { $ref: "#/$defs/alias" },
         region_role: { type: "string" },
-        align: { enum: ["start", "center", "end"] },
+        align: { enum: ["start", "center", "end", "equals"] },
+        offset: {
+          type: "object",
+          required: ["x", "y"],
+          additionalProperties: false,
+          properties: {
+            x: { type: "number", minimum: -4e3, maximum: 4e3 },
+            y: { type: "number", minimum: -4e3, maximum: 4e3 }
+          }
+        },
         gap: { enum: ["compact", "normal", "spacious"] }
       }
     }
@@ -8102,7 +8222,8 @@ var OLL_NODE_KINDS = [
   "scene3d",
   "image",
   "table",
-  "note"
+  "note",
+  "ink"
 ];
 var OLL_ACTION_NAMES = [
   "write",
@@ -8113,7 +8234,9 @@ var OLL_ACTION_NAMES = [
   "focus",
   "point",
   "expression",
-  "animate"
+  "animate",
+  "hide",
+  "view"
 ];
 var OLL_BINDING_CAPABILITIES = {
   geometry: {
@@ -8127,7 +8250,8 @@ var OLL_BINDING_CAPABILITIES = {
     guides: ["value"]
   },
   scene3d: {
-    sections: ["value"]
+    sections: ["value"],
+    objects: ["unfold"]
   }
 };
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
@@ -8176,13 +8300,36 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "student-tasks:scene3d_view_target": "0.1.0",
   "student-tasks:numeric_answer": "0.5.0",
   "reflections": "0.3.0",
-  "binding-hide-undefined": "0.3.0"
+  "binding-hide-undefined": "0.3.0",
+  "lesson-mode:learner_taught": "0.6.0",
+  "node:ink": "0.6.0",
+  "placement:annotates": "0.6.0",
+  "placement:replaces": "0.6.0",
+  "action:board.hide": "0.6.0",
+  "write-source": "0.6.0",
+  "action:scene3d.view": "0.6.0",
+  "emphasis:none": "0.7.0",
+  "variables:wrap": "0.7.0",
+  "scene3d:latent-highlights": "0.7.0",
+  "ink:shown-strokes": "0.8.0",
+  "beat-pace:continuous": "0.8.0",
+  "placement:continues": "0.9.0",
+  "ink:drawn-size": "0.9.0",
+  "scene3d:more-solids": "0.9.0",
+  "scene3d:unfold": "0.9.0",
+  "scene3d:face-targets": "0.10.0"
 });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
 var validateAuthoringDocument = ajv.compile(v0_1_schema_default);
 var ACTIONS = new Set(OLL_ACTION_NAMES);
+var SCENE3D_PRESET_VIEWS = {
+  front: { yaw: 0, pitch: 0 },
+  side: { yaw: Math.PI / 2, pitch: 0 },
+  top: { yaw: 0, pitch: Math.PI / 2 },
+  isometric: { yaw: 0.72, pitch: 0.55 }
+};
 
 // src/scene3d-surfaces.ts
 var DOMAIN_CANDIDATE_HALF_SPANS = [2, 5, 10, 20, 50, 100];

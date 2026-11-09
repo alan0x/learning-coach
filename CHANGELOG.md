@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.1 - 2026-11-09
+
+- Compiles and validates against OLL `350d5e0` (player execution version 0.10.0), the same OLL that Octos Learn plays, instead of `7aec858` (0.5.0). The vendored authoring schema is synced. Generated lessons are unchanged by this alone; Coach can now emit features up to player 0.10.0 once its recipes use them.
+
 ## 0.24.0 - 2026-11-01
 
 - `learning.teach.review` also returns `personal_details`: personal details the child said on each card (a real person's name, their school, town or address, age or grade, contact details) as the card key and the child's exact words, so the host can ask the child to remove them before the lesson is shared. A detail that is not the child's own words on that card is dropped. The review's messages still never repeat personal details. Other actions are unchanged.
