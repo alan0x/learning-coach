@@ -457,7 +457,7 @@ export type LessonPlanStudentActivity =
     prompt: string;
     /** Whole number, decimal, fraction or mixed number, as a learner would type it. */
     answer: string;
-    /** Arithmetic that gives the answer; the program evaluates it and rejects a mismatch. */
+    /** Arithmetic that gives the answer; the program evaluates it and rejects a mismatch. A decimal answer may be the check rounded to the places written. */
     check: string;
     unit?: string;
     simplest_fraction?: boolean;
@@ -1347,12 +1347,33 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
 }
 
 /**
+ * How far a typed answer may be from the expected answer and still count:
+ * 0 when the answer equals its check, or half a unit in the answer's last
+ * decimal place when the answer is its check rounded to the places written
+ * (11.21 for 2.02/18.02*100 = 11.2097...). Whole numbers, fractions and mixed
+ * numbers must equal the check exactly, so a math slip such as 7/2 written as
+ * 3 is still caught. Undefined means the answer does not match its check.
+ */
+export function numericAnswerTolerance(answer: string, checked: number): number | undefined {
+  const expected = parseNumericAnswer(answer);
+  if (!expected || !Number.isFinite(checked)) return undefined;
+  const difference = Math.abs(checked - expected.value);
+  if (difference <= 1e-9 * Math.max(1, Math.abs(expected.value))) return 0;
+  if (expected.form !== "decimal") return undefined;
+  const places = /\.(\d+)\s*$/.exec(answer)?.[1]?.length;
+  if (!places) return undefined;
+  const halfUnit = 0.5 * 10 ** -places;
+  // A check that lands exactly on the rounding boundary may round either way.
+  return difference <= halfUnit * (1 + 1e-9) ? halfUnit : undefined;
+}
+
+/**
  * The model writes both the answer and the arithmetic behind it. The program
  * evaluates that arithmetic, so a slip between the two never reaches a learner
  * as a wrong expected answer. It cannot tell whether the arithmetic models a
  * word problem correctly; that stays with the lesson's review.
  */
-function validateNumericAnswerActivity(activity: Record<string, unknown>, path: string): void {
+export function validateNumericAnswerActivity(activity: Record<string, unknown>, path: string): void {
   nonEmptyString(activity.answer, `${path}.answer`, 64);
   const expected = parseNumericAnswer(activity.answer as string);
   if (!expected) fail("LESSON_PLAN_ACTIVITY", `${path}.answer`, "answer must be a whole number, decimal, fraction or mixed number");
@@ -1363,7 +1384,7 @@ function validateNumericAnswerActivity(activity: Record<string, unknown>, path: 
   } catch (error) {
     fail("LESSON_PLAN_ACTIVITY", `${path}.check`, `check must be arithmetic on numbers only: ${(error as Error).message}`);
   }
-  if (!Number.isFinite(checked!) || Math.abs(checked! - expected!.value) > 1e-9 * Math.max(1, Math.abs(expected!.value))) {
+  if (numericAnswerTolerance(activity.answer as string, checked!) === undefined) {
     fail("LESSON_PLAN_ACTIVITY", `${path}.answer`, `answer ${String(activity.answer)} does not equal its check ${String(activity.check)}`);
   }
   optionalString(activity.unit, `${path}.unit`, 16);

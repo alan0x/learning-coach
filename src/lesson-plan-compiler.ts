@@ -21,6 +21,7 @@ import {
   LESSON_PLAN_CAPABILITY_REGISTRY,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LessonPlanError,
+  numericAnswerTolerance,
   resolveLessonPlan,
   type JsonValue,
   type LessonPlan,
@@ -1833,6 +1834,9 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         });
       } else if (activity.kind === "numeric_answer") {
         const anchor = resolvedReference(`${activityPath}.reference`);
+        // A rounded answer accepts anything that rounds to it, so a learner who
+        // types the unrounded value or keeps more places is not marked wrong.
+        const tolerance = numericAnswerTolerance(activity.answer, compileMathExpression(activity.check, [])({}));
         addTask({
           ...common,
           anchor: wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias,
@@ -1840,6 +1844,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           completion: {
             kind: "numeric_answer",
             answer: activity.answer,
+            ...(tolerance ? { tolerance } : {}),
             ...(activity.unit ? { unit: activity.unit } : {}),
             ...(activity.simplest_fraction ? { form: "simplest_fraction" as const } : {}),
           },

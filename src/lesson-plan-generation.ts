@@ -133,7 +133,7 @@ export interface NonLessonPlanResponse {
 
 export type LessonPlanGenerationResult = GeneratedLessonPlan | NonLessonPlanResponse;
 
-const ANSWER_ACTIVITY_RULE = "answer 只写一个数（整数、小数、分数 3/4、带分数 2 3/4），不带单位或 %，百分数题写百分号前的数并把 % 写入 unit；check 写只含数字的算式（如 2*3/4），程序核对它与 answer 相等；题目要求最简分数时 simplest_fraction 必须为 true，否则没约分的答案也算对；unit 只写单位，没有就省略；hints 写 1–2 条不给出答案的提示。";
+const ANSWER_ACTIVITY_RULE = "answer 只写一个数（整数、小数、分数 3/4、带分数 2 3/4），不带单位或 %，百分数题写百分号前的数并把 % 写入 unit；check 写只含数字的算式（如 2*3/4），程序核对它与 answer 相等；结果要四舍五入时 answer 写成小数（如 11.21、2.0），题目写明保留几位小数，程序按位数核对；题目要求最简分数时 simplest_fraction 必须为 true，否则没约分的答案也算对；unit 只写单位，没有就省略；hints 写 1–2 条不给出答案的提示。";
 
 const OUTLINE_SYSTEM_PROMPT = `设计完整课程目录，不生成 OLL、执行 ID、组件名或自由对象名。
 - 需要同步对照的图复用同一共享数值，并通过 supporting/comparison 声明关联；不要用两个独立 main 图表示同一联动关系。

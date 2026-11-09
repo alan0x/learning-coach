@@ -4698,6 +4698,32 @@ test("a typed question compiles to a numeric answer task by its card, checked ag
   rejects((activity) => { activity.reference = { source: "close" }; }, /reference|board card/);
 });
 
+test("a rounded decimal answer matches its check to the places written, and the learner gets the same rounding", () => {
+  const base = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
+  const withAnswer = (answer, check) => {
+    const plan = structuredClone(base);
+    plan.sections[1].student_activities = [{
+      kind: "numeric_answer", prompt: "保留两位小数。", answer, check,
+      reference: { source: "local_board_item", moment: 1, item: 2 }, hints: ["先算比值。"],
+    }];
+    return plan;
+  };
+  const completion = (answer, check) => compileAndValidateLessonPlan(withAnswer(answer, check)).lesson.lesson.tasks
+    .find((task) => task.completion.kind === "numeric_answer").completion;
+  // Answers the P0 baseline rejected as unequal although they were correctly rounded.
+  assert.deepEqual(completion("11.21", "2.02/18.02*100"), { kind: "numeric_answer", answer: "11.21", tolerance: 0.005 });
+  assert.equal(completion("27.29", "12.011/44.01*100").tolerance, 0.005);
+  assert.equal(completion("2.0", "2*3.14*(0.98/9.8)^0.5").tolerance, 0.05);
+  // An exact answer keeps exact grading.
+  assert.deepEqual(completion("0.75", "3/4"), { kind: "numeric_answer", answer: "0.75" });
+  // Wrong rounding, and rounding outside decimals, are still mismatches.
+  assert.throws(() => compileLessonPlan(withAnswer("11.22", "2.02/18.02*100")), /does not equal its check/);
+  assert.equal(completion("11.2", "2.02/18.02*100").tolerance, 0.05, "one place written, one place checked");
+  assert.throws(() => compileLessonPlan(withAnswer("3", "7/2")), /does not equal its check/, "whole numbers stay exact");
+  assert.throws(() => compileLessonPlan(withAnswer("1", "9.8*(2/(2*3.1415926))^2")), /does not equal its check/);
+  assert.throws(() => compileLessonPlan(withAnswer("1/3", "0.33")), /does not equal its check/, "fractions stay exact");
+});
+
 
 function appendStandaloneGraph(plan, parameters, numbers = [1]) {
   plan.sections[1].moments.push({ narration: "Continue observing the same mathematical state.", actions: [
