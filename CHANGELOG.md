@@ -2,7 +2,7 @@
 
 ## 0.24.1 - 2026-11-09
 
-- Compiles and validates against OLL `350d5e0` (player execution version 0.10.0), the same OLL that Octos Learn plays, instead of `7aec858` (0.5.0). The vendored authoring schema is synced. Generated lessons are unchanged by this alone; Coach can now emit features up to player 0.10.0 once its recipes use them.
+- Compiles and validates against OLL `350d5e0` (player execution version 0.10.0), the same OLL that Octos Learn plays, instead of `7aec858` (0.5.0). The vendored authoring schema is synced. No recipe or prompt changes; Coach can now use features up to player 0.10.0 when its recipes need them.
 
 ## 0.24.0 - 2026-11-01
 
