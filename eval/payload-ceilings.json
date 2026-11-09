@@ -1,0 +1,126 @@
+{
+  "note": "Hard payload ceilings per input route and request path (subject plugin plan, decision S6). Bytes of system prompt + prompt + response schema, excluding images. Raising a ceiling requires a plan change and a fresh live speed comparison.",
+  "recorded_from": "learning-coach main baseline",
+  "entry_points": {
+    "camera/fallback_outline": {
+      "total_bytes": 9066,
+      "schema_bytes": 2678
+    },
+    "camera/first_request": {
+      "total_bytes": 18197,
+      "schema_bytes": 7407
+    },
+    "camera/first_section_retry": {
+      "total_bytes": 8905,
+      "schema_bytes": 4160
+    },
+    "camera/later_section": {
+      "total_bytes": 8380,
+      "schema_bytes": 3396
+    },
+    "camera/practice": {
+      "total_bytes": 1891,
+      "schema_bytes": 482
+    },
+    "camera/section_repair": {
+      "total_bytes": 8474,
+      "schema_bytes": 3396
+    },
+    "selection/fallback_outline": {
+      "total_bytes": 9066,
+      "schema_bytes": 2678
+    },
+    "selection/first_request": {
+      "total_bytes": 18681,
+      "schema_bytes": 7407
+    },
+    "selection/first_section_retry": {
+      "total_bytes": 8905,
+      "schema_bytes": 4160
+    },
+    "selection/later_section": {
+      "total_bytes": 8380,
+      "schema_bytes": 3396
+    },
+    "selection/practice": {
+      "total_bytes": 1891,
+      "schema_bytes": 482
+    },
+    "selection/section_repair": {
+      "total_bytes": 8474,
+      "schema_bytes": 3396
+    },
+    "self_contained/fallback_outline": {
+      "total_bytes": 7669,
+      "schema_bytes": 2437
+    },
+    "self_contained/first_request": {
+      "total_bytes": 15852,
+      "schema_bytes": 6836
+    },
+    "self_contained/first_section_retry": {
+      "total_bytes": 8786,
+      "schema_bytes": 4160
+    },
+    "self_contained/later_section": {
+      "total_bytes": 8261,
+      "schema_bytes": 3396
+    },
+    "self_contained/practice": {
+      "total_bytes": 1772,
+      "schema_bytes": 482
+    },
+    "self_contained/section_repair": {
+      "total_bytes": 8355,
+      "schema_bytes": 3396
+    },
+    "text/fallback_outline": {
+      "total_bytes": 8947,
+      "schema_bytes": 2678
+    },
+    "text/first_request": {
+      "total_bytes": 17099,
+      "schema_bytes": 7077
+    },
+    "text/first_section_retry": {
+      "total_bytes": 8786,
+      "schema_bytes": 4160
+    },
+    "text/later_section": {
+      "total_bytes": 8261,
+      "schema_bytes": 3396
+    },
+    "text/practice": {
+      "total_bytes": 1772,
+      "schema_bytes": 482
+    },
+    "text/section_repair": {
+      "total_bytes": 8355,
+      "schema_bytes": 3396
+    },
+    "voice/fallback_outline": {
+      "total_bytes": 8947,
+      "schema_bytes": 2678
+    },
+    "voice/first_request": {
+      "total_bytes": 17099,
+      "schema_bytes": 7077
+    },
+    "voice/first_section_retry": {
+      "total_bytes": 8786,
+      "schema_bytes": 4160
+    },
+    "voice/later_section": {
+      "total_bytes": 8261,
+      "schema_bytes": 3396
+    },
+    "voice/practice": {
+      "total_bytes": 1772,
+      "schema_bytes": 482
+    },
+    "voice/section_repair": {
+      "total_bytes": 8355,
+      "schema_bytes": 3396
+    }
+  }
+}
