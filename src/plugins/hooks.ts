@@ -28,7 +28,7 @@ export interface RecipeHooks {
   /** True when the visual's number at this input is an input to a recipe formula: it has no registry purpose and no program range. */
   free_number?(content: LessonPlanVisualContent, index: number): boolean;
   /** Adjusts the plan for this visual before compiling, such as separating initial values. */
-  before_compile?(content: LessonPlanVisualContent, plan: LessonPlan): void;
+  before_compile?(content: LessonPlanVisualContent, plan: LessonPlan, sectionIndex: number): void;
   /** The number range a `surface_section` input can take for this visual. */
   section_range?(content: LessonPlanVisualContent, path: string): { min: number; max: number };
   /** Checks the visual's parameters (undefined when it has none), after the general parameter checks. */
@@ -36,7 +36,7 @@ export interface RecipeHooks {
   /** Checks the visual's number list, after each reference is checked. */
   validate_numbers?(numbers: unknown[], content: Record<string, unknown>, context: RecipeValidationContext): void;
   /** Lesson numbers that drive this visual, when its parameters decide them. */
-  bound_numbers?(content: LessonPlanVisualContent, context: RecipeValidationContext): number[] | undefined;
+  bound_numbers?(content: LessonPlanVisualContent): number[];
 }
 
 export type { LessonPlanMathExpression };
@@ -46,12 +46,19 @@ export type { LessonPlanMathExpression };
 // as "constructor" must find nothing.
 export const RECIPE_HOOKS: Readonly<Record<string, RecipeHooks | undefined>> = Object.assign(Object.create(null), MATH_HOOKS, SHARED_HOOKS);
 
+export interface DraftSpecializationContext {
+  outline: LessonPlanOutline;
+  request: string;
+  accepted: readonly LessonPlanSectionDraft[];
+  adjust(event: { kind: "plot_binding_rebuilt" | "plot_control_removed"; section: number; moment: number; reason: string }): void;
+}
+
 /** Plugin steps that work on the whole request or lesson rather than one recipe. */
 export interface PluginHooks {
   /** Adjusts the accepted outline for the request. */
   prepare_outline?(outline: LessonPlanOutline, context: { request: string; language?: string }): void;
   /** Adjusts a section draft for the request, before it is compiled. */
-  specialize_draft?(draft: LessonPlanSectionDraft, context: { outline: LessonPlanOutline; request: string }): void;
+  specialize_draft?(draft: LessonPlanSectionDraft, context: DraftSpecializationContext): void;
   /** Normalizes the resolved plan before compiling. Runs for every plugin before any check_plan. */
   normalize_plan?(plan: LessonPlan): void;
   /** Rejects a plan whose narration contradicts what its visuals show. */

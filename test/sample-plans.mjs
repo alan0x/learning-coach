@@ -59,7 +59,7 @@ export function samplePlan(capability) {
       content: {
         capability,
         parameters: capability === "function_plot"
-          ? { expression: "x^2" }
+          ? { expression: "x^2", sample_x_numbers: [1] }
           : capability === "implicit_surface_with_section"
             ? { expression: "x^2+y^2+z^2", level: 1, section_axis: "z" }
             : {},

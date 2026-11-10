@@ -721,7 +721,7 @@ test("an explicit comparison may keep two otherwise equivalent views separate", 
       role: "comparison_view",
       content: {
         capability: "function_plot",
-        parameters: { title: "Detailed comparison", expression: "x^3", x_min: -1, x_max: 1 },
+        parameters: { title: "Detailed comparison", expression: "x^3", sample_x_numbers: [1], x_min: -1, x_max: 1 },
         numbers: [1],
       },
       placement: { relation: "new_region" },
@@ -777,6 +777,7 @@ test("an animated or assessed number must drive at least one visual", () => {
   const visual = staticMultiNumberPlot.sections[0].moments[0].actions[0].content;
   delete visual.parameters.expression_tokens;
   visual.parameters.expression = "x^2";
+  visual.parameters.sample_x_numbers = [1, 2];
   staticMultiNumberPlot.sections[0].purpose = "观察两点";
   staticMultiNumberPlot.sections[0].moments[0].narration = "通过两个滑块观察 A、B 两个采样点。";
   const compiled = compileAndValidateLessonPlan(staticMultiNumberPlot);
@@ -1009,6 +1010,7 @@ test("the compiler expands a plot axis to keep a moving point visible", () => {
   };
   plan.sections[0].moments[0].actions[0].content.parameters = {
     expression: "(1+1/x)^x",
+    sample_x_numbers: [1],
     x_min: 1,
     x_max: 4,
     y_min: 1,
@@ -1057,6 +1059,7 @@ test("a one-variable sequence curve uses x while the lesson number moves one poi
   };
   plan.sections[0].moments[0].actions[0].content.parameters = {
     expression: "(1+1/x)^x",
+    sample_x_numbers: [1],
     x_min: 1,
     x_max: 100,
     y_min: 1.9,
@@ -1096,6 +1099,7 @@ test("canonical function tokens can describe a one-variable sequence without tur
       { kind: "input" },
       { kind: "operator", operator: "power" },
     ],
+    sample_x_numbers: [1],
     x_min: 1,
     x_max: 100,
     y_min: 1.9,
@@ -1686,7 +1690,7 @@ test("the compiler covers all current OLL write kinds and action kinds in one de
           { action: "create", kind: "image", role: "example", content: { resource: 1, alt: "受控测试图片" }, placement: { relation: "below", reference: boardItem(4) } },
           { action: "create", kind: "visual", role: "diagram", content: { capability: "process_diagram", parameters: { steps: ["观察", "计算", "验证"] } }, placement: { relation: "right_of", reference: boardItem(6) } },
           { action: "create", kind: "visual", role: "diagram", content: { capability: "coordinate_circle", parameters: { radius: 2 } }, placement: { relation: "below", reference: boardItem(6) }, reusable_item: 1 },
-          { action: "create", kind: "visual", role: "diagram", content: { capability: "function_plot", parameters: { expression: "x^2" }, numbers: [1] }, placement: { relation: "right_of", reference: boardItem(8) }, reusable_item: 2 },
+          { action: "create", kind: "visual", role: "diagram", content: { capability: "function_plot", parameters: { expression: "x^2", sample_x_numbers: [1] }, numbers: [1] }, placement: { relation: "right_of", reference: boardItem(8) }, reusable_item: 2 },
           { action: "create", kind: "visual", role: "diagram", content: { capability: "cube_with_section", parameters: {}, numbers: [2] }, placement: { relation: "below", reference: boardItem(8) } },
           { action: "revise", reference: boardItem(1), kind: "text", content: { text: "修订后的普通文字" }, reason: "补充说明" },
           { action: "connect", from_ref: boardItem(8, "circle"), to_ref: boardItem(9, "primary_curve"), relation: "compares_with", label: "图形比较", reusable_item: 3 },
@@ -3562,6 +3566,7 @@ test("the staged model path lowers several static formulas into one multi-curve 
   }));
   Object.assign(outline, modelCourseVisualStructure(plan, drafts));
   const visual = drafts[0].course_visual_creates.visual_1.content;
+  delete visual.parameters.sample_x_numbers;
   visual.parameters.formulas = ["x", "x^2", "log x", "log_2 x", "log_3(x)", "log4(x)"];
   visual.parameters.curve_labels = [
     "y = x",
@@ -3880,6 +3885,7 @@ test("slope parameter lessons supply fixed reference points with computed secant
   const visual = plan.sections[0].moments[0].actions[0].content;
   delete visual.parameters.expression;
   delete visual.parameters.expressions;
+  delete visual.parameters.sample_x_numbers;
   visual.parameters.expression_tokens = [
     {kind:"number",number:1}, {kind:"input"}, {kind:"operator",operator:"multiply"},
   ];
@@ -3896,6 +3902,7 @@ test("default two-point controls begin apart but remain independently bound", ()
   const visual = plan.sections[0].moments[0].actions[0].content;
   delete visual.parameters.expression_tokens;
   visual.parameters.expression = "x^2";
+  visual.parameters.sample_x_numbers = [1, 2];
   plan.sections[0].purpose = "比较两点";
   plan.sections[0].moments[0].narration = "分别移动 A、B 观察割线。";
   const compiled = compileAndValidateLessonPlan(plan);
@@ -3911,6 +3918,7 @@ test("a later chapter cannot claim that fixed-line sampling changes its slope", 
   const plan = structuredClone(completeLessonPlanFixtures.quadratic_translation);
   const visual = plan.sections[0].moments[0].actions[0].content;
   visual.parameters.expression_tokens = [{kind:"input"}];
+  visual.parameters.sample_x_numbers = [1, 2];
   plan.sections[0].purpose = "固定直线上的点";
   plan.sections[0].moments[0].narration = "移动两点观察斜率保持不变。";
   plan.sections[1].moments[0].narration = "移动点 B，直线的斜率随之改变。";
@@ -3921,6 +3929,7 @@ test("a later chapter cannot claim that fixed-line sampling changes its slope", 
 test("fixed-line slope definitions may refer to coordinate changes", () => {
   const plan = structuredClone(completeLessonPlanFixtures.quadratic_translation);
   plan.sections[0].moments[0].actions[0].content.parameters.expression_tokens = [{kind:"input"}];
+  plan.sections[0].moments[0].actions[0].content.parameters.sample_x_numbers = [1, 2];
   plan.sections[0].purpose = "固定直线上的点";
   plan.sections[0].moments[0].narration = "斜率表示纵坐标变化量与横坐标变化量的比值。";
   assert.doesNotThrow(() => compileAndValidateLessonPlan(plan));
@@ -3957,7 +3966,7 @@ test("finite circle rearrangement must not claim an exact rectangle", () => {
 
 test("known two-point input wording is normalized without a model repair", () => {
   const plan=structuredClone(completeLessonPlanFixtures.quadratic_translation);
-  plan.sections[0].moments[0].actions[0].content.parameters.expression_tokens=[{kind:"input"}];
+  Object.assign(plan.sections[0].moments[0].actions[0].content.parameters, { expression_tokens: [{kind:"input"}], sample_x_numbers: [1, 2] });
   plan.sections[0].purpose="观察固定直线";
   plan.sections[0].moments[0].narration="请直接拖动点 B，斜率保持不变。";
   const compiled=compileAndValidateLessonPlan(plan);
@@ -3967,7 +3976,7 @@ test("known two-point input wording is normalized without a model repair", () =>
 
 test("fixed-line sample narration is normalized to the interaction that exists", () => {
   const plan=structuredClone(completeLessonPlanFixtures.quadratic_translation);
-  plan.sections[0].moments[0].actions[0].content.parameters.expression_tokens=[{kind:"input"}];
+  Object.assign(plan.sections[0].moments[0].actions[0].content.parameters, { expression_tokens: [{kind:"input"}], sample_x_numbers: [1, 2] });
   plan.sections[0].purpose="观察固定直线";
   plan.sections[0].moments[0].narration="现在请调整点 A 或点 B 的位置，观察纵向与横向变化量如何影响斜率的大小。";
   const activity=plan.sections.flatMap(section=>section.student_activities??[])[0];
@@ -4382,7 +4391,7 @@ test("a rounded decimal answer matches its check to the places written, and the 
 
 function appendStandaloneGraph(plan, parameters, numbers = [1]) {
   plan.sections[1].moments.push({ narration: "Continue observing the same mathematical state.", actions: [
-    { action: "create", kind: "visual", role: "later_graph", content: { capability: "function_plot", parameters, numbers },
+    { action: "create", kind: "visual", role: "later_graph", content: { capability: "function_plot", parameters: { ...parameters, sample_x_numbers: numbers }, numbers },
       placement: { relation: "new_region" } },
     { action: "point_at", reference: localBoardItem(2, 1) },
     { action: "point_at", reference: { ...localBoardItem(2, 1), part: { kind: "capability", role: "primary_curve" } } },
@@ -4438,7 +4447,7 @@ test("same expression with a different binding, curve, measurement or dimensiona
 
 test("an earlier standalone view can be reused by a later composite without breaking connections", () => {
   const plan = samplePlan("function_plot");
-  plan.sections[0].moments[0].actions[0].content.parameters = { expression: "sin(x)" };
+  plan.sections[0].moments[0].actions[0].content.parameters = { expression: "sin(x)", sample_x_numbers: [1] };
   plan.sections[1].moments.push({ narration: "Relate this graph to a new geometric view.", actions: [
     { action: "create", kind: "visual", role: "composite", content: { capability: "unit_circle_projection", parameters: { projection: "sin" }, numbers: [1] }, placement: { relation: "new_region" } },
   ] });
@@ -4455,7 +4464,7 @@ test("an earlier standalone view can be reused by a later composite without brea
 test("cross-component duplicate comparison is resolved without another model request", async () => {
   const plan = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
   plan.sections.push({ purpose: "Return to the same graph", moments: [{ narration: "继续观察函数图像。", actions: [
-    { action: "create", kind: "visual", role: "comparison", content: { capability: "function_plot", parameters: { expression: "sin(x)" }, numbers: [1] }, placement: { relation: "new_region" } },
+    { action: "create", kind: "visual", role: "comparison", content: { capability: "function_plot", parameters: { expression: "sin(x)", sample_x_numbers: [1] }, numbers: [1] }, placement: { relation: "new_region" } },
   ] }] });
   const drafts = plan.sections.map(({moments,student_activities},index)=>toModelSectionDraft({version:plan.version,section:index+1,moments,...student_activities?{student_activities}:{}}));
   const outline = stagedOutline(plan, drafts);

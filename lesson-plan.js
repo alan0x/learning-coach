@@ -11409,14 +11409,14 @@ var MATH_RECIPES = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label"],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label"],
     required_model_schema_parameters: ["formulas"],
-    semantic_parameters: ["expression", "expressions", "expression_tokens"],
+    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
-    model_guidance: "\u51FD\u6570\u56FE\uFF1A\u9759\u6001\u516C\u5F0F\u6700\u591A\u4E24\u6570\u79FB\u52A8A/B\u70B9\uFF1B\u542B\u6570\u503C\u7684\u516C\u5F0F\u6539\u53D8\u66F2\u7EBF"
+    model_guidance: "\u51FD\u6570\u56FE\uFF1A\u516C\u5F0F\u5F15\u7528\u6ED1\u5757\u6539\u66F2\u7EBF\uFF1B\u91C7\u6837\u70B9\u53E6\u58F0\u660E"
   },
   unit_circle_projection: {
     parts: ["whole", "unit_circle", "moving_point", "radius", "projection_line", "primary_curve", "primary_control"],
@@ -11554,12 +11554,12 @@ var MATH_RECIPES = {
 };
 var text = { type: "string" };
 var MATH_SCHEMA_PROPERTIES = {
+  // The compiler derives legends from the formulas when none are supplied.
   function_plot: {
     x_label: text,
     y_label: text,
     formulas: { type: "array", minItems: 1, maxItems: 8, items: text },
-    curve_label: text,
-    curve_labels: { type: "array", minItems: 1, maxItems: 8, items: text }
+    sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } }
   },
   unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
   circle_polygon_bounds: { radius: { type: "number", minimum: 0 } },
@@ -11587,7 +11587,7 @@ var MATH_PLUGIN = {
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
-    "section.formulas": "function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002",
+    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002",
     "section.bounds": "\u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002",
     "section.linked_numbers": "\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002",
     "section.constructions": "geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002"
@@ -11797,8 +11797,7 @@ var SCHEMA_PROPERTY_ORDER = [
   "x_label",
   "y_label",
   "formulas",
-  "curve_label",
-  "curve_labels",
+  "sample_x_numbers",
   "expression",
   "section_axis",
   "section_value",
@@ -12067,229 +12066,6 @@ function scaledAngleExpression(variable, scale) {
   return scale === 1 ? variable : `(${variable})*pi/180`;
 }
 
-// src/plugins/math-teaching-contracts.ts
-function affineTokens(tokens) {
-  const stack = [];
-  for (const token of tokens) {
-    if (token.kind === "input") stack.push(1);
-    else if (["literal", "constant", "number"].includes(token.kind)) stack.push(0);
-    else if (token.kind === "negate") continue;
-    else if (token.kind === "operator") {
-      const b = stack.pop(), a = stack.pop();
-      if (a === void 0 || b === void 0) return false;
-      if (token.operator === "add" || token.operator === "subtract") stack.push(Math.max(a, b));
-      else if (token.operator === "multiply") stack.push(a + b);
-      else if (token.operator === "divide" && b === 0) stack.push(a);
-      else return false;
-    } else return false;
-  }
-  return stack.length === 1 && stack[0] <= 1;
-}
-function fixedLineSamples(visual) {
-  const tokens = visual.parameters?.expression_tokens;
-  return visual.capability === "function_plot" && visual.numbers?.length === 2 && Array.isArray(tokens) && !tokens.some((t) => t.kind === "number") && affineTokens(tokens);
-}
-function normalizePlotInputInstructions(plan) {
-  const visuals = plan.sections.flatMap((s) => s.moments.flatMap((m) => m.actions)).filter((a) => a.action === "create" && a.kind === "visual").map((a) => a.content);
-  if (visuals.length !== 1 || visuals[0].capability !== "function_plot" || visuals[0].numbers?.length !== 2) return;
-  const tokens = visuals[0].parameters?.expression_tokens;
-  if (Array.isArray(tokens) && tokens.some((t) => t.kind === "number")) return;
-  const samplesFixedLine = fixedLineSamples(visuals[0]);
-  for (const section of plan.sections) for (const moment of section.moments) {
-    moment.narration = moment.narration.replace(
-      /(?:directly\s+)?drag(?:ging)?\s+(?:the\s+)?point\s+([AB])\b/gi,
-      (_match, label) => `adjusting the horizontal-coordinate slider for point ${label}`
-    ).replace(
-      /(?:移动|调整|拖动|拖拽)点\s*([AB])\s*(?:或|和|、)\s*(?:点\s*)?([AB])(?:的)?(?:位置|横坐标)/g,
-      (_match, first, second) => `\u8C03\u6574\u70B9 ${first} \u6216\u70B9 ${second} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
-    ).replace(
-      /(?:直接)?拖(?:动|拽)(?:图上|图中|曲线上)?(?:的)?点\s*([AB])/g,
-      (_match, label) => `\u8C03\u6574\u70B9 ${label} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
-    );
-    if (samplesFixedLine) {
-      moment.narration = moment.narration.replace(
-        /[^。！？!?；;]*斜率如何保持不变或发生变化[^。！？!?；;]*/g,
-        "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u5982\u4F55\u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      ).replace(
-        /[^。！？!?；;]*(?:纵向|高度|纵坐标).{0,12}(?:变大|改变|变化).{0,12}(?:横向|横坐标).{0,12}不变[^。！？!?；;]*/g,
-        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      ).replace(
-        /[^。！？!?；;]*(?:看看|观察).{0,36}(?:斜率|倾斜程度).{0,32}(?:变化|改变)[^。！？!?；;]*/g,
-        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      ).replace(
-        /[^。！？!?；;]*(?:调整|移动|拖动|拖拽).{0,36}点.{0,36}(?:观察|看看).{0,36}(?:斜率|倾斜程度)[^。！？!?；;]*/g,
-        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
-      );
-    }
-  }
-  if (samplesFixedLine) for (const section of plan.sections) {
-    for (const activity of section.student_activities ?? []) {
-      if (activity.kind !== "number_target") continue;
-      activity.prompt = activity.prompt.replace(/观察.{0,24}斜率.{0,12}(?:变化|改变)/g, "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8").replace(/改变.{0,16}(?:倾斜程度|斜率)/g, "\u9A8C\u8BC1\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8");
-      activity.hints = activity.hints.map((hint) => /变陡|变平缓|(?:倾斜程度|倾斜状态|陡峭程度|比值).{0,16}(?:改变|变化)|(?:改变|变化).{0,16}(?:倾斜程度|斜率|陡峭程度|比值)/.test(hint) ? "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u7684\u6BD4\u503C\u662F\u5426\u4FDD\u6301\u4E0D\u53D8" : hint);
-      if (activity.success_message && !/不变|保持/.test(activity.success_message) && /(?:改变|变化|更新|影响).{0,20}(?:倾斜程度|斜率|陡峭程度|比值)|(?:倾斜程度|斜率|陡峭程度|比值).{0,20}(?:改变|变化|更新|影响)|如何随.{0,20}变化/.test(activity.success_message)) {
-        activity.success_message = "\u5B8C\u6210\uFF01\u79FB\u52A8\u53D6\u6837\u70B9\u540E\uFF0C\u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8\u3002";
-      }
-    }
-  }
-}
-function validateRearrangementClaims(plan) {
-  const local = /* @__PURE__ */ new Map();
-  const reusable = /* @__PURE__ */ new Map();
-  const byNumber = /* @__PURE__ */ new Map();
-  const relatedLocal = /* @__PURE__ */ new Map();
-  const relatedReusable = /* @__PURE__ */ new Map();
-  const lookup = (reference, section) => {
-    if (reference.source === "reusable") {
-      const key = `${reference.section}:${reference.item}`, visual = reusable.get(key);
-      return visual ? [visual] : [...relatedReusable.get(key) ?? []];
-    }
-    if (reference.source === "local_board_item") {
-      const key = `${section}:${reference.moment}:${reference.item}`, visual = local.get(key);
-      return visual ? [visual] : [...relatedLocal.get(key) ?? []];
-    }
-    return [];
-  };
-  const check = (text2, visuals, path) => {
-    if (visuals.size !== 1) return;
-    const visual = [...visuals][0];
-    if (visual.capability !== "geometric_rearrangement") return;
-    const construction = visual.parameters?.construction ?? "right_triangle_square";
-    const facts = REARRANGEMENT_FACTS[construction];
-    if (!facts) return;
-    const claims = text2.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
-    const wrongPieces = construction === "square_area_identity" && claims.some((claim) => /(?:这(?:个|张|些|幅)|图中|图里|内部|里面|画面|包含).{0,20}(?:四|4)\s*(?:个|块|片)?(?:完全相同的|全等的|全等|完全相同|一样的)?(?:直角)?三角形/u.test(claim));
-    const wrongFrame = construction === "right_triangle_square" && claims.some((claim) => /(?:外框|外侧正方形|这个大正方形|大正方形)(?:的)?边长.{0,8}(?:是|为|等于|就是).{0,4}(?:斜边\s*)?c(?![a-z])/iu.test(claim) || /(?:中间|中央|中心).{0,8}(?:正方形|留白).{0,8}(?:边长|面积).{0,8}(?:b\s*[-−]\s*a|a\s*[-−]\s*b)/iu.test(claim) || /(?:S_?\{?(?:大正方形|外框)\}?|S[（(](?:大正方形|外框)[）)])\s*=\s*c(?:²|\^\{?2\}?)/u.test(claim));
-    const wrongControl = claims.some((claim) => /(?:拖动|拖拽|调整|滑动).{0,12}(?:滑块|滑杆|进度).{0,16}(?:改变|调整).{0,8}(?:边长|三边|斜边|直角边)/u.test(claim));
-    const wrongFinal = construction === "right_triangle_square" && claims.some((claim) => /(?:拼成|拼合成|填满).{0,8}斜边正方形/u.test(claim));
-    if (wrongPieces || wrongFrame || wrongControl || wrongFinal) {
-      throw new LessonPlanError(
-        "LESSON_PLAN_TEACHING_MISMATCH",
-        path,
-        `${construction}: ${facts.pieces}; ${facts.container}; start: ${facts.initial}; end: ${facts.final}; ${facts.proof}. The control moves pieces only, not side lengths. Correct this section without replacing the established visual.`
-      );
-    }
-  };
-  for (const [si, section] of plan.sections.entries()) {
-    for (const [mi, moment] of section.moments.entries()) {
-      const selected = /* @__PURE__ */ new Set();
-      let item = 0;
-      for (const action of moment.actions) {
-        if (action.action !== "create") continue;
-        item += 1;
-        if (action.kind !== "visual") continue;
-        const visual = action.content;
-        local.set(`${si + 1}:${mi + 1}:${item}`, visual);
-        if (action.reusable_item) reusable.set(`${si + 1}:${action.reusable_item}`, visual);
-        selected.add(visual);
-        for (const number of visual.numbers ?? []) {
-          const bound = byNumber.get(number) ?? /* @__PURE__ */ new Set();
-          bound.add(visual);
-          byNumber.set(number, bound);
-        }
-      }
-      for (const action of moment.actions) {
-        const refs = action.action === "focus" ? action.references : action.action === "point_at" || action.action === "emphasize" || action.action === "revise" ? [action.reference] : [];
-        for (const ref of refs) for (const visual of lookup(ref, si + 1)) selected.add(visual);
-        if (action.action === "animate") for (const visual of byNumber.get(action.number) ?? []) selected.add(visual);
-      }
-      const path = `$lessonPlan.sections[${si}].moments[${mi}]`;
-      check(moment.narration ?? "", selected, path);
-      let boardItem = 0;
-      for (const [ai, action] of moment.actions.entries()) {
-        if (action.action === "create") {
-          boardItem += 1;
-          if (action.kind !== "visual") {
-            relatedLocal.set(`${si + 1}:${mi + 1}:${boardItem}`, new Set(selected));
-            if (action.reusable_item) relatedReusable.set(`${si + 1}:${action.reusable_item}`, new Set(selected));
-          }
-        }
-        if (action.action !== "create" && action.action !== "revise" || action.kind === "visual") continue;
-        const content = action.content;
-        check(
-          [content.latex, content.text, content.title, ...content.items ?? []].filter(Boolean).join("\n"),
-          selected,
-          `${path}.actions[${ai}]`
-        );
-      }
-    }
-    for (const [ai, activity] of (section.student_activities ?? []).entries()) {
-      const selected = /* @__PURE__ */ new Set();
-      if (activity.kind === "number_target") {
-        for (const control of activity.number_controls) for (const visual of byNumber.get(control.number) ?? []) selected.add(visual);
-      } else {
-        for (const visual of lookup(activity.reference, si + 1)) selected.add(visual);
-      }
-      check(
-        activity.kind === "reflection" ? `${activity.prompt}
-${activity.answer}` : [activity.prompt, ...activity.hints, activity.success_message].filter(Boolean).join("\n"),
-        selected,
-        `$lessonPlan.sections[${si}].student_activities[${ai}]`
-      );
-    }
-  }
-}
-function validateTeachingClaims(plan) {
-  validateRearrangementClaims(plan);
-  const plots = plan.sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).filter((action) => action.action === "create" && action.kind === "visual").map((action) => action.content).filter((visual) => visual.capability === "function_plot");
-  const hasCircleArea = plan.sections.some((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "circle_area_rearrangement")));
-  const onlyFixedLineSamples = plots.length === 1 && fixedLineSamples(plots[0]);
-  for (const [si, section] of plan.sections.entries()) {
-    for (const [mi, moment] of section.moments.entries()) {
-      const text2 = moment.narration ?? "";
-      const claims = text2.split(/[。！？!?；;]/);
-      const englishClaims = text2.split(/(?<=[.!?;])\s+/u).filter((claim) => !/\?\s*$/.test(claim) && !/\b(?:not|never|cannot|can't|doesn't|isn't|don't|whether|if)\b/i.test(claim));
-      if (hasCircleArea && englishClaims.some((claim) => /\b(?:base|height)\b.{0,25}\b(?:exactly|equals?|is)\b.{0,15}(?:πr|pi\s*\*?\s*r|radius|\br\b)/i.test(claim)) && !/\b(?:approach|tend|limit|infinite|finer|approx|curved)\w*\b/i.test(section.moments.slice(0, mi + 1).map((moment2) => moment2.narration).join(" "))) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
-      }
-      if (onlyFixedLineSamples && englishClaims.some((claim) => /\b(?:slope|steepness)\b.{0,20}\b(?:changes?|changing|varies|varying)\b/i.test(claim) && !/\b(?:unchanged|constant|fixed|invariant|remains?|stays?)\b/i.test(claim))) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
-      }
-      if (plots.length && englishClaims.some((claim) => /\b(?:larger|greater|increas\w*)\s+(?:signed\s+)?(?:slope|k)\b.{0,45}\bsteeper\b/i.test(claim)) && !/\b(?:absolute|positive|magnitude)\b|k\s*>\s*0/i.test(text2)) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
-      }
-      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text2) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
-      }
-      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text2) && !/滑块|滑杆/.test(text2)) {
-        throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "use the point's horizontal-coordinate slider; directly dragging plot points is unavailable");
-      }
-      if (onlyFixedLineSamples && claims.some((claim) => /(?:斜率|倾斜角度|倾斜程度|倾斜方向|陡峭程度)(?:的数值)?(?:就|也|会|将|随之|随点移动|发生|而|从而|不断|逐渐|产生|有所|明显|直接|可以|能够|能|\s|[，,]){0,8}(?:改变|变化)(?!量|率)|(?:改变|变化)(?:了|着|其|它的|直线的|连线的|割线的|两点连线的|\s){0,5}(?:斜率|倾斜角度|倾斜程度|陡峭程度)/.test(claim) && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
-      }
-      const steepnessClaim = (text2.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
-      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text2)) {
-        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
-      }
-    }
-    for (const [mi, moment] of section.moments.entries()) {
-      const visuals = moment.actions.filter((a) => a.action === "create" && a.kind === "visual");
-      for (const action of visuals) {
-        if (action.action !== "create" || action.kind !== "visual") continue;
-        const visual = action.content;
-        const text2 = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
-        const path = `$plan.sections[${si}].moments[${mi}]`;
-        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text2) && /证明|推导|拼|重排|prove|derive/i.test(text2)) {
-          throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path, "circle area requires circle_area_rearrangement; polygon recipes cannot prove pi*r^2");
-        }
-        if (visual.capability !== "function_plot") continue;
-        const tokens = visual.parameters?.expression_tokens;
-        const dynamic = Array.isArray(tokens) && tokens.some((t) => t?.kind === "number");
-        const count = dynamic ? 0 : new Set(visual.numbers ?? []).size;
-        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text2)) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "moving the whole curve requires formula number references; static sample inputs only move points");
-        }
-        if (/两个点|两点|two points/i.test(text2) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text2) && count !== 2) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and content.numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
-        }
-        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text2)) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "plot points use sliders; direct point dragging is unavailable");
-        }
-      }
-    }
-  }
-}
-
 // src/plugins/math-formulas.ts
 var formulaFunctions = /* @__PURE__ */ new Set([
   "abs",
@@ -12475,18 +12251,419 @@ function parseModelFormula(rawFormula, numberCount, path) {
   return result;
 }
 
-// src/plugins/math-hooks.ts
-function formulaNumbers(parameters3, numberCount, limit) {
-  if (!Array.isArray(parameters3.expression_tokens)) return [];
-  return [...new Set(parameters3.expression_tokens.flatMap((token) => token && typeof token === "object" && !Array.isArray(token) && token.kind === "number" && Number.isInteger(token.number) ? [Number(token.number)] : []))].filter((number) => number >= 1 && number <= numberCount).slice(0, limit);
+// src/plugins/plot-bindings.ts
+function plotCurveNumbers(parameters3) {
+  const tokens = parameters3?.expression_tokens;
+  if (!Array.isArray(tokens)) return [];
+  return [...new Set(tokens.flatMap((token) => token?.kind === "number" ? [token.number] : []))];
 }
-function separateInitialSamples(visual, plan) {
-  const words = JSON.stringify(plan.sections.map((s) => s.moments.map((m) => m.narration)));
-  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
-  if (visual.numbers?.length !== 2) return;
+function plotSampleNumbers(parameters3) {
+  const samples = parameters3?.sample_x_numbers;
+  return Array.isArray(samples) ? samples : [];
+}
+function validatePlotSampleNumbers(value, numberCount, path) {
+  if (value === void 0) return [];
+  if (!Array.isArray(value) || !value.length || value.length > 2 || new Set(value).size !== value.length || value.some((number) => !Number.isInteger(number) || number < 1 || number > numberCount)) {
+    fail2("LESSON_PLAN_NUMBER_REFERENCE", path, "use one or two distinct lesson number indexes for the sample x-coordinates");
+  }
+  return value;
+}
+function multiply(a, b) {
+  if (a[2] * b[2] !== 0 || a[1] * b[2] + a[2] * b[1] !== 0) return;
+  return [a[0] * b[0], a[0] * b[1] + a[1] * b[0], a[0] * b[2] + a[1] * b[1] + a[2] * b[0]];
+}
+function polynomial(tokens) {
+  const stack = [];
+  for (const token of tokens) {
+    if (token.kind === "input") stack.push([0, 1, 0]);
+    else if (token.kind === "literal") stack.push([token.value, 0, 0]);
+    else if (token.kind === "negate") {
+      const a = stack.pop();
+      if (!a) return;
+      stack.push([-a[0], -a[1], -a[2]]);
+    } else if (token.kind === "operator") {
+      const b = stack.pop(), a = stack.pop();
+      if (!a || !b) return;
+      if (token.operator === "add" || token.operator === "subtract") {
+        const sign = token.operator === "add" ? 1 : -1;
+        stack.push([a[0] + sign * b[0], a[1] + sign * b[1], a[2] + sign * b[2]]);
+      } else if (token.operator === "multiply" || token.operator === "power" && b[0] === 2 && b[1] === 0 && b[2] === 0) {
+        const product = multiply(a, token.operator === "power" ? a : b);
+        if (!product) return;
+        stack.push(product);
+      } else return;
+    } else return;
+  }
+  if (stack.length === 1 && stack[0].every(Number.isFinite)) return stack[0];
+}
+function vertexRole(label) {
+  const normalized = label.normalize("NFKC").toLowerCase().trim().replace(/[-‐‑–\s]+/g, "");
+  if (/^(?:顶点(?:的)?(?:横坐标|x坐标)h?|vertexxcoordinate|xcoordinateofthevertex|horizontalcoordinateofthevertex)$/u.test(normalized)) return "h";
+  if (/^(?:顶点(?:的)?(?:纵坐标|y坐标)k?|vertexycoordinate|ycoordinateofthevertex|verticalcoordinateofthevertex)$/u.test(normalized)) return "k";
+}
+var vertexInstruction = /(?:调整|移动|平移|拖动)(?:(?:这条|该)?抛物线的|该图的|该|这个)?顶点|(?:move|shift|translate|adjust|drag)\s+(?:the|this)\s+vertex\b/iu;
+var sampleIntent = /割线|采样点|点\s*[ABP]\b|\b[ABP]\s*点|两点|两个点|\b(?:secant|sample points?|point\s+[ABP]|two (?:independent )?points)\b/iu;
+var interactionVerb = /调整|移动|平移|拖动|拖拽|滑块|\b(?:adjust|move|shift|translate|drag|slider|change)\b/iu;
+var negativeInstruction = /不(?:要|能|必|用|会|可)|别(?:拖|动|调整)|没有|无法|\b(?:no|not|never|cannot|can['’]t|don['’]t)\b/iu;
+var pastInstruction = /(?:刚才|之前|先前|上[一]?节|上次)|\b(?:previously|earlier|last time|we (?:moved|adjusted|shifted|translated|dragged))\b/iu;
+var clauses = (text2) => text2.split(/[。！？!?；;，,]/u);
+function sectionVisuals(draft) {
+  return draft.moments.flatMap((moment, index) => moment.actions.flatMap((action) => action.action === "create" && action.kind === "visual" ? [{ visual: action.content, moment: index + 1 }] : []));
+}
+function sectionText(draft) {
+  return [
+    ...draft.moments.flatMap((moment) => clauses(moment.narration)),
+    ...(draft.student_activities ?? []).flatMap((activity) => clauses(activity.prompt))
+  ];
+}
+function structuralUse(draft, number) {
+  return draft.moments.some((moment) => moment.actions.some((action) => action.action === "animate" && action.number === number)) || (draft.student_activities ?? []).some((activity) => activity.kind === "number_target" && (activity.number_controls.some((control) => control.number === number) || activity.expression?.some((token) => token.kind === "number" && token.number === number)));
+}
+function positiveInstruction(text2, pattern) {
+  return pattern.test(text2) && !negativeInstruction.test(text2) && !pastInstruction.test(text2);
+}
+function recoverVertex(visual, candidates, outline) {
   const tokens = visual.parameters?.expression_tokens;
-  if (Array.isArray(tokens) && tokens.some((t) => t && typeof t === "object" && "kind" in t && t.kind === "number")) return;
-  const a = plan.numbers?.[visual.numbers[0] - 1], b = plan.numbers?.[visual.numbers[1] - 1];
+  if (!Array.isArray(tokens) || candidates.length !== 2) return false;
+  const definitions = candidates.map((index) => outline.numbers?.[index - 1]);
+  if (definitions.some((definition) => !definition?.student_control)) return false;
+  const roles = definitions.map((definition) => vertexRole(definition?.label ?? ""));
+  const hIndex = roles.indexOf("h"), kIndex = roles.indexOf("k");
+  if (hIndex < 0 || kIndex < 0) return false;
+  const original = polynomial(tokens);
+  if (!original || original[2] === 0) return false;
+  const [c, b, a] = original;
+  const h = definitions[hIndex].initial, k = definitions[kIndex].initial;
+  const close = (left, right) => Number.isFinite(right) && Math.abs(left - right) <= Number.EPSILON * 8 * Math.max(Math.abs(left), Math.abs(right));
+  if (!close(b, -2 * a * h) || !close(c, a * h * h + k)) return false;
+  const expression = `(${a})*(x-n${candidates[hIndex]})^2+n${candidates[kIndex]}`;
+  visual.parameters.expression_tokens = parseModelFormula(expression, outline.numbers.length, "$lessonPlanSection.visual.parameters.formulas");
+  delete visual.parameters.curve_label;
+  delete visual.parameters.curve_labels;
+  return true;
+}
+var omittedControls = /* @__PURE__ */ new WeakMap();
+function normalizePlotDraftBindings(draft, context) {
+  const { outline, request, accepted, adjust } = context;
+  const visuals = sectionVisuals(draft);
+  const previousVisuals = accepted.flatMap(sectionVisuals);
+  const plots = visuals.filter(({ visual }) => visual.capability === "function_plot");
+  const text2 = sectionText(draft);
+  const plotText = [...text2, ...clauses(outline.sections[draft.section - 1]?.purpose ?? ""), ...clauses(request)];
+  const wantsVertex = plots.length === 1 && text2.some((line) => positiveInstruction(line, vertexInstruction) && (visuals.length === 1 || /抛物线|\bparabola\b/iu.test(line)));
+  const wantsSamples = plotText.some((line) => positiveInstruction(line, sampleIntent) && interactionVerb.test(line));
+  const hasSampleIntent = plotText.some((line) => positiveInstruction(line, sampleIntent));
+  const bound = (visual) => visual.capability === "function_plot" ? [...plotCurveNumbers(visual.parameters), ...plotSampleNumbers(visual.parameters)] : visual.numbers ?? [];
+  const controlsNamed = (number) => {
+    const label = outline.numbers?.[number - 1]?.label?.trim().toLowerCase();
+    if (!label) return false;
+    const roleLabel = vertexRole(label) ? label.replace(/[hk]$/u, "").trim() : label;
+    return text2.some((line) => positiveInstruction(line, interactionVerb) && line.toLowerCase().includes(roleLabel));
+  };
+  const dropped = /* @__PURE__ */ new Set();
+  for (const { visual, moment } of plots) {
+    const path = `$lessonPlanSection[${draft.section}].moments[${moment}].content.parameters.sample_x_numbers`;
+    const declared = visual.numbers ?? [];
+    let curve = plotCurveNumbers(visual.parameters);
+    const sampleField = visual.parameters?.sample_x_numbers;
+    if (Array.isArray(sampleField) && !sampleField.length) delete visual.parameters.sample_x_numbers;
+    let samples = validatePlotSampleNumbers(visual.parameters?.sample_x_numbers, outline.numbers?.length ?? 0, path);
+    if (curve.length && samples.length) {
+      if (wantsSamples || samples.some((number) => !curve.includes(number) && (structuralUse(draft, number) || controlsNamed(number)))) {
+        fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, "sample_x_numbers moves points on a fixed curve; keep formula references for changing the curve, or use a separate fixed curve for moving points");
+      }
+      delete visual.parameters.sample_x_numbers;
+      samples.filter((number) => !curve.includes(number)).forEach((number) => dropped.add(number));
+      adjust({ kind: "plot_control_removed", section: draft.section, moment, reason: "unused_samples_on_parameterized_curve" });
+      samples = [];
+    }
+    const others = new Set([...previousVisuals, ...visuals].filter((item) => item.visual !== visual).flatMap((item) => bound(item.visual)));
+    const unused = (number) => !curve.includes(number) && !samples.includes(number) && !others.has(number);
+    const candidates = declared.filter(unused);
+    const fixed = !curve.length && !samples.length;
+    const singleFormula = Array.isArray(visual.parameters?.expression_tokens);
+    const formulasPath = path.replace(/sample_x_numbers$/, "formulas");
+    const vertexCandidates = declared.length ? candidates : (outline.numbers ?? []).flatMap((number, index) => number.student_control && unused(index + 1) && vertexRole(number.label ?? "") ? [index + 1] : []);
+    if (fixed && wantsVertex && !hasSampleIntent && recoverVertex(visual, vertexCandidates, outline)) {
+      curve = plotCurveNumbers(visual.parameters);
+      adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "quadratic_vertex_from_confirmed_roles" });
+    } else {
+      if (fixed && singleFormula && wantsSamples && (plots.length === 1 || candidates.length)) {
+        const indexes = candidates.slice(0, 2);
+        fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length ? `Use parameters.sample_x_numbers: [${indexes.join(",")}] for the sample x-coordinate controls; use one index for one point` : "Use parameters.sample_x_numbers with the lesson number index of each sample's x-coordinate");
+      }
+      if (wantsVertex && !curve.length && !hasSampleIntent || candidates.some((number) => structuralUse(draft, number) || controlsNamed(number))) {
+        fail2("LESSON_PLAN_INTERACTION_MISMATCH", formulasPath, "Use the lesson number references in the curve formula when sliders change the curve");
+      }
+      if (fixed && singleFormula && plots.length === 1 && (outline.numbers ?? []).some((_, index) => unused(index + 1) && structuralUse(draft, index + 1))) {
+        fail2(
+          "LESSON_PLAN_INTERACTION_MISMATCH",
+          formulasPath,
+          "The demonstration uses an unbound number; reference it in the formula for a curve control, or use parameters.sample_x_numbers for a point"
+        );
+      }
+      if (candidates.length) {
+        candidates.forEach((number) => dropped.add(number));
+        adjust({
+          kind: curve.length ? "plot_binding_rebuilt" : "plot_control_removed",
+          section: draft.section,
+          moment,
+          reason: curve.length ? "formula_defines_curve_bindings" : "unused_plot_numbers"
+        });
+      }
+    }
+    const actual = [...curve, ...samples];
+    if (actual.length) visual.numbers = actual;
+    else delete visual.numbers;
+  }
+  const knownBindings = new Set([...previousVisuals, ...visuals].flatMap((item) => bound(item.visual)));
+  const omitted = /* @__PURE__ */ new Set([...accepted.flatMap((earlier) => [...omittedControls.get(earlier) ?? []]), ...dropped]);
+  for (const number of omitted) {
+    if (knownBindings.has(number)) continue;
+    if (structuralUse(draft, number) || controlsNamed(number)) {
+      fail2("LESSON_PLAN_INTERACTION_MISMATCH", `$lessonPlanSection[${draft.section}].moments`, `Number ${number} has no control in the published graph; explain the fixed curve or bind a control in a new graph in this section`);
+    }
+    for (const [index, moment] of draft.moments.entries()) {
+      if (!moment.restart_numbers?.includes(number)) continue;
+      moment.restart_numbers = moment.restart_numbers.filter((index2) => index2 !== number);
+      if (!moment.restart_numbers.length) delete moment.restart_numbers;
+      adjust({ kind: "plot_control_removed", section: draft.section, moment: index + 1, reason: "unused_restart_for_omitted_plot_control" });
+    }
+  }
+  if (dropped.size) omittedControls.set(draft, dropped);
+}
+
+// src/plugins/math-teaching-contracts.ts
+function affineTokens(tokens) {
+  const stack = [];
+  for (const token of tokens) {
+    if (token.kind === "input") stack.push(1);
+    else if (["literal", "constant", "number"].includes(token.kind)) stack.push(0);
+    else if (token.kind === "negate") continue;
+    else if (token.kind === "operator") {
+      const b = stack.pop(), a = stack.pop();
+      if (a === void 0 || b === void 0) return false;
+      if (token.operator === "add" || token.operator === "subtract") stack.push(Math.max(a, b));
+      else if (token.operator === "multiply") stack.push(a + b);
+      else if (token.operator === "divide" && b === 0) stack.push(a);
+      else return false;
+    } else return false;
+  }
+  return stack.length === 1 && stack[0] <= 1;
+}
+function fixedLineSamples(visual) {
+  const tokens = visual.parameters?.expression_tokens;
+  return visual.capability === "function_plot" && plotSampleNumbers(visual.parameters).length === 2 && Array.isArray(tokens) && !tokens.some((t) => t.kind === "number") && affineTokens(tokens);
+}
+function normalizePlotInputInstructions(plan) {
+  const visuals = plan.sections.flatMap((s) => s.moments.flatMap((m) => m.actions)).filter((a) => a.action === "create" && a.kind === "visual").map((a) => a.content);
+  if (visuals.length !== 1 || visuals[0].capability !== "function_plot" || plotSampleNumbers(visuals[0].parameters).length !== 2) return;
+  const tokens = visuals[0].parameters?.expression_tokens;
+  if (Array.isArray(tokens) && tokens.some((t) => t.kind === "number")) return;
+  const samplesFixedLine = fixedLineSamples(visuals[0]);
+  for (const section of plan.sections) for (const moment of section.moments) {
+    moment.narration = moment.narration.replace(
+      /(?:directly\s+)?drag(?:ging)?\s+(?:the\s+)?point\s+([AB])\b/gi,
+      (_match, label) => `adjusting the horizontal-coordinate slider for point ${label}`
+    ).replace(
+      /(?:移动|调整|拖动|拖拽)点\s*([AB])\s*(?:或|和|、)\s*(?:点\s*)?([AB])(?:的)?(?:位置|横坐标)/g,
+      (_match, first, second) => `\u8C03\u6574\u70B9 ${first} \u6216\u70B9 ${second} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
+    ).replace(
+      /(?:直接)?拖(?:动|拽)(?:图上|图中|曲线上)?(?:的)?点\s*([AB])/g,
+      (_match, label) => `\u8C03\u6574\u70B9 ${label} \u7684\u6A2A\u5750\u6807\u6ED1\u5757`
+    );
+    if (samplesFixedLine) {
+      moment.narration = moment.narration.replace(
+        /[^。！？!?；;]*斜率如何保持不变或发生变化[^。！？!?；;]*/g,
+        "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u5982\u4F55\u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:纵向|高度|纵坐标).{0,12}(?:变大|改变|变化).{0,12}(?:横向|横坐标).{0,12}不变[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:看看|观察).{0,36}(?:斜率|倾斜程度).{0,32}(?:变化|改变)[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      ).replace(
+        /[^。！？!?；;]*(?:调整|移动|拖动|拖拽).{0,36}点.{0,36}(?:观察|看看).{0,36}(?:斜率|倾斜程度)[^。！？!?；;]*/g,
+        "\u8C03\u6574\u70B9 A \u6216\u70B9 B \u7684\u6A2A\u5750\u6807\u6ED1\u5757\uFF0C\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u659C\u7387\u4FDD\u6301\u4E0D\u53D8"
+      );
+    }
+  }
+  if (samplesFixedLine) for (const section of plan.sections) {
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target") continue;
+      activity.prompt = activity.prompt.replace(/观察.{0,24}斜率.{0,12}(?:变化|改变)/g, "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u5E76\u9A8C\u8BC1\u659C\u7387\u4FDD\u6301\u4E0D\u53D8").replace(/改变.{0,16}(?:倾斜程度|斜率)/g, "\u9A8C\u8BC1\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8");
+      activity.hints = activity.hints.map((hint) => /变陡|变平缓|(?:倾斜程度|倾斜状态|陡峭程度|比值).{0,16}(?:改变|变化)|(?:改变|变化).{0,16}(?:倾斜程度|斜率|陡峭程度|比值)/.test(hint) ? "\u89C2\u5BDF \u0394x \u4E0E \u0394y \u7684\u6BD4\u503C\u662F\u5426\u4FDD\u6301\u4E0D\u53D8" : hint);
+      if (activity.success_message && !/不变|保持/.test(activity.success_message) && /(?:改变|变化|更新|影响).{0,20}(?:倾斜程度|斜率|陡峭程度|比值)|(?:倾斜程度|斜率|陡峭程度|比值).{0,20}(?:改变|变化|更新|影响)|如何随.{0,20}变化/.test(activity.success_message)) {
+        activity.success_message = "\u5B8C\u6210\uFF01\u79FB\u52A8\u53D6\u6837\u70B9\u540E\uFF0C\u0394x \u4E0E \u0394y \u540C\u6BD4\u4F8B\u53D8\u5316\uFF0C\u56FA\u5B9A\u76F4\u7EBF\u7684\u659C\u7387\u4FDD\u6301\u4E0D\u53D8\u3002";
+      }
+    }
+  }
+}
+function validateRearrangementClaims(plan) {
+  const local = /* @__PURE__ */ new Map();
+  const reusable = /* @__PURE__ */ new Map();
+  const byNumber = /* @__PURE__ */ new Map();
+  const relatedLocal = /* @__PURE__ */ new Map();
+  const relatedReusable = /* @__PURE__ */ new Map();
+  const lookup = (reference, section) => {
+    if (reference.source === "reusable") {
+      const key = `${reference.section}:${reference.item}`, visual = reusable.get(key);
+      return visual ? [visual] : [...relatedReusable.get(key) ?? []];
+    }
+    if (reference.source === "local_board_item") {
+      const key = `${section}:${reference.moment}:${reference.item}`, visual = local.get(key);
+      return visual ? [visual] : [...relatedLocal.get(key) ?? []];
+    }
+    return [];
+  };
+  const check = (text2, visuals, path) => {
+    if (visuals.size !== 1) return;
+    const visual = [...visuals][0];
+    if (visual.capability !== "geometric_rearrangement") return;
+    const construction = visual.parameters?.construction ?? "right_triangle_square";
+    const facts = REARRANGEMENT_FACTS[construction];
+    if (!facts) return;
+    const claims = text2.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
+    const wrongPieces = construction === "square_area_identity" && claims.some((claim) => /(?:这(?:个|张|些|幅)|图中|图里|内部|里面|画面|包含).{0,20}(?:四|4)\s*(?:个|块|片)?(?:完全相同的|全等的|全等|完全相同|一样的)?(?:直角)?三角形/u.test(claim));
+    const wrongFrame = construction === "right_triangle_square" && claims.some((claim) => /(?:外框|外侧正方形|这个大正方形|大正方形)(?:的)?边长.{0,8}(?:是|为|等于|就是).{0,4}(?:斜边\s*)?c(?![a-z])/iu.test(claim) || /(?:中间|中央|中心).{0,8}(?:正方形|留白).{0,8}(?:边长|面积).{0,8}(?:b\s*[-−]\s*a|a\s*[-−]\s*b)/iu.test(claim) || /(?:S_?\{?(?:大正方形|外框)\}?|S[（(](?:大正方形|外框)[）)])\s*=\s*c(?:²|\^\{?2\}?)/u.test(claim));
+    const wrongControl = claims.some((claim) => /(?:拖动|拖拽|调整|滑动).{0,12}(?:滑块|滑杆|进度).{0,16}(?:改变|调整).{0,8}(?:边长|三边|斜边|直角边)/u.test(claim));
+    const wrongFinal = construction === "right_triangle_square" && claims.some((claim) => /(?:拼成|拼合成|填满).{0,8}斜边正方形/u.test(claim));
+    if (wrongPieces || wrongFrame || wrongControl || wrongFinal) {
+      throw new LessonPlanError(
+        "LESSON_PLAN_TEACHING_MISMATCH",
+        path,
+        `${construction}: ${facts.pieces}; ${facts.container}; start: ${facts.initial}; end: ${facts.final}; ${facts.proof}. The control moves pieces only, not side lengths. Correct this section without replacing the established visual.`
+      );
+    }
+  };
+  for (const [si, section] of plan.sections.entries()) {
+    for (const [mi, moment] of section.moments.entries()) {
+      const selected = /* @__PURE__ */ new Set();
+      let item = 0;
+      for (const action of moment.actions) {
+        if (action.action !== "create") continue;
+        item += 1;
+        if (action.kind !== "visual") continue;
+        const visual = action.content;
+        local.set(`${si + 1}:${mi + 1}:${item}`, visual);
+        if (action.reusable_item) reusable.set(`${si + 1}:${action.reusable_item}`, visual);
+        selected.add(visual);
+        for (const number of visual.numbers ?? []) {
+          const bound = byNumber.get(number) ?? /* @__PURE__ */ new Set();
+          bound.add(visual);
+          byNumber.set(number, bound);
+        }
+      }
+      for (const action of moment.actions) {
+        const refs = action.action === "focus" ? action.references : action.action === "point_at" || action.action === "emphasize" || action.action === "revise" ? [action.reference] : [];
+        for (const ref of refs) for (const visual of lookup(ref, si + 1)) selected.add(visual);
+        if (action.action === "animate") for (const visual of byNumber.get(action.number) ?? []) selected.add(visual);
+      }
+      const path = `$lessonPlan.sections[${si}].moments[${mi}]`;
+      check(moment.narration ?? "", selected, path);
+      let boardItem = 0;
+      for (const [ai, action] of moment.actions.entries()) {
+        if (action.action === "create") {
+          boardItem += 1;
+          if (action.kind !== "visual") {
+            relatedLocal.set(`${si + 1}:${mi + 1}:${boardItem}`, new Set(selected));
+            if (action.reusable_item) relatedReusable.set(`${si + 1}:${action.reusable_item}`, new Set(selected));
+          }
+        }
+        if (action.action !== "create" && action.action !== "revise" || action.kind === "visual") continue;
+        const content = action.content;
+        check(
+          [content.latex, content.text, content.title, ...content.items ?? []].filter(Boolean).join("\n"),
+          selected,
+          `${path}.actions[${ai}]`
+        );
+      }
+    }
+    for (const [ai, activity] of (section.student_activities ?? []).entries()) {
+      const selected = /* @__PURE__ */ new Set();
+      if (activity.kind === "number_target") {
+        for (const control of activity.number_controls) for (const visual of byNumber.get(control.number) ?? []) selected.add(visual);
+      } else {
+        for (const visual of lookup(activity.reference, si + 1)) selected.add(visual);
+      }
+      check(
+        activity.kind === "reflection" ? `${activity.prompt}
+${activity.answer}` : [activity.prompt, ...activity.hints, activity.success_message].filter(Boolean).join("\n"),
+        selected,
+        `$lessonPlan.sections[${si}].student_activities[${ai}]`
+      );
+    }
+  }
+}
+function validateTeachingClaims(plan) {
+  validateRearrangementClaims(plan);
+  const plots = plan.sections.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).filter((action) => action.action === "create" && action.kind === "visual").map((action) => action.content).filter((visual) => visual.capability === "function_plot");
+  const hasCircleArea = plan.sections.some((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "circle_area_rearrangement")));
+  const onlyFixedLineSamples = plots.length === 1 && fixedLineSamples(plots[0]);
+  for (const [si, section] of plan.sections.entries()) {
+    for (const [mi, moment] of section.moments.entries()) {
+      const text2 = moment.narration ?? "";
+      const claims = text2.split(/[。！？!?；;]/);
+      const englishClaims = text2.split(/(?<=[.!?;])\s+/u).filter((claim) => !/\?\s*$/.test(claim) && !/\b(?:not|never|cannot|can't|doesn't|isn't|don't|whether|if)\b/i.test(claim));
+      if (hasCircleArea && englishClaims.some((claim) => /\b(?:base|height)\b.{0,25}\b(?:exactly|equals?|is)\b.{0,15}(?:πr|pi\s*\*?\s*r|radius|\br\b)/i.test(claim)) && !/\b(?:approach|tend|limit|infinite|finer|approx|curved)\w*\b/i.test(section.moments.slice(0, mi + 1).map((moment2) => moment2.narration).join(" "))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
+      }
+      if (onlyFixedLineSamples && englishClaims.some((claim) => /\b(?:slope|steepness)\b.{0,20}\b(?:changes?|changing|varies|varying)\b/i.test(claim) && !/\b(?:unchanged|constant|fixed|invariant|remains?|stays?)\b/i.test(claim))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
+      }
+      if (plots.length && englishClaims.some((claim) => /\b(?:larger|greater|increas\w*)\s+(?:signed\s+)?(?:slope|k)\b.{0,45}\bsteeper\b/i.test(claim)) && !/\b(?:absolute|positive|magnitude)\b|k\s*>\s*0/i.test(text2)) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
+      }
+      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text2) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
+      }
+      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text2) && !/滑块|滑杆/.test(text2)) {
+        throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "use the point's horizontal-coordinate slider; directly dragging plot points is unavailable");
+      }
+      if (onlyFixedLineSamples && claims.some((claim) => /(?:斜率|倾斜角度|倾斜程度|倾斜方向|陡峭程度)(?:的数值)?(?:就|也|会|将|随之|随点移动|发生|而|从而|不断|逐渐|产生|有所|明显|直接|可以|能够|能|\s|[，,]){0,8}(?:改变|变化)(?!量|率)|(?:改变|变化)(?:了|着|其|它的|直线的|连线的|割线的|两点连线的|\s){0,5}(?:斜率|倾斜角度|倾斜程度|陡峭程度)/.test(claim) && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
+      }
+      const steepnessClaim = (text2.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
+      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text2)) {
+        throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
+      }
+    }
+    for (const [mi, moment] of section.moments.entries()) {
+      const visuals = moment.actions.filter((a) => a.action === "create" && a.kind === "visual");
+      for (const action of visuals) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const visual = action.content;
+        const text2 = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
+        const path = `$plan.sections[${si}].moments[${mi}]`;
+        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text2) && /证明|推导|拼|重排|prove|derive/i.test(text2)) {
+          throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path, "circle area requires circle_area_rearrangement; polygon recipes cannot prove pi*r^2");
+        }
+        if (visual.capability !== "function_plot") continue;
+        const tokens = visual.parameters?.expression_tokens;
+        const dynamic = Array.isArray(tokens) && tokens.some((t) => t?.kind === "number");
+        const count = plotSampleNumbers(visual.parameters).length;
+        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text2)) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "moving the whole curve requires formula number references; static sample inputs only move points");
+        }
+        if (/两个点|两点|two points/i.test(text2) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text2) && count !== 2) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and parameters.sample_x_numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
+        }
+        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text2)) {
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "plot points use sliders; direct point dragging is unavailable");
+        }
+      }
+    }
+  }
+}
+
+// src/plugins/math-hooks.ts
+function separateInitialSamples(visual, plan, sectionIndex) {
+  const words = plan.sections[sectionIndex].moments.map((moment) => moment.narration).join(" ");
+  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
+  const samples = plotSampleNumbers(visual.parameters);
+  if (samples.length !== 2) return;
+  if (plan.sections.slice(0, sectionIndex).some((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.numbers?.includes(samples[1]))))) return;
+  const a = plan.numbers?.[samples[0] - 1], b = plan.numbers?.[samples[1] - 1];
   if (!a || !b || a === b || Math.abs(a.initial - b.initial) > 1e-8) return;
   const step = b.student_control?.step ?? (b.max - b.min) / 200;
   const delta = Math.max(step, Math.round((b.max - b.min) / 5 / step) * step);
@@ -12617,7 +12794,6 @@ var MATH_HOOKS = {
       delete parameters3.curve_label;
       return { no_numbers: true };
     },
-    numbers_from_parameters: (parameters3, { numberCount, limit }) => formulaNumbers(parameters3, numberCount, limit),
     validate_parameters(parameters3, { path, numberCount, fail: fail4, record: record2, array: array2, validateMathExpression: validateMathExpression2 }) {
       if (parameters3 === void 0) {
         fail4(
@@ -12634,6 +12810,11 @@ var MATH_HOOKS = {
           `${path}.parameters`,
           "a function plot requires exactly one explicit mathematical expression"
         );
+      }
+      const pathToSamples = `${path}.parameters.sample_x_numbers`;
+      const samples = validatePlotSampleNumbers(visualParameters.sample_x_numbers, numberCount, pathToSamples);
+      if (samples.length && plotCurveNumbers(visualParameters).length) {
+        fail4("LESSON_PLAN_INTERACTION_MISMATCH", pathToSamples, "sample_x_numbers requires a fixed curve; use formula references for curve controls");
       }
       if (visualParameters.expression_tokens !== void 0) {
         const expressionTokens = array2(
@@ -12655,16 +12836,9 @@ var MATH_HOOKS = {
         );
       }
     },
-    validate_numbers(numbers, content, { path, fail: fail4 }) {
-      if (numbers.length > 2 && content.parameters?.expression_tokens === void 0) {
-        fail4("LESSON_PLAN_EXPRESSION", `${path}.numbers`, "static curves support at most two independent sample points");
-      }
-    },
     before_compile: separateInitialSamples,
-    bound_numbers(content, { path, numberCount, validateMathExpression: validateMathExpression2 }) {
-      if (content.parameters?.expression_tokens === void 0) return void 0;
-      const curveNumbers = validateMathExpression2(content.parameters.expression_tokens, path, numberCount, true);
-      return curveNumbers.length ? curveNumbers : void 0;
+    bound_numbers(content) {
+      return [...plotCurveNumbers(content.parameters), ...plotSampleNumbers(content.parameters)];
     }
   },
   function_surface_with_section: { section_range: surfaceSectionRange },
@@ -12701,17 +12875,21 @@ function specializeTwoPointDraft(draft, outline, request) {
   for (const moment of draft.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
     const content = action.content;
-    if (content.capability !== "function_plot") continue;
+    if (content.capability !== "function_plot" || content.parameters?.sample_x_numbers !== void 0 || Array.isArray(content.parameters?.expressions)) continue;
     const tokens = content.parameters?.expression_tokens;
     if (Array.isArray(tokens)) {
       content.parameters.expression_tokens = tokens.map((token) => token.kind === "number" ? { kind: "literal", value: outline.numbers?.[token.number - 1]?.initial ?? 0 } : token);
     }
+    content.parameters = { ...content.parameters, sample_x_numbers: [1, 2] };
     content.numbers = [1, 2];
   }
 }
 var MATH_PLUGIN_HOOKS = {
   prepare_outline: (outline, { request, language }) => prepareTwoPointOutline(outline, request, language),
-  specialize_draft: (draft, { outline, request }) => specializeTwoPointDraft(draft, outline, request),
+  specialize_draft(draft, context) {
+    specializeTwoPointDraft(draft, context.outline, context.request);
+    normalizePlotDraftBindings(draft, context);
+  },
   normalize_plan: normalizePlotInputInstructions,
   check_plan: validateTeachingClaims
 };
@@ -13262,11 +13440,8 @@ function resolveLessonPlan(value, options = {}) {
           }
           if (kind === "visual") {
             const visualContent = content;
-            const curveNumbers = RECIPE_HOOKS[visualContent.capability]?.bound_numbers?.(
-              visualContent,
-              recipeValidationContext(`${itemPath}.content.parameters.expression_tokens`, rawNumbers.length)
-            );
-            for (const number of curveNumbers ?? visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
+            const boundNumbers = RECIPE_HOOKS[visualContent.capability]?.bound_numbers?.(visualContent);
+            for (const number of boundNumbers ?? visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
           }
           boardItemIndex += 1;
           const id = `section-${pad3(sectionIndex)}-moment-${pad3(momentIndex)}-item-${pad3(boardItemIndex)}`;
@@ -14004,7 +14179,7 @@ function functionViewport(expressions, parameters3, requestedX) {
 // src/plugins/math-compilers.ts
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
   const dynamicTokens = input.expression_tokens;
   if (dynamicTokens !== void 0 && !dynamicTokens.some((token) => token.kind === "input")) {
     fail2(
@@ -14026,30 +14201,9 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       "a function plot requires an explicit mathematical expression"
     );
   }
-  const dynamicNumbers = dynamicTokens === void 0 ? [] : [...new Set(dynamicTokens.flatMap((token) => token.kind === "number" ? [token.number] : []))];
+  const dynamicNumbers = plotCurveNumbers(input);
   if (dynamicNumbers.length > LESSON_PLAN_CAPABILITY_NUMBER_LIMITS.function_plot) {
-    fail2(
-      "LESSON_PLAN_COMPILER_CONTROL_LIMIT",
-      `${path}.expression_tokens`,
-      `function_plot supports at most ${LESSON_PLAN_CAPABILITY_NUMBER_LIMITS.function_plot} numeric inputs`
-    );
-  }
-  if (dynamicTokens !== void 0) {
-    const declaredNumbers = [...new Set(content.numbers ?? [])];
-    if (dynamicNumbers.length > 0 && JSON.stringify(declaredNumbers) !== JSON.stringify(dynamicNumbers)) {
-      fail2(
-        "LESSON_PLAN_CAPABILITY_PARAMETER",
-        `${path}.numbers`,
-        "function_plot numbers must exactly match the number references in expression_tokens"
-      );
-    }
-    if (dynamicNumbers.length === 0 && declaredNumbers.length > 2) {
-      fail2(
-        "LESSON_PLAN_CAPABILITY_PARAMETER",
-        `${path}.numbers`,
-        "a static function supports at most two independent sample points"
-      );
-    }
+    fail2("LESSON_PLAN_COMPILER_CONTROL_LIMIT", `${path}.expression_tokens`, "too many curve parameters");
   }
   const rawExpressions = dynamicTokens !== void 0 ? [mathExpressionToOll(dynamicTokens)] : input.expressions === void 0 ? [optionalText(input.expression, "", `${path}.expression`)] : optionalStringArray(input.expressions, [], `${path}.expressions`);
   const expressionVariables = ["x", ...dynamicNumbers.map(variableAlias)];
@@ -14060,20 +14214,18 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   if (curveLabels.length > 0 && curveLabels.length !== expressions.length) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.curve_labels`, "curve label count must equal expression count");
   }
-  const sampleNumbers = dynamicNumbers.length === 0 ? [...new Set(content.numbers ?? [])] : [];
-  if (sampleNumbers.length > 2) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "static curves support at most two sample points");
+  const sampleNumbers = plotSampleNumbers(input);
   const number = sampleNumbers[0];
-  const definition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
   let requestedX = input.x_min !== void 0 || input.x_max !== void 0 ? {
     min: optionalNumber(input.x_min, -4, `${path}.x_min`),
     max: optionalNumber(input.x_max, 4, `${path}.x_max`)
   } : void 0;
   if (requestedX) assertRange(requestedX.min, requestedX.max, `${path}.x_range`);
   for (const sampleNumber of sampleNumbers) {
-    const definition2 = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+    const definition = numberDefinition(plan, sampleNumber, `${path}.numbers`);
     requestedX = {
-      min: Math.min(requestedX?.min ?? definition2.min, definition2.min),
-      max: Math.max(requestedX?.max ?? definition2.max, definition2.max)
+      min: Math.min(requestedX?.min ?? definition.min, definition.min),
+      max: Math.max(requestedX?.max ?? definition.max, definition.max)
     };
   }
   let viewport;
@@ -14102,7 +14254,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   }));
   const samples = sampleNumbers.map((sampleNumber, index) => {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
-    for (const x of [d.min, d.initial, d.max]) evaluate(expression, ["x"], { x }, `${path}.expression`);
+    for (const x of [d.min, d.max]) evaluate(expression, ["x"], { x }, `${path}.expression`);
     return {
       x: d.initial,
       y: evaluate(expression, ["x"], { x: d.initial }, `${path}.expression`),
@@ -14110,6 +14262,20 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       x_expression: variableAlias(sampleNumber)
     };
   });
+  if (samples.length) {
+    const creationIndex = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.content === content)));
+    const teachingY = samples.map((sample) => sample.y);
+    for (const [momentIndex, moment] of (plan.sections[creationIndex]?.moments ?? []).entries()) {
+      for (const [actionIndex, action] of moment.actions.entries()) {
+        if (action.action !== "animate" || !sampleNumbers.includes(action.number)) continue;
+        const animationPath = `$lessonPlan.sections[${creationIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`;
+        teachingY.push(evaluate(expression, ["x"], { x: action.end_value }, animationPath));
+      }
+    }
+    const padding = (requestedY.max - requestedY.min) * 0.05;
+    axes.y.min = Math.min(requestedY.min, ...teachingY.map((y) => y - padding));
+    axes.y.max = Math.max(requestedY.max, ...teachingY.map((y) => y + padding));
+  }
   let references;
   if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
     const initialVariables = Object.fromEntries(dynamicNumbers.map((index) => [variableAlias(index), numberDefinition(plan, index, path).initial]));
@@ -14593,11 +14759,19 @@ function positiveIntegerProgramRange(definition, maximum) {
 function normalizeProgramOwnedNumberRanges(plan) {
   const constrained = /* @__PURE__ */ new Set();
   const integerSides = /* @__PURE__ */ new Set();
+  const publishedPlotNumbers = /* @__PURE__ */ new Set();
   for (const [sectionIndex, section] of plan.sections.entries()) {
+    const newPlotNumbers = /* @__PURE__ */ new Set();
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
         if (action.action !== "create" && action.action !== "revise" || action.kind !== "visual") continue;
         const content = action.content;
+        const bound = RECIPE_HOOKS[content.capability]?.bound_numbers?.(content);
+        if (bound?.length) content.numbers = bound;
+        else if (bound) delete content.numbers;
+        if (content.capability === "function_plot") {
+          for (const number of bound ?? []) newPlotNumbers.add(number);
+        }
         const policies = LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].number_input_policies;
         for (const [inputIndex, numberIndex] of (content.numbers ?? []).entries()) {
           const definition = plan.numbers?.[numberIndex - 1];
@@ -14605,6 +14779,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
           if (!definition || !policy) continue;
           if (RECIPE_HOOKS[content.capability]?.free_number?.(content, inputIndex)) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
+          const prior = publishedPlotNumbers.has(numberIndex) ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step } : void 0;
           if (policy.kind === "side_count") {
             integerSides.add(numberIndex);
             intersectProgramRange(definition, 3, 384);
@@ -14633,9 +14808,17 @@ function normalizeProgramOwnedNumberRanges(plan) {
               constrained.add(numberIndex);
             }
           }
+          if (prior && (definition.min !== prior.min || definition.max !== prior.max || definition.initial !== prior.initial || definition.student_control?.step !== prior.step)) {
+            fail2(
+              "LESSON_PLAN_INTERACTION_MISMATCH",
+              path,
+              `Use a number that fits this visual without changing number ${numberIndex} in the published graph`
+            );
+          }
         }
       }
     }
+    for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
   if (constrained.size === 0) return;
   for (const section of plan.sections) {
@@ -14707,10 +14890,10 @@ function compileLessonPlan(value, options = {}) {
   for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
   normalizeProgramOwnedNumberRanges(plan);
   mergeEquivalentVisualInputs(plan);
-  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+  for (const [sectionIndex, section] of plan.sections.entries()) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
     const visual = action.content;
-    RECIPE_HOOKS[visual.capability]?.before_compile?.(visual, plan);
+    RECIPE_HOOKS[visual.capability]?.before_compile?.(visual, plan, sectionIndex);
   }
   const resolvedReferences = new Map(resolved.references.map((item) => [item.path, item]));
   const wholeTargets = /* @__PURE__ */ new Map();
@@ -15344,7 +15527,7 @@ function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes) 
       timing: { enum: timingNames },
       content: object({
         parameters: visualParametersSchema([capability2]),
-        ...numberCount > 0 && numberLimit > 0 ? {
+        ...numberCount > 0 && numberLimit > 0 && capability2 !== "function_plot" ? {
           numbers: {
             type: "array",
             maxItems: numberLimit,
@@ -16236,7 +16419,7 @@ function lowerModelBoardContent(kind, value, numberCount) {
   if (forceNoNumbers) validNumbers = [];
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters3, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
-  if (!forceNoNumbers && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
+  if (!forceNoNumbers && capability2 !== "function_plot" && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
     validNumbers = [1];
   }
   return {
@@ -16592,15 +16775,33 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
   const sanitized = sanitizeNonessentialVisuals(outlineValue, draftValues);
   const outline = sanitized.outline;
   const drafts = sanitized.drafts;
-  for (const section of drafts) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
+  const visuallyBound = /* @__PURE__ */ new Set();
+  const publishedPlotNumbers = /* @__PURE__ */ new Set();
+  for (const [sectionIndex, section] of drafts.entries()) {
+    const newPlotNumbers = /* @__PURE__ */ new Set();
+    for (const [momentIndex, moment] of section.moments.entries()) {
+      for (const [actionIndex, action] of moment.actions.entries()) {
+        if ((action.action === "create" || action.action === "revise") && action.kind === "visual") {
+          const visual = action.content;
+          const bound = RECIPE_HOOKS[visual.capability]?.bound_numbers?.(visual);
+          for (const number of bound ?? visual.numbers ?? []) visuallyBound.add(number);
+          if (visual.capability === "function_plot") {
+            for (const number of bound ?? []) newPlotNumbers.add(number);
+          }
+        }
         if (action.action !== "animate") continue;
         const definition = outline.numbers?.[action.number - 1];
         if (!definition || !Number.isFinite(action.end_value)) continue;
         const nextMin = Math.min(definition.min, action.end_value);
         const nextMax = Math.max(definition.max, action.end_value);
         if (nextMin === definition.min && nextMax === definition.max) continue;
+        if (publishedPlotNumbers.has(action.number)) {
+          throw new LessonPlanError(
+            "LESSON_PLAN_INTERACTION_MISMATCH",
+            `$lessonPlanSectionDrafts[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`,
+            `Keep the animation within the published graph's number ${action.number} range [${definition.min}, ${definition.max}]`
+          );
+        }
         definition.min = nextMin;
         definition.max = nextMax;
         definition.initial = Math.min(nextMax, Math.max(nextMin, definition.initial));
@@ -16609,16 +16810,7 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
         }
       }
     }
-  }
-  const visuallyBound = /* @__PURE__ */ new Set();
-  for (const section of drafts) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
-        if (action.action !== "create" && action.action !== "revise" || action.kind !== "visual") continue;
-        const visual = action.content;
-        for (const number of visual.numbers ?? []) visuallyBound.add(number);
-      }
-    }
+    for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
   outline.numbers?.forEach((number, index) => {
     if (!visuallyBound.has(index + 1)) delete number.student_control;
@@ -17656,6 +17848,22 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
   let modelCalls = 0;
   let outline;
+  const draftAdjustments = /* @__PURE__ */ new WeakMap();
+  const specializeDraft = (draft, outline2, accepted) => {
+    const adjustments = [];
+    for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(draft, {
+      outline: outline2,
+      accepted,
+      request: input.learner_request,
+      adjust: (adjustment) => adjustments.push(adjustment)
+    });
+    if (adjustments.length) draftAdjustments.set(draft, adjustments);
+    return draft;
+  };
+  const reportDraftAdjustments = async (draft) => {
+    for (const adjustment of draftAdjustments.get(draft) ?? []) await options.on_program_adjustment?.(adjustment);
+    draftAdjustments.delete(draft);
+  };
   let bootstrappedFirstSection;
   let outlineError;
   let stableCameraObservation;
@@ -17757,7 +17965,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     );
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
-      bootstrappedFirstSection = lowerModelSectionDraft(
+      const firstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
           coerceLessonPlanBootstrapSectionModelNumbers(bootstrap.first_section),
           outline
@@ -17767,7 +17975,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         true,
         input.language
       );
-      for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(bootstrappedFirstSection, { outline, request: input.learner_request });
+      bootstrappedFirstSection = specializeDraft(firstSection, outline, []);
     } catch (error) {
       sectionErrors.set(1, error);
       await options.on_rejected_part?.({
@@ -17972,7 +18180,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         true,
         input.language
       );
-      for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(candidate, { outline, request: input.learner_request });
+      specializeDraft(candidate, outline, drafts.slice(0, section - 1));
     } catch (error) {
       const previousError = sectionErrors.get(section);
       sectionErrors.set(section, error);
@@ -18013,10 +18221,9 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       candidate ??= await generateSection(section);
       await dropUncheckedAnswerActivities(candidate, section);
       drafts[section - 1] = candidate;
+      let prefix;
       try {
-        const prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
-        await options.on_playable_prefix?.({ completed_sections: section, compiled: prefix });
-        return;
+        prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
       } catch (error) {
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
@@ -18029,7 +18236,11 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
           error: rejectionDetails(error)
         });
         candidate = void 0;
+        continue;
       }
+      await reportDraftAdjustments(candidate);
+      await options.on_playable_prefix?.({ completed_sections: section, compiled: prefix });
+      return;
     }
   };
   try {
@@ -18130,6 +18341,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     }
   }
   if (!compiled) throw finalError;
+  for (const draft of drafts) await reportDraftAdjustments(draft);
   for (const adjustment of programAdjustments) {
     await options.on_program_adjustment?.(adjustment);
   }

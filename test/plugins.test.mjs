@@ -77,7 +77,7 @@ const firstProblem = (plan) => { try { api.compileAndValidateLessonPlan(plan); r
 
 test("an invalid plot title is reported before its samples are evaluated", () => {
   const plot = samplePlan("function_plot");
-  plot.sections[0].moments[0].actions[0].content.parameters = { expression: "1/x", title: 123 };
+  plot.sections[0].moments[0].actions[0].content.parameters = { expression: "1/x", sample_x_numbers: [1], title: 123 };
   plot.numbers[0] = { ...plot.numbers[0], min: 0, max: 2, initial: 1 };
   assert.match(firstProblem(plot), /\.parameters\.title$/);
 });

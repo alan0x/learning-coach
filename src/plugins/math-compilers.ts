@@ -7,8 +7,9 @@ import {
 } from "octos-lesson-language/plugin-math";
 import { compileText } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
+import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { functionViewport } from "../function-viewport.js";
-import { type AuthoringAction } from "octos-lesson-language";
+import { compileMathExpression, type AuthoringAction } from "octos-lesson-language";
 import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
 import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
@@ -22,7 +23,7 @@ function compileFunctionPlot(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
   const dynamicTokens = input.expression_tokens as LessonPlanMathExpression | undefined;
   if (dynamicTokens !== undefined
     && !dynamicTokens.some((token) => token.kind === "input")) {
@@ -48,33 +49,9 @@ function compileFunctionPlot(
       "a function plot requires an explicit mathematical expression",
     );
   }
-  const dynamicNumbers = dynamicTokens === undefined
-    ? []
-    : [...new Set(dynamicTokens.flatMap((token) => token.kind === "number" ? [token.number] : []))];
+  const dynamicNumbers = plotCurveNumbers(input);
   if (dynamicNumbers.length > LESSON_PLAN_CAPABILITY_NUMBER_LIMITS.function_plot) {
-    fail(
-      "LESSON_PLAN_COMPILER_CONTROL_LIMIT",
-      `${path}.expression_tokens`,
-      `function_plot supports at most ${LESSON_PLAN_CAPABILITY_NUMBER_LIMITS.function_plot} numeric inputs`,
-    );
-  }
-  if (dynamicTokens !== undefined) {
-    const declaredNumbers = [...new Set(content.numbers ?? [])];
-    if (dynamicNumbers.length > 0
-      && JSON.stringify(declaredNumbers) !== JSON.stringify(dynamicNumbers)) {
-      fail(
-        "LESSON_PLAN_CAPABILITY_PARAMETER",
-        `${path}.numbers`,
-        "function_plot numbers must exactly match the number references in expression_tokens",
-      );
-    }
-    if (dynamicNumbers.length === 0 && declaredNumbers.length > 2) {
-      fail(
-        "LESSON_PLAN_CAPABILITY_PARAMETER",
-        `${path}.numbers`,
-        "a static function supports at most two independent sample points",
-      );
-    }
+    fail("LESSON_PLAN_COMPILER_CONTROL_LIMIT", `${path}.expression_tokens`, "too many curve parameters");
   }
   const rawExpressions = dynamicTokens !== undefined
     ? [mathExpressionToOll(dynamicTokens)]
@@ -91,10 +68,8 @@ function compileFunctionPlot(
   if (curveLabels.length > 0 && curveLabels.length !== expressions.length) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.curve_labels`, "curve label count must equal expression count");
   }
-  const sampleNumbers = dynamicNumbers.length === 0 ? [...new Set(content.numbers ?? [])] : [];
-  if (sampleNumbers.length > 2) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "static curves support at most two sample points");
+  const sampleNumbers = plotSampleNumbers(input);
   const number = sampleNumbers[0];
-  const definition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : undefined;
   let requestedX = input.x_min !== undefined || input.x_max !== undefined
     ? {
         min: optionalNumber(input.x_min, -4, `${path}.x_min`),
@@ -144,10 +119,25 @@ function compileFunctionPlot(
   }));
   const samples = sampleNumbers.map((sampleNumber, index) => {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
-    for (const x of [d.min, d.initial, d.max]) evaluate(expression, ["x"], {x}, `${path}.expression`);
-    return { x: d.initial, y: evaluate(expression, ["x"], {x:d.initial}, `${path}.expression`),
+    for (const x of [d.min, d.max]) evaluate(expression, ["x"], { x }, `${path}.expression`);
+    return { x: d.initial, y: evaluate(expression, ["x"], { x: d.initial }, `${path}.expression`),
       label: sampleNumbers.length === 2 ? (index === 0 ? "A" : "B") : "P(x, y)", x_expression: variableAlias(sampleNumber) };
   });
+  if (samples.length) {
+    const creationIndex = plan.sections.findIndex(section => section.moments.some(moment =>
+      moment.actions.some(action => action.action === "create" && action.content === content)));
+    const teachingY = samples.map(sample => sample.y);
+    for (const [momentIndex, moment] of (plan.sections[creationIndex]?.moments ?? []).entries()) {
+      for (const [actionIndex, action] of moment.actions.entries()) {
+        if (action.action !== "animate" || !sampleNumbers.includes(action.number)) continue;
+        const animationPath = `$lessonPlan.sections[${creationIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`;
+        teachingY.push(evaluate(expression, ["x"], { x: action.end_value }, animationPath));
+      }
+    }
+    const padding = (requestedY.max - requestedY.min) * 0.05;
+    axes.y.min = Math.min(requestedY.min, ...teachingY.map(y => y - padding));
+    axes.y.max = Math.max(requestedY.max, ...teachingY.map(y => y + padding));
+  }
   // Slope lessons with curve parameters still need visible reference points.
   // Their x positions are fixed; the parameter sliders change the curve.
   let references: Array<{ x: number; y: number; label: string }> | undefined;
