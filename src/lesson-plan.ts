@@ -1349,7 +1349,8 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
 /**
  * How far a typed answer may be from the expected answer and still count:
  * 0 when the answer equals its check, or half a unit in the answer's last
- * decimal place when the answer is its check rounded to the places written
+ * decimal place (plus a floating-point slack) when the answer is its check
+ * rounded to the places written
  * (11.21 for 2.02/18.02*100 = 11.2097...). Whole numbers, fractions and mixed
  * numbers must equal the check exactly, so a math slip such as 7/2 written as
  * 3 is still caught. Undefined means the answer does not match its check.
@@ -1360,11 +1361,19 @@ export function numericAnswerTolerance(answer: string, checked: number): number 
   const difference = Math.abs(checked - expected.value);
   if (difference <= 1e-9 * Math.max(1, Math.abs(expected.value))) return 0;
   if (expected.form !== "decimal") return undefined;
-  const places = /\.(\d+)\s*$/.exec(answer)?.[1]?.length;
+  // Count places the way the grader reads the answer (full-width digits and points included).
+  const written = answer.trim()
+    .replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 0xfee0))
+    .replace(/[．。]/g, ".");
+  const places = /\.(\d+)$/.exec(written)?.[1]?.length;
   if (!places) return undefined;
   const halfUnit = 0.5 * 10 ** -places;
   // A check that lands exactly on the rounding boundary may round either way.
-  return difference <= halfUnit * (1 + 1e-9) ? halfUnit : undefined;
+  if (difference > halfUnit * (1 + 1e-9)) return undefined;
+  // The grader compares |typed - answer| <= tolerance in floating point, where
+  // |2.15 - 2.2| is 0.05000000000000027. A slack far below the answer's own
+  // precision keeps a correctly rounded value from being marked wrong.
+  return Number((halfUnit + Math.max(halfUnit * 1e-6, Math.abs(expected.value) * 1e-12)).toPrecision(10));
 }
 
 /**
@@ -1373,6 +1382,24 @@ export function numericAnswerTolerance(answer: string, checked: number): number 
  * as a wrong expected answer. It cannot tell whether the arithmetic models a
  * word problem correctly; that stays with the lesson's review.
  */
+/**
+ * Every check a typed question gets except where it sits on the board, so an
+ * optional question that would fail can be dropped before it costs its section.
+ */
+export function validateTypedQuestion(activity: Record<string, unknown>, path: string): void {
+  allowedKeys(activity, [
+    "kind", "prompt", "answer", "check", "unit", "simplest_fraction", "reference",
+    "hints", "hint_after_attempts", "success_message",
+  ], path);
+  validateNumericAnswerActivity(activity, path);
+  nonEmptyString(activity.prompt, `${path}.prompt`, 480);
+  const hints = array(activity.hints, `${path}.hints`);
+  if (hints.length === 0) fail("LESSON_PLAN_ACTIVITY", `${path}.hints`, "activity requires hints");
+  hints.forEach((hint, hintIndex) => nonEmptyString(hint, `${path}.hints[${hintIndex}]`, 480));
+  if (activity.hint_after_attempts !== undefined) positiveIndex(activity.hint_after_attempts, `${path}.hint_after_attempts`);
+  optionalString(activity.success_message, `${path}.success_message`, 480);
+}
+
 export function validateNumericAnswerActivity(activity: Record<string, unknown>, path: string): void {
   nonEmptyString(activity.answer, `${path}.answer`, 64);
   const expected = parseNumericAnswer(activity.answer as string);

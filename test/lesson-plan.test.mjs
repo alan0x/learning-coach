@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { build } from "esbuild";
-import { evaluateMathExpression } from "octos-lesson-language";
+import { checkNumericAnswer, evaluateMathExpression } from "octos-lesson-language";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const lessonPlanBundle = await build({
@@ -4593,6 +4593,22 @@ test("a later section's typed question that fails its check is dropped without a
   assert.match(dropped[0].reason, /answer 17 does not equal its check 323-221\*1/);
 });
 
+test("a later section's typed question with a blank hint is dropped, not a failed lesson", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/later-practice-generation.json"), "utf8"));
+  const responses = [...fixture.responses];
+  const third = JSON.parse(responses[2]);
+  third.answer_activities = [{ prompt: "x = 3 处的切线斜率是多少？", answer: "6", check: "2*3", hints: [" "] }];
+  responses[2] = JSON.stringify(third);
+  const adjustments = [];
+  const generated = await generateLessonPlanWithModel(async () => {
+    assert.ok(responses.length, "unexpected repair call");
+    return responses.shift();
+  }, { ...fixture.input, turn_id: "replay-blank-hint" }, { on_program_adjustment: event => { adjustments.push(event); } });
+  assert.equal(generated.lesson.lesson.tasks?.some(task => task.completion.kind === "numeric_answer") ?? false, false);
+  assert.match(adjustments.find(event => event.kind === "answer_activity_removed").reason, /hints\[0\]/);
+});
+
 test("a one-section lesson asks for practice after it is playable; bad or failed practice never costs the lesson", async () => {
   const { readFile } = await import("node:fs/promises");
   const fixture = JSON.parse(await readFile(resolve(root, "test/fixtures/later-practice-generation.json"), "utf8"));
@@ -4740,14 +4756,21 @@ test("a rounded decimal answer matches its check to the places written, and the 
   const completion = (answer, check) => compileAndValidateLessonPlan(withAnswer(answer, check)).lesson.lesson.tasks
     .find((task) => task.completion.kind === "numeric_answer").completion;
   // Answers the P0 baseline rejected as unequal although they were correctly rounded.
-  assert.deepEqual(completion("11.21", "2.02/18.02*100"), { kind: "numeric_answer", answer: "11.21", tolerance: 0.005 });
-  assert.equal(completion("27.29", "12.011/44.01*100").tolerance, 0.005);
-  assert.equal(completion("2.0", "2*3.14*(0.98/9.8)^0.5").tolerance, 0.05);
+  assert.deepEqual(completion("11.21", "2.02/18.02*100"), { kind: "numeric_answer", answer: "11.21", tolerance: 0.005000005 });
+  assert.equal(completion("27.29", "12.011/44.01*100").tolerance, 0.005000005);
+  assert.equal(completion("2.0", "2*3.14*(0.98/9.8)^0.5").tolerance, 0.05000005);
   // An exact answer keeps exact grading.
   assert.deepEqual(completion("0.75", "3/4"), { kind: "numeric_answer", answer: "0.75" });
   // Wrong rounding, and rounding outside decimals, are still mismatches.
   assert.throws(() => compileLessonPlan(withAnswer("11.22", "2.02/18.02*100")), /does not equal its check/);
-  assert.equal(completion("11.2", "2.02/18.02*100").tolerance, 0.05, "one place written, one place checked");
+  assert.equal(completion("11.2", "2.02/18.02*100").tolerance, 0.05000005, "one place written, one place checked");
+  // On the rounding boundary the learner's unrounded value still passes the OLL grader, as does a full-width answer.
+  for (const [answer, check, typed] of [["2.2", "2.15", "2.15"], ["-2.2", "-2.15", "-2.15"], ["２．２", "2.15", "2.15"]]) {
+    const graded = completion(answer, check);
+    assert.equal(checkNumericAnswer(graded, typed).succeeded, true, `${typed} for ${answer}`);
+    assert.equal(checkNumericAnswer(graded, answer).succeeded, true, `${answer} itself`);
+    assert.equal(checkNumericAnswer(graded, "2.26").succeeded, false);
+  }
   assert.throws(() => compileLessonPlan(withAnswer("3", "7/2")), /does not equal its check/, "whole numbers stay exact");
   assert.throws(() => compileLessonPlan(withAnswer("1", "9.8*(2/(2*3.1415926))^2")), /does not equal its check/);
   assert.throws(() => compileLessonPlan(withAnswer("1/3", "0.33")), /does not equal its check/, "fractions stay exact");

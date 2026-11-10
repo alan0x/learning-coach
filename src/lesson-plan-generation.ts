@@ -10,7 +10,7 @@ import {
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VERSION,
   LessonPlanError,
-  validateNumericAnswerActivity,
+  validateTypedQuestion,
   assembleLessonPlan,
   matchLessonPlanCapability,
   validateLessonPlanOutline,
@@ -3214,15 +3214,16 @@ export async function generateLessonPlanWithModel(
   };
 
   // A typed question is optional and the section never refers to its answer,
-  // so one whose answer fails its own check is dropped rather than costing a
-  // section rewrite (or, after a playable prefix, failing the whole lesson).
+  // so one that fails its own checks (answer, arithmetic, prompt or hints) is
+  // dropped rather than costing a section rewrite (or, after a playable
+  // prefix, failing the whole lesson).
   const dropUncheckedAnswerActivities = async (draft: LessonPlanSectionDraft, section: number): Promise<void> => {
     if (!draft.student_activities?.length) return;
     const kept: LessonPlanStudentActivity[] = [];
     for (const [index, activity] of draft.student_activities.entries()) {
       if (activity.kind === "numeric_answer") {
         try {
-          validateNumericAnswerActivity(activity as unknown as Record<string, unknown>, `$lessonPlanSection${section}.student_activities[${index}]`);
+          validateTypedQuestion(activity as unknown as Record<string, unknown>, `$lessonPlanSection${section}.student_activities[${index}]`);
         } catch (error) {
           if (!(error instanceof LessonPlanError)) throw error;
           await options.on_program_adjustment?.({ kind: "answer_activity_removed", section, reason: error.message });

@@ -11175,10 +11175,33 @@ function numericAnswerTolerance(answer, checked) {
   const difference = Math.abs(checked - expected.value);
   if (difference <= 1e-9 * Math.max(1, Math.abs(expected.value))) return 0;
   if (expected.form !== "decimal") return void 0;
-  const places = /\.(\d+)\s*$/.exec(answer)?.[1]?.length;
+  const written = answer.trim().replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 65248)).replace(/[．。]/g, ".");
+  const places = /\.(\d+)$/.exec(written)?.[1]?.length;
   if (!places) return void 0;
   const halfUnit = 0.5 * 10 ** -places;
-  return difference <= halfUnit * (1 + 1e-9) ? halfUnit : void 0;
+  if (difference > halfUnit * (1 + 1e-9)) return void 0;
+  return Number((halfUnit + Math.max(halfUnit * 1e-6, Math.abs(expected.value) * 1e-12)).toPrecision(10));
+}
+function validateTypedQuestion(activity, path) {
+  allowedKeys(activity, [
+    "kind",
+    "prompt",
+    "answer",
+    "check",
+    "unit",
+    "simplest_fraction",
+    "reference",
+    "hints",
+    "hint_after_attempts",
+    "success_message"
+  ], path);
+  validateNumericAnswerActivity(activity, path);
+  nonEmptyString(activity.prompt, `${path}.prompt`, 480);
+  const hints = array(activity.hints, `${path}.hints`);
+  if (hints.length === 0) fail2("LESSON_PLAN_ACTIVITY", `${path}.hints`, "activity requires hints");
+  hints.forEach((hint, hintIndex) => nonEmptyString(hint, `${path}.hints[${hintIndex}]`, 480));
+  if (activity.hint_after_attempts !== void 0) positiveIndex(activity.hint_after_attempts, `${path}.hint_after_attempts`);
+  optionalString(activity.success_message, `${path}.success_message`, 480);
 }
 function validateNumericAnswerActivity(activity, path) {
   nonEmptyString(activity.answer, `${path}.answer`, 64);
@@ -17074,7 +17097,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     for (const [index, activity] of draft.student_activities.entries()) {
       if (activity.kind === "numeric_answer") {
         try {
-          validateNumericAnswerActivity(activity, `$lessonPlanSection${section}.student_activities[${index}]`);
+          validateTypedQuestion(activity, `$lessonPlanSection${section}.student_activities[${index}]`);
         } catch (error) {
           if (!(error instanceof LessonPlanError)) throw error;
           await options.on_program_adjustment?.({ kind: "answer_activity_removed", section, reason: error.message });
@@ -17258,5 +17281,6 @@ export {
   resolveLessonPlan,
   validateLessonPlan,
   validateLessonPlanOutline,
-  validateNumericAnswerActivity
+  validateNumericAnswerActivity,
+  validateTypedQuestion
 };
