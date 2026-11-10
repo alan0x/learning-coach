@@ -129,6 +129,19 @@ function compileFunctionPlot(
       }
     : viewport.y;
   assertRange(requestedY.min, requestedY.max, `${path}.y_range`);
+  // Title, axes and curve labels are checked before the samples are
+  // evaluated, so a repair hears about them first (as before the builder).
+  const title = namedNumbers(optionalText(input.title, compileText(plan, "函数图像"), `${path}.title`), plan);
+  const axes = {
+    ...(expressions.length > 1 && expressions.some(e => e.replace(/[()\s]/g, "") === "x") ? {equal_scale:true} : {}),
+    x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
+    y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) },
+  };
+  const curves = expressions.map((item, index) => ({
+    expression: item,
+    label: curveLabels[index]
+      ?? (index === 0 ? namedNumbers(optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`), plan) : `y = ${item}`),
+  }));
   const samples = sampleNumbers.map((sampleNumber, index) => {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
     for (const x of [d.min, d.initial, d.max]) evaluate(expression, ["x"], {x}, `${path}.expression`);
@@ -151,17 +164,9 @@ function compileFunctionPlot(
   // Built by the math plugin's shared layer, which Studio also uses.
   const built = buildFunctionPlot({
     as: base, role, place: placement,
-    title: namedNumbers(optionalText(input.title, compileText(plan, "函数图像"), `${path}.title`), plan),
-    axes: {
-      ...(expressions.length > 1 && expressions.some(e => e.replace(/[()\s]/g, "") === "x") ? {equal_scale:true} : {}),
-      x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
-      y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) },
-    },
-    curves: expressions.map((item, index) => ({
-      expression: item,
-      label: curveLabels[index]
-        ?? (index === 0 ? namedNumbers(optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`), plan) : `y = ${item}`),
-    })),
+    title,
+    axes,
+    curves,
     ...(samples.length ? { samples } : references ? { references } : {}),
   });
   return {
