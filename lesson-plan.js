@@ -13290,6 +13290,45 @@ function buildCirclePolygons(input) {
     }
   };
 }
+var functionCurveId = (index) => index === 0 ? "primary-curve" : `curve-${String(index + 1).padStart(2, "0")}`;
+function replaceIdentifier2(expression, source, target) {
+  return expression.replace(new RegExp(`\\b${source}\\b`, "gu"), target);
+}
+var FUNCTION_PLOT_POINT_IDS = { samples: ["moving-point", "second-point"], references: ["reference-a", "reference-b"] };
+function buildFunctionPlot(input) {
+  const primary = input.curves[0].expression;
+  const content = {
+    ...input.title !== void 0 ? { title: input.title } : {},
+    axes: input.axes,
+    curves: input.curves.map((curve, index) => ({ as: functionCurveId(index), ...curve }))
+  };
+  if (input.samples?.length) {
+    content.points = input.samples.map((sample, index) => ({ as: FUNCTION_PLOT_POINT_IDS.samples[index], x: sample.x, y: sample.y, label: sample.label }));
+    content.bindings = input.samples.flatMap((sample, index) => {
+      const point = FUNCTION_PLOT_POINT_IDS.samples[index];
+      return [
+        { target: `${point}.x`, expression: sample.x_expression },
+        { target: `${point}.y`, expression: replaceIdentifier2(primary, "x", sample.x_expression) }
+      ];
+    });
+    if (input.samples.length === 2)
+      content.measurement = "secant";
+  } else if (input.references?.length) {
+    content.points = input.references.map((reference, index) => ({ as: FUNCTION_PLOT_POINT_IDS.references[index], x: reference.x, y: reference.y, label: reference.label }));
+    content.bindings = input.references.map((reference, index) => ({ target: `${FUNCTION_PLOT_POINT_IDS.references[index]}.y`, expression: replaceIdentifier2(primary, "x", String(reference.x)) }));
+    content.measurement = "secant";
+    content.sample_input = "fixed_x";
+  }
+  return {
+    actions: [{ do: "write", as: input.as, kind: "plot", role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      primary_curve: `${input.as}#primary-curve`,
+      ...input.samples?.length ? { moving_point: `${input.as}#moving-point` } : {}
+    }
+  };
+}
 
 // src/function-viewport.ts
 function niceRange(values, includeZero = true) {
@@ -13302,11 +13341,11 @@ function niceRange(values, includeZero = true) {
     high = Math.max(high, 0);
   }
   const span = high - low;
-  const pad3 = span > 1e-9 ? span * 0.12 : Math.max(1, Math.abs(low) * 0.2);
-  const rawStep = (span + 2 * pad3) / 6;
+  const pad5 = span > 1e-9 ? span * 0.12 : Math.max(1, Math.abs(low) * 0.2);
+  const rawStep = (span + 2 * pad5) / 6;
   const unit = 10 ** Math.floor(Math.log10(rawStep));
   const step = [1, 2, 5, 10].map((n) => n * unit).find((n) => n >= rawStep);
-  return { min: Math.floor((low - pad3) / step) * step, max: Math.ceil((high + pad3) / step) * step };
+  return { min: Math.floor((low - pad5) / step) * step, max: Math.ceil((high + pad5) / step) * step };
 }
 function quadratic(evaluate2) {
   const y0 = evaluate2(0), y1 = evaluate2(1), ym = evaluate2(-1);
@@ -13464,40 +13503,27 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     max: optionalNumber(input.y_max, viewport.y.max, `${path}.y_max`)
   } : viewport.y;
   assertRange(requestedY.min, requestedY.max, `${path}.y_range`);
-  const plotContent = {
-    title: namedNumbers(optionalText(input.title, compileText(plan, "\u51FD\u6570\u56FE\u50CF"), `${path}.title`), plan),
-    axes: {
-      ...expressions.length > 1 && expressions.some((e) => e.replace(/[()\s]/g, "") === "x") ? { equal_scale: true } : {},
-      x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
-      y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) }
-    },
-    curves: expressions.map((item, index) => ({
-      as: index === 0 ? "primary-curve" : `curve-${pad(index + 1)}`,
-      expression: item,
-      label: curveLabels[index] ?? (index === 0 ? namedNumbers(optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`), plan) : `y = ${item}`)
-    }))
+  const title = namedNumbers(optionalText(input.title, compileText(plan, "\u51FD\u6570\u56FE\u50CF"), `${path}.title`), plan);
+  const axes = {
+    ...expressions.length > 1 && expressions.some((e) => e.replace(/[()\s]/g, "") === "x") ? { equal_scale: true } : {},
+    x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
+    y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) }
   };
-  if (sampleNumbers.length) {
-    plotContent.points = sampleNumbers.map((sampleNumber, index) => {
-      const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
-      for (const x of [d.min, d.initial, d.max]) evaluate(expression, ["x"], { x }, `${path}.expression`);
-      return {
-        as: index === 0 ? "moving-point" : "second-point",
-        x: d.initial,
-        y: evaluate(expression, ["x"], { x: d.initial }, `${path}.expression`),
-        label: sampleNumbers.length === 2 ? index === 0 ? "A" : "B" : "P(x, y)"
-      };
-    });
-    plotContent.bindings = sampleNumbers.flatMap((sampleNumber, index) => {
-      const point = index === 0 ? "moving-point" : "second-point";
-      const variable = variableAlias(sampleNumber);
-      return [
-        { target: `${point}.x`, expression: variable },
-        { target: `${point}.y`, expression: replaceIdentifier(expression, "x", variable) }
-      ];
-    });
-    if (sampleNumbers.length === 2) plotContent.measurement = "secant";
-  }
+  const curves = expressions.map((item, index) => ({
+    expression: item,
+    label: curveLabels[index] ?? (index === 0 ? namedNumbers(optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`), plan) : `y = ${item}`)
+  }));
+  const samples = sampleNumbers.map((sampleNumber, index) => {
+    const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+    for (const x of [d.min, d.initial, d.max]) evaluate(expression, ["x"], { x }, `${path}.expression`);
+    return {
+      x: d.initial,
+      y: evaluate(expression, ["x"], { x: d.initial }, `${path}.expression`),
+      label: sampleNumbers.length === 2 ? index === 0 ? "A" : "B" : "P(x, y)",
+      x_expression: variableAlias(sampleNumber)
+    };
+  });
+  let references;
   if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
     const initialVariables = Object.fromEntries(dynamicNumbers.map((index) => [variableAlias(index), numberDefinition(plan, index, path).initial]));
     const xs = [0, 1];
@@ -13508,15 +13534,19 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
         return NaN;
       }
     });
-    if (ys.every(Number.isFinite)) {
-      plotContent.points = xs.map((x, index) => ({ as: index ? "reference-b" : "reference-a", x, y: ys[index], label: index ? "B" : "A" }));
-      plotContent.bindings = xs.map((x, index) => ({ target: `${index ? "reference-b" : "reference-a"}.y`, expression: replaceIdentifier(expression, "x", String(x)) }));
-      plotContent.measurement = "secant";
-      plotContent.sample_input = "fixed_x";
-    }
+    if (ys.every(Number.isFinite)) references = xs.map((x, index) => ({ x, y: ys[index], label: index ? "B" : "A" }));
   }
+  const built = buildFunctionPlot({
+    as: base,
+    role,
+    place: placement,
+    title,
+    axes,
+    curves,
+    ...samples.length ? { samples } : references ? { references } : {}
+  });
   return {
-    actions: [{ do: "write", as: base, kind: "plot", role, content: plotContent, place: placement }],
+    actions: built.actions,
     whole: base,
     parts: new Map([
       ["whole", base],
@@ -14261,33 +14291,51 @@ var PHYSICS_COMPILERS = {
   spring_and_mass: compileSpringAndMass
 };
 
+// node_modules/octos-lesson-language/dist/packages/plugin-shared/src/index.js
+var pad4 = (index) => String(index).padStart(2, "0");
+var processStepId = (index) => `step-${pad4(index)}`;
+var processEdgeId = (index) => `edge-${pad4(index)}`;
+var PROCESS_CYCLE_EDGE_ID = "edge-close";
+function processDiagramContent(input) {
+  const { steps } = input;
+  const elements = steps.map((step, index) => ({ as: processStepId(index + 1), label: step.label }));
+  const edges = steps.slice(1).map((step, index) => {
+    const label = step.link ?? input.link_label;
+    return { as: processEdgeId(index + 1), from: processStepId(index + 1), to: processStepId(index + 2), ...label !== void 0 ? { label } : {} };
+  });
+  if (input.shape === "cycle" && steps.length > 2) {
+    edges.push({ as: PROCESS_CYCLE_EDGE_ID, from: processStepId(steps.length), to: processStepId(1) });
+  }
+  return { ...input.title !== void 0 ? { title: input.title } : {}, elements, edges };
+}
+function buildProcessDiagram(input) {
+  const count = input.steps.length;
+  return {
+    actions: [{ do: "write", as: input.as, kind: "diagram", role: input.role, content: processDiagramContent(input), place: input.place }],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      first_step: `${input.as}#${processStepId(1)}`,
+      current_step: `${input.as}#${processStepId(Math.min(2, count))}`,
+      last_step: `${input.as}#${processStepId(count)}`
+    }
+  };
+}
+
 // src/plugins/shared-compilers.ts
 function compileProcessDiagram(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "steps"], path);
   const steps = optionalStringArray(input.steps, [compileText(plan, "\u5F00\u59CB"), compileText(plan, "\u89C2\u5BDF\u53D8\u5316"), compileText(plan, "\u5F97\u5230\u7ED3\u8BBA")], `${path}.steps`);
-  const elements = steps.map((label, index) => ({ as: `step-${pad(index + 1)}`, label }));
-  const edges = steps.slice(1).map((_label, index) => ({
-    as: `edge-${pad(index + 1)}`,
-    from: `step-${pad(index + 1)}`,
-    to: `step-${pad(index + 2)}`,
-    label: compileText(plan, "\u4E0B\u4E00\u6B65")
-  }));
-  const first = `${base}#step-01`;
-  const last = `${base}#step-${pad(steps.length)}`;
-  const current = `${base}#step-${pad(Math.min(2, steps.length))}`;
-  return {
-    actions: [{
-      do: "write",
-      as: base,
-      kind: "diagram",
-      role,
-      content: { title: optionalText(input.title, compileText(plan, "\u8FC7\u7A0B\u56FE"), `${path}.title`), elements, edges },
-      place: placement
-    }],
-    whole: base,
-    parts: /* @__PURE__ */ new Map([["whole", base], ["first_step", first], ["current_step", current], ["last_step", last]])
-  };
+  const built = buildProcessDiagram({
+    as: base,
+    role,
+    place: placement,
+    title: optionalText(input.title, compileText(plan, "\u8FC7\u7A0B\u56FE"), `${path}.title`),
+    steps: steps.map((label) => ({ label })),
+    link_label: compileText(plan, "\u4E0B\u4E00\u6B65")
+  });
+  return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
 }
 var SHARED_COMPILERS = {
   process_diagram: compileProcessDiagram
