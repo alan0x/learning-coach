@@ -11433,6 +11433,7 @@ async function main() {
         lesson_plan_model_calls: generatedLessonPlan.model_calls,
         lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
         lesson_plan_plugins: generatedLessonPlan.plugins,
+        structured_metadata: { lesson_plan_plugins: generatedLessonPlan.plugins },
         published_parts: publishedParts,
         ...generatedLessonPlan.camera_observation ? input.request_source === "ink_selection" ? { selection_observation: generatedLessonPlan.camera_observation } : { camera_observation: generatedLessonPlan.camera_observation } : {},
         ...input.request_source === "self_contained" ? {} : { request_source: input.request_source }

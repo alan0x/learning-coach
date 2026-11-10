@@ -3060,6 +3060,7 @@ async function main(): Promise<void> {
         lesson_plan_model_calls: generatedLessonPlan.model_calls,
         lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
         lesson_plan_plugins: generatedLessonPlan.plugins,
+        structured_metadata: { lesson_plan_plugins: generatedLessonPlan.plugins },
         published_parts: publishedParts,
         ...(generatedLessonPlan.camera_observation
           ? input.request_source === "ink_selection"
