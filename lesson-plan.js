@@ -10591,7 +10591,10 @@ function canonicalizeState(state) {
   };
 }
 
-// src/rearrangement.ts
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/solids.js
+var POLYHEDRON_REACH = { tetrahedron: 1 / Math.sqrt(3), octahedron: 1, dodecahedron: 0.7947, icosahedron: 0.8507 };
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/rearrangement.js
 var REARRANGEMENT_CONSTRUCTIONS = {
   right_triangle_square: {
     title: "\u76F4\u89D2\u4E09\u89D2\u5F62\u91CD\u6392\u4E0E\u9762\u79EF\u5173\u7CFB",
@@ -10628,10 +10631,10 @@ var REARRANGEMENT_CONSTRUCTIONS = {
   }
 };
 var REARRANGEMENT_FACTS = REARRANGEMENT_CONSTRUCTIONS;
-var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
 function rearrangementRecipe(construction, first, second) {
   const definition = REARRANGEMENT_CONSTRUCTIONS[construction];
-  if (!definition) return void 0;
+  if (!definition)
+    return void 0;
   const gap = Math.max(first, second) * 0.35;
   if (construction === "right_triangle_square") {
     const side = first + second;
@@ -10674,6 +10677,498 @@ function rearrangementRecipe(construction, first, second) {
   }
   return void 0;
 }
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/geometry.js
+var write = (input, kind, content) => ({ do: "write", as: input.as, kind, role: input.role, content, place: input.place });
+function buildCircleAndArc(input) {
+  const { radius, angle, t } = input;
+  const angleVariable = input.angle_number?.variable;
+  const angleExpression = input.angle_number?.expression;
+  const radiusVariable = input.radius_number?.variable;
+  const radiusExpression = radiusVariable ?? String(radius);
+  const maximumRadius = input.radius_number ? Math.max(Math.abs(input.radius_number.min), Math.abs(input.radius_number.max)) : radius;
+  const geometry = {
+    title: input.title,
+    axes: {
+      x: { min: -maximumRadius * 1.25, max: maximumRadius * 1.25, label: "x" },
+      y: { min: -maximumRadius * 1.25, max: maximumRadius * 1.25, label: "y" },
+      equal_scale: true
+    },
+    points: [
+      { as: "center", x: 0, y: 0, label: "O" },
+      {
+        as: "moving-point",
+        x: radius * Math.cos(angle),
+        y: radius * Math.sin(angle),
+        label: "P",
+        ...angleVariable ? { interaction: { kind: "angle_control", variable: angleVariable, center: "center" } } : {}
+      }
+    ],
+    circles: [{ as: "circle", center: "center", radius, label: radiusVariable ? t("\u534A\u5F84 r") : `r = ${radius}` }],
+    segments: [{ as: "radius", from: "center", to: "moving-point", style: "solid" }],
+    arcs: [{ as: "arc", center: "center", radius, start_angle: 0, end_angle: angle, label: t("\u5706\u5F27") }],
+    ...angleVariable || radiusVariable ? {
+      bindings: [
+        ...angleExpression ? [
+          { target: "moving-point.x", expression: `${radiusExpression}*cos(${angleExpression})` },
+          { target: "moving-point.y", expression: `${radiusExpression}*sin(${angleExpression})` },
+          { target: "arc.end_angle", expression: angleExpression }
+        ] : [],
+        ...radiusVariable ? [
+          { target: "circle.radius", expression: radiusVariable },
+          { target: "arc.radius", expression: radiusVariable }
+        ] : []
+      ]
+    } : {}
+  };
+  const base = input.as;
+  return {
+    actions: [write(input, "geometry", geometry)],
+    whole: base,
+    parts: {
+      whole: base,
+      circle: `${base}#circle`,
+      arc: `${base}#arc`,
+      radius: `${base}#radius`,
+      ...angleVariable ? { primary_control: `${base}#moving-point` } : {}
+    }
+  };
+}
+function buildCoordinateCircle(input) {
+  const { center, radius, t } = input;
+  const extent = input.maximum_radius * 1.5;
+  const binding = input.radius_binding;
+  const geometry = {
+    title: input.title,
+    axes: {
+      x: { min: center.x - extent, max: center.x + extent, label: "x" },
+      y: { min: center.y - extent, max: center.y + extent, label: "y" },
+      equal_scale: true
+    },
+    points: [{ as: "center", x: center.x, y: center.y, label: `(${center.x}, ${center.y})` }],
+    circles: [{ as: "circle", center: "center", radius, label: binding ? t("\u534A\u5F84 r") : `r = ${radius}` }],
+    ...binding ? { bindings: [{
+      target: "circle.radius",
+      expression: binding.expression,
+      ...binding.formula ? { allow_zero: true, label: { prefix: "r = ", precision: 2 } } : {}
+    }] } : {}
+  };
+  const base = input.as;
+  return {
+    actions: [write(input, "geometry", geometry)],
+    whole: base,
+    parts: {
+      whole: base,
+      circle: `${base}#circle`,
+      center: `${base}#center`,
+      radius: `${base}#circle`,
+      ...binding ? { primary_control: `${base}#circle` } : {}
+    }
+  };
+}
+function minimumExpression(value, variable) {
+  return `((${value})+(${variable})-abs((${value})-(${variable})))/2`;
+}
+function buildUnitSquareArray(input) {
+  const { t } = input;
+  const columnVariable = input.columns.variable;
+  const rowVariable = input.rows.variable;
+  const columns = Math.round(input.columns.initial);
+  const rows = Math.round(input.rows.initial);
+  const maximumColumns = Math.round(input.columns.max);
+  const maximumRows = Math.round(input.rows.max);
+  const points = [
+    { as: "boundary-bottom-left", x: 0, y: 0, visible: false },
+    { as: "boundary-bottom-right", x: columns, y: 0, visible: false },
+    { as: "boundary-top-right", x: columns, y: rows, visible: false },
+    { as: "boundary-top-left", x: 0, y: rows, visible: false },
+    { as: "unit-bottom-left", x: 0, y: 0, visible: false },
+    { as: "unit-bottom-right", x: 1, y: 0, visible: false },
+    { as: "unit-top-right", x: 1, y: 1, visible: false },
+    { as: "unit-top-left", x: 0, y: 1, visible: false }
+  ];
+  const segments = [];
+  const bindings = [
+    { target: "boundary-bottom-right.x", expression: columnVariable },
+    { target: "boundary-top-right.x", expression: columnVariable },
+    { target: "boundary-top-right.y", expression: rowVariable },
+    { target: "boundary-top-left.y", expression: rowVariable }
+  ];
+  for (let column = 0; column <= maximumColumns; column += 1) {
+    const x = Math.min(column, columns);
+    points.push({ as: `column-${column}-bottom`, x, y: 0, visible: false }, { as: `column-${column}-top`, x, y: rows, visible: false });
+    segments.push({
+      as: `column-${column}`,
+      from: `column-${column}-bottom`,
+      to: `column-${column}-top`,
+      style: column === 0 || column === maximumColumns ? "solid" : "dashed"
+    });
+    bindings.push({ target: `column-${column}-bottom.x`, expression: minimumExpression(column, columnVariable) }, { target: `column-${column}-top.x`, expression: minimumExpression(column, columnVariable) }, { target: `column-${column}-top.y`, expression: rowVariable });
+  }
+  for (let row = 0; row <= maximumRows; row += 1) {
+    const y = Math.min(row, rows);
+    points.push({ as: `row-${row}-left`, x: 0, y, visible: false }, { as: `row-${row}-right`, x: columns, y, visible: false });
+    segments.push({
+      as: `row-${row}`,
+      from: `row-${row}-left`,
+      to: `row-${row}-right`,
+      style: row === 0 || row === maximumRows ? "solid" : "dashed"
+    });
+    bindings.push({ target: `row-${row}-left.y`, expression: minimumExpression(row, rowVariable) }, { target: `row-${row}-right.x`, expression: columnVariable }, { target: `row-${row}-right.y`, expression: minimumExpression(row, rowVariable) });
+  }
+  const geometry = {
+    title: input.title,
+    caption: t("\u6BCF\u4E2A\u5C0F\u65B9\u683C\u9762\u79EF\u4E3A 1 \u5E73\u65B9\u5355\u4F4D\uFF1B\u6BCF\u884C\u65B9\u683C\u6570 \xD7 \u884C\u6570 = \u65B9\u683C\u603B\u6570 = \u957F\u65B9\u5F62\u9762\u79EF\u3002"),
+    axes: {
+      x: { min: -0.75, max: maximumColumns + 0.75, label: t("\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09") },
+      y: { min: -0.75, max: maximumRows + 0.75, label: t("\u884C\u6570\uFF08\u5BBD\uFF09") },
+      equal_scale: true
+    },
+    points,
+    polygons: [
+      { as: "interior", points: ["boundary-bottom-left", "boundary-bottom-right", "boundary-top-right", "boundary-top-left"], tone: "primary" },
+      { as: "unit-square", points: ["unit-bottom-left", "unit-bottom-right", "unit-top-right", "unit-top-left"], label: t("1 \u5E73\u65B9\u5355\u4F4D"), tone: "accent" }
+    ],
+    segments,
+    bindings
+  };
+  const base = input.as;
+  return {
+    actions: [write(input, "geometry", geometry)],
+    whole: base,
+    parts: {
+      whole: base,
+      unit_square: `${base}#unit-square`,
+      row: `${base}#row-1`,
+      column: `${base}#column-1`,
+      interior: `${base}#interior`,
+      boundary: `${base}#interior`,
+      primary_control: `${base}#interior`,
+      secondary_control: `${base}#interior`
+    }
+  };
+}
+function linearExpression(start, end, progress) {
+  return `${start}+(${end - start})*(${progress})`;
+}
+function buildCircleAreaRearrangement(input) {
+  const { radius: r, t } = input;
+  const base = input.as;
+  const progress = input.progress?.expression ?? "0";
+  const initial = input.progress?.initial ?? 0;
+  const actions = [];
+  for (const [panel, n] of [8, 16].entries()) {
+    const id = panel === 0 ? base : `${base}-refined`;
+    const angle = 2 * Math.PI / n, chord = 2 * r * Math.sin(angle / 2), height = r * Math.cos(angle / 2);
+    const points = [];
+    const arcs = [];
+    const bindings = [];
+    for (let i = 0; i < n; i++) {
+      const center = `center-${i}`, sector = `sector-${i}`;
+      const up = i % 2 === 0;
+      const endX = i / 2 * chord, endY = up ? 0 : height;
+      const start = i * angle, end = (up ? Math.PI / 2 : -Math.PI / 2) - angle / 2;
+      points.push({ as: center, x: endX * initial, y: endY * initial, visible: false });
+      arcs.push({ as: sector, center, radius: r, start_angle: start + (end - start) * initial, end_angle: start + angle + (end - start) * initial, filled: true });
+      if (input.progress)
+        bindings.push({ target: `${center}.x`, expression: `${endX}*(${progress})` }, { target: `${center}.y`, expression: `${endY}*(${progress})` }, { target: `${sector}.start_angle`, expression: linearExpression(start, end, progress) }, { target: `${sector}.end_angle`, expression: linearExpression(start + angle, end + angle, progress) });
+    }
+    actions.push({ do: "write", as: id, kind: "geometry", role: input.role, place: panel === 0 ? input.place : { relation: "below", anchor: base, gap: "normal" }, content: {
+      title: t("{{v0}} \u7B49\u5206\u5706\u7684\u9762\u79EF\u91CD\u6392", { v0: n }),
+      caption: t("\u534A\u5F84 r={{v0}}\uFF1B\u6BCF\u5757\u5747\u4E3A\u771F\u5B9E\u6247\u5F62\uFF0C\u91CD\u6392\u9762\u79EF\u4E0D\u53D8\u3002\u6709\u9650\u7B49\u5206\u7684\u8FB9\u7F18\u4ECD\u5F2F\u66F2\uFF1B\u7B49\u5206\u8D8A\u7EC6\uFF0C\u5E95\u8D8B\u8FD1 \u03C0r\uFF0C\u9AD8\u8D8B\u8FD1 r\uFF0C\u9762\u79EF\u4E3A \u03C0r\xB2\u3002", { v0: r }),
+      axes: { x: { min: -r * 1.3, max: Math.PI * r + r }, y: { min: -r * 1.3, max: r * 1.6 }, equal_scale: true },
+      points,
+      arcs,
+      ...bindings.length ? { bindings } : {}
+    } });
+  }
+  return { actions, whole: base, parts: { whole: base, ...input.progress ? { primary_control: base } : {} } };
+}
+function transformedPoint(point, pose) {
+  const angle = pose.angle ?? 0;
+  return [
+    pose.x + point[0] * Math.cos(angle) - point[1] * Math.sin(angle),
+    pose.y + point[0] * Math.sin(angle) + point[1] * Math.cos(angle)
+  ];
+}
+function buildGeometricRearrangement(input) {
+  const { construction, legs: { a: legA, b: legB } } = input;
+  const base = input.as;
+  const recipe = rearrangementRecipe(construction, legA, legB);
+  if (!recipe)
+    throw new Error(`Unsupported geometric construction '${String(construction)}'`);
+  const facts = REARRANGEMENT_CONSTRUCTIONS[construction];
+  const progressExpression = input.progress?.expression ?? "0";
+  const progressInitial = input.progress?.initial ?? 0;
+  const pieces = recipe.pieces.map((piece, index) => ({ ...piece, role: `piece-${index + 1}` }));
+  const targetPoints = recipe.target.map(([x, y], index) => ({ as: `target-point-${index + 1}`, x, y, visible: false }));
+  const points = [
+    ...targetPoints,
+    ...pieces.flatMap((piece) => {
+      const pose = {
+        x: piece.start.x + (piece.end.x - piece.start.x) * progressInitial,
+        y: piece.start.y + (piece.end.y - piece.start.y) * progressInitial,
+        angle: (piece.start.angle ?? 0) + ((piece.end.angle ?? 0) - (piece.start.angle ?? 0)) * progressInitial
+      };
+      return piece.points.map((point, pointIndex) => {
+        const [x, y] = transformedPoint(point, pose);
+        return { as: `${piece.role}-point-${pointIndex + 1}`, x, y, visible: false };
+      });
+    })
+  ];
+  const polygons = [
+    { as: "target-shape", points: targetPoints.map((point) => point.as), tone: "neutral" },
+    ...pieces.map((piece) => ({
+      as: piece.role,
+      points: piece.points.map((_point, index) => `${piece.role}-point-${index + 1}`),
+      label: piece.label,
+      tone: piece.tone
+    }))
+  ];
+  const segments = [
+    ...recipe.target.map((_point, pointIndex) => ({
+      as: `target-edge-${pointIndex + 1}`,
+      from: `target-point-${pointIndex + 1}`,
+      to: `target-point-${(pointIndex + 1) % recipe.target.length + 1}`,
+      style: "dashed",
+      ...pointIndex === 2 ? { label: construction === "triangle_to_rectangle" ? "a" : "a+b" } : {}
+    }))
+  ];
+  if (construction !== "square_area_identity") {
+    segments.push({ as: "leg-a", from: "piece-1-point-1", to: "piece-1-point-2", style: "solid", label: "a" }, { as: "leg-b", from: "piece-1-point-1", to: "piece-1-point-3", style: "solid", label: "b" }, { as: "hypotenuse", from: "piece-1-point-2", to: "piece-1-point-3", style: "solid", label: "c" });
+    if (construction === "right_triangle_square") {
+      const marker = Math.min(legA, legB) * 0.12;
+      const pose = pieces[0].start;
+      for (const [index, point] of [[marker, 0], [marker, marker], [0, marker]].entries()) {
+        const [x, y] = transformedPoint(point, pose);
+        points.push({ as: `right-angle-point-${index + 1}`, x, y, visible: false });
+      }
+      segments.push({ as: "right-angle-1", from: "right-angle-point-1", to: "right-angle-point-2", style: "solid" }, { as: "right-angle-2", from: "right-angle-point-2", to: "right-angle-point-3", style: "solid" });
+    }
+  }
+  const bindings = input.progress ? pieces.flatMap((piece) => piece.points.flatMap(([localX, localY], pointIndex) => {
+    const translateX = linearExpression(piece.start.x, piece.end.x, progressExpression);
+    const translateY = linearExpression(piece.start.y, piece.end.y, progressExpression);
+    const angle = linearExpression(piece.start.angle ?? 0, piece.end.angle ?? 0, progressExpression);
+    const target = `${piece.role}-point-${pointIndex + 1}`;
+    return [
+      { target: `${target}.x`, expression: `(${translateX})+(${localX})*cos(${angle})-(${localY})*sin(${angle})` },
+      { target: `${target}.y`, expression: `(${translateY})+(${localX})*sin(${angle})+(${localY})*cos(${angle})` }
+    ];
+  })) : [];
+  if (construction === "right_triangle_square") {
+    const start = (legA + legB) / 2;
+    const endX = legA + legB / 2, endY = legB / 2;
+    points.push({ as: "central-area", x: start + (endX - start) * progressInitial, y: start + (endY - start) * progressInitial, visible: false });
+    if (input.progress)
+      bindings.push({ target: "central-area.x", expression: linearExpression(start, endX, progressExpression) }, { target: "central-area.y", expression: linearExpression(start, endY, progressExpression) });
+  }
+  const endpointPoints = [
+    ...recipe.target,
+    ...pieces.flatMap((piece) => [piece.start, piece.end].flatMap((pose) => piece.points.map((point) => transformedPoint(point, pose))))
+  ];
+  const xs = endpointPoints.map((point) => point[0]);
+  const ys = endpointPoints.map((point) => point[1]);
+  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1);
+  const margin = span * 0.1;
+  const geometry = {
+    // A fixed recipe owns its name just as it owns its shapes and proof.
+    title: recipe.title,
+    caption: facts.caption,
+    axes: {
+      x: { min: Math.min(...xs) - margin, max: Math.max(...xs) + margin },
+      y: { min: Math.min(...ys) - margin, max: Math.max(...ys) + margin },
+      equal_scale: true
+    },
+    points,
+    polygons,
+    segments,
+    ...bindings.length ? { bindings } : {}
+  };
+  return {
+    actions: [{ do: "write", as: base, kind: "geometry", role: input.role, content: geometry, place: input.place }],
+    whole: base,
+    parts: {
+      whole: base,
+      target_shape: `${base}#target-shape`,
+      outer_square: `${base}#target-shape`,
+      ...Object.fromEntries(pieces.map((piece, index) => [`piece_${index + 1}`, `${base}#${piece.role}`])),
+      central_area: `${base}#${construction === "right_triangle_square" ? "central-area" : "target-shape"}`,
+      ...construction !== "square_area_identity" ? { leg_a: `${base}#leg-a`, leg_b: `${base}#leg-b`, hypotenuse: `${base}#hypotenuse` } : {},
+      ...input.progress ? { primary_control: base } : {}
+    }
+  };
+}
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
+function buildUnitCircle(input) {
+  const theta = input.angle ? input.angle.initial : input.fixed_angle ?? Math.PI / 3;
+  const variable = input.angle?.variable;
+  const angleExpression = input.angle?.expression;
+  const circle = input.graph ? `${input.as}-circle` : input.as;
+  const geometry = {
+    ...input.text.title !== void 0 ? { title: input.text.title } : {},
+    axes: {
+      x: { min: -1.25, max: 1.25, label: "x" },
+      y: { min: -1.25, max: 1.25, label: "y" },
+      equal_scale: true
+    },
+    points: [
+      { as: "origin", x: 0, y: 0, label: "O" },
+      {
+        as: "moving-point",
+        x: Math.cos(theta),
+        y: Math.sin(theta),
+        label: input.text.point_label ?? "P(cos \u03B8, sin \u03B8)",
+        ...variable ? { interaction: { kind: "angle_control", variable, center: "origin" } } : {}
+      },
+      { as: "projection-foot", x: Math.cos(theta), y: 0, ...input.text.foot_label !== void 0 ? { label: input.text.foot_label } : {} }
+    ],
+    circles: [{ as: "unit-circle", center: "origin", radius: 1, label: "r = 1" }],
+    segments: [
+      { as: "radius", from: "origin", to: "moving-point", ...input.text.radius_label !== void 0 ? { label: input.text.radius_label } : {}, style: "solid" },
+      { as: "projection", from: "moving-point", to: "projection-foot", style: "projection", label: "sin \u03B8" }
+    ],
+    arcs: [{ as: "angle", center: "origin", radius: 0.28, start_angle: 0, end_angle: theta, label: "\u03B8" }],
+    ...angleExpression ? {
+      bindings: [
+        { target: "moving-point.x", expression: `cos(${angleExpression})` },
+        { target: "moving-point.y", expression: `sin(${angleExpression})` },
+        { target: "projection-foot.x", expression: `cos(${angleExpression})` },
+        { target: "angle.end_angle", expression: angleExpression }
+      ]
+    } : {}
+  };
+  const circleParts = {
+    unit_circle: `${circle}#unit-circle`,
+    moving_point: `${circle}#moving-point`,
+    radius: `${circle}#radius`,
+    projection_line: `${circle}#projection`
+  };
+  if (!input.graph) {
+    return {
+      actions: [{ do: "write", as: circle, kind: "geometry", role: input.role, content: geometry, place: input.place }],
+      whole: circle,
+      parts: { whole: circle, ...circleParts, ...variable ? { primary_control: `${circle}#moving-point` } : {} }
+    };
+  }
+  const { projection, title, link_label, group_label } = input.graph;
+  const plot = `${input.as}-plot`;
+  const plotContent = {
+    title,
+    axes: {
+      x: { min: input.angle?.min ?? 0, max: input.angle?.max ?? Math.PI * 2, label: "\u03B8" },
+      y: { min: -1.2, max: 1.2, label: "y" }
+    },
+    curves: [{ as: "primary-curve", expression: `${projection}(x)`, label: `y = ${projection}(x)` }],
+    points: [{ as: "moving-point", x: theta, y: Math[projection](theta), label: `P(\u03B8, ${projection}(\u03B8))` }],
+    ...angleExpression ? {
+      bindings: [
+        { target: "moving-point.x", expression: angleExpression },
+        { target: "moving-point.y", expression: `${projection}(${angleExpression})` }
+      ]
+    } : {}
+  };
+  return {
+    actions: [
+      { do: "write", as: circle, kind: "geometry", role: input.role, content: geometry, place: input.place },
+      { do: "write", as: plot, kind: "plot", role: input.role, content: plotContent, place: { relation: "right_of", anchor: circle, gap: "normal" } },
+      { do: "connect", as: `${input.as}-link`, from: circle, to: plot, relation: "maps_to", label: link_label },
+      { do: "group", as: input.as, role: input.role, label: group_label, members: [circle, plot] }
+    ],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      ...circleParts,
+      primary_curve: `${plot}#primary-curve`,
+      ...variable ? { primary_control: `${circle}#moving-point` } : {}
+    }
+  };
+}
+function buildCirclePolygons(input) {
+  const { radius } = input;
+  const driven = typeof input.sides === "number" ? void 0 : input.sides;
+  const sides = typeof input.sides === "number" ? input.sides : input.sides.initial;
+  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven?.min ?? sides)) * 1.18 : radius * 1.3;
+  const polygon = (as, label) => ({
+    as,
+    center: "center",
+    radius,
+    sides,
+    relation: as,
+    ...input.circumscribed ? { tone: as === "inscribed" ? "primary" : "accent" } : {},
+    label,
+    show_measurements: true
+  });
+  const content = {
+    ...input.text.title !== void 0 ? { title: input.text.title } : {},
+    axes: { x: { min: -extent, max: extent, label: "x" }, y: { min: -extent, max: extent, label: "y" }, equal_scale: true },
+    points: [{ as: "center", x: 0, y: 0, label: "O" }],
+    circles: [{ as: "circle", center: "center", radius, label: `r = ${radius}` }],
+    regular_polygons: [
+      polygon("inscribed", input.text.inscribed_label),
+      ...input.circumscribed ? [polygon("circumscribed", input.text.circumscribed_label)] : []
+    ],
+    ...input.text.caption !== void 0 ? { caption: input.text.caption } : {},
+    ...driven ? { bindings: [
+      { target: "inscribed.sides", expression: driven.expression },
+      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven.expression }] : []
+    ] } : {}
+  };
+  return {
+    actions: [{ do: "write", as: input.as, kind: "geometry", role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      circle: `${input.as}#circle`,
+      inscribed_polygon: `${input.as}#inscribed`,
+      ...input.circumscribed ? { circumscribed_polygon: `${input.as}#circumscribed` } : {},
+      primary_control: input.as
+    }
+  };
+}
+var functionCurveId = (index) => index === 0 ? "primary-curve" : `curve-${String(index + 1).padStart(2, "0")}`;
+function replaceIdentifier(expression, source, target) {
+  return expression.replace(new RegExp(`\\b${source}\\b`, "gu"), target);
+}
+var FUNCTION_PLOT_POINT_IDS = { samples: ["moving-point", "second-point"], references: ["reference-a", "reference-b"] };
+function buildFunctionPlot(input) {
+  const primary = input.curves[0].expression;
+  const content = {
+    ...input.title !== void 0 ? { title: input.title } : {},
+    axes: input.axes,
+    curves: input.curves.map((curve, index) => ({ as: functionCurveId(index), ...curve }))
+  };
+  if (input.samples?.length) {
+    content.points = input.samples.map((sample, index) => ({ as: FUNCTION_PLOT_POINT_IDS.samples[index], x: sample.x, y: sample.y, label: sample.label }));
+    content.bindings = input.samples.flatMap((sample, index) => {
+      const point = FUNCTION_PLOT_POINT_IDS.samples[index];
+      return [
+        { target: `${point}.x`, expression: sample.x_expression },
+        { target: `${point}.y`, expression: replaceIdentifier(primary, "x", sample.x_expression) }
+      ];
+    });
+    if (input.samples.length === 2)
+      content.measurement = "secant";
+  } else if (input.references?.length) {
+    content.points = input.references.map((reference, index) => ({ as: FUNCTION_PLOT_POINT_IDS.references[index], x: reference.x, y: reference.y, label: reference.label }));
+    content.bindings = input.references.map((reference, index) => ({ target: `${FUNCTION_PLOT_POINT_IDS.references[index]}.y`, expression: replaceIdentifier(primary, "x", String(reference.x)) }));
+    content.measurement = "secant";
+    content.sample_input = "fixed_x";
+  }
+  return {
+    actions: [{ do: "write", as: input.as, kind: "plot", role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      primary_curve: `${input.as}#primary-curve`,
+      ...input.samples?.length ? { moving_point: `${input.as}#moving-point` } : {}
+    }
+  };
+}
+
+// src/rearrangement.ts
+var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
 
 // src/plugins/math.ts
 var MATH_RECIPES = {
@@ -11116,7 +11611,7 @@ function optionalStringArray(value, fallback, path) {
 function assertRange(min, max, path) {
   if (!(min < max)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "range minimum must be smaller than maximum");
 }
-function replaceIdentifier(expression, source, target) {
+function replaceIdentifier2(expression, source, target) {
   return expression.replace(new RegExp(`\\b${source}\\b`, "gu"), target);
 }
 function safeFunctionExpression(value, fallback, variables, path) {
@@ -11197,10 +11692,10 @@ function includeWrittenCardsInFocus(actions) {
     if (action.do !== "focus") return;
     const focus = action;
     for (const earlier of actions.slice(0, index)) {
-      const write = earlier;
-      if (write.do !== "write" || !write.as || !["math", "note", "text"].includes(String(write.kind))) continue;
-      if (phase(write) > phase(action) || focus.targets.includes(write.as)) continue;
-      focus.targets.push(write.as);
+      const write2 = earlier;
+      if (write2.do !== "write" || !write2.as || !["math", "note", "text"].includes(String(write2.kind))) continue;
+      if (phase(write2) > phase(action) || focus.targets.includes(write2.as)) continue;
+      focus.targets.push(write2.as);
     }
   });
 }
@@ -13163,176 +13658,6 @@ var CompiledVisualRegistry = class {
   }
 };
 
-// node_modules/octos-lesson-language/dist/packages/plugin-math/src/solids.js
-var POLYHEDRON_REACH = { tetrahedron: 1 / Math.sqrt(3), octahedron: 1, dodecahedron: 0.7947, icosahedron: 0.8507 };
-
-// node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
-function buildUnitCircle(input) {
-  const theta = input.angle ? input.angle.initial : input.fixed_angle ?? Math.PI / 3;
-  const variable = input.angle?.variable;
-  const angleExpression = input.angle?.expression;
-  const circle = input.graph ? `${input.as}-circle` : input.as;
-  const geometry = {
-    ...input.text.title !== void 0 ? { title: input.text.title } : {},
-    axes: {
-      x: { min: -1.25, max: 1.25, label: "x" },
-      y: { min: -1.25, max: 1.25, label: "y" },
-      equal_scale: true
-    },
-    points: [
-      { as: "origin", x: 0, y: 0, label: "O" },
-      {
-        as: "moving-point",
-        x: Math.cos(theta),
-        y: Math.sin(theta),
-        label: input.text.point_label ?? "P(cos \u03B8, sin \u03B8)",
-        ...variable ? { interaction: { kind: "angle_control", variable, center: "origin" } } : {}
-      },
-      { as: "projection-foot", x: Math.cos(theta), y: 0, ...input.text.foot_label !== void 0 ? { label: input.text.foot_label } : {} }
-    ],
-    circles: [{ as: "unit-circle", center: "origin", radius: 1, label: "r = 1" }],
-    segments: [
-      { as: "radius", from: "origin", to: "moving-point", ...input.text.radius_label !== void 0 ? { label: input.text.radius_label } : {}, style: "solid" },
-      { as: "projection", from: "moving-point", to: "projection-foot", style: "projection", label: "sin \u03B8" }
-    ],
-    arcs: [{ as: "angle", center: "origin", radius: 0.28, start_angle: 0, end_angle: theta, label: "\u03B8" }],
-    ...angleExpression ? {
-      bindings: [
-        { target: "moving-point.x", expression: `cos(${angleExpression})` },
-        { target: "moving-point.y", expression: `sin(${angleExpression})` },
-        { target: "projection-foot.x", expression: `cos(${angleExpression})` },
-        { target: "angle.end_angle", expression: angleExpression }
-      ]
-    } : {}
-  };
-  const circleParts = {
-    unit_circle: `${circle}#unit-circle`,
-    moving_point: `${circle}#moving-point`,
-    radius: `${circle}#radius`,
-    projection_line: `${circle}#projection`
-  };
-  if (!input.graph) {
-    return {
-      actions: [{ do: "write", as: circle, kind: "geometry", role: input.role, content: geometry, place: input.place }],
-      whole: circle,
-      parts: { whole: circle, ...circleParts, ...variable ? { primary_control: `${circle}#moving-point` } : {} }
-    };
-  }
-  const { projection, title, link_label, group_label } = input.graph;
-  const plot = `${input.as}-plot`;
-  const plotContent = {
-    title,
-    axes: {
-      x: { min: input.angle?.min ?? 0, max: input.angle?.max ?? Math.PI * 2, label: "\u03B8" },
-      y: { min: -1.2, max: 1.2, label: "y" }
-    },
-    curves: [{ as: "primary-curve", expression: `${projection}(x)`, label: `y = ${projection}(x)` }],
-    points: [{ as: "moving-point", x: theta, y: Math[projection](theta), label: `P(\u03B8, ${projection}(\u03B8))` }],
-    ...angleExpression ? {
-      bindings: [
-        { target: "moving-point.x", expression: angleExpression },
-        { target: "moving-point.y", expression: `${projection}(${angleExpression})` }
-      ]
-    } : {}
-  };
-  return {
-    actions: [
-      { do: "write", as: circle, kind: "geometry", role: input.role, content: geometry, place: input.place },
-      { do: "write", as: plot, kind: "plot", role: input.role, content: plotContent, place: { relation: "right_of", anchor: circle, gap: "normal" } },
-      { do: "connect", as: `${input.as}-link`, from: circle, to: plot, relation: "maps_to", label: link_label },
-      { do: "group", as: input.as, role: input.role, label: group_label, members: [circle, plot] }
-    ],
-    whole: input.as,
-    parts: {
-      whole: input.as,
-      ...circleParts,
-      primary_curve: `${plot}#primary-curve`,
-      ...variable ? { primary_control: `${circle}#moving-point` } : {}
-    }
-  };
-}
-function buildCirclePolygons(input) {
-  const { radius } = input;
-  const driven = typeof input.sides === "number" ? void 0 : input.sides;
-  const sides = typeof input.sides === "number" ? input.sides : input.sides.initial;
-  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven?.min ?? sides)) * 1.18 : radius * 1.3;
-  const polygon = (as, label) => ({
-    as,
-    center: "center",
-    radius,
-    sides,
-    relation: as,
-    ...input.circumscribed ? { tone: as === "inscribed" ? "primary" : "accent" } : {},
-    label,
-    show_measurements: true
-  });
-  const content = {
-    ...input.text.title !== void 0 ? { title: input.text.title } : {},
-    axes: { x: { min: -extent, max: extent, label: "x" }, y: { min: -extent, max: extent, label: "y" }, equal_scale: true },
-    points: [{ as: "center", x: 0, y: 0, label: "O" }],
-    circles: [{ as: "circle", center: "center", radius, label: `r = ${radius}` }],
-    regular_polygons: [
-      polygon("inscribed", input.text.inscribed_label),
-      ...input.circumscribed ? [polygon("circumscribed", input.text.circumscribed_label)] : []
-    ],
-    ...input.text.caption !== void 0 ? { caption: input.text.caption } : {},
-    ...driven ? { bindings: [
-      { target: "inscribed.sides", expression: driven.expression },
-      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven.expression }] : []
-    ] } : {}
-  };
-  return {
-    actions: [{ do: "write", as: input.as, kind: "geometry", role: input.role, content, place: input.place }],
-    whole: input.as,
-    parts: {
-      whole: input.as,
-      circle: `${input.as}#circle`,
-      inscribed_polygon: `${input.as}#inscribed`,
-      ...input.circumscribed ? { circumscribed_polygon: `${input.as}#circumscribed` } : {},
-      primary_control: input.as
-    }
-  };
-}
-var functionCurveId = (index) => index === 0 ? "primary-curve" : `curve-${String(index + 1).padStart(2, "0")}`;
-function replaceIdentifier2(expression, source, target) {
-  return expression.replace(new RegExp(`\\b${source}\\b`, "gu"), target);
-}
-var FUNCTION_PLOT_POINT_IDS = { samples: ["moving-point", "second-point"], references: ["reference-a", "reference-b"] };
-function buildFunctionPlot(input) {
-  const primary = input.curves[0].expression;
-  const content = {
-    ...input.title !== void 0 ? { title: input.title } : {},
-    axes: input.axes,
-    curves: input.curves.map((curve, index) => ({ as: functionCurveId(index), ...curve }))
-  };
-  if (input.samples?.length) {
-    content.points = input.samples.map((sample, index) => ({ as: FUNCTION_PLOT_POINT_IDS.samples[index], x: sample.x, y: sample.y, label: sample.label }));
-    content.bindings = input.samples.flatMap((sample, index) => {
-      const point = FUNCTION_PLOT_POINT_IDS.samples[index];
-      return [
-        { target: `${point}.x`, expression: sample.x_expression },
-        { target: `${point}.y`, expression: replaceIdentifier2(primary, "x", sample.x_expression) }
-      ];
-    });
-    if (input.samples.length === 2)
-      content.measurement = "secant";
-  } else if (input.references?.length) {
-    content.points = input.references.map((reference, index) => ({ as: FUNCTION_PLOT_POINT_IDS.references[index], x: reference.x, y: reference.y, label: reference.label }));
-    content.bindings = input.references.map((reference, index) => ({ target: `${FUNCTION_PLOT_POINT_IDS.references[index]}.y`, expression: replaceIdentifier2(primary, "x", String(reference.x)) }));
-    content.measurement = "secant";
-    content.sample_input = "fixed_x";
-  }
-  return {
-    actions: [{ do: "write", as: input.as, kind: "plot", role: input.role, content, place: input.place }],
-    whole: input.as,
-    parts: {
-      whole: input.as,
-      primary_curve: `${input.as}#primary-curve`,
-      ...input.samples?.length ? { moving_point: `${input.as}#moving-point` } : {}
-    }
-  };
-}
-
 // src/function-viewport.ts
 function niceRange(values, includeZero = true) {
   const finite = values.filter((v) => Number.isFinite(v) && Math.abs(v) < 1e12).sort((a, b) => a - b);
@@ -13556,6 +13881,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     ])
   };
 }
+var translator = (plan) => (source, values) => compileText(plan, source, values);
 function builtVisual(built) {
   return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
 }
@@ -13628,55 +13954,17 @@ function compileCircleAndArc(base, content, role, placement, plan, path) {
   const angleScale = angleScaleForUnit(angleDefinition?.unit);
   const angle = (angleDefinition?.initial ?? optionalNumber(input.angle, Math.PI / 3, `${path}.angle`)) * angleScale;
   const angleVariable = angleNumber ? variableAlias(angleNumber) : void 0;
-  const radiusVariable = radiusNumber ? variableAlias(radiusNumber) : void 0;
-  const angleExpression = angleVariable ? scaledAngleExpression(angleVariable, angleScale) : void 0;
-  const radiusExpression = radiusVariable ?? String(radius);
-  const maximumRadius = radiusDefinition ? Math.max(Math.abs(radiusDefinition.min), Math.abs(radiusDefinition.max)) : radius;
-  const geometry = {
+  return builtVisual(buildCircleAndArc({
+    as: base,
+    role,
+    place: placement,
+    t: translator(plan),
     title: optionalText(input.title, compileText(plan, "\u5706\u3001\u5706\u5FC3\u89D2\u4E0E\u5706\u5F27"), `${path}.title`),
-    axes: {
-      x: { min: -maximumRadius * 1.25, max: maximumRadius * 1.25, label: "x" },
-      y: { min: -maximumRadius * 1.25, max: maximumRadius * 1.25, label: "y" },
-      equal_scale: true
-    },
-    points: [
-      { as: "center", x: 0, y: 0, label: "O" },
-      {
-        as: "moving-point",
-        x: radius * Math.cos(angle),
-        y: radius * Math.sin(angle),
-        label: "P",
-        ...angleVariable ? { interaction: { kind: "angle_control", variable: angleVariable, center: "center" } } : {}
-      }
-    ],
-    circles: [{ as: "circle", center: "center", radius, label: radiusVariable ? compileText(plan, "\u534A\u5F84 r") : `r = ${radius}` }],
-    segments: [{ as: "radius", from: "center", to: "moving-point", style: "solid" }],
-    arcs: [{ as: "arc", center: "center", radius, start_angle: 0, end_angle: angle, label: compileText(plan, "\u5706\u5F27") }],
-    ...angleVariable || radiusVariable ? {
-      bindings: [
-        ...angleExpression ? [
-          { target: "moving-point.x", expression: `${radiusExpression}*cos(${angleExpression})` },
-          { target: "moving-point.y", expression: `${radiusExpression}*sin(${angleExpression})` },
-          { target: "arc.end_angle", expression: angleExpression }
-        ] : [],
-        ...radiusVariable ? [
-          { target: "circle.radius", expression: radiusVariable },
-          { target: "arc.radius", expression: radiusVariable }
-        ] : []
-      ]
-    } : {}
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }],
-    whole: base,
-    parts: new Map([
-      ["whole", base],
-      ["circle", `${base}#circle`],
-      ["arc", `${base}#arc`],
-      ["radius", `${base}#radius`],
-      ...angleVariable ? [["primary_control", `${base}#moving-point`]] : []
-    ])
-  };
+    radius,
+    angle,
+    ...angleVariable ? { angle_number: { variable: angleVariable, expression: scaledAngleExpression(angleVariable, angleScale) } } : {},
+    ...radiusNumber && radiusDefinition ? { radius_number: { variable: variableAlias(radiusNumber), min: radiusDefinition.min, max: radiusDefinition.max } } : {}
+  }));
 }
 function compileCubeWithSection(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -13867,36 +14155,17 @@ function compileCoordinateCircle(base, content, role, placement, plan, path) {
   const sampledRadii = radiusDefinition && formula ? Array.from({ length: 201 }, (_, i) => radiusAt(radiusDefinition.min + (radiusDefinition.max - radiusDefinition.min) * i / 200)) : [];
   if (sampledRadii.some((value) => !Number.isFinite(value) || value < 0)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius_expression`, "radius expression has an invalid sampled value");
   const maximumRadius = formula ? Math.max(radius, ...sampledRadii, 1) : radiusDefinition ? Math.max(Math.abs(radiusDefinition.min), Math.abs(radiusDefinition.max)) : radius;
-  const extent = maximumRadius * 1.5;
-  const geometry = {
+  return builtVisual(buildCoordinateCircle({
+    as: base,
+    role,
+    place: placement,
+    t: translator(plan),
     title: optionalText(input.title, compileText(plan, "\u5750\u6807\u7CFB\u4E2D\u7684\u5706"), `${path}.title`),
-    axes: {
-      x: { min: centerX - extent, max: centerX + extent, label: "x" },
-      y: { min: centerY - extent, max: centerY + extent, label: "y" },
-      equal_scale: true
-    },
-    points: [{ as: "center", x: centerX, y: centerY, label: `(${centerX}, ${centerY})` }],
-    circles: [{ as: "circle", center: "center", radius, label: variable ? compileText(plan, "\u534A\u5F84 r") : `r = ${radius}` }],
-    ...variable ? { bindings: [{
-      target: "circle.radius",
-      expression: formula ? replaceIdentifier(formula, "n1", variable) : variable,
-      ...formula ? { allow_zero: true, label: { prefix: "r = ", precision: 2 } } : {}
-    }] } : {}
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }],
-    whole: base,
-    parts: new Map([
-      ["whole", base],
-      ["circle", `${base}#circle`],
-      ["center", `${base}#center`],
-      ["radius", `${base}#circle`],
-      ...variable ? [["primary_control", `${base}#circle`]] : []
-    ])
-  };
-}
-function minimumExpression(value, variable) {
-  return `((${value})+(${variable})-abs((${value})-(${variable})))/2`;
+    center: { x: centerX, y: centerY },
+    radius,
+    maximum_radius: maximumRadius,
+    ...variable ? { radius_binding: { expression: formula ? replaceIdentifier2(formula, "n1", variable) : variable, formula: Boolean(formula) } } : {}
+  }));
 }
 function compileRectangleUnitSquareArray(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -13912,114 +14181,15 @@ function compileRectangleUnitSquareArray(base, content, role, placement, plan, p
   }
   const columnDefinition = numberDefinition(plan, columnNumber, `${path}.numbers[0]`);
   const rowDefinition = numberDefinition(plan, rowNumber, `${path}.numbers[1]`);
-  const columnVariable = variableAlias(columnNumber);
-  const rowVariable = variableAlias(rowNumber);
-  const columns = Math.round(columnDefinition.initial);
-  const rows = Math.round(rowDefinition.initial);
-  const maximumColumns = Math.round(columnDefinition.max);
-  const maximumRows = Math.round(rowDefinition.max);
-  const points = [
-    { as: "boundary-bottom-left", x: 0, y: 0, visible: false },
-    { as: "boundary-bottom-right", x: columns, y: 0, visible: false },
-    { as: "boundary-top-right", x: columns, y: rows, visible: false },
-    { as: "boundary-top-left", x: 0, y: rows, visible: false },
-    { as: "unit-bottom-left", x: 0, y: 0, visible: false },
-    { as: "unit-bottom-right", x: 1, y: 0, visible: false },
-    { as: "unit-top-right", x: 1, y: 1, visible: false },
-    { as: "unit-top-left", x: 0, y: 1, visible: false }
-  ];
-  const segments = [];
-  const bindings = [
-    { target: "boundary-bottom-right.x", expression: columnVariable },
-    { target: "boundary-top-right.x", expression: columnVariable },
-    { target: "boundary-top-right.y", expression: rowVariable },
-    { target: "boundary-top-left.y", expression: rowVariable }
-  ];
-  for (let column = 0; column <= maximumColumns; column += 1) {
-    const x = Math.min(column, columns);
-    points.push(
-      { as: `column-${column}-bottom`, x, y: 0, visible: false },
-      { as: `column-${column}-top`, x, y: rows, visible: false }
-    );
-    segments.push({
-      as: `column-${column}`,
-      from: `column-${column}-bottom`,
-      to: `column-${column}-top`,
-      style: column === 0 || column === maximumColumns ? "solid" : "dashed"
-    });
-    bindings.push(
-      { target: `column-${column}-bottom.x`, expression: minimumExpression(column, columnVariable) },
-      { target: `column-${column}-top.x`, expression: minimumExpression(column, columnVariable) },
-      { target: `column-${column}-top.y`, expression: rowVariable }
-    );
-  }
-  for (let row = 0; row <= maximumRows; row += 1) {
-    const y = Math.min(row, rows);
-    points.push(
-      { as: `row-${row}-left`, x: 0, y, visible: false },
-      { as: `row-${row}-right`, x: columns, y, visible: false }
-    );
-    segments.push({
-      as: `row-${row}`,
-      from: `row-${row}-left`,
-      to: `row-${row}-right`,
-      style: row === 0 || row === maximumRows ? "solid" : "dashed"
-    });
-    bindings.push(
-      { target: `row-${row}-left.y`, expression: minimumExpression(row, rowVariable) },
-      { target: `row-${row}-right.x`, expression: columnVariable },
-      { target: `row-${row}-right.y`, expression: minimumExpression(row, rowVariable) }
-    );
-  }
-  const geometry = {
+  return builtVisual(buildUnitSquareArray({
+    as: base,
+    role,
+    place: placement,
+    t: translator(plan),
     title: optionalText(input.title, compileText(plan, "\u5355\u4F4D\u6B63\u65B9\u5F62\u94FA\u6210\u957F\u65B9\u5F62"), `${path}.title`),
-    caption: compileText(plan, "\u6BCF\u4E2A\u5C0F\u65B9\u683C\u9762\u79EF\u4E3A 1 \u5E73\u65B9\u5355\u4F4D\uFF1B\u6BCF\u884C\u65B9\u683C\u6570 \xD7 \u884C\u6570 = \u65B9\u683C\u603B\u6570 = \u957F\u65B9\u5F62\u9762\u79EF\u3002"),
-    axes: {
-      x: { min: -0.75, max: maximumColumns + 0.75, label: compileText(plan, "\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09") },
-      y: { min: -0.75, max: maximumRows + 0.75, label: compileText(plan, "\u884C\u6570\uFF08\u5BBD\uFF09") },
-      equal_scale: true
-    },
-    points,
-    polygons: [
-      {
-        as: "interior",
-        points: ["boundary-bottom-left", "boundary-bottom-right", "boundary-top-right", "boundary-top-left"],
-        tone: "primary"
-      },
-      {
-        as: "unit-square",
-        points: ["unit-bottom-left", "unit-bottom-right", "unit-top-right", "unit-top-left"],
-        label: compileText(plan, "1 \u5E73\u65B9\u5355\u4F4D"),
-        tone: "accent"
-      }
-    ],
-    segments,
-    bindings
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }],
-    whole: base,
-    parts: /* @__PURE__ */ new Map([
-      ["whole", base],
-      ["unit_square", `${base}#unit-square`],
-      ["row", `${base}#row-1`],
-      ["column", `${base}#column-1`],
-      ["interior", `${base}#interior`],
-      ["boundary", `${base}#interior`],
-      ["primary_control", `${base}#interior`],
-      ["secondary_control", `${base}#interior`]
-    ])
-  };
-}
-function transformedPoint(point, pose) {
-  const angle = pose.angle ?? 0;
-  return [
-    pose.x + point[0] * Math.cos(angle) - point[1] * Math.sin(angle),
-    pose.y + point[0] * Math.sin(angle) + point[1] * Math.cos(angle)
-  ];
-}
-function linearExpression(start, end, progress) {
-  return `${start}+(${end - start})*(${progress})`;
+    columns: { variable: variableAlias(columnNumber), initial: columnDefinition.initial, max: columnDefinition.max },
+    rows: { variable: variableAlias(rowNumber), initial: rowDefinition.initial, max: rowDefinition.max }
+  }));
 }
 function compileGeometricRearrangement(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -14033,137 +14203,18 @@ function compileGeometricRearrangement(base, content, role, placement, plan, pat
   const number = content.numbers?.[0];
   const progressDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
   const progressVariable = number ? variableAlias(number) : void 0;
-  const progressExpression = progressDefinition && progressVariable ? `((${progressVariable})-(${progressDefinition.min}))/((${progressDefinition.max})-(${progressDefinition.min}))` : "0";
-  const recipe = rearrangementRecipe(construction, legA, legB);
-  if (!recipe) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
-  const facts = REARRANGEMENT_CONSTRUCTIONS[construction];
-  const progressInitial = progressDefinition ? (progressDefinition.initial - progressDefinition.min) / (progressDefinition.max - progressDefinition.min) : 0;
-  const pieces = recipe.pieces.map((piece, index) => ({ ...piece, role: `piece-${index + 1}` }));
-  const targetPoints = recipe.target.map(([x, y], index) => ({
-    as: `target-point-${index + 1}`,
-    x,
-    y,
-    visible: false
+  if (!rearrangementRecipe(construction, legA, legB)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.construction`, "unsupported geometric construction");
+  return builtVisual(buildGeometricRearrangement({
+    as: base,
+    role,
+    place: placement,
+    construction,
+    legs: { a: legA, b: legB },
+    ...progressDefinition && progressVariable ? { progress: {
+      expression: `((${progressVariable})-(${progressDefinition.min}))/((${progressDefinition.max})-(${progressDefinition.min}))`,
+      initial: (progressDefinition.initial - progressDefinition.min) / (progressDefinition.max - progressDefinition.min)
+    } } : {}
   }));
-  const points = [
-    ...targetPoints,
-    ...pieces.flatMap((piece) => {
-      const pose = {
-        x: piece.start.x + (piece.end.x - piece.start.x) * progressInitial,
-        y: piece.start.y + (piece.end.y - piece.start.y) * progressInitial,
-        angle: (piece.start.angle ?? 0) + ((piece.end.angle ?? 0) - (piece.start.angle ?? 0)) * progressInitial
-      };
-      return piece.points.map((point, pointIndex) => {
-        const [x, y] = transformedPoint(point, pose);
-        return { as: `${piece.role}-point-${pointIndex + 1}`, x, y, visible: false };
-      });
-    })
-  ];
-  const polygons = [
-    {
-      as: "target-shape",
-      points: targetPoints.map((point) => point.as),
-      tone: "neutral"
-    },
-    ...pieces.map((piece) => ({
-      as: piece.role,
-      points: piece.points.map((_point, index) => `${piece.role}-point-${index + 1}`),
-      label: piece.label,
-      tone: piece.tone
-    }))
-  ];
-  const segments = [
-    ...recipe.target.map((_point, pointIndex) => ({
-      as: `target-edge-${pointIndex + 1}`,
-      from: `target-point-${pointIndex + 1}`,
-      to: `target-point-${(pointIndex + 1) % recipe.target.length + 1}`,
-      style: "dashed",
-      ...pointIndex === 2 ? { label: construction === "triangle_to_rectangle" ? "a" : "a+b" } : {}
-    }))
-  ];
-  if (construction !== "square_area_identity") {
-    segments.push(
-      { as: "leg-a", from: "piece-1-point-1", to: "piece-1-point-2", style: "solid", label: "a" },
-      { as: "leg-b", from: "piece-1-point-1", to: "piece-1-point-3", style: "solid", label: "b" },
-      { as: "hypotenuse", from: "piece-1-point-2", to: "piece-1-point-3", style: "solid", label: "c" }
-    );
-    if (construction === "right_triangle_square") {
-      const marker = Math.min(legA, legB) * 0.12;
-      const pose = pieces[0].start;
-      for (const [index, point] of [[marker, 0], [marker, marker], [0, marker]].entries()) {
-        const [x, y] = transformedPoint(point, pose);
-        points.push({ as: `right-angle-point-${index + 1}`, x, y, visible: false });
-      }
-      segments.push(
-        { as: "right-angle-1", from: "right-angle-point-1", to: "right-angle-point-2", style: "solid" },
-        { as: "right-angle-2", from: "right-angle-point-2", to: "right-angle-point-3", style: "solid" }
-      );
-    }
-  }
-  const bindings = progressVariable ? pieces.flatMap((piece) => piece.points.flatMap(([localX, localY], pointIndex) => {
-    const translateX = linearExpression(piece.start.x, piece.end.x, progressExpression);
-    const translateY = linearExpression(piece.start.y, piece.end.y, progressExpression);
-    const angle = linearExpression(piece.start.angle ?? 0, piece.end.angle ?? 0, progressExpression);
-    const target = `${piece.role}-point-${pointIndex + 1}`;
-    return [
-      { target: `${target}.x`, expression: `(${translateX})+(${localX})*cos(${angle})-(${localY})*sin(${angle})` },
-      { target: `${target}.y`, expression: `(${translateY})+(${localX})*sin(${angle})+(${localY})*cos(${angle})` }
-    ];
-  })) : [];
-  if (construction === "right_triangle_square") {
-    const start = (legA + legB) / 2;
-    const endX = legA + legB / 2, endY = legB / 2;
-    points.push({
-      as: "central-area",
-      x: start + (endX - start) * progressInitial,
-      y: start + (endY - start) * progressInitial,
-      visible: false
-    });
-    if (progressVariable) bindings.push(
-      { target: "central-area.x", expression: linearExpression(start, endX, progressExpression) },
-      { target: "central-area.y", expression: linearExpression(start, endY, progressExpression) }
-    );
-  }
-  const endpointPoints = [
-    ...recipe.target,
-    ...pieces.flatMap((piece) => [piece.start, piece.end].flatMap((pose) => piece.points.map((point) => transformedPoint(point, pose))))
-  ];
-  const xs = endpointPoints.map((point) => point[0]);
-  const ys = endpointPoints.map((point) => point[1]);
-  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1);
-  const margin = span * 0.1;
-  const geometry = {
-    // A fixed recipe owns its name just as it owns its shapes and proof;
-    // a model-authored title must not identify it as a different construction.
-    title: recipe.title,
-    caption: facts.caption,
-    axes: {
-      x: { min: Math.min(...xs) - margin, max: Math.max(...xs) + margin },
-      y: { min: Math.min(...ys) - margin, max: Math.max(...ys) + margin },
-      equal_scale: true
-    },
-    points,
-    polygons,
-    segments,
-    ...bindings.length ? { bindings } : {}
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }],
-    whole: base,
-    parts: new Map([
-      ["whole", base],
-      ["target_shape", `${base}#target-shape`],
-      ["outer_square", `${base}#target-shape`],
-      ...pieces.map((piece, index) => [`piece_${index + 1}`, `${base}#${piece.role}`]),
-      ["central_area", `${base}#${construction === "right_triangle_square" ? "central-area" : "target-shape"}`],
-      ...construction !== "square_area_identity" ? [
-        ["leg_a", `${base}#leg-a`],
-        ["leg_b", `${base}#leg-b`],
-        ["hypotenuse", `${base}#hypotenuse`]
-      ] : [],
-      ...progressVariable ? [["primary_control", base]] : []
-    ])
-  };
 }
 function compileCircleArea(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -14173,39 +14224,14 @@ function compileCircleArea(base, content, role, placement, plan, path) {
   const number = content.numbers?.[0];
   const d = number ? numberDefinition(plan, number, path) : void 0;
   const variable = number ? variableAlias(number) : void 0;
-  const progress = variable && d ? `(${variable}-${d.min})/(${d.max - d.min})` : "0";
-  const initial = d ? (d.initial - d.min) / (d.max - d.min) : 0;
-  const actions = [];
-  for (const [panel, n] of [8, 16].entries()) {
-    const id = panel === 0 ? base : `${base}-refined`;
-    const angle = 2 * Math.PI / n, chord = 2 * r * Math.sin(angle / 2), height = r * Math.cos(angle / 2);
-    const points = [];
-    const arcs = [];
-    const bindings = [];
-    for (let i = 0; i < n; i++) {
-      const center = `center-${i}`, sector = `sector-${i}`;
-      const up = i % 2 === 0;
-      const endX = i / 2 * chord, endY = up ? 0 : height;
-      const start = i * angle, end = (up ? Math.PI / 2 : -Math.PI / 2) - angle / 2;
-      points.push({ as: center, x: endX * initial, y: endY * initial, visible: false });
-      arcs.push({ as: sector, center, radius: r, start_angle: start + (end - start) * initial, end_angle: start + angle + (end - start) * initial, filled: true });
-      if (variable) bindings.push(
-        { target: `${center}.x`, expression: `${endX}*(${progress})` },
-        { target: `${center}.y`, expression: `${endY}*(${progress})` },
-        { target: `${sector}.start_angle`, expression: linearExpression(start, end, progress) },
-        { target: `${sector}.end_angle`, expression: linearExpression(start + angle, end + angle, progress) }
-      );
-    }
-    actions.push({ do: "write", as: id, kind: "geometry", role, place: panel === 0 ? placement : { relation: "below", anchor: base, gap: "normal" }, content: {
-      title: compileText(plan, "{{v0}} \u7B49\u5206\u5706\u7684\u9762\u79EF\u91CD\u6392", { v0: n }),
-      caption: compileText(plan, "\u534A\u5F84 r={{v0}}\uFF1B\u6BCF\u5757\u5747\u4E3A\u771F\u5B9E\u6247\u5F62\uFF0C\u91CD\u6392\u9762\u79EF\u4E0D\u53D8\u3002\u6709\u9650\u7B49\u5206\u7684\u8FB9\u7F18\u4ECD\u5F2F\u66F2\uFF1B\u7B49\u5206\u8D8A\u7EC6\uFF0C\u5E95\u8D8B\u8FD1 \u03C0r\uFF0C\u9AD8\u8D8B\u8FD1 r\uFF0C\u9762\u79EF\u4E3A \u03C0r\xB2\u3002", { v0: r }),
-      axes: { x: { min: -r * 1.3, max: Math.PI * r + r }, y: { min: -r * 1.3, max: r * 1.6 }, equal_scale: true },
-      points,
-      arcs,
-      ...bindings.length ? { bindings } : {}
-    } });
-  }
-  return { actions, whole: base, parts: new Map([["whole", base], ...variable ? [["primary_control", base]] : []]) };
+  return builtVisual(buildCircleAreaRearrangement({
+    as: base,
+    role,
+    place: placement,
+    t: translator(plan),
+    radius: r,
+    ...variable && d ? { progress: { expression: `(${variable}-${d.min})/(${d.max - d.min})`, initial: (d.initial - d.min) / (d.max - d.min) } } : {}
+  }));
 }
 var MATH_COMPILERS = {
   function_plot: compileFunctionPlot,
