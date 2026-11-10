@@ -7,6 +7,7 @@ import {
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VERSION,
   LessonPlanError,
+  validateTypedQuestion,
   assembleLessonPlan,
   matchLessonPlanCapability,
   validateLessonPlanOutline,
@@ -108,7 +109,7 @@ export interface GenerateLessonPlanOptions {
     error: { code: string; path?: string; message: string };
   }) => void | Promise<void>;
   on_program_adjustment?: (event: {
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -133,7 +134,7 @@ export interface NonLessonPlanResponse {
 
 export type LessonPlanGenerationResult = GeneratedLessonPlan | NonLessonPlanResponse;
 
-const ANSWER_ACTIVITY_RULE = "answer 只写一个数（整数、小数、分数 3/4、带分数 2 3/4），不带单位或 %，百分数题写百分号前的数并把 % 写入 unit；check 写只含数字的算式（如 2*3/4），程序核对它与 answer 相等；题目要求最简分数时 simplest_fraction 必须为 true，否则没约分的答案也算对；unit 只写单位，没有就省略；hints 写 1–2 条不给出答案的提示。";
+const ANSWER_ACTIVITY_RULE = "answer 只写一个数（整数、小数、分数 3/4、带分数 2 3/4），不带单位或 %，百分数题写百分号前的数并把 % 写入 unit；check 写只含数字的算式（如 2*3/4），程序核对它与 answer 相等；结果要四舍五入时 answer 写成小数（如 11.21、2.0），题目写明保留几位小数，程序按位数核对；题目要求最简分数时 simplest_fraction 必须为 true，否则没约分的答案也算对；unit 只写单位，没有就省略；hints 写 1–2 条不给出答案的提示。";
 
 const OUTLINE_SYSTEM_PROMPT = [
   `设计完整课程目录，不生成 OLL、执行 ID、组件名或自由对象名。`,
@@ -749,7 +750,7 @@ function sanitizeNonessentialVisuals(
   outline: LessonPlanOutline;
   drafts: LessonPlanSectionDraft[];
   adjustments: Array<{
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -761,7 +762,7 @@ function sanitizeNonessentialVisuals(
   const outline = structuredClone(outlineValue);
   const drafts = structuredClone(draftValues);
   const adjustments: Array<{
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -2818,6 +2819,30 @@ export async function generateLessonPlanWithModel(
     return candidate;
   };
 
+  // A typed question is optional and the section never refers to its answer,
+  // so one that fails its own checks (answer, arithmetic, prompt or hints) is
+  // dropped rather than costing a section rewrite (or, after a playable
+  // prefix, failing the whole lesson).
+  const dropUncheckedAnswerActivities = async (draft: LessonPlanSectionDraft, section: number): Promise<void> => {
+    if (!draft.student_activities?.length) return;
+    const kept: LessonPlanStudentActivity[] = [];
+    for (const [index, activity] of draft.student_activities.entries()) {
+      if (activity.kind === "numeric_answer") {
+        try {
+          validateTypedQuestion(activity as unknown as Record<string, unknown>, `$lessonPlanSection${section}.student_activities[${index}]`);
+        } catch (error) {
+          if (!(error instanceof LessonPlanError)) throw error;
+          await options.on_program_adjustment?.({ kind: "answer_activity_removed", section, reason: error.message });
+          continue;
+        }
+      }
+      kept.push(activity);
+    }
+    if (kept.length === draft.student_activities.length) return;
+    if (kept.length) draft.student_activities = kept;
+    else delete draft.student_activities;
+  };
+
   const drafts: LessonPlanSectionDraft[] = [];
   const acceptSection = async (
     section: number,
@@ -2826,6 +2851,7 @@ export async function generateLessonPlanWithModel(
     let candidate = initialCandidate;
     while (true) {
       candidate ??= await generateSection(section);
+      await dropUncheckedAnswerActivities(candidate, section);
       drafts[section - 1] = candidate;
       try {
         const prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.2 - 2026-11-10
+
+- Typed questions (`answer_activities`) can no longer fail a lesson. In the P0 baseline, 4 of 120 lessons failed after section 1 was already playing, because a later section's optional question kept failing its answer check across all three section attempts.
+  - A decimal answer now matches when it is its `check` rounded to the places it writes (11.21 for 2.02/18.02*100; full-width digits count the same). The learner's task gets the same half-unit tolerance plus a floating-point slack (0.005000005 for two places), so typing the unrounded value is also accepted, even exactly on the rounding boundary (2.15 for 2.2). Whole numbers, fractions and mixed numbers still must equal the check exactly. The typed-question rule asks for rounded answers as decimals, with the question stating the places.
+  - A question that still fails its checks (answer, arithmetic, prompt or hints) is dropped when its section arrives (a `lesson-plan-program-adjustment` of kind `answer_activity_removed`), as single-section practice already does, instead of costing a section rewrite.
+
 ## 0.24.1 - 2026-11-09
 
 - Compiles and validates against OLL `350d5e0` (player execution version 0.10.0), the same OLL that Octos Learn plays, instead of `7aec858` (0.5.0). The vendored authoring schema is synced. No recipe or prompt changes; Coach can now use features up to player 0.10.0 when its recipes need them.

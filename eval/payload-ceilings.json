@@ -11,19 +11,19 @@
       "schema_bytes": 7407
     },
     "camera/first_section_retry": {
-      "total_bytes": 8905,
+      "total_bytes": 9030,
       "schema_bytes": 4160
     },
     "camera/later_section": {
-      "total_bytes": 8380,
+      "total_bytes": 8505,
       "schema_bytes": 3396
     },
     "camera/practice": {
-      "total_bytes": 1891,
+      "total_bytes": 2016,
       "schema_bytes": 482
     },
     "camera/section_repair": {
-      "total_bytes": 8474,
+      "total_bytes": 8599,
       "schema_bytes": 3396
     },
     "selection/fallback_outline": {
@@ -35,19 +35,19 @@
       "schema_bytes": 7407
     },
     "selection/first_section_retry": {
-      "total_bytes": 8905,
+      "total_bytes": 9030,
       "schema_bytes": 4160
     },
     "selection/later_section": {
-      "total_bytes": 8380,
+      "total_bytes": 8505,
       "schema_bytes": 3396
     },
     "selection/practice": {
-      "total_bytes": 1891,
+      "total_bytes": 2016,
       "schema_bytes": 482
     },
     "selection/section_repair": {
-      "total_bytes": 8474,
+      "total_bytes": 8599,
       "schema_bytes": 3396
     },
     "self_contained/fallback_outline": {
@@ -59,19 +59,19 @@
       "schema_bytes": 6836
     },
     "self_contained/first_section_retry": {
-      "total_bytes": 8786,
+      "total_bytes": 8911,
       "schema_bytes": 4160
     },
     "self_contained/later_section": {
-      "total_bytes": 8261,
+      "total_bytes": 8386,
       "schema_bytes": 3396
     },
     "self_contained/practice": {
-      "total_bytes": 1772,
+      "total_bytes": 1897,
       "schema_bytes": 482
     },
     "self_contained/section_repair": {
-      "total_bytes": 8355,
+      "total_bytes": 8480,
       "schema_bytes": 3396
     },
     "text/fallback_outline": {
@@ -83,19 +83,19 @@
       "schema_bytes": 7077
     },
     "text/first_section_retry": {
-      "total_bytes": 8786,
+      "total_bytes": 8911,
       "schema_bytes": 4160
     },
     "text/later_section": {
-      "total_bytes": 8261,
+      "total_bytes": 8386,
       "schema_bytes": 3396
     },
     "text/practice": {
-      "total_bytes": 1772,
+      "total_bytes": 1897,
       "schema_bytes": 482
     },
     "text/section_repair": {
-      "total_bytes": 8355,
+      "total_bytes": 8480,
       "schema_bytes": 3396
     },
     "voice/fallback_outline": {
@@ -107,19 +107,19 @@
       "schema_bytes": 7077
     },
     "voice/first_section_retry": {
-      "total_bytes": 8786,
+      "total_bytes": 8911,
       "schema_bytes": 4160
     },
     "voice/later_section": {
-      "total_bytes": 8261,
+      "total_bytes": 8386,
       "schema_bytes": 3396
     },
     "voice/practice": {
-      "total_bytes": 1772,
+      "total_bytes": 1897,
       "schema_bytes": 482
     },
     "voice/section_repair": {
-      "total_bytes": 8355,
+      "total_bytes": 8480,
       "schema_bytes": 3396
     }
   }

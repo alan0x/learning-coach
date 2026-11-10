@@ -281,7 +281,7 @@ export type LessonPlanStudentActivity =
     prompt: string;
     /** Whole number, decimal, fraction or mixed number, as a learner would type it. */
     answer: string;
-    /** Arithmetic that gives the answer; the program evaluates it and rejects a mismatch. */
+    /** Arithmetic that gives the answer; the program evaluates it and rejects a mismatch. A decimal answer may be the check rounded to the places written. */
     check: string;
     unit?: string;
     simplest_fraction?: boolean;
@@ -1119,12 +1119,65 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
 }
 
 /**
+ * How far a typed answer may be from the expected answer and still count:
+ * 0 when the answer equals its check, or half a unit in the answer's last
+ * decimal place (plus a floating-point slack) when the answer is its check
+ * rounded to the places written
+ * (11.21 for 2.02/18.02*100 = 11.2097...). Whole numbers, fractions and mixed
+ * numbers must equal the check exactly, so a math slip such as 7/2 written as
+ * 3 is still caught. Undefined means the answer does not match its check.
+ */
+export function numericAnswerTolerance(answer: string, checked: number): number | undefined {
+  const expected = parseNumericAnswer(answer);
+  if (!expected || !Number.isFinite(checked)) return undefined;
+  const difference = Math.abs(checked - expected.value);
+  if (difference === 0) return 0;
+  if (expected.form !== "decimal") {
+    return difference <= 1e-9 * Math.max(1, Math.abs(expected.value)) ? 0 : undefined;
+  }
+  // Count places the way the grader reads the answer (full-width digits and points included).
+  const written = answer.trim()
+    .replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 0xfee0))
+    .replace(/[．。]/g, ".");
+  const places = /\.(\d+)$/.exec(written)?.[1]?.length;
+  if (!places) return undefined;
+  const halfUnit = 0.5 * 10 ** -places;
+  const gradingSlack = halfUnit * 1e-6;
+  // Limit binary arithmetic noise to a small fraction of the last place, so
+  // the scale of a large answer cannot turn real decimal rounding into equality.
+  const roundoff = Math.min(gradingSlack, Number.EPSILON * Math.max(Math.abs(expected.value), Math.abs(checked)));
+  if (difference <= roundoff) return 0;
+  // Either side of an exact tie is accepted. Include the checked value in the
+  // emitted tolerance even if serializing the tolerance rounds it down.
+  if (difference > halfUnit + roundoff) return undefined;
+  return Math.max(difference, Number((halfUnit + gradingSlack).toPrecision(10)));
+}
+
+/**
  * The model writes both the answer and the arithmetic behind it. The program
  * evaluates that arithmetic, so a slip between the two never reaches a learner
  * as a wrong expected answer. It cannot tell whether the arithmetic models a
  * word problem correctly; that stays with the lesson's review.
  */
-function validateNumericAnswerActivity(activity: Record<string, unknown>, path: string): void {
+/**
+ * Every check a typed question gets except where it sits on the board, so an
+ * optional question that would fail can be dropped before it costs its section.
+ */
+export function validateTypedQuestion(activity: Record<string, unknown>, path: string): void {
+  allowedKeys(activity, [
+    "kind", "prompt", "answer", "check", "unit", "simplest_fraction", "reference",
+    "hints", "hint_after_attempts", "success_message",
+  ], path);
+  validateNumericAnswerActivity(activity, path);
+  nonEmptyString(activity.prompt, `${path}.prompt`, 480);
+  const hints = array(activity.hints, `${path}.hints`);
+  if (hints.length === 0) fail("LESSON_PLAN_ACTIVITY", `${path}.hints`, "activity requires hints");
+  hints.forEach((hint, hintIndex) => nonEmptyString(hint, `${path}.hints[${hintIndex}]`, 480));
+  if (activity.hint_after_attempts !== undefined) positiveIndex(activity.hint_after_attempts, `${path}.hint_after_attempts`);
+  optionalString(activity.success_message, `${path}.success_message`, 480);
+}
+
+export function validateNumericAnswerActivity(activity: Record<string, unknown>, path: string): void {
   nonEmptyString(activity.answer, `${path}.answer`, 64);
   const expected = parseNumericAnswer(activity.answer as string);
   if (!expected) fail("LESSON_PLAN_ACTIVITY", `${path}.answer`, "answer must be a whole number, decimal, fraction or mixed number");
@@ -1135,7 +1188,7 @@ function validateNumericAnswerActivity(activity: Record<string, unknown>, path: 
   } catch (error) {
     fail("LESSON_PLAN_ACTIVITY", `${path}.check`, `check must be arithmetic on numbers only: ${(error as Error).message}`);
   }
-  if (!Number.isFinite(checked!) || Math.abs(checked! - expected!.value) > 1e-9 * Math.max(1, Math.abs(expected!.value))) {
+  if (numericAnswerTolerance(activity.answer as string, checked!) === undefined) {
     fail("LESSON_PLAN_ACTIVITY", `${path}.answer`, `answer ${String(activity.answer)} does not equal its check ${String(activity.check)}`);
   }
   optionalString(activity.unit, `${path}.unit`, 16);
