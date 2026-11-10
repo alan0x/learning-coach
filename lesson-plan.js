@@ -13163,6 +13163,9 @@ var CompiledVisualRegistry = class {
   }
 };
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/solids.js
+var POLYHEDRON_REACH = { tetrahedron: 1 / Math.sqrt(3), octahedron: 1, dodecahedron: 0.7947, icosahedron: 0.8507 };
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
 function buildUnitCircle(input) {
   const theta = input.angle ? input.angle.initial : input.fixed_angle ?? Math.PI / 3;
@@ -14218,6 +14221,66 @@ var MATH_COMPILERS = {
   circle_area_rearrangement: compileCircleArea
 };
 
+// node_modules/octos-lesson-language/dist/packages/plugin-physics/src/index.js
+function buildSpringAndMass(input) {
+  const { text: text2 } = input;
+  const phase = input.phase ? input.phase.initial : input.fixed_phase ?? 0;
+  const expression = input.phase?.expression;
+  const motion = `${input.as}-motion`;
+  const plot = `${input.as}-plot`;
+  const geometry = {
+    title: text2.title,
+    axes: { x: { min: -1.5, max: 1.5, label: text2.displacement }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
+    points: [
+      { as: "anchor", x: -1.25, y: 0, label: text2.anchor },
+      { as: "equilibrium", x: 0, y: 0, label: text2.equilibrium },
+      { as: "mass", x: Math.cos(phase), y: 0, label: text2.mass },
+      { as: "force-tip", x: Math.cos(phase) * 0.5, y: 0, visible: false }
+    ],
+    segments: [
+      { as: "spring", from: "anchor", to: "mass", style: "solid" },
+      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: text2.restoring_force }
+    ],
+    ...expression ? {
+      bindings: [
+        { target: "mass.x", expression: `cos(${expression})` },
+        { target: "force-tip.x", expression: `0.5*cos(${expression})` }
+      ]
+    } : {}
+  };
+  const plotContent = {
+    title: text2.plot_title,
+    axes: { x: { min: input.phase?.min ?? 0, max: input.phase?.max ?? Math.PI * 2, label: text2.phase }, y: { min: -1.2, max: 1.2, label: text2.displacement } },
+    curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
+    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: text2.current_state }],
+    ...expression ? {
+      bindings: [
+        { target: "moving-point.x", expression },
+        { target: "moving-point.y", expression: `cos(${expression})` }
+      ]
+    } : {}
+  };
+  return {
+    actions: [
+      { do: "write", as: motion, kind: "geometry", role: input.role, content: geometry, place: input.place },
+      { do: "write", as: plot, kind: "plot", role: input.role, content: plotContent, place: { relation: "right_of", anchor: motion, gap: "normal" } },
+      { do: "connect", as: `${input.as}-link`, from: motion, to: plot, relation: "same_state", label: text2.link_label },
+      { do: "group", as: input.as, role: input.role, label: text2.group_label, members: [motion, plot] }
+    ],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      spring: `${motion}#spring`,
+      mass: `${motion}#mass`,
+      equilibrium: `${motion}#equilibrium`,
+      force_arrow: `${motion}#force-arrow`,
+      primary_curve: `${plot}#primary-curve`,
+      moving_point: `${plot}#moving-point`,
+      ...expression ? { primary_control: `${plot}#moving-point` } : {}
+    }
+  };
+}
+
 // src/plugins/physics-compilers.ts
 function compileSpringAndMass(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -14227,62 +14290,33 @@ function compileSpringAndMass(base, content, role, placement, plan, path) {
   const phaseScale = angleScaleForUnit(phaseDefinition?.unit);
   const phase = (phaseDefinition?.initial ?? 0) * phaseScale;
   const variable = number ? variableAlias(number) : void 0;
-  const phaseExpression = variable ? scaledAngleExpression(variable, phaseScale) : void 0;
-  const motion = `${base}-motion`;
-  const plot = `${base}-plot`;
-  const plotPhaseMin = phaseDefinition ? phaseDefinition.min * phaseScale : 0;
-  const plotPhaseMax = phaseDefinition ? phaseDefinition.max * phaseScale : Math.PI * 2;
-  const geometry = {
-    title: optionalText(input.title, compileText(plan, "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8"), `${path}.title`),
-    axes: { x: { min: -1.5, max: 1.5, label: compileText(plan, "\u4F4D\u79FB") }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
-    points: [
-      { as: "anchor", x: -1.25, y: 0, label: compileText(plan, "\u56FA\u5B9A\u7AEF") },
-      { as: "equilibrium", x: 0, y: 0, label: compileText(plan, "\u5E73\u8861\u4F4D\u7F6E") },
-      { as: "mass", x: Math.cos(phase), y: 0, label: compileText(plan, "\u7269\u4F53") },
-      { as: "force-tip", x: Math.cos(phase) * 0.5, y: 0, visible: false }
-    ],
-    segments: [
-      { as: "spring", from: "anchor", to: "mass", style: "solid" },
-      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: compileText(plan, "\u56DE\u590D\u529B") }
-    ],
-    ...variable ? {
-      bindings: [
-        { target: "mass.x", expression: `cos(${phaseExpression})` },
-        { target: "force-tip.x", expression: `0.5*cos(${phaseExpression})` }
-      ]
-    } : {}
-  };
-  const plotContent = {
-    title: compileText(plan, "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316"),
-    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: compileText(plan, "\u76F8\u4F4D") }, y: { min: -1.2, max: 1.2, label: compileText(plan, "\u4F4D\u79FB") } },
-    curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
-    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: compileText(plan, "\u5F53\u524D\u72B6\u6001") }],
-    ...variable ? {
-      bindings: [
-        { target: "moving-point.x", expression: phaseExpression },
-        { target: "moving-point.y", expression: `cos(${phaseExpression})` }
-      ]
-    } : {}
-  };
-  return {
-    actions: [
-      { do: "write", as: motion, kind: "geometry", role, content: geometry, place: placement },
-      { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: motion, gap: "normal" } },
-      { do: "connect", as: `${base}-link`, from: motion, to: plot, relation: "same_state", label: compileText(plan, "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB") },
-      { do: "group", as: base, role, label: compileText(plan, "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF"), members: [motion, plot] }
-    ],
-    whole: base,
-    parts: new Map([
-      ["whole", base],
-      ["spring", `${motion}#spring`],
-      ["mass", `${motion}#mass`],
-      ["equilibrium", `${motion}#equilibrium`],
-      ["force_arrow", `${motion}#force-arrow`],
-      ["primary_curve", `${plot}#primary-curve`],
-      ["moving_point", `${plot}#moving-point`],
-      ...variable ? [["primary_control", `${plot}#moving-point`]] : []
-    ])
-  };
+  const built = buildSpringAndMass({
+    as: base,
+    role,
+    place: placement,
+    ...variable && phaseDefinition ? {
+      phase: {
+        expression: scaledAngleExpression(variable, phaseScale),
+        initial: phase,
+        min: phaseDefinition.min * phaseScale,
+        max: phaseDefinition.max * phaseScale
+      }
+    } : { fixed_phase: phase },
+    text: {
+      title: optionalText(input.title, compileText(plan, "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8"), `${path}.title`),
+      displacement: compileText(plan, "\u4F4D\u79FB"),
+      anchor: compileText(plan, "\u56FA\u5B9A\u7AEF"),
+      equilibrium: compileText(plan, "\u5E73\u8861\u4F4D\u7F6E"),
+      mass: compileText(plan, "\u7269\u4F53"),
+      restoring_force: compileText(plan, "\u56DE\u590D\u529B"),
+      plot_title: compileText(plan, "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316"),
+      phase: compileText(plan, "\u76F8\u4F4D"),
+      current_state: compileText(plan, "\u5F53\u524D\u72B6\u6001"),
+      link_label: compileText(plan, "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB"),
+      group_label: compileText(plan, "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF")
+    }
+  });
+  return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
 }
 var PHYSICS_COMPILERS = {
   spring_and_mass: compileSpringAndMass
