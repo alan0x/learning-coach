@@ -52,7 +52,10 @@ function measure(request) {
   return {
     bytes,
     schema_sha256: sha256(schema),
-    request_sha256: sha256(JSON.stringify([request.system_prompt, request.prompt, schema])),
+    // Whether the camera frame or selection image is attached is part of the
+    // request too; it is added only when set, so other digests are unchanged.
+    request_sha256: sha256(JSON.stringify([request.system_prompt, request.prompt, schema,
+      ...(request.include_camera_media ? [{ include_camera_media: true }] : [])])),
   };
 }
 
