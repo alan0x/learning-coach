@@ -38,10 +38,11 @@ if (args.includes("--record-ceilings")) {
 }
 
 if (args.includes("--record-hashes")) {
-  const hashes = await measureRequestHashes(api, requestHashFixtures(api.LESSON_PLAN_CAPABILITY_REGISTRY, completeLessonPlanFixtures), helpers);
+  const { hashes, lessons } = await measureRequestHashes(api, requestHashFixtures(api.LESSON_PLAN_CAPABILITY_REGISTRY, completeLessonPlanFixtures), helpers);
   await writeFile(new URL("../eval/request-hashes.json", import.meta.url), `${JSON.stringify({
-    note: "Digest of every model request per fixture, route/path/language/context (subject plugin plan, P1 exit). Moving code into plugins must not change any digest. Re-record only for an intended prompt or schema change.",
+    note: "Digest of every model request (hashes) and of the lesson produced (lessons) per fixture, route/path/language/context (subject plugin plan, P1 exit). Moving code into plugins must not change any digest. Re-record only for an intended prompt, schema or compiler change.",
     hashes,
+    lessons,
   }, null, 1)}\n`);
   console.log(`Recorded ${Object.values(hashes).reduce((sum, runs) => sum + Object.keys(runs).length, 0)} request digests.`);
 }

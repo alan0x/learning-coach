@@ -2,12 +2,12 @@ import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
-  PROCESS_DIAGRAM_CONTRACT,
   LESSON_PLAN_VISUAL_FEATURES,
   LessonPlanError,
   type LessonPlanCapability,
   type LessonPlanOutline,
 } from "./lesson-plan.js";
+import { RECIPE_SCHEMA_PROPERTIES, SCHEMA_PROPERTY_ORDER } from "./plugins/index.js";
 
 export type LessonPlanJsonSchema = Record<string, unknown>;
 
@@ -166,45 +166,14 @@ function visualParametersSchema(
   const modelParameters = new Set(allowedCapabilities.flatMap(
     (capability) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_parameter_names],
   ));
-  const properties: Record<string, unknown> = {};
-  const uses = (capability: LessonPlanCapability): boolean => allowedCapabilities.includes(capability);
-  if (modelParameters.has("title")) properties.title = string(240);
-  if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
-  if (uses("function_plot")) {
-    properties.x_label = string(32);
-    properties.y_label = string(32);
-    properties.formulas = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
-    properties.curve_label = string(160);
-    properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
-  }
-  if (uses("function_surface_with_section") || uses("implicit_surface_with_section")) {
-    properties.expression = string(256);
-    properties.section_axis = { enum: ["x", "y", "z"] };
-  }
-  if (uses("function_surface_with_section")) properties.section_value = { type: "number" };
-  if (uses("implicit_surface_with_section")) properties.level = { type: "number" };
-  if (modelParameters.has("radius")) properties.radius = { type: "number", minimum: 0 };
-  if (uses("circle_and_arc")) properties.angle = { type: "number" };
-  if (uses("coordinate_circle")) {
-    properties.radius_expression = string(256);
-    properties.center_x = { type: "number" };
-    properties.center_y = { type: "number" };
-  }
-  if (uses("geometric_rearrangement")) {
-    properties.construction = {
-      enum: [...LESSON_PLAN_CAPABILITY_REGISTRY.geometric_rearrangement.parameter_options.construction],
-    };
-    properties.leg_a = { type: "number", minimum: 0 };
-    properties.leg_b = { type: "number", minimum: 0 };
-  }
-  if (uses("process_diagram")) {
-    properties.steps = {
-      type: "array",
-      minItems: PROCESS_DIAGRAM_CONTRACT.min_steps,
-      maxItems: PROCESS_DIAGRAM_CONTRACT.max_steps,
-      items: string(PROCESS_DIAGRAM_CONTRACT.max_step_characters),
-    };
-  }
+  const declared: Record<string, unknown> = {};
+  if (modelParameters.has("title")) declared.title = string(240);
+  for (const capability of allowedCapabilities) Object.assign(declared, RECIPE_SCHEMA_PROPERTIES[capability]);
+  const order: readonly string[] = SCHEMA_PROPERTY_ORDER;
+  const properties = Object.fromEntries([
+    ...order.filter((name) => name in declared),
+    ...Object.keys(declared).filter((name) => !order.includes(name)),
+  ].map((name) => [name, declared[name]]));
   const required = allowedCapabilities.length === 1
     ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters]
     : [];

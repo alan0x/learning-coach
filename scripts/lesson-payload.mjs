@@ -111,8 +111,9 @@ async function runOnce(api, helpers, name, plan, route, mode, extraInput = {}) {
     return helpers.sectionModelResponse(request, drafts);
   };
   let error;
+  let result;
   try {
-    await api.generateLessonPlanWithModel(model, {
+    result = await api.generateLessonPlanWithModel(model, {
       turn_id: `payload-${name}-${route}-${mode}`,
       learner_request: plan.title,
       request_parts: [plan.title],
@@ -123,7 +124,11 @@ async function runOnce(api, helpers, name, plan, route, mode, extraInput = {}) {
   } catch (cause) {
     error = cause instanceof Error ? cause.message : String(cause);
   }
-  return { fixture: name, route, mode, requests, ...(error ? { error } : {}) };
+  return {
+    fixture: name, route, mode, requests,
+    ...(result ? { result_sha256: sha256(JSON.stringify(result.lesson ?? result)) } : {}),
+    ...(error ? { error } : {}),
+  };
 }
 
 function summarize(values) {
@@ -181,11 +186,13 @@ export function checkPayloadCeilings(report, ceilings) {
 /**
  * The exact requests Coach sends, as hashes: for every fixture, route, path,
  * language and context, the ordered list of request hashes (system prompt,
- * prompt and response schema), reduced to a 16-hex digest per run. Moving
- * recipes into plugins must leave every digest unchanged (plan P1 exit).
+ * prompt and response schema), reduced to a 16-hex digest per run, and the
+ * digest of the lesson each run produced. Moving recipes into plugins must
+ * leave every digest unchanged (plan P1 exit).
  */
 export async function measureRequestHashes(api, fixtures, helpers) {
   const hashes = {};
+  const lessons = {};
   for (const language of ["zh-CN", "en-US"]) {
     for (const [context, fields] of Object.entries({ none: {}, full: FULL_CONTEXT })) {
       for (const [name, plan] of Object.entries(fixtures)) {
@@ -193,12 +200,15 @@ export async function measureRequestHashes(api, fixtures, helpers) {
           for (const mode of MODES) {
             const run = await runOnce(api, helpers, name, plan, route, mode, { language, ...fields });
             if (run.error) throw new Error(`${name} ${route} ${mode} ${language} ${context}: generation failed: ${run.error}`);
+            const key = `${route}/${mode}/${language}/${context}`;
             hashes[name] ??= {};
-            hashes[name][`${route}/${mode}/${language}/${context}`] = sha256(run.requests.map((request) => `${request.entry_point}:${request.request_sha256}`).join("\n")).slice(0, 16);
+            hashes[name][key] = sha256(run.requests.map((request) => `${request.entry_point}:${request.request_sha256}`).join("\n")).slice(0, 16);
+            lessons[name] ??= {};
+            lessons[name][key] = run.result_sha256.slice(0, 16);
           }
         }
       }
     }
   }
-  return hashes;
+  return { hashes, lessons };
 }

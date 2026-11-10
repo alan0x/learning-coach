@@ -4336,7 +4336,7 @@ var require_core = __commonJS({
       errorsText(errors = this.errors, { separator = ", ", dataVar = "data" } = {}) {
         if (!errors || errors.length === 0)
           return "No errors";
-        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text, msg) => text + separator + msg);
+        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text2, msg) => text2 + separator + msg);
       }
       $dataMetaSchema(metaSchema, keywordsJsonPointers) {
         const rules = this.RULES.all;
@@ -7180,8 +7180,8 @@ var FULL_WIDTH = {
   "\uFF0C": ",",
   "\u3000": " "
 };
-function normalize(text) {
-  return text.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 65248)).replace(/[－−–／÷．。，　]/g, (char) => FULL_WIDTH[char]).trim().replace(/\s+/g, " ").replace(/\s*\/\s*/g, "/").replace(/^-\s+/, "-");
+function normalize(text2) {
+  return text2.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 65248)).replace(/[－−–／÷．。，　]/g, (char) => FULL_WIDTH[char]).trim().replace(/\s+/g, " ").replace(/\s*\/\s*/g, "/").replace(/^-\s+/, "-");
 }
 var INTEGER = /^(-?)(\d{1,3}(?:,\d{3})+|\d+)$/;
 var DECIMAL = /^(-?)(\d{1,3}(?:,\d{3})+|\d*)\.(\d+)$/;
@@ -7190,10 +7190,10 @@ var MIXED = /^(-?)(\d+) (\d+)\/(\d+)$/;
 function safe(...values) {
   return values.every(Number.isSafeInteger);
 }
-function parseNumericAnswer(text) {
-  if (typeof text !== "string" || text.length > 64)
+function parseNumericAnswer(text2) {
+  if (typeof text2 !== "string" || text2.length > 64)
     return void 0;
-  const written = normalize(text);
+  const written = normalize(text2);
   let match = INTEGER.exec(written);
   if (match) {
     const value = Number(match[2].replace(/,/g, ""));
@@ -9568,34 +9568,34 @@ function validateDrawnSize(size, path) {
     fail("OLL_INVALID_OPERATION_PAYLOAD", path, "drawn_size is { width, height } in board units, each above 0 and at most 4000");
   }
 }
-function validatePlacement(place2, path, registry) {
-  requireObject(place2, path);
-  if (!PLACEMENT_RELATIONS.has(place2.relation)) {
-    fail("OLL_INVALID_PLACEMENT", `${path}/relation`, `Unknown placement relation '${place2.relation}'`);
+function validatePlacement(place5, path, registry) {
+  requireObject(place5, path);
+  if (!PLACEMENT_RELATIONS.has(place5.relation)) {
+    fail("OLL_INVALID_PLACEMENT", `${path}/relation`, `Unknown placement relation '${place5.relation}'`);
   }
   for (const forbidden of ["x", "y", "width", "height", "zoom", "duration_ms"]) {
-    if (forbidden in place2)
+    if (forbidden in place5)
       fail("OLL_INVALID_PLACEMENT", `${path}/${forbidden}`, `Authoring Profile cannot set '${forbidden}'`);
   }
-  if (place2.relation === "continues") {
-    const offset = place2.offset;
+  if (place5.relation === "continues") {
+    const offset = place5.offset;
     const fine = (n) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= 4e3;
     if (!offset || typeof offset !== "object" || Array.isArray(offset) || !fine(offset.x) || !fine(offset.y) || Object.keys(offset).some((key) => key !== "x" && key !== "y")) {
       fail("OLL_INVALID_PLACEMENT", `${path}/offset`, "A continuation needs its offset { x, y } from the anchor's top-left, in board units within \xB14000");
     }
   } else {
-    if (place2.offset !== void 0)
+    if (place5.offset !== void 0)
       fail("OLL_INVALID_PLACEMENT", `${path}/offset`, "Only a continuation has an offset");
-    if (place2.align === "equals" && place2.relation !== "replaces")
+    if (place5.align === "equals" && place5.relation !== "replaces")
       fail("OLL_INVALID_PLACEMENT", `${path}/align`, "Only a continuation, or what replaces one, lines up its '='");
   }
-  if (place2.relation === "new_region") {
-    if (place2.anchor !== void 0)
+  if (place5.relation === "new_region") {
+    if (place5.anchor !== void 0)
       fail("OLL_INVALID_PLACEMENT", `${path}/anchor`, "new_region cannot use an anchor");
-  } else if (place2.relation === "annotates" || place2.relation === "replaces" || place2.relation === "continues") {
-    resolveLocal(registry, place2.anchor, `${path}/anchor`, ["node"]);
+  } else if (place5.relation === "annotates" || place5.relation === "replaces" || place5.relation === "continues") {
+    resolveLocal(registry, place5.anchor, `${path}/anchor`, ["node"]);
   } else {
-    resolveLocal(registry, place2.anchor, `${path}/anchor`, ["node", "group"]);
+    resolveLocal(registry, place5.anchor, `${path}/anchor`, ["node", "group"]);
   }
 }
 function validateActionPayload(action, path) {
@@ -10092,10 +10092,10 @@ function requireCanonicalId(target) {
     fail("OLL_REFERENCE_NOT_FOUND", "target", "Canonical target has no addressable ID");
   return id;
 }
-function normalizePlacement(registry, place2) {
-  const result = { ...place2 };
-  if (place2.anchor) {
-    const target = canonicalTarget(registry, place2.anchor);
+function normalizePlacement(registry, place5) {
+  const result = { ...place5 };
+  if (place5.anchor) {
+    const target = canonicalTarget(registry, place5.anchor);
     delete result.anchor;
     result.anchor = requireCanonicalId(target);
   }
@@ -10675,15 +10675,8 @@ function rearrangementRecipe(construction, first, second) {
   return void 0;
 }
 
-// src/lesson-plan.ts
-var LESSON_PLAN_VERSION = "0.1";
-var PROCESS_DIAGRAM_CONTRACT = {
-  min_steps: 2,
-  max_steps: 8,
-  max_step_characters: 80,
-  max_title_characters: 120
-};
-var LESSON_PLAN_CAPABILITY_REGISTRY = {
+// src/plugins/math.ts
+var MATH_RECIPES = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
@@ -10735,19 +10728,6 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     student_controls: ["slider", "geometry_point"],
     required_features: ["circle", "arc"],
     model_guidance: "\u5706\u3001\u5706\u5FC3\u89D2\u3001\u534A\u5F84\u548C\u5706\u5F27\uFF1B\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u63A7\u5236\u89D2\u5EA6\u548C\u534A\u5F84\uFF1B\u4E0D\u652F\u6301\u7528\u8FB9\u6570\u5192\u5145\u89D2\u5EA6\u6216\u7528\u5706\u5F27\u5192\u5145\u6B63\u591A\u8FB9\u5F62\u3002\u9002\u5408\u9700\u8981\u89C2\u5BDF\u5706\u5FC3\u89D2\u3001\u5706\u5F27\u6216\u5F27\u957F\u5173\u7CFB\u7684\u8BB2\u89E3\uFF1B\u82E5\u53EA\u9700\u8981\u5C55\u793A\u6574\u5706\u3001\u89E3\u91CA\u5706\u5468\u957F\u4E0E\u76F4\u5F84\u7684\u6BD4\u503C\uFF0C\u4E0D\u5E94\u4EC5\u56E0\u6D89\u53CA\u2018\u5706\u2019\u5C31\u9009\u62E9\u672C\u80FD\u529B\uFF1B\u672C\u80FD\u529B\u7ED8\u5236\u5706\u3001\u5706\u5F27\u4E0E\u534A\u5F84\uFF0C\u4E0D\u4F1A\u5C55\u793A\u5468\u957F\u4E0E\u76F4\u5F84\u7684\u6BD4\u503C"
-  },
-  spring_and_mass: {
-    parts: ["whole", "spring", "mass", "equilibrium", "force_arrow", "primary_curve", "moving_point", "primary_control"],
-    number_inputs: ["phase"],
-    number_input_policies: [{ kind: "angle" }],
-    parameter_names: ["title"],
-    model_parameter_names: ["title"],
-    required_model_schema_parameters: [],
-    semantic_parameters: [],
-    output_kinds: ["geometry", "plot"],
-    student_controls: ["slider"],
-    required_features: ["spring_mass", "cartesian_function_curve"],
-    model_guidance: "\u5F39\u7C27\u3001\u7269\u4F53\u3001\u5E73\u8861\u4F4D\u7F6E\u3001\u56DE\u590D\u529B\u548C\u4F59\u5F26\u53D8\u5316\u66F2\u7EBF\u5171\u4EAB\u76F8\u4F4D"
   },
   cube_with_section: {
     parts: ["whole", "solid", "vertex", "edge", "face", "section", "primary_control"],
@@ -10842,7 +10822,81 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     student_controls: ["slider"],
     required_features: ["circle_area_rearrangement"],
     model_guidance: "\u5706\u9762\u79EF\uFF1A\u6247\u5F62\u7B49\u79EF\u91CD\u6392\uFF0C\u5E95\u8D8B\u8FD1\u03C0r\u3001\u9AD8\u8D8B\u8FD1r"
+  }
+};
+var text = { type: "string" };
+var MATH_SCHEMA_PROPERTIES = {
+  function_plot: {
+    x_label: text,
+    y_label: text,
+    formulas: { type: "array", minItems: 1, maxItems: 8, items: text },
+    curve_label: text,
+    curve_labels: { type: "array", minItems: 1, maxItems: 8, items: text }
   },
+  unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
+  circle_polygon_bounds: { radius: { type: "number", minimum: 0 } },
+  circle_and_arc: { radius: { type: "number", minimum: 0 }, angle: { type: "number" } },
+  function_surface_with_section: { expression: text, section_axis: { enum: ["x", "y", "z"] }, section_value: { type: "number" } },
+  implicit_surface_with_section: { expression: text, section_axis: { enum: ["x", "y", "z"] }, level: { type: "number" } },
+  coordinate_circle: {
+    radius: { type: "number", minimum: 0 },
+    radius_expression: text,
+    center_x: { type: "number" },
+    center_y: { type: "number" }
+  },
+  geometric_rearrangement: {
+    construction: { enum: [...MATH_RECIPES.geometric_rearrangement.parameter_options.construction] },
+    leg_a: { type: "number", minimum: 0 },
+    leg_b: { type: "number", minimum: 0 }
+  },
+  circle_area_rearrangement: { radius: { type: "number", minimum: 0 } }
+};
+var MATH_PLUGIN = {
+  manifest: { id: "math", version: "0.1.0", depends: { shared: "0.1.0" } },
+  subject: { description: { "zh-CN": "\u6570\u5B66\uFF1A\u6570\u4E0E\u8FD0\u7B97\u3001\u4EE3\u6570\u3001\u51FD\u6570\u4E0E\u56FE\u50CF\u3001\u51E0\u4F55\u3001\u7EDF\u8BA1\u4E0E\u6982\u7387" } },
+  recipes: MATH_RECIPES,
+  schema_properties: MATH_SCHEMA_PROPERTIES,
+  prompt_rules: {
+    "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
+    "section.formulas": "function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002",
+    "section.bounds": "\u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002",
+    "section.linked_numbers": "\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002",
+    "section.constructions": "geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002"
+  }
+};
+
+// src/plugins/physics.ts
+var PHYSICS_RECIPES = {
+  spring_and_mass: {
+    parts: ["whole", "spring", "mass", "equilibrium", "force_arrow", "primary_curve", "moving_point", "primary_control"],
+    number_inputs: ["phase"],
+    number_input_policies: [{ kind: "angle" }],
+    parameter_names: ["title"],
+    model_parameter_names: ["title"],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["geometry", "plot"],
+    student_controls: ["slider"],
+    required_features: ["spring_mass", "cartesian_function_curve"],
+    model_guidance: "\u5F39\u7C27\u3001\u7269\u4F53\u3001\u5E73\u8861\u4F4D\u7F6E\u3001\u56DE\u590D\u529B\u548C\u4F59\u5F26\u53D8\u5316\u66F2\u7EBF\u5171\u4EAB\u76F8\u4F4D"
+  }
+};
+var PHYSICS_PLUGIN = {
+  manifest: { id: "physics", version: "0.1.0", depends: { shared: "0.1.0" } },
+  subject: { description: { "zh-CN": "\u7269\u7406\uFF1A\u8FD0\u52A8\u4E0E\u529B\u3001\u80FD\u91CF\u3001\u7535\u8DEF\u3001\u5149\u3001\u58F0\u3001\u6D6E\u529B\u7B49" } },
+  recipes: PHYSICS_RECIPES,
+  schema_properties: {},
+  prompt_rules: {}
+};
+
+// src/plugins/shared.ts
+var PROCESS_DIAGRAM_CONTRACT = {
+  min_steps: 2,
+  max_steps: 8,
+  max_step_characters: 80,
+  max_title_characters: 120
+};
+var SHARED_RECIPES = {
   process_diagram: {
     parts: ["whole", "first_step", "current_step", "last_step"],
     number_inputs: [],
@@ -10857,6 +10911,79 @@ var LESSON_PLAN_CAPABILITY_REGISTRY = {
     model_guidance: "\u6982\u5FF5\u6216\u6B65\u9AA4\u6D41\u7A0B\u56FE\uFF1B\u6CA1\u6709\u51E0\u4F55\u79FB\u52A8\uFF0C\u4E5F\u4E0D\u63A5\u53D7\u6570\u503C\u8F93\u5165"
   }
 };
+var SHARED_PLUGIN = {
+  manifest: { id: "shared", version: "0.1.0", depends: {} },
+  recipes: SHARED_RECIPES,
+  schema_properties: {
+    process_diagram: {
+      // Strings carry no length keywords; the validator enforces them.
+      steps: { type: "array", minItems: PROCESS_DIAGRAM_CONTRACT.min_steps, maxItems: PROCESS_DIAGRAM_CONTRACT.max_steps, items: { type: "string" } }
+    }
+  },
+  prompt_rules: {
+    "outline.visual_choice": "ordered_process_steps \u4EC5\u662F\u9759\u6001\u6D41\u7A0B\u3002",
+    "section.constructions": "process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002"
+  }
+};
+
+// src/plugins/index.ts
+var INSTALLED_PLUGINS = [MATH_PLUGIN, PHYSICS_PLUGIN, SHARED_PLUGIN];
+var ALL_RECIPES = { ...MATH_PLUGIN.recipes, ...PHYSICS_PLUGIN.recipes, ...SHARED_PLUGIN.recipes };
+var RECIPE_CATALOG_ORDER = [
+  "function_plot",
+  "unit_circle_projection",
+  "circle_polygon_bounds",
+  "circle_and_arc",
+  "spring_and_mass",
+  "cube_with_section",
+  "function_surface_with_section",
+  "implicit_surface_with_section",
+  "coordinate_circle",
+  "rectangle_unit_square_array",
+  "geometric_rearrangement",
+  "circle_area_rearrangement",
+  "process_diagram"
+];
+var PLUGIN_RECIPE_REGISTRY = Object.fromEntries(
+  RECIPE_CATALOG_ORDER.map((name) => [name, ALL_RECIPES[name]])
+);
+var RECIPE_PLUGIN = Object.fromEntries(
+  INSTALLED_PLUGINS.flatMap((plugin) => Object.keys(plugin.recipes).map((name) => [name, plugin.manifest.id]))
+);
+var RECIPE_SCHEMA_PROPERTIES = Object.assign(
+  {},
+  ...INSTALLED_PLUGINS.map((plugin) => plugin.schema_properties)
+);
+var SCHEMA_PROPERTY_ORDER = [
+  "title",
+  "projection",
+  "x_label",
+  "y_label",
+  "formulas",
+  "curve_label",
+  "curve_labels",
+  "expression",
+  "section_axis",
+  "section_value",
+  "level",
+  "radius",
+  "angle",
+  "radius_expression",
+  "center_x",
+  "center_y",
+  "construction",
+  "leg_a",
+  "leg_b",
+  "steps"
+];
+function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
+  const text2 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
+  return text2 ? `- ${text2}` : "";
+}
+
+// src/lesson-plan.ts
+var LESSON_PLAN_VERSION = "0.1";
+var LESSON_PLAN_CAPABILITY_REGISTRY = PLUGIN_RECIPE_REGISTRY;
 var LESSON_PLAN_CAPABILITY_NAMES = Object.keys(LESSON_PLAN_CAPABILITY_REGISTRY);
 var LESSON_PLAN_VISUAL_FEATURES = [...new Set(
   LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features])
@@ -12198,14 +12325,14 @@ function validateRearrangementClaims(plan) {
     }
     return [];
   };
-  const check = (text, visuals, path) => {
+  const check = (text2, visuals, path) => {
     if (visuals.size !== 1) return;
     const visual = [...visuals][0];
     if (visual.capability !== "geometric_rearrangement") return;
     const construction = visual.parameters?.construction ?? "right_triangle_square";
     const facts = REARRANGEMENT_FACTS[construction];
     if (!facts) return;
-    const claims = text.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
+    const claims = text2.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/gu, "$1").split(/[。！？!?；;\n]/u).filter((claim) => !/不是|并非|不等于|没有|不能|假设|想象|另一种|另一张|其他构造|如果|not |isn't|imagine|another /iu.test(claim));
     const wrongPieces = construction === "square_area_identity" && claims.some((claim) => /(?:这(?:个|张|些|幅)|图中|图里|内部|里面|画面|包含).{0,20}(?:四|4)\s*(?:个|块|片)?(?:完全相同的|全等的|全等|完全相同|一样的)?(?:直角)?三角形/u.test(claim));
     const wrongFrame = construction === "right_triangle_square" && claims.some((claim) => /(?:外框|外侧正方形|这个大正方形|大正方形)(?:的)?边长.{0,8}(?:是|为|等于|就是).{0,4}(?:斜边\s*)?c(?![a-z])/iu.test(claim) || /(?:中间|中央|中心).{0,8}(?:正方形|留白).{0,8}(?:边长|面积).{0,8}(?:b\s*[-−]\s*a|a\s*[-−]\s*b)/iu.test(claim) || /(?:S_?\{?(?:大正方形|外框)\}?|S[（(](?:大正方形|外框)[）)])\s*=\s*c(?:²|\^\{?2\}?)/u.test(claim));
     const wrongControl = claims.some((claim) => /(?:拖动|拖拽|调整|滑动).{0,12}(?:滑块|滑杆|进度).{0,16}(?:改变|调整).{0,8}(?:边长|三边|斜边|直角边)/u.test(claim));
@@ -12284,29 +12411,29 @@ function validateTeachingClaims(plan) {
   const onlyFixedLineSamples = plots.length === 1 && fixedLineSamples(plots[0]);
   for (const [si, section] of plan.sections.entries()) {
     for (const [mi, moment] of section.moments.entries()) {
-      const text = moment.narration ?? "";
-      const claims = text.split(/[。！？!?；;]/);
-      const englishClaims = text.split(/(?<=[.!?;])\s+/u).filter((claim) => !/\?\s*$/.test(claim) && !/\b(?:not|never|cannot|can't|doesn't|isn't|don't|whether|if)\b/i.test(claim));
+      const text2 = moment.narration ?? "";
+      const claims = text2.split(/[。！？!?；;]/);
+      const englishClaims = text2.split(/(?<=[.!?;])\s+/u).filter((claim) => !/\?\s*$/.test(claim) && !/\b(?:not|never|cannot|can't|doesn't|isn't|don't|whether|if)\b/i.test(claim));
       if (hasCircleArea && englishClaims.some((claim) => /\b(?:base|height)\b.{0,25}\b(?:exactly|equals?|is)\b.{0,15}(?:πr|pi\s*\*?\s*r|radius|\br\b)/i.test(claim)) && !/\b(?:approach|tend|limit|infinite|finer|approx|curved)\w*\b/i.test(section.moments.slice(0, mi + 1).map((moment2) => moment2.narration).join(" "))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
       }
       if (onlyFixedLineSamples && englishClaims.some((claim) => /\b(?:slope|steepness)\b.{0,20}\b(?:changes?|changing|varies|varying)\b/i.test(claim) && !/\b(?:unchanged|constant|fixed|invariant|remains?|stays?)\b/i.test(claim))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
       }
-      if (plots.length && englishClaims.some((claim) => /\b(?:larger|greater|increas\w*)\s+(?:signed\s+)?(?:slope|k)\b.{0,45}\bsteeper\b/i.test(claim)) && !/\b(?:absolute|positive|magnitude)\b|k\s*>\s*0/i.test(text)) {
+      if (plots.length && englishClaims.some((claim) => /\b(?:larger|greater|increas\w*)\s+(?:signed\s+)?(?:slope|k)\b.{0,45}\bsteeper\b/i.test(claim)) && !/\b(?:absolute|positive|magnitude)\b|k\s*>\s*0/i.test(text2)) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
       }
-      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
+      if (hasCircleArea && /(?:高|底边|底边长|底)(?:度|长度)?(?:正好|恰好|精确|就是|等于|为|是){1,3}.{0,8}(?:半径|πr|r)/.test(text2) && !/趋近|趋于|极限|无限|越来越|近似|接近/.test(section.moments.slice(0, mi + 1).map((m) => m.narration).join(" "))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "finite sectors have curved edges; base tends to pi*r and height tends to r as subdivisions increase");
       }
-      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text) && !/滑块|滑杆/.test(text)) {
+      if (plots.length && /拖(?:动|拽)(?:图上|图中|曲线上|一下|这个|那个|两个|两|的|\s)*(?:点\s*[ABＰP]|[ABＰP]\s*点|两个点|两点)/.test(text2) && !/滑块|滑杆/.test(text2)) {
         throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "use the point's horizontal-coordinate slider; directly dragging plot points is unavailable");
       }
       if (onlyFixedLineSamples && claims.some((claim) => /(?:斜率|倾斜角度|倾斜程度|倾斜方向|陡峭程度)(?:的数值)?(?:就|也|会|将|随之|随点移动|发生|而|从而|不断|逐渐|产生|有所|明显|直接|可以|能够|能|\s|[，,]){0,8}(?:改变|变化)(?!量|率)|(?:改变|变化)(?:了|着|其|它的|直线的|连线的|割线的|两点连线的|\s){0,5}(?:斜率|倾斜角度|倾斜程度|陡峭程度)/.test(claim) && !/不变|不会|不改变|保持|无论|有没有|是否|会不会/.test(claim))) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "moving two samples on a fixed straight line preserves its slope; use a nonlinear curve for changing secant slope");
       }
-      const steepnessClaim = (text.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
-      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text)) {
+      const steepnessClaim = (text2.match(/[^。！？!?；;]+[。！？!?；;]?/g) ?? []).some((sentence) => /(?:斜率|k).{0,10}越大.{0,12}越陡/.test(sentence) && !/[？?]\s*$/.test(sentence) && !/吗|是否|不一定|未必|并不|并非|不是|不总是|不能说/.test(sentence));
+      if (steepnessClaim && !/绝对值|正数|为正|大于.?0|k\s*>\s*0/.test(text2)) {
         throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", `$plan.sections[${si}].moments[${mi}]`, "steepness depends on absolute slope; larger signed k is not always steeper");
       }
     }
@@ -12315,111 +12442,27 @@ function validateTeachingClaims(plan) {
       for (const action of visuals) {
         if (action.action !== "create" || action.kind !== "visual") continue;
         const visual = action.content;
-        const text = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
+        const text2 = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
         const path = `$plan.sections[${si}].moments[${mi}]`;
-        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text) && /证明|推导|拼|重排|prove|derive/i.test(text)) {
+        if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text2) && /证明|推导|拼|重排|prove|derive/i.test(text2)) {
           throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path, "circle area requires circle_area_rearrangement; polygon recipes cannot prove pi*r^2");
         }
         if (visual.capability !== "function_plot") continue;
         const tokens = visual.parameters?.expression_tokens;
         const dynamic = Array.isArray(tokens) && tokens.some((t) => t?.kind === "number");
         const count = dynamic ? 0 : new Set(visual.numbers ?? []).size;
-        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text)) {
+        if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text2)) {
           throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "moving the whole curve requires formula number references; static sample inputs only move points");
         }
-        if (/两个点|两点|two points/i.test(text) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text) && count !== 2) {
+        if (/两个点|两点|two points/i.test(text2) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text2) && count !== 2) {
           throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and content.numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
         }
-        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text)) {
+        if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text2)) {
           throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "plot points use sliders; direct point dragging is unavailable");
         }
       }
     }
   }
-}
-
-// src/function-viewport.ts
-function niceRange(values, includeZero = true) {
-  const finite = values.filter((v) => Number.isFinite(v) && Math.abs(v) < 1e12).sort((a, b) => a - b);
-  if (!finite.length) throw new Error("function has no finite teaching viewport");
-  let low = finite[Math.floor((finite.length - 1) * 0.02)];
-  let high = finite[Math.ceil((finite.length - 1) * 0.98)];
-  if (includeZero) {
-    low = Math.min(low, 0);
-    high = Math.max(high, 0);
-  }
-  const span = high - low;
-  const pad3 = span > 1e-9 ? span * 0.12 : Math.max(1, Math.abs(low) * 0.2);
-  const rawStep = (span + 2 * pad3) / 6;
-  const unit = 10 ** Math.floor(Math.log10(rawStep));
-  const step = [1, 2, 5, 10].map((n) => n * unit).find((n) => n >= rawStep);
-  return { min: Math.floor((low - pad3) / step) * step, max: Math.ceil((high + pad3) / step) * step };
-}
-function quadratic(evaluate2) {
-  const y0 = evaluate2(0), y1 = evaluate2(1), ym = evaluate2(-1);
-  const a = (y1 + ym - 2 * y0) / 2, b = (y1 - ym) / 2;
-  if (![a, b, y0].every(Number.isFinite) || Math.abs(a) < 1e-9) return;
-  for (const x of [-2, 0.37, 2, 3]) {
-    const expected = a * x * x + b * x + y0, actual = evaluate2(x);
-    if (!Number.isFinite(actual) || Math.abs(expected - actual) > 1e-8 * Math.max(1, Math.abs(expected))) return;
-  }
-  const vertex = -b / (2 * a), value = evaluate2(vertex);
-  if (Number.isFinite(vertex) && Number.isFinite(value)) return { vertex, value, a };
-}
-function functionViewport(expressions, parameters2, requestedX) {
-  const evaluators = expressions.map((e) => compileMathExpression(e, ["x", ...parameters2.map((p) => p.name)]));
-  const initial = Object.fromEntries(parameters2.map((p) => [p.name, p.initial]));
-  const states = [initial, ...parameters2.flatMap((p) => [p.min, p.max].map((v) => ({ ...initial, [p.name]: v })))];
-  const evaluate2 = (index, state, x2) => {
-    try {
-      return evaluators[index]({ ...state, x: x2 });
-    } catch {
-      return NaN;
-    }
-  };
-  const vertices = states.flatMap((state) => evaluators.flatMap((_, i) => {
-    const q = quadratic((x2) => evaluate2(i, state, x2));
-    return q ? [q] : [];
-  }));
-  const identity = expressions.some((e) => e.replace(/[()\s]/g, "") === "x");
-  if (!requestedX && identity && expressions.length > 1 && expressions.some((e) => /\b(?:ln|log)\s*\(/.test(e))) {
-    return { x: { min: -2, max: 6 }, y: { min: -2, max: 6 } };
-  }
-  if (!requestedX && expressions.length === 1 && parameters2.length === 0) {
-    const y0 = evaluate2(0, initial, 0), y1 = evaluate2(0, initial, 1);
-    const rate = Math.log(y1 / y0), intercept = Math.log(y0);
-    if (y0 > 0 && y1 > 0 && Number.isFinite(rate) && Math.abs(rate) > 1e-6 && [-2, -1, 0.37, 2, 3].every((t) => {
-      const expected = Math.exp(intercept + rate * t), actual = evaluate2(0, initial, t);
-      return Number.isFinite(actual) && Math.abs(actual - expected) < 1e-8 * Math.max(1, expected);
-    })) {
-      const center = -intercept / rate, radius = 2 / Math.abs(rate);
-      return { x: { min: Math.min(0, center - radius), max: Math.max(0, center + radius) }, y: { min: -1, max: 8 } };
-    }
-  }
-  let x = requestedX ?? { min: -4, max: 4 };
-  if (!requestedX && vertices.length) {
-    x = { min: Math.min(-4, ...vertices.map((q) => q.vertex - 2)), max: Math.max(4, ...vertices.map((q) => q.vertex + 2)) };
-  } else if (!requestedX && expressions.some((e) => /\b(sin|cos|tan)\s*\(/.test(e))) {
-    x = { min: -Math.PI * 2, max: Math.PI * 2 };
-  }
-  const sample = (range) => Array.from({ length: 121 }, (_, i) => range.min + (range.max - range.min) * i / 120).flatMap((t) => evaluators.map((_, index) => evaluate2(index, initial, t)));
-  let values = sample(x);
-  if (!requestedX && !vertices.length && values.filter(Number.isFinite).length < values.length * 0.7) {
-    const positive = { min: 0, max: 8 }, alternative = sample(positive);
-    if (alternative.filter(Number.isFinite).length > values.filter(Number.isFinite).length) {
-      x = positive;
-      values = alternative;
-    }
-  }
-  if (vertices.length === states.length * evaluators.length) {
-    values = vertices.flatMap((q) => [q.value, q.value + q.a * 9]);
-  }
-  const y = expressions.length === 1 && /^tan\(x\)$/.test(expressions[0].replace(/\s/g, "")) ? { min: -4, max: 4 } : niceRange(values);
-  for (const q of vertices) {
-    y.min = Math.min(y.min, q.value - 1);
-    y.max = Math.max(y.max, q.value + 1);
-  }
-  return { x, y };
 }
 
 // src/scene3d-surfaces.ts
@@ -12544,68 +12587,12 @@ function buildImplicitSurfaceObject(input) {
   };
 }
 
-// src/lesson-plan-compiler.ts
+// src/recipe-kit.ts
 var LESSON_PLAN_SCENE_INITIAL_CAMERAS = {
   cube_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
   function_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
   implicit_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 }
 };
-function normalizedVisualIdentity(content, includeNumbers = true) {
-  const sourceParameters = content.parameters ?? {};
-  const parameters2 = Object.fromEntries(
-    LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].semantic_parameters.filter((name) => sourceParameters[name] !== void 0).map((name) => [name, sourceParameters[name]])
-  );
-  const normalize2 = (value) => {
-    if (Array.isArray(value)) return value.map(normalize2);
-    if (!value || typeof value !== "object") return value;
-    return Object.fromEntries(
-      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, child]) => [key, normalize2(child)])
-    );
-  };
-  return JSON.stringify(normalize2({
-    capability: content.capability,
-    parameters: parameters2,
-    ...includeNumbers ? { numbers: content.numbers ?? [] } : {}
-  }));
-}
-function separateInitialSamples(plan) {
-  const words = JSON.stringify(plan.sections.map((s) => s.moments.map((m) => m.narration)));
-  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
-  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
-    if (action.action !== "create" || action.kind !== "visual") continue;
-    const visual = action.content;
-    if (visual.capability !== "function_plot" || visual.numbers?.length !== 2) continue;
-    const tokens = visual.parameters?.expression_tokens;
-    if (Array.isArray(tokens) && tokens.some((t) => t && typeof t === "object" && "kind" in t && t.kind === "number")) continue;
-    const a = plan.numbers?.[visual.numbers[0] - 1], b = plan.numbers?.[visual.numbers[1] - 1];
-    if (!a || !b || a === b || Math.abs(a.initial - b.initial) > 1e-8) continue;
-    const step = b.student_control?.step ?? (b.max - b.min) / 200;
-    const delta = Math.max(step, Math.round((b.max - b.min) / 5 / step) * step);
-    b.initial = b.initial + delta <= b.max ? b.initial + delta : Math.max(b.min, b.initial - delta);
-  }
-}
-function mergeEquivalentVisualInputs(plan) {
-  const groups = /* @__PURE__ */ new Map();
-  for (const section of plan.sections) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
-        if (action.action !== "create" || action.kind !== "visual") continue;
-        const content = action.content;
-        const identity = normalizedVisualIdentity(content, false);
-        const group = groups.get(identity) ?? [];
-        group.push(content);
-        groups.set(identity, group);
-      }
-    }
-  }
-  for (const group of groups.values()) {
-    if (group.length < 2) continue;
-    const inputs = [...new Set(group.flatMap((content) => content.numbers ?? []))];
-    const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[group[0].capability];
-    if (inputs.length > limit) continue;
-    for (const content of group) content.numbers = [...inputs];
-  }
-}
 function fail3(code, path, message) {
   throw new LessonPlanError(code, path, message);
 }
@@ -12751,8 +12738,8 @@ function numberDefinition(plan, index, path) {
   if (!definition) fail3("LESSON_PLAN_NUMBER_REFERENCE", path, "number reference is unavailable");
   return definition;
 }
-function namedNumbers(text, plan) {
-  return text.replace(/\bn([1-9])\b/gu, (placeholder, digit) => {
+function namedNumbers(text2, plan) {
+  return text2.replace(/\bn([1-9])\b/gu, (placeholder, digit) => {
     const label = plan.numbers?.[Number(digit) - 1]?.label?.trim();
     if (!label) return placeholder;
     return /([A-Za-z\u03b1-\u03c9])$/u.exec(label)?.[1] ?? label;
@@ -12768,6 +12755,92 @@ function angleScaleForUnit(unit) {
 function scaledAngleExpression(variable, scale) {
   return scale === 1 ? variable : `(${variable})*pi/180`;
 }
+
+// src/function-viewport.ts
+function niceRange(values, includeZero = true) {
+  const finite = values.filter((v) => Number.isFinite(v) && Math.abs(v) < 1e12).sort((a, b) => a - b);
+  if (!finite.length) throw new Error("function has no finite teaching viewport");
+  let low = finite[Math.floor((finite.length - 1) * 0.02)];
+  let high = finite[Math.ceil((finite.length - 1) * 0.98)];
+  if (includeZero) {
+    low = Math.min(low, 0);
+    high = Math.max(high, 0);
+  }
+  const span = high - low;
+  const pad3 = span > 1e-9 ? span * 0.12 : Math.max(1, Math.abs(low) * 0.2);
+  const rawStep = (span + 2 * pad3) / 6;
+  const unit = 10 ** Math.floor(Math.log10(rawStep));
+  const step = [1, 2, 5, 10].map((n) => n * unit).find((n) => n >= rawStep);
+  return { min: Math.floor((low - pad3) / step) * step, max: Math.ceil((high + pad3) / step) * step };
+}
+function quadratic(evaluate2) {
+  const y0 = evaluate2(0), y1 = evaluate2(1), ym = evaluate2(-1);
+  const a = (y1 + ym - 2 * y0) / 2, b = (y1 - ym) / 2;
+  if (![a, b, y0].every(Number.isFinite) || Math.abs(a) < 1e-9) return;
+  for (const x of [-2, 0.37, 2, 3]) {
+    const expected = a * x * x + b * x + y0, actual = evaluate2(x);
+    if (!Number.isFinite(actual) || Math.abs(expected - actual) > 1e-8 * Math.max(1, Math.abs(expected))) return;
+  }
+  const vertex = -b / (2 * a), value = evaluate2(vertex);
+  if (Number.isFinite(vertex) && Number.isFinite(value)) return { vertex, value, a };
+}
+function functionViewport(expressions, parameters2, requestedX) {
+  const evaluators = expressions.map((e) => compileMathExpression(e, ["x", ...parameters2.map((p) => p.name)]));
+  const initial = Object.fromEntries(parameters2.map((p) => [p.name, p.initial]));
+  const states = [initial, ...parameters2.flatMap((p) => [p.min, p.max].map((v) => ({ ...initial, [p.name]: v })))];
+  const evaluate2 = (index, state, x2) => {
+    try {
+      return evaluators[index]({ ...state, x: x2 });
+    } catch {
+      return NaN;
+    }
+  };
+  const vertices = states.flatMap((state) => evaluators.flatMap((_, i) => {
+    const q = quadratic((x2) => evaluate2(i, state, x2));
+    return q ? [q] : [];
+  }));
+  const identity = expressions.some((e) => e.replace(/[()\s]/g, "") === "x");
+  if (!requestedX && identity && expressions.length > 1 && expressions.some((e) => /\b(?:ln|log)\s*\(/.test(e))) {
+    return { x: { min: -2, max: 6 }, y: { min: -2, max: 6 } };
+  }
+  if (!requestedX && expressions.length === 1 && parameters2.length === 0) {
+    const y0 = evaluate2(0, initial, 0), y1 = evaluate2(0, initial, 1);
+    const rate = Math.log(y1 / y0), intercept = Math.log(y0);
+    if (y0 > 0 && y1 > 0 && Number.isFinite(rate) && Math.abs(rate) > 1e-6 && [-2, -1, 0.37, 2, 3].every((t) => {
+      const expected = Math.exp(intercept + rate * t), actual = evaluate2(0, initial, t);
+      return Number.isFinite(actual) && Math.abs(actual - expected) < 1e-8 * Math.max(1, expected);
+    })) {
+      const center = -intercept / rate, radius = 2 / Math.abs(rate);
+      return { x: { min: Math.min(0, center - radius), max: Math.max(0, center + radius) }, y: { min: -1, max: 8 } };
+    }
+  }
+  let x = requestedX ?? { min: -4, max: 4 };
+  if (!requestedX && vertices.length) {
+    x = { min: Math.min(-4, ...vertices.map((q) => q.vertex - 2)), max: Math.max(4, ...vertices.map((q) => q.vertex + 2)) };
+  } else if (!requestedX && expressions.some((e) => /\b(sin|cos|tan)\s*\(/.test(e))) {
+    x = { min: -Math.PI * 2, max: Math.PI * 2 };
+  }
+  const sample = (range) => Array.from({ length: 121 }, (_, i) => range.min + (range.max - range.min) * i / 120).flatMap((t) => evaluators.map((_, index) => evaluate2(index, initial, t)));
+  let values = sample(x);
+  if (!requestedX && !vertices.length && values.filter(Number.isFinite).length < values.length * 0.7) {
+    const positive = { min: 0, max: 8 }, alternative = sample(positive);
+    if (alternative.filter(Number.isFinite).length > values.filter(Number.isFinite).length) {
+      x = positive;
+      values = alternative;
+    }
+  }
+  if (vertices.length === states.length * evaluators.length) {
+    values = vertices.flatMap((q) => [q.value, q.value + q.a * 9]);
+  }
+  const y = expressions.length === 1 && /^tan\(x\)$/.test(expressions[0].replace(/\s/g, "")) ? { min: -4, max: 4 } : niceRange(values);
+  for (const q of vertices) {
+    y.min = Math.min(y.min, q.value - 1);
+    y.max = Math.max(y.max, q.value + 1);
+  }
+  return { x, y };
+}
+
+// src/plugins/math-compilers.ts
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
@@ -13091,71 +13164,6 @@ function compileCircleAndArc(base, content, role, placement, plan, path) {
       ["arc", `${base}#arc`],
       ["radius", `${base}#radius`],
       ...angleVariable ? [["primary_control", `${base}#moving-point`]] : []
-    ])
-  };
-}
-function compileSpringAndMass(base, content, role, placement, plan, path) {
-  const input = parameters(content);
-  allowParameterKeys(input, ["title"], path);
-  const number = content.numbers?.[0];
-  const phaseDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
-  const phaseScale = angleScaleForUnit(phaseDefinition?.unit);
-  const phase = (phaseDefinition?.initial ?? 0) * phaseScale;
-  const variable = number ? variableAlias(number) : void 0;
-  const phaseExpression = variable ? scaledAngleExpression(variable, phaseScale) : void 0;
-  const motion = `${base}-motion`;
-  const plot = `${base}-plot`;
-  const plotPhaseMin = phaseDefinition ? phaseDefinition.min * phaseScale : 0;
-  const plotPhaseMax = phaseDefinition ? phaseDefinition.max * phaseScale : Math.PI * 2;
-  const geometry = {
-    title: optionalText(input.title, compileText(plan, "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8"), `${path}.title`),
-    axes: { x: { min: -1.5, max: 1.5, label: compileText(plan, "\u4F4D\u79FB") }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
-    points: [
-      { as: "anchor", x: -1.25, y: 0, label: compileText(plan, "\u56FA\u5B9A\u7AEF") },
-      { as: "equilibrium", x: 0, y: 0, label: compileText(plan, "\u5E73\u8861\u4F4D\u7F6E") },
-      { as: "mass", x: Math.cos(phase), y: 0, label: compileText(plan, "\u7269\u4F53") },
-      { as: "force-tip", x: Math.cos(phase) * 0.5, y: 0, visible: false }
-    ],
-    segments: [
-      { as: "spring", from: "anchor", to: "mass", style: "solid" },
-      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: compileText(plan, "\u56DE\u590D\u529B") }
-    ],
-    ...variable ? {
-      bindings: [
-        { target: "mass.x", expression: `cos(${phaseExpression})` },
-        { target: "force-tip.x", expression: `0.5*cos(${phaseExpression})` }
-      ]
-    } : {}
-  };
-  const plotContent = {
-    title: compileText(plan, "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316"),
-    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: compileText(plan, "\u76F8\u4F4D") }, y: { min: -1.2, max: 1.2, label: compileText(plan, "\u4F4D\u79FB") } },
-    curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
-    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: compileText(plan, "\u5F53\u524D\u72B6\u6001") }],
-    ...variable ? {
-      bindings: [
-        { target: "moving-point.x", expression: phaseExpression },
-        { target: "moving-point.y", expression: `cos(${phaseExpression})` }
-      ]
-    } : {}
-  };
-  return {
-    actions: [
-      { do: "write", as: motion, kind: "geometry", role, content: geometry, place: placement },
-      { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: motion, gap: "normal" } },
-      { do: "connect", as: `${base}-link`, from: motion, to: plot, relation: "same_state", label: compileText(plan, "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB") },
-      { do: "group", as: base, role, label: compileText(plan, "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF"), members: [motion, plot] }
-    ],
-    whole: base,
-    parts: new Map([
-      ["whole", base],
-      ["spring", `${motion}#spring`],
-      ["mass", `${motion}#mass`],
-      ["equilibrium", `${motion}#equilibrium`],
-      ["force_arrow", `${motion}#force-arrow`],
-      ["primary_curve", `${plot}#primary-curve`],
-      ["moving_point", `${plot}#moving-point`],
-      ...variable ? [["primary_control", `${plot}#moving-point`]] : []
     ])
   };
 }
@@ -13688,6 +13696,91 @@ function compileCircleArea(base, content, role, placement, plan, path) {
   }
   return { actions, whole: base, parts: new Map([["whole", base], ...variable ? [["primary_control", base]] : []]) };
 }
+var MATH_COMPILERS = {
+  function_plot: compileFunctionPlot,
+  unit_circle_projection: compileUnitCircleProjection,
+  circle_polygon_bounds: compileCirclePolygonBounds,
+  circle_and_arc: compileCircleAndArc,
+  cube_with_section: compileCubeWithSection,
+  function_surface_with_section: compileFunctionSurface,
+  implicit_surface_with_section: compileImplicitSurface,
+  coordinate_circle: compileCoordinateCircle,
+  rectangle_unit_square_array: compileRectangleUnitSquareArray,
+  geometric_rearrangement: compileGeometricRearrangement,
+  circle_area_rearrangement: compileCircleArea
+};
+
+// src/plugins/physics-compilers.ts
+function compileSpringAndMass(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title"], path);
+  const number = content.numbers?.[0];
+  const phaseDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
+  const phaseScale = angleScaleForUnit(phaseDefinition?.unit);
+  const phase = (phaseDefinition?.initial ?? 0) * phaseScale;
+  const variable = number ? variableAlias(number) : void 0;
+  const phaseExpression = variable ? scaledAngleExpression(variable, phaseScale) : void 0;
+  const motion = `${base}-motion`;
+  const plot = `${base}-plot`;
+  const plotPhaseMin = phaseDefinition ? phaseDefinition.min * phaseScale : 0;
+  const plotPhaseMax = phaseDefinition ? phaseDefinition.max * phaseScale : Math.PI * 2;
+  const geometry = {
+    title: optionalText(input.title, compileText(plan, "\u5F39\u7C27\u632F\u5B50\u7684\u5F80\u590D\u8FD0\u52A8"), `${path}.title`),
+    axes: { x: { min: -1.5, max: 1.5, label: compileText(plan, "\u4F4D\u79FB") }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
+    points: [
+      { as: "anchor", x: -1.25, y: 0, label: compileText(plan, "\u56FA\u5B9A\u7AEF") },
+      { as: "equilibrium", x: 0, y: 0, label: compileText(plan, "\u5E73\u8861\u4F4D\u7F6E") },
+      { as: "mass", x: Math.cos(phase), y: 0, label: compileText(plan, "\u7269\u4F53") },
+      { as: "force-tip", x: Math.cos(phase) * 0.5, y: 0, visible: false }
+    ],
+    segments: [
+      { as: "spring", from: "anchor", to: "mass", style: "solid" },
+      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: compileText(plan, "\u56DE\u590D\u529B") }
+    ],
+    ...variable ? {
+      bindings: [
+        { target: "mass.x", expression: `cos(${phaseExpression})` },
+        { target: "force-tip.x", expression: `0.5*cos(${phaseExpression})` }
+      ]
+    } : {}
+  };
+  const plotContent = {
+    title: compileText(plan, "\u4F4D\u79FB\u968F\u76F8\u4F4D\u53D8\u5316"),
+    axes: { x: { min: plotPhaseMin, max: plotPhaseMax, label: compileText(plan, "\u76F8\u4F4D") }, y: { min: -1.2, max: 1.2, label: compileText(plan, "\u4F4D\u79FB") } },
+    curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
+    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: compileText(plan, "\u5F53\u524D\u72B6\u6001") }],
+    ...variable ? {
+      bindings: [
+        { target: "moving-point.x", expression: phaseExpression },
+        { target: "moving-point.y", expression: `cos(${phaseExpression})` }
+      ]
+    } : {}
+  };
+  return {
+    actions: [
+      { do: "write", as: motion, kind: "geometry", role, content: geometry, place: placement },
+      { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: motion, gap: "normal" } },
+      { do: "connect", as: `${base}-link`, from: motion, to: plot, relation: "same_state", label: compileText(plan, "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB") },
+      { do: "group", as: base, role, label: compileText(plan, "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF"), members: [motion, plot] }
+    ],
+    whole: base,
+    parts: new Map([
+      ["whole", base],
+      ["spring", `${motion}#spring`],
+      ["mass", `${motion}#mass`],
+      ["equilibrium", `${motion}#equilibrium`],
+      ["force_arrow", `${motion}#force-arrow`],
+      ["primary_curve", `${plot}#primary-curve`],
+      ["moving_point", `${plot}#moving-point`],
+      ...variable ? [["primary_control", `${plot}#moving-point`]] : []
+    ])
+  };
+}
+var PHYSICS_COMPILERS = {
+  spring_and_mass: compileSpringAndMass
+};
+
+// src/plugins/shared-compilers.ts
 function compileProcessDiagram(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "steps"], path);
@@ -13715,20 +13808,72 @@ function compileProcessDiagram(base, content, role, placement, plan, path) {
     parts: /* @__PURE__ */ new Map([["whole", base], ["first_step", first], ["current_step", current], ["last_step", last]])
   };
 }
+var SHARED_COMPILERS = {
+  process_diagram: compileProcessDiagram
+};
+
+// src/lesson-plan-compiler.ts
+function normalizedVisualIdentity(content, includeNumbers = true) {
+  const sourceParameters = content.parameters ?? {};
+  const parameters2 = Object.fromEntries(
+    LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].semantic_parameters.filter((name) => sourceParameters[name] !== void 0).map((name) => [name, sourceParameters[name]])
+  );
+  const normalize2 = (value) => {
+    if (Array.isArray(value)) return value.map(normalize2);
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(
+      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, child]) => [key, normalize2(child)])
+    );
+  };
+  return JSON.stringify(normalize2({
+    capability: content.capability,
+    parameters: parameters2,
+    ...includeNumbers ? { numbers: content.numbers ?? [] } : {}
+  }));
+}
+function separateInitialSamples(plan) {
+  const words = JSON.stringify(plan.sections.map((s) => s.moments.map((m) => m.narration)));
+  if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    const visual = action.content;
+    if (visual.capability !== "function_plot" || visual.numbers?.length !== 2) continue;
+    const tokens = visual.parameters?.expression_tokens;
+    if (Array.isArray(tokens) && tokens.some((t) => t && typeof t === "object" && "kind" in t && t.kind === "number")) continue;
+    const a = plan.numbers?.[visual.numbers[0] - 1], b = plan.numbers?.[visual.numbers[1] - 1];
+    if (!a || !b || a === b || Math.abs(a.initial - b.initial) > 1e-8) continue;
+    const step = b.student_control?.step ?? (b.max - b.min) / 200;
+    const delta = Math.max(step, Math.round((b.max - b.min) / 5 / step) * step);
+    b.initial = b.initial + delta <= b.max ? b.initial + delta : Math.max(b.min, b.initial - delta);
+  }
+}
+function mergeEquivalentVisualInputs(plan) {
+  const groups = /* @__PURE__ */ new Map();
+  for (const section of plan.sections) {
+    for (const moment of section.moments) {
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const content = action.content;
+        const identity = normalizedVisualIdentity(content, false);
+        const group = groups.get(identity) ?? [];
+        group.push(content);
+        groups.set(identity, group);
+      }
+    }
+  }
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const inputs = [...new Set(group.flatMap((content) => content.numbers ?? []))];
+    const limit = LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[group[0].capability];
+    if (inputs.length > limit) continue;
+    for (const content of group) content.numbers = [...inputs];
+  }
+}
+var PLUGIN_COMPILERS = { math: MATH_COMPILERS, physics: PHYSICS_COMPILERS, shared: SHARED_COMPILERS };
 var VISUAL_COMPILERS = {
-  function_plot: compileFunctionPlot,
-  unit_circle_projection: compileUnitCircleProjection,
-  circle_and_arc: compileCircleAndArc,
-  circle_polygon_bounds: compileCirclePolygonBounds,
-  spring_and_mass: compileSpringAndMass,
-  cube_with_section: compileCubeWithSection,
-  function_surface_with_section: compileFunctionSurface,
-  implicit_surface_with_section: compileImplicitSurface,
-  coordinate_circle: compileCoordinateCircle,
-  rectangle_unit_square_array: compileRectangleUnitSquareArray,
-  geometric_rearrangement: compileGeometricRearrangement,
-  process_diagram: compileProcessDiagram,
-  circle_area_rearrangement: compileCircleArea
+  ...MATH_COMPILERS,
+  ...PHYSICS_COMPILERS,
+  ...SHARED_COMPILERS
 };
 function intersectProgramRange(definition, allowedMin, allowedMax) {
   let min = Math.max(definition.min, allowedMin);
@@ -14490,45 +14635,14 @@ function visualParametersSchema(allowedCapabilities, numberCount = 0, requireDyn
   const modelParameters = new Set(allowedCapabilities.flatMap(
     (capability2) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_parameter_names]
   ));
-  const properties = {};
-  const uses = (capability2) => allowedCapabilities.includes(capability2);
-  if (modelParameters.has("title")) properties.title = string(240);
-  if (uses("unit_circle_projection")) properties.projection = { enum: ["sin", "cos"] };
-  if (uses("function_plot")) {
-    properties.x_label = string(32);
-    properties.y_label = string(32);
-    properties.formulas = { type: "array", minItems: 1, maxItems: 8, items: string(256) };
-    properties.curve_label = string(160);
-    properties.curve_labels = { type: "array", minItems: 1, maxItems: 8, items: string(160) };
-  }
-  if (uses("function_surface_with_section") || uses("implicit_surface_with_section")) {
-    properties.expression = string(256);
-    properties.section_axis = { enum: ["x", "y", "z"] };
-  }
-  if (uses("function_surface_with_section")) properties.section_value = { type: "number" };
-  if (uses("implicit_surface_with_section")) properties.level = { type: "number" };
-  if (modelParameters.has("radius")) properties.radius = { type: "number", minimum: 0 };
-  if (uses("circle_and_arc")) properties.angle = { type: "number" };
-  if (uses("coordinate_circle")) {
-    properties.radius_expression = string(256);
-    properties.center_x = { type: "number" };
-    properties.center_y = { type: "number" };
-  }
-  if (uses("geometric_rearrangement")) {
-    properties.construction = {
-      enum: [...LESSON_PLAN_CAPABILITY_REGISTRY.geometric_rearrangement.parameter_options.construction]
-    };
-    properties.leg_a = { type: "number", minimum: 0 };
-    properties.leg_b = { type: "number", minimum: 0 };
-  }
-  if (uses("process_diagram")) {
-    properties.steps = {
-      type: "array",
-      minItems: PROCESS_DIAGRAM_CONTRACT.min_steps,
-      maxItems: PROCESS_DIAGRAM_CONTRACT.max_steps,
-      items: string(PROCESS_DIAGRAM_CONTRACT.max_step_characters)
-    };
-  }
+  const declared = {};
+  if (modelParameters.has("title")) declared.title = string(240);
+  for (const capability2 of allowedCapabilities) Object.assign(declared, RECIPE_SCHEMA_PROPERTIES[capability2]);
+  const order = SCHEMA_PROPERTY_ORDER;
+  const properties = Object.fromEntries([
+    ...order.filter((name) => name in declared),
+    ...Object.keys(declared).filter((name) => !order.includes(name))
+  ].map((name) => [name, declared[name]]));
   const required = allowedCapabilities.length === 1 ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters] : [];
   if ((requireDynamicPlotExpression || canonicalFunctionPlot) && !required.includes("formulas")) {
     required.push("formulas");
@@ -15032,56 +15146,105 @@ function completedObjectText(source, propertyName) {
   return void 0;
 }
 function completedJsonObjectProperty(source, propertyName) {
-  const text = completedObjectText(source, propertyName);
-  if (text === void 0) return void 0;
+  const text2 = completedObjectText(source, propertyName);
+  if (text2 === void 0) return void 0;
   try {
-    return JSON.parse(text);
+    return JSON.parse(text2);
   } catch {
     return void 0;
   }
 }
 
+// src/plugins/math-facts.ts
+var MATH_SECTION_FACTS = {
+  function_plot: ({ established }) => established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {},
+  geometric_rearrangement: ({ mode, established, numbers, state }) => {
+    let facts = {};
+    if (established) {
+      const construction = established.parameters?.construction ?? "right_triangle_square";
+      const definition = REARRANGEMENT_FACTS[construction];
+      const number = established.numbers?.[0];
+      const range = number ? numbers?.[number - 1] : void 0;
+      facts = definition ? {
+        construction,
+        pieces: definition.pieces,
+        shows: definition.shows,
+        container: definition.container,
+        at_start: definition.initial,
+        at_end: definition.final,
+        fixed_legs: { a: established.parameters?.leg_a ?? 3, b: established.parameters?.leg_b ?? 2 },
+        ...range && number ? { progress: {
+          number,
+          current_value: state.get(number),
+          normalized: ((state.get(number) ?? range.initial) - range.min) / (range.max - range.min)
+        } } : {}
+      } : {};
+    }
+    return { facts: { ...facts, ...mode === "create" ? { construction_choices: REARRANGEMENT_MODEL_GUIDANCE } : {} } };
+  },
+  circle_polygon_bounds: ({ established }) => ({
+    facts: {
+      circle_fixed: true,
+      radius: established?.parameters?.radius ?? 2,
+      side_count: { min: 3, max: 384, integer: true },
+      pi_lower: "n*sin(pi/n)",
+      pi_upper: "n*tan(pi/n)",
+      n96: { lower: 3.1410319508905093, upper: 3.142714599645368 },
+      caution: "Use the actual regular polygons, not circle_and_arc; displayed bounds are approximations, not exact historical rational bounds."
+    }
+  })
+};
+
+// src/plugins/section-facts.ts
+var SECTION_FACTS = { ...MATH_SECTION_FACTS };
+
 // src/lesson-plan-generation.ts
 var ANSWER_ACTIVITY_RULE = "answer \u53EA\u5199\u4E00\u4E2A\u6570\uFF08\u6574\u6570\u3001\u5C0F\u6570\u3001\u5206\u6570 3/4\u3001\u5E26\u5206\u6570 2 3/4\uFF09\uFF0C\u4E0D\u5E26\u5355\u4F4D\u6216 %\uFF0C\u767E\u5206\u6570\u9898\u5199\u767E\u5206\u53F7\u524D\u7684\u6570\u5E76\u628A % \u5199\u5165 unit\uFF1Bcheck \u5199\u53EA\u542B\u6570\u5B57\u7684\u7B97\u5F0F\uFF08\u5982 2*3/4\uFF09\uFF0C\u7A0B\u5E8F\u6838\u5BF9\u5B83\u4E0E answer \u76F8\u7B49\uFF1B\u9898\u76EE\u8981\u6C42\u6700\u7B80\u5206\u6570\u65F6 simplest_fraction \u5FC5\u987B\u4E3A true\uFF0C\u5426\u5219\u6CA1\u7EA6\u5206\u7684\u7B54\u6848\u4E5F\u7B97\u5BF9\uFF1Bunit \u53EA\u5199\u5355\u4F4D\uFF0C\u6CA1\u6709\u5C31\u7701\u7565\uFF1Bhints \u5199 1\u20132 \u6761\u4E0D\u7ED9\u51FA\u7B54\u6848\u7684\u63D0\u793A\u3002";
-var OUTLINE_SYSTEM_PROMPT = `\u8BBE\u8BA1\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002
-- \u9700\u8981\u540C\u6B65\u5BF9\u7167\u7684\u56FE\u590D\u7528\u540C\u4E00\u5171\u4EAB\u6570\u503C\uFF0C\u5E76\u901A\u8FC7 supporting/comparison \u58F0\u660E\u5173\u8054\uFF1B\u4E0D\u8981\u7528\u4E24\u4E2A\u72EC\u7ACB main \u56FE\u8868\u793A\u540C\u4E00\u8054\u52A8\u5173\u7CFB\u3002
-- visual_recipes \u4E3A [features,numbers,purpose]\u3002course_visuals \u9009\u5176\u4E2D features\uFF0C\u53EA\u5217\u5FC5\u8981\u753B\u9762\uFF1B\u540E\u7EED\u590D\u7528\uFF0C\u786E\u9700\u5E76\u6392\u624D\u5EFA comparison\uFF0Csupporting/comparison \u6307\u5411\u8F83\u65E9\u753B\u9762\u3002
-- \u9009\u62E9\u56FE\u5F62\u7279\u5F81\u65F6\uFF0C\u4EE5\u672C\u8282\u9700\u8981\u5C55\u793A\u7684\u6570\u5B66\u5173\u7CFB\u4E3A\u4F9D\u636E\uFF1B\u4E0D\u80FD\u4EC5\u56E0\u8BB2\u89E3\u4E2D\u51FA\u73B0\u67D0\u4E2A\u6570\u5B66\u5BF9\u8C61\uFF0C\u5C31\u9009\u7528\u5305\u542B\u8BE5\u5BF9\u8C61\u7684\u56FE\u5F62\u7279\u5F81\u3002
-- \u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002ordered_process_steps \u4EC5\u662F\u9759\u6001\u6D41\u7A0B\u3002
-- numbers \u53EA\u5199\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3001\u8303\u56F4\u548C\u521D\u503C\uFF0C\u987A\u5E8F\u4F9D visual_recipes \u7684 numbers\uFF1B\u63A7\u4EF6\u4E0E\u6B65\u957F\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- request_coverage \u4F9D request_parts \u987A\u5E8F\u8986\u76D6\uFF1A\u53EF\u5B9E\u73B0\u5199 teach+\u7AE0\u8282\u3002\u53EA\u662F\u8981\u6C42\u7684\u4E92\u52A8\u6216\u753B\u9762\u5F62\u5F0F\u505A\u4E0D\u5230\uFF08\u5982\u53EF\u81EA\u7531\u62D6\u52A8\u9876\u70B9\u7684\u4EFB\u610F\u4E09\u89D2\u5F62\uFF09\uFF0C\u4F46\u6570\u5B66\u5185\u5BB9\u80FD\u7528\u5DF2\u6709\u753B\u9762\u8BB2\u5BF9\u65F6\uFF0C\u5199 teach \u5E76\u6362\u6210\u53EF\u5B9E\u73B0\u7684\u753B\u9762\uFF0C\u5728\u7B2C\u4E00\u8282\u65C1\u767D\u91CC\u7528\u4E00\u53E5\u8BDD\u8BF4\u660E\u6362\u6210\u4E86\u4EC0\u4E48\uFF1B\u53EA\u6709\u6570\u5B66\u5185\u5BB9\u672C\u8EAB\u65E0\u6CD5\u6B63\u786E\u5448\u73B0\u65F6\u624D\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u53CA\u539F\u56E0\uFF0C\u7981\u6B62\u9519\u8BEF\u66FF\u4EE3\u3002
-- \u6309\u72EC\u7ACB\u6559\u5B66\u76EE\u6807\u548C\u5B66\u4E60\u8FDB\u7A0B\u5206\u8282\uFF0C\u4E0D\u6309\u4E3B\u9898\u6570\u6216\u753B\u9762\u6570\u5206\u8282\u3002\u6BCF\u8282\u53EA\u627F\u62C5\u4E00\u4E2A\u5B8C\u6210\u540E\u53EF\u9A8C\u8BC1\u7684\u76EE\u6807\uFF1B\u8FDE\u7EED\u63A8\u5BFC\u53CA\u987B\u540C\u6B65\u89C2\u5BDF\u7684\u753B\u9762\u7559\u5728\u540C\u4E00\u8282\u7684\u591A\u4E2A moment\u3002\u7B80\u5355\u95EE\u9898\u80FD\u56F4\u7ED5\u4E00\u4E2A\u76EE\u6807\u8BB2\u6E05\u65F6\u7528 1 \u8282\uFF1B\u82E5\u987B\u5206\u522B\u5EFA\u7ACB\u76F4\u89C9\u3001\u7EA0\u9519\u6216\u89E3\u91CA\u539F\u7406\u3001\u63A8\u5BFC\u6216\u6F14\u793A\u3001\u5E94\u7528\u3001\u68C0\u67E5\u638C\u63E1\u4E2D\u7684\u591A\u4E2A\u76EE\u6807\uFF0C\u62C6\u6210 2\u20134 \u8282\u3002\u4E0D\u8981\u4E3A\u51D1\u8282\u6570\u91CD\u590D\u5F00\u573A\u3001\u5B9A\u4E49\u6216\u603B\u7ED3\uFF0C\u4E5F\u4E0D\u8981\u628A\u672C\u5E94\u72EC\u7ACB\u7684\u63A8\u5BFC\u3001\u5E94\u7528\u548C\u68C0\u67E5\u5168\u585E\u8FDB\u4E00\u8282\u3002\u4E3A\u4EC0\u4E48\u987B\u63A8\u5BFC\uFF0C\u600E\u4E48\u7B97\u987B\u6B65\u9AA4\u4E0E\u68C0\u9A8C\uFF0C\u662F\u4EC0\u4E48\u987B\u76F4\u89C9\u4E0E\u8FB9\u754C\u3002\u4E0D\u731C\u5E74\u7EA7\uFF1Bclose \u53EA\u603B\u7ED3\u3002
-\u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
-var SECTION_SYSTEM_PROMPT = `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5B9A\u7684\u4E00\u8282\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u6216\u5BF9\u8C61\u5F15\u7528\u3002
-- \u5FC5\u987B\u843D\u5B9E\u76EE\u5F55\u5206\u914D\u7684 request_parts\u3002\u65C1\u767D\u4E0E\u5BF9\u5E94\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002
-- \u76EE\u5F55\u4E2D\u672C\u8282 create \u7684\u753B\u9762\u6309\u987A\u5E8F\u5199\u5165 course_visual_creates \u5E76\u6307\u5B9A moment\uFF1Breuse \u7684\u753B\u9762\u4E0D\u5F97\u91CD\u5EFA\u3002\u76EE\u5F55\u58F0\u660E\u7684\u516C\u5F0F\u548C\u7B14\u8BB0\u5206\u522B\u6309\u987A\u5E8F\u5199\u5165 reusable_math_creates\u3001reusable_note_creates\uFF1B\u7A7A\u6E05\u5355\u7701\u7565\u3002
-- focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\uFF0C\u8865\u9F50\u5361\u7247\u7528\u9014\u3001\u4F4D\u7F6E\u3001\u9ED8\u8BA4\u65F6\u673A\u548C\u52A8\u4F5C\u987A\u5E8F\u3002
-- \u5C0F\u6570\u7528 mantissa/scale\uFF0C\u5982 -1.5\u2192-15/1\u3002
-- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002
-- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u6ED1\u6746\u6240\u5728\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002
-- \u601D\u8003\u9898\u8BFE\u4E2D\u53EA\u95EE\u4E0D\u7B54\uFF1B\u9898\u4E0E\u53C2\u8003\u7B54\u6848\u5199\u5165 reflection_activities\uFF0C\u8BFE\u540E\u4EE5\u6536\u8D77\u7684\u7B54\u6848\u5361\u7247\u51FA\u73B0\u3002
-- \u672C\u8282\u8BB2\u4E86\u80FD\u7B97\u51FA\u786E\u5B9A\u6570\u503C\u7684\u5185\u5BB9\uFF08\u8BA1\u7B97\u3001\u6362\u7B97\u3001\u8BFB\u6570\u3001\u4EE3\u5165\u6C42\u503C\uFF09\u65F6\uFF0C\u5199 1 \u9053 answer_activities \u8BA9\u5B66\u751F\u8BFE\u540E\u586B\u6570\uFF1A\u7528\u8BFE\u4E2D\u6CA1\u7B97\u8FC7\u7684\u65B0\u6570\uFF0C\u8BFE\u4E2D\u4E0D\u8BF4\u7B54\u6848\u3002${ANSWER_ACTIVITY_RULE}
-- \u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002
-- \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
-- geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002
-\u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`;
-var BOOTSTRAP_FIRST_SECTION_PROMPT = `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D\uFF0C\u5FC5\u987B\u5148\u5B8C\u6210 outline\uFF0C\u518D\u4F9D\u636E\u8FD9\u4E2A outline \u7F16\u5199 first_section\u3002first_section \u53EA\u80FD\u843D\u5B9E outline.sections[0]\uFF1A
-- outline \u662F\u552F\u4E00\u8BFE\u7A0B\u5B89\u6392\uFF1B\u4E0D\u5F97\u5728 first_section \u589E\u52A0 outline \u6CA1\u6709\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\uFF0C\u4E5F\u4E0D\u5F97\u9057\u6F0F\u7B2C\u4E00\u8282\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\u548C\u53EF\u590D\u7528\u677F\u4E66\u3002
-- first_section \u53EA\u5199 moments \u4EE5\u53CA\u53EF\u9009\u7684 number_activities\u3001scene3d_activities\u3002\u65C1\u767D\u4E0E\u5BF9\u5E94\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002
-- \u7B2C\u4E00\u8282\u65B0\u753B\u9762\u5199\u5165 moment.visual_creates\uFF1Bcourse_visual\u3001content.numbers \u5206\u522B\u5F15\u7528 outline.course_visuals\u3001outline.numbers \u7684\u4ECE1\u5F00\u59CB\u4F4D\u7F6E\u3002content.parameters \u4EC5\u5199\u6570\u5B66\u5185\u5BB9\uFF0C\u80FD\u529B\u7531\u7A0B\u5E8F\u786E\u5B9A\uFF1B\u590D\u7528\u753B\u9762\u4E0D\u91CD\u5EFA\u3002
-- \u7B2C\u4E00\u8282\u516C\u5F0F/\u7B14\u8BB0\u5199\u5165 moment.math_creates/note_creates\uFF1B\u53EF\u590D\u7528\u9879\u7528 reusable_item \u5F15\u7528\u76EE\u5F55\u4E2D\u4ECE1\u5F00\u59CB\u7684\u4F4D\u7F6E\uFF0C\u4E34\u65F6\u9879\u4E0D\u586B\u3002\u7A0B\u5E8F\u751F\u6210\u7A33\u5B9A\u5F15\u7528\u3002
-- first_section \u4F7F\u7528 outline \u4E2D\u6570\u503C\u548C\u753B\u9762\u7684\u5148\u540E\u987A\u5E8F\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u3001\u5BF9\u8C61\u5F15\u7528\u3001course_visual_creates \u6216 reusable_board_creates\u3002
-- focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\uFF0C\u8865\u9F50\u5361\u7247\u7528\u9014\u3001\u4F4D\u7F6E\u3001\u9ED8\u8BA4\u65F6\u673A\u548C\u52A8\u4F5C\u987A\u5E8F\u3002
-- \u5C0F\u6570\u7528 mantissa/scale\uFF0C\u5982 -1.5\u2192-15/1\u3002
-- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- function_plot \u7684 parameters.formulas \u5199\u4E2D\u7F00\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74\u4E3A x\uFF0C\u652F\u6301\u5E38\u89C1\u8FD0\u7B97/\u51FD\u6570\u3002\u6539\u53D8\u66F2\u7EBF\u53EF\u5199 n1\u3001n2 \u5F15\u7528\u6570\u503C\uFF1B\u72EC\u7ACB\u79FB\u52A8\u4E24\u70B9\u5219\u516C\u5F0F\u4E0D\u542B n1/n2\uFF0Ccontent.numbers=[1,2]\uFF0C\u4E24\u6570\u4E3A A/B \u6A2A\u5750\u6807\u6ED1\u5757\u3002\u659C\u7387\u5165\u95E8\u4F18\u5148\u8C03\u76F4\u7EBF\u7CFB\u6570\uFF1B\u4E24\u70B9\u6309\u9700\u7528\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u79FB\u52A8\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\uFF0C\u975E\u7AD6\u7EBF\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002\u89C6\u7A97\u548C\u7ED1\u5B9A\u7531\u7A0B\u5E8F\u751F\u6210\u3002
-- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002
-- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u6ED1\u6746\u6240\u5728\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002
-- \u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002
-- \u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002
-- geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002process_diagram \u65E0\u6570\u503C/\u52A8\u753B\u3002`;
+var OUTLINE_SYSTEM_PROMPT = [
+  `\u8BBE\u8BA1\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002`,
+  `- \u9700\u8981\u540C\u6B65\u5BF9\u7167\u7684\u56FE\u590D\u7528\u540C\u4E00\u5171\u4EAB\u6570\u503C\uFF0C\u5E76\u901A\u8FC7 supporting/comparison \u58F0\u660E\u5173\u8054\uFF1B\u4E0D\u8981\u7528\u4E24\u4E2A\u72EC\u7ACB main \u56FE\u8868\u793A\u540C\u4E00\u8054\u52A8\u5173\u7CFB\u3002`,
+  `- visual_recipes \u4E3A [features,numbers,purpose]\u3002course_visuals \u9009\u5176\u4E2D features\uFF0C\u53EA\u5217\u5FC5\u8981\u753B\u9762\uFF1B\u540E\u7EED\u590D\u7528\uFF0C\u786E\u9700\u5E76\u6392\u624D\u5EFA comparison\uFF0Csupporting/comparison \u6307\u5411\u8F83\u65E9\u753B\u9762\u3002`,
+  `- \u9009\u62E9\u56FE\u5F62\u7279\u5F81\u65F6\uFF0C\u4EE5\u672C\u8282\u9700\u8981\u5C55\u793A\u7684\u6570\u5B66\u5173\u7CFB\u4E3A\u4F9D\u636E\uFF1B\u4E0D\u80FD\u4EC5\u56E0\u8BB2\u89E3\u4E2D\u51FA\u73B0\u67D0\u4E2A\u6570\u5B66\u5BF9\u8C61\uFF0C\u5C31\u9009\u7528\u5305\u542B\u8BE5\u5BF9\u8C61\u7684\u56FE\u5F62\u7279\u5F81\u3002`,
+  promptSlot("outline.visual_choice"),
+  `- numbers \u53EA\u5199\u6709\u6559\u5B66\u4F5C\u7528\u7684\u5171\u4EAB\u6570\u503C\u3001\u8303\u56F4\u548C\u521D\u503C\uFF0C\u987A\u5E8F\u4F9D visual_recipes \u7684 numbers\uFF1B\u63A7\u4EF6\u4E0E\u6B65\u957F\u7531\u7A0B\u5E8F\u751F\u6210\u3002`,
+  `- request_coverage \u4F9D request_parts \u987A\u5E8F\u8986\u76D6\uFF1A\u53EF\u5B9E\u73B0\u5199 teach+\u7AE0\u8282\u3002\u53EA\u662F\u8981\u6C42\u7684\u4E92\u52A8\u6216\u753B\u9762\u5F62\u5F0F\u505A\u4E0D\u5230\uFF08\u5982\u53EF\u81EA\u7531\u62D6\u52A8\u9876\u70B9\u7684\u4EFB\u610F\u4E09\u89D2\u5F62\uFF09\uFF0C\u4F46\u6570\u5B66\u5185\u5BB9\u80FD\u7528\u5DF2\u6709\u753B\u9762\u8BB2\u5BF9\u65F6\uFF0C\u5199 teach \u5E76\u6362\u6210\u53EF\u5B9E\u73B0\u7684\u753B\u9762\uFF0C\u5728\u7B2C\u4E00\u8282\u65C1\u767D\u91CC\u7528\u4E00\u53E5\u8BDD\u8BF4\u660E\u6362\u6210\u4E86\u4EC0\u4E48\uFF1B\u53EA\u6709\u6570\u5B66\u5185\u5BB9\u672C\u8EAB\u65E0\u6CD5\u6B63\u786E\u5448\u73B0\u65F6\u624D\u5199 unsupported\u3001\u7A7A\u7AE0\u8282\u53CA\u539F\u56E0\uFF0C\u7981\u6B62\u9519\u8BEF\u66FF\u4EE3\u3002`,
+  `- \u6309\u72EC\u7ACB\u6559\u5B66\u76EE\u6807\u548C\u5B66\u4E60\u8FDB\u7A0B\u5206\u8282\uFF0C\u4E0D\u6309\u4E3B\u9898\u6570\u6216\u753B\u9762\u6570\u5206\u8282\u3002\u6BCF\u8282\u53EA\u627F\u62C5\u4E00\u4E2A\u5B8C\u6210\u540E\u53EF\u9A8C\u8BC1\u7684\u76EE\u6807\uFF1B\u8FDE\u7EED\u63A8\u5BFC\u53CA\u987B\u540C\u6B65\u89C2\u5BDF\u7684\u753B\u9762\u7559\u5728\u540C\u4E00\u8282\u7684\u591A\u4E2A moment\u3002\u7B80\u5355\u95EE\u9898\u80FD\u56F4\u7ED5\u4E00\u4E2A\u76EE\u6807\u8BB2\u6E05\u65F6\u7528 1 \u8282\uFF1B\u82E5\u987B\u5206\u522B\u5EFA\u7ACB\u76F4\u89C9\u3001\u7EA0\u9519\u6216\u89E3\u91CA\u539F\u7406\u3001\u63A8\u5BFC\u6216\u6F14\u793A\u3001\u5E94\u7528\u3001\u68C0\u67E5\u638C\u63E1\u4E2D\u7684\u591A\u4E2A\u76EE\u6807\uFF0C\u62C6\u6210 2\u20134 \u8282\u3002\u4E0D\u8981\u4E3A\u51D1\u8282\u6570\u91CD\u590D\u5F00\u573A\u3001\u5B9A\u4E49\u6216\u603B\u7ED3\uFF0C\u4E5F\u4E0D\u8981\u628A\u672C\u5E94\u72EC\u7ACB\u7684\u63A8\u5BFC\u3001\u5E94\u7528\u548C\u68C0\u67E5\u5168\u585E\u8FDB\u4E00\u8282\u3002\u4E3A\u4EC0\u4E48\u987B\u63A8\u5BFC\uFF0C\u600E\u4E48\u7B97\u987B\u6B65\u9AA4\u4E0E\u68C0\u9A8C\uFF0C\u662F\u4EC0\u4E48\u987B\u76F4\u89C9\u4E0E\u8FB9\u754C\u3002\u4E0D\u731C\u5E74\u7EA7\uFF1Bclose \u53EA\u603B\u7ED3\u3002`,
+  `\u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`
+].filter(Boolean).join("\n");
+var SECTION_SYSTEM_PROMPT = [
+  `\u53EA\u7F16\u5199\u8BFE\u7A0B\u76EE\u5F55\u6307\u5B9A\u7684\u4E00\u8282\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u6216\u5BF9\u8C61\u5F15\u7528\u3002`,
+  `- \u5FC5\u987B\u843D\u5B9E\u76EE\u5F55\u5206\u914D\u7684 request_parts\u3002\u65C1\u767D\u4E0E\u5BF9\u5E94\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002`,
+  `- \u76EE\u5F55\u4E2D\u672C\u8282 create \u7684\u753B\u9762\u6309\u987A\u5E8F\u5199\u5165 course_visual_creates \u5E76\u6307\u5B9A moment\uFF1Breuse \u7684\u753B\u9762\u4E0D\u5F97\u91CD\u5EFA\u3002\u76EE\u5F55\u58F0\u660E\u7684\u516C\u5F0F\u548C\u7B14\u8BB0\u5206\u522B\u6309\u987A\u5E8F\u5199\u5165 reusable_math_creates\u3001reusable_note_creates\uFF1B\u7A7A\u6E05\u5355\u7701\u7565\u3002`,
+  `- focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\uFF0C\u8865\u9F50\u5361\u7247\u7528\u9014\u3001\u4F4D\u7F6E\u3001\u9ED8\u8BA4\u65F6\u673A\u548C\u52A8\u4F5C\u987A\u5E8F\u3002`,
+  `- \u5C0F\u6570\u7528 mantissa/scale\uFF0C\u5982 -1.5\u2192-15/1\u3002`,
+  `- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002`,
+  promptSlot("section.formulas"),
+  `- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002`,
+  `- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u6ED1\u6746\u6240\u5728\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002`,
+  `- \u601D\u8003\u9898\u8BFE\u4E2D\u53EA\u95EE\u4E0D\u7B54\uFF1B\u9898\u4E0E\u53C2\u8003\u7B54\u6848\u5199\u5165 reflection_activities\uFF0C\u8BFE\u540E\u4EE5\u6536\u8D77\u7684\u7B54\u6848\u5361\u7247\u51FA\u73B0\u3002`,
+  `- \u672C\u8282\u8BB2\u4E86\u80FD\u7B97\u51FA\u786E\u5B9A\u6570\u503C\u7684\u5185\u5BB9\uFF08\u8BA1\u7B97\u3001\u6362\u7B97\u3001\u8BFB\u6570\u3001\u4EE3\u5165\u6C42\u503C\uFF09\u65F6\uFF0C\u5199 1 \u9053 answer_activities \u8BA9\u5B66\u751F\u8BFE\u540E\u586B\u6570\uFF1A\u7528\u8BFE\u4E2D\u6CA1\u7B97\u8FC7\u7684\u65B0\u6570\uFF0C\u8BFE\u4E2D\u4E0D\u8BF4\u7B54\u6848\u3002${ANSWER_ACTIVITY_RULE}`,
+  promptSlot("section.bounds"),
+  promptSlot("section.linked_numbers", "\u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B"),
+  promptSlot("section.constructions"),
+  `\u53EA\u8FD4\u56DE\u7B26\u5408\u54CD\u5E94 Schema \u7684 JSON\u3002`
+].filter(Boolean).join("\n");
+var BOOTSTRAP_FIRST_SECTION_PROMPT = [
+  `\u5728\u540C\u4E00\u6B21\u56DE\u7B54\u4E2D\uFF0C\u5FC5\u987B\u5148\u5B8C\u6210 outline\uFF0C\u518D\u4F9D\u636E\u8FD9\u4E2A outline \u7F16\u5199 first_section\u3002first_section \u53EA\u80FD\u843D\u5B9E outline.sections[0]\uFF1A`,
+  `- outline \u662F\u552F\u4E00\u8BFE\u7A0B\u5B89\u6392\uFF1B\u4E0D\u5F97\u5728 first_section \u589E\u52A0 outline \u6CA1\u6709\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\uFF0C\u4E5F\u4E0D\u5F97\u9057\u6F0F\u7B2C\u4E00\u8282\u58F0\u660E\u7684\u4E3B\u8981\u753B\u9762\u548C\u53EF\u590D\u7528\u677F\u4E66\u3002`,
+  `- first_section \u53EA\u5199 moments \u4EE5\u53CA\u53EF\u9009\u7684 number_activities\u3001scene3d_activities\u3002\u65C1\u767D\u4E0E\u5BF9\u5E94\u677F\u4E66\u548C\u52A8\u4F5C\u653E\u5728\u540C\u4E00 moment\uFF1B\u53EF\u89C1\u6587\u5B57\u76F4\u63A5\u5BF9\u5B66\u4E60\u8005\u8BF4\u8BDD\uFF0C\u4E0D\u80FD\u5199\u201C\u8BA9\u5B66\u751F\u2026\u2026\u201D\u3002`,
+  `- \u7B2C\u4E00\u8282\u65B0\u753B\u9762\u5199\u5165 moment.visual_creates\uFF1Bcourse_visual\u3001content.numbers \u5206\u522B\u5F15\u7528 outline.course_visuals\u3001outline.numbers \u7684\u4ECE1\u5F00\u59CB\u4F4D\u7F6E\u3002content.parameters \u4EC5\u5199\u6570\u5B66\u5185\u5BB9\uFF0C\u80FD\u529B\u7531\u7A0B\u5E8F\u786E\u5B9A\uFF1B\u590D\u7528\u753B\u9762\u4E0D\u91CD\u5EFA\u3002`,
+  `- \u7B2C\u4E00\u8282\u516C\u5F0F/\u7B14\u8BB0\u5199\u5165 moment.math_creates/note_creates\uFF1B\u53EF\u590D\u7528\u9879\u7528 reusable_item \u5F15\u7528\u76EE\u5F55\u4E2D\u4ECE1\u5F00\u59CB\u7684\u4F4D\u7F6E\uFF0C\u4E34\u65F6\u9879\u4E0D\u586B\u3002\u7A0B\u5E8F\u751F\u6210\u7A33\u5B9A\u5F15\u7528\u3002`,
+  `- first_section \u4F7F\u7528 outline \u4E2D\u6570\u503C\u548C\u753B\u9762\u7684\u5148\u540E\u987A\u5E8F\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u53D8\u91CF\u540D\u3001\u5BF9\u8C61\u540D\u3001\u5BF9\u8C61\u5F15\u7528\u3001course_visual_creates \u6216 reusable_board_creates\u3002`,
+  `- focuses \u53EA\u5199\u805A\u7126\u610F\u56FE\uFF0Cpoints \u53EA\u8868\u793A\u9700\u8981\u6307\u793A\uFF1B\u7A0B\u5E8F\u9009\u62E9\u771F\u5B9E\u5BF9\u8C61\uFF0C\u8865\u9F50\u5361\u7247\u7528\u9014\u3001\u4F4D\u7F6E\u3001\u9ED8\u8BA4\u65F6\u673A\u548C\u52A8\u4F5C\u987A\u5E8F\u3002`,
+  `- \u5C0F\u6570\u7528 mantissa/scale\uFF0C\u5982 -1.5\u2192-15/1\u3002`,
+  `- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002`,
+  promptSlot("section.formulas"),
+  `- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002`,
+  `- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u6ED1\u6746\u6240\u5728\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002`,
+  promptSlot("section.bounds"),
+  promptSlot("section.linked_numbers", "\u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B"),
+  promptSlot("section.constructions")
+].filter(Boolean).join("\n");
 var TEACHER_PROFILE_RULE = `course_context.teacher_profile \u662F\u672C\u6B21\u6388\u8BFE\u9884\u8BBE\u8001\u5E08\u7684\u57FA\u7840\u8BBE\u5B9A\u3002\u7528\u5B83\u51B3\u5B9A\u8BB2\u89E3\u7684\u7EC4\u7EC7\u3001\u63AA\u8F9E\u3001\u63D0\u95EE\u65F6\u673A\u548C\u9F13\u52B1\u65B9\u5F0F\uFF0C\u8BA9\u98CE\u683C\u4F53\u73B0\u5728\u76EE\u5F55\u548C\u65C1\u767D\u91CC\uFF0C\u800C\u4E0D\u53EA\u662F\u52A0\u5F62\u5BB9\u8BCD\uFF1B\u4E0D\u5F97\u6539\u53D8\u6570\u5B66\u5185\u5BB9\u3001\u7701\u7565\u5FC5\u8981\u6761\u4EF6\u6216\u628A\u6BD4\u55BB\u5F53\u4F5C\u8BC1\u660E\u3002\u5B66\u751F\u672C\u6B21\u7684\u660E\u786E\u8981\u6C42\u4F18\u5148\u4E8E\u8001\u5E08\u98CE\u683C\u3002\u6BCF\u4E00\u8282\u90FD\u8981\u8BA9\u8BBE\u5B9A\u4E2D\u7684\u5177\u4F53\u505A\u6CD5\u80FD\u88AB\u542C\u51FA\u6765\uFF0C\u800C\u4E0D\u53EA\u662F\u8BED\u6C14\uFF1A\u6309\u8BBE\u5B9A\u7684\u65B9\u5F0F\u8BA4\u53EF\u5B66\u751F\uFF08\u70B9\u51FA\u5177\u4F53\u54EA\u4E00\u6B65\u6216\u54EA\u4E2A\u60F3\u6CD5\uFF09\uFF1B\u9009\u4F8B\u5B50\u65F6\u4F18\u5148\u7528\u8BBE\u5B9A\u4E2D\u611F\u5174\u8DA3\u7684\u8BDD\u9898\uFF1B\u8BBE\u5B9A\u5199\u4E86\u4E3B\u8981\u8BB2\u89E3\u624B\u6CD5\uFF08\u5982\u4E00\u4E2A\u8D2F\u7A7F\u7684\u6BD4\u55BB\u3001\u9010\u6B65\u6BD4\u8F83\u53D8\u5316\u91CF\uFF09\u5C31\u5728\u6BCF\u8282\u6CBF\u7528\uFF1B\u8BBE\u5B9A\u8981\u6C42\u4E00\u6B21\u53EA\u7528\u4E00\u4E2A\u4E3B\u8981\u6BD4\u55BB\u65F6\uFF0C\u5168\u8BFE\u53EA\u7528\u8FD9\u4E00\u4E2A\uFF0C\u4E0D\u518D\u5F15\u5165\u7B2C\u4E8C\u4E2A\u6BD4\u55BB\u6216\u89D2\u8272\u79F0\u547C\uFF1B\u5C0F\u4E60\u60EF\u5168\u8BFE\u6700\u591A\u51FA\u73B0\u4E00\u6B21\u3002\u98CE\u683C\u793A\u4F8B\u53EA\u7528\u6765\u4F53\u4F1A\uFF0C\u4E0D\u7167\u6284\u3002`;
 var LEARNER_BACKGROUND_RULE = `course_context.learner_background \u662F\u5B66\u4E60\u5E94\u7528\u63D0\u4F9B\u7684\u5B66\u751F\u80CC\u666F\u4E0E\u4EE5\u5F80\u5B66\u4E60\u8BB0\u5F55\uFF0C\u6CE8\u660E\u4E86\u6765\u6E90\u3002\u53EA\u5F15\u7528\u5176\u4E2D\u660E\u786E\u5199\u51FA\u7684\u4E8B\u5B9E\uFF0C\u53EF\u7528\u6765\u8854\u63A5\u65E7\u77E5\u8BC6\u6216\u91C7\u7528\u5B66\u751F\u8BF4\u8FC7\u7684\u504F\u597D\uFF1B\u4E0D\u5F97\u7F16\u9020\u672A\u63D0\u4F9B\u7684\u7ECF\u5386\uFF0C\u4E0D\u5F97\u63A8\u65AD\u638C\u63E1\u7A0B\u5EA6\u3001\u60C5\u7EEA\u6216\u504F\u597D\uFF1B\u4E0E\u672C\u6B21\u8BF7\u6C42\u65E0\u5173\u65F6\u4E0D\u63D0\u3002\u5B83\u4E0D\u662F\u672C\u6B21\u8BF7\u6C42\uFF0C\u4E0D\u80FD\u636E\u6B64\u6539\u53D8\u8BFE\u7A0B\u4E3B\u9898\u3002\u5982\u679C\u5176\u4E2D\u6709\u4E0E\u672C\u6B21\u95EE\u9898\u76F4\u63A5\u76F8\u5173\u7684\u4E8B\u5B9E\uFF08\u5B66\u751F\u8BF4\u8FC7\u7684\u8BB2\u89E3\u504F\u597D\u3001\u505A\u8FC7\u7684\u76F8\u5173\u9898\u76EE\u6216\u51FA\u8FC7\u7684\u9519\u3001\u548C\u67D0\u4F4D\u8001\u5E08\u4E00\u8D77\u7528\u8FC7\u7684\u8BB2\u6CD5\uFF09\uFF0C\u5728\u7B2C\u4E00\u8282\u5F00\u5934\u7528\u5BF9\u5B66\u751F\u8BF4\u8BDD\u7684\u65B9\u5F0F\u660E\u786E\u63D0\u8D77\u6700\u76F8\u5173\u7684\u4E00\u5230\u4E24\u6761\uFF08\u4E0D\u8D85\u8FC7\u4E24\u6761\uFF09\uFF0C\u5E76\u5728\u672C\u8282\u8BB2\u89E3\u4E2D\u771F\u6B63\u7528\u4E0A\uFF1B\u7528\u4E0D\u4E0A\u7684\u4E0D\u63D0\u3002\u7528\u81EA\u5DF1\u7684\u8BDD\u8BF4\uFF0C\u4E0D\u5957\u7528\u56FA\u5B9A\u53E5\u5F0F\uFF0C\u4F8B\u5982\u7167\u5B66\u751F\u8BF4\u8FC7\u7684\u8BB2\u89E3\u504F\u597D\u6765\u5B89\u6392\u987A\u5E8F\u5E76\u70B9\u660E\u8FD9\u662F\u5B66\u751F\u7684\u8981\u6C42\uFF0C\u6216\u70B9\u51FA\u5B66\u751F\u5728\u76F8\u5173\u9898\u76EE\u4E0A\u51FA\u8FC7\u7684\u9519\u5E76\u5728\u672C\u8282\u4E13\u95E8\u68C0\u67E5\u90A3\u4E00\u6B65\u3002\u63D0\u5230\u8FC7\u53BB\u7684\u9519\u8BEF\u65F6\u8BED\u6C14\u4E2D\u6027\uFF0C\u4E0D\u8D23\u5907\uFF0C\u4E5F\u4E0D\u636E\u6B64\u5224\u65AD\u73B0\u5728\u4ECD\u4E0D\u4F1A\uFF1B\u5176\u4ED6\u8001\u5E08\u53C2\u4E0E\u7684\u7ECF\u5386\u8981\u8BF4\u660E\u662F\u90A3\u4F4D\u8001\u5E08\uFF0C\u4F8B\u5982\u201C\u4F60\u548C\u8C46\u8C46\u8001\u5E08\u7528\u5C71\u8DEF\u6BD4\u55BB\u5B66\u8FC7\u659C\u7387\u201D\uFF0C\u4E0D\u8981\u8BF4\u6210\u81EA\u5DF1\u7684\u3002\u53EA\u8BF4\u4E8B\u5B9E\u5199\u5230\u7684\u7A0B\u5EA6\uFF1A\u53EA\u6709\u65E5\u671F\u3001\u6B21\u6570\u7B49\u7EDF\u8BA1\u65F6\u4E0D\u8BF4\u6210\u5B66\u4F1A\u6216\u7406\u89E3\u3002\u7B2C\u4E8C\u8282\u53CA\u4EE5\u540E\u4E0D\u518D\u590D\u8FF0\u8FD9\u4E9B\u80CC\u666F\uFF0C\u53EA\u6309\u5B83\u8C03\u6574\u8BB2\u6CD5\u3002\u5B66\u751F\u7684\u5174\u8DA3\u4E0E\u8001\u5E08\u8BBE\u5B9A\u4E2D\u611F\u5174\u8DA3\u7684\u8BDD\u9898\u91CD\u5408\u65F6\uFF08\u4F8B\u5982\u90FD\u4E0E\u8FD0\u52A8\u6709\u5173\uFF09\uFF0C\u81F3\u5C11\u7528\u5B83\u4E3E\u4E00\u4E2A\u4E0E\u6570\u5B66\u5185\u5BB9\u76F8\u7B26\u7684\u4F8B\u5B50\uFF1B\u4E0D\u91CD\u5408\u65F6\u4E0D\u5FC5\u786C\u63D0\u3002`;
 var CURRENT_LESSON_RULE = `course_context.current_lesson \u662F\u540C\u4E00\u5757\u767D\u677F\u4E0A\u521A\u8BB2\u8FC7\u7684\u5185\u5BB9\uFF08\u5B66\u751F\u770B\u5F97\u5230\uFF09\uFF0C\u7531\u5B66\u4E60\u5E94\u7528\u6574\u7406\uFF0C\u53EF\u4EE5\u76F4\u63A5\u5F15\u7528\u3002\u5B66\u751F\u7684\u8BF7\u6C42\u6307\u5411\u5176\u4E2D\u786E\u5B9E\u5199\u5230\u7684\u5185\u5BB9\u65F6\uFF08\u5982\u201C\u53CD\u601D\u9898\u201D\u201C\u601D\u8003\u9898\u201D\u201C\u521A\u624D\u90A3\u9053\u9898\u201D\u201C\u6700\u540E\u4E00\u6B65\u201D\uFF09\uFF0C\u636E\u6B64\u786E\u5B9A\u6240\u6307\uFF1A\u8FD9\u6837\u7684\u8BF7\u6C42\u4E3B\u9898\u662F\u6E05\u695A\u7684\uFF0C\u5E94\u751F\u6210\u8BFE\u7A0B\uFF08generate_lesson\uFF09\uFF0C\u4E0D\u8981\u5224\u4E3A\u9700\u8981\u8FFD\u95EE\uFF0C\u4E5F\u4E0D\u8981\u6C42\u5B66\u751F\u518D\u63CF\u8FF0\u4E00\u904D\uFF1B\u76F4\u63A5\u9488\u5BF9\u90A3\u9053\u9898\u6216\u90A3\u4E00\u6B65\u4E0A\u8BFE\uFF0C\u4E0D\u91CD\u8BB2\u6574\u8282\u8BFE\uFF1B\u8BFE\u540E\u601D\u8003\u9898\u53EF\u4EE5\u53C2\u8003\u5176\u53C2\u8003\u7B54\u6848\uFF0C\u5148\u5E26\u5B66\u751F\u60F3\u6E05\u695A\u601D\u8DEF\uFF0C\u518D\u7ED9\u51FA\u7ED3\u8BBA\u3002current_lesson \u91CC\u627E\u4E0D\u5230\u6240\u6307\u65F6\uFF0C\u7167\u5E38\u5224\u65AD\u662F\u5426\u9700\u8981\u8FFD\u95EE\u3002\u672C\u6B21\u8BF7\u6C42\u9644\u5E26\u4E86\u56FE\u7247\u6216\u9009\u533A\u65F6\uFF0C\u201C\u8FD9\u9053\u9898\u201D\u201C\u8FD9\u91CC\u201D\u6307\u56FE\u7247\u6216\u9009\u533A\u91CC\u7684\u5185\u5BB9\uFF0C\u4E0D\u6307 current_lesson\uFF1B\u53EA\u6709\u660E\u786E\u8BF4\u201C\u521A\u624D\u201D\u201C\u4E0A\u8282\u8BFE\u201D\u201C\u53CD\u601D\u9898\u201D\u7B49\u65F6\u624D\u6307\u5B83\u3002\u8BF7\u6C42\u4E0E\u5B83\u65E0\u5173\u65F6\uFF0C\u6309\u8BF7\u6C42\u672C\u8EAB\u4E0A\u8BFE\uFF0C\u4E0D\u63D0\u5B83\uFF1B\u5B83\u4E0D\u80FD\u6539\u53D8\u5B66\u751F\u660E\u786E\u63D0\u51FA\u7684\u4E3B\u9898\u3002`;
@@ -17425,46 +17588,21 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     if (!visual.use_sections.includes(section)) return [];
     const source = visual.create_section < section ? drafts[visual.create_section - 1]?.moments.flatMap((m) => m.actions).find((a) => a.action === "create" && a.kind === "visual" && a.reusable_item === visual.reusable_item && a.content.capability === visual.capability) : void 0;
     const established = source?.action === "create" && source.kind === "visual" ? source.content : void 0;
-    let facts = {};
-    if (established?.capability === "geometric_rearrangement") {
-      const construction = established.parameters?.construction ?? "right_triangle_square";
-      const definition = REARRANGEMENT_FACTS[construction];
-      const number = established.numbers?.[0];
-      const range = number ? outline.numbers?.[number - 1] : void 0;
-      facts = definition ? {
-        construction,
-        pieces: definition.pieces,
-        shows: definition.shows,
-        container: definition.container,
-        at_start: definition.initial,
-        at_end: definition.final,
-        fixed_legs: { a: established.parameters?.leg_a ?? 3, b: established.parameters?.leg_b ?? 2 },
-        ...range && number ? { progress: {
-          number,
-          current_value: state.get(number),
-          normalized: ((state.get(number) ?? range.initial) - range.min) / (range.max - range.min)
-        } } : {}
-      } : {};
-    }
-    if (visual.capability === "circle_polygon_bounds") {
-      facts = {
-        circle_fixed: true,
-        radius: established?.parameters?.radius ?? 2,
-        side_count: { min: 3, max: 384, integer: true },
-        pi_lower: "n*sin(pi/n)",
-        pi_upper: "n*tan(pi/n)",
-        n96: { lower: 3.1410319508905093, upper: 3.142714599645368 },
-        caution: "Use the actual regular polygons, not circle_and_arc; displayed bounds are approximations, not exact historical rational bounds."
-      };
-    }
+    const mode = visual.create_section === section ? "create" : "reuse";
+    const { lead = {}, facts = {} } = SECTION_FACTS[visual.capability]?.({
+      section,
+      mode,
+      established,
+      numbers: outline.numbers,
+      state
+    }) ?? {};
     return [{
-      ...established && fixedLineSamples(established) ? { sample_slope: "constant" } : {},
+      ...lead,
       course_visual: index + 1,
       capability: visual.capability,
-      mode: visual.create_section === section ? "create" : "reuse",
+      mode,
       relation: visual.relation,
       ...facts,
-      ...visual.create_section === section && visual.capability === "geometric_rearrangement" ? { construction_choices: REARRANGEMENT_MODEL_GUIDANCE } : {},
       ...visual.related_visual === void 0 ? {} : { related_visual: visual.related_visual }
     }];
   });
@@ -17668,6 +17806,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
   };
 }
 export {
+  INSTALLED_PLUGINS,
   LESSON_PLAN_CAPABILITIES,
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_INPUTS,
@@ -17679,7 +17818,12 @@ export {
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VISUAL_PARAMETER_NAMES,
   LessonPlanError,
+  PLUGIN_COMPILERS,
   PROCESS_DIAGRAM_CONTRACT,
+  RECIPE_CATALOG_ORDER,
+  RECIPE_PLUGIN,
+  RECIPE_SCHEMA_PROPERTIES,
+  SCHEMA_PROPERTY_ORDER,
   assembleLessonPlan,
   buildCameraLessonPlanAdmissionBootstrapJsonSchema,
   buildCameraLessonPlanAdmissionOutlineJsonSchema,
@@ -17699,6 +17843,7 @@ export {
   includeWrittenCardsInFocus,
   matchLessonPlanCapability,
   mathExpressionToOll,
+  promptSlot,
   resolveLessonPlan,
   validateLessonPlan,
   validateLessonPlanOutline
