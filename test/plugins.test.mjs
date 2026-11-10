@@ -89,3 +89,14 @@ test("an invalid implicit-surface title is reported as a title, not an expressio
   surface.sections[0].moments[0].actions[0].content.parameters = { expression: "x^2+y^2+z^2", level: -1 };
   assert.match(firstProblem(surface), /\.parameters\.expression$/, "a surface with no points is still an expression problem");
 });
+
+test("an unrenderable implicit surface is reported before its invalid title", () => {
+  const surface = samplePlan("implicit_surface_with_section");
+  const moment = surface.sections[0].moments[0];
+  const visual = moment.actions[0].content;
+  delete surface.numbers;
+  delete visual.numbers;
+  moment.actions = moment.actions.filter((action) => action.action !== "animate");
+  visual.parameters = { expression: "x^2+y^2+z^2", level: -1, title: " " };
+  assert.match(firstProblem(surface), /\.parameters\.expression$/);
+});

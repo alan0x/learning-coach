@@ -362,12 +362,14 @@ function compileImplicitSurface(
   }
   const number = content.numbers?.[0];
   const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
-  const title = optionalText(input.title, compileText(plan, "隐式曲面与截面"), `${path}.title`);
   let built: BuiltRecipe;
   try {
     built = buildImplicitSurface({
       as: base, role, place: placement, t: translator(plan),
-      title, expression, level, axis,
+      // The builder resolves the surface before reading the title. Validate
+      // here so a bad surface still takes precedence in a repair request.
+      get title() { return optionalText(input.title, compileText(plan, "隐式曲面与截面"), `${path}.title`); },
+      expression, level, axis,
       section: { value: sectionValue, ...(number ? { variable: variableAlias(number) } : {}) },
     });
   } catch (error) {
