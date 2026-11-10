@@ -13163,6 +13163,134 @@ var CompiledVisualRegistry = class {
   }
 };
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
+function buildUnitCircle(input) {
+  const theta = input.angle ? input.angle.initial : input.fixed_angle ?? Math.PI / 3;
+  const variable = input.angle?.variable;
+  const angleExpression = input.angle?.expression;
+  const circle = input.graph ? `${input.as}-circle` : input.as;
+  const geometry = {
+    ...input.text.title !== void 0 ? { title: input.text.title } : {},
+    axes: {
+      x: { min: -1.25, max: 1.25, label: "x" },
+      y: { min: -1.25, max: 1.25, label: "y" },
+      equal_scale: true
+    },
+    points: [
+      { as: "origin", x: 0, y: 0, label: "O" },
+      {
+        as: "moving-point",
+        x: Math.cos(theta),
+        y: Math.sin(theta),
+        label: input.text.point_label ?? "P(cos \u03B8, sin \u03B8)",
+        ...variable ? { interaction: { kind: "angle_control", variable, center: "origin" } } : {}
+      },
+      { as: "projection-foot", x: Math.cos(theta), y: 0, ...input.text.foot_label !== void 0 ? { label: input.text.foot_label } : {} }
+    ],
+    circles: [{ as: "unit-circle", center: "origin", radius: 1, label: "r = 1" }],
+    segments: [
+      { as: "radius", from: "origin", to: "moving-point", ...input.text.radius_label !== void 0 ? { label: input.text.radius_label } : {}, style: "solid" },
+      { as: "projection", from: "moving-point", to: "projection-foot", style: "projection", label: "sin \u03B8" }
+    ],
+    arcs: [{ as: "angle", center: "origin", radius: 0.28, start_angle: 0, end_angle: theta, label: "\u03B8" }],
+    ...angleExpression ? {
+      bindings: [
+        { target: "moving-point.x", expression: `cos(${angleExpression})` },
+        { target: "moving-point.y", expression: `sin(${angleExpression})` },
+        { target: "projection-foot.x", expression: `cos(${angleExpression})` },
+        { target: "angle.end_angle", expression: angleExpression }
+      ]
+    } : {}
+  };
+  const circleParts = {
+    unit_circle: `${circle}#unit-circle`,
+    moving_point: `${circle}#moving-point`,
+    radius: `${circle}#radius`,
+    projection_line: `${circle}#projection`
+  };
+  if (!input.graph) {
+    return {
+      actions: [{ do: "write", as: circle, kind: "geometry", role: input.role, content: geometry, place: input.place }],
+      whole: circle,
+      parts: { whole: circle, ...circleParts, ...variable ? { primary_control: `${circle}#moving-point` } : {} }
+    };
+  }
+  const { projection, title, link_label, group_label } = input.graph;
+  const plot = `${input.as}-plot`;
+  const plotContent = {
+    title,
+    axes: {
+      x: { min: input.angle?.min ?? 0, max: input.angle?.max ?? Math.PI * 2, label: "\u03B8" },
+      y: { min: -1.2, max: 1.2, label: "y" }
+    },
+    curves: [{ as: "primary-curve", expression: `${projection}(x)`, label: `y = ${projection}(x)` }],
+    points: [{ as: "moving-point", x: theta, y: Math[projection](theta), label: `P(\u03B8, ${projection}(\u03B8))` }],
+    ...angleExpression ? {
+      bindings: [
+        { target: "moving-point.x", expression: angleExpression },
+        { target: "moving-point.y", expression: `${projection}(${angleExpression})` }
+      ]
+    } : {}
+  };
+  return {
+    actions: [
+      { do: "write", as: circle, kind: "geometry", role: input.role, content: geometry, place: input.place },
+      { do: "write", as: plot, kind: "plot", role: input.role, content: plotContent, place: { relation: "right_of", anchor: circle, gap: "normal" } },
+      { do: "connect", as: `${input.as}-link`, from: circle, to: plot, relation: "maps_to", label: link_label },
+      { do: "group", as: input.as, role: input.role, label: group_label, members: [circle, plot] }
+    ],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      ...circleParts,
+      primary_curve: `${plot}#primary-curve`,
+      ...variable ? { primary_control: `${circle}#moving-point` } : {}
+    }
+  };
+}
+function buildCirclePolygons(input) {
+  const { radius } = input;
+  const driven = typeof input.sides === "number" ? void 0 : input.sides;
+  const sides = typeof input.sides === "number" ? input.sides : input.sides.initial;
+  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven?.min ?? sides)) * 1.18 : radius * 1.3;
+  const polygon = (as, label) => ({
+    as,
+    center: "center",
+    radius,
+    sides,
+    relation: as,
+    ...input.circumscribed ? { tone: as === "inscribed" ? "primary" : "accent" } : {},
+    label,
+    show_measurements: true
+  });
+  const content = {
+    ...input.text.title !== void 0 ? { title: input.text.title } : {},
+    axes: { x: { min: -extent, max: extent, label: "x" }, y: { min: -extent, max: extent, label: "y" }, equal_scale: true },
+    points: [{ as: "center", x: 0, y: 0, label: "O" }],
+    circles: [{ as: "circle", center: "center", radius, label: `r = ${radius}` }],
+    regular_polygons: [
+      polygon("inscribed", input.text.inscribed_label),
+      ...input.circumscribed ? [polygon("circumscribed", input.text.circumscribed_label)] : []
+    ],
+    ...input.text.caption !== void 0 ? { caption: input.text.caption } : {},
+    ...driven ? { bindings: [
+      { target: "inscribed.sides", expression: driven.expression },
+      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven.expression }] : []
+    ] } : {}
+  };
+  return {
+    actions: [{ do: "write", as: input.as, kind: "geometry", role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      circle: `${input.as}#circle`,
+      inscribed_polygon: `${input.as}#inscribed`,
+      ...input.circumscribed ? { circumscribed_polygon: `${input.as}#circumscribed` } : {},
+      primary_control: input.as
+    }
+  };
+}
+
 // src/function-viewport.ts
 function niceRange(values, includeZero = true) {
   const finite = values.filter((v) => Number.isFinite(v) && Math.abs(v) < 1e12).sort((a, b) => a - b);
@@ -13398,6 +13526,9 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     ])
   };
 }
+function builtVisual(built) {
+  return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
+}
 function compileUnitCircleProjection(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "projection"], path);
@@ -13406,78 +13537,28 @@ function compileUnitCircleProjection(base, content, role, placement, plan, path)
   const number = content.numbers?.[0];
   const angleDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
   const angleScale = angleScaleForUnit(angleDefinition?.unit);
-  const theta = (angleDefinition?.initial ?? Math.PI / 3) * angleScale;
   const variable = number ? variableAlias(number) : void 0;
-  const angleExpression = variable ? scaledAngleExpression(variable, angleScale) : void 0;
-  const circle = `${base}-circle`;
-  const plot = `${base}-plot`;
-  const link = `${base}-link`;
-  const geometry = {
-    title: optionalText(input.title, compileText(plan, "\u5355\u4F4D\u5706\u4E0E\u6295\u5F71"), `${path}.title`),
-    axes: {
-      x: { min: -1.25, max: 1.25, label: "x" },
-      y: { min: -1.25, max: 1.25, label: "y" },
-      equal_scale: true
-    },
-    points: [
-      { as: "origin", x: 0, y: 0, label: "O" },
-      {
-        as: "moving-point",
-        x: Math.cos(theta),
-        y: Math.sin(theta),
-        label: "P(cos \u03B8, sin \u03B8)",
-        ...variable ? { interaction: { kind: "angle_control", variable, center: "origin" } } : {}
-      },
-      { as: "projection-foot", x: Math.cos(theta), y: 0 }
-    ],
-    circles: [{ as: "unit-circle", center: "origin", radius: 1, label: "r = 1" }],
-    segments: [
-      { as: "radius", from: "origin", to: "moving-point", style: "solid" },
-      { as: "projection", from: "moving-point", to: "projection-foot", style: "projection", label: "sin \u03B8" }
-    ],
-    arcs: [{ as: "angle", center: "origin", radius: 0.28, start_angle: 0, end_angle: theta, label: "\u03B8" }],
-    ...variable ? {
-      bindings: [
-        { target: "moving-point.x", expression: `cos(${angleExpression})` },
-        { target: "moving-point.y", expression: `sin(${angleExpression})` },
-        { target: "projection-foot.x", expression: `cos(${angleExpression})` },
-        { target: "angle.end_angle", expression: angleExpression }
-      ]
-    } : {}
-  };
-  const functionName = projection;
-  const plotAngleMin = angleDefinition ? angleDefinition.min * angleScale : 0;
-  const plotAngleMax = angleDefinition ? angleDefinition.max * angleScale : Math.PI * 2;
-  const plotContent = {
-    title: compileText(plan, "{{v0}}\u51FD\u6570\u56FE\u50CF", { v0: compileText(plan, functionName === "sin" ? "\u6B63\u5F26" : "\u4F59\u5F26") }),
-    axes: { x: { min: plotAngleMin, max: plotAngleMax, label: "\u03B8" }, y: { min: -1.2, max: 1.2, label: "y" } },
-    curves: [{ as: "primary-curve", expression: `${functionName}(x)`, label: `y = ${functionName}(x)` }],
-    points: [{ as: "moving-point", x: theta, y: Math[functionName](theta), label: `P(\u03B8, ${functionName}(\u03B8))` }],
-    ...variable ? {
-      bindings: [
-        { target: "moving-point.x", expression: angleExpression },
-        { target: "moving-point.y", expression: `${functionName}(${angleExpression})` }
-      ]
-    } : {}
-  };
-  return {
-    actions: [
-      { do: "write", as: circle, kind: "geometry", role, content: geometry, place: placement },
-      { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: circle, gap: "normal" } },
-      { do: "connect", as: link, from: circle, to: plot, relation: "maps_to", label: compileText(plan, "\u65CB\u8F6C\u89D2\u4E0E\u5468\u671F\u6CE2\u52A8") },
-      { do: "group", as: base, role, label: compileText(plan, "\u5355\u4F4D\u5706\u4E0E\u51FD\u6570\u56FE\u50CF"), members: [circle, plot] }
-    ],
-    whole: base,
-    parts: new Map([
-      ["whole", base],
-      ["unit_circle", `${circle}#unit-circle`],
-      ["moving_point", `${circle}#moving-point`],
-      ["radius", `${circle}#radius`],
-      ["projection_line", `${circle}#projection`],
-      ["primary_curve", `${plot}#primary-curve`],
-      ...variable ? [["primary_control", `${circle}#moving-point`]] : []
-    ])
-  };
+  return builtVisual(buildUnitCircle({
+    as: base,
+    role,
+    place: placement,
+    ...variable && angleDefinition ? {
+      angle: {
+        variable,
+        expression: scaledAngleExpression(variable, angleScale),
+        initial: angleDefinition.initial * angleScale,
+        min: angleDefinition.min * angleScale,
+        max: angleDefinition.max * angleScale
+      }
+    } : { fixed_angle: (angleDefinition?.initial ?? Math.PI / 3) * angleScale },
+    text: { title: optionalText(input.title, compileText(plan, "\u5355\u4F4D\u5706\u4E0E\u6295\u5F71"), `${path}.title`) },
+    graph: {
+      projection,
+      title: compileText(plan, "{{v0}}\u51FD\u6570\u56FE\u50CF", { v0: compileText(plan, projection === "sin" ? "\u6B63\u5F26" : "\u4F59\u5F26") }),
+      link_label: compileText(plan, "\u65CB\u8F6C\u89D2\u4E0E\u5468\u671F\u6CE2\u52A8"),
+      group_label: compileText(plan, "\u5355\u4F4D\u5706\u4E0E\u51FD\u6570\u56FE\u50CF")
+    }
+  }));
 }
 function compileCirclePolygonBounds(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -13486,28 +13567,21 @@ function compileCirclePolygonBounds(base, content, role, placement, plan, path) 
   if (radius <= 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius`, "radius must be positive");
   const number = content.numbers?.[0];
   const definition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : void 0;
-  const sides = definition?.initial ?? 6;
-  const extent = radius / Math.cos(Math.PI / (definition?.min ?? sides)) * 1.18;
-  const geometry = {
-    title: optionalText(input.title, compileText(plan, "\u5706\u4E0E\u6B63\u591A\u8FB9\u5F62\u7684\u5468\u957F\u5939\u903C"), `${path}.title`),
-    axes: { x: { min: -extent, max: extent, label: "x" }, y: { min: -extent, max: extent, label: "y" }, equal_scale: true },
-    points: [{ as: "center", x: 0, y: 0, label: "O" }],
-    circles: [{ as: "circle", center: "center", radius, label: `r = ${radius}` }],
-    regular_polygons: [
-      { as: "inscribed", center: "center", radius, sides, relation: "inscribed", tone: "primary", label: compileText(plan, "\u5185\u63A5\u6B63\u591A\u8FB9\u5F62"), show_measurements: true },
-      { as: "circumscribed", center: "center", radius, sides, relation: "circumscribed", tone: "accent", label: compileText(plan, "\u5916\u5207\u6B63\u591A\u8FB9\u5F62"), show_measurements: true }
-    ],
-    caption: compileText(plan, "\u7EFF\u8272\u5185\u63A5\u5468\u957F < \u5706\u5468\u957F < \u6A59\u8272\u5916\u5207\u5468\u957F\u3002\u9664\u4EE5\u76F4\u5F84 2r\uFF1An sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002\u663E\u793A\u503C\u4E3A\u8FD1\u4F3C\u503C\uFF1B\u8FB9\u6570\u589E\u52A0\u65F6\u4E0A\u4E0B\u754C\u5171\u540C\u903C\u8FD1 \u03C0\u3002"),
-    ...number ? { bindings: [
-      { target: "inscribed.sides", expression: `round(${variableAlias(number)})` },
-      { target: "circumscribed.sides", expression: `round(${variableAlias(number)})` }
-    ] } : {}
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }],
-    whole: base,
-    parts: /* @__PURE__ */ new Map([["whole", base], ["circle", `${base}#circle`], ["inscribed_polygon", `${base}#inscribed`], ["circumscribed_polygon", `${base}#circumscribed`], ["primary_control", base]])
-  };
+  const initialSides = definition?.initial ?? 6;
+  return builtVisual(buildCirclePolygons({
+    as: base,
+    role,
+    place: placement,
+    radius,
+    sides: number ? { expression: `round(${variableAlias(number)})`, initial: initialSides, ...definition ? { min: definition.min } : {} } : initialSides,
+    circumscribed: true,
+    text: {
+      title: optionalText(input.title, compileText(plan, "\u5706\u4E0E\u6B63\u591A\u8FB9\u5F62\u7684\u5468\u957F\u5939\u903C"), `${path}.title`),
+      inscribed_label: compileText(plan, "\u5185\u63A5\u6B63\u591A\u8FB9\u5F62"),
+      circumscribed_label: compileText(plan, "\u5916\u5207\u6B63\u591A\u8FB9\u5F62"),
+      caption: compileText(plan, "\u7EFF\u8272\u5185\u63A5\u5468\u957F < \u5706\u5468\u957F < \u6A59\u8272\u5916\u5207\u5468\u957F\u3002\u9664\u4EE5\u76F4\u5F84 2r\uFF1An sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002\u663E\u793A\u503C\u4E3A\u8FD1\u4F3C\u503C\uFF1B\u8FB9\u6570\u589E\u52A0\u65F6\u4E0A\u4E0B\u754C\u5171\u540C\u903C\u8FD1 \u03C0\u3002")
+    }
+  }));
 }
 function compileCircleAndArc(base, content, role, placement, plan, path) {
   const input = parameters(content);

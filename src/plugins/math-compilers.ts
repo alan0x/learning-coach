@@ -1,4 +1,5 @@
 // Recipe compilers of the math plugin: validated recipe parameters to OLL authoring actions.
+import { buildCirclePolygons, buildUnitCircle, type BuiltRecipe } from "octos-lesson-language/plugin-math";
 import { compileText } from "../lesson-text.js";
 import { rearrangementRecipe, REARRANGEMENT_CONSTRUCTIONS, type RearrangementConstruction, type RigidPose } from "../rearrangement.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
@@ -183,6 +184,12 @@ function compileFunctionPlot(
   };
 }
 
+// Built by the math plugin's shared layer (octos-lesson-language/plugin-math),
+// which Studio also uses; Coach only turns its Lesson Plan into builder input.
+function builtVisual(built: BuiltRecipe): CompiledVisual {
+  return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
+}
+
 function compileUnitCircleProjection(
   base: string,
   content: LessonPlanVisualContent,
@@ -198,78 +205,28 @@ function compileUnitCircleProjection(
   const number = content.numbers?.[0];
   const angleDefinition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : undefined;
   const angleScale = angleScaleForUnit(angleDefinition?.unit);
-  const theta = (angleDefinition?.initial ?? Math.PI / 3) * angleScale;
   const variable = number ? variableAlias(number) : undefined;
-  const angleExpression = variable ? scaledAngleExpression(variable, angleScale) : undefined;
-  const circle = `${base}-circle`;
-  const plot = `${base}-plot`;
-  const link = `${base}-link`;
-  const geometry: Record<string, unknown> = {
-    title: optionalText(input.title, compileText(plan, "单位圆与投影"), `${path}.title`),
-    axes: {
-      x: { min: -1.25, max: 1.25, label: "x" },
-      y: { min: -1.25, max: 1.25, label: "y" },
-      equal_scale: true,
-    },
-    points: [
-      { as: "origin", x: 0, y: 0, label: "O" },
-      {
-        as: "moving-point",
-        x: Math.cos(theta),
-        y: Math.sin(theta),
-        label: "P(cos θ, sin θ)",
-        ...(variable ? { interaction: { kind: "angle_control", variable, center: "origin" } } : {}),
+  return builtVisual(buildUnitCircle({
+    as: base,
+    role,
+    place: placement,
+    ...(variable && angleDefinition ? {
+      angle: {
+        variable,
+        expression: scaledAngleExpression(variable, angleScale),
+        initial: angleDefinition.initial * angleScale,
+        min: angleDefinition.min * angleScale,
+        max: angleDefinition.max * angleScale,
       },
-      { as: "projection-foot", x: Math.cos(theta), y: 0 },
-    ],
-    circles: [{ as: "unit-circle", center: "origin", radius: 1, label: "r = 1" }],
-    segments: [
-      { as: "radius", from: "origin", to: "moving-point", style: "solid" },
-      { as: "projection", from: "moving-point", to: "projection-foot", style: "projection", label: "sin θ" },
-    ],
-    arcs: [{ as: "angle", center: "origin", radius: 0.28, start_angle: 0, end_angle: theta, label: "θ" }],
-    ...(variable ? {
-      bindings: [
-        { target: "moving-point.x", expression: `cos(${angleExpression})` },
-        { target: "moving-point.y", expression: `sin(${angleExpression})` },
-        { target: "projection-foot.x", expression: `cos(${angleExpression})` },
-        { target: "angle.end_angle", expression: angleExpression },
-      ],
-    } : {}),
-  };
-  const functionName = projection as "sin" | "cos";
-  const plotAngleMin = angleDefinition ? angleDefinition.min * angleScale : 0;
-  const plotAngleMax = angleDefinition ? angleDefinition.max * angleScale : Math.PI * 2;
-  const plotContent: Record<string, unknown> = {
-    title: compileText(plan, "{{v0}}函数图像", { v0: compileText(plan, functionName === "sin" ? "正弦" : "余弦") }),
-    axes: { x: { min: plotAngleMin, max: plotAngleMax, label: "θ" }, y: { min: -1.2, max: 1.2, label: "y" } },
-    curves: [{ as: "primary-curve", expression: `${functionName}(x)`, label: `y = ${functionName}(x)` }],
-    points: [{ as: "moving-point", x: theta, y: Math[functionName](theta), label: `P(θ, ${functionName}(θ))` }],
-    ...(variable ? {
-      bindings: [
-        { target: "moving-point.x", expression: angleExpression },
-        { target: "moving-point.y", expression: `${functionName}(${angleExpression})` },
-      ],
-    } : {}),
-  };
-  return {
-    actions: [
-      { do: "write", as: circle, kind: "geometry", role, content: geometry, place: placement },
-      { do: "write", as: plot, kind: "plot", role, content: plotContent, place: { relation: "right_of", anchor: circle, gap: "normal" } },
-      { do: "connect", as: link, from: circle, to: plot, relation: "maps_to", label: compileText(plan, "旋转角与周期波动") },
-      { do: "group", as: base, role, label: compileText(plan, "单位圆与函数图像"), members: [circle, plot] },
-    ],
-    whole: base,
-    parts: new Map([
-      ["whole", base],
-      ["unit_circle", `${circle}#unit-circle`],
-      ["moving_point", `${circle}#moving-point`],
-      ["radius", `${circle}#radius`],
-      ["projection_line", `${circle}#projection`],
-      ["primary_curve", `${plot}#primary-curve`],
-      ...(variable ? [["primary_control", `${circle}#moving-point`]] as Array<[string, string]> : []),
-    ]),
-  };
+    } : { fixed_angle: (angleDefinition?.initial ?? Math.PI / 3) * angleScale }),
+    text: { title: optionalText(input.title, compileText(plan, "单位圆与投影"), `${path}.title`) },
+    graph: {
+      projection,
+      title: compileText(plan, "{{v0}}函数图像", { v0: compileText(plan, projection === "sin" ? "正弦" : "余弦") }),
+      link_label: compileText(plan, "旋转角与周期波动"),
+      group_label: compileText(plan, "单位圆与函数图像"),
+    },
+  }));
 }
 
 function compileCirclePolygonBounds(
@@ -282,26 +239,23 @@ function compileCirclePolygonBounds(
   if (radius <= 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.radius`, "radius must be positive");
   const number = content.numbers?.[0];
   const definition = number ? numberDefinition(plan, number, `${path}.numbers[0]`) : undefined;
-  const sides = definition?.initial ?? 6;
-  // The outer polygon fits even at the smallest permitted side count.
-  const extent = radius / Math.cos(Math.PI / (definition?.min ?? sides)) * 1.18;
-  const geometry = {
-    title: optionalText(input.title, compileText(plan, "圆与正多边形的周长夹逼"), `${path}.title`),
-    axes: { x: { min: -extent, max: extent, label: "x" }, y: { min: -extent, max: extent, label: "y" }, equal_scale: true },
-    points: [{ as: "center", x: 0, y: 0, label: "O" }],
-    circles: [{ as: "circle", center: "center", radius, label: `r = ${radius}` }],
-    regular_polygons: [
-      { as: "inscribed", center: "center", radius, sides, relation: "inscribed", tone: "primary", label: compileText(plan, "内接正多边形"), show_measurements: true },
-      { as: "circumscribed", center: "center", radius, sides, relation: "circumscribed", tone: "accent", label: compileText(plan, "外切正多边形"), show_measurements: true },
-    ],
-    caption: compileText(plan, "绿色内接周长 < 圆周长 < 橙色外切周长。除以直径 2r：n sin(π/n) < π < n tan(π/n)。显示值为近似值；边数增加时上下界共同逼近 π。"),
-    ...(number ? { bindings: [
-      { target: "inscribed.sides", expression: `round(${variableAlias(number)})` },
-      { target: "circumscribed.sides", expression: `round(${variableAlias(number)})` },
-    ] } : {}),
-  };
-  return { actions: [{ do: "write", as: base, kind: "geometry", role, content: geometry, place: placement }], whole: base,
-    parts: new Map([["whole", base], ["circle", `${base}#circle`], ["inscribed_polygon", `${base}#inscribed`], ["circumscribed_polygon", `${base}#circumscribed`], ["primary_control", base]]) };
+  const initialSides = definition?.initial ?? 6;
+  return builtVisual(buildCirclePolygons({
+    as: base,
+    role,
+    place: placement,
+    radius,
+    sides: number
+      ? { expression: `round(${variableAlias(number)})`, initial: initialSides, ...(definition ? { min: definition.min } : {}) }
+      : initialSides,
+    circumscribed: true,
+    text: {
+      title: optionalText(input.title, compileText(plan, "圆与正多边形的周长夹逼"), `${path}.title`),
+      inscribed_label: compileText(plan, "内接正多边形"),
+      circumscribed_label: compileText(plan, "外切正多边形"),
+      caption: compileText(plan, "绿色内接周长 < 圆周长 < 橙色外切周长。除以直径 2r：n sin(π/n) < π < n tan(π/n)。显示值为近似值；边数增加时上下界共同逼近 π。"),
+    },
+  }));
 }
 
 function compileCircleAndArc(
