@@ -1131,8 +1131,10 @@ export function numericAnswerTolerance(answer: string, checked: number): number 
   const expected = parseNumericAnswer(answer);
   if (!expected || !Number.isFinite(checked)) return undefined;
   const difference = Math.abs(checked - expected.value);
-  if (difference <= 1e-9 * Math.max(1, Math.abs(expected.value))) return 0;
-  if (expected.form !== "decimal") return undefined;
+  if (difference === 0) return 0;
+  if (expected.form !== "decimal") {
+    return difference <= 1e-9 * Math.max(1, Math.abs(expected.value)) ? 0 : undefined;
+  }
   // Count places the way the grader reads the answer (full-width digits and points included).
   const written = answer.trim()
     .replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 0xfee0))
@@ -1140,12 +1142,15 @@ export function numericAnswerTolerance(answer: string, checked: number): number 
   const places = /\.(\d+)$/.exec(written)?.[1]?.length;
   if (!places) return undefined;
   const halfUnit = 0.5 * 10 ** -places;
-  // A check that lands exactly on the rounding boundary may round either way.
-  if (difference > halfUnit * (1 + 1e-9)) return undefined;
-  // The grader compares |typed - answer| <= tolerance in floating point, where
-  // |2.15 - 2.2| is 0.05000000000000027. A slack far below the answer's own
-  // precision keeps a correctly rounded value from being marked wrong.
-  return Number((halfUnit + Math.max(halfUnit * 1e-6, Math.abs(expected.value) * 1e-12)).toPrecision(10));
+  const gradingSlack = halfUnit * 1e-6;
+  // Limit binary arithmetic noise to a small fraction of the last place, so
+  // the scale of a large answer cannot turn real decimal rounding into equality.
+  const roundoff = Math.min(gradingSlack, Number.EPSILON * Math.max(Math.abs(expected.value), Math.abs(checked)));
+  if (difference <= roundoff) return 0;
+  // Either side of an exact tie is accepted. Include the checked value in the
+  // emitted tolerance even if serializing the tolerance rounds it down.
+  if (difference > halfUnit + roundoff) return undefined;
+  return Math.max(difference, Number((halfUnit + gradingSlack).toPrecision(10)));
 }
 
 /**
