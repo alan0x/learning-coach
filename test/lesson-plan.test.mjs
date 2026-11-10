@@ -4761,8 +4761,19 @@ test("a rounded decimal answer matches its check to the places written, and the 
   assert.equal(completion("2.0", "2*3.14*(0.98/9.8)^0.5").tolerance, 0.05000005);
   // An exact answer keeps exact grading.
   assert.deepEqual(completion("0.75", "3/4"), { kind: "numeric_answer", answer: "0.75" });
+  assert.deepEqual(completion("0.3", "0.1+0.2"), { kind: "numeric_answer", answer: "0.3" });
+  for (const [answer, check] of [
+    ["12345678.90", "12345678.896"],
+    ["12345678.90", "12345678.905"],
+    ["1234.567890", "1234.5678904"],
+  ]) {
+    const graded = completion(answer, check);
+    assert.ok(graded.tolerance > 0, `${answer} is a rounded answer`);
+    assert.equal(checkNumericAnswer(graded, check).succeeded, true, `${check} for ${answer}`);
+  }
   // Wrong rounding, and rounding outside decimals, are still mismatches.
   assert.throws(() => compileLessonPlan(withAnswer("11.22", "2.02/18.02*100")), /does not equal its check/);
+  assert.throws(() => compileLessonPlan(withAnswer("12345678.90", "12345678.908")), /does not equal its check/);
   assert.equal(completion("11.2", "2.02/18.02*100").tolerance, 0.05000005, "one place written, one place checked");
   // On the rounding boundary the learner's unrounded value still passes the OLL grader, as does a full-width answer.
   for (const [answer, check, typed] of [["2.2", "2.15", "2.15"], ["-2.2", "-2.15", "-2.15"], ["２．２", "2.15", "2.15"]]) {

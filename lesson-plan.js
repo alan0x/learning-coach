@@ -11173,14 +11173,19 @@ function numericAnswerTolerance(answer, checked) {
   const expected = parseNumericAnswer(answer);
   if (!expected || !Number.isFinite(checked)) return void 0;
   const difference = Math.abs(checked - expected.value);
-  if (difference <= 1e-9 * Math.max(1, Math.abs(expected.value))) return 0;
-  if (expected.form !== "decimal") return void 0;
+  if (difference === 0) return 0;
+  if (expected.form !== "decimal") {
+    return difference <= 1e-9 * Math.max(1, Math.abs(expected.value)) ? 0 : void 0;
+  }
   const written = answer.trim().replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 65248)).replace(/[．。]/g, ".");
   const places = /\.(\d+)$/.exec(written)?.[1]?.length;
   if (!places) return void 0;
   const halfUnit = 0.5 * 10 ** -places;
-  if (difference > halfUnit * (1 + 1e-9)) return void 0;
-  return Number((halfUnit + Math.max(halfUnit * 1e-6, Math.abs(expected.value) * 1e-12)).toPrecision(10));
+  const gradingSlack = halfUnit * 1e-6;
+  const roundoff = Math.min(gradingSlack, Number.EPSILON * Math.max(Math.abs(expected.value), Math.abs(checked)));
+  if (difference <= roundoff) return 0;
+  if (difference > halfUnit + roundoff) return void 0;
+  return Math.max(difference, Number((halfUnit + gradingSlack).toPrecision(10)));
 }
 function validateTypedQuestion(activity, path) {
   allowedKeys(activity, [
