@@ -1,0 +1,7694 @@
+{
+  "model": "jev-latest",
+  "calls": 186,
+  "rows": [
+    {
+      "id": "M01-linear-system-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 488,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.71
+        }
+      }
+    },
+    {
+      "id": "M01-linear-system-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 270,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.73
+        }
+      }
+    },
+    {
+      "id": "M01-linear-system-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.5
+        }
+      }
+    },
+    {
+      "id": "M01-linear-system-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 230,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.48
+        }
+      }
+    },
+    {
+      "id": "M02-quadratic-translation-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.76
+        }
+      }
+    },
+    {
+      "id": "M02-quadratic-translation-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 227,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.73
+        }
+      }
+    },
+    {
+      "id": "M02-quadratic-translation-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 239,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.52
+        }
+      }
+    },
+    {
+      "id": "M02-quadratic-translation-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 241,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.52
+        }
+      }
+    },
+    {
+      "id": "M03-exp-log-inverse-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.86
+        }
+      }
+    },
+    {
+      "id": "M03-exp-log-inverse-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 233,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.86
+        }
+      }
+    },
+    {
+      "id": "M03-exp-log-inverse-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 232,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.55
+        }
+      }
+    },
+    {
+      "id": "M03-exp-log-inverse-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 230,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.51
+        }
+      }
+    },
+    {
+      "id": "M04-unit-circle-sine-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 232,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.97,
+          "probabilities": {
+            "generate_lesson": 0.98,
+            "clarify": 0.02,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.51,
+          "probabilities": {
+            "math": 0.39,
+            "physics": 0.61,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.45
+        }
+      }
+    },
+    {
+      "id": "M04-unit-circle-sine-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 277,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.39,
+          "probabilities": {
+            "math": 0.51,
+            "physics": 0.48,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.48
+        }
+      }
+    },
+    {
+      "id": "M04-unit-circle-sine-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 231,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.59
+        }
+      }
+    },
+    {
+      "id": "M04-unit-circle-sine-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 232,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.6
+        }
+      }
+    },
+    {
+      "id": "M05-pythagorean-rearrangement-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.86
+        }
+      }
+    },
+    {
+      "id": "M05-pythagorean-rearrangement-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.87
+        }
+      }
+    },
+    {
+      "id": "M05-pythagorean-rearrangement-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 232,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.75
+        }
+      }
+    },
+    {
+      "id": "M05-pythagorean-rearrangement-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 230,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.76
+        }
+      }
+    },
+    {
+      "id": "M06-arc-length-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 244,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.57
+        }
+      }
+    },
+    {
+      "id": "M06-arc-length-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.57
+        }
+      }
+    },
+    {
+      "id": "M06-arc-length-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.52
+        }
+      }
+    },
+    {
+      "id": "M06-arc-length-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 238,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0.99,
+            "physics": 0.01,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.54
+        }
+      }
+    },
+    {
+      "id": "M07-euclidean-algorithm-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 231,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.76
+        }
+      }
+    },
+    {
+      "id": "M07-euclidean-algorithm-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.77
+        }
+      }
+    },
+    {
+      "id": "M07-euclidean-algorithm-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 244,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.71
+        }
+      }
+    },
+    {
+      "id": "M07-euclidean-algorithm-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.98,
+          "probabilities": {
+            "math": 0.98,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.02
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.69
+        }
+      }
+    },
+    {
+      "id": "M08-arithmetic-series-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.84
+        }
+      }
+    },
+    {
+      "id": "M08-arithmetic-series-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 431,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.82
+        }
+      }
+    },
+    {
+      "id": "M08-arithmetic-series-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 227,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.58
+        }
+      }
+    },
+    {
+      "id": "M08-arithmetic-series-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.6
+        }
+      }
+    },
+    {
+      "id": "M09-derivative-tangent-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.85
+        }
+      }
+    },
+    {
+      "id": "M09-derivative-tangent-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 233,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.83
+        }
+      }
+    },
+    {
+      "id": "M09-derivative-tangent-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 242,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.56
+        }
+      }
+    },
+    {
+      "id": "M09-derivative-tangent-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 239,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.57
+        }
+      }
+    },
+    {
+      "id": "M10-binomial-probability-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.73
+        }
+      }
+    },
+    {
+      "id": "M10-binomial-probability-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 246,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.69
+        }
+      }
+    },
+    {
+      "id": "M10-binomial-probability-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 226,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.55
+        }
+      }
+    },
+    {
+      "id": "M10-binomial-probability-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 239,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.55
+        }
+      }
+    },
+    {
+      "id": "M11-paraboloid-section-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 443,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.69
+        }
+      }
+    },
+    {
+      "id": "M11-paraboloid-section-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 222,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.69
+        }
+      }
+    },
+    {
+      "id": "M11-paraboloid-section-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 437,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.95,
+          "probabilities": {
+            "math": 0.96,
+            "physics": 0.04,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.47
+        }
+      }
+    },
+    {
+      "id": "M11-paraboloid-section-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 231,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.95,
+          "probabilities": {
+            "math": 0.96,
+            "physics": 0.03,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.53
+        }
+      }
+    },
+    {
+      "id": "M12-sphere-section-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 244,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0.99,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.59
+        }
+      }
+    },
+    {
+      "id": "M12-sphere-section-question",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 251,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.54
+        }
+      }
+    },
+    {
+      "id": "M12-sphere-section-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 228,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.94,
+          "probabilities": {
+            "generate_lesson": 0.96,
+            "clarify": 0.04,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0.99,
+            "physics": 0.01,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.36
+        }
+      }
+    },
+    {
+      "id": "M12-sphere-section-topic",
+      "category": "math",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 241,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.94,
+          "probabilities": {
+            "generate_lesson": 0.96,
+            "clarify": 0.04,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.96,
+          "probabilities": {
+            "math": 0.97,
+            "physics": 0.01,
+            "chemistry": 0.01,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.33
+        }
+      }
+    },
+    {
+      "id": "MA-en-01",
+      "category": "math",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 258,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.88
+        }
+      }
+    },
+    {
+      "id": "MA-en-01",
+      "category": "math",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 248,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.88
+        }
+      }
+    },
+    {
+      "id": "MA-en-02",
+      "category": "math",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 248,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "MA-en-02",
+      "category": "math",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.91
+        }
+      }
+    },
+    {
+      "id": "MA-en-03",
+      "category": "math",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 595,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.54
+        }
+      }
+    },
+    {
+      "id": "MA-en-03",
+      "category": "math",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 237,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.53
+        }
+      }
+    },
+    {
+      "id": "MA-en-04",
+      "category": "math",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 257,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.86
+        }
+      }
+    },
+    {
+      "id": "MA-en-04",
+      "category": "math",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 237,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.85
+        }
+      }
+    },
+    {
+      "id": "MA-en-05",
+      "category": "math",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 248,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.91
+        }
+      }
+    },
+    {
+      "id": "MA-en-05",
+      "category": "math",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 241,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.91
+        }
+      }
+    },
+    {
+      "id": "MA-en-06",
+      "category": "math",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 239,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "MA-en-06",
+      "category": "math",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 230,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "PH-en-01",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 239,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.82,
+          "probabilities": {
+            "math": 0.14,
+            "physics": 0.86,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.89
+        }
+      }
+    },
+    {
+      "id": "PH-en-01",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 230,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.87,
+          "probabilities": {
+            "math": 0.1,
+            "physics": 0.9,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "PH-en-02",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 237,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.88
+        }
+      }
+    },
+    {
+      "id": "PH-en-02",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 233,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.89
+        }
+      }
+    },
+    {
+      "id": "PH-en-03",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 231,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.99,
+            "general_science": 0.01,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.84
+        }
+      }
+    },
+    {
+      "id": "PH-en-03",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.85
+        }
+      }
+    },
+    {
+      "id": "PH-en-04",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 232,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.99,
+            "general_science": 0.01,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.85
+        }
+      }
+    },
+    {
+      "id": "PH-en-04",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 252,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.85
+        }
+      }
+    },
+    {
+      "id": "PH-en-05",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 237,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.96,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.97,
+            "general_science": 0.03,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "PH-en-05",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 226,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "PH-en-06",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 240,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.99,
+            "general_science": 0.01,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.75
+        }
+      }
+    },
+    {
+      "id": "PH-en-06",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 245,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.79
+        }
+      }
+    },
+    {
+      "id": "PH-en-07",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 229,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.99,
+            "general_science": 0.01,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.91
+        }
+      }
+    },
+    {
+      "id": "PH-en-07",
+      "category": "physics",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 233,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.91
+        }
+      }
+    },
+    {
+      "id": "PH-zh-01",
+      "category": "physics",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 256,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.89
+        }
+      }
+    },
+    {
+      "id": "PH-zh-01",
+      "category": "physics",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 231,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.87
+        }
+      }
+    },
+    {
+      "id": "PH-zh-02",
+      "category": "physics",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 247,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.88
+        }
+      }
+    },
+    {
+      "id": "PH-zh-02",
+      "category": "physics",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 248,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0.01,
+            "physics": 0.99,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.87
+        }
+      }
+    },
+    {
+      "id": "PH-zh-03",
+      "category": "physics",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.99,
+            "general_science": 0.01,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.74
+        }
+      }
+    },
+    {
+      "id": "PH-zh-03",
+      "category": "physics",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 229,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.73
+        }
+      }
+    },
+    {
+      "id": "PH-zh-04",
+      "category": "physics",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.8
+        }
+      }
+    },
+    {
+      "id": "PH-zh-04",
+      "category": "physics",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 248,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.82
+        }
+      }
+    },
+    {
+      "id": "PH-zh-05",
+      "category": "physics",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 515,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.96,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.97,
+            "general_science": 0.03,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "PH-zh-05",
+      "category": "physics",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.89
+        }
+      }
+    },
+    {
+      "id": "CH-en-01",
+      "category": "chemistry",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 431,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.01,
+            "general_science": 0.99,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.92
+        }
+      }
+    },
+    {
+      "id": "CH-en-01",
+      "category": "chemistry",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 242,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 0.96,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.02,
+            "chemistry": 0.97,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.94
+        }
+      }
+    },
+    {
+      "id": "CH-en-02",
+      "category": "chemistry",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 252,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.81
+        }
+      }
+    },
+    {
+      "id": "CH-en-02",
+      "category": "chemistry",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 243,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 1,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.81
+        }
+      }
+    },
+    {
+      "id": "CH-en-03",
+      "category": "chemistry",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [
+        "physics"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 0.47,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.42,
+            "general_science": 0.58,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.93
+        }
+      }
+    },
+    {
+      "id": "CH-en-03",
+      "category": "chemistry",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [
+        "physics"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 428,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.44,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.55,
+            "chemistry": 0.44,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.93
+        }
+      }
+    },
+    {
+      "id": "CH-en-04",
+      "category": "chemistry",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [
+        "physics"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.97,
+          "probabilities": {
+            "generate_lesson": 0.98,
+            "clarify": 0.02,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 0.91,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.07,
+            "general_science": 0.93,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.58
+        }
+      }
+    },
+    {
+      "id": "CH-en-04",
+      "category": "chemistry",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [
+        "physics"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 241,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.97,
+          "probabilities": {
+            "generate_lesson": 0.98,
+            "clarify": 0.02,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 0.92,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.05,
+            "chemistry": 0.94,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.57
+        }
+      }
+    },
+    {
+      "id": "CH-en-05",
+      "category": "chemistry",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 275,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.91
+        }
+      }
+    },
+    {
+      "id": "CH-en-05",
+      "category": "chemistry",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 253,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 1,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "CH-zh-01",
+      "category": "chemistry",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 251,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "CH-zh-01",
+      "category": "chemistry",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 251,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 1,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.89
+        }
+      }
+    },
+    {
+      "id": "CH-zh-02",
+      "category": "chemistry",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 302,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.72
+        }
+      }
+    },
+    {
+      "id": "CH-zh-02",
+      "category": "chemistry",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 244,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0.01,
+            "physics": 0,
+            "chemistry": 0.99,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.7
+        }
+      }
+    },
+    {
+      "id": "CH-zh-03",
+      "category": "chemistry",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 252,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.85
+        }
+      }
+    },
+    {
+      "id": "CH-zh-03",
+      "category": "chemistry",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 270,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 1,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.85
+        }
+      }
+    },
+    {
+      "id": "CH-zh-04",
+      "category": "chemistry",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 232,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.89
+        }
+      }
+    },
+    {
+      "id": "CH-zh-04",
+      "category": "chemistry",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 471,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 1,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.87
+        }
+      }
+    },
+    {
+      "id": "CH-zh-05",
+      "category": "chemistry",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 231,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.01,
+            "general_science": 0.99,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.87
+        }
+      }
+    },
+    {
+      "id": "CH-zh-05",
+      "category": "chemistry",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 502,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.01,
+            "chemistry": 0.99,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.87
+        }
+      }
+    },
+    {
+      "id": "BI-en-01",
+      "category": "biology",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [
+        "chemistry"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 241,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.91
+        }
+      }
+    },
+    {
+      "id": "BI-en-01",
+      "category": "biology",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [
+        "chemistry"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 242,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 0.98,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0.02,
+            "biology": 0.98,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.93
+        }
+      }
+    },
+    {
+      "id": "BI-en-02",
+      "category": "biology",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 239,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.93
+        }
+      }
+    },
+    {
+      "id": "BI-en-02",
+      "category": "biology",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 228,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 1,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.93
+        }
+      }
+    },
+    {
+      "id": "BI-en-03",
+      "category": "biology",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 245,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.63
+        }
+      }
+    },
+    {
+      "id": "BI-en-03",
+      "category": "biology",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 402,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 1,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.57
+        }
+      }
+    },
+    {
+      "id": "BI-en-04",
+      "category": "biology",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 231,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.89
+        }
+      }
+    },
+    {
+      "id": "BI-en-04",
+      "category": "biology",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 1,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.88
+        }
+      }
+    },
+    {
+      "id": "BI-en-05",
+      "category": "biology",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.91
+        }
+      }
+    },
+    {
+      "id": "BI-en-05",
+      "category": "biology",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 247,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 1,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "BI-zh-01",
+      "category": "biology",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 237,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.89
+        }
+      }
+    },
+    {
+      "id": "BI-zh-01",
+      "category": "biology",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 244,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 1,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.89
+        }
+      }
+    },
+    {
+      "id": "BI-zh-02",
+      "category": "biology",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.83
+        }
+      }
+    },
+    {
+      "id": "BI-zh-02",
+      "category": "biology",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 241,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0.01,
+            "biology": 0.99,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.82
+        }
+      }
+    },
+    {
+      "id": "BI-zh-03",
+      "category": "biology",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 461,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "BI-zh-03",
+      "category": "biology",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 292,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 1,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.9
+        }
+      }
+    },
+    {
+      "id": "BI-zh-04",
+      "category": "biology",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 252,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.97,
+          "probabilities": {
+            "generate_lesson": 0.98,
+            "clarify": 0.02,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 0.99,
+            "language_humanities": 0,
+            "other": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.66
+        }
+      }
+    },
+    {
+      "id": "BI-zh-04",
+      "category": "biology",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 233,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.96,
+          "probabilities": {
+            "generate_lesson": 0.97,
+            "clarify": 0.03,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 0.98,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0.98,
+            "unclear": 0.02
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.68
+        }
+      }
+    },
+    {
+      "id": "AM-en-01",
+      "category": "ambiguous",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [],
+      "acceptable_plugins": [],
+      "expected_disposition": "clarify",
+      "http_status": 200,
+      "latency_ms": 242,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.68,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 0.01,
+            "language_humanities": 0.25,
+            "other": 0.74
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "AM-en-01",
+      "category": "ambiguous",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [],
+      "acceptable_plugins": [],
+      "expected_disposition": "clarify",
+      "http_status": 200,
+      "latency_ms": 432,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 1
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "AM-en-02",
+      "category": "ambiguous",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [],
+      "acceptable_plugins": [],
+      "expected_disposition": "clarify",
+      "http_status": 200,
+      "latency_ms": 481,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 0,
+            "clarify": 1,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.92,
+          "probabilities": {
+            "math": 0.03,
+            "physics": 0,
+            "general_science": 0.01,
+            "language_humanities": 0.02,
+            "other": 0.94
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      }
+    },
+    {
+      "id": "AM-en-02",
+      "category": "ambiguous",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [],
+      "acceptable_plugins": [],
+      "expected_disposition": "clarify",
+      "http_status": 200,
+      "latency_ms": 239,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 0,
+            "clarify": 1,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 1
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      }
+    },
+    {
+      "id": "AM-en-03",
+      "category": "ambiguous",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 233,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.95,
+          "probabilities": {
+            "math": 0.96,
+            "physics": 0,
+            "general_science": 0.03,
+            "language_humanities": 0,
+            "other": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.65
+        }
+      }
+    },
+    {
+      "id": "AM-en-03",
+      "category": "ambiguous",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 240,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.9,
+          "probabilities": {
+            "math": 0.92,
+            "physics": 0.01,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.07
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.67
+        }
+      }
+    },
+    {
+      "id": "AM-en-04",
+      "category": "ambiguous",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [
+        "chemistry",
+        "biology"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 240,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.94,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.95,
+            "general_science": 0.05,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.86
+        }
+      }
+    },
+    {
+      "id": "AM-en-04",
+      "category": "ambiguous",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [
+        "chemistry",
+        "biology"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 259,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 1,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.86
+        }
+      }
+    },
+    {
+      "id": "AM-en-05",
+      "category": "ambiguous",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [],
+      "acceptable_plugins": [
+        "chemistry",
+        "physics"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.94
+        }
+      }
+    },
+    {
+      "id": "AM-en-05",
+      "category": "ambiguous",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [],
+      "acceptable_plugins": [
+        "chemistry",
+        "physics"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 229,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 0.45,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.29,
+            "chemistry": 0.08,
+            "biology": 0.07,
+            "unclear": 0.56
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.93
+        }
+      }
+    },
+    {
+      "id": "AM-zh-01",
+      "category": "ambiguous",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [
+        "chemistry"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 241,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.85,
+          "probabilities": {
+            "generate_lesson": 0.9,
+            "clarify": 0.1,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.18
+        }
+      }
+    },
+    {
+      "id": "AM-zh-01",
+      "category": "ambiguous",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [
+        "chemistry"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.85,
+          "probabilities": {
+            "generate_lesson": 0.9,
+            "clarify": 0.1,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.94,
+          "probabilities": {
+            "math": 0.95,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.05
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.19
+        }
+      }
+    },
+    {
+      "id": "AM-zh-02",
+      "category": "ambiguous",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [],
+      "acceptable_plugins": [],
+      "expected_disposition": "clarify",
+      "http_status": 200,
+      "latency_ms": 247,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 0,
+            "clarify": 1,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.96,
+          "probabilities": {
+            "math": 0.01,
+            "physics": 0,
+            "general_science": 0.01,
+            "language_humanities": 0.01,
+            "other": 0.97
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "AM-zh-02",
+      "category": "ambiguous",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [],
+      "acceptable_plugins": [],
+      "expected_disposition": "clarify",
+      "http_status": 200,
+      "latency_ms": 438,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 0,
+            "clarify": 1,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 1
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      }
+    },
+    {
+      "id": "AM-zh-03",
+      "category": "ambiguous",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [],
+      "acceptable_plugins": [
+        "physics",
+        "chemistry",
+        "biology"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 225,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 0.9,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.01,
+            "general_science": 0.92,
+            "language_humanities": 0,
+            "other": 0.07
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.45
+        }
+      }
+    },
+    {
+      "id": "AM-zh-03",
+      "category": "ambiguous",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [],
+      "acceptable_plugins": [
+        "physics",
+        "chemistry",
+        "biology"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 0.95,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.01,
+            "chemistry": 0.02,
+            "biology": 0.01,
+            "unclear": 0.96
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.46
+        }
+      }
+    },
+    {
+      "id": "MX-en-01",
+      "category": "mixed",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 276,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.81,
+          "probabilities": {
+            "math": 0.15,
+            "physics": 0.85,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.76
+        }
+      }
+    },
+    {
+      "id": "MX-en-01",
+      "category": "mixed",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 250,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.6,
+          "probabilities": {
+            "math": 0.31,
+            "physics": 0.68,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.78
+        }
+      }
+    },
+    {
+      "id": "MX-en-02",
+      "category": "mixed",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 238,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.88
+        }
+      }
+    },
+    {
+      "id": "MX-en-02",
+      "category": "mixed",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 243,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 0.98,
+          "probabilities": {
+            "math": 0.02,
+            "physics": 0,
+            "chemistry": 0.98,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.87
+        }
+      }
+    },
+    {
+      "id": "MX-en-03",
+      "category": "mixed",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "biology",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 233,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 0.87,
+          "probabilities": {
+            "math": 0.1,
+            "physics": 0,
+            "general_science": 0.9,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.85
+        }
+      }
+    },
+    {
+      "id": "MX-en-03",
+      "category": "mixed",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "biology",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 248,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 0.66,
+          "probabilities": {
+            "math": 0.27,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0.73,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.85
+        }
+      }
+    },
+    {
+      "id": "MX-en-04",
+      "category": "mixed",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 239,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.85,
+          "probabilities": {
+            "math": 0.12,
+            "physics": 0.88,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.75
+        }
+      }
+    },
+    {
+      "id": "MX-en-04",
+      "category": "mixed",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 235,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.81,
+          "probabilities": {
+            "math": 0.14,
+            "physics": 0.85,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.75
+        }
+      }
+    },
+    {
+      "id": "MX-en-05",
+      "category": "mixed",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics",
+        "chemistry"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 230,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.46,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.57,
+            "general_science": 0.43,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.89
+        }
+      }
+    },
+    {
+      "id": "MX-en-05",
+      "category": "mixed",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics",
+        "chemistry"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 228,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.75,
+          "probabilities": {
+            "math": 0.02,
+            "physics": 0.8,
+            "chemistry": 0.17,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.88
+        }
+      }
+    },
+    {
+      "id": "MX-zh-01",
+      "category": "mixed",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "physics",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 248,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.42,
+          "probabilities": {
+            "math": 0.54,
+            "physics": 0.46,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.38
+        }
+      }
+    },
+    {
+      "id": "MX-zh-01",
+      "category": "mixed",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "physics",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 263,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.99,
+            "clarify": 0.01,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.55,
+          "probabilities": {
+            "math": 0.35,
+            "physics": 0.64,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.32
+        }
+      }
+    },
+    {
+      "id": "MX-zh-02",
+      "category": "mixed",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 237,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 0.76,
+          "probabilities": {
+            "math": 0.19,
+            "physics": 0,
+            "general_science": 0.81,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.76
+        }
+      }
+    },
+    {
+      "id": "MX-zh-02",
+      "category": "mixed",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry",
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 237,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "chemistry",
+          "confidence": 0.45,
+          "probabilities": {
+            "math": 0.37,
+            "physics": 0,
+            "chemistry": 0.56,
+            "biology": 0,
+            "unclear": 0.07
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.77
+        }
+      }
+    },
+    {
+      "id": "MX-zh-03",
+      "category": "mixed",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "biology",
+        "math"
+      ],
+      "acceptable_plugins": [
+        "chemistry"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 238,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.63
+        }
+      }
+    },
+    {
+      "id": "MX-zh-03",
+      "category": "mixed",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "biology",
+        "math"
+      ],
+      "acceptable_plugins": [
+        "chemistry"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 224,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 1,
+            "clarify": 0,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 0.9,
+          "probabilities": {
+            "math": 0.08,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0.92,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.66
+        }
+      }
+    },
+    {
+      "id": "IM-01",
+      "category": "image",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 238,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.74,
+          "probabilities": {
+            "math": 0.17,
+            "physics": 0.01,
+            "general_science": 0.02,
+            "language_humanities": 0.01,
+            "other": 0.79
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "IM-01",
+      "category": "image",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 230,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 1,
+          "probabilities": {
+            "generate_lesson": 0,
+            "clarify": 1,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0.01,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.99
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "IM-02",
+      "category": "image",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 231,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.51,
+          "probabilities": {
+            "math": 0.02,
+            "physics": 0.01,
+            "general_science": 0.02,
+            "language_humanities": 0.34,
+            "other": 0.61
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "IM-02",
+      "category": "image",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 250,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 1
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "IM-03",
+      "category": "image",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 239,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.97,
+          "probabilities": {
+            "generate_lesson": 0.02,
+            "clarify": 0.98,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.42,
+          "probabilities": {
+            "math": 0.36,
+            "physics": 0.02,
+            "general_science": 0.04,
+            "language_humanities": 0.04,
+            "other": 0.54
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      }
+    },
+    {
+      "id": "IM-03",
+      "category": "image",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 250,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.97,
+          "probabilities": {
+            "generate_lesson": 0.02,
+            "clarify": 0.98,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 0.98,
+          "probabilities": {
+            "math": 0.02,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.98
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      }
+    },
+    {
+      "id": "IM-04",
+      "category": "image",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 230,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.68,
+          "probabilities": {
+            "generate_lesson": 0.21,
+            "clarify": 0.79,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.34,
+          "probabilities": {
+            "math": 0.09,
+            "physics": 0.19,
+            "general_science": 0.23,
+            "language_humanities": 0.02,
+            "other": 0.47
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      }
+    },
+    {
+      "id": "IM-04",
+      "category": "image",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 228,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.68,
+          "probabilities": {
+            "generate_lesson": 0.21,
+            "clarify": 0.79,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 0.98,
+          "probabilities": {
+            "math": 0.01,
+            "physics": 0.01,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.98
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.08
+        }
+      }
+    },
+    {
+      "id": "IM-05",
+      "category": "image",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [],
+      "acceptable_plugins": [],
+      "expected_disposition": "clarify",
+      "http_status": 200,
+      "latency_ms": 252,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.91,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.94,
+            "ignore": 0.05
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.9,
+          "probabilities": {
+            "math": 0.03,
+            "physics": 0.01,
+            "general_science": 0.02,
+            "language_humanities": 0.02,
+            "other": 0.92
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      }
+    },
+    {
+      "id": "IM-05",
+      "category": "image",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [],
+      "acceptable_plugins": [],
+      "expected_disposition": "clarify",
+      "http_status": 200,
+      "latency_ms": 237,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.92,
+          "probabilities": {
+            "generate_lesson": 0,
+            "clarify": 0.95,
+            "ignore": 0.05
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 1
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      }
+    },
+    {
+      "id": "IM-06",
+      "category": "image",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 231,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.68,
+          "probabilities": {
+            "math": 0.13,
+            "physics": 0.02,
+            "general_science": 0.05,
+            "language_humanities": 0.06,
+            "other": 0.74
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      }
+    },
+    {
+      "id": "IM-06",
+      "category": "image",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 428,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 0.99,
+          "probabilities": {
+            "math": 0.01,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.99
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      }
+    },
+    {
+      "id": "IM-07",
+      "category": "image",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.82,
+          "probabilities": {
+            "math": 0.03,
+            "physics": 0.01,
+            "general_science": 0.02,
+            "language_humanities": 0.08,
+            "other": 0.86
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "IM-07",
+      "category": "image",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 231,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 1
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      }
+    },
+    {
+      "id": "IM-08",
+      "category": "image",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [
+        "chemistry"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 237,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.45,
+          "probabilities": {
+            "math": 0.01,
+            "physics": 0,
+            "general_science": 0.01,
+            "language_humanities": 0.42,
+            "other": 0.56
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "IM-08",
+      "category": "image",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [
+        "chemistry"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 233,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 1
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "IM-09",
+      "category": "image",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 243,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.95,
+          "probabilities": {
+            "math": 0.96,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0.01,
+            "other": 0.03
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      }
+    },
+    {
+      "id": "IM-09",
+      "category": "image",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 227,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.97,
+          "probabilities": {
+            "generate_lesson": 0.02,
+            "clarify": 0.98,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 0.54,
+          "probabilities": {
+            "math": 0.37,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.63
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      }
+    },
+    {
+      "id": "IM-10",
+      "category": "image",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "other",
+          "confidence": 0.69,
+          "probabilities": {
+            "math": 0.07,
+            "physics": 0.05,
+            "general_science": 0.06,
+            "language_humanities": 0.07,
+            "other": 0.75
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      }
+    },
+    {
+      "id": "IM-10",
+      "category": "image",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 240,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.98,
+          "probabilities": {
+            "generate_lesson": 0.01,
+            "clarify": 0.99,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 1
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      }
+    },
+    {
+      "id": "FU-01",
+      "category": "follow_up",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 237,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.97,
+          "probabilities": {
+            "generate_lesson": 0.98,
+            "clarify": 0.02,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.61,
+          "probabilities": {
+            "math": 0.31,
+            "physics": 0.69,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.34
+        }
+      }
+    },
+    {
+      "id": "FU-01",
+      "category": "follow_up",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "physics"
+      ],
+      "acceptable_plugins": [
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 486,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.97,
+          "probabilities": {
+            "generate_lesson": 0.98,
+            "clarify": 0.02,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 0.4,
+          "probabilities": {
+            "math": 0.52,
+            "physics": 0.47,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.34
+        }
+      }
+    },
+    {
+      "id": "FU-02",
+      "category": "follow_up",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 240,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.64,
+          "probabilities": {
+            "generate_lesson": 0.76,
+            "clarify": 0.24,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.09
+        }
+      }
+    },
+    {
+      "id": "FU-02",
+      "category": "follow_up",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.58,
+          "probabilities": {
+            "generate_lesson": 0.72,
+            "clarify": 0.28,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.08
+        }
+      }
+    },
+    {
+      "id": "FU-03",
+      "category": "follow_up",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.96,
+          "probabilities": {
+            "generate_lesson": 0.97,
+            "clarify": 0.03,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "general_science": 0,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.2
+        }
+      }
+    },
+    {
+      "id": "FU-03",
+      "category": "follow_up",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "math"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 233,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.97,
+          "probabilities": {
+            "generate_lesson": 0.98,
+            "clarify": 0.02,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "math",
+          "confidence": 1,
+          "probabilities": {
+            "math": 1,
+            "physics": 0,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.2
+        }
+      }
+    },
+    {
+      "id": "FU-04",
+      "category": "follow_up",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [
+        "physics",
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 230,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.37,
+          "probabilities": {
+            "generate_lesson": 0.42,
+            "clarify": 0.58,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 0.8,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.16,
+            "general_science": 0.84,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      }
+    },
+    {
+      "id": "FU-04",
+      "category": "follow_up",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [
+        "chemistry"
+      ],
+      "acceptable_plugins": [
+        "physics",
+        "math"
+      ],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 247,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.38,
+          "probabilities": {
+            "generate_lesson": 0.41,
+            "clarify": 0.59,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "physics",
+          "confidence": 0.37,
+          "probabilities": {
+            "math": 0.15,
+            "physics": 0.5,
+            "chemistry": 0.33,
+            "biology": 0,
+            "unclear": 0.02
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      }
+    },
+    {
+      "id": "FU-05",
+      "category": "follow_up",
+      "language": "zh-CN",
+      "variant": "A",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 236,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.56,
+          "probabilities": {
+            "generate_lesson": 0.29,
+            "clarify": 0.71,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "general_science",
+          "confidence": 1,
+          "probabilities": {
+            "math": 0,
+            "physics": 0,
+            "general_science": 1,
+            "language_humanities": 0,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      }
+    },
+    {
+      "id": "FU-05",
+      "category": "follow_up",
+      "language": "zh-CN",
+      "variant": "B",
+      "expected_plugins": [
+        "biology"
+      ],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 234,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "clarify",
+          "confidence": 0.61,
+          "probabilities": {
+            "generate_lesson": 0.26,
+            "clarify": 0.74,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "biology",
+          "confidence": 0.96,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.01,
+            "chemistry": 0.01,
+            "biology": 0.97,
+            "unclear": 0.01
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      }
+    },
+    {
+      "id": "FU-06",
+      "category": "follow_up",
+      "language": "en-US",
+      "variant": "A",
+      "expected_plugins": [],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 252,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.92,
+          "probabilities": {
+            "generate_lesson": 0.95,
+            "clarify": 0.05,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "language_humanities",
+          "confidence": 0.55,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.36,
+            "general_science": 0,
+            "language_humanities": 0.64,
+            "other": 0
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.71
+        }
+      }
+    },
+    {
+      "id": "FU-06",
+      "category": "follow_up",
+      "language": "en-US",
+      "variant": "B",
+      "expected_plugins": [],
+      "acceptable_plugins": [],
+      "expected_disposition": "generate_lesson",
+      "http_status": 200,
+      "latency_ms": 242,
+      "answers": {
+        "disposition": {
+          "type": "choice",
+          "choice": "generate_lesson",
+          "confidence": 0.96,
+          "probabilities": {
+            "generate_lesson": 0.97,
+            "clarify": 0.03,
+            "ignore": 0
+          }
+        },
+        "subject": {
+          "type": "choice",
+          "choice": "unclear",
+          "confidence": 0.98,
+          "probabilities": {
+            "math": 0,
+            "physics": 0.02,
+            "chemistry": 0,
+            "biology": 0,
+            "unclear": 0.98
+          }
+        },
+        "is_self_contained": {
+          "type": "noul",
+          "noul": 0.77
+        }
+      }
+    }
+  ]
+}
