@@ -14163,7 +14163,6 @@ function compileImplicitSurface(base, content, role, placement, plan, path) {
   }
   const number = content.numbers?.[0];
   const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
-  const title = optionalText(input.title, compileText(plan, "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762"), `${path}.title`);
   let built;
   try {
     built = buildImplicitSurface({
@@ -14171,7 +14170,11 @@ function compileImplicitSurface(base, content, role, placement, plan, path) {
       role,
       place: placement,
       t: translator(plan),
-      title,
+      // The builder resolves the surface before reading the title. Validate
+      // here so a bad surface still takes precedence in a repair request.
+      get title() {
+        return optionalText(input.title, compileText(plan, "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762"), `${path}.title`);
+      },
       expression,
       level,
       axis,
