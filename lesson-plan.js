@@ -13370,6 +13370,40 @@ function resolveLessonPlan(value, options = {}) {
     references
   };
 }
+function numericAnswerTolerance(answer, checked) {
+  const expected = parseNumericAnswer(answer);
+  if (!expected || !Number.isFinite(checked)) return void 0;
+  const difference = Math.abs(checked - expected.value);
+  if (difference <= 1e-9 * Math.max(1, Math.abs(expected.value))) return 0;
+  if (expected.form !== "decimal") return void 0;
+  const written = answer.trim().replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - 65248)).replace(/[．。]/g, ".");
+  const places = /\.(\d+)$/.exec(written)?.[1]?.length;
+  if (!places) return void 0;
+  const halfUnit = 0.5 * 10 ** -places;
+  if (difference > halfUnit * (1 + 1e-9)) return void 0;
+  return Number((halfUnit + Math.max(halfUnit * 1e-6, Math.abs(expected.value) * 1e-12)).toPrecision(10));
+}
+function validateTypedQuestion(activity, path) {
+  allowedKeys(activity, [
+    "kind",
+    "prompt",
+    "answer",
+    "check",
+    "unit",
+    "simplest_fraction",
+    "reference",
+    "hints",
+    "hint_after_attempts",
+    "success_message"
+  ], path);
+  validateNumericAnswerActivity(activity, path);
+  nonEmptyString(activity.prompt, `${path}.prompt`, 480);
+  const hints = array(activity.hints, `${path}.hints`);
+  if (hints.length === 0) fail3("LESSON_PLAN_ACTIVITY", `${path}.hints`, "activity requires hints");
+  hints.forEach((hint, hintIndex) => nonEmptyString(hint, `${path}.hints[${hintIndex}]`, 480));
+  if (activity.hint_after_attempts !== void 0) positiveIndex(activity.hint_after_attempts, `${path}.hint_after_attempts`);
+  optionalString(activity.success_message, `${path}.success_message`, 480);
+}
 function validateNumericAnswerActivity(activity, path) {
   nonEmptyString(activity.answer, `${path}.answer`, 64);
   const expected = parseNumericAnswer(activity.answer);
@@ -13381,7 +13415,7 @@ function validateNumericAnswerActivity(activity, path) {
   } catch (error) {
     fail3("LESSON_PLAN_ACTIVITY", `${path}.check`, `check must be arithmetic on numbers only: ${error.message}`);
   }
-  if (!Number.isFinite(checked) || Math.abs(checked - expected.value) > 1e-9 * Math.max(1, Math.abs(expected.value))) {
+  if (numericAnswerTolerance(activity.answer, checked) === void 0) {
     fail3("LESSON_PLAN_ACTIVITY", `${path}.answer`, `answer ${String(activity.answer)} does not equal its check ${String(activity.check)}`);
   }
   optionalString(activity.unit, `${path}.unit`, 16);
@@ -14848,6 +14882,7 @@ function compileLessonPlan(value, options = {}) {
         });
       } else if (activity.kind === "numeric_answer") {
         const anchor = resolvedReference(`${activityPath}.reference`);
+        const tolerance = numericAnswerTolerance(activity.answer, compileMathExpression(activity.check, [])({}));
         addTask({
           ...common,
           anchor: wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias,
@@ -14855,6 +14890,7 @@ function compileLessonPlan(value, options = {}) {
           completion: {
             kind: "numeric_answer",
             answer: activity.answer,
+            ...tolerance ? { tolerance } : {},
             ...activity.unit ? { unit: activity.unit } : {},
             ...activity.simplest_fraction ? { form: "simplest_fraction" } : {}
           }
@@ -15723,7 +15759,7 @@ var MATH_SECTION_FACTS = {
 var SECTION_FACTS = Object.assign(/* @__PURE__ */ Object.create(null), MATH_SECTION_FACTS);
 
 // src/lesson-plan-generation.ts
-var ANSWER_ACTIVITY_RULE = "answer \u53EA\u5199\u4E00\u4E2A\u6570\uFF08\u6574\u6570\u3001\u5C0F\u6570\u3001\u5206\u6570 3/4\u3001\u5E26\u5206\u6570 2 3/4\uFF09\uFF0C\u4E0D\u5E26\u5355\u4F4D\u6216 %\uFF0C\u767E\u5206\u6570\u9898\u5199\u767E\u5206\u53F7\u524D\u7684\u6570\u5E76\u628A % \u5199\u5165 unit\uFF1Bcheck \u5199\u53EA\u542B\u6570\u5B57\u7684\u7B97\u5F0F\uFF08\u5982 2*3/4\uFF09\uFF0C\u7A0B\u5E8F\u6838\u5BF9\u5B83\u4E0E answer \u76F8\u7B49\uFF1B\u9898\u76EE\u8981\u6C42\u6700\u7B80\u5206\u6570\u65F6 simplest_fraction \u5FC5\u987B\u4E3A true\uFF0C\u5426\u5219\u6CA1\u7EA6\u5206\u7684\u7B54\u6848\u4E5F\u7B97\u5BF9\uFF1Bunit \u53EA\u5199\u5355\u4F4D\uFF0C\u6CA1\u6709\u5C31\u7701\u7565\uFF1Bhints \u5199 1\u20132 \u6761\u4E0D\u7ED9\u51FA\u7B54\u6848\u7684\u63D0\u793A\u3002";
+var ANSWER_ACTIVITY_RULE = "answer \u53EA\u5199\u4E00\u4E2A\u6570\uFF08\u6574\u6570\u3001\u5C0F\u6570\u3001\u5206\u6570 3/4\u3001\u5E26\u5206\u6570 2 3/4\uFF09\uFF0C\u4E0D\u5E26\u5355\u4F4D\u6216 %\uFF0C\u767E\u5206\u6570\u9898\u5199\u767E\u5206\u53F7\u524D\u7684\u6570\u5E76\u628A % \u5199\u5165 unit\uFF1Bcheck \u5199\u53EA\u542B\u6570\u5B57\u7684\u7B97\u5F0F\uFF08\u5982 2*3/4\uFF09\uFF0C\u7A0B\u5E8F\u6838\u5BF9\u5B83\u4E0E answer \u76F8\u7B49\uFF1B\u7ED3\u679C\u8981\u56DB\u820D\u4E94\u5165\u65F6 answer \u5199\u6210\u5C0F\u6570\uFF08\u5982 11.21\u30012.0\uFF09\uFF0C\u9898\u76EE\u5199\u660E\u4FDD\u7559\u51E0\u4F4D\u5C0F\u6570\uFF0C\u7A0B\u5E8F\u6309\u4F4D\u6570\u6838\u5BF9\uFF1B\u9898\u76EE\u8981\u6C42\u6700\u7B80\u5206\u6570\u65F6 simplest_fraction \u5FC5\u987B\u4E3A true\uFF0C\u5426\u5219\u6CA1\u7EA6\u5206\u7684\u7B54\u6848\u4E5F\u7B97\u5BF9\uFF1Bunit \u53EA\u5199\u5355\u4F4D\uFF0C\u6CA1\u6709\u5C31\u7701\u7565\uFF1Bhints \u5199 1\u20132 \u6761\u4E0D\u7ED9\u51FA\u7B54\u6848\u7684\u63D0\u793A\u3002";
 var OUTLINE_SYSTEM_PROMPT = [
   `\u8BBE\u8BA1\u5B8C\u6574\u8BFE\u7A0B\u76EE\u5F55\uFF0C\u4E0D\u751F\u6210 OLL\u3001\u6267\u884C ID\u3001\u7EC4\u4EF6\u540D\u6216\u81EA\u7531\u5BF9\u8C61\u540D\u3002`,
   `- \u9700\u8981\u540C\u6B65\u5BF9\u7167\u7684\u56FE\u590D\u7528\u540C\u4E00\u5171\u4EAB\u6570\u503C\uFF0C\u5E76\u901A\u8FC7 supporting/comparison \u58F0\u660E\u5173\u8054\uFF1B\u4E0D\u8981\u7528\u4E24\u4E2A\u72EC\u7ACB main \u56FE\u8868\u793A\u540C\u4E00\u8054\u52A8\u5173\u7CFB\u3002`,
@@ -17898,11 +17934,31 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     }
     return candidate;
   };
+  const dropUncheckedAnswerActivities = async (draft, section) => {
+    if (!draft.student_activities?.length) return;
+    const kept = [];
+    for (const [index, activity] of draft.student_activities.entries()) {
+      if (activity.kind === "numeric_answer") {
+        try {
+          validateTypedQuestion(activity, `$lessonPlanSection${section}.student_activities[${index}]`);
+        } catch (error) {
+          if (!(error instanceof LessonPlanError)) throw error;
+          await options.on_program_adjustment?.({ kind: "answer_activity_removed", section, reason: error.message });
+          continue;
+        }
+      }
+      kept.push(activity);
+    }
+    if (kept.length === draft.student_activities.length) return;
+    if (kept.length) draft.student_activities = kept;
+    else delete draft.student_activities;
+  };
   const drafts = [];
   const acceptSection = async (section, initialCandidate) => {
     let candidate = initialCandidate;
     while (true) {
       candidate ??= await generateSection(section);
+      await dropUncheckedAnswerActivities(candidate, section);
       drafts[section - 1] = candidate;
       try {
         const prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
@@ -18072,8 +18128,11 @@ export {
   includeWrittenCardsInFocus,
   matchLessonPlanCapability,
   mathExpressionToOll,
+  numericAnswerTolerance,
   promptSlot,
   resolveLessonPlan,
   validateLessonPlan,
-  validateLessonPlanOutline
+  validateLessonPlanOutline,
+  validateNumericAnswerActivity,
+  validateTypedQuestion
 };
