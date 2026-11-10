@@ -8331,7 +8331,10 @@ var SCENE3D_PRESET_VIEWS = {
   isometric: { yaw: 0.72, pitch: 0.55 }
 };
 
-// src/scene3d-surfaces.ts
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/solids.js
+var POLYHEDRON_REACH = { tetrahedron: 1 / Math.sqrt(3), octahedron: 1, dodecahedron: 0.7947, icosahedron: 0.8507 };
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/scene3d-surfaces.js
 var DOMAIN_CANDIDATE_HALF_SPANS = [2, 5, 10, 20, 50, 100];
 var DOMAIN_REFINEMENT_STEPS = 12;
 var DOMAIN_MARGIN = 1.1;
@@ -8348,13 +8351,15 @@ function sampleImplicitSurfaceStatus(evaluate, variables, level, halfSpan, depen
     boundaryRanges.set(`${variable}:max`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
   }
   const observe = (value, coordinates) => {
-    if (!Number.isFinite(value) || Math.abs(value) > 1e12) return;
+    if (!Number.isFinite(value) || Math.abs(value) > 1e12)
+      return;
     minimum = Math.min(minimum, value);
     maximum = Math.max(maximum, value);
     for (const variable of dependentVariables) {
       const coordinate = coordinates[variable];
       const side = Math.abs((coordinate ?? 0) + halfSpan) < 1e-9 ? "min" : Math.abs((coordinate ?? 0) - halfSpan) < 1e-9 ? "max" : void 0;
-      if (!side) continue;
+      if (!side)
+        continue;
       const range = boundaryRanges.get(`${variable}:${side}`);
       range.minimum = Math.min(range.minimum, value);
       range.maximum = Math.max(range.maximum, value);
@@ -8375,24 +8380,20 @@ function sampleImplicitSurfaceStatus(evaluate, variables, level, halfSpan, depen
       }
     }
   }
-  if (!(minimum <= level && maximum >= level)) return "absent";
+  if (!(minimum <= level && maximum >= level))
+    return "absent";
   const crossesBoundary = [...boundaryRanges.values()].some((range) => range.minimum <= level && range.maximum >= level);
   return crossesBoundary ? "clipped" : "contained";
 }
 function implicitSurfaceDomain(expression, variables, level) {
-  if (!Number.isFinite(level)) throw new Error("Implicit surface level must be finite");
+  if (!Number.isFinite(level))
+    throw new Error("Implicit surface level must be finite");
   const evaluate = compileMathExpression(expression, [...variables]);
   const dependentVariables = new Set(variables.filter((variable) => expressionUsesVariable(expression, variable)));
   let firstVisibleHalfSpan;
   let previousHalfSpan = 0;
   for (const candidateHalfSpan of DOMAIN_CANDIDATE_HALF_SPANS) {
-    const status = sampleImplicitSurfaceStatus(
-      evaluate,
-      variables,
-      level,
-      candidateHalfSpan,
-      dependentVariables
-    );
+    const status = sampleImplicitSurfaceStatus(evaluate, variables, level, candidateHalfSpan, dependentVariables);
     if (status !== "absent" && firstVisibleHalfSpan === void 0) {
       firstVisibleHalfSpan = candidateHalfSpan;
     }
@@ -8401,15 +8402,11 @@ function implicitSurfaceDomain(expression, variables, level) {
       let upper = candidateHalfSpan;
       for (let step = 0; step < DOMAIN_REFINEMENT_STEPS; step += 1) {
         const middle = (lower + upper) / 2;
-        const middleStatus = sampleImplicitSurfaceStatus(
-          evaluate,
-          variables,
-          level,
-          middle,
-          dependentVariables
-        );
-        if (middleStatus === "contained") upper = middle;
-        else lower = middle;
+        const middleStatus = sampleImplicitSurfaceStatus(evaluate, variables, level, middle, dependentVariables);
+        if (middleStatus === "contained")
+          upper = middle;
+        else
+          lower = middle;
       }
       const dependentHalfSpan = Math.max(2, upper * DOMAIN_MARGIN);
       const rangeFor = (variable) => {
@@ -8432,9 +8429,11 @@ function implicitSurfaceDomain(expression, variables, level) {
 }
 function buildImplicitSurfaceObject(input) {
   const expression = input.expression.trim();
-  if (!expression) throw new Error("Implicit surface expression must not be empty");
+  if (!expression)
+    throw new Error("Implicit surface expression must not be empty");
   const domain = implicitSurfaceDomain(expression, ["x", "y", "z"], input.level);
-  if (!domain.z) throw new Error("Implicit surface requires a three-dimensional viewport");
+  if (!domain.z)
+    throw new Error("Implicit surface requires a three-dimensional viewport");
   const samples = input.samples ?? 12;
   if (!Number.isInteger(samples) || samples < 4 || samples > 24) {
     throw new Error("Implicit surface samples must be an integer from 4 to 24");

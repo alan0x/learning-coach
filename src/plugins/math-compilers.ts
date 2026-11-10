@@ -1,7 +1,8 @@
 // Recipe compilers of the math plugin: validated recipe parameters to OLL authoring actions.
 import {
   buildCircleAndArc, buildCircleAreaRearrangement, buildCirclePolygons, buildCoordinateCircle, buildFunctionPlot,
-  buildGeometricRearrangement, buildUnitCircle, buildUnitSquareArray, rearrangementRecipe,
+  buildCubeWithSection, buildFunctionSurface, buildGeometricRearrangement, buildImplicitSurface,
+  buildUnitCircle, buildUnitSquareArray, rearrangementRecipe,
   type BuiltRecipe, type RearrangementConstruction,
 } from "octos-lesson-language/plugin-math";
 import { compileText } from "../lesson-text.js";
@@ -295,37 +296,11 @@ function compileCubeWithSection(
   allowParameterKeys(input, ["title"], path);
   const number = content.numbers?.[0];
   const height = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
-  const variable = number ? variableAlias(number) : undefined;
-  const sceneContent: Record<string, unknown> = {
+  return { ...builtVisual(buildCubeWithSection({
+    as: base, role, place: placement, t: translator(plan),
     title: optionalText(input.title, compileText(plan, "正方体、顶点、棱、面与截面"), `${path}.title`),
-    fallback: compileText(plan, "一个中心在原点、边长为 2 的正方体，标出了顶点、棱、面和水平截面。"),
-    axes: true,
-    camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.cube_with_section },
-    objects: [{
-      as: "solid", kind: "box", label: compileText(plan, "正方体"), color: "teal",
-      center: { x: 0, y: 0, z: 0 }, size: { x: 2, y: 2, z: 2 },
-    }],
-    sections: [{
-      as: "section", axis: "z", value: height, targets: ["solid"],
-      display: "plane_and_intersection", label: compileText(plan, "水平截面"), color: "orange",
-    }],
-    highlights: [
-      { as: "vertex", kind: "point", points: [{ x: -1, y: -1, z: 1 }], label: compileText(plan, "顶点"), color: "red" },
-      { as: "edge", kind: "edge", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }], label: compileText(plan, "棱"), color: "orange" },
-      { as: "face", kind: "face", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 }], label: compileText(plan, "面"), color: "purple" },
-    ],
-    ...(variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}),
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "scene3d", role, content: sceneContent, place: placement }],
-    whole: base,
-    primaryScene: base,
-    parts: new Map([
-      ["whole", base], ["solid", `${base}#solid`], ["vertex", `${base}#vertex`],
-      ["edge", `${base}#edge`], ["face", `${base}#face`], ["section", `${base}#section`],
-      ...(variable ? [["primary_control", `${base}#section`]] as Array<[string, string]> : []),
-    ]),
-  };
+    section: { value: height, ...(number ? { variable: variableAlias(number) } : {}) },
+  })), primaryScene: base };
 }
 
 function compileFunctionSurface(
@@ -350,31 +325,12 @@ function compileFunctionSurface(
   if (axis !== "x" && axis !== "y" && axis !== "z") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
   const number = content.numbers?.[0];
   const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : optionalNumber(input.section_value, 1, `${path}.section_value`);
-  const variable = number ? variableAlias(number) : undefined;
-  const sceneContent: Record<string, unknown> = {
+  return { ...builtVisual(buildFunctionSurface({
+    as: base, role, place: placement, t: translator(plan),
     title: optionalText(input.title, compileText(plan, "函数曲面与截面"), `${path}.title`),
-    fallback: compileText(plan, "函数曲面 z={{v0}} 与可变截面。", { v0: expression }),
-    axes: true,
-    camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.function_surface_with_section },
-    objects: [{
-      as: "surface", kind: "surface", label: `z=${expression}`, color: "teal", expression,
-      x_range: { min: xMin, max: xMax }, y_range: { min: yMin, max: yMax }, samples,
-    }],
-    sections: [{
-      as: "section", axis, value: sectionValue, targets: ["surface"],
-      display: "plane_and_intersection", label: compileText(plan, "截面"), color: "orange",
-    }],
-    ...(variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}),
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "scene3d", role, content: sceneContent, place: placement }],
-    whole: base,
-    primaryScene: base,
-    parts: new Map([
-      ["whole", base], ["surface", `${base}#surface`], ["section", `${base}#section`],
-      ["intersection", `${base}#section`], ...(variable ? [["primary_control", `${base}#section`]] as Array<[string, string]> : []),
-    ]),
-  };
+    expression, x_range: { min: xMin, max: xMax }, y_range: { min: yMin, max: yMax }, samples, axis,
+    section: { value: sectionValue, ...(number ? { variable: variableAlias(number) } : {}) },
+  })), primaryScene: base };
 }
 
 function compileImplicitSurface(
@@ -399,15 +355,15 @@ function compileImplicitSurface(
   if (axis !== "x" && axis !== "y" && axis !== "z") {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
   }
-  let surface: ReturnType<typeof buildImplicitSurfaceObject>;
+  const number = content.numbers?.[0];
+  const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
+  let built: BuiltRecipe;
   try {
-    surface = buildImplicitSurfaceObject({
-      as: "surface",
-      expression,
-      level,
-      samples: 12,
-      color: "teal",
-      label: `${expression}=${level}`,
+    built = buildImplicitSurface({
+      as: base, role, place: placement, t: translator(plan),
+      title: optionalText(input.title, compileText(plan, "隐式曲面与截面"), `${path}.title`),
+      expression, level, axis,
+      section: { value: sectionValue, ...(number ? { variable: variableAlias(number) } : {}) },
     });
   } catch (error) {
     fail(
@@ -416,30 +372,7 @@ function compileImplicitSurface(
       error instanceof Error ? error.message : "implicit surface cannot be rendered",
     );
   }
-  const number = content.numbers?.[0];
-  const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
-  const variable = number ? variableAlias(number) : undefined;
-  const sceneContent: Record<string, unknown> = {
-    title: optionalText(input.title, compileText(plan, "隐式曲面与截面"), `${path}.title`),
-    fallback: compileText(plan, "隐式曲面 {{v0}}={{v1}} 与可变轴向截面。", { v0: expression, v1: level }),
-    axes: true,
-    camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.implicit_surface_with_section },
-    objects: [surface],
-    sections: [{
-      as: "section", axis, value: sectionValue, targets: ["surface"],
-      display: "plane_and_intersection", label: compileText(plan, "截面"), color: "orange",
-    }],
-    ...(variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}),
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "scene3d", role, content: sceneContent, place: placement }],
-    whole: base,
-    primaryScene: base,
-    parts: new Map([
-      ["whole", base], ["surface", `${base}#surface`], ["section", `${base}#section`],
-      ["intersection", `${base}#section`], ...(variable ? [["primary_control", `${base}#section`]] as Array<[string, string]> : []),
-    ]),
-  };
+  return { ...builtVisual(built), primaryScene: base };
 }
 
 function compileCoordinateCircle(

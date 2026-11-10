@@ -11000,6 +11000,226 @@ function buildGeometricRearrangement(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/scene3d-surfaces.js
+var DOMAIN_CANDIDATE_HALF_SPANS = [2, 5, 10, 20, 50, 100];
+var DOMAIN_REFINEMENT_STEPS = 12;
+var DOMAIN_MARGIN = 1.1;
+function expressionUsesVariable(expression, variable) {
+  return new RegExp(`(^|[^A-Za-z0-9_])${variable}([^A-Za-z0-9_]|$)`, "u").test(expression);
+}
+function sampleImplicitSurfaceStatus(evaluate2, variables, level, halfSpan, dependentVariables) {
+  const resolution = variables.length === 2 ? 18 : 10;
+  let minimum = Number.POSITIVE_INFINITY;
+  let maximum = Number.NEGATIVE_INFINITY;
+  const boundaryRanges = /* @__PURE__ */ new Map();
+  for (const variable of dependentVariables) {
+    boundaryRanges.set(`${variable}:min`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
+    boundaryRanges.set(`${variable}:max`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
+  }
+  const observe = (value, coordinates) => {
+    if (!Number.isFinite(value) || Math.abs(value) > 1e12)
+      return;
+    minimum = Math.min(minimum, value);
+    maximum = Math.max(maximum, value);
+    for (const variable of dependentVariables) {
+      const coordinate = coordinates[variable];
+      const side = Math.abs((coordinate ?? 0) + halfSpan) < 1e-9 ? "min" : Math.abs((coordinate ?? 0) - halfSpan) < 1e-9 ? "max" : void 0;
+      if (!side)
+        continue;
+      const range = boundaryRanges.get(`${variable}:${side}`);
+      range.minimum = Math.min(range.minimum, value);
+      range.maximum = Math.max(range.maximum, value);
+    }
+  };
+  for (let xIndex = 0; xIndex <= resolution; xIndex += 1) {
+    const x = -halfSpan + 2 * halfSpan * xIndex / resolution;
+    for (let yIndex = 0; yIndex <= resolution; yIndex += 1) {
+      const y = -halfSpan + 2 * halfSpan * yIndex / resolution;
+      const zIterations = variables.length === 3 ? resolution : 0;
+      for (let zIndex = 0; zIndex <= zIterations; zIndex += 1) {
+        const z = variables.length === 3 ? -halfSpan + 2 * halfSpan * zIndex / resolution : 0;
+        const coordinates = variables.length === 3 ? { x, y, z } : { x, y };
+        try {
+          observe(evaluate2(coordinates), coordinates);
+        } catch {
+        }
+      }
+    }
+  }
+  if (!(minimum <= level && maximum >= level))
+    return "absent";
+  const crossesBoundary = [...boundaryRanges.values()].some((range) => range.minimum <= level && range.maximum >= level);
+  return crossesBoundary ? "clipped" : "contained";
+}
+function implicitSurfaceDomain(expression, variables, level) {
+  if (!Number.isFinite(level))
+    throw new Error("Implicit surface level must be finite");
+  const evaluate2 = compileMathExpression(expression, [...variables]);
+  const dependentVariables = new Set(variables.filter((variable) => expressionUsesVariable(expression, variable)));
+  let firstVisibleHalfSpan;
+  let previousHalfSpan = 0;
+  for (const candidateHalfSpan of DOMAIN_CANDIDATE_HALF_SPANS) {
+    const status = sampleImplicitSurfaceStatus(evaluate2, variables, level, candidateHalfSpan, dependentVariables);
+    if (status !== "absent" && firstVisibleHalfSpan === void 0) {
+      firstVisibleHalfSpan = candidateHalfSpan;
+    }
+    if (status === "contained") {
+      let lower = previousHalfSpan;
+      let upper = candidateHalfSpan;
+      for (let step = 0; step < DOMAIN_REFINEMENT_STEPS; step += 1) {
+        const middle = (lower + upper) / 2;
+        const middleStatus = sampleImplicitSurfaceStatus(evaluate2, variables, level, middle, dependentVariables);
+        if (middleStatus === "contained")
+          upper = middle;
+        else
+          lower = middle;
+      }
+      const dependentHalfSpan = Math.max(2, upper * DOMAIN_MARGIN);
+      const rangeFor = (variable) => {
+        const halfSpan = dependentVariables.has(variable) ? dependentHalfSpan : Math.max(2, dependentHalfSpan);
+        return { min: -halfSpan, max: halfSpan };
+      };
+      return {
+        x: rangeFor("x"),
+        y: rangeFor("y"),
+        ...variables.length === 3 ? { z: rangeFor("z") } : {}
+      };
+    }
+    previousHalfSpan = candidateHalfSpan;
+  }
+  if (firstVisibleHalfSpan !== void 0) {
+    const range = { min: -firstVisibleHalfSpan, max: firstVisibleHalfSpan };
+    return { x: range, y: range, ...variables.length === 3 ? { z: range } : {} };
+  }
+  throw new Error("Implicit surface level is outside the program-selected viewport");
+}
+function buildImplicitSurfaceObject(input) {
+  const expression = input.expression.trim();
+  if (!expression)
+    throw new Error("Implicit surface expression must not be empty");
+  const domain = implicitSurfaceDomain(expression, ["x", "y", "z"], input.level);
+  if (!domain.z)
+    throw new Error("Implicit surface requires a three-dimensional viewport");
+  const samples = input.samples ?? 12;
+  if (!Number.isInteger(samples) || samples < 4 || samples > 24) {
+    throw new Error("Implicit surface samples must be an integer from 4 to 24");
+  }
+  return {
+    as: input.as,
+    kind: "implicit_surface",
+    expression,
+    level: input.level,
+    x_range: domain.x,
+    y_range: domain.y,
+    z_range: domain.z,
+    samples,
+    color: input.color ?? "teal",
+    ...input.label ? { label: input.label } : {}
+  };
+}
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/surfaces.js
+var SURFACE_SCENE_CAMERA = { yaw: 0.72, pitch: 0.55, zoom: 1 };
+function sectionScene(input, content, section, parts) {
+  const base = input.as;
+  return {
+    actions: [{ do: "write", as: base, kind: "scene3d", role: input.role, content: {
+      ...content,
+      ...section.variable ? { bindings: [{ target: "section.value", expression: section.variable }] } : {}
+    }, place: input.place }],
+    whole: base,
+    parts: { whole: base, ...parts, ...section.variable ? { primary_control: `${base}#section` } : {} }
+  };
+}
+function buildCubeWithSection(input) {
+  const { t } = input;
+  const base = input.as;
+  return sectionScene(input, {
+    title: input.title,
+    fallback: t("\u4E00\u4E2A\u4E2D\u5FC3\u5728\u539F\u70B9\u3001\u8FB9\u957F\u4E3A 2 \u7684\u6B63\u65B9\u4F53\uFF0C\u6807\u51FA\u4E86\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u6C34\u5E73\u622A\u9762\u3002"),
+    axes: true,
+    camera: { ...SURFACE_SCENE_CAMERA },
+    objects: [{
+      as: "solid",
+      kind: "box",
+      label: t("\u6B63\u65B9\u4F53"),
+      color: "teal",
+      center: { x: 0, y: 0, z: 0 },
+      size: { x: 2, y: 2, z: 2 }
+    }],
+    sections: [{
+      as: "section",
+      axis: "z",
+      value: input.section.value,
+      targets: ["solid"],
+      display: "plane_and_intersection",
+      label: t("\u6C34\u5E73\u622A\u9762"),
+      color: "orange"
+    }],
+    highlights: [
+      { as: "vertex", kind: "point", points: [{ x: -1, y: -1, z: 1 }], label: t("\u9876\u70B9"), color: "red" },
+      { as: "edge", kind: "edge", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }], label: t("\u68F1"), color: "orange" },
+      { as: "face", kind: "face", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 }], label: t("\u9762"), color: "purple" }
+    ]
+  }, input.section, {
+    solid: `${base}#solid`,
+    vertex: `${base}#vertex`,
+    edge: `${base}#edge`,
+    face: `${base}#face`,
+    section: `${base}#section`
+  });
+}
+function buildFunctionSurface(input) {
+  const { t, expression } = input;
+  const base = input.as;
+  return sectionScene(input, {
+    title: input.title,
+    fallback: t("\u51FD\u6570\u66F2\u9762 z={{v0}} \u4E0E\u53EF\u53D8\u622A\u9762\u3002", { v0: expression }),
+    axes: true,
+    camera: { ...SURFACE_SCENE_CAMERA },
+    objects: [{
+      as: "surface",
+      kind: "surface",
+      label: `z=${expression}`,
+      color: "teal",
+      expression,
+      x_range: input.x_range,
+      y_range: input.y_range,
+      samples: input.samples
+    }],
+    sections: [{
+      as: "section",
+      axis: input.axis,
+      value: input.section.value,
+      targets: ["surface"],
+      display: "plane_and_intersection",
+      label: t("\u622A\u9762"),
+      color: "orange"
+    }]
+  }, input.section, { surface: `${base}#surface`, section: `${base}#section`, intersection: `${base}#section` });
+}
+function buildImplicitSurface(input) {
+  const { t, expression, level } = input;
+  const base = input.as;
+  const surface = buildImplicitSurfaceObject({ as: "surface", expression, level, samples: 12, color: "teal", label: `${expression}=${level}` });
+  return sectionScene(input, {
+    title: input.title,
+    fallback: t("\u9690\u5F0F\u66F2\u9762 {{v0}}={{v1}} \u4E0E\u53EF\u53D8\u8F74\u5411\u622A\u9762\u3002", { v0: expression, v1: level }),
+    axes: true,
+    camera: { ...SURFACE_SCENE_CAMERA },
+    objects: [surface],
+    sections: [{
+      as: "section",
+      axis: input.axis,
+      value: input.section.value,
+      targets: ["surface"],
+      display: "plane_and_intersection",
+      label: t("\u622A\u9762"),
+      color: "orange"
+    }]
+  }, input.section, { surface: `${base}#surface`, section: `${base}#section`, intersection: `${base}#section` });
+}
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
 function buildUnitCircle(input) {
   const theta = input.angle ? input.angle.initial : input.fixed_angle ?? Math.PI / 3;
@@ -11723,128 +11943,6 @@ function angleScaleForUnit(unit) {
 }
 function scaledAngleExpression(variable, scale) {
   return scale === 1 ? variable : `(${variable})*pi/180`;
-}
-
-// src/scene3d-surfaces.ts
-var DOMAIN_CANDIDATE_HALF_SPANS = [2, 5, 10, 20, 50, 100];
-var DOMAIN_REFINEMENT_STEPS = 12;
-var DOMAIN_MARGIN = 1.1;
-function expressionUsesVariable(expression, variable) {
-  return new RegExp(`(^|[^A-Za-z0-9_])${variable}([^A-Za-z0-9_]|$)`, "u").test(expression);
-}
-function sampleImplicitSurfaceStatus(evaluate2, variables, level, halfSpan, dependentVariables) {
-  const resolution = variables.length === 2 ? 18 : 10;
-  let minimum = Number.POSITIVE_INFINITY;
-  let maximum = Number.NEGATIVE_INFINITY;
-  const boundaryRanges = /* @__PURE__ */ new Map();
-  for (const variable of dependentVariables) {
-    boundaryRanges.set(`${variable}:min`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
-    boundaryRanges.set(`${variable}:max`, { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY });
-  }
-  const observe = (value, coordinates) => {
-    if (!Number.isFinite(value) || Math.abs(value) > 1e12) return;
-    minimum = Math.min(minimum, value);
-    maximum = Math.max(maximum, value);
-    for (const variable of dependentVariables) {
-      const coordinate = coordinates[variable];
-      const side = Math.abs((coordinate ?? 0) + halfSpan) < 1e-9 ? "min" : Math.abs((coordinate ?? 0) - halfSpan) < 1e-9 ? "max" : void 0;
-      if (!side) continue;
-      const range = boundaryRanges.get(`${variable}:${side}`);
-      range.minimum = Math.min(range.minimum, value);
-      range.maximum = Math.max(range.maximum, value);
-    }
-  };
-  for (let xIndex = 0; xIndex <= resolution; xIndex += 1) {
-    const x = -halfSpan + 2 * halfSpan * xIndex / resolution;
-    for (let yIndex = 0; yIndex <= resolution; yIndex += 1) {
-      const y = -halfSpan + 2 * halfSpan * yIndex / resolution;
-      const zIterations = variables.length === 3 ? resolution : 0;
-      for (let zIndex = 0; zIndex <= zIterations; zIndex += 1) {
-        const z = variables.length === 3 ? -halfSpan + 2 * halfSpan * zIndex / resolution : 0;
-        const coordinates = variables.length === 3 ? { x, y, z } : { x, y };
-        try {
-          observe(evaluate2(coordinates), coordinates);
-        } catch {
-        }
-      }
-    }
-  }
-  if (!(minimum <= level && maximum >= level)) return "absent";
-  const crossesBoundary = [...boundaryRanges.values()].some((range) => range.minimum <= level && range.maximum >= level);
-  return crossesBoundary ? "clipped" : "contained";
-}
-function implicitSurfaceDomain(expression, variables, level) {
-  if (!Number.isFinite(level)) throw new Error("Implicit surface level must be finite");
-  const evaluate2 = compileMathExpression(expression, [...variables]);
-  const dependentVariables = new Set(variables.filter((variable) => expressionUsesVariable(expression, variable)));
-  let firstVisibleHalfSpan;
-  let previousHalfSpan = 0;
-  for (const candidateHalfSpan of DOMAIN_CANDIDATE_HALF_SPANS) {
-    const status = sampleImplicitSurfaceStatus(
-      evaluate2,
-      variables,
-      level,
-      candidateHalfSpan,
-      dependentVariables
-    );
-    if (status !== "absent" && firstVisibleHalfSpan === void 0) {
-      firstVisibleHalfSpan = candidateHalfSpan;
-    }
-    if (status === "contained") {
-      let lower = previousHalfSpan;
-      let upper = candidateHalfSpan;
-      for (let step = 0; step < DOMAIN_REFINEMENT_STEPS; step += 1) {
-        const middle = (lower + upper) / 2;
-        const middleStatus = sampleImplicitSurfaceStatus(
-          evaluate2,
-          variables,
-          level,
-          middle,
-          dependentVariables
-        );
-        if (middleStatus === "contained") upper = middle;
-        else lower = middle;
-      }
-      const dependentHalfSpan = Math.max(2, upper * DOMAIN_MARGIN);
-      const rangeFor = (variable) => {
-        const halfSpan = dependentVariables.has(variable) ? dependentHalfSpan : Math.max(2, dependentHalfSpan);
-        return { min: -halfSpan, max: halfSpan };
-      };
-      return {
-        x: rangeFor("x"),
-        y: rangeFor("y"),
-        ...variables.length === 3 ? { z: rangeFor("z") } : {}
-      };
-    }
-    previousHalfSpan = candidateHalfSpan;
-  }
-  if (firstVisibleHalfSpan !== void 0) {
-    const range = { min: -firstVisibleHalfSpan, max: firstVisibleHalfSpan };
-    return { x: range, y: range, ...variables.length === 3 ? { z: range } : {} };
-  }
-  throw new Error("Implicit surface level is outside the program-selected viewport");
-}
-function buildImplicitSurfaceObject(input) {
-  const expression = input.expression.trim();
-  if (!expression) throw new Error("Implicit surface expression must not be empty");
-  const domain = implicitSurfaceDomain(expression, ["x", "y", "z"], input.level);
-  if (!domain.z) throw new Error("Implicit surface requires a three-dimensional viewport");
-  const samples = input.samples ?? 12;
-  if (!Number.isInteger(samples) || samples < 4 || samples > 24) {
-    throw new Error("Implicit surface samples must be an integer from 4 to 24");
-  }
-  return {
-    as: input.as,
-    kind: "implicit_surface",
-    expression,
-    level: input.level,
-    x_range: domain.x,
-    y_range: domain.y,
-    z_range: domain.z,
-    samples,
-    color: input.color ?? "teal",
-    ...input.label ? { label: input.label } : {}
-  };
 }
 
 // src/plugins/math-teaching-contracts.ts
@@ -13971,50 +14069,14 @@ function compileCubeWithSection(base, content, role, placement, plan, path) {
   allowParameterKeys(input, ["title"], path);
   const number = content.numbers?.[0];
   const height = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
-  const variable = number ? variableAlias(number) : void 0;
-  const sceneContent = {
+  return { ...builtVisual(buildCubeWithSection({
+    as: base,
+    role,
+    place: placement,
+    t: translator(plan),
     title: optionalText(input.title, compileText(plan, "\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u4E0E\u622A\u9762"), `${path}.title`),
-    fallback: compileText(plan, "\u4E00\u4E2A\u4E2D\u5FC3\u5728\u539F\u70B9\u3001\u8FB9\u957F\u4E3A 2 \u7684\u6B63\u65B9\u4F53\uFF0C\u6807\u51FA\u4E86\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u6C34\u5E73\u622A\u9762\u3002"),
-    axes: true,
-    camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.cube_with_section },
-    objects: [{
-      as: "solid",
-      kind: "box",
-      label: compileText(plan, "\u6B63\u65B9\u4F53"),
-      color: "teal",
-      center: { x: 0, y: 0, z: 0 },
-      size: { x: 2, y: 2, z: 2 }
-    }],
-    sections: [{
-      as: "section",
-      axis: "z",
-      value: height,
-      targets: ["solid"],
-      display: "plane_and_intersection",
-      label: compileText(plan, "\u6C34\u5E73\u622A\u9762"),
-      color: "orange"
-    }],
-    highlights: [
-      { as: "vertex", kind: "point", points: [{ x: -1, y: -1, z: 1 }], label: compileText(plan, "\u9876\u70B9"), color: "red" },
-      { as: "edge", kind: "edge", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }], label: compileText(plan, "\u68F1"), color: "orange" },
-      { as: "face", kind: "face", points: [{ x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 }], label: compileText(plan, "\u9762"), color: "purple" }
-    ],
-    ...variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "scene3d", role, content: sceneContent, place: placement }],
-    whole: base,
-    primaryScene: base,
-    parts: new Map([
-      ["whole", base],
-      ["solid", `${base}#solid`],
-      ["vertex", `${base}#vertex`],
-      ["edge", `${base}#edge`],
-      ["face", `${base}#face`],
-      ["section", `${base}#section`],
-      ...variable ? [["primary_control", `${base}#section`]] : []
-    ])
-  };
+    section: { value: height, ...number ? { variable: variableAlias(number) } : {} }
+  })), primaryScene: base };
 }
 function compileFunctionSurface(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -14031,45 +14093,19 @@ function compileFunctionSurface(base, content, role, placement, plan, path) {
   if (axis !== "x" && axis !== "y" && axis !== "z") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
   const number = content.numbers?.[0];
   const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : optionalNumber(input.section_value, 1, `${path}.section_value`);
-  const variable = number ? variableAlias(number) : void 0;
-  const sceneContent = {
+  return { ...builtVisual(buildFunctionSurface({
+    as: base,
+    role,
+    place: placement,
+    t: translator(plan),
     title: optionalText(input.title, compileText(plan, "\u51FD\u6570\u66F2\u9762\u4E0E\u622A\u9762"), `${path}.title`),
-    fallback: compileText(plan, "\u51FD\u6570\u66F2\u9762 z={{v0}} \u4E0E\u53EF\u53D8\u622A\u9762\u3002", { v0: expression }),
-    axes: true,
-    camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.function_surface_with_section },
-    objects: [{
-      as: "surface",
-      kind: "surface",
-      label: `z=${expression}`,
-      color: "teal",
-      expression,
-      x_range: { min: xMin, max: xMax },
-      y_range: { min: yMin, max: yMax },
-      samples
-    }],
-    sections: [{
-      as: "section",
-      axis,
-      value: sectionValue,
-      targets: ["surface"],
-      display: "plane_and_intersection",
-      label: compileText(plan, "\u622A\u9762"),
-      color: "orange"
-    }],
-    ...variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "scene3d", role, content: sceneContent, place: placement }],
-    whole: base,
-    primaryScene: base,
-    parts: new Map([
-      ["whole", base],
-      ["surface", `${base}#surface`],
-      ["section", `${base}#section`],
-      ["intersection", `${base}#section`],
-      ...variable ? [["primary_control", `${base}#section`]] : []
-    ])
-  };
+    expression,
+    x_range: { min: xMin, max: xMax },
+    y_range: { min: yMin, max: yMax },
+    samples,
+    axis,
+    section: { value: sectionValue, ...number ? { variable: variableAlias(number) } : {} }
+  })), primaryScene: base };
 }
 function compileImplicitSurface(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -14086,15 +14122,20 @@ function compileImplicitSurface(base, content, role, placement, plan, path) {
   if (axis !== "x" && axis !== "y" && axis !== "z") {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.section_axis`, "expected x, y, or z");
   }
-  let surface;
+  const number = content.numbers?.[0];
+  const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
+  let built;
   try {
-    surface = buildImplicitSurfaceObject({
-      as: "surface",
+    built = buildImplicitSurface({
+      as: base,
+      role,
+      place: placement,
+      t: translator(plan),
+      title: optionalText(input.title, compileText(plan, "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762"), `${path}.title`),
       expression,
       level,
-      samples: 12,
-      color: "teal",
-      label: `${expression}=${level}`
+      axis,
+      section: { value: sectionValue, ...number ? { variable: variableAlias(number) } : {} }
     });
   } catch (error) {
     fail2(
@@ -14103,38 +14144,7 @@ function compileImplicitSurface(base, content, role, placement, plan, path) {
       error instanceof Error ? error.message : "implicit surface cannot be rendered"
     );
   }
-  const number = content.numbers?.[0];
-  const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
-  const variable = number ? variableAlias(number) : void 0;
-  const sceneContent = {
-    title: optionalText(input.title, compileText(plan, "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762"), `${path}.title`),
-    fallback: compileText(plan, "\u9690\u5F0F\u66F2\u9762 {{v0}}={{v1}} \u4E0E\u53EF\u53D8\u8F74\u5411\u622A\u9762\u3002", { v0: expression, v1: level }),
-    axes: true,
-    camera: { ...LESSON_PLAN_SCENE_INITIAL_CAMERAS.implicit_surface_with_section },
-    objects: [surface],
-    sections: [{
-      as: "section",
-      axis,
-      value: sectionValue,
-      targets: ["surface"],
-      display: "plane_and_intersection",
-      label: compileText(plan, "\u622A\u9762"),
-      color: "orange"
-    }],
-    ...variable ? { bindings: [{ target: "section.value", expression: variable }] } : {}
-  };
-  return {
-    actions: [{ do: "write", as: base, kind: "scene3d", role, content: sceneContent, place: placement }],
-    whole: base,
-    primaryScene: base,
-    parts: new Map([
-      ["whole", base],
-      ["surface", `${base}#surface`],
-      ["section", `${base}#section`],
-      ["intersection", `${base}#section`],
-      ...variable ? [["primary_control", `${base}#section`]] : []
-    ])
-  };
+  return { ...builtVisual(built), primaryScene: base };
 }
 function compileCoordinateCircle(base, content, role, placement, plan, path) {
   const input = parameters(content);
