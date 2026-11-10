@@ -867,6 +867,9 @@ test("the complete-lesson command accepts an outline and first section in one mo
     const completed = messages.find((message) => message.success === true);
     assert.equal(completed.authoring_strategy, "lesson_plan");
     assert.equal(completed.lesson_plan_sections, 1);
+    assert.deepEqual(completed.structured_metadata, {
+      lesson_plan_plugins: completed.lesson_plan_plugins,
+    });
     assert.equal(completed.published_parts, 1);
     // One combined response, then the practice request a one-section lesson makes.
     assert.equal(modelCalls, 2);

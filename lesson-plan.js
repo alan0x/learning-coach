@@ -11221,6 +11221,17 @@ function buildImplicitSurface(input) {
 }
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
+var MATH_PLUGIN_MANIFEST = {
+  id: "math",
+  version: "0.1.0",
+  // Every subject plugin depends on the shared tools (decision 0012).
+  depends: { shared: "0.1.0" },
+  ollCore: ">=0.10.0"
+};
+var MATH_SUBJECT_DESCRIPTION = {
+  "zh-CN": "\u6570\u5B66\uFF1A\u6570\u4E0E\u8FD0\u7B97\u3001\u4EE3\u6570\u3001\u51FD\u6570\u4E0E\u56FE\u50CF\u3001\u51E0\u4F55\u3001\u7EDF\u8BA1\u4E0E\u6982\u7387",
+  "en-US": "Mathematics: number, algebra, functions and graphs, geometry, statistics and probability"
+};
 function buildUnitCircle(input) {
   const theta = input.angle ? input.angle.initial : input.fixed_angle ?? Math.PI / 3;
   const variable = input.angle?.variable;
@@ -11569,8 +11580,9 @@ var MATH_SCHEMA_PROPERTIES = {
   circle_area_rearrangement: { radius: { type: "number", minimum: 0 } }
 };
 var MATH_PLUGIN = {
-  manifest: { id: "math", version: "0.1.0", depends: { shared: "0.1.0" } },
-  subject: { description: { "zh-CN": "\u6570\u5B66\uFF1A\u6570\u4E0E\u8FD0\u7B97\u3001\u4EE3\u6570\u3001\u51FD\u6570\u4E0E\u56FE\u50CF\u3001\u51E0\u4F55\u3001\u7EDF\u8BA1\u4E0E\u6982\u7387" } },
+  // The manifest and the Jev subject line are the OLL shared layer's.
+  manifest: MATH_PLUGIN_MANIFEST,
+  subject: { description: MATH_SUBJECT_DESCRIPTION },
   recipes: MATH_RECIPES,
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
@@ -11581,6 +11593,76 @@ var MATH_PLUGIN = {
     "section.constructions": "geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002"
   }
 };
+
+// node_modules/octos-lesson-language/dist/packages/plugin-physics/src/index.js
+var PHYSICS_PLUGIN_MANIFEST = {
+  id: "physics",
+  version: "0.1.0",
+  depends: { shared: "0.1.0" },
+  ollCore: ">=0.10.0"
+};
+var PHYSICS_SUBJECT_DESCRIPTION = {
+  "zh-CN": "\u7269\u7406\uFF1A\u8FD0\u52A8\u4E0E\u529B\u3001\u80FD\u91CF\u3001\u7535\u8DEF\u3001\u5149\u3001\u58F0\u3001\u6D6E\u529B\u7B49",
+  "en-US": "Physics: motion and forces, energy, circuits, light, sound, buoyancy"
+};
+function buildSpringAndMass(input) {
+  const { text: text2 } = input;
+  const phase = input.phase ? input.phase.initial : input.fixed_phase ?? 0;
+  const expression = input.phase?.expression;
+  const motion = `${input.as}-motion`;
+  const plot = `${input.as}-plot`;
+  const geometry = {
+    title: text2.title,
+    axes: { x: { min: -1.5, max: 1.5, label: text2.displacement }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
+    points: [
+      { as: "anchor", x: -1.25, y: 0, label: text2.anchor },
+      { as: "equilibrium", x: 0, y: 0, label: text2.equilibrium },
+      { as: "mass", x: Math.cos(phase), y: 0, label: text2.mass },
+      { as: "force-tip", x: Math.cos(phase) * 0.5, y: 0, visible: false }
+    ],
+    segments: [
+      { as: "spring", from: "anchor", to: "mass", style: "solid" },
+      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: text2.restoring_force }
+    ],
+    ...expression ? {
+      bindings: [
+        { target: "mass.x", expression: `cos(${expression})` },
+        { target: "force-tip.x", expression: `0.5*cos(${expression})` }
+      ]
+    } : {}
+  };
+  const plotContent = {
+    title: text2.plot_title,
+    axes: { x: { min: input.phase?.min ?? 0, max: input.phase?.max ?? Math.PI * 2, label: text2.phase }, y: { min: -1.2, max: 1.2, label: text2.displacement } },
+    curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
+    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: text2.current_state }],
+    ...expression ? {
+      bindings: [
+        { target: "moving-point.x", expression },
+        { target: "moving-point.y", expression: `cos(${expression})` }
+      ]
+    } : {}
+  };
+  return {
+    actions: [
+      { do: "write", as: motion, kind: "geometry", role: input.role, content: geometry, place: input.place },
+      { do: "write", as: plot, kind: "plot", role: input.role, content: plotContent, place: { relation: "right_of", anchor: motion, gap: "normal" } },
+      { do: "connect", as: `${input.as}-link`, from: motion, to: plot, relation: "same_state", label: text2.link_label },
+      { do: "group", as: input.as, role: input.role, label: text2.group_label, members: [motion, plot] }
+    ],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      spring: `${motion}#spring`,
+      mass: `${motion}#mass`,
+      equilibrium: `${motion}#equilibrium`,
+      force_arrow: `${motion}#force-arrow`,
+      primary_curve: `${plot}#primary-curve`,
+      moving_point: `${plot}#moving-point`,
+      ...expression ? { primary_control: `${plot}#moving-point` } : {}
+    }
+  };
+}
 
 // src/plugins/physics.ts
 var PHYSICS_RECIPES = {
@@ -11599,12 +11681,50 @@ var PHYSICS_RECIPES = {
   }
 };
 var PHYSICS_PLUGIN = {
-  manifest: { id: "physics", version: "0.1.0", depends: { shared: "0.1.0" } },
-  subject: { description: { "zh-CN": "\u7269\u7406\uFF1A\u8FD0\u52A8\u4E0E\u529B\u3001\u80FD\u91CF\u3001\u7535\u8DEF\u3001\u5149\u3001\u58F0\u3001\u6D6E\u529B\u7B49" } },
+  // The manifest and the Jev subject line are the OLL shared layer's.
+  manifest: PHYSICS_PLUGIN_MANIFEST,
+  subject: { description: PHYSICS_SUBJECT_DESCRIPTION },
   recipes: PHYSICS_RECIPES,
   schema_properties: {},
   prompt_rules: {}
 };
+
+// node_modules/octos-lesson-language/dist/packages/plugin-shared/src/index.js
+var SHARED_PLUGIN_MANIFEST = {
+  id: "shared",
+  version: "0.1.0",
+  depends: {},
+  ollCore: ">=0.10.0"
+};
+var pad = (index) => String(index).padStart(2, "0");
+var processStepId = (index) => `step-${pad(index)}`;
+var processEdgeId = (index) => `edge-${pad(index)}`;
+var PROCESS_CYCLE_EDGE_ID = "edge-close";
+function processDiagramContent(input) {
+  const { steps } = input;
+  const elements = steps.map((step, index) => ({ as: processStepId(index + 1), label: step.label }));
+  const edges = steps.slice(1).map((step, index) => {
+    const label = step.link ?? input.link_label;
+    return { as: processEdgeId(index + 1), from: processStepId(index + 1), to: processStepId(index + 2), ...label !== void 0 ? { label } : {} };
+  });
+  if (input.shape === "cycle" && steps.length > 2) {
+    edges.push({ as: PROCESS_CYCLE_EDGE_ID, from: processStepId(steps.length), to: processStepId(1) });
+  }
+  return { ...input.title !== void 0 ? { title: input.title } : {}, elements, edges };
+}
+function buildProcessDiagram(input) {
+  const count = input.steps.length;
+  return {
+    actions: [{ do: "write", as: input.as, kind: "diagram", role: input.role, content: processDiagramContent(input), place: input.place }],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      first_step: `${input.as}#${processStepId(1)}`,
+      current_step: `${input.as}#${processStepId(Math.min(2, count))}`,
+      last_step: `${input.as}#${processStepId(count)}`
+    }
+  };
+}
 
 // src/plugins/shared.ts
 var PROCESS_DIAGRAM_CONTRACT = {
@@ -11629,7 +11749,7 @@ var SHARED_RECIPES = {
   }
 };
 var SHARED_PLUGIN = {
-  manifest: { id: "shared", version: "0.1.0", depends: {} },
+  manifest: SHARED_PLUGIN_MANIFEST,
   recipes: SHARED_RECIPES,
   schema_properties: {
     process_diagram: {
@@ -11787,11 +11907,11 @@ var LESSON_PLAN_SCENE_INITIAL_CAMERAS = {
 function fail2(code, path, message) {
   throw new LessonPlanError(code, path, message);
 }
-function pad(index) {
+function pad2(index) {
   return String(index).padStart(2, "0");
 }
 function variableAlias(index) {
-  return `number_${pad(index)}`;
+  return `number_${pad2(index)}`;
 }
 function parameters(content) {
   return content.parameters ?? {};
@@ -11898,7 +12018,7 @@ function mathExpressionToOll(expression) {
 function place(input, path, reference) {
   const gap = input.gap === "tight" ? "compact" : input.gap === "wide" ? "spacious" : input.gap;
   const sectionMatch = path.match(/sections\[(\d+)\]/u);
-  const regionRole = sectionMatch ? `section-${pad(Number(sectionMatch[1]) + 1)}` : "lesson-content";
+  const regionRole = sectionMatch ? `section-${pad2(Number(sectionMatch[1]) + 1)}` : "lesson-content";
   return {
     relation: input.relation,
     ...input.relation === "new_region" ? { region_role: regionRole } : {},
@@ -12933,7 +13053,7 @@ function validateBoardContent(kind, value, path, numberCount, resourceCount) {
   }
   return content;
 }
-function pad2(index) {
+function pad3(index) {
   return String(index).padStart(2, "0");
 }
 function localKey(section, moment, kind, item) {
@@ -13019,7 +13139,7 @@ function resolveLessonPlan(value, options = {}) {
     }
     hosts.set(index + 1, {
       id: host.target_id,
-      authoringAlias: `host-${pad2(index + 1)}`,
+      authoringAlias: `host-${pad3(index + 1)}`,
       kind: "host",
       hostParts: new Set(host.parts ?? [])
     });
@@ -13149,7 +13269,7 @@ function resolveLessonPlan(value, options = {}) {
             for (const number of curveNumbers ?? visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
           }
           boardItemIndex += 1;
-          const id = `section-${pad2(sectionIndex)}-moment-${pad2(momentIndex)}-item-${pad2(boardItemIndex)}`;
+          const id = `section-${pad3(sectionIndex)}-moment-${pad3(momentIndex)}-item-${pad3(boardItemIndex)}`;
           const target = { id, authoringAlias: id, kind: "board_item", boardKind: kind };
           if (kind === "visual") target.capability = content.capability;
           locals.set(localKey(sectionIndex, momentIndex, "board_item", boardItemIndex), target);
@@ -13178,7 +13298,7 @@ function resolveLessonPlan(value, options = {}) {
           optionalString(action.label, `${itemPath}.label`, 160);
           optionalTiming(action.timing, `${itemPath}.timing`);
           connectionIndex += 1;
-          const id = `section-${pad2(sectionIndex)}-moment-${pad2(momentIndex)}-connection-${pad2(connectionIndex)}`;
+          const id = `section-${pad3(sectionIndex)}-moment-${pad3(momentIndex)}-connection-${pad3(connectionIndex)}`;
           const target = { id, authoringAlias: id, kind: "connection" };
           locals.set(localKey(sectionIndex, momentIndex, "connection", connectionIndex), target);
           connectionIds.push(id);
@@ -13192,7 +13312,7 @@ function resolveLessonPlan(value, options = {}) {
           members.forEach((member, index) => resolveReference(member, `${itemPath}.members[${index}]`, sectionIndex, momentIndex));
           optionalTiming(action.timing, `${itemPath}.timing`);
           groupIndex += 1;
-          const id = `section-${pad2(sectionIndex)}-moment-${pad2(momentIndex)}-group-${pad2(groupIndex)}`;
+          const id = `section-${pad3(sectionIndex)}-moment-${pad3(momentIndex)}-group-${pad3(groupIndex)}`;
           const target = { id, authoringAlias: id, kind: "group" };
           locals.set(localKey(sectionIndex, momentIndex, "group", groupIndex), target);
           groupIds.push(id);
@@ -13229,7 +13349,7 @@ function resolveLessonPlan(value, options = {}) {
       });
       resolvedMoments.push({
         index: momentIndex,
-        moment_id: `section-${pad2(sectionIndex)}-moment-${pad2(momentIndex)}`,
+        moment_id: `section-${pad3(sectionIndex)}-moment-${pad3(momentIndex)}`,
         board_item_ids: boardItemIds,
         connection_ids: connectionIds,
         group_ids: groupIds
@@ -13343,7 +13463,7 @@ function resolveLessonPlan(value, options = {}) {
     });
     resolvedSections.push({
       index: sectionIndex,
-      section_id: `section-${pad2(sectionIndex)}`,
+      section_id: `section-${pad3(sectionIndex)}`,
       moments: resolvedMoments,
       reusable_items: resolvedReusable
     });
@@ -13365,7 +13485,7 @@ function resolveLessonPlan(value, options = {}) {
   }
   return {
     plan: structuredClone(value),
-    numbers: rawNumbers.map((_entry, index) => ({ index: index + 1, variable_id: `number_${pad2(index + 1)}` })),
+    numbers: rawNumbers.map((_entry, index) => ({ index: index + 1, variable_id: `number_${pad3(index + 1)}` })),
     sections: resolvedSections,
     references
   };
@@ -14306,66 +14426,6 @@ var MATH_COMPILERS = {
   circle_area_rearrangement: compileCircleArea
 };
 
-// node_modules/octos-lesson-language/dist/packages/plugin-physics/src/index.js
-function buildSpringAndMass(input) {
-  const { text: text2 } = input;
-  const phase = input.phase ? input.phase.initial : input.fixed_phase ?? 0;
-  const expression = input.phase?.expression;
-  const motion = `${input.as}-motion`;
-  const plot = `${input.as}-plot`;
-  const geometry = {
-    title: text2.title,
-    axes: { x: { min: -1.5, max: 1.5, label: text2.displacement }, y: { min: -0.6, max: 0.6 }, equal_scale: true },
-    points: [
-      { as: "anchor", x: -1.25, y: 0, label: text2.anchor },
-      { as: "equilibrium", x: 0, y: 0, label: text2.equilibrium },
-      { as: "mass", x: Math.cos(phase), y: 0, label: text2.mass },
-      { as: "force-tip", x: Math.cos(phase) * 0.5, y: 0, visible: false }
-    ],
-    segments: [
-      { as: "spring", from: "anchor", to: "mass", style: "solid" },
-      { as: "force-arrow", from: "mass", to: "force-tip", style: "solid", label: text2.restoring_force }
-    ],
-    ...expression ? {
-      bindings: [
-        { target: "mass.x", expression: `cos(${expression})` },
-        { target: "force-tip.x", expression: `0.5*cos(${expression})` }
-      ]
-    } : {}
-  };
-  const plotContent = {
-    title: text2.plot_title,
-    axes: { x: { min: input.phase?.min ?? 0, max: input.phase?.max ?? Math.PI * 2, label: text2.phase }, y: { min: -1.2, max: 1.2, label: text2.displacement } },
-    curves: [{ as: "primary-curve", expression: "cos(x)", label: "x = cos(t)" }],
-    points: [{ as: "moving-point", x: phase, y: Math.cos(phase), label: text2.current_state }],
-    ...expression ? {
-      bindings: [
-        { target: "moving-point.x", expression },
-        { target: "moving-point.y", expression: `cos(${expression})` }
-      ]
-    } : {}
-  };
-  return {
-    actions: [
-      { do: "write", as: motion, kind: "geometry", role: input.role, content: geometry, place: input.place },
-      { do: "write", as: plot, kind: "plot", role: input.role, content: plotContent, place: { relation: "right_of", anchor: motion, gap: "normal" } },
-      { do: "connect", as: `${input.as}-link`, from: motion, to: plot, relation: "same_state", label: text2.link_label },
-      { do: "group", as: input.as, role: input.role, label: text2.group_label, members: [motion, plot] }
-    ],
-    whole: input.as,
-    parts: {
-      whole: input.as,
-      spring: `${motion}#spring`,
-      mass: `${motion}#mass`,
-      equilibrium: `${motion}#equilibrium`,
-      force_arrow: `${motion}#force-arrow`,
-      primary_curve: `${plot}#primary-curve`,
-      moving_point: `${plot}#moving-point`,
-      ...expression ? { primary_control: `${plot}#moving-point` } : {}
-    }
-  };
-}
-
 // src/plugins/physics-compilers.ts
 function compileSpringAndMass(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -14407,37 +14467,6 @@ var PHYSICS_COMPILERS = {
   spring_and_mass: compileSpringAndMass
 };
 
-// node_modules/octos-lesson-language/dist/packages/plugin-shared/src/index.js
-var pad4 = (index) => String(index).padStart(2, "0");
-var processStepId = (index) => `step-${pad4(index)}`;
-var processEdgeId = (index) => `edge-${pad4(index)}`;
-var PROCESS_CYCLE_EDGE_ID = "edge-close";
-function processDiagramContent(input) {
-  const { steps } = input;
-  const elements = steps.map((step, index) => ({ as: processStepId(index + 1), label: step.label }));
-  const edges = steps.slice(1).map((step, index) => {
-    const label = step.link ?? input.link_label;
-    return { as: processEdgeId(index + 1), from: processStepId(index + 1), to: processStepId(index + 2), ...label !== void 0 ? { label } : {} };
-  });
-  if (input.shape === "cycle" && steps.length > 2) {
-    edges.push({ as: PROCESS_CYCLE_EDGE_ID, from: processStepId(steps.length), to: processStepId(1) });
-  }
-  return { ...input.title !== void 0 ? { title: input.title } : {}, elements, edges };
-}
-function buildProcessDiagram(input) {
-  const count = input.steps.length;
-  return {
-    actions: [{ do: "write", as: input.as, kind: "diagram", role: input.role, content: processDiagramContent(input), place: input.place }],
-    whole: input.as,
-    parts: {
-      whole: input.as,
-      first_step: `${input.as}#${processStepId(1)}`,
-      current_step: `${input.as}#${processStepId(Math.min(2, count))}`,
-      last_step: `${input.as}#${processStepId(count)}`
-    }
-  };
-}
-
 // src/plugins/shared-compilers.ts
 function compileProcessDiagram(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -14455,6 +14484,14 @@ function compileProcessDiagram(base, content, role, placement, plan, path) {
 }
 var SHARED_COMPILERS = {
   process_diagram: compileProcessDiagram
+};
+
+// src/plugins/compilers.ts
+var PLUGIN_COMPILERS = { math: MATH_COMPILERS, physics: PHYSICS_COMPILERS, shared: SHARED_COMPILERS };
+var VISUAL_COMPILERS = {
+  ...MATH_COMPILERS,
+  ...PHYSICS_COMPILERS,
+  ...SHARED_COMPILERS
 };
 
 // src/lesson-plan-compiler.ts
@@ -14498,12 +14535,20 @@ function mergeEquivalentVisualInputs(plan) {
     for (const content of group) content.numbers = [...inputs];
   }
 }
-var PLUGIN_COMPILERS = { math: MATH_COMPILERS, physics: PHYSICS_COMPILERS, shared: SHARED_COMPILERS };
-var VISUAL_COMPILERS = {
-  ...MATH_COMPILERS,
-  ...PHYSICS_COMPILERS,
-  ...SHARED_COMPILERS
-};
+function lessonPlanPlugins(plan) {
+  const installed = new Map(INSTALLED_PLUGINS.map((plugin) => [plugin.manifest.id, plugin.manifest]));
+  const used = /* @__PURE__ */ new Set();
+  const add = (id) => {
+    if (used.has(id)) return;
+    used.add(id);
+    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add(dependency);
+  };
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    add(RECIPE_PLUGIN[action.content.capability]);
+  }
+  return Object.fromEntries([...used].sort().map((id) => [id, installed.get(id).version]));
+}
 function intersectProgramRange(definition, allowedMin, allowedMax) {
   let min = Math.max(definition.min, allowedMin);
   let max = Math.min(definition.max, allowedMax);
@@ -14694,7 +14739,7 @@ function compileLessonPlan(value, options = {}) {
       if (!result) fail2("LESSON_PLAN_COMPILER_REFERENCE", path, `capability part '${item.part.role}' was not produced`);
       return result;
     }
-    if (item.part.kind === "index") return `${item.authoring_alias}#part-${pad(item.part.index)}`;
+    if (item.part.kind === "index") return `${item.authoring_alias}#part-${pad2(item.part.index)}`;
     fail2("LESSON_PLAN_COMPILER_REFERENCE", path, "unsupported reference part");
   };
   const steps = [];
@@ -14713,7 +14758,7 @@ function compileLessonPlan(value, options = {}) {
         const actionPath = `${momentPath}.actions[${actionOffset}]`;
         if (item.action === "create") {
           boardItemIndex += 1;
-          const alias = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-item-${pad(boardItemIndex)}`;
+          const alias = `section-${pad2(sectionIndex)}-moment-${pad2(momentIndex)}-item-${pad2(boardItemIndex)}`;
           const placement = place(item.placement, `${actionPath}.placement`, reference);
           if (item.kind === "visual") {
             const visualContent = item.content;
@@ -14772,7 +14817,7 @@ function compileLessonPlan(value, options = {}) {
           actions.push({ do: "emphasize", target: reference(`${actionPath}.reference`), emphasis: item.emphasis, ...actionWhen(item.timing) });
         } else if (item.action === "connect") {
           connectionIndex += 1;
-          const alias = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-connection-${pad(connectionIndex)}`;
+          const alias = `section-${pad2(sectionIndex)}-moment-${pad2(momentIndex)}-connection-${pad2(connectionIndex)}`;
           actions.push({
             do: "connect",
             as: alias,
@@ -14785,7 +14830,7 @@ function compileLessonPlan(value, options = {}) {
           wholeTargets.set(alias, alias);
         } else if (item.action === "group") {
           groupIndex += 1;
-          const alias = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-group-${pad(groupIndex)}`;
+          const alias = `section-${pad2(sectionIndex)}-moment-${pad2(momentIndex)}-group-${pad2(groupIndex)}`;
           actions.push({
             do: "group",
             as: alias,
@@ -14822,7 +14867,7 @@ function compileLessonPlan(value, options = {}) {
       }
       includeWrittenCardsInFocus(actions);
       beats.push({
-        key: `moment-${pad(momentIndex)}`,
+        key: `moment-${pad2(momentIndex)}`,
         ...moment.restart_numbers?.length ? { start: { kind: "replay", variables: moment.restart_numbers.map(variableAlias) } } : {},
         // The model sometimes writes a formula placeholder (n1) in spoken or
         // written text; learners hear and read the number's own symbol.
@@ -14831,7 +14876,7 @@ function compileLessonPlan(value, options = {}) {
         actions
       });
     });
-    steps.push({ key: `section-${pad(sectionIndex)}`, purpose: section.purpose, beats });
+    steps.push({ key: `section-${pad2(sectionIndex)}`, purpose: section.purpose, beats });
   });
   const tasks = [];
   const reflections = [];
@@ -14855,7 +14900,7 @@ function compileLessonPlan(value, options = {}) {
       if (activity.kind === "reflection") {
         const anchor = resolvedReference(`${activityPath}.reference`);
         reflections.push({
-          as: `section-${pad(sectionOffset + 1)}-reflection-${pad(activityOffset + 1)}`,
+          as: `section-${pad2(sectionOffset + 1)}-reflection-${pad2(activityOffset + 1)}`,
           prompt: namedNumbers(activity.prompt, plan),
           answer: namedNumbers(activity.answer, plan),
           anchor: wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias,
@@ -14864,7 +14909,7 @@ function compileLessonPlan(value, options = {}) {
         return;
       }
       const common = {
-        as: `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`,
+        as: `section-${pad2(sectionOffset + 1)}-task-${pad2(activityOffset + 1)}`,
         prompt: namedNumbers(activity.prompt, plan),
         availability: { kind: "after_lesson" },
         hints: activity.hints.map((hint) => namedNumbers(hint, plan)),
@@ -14937,12 +14982,12 @@ function compileLessonPlan(value, options = {}) {
         board_id: options.board_context.board_id,
         revision: options.board_context.revision,
         references: hostReferences.map((host, index) => ({
-          as: `host-${pad(index + 1)}`,
+          as: `host-${pad2(index + 1)}`,
           type: host.type,
           target_id: host.target_id,
           ...host.label ? { label: host.label } : {},
           fragments: (host.parts ?? []).map((targetId, partOffset) => ({
-            as: `part-${pad(partOffset + 1)}`,
+            as: `part-${pad2(partOffset + 1)}`,
             target_id: targetId
           }))
         }))
@@ -14981,7 +15026,7 @@ function compileLessonPlan(value, options = {}) {
     steps,
     close: { summary: plan.close.summary, focus: closeFocus }
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan) };
 }
 function expressionReferencesVariable(expression, variable) {
   if (typeof expression !== "string") return false;
@@ -18134,6 +18179,7 @@ export {
   deriveLessonRequestParts,
   generateLessonPlanWithModel,
   includeWrittenCardsInFocus,
+  lessonPlanPlugins,
   matchLessonPlanCapability,
   mathExpressionToOll,
   numericAnswerTolerance,

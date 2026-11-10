@@ -3049,6 +3049,7 @@ async function main(): Promise<void> {
         mode: "lesson_plan",
         sections: generatedLessonPlan.lesson.steps.length,
         model_calls: generatedLessonPlan.model_calls,
+        plugins: generatedLessonPlan.plugins,
         elapsed_ms: Date.now() - startedAt,
       });
       emit({
@@ -3058,6 +3059,8 @@ async function main(): Promise<void> {
         authoring_strategy: "lesson_plan",
         lesson_plan_model_calls: generatedLessonPlan.model_calls,
         lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
+        lesson_plan_plugins: generatedLessonPlan.plugins,
+        structured_metadata: { lesson_plan_plugins: generatedLessonPlan.plugins },
         published_parts: publishedParts,
         ...(generatedLessonPlan.camera_observation
           ? input.request_source === "ink_selection"

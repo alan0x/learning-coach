@@ -100,3 +100,35 @@ test("an unrenderable implicit surface is reported before its invalid title", ()
   visual.parameters = { expression: "x^2+y^2+z^2", level: -1, title: " " };
   assert.match(firstProblem(surface), /\.parameters\.expression$/);
 });
+
+test("plugin manifests and subject lines are the OLL shared layer's", async () => {
+  const oll = {
+    math: await import("octos-lesson-language/plugin-math"),
+    physics: await import("octos-lesson-language/plugin-physics"),
+    shared: await import("octos-lesson-language/plugin-shared"),
+  };
+  for (const plugin of INSTALLED_PLUGINS) {
+    const id = plugin.manifest.id;
+    const name = id.toUpperCase();
+    assert.deepEqual(plugin.manifest, oll[id][`${name}_PLUGIN_MANIFEST`], id);
+    if (id === "shared") assert.equal(plugin.subject, undefined);
+    else {
+      assert.deepEqual(plugin.subject.description, oll[id][`${name}_SUBJECT_DESCRIPTION`], id);
+      for (const language of ["zh-CN", "en-US"]) assert.ok(plugin.subject.description[language], `${id} ${language}`);
+    }
+    for (const dependency of Object.keys(plugin.manifest.depends)) {
+      assert.ok(INSTALLED_PLUGINS.some((other) => other.manifest.id === dependency), `${id} depends on ${dependency}`);
+    }
+  }
+});
+
+test("a compiled lesson records the plugins that built its visuals", () => {
+  const { compileLessonPlan, lessonPlanPlugins } = api;
+  assert.equal(typeof lessonPlanPlugins, "function");
+  const plan = (capability) => ({ sections: [{ moments: [{ actions: [{ action: "create", kind: "visual", content: { capability } }] }] }] });
+  assert.deepEqual(lessonPlanPlugins({ sections: [] }), {});
+  assert.deepEqual(lessonPlanPlugins(plan("process_diagram")), { shared: "0.1.0" });
+  assert.deepEqual(lessonPlanPlugins(plan("spring_and_mass")), { physics: "0.1.0", shared: "0.1.0" });
+  assert.deepEqual(lessonPlanPlugins(plan("unit_circle_projection")), { math: "0.1.0", shared: "0.1.0" });
+  assert.equal(typeof compileLessonPlan, "function");
+});
