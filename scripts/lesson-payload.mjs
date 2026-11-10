@@ -52,7 +52,10 @@ function measure(request) {
   return {
     bytes,
     schema_sha256: sha256(schema),
-    request_sha256: sha256(JSON.stringify([request.system_prompt, request.prompt, schema])),
+    // Whether the camera frame or selection image is attached is part of the
+    // request too; it is added only when set, so other digests are unchanged.
+    request_sha256: sha256(JSON.stringify([request.system_prompt, request.prompt, schema,
+      ...(request.include_camera_media ? [{ include_camera_media: true }] : [])])),
   };
 }
 
@@ -67,7 +70,18 @@ function fixtureDrafts(plan, helpers) {
   return { drafts, outline, firstSection: helpers.bootstrapSectionFromExact(outline, drafts[0]) };
 }
 
-async function runOnce(api, helpers, name, plan, route, mode) {
+// Optional host context. Each field appends its own rule to the system prompt,
+// so the request-hash check runs once without context and once with all of it.
+export const FULL_CONTEXT = {
+  learner_context: "Grade 8 learner.",
+  tutor_context: "Tutor note: keep it short.",
+  teacher_profile: "A patient teacher who compares changes step by step.",
+  learner_background: "From the learning app: last week the learner practised slopes.",
+  current_lesson: "Lesson: Slope of a line. y = 2x + 1 on a graph.",
+  teacher_experiences: "Watches the stars from the observatory tower at night.",
+};
+
+async function runOnce(api, helpers, name, plan, route, mode, extraInput = {}) {
   const source = mode === "single_section_practice"
     ? { ...plan, sections: plan.sections.slice(0, 1) }
     : plan;
@@ -104,6 +118,7 @@ async function runOnce(api, helpers, name, plan, route, mode) {
       request_parts: [plan.title],
       language: "zh-CN",
       ...ROUTES[route],
+      ...extraInput,
     }, { max_attempts_per_part: 2 });
   } catch (cause) {
     error = cause instanceof Error ? cause.message : String(cause);
@@ -161,4 +176,29 @@ export function checkPayloadCeilings(report, ceilings) {
     }
   }
   return [...new Set(problems)];
+}
+
+/**
+ * The exact requests Coach sends, as hashes: for every fixture, route, path,
+ * language and context, the ordered list of request hashes (system prompt,
+ * prompt and response schema), reduced to a 16-hex digest per run. Moving
+ * recipes into plugins must leave every digest unchanged (plan P1 exit).
+ */
+export async function measureRequestHashes(api, fixtures, helpers) {
+  const hashes = {};
+  for (const language of ["zh-CN", "en-US"]) {
+    for (const [context, fields] of Object.entries({ none: {}, full: FULL_CONTEXT })) {
+      for (const [name, plan] of Object.entries(fixtures)) {
+        for (const route of Object.keys(ROUTES)) {
+          for (const mode of MODES) {
+            const run = await runOnce(api, helpers, name, plan, route, mode, { language, ...fields });
+            if (run.error) throw new Error(`${name} ${route} ${mode} ${language} ${context}: generation failed: ${run.error}`);
+            hashes[name] ??= {};
+            hashes[name][`${route}/${mode}/${language}/${context}`] = sha256(run.requests.map((request) => `${request.entry_point}:${request.request_sha256}`).join("\n")).slice(0, 16);
+          }
+        }
+      }
+    }
+  }
+  return hashes;
 }

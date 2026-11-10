@@ -2,12 +2,14 @@
 // Usage:
 //   node scripts/measure-lesson-payload.mjs [--out report.json]   measure and print the per-entry-point summary
 //   node scripts/measure-lesson-payload.mjs --record-ceilings     write eval/payload-ceilings.json from this build
+//   node scripts/measure-lesson-payload.mjs --record-hashes       write eval/request-hashes.json from this build
 // Run `npm run build` first; this reads the built lesson-plan.js.
 import { readFile, writeFile } from "node:fs/promises";
 
 import { completeLessonPlanFixtures } from "../test/lesson-plan-course-fixtures.mjs";
 import { modelResponseHelpers } from "../test/model-responses.mjs";
-import { checkPayloadCeilings, measureLessonPayload } from "./lesson-payload.mjs";
+import { requestHashFixtures } from "../test/sample-plans.mjs";
+import { checkPayloadCeilings, measureLessonPayload, measureRequestHashes } from "./lesson-payload.mjs";
 
 const api = await import(new URL("../lesson-plan.js", import.meta.url));
 const helpers = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
@@ -33,6 +35,15 @@ if (args.includes("--record-ceilings")) {
   };
   await writeFile(ceilingsUrl, `${JSON.stringify(ceilings, null, 2)}\n`);
   console.log(`Recorded ${Object.keys(ceilings.entry_points).length} entry-point ceilings.`);
+}
+
+if (args.includes("--record-hashes")) {
+  const hashes = await measureRequestHashes(api, requestHashFixtures(api.LESSON_PLAN_CAPABILITY_REGISTRY, completeLessonPlanFixtures), helpers);
+  await writeFile(new URL("../eval/request-hashes.json", import.meta.url), `${JSON.stringify({
+    note: "Digest of every model request per fixture, route/path/language/context (subject plugin plan, P1 exit). Moving code into plugins must not change any digest. Re-record only for an intended prompt or schema change.",
+    hashes,
+  }, null, 1)}\n`);
+  console.log(`Recorded ${Object.values(hashes).reduce((sum, runs) => sum + Object.keys(runs).length, 0)} request digests.`);
 }
 
 const outIndex = args.indexOf("--out");
