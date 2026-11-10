@@ -2,6 +2,7 @@
 // graphs and sliders are still core Coach and move here later in P1.
 // Subject plugin (decision 0012, draft). Coach assembles its recipe registry
 // and the recipe rules in its prompts from the installed plugins.
+import { SHARED_PLUGIN_MANIFEST } from "octos-lesson-language/plugin-shared";
 import type { CoachSubjectPlugin } from "./types.js";
 
 export const PROCESS_DIAGRAM_CONTRACT = {
@@ -28,7 +29,7 @@ export const SHARED_RECIPES = {
 } as const;
 
 export const SHARED_PLUGIN = {
-  manifest: { id: "shared", version: "0.1.0", depends: {} },
+  manifest: SHARED_PLUGIN_MANIFEST,
   recipes: SHARED_RECIPES,
   schema_properties: {
     process_diagram: {

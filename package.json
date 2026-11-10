@@ -1,6 +1,6 @@
 {
   "name": "learning-coach-skill",
-  "version": "0.24.2",
+  "version": "0.24.3",
   "private": true,
   "type": "module",
   "engines": {
@@ -19,7 +19,7 @@
     "postinstall": "node scripts/apply-oll-runtime-patch.mjs"
   },
   "dependencies": {
-    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#0c9676b3eb5d7af638bfc4963ca7fd39265559f1"
+    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#d84fcb257ba2de73df39bdb534c4e59febc3edd9"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"

@@ -11422,6 +11422,7 @@ async function main() {
         mode: "lesson_plan",
         sections: generatedLessonPlan.lesson.steps.length,
         model_calls: generatedLessonPlan.model_calls,
+        plugins: generatedLessonPlan.plugins,
         elapsed_ms: Date.now() - startedAt
       });
       emit({
@@ -11431,6 +11432,7 @@ async function main() {
         authoring_strategy: "lesson_plan",
         lesson_plan_model_calls: generatedLessonPlan.model_calls,
         lesson_plan_sections: generatedLessonPlan.lesson.steps.length,
+        lesson_plan_plugins: generatedLessonPlan.plugins,
         published_parts: publishedParts,
         ...generatedLessonPlan.camera_observation ? input.request_source === "ink_selection" ? { selection_observation: generatedLessonPlan.camera_observation } : { camera_observation: generatedLessonPlan.camera_observation } : {},
         ...input.request_source === "self_contained" ? {} : { request_source: input.request_source }

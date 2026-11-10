@@ -2,6 +2,7 @@
 // Subject plugin (decision 0012, draft). Coach assembles its recipe registry
 // and the recipe rules in its prompts from the installed plugins.
 import { REARRANGEMENT_MODEL_GUIDANCE } from "../rearrangement.js";
+import { MATH_PLUGIN_MANIFEST, MATH_SUBJECT_DESCRIPTION } from "octos-lesson-language/plugin-math";
 import type { CoachSubjectPlugin } from "./types.js";
 
 export const MATH_RECIPES = {
@@ -185,8 +186,9 @@ const MATH_SCHEMA_PROPERTIES = {
 };
 
 export const MATH_PLUGIN = {
-  manifest: { id: "math", version: "0.1.0", depends: { shared: "0.1.0" } },
-  subject: { description: { "zh-CN": "数学：数与运算、代数、函数与图像、几何、统计与概率" } },
+  // The manifest and the Jev subject line are the OLL shared layer's.
+  manifest: MATH_PLUGIN_MANIFEST,
+  subject: { description: MATH_SUBJECT_DESCRIPTION },
   recipes: MATH_RECIPES,
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {

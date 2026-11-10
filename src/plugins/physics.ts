@@ -1,6 +1,7 @@
 // Physics: motion and forces, energy, circuits, light, sound, buoyancy.
 // Subject plugin (decision 0012, draft). Coach assembles its recipe registry
 // and the recipe rules in its prompts from the installed plugins.
+import { PHYSICS_PLUGIN_MANIFEST, PHYSICS_SUBJECT_DESCRIPTION } from "octos-lesson-language/plugin-physics";
 import type { CoachSubjectPlugin } from "./types.js";
 
 export const PHYSICS_RECIPES = {
@@ -20,8 +21,9 @@ export const PHYSICS_RECIPES = {
 } as const;
 
 export const PHYSICS_PLUGIN = {
-  manifest: { id: "physics", version: "0.1.0", depends: { shared: "0.1.0" } },
-  subject: { description: { "zh-CN": "物理：运动与力、能量、电路、光、声、浮力等" } },
+  // The manifest and the Jev subject line are the OLL shared layer's.
+  manifest: PHYSICS_PLUGIN_MANIFEST,
+  subject: { description: PHYSICS_SUBJECT_DESCRIPTION },
   recipes: PHYSICS_RECIPES,
   schema_properties: {},
   prompt_rules: {},

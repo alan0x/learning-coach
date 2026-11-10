@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.3 - 2026-11-10
+
+- Subject plugin close-out (plan P1). No prompt, schema or lesson changes: every request and lesson digest in `eval/request-hashes.json` is unchanged.
+  - The compiler looks recipes up in `src/plugins/compilers.ts` and no longer names a plugin.
+  - Plugin manifests and Jev subject lines come from the OLL packages (`octos-lesson-language/plugin-<id>`) instead of being declared a second time. This found one disagreement: OLL's `math` manifest did not depend on `shared`. Fixed in OLL `d84fcb2`.
+  - A compiled lesson reports the plugins that built its visuals, with versions (`plugins` on the compiled result, `lesson_plan_plugins` in the tool result and the `lesson-plan-generation` log entry). This is compilation metadata, separate from what a player needs.
+
 ## 0.24.2 - 2026-11-10
 
 - Typed questions (`answer_activities`) can no longer fail a lesson. In the P0 baseline, 4 of 120 lessons failed after section 1 was already playing, because a later section's optional question kept failing its answer check across all three section attempts.

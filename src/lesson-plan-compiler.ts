@@ -2,12 +2,11 @@ import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
 import { LESSON_PLAN_CAPABILITY_REGISTRY, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
-import { implicitSurfaceDomain } from "./scene3d-surfaces.js";
-import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen, type VisualCompiler } from "./recipe-kit.js";
-import { MATH_COMPILERS } from "./plugins/math-compilers.js";
+import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen } from "./recipe-kit.js";
+import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
+import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
 import { PLUGIN_HOOKS, RECIPE_HOOKS } from "./plugins/hooks.js";
-import { PHYSICS_COMPILERS } from "./plugins/physics-compilers.js";
-import { SHARED_COMPILERS } from "./plugins/shared-compilers.js";
+export { PLUGIN_COMPILERS };
 
 export { LESSON_PLAN_SCENE_INITIAL_CAMERAS, includeWrittenCardsInFocus, mathExpressionToOll } from "./recipe-kit.js";
 
@@ -24,6 +23,8 @@ export interface CompileLessonPlanOptions extends ResolveLessonPlanOptions {
 export interface CompiledLessonPlan {
   lesson: AuthoringLesson;
   resolved: ResolvedLessonPlan;
+  /** Plugin ID to version for the plugins that built this lesson's visuals. */
+  plugins: Record<string, string>;
 }
 
 function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbers = true): string {
@@ -73,14 +74,25 @@ function mergeEquivalentVisualInputs(plan: LessonPlan): void {
   }
 }
 
-/** Each installed plugin's recipe compilers, keyed by plugin ID. */
-export const PLUGIN_COMPILERS = { math: MATH_COMPILERS, physics: PHYSICS_COMPILERS, shared: SHARED_COMPILERS } as const;
-
-const VISUAL_COMPILERS = {
-  ...MATH_COMPILERS,
-  ...PHYSICS_COMPILERS,
-  ...SHARED_COMPILERS,
-} satisfies Record<LessonPlanVisualContent["capability"], VisualCompiler>;
+/**
+ * The plugins whose recipes built this plan's visuals, with the plugins they
+ * depend on, each at its installed version. This is compilation metadata: it
+ * says what produced the lesson, not what a player needs to play it.
+ */
+export function lessonPlanPlugins(plan: LessonPlan): Record<string, string> {
+  const installed = new Map(INSTALLED_PLUGINS.map((plugin) => [plugin.manifest.id as string, plugin.manifest]));
+  const used = new Set<string>();
+  const add = (id: string): void => {
+    if (used.has(id)) return;
+    used.add(id);
+    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add(dependency);
+  };
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    add(RECIPE_PLUGIN[(action.content as LessonPlanVisualContent).capability]);
+  }
+  return Object.fromEntries([...used].sort().map((id) => [id, installed.get(id)!.version]));
+}
 
 function intersectProgramRange(
   definition: NonNullable<LessonPlan["numbers"]>[number],
@@ -585,7 +597,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     steps,
     close: { summary: plan.close.summary, focus: closeFocus },
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan) };
 }
 
 function expressionReferencesVariable(expression: unknown, variable: string): boolean {
