@@ -69,3 +69,15 @@ test("recipe hooks and section facts are keyed by known recipes, and unknown nam
   }
   assert.deepEqual(Object.keys(RECIPE_HOOKS).sort(), ["coordinate_circle", "function_plot", "function_surface_with_section", "implicit_surface_with_section", "process_diagram"]);
 });
+
+// A repair request names the first problem found, so moving recipes into
+// builders must not change which problem that is.
+const { samplePlan } = await import("./sample-plans.mjs");
+const firstProblem = (plan) => { try { api.compileAndValidateLessonPlan(plan); return "compiled"; } catch (error) { return error.path; } };
+
+test("an invalid plot title is reported before its samples are evaluated", () => {
+  const plot = samplePlan("function_plot");
+  plot.sections[0].moments[0].actions[0].content.parameters = { expression: "1/x", title: 123 };
+  plot.numbers[0] = { ...plot.numbers[0], min: 0, max: 2, initial: 1 };
+  assert.match(firstProblem(plot), /\.parameters\.title$/);
+});
