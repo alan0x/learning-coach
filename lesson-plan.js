@@ -7275,7 +7275,25 @@ var v0_1_schema_default = {
       required: ["mode", "language", "title", "goals"],
       additionalProperties: false,
       properties: {
-        mode: { const: "explain" },
+        mode: { enum: ["explain", "learner_taught"] },
+        author: {
+          type: "object",
+          required: ["kind", "learner_ref", "presented_by"],
+          additionalProperties: false,
+          properties: {
+            kind: { const: "learner" },
+            learner_ref: { type: "string", pattern: "^learner:[A-Za-z0-9_-]{1,64}$" },
+            presented_by: {
+              type: "object",
+              required: ["avatar_ref", "voice_ref"],
+              additionalProperties: false,
+              properties: {
+                avatar_ref: { type: "string", pattern: "^avatar:[a-z0-9-]{1,48}$" },
+                voice_ref: { type: "string", pattern: "^voice:[a-z0-9-]{1,48}$" }
+              }
+            }
+          }
+        },
         language: { type: "string", minLength: 2, maxLength: 32 },
         title: { type: "string", minLength: 1, maxLength: 160 },
         goals: { type: "array", minItems: 1, maxItems: 8, items: { type: "string" } },
@@ -7519,9 +7537,10 @@ var v0_1_schema_default = {
         key: { $ref: "#/$defs/alias" },
         say: { type: "string", maxLength: 1200 },
         delivery: { enum: ["neutral", "patient", "encouraging", "careful", "emphatic"] },
+        pace: { enum: ["continuous"] },
         actions: {
           type: "array",
-          minItems: 1,
+          minItems: 0,
           maxItems: 24,
           items: { $ref: "#/$defs/action" }
         }
@@ -7532,10 +7551,10 @@ var v0_1_schema_default = {
       required: ["do"],
       additionalProperties: false,
       properties: {
-        do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate"] },
+        do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7553,7 +7572,18 @@ var v0_1_schema_default = {
         value: { type: "number" },
         easing: { enum: ["linear", "ease_in_out"] },
         duration_intent: { enum: ["brief", "normal", "extended"] },
-        reason: { type: "string" }
+        reason: { type: "string" },
+        show: { type: "string" },
+        preset: { enum: ["front", "top", "side", "isometric"] },
+        source: {
+          type: "object",
+          required: ["selection", "confirmed_by"],
+          additionalProperties: false,
+          properties: {
+            selection: { type: "string", pattern: "^sel-[A-Za-z0-9_-]{1,96}$" },
+            confirmed_by: { const: "learner" }
+          }
+        }
       },
       allOf: [
         {
@@ -7566,6 +7596,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "image" } }
           },
           then: { properties: { content: { $ref: "#/$defs/imageContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "ink" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/inkContent" } } }
         },
         {
           if: {
@@ -7610,6 +7647,14 @@ var v0_1_schema_default = {
         },
         {
           if: { properties: { do: { const: "point" } } },
+          then: { required: ["target"] }
+        },
+        {
+          if: { properties: { do: { const: "hide" } } },
+          then: { required: ["target"] }
+        },
+        {
+          if: { properties: { do: { const: "view" } } },
           then: { required: ["target"] }
         },
         {
@@ -7766,6 +7811,7 @@ var v0_1_schema_default = {
         initial: { type: "number" },
         min: { type: "number" },
         max: { type: "number" },
+        wrap: { const: true },
         label: { type: "string", maxLength: 80 },
         unit: { type: "string", maxLength: 32 },
         control: {
@@ -7819,13 +7865,31 @@ var v0_1_schema_default = {
             additionalProperties: false,
             properties: {
               as: { $ref: "#/$defs/alias" },
-              kind: { enum: ["box", "sphere", "cylinder", "cone", "surface", "implicit_surface"] },
+              kind: { enum: ["box", "sphere", "cylinder", "cone", "surface", "implicit_surface", "prism", "pyramid", "frustum", "hemisphere", "torus", "tetrahedron", "octahedron", "dodecahedron", "icosahedron", "ellipsoid"] },
               label: { type: "string" },
               color: { type: "string" },
               center: { $ref: "#/$defs/point3d" },
               size: { $ref: "#/$defs/size3d" },
               radius: { type: "number", exclusiveMinimum: 0 },
               height: { type: "number", exclusiveMinimum: 0 },
+              sides: { type: "integer", minimum: 3, maximum: 12 },
+              top_radius: { type: "number", exclusiveMinimum: 0 },
+              tube: { type: "number", exclusiveMinimum: 0 },
+              radii: {
+                type: "object",
+                required: ["x", "y", "z"],
+                additionalProperties: false,
+                properties: { x: { type: "number", exclusiveMinimum: 0 }, y: { type: "number", exclusiveMinimum: 0 }, z: { type: "number", exclusiveMinimum: 0 } }
+              },
+              base: { type: "array", minItems: 3, maxItems: 12, items: {
+                type: "object",
+                required: ["x", "y"],
+                additionalProperties: false,
+                properties: { x: { type: "number" }, y: { type: "number" } }
+              } },
+              top_scale: { type: "number", minimum: 0, exclusiveMaximum: 1 },
+              unfold: { type: "number", minimum: 0, maximum: 1 },
+              face_targets: { type: "boolean" },
               expression: { type: "string", minLength: 1, maxLength: 256 },
               x_range: { $ref: "#/$defs/range3d" },
               y_range: { $ref: "#/$defs/range3d" },
@@ -7876,7 +7940,8 @@ var v0_1_schema_default = {
                 items: { $ref: "#/$defs/point3d" }
               },
               label: { type: "string" },
-              color: { type: "string" }
+              color: { type: "string" },
+              shown: { enum: ["always", "when_emphasized"] }
             }
           }
         },
@@ -7948,6 +8013,52 @@ var v0_1_schema_default = {
         label: { type: "string" }
       }
     },
+    inkContent: {
+      type: "object",
+      required: ["snapshot_id", "sha256", "alt"],
+      additionalProperties: false,
+      properties: {
+        snapshot_id: { type: "string", pattern: "^ink-snap:[A-Za-z0-9_.:@-]{1,96}$" },
+        sha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+        replay: { enum: ["stroke_order", "static"] },
+        shown_strokes: { type: "integer", minimum: 1 },
+        drawn_size: {
+          type: "object",
+          required: ["width", "height"],
+          additionalProperties: false,
+          properties: {
+            width: { type: "number", exclusiveMinimum: 0, maximum: 4e3 },
+            height: { type: "number", exclusiveMinimum: 0, maximum: 4e3 }
+          }
+        },
+        alt: { type: "string", minLength: 1, maxLength: 480 },
+        selections: {
+          type: "array",
+          maxItems: 24,
+          items: {
+            type: "object",
+            required: ["as", "selection_id"],
+            additionalProperties: false,
+            properties: {
+              as: { $ref: "#/$defs/alias" },
+              selection_id: { type: "string", pattern: "^sel-[A-Za-z0-9_-]{1,96}$" },
+              label: { type: "string" }
+            }
+          }
+        },
+        annotation: {
+          type: "object",
+          required: ["x", "y", "width", "height"],
+          additionalProperties: false,
+          properties: {
+            x: { type: "number", minimum: -0.5, maximum: 1.5 },
+            y: { type: "number", minimum: -0.5, maximum: 1.5 },
+            width: { type: "number", exclusiveMinimum: 0, maximum: 2 },
+            height: { type: "number", exclusiveMinimum: 0, maximum: 2 }
+          }
+        }
+      }
+    },
     imageContent: {
       type: "object",
       required: ["asset_id"],
@@ -7982,10 +8093,19 @@ var v0_1_schema_default = {
       required: ["relation"],
       additionalProperties: false,
       properties: {
-        relation: { enum: ["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"] },
+        relation: { enum: ["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay", "annotates", "replaces", "continues"] },
         anchor: { $ref: "#/$defs/alias" },
         region_role: { type: "string" },
-        align: { enum: ["start", "center", "end"] },
+        align: { enum: ["start", "center", "end", "equals"] },
+        offset: {
+          type: "object",
+          required: ["x", "y"],
+          additionalProperties: false,
+          properties: {
+            x: { type: "number", minimum: -4e3, maximum: 4e3 },
+            y: { type: "number", minimum: -4e3, maximum: 4e3 }
+          }
+        },
         gap: { enum: ["compact", "normal", "spacious"] }
       }
     }
@@ -8166,6 +8286,49 @@ function evaluateMathExpression(expression, variables) {
   return result;
 }
 
+// node_modules/octos-lesson-language/dist/packages/core/src/solid-face-targets.js
+function solidFaceKeys(object2) {
+  const numbered = (prefix, count) => Array.from({ length: count }, (_, index) => `${prefix}-${index + 1}`);
+  switch (object2.kind) {
+    case "box":
+      return ["bottom", "top", ...numbered("side", 4)];
+    case "prism":
+    case "pyramid": {
+      const sides = Array.isArray(object2.base) ? object2.base.length : Number(object2.sides);
+      if (!Number.isInteger(sides) || sides < 3 || sides > 12)
+        return [];
+      return [
+        "bottom",
+        ...numbered("side", sides),
+        ...object2.kind === "prism" || Number(object2.top_scale) > 0 ? ["top"] : []
+      ];
+    }
+    case "cylinder":
+    case "frustum":
+      return ["bottom", "top", "side"];
+    case "cone":
+    case "hemisphere":
+      return ["bottom", "side"];
+    case "sphere":
+    case "ellipsoid":
+    case "torus":
+      return ["side"];
+    case "tetrahedron":
+      return numbered("face", 4);
+    case "octahedron":
+      return numbered("face", 8);
+    case "dodecahedron":
+      return numbered("face", 12);
+    case "icosahedron":
+      return numbered("face", 20);
+    default:
+      return [];
+  }
+}
+function solidFaceTarget(objectId, face) {
+  return `${objectId}-${face}-face`;
+}
+
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_NODE_KINDS = [
   "text",
@@ -8177,7 +8340,8 @@ var OLL_NODE_KINDS = [
   "scene3d",
   "image",
   "table",
-  "note"
+  "note",
+  "ink"
 ];
 var OLL_ACTION_NAMES = [
   "write",
@@ -8188,7 +8352,9 @@ var OLL_ACTION_NAMES = [
   "focus",
   "point",
   "expression",
-  "animate"
+  "animate",
+  "hide",
+  "view"
 ];
 var OLL_BINDING_CAPABILITIES = {
   geometry: {
@@ -8202,7 +8368,8 @@ var OLL_BINDING_CAPABILITIES = {
     guides: ["value"]
   },
   scene3d: {
-    sections: ["value"]
+    sections: ["value"],
+    objects: ["unfold"]
   }
 };
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
@@ -8257,7 +8424,24 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "student-tasks:scene3d_view_target": "0.1.0",
   "student-tasks:numeric_answer": "0.5.0",
   "reflections": "0.3.0",
-  "binding-hide-undefined": "0.3.0"
+  "binding-hide-undefined": "0.3.0",
+  "lesson-mode:learner_taught": "0.6.0",
+  "node:ink": "0.6.0",
+  "placement:annotates": "0.6.0",
+  "placement:replaces": "0.6.0",
+  "action:board.hide": "0.6.0",
+  "write-source": "0.6.0",
+  "action:scene3d.view": "0.6.0",
+  "emphasis:none": "0.7.0",
+  "variables:wrap": "0.7.0",
+  "scene3d:latent-highlights": "0.7.0",
+  "ink:shown-strokes": "0.8.0",
+  "beat-pace:continuous": "0.8.0",
+  "placement:continues": "0.9.0",
+  "ink:drawn-size": "0.9.0",
+  "scene3d:more-solids": "0.9.0",
+  "scene3d:unfold": "0.9.0",
+  "scene3d:face-targets": "0.10.0"
 });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/opening.js
@@ -8314,7 +8498,25 @@ var ACTIONS = new Set(OLL_ACTION_NAMES);
 var PHASES = /* @__PURE__ */ new Set(["before_speech", "during_speech", "after_speech"]);
 var ANIMATION_EASINGS = /* @__PURE__ */ new Set(["linear", "ease_in_out"]);
 var ANIMATION_DURATION_INTENTS = /* @__PURE__ */ new Set(["brief", "normal", "extended"]);
-var PLACEMENT_RELATIONS = /* @__PURE__ */ new Set(["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay"]);
+var UNFOLDING_KINDS = /* @__PURE__ */ new Set(["box", "prism", "pyramid", "cylinder", "cone"]);
+function convexPolygon(base) {
+  if (!Array.isArray(base) || base.length < 3 || base.length > 12)
+    return false;
+  if (!base.every((point) => point && typeof point === "object" && Number.isFinite(point.x) && Number.isFinite(point.y)))
+    return false;
+  const area = base.reduce((sum, point, index) => {
+    const next = base[(index + 1) % base.length];
+    return sum + point.x * next.y - next.x * point.y;
+  }, 0) / 2;
+  if (Math.abs(area) < 1e-9)
+    return false;
+  return base.every((point, index) => {
+    const next = base[(index + 1) % base.length], after = base[(index + 2) % base.length];
+    return Math.sign(area) * ((next.x - point.x) * (after.y - next.y) - (next.y - point.y) * (after.x - next.x)) > -1e-9;
+  });
+}
+var SOLID_KINDS = /* @__PURE__ */ new Set(["sphere", "cylinder", "cone", "prism", "pyramid", "frustum", "hemisphere", "torus", "tetrahedron", "octahedron", "dodecahedron", "icosahedron"]);
+var PLACEMENT_RELATIONS = /* @__PURE__ */ new Set(["new_region", "below", "above", "left_of", "right_of", "near", "inside", "overlay", "annotates", "replaces", "continues"]);
 var ACTION_FIELDS = /* @__PURE__ */ new Set([
   "do",
   "when",
@@ -8337,7 +8539,10 @@ var ACTION_FIELDS = /* @__PURE__ */ new Set([
   "variable",
   "value",
   "easing",
-  "duration_intent"
+  "duration_intent",
+  "source",
+  "show",
+  "preset"
 ]);
 var OllError = class extends Error {
   code;
@@ -8377,6 +8582,21 @@ function requireVariableAlias(value, path) {
     fail("OLL_INVALID_VARIABLE", path, `Invalid variable alias '${String(value)}'`);
   }
 }
+function validateLessonAuthor(document) {
+  const { mode, author } = document.lesson;
+  if (mode !== "explain" && mode !== "learner_taught") {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", "/lesson/mode", `Unknown lesson mode '${String(mode)}'`);
+  }
+  if (mode === "learner_taught" && !author) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", "/lesson/author", "A learner-taught lesson must name its learner author");
+  }
+  if (mode !== "learner_taught" && author) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", "/lesson/author", "Only learner-taught lessons have a learner author");
+  }
+}
+function isLearnerTaught(document) {
+  return document.lesson.mode === "learner_taught";
+}
 function validateLessonVariables(document) {
   const values = /* @__PURE__ */ new Map();
   for (const [index, variable] of (document.lesson.variables ?? []).entries()) {
@@ -8394,6 +8614,8 @@ function validateLessonVariables(document) {
       fail("OLL_INVALID_VARIABLE", path, "Variable max must be greater than min");
     if (initial < min || initial > max)
       fail("OLL_INVALID_VARIABLE", `${path}/initial`, "Variable initial value is outside its range");
+    if (variable.wrap !== void 0 && variable.wrap !== true)
+      fail("OLL_INVALID_VARIABLE", `${path}/wrap`, "Variable wrap must be true when present");
     if (variable.control?.step !== void 0) {
       const step = requireFiniteNumber(variable.control.step, `${path}/control/step`);
       if (step <= 0 || step > max - min)
@@ -8411,6 +8633,12 @@ function scene3dViewDirection(view) {
     z: Math.sin(view.pitch)
   };
 }
+var SCENE3D_PRESET_VIEWS = {
+  front: { yaw: 0, pitch: 0 },
+  side: { yaw: Math.PI / 2, pitch: 0 },
+  top: { yaw: 0, pitch: Math.PI / 2 },
+  isometric: { yaw: 0.72, pitch: 0.55 }
+};
 function scene3dViewTargetScore(view, target) {
   let angularDistance;
   if (target.match === "view_direction") {
@@ -8823,14 +9051,21 @@ function validateContentFragments(content, path) {
     return fragment.as;
   });
 }
-function collectAddressableContent(content) {
-  const result = validateContentFragments(content, "/content");
-  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "polygons", "regular_polygons", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
+function collectAddressableContent(content, path = "/content") {
+  const result = validateContentFragments(content, path);
+  for (const field of ["curves", "points", "guides", "regions", "elements", "edges", "polygons", "regular_polygons", "circles", "segments", "arcs", "objects", "sections", "highlights", "selections"]) {
     if (!content?.[field])
       continue;
-    for (const item of content[field]) {
+    for (const [index, item] of content[field].entries()) {
       if (item?.as)
         result.push(item.as);
+      if (field === "objects" && item?.face_targets === true && typeof item.as === "string") {
+        const faces = solidFaceKeys(item).map((face) => solidFaceTarget(item.as, face));
+        if (ALIAS_PATTERN.test(item.as) && faces.some((face) => !ALIAS_PATTERN.test(face))) {
+          fail("OLL_INVALID_ALIAS", `${path}/objects/${index}/as`, "Shorten the object alias to leave room for its face target names");
+        }
+        result.push(...faces);
+      }
     }
   }
   return result;
@@ -9035,8 +9270,18 @@ function validateScene3dContent(action, path, variables) {
     aliases.add(object2.as);
     objectAliases.add(object2.as);
     const objectKind = String(object2.kind);
-    if (!["box", "sphere", "cylinder", "cone", "surface", "implicit_surface"].includes(objectKind)) {
+    if (!["box", "sphere", "cylinder", "cone", "surface", "implicit_surface", "prism", "pyramid", "frustum", "hemisphere", "torus", "tetrahedron", "octahedron", "dodecahedron", "icosahedron", "ellipsoid"].includes(objectKind)) {
       fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/kind`, `Unknown 3D object kind '${object2.kind}'`);
+    }
+    if (object2.face_targets === true && !solidFaceKeys(object2).length) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/face_targets`, "Face targets require a solid with selectable surfaces");
+    }
+    if (object2.unfold !== void 0) {
+      if (!UNFOLDING_KINDS.has(objectKind))
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/unfold`, "Only a box, prism, pyramid, cylinder or cone unfolds into a net");
+      const unfold = requireFiniteNumber(object2.unfold, `${objectPath}/unfold`);
+      if (unfold < 0 || unfold > 1)
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/unfold`, "unfold is between 0 (closed) and 1 (a flat net)");
     }
     if (object2.color !== void 0 && (typeof object2.color !== "string" || !/^(#[0-9a-fA-F]{6}|teal|blue|purple|orange|red|gray)$/.test(object2.color))) {
       fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/color`, "3D colors must use a safe palette name or six-digit hex value");
@@ -9044,15 +9289,44 @@ function validateScene3dContent(action, path, variables) {
     if (objectKind === "box") {
       point(object2.center, `${objectPath}/center`);
       size(object2.size, `${objectPath}/size`);
-    } else if (["sphere", "cylinder", "cone"].includes(objectKind)) {
+    } else if (objectKind === "ellipsoid") {
       point(object2.center, `${objectPath}/center`);
-      const radius = requireFiniteNumber(object2.radius, `${objectPath}/radius`);
+      const radii = object2.radii;
+      if (!radii || !["x", "y", "z"].every((axis) => typeof radii[axis] === "number" && radii[axis] > 0)) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/radii`, "An ellipsoid needs three radii above zero");
+      }
+    } else if (SOLID_KINDS.has(objectKind)) {
+      point(object2.center, `${objectPath}/center`);
+      const based = (objectKind === "prism" || objectKind === "pyramid") && object2.base !== void 0;
+      const radius = based ? 1 : requireFiniteNumber(object2.radius, `${objectPath}/radius`);
       if (radius <= 0)
         fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/radius`, "3D radius must be greater than zero");
-      if (objectKind !== "sphere") {
+      if (["cylinder", "cone", "prism", "pyramid", "frustum"].includes(objectKind)) {
         const height = requireFiniteNumber(object2.height, `${objectPath}/height`);
         if (height <= 0)
           fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/height`, "3D height must be greater than zero");
+      }
+      if (based) {
+        if (object2.sides !== void 0)
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/sides`, "A prism or pyramid has either sides (a regular base) or a base polygon, not both");
+        if (!convexPolygon(object2.base))
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/base`, "A base is a convex polygon of 3 to 12 corners with an area");
+      } else if (objectKind === "prism" || objectKind === "pyramid") {
+        const sides = Number(object2.sides);
+        if (!Number.isInteger(sides) || sides < 3 || sides > 12)
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/sides`, "A prism or pyramid has 3 to 12 sides");
+      }
+      if (object2.top_scale !== void 0 && objectKind !== "pyramid")
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/top_scale`, "Only a pyramid is truncated (top_scale)");
+      if (objectKind === "frustum") {
+        const top = requireFiniteNumber(object2.top_radius, `${objectPath}/top_radius`);
+        if (top <= 0)
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/top_radius`, "A frustum's top radius must be greater than zero");
+      }
+      if (objectKind === "torus") {
+        const tube = requireFiniteNumber(object2.tube, `${objectPath}/tube`);
+        if (tube <= 0 || tube >= radius)
+          fail("OLL_INVALID_OPERATION_PAYLOAD", `${objectPath}/tube`, "A torus's tube must be thinner than its ring: 0 < tube < radius");
       }
     } else if (objectKind === "implicit_surface") {
       requireString(object2.expression, `${objectPath}/expression`);
@@ -9166,6 +9440,9 @@ function validateScene3dContent(action, path, variables) {
       if (!["point", "edge", "face"].includes(String(highlight.kind))) {
         fail("OLL_INVALID_OPERATION_PAYLOAD", `${highlightPath}/kind`, `Unknown 3D highlight kind '${String(highlight.kind)}'`);
       }
+      if (highlight.shown !== void 0 && highlight.shown !== "always" && highlight.shown !== "when_emphasized") {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${highlightPath}/shown`, "3D highlight shown must be 'always' or 'when_emphasized'");
+      }
       requireArray(highlight.points, `${highlightPath}/points`);
       const requiredCount = highlight.kind === "point" ? 1 : highlight.kind === "edge" ? 2 : 3;
       if (highlight.points.length < requiredCount || highlight.kind !== "face" && highlight.points.length !== requiredCount || highlight.points.length > 12) {
@@ -9254,6 +9531,43 @@ function validateImageResource(action, path, resourceContext) {
     }
   });
 }
+function validateInkResource(action, path, resourceContext) {
+  if (action.kind !== "ink")
+    return;
+  const content = action.content;
+  if (content.annotation !== void 0 && action.place.relation !== "annotates") {
+    fail("OLL_INVALID_PLACEMENT", `${path}/content/annotation`, "Only an annotation carries a position on its anchor");
+  }
+  if (action.place.relation === "annotates" && content.annotation === void 0) {
+    fail("OLL_INVALID_PLACEMENT", `${path}/content/annotation`, "An annotation needs its position on the anchor");
+  }
+  if (content.shown_strokes !== void 0 && (!Number.isInteger(content.shown_strokes) || content.shown_strokes < 1)) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/shown_strokes`, "shown_strokes is a whole number of strokes, at least 1");
+  }
+  validateDrawnSize(content.drawn_size, `${path}/content/drawn_size`);
+  if (!resourceContext)
+    return;
+  const snapshot = resourceContext.ink_snapshots?.find((candidate) => candidate.snapshot_id === content.snapshot_id);
+  if (!snapshot)
+    fail("OLL_RESOURCE_DENIED", `${path}/content/snapshot_id`, `Ink snapshot '${content.snapshot_id}' is not available in Session Context`);
+  if (snapshot.sha256 !== content.sha256)
+    fail("OLL_RESOURCE_DENIED", `${path}/content/sha256`, `Ink snapshot '${content.snapshot_id}' does not match its checksum`);
+  const allowed = new Set(snapshot.selection_ids ?? []);
+  (content.selections ?? []).forEach((selection, index) => {
+    if (!allowed.has(selection.selection_id)) {
+      fail("OLL_RESOURCE_DENIED", `${path}/content/selections/${index}/selection_id`, `Selection '${selection.selection_id}' is not part of '${content.snapshot_id}'`);
+    }
+  });
+}
+function validateDrawnSize(size, path) {
+  if (size === void 0)
+    return;
+  const value = size;
+  const fine = (n) => typeof n === "number" && Number.isFinite(n) && n > 0 && n <= 4e3;
+  if (!size || typeof size !== "object" || Array.isArray(size) || !fine(value.width) || !fine(value.height) || Object.keys(size).some((key) => key !== "width" && key !== "height")) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", path, "drawn_size is { width, height } in board units, each above 0 and at most 4000");
+  }
+}
 function validatePlacement(place5, path, registry) {
   requireObject(place5, path);
   if (!PLACEMENT_RELATIONS.has(place5.relation)) {
@@ -9263,9 +9577,23 @@ function validatePlacement(place5, path, registry) {
     if (forbidden in place5)
       fail("OLL_INVALID_PLACEMENT", `${path}/${forbidden}`, `Authoring Profile cannot set '${forbidden}'`);
   }
+  if (place5.relation === "continues") {
+    const offset = place5.offset;
+    const fine = (n) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= 4e3;
+    if (!offset || typeof offset !== "object" || Array.isArray(offset) || !fine(offset.x) || !fine(offset.y) || Object.keys(offset).some((key) => key !== "x" && key !== "y")) {
+      fail("OLL_INVALID_PLACEMENT", `${path}/offset`, "A continuation needs its offset { x, y } from the anchor's top-left, in board units within \xB14000");
+    }
+  } else {
+    if (place5.offset !== void 0)
+      fail("OLL_INVALID_PLACEMENT", `${path}/offset`, "Only a continuation has an offset");
+    if (place5.align === "equals" && place5.relation !== "replaces")
+      fail("OLL_INVALID_PLACEMENT", `${path}/align`, "Only a continuation, or what replaces one, lines up its '='");
+  }
   if (place5.relation === "new_region") {
     if (place5.anchor !== void 0)
       fail("OLL_INVALID_PLACEMENT", `${path}/anchor`, "new_region cannot use an anchor");
+  } else if (place5.relation === "annotates" || place5.relation === "replaces" || place5.relation === "continues") {
+    resolveLocal(registry, place5.anchor, `${path}/anchor`, ["node"]);
   } else {
     resolveLocal(registry, place5.anchor, `${path}/anchor`, ["node", "group"]);
   }
@@ -9274,6 +9602,9 @@ function validateActionPayload(action, path) {
   for (const field of Object.keys(action)) {
     if (!ACTION_FIELDS.has(field))
       fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/${field}`, `Unknown action field '${field}'`);
+  }
+  if (action.do !== "write" && "source" in action) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/source`, "Only a new card has a source");
   }
   if (action.do === "write") {
     requireAlias(action.as, `${path}/as`);
@@ -9304,8 +9635,13 @@ function validateActionPayload(action, path) {
   } else if (action.do === "focus") {
     requireArray(action.targets, `${path}/targets`);
     requireString(action.intent, `${path}/intent`);
-  } else if (action.do === "point") {
+  } else if (action.do === "point" || action.do === "hide") {
     requireString(action.target, `${path}/target`);
+  } else if (action.do === "view") {
+    requireString(action.target, `${path}/target`);
+    if (action.show === void 0 === (action.preset === void 0)) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", path, "A view shows either one highlighted part or one preset");
+    }
   } else if (action.do === "expression") {
     requireString(action.expression, `${path}/expression`);
   } else if (action.do === "animate") {
@@ -9352,6 +9688,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
   }
   requireObject(document.lesson, "/lesson");
   requireArray(document.lesson.goals, "/lesson/goals");
+  validateLessonAuthor(document);
   const lessonVariables = validateLessonVariables(document);
   const availableStudentControls = /* @__PURE__ */ new Map();
   const scene3dCameras = /* @__PURE__ */ new Map();
@@ -9364,6 +9701,21 @@ function validateAuthoringLesson(document, resourceContext = null) {
   requireObject(document.close, "/close");
   requireArray(document.close.focus, "/close/focus");
   const registry = /* @__PURE__ */ new Map();
+  const hidden = /* @__PURE__ */ new Set();
+  const inkNodes = /* @__PURE__ */ new Map();
+  const scene3dHighlights = /* @__PURE__ */ new Map();
+  const knownSelections = new Set((resourceContext?.ink_snapshots ?? []).flatMap((snapshot) => snapshot.selection_ids ?? []));
+  const requireLearnerTaught = (path, what) => {
+    if (!isLearnerTaught(document))
+      fail("OLL_INVALID_OPERATION", path, `${what} is only available in learner-taught lessons`);
+  };
+  const requireVisible = (value, path) => {
+    if (typeof value !== "string")
+      return;
+    const alias = value.split("#")[0];
+    if (hidden.has(alias))
+      fail("OLL_INVALID_REFERENCE", path, `'${alias}' is hidden`);
+  };
   if (document.board_context) {
     requireString(document.board_context.board_id, "/board_context/board_id");
     if (!Number.isSafeInteger(document.board_context.revision) || document.board_context.revision < 0) {
@@ -9424,7 +9776,11 @@ function validateAuthoringLesson(document, resourceContext = null) {
       if (beatKeys.has(beat.key))
         fail("OLL_DUPLICATE_ALIAS", `${beatPath}/key`, `Beat '${beat.key}' is duplicated`);
       beatKeys.add(beat.key);
-      requireArray(beat.actions, `${beatPath}/actions`);
+      if (!Array.isArray(beat.actions))
+        fail("OLL_INVALID_TYPE", `${beatPath}/actions`, "Expected an array");
+      if (!beat.actions.length && !(isLearnerTaught(document) && beat.say?.trim())) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${beatPath}/actions`, "A beat needs at least one action; only a learner-taught beat may be words alone");
+      }
       if (beat.start) {
         if (beat.start.kind === "practice")
           fail("OLL_INVALID_PHASE_START", `${beatPath}/start`, "Practice belongs on a student task");
@@ -9443,7 +9799,45 @@ function validateAuthoringLesson(document, resourceContext = null) {
           requireAlias(action.as, `${actionPath}/as`);
           requireObject(action.content, `${actionPath}/content`);
           validatePlacement(action.place, `${actionPath}/place`, registry);
-          const fragments = collectAddressableContent(action.content);
+          if (action.kind === "ink")
+            requireLearnerTaught(`${actionPath}/kind`, "Learner ink");
+          if (action.place.relation === "annotates") {
+            requireLearnerTaught(`${actionPath}/place/relation`, "Annotating a card");
+            if (action.kind !== "ink")
+              fail("OLL_INVALID_PLACEMENT", `${actionPath}/place/relation`, "Only learner ink annotates a card");
+          }
+          if (action.place.anchor !== void 0)
+            requireVisible(action.place.anchor, `${actionPath}/place/anchor`);
+          if (action.place.relation === "replaces" && action.place.align === "equals" && action.kind !== "math") {
+            fail("OLL_INVALID_PLACEMENT", `${actionPath}/place/align`, "Only math lines up its '='");
+          }
+          if (action.place.relation === "continues") {
+            requireLearnerTaught(`${actionPath}/place/relation`, "Continuing a card");
+            if (action.kind !== "ink" && action.kind !== "math")
+              fail("OLL_INVALID_PLACEMENT", `${actionPath}/place/relation`, "Only learner ink or math continues a card");
+            if (action.place.align === "equals" && action.kind !== "math")
+              fail("OLL_INVALID_PLACEMENT", `${actionPath}/place/align`, "Only math lines up its '='");
+          }
+          if (action.place.relation === "replaces") {
+            requireLearnerTaught(`${actionPath}/place/relation`, "Replacing a card");
+            if (registry.get(action.place.anchor)?.external) {
+              fail("OLL_INVALID_REFERENCE", `${actionPath}/place/anchor`, "External board references are read-only");
+            }
+            hidden.add(action.place.anchor);
+          }
+          validateInkResource(action, actionPath, resourceContext);
+          if (action.kind === "ink") {
+            inkNodes.set(action.as, action.place.relation);
+            for (const selection of action.content.selections ?? [])
+              knownSelections.add(selection.selection_id);
+          }
+          if (action.source !== void 0) {
+            requireLearnerTaught(`${actionPath}/source`, "A learner-confirmed source");
+            if (!knownSelections.has(action.source.selection)) {
+              fail("OLL_REFERENCE_NOT_FOUND", `${actionPath}/source/selection`, `Selection '${action.source.selection}' is not part of this lesson's ink`);
+            }
+          }
+          const fragments = collectAddressableContent(action.content, `${actionPath}/content`);
           const uniqueFragments = /* @__PURE__ */ new Set();
           for (const fragment of fragments) {
             requireAlias(fragment, `${actionPath}/content`);
@@ -9457,6 +9851,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
           validatePlotContent(action, actionPath, lessonVariables);
           validateScene3dContent(action, actionPath, lessonVariables);
           if (action.kind === "scene3d") {
+            scene3dHighlights.set(action.as, new Set((action.content.highlights ?? []).map((highlight) => highlight.as)));
             const camera = action.content.camera;
             scene3dCameras.set(action.as, {
               yaw: camera.yaw,
@@ -9489,6 +9884,33 @@ function validateAuthoringLesson(document, resourceContext = null) {
         }
         if (["emphasize", "point"].includes(action.do)) {
           resolveLocal(registry, action.target, `${actionPath}/target`, ["node", "connection", "group"]);
+          requireVisible(action.target, `${actionPath}/target`);
+          return;
+        }
+        if (action.do === "view") {
+          const target = resolveLocal(registry, action.target, `${actionPath}/target`, ["node"]);
+          const highlights = scene3dHighlights.get(target.alias);
+          if (!highlights || target.fragment)
+            fail("OLL_INVALID_REFERENCE", `${actionPath}/target`, "A view turns a whole 3D scene of this lesson");
+          requireVisible(action.target, `${actionPath}/target`);
+          if (action.show !== void 0) {
+            const shown = resolveLocal(registry, action.show, `${actionPath}/show`, ["node"]);
+            if (shown.alias !== target.alias || !shown.fragment || !highlights.has(shown.fragment)) {
+              fail("OLL_INVALID_REFERENCE", `${actionPath}/show`, "A view shows a highlighted part of the same scene");
+            }
+          }
+          return;
+        }
+        if (action.do === "hide") {
+          requireLearnerTaught(`${actionPath}/do`, "Hiding a card");
+          const resolved = resolveLocal(registry, action.target, `${actionPath}/target`, ["node"]);
+          if (resolved.fragment)
+            fail("OLL_INVALID_REFERENCE", `${actionPath}/target`, "Hide a whole card, not part of it");
+          if (registry.get(resolved.alias)?.external) {
+            fail("OLL_INVALID_REFERENCE", `${actionPath}/target`, "External board references are read-only");
+          }
+          requireVisible(action.target, `${actionPath}/target`);
+          hidden.add(resolved.alias);
           return;
         }
         if (action.do === "revise") {
@@ -9496,11 +9918,29 @@ function validateAuthoringLesson(document, resourceContext = null) {
           if (registry.get(resolved.alias)?.external) {
             fail("OLL_INVALID_REFERENCE", `${actionPath}/target`, "External board references are read-only");
           }
+          requireVisible(action.target, `${actionPath}/target`);
+          if (inkNodes.has(resolved.alias)) {
+            validateInkResource({ do: "write", as: resolved.alias, kind: "ink", role: "ink", content: action.content, place: { relation: inkNodes.get(resolved.alias) } }, actionPath, resourceContext);
+          }
+          const revisedFragments = collectAddressableContent(action.content, `${actionPath}/content`);
+          if (revisedFragments.length) {
+            const unique = /* @__PURE__ */ new Set();
+            for (const fragment of revisedFragments) {
+              requireAlias(fragment, `${actionPath}/content`);
+              if (unique.has(fragment))
+                fail("OLL_DUPLICATE_ALIAS", `${actionPath}/content`, `Fragment '${fragment}' is duplicated`);
+              unique.add(fragment);
+            }
+            validateStructuredContent(action.content, `${actionPath}/content`, unique);
+            registry.get(resolved.alias).fragments = unique;
+          }
           return;
         }
         if (action.do === "connect") {
           resolveLocal(registry, action.from, `${actionPath}/from`);
           resolveLocal(registry, action.to, `${actionPath}/to`);
+          requireVisible(action.from, `${actionPath}/from`);
+          requireVisible(action.to, `${actionPath}/to`);
           register(registry, action.as, "connection", `${actionPath}/as`);
           return;
         }
@@ -9516,6 +9956,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
           requireArray(action.targets, `${actionPath}/targets`);
           for (let index = 0; index < action.targets.length; index += 1) {
             resolveLocal(registry, action.targets[index], `${actionPath}/targets/${index}`, ["node", "group", "connection"]);
+            requireVisible(action.targets[index], `${actionPath}/targets/${index}`);
           }
         }
       });
@@ -9526,6 +9967,7 @@ function validateAuthoringLesson(document, resourceContext = null) {
   if (document.close?.focus) {
     for (let index = 0; index < document.close.focus.length; index += 1) {
       resolveLocal(registry, document.close.focus[index], `/close/focus/${index}`, ["node", "group", "connection"]);
+      requireVisible(document.close.focus[index], `/close/focus/${index}`);
     }
   }
   return { registry };
@@ -9535,7 +9977,7 @@ function stableId(host, type, alias) {
 }
 function normalizeAddressableContent(_host, nodeId, content) {
   const clone = structuredClone(content);
-  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "polygons", "regular_polygons", "circles", "segments", "arcs", "objects", "sections", "highlights"]) {
+  for (const field of ["fragments", "curves", "points", "guides", "regions", "elements", "edges", "polygons", "regular_polygons", "circles", "segments", "arcs", "objects", "sections", "highlights", "selections"]) {
     if (!Array.isArray(clone?.[field]))
       continue;
     clone[field] = clone[field].map((item) => {
@@ -9673,6 +10115,7 @@ function normalizeAction(action, context) {
         role: action.role,
         content: normalizeAddressableContent(host, nodeId, action.content),
         placement: normalizePlacement(registry, action.place),
+        ...action.source ? { source: structuredClone(action.source) } : {},
         ...host.regionId ? { region_id: host.regionId } : {}
       }
     };
@@ -9739,13 +10182,25 @@ function normalizeAction(action, context) {
       }
     };
   }
+  if (action.do === "hide") {
+    return { action_id: actionId, op: "board.hide", target: canonicalTarget(registry, action.target) };
+  }
+  if (action.do === "view") {
+    return {
+      action_id: actionId,
+      op: "scene3d.view",
+      target: canonicalTarget(registry, action.target),
+      view: action.show !== void 0 ? { show: canonicalTarget(registry, action.show) } : { preset: action.preset }
+    };
+  }
   if (action.do === "revise") {
+    const target = canonicalTarget(registry, action.target);
     return {
       action_id: actionId,
       op: "board.revise",
-      target: canonicalTarget(registry, action.target),
+      target,
       revision: {
-        content: action.content,
+        content: normalizeAddressableContent(host, target.node_id, action.content),
         reason: action.reason
       }
     };
@@ -9837,6 +10292,7 @@ function normalizeAuthoringLesson(document, host) {
           return {
             id: `${stableId(host, "step", step.key)}:beat:${beat.key}`,
             ...beat.say ? { narration: { text: beat.say, ...beat.delivery ? { delivery: beat.delivery } : {} } } : {},
+            ...beat.pace ? { pace: beat.pace } : {},
             stage
           };
         })
@@ -9874,6 +10330,7 @@ function createSemanticBoardState(open) {
       initial: variable.initial,
       min: variable.min,
       max: variable.max,
+      ...variable.wrap ? { wrap: true } : {},
       ...variable.label ? { label: variable.label } : {},
       ...variable.unit ? { unit: variable.unit } : {},
       ...variable.control ? { control: structuredClone(variable.control) } : {}
@@ -9942,6 +10399,8 @@ function evaluateContentBindings(content, variables) {
       if (property === "radius" && (record2[property] < 0 || record2[property] === 0 && binding.allow_zero !== true)) {
         throw new Error("Bound radius must be positive unless explicitly allowed to degenerate to zero");
       }
+      if (property === "unfold")
+        record2[property] = Math.min(1, Math.max(0, record2[property]));
       if (property === "sides" && (record2[property] < 3 || record2[property] > 384)) {
         throw new Error("Bound polygon sides must be in 3..384");
       }
@@ -9979,6 +10438,14 @@ function applyCanonicalAction(state, action) {
     const node = structuredClone(action.node);
     node.content = evaluateContentBindings(node.content, bindingValues(state));
     state.nodes[action.node.id] = node;
+    if (action.node.placement?.relation === "replaces") {
+      const replaced = state.nodes[anchor];
+      if (!replaced)
+        fail("OLL_REFERENCE_NOT_FOUND", "action.node.placement.anchor", `Replaced node '${anchor}' not found`);
+      replaced.hidden = true;
+      replaced.replaced_by = action.node.id;
+      state.focus = state.focus.filter((id) => id !== anchor);
+    }
   } else if (action.op === "board.connect") {
     if (!action.connection)
       fail("OLL_INVALID_EVENT", "action.connection", "board.connect requires connection");
@@ -10021,6 +10488,17 @@ function applyCanonicalAction(state, action) {
     if (!target)
       fail("OLL_REFERENCE_NOT_FOUND", "action.target", "Emphasis target not found");
     target.emphasis = [...target.emphasis ?? [], { target: action.target, emphasis: action.emphasis }];
+  } else if (action.op === "board.hide") {
+    const node = action.target?.node_id ? state.nodes[action.target.node_id] : void 0;
+    if (!node)
+      fail("OLL_REFERENCE_NOT_FOUND", "action.target", "Hidden node not found");
+    node.hidden = true;
+    state.focus = state.focus.filter((id) => id !== node.id);
+  } else if (action.op === "scene3d.view") {
+    const node = action.target?.node_id ? state.nodes[action.target.node_id] : void 0;
+    if (!node || node.kind !== "scene3d" || !action.view)
+      fail("OLL_REFERENCE_NOT_FOUND", "action.target", "View target is not a 3D scene");
+    node.view_intent = structuredClone(action.view);
   } else if (action.op === "teacher.point") {
     if (!canonicalTargetExists(state, action.target))
       fail("OLL_REFERENCE_NOT_FOUND", "action.target", "Point target not found");
