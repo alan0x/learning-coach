@@ -1,5 +1,5 @@
 // Recipe compilers of the math plugin: validated recipe parameters to OLL authoring actions.
-import { buildCirclePolygons, buildUnitCircle, type BuiltRecipe } from "octos-lesson-language/plugin-math";
+import { buildCirclePolygons, buildFunctionPlot, buildUnitCircle, type BuiltRecipe } from "octos-lesson-language/plugin-math";
 import { compileText } from "../lesson-text.js";
 import { rearrangementRecipe, REARRANGEMENT_CONSTRUCTIONS, type RearrangementConstruction, type RigidPose } from "../rearrangement.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
@@ -125,38 +125,15 @@ function compileFunctionPlot(
       }
     : viewport.y;
   assertRange(requestedY.min, requestedY.max, `${path}.y_range`);
-  const plotContent: Record<string, unknown> = {
-    title: namedNumbers(optionalText(input.title, compileText(plan, "函数图像"), `${path}.title`), plan),
-    axes: {
-      ...(expressions.length > 1 && expressions.some(e => e.replace(/[()\s]/g, "") === "x") ? {equal_scale:true} : {}),
-      x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
-      y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) },
-    },
-    curves: expressions.map((item, index) => ({
-      as: index === 0 ? "primary-curve" : `curve-${pad(index + 1)}`,
-      expression: item,
-      label: curveLabels[index]
-        ?? (index === 0 ? namedNumbers(optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`), plan) : `y = ${item}`),
-    })),
-  };
-  if (sampleNumbers.length) {
-    plotContent.points = sampleNumbers.map((sampleNumber, index) => {
-      const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
-      for (const x of [d.min, d.initial, d.max]) evaluate(expression, ["x"], {x}, `${path}.expression`);
-      return { as: index === 0 ? "moving-point" : "second-point", x: d.initial,
-        y: evaluate(expression, ["x"], {x:d.initial}, `${path}.expression`),
-        label: sampleNumbers.length === 2 ? (index === 0 ? "A" : "B") : "P(x, y)" };
-    });
-    plotContent.bindings = sampleNumbers.flatMap((sampleNumber, index) => {
-      const point = index === 0 ? "moving-point" : "second-point";
-      const variable = variableAlias(sampleNumber);
-      return [{target:`${point}.x`,expression:variable},
-        {target:`${point}.y`,expression:replaceIdentifier(expression,"x",variable)}];
-    });
-    if (sampleNumbers.length === 2) plotContent.measurement = "secant";
-  }
+  const samples = sampleNumbers.map((sampleNumber, index) => {
+    const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+    for (const x of [d.min, d.initial, d.max]) evaluate(expression, ["x"], {x}, `${path}.expression`);
+    return { x: d.initial, y: evaluate(expression, ["x"], {x:d.initial}, `${path}.expression`),
+      label: sampleNumbers.length === 2 ? (index === 0 ? "A" : "B") : "P(x, y)", x_expression: variableAlias(sampleNumber) };
+  });
   // Slope lessons with curve parameters still need visible reference points.
   // Their x positions are fixed; the parameter sliders change the curve.
+  let references: Array<{ x: number; y: number; label: string }> | undefined;
   if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
     const initialVariables = Object.fromEntries(dynamicNumbers.map(index =>
       [variableAlias(index), numberDefinition(plan, index, path).initial]));
@@ -165,15 +142,26 @@ function compileFunctionPlot(
       try { return evaluate(expression, expressionVariables, {...initialVariables, x}, path); }
       catch { return NaN; }
     });
-    if (ys.every(Number.isFinite)) {
-      plotContent.points = xs.map((x, index) => ({as:index ? "reference-b" : "reference-a", x, y:ys[index], label:index ? "B" : "A"}));
-      plotContent.bindings = xs.map((x, index) => ({target:`${index ? "reference-b" : "reference-a"}.y`, expression:replaceIdentifier(expression,"x",String(x))}));
-      plotContent.measurement = "secant";
-      plotContent.sample_input = "fixed_x";
-    }
+    if (ys.every(Number.isFinite)) references = xs.map((x, index) => ({ x, y: ys[index]!, label: index ? "B" : "A" }));
   }
+  // Built by the math plugin's shared layer, which Studio also uses.
+  const built = buildFunctionPlot({
+    as: base, role, place: placement,
+    title: namedNumbers(optionalText(input.title, compileText(plan, "函数图像"), `${path}.title`), plan),
+    axes: {
+      ...(expressions.length > 1 && expressions.some(e => e.replace(/[()\s]/g, "") === "x") ? {equal_scale:true} : {}),
+      x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
+      y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) },
+    },
+    curves: expressions.map((item, index) => ({
+      expression: item,
+      label: curveLabels[index]
+        ?? (index === 0 ? namedNumbers(optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`), plan) : `y = ${item}`),
+    })),
+    ...(samples.length ? { samples } : references ? { references } : {}),
+  });
   return {
-    actions: [{ do: "write", as: base, kind: "plot", role, content: plotContent, place: placement }],
+    actions: built.actions,
     whole: base,
     parts: new Map([
       ["whole", base],
