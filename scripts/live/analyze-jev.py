@@ -25,7 +25,7 @@ print("disposition matches (B):",sum(e==g for _,e,g in dis),"/",len(dis),"mismat
 # routing simulation for B
 print("\nB routing simulation (selected = top if p>=T1, plus second if p>=T2; else broad):")
 for T1 in (0.5,0.6,0.7,0.8):
-  for T2 in (0.2,0.3):
+  for T2 in (0.05,0.1,0.2,0.3):
     stats=collections.Counter(); misses=[]
     for r in B:
         if disp(r)!='generate_lesson': stats['not a lesson']+=1; continue
