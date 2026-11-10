@@ -9,7 +9,7 @@ import { compileText } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
 import { functionViewport } from "../function-viewport.js";
 import { type AuthoringAction } from "octos-lesson-language";
-import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
 import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
@@ -362,15 +362,17 @@ function compileImplicitSurface(
   }
   const number = content.numbers?.[0];
   const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
+  const title = optionalText(input.title, compileText(plan, "隐式曲面与截面"), `${path}.title`);
   let built: BuiltRecipe;
   try {
     built = buildImplicitSurface({
       as: base, role, place: placement, t: translator(plan),
-      title: optionalText(input.title, compileText(plan, "隐式曲面与截面"), `${path}.title`),
-      expression, level, axis,
+      title, expression, level, axis,
       section: { value: sectionValue, ...(number ? { variable: variableAlias(number) } : {}) },
     });
   } catch (error) {
+    // Only the builder's own failure (no stable viewport) is an expression problem.
+    if (error instanceof LessonPlanError) throw error;
     fail(
       "LESSON_PLAN_CAPABILITY_PARAMETER",
       `${path}.expression`,

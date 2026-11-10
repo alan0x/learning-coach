@@ -81,3 +81,11 @@ test("an invalid plot title is reported before its samples are evaluated", () =>
   plot.numbers[0] = { ...plot.numbers[0], min: 0, max: 2, initial: 1 };
   assert.match(firstProblem(plot), /\.parameters\.title$/);
 });
+
+test("an invalid implicit-surface title is reported as a title, not an expression", () => {
+  const surface = samplePlan("implicit_surface_with_section");
+  surface.sections[0].moments[0].actions[0].content.parameters = { expression: "x^2+y^2+z^2", level: 1, title: 123 };
+  assert.match(firstProblem(surface), /\.parameters\.title$/);
+  surface.sections[0].moments[0].actions[0].content.parameters = { expression: "x^2+y^2+z^2", level: -1 };
+  assert.match(firstProblem(surface), /\.parameters\.expression$/, "a surface with no points is still an expression problem");
+});

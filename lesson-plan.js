@@ -11348,8 +11348,9 @@ function buildCirclePolygons(input) {
   };
 }
 var functionCurveId = (index) => index === 0 ? "primary-curve" : `curve-${String(index + 1).padStart(2, "0")}`;
-function replaceIdentifier(expression, source, target) {
-  return expression.replace(new RegExp(`\\b${source}\\b`, "gu"), target);
+function substituteX(expression, value) {
+  const atomic = /^(?:[A-Za-z_][A-Za-z0-9_]*|\d+(?:\.\d+)?)$/.test(value);
+  return expression.replace(/\bx\b/gu, atomic ? value : `(${value})`);
 }
 var FUNCTION_PLOT_POINT_IDS = { samples: ["moving-point", "second-point"], references: ["reference-a", "reference-b"] };
 function buildFunctionPlot(input) {
@@ -11357,7 +11358,8 @@ function buildFunctionPlot(input) {
   const content = {
     ...input.title !== void 0 ? { title: input.title } : {},
     axes: input.axes,
-    curves: input.curves.map((curve, index) => ({ as: functionCurveId(index), ...curve }))
+    // The builder names the curves; a caller's own "as" is ignored so the part names stay true.
+    curves: input.curves.map(({ as: _ignored, ...curve }, index) => ({ as: functionCurveId(index), ...curve }))
   };
   if (input.samples?.length) {
     content.points = input.samples.map((sample, index) => ({ as: FUNCTION_PLOT_POINT_IDS.samples[index], x: sample.x, y: sample.y, label: sample.label }));
@@ -11365,14 +11367,14 @@ function buildFunctionPlot(input) {
       const point = FUNCTION_PLOT_POINT_IDS.samples[index];
       return [
         { target: `${point}.x`, expression: sample.x_expression },
-        { target: `${point}.y`, expression: replaceIdentifier(primary, "x", sample.x_expression) }
+        { target: `${point}.y`, expression: substituteX(primary, sample.x_expression) }
       ];
     });
     if (input.samples.length === 2)
       content.measurement = "secant";
   } else if (input.references?.length) {
     content.points = input.references.map((reference, index) => ({ as: FUNCTION_PLOT_POINT_IDS.references[index], x: reference.x, y: reference.y, label: reference.label }));
-    content.bindings = input.references.map((reference, index) => ({ target: `${FUNCTION_PLOT_POINT_IDS.references[index]}.y`, expression: replaceIdentifier(primary, "x", String(reference.x)) }));
+    content.bindings = input.references.map((reference, index) => ({ target: `${FUNCTION_PLOT_POINT_IDS.references[index]}.y`, expression: substituteX(primary, String(reference.x)) }));
     content.measurement = "secant";
     content.sample_input = "fixed_x";
   }
@@ -11831,7 +11833,7 @@ function optionalStringArray(value, fallback, path) {
 function assertRange(min, max, path) {
   if (!(min < max)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "range minimum must be smaller than maximum");
 }
-function replaceIdentifier2(expression, source, target) {
+function replaceIdentifier(expression, source, target) {
   return expression.replace(new RegExp(`\\b${source}\\b`, "gu"), target);
 }
 function safeFunctionExpression(value, fallback, variables, path) {
@@ -14127,6 +14129,7 @@ function compileImplicitSurface(base, content, role, placement, plan, path) {
   }
   const number = content.numbers?.[0];
   const sectionValue = number ? numberDefinition(plan, number, `${path}.numbers[0]`).initial : 0;
+  const title = optionalText(input.title, compileText(plan, "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762"), `${path}.title`);
   let built;
   try {
     built = buildImplicitSurface({
@@ -14134,13 +14137,14 @@ function compileImplicitSurface(base, content, role, placement, plan, path) {
       role,
       place: placement,
       t: translator(plan),
-      title: optionalText(input.title, compileText(plan, "\u9690\u5F0F\u66F2\u9762\u4E0E\u622A\u9762"), `${path}.title`),
+      title,
       expression,
       level,
       axis,
       section: { value: sectionValue, ...number ? { variable: variableAlias(number) } : {} }
     });
   } catch (error) {
+    if (error instanceof LessonPlanError) throw error;
     fail2(
       "LESSON_PLAN_CAPABILITY_PARAMETER",
       `${path}.expression`,
@@ -14177,7 +14181,7 @@ function compileCoordinateCircle(base, content, role, placement, plan, path) {
     center: { x: centerX, y: centerY },
     radius,
     maximum_radius: maximumRadius,
-    ...variable ? { radius_binding: { expression: formula ? replaceIdentifier2(formula, "n1", variable) : variable, formula: Boolean(formula) } } : {}
+    ...variable ? { radius_binding: { expression: formula ? replaceIdentifier(formula, "n1", variable) : variable, formula: Boolean(formula) } } : {}
   }));
 }
 function compileRectangleUnitSquareArray(base, content, role, placement, plan, path) {
