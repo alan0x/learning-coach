@@ -24,4 +24,5 @@ export interface SectionFacts {
 export type SectionFactsHook = (input: SectionFactsInput) => SectionFacts;
 
 /** Section-fact hooks of the installed plugins, keyed by recipe. */
-export const SECTION_FACTS: Readonly<Record<string, SectionFactsHook>> = { ...MATH_SECTION_FACTS };
+// Null prototype, like RECIPE_HOOKS: unknown names find nothing.
+export const SECTION_FACTS: Readonly<Record<string, SectionFactsHook | undefined>> = Object.assign(Object.create(null), MATH_SECTION_FACTS);

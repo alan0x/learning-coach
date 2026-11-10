@@ -3,7 +3,6 @@ import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
-  PROCESS_DIAGRAM_CONTRACT,
   LESSON_PLAN_CAPABILITIES,
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VERSION,
@@ -47,6 +46,7 @@ import {
 import { completedJsonObjectProperty } from "./json-stream.js";
 import { promptSlot } from "./plugins/index.js";
 import { SECTION_FACTS } from "./plugins/section-facts.js";
+import { RECIPE_HOOKS, PLUGIN_HOOKS } from "./plugins/hooks.js";
 
 export interface LessonPlanGenerationInput {
   turn_id: string;
@@ -615,217 +615,6 @@ const boardContentKeys: Record<string, readonly string[]> = {
   image: ["resource", "alt"],
 };
 
-type FormulaLexeme =
-  | { kind: "number"; value: number }
-  | { kind: "identifier"; value: string }
-  | { kind: "operator"; value: "+" | "-" | "*" | "/" | "^" }
-  | { kind: "left" | "right" };
-
-const formulaFunctions = new Set([
-  "abs", "acos", "asin", "atan", "ceil", "cos", "exp", "floor",
-  "ln", "log", "round", "sin", "sqrt", "tan",
-]);
-
-function formulaError(path: string, message: string): never {
-  throw new LessonPlanError("LESSON_PLAN_EXPRESSION", path, message);
-}
-
-const atomicBareFunctionPattern = new RegExp(
-  `\\b(${[...formulaFunctions].join("|")})\\s+(-?(?:x|n\\d+|pi|e|(?:\\d+(?:\\.\\d*)?|\\.\\d+)))(?=\\s*(?:$|[+\\-*/),]))`,
-  "giu",
-);
-
-const atomicSubscriptLogPattern = new RegExp(
-  `\\blog_\\{?((?:\\d+(?:\\.\\d*)?|\\.\\d+))\\}?\\s+(-?(?:x|n\\d+|pi|e|(?:\\d+(?:\\.\\d*)?|\\.\\d+)))(?=\\s*(?:$|[+\\-*/),]))`,
-  "giu",
-);
-
-const parenthesizedSubscriptLogPattern = new RegExp(
-  `\\blog_?\\{?((?:\\d+(?:\\.\\d*)?|\\.\\d+))\\}?\\s*\\(\\s*(-?(?:x|n\\d+|pi|e|(?:\\d+(?:\\.\\d*)?|\\.\\d+)))\\s*\\)`,
-  "giu",
-);
-
-function normalizeAtomicBareFunctionCalls(formula: string): string {
-  // Only normalize an unambiguous, single atomic argument. Expressions such
-  // as `log x^2` or `sin x y` keep failing instead of being guessed.
-  return formula
-    .replace(parenthesizedSubscriptLogPattern, (_match, base: string, argument: string) => {
-      const numericBase = Number(base);
-      if (!(numericBase > 0) || numericBase === 1) return _match;
-      return `(log(${argument})/log(${base}))`;
-    })
-    .replace(atomicSubscriptLogPattern, (_match, base: string, argument: string) => {
-      const numericBase = Number(base);
-      if (!(numericBase > 0) || numericBase === 1) return _match;
-      // Change of base works regardless of whether the runtime's `log` is
-      // natural or base ten, and avoids adding a second log operator.
-      return `(log(${argument})/log(${base}))`;
-    })
-    .replace(atomicBareFunctionPattern, (_match, name: string, argument: string) => (
-      `${name}(${argument})`
-    ));
-}
-
-function formulaLexemes(rawFormula: unknown, path: string): FormulaLexeme[] {
-  if (typeof rawFormula !== "string" || !rawFormula.trim() || rawFormula.length > 256) {
-    return formulaError(path, "expected a non-empty formula up to 256 characters");
-  }
-  let formula = normalizeAtomicBareFunctionCalls(rawFormula.trim())
-    .replaceAll("−", "-")
-    .replaceAll("×", "*")
-    .replaceAll("÷", "/")
-    .replaceAll("π", "pi")
-    .replaceAll("²", "^2")
-    .replaceAll("³", "^3");
-  const equals = [...formula.matchAll(/=/gu)];
-  if (equals.length > 1) formulaError(path, "formula may contain at most one equals sign");
-  if (equals.length === 1) {
-    const index = equals[0].index ?? 0;
-    const left = formula.slice(0, index).replaceAll(/\s+/gu, "").toLowerCase();
-    if (left !== "y" && left !== "f(x)") {
-      formulaError(path, "an optional formula left side must be y or f(x)");
-    }
-    formula = formula.slice(index + 1);
-  }
-  const compact = formula.replaceAll(/\s+/gu, "");
-  const tokens: FormulaLexeme[] = [];
-  for (let index = 0; index < compact.length;) {
-    const rest = compact.slice(index);
-    const number = /^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/iu.exec(rest)?.[0];
-    if (number) {
-      const value = Number(number);
-      if (!Number.isFinite(value)) formulaError(path, `invalid number '${number}'`);
-      tokens.push({ kind: "number", value });
-      index += number.length;
-      continue;
-    }
-    const identifier = /^(?:n\d+|[a-z_][a-z_]*)/iu.exec(rest)?.[0];
-    if (identifier) {
-      tokens.push({ kind: "identifier", value: identifier.toLowerCase() });
-      index += identifier.length;
-      continue;
-    }
-    const character = compact[index];
-    if (character === "(" || character === ")") {
-      tokens.push({ kind: character === "(" ? "left" : "right" });
-      index += 1;
-      continue;
-    }
-    if (character === "+" || character === "-" || character === "*" || character === "/" || character === "^") {
-      tokens.push({ kind: "operator", value: character });
-      index += 1;
-      continue;
-    }
-    formulaError(path, `unsupported formula character '${character}'`);
-  }
-  const withImplicitMultiplication: FormulaLexeme[] = [];
-  const canEndValue = (token: FormulaLexeme): boolean => (
-    token.kind === "number" || token.kind === "identifier" || token.kind === "right"
-  );
-  const canStartValue = (token: FormulaLexeme): boolean => (
-    token.kind === "number" || token.kind === "identifier" || token.kind === "left"
-  );
-  for (const token of tokens) {
-    const previous = withImplicitMultiplication.at(-1);
-    const functionCall = previous?.kind === "identifier"
-      && formulaFunctions.has(previous.value)
-      && token.kind === "left";
-    if (previous && canEndValue(previous) && canStartValue(token) && !functionCall) {
-      withImplicitMultiplication.push({ kind: "operator", value: "*" });
-    }
-    withImplicitMultiplication.push(token);
-  }
-  return withImplicitMultiplication;
-}
-
-function parseModelFormula(rawFormula: unknown, numberCount: number, path: string): LessonPlanMathExpression {
-  const lexemes = formulaLexemes(rawFormula, path);
-  let position = 0;
-  const peek = (): FormulaLexeme | undefined => lexemes[position];
-  const take = (): FormulaLexeme | undefined => lexemes[position++];
-  const binary = (
-    left: LessonPlanMathExpression,
-    right: LessonPlanMathExpression,
-    operator: "add" | "subtract" | "multiply" | "divide" | "power",
-  ): LessonPlanMathExpression => [...left, ...right, { kind: "operator", operator }];
-
-  let parseExpression: () => LessonPlanMathExpression;
-  let parseUnary: () => LessonPlanMathExpression;
-  const parsePrimary = (): LessonPlanMathExpression => {
-    const token = take();
-    if (!token) return formulaError(path, "formula ended before a value");
-    if (token.kind === "number") return [{ kind: "literal", value: token.value }];
-    if (token.kind === "left") {
-      const value = parseExpression();
-      if (take()?.kind !== "right") formulaError(path, "formula has an unclosed parenthesis");
-      return value;
-    }
-    if (token.kind !== "identifier") return formulaError(path, "expected a number, x, n1, constant, or function");
-    if (token.value === "x") return [{ kind: "input" }];
-    if (token.value === "pi" || token.value === "e") return [{ kind: "constant", name: token.value }];
-    const numberMatch = /^n(\d+)$/u.exec(token.value);
-    if (numberMatch) {
-      const number = Number(numberMatch[1]);
-      if (number < 1 || number > numberCount) {
-        formulaError(path, `formula references unavailable numeric control n${number}`);
-      }
-      return [{ kind: "number", number }];
-    }
-    if (!formulaFunctions.has(token.value)) formulaError(path, `unsupported formula name '${token.value}'`);
-    if (take()?.kind !== "left") formulaError(path, `function ${token.value} requires parentheses`);
-    const argument = parseExpression();
-    if (take()?.kind !== "right") formulaError(path, `function ${token.value} has an unclosed parenthesis`);
-    return [...argument, {
-      kind: "function",
-      name: token.value as "abs" | "acos" | "asin" | "atan" | "ceil" | "cos" | "exp" | "floor" | "ln" | "log" | "round" | "sin" | "sqrt" | "tan",
-    }];
-  };
-  const parsePower = (): LessonPlanMathExpression => {
-    const left = parsePrimary();
-    const token = peek();
-    if (token?.kind === "operator" && token.value === "^") {
-      take();
-      return binary(left, parseUnary(), "power");
-    }
-    return left;
-  };
-  parseUnary = (): LessonPlanMathExpression => {
-    const token = peek();
-    if (token?.kind === "operator" && (token.value === "+" || token.value === "-")) {
-      take();
-      const value = parseUnary();
-      return token.value === "-" ? [...value, { kind: "negate" }] : value;
-    }
-    return parsePower();
-  };
-  const parseProduct = (): LessonPlanMathExpression => {
-    let value = parseUnary();
-    while (true) {
-      const token = peek();
-      if (token?.kind !== "operator" || (token.value !== "*" && token.value !== "/")) break;
-      take();
-      value = binary(value, parseUnary(), token.value === "*" ? "multiply" : "divide");
-    }
-    return value;
-  };
-  parseExpression = (): LessonPlanMathExpression => {
-    let value = parseProduct();
-    while (true) {
-      const token = peek();
-      if (token?.kind !== "operator" || (token.value !== "+" && token.value !== "-")) break;
-      take();
-      value = binary(value, parseProduct(), token.value === "+" ? "add" : "subtract");
-    }
-    return value;
-  };
-  const result = parseExpression();
-  if (position !== lexemes.length) formulaError(path, "formula contains an unexpected trailing token");
-  if (!result.some((token) => token.kind === "input")) {
-    formulaError(path, "a function plot formula must depend on x");
-  }
-  return result;
-}
-
 function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: number): unknown {
   if (typeof kind !== "string" || !value || typeof value !== "object" || Array.isArray(value)) return value;
   const content = value as Record<string, unknown>;
@@ -848,100 +637,8 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
   const parameters = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters)
     ? { ...(content.parameters as Record<string, unknown>) }
     : {};
-  if (capability === "implicit_surface_with_section"
-    && typeof parameters.expression === "string") {
-    const equation = parameters.expression.split("=").map((part) => part.trim());
-    if (equation.length === 2 && equation.every(Boolean)) {
-      const rightLevel = Number(equation[1]);
-      const leftLevel = Number(equation[0]);
-      if (Number.isFinite(rightLevel)) {
-        parameters.expression = equation[0];
-        parameters.level = rightLevel;
-      } else if (Number.isFinite(leftLevel)) {
-        parameters.expression = equation[1];
-        parameters.level = leftLevel;
-      } else {
-        parameters.expression = `(${equation[0]})-(${equation[1]})`;
-        parameters.level = 0;
-      }
-    } else if (parameters.level === undefined) {
-      // Implicit equations are canonically F(x,y,z)=0. When the model writes
-      // only the residual expression, the missing right-hand side is execution
-      // state the program can supply without regenerating the section.
-      parameters.level = 0;
-    }
-  }
-  let forceNoNumbers = false;
-  if (capability === "function_plot") {
-    const rawFormulas = parameters.formulas !== undefined
-      ? parameters.formulas
-      : typeof parameters.expression === "string"
-        ? [parameters.expression]
-        : Array.isArray(parameters.expressions)
-          ? parameters.expressions
-          : undefined;
-    if (rawFormulas !== undefined) {
-      if (!Array.isArray(rawFormulas)
-        || rawFormulas.length < 1
-        || rawFormulas.length > 8) {
-        formulaError(
-          "$lessonPlanSection.visual.parameters.formulas",
-          "expected one to eight formulas",
-        );
-      }
-      // The provider can occasionally return an older synonymous field in
-      // addition to `formulas`, even under a response schema. Select one
-      // semantic source and erase all execution representations before the
-      // program builds exactly one canonical representation below.
-      delete parameters.formulas;
-      delete parameters.expression;
-      delete parameters.expressions;
-      delete parameters.expression_tokens;
-      const parsed = rawFormulas.map((formula, index) => parseModelFormula(
-        formula,
-        numberCount,
-        `$lessonPlanSection.visual.parameters.formulas[${index}]`,
-      ));
-      if (parsed.length === 1) {
-        parameters.expression_tokens = parsed[0];
-      } else {
-        if (parsed.some((expression) => expression.some((token) => token.kind === "number"))) {
-          formulaError(
-            "$lessonPlanSection.visual.parameters.formulas",
-            "a multi-curve comparison currently supports static formulas only; use one formula when lesson numbers change the whole curve",
-          );
-        }
-        // Formula text is a teaching choice. Curve identity and duplicate
-        // handling are execution details: canonicalize and deduplicate them in
-        // the program so a probabilistic repeated formula cannot render the
-        // same curve twice.
-        const canonical = parsed.map(mathExpressionToOll);
-        const retainedIndexes: number[] = [];
-        const seen = new Set<string>();
-        canonical.forEach((expression, index) => {
-          if (seen.has(expression)) return;
-          seen.add(expression);
-          retainedIndexes.push(index);
-        });
-        parameters.expressions = retainedIndexes.map((index) => canonical[index]);
-        if (Array.isArray(parameters.curve_labels)
-          && parameters.curve_labels.length === canonical.length) {
-          parameters.curve_labels = retainedIndexes.map((index) => parameters.curve_labels![index]);
-        } else {
-          // Labels are optional presentation text. If they do not align with
-          // the actual curves, derive safe labels from the expressions instead
-          // of rejecting and regenerating the lesson.
-          delete parameters.curve_labels;
-        }
-        // A single-curve label from a speculative draft cannot safely name the
-        // first member of a later multi-curve comparison.
-        delete parameters.curve_label;
-        // A multi-curve request is an explicit static comparison. A stray
-        // model-authored number must never turn it into a moving-point lesson.
-        forceNoNumbers = true;
-      }
-    }
-  }
+  const hooks = typeof capability === "string" ? RECIPE_HOOKS[capability] : undefined;
+  const forceNoNumbers = hooks?.lower_model_parameters?.(parameters, { numberCount })?.no_numbers === true;
   if (typeof content.title === "string" && parameters.title === undefined) parameters.title = content.title;
   if (typeof capability === "string" && capability in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
     const allowedParameters = new Set(
@@ -962,16 +659,8 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
     )))].slice(0, numberLimit)
     : [];
   if (forceNoNumbers) validNumbers = [];
-  if (capability === "function_plot" && Array.isArray(parameters.expression_tokens)) {
-    const formulaNumbers = [...new Set(parameters.expression_tokens.flatMap((token) => (
-      token && typeof token === "object" && !Array.isArray(token)
-        && (token as Record<string, unknown>).kind === "number"
-        && Number.isInteger((token as Record<string, unknown>).number)
-        ? [Number((token as Record<string, unknown>).number)]
-        : []
-    )))].filter((number) => number >= 1 && number <= numberCount).slice(0, numberLimit);
-    if (formulaNumbers.length > 0) validNumbers = formulaNumbers;
-  }
+  const parameterNumbers = hooks?.numbers_from_parameters?.(parameters, { numberCount, limit: numberLimit }) ?? [];
+  if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
   if (!forceNoNumbers
     && validNumbers.length === 0
     && numberCount === 1
@@ -1005,34 +694,12 @@ function compatibleVisualNumberPurpose(left: VisualNumberPurpose, right: VisualN
   return left === "generic" || right === "generic" || left === right;
 }
 
-function processDiagramRemovalReason(content: LessonPlanVisualContent): string | undefined {
-  if (content.capability !== "process_diagram") return undefined;
-  const input = content.parameters ?? {};
-  const steps = input.steps;
-  const title = input.title;
-  if (!Array.isArray(steps)) return "missing_steps";
-  if (steps.length < PROCESS_DIAGRAM_CONTRACT.min_steps || steps.length > PROCESS_DIAGRAM_CONTRACT.max_steps) {
-    return "step_count_out_of_range";
-  }
-  if (!steps.every((step) => (
-    typeof step === "string"
-    && step.trim().length >= 1
-    && step.trim().length <= PROCESS_DIAGRAM_CONTRACT.max_step_characters
-  ))) {
-    return "step_text_out_of_range";
-  }
-  if (title !== undefined && (
-    typeof title !== "string"
-    || title.trim().length < 1
-    || title.trim().length > PROCESS_DIAGRAM_CONTRACT.max_title_characters
-  )) {
-    return "title_text_out_of_range";
-  }
-  return undefined;
+function recipeRemovalReason(content: LessonPlanVisualContent): string | undefined {
+  return RECIPE_HOOKS[content.capability]?.removal_reason?.(content);
 }
 
 function isExecutableProcessDiagram(content: LessonPlanVisualContent): boolean {
-  return processDiagramRemovalReason(content) === undefined;
+  return recipeRemovalReason(content) === undefined;
 }
 
 function rebuildCreatePlacements(
@@ -1124,7 +791,7 @@ function sanitizeNonessentialVisuals(
         const courseVisualPosition = Number.isInteger(slot)
           ? courseVisualPositionBySlot.get(`${sectionNumber}:${slot}`)
           : undefined;
-        const processDiagramReason = processDiagramRemovalReason(content);
+        const processDiagramReason = recipeRemovalReason(content);
         if (processDiagramReason) {
           adjustments.push({
             kind: "visual_removed",
@@ -1159,10 +826,7 @@ function sanitizeNonessentialVisuals(
   });
   for (const entry of visualEntries) {
     const incompatible = (entry.content.numbers ?? []).some((number, index) => {
-      // A declared radius formula maps an input quantity to radius; its input
-      // is not itself a radius. Keep shared height/time/etc. controls intact.
-      const next = entry.content.capability === "coordinate_circle"
-        && entry.content.parameters?.radius_expression !== undefined
+      const next = RECIPE_HOOKS[entry.content.capability]?.free_number?.(entry.content, index)
         ? "generic" : visualNumberPurpose(entry.content.capability, index);
       const current = establishedPurposes.get(number);
       if (!current || compatibleVisualNumberPurpose(current, next)) {
@@ -2740,51 +2404,6 @@ function locallyUnsupportedLessonRequest(request: string, language?: string): st
   return undefined;
 }
 
-function requestsTwoIndependentPoints(request: string): boolean {
-  return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
-}
-
-function prepareTwoPointOutline(outline: LessonPlanOutline, request: string, language?: string): void {
-  if (!requestsTwoIndependentPoints(request)) return;
-  outline.numbers ??= [];
-  while (outline.numbers.length < 2) {
-    const index = outline.numbers.length;
-    outline.numbers.push({
-      initial: index === 0 ? -1 : 2,
-      min: -5,
-      max: 5,
-      label: index === 0 ? lessonText(language, "A点的x坐标") : lessonText(language, "B点的x坐标"),
-      student_control: { kind: "slider", step: 0.25 },
-    });
-  }
-  outline.numbers.slice(0, 2).forEach((number, index) => {
-    number.label = index === 0 ? lessonText(language, "A点的x坐标") : lessonText(language, "B点的x坐标");
-    number.student_control = { kind: "slider", step: number.student_control?.step ?? 0.25 };
-  });
-}
-
-function specializeTwoPointDraft(
-  draft: LessonPlanSectionDraft,
-  outline: LessonPlanOutline,
-  request: string,
-): void {
-  if (!requestsTwoIndependentPoints(request) || (outline.numbers?.length ?? 0) < 2) return;
-  for (const moment of draft.moments) for (const action of moment.actions) {
-    if (action.action !== "create" || action.kind !== "visual") continue;
-    const content = action.content as LessonPlanVisualContent;
-    if (content.capability !== "function_plot") continue;
-    const tokens = content.parameters?.expression_tokens;
-    if (Array.isArray(tokens)) {
-      content.parameters!.expression_tokens = (tokens as LessonPlanMathToken[]).map((token) => (
-        token.kind === "number"
-          ? { kind: "literal", value: outline.numbers?.[token.number - 1]?.initial ?? 0 }
-          : token
-      ));
-    }
-    content.numbers = [1, 2];
-  }
-}
-
 export async function generateLessonPlanWithModel(
   model: LessonPlanModelCall,
   input: LessonPlanGenerationInput,
@@ -2925,7 +2544,7 @@ export async function generateLessonPlanWithModel(
       ),
       fixedRequestParts.length,
     );
-    prepareTwoPointOutline(outline, input.learner_request, input.language);
+    for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
       bootstrappedFirstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
@@ -2937,7 +2556,7 @@ export async function generateLessonPlanWithModel(
         true,
         input.language,
       );
-      specializeTwoPointDraft(bootstrappedFirstSection, outline, input.learner_request);
+      for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(bootstrappedFirstSection, { outline, request: input.learner_request });
     } catch (error) {
       sectionErrors.set(1, error);
       await options.on_rejected_part?.({
@@ -3067,7 +2686,7 @@ export async function generateLessonPlanWithModel(
     }
   }
   if (!outline) throw outlineError;
-  prepareTwoPointOutline(outline, input.learner_request, input.language);
+  for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
   await options.on_outline_ready?.({
     sections: outline.sections.length,
     course_visuals: outline.course_visuals?.length ?? 0,
@@ -3183,7 +2802,7 @@ export async function generateLessonPlanWithModel(
         true,
         input.language,
       );
-      specializeTwoPointDraft(candidate, outline, input.learner_request);
+      for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(candidate, { outline, request: input.learner_request });
     } catch (error) {
       const previousError = sectionErrors.get(section);
       sectionErrors.set(section, error);

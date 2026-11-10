@@ -1,6 +1,7 @@
 import { compileMathExpression, isSimplestFraction, parseNumericAnswer } from "octos-lesson-language";
 
 import { PLUGIN_RECIPE_REGISTRY } from "./plugins/index.js";
+import { RECIPE_HOOKS, type RecipeValidationContext } from "./plugins/hooks.js";
 export const LESSON_PLAN_VERSION = "0.1" as const;
 
 export { PROCESS_DIAGRAM_CONTRACT } from "./plugins/shared.js";
@@ -495,6 +496,10 @@ function validateParameters(value: unknown, path: string): void {
   }
 }
 
+function recipeValidationContext(path: string, numberCount: number): RecipeValidationContext {
+  return { path, numberCount, fail, record, array, validateMathExpression };
+}
+
 function validateMathExpression(
   value: unknown,
   path: string,
@@ -650,51 +655,10 @@ function validateBoardContent(kind: LessonPlanBoardKind, value: unknown, path: s
   } else {
     allowedKeys(content, ["capability", "parameters", "numbers"], path);
     const visualCapability = capability(content.capability, `${path}.capability`);
-    if (content.parameters !== undefined) {
-      validateParameters(content.parameters, `${path}.parameters`);
-      if (visualCapability === "function_plot") {
-        const visualParameters = record(content.parameters, `${path}.parameters`);
-        const expressionFields = ["expression", "expressions", "expression_tokens"]
-          .filter((field) => visualParameters[field] !== undefined);
-        if (expressionFields.length !== 1) {
-          fail(
-            "LESSON_PLAN_EXPRESSION",
-            `${path}.parameters`,
-            "a function plot requires exactly one explicit mathematical expression",
-          );
-        }
-        if (visualParameters.expression_tokens !== undefined) {
-          const expressionTokens = array(
-            visualParameters.expression_tokens,
-            `${path}.parameters.expression_tokens`,
-          );
-          if (!expressionTokens.some((token) => (
-            token !== null
-            && typeof token === "object"
-            && !Array.isArray(token)
-            && (token as Record<string, unknown>).kind === "input"
-          ))) {
-            fail(
-              "LESSON_PLAN_PLOT_INPUT",
-              `${path}.parameters.expression_tokens`,
-              "a parameterized function curve must explicitly depend on the plot input; a lesson number cannot replace the horizontal-axis input",
-            );
-          }
-          validateMathExpression(
-            visualParameters.expression_tokens,
-            `${path}.parameters.expression_tokens`,
-            numberCount,
-            true,
-          );
-        }
-      }
-    } else if (visualCapability === "function_plot") {
-      fail(
-        "LESSON_PLAN_EXPRESSION",
-        `${path}.parameters`,
-        "a function plot requires an explicit mathematical expression",
-      );
-    }
+    const hooks = RECIPE_HOOKS[visualCapability];
+    const hookContext = recipeValidationContext(path, numberCount);
+    if (content.parameters !== undefined) validateParameters(content.parameters, `${path}.parameters`);
+    hooks?.validate_parameters?.(content.parameters, hookContext);
     if (content.numbers !== undefined) {
       const numbers = array(content.numbers, `${path}.numbers`);
       if (numbers.length > 16) fail("LESSON_PLAN_CONTENT", `${path}.numbers`, "too many number references");
@@ -702,10 +666,7 @@ function validateBoardContent(kind: LessonPlanBoardKind, value: unknown, path: s
         const number = positiveIndex(item, `${path}.numbers[${index}]`);
         if (number > numberCount) fail("LESSON_PLAN_NUMBER_REFERENCE", `${path}.numbers[${index}]`, "number reference is unavailable");
       });
-      if (visualCapability === "function_plot" && numbers.length > 2
-        && (content.parameters as Record<string, unknown>)?.expression_tokens === undefined) {
-        fail("LESSON_PLAN_EXPRESSION", `${path}.numbers`, "static curves support at most two independent sample points");
-      }
+      hooks?.validate_numbers?.(numbers, content, hookContext);
     }
   }
   return content as LessonPlanBoardContent;
@@ -943,23 +904,11 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
           }
           if (kind === "visual") {
             const visualContent = content as LessonPlanVisualContent;
-            if (visualContent.capability === "function_plot"
-              && visualContent.parameters?.expression_tokens !== undefined) {
-              const curveNumbers = validateMathExpression(
-                visualContent.parameters.expression_tokens,
-                `${itemPath}.content.parameters.expression_tokens`,
-                rawNumbers.length,
-                true,
-              );
-              for (const number of curveNumbers) visuallyBoundNumbers.add(number);
-              if (curveNumbers.length === 0) {
-                for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
-              }
-            } else if (visualContent.capability === "function_plot") {
-              for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
-            } else {
-              for (const number of visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
-            }
+            const curveNumbers = RECIPE_HOOKS[visualContent.capability]?.bound_numbers?.(
+              visualContent,
+              recipeValidationContext(`${itemPath}.content.parameters.expression_tokens`, rawNumbers.length),
+            );
+            for (const number of curveNumbers ?? visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
           }
           boardItemIndex += 1;
           const id = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-item-${pad(boardItemIndex)}`;
