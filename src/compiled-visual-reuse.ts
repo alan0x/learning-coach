@@ -5,6 +5,8 @@ export interface CompiledVisual {
   whole: string;
   primaryScene?: string;
   parts: Map<string, string>;
+  /** Program decisions worth logging, such as a replaced model viewport. */
+  adjustments?: Array<{ reason: string; detail: string }>;
 }
 
 interface RenderedVisual {
@@ -44,7 +46,9 @@ function cardIdentity(kind: string, content: Record<string, unknown>) {
         // View ranges/styles are presentation. Keep all extra curves, points,
         // measurements, units, bindings and interaction settings in the identity.
         if (kind === "plot") {
-          if (path.startsWith("axes.") && ["min", "max"].includes(name)) return false;
+          if (path.startsWith("axes.") && ["min", "max", "ticks"].includes(name)) return false;
+          if (path === "axes" && ["equal_scale", "layout", "follow_samples"].includes(name)) return false;
+          if (path === "curves" && name === "holes") return false;
           if ((path === "curves" || path === "points") && ["label", "color"].includes(name)) return false;
         }
         return true;
