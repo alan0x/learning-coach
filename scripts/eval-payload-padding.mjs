@@ -15,7 +15,7 @@
 // about them except the provider and model.
 //
 //   node scripts/eval-payload-padding.mjs --pairs 20 [--pad-bytes 8192] [--max-calls 60] [--out <report.json>]
-//     [--octos-profile ~/.octos/profiles/<id>.json]
+//     [--octos-profile ~/.octos/profiles/<id>.json] [--start-pair <n> --append <earlier report.json>]
 //
 // --octos-profile reads the profile's primary lesson model (family, model and
 // the key variable it names) inside this process, as Octos does when it runs
@@ -204,14 +204,24 @@ async function main() {
   });
   const api = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].contents).toString("base64")}`);
   const route = api.resolveLessonModelRoute();
-  const router = await api.createStructuredModelRouter(route);
-  const call = (request) => router.call({
-    label: request.label, turnId: request.turn_id, systemPrompt: request.system_prompt, prompt: request.prompt,
-    responseSchema: request.response_schema, lessonPlanPart: request.part, lessonPlanSection: request.section, lessonPlanAttempt: request.attempt,
-  });
+  // One router per run, as main.ts creates one per lesson: the router's total
+  // time budget and its provider preference belong to a single lesson.
+  const newRun = async () => {
+    const router = await api.createStructuredModelRouter(route);
+    return {
+      router,
+      call: (request) => router.call({
+        label: request.label, turnId: request.turn_id, systemPrompt: request.system_prompt, prompt: request.prompt,
+        responseSchema: request.response_schema, lessonPlanPart: request.part, lessonPlanSection: request.section, lessonPlanAttempt: request.attempt,
+      }),
+    };
+  };
   const cases = JSON.parse(await readFile(resolve(root, "eval/lesson-plan-generation-cases.json"), "utf8"));
   const budget = { remaining: maxCalls };
-  const rows = [];
+  const startPair = Number(option("--start-pair", "0"));
+  const previous = option("--append") ? JSON.parse(await readFile(resolve(option("--append")), "utf8")).rows
+    .filter((row) => row.pair < startPair) : [];
+  const rows = [...previous];
   const persist = async () => {
     if (!out) return;
     await mkdir(dirname(resolve(out)), { recursive: true });
@@ -219,10 +229,11 @@ async function main() {
       route_source: route.source, pad_bytes: padBytes, pairs, max_calls: maxCalls, summary: summarize(rows), rows }, null, 1)}\n`);
   };
   console.error(JSON.stringify({ stage: "payload-experiment", provider: route.provider, model: route.model, route_source: route.source, pairs, pad_bytes: padBytes, max_calls: maxCalls }));
-  for (let pair = 0; pair < pairs && budget.remaining > 0; pair += 1) {
+  for (let pair = startPair; pair < pairs && budget.remaining > 0; pair += 1) {
     const item = cases[pair % cases.length];
     const order = pair % 2 === 0 ? [0, padBytes] : [padBytes, 0];
     for (const pad of order) {
+      const { router, call } = await newRun();
       const row = await runOnce({ generate: api.generateLessonPlanWithModel, call, item, padBytes: pad,
         turnId: `payload-${pair}-${pad ? "padded" : "plain"}-${Date.now()}`, budget, onRejected: () => router.rejectLastResponse() });
       rows.push({ pair, order: order.indexOf(pad), ...row });
