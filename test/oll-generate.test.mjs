@@ -2523,3 +2523,102 @@ test("the skill executable runs when invoked through the local skills symlink", 
     assert.equal(JSON.parse(stdout).success,false);
   } finally { await rm(directory,{recursive:true,force:true}); }
 });
+
+test("a subject signal is logged in shadow mode and leaves every model request unchanged", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const outline = {
+    version: "0.1", title: "为什么负负得正", goals: ["解释符号规则"], teaching_strategies: [], numbers: [],
+    request_coverage: [{ request_part: 1, treatment: "teach", sections: [1] }], course_visuals: [],
+    sections: [{ purpose: "解释符号规则", allowed_capabilities: [], reusable_items: [{ kind: "board_item", board_kind: "math" }] }],
+    close: { summary: "负数乘负数得到正数。", focus: [{ source: "reusable", section: 1, item: 1 }] },
+  };
+  const section = {
+    version: "0.1", section: 1,
+    moments: [{ narration: "我们用分配律检查这个符号规则。", delivery: "patient", math_creates: [], note_creates: [],
+      focuses: [{ intent: "观察等式", timing: "after_speech" }], points: [] }],
+    reusable_board_creates: { item_1: { moment: 1, timing: "during_speech", role: "derivation",
+      content: { latex: "(-1)\\\\times(-1)=1" }, placement: { relation: "new_region" } } },
+  };
+  const bodies = [];
+  const server = createServer(async (request, response) => {
+    if (request.url === "/token") {
+      for await (const _chunk of request) { /* consume OAuth request */ }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ access_token: "test-token", expires_in: 3600 }));
+      return;
+    }
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    bodies.push(body);
+    const schema = JSON.parse(body).generationConfig.responseJsonSchema;
+    const content = schema.properties?.course
+      ? { disposition: "generate_lesson", learner_response: "", course: schema.properties.course.properties?.outline ? { outline, first_section: section } : outline }
+      : schema.properties?.course_visuals ? outline : section;
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify(content) }] } }] }));
+  });
+  const runs = [];
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const { port } = server.address();
+    const serviceAccount = {
+      project_id: "test-project", client_email: "lesson@test-project.iam.gserviceaccount.com",
+      private_key: privateKey.export({ type: "pkcs8", format: "pem" }), token_uri: `http://127.0.0.1:${port}/token`,
+    };
+    for (const signal of [{}, { plugins: ["math"], plugin_confidence: 0.91, plugin_source: "jev" }]) {
+      const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-plugin-signal-"));
+      const before = bodies.length;
+      const result = await runTool({ baseUrl: `http://127.0.0.1:${port}`, serviceAccount, workDirectory, input: signal });
+      assert.equal(result.exitCode, 0, result.stderr);
+      const trace = (await readFile(join(workDirectory, "study", "oll", "learn-e2e-001.generation-trace.jsonl"), "utf8"))
+        .trim().split("\n").map((line) => JSON.parse(line));
+      runs.push({ requests: bodies.slice(before), trace });
+      await rm(workDirectory, { recursive: true, force: true });
+    }
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+  const [plain, signalled] = runs;
+  assert.deepEqual(signalled.requests, plain.requests, "shadow mode sends the same broad requests");
+  const started = (run) => run.trace.find((event) => event.stage === "lesson-plan-generation" && event.status === "started");
+  const completed = (run) => run.trace.find((event) => event.stage === "lesson-plan-generation" && event.status === "completed");
+  assert.equal(started(plain).plugin_signal.plugin_source, "absent");
+  assert.equal(started(plain).plugin_signal.scoped, false);
+  assert.deepEqual(started(signalled).plugin_signal.scoped_plugins, ["math", "shared"]);
+  assert.equal(started(signalled).plugin_signal.plugin_confidence, 0.91);
+  assert.ok(!started(signalled).plugin_signal.scoped_recipes.includes("spring_and_mass"));
+  assert.equal(completed(signalled).plugin_source, "jev");
+  assert.deepEqual(completed(signalled).plugins_outside_scope, []);
+});
+
+test("an unknown plugin ID is rejected before any model request", async () => {
+  const workDirectory = await mkdtemp(join(tmpdir(), "learning-coach-plugin-unknown-"));
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  let modelCalls = 0;
+  const server = createServer(async (request, response) => {
+    for await (const _chunk of request) { /* consume */ }
+    if (request.url !== "/token") modelCalls += 1;
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ access_token: "test-token", expires_in: 3600 }));
+  });
+  try {
+    await new Promise((done) => server.listen(0, "127.0.0.1", done));
+    const { port } = server.address();
+    const result = await runTool({
+      baseUrl: `http://127.0.0.1:${port}`,
+      serviceAccount: {
+        project_id: "test-project", client_email: "lesson@test-project.iam.gserviceaccount.com",
+        private_key: privateKey.export({ type: "pkcs8", format: "pem" }), token_uri: `http://127.0.0.1:${port}/token`,
+      },
+      workDirectory,
+      input: { plugins: ["history"], plugin_source: "jev" },
+    });
+    assert.equal(result.exitCode, 1);
+    assert.equal(JSON.parse(result.stdout.trim().split("\n").at(-1)).error_code, "LESSON_PLUGIN_UNKNOWN");
+    assert.equal(modelCalls, 0);
+  } finally {
+    await new Promise((done) => server.close(done));
+    await rm(workDirectory, { recursive: true, force: true });
+  }
+});

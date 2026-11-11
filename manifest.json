@@ -1,6 +1,6 @@
 {
   "name": "learning-coach",
-  "version": "0.25.1",
+  "version": "0.26.0",
   "author": "alan0x",
   "description": "Generate validated OLL whiteboard lessons for learning sessions",
   "timeout_secs": 300,
@@ -65,6 +65,24 @@
           "learner_context": {
             "type": "string",
             "description": "Tentative learner background relevant to the requested explanation."
+          },
+          "plugins": {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 3,
+            "items": { "type": "string", "enum": ["math", "physics", "shared"] },
+            "description": "Optional subject plugins the host selected for this request (subject plan P2). `shared` alone means no subject plugin applies. Logged in shadow mode; the request stays broad."
+          },
+          "plugin_confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Optional confidence of the plugin selection, from 0 to 1."
+          },
+          "plugin_source": {
+            "type": "string",
+            "enum": ["jev", "context", "none"],
+            "description": "Where the plugin selection came from: Jev, the host's context (board, Studio or CoursePack), or none."
           },
           "input_modality": {
             "type": "string",
@@ -532,6 +550,24 @@
             "type": "string",
             "description": "Optional nearby problem statement or established math context for a short follow-up question."
           },
+          "plugins": {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 3,
+            "items": { "type": "string", "enum": ["math", "physics", "shared"] },
+            "description": "Optional subject plugins the host selected for this request (subject plan P2). `shared` alone means no subject plugin applies. Logged in shadow mode; the request stays broad."
+          },
+          "plugin_confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Optional confidence of the plugin selection, from 0 to 1."
+          },
+          "plugin_source": {
+            "type": "string",
+            "enum": ["jev", "context", "none"],
+            "description": "Where the plugin selection came from: Jev, the host's context (board, Studio or CoursePack), or none."
+          },
           "input_modality": {
             "type": "string",
             "enum": ["text", "voice"]
@@ -590,6 +626,24 @@
           "learner_background": { "type": "string", "description": "Optional learner background and prior learning facts from the host product, with sources. Only stated facts may be cited; it is never a new request." },
           "current_lesson": { "type": "string", "description": "Optional summary of what the same board just taught (titles, sections, thinking questions with reference answers, practice), as the learner saw it. Resolves follow-ups such as 'the reflection question'; it is never a new request." },
           "teacher_experiences": { "type": "string", "description": "Optional facts from the preset teacher's own (fictional, everyday) life. The teacher may mention at most one, briefly and only when it makes the concept concrete; most lessons mention none." },
+          "plugins": {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 3,
+            "items": { "type": "string", "enum": ["math", "physics", "shared"] },
+            "description": "Optional subject plugins the host selected for this request (subject plan P2). `shared` alone means no subject plugin applies. Logged in shadow mode; the request stays broad."
+          },
+          "plugin_confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Optional confidence of the plugin selection, from 0 to 1."
+          },
+          "plugin_source": {
+            "type": "string",
+            "enum": ["jev", "context", "none"],
+            "description": "Where the plugin selection came from: Jev, the host's context (board, Studio or CoursePack), or none."
+          },
           "input_modality": {
             "type": "string",
             "enum": ["text", "voice"]
@@ -650,6 +704,24 @@
           "learner_background": { "type": "string", "description": "Optional learner background and prior learning facts from the host product, with sources. Only stated facts may be cited; it is never a new request." },
           "current_lesson": { "type": "string", "description": "Optional summary of what the same board just taught (titles, sections, thinking questions with reference answers, practice), as the learner saw it. Resolves follow-ups such as 'the reflection question'; it is never a new request." },
           "teacher_experiences": { "type": "string", "description": "Optional facts from the preset teacher's own (fictional, everyday) life. The teacher may mention at most one, briefly and only when it makes the concept concrete; most lessons mention none." },
+          "plugins": {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 3,
+            "items": { "type": "string", "enum": ["math", "physics", "shared"] },
+            "description": "Optional subject plugins the host selected for this request (subject plan P2). `shared` alone means no subject plugin applies. Logged in shadow mode; the request stays broad."
+          },
+          "plugin_confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Optional confidence of the plugin selection, from 0 to 1."
+          },
+          "plugin_source": {
+            "type": "string",
+            "enum": ["jev", "context", "none"],
+            "description": "Where the plugin selection came from: Jev, the host's context (board, Studio or CoursePack), or none."
+          },
           "input_modality": {
             "type": "string",
             "enum": ["text", "voice"]
