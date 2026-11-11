@@ -9456,6 +9456,26 @@ function validatePlotContent(action, path, variables) {
   if (action.kind !== "plot" || !Array.isArray(action.content.curves))
     return;
   const axes = action.content.axes ?? {};
+  if (axes.layout !== void 0 && (axes.layout !== "adaptive" || axes.equal_scale !== true)) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/axes/layout`, "Adaptive plot layout requires equal_scale=true");
+  }
+  if (axes.follow_samples !== void 0 && typeof axes.follow_samples !== "boolean") {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/axes/follow_samples`, "Sample following must be a boolean");
+  }
+  for (const axis of ["x", "y"]) {
+    const ticks = axes[axis]?.ticks;
+    if (ticks !== void 0 && ticks !== "pi") {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/axes/${axis}/ticks`, 'Axis ticks may only be "pi"');
+    }
+  }
+  action.content.curves.forEach((curve, index) => {
+    const holes = curve?.holes;
+    if (holes === void 0)
+      return;
+    if (!Array.isArray(holes) || holes.length > 16 || !holes.every((hole) => hole && typeof hole === "object" && Number.isFinite(hole.x) && Number.isFinite(hole.y))) {
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/curves/${index}/holes`, "Curve holes are up to 16 finite {x, y} points");
+    }
+  });
   const plotRange = (value, rangePath, fallback) => {
     if (value === void 0)
       return fallback;
