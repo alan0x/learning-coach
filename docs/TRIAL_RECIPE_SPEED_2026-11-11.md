@@ -22,7 +22,7 @@ Harness: `scripts/eval-trial-recipe-speed.mjs`. Raw rows: `eval/trial-recipe-spe
 | Constant-speed requests | 10 | 9.20 s | 8.45 s | −0.92 s | −2.15 s, [−4.67, +0.37] |
 | Other subjects | 10 | 10.07 s | 7.86 s | −1.50 s | −3.09 s, [−5.96, −0.21] |
 
-- **No slowdown.** The candidate is not slower in either group. The negative differences are not a speed-up from the recipe. Four baseline runs were slow for unrelated reasons (15–20 s), two of them after a local rejection and a repair call. Every candidate run reached its first section with one model call. The size of the request changed by 81 prompt tokens; the payload experiment found no cost from 1,331.
+- **No slowdown.** The candidate is not slower in either group. The negative differences are not a speed-up from the recipe. Seven baseline runs took 13–20 s, and three of them needed extra model calls after a local rejection. Every candidate run reached its first section with one model call. The size of the request changed by 81 prompt tokens; the payload experiment found no cost from 1,331.
 - **Recipe choice.** The first playable section used the recipe in 10 of 10 constant-speed requests and 0 of 10 other requests. No run failed or was cut off.
 - **What the model wrote with it.**
   - Time 0–10 s.
