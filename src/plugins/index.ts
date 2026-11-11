@@ -45,7 +45,7 @@ export const RECIPE_CATALOG_ORDER = [
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-export const TRIAL_RECIPES = ["constant_speed_motion"] as const satisfies readonly (keyof AllRecipes)[];
+export const TRIAL_RECIPES = ["constant_speed_motion", "number_line"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {
@@ -83,7 +83,7 @@ export const RECIPE_SCHEMA_PROPERTIES: Readonly<Record<string, Readonly<Record<s
 export const SCHEMA_PROPERTY_ORDER = [
   "title", "projection", "x_label", "y_label", "formulas", "sample_x_numbers",
   "expression", "section_axis", "section_value", "level", "radius", "angle",
-  "radius_expression", "center_x", "center_y", "construction", "leg_a", "leg_b", "steps", "speed",
+  "radius_expression", "center_x", "center_y", "construction", "leg_a", "leg_b", "steps", "speed", "subdivisions", "hops",
 ] as const;
 
 /** One prompt bullet: its core text and the installed plugins' sentences, or "" when empty. */

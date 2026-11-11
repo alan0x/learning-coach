@@ -2,7 +2,7 @@
 import {
   buildCircleAndArc, buildCircleAreaRearrangement, buildCirclePolygons, buildCoordinateCircle, buildFunctionPlot,
   buildCubeWithSection, buildFunctionSurface, buildGeometricRearrangement, buildImplicitSurface,
-  buildUnitCircle, buildUnitSquareArray, rearrangementRecipe,
+  buildNumberLine, buildUnitCircle, buildUnitSquareArray, rearrangementRecipe, NUMBER_LINE_LIMITS,
   type BuiltRecipe, type RearrangementConstruction,
 } from "octos-lesson-language/plugin-math";
 import { compileText } from "../lesson-text.js";
@@ -550,7 +550,64 @@ function compileCircleArea(
 }
 
 
+/** Each unit split into this many parts, when every value of the lesson's numbers falls on such a part. */
+const NUMBER_LINE_SPLITS = [1, 2, 3, 4, 5, 6, 8, 10, 12];
+const onGrid = (value: number, parts: number) => Math.abs(value * parts - Math.round(value * parts)) < 1e-9;
+
+/**
+ * A number line (OLL decision 0013) from the visual's numbers: the first is
+ * the start, the second the change; the program computes where the jump ends.
+ * The line covers every value either number can take, so a slider never
+ * carries a part off it.
+ */
+function compileNumberLine(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "subdivisions", "hops"], path);
+  const [startNumber, changeNumber] = content.numbers ?? [];
+  const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : undefined;
+  const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : undefined;
+  const values = [
+    ...(start ? [start.min, start.max, start.initial] : [0]),
+    ...(start && change ? [start.min + change.min, start.max + change.max, start.initial + change.initial] : []),
+  ];
+  const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
+  const max = Math.ceil(Math.max(...values, 0)) + 1;
+  const span = max - min;
+  const subdivisions = input.subdivisions !== undefined
+    ? optionalInteger(input.subdivisions, 1, 1, 12, `${path}.subdivisions`)
+    : NUMBER_LINE_SPLITS.find((parts) => values.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
+  if (span * subdivisions > NUMBER_LINE_LIMITS.ticks) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.subdivisions`, "the numbers' range is too long for this many parts per unit");
+  // Hop by hop only when every reachable change is a whole number of parts and needs few enough hops.
+  const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
+  const hopsFit = change !== undefined && [change.min, change.max, change.initial].every((value) => onGrid(value, subdivisions))
+    && Math.ceil(reach * subdivisions - 1e-9) <= NUMBER_LINE_LIMITS.hops;
+  if (input.hops === true && !hopsFit) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.hops`, "hop by hop needs a change of whole parts and at most 24 hops");
+  const hops = input.hops === undefined ? hopsFit : input.hops === true;
+  const startVariable = startNumber ? variableAlias(startNumber) : undefined;
+  const changeVariable = changeNumber ? variableAlias(changeNumber) : undefined;
+  const built = buildNumberLine({
+    as: base, role, place: placement,
+    title: optionalText(input.title, compileText(plan, "数轴"), `${path}.title`),
+    range: { min, max },
+    ticks: { step: span > 24 ? (span > 60 ? 10 : 5) : 1, subdivisions: span > 24 ? 1 : subdivisions, labels: subdivisions > 1 && span <= 24 ? "all" : "major" },
+    ...(start && startVariable ? { points: [
+      { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "起点") },
+      ...(change && changeVariable ? [{ as: "end", value: { expression: `(${startVariable})+(${changeVariable})`, initial: start.initial + change.initial }, label: compileText(plan, "终点") }] : []),
+    ] } : {}),
+    ...(change && changeVariable && start ? { jumps: [{ as: "move", from: "start", by: { expression: changeVariable, initial: change.initial }, hops }] } : {}),
+  });
+  return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, ...(built.parts.move ? { primary_control: built.parts.move } : {}) })) };
+}
+
 export const MATH_COMPILERS = {
+  number_line: compileNumberLine,
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_polygon_bounds: compileCirclePolygonBounds,

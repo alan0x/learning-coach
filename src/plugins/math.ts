@@ -152,6 +152,19 @@ export const MATH_RECIPES = {
     required_features: ["circle_area_rearrangement"],
     model_guidance: "圆面积：扇形等积重排，底趋近πr、高趋近r",
   },
+  number_line: {
+    parts: ["whole", "start", "end", "move", "primary_control"],
+    number_inputs: ["start", "change"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: ["title", "subdivisions", "hops"],
+    model_parameter_names: ["title", "subdivisions", "hops"],
+    required_model_schema_parameters: [],
+    semantic_parameters: ["subdivisions", "hops"],
+    output_kinds: ["number_line"],
+    student_controls: ["slider"],
+    required_features: ["number_line"],
+    model_guidance: "数轴：两个数值依次是起点和移动量，终点由程序计算；适合整数、分数、小数的加减和数在数轴上的位置。subdivisions 是每个单位分成几份（分数用 2–12），hops 为 true 时一格一跳。不用于函数图像或不等式以外的坐标问题",
+  },
 } as const;
 
 // Provider-schema properties each recipe adds to a visual's parameters.
@@ -183,6 +196,7 @@ const MATH_SCHEMA_PROPERTIES = {
     leg_b: { type: "number", minimum: 0 },
   },
   circle_area_rearrangement: { radius: { type: "number", minimum: 0 } },
+  number_line: { subdivisions: { type: "integer", minimum: 1, maximum: 12 }, hops: { type: "boolean" } },
 };
 
 export const MATH_PLUGIN = {

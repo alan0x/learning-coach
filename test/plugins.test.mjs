@@ -135,6 +135,6 @@ test("a compiled lesson records the plugins that built its visuals", () => {
   assert.deepEqual(lessonPlanPlugins({ sections: [] }), {});
   assert.deepEqual(lessonPlanPlugins(plan("process_diagram")), { shared: "0.1.0" });
   assert.deepEqual(lessonPlanPlugins(plan("spring_and_mass")), { physics: "0.1.0", shared: "0.1.0" });
-  assert.deepEqual(lessonPlanPlugins(plan("unit_circle_projection")), { math: "0.1.0", shared: "0.1.0" });
+  assert.deepEqual(lessonPlanPlugins(plan("unit_circle_projection")), { math: "0.2.0", shared: "0.1.0" });
   assert.equal(typeof compileLessonPlan, "function");
 });

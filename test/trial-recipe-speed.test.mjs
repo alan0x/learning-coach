@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { MOTION_CASES, OTHER_CASE_IDS, recipesInPart, summarize } from "../scripts/eval-trial-recipe-speed.mjs";
+import { MOTION_CASES, NUMBER_LINE_CASES, OTHER_CASE_IDS, TRIAL_CASES, recipesInPart, summarize } from "../scripts/eval-trial-recipe-speed.mjs";
 
 test("trial-recipe cases pair motion requests with held-out requests from other subjects", async () => {
   const heldOut = new Set(JSON.parse(await readFile(new URL("../eval/subject-routing-heldout.json", import.meta.url), "utf8")).cases.map((item) => item.id));
@@ -22,4 +22,12 @@ test("the summary splits motion and other requests", () => {
   assert.equal(summary.motion.paired_difference_ms.median, 200);
   assert.equal(summary.other.paired_difference_ms.median, -100);
   assert.equal(summary.all.candidate_used_trial_recipe, 1);
+});
+
+test("the number line trial has its own fitting requests, and its card is recognised", () => {
+  assert.equal(NUMBER_LINE_CASES.length, OTHER_CASE_IDS.length);
+  assert.deepEqual(Object.keys(TRIAL_CASES), ["constant_speed_motion", "number_line"]);
+  assert.deepEqual(MOTION_CASES, TRIAL_CASES.constant_speed_motion);
+  const part = { steps: [{ beats: [{ actions: [{ do: "write", as: "v1", kind: "number_line", content: { range: { min: 0, max: 1 } } }] }] }] };
+  assert.deepEqual(recipesInPart(part), ["number_line"]);
 });
