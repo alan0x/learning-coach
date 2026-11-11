@@ -4,7 +4,7 @@ import test from "node:test";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
-import { padRequest, paddingText, runOnce, summarize } from "../scripts/eval-payload-padding.mjs";
+import { padRequest, paddingText, profileRouteEnvironment, runOnce, summarize } from "../scripts/eval-payload-padding.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const bundle = await build({
@@ -72,4 +72,22 @@ test("the summary pairs padded and unpadded runs", () => {
   assert.equal(summary.paired_difference_ms.mean, 100);
   assert.deepEqual(summary.p50_first_playable_ms, { plain: 9600, padded: 9700 });
   assert.equal(summary.errors, 1);
+});
+
+test("the profile route becomes the environment Octos injects", async () => {
+  const { mkdtemp, writeFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const directory = await mkdtemp(join(tmpdir(), "payload-profile-"));
+  const path = join(directory, "p.json");
+  try {
+    await writeFile(path, JSON.stringify({ config: { llm: { primary: { family_id: "google", model_id: "gemini-3.6-flash", route: { api_key_env: "GEMINI_API_KEY" } } },
+      env_vars: { GEMINI_API_KEY: "synthetic" } } }));
+    assert.deepEqual(await profileRouteEnvironment(path),
+      { OCTOS_PROFILE_LLM_PROVIDER: "google", OCTOS_PROFILE_LLM_MODEL: "gemini-3.6-flash", GEMINI_API_KEY: "synthetic" });
+    await writeFile(path, JSON.stringify({ config: { llm: { primary: { family_id: "google", model_id: "m", route: { api_key_env: "bad name" } } } } }));
+    await assert.rejects(profileRouteEnvironment(path), /names no key variable/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });

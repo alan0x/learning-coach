@@ -15,6 +15,11 @@
 // about them except the provider and model.
 //
 //   node scripts/eval-payload-padding.mjs --pairs 20 [--pad-bytes 8192] [--max-calls 60] [--out <report.json>]
+//     [--octos-profile ~/.octos/profiles/<id>.json]
+//
+// --octos-profile reads the profile's primary lesson model (family, model and
+// the key variable it names) inside this process, as Octos does when it runs
+// the skill. Nothing from it is printed except the provider and model.
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -81,6 +86,22 @@ export function padRequest(request, padBytes) {
 }
 
 class StopAfterFirstPlayable extends Error {}
+
+/** The environment Octos injects for a profile's primary lesson model. */
+export async function profileRouteEnvironment(path) {
+  const config = JSON.parse(await readFile(path, "utf8")).config ?? {};
+  const primary = config.llm?.primary;
+  const keyVariable = primary?.route?.api_key_env;
+  if (!primary?.family_id || !primary?.model_id) throw new Error("the profile has no primary lesson model");
+  if (typeof keyVariable !== "string" || !/^[A-Z0-9_]{1,64}$/u.test(keyVariable)) throw new Error("the profile route names no key variable");
+  const key = config.env_vars?.[keyVariable];
+  if (typeof key !== "string" || !key.trim()) throw new Error(`the profile has no value for ${keyVariable}`);
+  return {
+    OCTOS_PROFILE_LLM_PROVIDER: primary.family_id,
+    OCTOS_PROFILE_LLM_MODEL: primary.model_id,
+    [keyVariable]: key,
+  };
+}
 
 export async function runOnce({ generate, call, item, padBytes, turnId, budget, onRejected = () => {} }) {
   const startedAt = Date.now();
@@ -170,6 +191,8 @@ async function main() {
   const maxCalls = Number(option("--max-calls", String(pairs * 3)));
   const out = option("--out");
   if (!Number.isSafeInteger(pairs) || pairs < 1 || !Number.isSafeInteger(padBytes) || padBytes < 1) throw new Error("--pairs and --pad-bytes must be positive integers");
+  const profilePath = option("--octos-profile");
+  if (profilePath) Object.assign(process.env, await profileRouteEnvironment(profilePath));
 
   const bundle = await build({
     stdin: {
