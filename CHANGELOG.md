@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.26.0 - 2026-11-10
+
+- Subject signal in shadow mode (subject plan P2).
+  - The three lesson actions and `oll_generate_lesson` accept optional `plugins` (installed plugin IDs, at most three), `plugin_confidence` (0–1) and `plugin_source` (`jev`, `context` or `none`). Unknown IDs are rejected before any model request (`LESSON_PLUGIN_UNKNOWN`).
+  - The request stays broad and byte-identical.
+  - The `lesson-plan-generation` trace records the signal and what a scoped request would have contained (`plugin_signal.scoped_plugins`, `scoped_recipes`). The completed event records `plugins_outside_scope`.
+- The `chemistry`, `biology` and `earth_space` plugins are installed: their manifest and Jev subject line come from OLL `bd031be`. They have no recipes or prompt rules yet, so they add nothing to model requests, and every request digest is unchanged. They are listed in the lesson actions' `plugins` enum.
+- `eval/subject-routing-heldout.json` adds 46 held-out routing cases. `scripts/eval-subject-routing.mjs` runs them against Jev with Octos Learn's question.
+- `scripts/report-plugin-signal.mjs` reports, from generation traces: the share of lesson requests that arrived with a Jev answer, scoped versus broad requests, and lessons that used a plugin outside their scope.
+
 ## 0.25.1 - 2026-11-10
 
 - Rounding questions accept the unrounded value. A prompt that asks for rounding ("保留一位小数", "四舍五入", "精确到百分位", "round to the nearest tenth", "to 2 decimal places") gives the answer a tolerance of half a unit in the requested place. The learner can type 2.15 for an answer of 2.2, whether or not the model wrote the unrounded arithmetic in `check`. Questions that do not ask for rounding keep exact grading.

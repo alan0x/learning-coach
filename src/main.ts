@@ -1,4 +1,5 @@
 import { appendFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { checkPluginIds, parsePluginSignal, PluginSignalError, pluginsOutsideScope, shadowScope, type PluginSignal } from "./plugin-signal.js";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -68,6 +69,8 @@ interface ToolInput {
   camera_media?: string;
   selection_media?: string;
   client_timing?: ClientTiming;
+  /** The host's subject signal (P2 shadow mode); logged, never used to scope requests yet. */
+  plugin_signal?: PluginSignal;
 }
 
 interface ClientTiming {
@@ -416,6 +419,9 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     "camera_media",
     "selection_media",
     "client_timing",
+    "plugins",
+    "plugin_confidence",
+    "plugin_source",
   ]);
   for (const field of Object.keys(input)) {
     if (!allowedFields.has(field)) {
@@ -464,6 +470,13 @@ function parseCompleteLessonInput(raw: string): ToolInput {
       "Selection lesson generation requires one selection image",
     );
   }
+  let pluginSignal: PluginSignal | undefined;
+  try {
+    pluginSignal = parsePluginSignal(input);
+  } catch (error) {
+    if (error instanceof PluginSignalError) throw new ToolExecutionError(error.code, error.message);
+    throw error;
+  }
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: requireNonEmptyString(input.learner_request, "learner_request"),
@@ -497,6 +510,7 @@ function parseCompleteLessonInput(raw: string): ToolInput {
     ...(input.client_timing !== undefined
       ? { client_timing: parseClientTiming(input.client_timing) }
       : {}),
+    ...(pluginSignal ? { plugin_signal: pluginSignal } : {}),
   };
 }
 
@@ -2952,12 +2966,23 @@ async function main(): Promise<void> {
       });
     };
     {
-      const { generateLessonPlanWithModel } = await import("./lesson-plan.js");
+      const { generateLessonPlanWithModel, INSTALLED_PLUGINS } = await import("./lesson-plan.js");
+      // Shadow mode (subject plan P2): record the host's subject signal and what a
+      // scoped request would have contained; the request itself stays broad.
+      let pluginSignal: PluginSignal | undefined;
+      try {
+        pluginSignal = checkPluginIds(input.plugin_signal, INSTALLED_PLUGINS);
+      } catch (error) {
+        if (error instanceof PluginSignalError) throw new ToolExecutionError(error.code, error.message);
+        throw error;
+      }
+      const subjectScope = shadowScope(pluginSignal, INSTALLED_PLUGINS);
       stageLog({
         stage: "lesson-plan-generation",
         turn_id: input.turn_id,
         status: "started",
         mode: "lesson_plan",
+        plugin_signal: subjectScope,
       });
       const generatedLessonPlan = await generateLessonPlanWithModel(
         (request) => modelRouter.call({
@@ -3050,6 +3075,8 @@ async function main(): Promise<void> {
         sections: generatedLessonPlan.lesson.steps.length,
         model_calls: generatedLessonPlan.model_calls,
         plugins: generatedLessonPlan.plugins,
+        plugin_source: subjectScope.plugin_source,
+        plugins_outside_scope: pluginsOutsideScope(subjectScope, generatedLessonPlan.plugins),
         elapsed_ms: Date.now() - startedAt,
       });
       emit({

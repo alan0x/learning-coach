@@ -7171,6 +7171,69 @@ var require__ = __commonJS({
 
 // src/main.ts
 import { appendFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
+
+// src/plugin-signal.ts
+var PluginSignalError = class extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+  code;
+};
+var MAX_SELECTED_PLUGINS = 3;
+var PLUGIN_SOURCES = ["jev", "context", "none"];
+function parsePluginSignal(input) {
+  const { plugins, plugin_confidence: confidence, plugin_source: source } = input;
+  if (plugins === void 0 && confidence === void 0 && source === void 0) return void 0;
+  if (plugins !== void 0 && (!Array.isArray(plugins) || plugins.some((id) => typeof id !== "string"))) {
+    throw new PluginSignalError("LESSON_PLUGINS_INVALID", "plugins must be an array of plugin IDs");
+  }
+  const ids = [...new Set(plugins ?? [])];
+  if (ids.length > MAX_SELECTED_PLUGINS) {
+    throw new PluginSignalError("LESSON_PLUGINS_INVALID", `plugins selects at most ${MAX_SELECTED_PLUGINS} plugins`);
+  }
+  if (confidence !== void 0 && (typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 1)) {
+    throw new PluginSignalError("LESSON_PLUGIN_CONFIDENCE_INVALID", "plugin_confidence must be a number from 0 to 1");
+  }
+  const resolvedSource = source ?? (ids.length ? void 0 : "none");
+  if (!PLUGIN_SOURCES.includes(resolvedSource)) {
+    throw new PluginSignalError("LESSON_PLUGIN_SOURCE_INVALID", "plugin_source must be jev, context or none");
+  }
+  if (resolvedSource === "none" && ids.length) {
+    throw new PluginSignalError("LESSON_PLUGIN_SOURCE_INVALID", "plugin_source none cannot select plugins");
+  }
+  return {
+    plugins: ids,
+    ...confidence !== void 0 ? { plugin_confidence: confidence } : {},
+    plugin_source: resolvedSource
+  };
+}
+function checkPluginIds(signal, installed) {
+  if (!signal) return void 0;
+  const ids = installed.map((plugin) => plugin.manifest.id);
+  const unknown = signal.plugins.filter((id) => !ids.includes(id));
+  if (unknown.length) throw new PluginSignalError("LESSON_PLUGIN_UNKNOWN", `Unknown plugin ID: ${unknown.join(", ")}`);
+  return { ...signal, plugins: ids.filter((id) => signal.plugins.includes(id)) };
+}
+function shadowScope(signal, installed) {
+  const ids = installed.map((plugin) => plugin.manifest.id);
+  const selected = signal?.plugins ?? [];
+  const scoped = selected.length > 0;
+  const included = scoped ? ids.filter((id) => id === "shared" || selected.includes(id)) : ids;
+  return {
+    plugin_source: signal?.plugin_source ?? "absent",
+    plugins: selected,
+    ...signal?.plugin_confidence !== void 0 ? { plugin_confidence: signal.plugin_confidence } : {},
+    scoped,
+    scoped_plugins: included,
+    scoped_recipes: installed.filter((plugin) => included.includes(plugin.manifest.id)).flatMap((plugin) => Object.keys(plugin.recipes))
+  };
+}
+function pluginsOutsideScope(scope, lessonPlugins) {
+  return Object.keys(lessonPlugins).filter((id) => !scope.scoped_plugins.includes(id));
+}
+
+// src/main.ts
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname as dirname2, isAbsolute, resolve as resolve2, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -9199,7 +9262,10 @@ function parseCompleteLessonInput(raw) {
     "input_modality",
     "camera_media",
     "selection_media",
-    "client_timing"
+    "client_timing",
+    "plugins",
+    "plugin_confidence",
+    "plugin_source"
   ]);
   for (const field of Object.keys(input)) {
     if (!allowedFields.has(field)) {
@@ -9245,6 +9311,13 @@ function parseCompleteLessonInput(raw) {
       "Selection lesson generation requires one selection image"
     );
   }
+  let pluginSignal;
+  try {
+    pluginSignal = parsePluginSignal(input);
+  } catch (error) {
+    if (error instanceof PluginSignalError) throw new ToolExecutionError(error.code, error.message);
+    throw error;
+  }
   return {
     turn_id: validateTurnId(input.turn_id),
     learner_request: requireNonEmptyString(input.learner_request, "learner_request"),
@@ -9259,7 +9332,8 @@ function parseCompleteLessonInput(raw) {
     input_modality: input.input_modality === "voice" ? "voice" : "text",
     ...typeof input.camera_media === "string" ? { camera_media: requireNonEmptyString(input.camera_media, "camera_media") } : {},
     ...typeof input.selection_media === "string" ? { selection_media: requireNonEmptyString(input.selection_media, "selection_media") } : {},
-    ...input.client_timing !== void 0 ? { client_timing: parseClientTiming(input.client_timing) } : {}
+    ...input.client_timing !== void 0 ? { client_timing: parseClientTiming(input.client_timing) } : {},
+    ...pluginSignal ? { plugin_signal: pluginSignal } : {}
   };
 }
 function parseSelectionToolInput(raw) {
@@ -11327,12 +11401,21 @@ async function main() {
       });
     };
     {
-      const { generateLessonPlanWithModel } = await import("./lesson-plan.js");
+      const { generateLessonPlanWithModel, INSTALLED_PLUGINS } = await import("./lesson-plan.js");
+      let pluginSignal;
+      try {
+        pluginSignal = checkPluginIds(input.plugin_signal, INSTALLED_PLUGINS);
+      } catch (error) {
+        if (error instanceof PluginSignalError) throw new ToolExecutionError(error.code, error.message);
+        throw error;
+      }
+      const subjectScope = shadowScope(pluginSignal, INSTALLED_PLUGINS);
       stageLog({
         stage: "lesson-plan-generation",
         turn_id: input.turn_id,
         status: "started",
-        mode: "lesson_plan"
+        mode: "lesson_plan",
+        plugin_signal: subjectScope
       });
       const generatedLessonPlan = await generateLessonPlanWithModel(
         (request) => modelRouter.call({
@@ -11424,6 +11507,8 @@ async function main() {
         sections: generatedLessonPlan.lesson.steps.length,
         model_calls: generatedLessonPlan.model_calls,
         plugins: generatedLessonPlan.plugins,
+        plugin_source: subjectScope.plugin_source,
+        plugins_outside_scope: pluginsOutsideScope(subjectScope, generatedLessonPlan.plugins),
         elapsed_ms: Date.now() - startedAt
       });
       emit({

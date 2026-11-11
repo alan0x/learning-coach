@@ -7,7 +7,10 @@ import { PHYSICS_COMPILERS } from "./physics-compilers.js";
 import { SHARED_COMPILERS } from "./shared-compilers.js";
 
 /** Each installed plugin's recipe compilers, keyed by plugin ID. */
-export const PLUGIN_COMPILERS = { math: MATH_COMPILERS, physics: PHYSICS_COMPILERS, shared: SHARED_COMPILERS } as const;
+// Chemistry, biology and earth_space have no recipes yet (subject plan P2).
+export const PLUGIN_COMPILERS = {
+  math: MATH_COMPILERS, physics: PHYSICS_COMPILERS, chemistry: {}, biology: {}, earth_space: {}, shared: SHARED_COMPILERS,
+} as const;
 
 /** Every installed recipe's compiler, keyed by recipe. */
 export const VISUAL_COMPILERS = {

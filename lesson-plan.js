@@ -11784,8 +11784,84 @@ var SHARED_PLUGIN = {
   }
 };
 
+// node_modules/octos-lesson-language/dist/packages/plugin-chemistry/src/index.js
+var CHEMISTRY_PLUGIN_MANIFEST = {
+  id: "chemistry",
+  version: "0.1.0",
+  // Every subject plugin depends on the shared tools (decision 0012).
+  depends: { shared: "0.1.0" },
+  ollCore: ">=0.10.0"
+};
+var CHEMISTRY_SUBJECT_DESCRIPTION = {
+  "zh-CN": "\u5316\u5B66\uFF1A\u7269\u8D28\u7684\u7EC4\u6210\u4E0E\u7ED3\u6784\u3001\u5316\u5B66\u53CD\u5E94\u3001\u5143\u7D20\u4E0E\u5468\u671F\u8868\u3001\u6EB6\u6DB2\u3001\u9178\u548C\u78B1",
+  "en-US": "Chemistry: matter and its structure, chemical reactions, elements and the periodic table, solutions, acids and bases"
+};
+
+// src/plugins/chemistry.ts
+var CHEMISTRY_PLUGIN = {
+  // The manifest and the Jev subject line are the OLL shared layer's.
+  manifest: CHEMISTRY_PLUGIN_MANIFEST,
+  subject: { description: CHEMISTRY_SUBJECT_DESCRIPTION },
+  recipes: {},
+  schema_properties: {},
+  prompt_rules: {}
+};
+
+// node_modules/octos-lesson-language/dist/packages/plugin-biology/src/index.js
+var BIOLOGY_PLUGIN_MANIFEST = {
+  id: "biology",
+  version: "0.1.0",
+  // Every subject plugin depends on the shared tools (decision 0012).
+  depends: { shared: "0.1.0" },
+  ollCore: ">=0.10.0"
+};
+var BIOLOGY_SUBJECT_DESCRIPTION = {
+  "zh-CN": "\u751F\u7269\uFF1A\u7EC6\u80DE\u3001\u9057\u4F20\u4E0E\u8FDB\u5316\u3001\u751F\u6001\u7CFB\u7EDF\u3001\u4EBA\u4F53\u3001\u690D\u7269\u4E0E\u52A8\u7269",
+  "en-US": "Biology: cells, heredity and evolution, ecosystems, the human body, plants and animals"
+};
+
+// src/plugins/biology.ts
+var BIOLOGY_PLUGIN = {
+  // The manifest and the Jev subject line are the OLL shared layer's.
+  manifest: BIOLOGY_PLUGIN_MANIFEST,
+  subject: { description: BIOLOGY_SUBJECT_DESCRIPTION },
+  recipes: {},
+  schema_properties: {},
+  prompt_rules: {}
+};
+
+// node_modules/octos-lesson-language/dist/packages/plugin-earth-space/src/index.js
+var EARTH_SPACE_PLUGIN_MANIFEST = {
+  id: "earth_space",
+  version: "0.1.0",
+  // Every subject plugin depends on the shared tools (decision 0012).
+  depends: { shared: "0.1.0" },
+  ollCore: ">=0.10.0"
+};
+var EARTH_SPACE_SUBJECT_DESCRIPTION = {
+  "zh-CN": "\u5730\u7403\u4E0E\u5B87\u5B99\uFF1A\u5929\u6C14\u4E0E\u6C14\u5019\u3001\u6C34\u5FAA\u73AF\u3001\u5CA9\u77F3\u4E0E\u5730\u8C8C\u3001\u5730\u7403\u4E0E\u592A\u9633\u7CFB",
+  "en-US": "Earth and space science: weather and climate, the water cycle, rocks and landforms, Earth and the solar system"
+};
+
+// src/plugins/earth-space.ts
+var EARTH_SPACE_PLUGIN = {
+  // The manifest and the Jev subject line are the OLL shared layer's.
+  manifest: EARTH_SPACE_PLUGIN_MANIFEST,
+  subject: { description: EARTH_SPACE_SUBJECT_DESCRIPTION },
+  recipes: {},
+  schema_properties: {},
+  prompt_rules: {}
+};
+
 // src/plugins/index.ts
-var INSTALLED_PLUGINS = [MATH_PLUGIN, PHYSICS_PLUGIN, SHARED_PLUGIN];
+var INSTALLED_PLUGINS = [
+  MATH_PLUGIN,
+  PHYSICS_PLUGIN,
+  CHEMISTRY_PLUGIN,
+  BIOLOGY_PLUGIN,
+  EARTH_SPACE_PLUGIN,
+  SHARED_PLUGIN
+];
 var ALL_RECIPES = { ...MATH_PLUGIN.recipes, ...PHYSICS_PLUGIN.recipes, ...SHARED_PLUGIN.recipes };
 var RECIPE_CATALOG_ORDER = [
   "function_plot",
@@ -15408,7 +15484,14 @@ var SHARED_COMPILERS = {
 };
 
 // src/plugins/compilers.ts
-var PLUGIN_COMPILERS = { math: MATH_COMPILERS, physics: PHYSICS_COMPILERS, shared: SHARED_COMPILERS };
+var PLUGIN_COMPILERS = {
+  math: MATH_COMPILERS,
+  physics: PHYSICS_COMPILERS,
+  chemistry: {},
+  biology: {},
+  earth_space: {},
+  shared: SHARED_COMPILERS
+};
 var VISUAL_COMPILERS = {
   ...MATH_COMPILERS,
   ...PHYSICS_COMPILERS,

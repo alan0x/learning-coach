@@ -1,13 +1,18 @@
 import { MATH_PLUGIN } from "./math.js";
 import { PHYSICS_PLUGIN } from "./physics.js";
 import { SHARED_PLUGIN } from "./shared.js";
+import { CHEMISTRY_PLUGIN } from "./chemistry.js";
+import { BIOLOGY_PLUGIN } from "./biology.js";
+import { EARTH_SPACE_PLUGIN } from "./earth-space.js";
 import type { CoachSubjectPlugin, PromptSlot } from "./types.js";
 
 export type { CoachSubjectPlugin, PromptSlot } from "./types.js";
-export { MATH_PLUGIN, PHYSICS_PLUGIN, SHARED_PLUGIN };
+export { MATH_PLUGIN, PHYSICS_PLUGIN, CHEMISTRY_PLUGIN, BIOLOGY_PLUGIN, EARTH_SPACE_PLUGIN, SHARED_PLUGIN };
 
 /** Installed plugins, in the order their prompt sentences are joined. */
-export const INSTALLED_PLUGINS: readonly CoachSubjectPlugin[] = [MATH_PLUGIN, PHYSICS_PLUGIN, SHARED_PLUGIN];
+export const INSTALLED_PLUGINS: readonly CoachSubjectPlugin[] = [
+  MATH_PLUGIN, PHYSICS_PLUGIN, CHEMISTRY_PLUGIN, BIOLOGY_PLUGIN, EARTH_SPACE_PLUGIN, SHARED_PLUGIN,
+];
 
 const ALL_RECIPES = { ...MATH_PLUGIN.recipes, ...PHYSICS_PLUGIN.recipes, ...SHARED_PLUGIN.recipes };
 type AllRecipes = typeof ALL_RECIPES;

@@ -105,6 +105,9 @@ test("plugin manifests and subject lines are the OLL shared layer's", async () =
   const oll = {
     math: await import("octos-lesson-language/plugin-math"),
     physics: await import("octos-lesson-language/plugin-physics"),
+    chemistry: await import("octos-lesson-language/plugin-chemistry"),
+    biology: await import("octos-lesson-language/plugin-biology"),
+    earth_space: await import("octos-lesson-language/plugin-earth-space"),
     shared: await import("octos-lesson-language/plugin-shared"),
   };
   for (const plugin of INSTALLED_PLUGINS) {
