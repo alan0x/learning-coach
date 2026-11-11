@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.25.0 - 2026-11-10
+
+- Function plots get their view from a deterministic teaching view planner (`docs/PLOT_VIEW_PLANNER.md`), replacing the viewport heuristics.
+  - The view frames the features of each curve and the states the creation section shows. Slider extremes join only when they cost at most 1.5× of the span.
+  - Quantity axes start at zero.
+  - Model-written ranges are checked and repaired with a logged `plot_view_adjusted` adjustment instead of failing the section.
+  - Equal units are used only where geometry is the content. Radian trigonometric plots get π ticks, and removable holes are published as `curves[].holes`.
+- Static curve legends use the textbook formatter. `log10`, `lg` and `log2` are accepted.
+- Needs an OLL player that understands `axes.layout`, `axes.x.ticks` and `curves[].holes`. Older players ignore these fields and still play the lesson.
+- Request digests are unchanged. The lesson digests of the four function-plot fixtures changed.
+
 ## 0.24.4 - 2026-11-10
 
 - Function plots separate formula parameters from sample inputs. A curve changes through the parameters its formula references; `parameters.sample_x_numbers` moves one point (P) or two points (A/B, secant) along a fixed curve. Explicit sample bindings change every model request, so all 1,680 request digests were re-recorded; the lesson digests of the four function-plot fixtures changed with them.
