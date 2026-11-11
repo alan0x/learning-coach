@@ -8123,7 +8123,8 @@ var FUNCTIONS = {
   exp: Math.exp,
   floor: Math.floor,
   ln: Math.log,
-  log: Math.log,
+  // Common logarithm, as students read log(x); ln is the natural logarithm.
+  log: Math.log10,
   round: Math.round,
   sin: Math.sin,
   sqrt: Math.sqrt,
@@ -13896,6 +13897,69 @@ function numericAnswerTolerance(answer, checked) {
   if (difference > halfUnit + roundoff) return void 0;
   return Math.max(difference, Number((halfUnit + gradingSlack).toPrecision(10)));
 }
+var ROUNDING_DIGITS = {
+  "0": 0,
+  "1": 1,
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  "5": 5,
+  "6": 6,
+  \u4E00: 1,
+  \u4E8C: 2,
+  \u4E24: 2,
+  \u4E09: 3,
+  \u56DB: 4,
+  \u4E94: 5,
+  \u516D: 6,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6
+};
+var ROUNDING_PLACE_NAMES = {
+  \u4E2A\u4F4D: 0,
+  \u6574\u6570: 0,
+  \u5341\u5206\u4F4D: 1,
+  \u767E\u5206\u4F4D: 2,
+  \u5343\u5206\u4F4D: 3,
+  "whole number": 0,
+  integer: 0,
+  one: 0,
+  tenth: 1,
+  hundredth: 2,
+  thousandth: 3
+};
+function roundingPlaces(prompt, answer) {
+  const text2 = prompt.replace(/\s+/gu, " ");
+  if (/(?:不(?:用|要|必|需要?)|无需|别)\s*(?:四舍五入|取近似|保留)|\b(?:do not|don't|without|no need to) round/iu.test(text2)) return void 0;
+  const chinesePlaces = /保留\s*([0-6一二两三四五六])\s*位小数/u.exec(text2);
+  if (chinesePlaces) return ROUNDING_DIGITS[chinesePlaces[1]];
+  const chineseNamed = /精确到\s*(个位|整数|十分位|百分位|千分位)/u.exec(text2);
+  if (chineseNamed) return ROUNDING_PLACE_NAMES[chineseNamed[1]];
+  const chineseUnit = /精确到\s*0?\.(0*)1(?![0-9])/u.exec(text2);
+  if (chineseUnit) return chineseUnit[1].length + 1;
+  if (/保留整数|取整数|(?:四舍五入|精确)(?:到|为|成)\s*(?:整数|个位)/u.test(text2)) return 0;
+  const englishPlaces = /\b([0-6]|one|two|three|four|five|six)\s+decimal\s+places?\b/iu.exec(text2);
+  if (englishPlaces) return ROUNDING_DIGITS[englishPlaces[1].toLowerCase()];
+  const englishNamed = /\bnearest\s+(whole number|integer|one|tenth|hundredth|thousandth)s?\b/iu.exec(text2);
+  if (englishNamed) return ROUNDING_PLACE_NAMES[englishNamed[1].toLowerCase()];
+  const englishUnit = /\bnearest\s+0?\.(0*)1(?![0-9])/iu.exec(text2);
+  if (englishUnit) return englishUnit[1].length + 1;
+  if (/四舍五入|\bround(?:ed|ing)?\b/iu.test(text2)) {
+    const written = answer.trim().replace(/[０-９]/gu, (digit) => String.fromCharCode(digit.charCodeAt(0) - 65248)).replace(/[．。]/gu, ".");
+    return /\.(\d+)$/u.exec(written)?.[1]?.length ?? 0;
+  }
+  return void 0;
+}
+function roundingTolerance(prompt, answer) {
+  const places = roundingPlaces(prompt, answer);
+  if (places === void 0) return void 0;
+  const halfUnit = 0.5 * 10 ** -places;
+  return Number((halfUnit + halfUnit * 1e-6).toPrecision(10));
+}
 function validateTypedQuestion(activity, path) {
   allowedKeys(activity, [
     "kind",
@@ -15812,7 +15876,10 @@ function compileLessonPlan(value, options = {}) {
         });
       } else if (activity.kind === "numeric_answer") {
         const anchor = resolvedReference(`${activityPath}.reference`);
-        const tolerance = numericAnswerTolerance(activity.answer, compileMathExpression(activity.check, [])({}));
+        const tolerance = Math.max(
+          numericAnswerTolerance(activity.answer, compileMathExpression(activity.check, [])({})) ?? 0,
+          roundingTolerance(activity.prompt, activity.answer) ?? 0
+        );
         addTask({
           ...common,
           anchor: wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias,
@@ -19094,6 +19161,8 @@ export {
   numericAnswerTolerance,
   promptSlot,
   resolveLessonPlan,
+  roundingPlaces,
+  roundingTolerance,
   validateLessonPlan,
   validateLessonPlanOutline,
   validateNumericAnswerActivity,

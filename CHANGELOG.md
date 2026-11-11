@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.1 - 2026-11-10
+
+- Rounding questions accept the unrounded value. A prompt that asks for rounding ("保留一位小数", "四舍五入", "精确到百分位", "round to the nearest tenth", "to 2 decimal places") gives the answer a tolerance of half a unit in the requested place. The learner can type 2.15 for an answer of 2.2, whether or not the model wrote the unrounded arithmetic in `check`. Questions that do not ask for rounding keep exact grading.
+- `log` is the common logarithm (base 10) once Coach uses an OLL with that semantics. `ln` stays the natural logarithm. `log_b(x)` and `log10`/`lg`/`log2` are written by change of base, so they are unaffected.
+
 ## 0.25.0 - 2026-11-10
 
 - Function plots get their view from a deterministic teaching view planner (`docs/PLOT_VIEW_PLANNER.md`), replacing the viewport heuristics.
