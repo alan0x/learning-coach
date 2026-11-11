@@ -1,7 +1,7 @@
 import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
-import { LESSON_PLAN_CAPABILITY_REGISTRY, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_REGISTRY, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
 import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen } from "./recipe-kit.js";
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
@@ -533,7 +533,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         const anchor = resolvedReference(`${activityPath}.reference`);
         // A rounded answer accepts anything that rounds to it, so a learner who
         // types the unrounded value or keeps more places is not marked wrong.
-        const tolerance = numericAnswerTolerance(activity.answer, compileMathExpression(activity.check, [])({}));
+        const tolerance = Math.max(
+          numericAnswerTolerance(activity.answer, compileMathExpression(activity.check, [])({})) ?? 0,
+          roundingTolerance(activity.prompt, activity.answer) ?? 0,
+        );
         addTask({
           ...common,
           anchor: wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias,

@@ -4376,23 +4376,23 @@ test("a typed question compiles to a numeric answer task by its card, checked ag
 
 test("a rounded decimal answer matches its check to the places written, and the learner gets the same rounding", () => {
   const base = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
-  const withAnswer = (answer, check) => {
+  const withAnswer = (answer, check, prompt = "保留两位小数。") => {
     const plan = structuredClone(base);
     plan.sections[1].student_activities = [{
-      kind: "numeric_answer", prompt: "保留两位小数。", answer, check,
+      kind: "numeric_answer", prompt, answer, check,
       reference: { source: "local_board_item", moment: 1, item: 2 }, hints: ["先算比值。"],
     }];
     return plan;
   };
-  const completion = (answer, check) => compileAndValidateLessonPlan(withAnswer(answer, check)).lesson.lesson.tasks
+  const completion = (answer, check, prompt) => compileAndValidateLessonPlan(withAnswer(answer, check, prompt)).lesson.lesson.tasks
     .find((task) => task.completion.kind === "numeric_answer").completion;
   // Answers the P0 baseline rejected as unequal although they were correctly rounded.
   assert.deepEqual(completion("11.21", "2.02/18.02*100"), { kind: "numeric_answer", answer: "11.21", tolerance: 0.005000005 });
   assert.equal(completion("27.29", "12.011/44.01*100").tolerance, 0.005000005);
   assert.equal(completion("2.0", "2*3.14*(0.98/9.8)^0.5").tolerance, 0.05000005);
-  // An exact answer keeps exact grading.
-  assert.deepEqual(completion("0.75", "3/4"), { kind: "numeric_answer", answer: "0.75" });
-  assert.deepEqual(completion("0.3", "0.1+0.2"), { kind: "numeric_answer", answer: "0.3" });
+  // An exact answer to a question that does not ask for rounding keeps exact grading.
+  assert.deepEqual(completion("0.75", "3/4", "把 3/4 写成小数。"), { kind: "numeric_answer", answer: "0.75" });
+  assert.deepEqual(completion("0.3", "0.1+0.2", "计算 0.1+0.2。"), { kind: "numeric_answer", answer: "0.3" });
   for (const [answer, check] of [
     ["12345678.90", "12345678.896"],
     ["12345678.90", "12345678.905"],
@@ -4831,4 +4831,45 @@ test("a first section written after the planning call still sees the board's cur
   assert.ok(first, JSON.stringify(seen.map((call) => [call.label, call.section])));
   assert.ok(first.lesson);
   for (const call of seen.filter((entry) => entry.label === "lesson-plan-section" && entry.section > 1)) assert.equal(call.lesson, null);
+});
+
+test("a rounding question accepts the unrounded value whichever way the model wrote its check", () => {
+  const { roundingPlaces } = lessonPlanApi;
+  for (const [prompt, answer, places] of [
+    ["把 2.15 四舍五入保留一位小数。", "2.2", 1],
+    ["把 -2.15 保留两位小数。", "-2.15", 2],
+    ["精确到百分位。", "3.14", 2],
+    ["精确到 0.01。", "3.14", 2],
+    ["把 3.6 四舍五入到整数。", "4", 0],
+    ["四舍五入，结果是多少？", "1.235", 3],
+    ["Round 2.15 to the nearest tenth.", "2.2", 1],
+    ["Give the answer to 2 decimal places.", "1.41", 2],
+    ["Round to the nearest whole number.", "4", 0],
+    ["Round your answer to the nearest 0.01.", "3.14", 2],
+  ]) assert.equal(roundingPlaces(prompt, answer), places, prompt);
+  for (const prompt of ["把 3/4 写成小数。", "计算 0.1+0.2。", "不用四舍五入，直接写出结果。", "Do not round your answer."]) {
+    assert.equal(roundingPlaces(prompt, "0.75"), undefined, prompt);
+  }
+
+  const base = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
+  const completion = (prompt, answer, check) => {
+    const plan = structuredClone(base);
+    plan.sections[1].student_activities = [{
+      kind: "numeric_answer", prompt, answer, check,
+      reference: { source: "local_board_item", moment: 1, item: 2 }, hints: ["先看百分位。"],
+    }];
+    return compileAndValidateLessonPlan(plan).lesson.lesson.tasks.find((task) => task.completion.kind === "numeric_answer").completion;
+  };
+  // The E2E lesson 74859b6c wrote check = answer, which used to grade exactly.
+  for (const [prompt, answer, unrounded, wrong] of [
+    ["把 2.15 四舍五入保留一位小数。", "2.2", "2.15", ["2.26", "2.1", "2.14"]],
+    ["把 -2.15 四舍五入保留一位小数。", "-2.2", "-2.15", ["-2.26", "-2.1", "2.2"]],
+    ["Round 12345678.896 to two decimal places.", "12345678.90", "12345678.896", ["12345678.91", "12345678.8"]],
+    ["把 3.6 四舍五入到整数。", "4", "3.6", ["3.4", "5"]],
+  ]) {
+    const graded = completion(prompt, answer, answer);
+    assert.equal(checkNumericAnswer(graded, answer).succeeded, true, `${answer} itself`);
+    assert.equal(checkNumericAnswer(graded, unrounded).succeeded, true, `${unrounded} for ${answer}`);
+    for (const typed of wrong) assert.equal(checkNumericAnswer(graded, typed).succeeded, false, `${typed} for ${answer}`);
+  }
 });

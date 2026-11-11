@@ -1150,6 +1150,57 @@ export function numericAnswerTolerance(answer: string, checked: number): number 
   return Math.max(difference, Number((halfUnit + gradingSlack).toPrecision(10)));
 }
 
+const ROUNDING_DIGITS: Record<string, number> = {
+  "0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6,
+  一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6,
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
+};
+const ROUNDING_PLACE_NAMES: Record<string, number> = {
+  个位: 0, 整数: 0, 十分位: 1, 百分位: 2, 千分位: 3,
+  "whole number": 0, integer: 0, one: 0, tenth: 1, hundredth: 2, thousandth: 3,
+};
+
+/**
+ * The decimal places a question asks the learner to round to, read from its
+ * prompt: "保留一位小数", "精确到百分位", "四舍五入", "round to the nearest
+ * tenth", "to 2 decimal places". A bare "round" uses the answer's own places.
+ * Undefined when the prompt does not ask for rounding.
+ */
+export function roundingPlaces(prompt: string, answer: string): number | undefined {
+  const text = prompt.replace(/\s+/gu, " ");
+  if (/(?:不(?:用|要|必|需要?)|无需|别)\s*(?:四舍五入|取近似|保留)|\b(?:do not|don't|without|no need to) round/iu.test(text)) return undefined;
+  const chinesePlaces = /保留\s*([0-6一二两三四五六])\s*位小数/u.exec(text);
+  if (chinesePlaces) return ROUNDING_DIGITS[chinesePlaces[1]!];
+  const chineseNamed = /精确到\s*(个位|整数|十分位|百分位|千分位)/u.exec(text);
+  if (chineseNamed) return ROUNDING_PLACE_NAMES[chineseNamed[1]!];
+  const chineseUnit = /精确到\s*0?\.(0*)1(?![0-9])/u.exec(text);
+  if (chineseUnit) return chineseUnit[1]!.length + 1;
+  if (/保留整数|取整数|(?:四舍五入|精确)(?:到|为|成)\s*(?:整数|个位)/u.test(text)) return 0;
+  const englishPlaces = /\b([0-6]|one|two|three|four|five|six)\s+decimal\s+places?\b/iu.exec(text);
+  if (englishPlaces) return ROUNDING_DIGITS[englishPlaces[1]!.toLowerCase()];
+  const englishNamed = /\bnearest\s+(whole number|integer|one|tenth|hundredth|thousandth)s?\b/iu.exec(text);
+  if (englishNamed) return ROUNDING_PLACE_NAMES[englishNamed[1]!.toLowerCase()];
+  const englishUnit = /\bnearest\s+0?\.(0*)1(?![0-9])/iu.exec(text);
+  if (englishUnit) return englishUnit[1]!.length + 1;
+  if (/四舍五入|\bround(?:ed|ing)?\b/iu.test(text)) {
+    const written = answer.trim().replace(/[０-９]/gu, (digit) => String.fromCharCode(digit.charCodeAt(0) - 0xfee0)).replace(/[．。]/gu, ".");
+    return /\.(\d+)$/u.exec(written)?.[1]?.length ?? 0;
+  }
+  return undefined;
+}
+
+/**
+ * A rounding question accepts any typed value that rounds to its answer, so
+ * the learner may type the unrounded value too (2.15 for "保留一位小数", answer
+ * 2.2). Either side of an exact tie counts, as in numericAnswerTolerance.
+ */
+export function roundingTolerance(prompt: string, answer: string): number | undefined {
+  const places = roundingPlaces(prompt, answer);
+  if (places === undefined) return undefined;
+  const halfUnit = 0.5 * 10 ** -places;
+  return Number((halfUnit + halfUnit * 1e-6).toPrecision(10));
+}
+
 /**
  * The model writes both the answer and the arithmetic behind it. The program
  * evaluates that arithmetic, so a slip between the two never reaches a learner
