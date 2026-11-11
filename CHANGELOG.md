@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.4 - 2026-11-10
+
+- Function plots separate formula parameters from sample inputs. A curve changes through the parameters its formula references; `parameters.sample_x_numbers` moves one point (P) or two points (A/B, secant) along a fixed curve. Explicit sample bindings change every model request, so all 1,680 request digests were re-recorded; the lesson digests of the four function-plot fixtures changed with them.
+- A static quadratic whose labels and section instructions confirm the vertex roles is rebuilt locally as a vertex-translation curve, without another model request.
+- A redundant sample field on a parameterized curve is removed locally before validation, even when it is malformed, unless the lesson really uses a moving point. The adjustment log records the removed field.
+- Parameterized curve legends and hover readouts use the sliders' readable symbols (`y = −(x − h)² + k`) instead of internal aliases. Request digests are unchanged by this; one sample lesson digest changed.
+
 ## 0.24.3 - 2026-11-10
 
 - Subject plugin close-out (plan P1). No prompt, schema or lesson changes: every request and lesson digest in `eval/request-hashes.json` is unchanged.

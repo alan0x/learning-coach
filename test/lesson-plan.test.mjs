@@ -3949,6 +3949,44 @@ test("common function viewports show their main teaching region", async () => {
   assert.deepEqual(inverse.x,inverse.y);
 });
 
+test("plot formula display labels use readable symbols with minimal parentheses", async () => {
+  const bundle = await build({entryPoints:[resolve(root,"src/recipe-kit.ts")],bundle:true,platform:"node",format:"esm",write:false,logLevel:"silent"});
+  const { formatMathExpressionDisplay, displayNumberSymbols } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].contents).toString("base64")}`);
+  const plan = { numbers: [
+    { label: "顶点横坐标h", initial: -1, min: -3, max: 3 },
+    { label: "顶点纵坐标k", initial: 4, min: -2, max: 6 },
+  ]};
+  const symbols = displayNumberSymbols(plan, [1, 2]);
+  const fmt = (tokens) => formatMathExpressionDisplay(tokens, (index) => symbols.get(index) ?? `n${index}`);
+  const number = (value) => ({ kind: "number", number: value });
+  const literal = (value) => ({ kind: "literal", value });
+  const operator = (op) => ({ kind: "operator", operator: op });
+  assert.equal(fmt([{ kind: "input" }, number(1), operator("subtract"), literal(2), operator("power"), { kind: "negate" }, number(2), operator("add")]), "−(x − h)² + k");
+  assert.equal(fmt([literal(2), { kind: "input" }, operator("multiply"), literal(3), operator("add")]), "2x + 3");
+  assert.equal(fmt([literal(1), { kind: "input" }, literal(1), operator("add"), operator("divide")]), "1/(x + 1)");
+  assert.equal(fmt([literal(2), literal(3), { kind: "negate" }, operator("multiply")]), "2·(−3)");
+  assert.equal(fmt([{ kind: "input" }, number(1), { kind: "negate" }, operator("add")]), "x − h");
+  assert.equal(fmt([{ kind: "input" }, number(1), { kind: "negate" }, operator("subtract")]), "x + h");
+  assert.equal(fmt([{ kind: "input" }, literal(2), operator("power"), literal(3), operator("power")]), "(x²)³");
+  assert.equal(fmt([literal(2), { kind: "input" }, operator("multiply"), { kind: "function", name: "sin" }]), "sin(2x)");
+  assert.equal(fmt([literal(2), literal(3), operator("multiply")]), "2·3");
+
+  const colliding = displayNumberSymbols({ numbers: [{ label: "系数" }, { label: "系数" }] }, [1, 2]);
+  assert.equal(colliding.get(1), "系数₁");
+  assert.equal(colliding.get(2), "系数₂");
+  assert.equal(displayNumberSymbols({ numbers: [{ label: "时间" }] }, [1]).get(1), "时间");
+  assert.equal(displayNumberSymbols({ numbers: [{ initial: 0 }] }, [1]).get(1), "n1");
+  assert.equal(displayNumberSymbols({ numbers: [{ label: "旋转角 θ" }] }, [1]).get(1), "θ");
+  assert.equal(displayNumberSymbols({ numbers: [{ label: "slope" }] }, [1]).get(1), "slope");
+  const names = { numbers: [{ label: "h" }, { label: "h" }, { label: "h₁" }, { label: "x" }] };
+  const ordered = displayNumberSymbols(names, [1, 2, 3, 4]);
+  assert.equal(new Set(ordered.values()).size, 4);
+  assert.notEqual(ordered.get(4), "x");
+  assert.deepEqual(ordered, displayNumberSymbols(names, [4, 2, 1, 3]));
+  assert.equal(fmt([literal(2), literal(3), {kind:"input"}, operator("power"), operator("multiply")]), "2·3^x");
+  assert.equal(fmt([{kind:"input"}, literal(2), literal(3), operator("power"), operator("power")]), "x^(2³)");
+});
+
 test("later narration must not promise direct dragging of plot points", () => {
   const plan = structuredClone(completeLessonPlanFixtures.quadratic_translation);
   plan.sections[1].moments[0].narration = "现在拖动点 B。";

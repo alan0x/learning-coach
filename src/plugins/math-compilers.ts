@@ -12,7 +12,7 @@ import { functionViewport } from "../function-viewport.js";
 import { compileMathExpression, type AuthoringAction } from "octos-lesson-language";
 import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
-import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
+import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
   base: string,
@@ -112,10 +112,19 @@ function compileFunctionPlot(
     x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
     y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) },
   };
+  // Evaluation keeps the stable number_XX aliases; the display label is
+  // derived from the same parsed tokens with the numbers' readable symbols,
+  // so the legend and the hover readout can never disagree with the curve.
+  const displaySymbols = dynamicTokens !== undefined ? displayNumberSymbols(plan, dynamicNumbers) : undefined;
+  const defaultCurveLabel = (item: string) => dynamicTokens !== undefined
+    ? `y = ${formatMathExpressionDisplay(dynamicTokens, index => displaySymbols!.get(index) ?? `n${index}`)}`
+    : `y = ${item}`;
   const curves = expressions.map((item, index) => ({
     expression: item,
     label: curveLabels[index]
-      ?? (index === 0 ? namedNumbers(optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`), plan) : `y = ${item}`),
+      ?? (index === 0 && input.curve_label !== undefined
+        ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan)
+        : defaultCurveLabel(item)),
   }));
   const samples = sampleNumbers.map((sampleNumber, index) => {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);

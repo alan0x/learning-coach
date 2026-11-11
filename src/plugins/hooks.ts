@@ -50,7 +50,7 @@ export interface DraftSpecializationContext {
   outline: LessonPlanOutline;
   request: string;
   accepted: readonly LessonPlanSectionDraft[];
-  adjust(event: { kind: "plot_binding_rebuilt" | "plot_control_removed"; section: number; moment: number; reason: string }): void;
+  adjust(event: { kind: "plot_binding_rebuilt" | "plot_control_removed"; section: number; moment: number; reason: string; detail?: string }): void;
 }
 
 /** Plugin steps that work on the whole request or lesson rather than one recipe. */

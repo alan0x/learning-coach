@@ -263,3 +263,136 @@ test("a later visual cannot narrow a published plot range by reusing its input",
   assert.match(rejections[0].error.message, /without changing number 1 in the published graph/u);
   assert.deepEqual(plot, prefixes[0].plot);
 });
+
+test("a parameterized curve's legend uses the sliders' readable symbols, not internal aliases", async () => {
+  const { plot, prefixes, rejections } = await run(plotDraft({ formula: parameterizedFormula, exercise: true }));
+  assert.equal(prefixes[0].calls, 1);
+  assert.deepEqual(rejections, []);
+  assert.equal(plot.curves[0].label, "y = −(x − h)² + k");
+  assert.match(plot.curves[0].expression, /number_01/u, "evaluation keeps the stable aliases");
+  assert.doesNotMatch(plot.curves[0].label, /number_/u);
+});
+
+test("a model-authored curve label still wins over the derived display label", async () => {
+  const fixture = plotDraft({ formula: parameterizedFormula, exercise: true });
+  fixture.drafts[0].course_visual_creates.visual_1.content.parameters.curve_label = "抛物线 y=(x-n1)²+n2";
+  const { plot } = await run(fixture);
+  assert.equal(plot.curves[0].label, "抛物线 y=(x-h)²+k");
+});
+
+test("a malformed redundant sample field is dropped before validation, without a model request", async () => {
+  for (const samples of [[1, 1], [1, 9], [1, 2, 3]]) {
+    const { prefixes, rejections, adjustments, plot } = await run(
+      plotDraft({ formula: parameterizedFormula, samples, narration: vertexInstruction, exercise: true }));
+    assert.equal(prefixes[0].calls, 1, JSON.stringify(samples));
+    assert.deepEqual(rejections, []);
+    const removal = adjustments.find(event => event.reason === "unused_samples_on_parameterized_curve");
+    assert.ok(removal, JSON.stringify(samples));
+    assert.match(removal.detail ?? "", /sample_x_numbers=/u);
+    assert.equal(plot.points, undefined);
+  }
+});
+
+test("a malformed sample field that is still needed gets field-specific repair feedback", async () => {
+  // "text": the narration asks for moving sample points. "animation": the text
+  // stays on the vertex, but a creation-section animation references the number.
+  for (const mode of ["text", "animation"]) {
+    const fixture = plotDraft({
+      formula: parameterizedFormula, samples: [3, 3],
+      narration: mode === "text" ? sampleInstruction : vertexInstruction,
+    });
+    fixture.outline.numbers.push({ label: "点P的横坐标", initial: 0, min: -3, max: 3, student_control: { kind: "slider", step: 0.25 } });
+    if (mode === "animation") fixture.drafts[0].moments[0].animations = [{ number: 3, end_value: 2 }];
+    const { calls, rejections, plot } = await run(fixture, {
+      fix(draft, section) {
+        assert.equal(section, 1);
+        delete draft.moments[0].animations;
+        draft.moments[0].narration = sampleInstruction;
+        draft.course_visual_creates.visual_1.content = {
+          parameters: { formulas: [literalFormula], sample_x_numbers: [3] },
+        };
+      },
+    });
+    assert.equal(rejections.length, 1, mode);
+    assert.match(rejections[0].error.path, /\.sample_x_numbers$/u, mode);
+    assert.match(calls[1].feedback, /sample_x_numbers/u, mode);
+    assert.equal(plot.points.length, 1, mode);
+  }
+});
+
+test("mistyped sample references cannot silently discard a real animation and practice", async () => {
+  for (const samples of [["3"], 3, { number: 3 }, []]) {
+    const fixture = plotDraft({ formula: "x+n1", samples, exercise: true, animation: { number: 3, value: 2 } });
+    fixture.outline.numbers.push({ label: "采样的横坐标 t", initial: 0, min: -3, max: 3, student_control: { kind: "slider", step: 0.25 } });
+    Object.assign(fixture.drafts[0].number_activities[0], { number: 3, prompt: "请把 t 调到 2，观察对应的高度。" });
+    fixture.drafts[0].moments[0].restart_numbers = [3];
+    const { plot, prefixes, rejections, lesson } = await run(fixture, {
+      fix(draft, section) {
+        assert.equal(section, 1);
+        draft.course_visual_creates.visual_1.content.parameters = { formulas: ["x"], sample_x_numbers: [3] };
+      },
+    });
+    assert.equal(prefixes[0].calls, 2);
+    assert.match(rejections[0].error.path, /sample_x_numbers$/u);
+    assert.equal(lesson.lesson.tasks[0].prompt, "请把 t 调到 2，观察对应的高度。");
+    assert.equal(plot.points.length, 1);
+  }
+});
+
+test("an independent sample plot satisfies the shared section's sample intent", async () => {
+  const fixture = plotDraft({ formula: "x+n1", samples: [9], narration: "在另一张图上用滑块移动点 P。" });
+  fixture.outline.course_visuals.push({
+    required_features: [...LESSON_PLAN_CAPABILITY_REGISTRY.function_plot.required_features],
+    create_section: 1, use_sections: [1], relation: "comparison", related_visual: 1,
+  });
+  fixture.drafts[0].course_visual_creates.visual_2 = {
+    moment: 1, content: { parameters: { formulas: ["x^2"], sample_x_numbers: [1] } },
+  };
+  const { prefixes, rejections, lesson } = await run(fixture);
+  assert.equal(prefixes[0].calls, 1);
+  assert.deepEqual(rejections, []);
+  const plots = lesson.steps[0].beats.flatMap(beat => beat.actions).filter(action => action.kind === "plot");
+  assert.equal(plots.length, 2);
+  assert.equal(plots[0].content.points, undefined);
+  assert.equal(plots[1].content.points.length, 1);
+});
+
+test("a later instruction for an omitted sample point repairs only that section", async () => {
+  const fixture = plotDraft({ formula: "x+n1", samples: [1, 1] });
+  fixture.drafts[1].moments[0].narration = "现在用滑块移动点 P，观察它的高度。";
+  const { calls, rejections, prefixes, plot } = await run(fixture, {
+    fix(draft, section) {
+      assert.equal(section, 2);
+      draft.moments[0].narration = "观察整条曲线。";
+    },
+  });
+  assert.deepEqual(calls.slice(1).map(call => call.section), [2, 2, 3]);
+  assert.match(rejections[0].error.message, /no moving sample point/u);
+  assert.deepEqual(prefixes[0].plot, plot);
+});
+
+test("a curve parameter with the same number cannot substitute for a requested moving marker", async () => {
+  const fixture = plotDraft({ formula: "x+n1", samples: [1, 1], narration: "调节滑块，让标记沿曲线移动到指定高度。" });
+  const { prefixes, rejections, plot } = await run(fixture, {
+    fix(draft) {
+      draft.course_visual_creates.visual_1.content.parameters = { formulas: ["x"], sample_x_numbers: [1] };
+    },
+  });
+  assert.equal(prefixes[0].calls, 2);
+  assert.match(rejections[0].error.path, /sample_x_numbers$/u);
+  assert.equal(plot.points.length, 1);
+});
+
+test("an unreadable earlier sample field does not hide later use of an unbound control", async () => {
+  const fixture = plotDraft({ formula: "x+n1", samples: "unreadable" });
+  fixture.drafts[1].moments[0].animations = [{ number: 2, end_value: 2 }];
+  const { calls, rejections, prefixes, plot } = await run(fixture, {
+    fix(draft, section) {
+      assert.equal(section, 2);
+      delete draft.moments[0].animations;
+    },
+  });
+  assert.deepEqual(calls.slice(1).map(call => call.section), [2, 2, 3]);
+  assert.match(rejections[0].error.message, /no visual binding/u);
+  assert.deepEqual(prefixes[0].plot, plot);
+});

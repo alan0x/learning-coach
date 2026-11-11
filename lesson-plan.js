@@ -12055,6 +12055,108 @@ function namedNumbers(text2, plan) {
     return /([A-Za-z\u03b1-\u03c9])$/u.exec(label)?.[1] ?? label;
   });
 }
+var SUBSCRIPT_DIGITS = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089";
+function displayNumberSymbols(plan, indexes) {
+  const requested = /* @__PURE__ */ new Map();
+  for (const index of [...new Set(indexes)].sort((a, b) => a - b)) {
+    const label = plan.numbers?.[index - 1]?.label?.trim();
+    const suffix = label && /(?:^|[^A-Za-z\u0370-\u03ff])([A-Za-z\u0370-\u03ff])$/u.exec(label)?.[1];
+    requested.set(index, suffix || label || `n${index}`);
+  }
+  const counts = /* @__PURE__ */ new Map();
+  for (const name of requested.values()) counts.set(name, (counts.get(name) ?? 0) + 1);
+  const symbols = /* @__PURE__ */ new Map();
+  const reserved = /* @__PURE__ */ new Set(["x", "y", "\u03C0", "pi", "e"]);
+  const assigned = /* @__PURE__ */ new Set([...reserved, ...requested.values()]);
+  for (const [index, name] of requested) {
+    if (!reserved.has(name) && counts.get(name) === 1) {
+      symbols.set(index, name);
+      continue;
+    }
+    const subscript = [...String(index)].map((digit) => SUBSCRIPT_DIGITS[Number(digit)]).join("");
+    let candidate = name + subscript;
+    while (assigned.has(candidate)) candidate += subscript;
+    assigned.add(candidate);
+    symbols.set(index, candidate);
+  }
+  return symbols;
+}
+var DISPLAY_LEVEL_ADD = 0;
+var DISPLAY_LEVEL_MUL = 1;
+var DISPLAY_LEVEL_UNARY = 2;
+var DISPLAY_LEVEL_POWER = 3;
+var DISPLAY_LEVEL_ATOM = 4;
+var SIMPLE_IDENTIFIER = /^[A-Za-z\u0370-\u03ff][₀-₉]*$/u;
+function formatMathExpressionDisplay(expression, symbol) {
+  const stack = [];
+  const pop = (what) => {
+    const part = stack.pop();
+    if (!part) fail2("LESSON_PLAN_EXPRESSION", "$expression", `${what} is missing an operand`);
+    return part;
+  };
+  const parenthesize = (part) => `(${part.text})`;
+  for (const token of expression) {
+    if (token.kind === "input") stack.push({ text: "x", level: DISPLAY_LEVEL_ATOM });
+    else if (token.kind === "number") {
+      const name = symbol(token.number);
+      stack.push({ text: /[+−*/^=()·]|\s/u.test(name) ? `[${name}]` : name, level: DISPLAY_LEVEL_ATOM });
+    } else if (token.kind === "constant") stack.push({ text: token.name === "pi" ? "\u03C0" : token.name, level: DISPLAY_LEVEL_ATOM });
+    else if (token.kind === "literal") {
+      const magnitude = String(Math.abs(token.value));
+      stack.push(token.value < 0 || Object.is(token.value, -0) ? { text: `\u2212${magnitude}`, level: DISPLAY_LEVEL_UNARY, minus: magnitude } : { text: magnitude, level: DISPLAY_LEVEL_ATOM, literal: token.value });
+    } else if (token.kind === "negate") {
+      const operand = pop("negate");
+      const needsParens = operand.minus !== void 0 || operand.level === DISPLAY_LEVEL_ADD;
+      const inner = needsParens ? parenthesize(operand) : operand.text;
+      stack.push({ text: `\u2212${inner}`, level: DISPLAY_LEVEL_UNARY, minus: inner });
+    } else if (token.kind === "function") {
+      const operand = pop("function");
+      stack.push({ text: `${token.name}(${operand.text})`, level: DISPLAY_LEVEL_ATOM });
+    } else if (token.operator === "power") {
+      const exponent = pop("power");
+      const base = pop("power");
+      const baseText = base.level < DISPLAY_LEVEL_ATOM ? parenthesize(base) : base.text;
+      if (exponent.literal === 2 || exponent.literal === 3) {
+        stack.push({ text: `${baseText}${exponent.literal === 2 ? "\xB2" : "\xB3"}`, level: DISPLAY_LEVEL_POWER });
+      } else {
+        const exponentText = exponent.level === DISPLAY_LEVEL_ATOM ? exponent.text : parenthesize(exponent);
+        stack.push({ text: `${baseText}^${exponentText}`, level: DISPLAY_LEVEL_POWER });
+      }
+    } else if (token.operator === "multiply" || token.operator === "divide") {
+      const right = pop(token.operator);
+      const left = pop(token.operator);
+      if (token.operator === "multiply" && (left.literal === 1 || left.minus === "1")) {
+        if (left.minus === void 0) {
+          stack.push(right);
+        } else {
+          const needsParens = right.level === DISPLAY_LEVEL_ADD || right.minus !== void 0;
+          const inner = needsParens ? parenthesize(right) : right.text;
+          stack.push({ text: `\u2212${inner}`, level: DISPLAY_LEVEL_UNARY, minus: inner });
+        }
+        continue;
+      }
+      const leftText = left.level < DISPLAY_LEVEL_MUL || left.minus !== void 0 ? parenthesize(left) : left.text;
+      const rightNeedsParens = right.minus !== void 0 || right.level < DISPLAY_LEVEL_MUL || token.operator === "divide" && right.level === DISPLAY_LEVEL_MUL;
+      const rightText = rightNeedsParens ? parenthesize(right) : right.text;
+      const juxtapose = token.operator === "multiply" && left.literal !== void 0 && SIMPLE_IDENTIFIER.test(right.text);
+      stack.push({ text: juxtapose ? `${leftText}${rightText}` : `${leftText}${token.operator === "divide" ? "/" : "\xB7"}${rightText}`, level: DISPLAY_LEVEL_MUL });
+    } else {
+      const right = pop(token.operator);
+      const left = pop(token.operator);
+      const leftText = left.level < DISPLAY_LEVEL_ADD ? parenthesize(left) : left.text;
+      let text2;
+      if (token.operator === "add") {
+        text2 = right.minus !== void 0 ? `${leftText} \u2212 ${right.minus}` : `${leftText} + ${right.text}`;
+      } else {
+        text2 = right.minus !== void 0 ? `${leftText} + ${right.minus}` : `${leftText} \u2212 ${right.level <= DISPLAY_LEVEL_ADD ? parenthesize(right) : right.text}`;
+      }
+      stack.push({ text: text2, level: DISPLAY_LEVEL_ADD });
+    }
+  }
+  const result = stack[0];
+  if (!result || stack.length !== 1) fail2("LESSON_PLAN_EXPRESSION", "$expression", "expression does not produce one result");
+  return result.text;
+}
 function angleScaleForUnit(unit) {
   if (!unit) return 1;
   const normalized = unit.trim().toLowerCase();
@@ -12268,6 +12370,14 @@ function validatePlotSampleNumbers(value, numberCount, path) {
   }
   return value;
 }
+function candidateSampleNumbers(value, count) {
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap((entry) => {
+    if (entry && typeof entry === "object" && "number" in entry) entry = entry.number;
+    const number = typeof entry === "string" && /^\s*\d+\s*$/u.test(entry) ? Number(entry) : entry;
+    return typeof number === "number" && Number.isInteger(number) && number >= 1 && number <= count ? [number] : [];
+  });
+}
 function multiply(a, b) {
   if (a[2] * b[2] !== 0 || a[1] * b[2] + a[2] * b[1] !== 0) return;
   return [a[0] * b[0], a[0] * b[1] + a[1] * b[0], a[0] * b[2] + a[1] * b[1] + a[2] * b[0]];
@@ -12302,13 +12412,13 @@ function vertexRole(label) {
   if (/^(?:顶点(?:的)?(?:纵坐标|y坐标)k?|vertexycoordinate|ycoordinateofthevertex|verticalcoordinateofthevertex)$/u.test(normalized)) return "k";
 }
 var vertexInstruction = /(?:调整|移动|平移|拖动)(?:(?:这条|该)?抛物线的|该图的|该|这个)?顶点|(?:move|shift|translate|adjust|drag)\s+(?:the|this)\s+vertex\b/iu;
-var sampleIntent = /割线|采样点|点\s*[ABP]\b|\b[ABP]\s*点|两点|两个点|\b(?:secant|sample points?|point\s+[ABP]|two (?:independent )?points)\b/iu;
+var sampleIntent = /割线|采样点|曲线上.{0,6}标记|标记.{0,6}沿曲线|点\s*[ABP]\b|\b[ABP]\s*点|两点|两个点|\b(?:secant|sample points?|point\s+[ABP]|two (?:independent )?points)\b/iu;
 var interactionVerb = /调整|移动|平移|拖动|拖拽|滑块|\b(?:adjust|move|shift|translate|drag|slider|change)\b/iu;
 var negativeInstruction = /不(?:要|能|必|用|会|可)|别(?:拖|动|调整)|没有|无法|\b(?:no|not|never|cannot|can['’]t|don['’]t)\b/iu;
 var pastInstruction = /(?:刚才|之前|先前|上[一]?节|上次)|\b(?:previously|earlier|last time|we (?:moved|adjusted|shifted|translated|dragged))\b/iu;
 var clauses = (text2) => text2.split(/[。！？!?；;，,]/u);
 function sectionVisuals(draft) {
-  return draft.moments.flatMap((moment, index) => moment.actions.flatMap((action) => action.action === "create" && action.kind === "visual" ? [{ visual: action.content, moment: index + 1 }] : []));
+  return draft.moments.flatMap((moment, index) => moment.actions.flatMap((action) => action.action === "create" && action.kind === "visual" ? [{ visual: action.content, moment: index + 1, slot: action.reusable_item, section: draft.section }] : []));
 }
 function sectionText(draft) {
   return [
@@ -12343,6 +12453,7 @@ function recoverVertex(visual, candidates, outline) {
   return true;
 }
 var omittedControls = /* @__PURE__ */ new WeakMap();
+var omittedSamplePlots = /* @__PURE__ */ new WeakMap();
 function normalizePlotDraftBindings(draft, context) {
   const { outline, request, accepted, adjust } = context;
   const visuals = sectionVisuals(draft);
@@ -12351,33 +12462,60 @@ function normalizePlotDraftBindings(draft, context) {
   const text2 = sectionText(draft);
   const plotText = [...text2, ...clauses(outline.sections[draft.section - 1]?.purpose ?? ""), ...clauses(request)];
   const wantsVertex = plots.length === 1 && text2.some((line) => positiveInstruction(line, vertexInstruction) && (visuals.length === 1 || /抛物线|\bparabola\b/iu.test(line)));
-  const wantsSamples = plotText.some((line) => positiveInstruction(line, sampleIntent) && interactionVerb.test(line));
+  const asksForSamples = (line) => positiveInstruction(line, sampleIntent) && interactionVerb.test(line);
+  const wantsSamples = plotText.some(asksForSamples);
   const hasSampleIntent = plotText.some((line) => positiveInstruction(line, sampleIntent));
-  const bound = (visual) => visual.capability === "function_plot" ? [...plotCurveNumbers(visual.parameters), ...plotSampleNumbers(visual.parameters)] : visual.numbers ?? [];
+  const count = outline.numbers?.length ?? 0;
+  const validSamples = (visual) => {
+    const raw = visual.parameters?.sample_x_numbers;
+    return !plotCurveNumbers(visual.parameters).length && Array.isArray(raw) && raw.length <= 2 && new Set(raw).size === raw.length && raw.every((number) => Number.isInteger(number) && number >= 1 && number <= count) ? raw : [];
+  };
+  const bound = (visual) => visual.capability === "function_plot" ? [...plotCurveNumbers(visual.parameters), ...validSamples(visual)] : visual.numbers ?? [];
   const controlsNamed = (number) => {
     const label = outline.numbers?.[number - 1]?.label?.trim().toLowerCase();
     if (!label) return false;
     const roleLabel = vertexRole(label) ? label.replace(/[hk]$/u, "").trim() : label;
-    return text2.some((line) => positiveInstruction(line, interactionVerb) && line.toLowerCase().includes(roleLabel));
+    const singleSymbol = /^[a-z]$/u.test(roleLabel) ? new RegExp(`\\b${roleLabel}\\b`, "iu") : void 0;
+    return text2.some((line) => positiveInstruction(line, interactionVerb) && (singleSymbol ? singleSymbol.test(line) : line.toLowerCase().includes(roleLabel)));
   };
   const dropped = /* @__PURE__ */ new Set();
-  for (const { visual, moment } of plots) {
+  const droppedSampleSlots = /* @__PURE__ */ new Set();
+  const allVisuals = [...previousVisuals, ...visuals];
+  const inUse = (section, slot) => section === draft.section || outline.course_visuals?.some((visual) => visual.create_section === section && visual.reusable_item === slot && visual.use_sections.includes(draft.section));
+  const activeSamplePlots = allVisuals.filter((item) => inUse(item.section, item.slot) && item.visual.capability === "function_plot" && validSamples(item.visual).length);
+  for (const { visual, moment, slot } of plots) {
+    const others = new Set(allVisuals.filter((item) => item.visual !== visual).flatMap((item) => bound(item.visual)));
+    const otherSamplePlots = activeSamplePlots.filter((item) => item.visual !== visual);
+    const sampleIntentUnmet = wantsSamples && !otherSamplePlots.length;
     const path = `$lessonPlanSection[${draft.section}].moments[${moment}].content.parameters.sample_x_numbers`;
     const declared = visual.numbers ?? [];
     let curve = plotCurveNumbers(visual.parameters);
-    const sampleField = visual.parameters?.sample_x_numbers;
-    if (Array.isArray(sampleField) && !sampleField.length) delete visual.parameters.sample_x_numbers;
-    let samples = validatePlotSampleNumbers(visual.parameters?.sample_x_numbers, outline.numbers?.length ?? 0, path);
-    if (curve.length && samples.length) {
-      if (wantsSamples || samples.some((number) => !curve.includes(number) && (structuralUse(draft, number) || controlsNamed(number)))) {
+    const rawSamples = visual.parameters?.sample_x_numbers;
+    let samples = [];
+    if (curve.length && rawSamples !== void 0) {
+      const candidates2 = candidateSampleNumbers(rawSamples, count);
+      const onlySampleControl = (number) => !curve.includes(number) && !others.has(number);
+      const needed = candidates2.some((number) => onlySampleControl(number) && (structuralUse(draft, number) || controlsNamed(number)));
+      const unresolvedUse = (outline.numbers ?? []).some((_, index) => onlySampleControl(index + 1) && structuralUse(draft, index + 1));
+      const explicitlyHere = otherSamplePlots.length > 0 && !visuals.some((item) => item.visual !== visual && item.moment === moment && item.visual.capability === "function_plot" && validSamples(item.visual).length) && clauses(draft.moments[moment - 1].narration).some(asksForSamples) && !/另一[张幅]|另一.*图|other (?:plot|graph)/iu.test(draft.moments[moment - 1].narration);
+      if (sampleIntentUnmet || explicitlyHere || needed || unresolvedUse) {
         fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, "sample_x_numbers moves points on a fixed curve; keep formula references for changing the curve, or use a separate fixed curve for moving points");
       }
       delete visual.parameters.sample_x_numbers;
-      samples.filter((number) => !curve.includes(number)).forEach((number) => dropped.add(number));
-      adjust({ kind: "plot_control_removed", section: draft.section, moment, reason: "unused_samples_on_parameterized_curve" });
-      samples = [];
+      candidates2.filter(onlySampleControl).forEach((number) => dropped.add(number));
+      if (slot !== void 0) droppedSampleSlots.add(slot);
+      adjust({
+        kind: "plot_control_removed",
+        section: draft.section,
+        moment,
+        reason: "unused_samples_on_parameterized_curve",
+        detail: `sample_x_numbers=${JSON.stringify(rawSamples)?.slice(0, 120)}`
+      });
+    } else if (Array.isArray(rawSamples) && !rawSamples.length) {
+      delete visual.parameters.sample_x_numbers;
+    } else {
+      samples = validatePlotSampleNumbers(rawSamples, count, path);
     }
-    const others = new Set([...previousVisuals, ...visuals].filter((item) => item.visual !== visual).flatMap((item) => bound(item.visual)));
     const unused = (number) => !curve.includes(number) && !samples.includes(number) && !others.has(number);
     const candidates = declared.filter(unused);
     const fixed = !curve.length && !samples.length;
@@ -12388,7 +12526,7 @@ function normalizePlotDraftBindings(draft, context) {
       curve = plotCurveNumbers(visual.parameters);
       adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "quadratic_vertex_from_confirmed_roles" });
     } else {
-      if (fixed && singleFormula && wantsSamples && (plots.length === 1 || candidates.length)) {
+      if (fixed && singleFormula && sampleIntentUnmet && (plots.length === 1 || candidates.length)) {
         const indexes = candidates.slice(0, 2);
         fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length ? `Use parameters.sample_x_numbers: [${indexes.join(",")}] for the sample x-coordinate controls; use one index for one point` : "Use parameters.sample_x_numbers with the lesson number index of each sample's x-coordinate");
       }
@@ -12416,7 +12554,22 @@ function normalizePlotDraftBindings(draft, context) {
     if (actual.length) visual.numbers = actual;
     else delete visual.numbers;
   }
-  const knownBindings = new Set([...previousVisuals, ...visuals].flatMap((item) => bound(item.visual)));
+  const previousDroppedPlotInUse = accepted.some((earlier) => [...omittedSamplePlots.get(earlier) ?? []].some((slot) => inUse(earlier.section, slot)));
+  if (previousDroppedPlotInUse && text2.some(asksForSamples) && !activeSamplePlots.length) {
+    fail2(
+      "LESSON_PLAN_INTERACTION_MISMATCH",
+      `$lessonPlanSection[${draft.section}].moments`,
+      "The published graph has no moving sample point; add a fixed curve with sample_x_numbers in this section or revise the instruction"
+    );
+  }
+  const knownBindings = new Set(allVisuals.flatMap((item) => bound(item.visual)));
+  if (previousDroppedPlotInUse && (outline.numbers ?? []).some((_, index) => !knownBindings.has(index + 1) && structuralUse(draft, index + 1))) {
+    fail2(
+      "LESSON_PLAN_INTERACTION_MISMATCH",
+      `$lessonPlanSection[${draft.section}].moments`,
+      "The demonstration or practice uses a control with no visual binding; bind it in this section"
+    );
+  }
   const omitted = /* @__PURE__ */ new Set([...accepted.flatMap((earlier) => [...omittedControls.get(earlier) ?? []]), ...dropped]);
   for (const number of omitted) {
     if (knownBindings.has(number)) continue;
@@ -12431,6 +12584,7 @@ function normalizePlotDraftBindings(draft, context) {
     }
   }
   if (dropped.size) omittedControls.set(draft, dropped);
+  if (droppedSampleSlots.size) omittedSamplePlots.set(draft, droppedSampleSlots);
 }
 
 // src/plugins/math-teaching-contracts.ts
@@ -14248,9 +14402,11 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
     y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) }
   };
+  const displaySymbols = dynamicTokens !== void 0 ? displayNumberSymbols(plan, dynamicNumbers) : void 0;
+  const defaultCurveLabel = (item) => dynamicTokens !== void 0 ? `y = ${formatMathExpressionDisplay(dynamicTokens, (index) => displaySymbols.get(index) ?? `n${index}`)}` : `y = ${item}`;
   const curves = expressions.map((item, index) => ({
     expression: item,
-    label: curveLabels[index] ?? (index === 0 ? namedNumbers(optionalText(input.curve_label, `y = ${item}`, `${path}.curve_label`), plan) : `y = ${item}`)
+    label: curveLabels[index] ?? (index === 0 && input.curve_label !== void 0 ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan) : defaultCurveLabel(item))
   }));
   const samples = sampleNumbers.map((sampleNumber, index) => {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);

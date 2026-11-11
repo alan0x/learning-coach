@@ -25,6 +25,17 @@ export function validatePlotSampleNumbers(value: unknown, numberCount: number, p
   return value;
 }
 
+// These references are evidence of possible intent. They never become bindings
+// unless the strict sample contract is met.
+function candidateSampleNumbers(value: unknown, count: number): number[] {
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap(entry => {
+    if (entry && typeof entry === "object" && "number" in entry) entry = entry.number;
+    const number = typeof entry === "string" && /^\s*\d+\s*$/u.test(entry) ? Number(entry) : entry;
+    return typeof number === "number" && Number.isInteger(number) && number >= 1 && number <= count ? [number] : [];
+  });
+}
+
 type Coefficients = [constant: number, linear: number, quadratic: number];
 
 function multiply(a: Coefficients, b: Coefficients): Coefficients | undefined {
@@ -66,7 +77,7 @@ function vertexRole(label: string): "h" | "k" | undefined {
 }
 
 const vertexInstruction = /(?:调整|移动|平移|拖动)(?:(?:这条|该)?抛物线的|该图的|该|这个)?顶点|(?:move|shift|translate|adjust|drag)\s+(?:the|this)\s+vertex\b/iu;
-const sampleIntent = /割线|采样点|点\s*[ABP]\b|\b[ABP]\s*点|两点|两个点|\b(?:secant|sample points?|point\s+[ABP]|two (?:independent )?points)\b/iu;
+const sampleIntent = /割线|采样点|曲线上.{0,6}标记|标记.{0,6}沿曲线|点\s*[ABP]\b|\b[ABP]\s*点|两点|两个点|\b(?:secant|sample points?|point\s+[ABP]|two (?:independent )?points)\b/iu;
 const interactionVerb = /调整|移动|平移|拖动|拖拽|滑块|\b(?:adjust|move|shift|translate|drag|slider|change)\b/iu;
 const negativeInstruction = /不(?:要|能|必|用|会|可)|别(?:拖|动|调整)|没有|无法|\b(?:no|not|never|cannot|can['’]t|don['’]t)\b/iu;
 const pastInstruction = /(?:刚才|之前|先前|上[一]?节|上次)|\b(?:previously|earlier|last time|we (?:moved|adjusted|shifted|translated|dragged))\b/iu;
@@ -75,7 +86,7 @@ const clauses = (text: string) => text.split(/[。！？!?；;，,]/u);
 function sectionVisuals(draft: LessonPlanSectionDraft) {
   return draft.moments.flatMap((moment, index) => moment.actions.flatMap(action =>
     action.action === "create" && action.kind === "visual"
-      ? [{ visual: action.content as LessonPlanVisualContent, moment: index + 1 }]
+      ? [{ visual: action.content as LessonPlanVisualContent, moment: index + 1, slot: action.reusable_item, section: draft.section }]
       : []));
 }
 
@@ -128,6 +139,7 @@ function recoverVertex(
 }
 
 const omittedControls = new WeakMap<LessonPlanSectionDraft, Set<number>>();
+const omittedSamplePlots = new WeakMap<LessonPlanSectionDraft, Set<number>>();
 
 export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, context: DraftSpecializationContext): void {
   const { outline, request, accepted, adjust } = context;
@@ -138,37 +150,77 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
   const plotText = [...text, ...clauses(outline.sections[draft.section - 1]?.purpose ?? ""), ...clauses(request)];
   const wantsVertex = plots.length === 1 && text.some(line => positiveInstruction(line, vertexInstruction)
     && (visuals.length === 1 || /抛物线|\bparabola\b/iu.test(line)));
-  const wantsSamples = plotText.some(line => positiveInstruction(line, sampleIntent) && interactionVerb.test(line));
+  const asksForSamples = (line: string) => positiveInstruction(line, sampleIntent) && interactionVerb.test(line);
+  const wantsSamples = plotText.some(asksForSamples);
   const hasSampleIntent = plotText.some(line => positiveInstruction(line, sampleIntent));
+  const count = outline.numbers?.length ?? 0;
+  const validSamples = (visual: LessonPlanVisualContent): number[] => {
+    const raw = visual.parameters?.sample_x_numbers;
+    return !plotCurveNumbers(visual.parameters).length && Array.isArray(raw) && raw.length <= 2
+      && new Set(raw).size === raw.length && raw.every(number => Number.isInteger(number) && number >= 1 && number <= count)
+      ? raw : [];
+  };
   const bound = (visual: LessonPlanVisualContent) => visual.capability === "function_plot"
-    ? [...plotCurveNumbers(visual.parameters), ...plotSampleNumbers(visual.parameters)]
+    ? [...plotCurveNumbers(visual.parameters), ...validSamples(visual)]
     : visual.numbers ?? [];
   const controlsNamed = (number: number) => {
     const label = outline.numbers?.[number - 1]?.label?.trim().toLowerCase();
     if (!label) return false;
     const roleLabel = vertexRole(label) ? label.replace(/[hk]$/u, "").trim() : label;
-    return text.some(line => positiveInstruction(line, interactionVerb) && line.toLowerCase().includes(roleLabel));
+    const singleSymbol = /^[a-z]$/u.test(roleLabel) ? new RegExp(`\\b${roleLabel}\\b`, "iu") : undefined;
+    return text.some(line => positiveInstruction(line, interactionVerb)
+      && (singleSymbol ? singleSymbol.test(line) : line.toLowerCase().includes(roleLabel)));
   };
   const dropped = new Set<number>();
+  const droppedSampleSlots = new Set<number>();
+  const allVisuals = [...previousVisuals, ...visuals];
+  const inUse = (section: number, slot: number | undefined) =>
+    section === draft.section || outline.course_visuals?.some(visual =>
+      visual.create_section === section && visual.reusable_item === slot
+      && visual.use_sections.includes(draft.section));
+  const activeSamplePlots = allVisuals.filter(item => inUse(item.section, item.slot)
+    && item.visual.capability === "function_plot" && validSamples(item.visual).length);
 
-  for (const { visual, moment } of plots) {
+  for (const { visual, moment, slot } of plots) {
+    const others = new Set(allVisuals.filter(item => item.visual !== visual).flatMap(item => bound(item.visual)));
+    const otherSamplePlots = activeSamplePlots.filter(item => item.visual !== visual);
+    const sampleIntentUnmet = wantsSamples && !otherSamplePlots.length;
     const path = `$lessonPlanSection[${draft.section}].moments[${moment}].content.parameters.sample_x_numbers`;
     const declared = visual.numbers ?? [];
     let curve = plotCurveNumbers(visual.parameters);
-    const sampleField = visual.parameters?.sample_x_numbers;
-    if (Array.isArray(sampleField) && !sampleField.length) delete visual.parameters!.sample_x_numbers;
-    let samples = validatePlotSampleNumbers(visual.parameters?.sample_x_numbers, outline.numbers?.length ?? 0, path);
-    if (curve.length && samples.length) {
-      if (wantsSamples || samples.some(number => !curve.includes(number) && (structuralUse(draft, number) || controlsNamed(number)))) {
+    const rawSamples = visual.parameters?.sample_x_numbers;
+    let samples: number[] = [];
+    if (curve.length && rawSamples !== undefined) {
+      const candidates = candidateSampleNumbers(rawSamples, count);
+      const onlySampleControl = (number: number) => !curve.includes(number) && !others.has(number);
+      const needed = candidates.some(number => onlySampleControl(number)
+        && (structuralUse(draft, number) || controlsNamed(number)));
+      // A malformed field may not identify any index. An otherwise unbound
+      // animation or task in this plot's section still needs an explanation.
+      const unresolvedUse = (outline.numbers ?? []).some((_, index) =>
+        onlySampleControl(index + 1) && structuralUse(draft, index + 1));
+      // The current moment can identify this plot even when the section also
+      // contains a separate, correctly bound sample plot.
+      const explicitlyHere = otherSamplePlots.length > 0
+        && !visuals.some(item => item.visual !== visual && item.moment === moment
+          && item.visual.capability === "function_plot" && validSamples(item.visual).length)
+        && clauses(draft.moments[moment - 1].narration).some(asksForSamples)
+        && !/另一[张幅]|另一.*图|other (?:plot|graph)/iu.test(draft.moments[moment - 1].narration);
+      if (sampleIntentUnmet || explicitlyHere || needed || unresolvedUse) {
         fail("LESSON_PLAN_INTERACTION_MISMATCH", path, "sample_x_numbers moves points on a fixed curve; keep formula references for changing the curve, or use a separate fixed curve for moving points");
       }
       delete visual.parameters!.sample_x_numbers;
-      samples.filter(number => !curve.includes(number)).forEach(number => dropped.add(number));
-      adjust({ kind: "plot_control_removed", section: draft.section, moment, reason: "unused_samples_on_parameterized_curve" });
-      samples = [];
+      candidates.filter(onlySampleControl).forEach(number => dropped.add(number));
+      if (slot !== undefined) droppedSampleSlots.add(slot);
+      adjust({ kind: "plot_control_removed", section: draft.section, moment,
+        reason: "unused_samples_on_parameterized_curve",
+        detail: `sample_x_numbers=${JSON.stringify(rawSamples)?.slice(0, 120)}` });
+    } else if (Array.isArray(rawSamples) && !rawSamples.length) {
+      delete visual.parameters!.sample_x_numbers;
+    } else {
+      samples = validatePlotSampleNumbers(rawSamples, count, path);
     }
 
-    const others = new Set([...previousVisuals, ...visuals].filter(item => item.visual !== visual).flatMap(item => bound(item.visual)));
     const unused = (number: number) => !curve.includes(number) && !samples.includes(number) && !others.has(number);
     const candidates = declared.filter(unused);
     const fixed = !curve.length && !samples.length;
@@ -182,7 +234,7 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
       curve = plotCurveNumbers(visual.parameters);
       adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "quadratic_vertex_from_confirmed_roles" });
     } else {
-      if (fixed && singleFormula && wantsSamples && (plots.length === 1 || candidates.length)) {
+      if (fixed && singleFormula && sampleIntentUnmet && (plots.length === 1 || candidates.length)) {
         const indexes = candidates.slice(0, 2);
         fail("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length
           ? `Use parameters.sample_x_numbers: [${indexes.join(",")}] for the sample x-coordinate controls; use one index for one point`
@@ -208,7 +260,19 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
     else delete visual.numbers;
   }
 
-  const knownBindings = new Set([...previousVisuals, ...visuals].flatMap(item => bound(item.visual)));
+  const previousDroppedPlotInUse = accepted.some(earlier => [...omittedSamplePlots.get(earlier) ?? []]
+    .some(slot => inUse(earlier.section, slot)));
+  if (previousDroppedPlotInUse && text.some(asksForSamples) && !activeSamplePlots.length) {
+    fail("LESSON_PLAN_INTERACTION_MISMATCH", `$lessonPlanSection[${draft.section}].moments`,
+      "The published graph has no moving sample point; add a fixed curve with sample_x_numbers in this section or revise the instruction");
+  }
+
+  const knownBindings = new Set(allVisuals.flatMap(item => bound(item.visual)));
+  if (previousDroppedPlotInUse && (outline.numbers ?? []).some((_, index) =>
+    !knownBindings.has(index + 1) && structuralUse(draft, index + 1))) {
+    fail("LESSON_PLAN_INTERACTION_MISMATCH", `$lessonPlanSection[${draft.section}].moments`,
+      "The demonstration or practice uses a control with no visual binding; bind it in this section");
+  }
   const omitted = new Set([...accepted.flatMap(earlier => [...omittedControls.get(earlier) ?? []]), ...dropped]);
   for (const number of omitted) {
     if (knownBindings.has(number)) continue;
@@ -223,4 +287,5 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
     }
   }
   if (dropped.size) omittedControls.set(draft, dropped);
+  if (droppedSampleSlots.size) omittedSamplePlots.set(draft, droppedSampleSlots);
 }

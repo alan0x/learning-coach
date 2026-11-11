@@ -116,6 +116,7 @@ export interface GenerateLessonPlanOptions {
     board_kind?: "math" | "note";
     number?: number;
     reason: string;
+    detail?: string;
   }) => void | Promise<void>;
 }
 
