@@ -7,29 +7,22 @@ import { implicitSurfaceDomain } from "../scene3d-surfaces.js";
 import type { PluginHooks, RecipeHooks } from "./hooks.js";
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./math-teaching-contracts.js";
 import { formulaError, parseModelFormula } from "./math-formulas.js";
-
-function formulaNumbers(parameters: Record<string, unknown>, numberCount: number, limit: number): number[] {
-  if (!Array.isArray(parameters.expression_tokens)) return [];
-  return [...new Set(parameters.expression_tokens.flatMap((token) => (
-    token && typeof token === "object" && !Array.isArray(token)
-      && (token as Record<string, unknown>).kind === "number"
-      && Number.isInteger((token as Record<string, unknown>).number)
-      ? [Number((token as Record<string, unknown>).number)]
-      : []
-  )))].filter((number) => number >= 1 && number <= numberCount).slice(0, limit);
-}
+import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
 /**
  * Two independent sample points on a static curve should not start on top of
  * each other unless the narration says they do: move B by a fifth of its range.
  */
-function separateInitialSamples(visual: LessonPlanVisualContent, plan: LessonPlan): void {
-  const words = JSON.stringify(plan.sections.map(s => s.moments.map(m => m.narration)));
+function separateInitialSamples(visual: LessonPlanVisualContent, plan: LessonPlan, sectionIndex: number): void {
+  const words = plan.sections[sectionIndex].moments.map(moment => moment.narration).join(" ");
   if (/初始.{0,8}重合|先.{0,6}重合|开始.{0,8}重合|(?:initially|at first|start).{0,35}(?:coincid|same position)/i.test(words)) return;
-  if (visual.numbers?.length !== 2) return;
-  const tokens = visual.parameters?.expression_tokens;
-  if (Array.isArray(tokens) && tokens.some(t => t && typeof t === "object" && "kind" in t && t.kind === "number")) return;
-  const a = plan.numbers?.[visual.numbers[0]-1], b = plan.numbers?.[visual.numbers[1]-1];
+  const samples = plotSampleNumbers(visual.parameters);
+  if (samples.length !== 2) return;
+  // A later plot must not change a control that was already published.
+  if (plan.sections.slice(0, sectionIndex).some(section => section.moments.some(moment =>
+    moment.actions.some(action => action.action === "create" && action.kind === "visual"
+      && action.content.numbers?.includes(samples[1]))))) return;
+  const a = plan.numbers?.[samples[0]-1], b = plan.numbers?.[samples[1]-1];
   if (!a || !b || a === b || Math.abs(a.initial-b.initial)>1e-8) return;
   const step = b.student_control?.step ?? (b.max-b.min)/200;
   const delta = Math.max(step, Math.round((b.max-b.min)/5/step)*step);
@@ -192,7 +185,6 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       // model-authored number must never turn it into a moving-point lesson.
       return { no_numbers: true };
     },
-    numbers_from_parameters: (parameters, { numberCount, limit }) => formulaNumbers(parameters, numberCount, limit),
     validate_parameters(parameters, { path, numberCount, fail, record, array, validateMathExpression }) {
       if (parameters === undefined) {
         fail(
@@ -210,6 +202,11 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
           `${path}.parameters`,
           "a function plot requires exactly one explicit mathematical expression",
         );
+      }
+      const pathToSamples = `${path}.parameters.sample_x_numbers`;
+      const samples = validatePlotSampleNumbers(visualParameters.sample_x_numbers, numberCount, pathToSamples);
+      if (samples.length && plotCurveNumbers(visualParameters).length) {
+        fail("LESSON_PLAN_INTERACTION_MISMATCH", pathToSamples, "sample_x_numbers requires a fixed curve; use formula references for curve controls");
       }
       if (visualParameters.expression_tokens !== undefined) {
         const expressionTokens = array(
@@ -236,16 +233,9 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
         );
       }
     },
-    validate_numbers(numbers, content, { path, fail }) {
-      if (numbers.length > 2 && (content.parameters as Record<string, unknown>)?.expression_tokens === undefined) {
-        fail("LESSON_PLAN_EXPRESSION", `${path}.numbers`, "static curves support at most two independent sample points");
-      }
-    },
     before_compile: separateInitialSamples,
-    bound_numbers(content: LessonPlanVisualContent, { path, numberCount, validateMathExpression }) {
-      if (content.parameters?.expression_tokens === undefined) return undefined;
-      const curveNumbers = validateMathExpression(content.parameters.expression_tokens, path, numberCount, true);
-      return curveNumbers.length ? curveNumbers : undefined;
+    bound_numbers(content) {
+      return [...plotCurveNumbers(content.parameters), ...plotSampleNumbers(content.parameters)];
     },
   },
   function_surface_with_section: { section_range: surfaceSectionRange },
@@ -291,7 +281,8 @@ function specializeTwoPointDraft(
   for (const moment of draft.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
     const content = action.content as LessonPlanVisualContent;
-    if (content.capability !== "function_plot") continue;
+    if (content.capability !== "function_plot" || content.parameters?.sample_x_numbers !== undefined
+      || Array.isArray(content.parameters?.expressions)) continue;
     const tokens = content.parameters?.expression_tokens;
     if (Array.isArray(tokens)) {
       content.parameters!.expression_tokens = (tokens as LessonPlanMathToken[]).map((token) => (
@@ -300,13 +291,17 @@ function specializeTwoPointDraft(
           : token
       ));
     }
+    content.parameters = { ...content.parameters, sample_x_numbers: [1, 2] };
     content.numbers = [1, 2];
   }
 }
 
 export const MATH_PLUGIN_HOOKS: PluginHooks = {
   prepare_outline: (outline, { request, language }) => prepareTwoPointOutline(outline, request, language),
-  specialize_draft: (draft, { outline, request }) => specializeTwoPointDraft(draft, outline, request),
+  specialize_draft(draft, context) {
+    specializeTwoPointDraft(draft, context.outline, context.request);
+    normalizePlotDraftBindings(draft, context);
+  },
   normalize_plan: normalizePlotInputInstructions,
   check_plan: validateTeachingClaims,
 };

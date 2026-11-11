@@ -291,7 +291,7 @@ function courseVisualCreatesSchema(
       timing: { enum: timingNames },
       content: object({
         parameters: visualParametersSchema([capability]),
-        ...(numberCount > 0 && numberLimit > 0 ? {
+        ...(numberCount > 0 && numberLimit > 0 && capability !== "function_plot" ? {
           numbers: {
             type: "array",
             maxItems: numberLimit,

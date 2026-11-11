@@ -53,7 +53,7 @@ export const RECIPE_SCHEMA_PROPERTIES: Readonly<Record<string, Readonly<Record<s
  * entry lists goes after these, in the order the recipes declare it.
  */
 export const SCHEMA_PROPERTY_ORDER = [
-  "title", "projection", "x_label", "y_label", "formulas", "curve_label", "curve_labels",
+  "title", "projection", "x_label", "y_label", "formulas", "sample_x_numbers",
   "expression", "section_axis", "section_value", "level", "radius", "angle",
   "radius_expression", "center_x", "center_y", "construction", "leg_a", "leg_b", "steps",
 ] as const;

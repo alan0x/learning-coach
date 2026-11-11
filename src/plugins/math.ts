@@ -10,14 +10,14 @@ export const MATH_RECIPES = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "x_label", "y_label"],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label"],
     required_model_schema_parameters: ["formulas"],
-    semantic_parameters: ["expression", "expressions", "expression_tokens"],
+    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
-    model_guidance: "函数图：静态公式最多两数移动A/B点；含数值的公式改变曲线",
+    model_guidance: "函数图：公式引用滑块改曲线；采样点另声明",
   },
   unit_circle_projection: {
     parts: ["whole", "unit_circle", "moving_point", "radius", "projection_line", "primary_curve", "primary_control"],
@@ -159,12 +159,12 @@ export const MATH_RECIPES = {
 // the Lesson Plan validator enforces the limits after generation.
 const text = { type: "string" } as const;
 const MATH_SCHEMA_PROPERTIES = {
+  // The compiler derives legends from the formulas when none are supplied.
   function_plot: {
     x_label: text,
     y_label: text,
     formulas: { type: "array", minItems: 1, maxItems: 8, items: text },
-    curve_label: text,
-    curve_labels: { type: "array", minItems: 1, maxItems: 8, items: text },
+    sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } },
   },
   unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
   circle_polygon_bounds: { radius: { type: "number", minimum: 0 } },
@@ -193,7 +193,7 @@ export const MATH_PLUGIN = {
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "多边形重排选 polygon_pieces、rigid_rearrangement、area_relation；圆面积选 circle_area_rearrangement。",
-    "section.formulas": "function_plot 的 parameters.formulas 写中缀右侧公式，横轴为 x，支持常见运算/函数。改变曲线可写 n1、n2 引用数值；独立移动两点则公式不含 n1/n2，content.numbers=[1,2]，两数为 A/B 横坐标滑块。斜率入门优先调直线系数；两点按需用。多式仅静态比较。固定直线两点移动斜率不变；重合是0/0，非竖线。陡峭看斜率绝对值。视窗和绑定由程序生成。",
+    "section.formulas": "function_plot：formulas 写右侧公式，横轴 x。平移曲线写 -(x-n1)^2+n2，不代入初值。固定曲线上移动点用 sample_x_numbers=[1,2]（A/B 横坐标，单点只写一个）；不用 content.numbers。多式仅静态比较。固定直线两点斜率不变；重合是0/0。陡峭看斜率绝对值。",
     "section.bounds": "圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。",
     "section.linked_numbers": "半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。",
     "section.constructions": "geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。",

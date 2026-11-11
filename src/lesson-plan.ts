@@ -904,11 +904,8 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
           }
           if (kind === "visual") {
             const visualContent = content as LessonPlanVisualContent;
-            const curveNumbers = RECIPE_HOOKS[visualContent.capability]?.bound_numbers?.(
-              visualContent,
-              recipeValidationContext(`${itemPath}.content.parameters.expression_tokens`, rawNumbers.length),
-            );
-            for (const number of curveNumbers ?? visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
+            const boundNumbers = RECIPE_HOOKS[visualContent.capability]?.bound_numbers?.(visualContent);
+            for (const number of boundNumbers ?? visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
           }
           boardItemIndex += 1;
           const id = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-item-${pad(boardItemIndex)}`;

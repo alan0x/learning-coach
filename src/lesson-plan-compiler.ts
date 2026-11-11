@@ -155,12 +155,20 @@ function positiveIntegerProgramRange(
 function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
   const constrained = new Set<number>();
   const integerSides = new Set<number>();
+  const publishedPlotNumbers = new Set<number>();
   for (const [sectionIndex, section] of plan.sections.entries()) {
+    const newPlotNumbers = new Set<number>();
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
         if ((action.action !== "create" && action.action !== "revise")
           || action.kind !== "visual") continue;
         const content = action.content as LessonPlanVisualContent;
+        const bound = RECIPE_HOOKS[content.capability]?.bound_numbers?.(content);
+        if (bound?.length) content.numbers = bound;
+        else if (bound) delete content.numbers;
+        if (content.capability === "function_plot") {
+          for (const number of bound ?? []) newPlotNumbers.add(number);
+        }
         const policies = LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].number_input_policies;
         for (const [inputIndex, numberIndex] of (content.numbers ?? []).entries()) {
           const definition = plan.numbers?.[numberIndex - 1];
@@ -168,6 +176,9 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
           if (!definition || !policy) continue;
           if (RECIPE_HOOKS[content.capability]?.free_number?.(content, inputIndex)) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
+          const prior = publishedPlotNumbers.has(numberIndex)
+            ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step }
+            : undefined;
           if (policy.kind === "side_count") {
             integerSides.add(numberIndex);
             intersectProgramRange(definition, 3, 384);
@@ -193,9 +204,15 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
               constrained.add(numberIndex);
             }
           }
+          if (prior && (definition.min !== prior.min || definition.max !== prior.max || definition.initial !== prior.initial
+            || definition.student_control?.step !== prior.step)) {
+            fail("LESSON_PLAN_INTERACTION_MISMATCH", path,
+              `Use a number that fits this visual without changing number ${numberIndex} in the published graph`);
+          }
         }
       }
     }
+    for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
   if (constrained.size === 0) return;
   for (const section of plan.sections) {
@@ -282,10 +299,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
   normalizeProgramOwnedNumberRanges(plan);
   mergeEquivalentVisualInputs(plan);
-  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+  for (const [sectionIndex, section] of plan.sections.entries()) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
     const visual = action.content as LessonPlanVisualContent;
-    RECIPE_HOOKS[visual.capability]?.before_compile?.(visual, plan);
+    RECIPE_HOOKS[visual.capability]?.before_compile?.(visual, plan, sectionIndex);
   }
   const resolvedReferences = new Map(resolved.references.map((item) => [item.path, item]));
   const wholeTargets = new Map<string, string>();

@@ -109,13 +109,14 @@ export interface GenerateLessonPlanOptions {
     error: { code: string; path?: string; message: string };
   }) => void | Promise<void>;
   on_program_adjustment?: (event: {
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed" | "plot_binding_rebuilt" | "plot_control_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
     board_kind?: "math" | "note";
     number?: number;
     reason: string;
+    detail?: string;
   }) => void | Promise<void>;
 }
 
@@ -663,6 +664,7 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
   if (!forceNoNumbers
+    && capability !== "function_plot"
     && validNumbers.length === 0
     && numberCount === 1
     && typeof capability === "string"
@@ -750,7 +752,7 @@ function sanitizeNonessentialVisuals(
   outline: LessonPlanOutline;
   drafts: LessonPlanSectionDraft[];
   adjustments: Array<{
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed" | "plot_binding_rebuilt" | "plot_control_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -762,7 +764,7 @@ function sanitizeNonessentialVisuals(
   const outline = structuredClone(outlineValue);
   const drafts = structuredClone(draftValues);
   const adjustments: Array<{
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed" | "plot_binding_rebuilt" | "plot_control_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -1132,15 +1134,33 @@ function normalizeExecutableNumberInteractions(
   // without adding information. Build the executable range from their union,
   // then let installed capability policies apply any physical/rendering limit
   // during compilation.
-  for (const section of drafts) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
+  const visuallyBound = new Set<number>();
+  const publishedPlotNumbers = new Set<number>();
+  for (const [sectionIndex, section] of drafts.entries()) {
+    const newPlotNumbers = new Set<number>();
+    for (const [momentIndex, moment] of section.moments.entries()) {
+      for (const [actionIndex, action] of moment.actions.entries()) {
+        if ((action.action === "create" || action.action === "revise") && action.kind === "visual") {
+          const visual = action.content as LessonPlanVisualContent;
+          const bound = RECIPE_HOOKS[visual.capability]?.bound_numbers?.(visual);
+          for (const number of bound ?? visual.numbers ?? []) visuallyBound.add(number);
+          if (visual.capability === "function_plot") {
+            for (const number of bound ?? []) newPlotNumbers.add(number);
+          }
+        }
         if (action.action !== "animate") continue;
         const definition = outline.numbers?.[action.number - 1];
         if (!definition || !Number.isFinite(action.end_value)) continue;
         const nextMin = Math.min(definition.min, action.end_value);
         const nextMax = Math.max(definition.max, action.end_value);
         if (nextMin === definition.min && nextMax === definition.max) continue;
+        if (publishedPlotNumbers.has(action.number)) {
+          throw new LessonPlanError(
+            "LESSON_PLAN_INTERACTION_MISMATCH",
+            `$lessonPlanSectionDrafts[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`,
+            `Keep the animation within the published graph's number ${action.number} range [${definition.min}, ${definition.max}]`,
+          );
+        }
         definition.min = nextMin;
         definition.max = nextMax;
         definition.initial = Math.min(nextMax, Math.max(nextMin, definition.initial));
@@ -1149,16 +1169,7 @@ function normalizeExecutableNumberInteractions(
         }
       }
     }
-  }
-  const visuallyBound = new Set<number>();
-  for (const section of drafts) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
-        if ((action.action !== "create" && action.action !== "revise") || action.kind !== "visual") continue;
-        const visual = action.content as LessonPlanVisualContent;
-        for (const number of visual.numbers ?? []) visuallyBound.add(number);
-      }
-    }
+    for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
   outline.numbers?.forEach((number, index) => {
     if (!visuallyBound.has(index + 1)) delete number.student_control;
@@ -2425,6 +2436,21 @@ export async function generateLessonPlanWithModel(
   const admissionInput = input.input_modality === "voice" || input.input_modality === "text";
   let modelCalls = 0;
   let outline: LessonPlanOutline | undefined;
+  type ProgramAdjustment = Parameters<NonNullable<GenerateLessonPlanOptions["on_program_adjustment"]>>[0];
+  const draftAdjustments = new WeakMap<LessonPlanSectionDraft, ProgramAdjustment[]>();
+  const specializeDraft = (draft: LessonPlanSectionDraft, outline: LessonPlanOutline, accepted: readonly LessonPlanSectionDraft[]) => {
+    const adjustments: ProgramAdjustment[] = [];
+    for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(draft, {
+      outline, accepted, request: input.learner_request,
+      adjust: adjustment => adjustments.push(adjustment),
+    });
+    if (adjustments.length) draftAdjustments.set(draft, adjustments);
+    return draft;
+  };
+  const reportDraftAdjustments = async (draft: LessonPlanSectionDraft) => {
+    for (const adjustment of draftAdjustments.get(draft) ?? []) await options.on_program_adjustment?.(adjustment);
+    draftAdjustments.delete(draft);
+  };
   let bootstrappedFirstSection: LessonPlanSectionDraft | undefined;
   let outlineError: unknown;
   let stableCameraObservation: CameraLessonObservation | undefined;
@@ -2547,7 +2573,7 @@ export async function generateLessonPlanWithModel(
     );
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
-      bootstrappedFirstSection = lowerModelSectionDraft(
+      const firstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
           coerceLessonPlanBootstrapSectionModelNumbers(bootstrap.first_section),
           outline,
@@ -2557,7 +2583,7 @@ export async function generateLessonPlanWithModel(
         true,
         input.language,
       );
-      for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(bootstrappedFirstSection, { outline, request: input.learner_request });
+      bootstrappedFirstSection = specializeDraft(firstSection, outline, []);
     } catch (error) {
       sectionErrors.set(1, error);
       await options.on_rejected_part?.({
@@ -2803,7 +2829,7 @@ export async function generateLessonPlanWithModel(
         true,
         input.language,
       );
-      for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(candidate, { outline, request: input.learner_request });
+      specializeDraft(candidate, outline, drafts.slice(0, section - 1));
     } catch (error) {
       const previousError = sectionErrors.get(section);
       sectionErrors.set(section, error);
@@ -2853,10 +2879,9 @@ export async function generateLessonPlanWithModel(
       candidate ??= await generateSection(section);
       await dropUncheckedAnswerActivities(candidate, section);
       drafts[section - 1] = candidate;
+      let prefix: CompiledLessonPlan;
       try {
-        const prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
-        await options.on_playable_prefix?.({ completed_sections: section, compiled: prefix });
-        return;
+        prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
       } catch (error) {
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
@@ -2869,7 +2894,11 @@ export async function generateLessonPlanWithModel(
           error: rejectionDetails(error),
         });
         candidate = undefined;
+        continue;
       }
+      await reportDraftAdjustments(candidate);
+      await options.on_playable_prefix?.({ completed_sections: section, compiled: prefix });
+      return;
     }
   };
 
@@ -2977,6 +3006,7 @@ export async function generateLessonPlanWithModel(
     }
   }
   if (!compiled) throw finalError;
+  for (const draft of drafts) await reportDraftAdjustments(draft);
   for (const adjustment of programAdjustments) {
     await options.on_program_adjustment?.(adjustment);
   }

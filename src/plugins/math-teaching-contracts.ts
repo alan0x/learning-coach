@@ -2,6 +2,8 @@
 // what a function plot or a rearrangement actually shows.
 import { LessonPlanError, type LessonPlan, type LessonPlanMathToken, type LessonPlanVisualContent, type LessonPlanReference } from "../lesson-plan.js";
 
+import { plotSampleNumbers } from "./plot-bindings.js";
+
 /** Program-only facts. Never serialized into model catalogs or response schemas. */
 export const TEACHING_CONTRACTS = {
   circle_area_rearrangement: {concept:"circle_area", relation:"pi*r^2", preserves:"sector_area", finite_shape:"curved_edges"},
@@ -33,7 +35,7 @@ function affineTokens(tokens: LessonPlanMathToken[]): boolean {
 
 export function fixedLineSamples(visual: LessonPlanVisualContent): boolean {
   const tokens = visual.parameters?.expression_tokens;
-  return visual.capability === "function_plot" && visual.numbers?.length === 2
+  return visual.capability === "function_plot" && plotSampleNumbers(visual.parameters).length === 2
     && Array.isArray(tokens)
     && !(tokens as LessonPlanMathToken[]).some(t => t.kind === "number")
     && affineTokens(tokens as LessonPlanMathToken[]);
@@ -44,7 +46,7 @@ export function normalizePlotInputInstructions(plan: LessonPlan): void {
   const visuals = plan.sections.flatMap(s => s.moments.flatMap(m => m.actions))
     .filter(a => a.action === "create" && a.kind === "visual")
     .map(a => (a as {content:LessonPlanVisualContent}).content);
-  if (visuals.length !== 1 || visuals[0].capability !== "function_plot" || visuals[0].numbers?.length !== 2) return;
+  if (visuals.length !== 1 || visuals[0].capability !== "function_plot" || plotSampleNumbers(visuals[0].parameters).length !== 2) return;
   const tokens = visuals[0].parameters?.expression_tokens;
   if (Array.isArray(tokens) && (tokens as LessonPlanMathToken[]).some(t => t.kind === "number")) return;
   const samplesFixedLine = fixedLineSamples(visuals[0]);
@@ -255,12 +257,12 @@ export function validateTeachingClaims(plan: LessonPlan): void {
         if (visual.capability!=="function_plot") continue;
         const tokens=visual.parameters?.expression_tokens;
         const dynamic=Array.isArray(tokens)&&tokens.some(t=>t?.kind==="number");
-        const count=dynamic?0:new Set(visual.numbers??[]).size;
+        const count = plotSampleNumbers(visual.parameters).length;
         if (!dynamic && /整条.{0,8}(移动|平移)|(?:平移|移动)整条|translate.{0,12}(curve|parabola)/i.test(text)) {
           throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH",path,"moving the whole curve requires formula number references; static sample inputs only move points");
         }
         if (/两个点|两点|two points/i.test(text) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text) && count!==2) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH",path,`two independently moving points require a formula without n1/n2 and content.numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH",path,`two independently moving points require a formula without n1/n2 and parameters.sample_x_numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
         }
         if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text)) {
           throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH",path,"plot points use sliders; direct point dragging is unavailable");
