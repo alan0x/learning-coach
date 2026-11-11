@@ -8,6 +8,11 @@
 //
 //   TYPESAFE_API_KEY=… node scripts/eval-subject-routing.mjs \
 //     [--cases eval/subject-routing-heldout.json] [--recheck] [--images <dir of <id>.png>] [--out <report.json>]
+//     [--octos-profile ~/.octos/profiles/<id>.json]
+//
+// --octos-profile reads the profile's Jev key and model (OCTOS_LEARN_JEV_API_KEY
+// and OCTOS_LEARN_JEV_PARAMS, as Octos Learn's BYOK relay does) inside this
+// process instead of TYPESAFE_API_KEY.
 //
 // Camera and selection cases need their rendered image as <id>.png in --images;
 // without it they are reported as skipped.
@@ -31,10 +36,27 @@ export function scoreRoute(selected, item) {
   return expected.every((id) => subjects.includes(id)) ? "correct" : "missing_subject";
 }
 
-export function jevRequest(item, imageBase64) {
+/** The Jev key and model from an Octos profile's BYOK settings. */
+export async function profileJev(path) {
+  const env = JSON.parse(await readFile(path, "utf8")).config?.env_vars ?? {};
+  const key = env.OCTOS_LEARN_JEV_API_KEY;
+  if (typeof key !== "string" || !key.trim()) throw new Error("the profile has no Jev key");
+  let model = "jev-latest";
+  try {
+    const params = JSON.parse(env.OCTOS_LEARN_JEV_PARAMS ?? "{}");
+    if (params.provider && params.provider !== "typesafe") throw new Error(`unsupported Jev provider ${params.provider}`);
+    if (typeof params.params?.model === "string" && params.params.model.trim()) model = params.params.model.trim();
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new Error("the profile's Jev params are not JSON");
+    throw error;
+  }
+  return { key: key.trim(), model };
+}
+
+export function jevRequest(item, imageBase64, model = "jev-latest") {
   const language = item.language ?? "zh-CN";
   return {
-    model: "jev-latest",
+    model,
     state: {
       learner_request: item.prompt,
       input_modality: "text",
@@ -61,8 +83,10 @@ async function askJev(key, body) {
 async function main() {
   const args = process.argv.slice(2);
   const option = (name) => { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; };
-  const key = process.env.TYPESAFE_API_KEY?.trim();
-  if (!key) { console.error("TYPESAFE_API_KEY is required (the owner's Jev key; run only with approval)"); process.exit(2); }
+  const profile = option("--octos-profile") ? await profileJev(option("--octos-profile")) : undefined;
+  const key = profile?.key ?? process.env.TYPESAFE_API_KEY?.trim();
+  const model = profile?.model ?? "jev-latest";
+  if (!key) { console.error("TYPESAFE_API_KEY or --octos-profile is required (the owner's Jev key; run only with approval)"); process.exit(2); }
   const suite = JSON.parse(await readFile(join(root, option("--cases") ?? "eval/subject-routing-heldout.json"), "utf8"));
   let cases = suite.cases;
   if (args.includes("--recheck") && suite.recheck_from_tuning_set) {
@@ -78,11 +102,11 @@ async function main() {
       image = (await readFile(join(images, `${item.id}.png`))).toString("base64");
     }
     try {
-      const { answer, model, latency_ms } = await askJev(key, jevRequest(item, image));
+      const { answer, model: answeredBy, latency_ms } = await askJev(key, jevRequest(item, image, model));
       const selection = selectSubjectPlugins(answer?.probabilities, INSTALLED);
       const selected = selection?.plugins ?? [];
       rows.push({ id: item.id, category: item.category, choice: answer?.choice, probabilities: answer?.probabilities,
-        selected, outcome: scoreRoute(selected, item), model, latency_ms });
+        selected, outcome: scoreRoute(selected, item), model: answeredBy, latency_ms, image_seen: Boolean(image) });
     } catch (error) {
       rows.push({ id: item.id, category: item.category, outcome: "error", error: error instanceof Error ? error.message : String(error) });
     }

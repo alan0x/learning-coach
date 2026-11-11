@@ -1,0 +1,1024 @@
+{
+ "summary": {
+  "cases": 48,
+  "scored": 48,
+  "correct": 47,
+  "broad": 0,
+  "missing_subject": 1,
+  "wrong_subject": 0,
+  "errors": 0,
+  "skipped": 0,
+  "latency_p50_ms": 208
+ },
+ "rows": [
+  {
+   "id": "HO-MA-01",
+   "category": "math",
+   "choice": "math",
+   "probabilities": {
+    "math": 1,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "math"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 430,
+   "image_seen": false
+  },
+  {
+   "id": "HO-MA-02",
+   "category": "math",
+   "choice": "math",
+   "probabilities": {
+    "math": 1,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "math"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 224,
+   "image_seen": false
+  },
+  {
+   "id": "HO-MA-03",
+   "category": "math",
+   "choice": "math",
+   "probabilities": {
+    "math": 1,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "math"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 207,
+   "image_seen": false
+  },
+  {
+   "id": "HO-MA-04",
+   "category": "math",
+   "choice": "math",
+   "probabilities": {
+    "math": 1,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "math"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 208,
+   "image_seen": false
+  },
+  {
+   "id": "HO-MA-05",
+   "category": "math",
+   "choice": "math",
+   "probabilities": {
+    "math": 1,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "math"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 207,
+   "image_seen": false
+  },
+  {
+   "id": "HO-MA-06",
+   "category": "math",
+   "choice": "math",
+   "probabilities": {
+    "math": 1,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "math"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 219,
+   "image_seen": false
+  },
+  {
+   "id": "HO-PH-01",
+   "category": "physics",
+   "choice": "physics",
+   "probabilities": {
+    "math": 0,
+    "physics": 1,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "physics"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 204,
+   "image_seen": false
+  },
+  {
+   "id": "HO-PH-02",
+   "category": "physics",
+   "choice": "physics",
+   "probabilities": {
+    "math": 0,
+    "physics": 1,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "physics"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 202,
+   "image_seen": false
+  },
+  {
+   "id": "HO-PH-03",
+   "category": "physics",
+   "choice": "physics",
+   "probabilities": {
+    "math": 0,
+    "physics": 1,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "physics"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 211,
+   "image_seen": false
+  },
+  {
+   "id": "HO-PH-04",
+   "category": "physics",
+   "choice": "physics",
+   "probabilities": {
+    "math": 0,
+    "physics": 1,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "physics"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 201,
+   "image_seen": false
+  },
+  {
+   "id": "HO-PH-05",
+   "category": "physics",
+   "choice": "physics",
+   "probabilities": {
+    "math": 0,
+    "physics": 1,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "physics"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 201,
+   "image_seen": false
+  },
+  {
+   "id": "HO-CH-01",
+   "category": "chemistry",
+   "choice": "chemistry",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 1,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "chemistry"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 213,
+   "image_seen": false
+  },
+  {
+   "id": "HO-CH-02",
+   "category": "chemistry",
+   "choice": "chemistry",
+   "probabilities": {
+    "math": 0,
+    "physics": 0.01,
+    "chemistry": 0.99,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "chemistry"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 220,
+   "image_seen": false
+  },
+  {
+   "id": "HO-CH-03",
+   "category": "chemistry",
+   "choice": "chemistry",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 1,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "chemistry"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 214,
+   "image_seen": false
+  },
+  {
+   "id": "HO-CH-04",
+   "category": "chemistry",
+   "choice": "chemistry",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 1,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "chemistry"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 199,
+   "image_seen": false
+  },
+  {
+   "id": "HO-CH-05",
+   "category": "chemistry",
+   "choice": "chemistry",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 1,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "chemistry"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 200,
+   "image_seen": false
+  },
+  {
+   "id": "HO-BI-01",
+   "category": "biology",
+   "choice": "biology",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 1,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "biology"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 208,
+   "image_seen": false
+  },
+  {
+   "id": "HO-BI-02",
+   "category": "biology",
+   "choice": "biology",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 1,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "biology"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 216,
+   "image_seen": false
+  },
+  {
+   "id": "HO-BI-03",
+   "category": "biology",
+   "choice": "biology",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 1,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "biology"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 223,
+   "image_seen": false
+  },
+  {
+   "id": "HO-BI-04",
+   "category": "biology",
+   "choice": "biology",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 1,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "biology"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 197,
+   "image_seen": false
+  },
+  {
+   "id": "HO-BI-05",
+   "category": "biology",
+   "choice": "biology",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 1,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "biology"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 202,
+   "image_seen": false
+  },
+  {
+   "id": "HO-ES-01",
+   "category": "earth_space",
+   "choice": "earth_space",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 1,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "earth_space"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 205,
+   "image_seen": false
+  },
+  {
+   "id": "HO-ES-02",
+   "category": "earth_space",
+   "choice": "earth_space",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 1,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "earth_space"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 200,
+   "image_seen": false
+  },
+  {
+   "id": "HO-ES-03",
+   "category": "earth_space",
+   "choice": "earth_space",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 1,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "earth_space"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 213,
+   "image_seen": false
+  },
+  {
+   "id": "HO-ES-04",
+   "category": "earth_space",
+   "choice": "earth_space",
+   "probabilities": {
+    "math": 0,
+    "physics": 0.01,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0.99,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "earth_space"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 199,
+   "image_seen": false
+  },
+  {
+   "id": "HO-ES-05",
+   "category": "earth_space",
+   "choice": "earth_space",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 1,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "earth_space"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 204,
+   "image_seen": false
+  },
+  {
+   "id": "HO-ES-06",
+   "category": "earth_space",
+   "choice": "earth_space",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 1,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "earth_space"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 210,
+   "image_seen": false
+  },
+  {
+   "id": "HO-NO-01",
+   "category": "none",
+   "choice": "none",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 1,
+    "unclear": 0
+   },
+   "selected": [
+    "shared"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 204,
+   "image_seen": false
+  },
+  {
+   "id": "HO-NO-02",
+   "category": "none",
+   "choice": "none",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 1,
+    "unclear": 0
+   },
+   "selected": [
+    "shared"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 209,
+   "image_seen": false
+  },
+  {
+   "id": "HO-NO-03",
+   "category": "none",
+   "choice": "none",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 1,
+    "unclear": 0
+   },
+   "selected": [
+    "shared"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 213,
+   "image_seen": false
+  },
+  {
+   "id": "HO-NO-04",
+   "category": "none",
+   "choice": "none",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 1,
+    "unclear": 0
+   },
+   "selected": [
+    "shared"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 204,
+   "image_seen": false
+  },
+  {
+   "id": "HO-AM-01",
+   "category": "ambiguous",
+   "choice": "unclear",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 1
+   },
+   "selected": [],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 214,
+   "image_seen": false
+  },
+  {
+   "id": "HO-AM-02",
+   "category": "ambiguous",
+   "choice": "unclear",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 1
+   },
+   "selected": [],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 214,
+   "image_seen": false
+  },
+  {
+   "id": "HO-AM-03",
+   "category": "ambiguous",
+   "choice": "physics",
+   "probabilities": {
+    "math": 0,
+    "physics": 1,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "physics"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 206,
+   "image_seen": false
+  },
+  {
+   "id": "HO-MX-01",
+   "category": "mixed",
+   "choice": "math",
+   "probabilities": {
+    "math": 0.77,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0.23,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "math",
+    "biology"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 219,
+   "image_seen": false
+  },
+  {
+   "id": "HO-MX-02",
+   "category": "mixed",
+   "choice": "earth_space",
+   "probabilities": {
+    "math": 0.21,
+    "physics": 0.01,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0.78,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "earth_space",
+    "math"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 209,
+   "image_seen": false
+  },
+  {
+   "id": "HO-MX-03",
+   "category": "mixed",
+   "choice": "physics",
+   "probabilities": {
+    "math": 0,
+    "physics": 0.63,
+    "chemistry": 0.22,
+    "biology": 0.1,
+    "earth_space": 0.05,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "physics",
+    "chemistry"
+   ],
+   "outcome": "missing_subject",
+   "model": "jev-1.14.0",
+   "latency_ms": 196,
+   "image_seen": false
+  },
+  {
+   "id": "HO-MX-04",
+   "category": "mixed",
+   "choice": "physics",
+   "probabilities": {
+    "math": 0.11,
+    "physics": 0.89,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "physics",
+    "math"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 205,
+   "image_seen": false
+  },
+  {
+   "id": "HO-FU-01",
+   "category": "follow_up",
+   "choice": "earth_space",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0.98,
+    "none": 0,
+    "unclear": 0.02
+   },
+   "selected": [
+    "earth_space"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 205,
+   "image_seen": false
+  },
+  {
+   "id": "HO-FU-02",
+   "category": "follow_up",
+   "choice": "chemistry",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0.99,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0.01
+   },
+   "selected": [
+    "chemistry"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 223,
+   "image_seen": false
+  },
+  {
+   "id": "HO-FU-03",
+   "category": "follow_up",
+   "choice": "physics",
+   "probabilities": {
+    "math": 0.02,
+    "physics": 0.97,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0.01
+   },
+   "selected": [
+    "physics"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 215,
+   "image_seen": false
+  },
+  {
+   "id": "HO-FU-04",
+   "category": "follow_up",
+   "choice": "none",
+   "probabilities": {
+    "math": 0.02,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0.98,
+    "unclear": 0
+   },
+   "selected": [
+    "shared"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 202,
+   "image_seen": false
+  },
+  {
+   "id": "HO-IM-01",
+   "category": "image",
+   "choice": "earth_space",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0.99,
+    "none": 0,
+    "unclear": 0.01
+   },
+   "selected": [
+    "earth_space"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 233,
+   "image_seen": true
+  },
+  {
+   "id": "HO-IM-02",
+   "category": "image",
+   "choice": "chemistry",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 1,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "chemistry"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 216,
+   "image_seen": true
+  },
+  {
+   "id": "HO-IM-03",
+   "category": "image",
+   "choice": "math",
+   "probabilities": {
+    "math": 1,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "math"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 221,
+   "image_seen": true
+  },
+  {
+   "id": "HO-IM-04",
+   "category": "image",
+   "choice": "biology",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 1,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "biology"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 227,
+   "image_seen": true
+  },
+  {
+   "id": "FU-04",
+   "category": "follow_up",
+   "choice": "chemistry",
+   "probabilities": {
+    "math": 0,
+    "physics": 0.13,
+    "chemistry": 0.86,
+    "biology": 0,
+    "earth_space": 0.01,
+    "none": 0,
+    "unclear": 0
+   },
+   "selected": [
+    "chemistry",
+    "physics"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 197,
+   "image_seen": false
+  },
+  {
+   "id": "FU-05",
+   "category": "follow_up",
+   "choice": "biology",
+   "probabilities": {
+    "math": 0,
+    "physics": 0,
+    "chemistry": 0,
+    "biology": 0.99,
+    "earth_space": 0,
+    "none": 0,
+    "unclear": 0.01
+   },
+   "selected": [
+    "biology"
+   ],
+   "outcome": "correct",
+   "model": "jev-1.14.0",
+   "latency_ms": 199,
+   "image_seen": false
+  }
+ ]
+}
