@@ -1,14 +1,14 @@
 {
-  "note": "Hard payload ceilings per input route and request path (subject plugin plan, decision S6). Bytes of system prompt + prompt + response schema, excluding images. Raising a ceiling requires a plan change and a fresh live speed comparison.",
-  "recorded_from": "learning-coach main baseline",
+  "note": "Hard payload ceilings per input route and request path (subject plugin plan, decisions S6 and S14). Bytes of system prompt + prompt + response schema, excluding images. First-request ceilings are the P0 maxima plus the headroom tested in the 2026-11-11 payload experiment (+8,368 B, of which +2,956 B schema; docs/PAYLOAD_EXPERIMENT_2026-11-11.md). Other paths keep their P0 maxima. Raising a ceiling requires a plan change and a fresh live speed comparison.",
+  "recorded_from": "learning-coach main baseline (P0); first_request headroom from the 2026-11-11 experiment",
   "entry_points": {
     "camera/fallback_outline": {
       "total_bytes": 9066,
       "schema_bytes": 2678
     },
     "camera/first_request": {
-      "total_bytes": 18197,
-      "schema_bytes": 7407
+      "total_bytes": 26565,
+      "schema_bytes": 10363
     },
     "camera/first_section_retry": {
       "total_bytes": 9030,
@@ -31,8 +31,8 @@
       "schema_bytes": 2678
     },
     "selection/first_request": {
-      "total_bytes": 18681,
-      "schema_bytes": 7407
+      "total_bytes": 27049,
+      "schema_bytes": 10363
     },
     "selection/first_section_retry": {
       "total_bytes": 9030,
@@ -55,8 +55,8 @@
       "schema_bytes": 2437
     },
     "self_contained/first_request": {
-      "total_bytes": 15852,
-      "schema_bytes": 6836
+      "total_bytes": 24220,
+      "schema_bytes": 9792
     },
     "self_contained/first_section_retry": {
       "total_bytes": 8911,
@@ -79,8 +79,8 @@
       "schema_bytes": 2678
     },
     "text/first_request": {
-      "total_bytes": 17099,
-      "schema_bytes": 7077
+      "total_bytes": 25467,
+      "schema_bytes": 10033
     },
     "text/first_section_retry": {
       "total_bytes": 8911,
@@ -103,8 +103,8 @@
       "schema_bytes": 2678
     },
     "voice/first_request": {
-      "total_bytes": 17099,
-      "schema_bytes": 7077
+      "total_bytes": 25467,
+      "schema_bytes": 10033
     },
     "voice/first_section_retry": {
       "total_bytes": 8911,
@@ -121,6 +121,21 @@
     "voice/section_repair": {
       "total_bytes": 8480,
       "schema_bytes": 3396
+    }
+  },
+  "first_request_prompt_tokens": {
+    "text": 3875,
+    "note": "Provider usage promptTokenCount (Gemini API, gemini-3.6-flash, text composer request): unpadded 2,468-2,544, padded +8,368 B 3,799-3,875. Images not included. Checked in live runs, not offline."
+  },
+  "plugin_budgets": {
+    "note": "Bytes each plugin may add to a broad request: its recipes' model guidance and model parameter names, its prompt rules and its schema fragments (scripts/lesson-payload.mjs pluginFootprint). Budget = footprint on 2026-11-11 + its share of the tested 8,368 B headroom (proposed allocation; adjust by plan change).",
+    "budgets": {
+      "math": 5559,
+      "physics": 2086,
+      "shared": 2265,
+      "chemistry": 1000,
+      "biology": 1000,
+      "earth_space": 1000
     }
   }
 }
