@@ -8058,7 +8058,8 @@ var FUNCTIONS = {
   exp: Math.exp,
   floor: Math.floor,
   ln: Math.log,
-  log: Math.log,
+  // Common logarithm, as students read log(x); ln is the natural logarithm.
+  log: Math.log10,
   round: Math.round,
   sin: Math.sin,
   sqrt: Math.sqrt,
