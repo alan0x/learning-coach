@@ -59,3 +59,23 @@ test("held-out routing cases are consistent and separate from the tuning set", a
   }
   for (const id of heldOut.recheck_from_tuning_set.ids) assert.ok(tuningIds.has(id), `${id} is in the tuning set`);
 });
+
+test("the Jev routing runner asks Learn's question and scores routes against the cases", async () => {
+  const { jevRequest, scoreRoute } = await import("../scripts/eval-subject-routing.mjs");
+  const body = jevRequest({ prompt: "Why do we have seasons?", language: "en-US" });
+  assert.deepEqual(Object.keys(body.questions.subject.criteria), ["math", "physics", "chemistry", "biology", "earth_space", "none", "unclear"]);
+  assert.equal(body.assets, undefined);
+  const withImage = jevRequest({ prompt: "help", language: "zh-CN", request_source: "current_image" }, "iVBORw0KGgo=");
+  assert.equal(withImage.state.image, "request_image");
+  assert.equal(withImage.assets.request_image.data_base64, "iVBORw0KGgo=");
+  assert.equal(withImage.state.has_camera_frame, true);
+  const item = { expected_plugins: ["earth_space"], acceptable_plugins: ["physics"] };
+  assert.equal(scoreRoute(["earth_space"], item), "correct");
+  assert.equal(scoreRoute(["earth_space", "physics"], item), "correct");
+  assert.equal(scoreRoute([], item), "broad");
+  assert.equal(scoreRoute(["biology"], item), "wrong_subject");
+  assert.equal(scoreRoute(["physics"], item), "missing_subject");
+  assert.equal(scoreRoute(["shared"], { expected_plugins: [] }), "correct");
+  assert.equal(scoreRoute([], { expected_plugins: [] }), "correct");
+  assert.equal(scoreRoute(["math"], { expected_plugins: [] }), "wrong_subject");
+});

@@ -70,7 +70,7 @@
             "type": "array",
             "uniqueItems": true,
             "maxItems": 3,
-            "items": { "type": "string", "enum": ["math", "physics", "shared"] },
+            "items": { "type": "string", "enum": ["math", "physics", "chemistry", "biology", "earth_space", "shared"] },
             "description": "Optional subject plugins the host selected for this request (subject plan P2). `shared` alone means no subject plugin applies. Logged in shadow mode; the request stays broad."
           },
           "plugin_confidence": {
@@ -554,7 +554,7 @@
             "type": "array",
             "uniqueItems": true,
             "maxItems": 3,
-            "items": { "type": "string", "enum": ["math", "physics", "shared"] },
+            "items": { "type": "string", "enum": ["math", "physics", "chemistry", "biology", "earth_space", "shared"] },
             "description": "Optional subject plugins the host selected for this request (subject plan P2). `shared` alone means no subject plugin applies. Logged in shadow mode; the request stays broad."
           },
           "plugin_confidence": {
@@ -630,7 +630,7 @@
             "type": "array",
             "uniqueItems": true,
             "maxItems": 3,
-            "items": { "type": "string", "enum": ["math", "physics", "shared"] },
+            "items": { "type": "string", "enum": ["math", "physics", "chemistry", "biology", "earth_space", "shared"] },
             "description": "Optional subject plugins the host selected for this request (subject plan P2). `shared` alone means no subject plugin applies. Logged in shadow mode; the request stays broad."
           },
           "plugin_confidence": {
@@ -708,7 +708,7 @@
             "type": "array",
             "uniqueItems": true,
             "maxItems": 3,
-            "items": { "type": "string", "enum": ["math", "physics", "shared"] },
+            "items": { "type": "string", "enum": ["math", "physics", "chemistry", "biology", "earth_space", "shared"] },
             "description": "Optional subject plugins the host selected for this request (subject plan P2). `shared` alone means no subject plugin applies. Logged in shadow mode; the request stays broad."
           },
           "plugin_confidence": {
