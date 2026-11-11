@@ -38,9 +38,32 @@ export const RECIPE_CATALOG_ORDER = [
   "process_diagram",
 ] as const satisfies readonly (keyof AllRecipes)[];
 
+/**
+ * Recipes that are built and tested but not yet offered in AI lessons. A new
+ * recipe changes every provider request, so it joins the catalog only after
+ * it passes the speed gate (decision E5). Until then a measurement run
+ * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
+ * a trial recipe goes after the catalog.
+ */
+export const TRIAL_RECIPES = ["constant_speed_motion"] as const satisfies readonly (keyof AllRecipes)[];
+
+/** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
+export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {
+  const named = new Set((list ?? "").split(",").map((name) => name.trim()).filter(Boolean));
+  return TRIAL_RECIPES.filter((name) => named.has(name));
+}
+
+const processEnvironment = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+
+/** Recipes offered to the model, in catalog order. */
+export const OFFERED_RECIPES: ReadonlyArray<typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number]> = [
+  ...RECIPE_CATALOG_ORDER, ...enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES),
+];
+
+type RegistryName = typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number];
 export const PLUGIN_RECIPE_REGISTRY = Object.fromEntries(
-  RECIPE_CATALOG_ORDER.map((name) => [name, ALL_RECIPES[name]]),
-) as { readonly [Name in typeof RECIPE_CATALOG_ORDER[number]]: AllRecipes[Name] };
+  OFFERED_RECIPES.map((name) => [name, ALL_RECIPES[name]]),
+) as { readonly [Name in RegistryName]: AllRecipes[Name] };
 
 /** The plugin that owns each recipe. */
 export const RECIPE_PLUGIN = Object.fromEntries(
@@ -60,7 +83,7 @@ export const RECIPE_SCHEMA_PROPERTIES: Readonly<Record<string, Readonly<Record<s
 export const SCHEMA_PROPERTY_ORDER = [
   "title", "projection", "x_label", "y_label", "formulas", "sample_x_numbers",
   "expression", "section_axis", "section_value", "level", "radius", "angle",
-  "radius_expression", "center_x", "center_y", "construction", "leg_a", "leg_b", "steps",
+  "radius_expression", "center_x", "center_y", "construction", "leg_a", "leg_b", "steps", "speed",
 ] as const;
 
 /** One prompt bullet: its core text and the installed plugins' sentences, or "" when empty. */

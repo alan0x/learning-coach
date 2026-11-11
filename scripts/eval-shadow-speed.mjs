@@ -110,11 +110,11 @@ async function askGate(key, body) {
 }
 
 /** Starts the Coach tool as Octos does and stops it at the first playable section. */
-export function runTool({ build, input, env, maxCalls, onCall = () => {} }) {
+export function runTool({ build, input, env, maxCalls, onCall = () => {}, onFirstPart }) {
   return new Promise((resolvePromise) => {
     const startedAt = Date.now();
     const child = spawn(process.execPath, [join(build, "main"), "oll_generate_lesson"], { env, stdio: ["pipe", "ignore", "pipe"] });
-    const row = { first_playable_ms: null, calls: 0, prompt_tokens: null, plugin_signal: null, stages: [], outcome: "error" };
+    const row = { first_playable_ms: null, calls: 0, prompt_tokens: null, plugin_signal: null, stages: [], outcome: "error", first_part_path: null };
     let buffer = "";
     const stop = (outcome) => { if (row.outcome === "error" && outcome) row.outcome = outcome; child.kill("SIGTERM"); };
     child.stderr.on("data", (chunk) => {
@@ -123,6 +123,10 @@ export function runTool({ build, input, env, maxCalls, onCall = () => {} }) {
       while ((newline = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, newline);
         buffer = buffer.slice(newline + 1);
+        if (line.startsWith('{"type":"artifact"')) {
+          try { row.first_part_path ??= JSON.parse(line).path ?? null; } catch { /* not an artifact line */ }
+          continue;
+        }
         const json = line.startsWith("learning-coach: {") ? line.slice("learning-coach: ".length) : undefined;
         if (!json) continue;
         let entry;
@@ -139,6 +143,7 @@ export function runTool({ build, input, env, maxCalls, onCall = () => {} }) {
         }
         if (entry.stage === "lesson-prefix-published" && row.first_playable_ms === null) {
           row.first_playable_ms = Date.now() - startedAt;
+          if (onFirstPart && row.first_part_path) Object.assign(row, onFirstPart(row.first_part_path));
           stop("first_playable");
         }
       }

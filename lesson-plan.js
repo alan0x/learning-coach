@@ -11684,6 +11684,83 @@ function buildSpringAndMass(input) {
     }
   };
 }
+function niceAxisMax(value) {
+  if (!(value > 0) || !Number.isFinite(value))
+    return 1;
+  const power = 10 ** Math.floor(Math.log10(value));
+  const step = [1, 2, 2.5, 5, 10].find((candidate) => candidate * power >= value * (1 - 1e-9)) ?? 10;
+  return Number((step * power).toPrecision(12));
+}
+function quantityValue(quantity) {
+  return quantity.expression ? `(${quantity.expression})` : String(quantity.initial);
+}
+function buildConstantSpeedMotion(input) {
+  const { text: text2, time, speed } = input;
+  if (!(time.max > 0) || !(speed.max > 0))
+    throw new Error("constant-speed motion needs a positive time and speed maximum");
+  if (time.initial < 0 || time.initial > time.max || speed.initial <= 0 || speed.initial > speed.max) {
+    throw new Error("constant-speed motion needs 0 <= time <= its maximum and 0 < speed <= its maximum");
+  }
+  const track = `${input.as}-track`;
+  const graph = `${input.as}-graph`;
+  const length = niceAxisMax(time.max * speed.max);
+  const distance = time.initial * speed.initial;
+  const t = quantityValue(time);
+  const v = quantityValue(speed);
+  const driven = Boolean(time.expression || speed.expression);
+  const lane = Number((0.08 * length).toPrecision(12));
+  const trackContent = {
+    title: text2.title,
+    axes: { x: { min: -0.05 * length, max: 1.05 * length, label: text2.distance_axis }, y: { min: -0.1 * length, max: 0.2 * length, label: "" }, equal_scale: true },
+    points: [
+      { as: "start", x: 0, y: lane, label: text2.start },
+      { as: "finish", x: length, y: lane, visible: false },
+      { as: "object", x: distance, y: lane, label: driven ? `${text2.distance_readout}${distance}${text2.distance_unit ? ` ${text2.distance_unit}` : ""}` : text2.object }
+    ],
+    segments: [
+      { as: "track", from: "start", to: "finish", style: "dashed" },
+      { as: "travelled", from: "start", to: "object", style: "solid" }
+    ],
+    ...driven ? {
+      bindings: [{
+        target: "object.x",
+        expression: `${v}*${t}`,
+        label: { prefix: text2.distance_readout, suffix: text2.distance_unit ? ` ${text2.distance_unit}` : "", precision: 1 }
+      }]
+    } : {}
+  };
+  const graphContent = {
+    title: text2.plot_title,
+    axes: { x: { min: 0, max: time.max, label: text2.time_axis }, y: { min: 0, max: length, label: text2.distance_axis } },
+    curves: [{ as: "primary-curve", expression: `${v}*x`, label: text2.curve_label }],
+    points: [{ as: "moving-point", x: time.initial, y: distance, label: text2.current_state }],
+    ...driven ? {
+      bindings: [
+        { target: "moving-point.x", expression: t },
+        { target: "moving-point.y", expression: `${v}*${t}` }
+      ]
+    } : {}
+  };
+  return {
+    actions: [
+      { do: "write", as: track, kind: "geometry", role: input.role, content: trackContent, place: input.place },
+      { do: "write", as: graph, kind: "plot", role: input.role, content: graphContent, place: { relation: "right_of", anchor: track, gap: "normal" } },
+      { do: "connect", as: `${input.as}-link`, from: track, to: graph, relation: "same_state", label: text2.link_label },
+      { do: "group", as: input.as, role: input.role, label: text2.group_label, members: [track, graph] }
+    ],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      start: `${track}#start`,
+      object: `${track}#object`,
+      track: `${track}#track`,
+      travelled: `${track}#travelled`,
+      primary_curve: `${graph}#primary-curve`,
+      moving_point: `${graph}#moving-point`,
+      ...time.expression ? { primary_control: `${graph}#moving-point` } : {}
+    }
+  };
+}
 
 // src/plugins/physics.ts
 var PHYSICS_RECIPES = {
@@ -11699,6 +11776,19 @@ var PHYSICS_RECIPES = {
     student_controls: ["slider"],
     required_features: ["spring_mass", "cartesian_function_curve"],
     model_guidance: "\u5F39\u7C27\u3001\u7269\u4F53\u3001\u5E73\u8861\u4F4D\u7F6E\u3001\u56DE\u590D\u529B\u548C\u4F59\u5F26\u53D8\u5316\u66F2\u7EBF\u5171\u4EAB\u76F8\u4F4D"
+  },
+  constant_speed_motion: {
+    parts: ["whole", "start", "object", "track", "travelled", "primary_curve", "moving_point", "primary_control"],
+    number_inputs: ["time", "speed"],
+    number_input_policies: [{ kind: "bounded", min: 0, max: 1e6 }, { kind: "positive" }],
+    parameter_names: ["title", "speed"],
+    model_parameter_names: ["title", "speed"],
+    required_model_schema_parameters: [],
+    semantic_parameters: ["speed"],
+    output_kinds: ["geometry", "plot"],
+    student_controls: ["slider"],
+    required_features: ["uniform_motion", "distance_time_graph"],
+    model_guidance: "\u5300\u901F\u76F4\u7EBF\u8FD0\u52A8\uFF1A\u7269\u4F53\u6CBF\u76F4\u7EBF\u524D\u8FDB\uFF0C\u8DEF\u7A0B\u2014\u65F6\u95F4\u56FE\u50CF\u662F\u8FC7\u539F\u70B9\u7684\u76F4\u7EBF\uFF08s = v t\uFF09\uFF1B\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u63A7\u5236\u65F6\u95F4\u548C\u901F\u5EA6\uFF0C\u901F\u5EA6\u6539\u53D8\u76F4\u7EBF\u503E\u659C\u7A0B\u5EA6\u3002\u9002\u5408\u901F\u5EA6\u3001\u8DEF\u7A0B\u4E0E\u65F6\u95F4\u5173\u7CFB\u3001\u8BFB\u8DEF\u7A0B\u2014\u65F6\u95F4\u56FE\u50CF\uFF1B\u4E0D\u7528\u4E8E\u53D8\u901F\u3001\u52A0\u901F\u6216\u66F2\u7EBF\u8FD0\u52A8"
   }
 };
 var PHYSICS_PLUGIN = {
@@ -11706,7 +11796,9 @@ var PHYSICS_PLUGIN = {
   manifest: PHYSICS_PLUGIN_MANIFEST,
   subject: { description: PHYSICS_SUBJECT_DESCRIPTION },
   recipes: PHYSICS_RECIPES,
-  schema_properties: {},
+  schema_properties: {
+    constant_speed_motion: { speed: { type: "number", minimum: 0 } }
+  },
   prompt_rules: {}
 };
 
@@ -11878,8 +11970,18 @@ var RECIPE_CATALOG_ORDER = [
   "circle_area_rearrangement",
   "process_diagram"
 ];
+var TRIAL_RECIPES = ["constant_speed_motion"];
+function enabledTrialRecipes(list) {
+  const named = new Set((list ?? "").split(",").map((name) => name.trim()).filter(Boolean));
+  return TRIAL_RECIPES.filter((name) => named.has(name));
+}
+var processEnvironment = globalThis.process?.env;
+var OFFERED_RECIPES = [
+  ...RECIPE_CATALOG_ORDER,
+  ...enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES)
+];
 var PLUGIN_RECIPE_REGISTRY = Object.fromEntries(
-  RECIPE_CATALOG_ORDER.map((name) => [name, ALL_RECIPES[name]])
+  OFFERED_RECIPES.map((name) => [name, ALL_RECIPES[name]])
 );
 var RECIPE_PLUGIN = Object.fromEntries(
   INSTALLED_PLUGINS.flatMap((plugin) => Object.keys(plugin.recipes).map((name) => [name, plugin.manifest.id]))
@@ -11907,7 +12009,8 @@ var SCHEMA_PROPERTY_ORDER = [
   "construction",
   "leg_a",
   "leg_b",
-  "steps"
+  "steps",
+  "speed"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text2 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -11941,6 +12044,16 @@ var EN = {
   "\u5F53\u524D\u72B6\u6001": "Current state",
   "\u540C\u4E00\u65F6\u523B\u7684\u4F4D\u79FB": "Displacement at the same instant",
   "\u5F39\u7C27\u8FD0\u52A8\u4E0E\u51FD\u6570\u56FE\u50CF": "Spring motion and function graph",
+  "\u5300\u901F\u76F4\u7EBF\u8FD0\u52A8": "Motion at constant speed",
+  "\u8D77\u70B9": "Start",
+  "\u8FD0\u52A8\u7269\u4F53": "Moving object",
+  "\u7269\u4F53 s = ": "Object s = ",
+  "\u8DEF\u7A0B s": "Distance s",
+  "\u65F6\u95F4 t": "Time t",
+  "\uFF08{{v0}}\uFF09": " ({{v0}})",
+  "\u8DEF\u7A0B\u968F\u65F6\u95F4\u53D8\u5316": "Distance versus time",
+  "\u540C\u4E00\u65F6\u523B": "Same instant",
+  "\u5300\u901F\u8FD0\u52A8\u4E0E\u8DEF\u7A0B\u2014\u65F6\u95F4\u56FE\u50CF": "Constant-speed motion and its distance\u2013time graph",
   "\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u4E0E\u622A\u9762": "Cube, vertices, edges, faces, and sections",
   "\u4E00\u4E2A\u4E2D\u5FC3\u5728\u539F\u70B9\u3001\u8FB9\u957F\u4E3A 2 \u7684\u6B63\u65B9\u4F53\uFF0C\u6807\u51FA\u4E86\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u6C34\u5E73\u622A\u9762\u3002": "A cube centred at the origin with side length 2, showing a vertex, an edge, a face, and a horizontal section.",
   "\u6B63\u65B9\u4F53": "Cube",
@@ -15460,8 +15573,52 @@ function compileSpringAndMass(base, content, role, placement, plan, path) {
   });
   return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
 }
+var STILL_MOTION_TIME = 10;
+var DEFAULT_SPEED = 2;
+function motionUnits(speedUnit, timeUnit) {
+  if (!speedUnit?.trim()) return { distance: "m", time: timeUnit?.trim() || "s" };
+  const [distance = "", time = ""] = speedUnit.includes("/") ? speedUnit.split("/").map((part) => part.trim()) : [];
+  return { distance, time: timeUnit?.trim() || time };
+}
+function compileConstantSpeedMotion(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "speed"], path);
+  const [timeNumber, speedNumber] = content.numbers ?? [];
+  const timeDefinition = timeNumber ? numberDefinition(plan, timeNumber, `${path}.numbers[0]`) : void 0;
+  const speedDefinition = speedNumber ? numberDefinition(plan, speedNumber, `${path}.numbers[1]`) : void 0;
+  const speed = speedDefinition?.initial ?? optionalNumber(input.speed, DEFAULT_SPEED, `${path}.speed`);
+  if (!(speed > 0)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.speed`, "speed must be positive");
+  if (timeDefinition && !(timeDefinition.max > 0)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers[0]`, "time must be able to grow past 0");
+  }
+  const units = motionUnits(speedDefinition?.unit, timeDefinition?.unit);
+  const unitSuffix = (unit) => unit ? compileText(plan, "\uFF08{{v0}}\uFF09", { v0: unit }) : "";
+  const built = buildConstantSpeedMotion({
+    as: base,
+    role,
+    place: placement,
+    time: timeNumber && timeDefinition ? { expression: variableAlias(timeNumber), initial: timeDefinition.initial, max: timeDefinition.max } : { initial: STILL_MOTION_TIME, max: STILL_MOTION_TIME },
+    speed: speedNumber && speedDefinition ? { expression: variableAlias(speedNumber), initial: speed, max: speedDefinition.max } : { initial: speed, max: speed },
+    text: {
+      title: optionalText(input.title, compileText(plan, "\u5300\u901F\u76F4\u7EBF\u8FD0\u52A8"), `${path}.title`),
+      start: compileText(plan, "\u8D77\u70B9"),
+      object: compileText(plan, "\u8FD0\u52A8\u7269\u4F53"),
+      distance_readout: compileText(plan, "\u7269\u4F53 s = "),
+      distance_unit: units.distance,
+      distance_axis: `${compileText(plan, "\u8DEF\u7A0B s")}${unitSuffix(units.distance)}`,
+      time_axis: `${compileText(plan, "\u65F6\u95F4 t")}${unitSuffix(units.time)}`,
+      plot_title: compileText(plan, "\u8DEF\u7A0B\u968F\u65F6\u95F4\u53D8\u5316"),
+      curve_label: "s = v t",
+      current_state: compileText(plan, "\u5F53\u524D\u72B6\u6001"),
+      link_label: compileText(plan, "\u540C\u4E00\u65F6\u523B"),
+      group_label: compileText(plan, "\u5300\u901F\u8FD0\u52A8\u4E0E\u8DEF\u7A0B\u2014\u65F6\u95F4\u56FE\u50CF")
+    }
+  });
+  return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
+}
 var PHYSICS_COMPILERS = {
-  spring_and_mass: compileSpringAndMass
+  spring_and_mass: compileSpringAndMass,
+  constant_speed_motion: compileConstantSpeedMotion
 };
 
 // src/plugins/shared-compilers.ts
@@ -19213,6 +19370,7 @@ export {
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VISUAL_PARAMETER_NAMES,
   LessonPlanError,
+  OFFERED_RECIPES,
   PLUGIN_COMPILERS,
   PROCESS_DIAGRAM_CONTRACT,
   RECIPE_CATALOG_ORDER,
@@ -19221,6 +19379,7 @@ export {
   RECIPE_SCHEMA_PROPERTIES,
   SCHEMA_PROPERTY_ORDER,
   SECTION_FACTS,
+  TRIAL_RECIPES,
   assembleLessonPlan,
   buildCameraLessonPlanAdmissionBootstrapJsonSchema,
   buildCameraLessonPlanAdmissionOutlineJsonSchema,
@@ -19236,6 +19395,7 @@ export {
   compileAndValidateLessonPlan,
   compileLessonPlan,
   deriveLessonRequestParts,
+  enabledTrialRecipes,
   generateLessonPlanWithModel,
   includeWrittenCardsInFocus,
   lessonPlanPlugins,
