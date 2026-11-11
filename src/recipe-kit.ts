@@ -74,8 +74,32 @@ export function replaceIdentifier(expression: string, source: string, target: st
   return expression.replace(new RegExp(`\\b${source}\\b`, "gu"), target);
 }
 
+const LOG_ALIASES: Record<string, string> = { log10: "10", lg: "10", log2: "2" };
+
+/** Spell base-10 and base-2 logarithms with ln, which the player evaluates. */
+export function expandLogarithmAliases(expression: string): string {
+  let result = "";
+  let cursor = 0;
+  const pattern = /\b(log10|lg|log2)\s*\(/gu;
+  for (let match = pattern.exec(expression); match; match = pattern.exec(expression)) {
+    if (match.index < cursor) continue;
+    const start = match.index + match[0].length;
+    let end = start, depth = 1;
+    for (; end < expression.length; end += 1) {
+      if (expression[end] === "(") depth += 1;
+      if (expression[end] === ")" && --depth === 0) break;
+    }
+    if (depth !== 0) return expression;
+    const inner = expandLogarithmAliases(expression.slice(start, end));
+    result += `${expression.slice(cursor, match.index)}(ln(${inner})/ln(${LOG_ALIASES[match[1]!]}))`;
+    cursor = end + 1;
+    pattern.lastIndex = cursor;
+  }
+  return result + expression.slice(cursor);
+}
+
 export function safeFunctionExpression(value: JsonValue | undefined, fallback: string, variables: string[], path: string): string {
-  const expression = optionalText(value, fallback, path);
+  const expression = expandLogarithmAliases(optionalText(value, fallback, path));
   try {
     compileMathExpression(expression, variables);
   } catch (error) {
@@ -198,6 +222,7 @@ export function namedNumbers(text: string, plan: LessonPlan): string {
 }
 
 const SUBSCRIPT_DIGITS = "₀₁₂₃₄₅₆₇₈₉";
+const SUPERSCRIPT_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
 
 /**
  * Display symbols for the lesson numbers used in one plot formula: the
@@ -247,6 +272,10 @@ interface DisplayPart {
   minus?: string;
   /** The numeric value, when this part is a non-negative literal atom. */
   literal?: number;
+  /** A function call such as sin(3x). */
+  call?: boolean;
+  /** A power of a single symbol, such as x². */
+  symbolBase?: boolean;
 }
 
 const SIMPLE_IDENTIFIER = /^[A-Za-z\u0370-\u03ff][₀-₉]*$/u;
@@ -287,13 +316,17 @@ export function formatMathExpressionDisplay(
       stack.push({ text: `−${inner}`, level: DISPLAY_LEVEL_UNARY, minus: inner });
     } else if (token.kind === "function") {
       const operand = pop("function");
-      stack.push({ text: `${token.name}(${operand.text})`, level: DISPLAY_LEVEL_ATOM });
+      if (token.name === "abs") stack.push({ text: `|${operand.text}|`, level: DISPLAY_LEVEL_ATOM });
+      else if (token.name === "sqrt") {
+        stack.push({ text: operand.level === DISPLAY_LEVEL_ATOM && !operand.text.startsWith("(") ? `√${operand.text}` : `√(${operand.text})`, level: DISPLAY_LEVEL_ATOM });
+      } else stack.push({ text: `${token.name}(${operand.text})`, level: DISPLAY_LEVEL_ATOM, call: true });
     } else if (token.operator === "power") {
       const exponent = pop("power");
       const base = pop("power");
       const baseText = base.level < DISPLAY_LEVEL_ATOM ? parenthesize(base) : base.text;
-      if (exponent.literal === 2 || exponent.literal === 3) {
-        stack.push({ text: `${baseText}${exponent.literal === 2 ? "²" : "³"}`, level: DISPLAY_LEVEL_POWER });
+      if (exponent.literal !== undefined && Number.isInteger(exponent.literal) && exponent.literal >= 0 && exponent.literal < 1e6) {
+        const superscript = [...String(exponent.literal)].map(digit => SUPERSCRIPT_DIGITS[Number(digit)]).join("");
+        stack.push({ text: `${baseText}${superscript}`, level: DISPLAY_LEVEL_POWER, symbolBase: SIMPLE_IDENTIFIER.test(base.text) || baseText.startsWith("(") });
       } else {
         const exponentText = exponent.level === DISPLAY_LEVEL_ATOM
           ? exponent.text : parenthesize(exponent);
@@ -312,15 +345,30 @@ export function formatMathExpressionDisplay(
         }
         continue;
       }
-      const leftText = left.level < DISPLAY_LEVEL_MUL || left.minus !== undefined ? parenthesize(left) : left.text;
       const rightNeedsParens = right.minus !== undefined
         || right.level < DISPLAY_LEVEL_MUL
         || (token.operator === "divide" && right.level === DISPLAY_LEVEL_MUL);
       const rightText = rightNeedsParens ? parenthesize(right) : right.text;
-      // A numeric coefficient followed by a single symbol can use juxtaposition.
-      // Other operands keep a multiplication dot so adjacent tokens cannot merge.
-      const juxtapose = token.operator === "multiply" && left.literal !== undefined
-        && SIMPLE_IDENTIFIER.test(right.text);
+      // Textbook juxtaposition: 3x², −4.9t², kx, ax², 2sin(3x) and (x − 1)(x + 2).
+      // Two numbers, or a symbol before a number, keep the dot so tokens cannot merge.
+      const symbolLike = SIMPLE_IDENTIFIER.test(right.text) || right.symbolBase === true;
+      const negativeCoefficient = left.minus !== undefined && /^[0-9.]+$/u.test(left.minus);
+      const coefficient = left.literal !== undefined || negativeCoefficient;
+      // Parenthesized factors sit side by side: (x − 1)(x + 2)(x − 3), 2(x + 1).
+      const rightGroup = right.level === DISPLAY_LEVEL_ADD && right.minus === undefined;
+      const leftGroup = left.minus === undefined && (left.level === DISPLAY_LEVEL_ADD || left.text.endsWith(")"));
+      if (token.operator === "multiply" && rightGroup && (leftGroup || left.literal !== undefined)) {
+        stack.push({ text: `${left.level === DISPLAY_LEVEL_ADD ? parenthesize(left) : left.text}${parenthesize(right)}`, level: DISPLAY_LEVEL_MUL });
+        continue;
+      }
+      const juxtapose = token.operator === "multiply" && (
+        (coefficient && (symbolLike || right.call === true))
+        || (SIMPLE_IDENTIFIER.test(left.text) && symbolLike));
+      if (juxtapose && negativeCoefficient) {
+        stack.push({ text: `−${left.minus}${rightText}`, level: DISPLAY_LEVEL_UNARY, minus: `${left.minus}${rightText}` });
+        continue;
+      }
+      const leftText = left.level < DISPLAY_LEVEL_MUL || left.minus !== undefined ? parenthesize(left) : left.text;
       stack.push({ text: juxtapose ? `${leftText}${rightText}` : `${leftText}${token.operator === "divide" ? "/" : "·"}${rightText}`, level: DISPLAY_LEVEL_MUL });
     } else {
       const right = pop(token.operator);

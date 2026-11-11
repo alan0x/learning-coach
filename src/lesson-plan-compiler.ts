@@ -25,6 +25,8 @@ export interface CompiledLessonPlan {
   resolved: ResolvedLessonPlan;
   /** Plugin ID to version for the plugins that built this lesson's visuals. */
   plugins: Record<string, string>;
+  /** Visual decisions the program made for this lesson, by section (1-based). */
+  view_adjustments: Array<{ section: number; reason: string; detail: string }>;
 }
 
 function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbers = true): string {
@@ -309,6 +311,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const partTargets = new Map<string, Map<string, string>>();
   const primaryScenes = new Map<string, string>();
   const reusableVisuals = new Map<string, CompiledVisual>();
+  const viewAdjustments: CompiledLessonPlan["view_adjustments"] = [];
   let renderedVisuals: CompiledVisualRegistry | undefined;
   const reuseCompiledVisual = (visual: CompiledVisual) => {
     // The first component cannot duplicate earlier content. Initialize the
@@ -368,9 +371,11 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               );
             }
             const visual = existing
-              ?? reuseCompiledVisual(
-                compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`),
-              );
+              ?? (() => {
+                const compiledVisual = compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`);
+                for (const adjustment of compiledVisual.adjustments ?? []) viewAdjustments.push({ section: sectionIndex, ...adjustment });
+                return reuseCompiledVisual(compiledVisual);
+              })();
             if (existing) {
               actions.push({
                 do: "focus",
@@ -614,7 +619,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     steps,
     close: { summary: plan.close.summary, focus: closeFocus },
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan) };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments };
 }
 
 function expressionReferencesVariable(expression: unknown, variable: string): boolean {

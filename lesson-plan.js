@@ -10969,8 +10969,8 @@ function buildGeometricRearrangement(input) {
   ];
   const xs = endpointPoints.map((point) => point[0]);
   const ys = endpointPoints.map((point) => point[1]);
-  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1);
-  const margin = span * 0.1;
+  const span2 = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1);
+  const margin = span2 * 0.1;
   const geometry = {
     // A fixed recipe owns its name just as it owns its shapes and proof.
     title: recipe.title,
@@ -11955,8 +11955,29 @@ function assertRange(min, max, path) {
 function replaceIdentifier(expression, source, target) {
   return expression.replace(new RegExp(`\\b${source}\\b`, "gu"), target);
 }
+var LOG_ALIASES = { log10: "10", lg: "10", log2: "2" };
+function expandLogarithmAliases(expression) {
+  let result = "";
+  let cursor = 0;
+  const pattern = /\b(log10|lg|log2)\s*\(/gu;
+  for (let match = pattern.exec(expression); match; match = pattern.exec(expression)) {
+    if (match.index < cursor) continue;
+    const start = match.index + match[0].length;
+    let end = start, depth = 1;
+    for (; end < expression.length; end += 1) {
+      if (expression[end] === "(") depth += 1;
+      if (expression[end] === ")" && --depth === 0) break;
+    }
+    if (depth !== 0) return expression;
+    const inner = expandLogarithmAliases(expression.slice(start, end));
+    result += `${expression.slice(cursor, match.index)}(ln(${inner})/ln(${LOG_ALIASES[match[1]]}))`;
+    cursor = end + 1;
+    pattern.lastIndex = cursor;
+  }
+  return result + expression.slice(cursor);
+}
 function safeFunctionExpression(value, fallback, variables, path) {
-  const expression = optionalText(value, fallback, path);
+  const expression = expandLogarithmAliases(optionalText(value, fallback, path));
   try {
     compileMathExpression(expression, variables);
   } catch (error) {
@@ -12056,6 +12077,7 @@ function namedNumbers(text2, plan) {
   });
 }
 var SUBSCRIPT_DIGITS = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089";
+var SUPERSCRIPT_DIGITS = "\u2070\xB9\xB2\xB3\u2074\u2075\u2076\u2077\u2078\u2079";
 function displayNumberSymbols(plan, indexes) {
   const requested = /* @__PURE__ */ new Map();
   for (const index of [...new Set(indexes)].sort((a, b) => a - b)) {
@@ -12111,13 +12133,17 @@ function formatMathExpressionDisplay(expression, symbol) {
       stack.push({ text: `\u2212${inner}`, level: DISPLAY_LEVEL_UNARY, minus: inner });
     } else if (token.kind === "function") {
       const operand = pop("function");
-      stack.push({ text: `${token.name}(${operand.text})`, level: DISPLAY_LEVEL_ATOM });
+      if (token.name === "abs") stack.push({ text: `|${operand.text}|`, level: DISPLAY_LEVEL_ATOM });
+      else if (token.name === "sqrt") {
+        stack.push({ text: operand.level === DISPLAY_LEVEL_ATOM && !operand.text.startsWith("(") ? `\u221A${operand.text}` : `\u221A(${operand.text})`, level: DISPLAY_LEVEL_ATOM });
+      } else stack.push({ text: `${token.name}(${operand.text})`, level: DISPLAY_LEVEL_ATOM, call: true });
     } else if (token.operator === "power") {
       const exponent = pop("power");
       const base = pop("power");
       const baseText = base.level < DISPLAY_LEVEL_ATOM ? parenthesize(base) : base.text;
-      if (exponent.literal === 2 || exponent.literal === 3) {
-        stack.push({ text: `${baseText}${exponent.literal === 2 ? "\xB2" : "\xB3"}`, level: DISPLAY_LEVEL_POWER });
+      if (exponent.literal !== void 0 && Number.isInteger(exponent.literal) && exponent.literal >= 0 && exponent.literal < 1e6) {
+        const superscript = [...String(exponent.literal)].map((digit) => SUPERSCRIPT_DIGITS[Number(digit)]).join("");
+        stack.push({ text: `${baseText}${superscript}`, level: DISPLAY_LEVEL_POWER, symbolBase: SIMPLE_IDENTIFIER.test(base.text) || baseText.startsWith("(") });
       } else {
         const exponentText = exponent.level === DISPLAY_LEVEL_ATOM ? exponent.text : parenthesize(exponent);
         stack.push({ text: `${baseText}^${exponentText}`, level: DISPLAY_LEVEL_POWER });
@@ -12135,10 +12161,23 @@ function formatMathExpressionDisplay(expression, symbol) {
         }
         continue;
       }
-      const leftText = left.level < DISPLAY_LEVEL_MUL || left.minus !== void 0 ? parenthesize(left) : left.text;
       const rightNeedsParens = right.minus !== void 0 || right.level < DISPLAY_LEVEL_MUL || token.operator === "divide" && right.level === DISPLAY_LEVEL_MUL;
       const rightText = rightNeedsParens ? parenthesize(right) : right.text;
-      const juxtapose = token.operator === "multiply" && left.literal !== void 0 && SIMPLE_IDENTIFIER.test(right.text);
+      const symbolLike = SIMPLE_IDENTIFIER.test(right.text) || right.symbolBase === true;
+      const negativeCoefficient = left.minus !== void 0 && /^[0-9.]+$/u.test(left.minus);
+      const coefficient = left.literal !== void 0 || negativeCoefficient;
+      const rightGroup = right.level === DISPLAY_LEVEL_ADD && right.minus === void 0;
+      const leftGroup = left.minus === void 0 && (left.level === DISPLAY_LEVEL_ADD || left.text.endsWith(")"));
+      if (token.operator === "multiply" && rightGroup && (leftGroup || left.literal !== void 0)) {
+        stack.push({ text: `${left.level === DISPLAY_LEVEL_ADD ? parenthesize(left) : left.text}${parenthesize(right)}`, level: DISPLAY_LEVEL_MUL });
+        continue;
+      }
+      const juxtapose = token.operator === "multiply" && (coefficient && (symbolLike || right.call === true) || SIMPLE_IDENTIFIER.test(left.text) && symbolLike);
+      if (juxtapose && negativeCoefficient) {
+        stack.push({ text: `\u2212${left.minus}${rightText}`, level: DISPLAY_LEVEL_UNARY, minus: `${left.minus}${rightText}` });
+        continue;
+      }
+      const leftText = left.level < DISPLAY_LEVEL_MUL || left.minus !== void 0 ? parenthesize(left) : left.text;
       stack.push({ text: juxtapose ? `${leftText}${rightText}` : `${leftText}${token.operator === "divide" ? "/" : "\xB7"}${rightText}`, level: DISPLAY_LEVEL_MUL });
     } else {
       const right = pop(token.operator);
@@ -14185,7 +14224,9 @@ function cardIdentity(kind, content) {
     return Object.fromEntries(Object.entries(value).filter(([name]) => {
       if (!path && name === "title") return false;
       if (kind === "plot") {
-        if (path.startsWith("axes.") && ["min", "max"].includes(name)) return false;
+        if (path.startsWith("axes.") && ["min", "max", "ticks"].includes(name)) return false;
+        if (path === "axes" && ["equal_scale", "layout", "follow_samples"].includes(name)) return false;
+        if (path === "curves" && name === "holes") return false;
         if ((path === "curves" || path === "points") && ["label", "color"].includes(name)) return false;
       }
       return true;
@@ -14246,88 +14287,512 @@ var CompiledVisualRegistry = class {
   }
 };
 
-// src/function-viewport.ts
-function niceRange(values, includeZero = true) {
-  const finite = values.filter((v) => Number.isFinite(v) && Math.abs(v) < 1e12).sort((a, b) => a - b);
-  if (!finite.length) throw new Error("function has no finite teaching viewport");
-  let low = finite[Math.floor((finite.length - 1) * 0.02)];
-  let high = finite[Math.ceil((finite.length - 1) * 0.98)];
-  if (includeZero) {
-    low = Math.min(low, 0);
-    high = Math.max(high, 0);
-  }
-  const span = high - low;
-  const pad5 = span > 1e-9 ? span * 0.12 : Math.max(1, Math.abs(low) * 0.2);
-  const rawStep = (span + 2 * pad5) / 6;
-  const unit = 10 ** Math.floor(Math.log10(rawStep));
-  const step = [1, 2, 5, 10].map((n) => n * unit).find((n) => n >= rawStep);
-  return { min: Math.floor((low - pad5) / step) * step, max: Math.ceil((high + pad5) / step) * step };
+// src/plot-view-planner.ts
+var WEIGHT = { extremum: 3, root: 2, pole: 2, intersection: 2, hole: 1, intercept: 1, edge: 1 };
+var SCAN_HALF_WIDTH = 60;
+var SCAN_STEP = 0.05;
+var FEATURE_RADIUS = 25;
+var CLUSTER_GAP = 10;
+var MIN_SPAN = 8;
+var MAX_FEATURES = 9;
+var FEATURE_Y_MARGIN = 0.5;
+var EDGE_INSET = 0.08;
+var EXTREME_ALLOWANCE = 1.5;
+var EQUAL_ASPECT = { min: 0.5, max: 2 };
+function finite(value) {
+  return Number.isFinite(value) && Math.abs(value) < 1e12;
 }
-function quadratic(evaluate2) {
-  const y0 = evaluate2(0), y1 = evaluate2(1), ym = evaluate2(-1);
+function span(range) {
+  return range.max - range.min;
+}
+function hull(values) {
+  const list = values.filter(Number.isFinite);
+  return list.length ? { min: Math.min(...list), max: Math.max(...list) } : void 0;
+}
+function union(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return { min: Math.min(a.min, b.min), max: Math.max(a.max, b.max) };
+}
+function niceStep(raw) {
+  if (!(raw > 0) || !Number.isFinite(raw)) return 1;
+  const power = 10 ** Math.floor(Math.log10(raw));
+  const normalized = raw / power;
+  return ([1, 2, 2.5, 5, 10].find((value) => normalized <= value + 1e-9) ?? 10) * power;
+}
+function snap(range, unit = 1) {
+  const step = unit === 1 ? niceStep(span(range) / 20) : unit * Math.max(1, Math.round(span(range) / unit / 8));
+  const round = (value) => Number(value.toPrecision(12));
+  return { min: round(Math.floor(range.min / step + 1e-9) * step), max: round(Math.ceil(range.max / step - 1e-9) * step) };
+}
+function pad4(range, fraction, keep) {
+  const size = span(range) > 1e-9 ? span(range) : Math.max(1, Math.abs(range.min) * 0.2);
+  const amount = size * fraction / (1 - 2 * fraction);
+  return { min: keep?.min ? range.min : range.min - amount, max: keep?.max ? range.max : range.max + amount };
+}
+function affineArgument(argument, variables) {
+  const names = Object.keys(variables);
+  const source = argument.replace(/\b[A-Za-z_]\w*\b/gu, (name) => {
+    const index = names.indexOf(name);
+    return index < 0 ? name : `n${index + 1}`;
+  });
+  const stack = [];
+  try {
+    for (const token of parseModelFormula(source, names.length, "$viewport")) {
+      if (token.kind === "input") stack.push({ slope: 1, offset: 0 });
+      else if (token.kind === "literal") stack.push({ slope: 0, offset: token.value });
+      else if (token.kind === "number") stack.push({ slope: 0, offset: variables[names[token.number - 1]] });
+      else if (token.kind === "constant") stack.push({ slope: 0, offset: token.name === "pi" ? Math.PI : Math.E });
+      else if (token.kind === "negate") {
+        const operand = stack.pop();
+        stack.push({ slope: -operand.slope, offset: -operand.offset });
+      } else if (token.kind === "operator") {
+        const right = stack.pop(), left = stack.pop();
+        if (token.operator === "add" || token.operator === "subtract") {
+          const sign = token.operator === "add" ? 1 : -1;
+          stack.push({ slope: left.slope + sign * right.slope, offset: left.offset + sign * right.offset });
+        } else if (token.operator === "multiply" && !(left.slope && right.slope)) {
+          stack.push({ slope: left.slope * right.offset + right.slope * left.offset, offset: left.offset * right.offset });
+        } else if (token.operator === "divide" && right.slope === 0 && right.offset !== 0) {
+          stack.push({ slope: left.slope / right.offset, offset: left.offset / right.offset });
+        } else return;
+      } else return;
+    }
+  } catch {
+    return;
+  }
+  const result = stack[0];
+  if (stack.length === 1 && result && Number.isFinite(result.offset) && Number.isFinite(result.slope) && Math.abs(result.slope) >= 1e-9) return result;
+}
+function periodOf(expression, state) {
+  const calls = [...expression.matchAll(/\b(sin|cos|tan)\s*\(/gu)];
+  if (!calls.length) return;
+  const periods = [];
+  let rest = "";
+  let cursor = 0;
+  for (const match of calls) {
+    if (match.index < cursor) return;
+    const start = match.index + match[0].length;
+    let end = start, depth = 1;
+    for (; end < expression.length; end += 1) {
+      if (expression[end] === "(") depth += 1;
+      if (expression[end] === ")" && --depth === 0) break;
+    }
+    const affine = affineArgument(expression.slice(start, end), state);
+    if (!affine) return;
+    periods.push((match[1] === "tan" ? Math.PI : 2 * Math.PI) / Math.abs(affine.slope));
+    rest += `${expression.slice(cursor, match.index)}1`;
+    cursor = end + 1;
+  }
+  rest += expression.slice(cursor);
+  if (/\bx\b/u.test(rest)) return;
+  return Math.max(...periods);
+}
+function quadraticOf(curve) {
+  const y0 = curve(0), y1 = curve(1), ym = curve(-1);
   const a = (y1 + ym - 2 * y0) / 2, b = (y1 - ym) / 2;
-  if (![a, b, y0].every(Number.isFinite) || Math.abs(a) < 1e-9) return;
-  for (const x of [-2, 0.37, 2, 3]) {
-    const expected = a * x * x + b * x + y0, actual = evaluate2(x);
+  if (![a, b, y0].every(Number.isFinite) || Math.abs(a) < 1e-12) return;
+  for (const x of [-2, 0.37, 2, 3, -5.5, 7]) {
+    const expected = a * x * x + b * x + y0, actual = curve(x);
     if (!Number.isFinite(actual) || Math.abs(expected - actual) > 1e-8 * Math.max(1, Math.abs(expected))) return;
   }
-  const vertex = -b / (2 * a), value = evaluate2(vertex);
-  if (Number.isFinite(vertex) && Number.isFinite(value)) return { vertex, value, a };
+  const vertex = -b / (2 * a);
+  return { vertex, value: curve(vertex), a };
 }
-function functionViewport(expressions, parameters3, requestedX) {
-  const evaluators = expressions.map((e) => compileMathExpression(e, ["x", ...parameters3.map((p) => p.name)]));
-  const initial = Object.fromEntries(parameters3.map((p) => [p.name, p.initial]));
-  const states = [initial, ...parameters3.flatMap((p) => [p.min, p.max].map((v) => ({ ...initial, [p.name]: v })))];
-  const evaluate2 = (index, state, x2) => {
+function linearSlopeOf(curve) {
+  const y0 = curve(0), y1 = curve(1);
+  const slope = y1 - y0;
+  if (![y0, y1].every(Number.isFinite)) return;
+  for (const x of [-3, 2.5, 7]) {
+    if (Math.abs(curve(x) - (y0 + slope * x)) > 1e-9 * Math.max(1, Math.abs(y0 + slope * x))) return;
+  }
+  return slope;
+}
+function isCircularArc(curve, scan) {
+  const xs = Array.from({ length: 41 }, (_, index) => scan.min + span(scan) * index / 40).filter((x) => finite(curve(x)));
+  if (xs.length < 6) return false;
+  const points = xs.map((x) => ({ x, y: curve(x) }));
+  const [p, q, r] = [points[0], points[Math.floor(points.length / 2)], points.at(-1)];
+  const d = 2 * (p.x * (q.y - r.y) + q.x * (r.y - p.y) + r.x * (p.y - q.y));
+  if (Math.abs(d) < 1e-9) return false;
+  const s = (pt) => pt.x * pt.x + pt.y * pt.y;
+  const cx = (s(p) * (q.y - r.y) + s(q) * (r.y - p.y) + s(r) * (p.y - q.y)) / d;
+  const cy = (s(p) * (r.x - q.x) + s(q) * (p.x - r.x) + s(r) * (q.x - p.x)) / d;
+  const radius = Math.hypot(p.x - cx, p.y - cy);
+  return radius <= 10 * span(scan) && points.every((pt) => Math.abs(Math.hypot(pt.x - cx, pt.y - cy) - radius) < 1e-9 * Math.max(1, radius));
+}
+function bisect(f, inside, outside) {
+  let a = inside, b = outside;
+  for (let index = 0; index < 50; index += 1) {
+    const mid = (a + b) / 2;
+    if (f(mid)) a = mid;
+    else b = mid;
+  }
+  return (a + b) / 2;
+}
+function analyse(curve, scan) {
+  const count = Math.round(span(scan) / SCAN_STEP);
+  const xs = Array.from({ length: count + 1 }, (_, index) => scan.min + span(scan) * index / count);
+  const ys = xs.map(curve);
+  const features = [];
+  const magnitudes = ys.filter(finite).map(Math.abs).sort((a, b) => a - b);
+  const typical = Math.max(1, magnitudes[Math.floor(magnitudes.length / 2)] ?? 1);
+  const known = (x) => features.some((feature) => Math.abs(feature.x - x) < SCAN_STEP);
+  const poleAt = (x0) => {
+    let previous = 0;
+    let growing = 0;
+    for (const step of [0.01, 1e-3, 1e-4, 1e-5]) {
+      const value = Math.max(Math.abs(curve(x0 - step)) || 0, Math.abs(curve(x0 + step)) || 0);
+      if (!Number.isFinite(value)) return true;
+      if (value > previous * 1.5) growing += 1;
+      previous = value;
+    }
+    return growing >= 3 && previous > 1e3 * typical;
+  };
+  const holeAt = (x0) => {
+    if (finite(curve(x0))) return;
+    const left = curve(x0 - 1e-7), right = curve(x0 + 1e-7);
+    if (finite(left) && finite(right) && Math.abs(left - right) < 1e-4 * Math.max(1, Math.abs(left))) return { x: x0, y: (left + right) / 2 };
+  };
+  for (let x = Math.ceil(scan.min * 2) / 2; x <= scan.max; x += 0.5) {
+    const at = Number(x.toFixed(6));
+    const hole = holeAt(at);
+    if (hole) features.push({ kind: "hole", ...hole });
+    else if (!finite(curve(at)) && finite(curve(at - 0.01)) && finite(curve(at + 0.01)) && poleAt(at)) features.push({ kind: "pole", x: at });
+  }
+  for (let index = 1; index < xs.length; index += 1) {
+    const [x0, x1, y0, y1] = [xs[index - 1], xs[index], ys[index - 1], ys[index]];
+    if (finite(y0) !== finite(y1)) {
+      const before = ys.slice(Math.max(0, index - 4), index), after = ys.slice(index, index + 4);
+      if (before.every((v) => finite(v) === finite(y0)) && after.every((v) => finite(v) === finite(y1))) {
+        const inside = finite(y0) ? x0 : x1, outside = finite(y0) ? x1 : x0;
+        const edge = bisect((x) => finite(curve(x)), inside, outside);
+        if (!known(edge)) {
+          const direction = inside > outside ? 1 : -1;
+          const near = curve(edge + direction * 1e-9), farther = curve(edge + direction * 1e-6);
+          const bounded = finite(near) && finite(farther) && Math.abs(near - farther) <= 0.05 * Math.max(1, Math.abs(farther));
+          features.push({ kind: "edge", x: edge, ...bounded ? { y: near } : {} });
+        }
+      }
+      continue;
+    }
+    if (!finite(y0) || !finite(y1)) continue;
+    if (y0 === 0) {
+      if (!known(x0)) features.push({ kind: "root", x: x0, y: 0 });
+    } else if (Math.sign(y0) * Math.sign(y1) < 0) {
+      let a = x0, b = x1, fa = y0;
+      for (let step = 0; step < 60; step += 1) {
+        const mid = (a + b) / 2, fm = curve(mid);
+        if (!Number.isFinite(fm)) break;
+        if (Math.sign(fm) === Math.sign(fa)) {
+          a = mid;
+          fa = fm;
+        } else b = mid;
+      }
+      const root = (a + b) / 2;
+      if (!known(root)) {
+        if (Math.abs(curve(root)) < 1e-6 * typical) features.push({ kind: "root", x: root, y: 0 });
+        else if (poleAt(root)) features.push({ kind: "pole", x: root });
+      }
+    }
+    if (index >= 2) {
+      const yPrev = ys[index - 2];
+      if (finite(yPrev) && (y0 - yPrev) * (y1 - y0) < 0) {
+        const maximum = y0 > yPrev;
+        let a = xs[index - 2], b = x1;
+        const ratio = (Math.sqrt(5) - 1) / 2;
+        for (let step = 0; step < 60; step += 1) {
+          const c = b - ratio * (b - a), d = a + ratio * (b - a);
+          if (maximum ? curve(c) > curve(d) : curve(c) < curve(d)) b = d;
+          else a = c;
+        }
+        const x = (a + b) / 2, y = curve(x);
+        if (!known(x)) {
+          if (finite(y) && !poleAt(x)) features.push({ kind: "extremum", x, y });
+          else features.push({ kind: "pole", x });
+        }
+      }
+    }
+  }
+  const intercept = curve(0);
+  if (finite(intercept) && scan.min <= 0 && scan.max >= 0 && !features.some((f) => f.kind === "hole" && f.x === 0)) {
+    features.push({ kind: "intercept", x: 0, y: intercept });
+  }
+  return features;
+}
+function intersections(curves, scan) {
+  const found = [];
+  for (let i = 0; i < curves.length; i += 1) {
+    for (let j = i + 1; j < curves.length; j += 1) {
+      const difference = (x) => curves[i](x) - curves[j](x);
+      const count = Math.round(span(scan) / SCAN_STEP);
+      let previous = difference(scan.min);
+      for (let index = 1; index <= count; index += 1) {
+        const x = scan.min + span(scan) * index / count;
+        const current = difference(x);
+        if (finite(previous) && finite(current) && Math.sign(previous) * Math.sign(current) < 0) {
+          let a = x - span(scan) / count, b = x, fa = previous;
+          for (let step = 0; step < 60; step += 1) {
+            const mid = (a + b) / 2, fm = difference(mid);
+            if (Math.sign(fm) === Math.sign(fa)) {
+              a = mid;
+              fa = fm;
+            } else b = mid;
+          }
+          const at = (a + b) / 2, y = curves[i](at);
+          if (finite(y) && Math.abs(difference(at)) < 1e-6 * Math.max(1, Math.abs(y))) found.push({ kind: "intersection", x: at, y });
+        }
+        previous = current;
+      }
+    }
+  }
+  return found;
+}
+function selectCluster(features, anchors) {
+  if (!features.length) return { kept: [], dropped: [] };
+  const sorted = [...features].sort((a, b) => a.x - b.x);
+  const clusters = [[sorted[0]]];
+  for (const feature of sorted.slice(1)) {
+    const current = clusters.at(-1);
+    if (feature.x - current.at(-1).x > CLUSTER_GAP) clusters.push([feature]);
+    else current.push(feature);
+  }
+  const score = (cluster) => {
+    const anchored = anchors.some((x) => x >= cluster[0].x - CLUSTER_GAP && x <= cluster.at(-1).x + CLUSTER_GAP);
+    return (anchored ? 1e3 : 0) + cluster.reduce((sum, feature) => sum + WEIGHT[feature.kind], 0) - Math.min(...cluster.map((feature) => Math.abs(feature.x))) * 1e-3;
+  };
+  const best = clusters.reduce((a, b) => score(b) > score(a) ? b : a);
+  return { kept: best, dropped: clusters.filter((cluster) => cluster !== best).flat() };
+}
+function planPlotView(input) {
+  const names = input.parameters.map((parameter) => parameter.name);
+  const compiled = input.expressions.map((expression) => compileMathExpression(expression, ["x", ...names]));
+  const initial = Object.fromEntries(input.parameters.map((parameter) => [parameter.name, parameter.initial]));
+  const adjustments = [];
+  const teaching = input.teachingPoints ?? [];
+  const quantityX = input.quantityX === true;
+  const plain = input.plainAxes !== false;
+  const curveAt = (index, state) => (x2) => {
     try {
-      return evaluators[index]({ ...state, x: x2 });
+      return compiled[index]({ ...state, x: x2 });
     } catch {
-      return NaN;
+      return Number.NaN;
     }
   };
-  const vertices = states.flatMap((state) => evaluators.flatMap((_, i) => {
-    const q = quadratic((x2) => evaluate2(i, state, x2));
-    return q ? [q] : [];
-  }));
-  const identity = expressions.some((e) => e.replace(/[()\s]/g, "") === "x");
-  if (!requestedX && identity && expressions.length > 1 && expressions.some((e) => /\b(?:ln|log)\s*\(/.test(e))) {
-    return { x: { min: -2, max: 6 }, y: { min: -2, max: 6 } };
+  const naturalStart = quantityX && compiled.every((_, index) => finite(curveAt(index, initial)(1e-9))) && teaching.every((point) => point.x >= 0) && !(input.requested?.x?.min !== void 0 && input.requested.x.min < 0);
+  const scan = naturalStart ? { min: 0, max: 2 * SCAN_HALF_WIDTH } : { min: -SCAN_HALF_WIDTH, max: SCAN_HALF_WIDTH };
+  const focus = teaching.length ? teaching.reduce((sum, point) => sum + point.x, 0) / teaching.length : naturalStart ? 0 : 0;
+  const describe = (state) => {
+    const items = compiled.map((_, index) => {
+      const curve = curveAt(index, state);
+      const period = periodOf(input.expressions[index], state);
+      let features = analyse(curve, scan);
+      const radius = period !== void 0 ? Math.min(FEATURE_RADIUS, period) : FEATURE_RADIUS;
+      features = features.filter((feature) => Math.abs(feature.x - focus) <= radius + 1e-9 || teaching.some((point) => Math.abs(point.x - feature.x) <= CLUSTER_GAP));
+      if (features.length > MAX_FEATURES) {
+        features = [...features].sort((a, b) => Math.abs(a.x - focus) - Math.abs(b.x - focus)).slice(0, MAX_FEATURES);
+      }
+      return { index, state, curve, features, quadratic: quadraticOf(curve), period };
+    });
+    if (items.length > 1) {
+      const statePeriods = items.map((item) => item.period);
+      const radius = statePeriods.every((period) => period !== void 0) ? Math.min(FEATURE_RADIUS, Math.max(...statePeriods)) : FEATURE_RADIUS;
+      const crossings = intersections(items.map((item) => item.curve), scan).filter((feature) => Math.abs(feature.x - focus) <= radius + 1e-9);
+      items[0].features.push(...crossings);
+    }
+    return items;
+  };
+  const shownStates = [initial, ...input.demonstrations ?? []];
+  const base = shownStates.flatMap(describe);
+  const { kept, dropped } = selectCluster(base.flatMap((item) => item.features), teaching.map((point) => point.x));
+  if (dropped.length) {
+    adjustments.push({ reason: "distant_features_left_out", detail: [...new Set(dropped.map((feature) => `${feature.kind}@${Number(feature.x.toFixed(3))}`))].slice(0, 6).join(",") });
   }
-  if (!requestedX && expressions.length === 1 && parameters3.length === 0) {
-    const y0 = evaluate2(0, initial, 0), y1 = evaluate2(0, initial, 1);
-    const rate = Math.log(y1 / y0), intercept = Math.log(y0);
-    if (y0 > 0 && y1 > 0 && Number.isFinite(rate) && Math.abs(rate) > 1e-6 && [-2, -1, 0.37, 2, 3].every((t) => {
-      const expected = Math.exp(intercept + rate * t), actual = evaluate2(0, initial, t);
-      return Number.isFinite(actual) && Math.abs(actual - expected) < 1e-8 * Math.max(1, expected);
-    })) {
-      const center = -intercept / rate, radius = 2 / Math.abs(rate);
-      return { x: { min: Math.min(0, center - radius), max: Math.max(0, center + radius) }, y: { min: -1, max: 8 } };
+  const keptRange = hull(kept.map((feature) => feature.x));
+  const inCluster = (feature) => !keptRange || feature.x >= keptRange.min - CLUSTER_GAP && feature.x <= keptRange.max + CLUSTER_GAP;
+  const keptSet = new Set(kept);
+  const periods = base.map((item) => item.period).filter((value) => value !== void 0);
+  const allPeriodic = periods.length === base.length && periods.length > 0;
+  const allQuadratic = base.every((item) => item.quadratic);
+  const quadraticHalfWidth = (a) => Math.min(6, Math.max(1, Math.sqrt(9 / Math.abs(a))));
+  const regionOf = (item, features) => {
+    const structural = features.filter((feature) => feature.kind !== "intercept");
+    let region = hull((structural.length ? structural : features).map((feature) => feature.x));
+    if (item.quadratic) {
+      const halfWidth = quadraticHalfWidth(item.quadratic.a);
+      region = union(region, { min: item.quadratic.vertex - halfWidth, max: item.quadratic.vertex + halfWidth });
+    }
+    return region;
+  };
+  const growthEnd = (items) => {
+    const candidates = [1, 2, 2.5, 3, 4, 5, 6, 8].flatMap((m) => [1, 10, 100, 1e3].map((p) => m * p)).sort((a, b) => a - b);
+    for (const end of candidates) {
+      if (items.every((item) => {
+        const start = item.curve(0), value = item.curve(end);
+        if (!finite(start) || !finite(value)) return false;
+        return Math.abs(start) > 1e-9 ? Math.abs(value - start) >= 2 * Math.abs(start) : end >= MIN_SPAN;
+      })) return end;
+    }
+    return MIN_SPAN;
+  };
+  const undefinedBeyond = (items, edge, direction) => items.every((item) => [0.01, 0.1, 1].every((step) => !finite(item.curve(edge + direction * step))));
+  const xWindow = (items, features) => {
+    const selected = items.map((item) => item.features.filter(features));
+    let range = hull([
+      ...items.flatMap((item, index) => {
+        const region = regionOf(item, selected[index]);
+        return region ? [region.min, region.max] : [];
+      }),
+      ...teaching.map((point) => point.x)
+    ]);
+    const featureCount = new Set(selected.flat().map((feature) => feature.x.toFixed(3))).size;
+    if (allPeriodic) {
+      const period = Math.min(1e6, Math.max(...periods));
+      if (naturalStart) return { min: 0, max: Math.max(range?.max ?? 0, period) };
+      return union(range, { min: focus - period, max: focus + period });
+    }
+    if (naturalStart && featureCount <= 1) return union(range, { min: 0, max: growthEnd(items) });
+    if (allQuadratic) return range;
+    if (range && featureCount >= 2) range = { min: range.min - span(range) * 0.25, max: range.max + span(range) * 0.25 };
+    const edges = selected.flat().filter((feature) => feature.kind === "edge");
+    const leftEdge = edges.filter((edge) => undefinedBeyond(items, edge.x, -1)).map((edge) => edge.x);
+    const rightEdge = edges.filter((edge) => undefinedBeyond(items, edge.x, 1)).map((edge) => edge.x);
+    const lower = leftEdge.length ? Math.max(...leftEdge) : -Infinity;
+    const upper = rightEdge.length ? Math.min(...rightEdge) : Infinity;
+    const turning = new Set(selected.flat().filter((feature) => feature.kind === "extremum").map((feature) => feature.x.toFixed(3))).size >= 2;
+    const short = !range || !turning && span(range) < MIN_SPAN;
+    const wanted = short ? MIN_SPAN : span(range);
+    if (short) {
+      const middle = range ? (range.min + range.max) / 2 : focus;
+      const center = Math.abs(middle) < MIN_SPAN / 4 ? 0 : middle;
+      range = union(range, { min: center - MIN_SPAN / 2, max: center + MIN_SPAN / 2 });
+    }
+    if (range.min < lower) range = { min: lower, max: Math.min(upper, Math.max(range.max, lower + wanted)) };
+    if (range.max > upper) range = { min: Math.max(lower, Math.min(range.min, upper - wanted)), max: upper };
+    return range;
+  };
+  const yExtent = (items, window) => {
+    const values = [];
+    const guard = span(window) * 0.04;
+    const avoid = items.flatMap((item) => item.features.filter((feature) => feature.kind === "pole" || feature.kind === "edge" && feature.y === void 0).map((feature) => feature.x));
+    const sampled = (item, range) => {
+      for (let i = 0; i <= 400; i += 1) {
+        const t = range.min + span(range) * i / 400;
+        if (avoid.some((x2) => Math.abs(t - x2) < guard)) continue;
+        const value = item.curve(t);
+        if (finite(value)) values.push(value);
+      }
+    };
+    for (const item of items) {
+      const features = item.features.filter((feature) => keptSet.has(feature) || inCluster(feature)).filter((feature) => feature.x >= window.min && feature.x <= window.max);
+      if (item.quadratic) {
+        const halfWidth = quadraticHalfWidth(item.quadratic.a);
+        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth), max: Math.min(window.max, item.quadratic.vertex + halfWidth) };
+        sampled(item, span(own) > 0 ? own : window);
+      } else if (item.period === void 0 && features.some((feature) => feature.kind === "extremum") && !(undefinedBeyond([item], window.min, -1) && undefinedBeyond([item], window.max, 1))) {
+        const levels = hull(features.filter((feature) => feature.y !== void 0 && feature.kind !== "intercept").map((feature) => feature.y));
+        if (levels && span(levels) > 1e-9) {
+          values.push(levels.min - FEATURE_Y_MARGIN * span(levels), levels.max + FEATURE_Y_MARGIN * span(levels));
+        } else sampled(item, window);
+      } else sampled(item, window);
+      for (const feature of features) if (feature.y !== void 0) values.push(feature.y);
+    }
+    values.push(...teaching.filter((point) => point.x >= window.min && point.x <= window.max).map((point) => point.y));
+    return hull(values);
+  };
+  let x = xWindow(base, (feature) => keptSet.has(feature));
+  let yContent = yExtent(base, x);
+  const baseX = x, baseY = yContent;
+  for (const parameter of input.parameters) {
+    let candidateX = x;
+    let candidateY = yContent;
+    for (const value of [parameter.min, parameter.max]) {
+      if (value === parameter.initial) continue;
+      const items = describe({ ...initial, [parameter.name]: value });
+      candidateX = union(candidateX, xWindow(items, inCluster));
+      candidateY = union(candidateY, yExtent(items, candidateX));
+    }
+    if (!candidateX || !candidateY || !baseY) continue;
+    if (span(candidateX) <= EXTREME_ALLOWANCE * span(baseX) && span(candidateY) <= EXTREME_ALLOWANCE * Math.max(span(baseY), 1e-9)) {
+      x = candidateX;
+      yContent = candidateY;
     }
   }
-  let x = requestedX ?? { min: -4, max: 4 };
-  if (!requestedX && vertices.length) {
-    x = { min: Math.min(-4, ...vertices.map((q) => q.vertex - 2)), max: Math.max(4, ...vertices.map((q) => q.vertex + 2)) };
-  } else if (!requestedX && expressions.some((e) => /\b(sin|cos|tan)\s*\(/.test(e))) {
-    x = { min: -Math.PI * 2, max: Math.PI * 2 };
-  }
-  const sample = (range) => Array.from({ length: 121 }, (_, i) => range.min + (range.max - range.min) * i / 120).flatMap((t) => evaluators.map((_, index) => evaluate2(index, initial, t)));
-  let values = sample(x);
-  if (!requestedX && !vertices.length && values.filter(Number.isFinite).length < values.length * 0.7) {
-    const positive = { min: 0, max: 8 }, alternative = sample(positive);
-    if (alternative.filter(Number.isFinite).length > values.filter(Number.isFinite).length) {
-      x = positive;
-      values = alternative;
+  for (const point of input.optionalPoints ?? []) {
+    const candidateX = union(x, { min: point.x, max: point.x });
+    const candidateY = union(yContent, { min: point.y, max: point.y });
+    if (candidateY && baseY && span(candidateX) <= EXTREME_ALLOWANCE * span(baseX) && span(candidateY) <= EXTREME_ALLOWANCE * Math.max(span(baseY), 1e-9)) {
+      x = candidateX;
+      yContent = candidateY;
     }
   }
-  if (vertices.length === states.length * evaluators.length) {
-    values = vertices.flatMap((q) => [q.value, q.value + q.a * 9]);
+  const requestedX = input.requested?.x;
+  let acceptedX = false;
+  if (requestedX && (requestedX.min !== void 0 || requestedX.max !== void 0)) {
+    const proposal = { min: requestedX.min ?? x.min, max: requestedX.max ?? x.max };
+    const curveFinite = proposal.max > proposal.min && base.some((item) => Array.from({ length: 41 }, (_, i) => item.curve(proposal.min + span(proposal) * i / 40)).filter(finite).length >= 10);
+    const keepsTeaching = teaching.every((point) => point.x >= proposal.min && point.x <= proposal.max);
+    const tooWide = span(proposal) > 4 * Math.max(span(x), MIN_SPAN);
+    if (curveFinite && keepsTeaching && !tooWide) {
+      x = proposal;
+      acceptedX = true;
+      yContent = yExtent(base, x) ?? yContent;
+    } else {
+      adjustments.push({ reason: "model_x_range_replaced", detail: `requested=[${requestedX.min ?? ""},${requestedX.max ?? ""}] used=[${Number(x.min.toPrecision(4))},${Number(x.max.toPrecision(4))}]` });
+    }
   }
-  const y = expressions.length === 1 && /^tan\(x\)$/.test(expressions[0].replace(/\s/g, "")) ? { min: -4, max: 4 } : niceRange(values);
-  for (const q of vertices) {
-    y.min = Math.min(y.min, q.value - 1);
-    y.max = Math.max(y.max, q.value + 1);
+  let y = yContent ?? { min: -1, max: 1 };
+  const requestedY = input.requested?.y;
+  let acceptedY = false;
+  if (requestedY && (requestedY.min !== void 0 || requestedY.max !== void 0)) {
+    const proposal = { min: requestedY.min ?? y.min, max: requestedY.max ?? y.max };
+    const mustY = hull([
+      ...kept.filter((feature) => feature.y !== void 0 && feature.x >= x.min && feature.x <= x.max && feature.kind !== "intercept").map((feature) => feature.y),
+      ...teaching.map((point) => point.y)
+    ]);
+    const samples = base.flatMap((item) => Array.from({ length: 81 }, (_, i) => item.curve(x.min + span(x) * i / 80))).filter(finite);
+    const inside = samples.filter((value) => value >= proposal.min && value <= proposal.max).length;
+    const keeps = !mustY || mustY.min >= proposal.min && mustY.max <= proposal.max;
+    if (proposal.max > proposal.min && keeps && inside >= samples.length * 0.3) {
+      y = proposal;
+      acceptedY = true;
+    } else {
+      adjustments.push({ reason: "model_y_range_replaced", detail: `requested=[${requestedY.min ?? ""},${requestedY.max ?? ""}] used=[${Number(y.min.toPrecision(4))},${Number(y.max.toPrecision(4))}]` });
+    }
   }
-  return { x, y };
+  const identity = input.expressions.length > 1 && input.expressions.some((expression) => expression.replace(/[()\s]/gu, "") === "x");
+  if (identity && !acceptedY) y = { ...x };
+  const nearZero = (range) => {
+    if (range.min > 0 && range.min <= span(range) * 0.5) return { ...range, min: 0 };
+    if (range.max < 0 && -range.max <= span(range) * 0.5) return { ...range, max: 0 };
+    return range;
+  };
+  if (!acceptedX) x = nearZero(x);
+  if (!acceptedY && !identity) y = nearZero(y);
+  const periodicWindow = allPeriodic && !acceptedX;
+  const piTicks = !quantityX && plain && allPeriodic && span(x) >= Math.PI && periods.every((period) => period / Math.PI >= 0.5 && period / Math.PI <= 8 && Math.abs(period / Math.PI * 4 - Math.round(period / Math.PI * 4)) < 1e-9);
+  const keepXMin = naturalStart && x.min === 0 || periodicWindow;
+  const keepXMax = periodicWindow;
+  let finalX = x;
+  if (!acceptedX) {
+    finalX = snap(pad4(x, EDGE_INSET, { min: keepXMin, max: keepXMax }), piTicks ? Math.PI / 2 : 1);
+    if (keepXMin) finalX.min = x.min;
+    if (keepXMax) finalX.max = x.max;
+  }
+  const keepYMin = quantityX && y.min === 0;
+  let finalY = y;
+  if (!acceptedY) {
+    finalY = identity ? { ...finalX } : snap(pad4(y, EDGE_INSET, { min: keepYMin }));
+    if (keepYMin) finalY.min = 0;
+  }
+  const initialItems = base.filter((item) => item.state === initial);
+  const circular = initialItems.some((item) => isCircularArc(item.curve, finalX));
+  const slopes = initialItems.map((item) => linearSlopeOf(item.curve));
+  const perpendicular = slopes.some((m, i) => m !== void 0 && slopes.some((n, j) => j > i && n !== void 0 && Math.abs(m * n + 1) < 1e-9));
+  const aspect = span(finalY) / span(finalX);
+  const equalScale = plain && (identity || circular || perpendicular || allQuadratic && aspect >= EQUAL_ASPECT.min && aspect <= EQUAL_ASPECT.max);
+  const holes = compiled.map((_, index) => initialItems.filter((item) => item.index === index).flatMap((item) => item.features.filter((feature) => feature.kind === "hole" && feature.x > finalX.min && feature.x < finalX.max && feature.y !== void 0 && feature.y > finalY.min && feature.y < finalY.max)).map((feature) => ({ x: feature.x, y: feature.y })));
+  return { x: finalX, y: finalY, equalScale, piTicks, holes, adjustments };
 }
 
 // src/plugins/math-compilers.ts
@@ -14370,92 +14835,142 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   }
   const sampleNumbers = plotSampleNumbers(input);
   const number = sampleNumbers[0];
-  let requestedX = input.x_min !== void 0 || input.x_max !== void 0 ? {
-    min: optionalNumber(input.x_min, -4, `${path}.x_min`),
-    max: optionalNumber(input.x_max, 4, `${path}.x_max`)
-  } : void 0;
-  if (requestedX) assertRange(requestedX.min, requestedX.max, `${path}.x_range`);
-  for (const sampleNumber of sampleNumbers) {
-    const definition = numberDefinition(plan, sampleNumber, `${path}.numbers`);
-    requestedX = {
-      min: Math.min(requestedX?.min ?? definition.min, definition.min),
-      max: Math.max(requestedX?.max ?? definition.max, definition.max)
-    };
-  }
-  let viewport;
-  try {
-    viewport = functionViewport(expressions, dynamicNumbers.map((index) => {
-      const item = numberDefinition(plan, index, `${path}.numbers`);
-      return { name: variableAlias(index), initial: item.initial, min: item.min, max: item.max };
-    }), requestedX);
-  } catch (error) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, error instanceof Error ? error.message : "invalid viewport");
-  }
-  const requestedY = input.y_min !== void 0 || input.y_max !== void 0 ? {
-    min: optionalNumber(input.y_min, viewport.y.min, `${path}.y_min`),
-    max: optionalNumber(input.y_max, viewport.y.max, `${path}.y_max`)
-  } : viewport.y;
-  assertRange(requestedY.min, requestedY.max, `${path}.y_range`);
-  const title = namedNumbers(optionalText(input.title, compileText(plan, "\u51FD\u6570\u56FE\u50CF"), `${path}.title`), plan);
-  const axes = {
-    ...expressions.length > 1 && expressions.some((e) => e.replace(/[()\s]/g, "") === "x") ? { equal_scale: true } : {},
-    x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
-    y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) }
+  const hint = (value, key) => value === void 0 ? void 0 : optionalNumber(value, 0, `${path}.${key}`);
+  const requested = {
+    x: { min: hint(input.x_min, "x_min"), max: hint(input.x_max, "x_max") },
+    y: { min: hint(input.y_min, "y_min"), max: hint(input.y_max, "y_max") }
   };
+  const creationIndex = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.content === content)));
+  const creationMoments = plan.sections[creationIndex]?.moments ?? [];
+  const curveParameters = dynamicNumbers.map((index) => {
+    const item = numberDefinition(plan, index, `${path}.numbers`);
+    return { name: variableAlias(index), initial: item.initial, min: item.min, max: item.max };
+  });
+  const initialState = Object.fromEntries(curveParameters.map((parameter) => [parameter.name, parameter.initial]));
+  const demonstrations = [];
+  {
+    const state = { ...initialState };
+    for (const moment of creationMoments) {
+      for (const restarted of moment.restart_numbers ?? []) {
+        const name = variableAlias(restarted);
+        if (name in initialState) state[name] = initialState[name];
+      }
+      for (const action of moment.actions) {
+        if (action.action !== "animate" || !dynamicNumbers.includes(action.number)) continue;
+        state[variableAlias(action.number)] = action.end_value;
+        demonstrations.push({ ...state });
+      }
+    }
+  }
+  const practiceTargets = (plan.sections[creationIndex]?.student_activities ?? []).flatMap((activity) => activity.kind === "number_target" && activity.expression === void 0 && activity.number_controls.length === 1 ? [{ number: activity.number_controls[0].number, value: activity.value }] : []);
+  for (const target of practiceTargets) {
+    if (dynamicNumbers.includes(target.number)) demonstrations.push({ ...initialState, [variableAlias(target.number)]: target.value });
+  }
+  const title = namedNumbers(optionalText(input.title, compileText(plan, "\u51FD\u6570\u56FE\u50CF"), `${path}.title`), plan);
+  const xLabel = namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan);
+  const yLabel = namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan);
   const displaySymbols = dynamicTokens !== void 0 ? displayNumberSymbols(plan, dynamicNumbers) : void 0;
-  const defaultCurveLabel = (item) => dynamicTokens !== void 0 ? `y = ${formatMathExpressionDisplay(dynamicTokens, (index) => displaySymbols.get(index) ?? `n${index}`)}` : `y = ${item}`;
+  const defaultCurveLabel = (item) => {
+    if (dynamicTokens !== void 0) {
+      return `y = ${formatMathExpressionDisplay(dynamicTokens, (index) => displaySymbols.get(index) ?? `n${index}`)}`;
+    }
+    if (/\b(?:log10|lg|log2)\s*\(/u.test(item)) {
+      return `y = ${item.replace(/\blog10\s*\(/gu, "log\u2081\u2080(").replace(/\blog2\s*\(/gu, "log\u2082(").replace(/\*/gu, "\xB7")}`;
+    }
+    try {
+      return `y = ${formatMathExpressionDisplay(parseModelFormula(item, 0, `${path}.expression`), (index) => `n${index}`)}`;
+    } catch {
+      return `y = ${item}`;
+    }
+  };
   const curves = expressions.map((item, index) => ({
     expression: item,
-    label: curveLabels[index] ?? (index === 0 && input.curve_label !== void 0 ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan) : defaultCurveLabel(item))
+    label: curveLabels[index] ?? (index === 0 && input.curve_label !== void 0 ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan) : defaultCurveLabel(rawExpressions[index] ?? item))
   }));
+  const sampleAt = (x, where) => ({ x, y: evaluate(expression, ["x"], { x }, where) });
   const samples = sampleNumbers.map((sampleNumber, index) => {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
     for (const x of [d.min, d.max]) evaluate(expression, ["x"], { x }, `${path}.expression`);
     return {
-      x: d.initial,
-      y: evaluate(expression, ["x"], { x: d.initial }, `${path}.expression`),
+      ...sampleAt(d.initial, `${path}.expression`),
       label: sampleNumbers.length === 2 ? index === 0 ? "A" : "B" : "P(x, y)",
       x_expression: variableAlias(sampleNumber)
     };
   });
-  if (samples.length) {
-    const creationIndex = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.content === content)));
-    const teachingY = samples.map((sample) => sample.y);
-    for (const [momentIndex, moment] of (plan.sections[creationIndex]?.moments ?? []).entries()) {
-      for (const [actionIndex, action] of moment.actions.entries()) {
-        if (action.action !== "animate" || !sampleNumbers.includes(action.number)) continue;
-        const animationPath = `$lessonPlan.sections[${creationIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`;
-        teachingY.push(evaluate(expression, ["x"], { x: action.end_value }, animationPath));
-      }
+  const teachingPoints = samples.map(({ x, y }) => ({ x, y }));
+  const optionalPoints = [];
+  for (const sampleNumber of sampleNumbers) {
+    const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+    for (const x of [d.min, d.max]) {
+      const y = evaluate(expression, ["x"], { x }, `${path}.expression`);
+      if (Number.isFinite(y)) optionalPoints.push({ x, y });
     }
-    const padding = (requestedY.max - requestedY.min) * 0.05;
-    axes.y.min = Math.min(requestedY.min, ...teachingY.map((y) => y - padding));
-    axes.y.max = Math.max(requestedY.max, ...teachingY.map((y) => y + padding));
+  }
+  for (const target of practiceTargets) {
+    if (!sampleNumbers.includes(target.number)) continue;
+    const y = compileMathExpression(expression, ["x"])({ x: target.value });
+    if (Number.isFinite(y)) teachingPoints.push({ x: target.value, y });
+  }
+  for (const [momentIndex, moment] of creationMoments.entries()) {
+    for (const [actionIndex, action] of moment.actions.entries()) {
+      if (action.action !== "animate" || !sampleNumbers.includes(action.number)) continue;
+      teachingPoints.push(sampleAt(
+        action.end_value,
+        `$lessonPlan.sections[${creationIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`
+      ));
+    }
   }
   let references;
   if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
-    const initialVariables = Object.fromEntries(dynamicNumbers.map((index) => [variableAlias(index), numberDefinition(plan, index, path).initial]));
-    const xs = [0, 1];
-    const ys = xs.map((x) => {
+    const evaluateCurve = compileMathExpression(expression, expressionVariables);
+    const referencePoints = (values) => [0, 1].flatMap((x, index) => {
       try {
-        return evaluate(expression, expressionVariables, { ...initialVariables, x }, path);
+        const y = evaluateCurve({ ...values, x });
+        return Number.isFinite(y) ? [{ x, y, label: index ? "B" : "A" }] : [];
       } catch {
-        return NaN;
+        return [];
       }
     });
-    if (ys.every(Number.isFinite)) references = xs.map((x, index) => ({ x, y: ys[index], label: index ? "B" : "A" }));
+    const initialReferences = referencePoints(initialState);
+    if (initialReferences.length === 2) {
+      references = initialReferences;
+      teachingPoints.push(...references, ...demonstrations.flatMap(referencePoints));
+    }
   }
+  let view;
+  try {
+    view = planPlotView({
+      expressions,
+      parameters: curveParameters,
+      demonstrations,
+      teachingPoints,
+      optionalPoints,
+      requested,
+      quantityX: xLabel !== "x",
+      plainAxes: xLabel === "x" && yLabel === "y"
+    });
+  } catch (error) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, error instanceof Error ? error.message : "invalid viewport");
+  }
+  const axes = {
+    ...view.equalScale ? { equal_scale: true, layout: "adaptive" } : {},
+    ...samples.length ? { follow_samples: true } : {},
+    x: { min: view.x.min, max: view.x.max, label: xLabel, ...view.piTicks ? { ticks: "pi" } : {} },
+    y: { min: view.y.min, max: view.y.max, label: yLabel }
+  };
+  const plottedCurves = curves.map((curve, index) => view.holes[index]?.length ? { ...curve, holes: view.holes[index] } : curve);
   const built = buildFunctionPlot({
     as: base,
     role,
     place: placement,
     title,
     axes,
-    curves,
+    curves: plottedCurves,
     ...samples.length ? { samples } : references ? { references } : {}
   });
   return {
     actions: built.actions,
+    ...view.adjustments.length ? { adjustments: view.adjustments } : {},
     whole: base,
     parts: new Map([
       ["whole", base],
@@ -15056,6 +15571,7 @@ function compileLessonPlan(value, options = {}) {
   const partTargets = /* @__PURE__ */ new Map();
   const primaryScenes = /* @__PURE__ */ new Map();
   const reusableVisuals = /* @__PURE__ */ new Map();
+  const viewAdjustments = [];
   let renderedVisuals;
   const reuseCompiledVisual = (visual) => {
     if (reusableVisuals.size === 0) return visual;
@@ -15110,9 +15626,11 @@ function compileLessonPlan(value, options = {}) {
                 "an explicit comparison must differ in teaching content, not only in title, viewport, camera, color, sampling, or layout"
               );
             }
-            const visual = existing ?? reuseCompiledVisual(
-              compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`)
-            );
+            const visual = existing ?? (() => {
+              const compiledVisual = compileVisual(alias, visualContent, item.role, placement, plan, `${actionPath}.content.parameters`);
+              for (const adjustment of compiledVisual.adjustments ?? []) viewAdjustments.push({ section: sectionIndex, ...adjustment });
+              return reuseCompiledVisual(compiledVisual);
+            })();
             if (existing) {
               actions.push({
                 do: "focus",
@@ -15365,7 +15883,7 @@ function compileLessonPlan(value, options = {}) {
     steps,
     close: { summary: plan.close.summary, focus: closeFocus }
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan) };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments };
 }
 function expressionReferencesVariable(expression, variable) {
   if (typeof expression !== "string") return false;
@@ -16335,8 +16853,8 @@ var PROGRAM_ANIMATION_EASING = "linear";
 var PROGRAM_SCENE_ANGULAR_TOLERANCE_DEGREES = 7.5;
 var PROGRAM_SCENE_ZOOM_TOLERANCE = 0.1;
 function deriveSliderStep(min, max) {
-  const span = max - min;
-  return span / TARGET_SLIDER_INTERVALS;
+  const span2 = max - min;
+  return span2 / TARGET_SLIDER_INTERVALS;
 }
 function normalizeModelNumberRange(number) {
   if (typeof number.initial !== "number" || !Number.isFinite(number.initial) || typeof number.min !== "number" || !Number.isFinite(number.min) || typeof number.max !== "number" || !Number.isFinite(number.max)) return;
@@ -18500,6 +19018,9 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
   for (const draft of drafts) await reportDraftAdjustments(draft);
   for (const adjustment of programAdjustments) {
     await options.on_program_adjustment?.(adjustment);
+  }
+  for (const adjustment of compiled.view_adjustments) {
+    await options.on_program_adjustment?.({ kind: "plot_view_adjusted", ...adjustment });
   }
   return {
     ...compiled,

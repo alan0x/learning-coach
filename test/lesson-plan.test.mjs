@@ -1023,7 +1023,9 @@ test("the compiler expands a plot axis to keep a moving point visible", () => {
   const plot = compileAndValidateLessonPlan(plan).lesson.steps[0].beats[0].actions.find(
     (action) => action.do === "write" && action.kind === "plot",
   ).content;
-  assert.deepEqual(plot.axes.x, { min: 1, max: 100, label: "x" });
+  // The initial point and the animation endpoint are shown; the unvisited slider end (100) is not.
+  assert.ok(plot.axes.x.min <= 1 && plot.axes.x.max >= 2 && plot.axes.x.max < 100, JSON.stringify(plot.axes.x));
+  assert.equal(plot.axes.follow_samples, true);
   assert.equal(plot.points[0].x, 1);
   assert.equal(plot.bindings[0].expression, "number_01");
 });
@@ -2934,13 +2936,12 @@ test("the exact section schema withholds viewport parameters and the program com
   const plot = generated.lesson.steps[0].beats[0].actions.find(
     (action) => action.do === "write" && action.kind === "plot",
   ).content;
-  assert.deepEqual(plot.axes.x, {
-    min: plan.numbers[0].min,
-    max: plan.numbers[0].max,
-    label: "x",
-  });
-  assert.ok(plot.axes.y.min < 0);
-  assert.ok(plot.axes.y.max > 9);
+  // The program frames the sample point; the model supplies no viewport.
+  for (const point of plot.points) {
+    assert.ok(point.x > plot.axes.x.min && point.x < plot.axes.x.max, JSON.stringify(plot.axes));
+    assert.ok(point.y > plot.axes.y.min && point.y < plot.axes.y.max, JSON.stringify(plot.axes));
+  }
+  assert.equal(plot.axes.x.label, "x");
 });
 
 test("the accepted outline keeps authority over reusable items in the exact first section", async () => {
@@ -3662,7 +3663,7 @@ test("the staged model path lowers several static formulas into one multi-curve 
     normalizedPlot.content.curves.map((curve) => [curve.expression, curve.label]),
     [
       ["x", "y = x"],
-      ["(x)^(2)", "y = (x)^(2)"],
+      ["(x)^(2)", "y = x²"],
     ],
   );
   assert.equal(normalizedPlot.content.points, undefined);
@@ -3841,9 +3842,13 @@ test("automatic quadratic viewport keeps reachable vertices without flattening t
   }
   const {lesson} = compileAndValidateLessonPlan(plan);
   const plot = lesson.steps.flatMap(s=>s.beats.flatMap(b=>b.actions)).find(a=>a.kind === "plot").content;
-  assert.ok(plot.axes.x.min < -5 && plot.axes.x.max > 5);
-  assert.ok(plot.axes.y.min < -5 && plot.axes.y.max > 5);
-  assert.ok(plot.axes.y.max-plot.axes.y.min <= 40, "parameter extremes must not flatten the lesson");
+  // The initial vertex and its shape are framed with equal units; slider
+  // extremes the lesson never shows do not widen the frame.
+  assert.ok(plot.axes.x.min < -2 && plot.axes.x.max > 2, JSON.stringify(plot.axes));
+  assert.ok(plot.axes.y.min < 0 && plot.axes.y.max > 4, JSON.stringify(plot.axes));
+  assert.ok(plot.axes.x.max - plot.axes.x.min <= 16, "parameter extremes must not flatten the lesson");
+  assert.ok(plot.axes.y.max - plot.axes.y.min <= 20, "parameter extremes must not flatten the lesson");
+  assert.equal(plot.axes.equal_scale, true);
 });
 
 
@@ -3935,19 +3940,6 @@ test("fixed-line slope definitions may refer to coordinate changes", () => {
   assert.doesNotThrow(() => compileAndValidateLessonPlan(plan));
 });
 
-
-test("common function viewports show their main teaching region", async () => {
-  const bundle = await build({entryPoints:[resolve(root,"src/function-viewport.ts")],bundle:true,platform:"node",format:"esm",write:false,logLevel:"silent"});
-  const {functionViewport} = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].contents).toString("base64")}`);
-  for (const expression of ["x","x^2","sin(x)","tan(x)","ln(x)","sqrt(x)","exp(x)","1/x"]) {
-    const view=functionViewport([expression],[]);
-    assert.ok(view.x.min<=0 && view.x.max>0,expression);
-    assert.ok(view.y.min<=0 && view.y.max>0,expression);
-    assert.ok(view.y.max-view.y.min<=24,expression);
-  }
-  const inverse=functionViewport(["2^x","ln(x)/ln(2)","x"],[]);
-  assert.deepEqual(inverse.x,inverse.y);
-});
 
 test("plot formula display labels use readable symbols with minimal parentheses", async () => {
   const bundle = await build({entryPoints:[resolve(root,"src/recipe-kit.ts")],bundle:true,platform:"node",format:"esm",write:false,logLevel:"silent"});

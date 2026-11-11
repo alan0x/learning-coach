@@ -109,7 +109,7 @@ export interface GenerateLessonPlanOptions {
     error: { code: string; path?: string; message: string };
   }) => void | Promise<void>;
   on_program_adjustment?: (event: {
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed" | "plot_binding_rebuilt" | "plot_control_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed" | "plot_binding_rebuilt" | "plot_control_removed" | "plot_view_adjusted";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -3009,6 +3009,9 @@ export async function generateLessonPlanWithModel(
   for (const draft of drafts) await reportDraftAdjustments(draft);
   for (const adjustment of programAdjustments) {
     await options.on_program_adjustment?.(adjustment);
+  }
+  for (const adjustment of compiled.view_adjustments) {
+    await options.on_program_adjustment?.({ kind: "plot_view_adjusted", ...adjustment });
   }
   return {
     ...compiled,

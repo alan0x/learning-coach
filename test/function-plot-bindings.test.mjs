@@ -92,8 +92,10 @@ test("the reconstructed E2E vertex exercise recovers before a second model reque
     assert.equal(y(1, 1, 4), 4);
     assert.equal(y(-1, 1, 4), 0);
     assert.equal(y(-1, -1, 6), 6);
-    assert.ok(plot.axes.x.min <= -3 && plot.axes.x.max >= 3);
-    assert.ok(plot.axes.y.min < 0 && plot.axes.y.max >= 6);
+    // The initial vertex (-1, 4) and the exercise's vertex (1, 4) are framed with clearance.
+    for (const [vx, vy] of [[-1, 4], [1, 4]]) {
+      assert.ok(vx > plot.axes.x.min && vx < plot.axes.x.max && vy > plot.axes.y.min && vy < plot.axes.y.max, JSON.stringify(plot.axes));
+    }
     assert.deepEqual(plot, prefixes[0].plot);
   }
 });

@@ -8,7 +8,8 @@ import {
 import { compileText } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
-import { functionViewport } from "../function-viewport.js";
+import { planPlotView, type PlotView } from "../plot-view-planner.js";
+import { parseModelFormula } from "./math-formulas.js";
 import { compileMathExpression, type AuthoringAction } from "octos-lesson-language";
 import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
@@ -70,106 +71,153 @@ function compileFunctionPlot(
   }
   const sampleNumbers = plotSampleNumbers(input);
   const number = sampleNumbers[0];
-  let requestedX = input.x_min !== undefined || input.x_max !== undefined
-    ? {
-        min: optionalNumber(input.x_min, -4, `${path}.x_min`),
-        max: optionalNumber(input.x_max, 4, `${path}.x_max`),
+  // Model ranges are hints for the view planner, not commands.
+  const hint = (value: unknown, key: string) => value === undefined ? undefined : optionalNumber(value, 0, `${path}.${key}`);
+  const requested = {
+    x: { min: hint(input.x_min, "x_min"), max: hint(input.x_max, "x_max") },
+    y: { min: hint(input.y_min, "y_min"), max: hint(input.y_max, "y_max") },
+  };
+
+  // The states this plot's creation section shows: restarts and animation endpoints.
+  const creationIndex = plan.sections.findIndex(section => section.moments.some(moment =>
+    moment.actions.some(action => action.action === "create" && action.content === content)));
+  const creationMoments = plan.sections[creationIndex]?.moments ?? [];
+  const curveParameters = dynamicNumbers.map(index => {
+    const item = numberDefinition(plan, index, `${path}.numbers`);
+    return { name: variableAlias(index), initial: item.initial, min: item.min, max: item.max };
+  });
+  const initialState = Object.fromEntries(curveParameters.map(parameter => [parameter.name, parameter.initial]));
+  const demonstrations: Record<string, number>[] = [];
+  {
+    const state = { ...initialState };
+    for (const moment of creationMoments) {
+      for (const restarted of moment.restart_numbers ?? []) {
+        const name = variableAlias(restarted);
+        if (name in initialState) state[name] = initialState[name]!;
       }
-    : undefined;
-  if (requestedX) assertRange(requestedX.min, requestedX.max, `${path}.x_range`);
-  for (const sampleNumber of sampleNumbers) {
-    const definition = numberDefinition(plan, sampleNumber, `${path}.numbers`);
-    // The Lesson Plan describes what should be taught; the compiler owns the
-    // mechanical viewport needed to make that teaching state visible. A model
-    // should not spend another request merely copying a slider's numeric range
-    // into plot axes.
-    requestedX = {
-      min: Math.min(requestedX?.min ?? definition.min, definition.min),
-      max: Math.max(requestedX?.max ?? definition.max, definition.max),
-    };
-  }
-  let viewport: ReturnType<typeof functionViewport>;
-  try {
-    viewport = functionViewport(expressions, dynamicNumbers.map(index => {
-      const item = numberDefinition(plan, index, `${path}.numbers`);
-      return { name: variableAlias(index), initial: item.initial, min: item.min, max: item.max };
-    }), requestedX);
-  } catch (error) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, error instanceof Error ? error.message : "invalid viewport");
-  }
-  const requestedY = input.y_min !== undefined || input.y_max !== undefined
-    ? {
-        min: optionalNumber(input.y_min, viewport.y.min, `${path}.y_min`),
-        max: optionalNumber(input.y_max, viewport.y.max, `${path}.y_max`),
+      for (const action of moment.actions) {
+        if (action.action !== "animate" || !dynamicNumbers.includes(action.number)) continue;
+        state[variableAlias(action.number)] = action.end_value;
+        demonstrations.push({ ...state });
       }
-    : viewport.y;
-  assertRange(requestedY.min, requestedY.max, `${path}.y_range`);
+    }
+  }
+  // Practice targets in the creation section are states the learner is asked to reach.
+  const practiceTargets = (plan.sections[creationIndex]?.student_activities ?? []).flatMap(activity =>
+    activity.kind === "number_target" && activity.expression === undefined && activity.number_controls.length === 1
+      ? [{ number: activity.number_controls[0]!.number, value: activity.value }] : []);
+  for (const target of practiceTargets) {
+    if (dynamicNumbers.includes(target.number)) demonstrations.push({ ...initialState, [variableAlias(target.number)]: target.value });
+  }
+
   // Title, axes and curve labels are checked before the samples are
   // evaluated, so a repair hears about them first (as before the builder).
   const title = namedNumbers(optionalText(input.title, compileText(plan, "函数图像"), `${path}.title`), plan);
-  const axes = {
-    ...(expressions.length > 1 && expressions.some(e => e.replace(/[()\s]/g, "") === "x") ? {equal_scale:true} : {}),
-    x: { min: viewport.x.min, max: viewport.x.max, label: namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan) },
-    y: { min: requestedY.min, max: requestedY.max, label: namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan) },
-  };
+  const xLabel = namedNumbers(optionalText(input.x_label, "x", `${path}.x_label`), plan);
+  const yLabel = namedNumbers(optionalText(input.y_label, "y", `${path}.y_label`), plan);
   // Evaluation keeps the stable number_XX aliases; the display label is
-  // derived from the same parsed tokens with the numbers' readable symbols,
+  // derived from the parsed formula with the numbers' readable symbols,
   // so the legend and the hover readout can never disagree with the curve.
   const displaySymbols = dynamicTokens !== undefined ? displayNumberSymbols(plan, dynamicNumbers) : undefined;
-  const defaultCurveLabel = (item: string) => dynamicTokens !== undefined
-    ? `y = ${formatMathExpressionDisplay(dynamicTokens, index => displaySymbols!.get(index) ?? `n${index}`)}`
-    : `y = ${item}`;
+  const defaultCurveLabel = (item: string) => {
+    if (dynamicTokens !== undefined) {
+      return `y = ${formatMathExpressionDisplay(dynamicTokens, index => displaySymbols!.get(index) ?? `n${index}`)}`;
+    }
+    // Named logarithms read better as written than as their ln expansion.
+    if (/\b(?:log10|lg|log2)\s*\(/u.test(item)) {
+      return `y = ${item.replace(/\blog10\s*\(/gu, "log₁₀(").replace(/\blog2\s*\(/gu, "log₂(").replace(/\*/gu, "·")}`;
+    }
+    try {
+      return `y = ${formatMathExpressionDisplay(parseModelFormula(item, 0, `${path}.expression`), index => `n${index}`)}`;
+    } catch {
+      return `y = ${item}`;
+    }
+  };
   const curves = expressions.map((item, index) => ({
     expression: item,
     label: curveLabels[index]
       ?? (index === 0 && input.curve_label !== undefined
         ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan)
-        : defaultCurveLabel(item)),
+        : defaultCurveLabel(rawExpressions[index] ?? item)),
   }));
+
+  // Points on a fixed curve: the initial positions and the creation section's
+  // animation endpoints must be visible; the slider ends may join the view.
+  const sampleAt = (x: number, where: string) => ({ x, y: evaluate(expression, ["x"], { x }, where) });
   const samples = sampleNumbers.map((sampleNumber, index) => {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
     for (const x of [d.min, d.max]) evaluate(expression, ["x"], { x }, `${path}.expression`);
-    return { x: d.initial, y: evaluate(expression, ["x"], { x: d.initial }, `${path}.expression`),
+    return { ...sampleAt(d.initial, `${path}.expression`),
       label: sampleNumbers.length === 2 ? (index === 0 ? "A" : "B") : "P(x, y)", x_expression: variableAlias(sampleNumber) };
   });
-  if (samples.length) {
-    const creationIndex = plan.sections.findIndex(section => section.moments.some(moment =>
-      moment.actions.some(action => action.action === "create" && action.content === content)));
-    const teachingY = samples.map(sample => sample.y);
-    for (const [momentIndex, moment] of (plan.sections[creationIndex]?.moments ?? []).entries()) {
-      for (const [actionIndex, action] of moment.actions.entries()) {
-        if (action.action !== "animate" || !sampleNumbers.includes(action.number)) continue;
-        const animationPath = `$lessonPlan.sections[${creationIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`;
-        teachingY.push(evaluate(expression, ["x"], { x: action.end_value }, animationPath));
-      }
+  const teachingPoints: Array<{ x: number; y: number }> = samples.map(({ x, y }) => ({ x, y }));
+  const optionalPoints: Array<{ x: number; y: number }> = [];
+  for (const sampleNumber of sampleNumbers) {
+    const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+    for (const x of [d.min, d.max]) {
+      const y = evaluate(expression, ["x"], { x }, `${path}.expression`);
+      if (Number.isFinite(y)) optionalPoints.push({ x, y });
     }
-    const padding = (requestedY.max - requestedY.min) * 0.05;
-    axes.y.min = Math.min(requestedY.min, ...teachingY.map(y => y - padding));
-    axes.y.max = Math.max(requestedY.max, ...teachingY.map(y => y + padding));
+  }
+  for (const target of practiceTargets) {
+    if (!sampleNumbers.includes(target.number)) continue;
+    const y = compileMathExpression(expression, ["x"])({ x: target.value });
+    if (Number.isFinite(y)) teachingPoints.push({ x: target.value, y });
+  }
+  for (const [momentIndex, moment] of creationMoments.entries()) {
+    for (const [actionIndex, action] of moment.actions.entries()) {
+      if (action.action !== "animate" || !sampleNumbers.includes(action.number)) continue;
+      teachingPoints.push(sampleAt(action.end_value,
+        `$lessonPlan.sections[${creationIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`));
+    }
   }
   // Slope lessons with curve parameters still need visible reference points.
   // Their x positions are fixed; the parameter sliders change the curve.
   let references: Array<{ x: number; y: number; label: string }> | undefined;
   if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
-    const initialVariables = Object.fromEntries(dynamicNumbers.map(index =>
-      [variableAlias(index), numberDefinition(plan, index, path).initial]));
-    const xs = [0, 1];
-    const ys = xs.map(x => {
-      try { return evaluate(expression, expressionVariables, {...initialVariables, x}, path); }
-      catch { return NaN; }
+    const evaluateCurve = compileMathExpression(expression, expressionVariables);
+    const referencePoints = (values: Record<string, number>) => [0, 1].flatMap((x, index) => {
+      try {
+        const y = evaluateCurve({ ...values, x });
+        return Number.isFinite(y) ? [{ x, y, label: index ? "B" : "A" }] : [];
+      } catch {
+        return [];
+      }
     });
-    if (ys.every(Number.isFinite)) references = xs.map((x, index) => ({ x, y: ys[index]!, label: index ? "B" : "A" }));
+    const initialReferences = referencePoints(initialState);
+    if (initialReferences.length === 2) {
+      references = initialReferences;
+      teachingPoints.push(...references, ...demonstrations.flatMap(referencePoints));
+    }
   }
+
+  let view: PlotView;
+  try {
+    view = planPlotView({
+      expressions, parameters: curveParameters, demonstrations, teachingPoints, optionalPoints, requested,
+      quantityX: xLabel !== "x", plainAxes: xLabel === "x" && yLabel === "y",
+    });
+  } catch (error) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expression`, error instanceof Error ? error.message : "invalid viewport");
+  }
+  const axes: Record<string, unknown> = {
+    ...(view.equalScale ? { equal_scale: true, layout: "adaptive" } : {}),
+    ...(samples.length ? { follow_samples: true } : {}),
+    x: { min: view.x.min, max: view.x.max, label: xLabel, ...(view.piTicks ? { ticks: "pi" } : {}) },
+    y: { min: view.y.min, max: view.y.max, label: yLabel },
+  };
+  const plottedCurves = curves.map((curve, index) => view.holes[index]?.length ? { ...curve, holes: view.holes[index] } : curve);
   // Built by the math plugin's shared layer, which Studio also uses.
   const built = buildFunctionPlot({
     as: base, role, place: placement,
     title,
-    axes,
-    curves,
+    axes: axes as Parameters<typeof buildFunctionPlot>[0]["axes"],
+    curves: plottedCurves,
     ...(samples.length ? { samples } : references ? { references } : {}),
   });
   return {
     actions: built.actions,
+    ...(view.adjustments.length ? { adjustments: view.adjustments } : {}),
     whole: base,
     parts: new Map([
       ["whole", base],
