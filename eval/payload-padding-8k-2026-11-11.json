@@ -1,0 +1,863 @@
+{
+ "measured_at": "2026-11-11T08:22:48.126Z",
+ "provider": "gemini",
+ "model": "gemini-3.6-flash",
+ "route_source": "profile",
+ "pad_bytes": 8192,
+ "pairs": 20,
+ "max_calls": 18,
+ "summary": {
+  "complete_pairs": 20,
+  "p50_first_playable_ms": {
+   "plain": 8847.5,
+   "padded": 8869
+  },
+  "p50_bootstrap_ms": {
+   "plain": 8680,
+   "padded": 8857.5
+  },
+  "paired_difference_ms": {
+   "median": 491.5,
+   "mean": -549.1,
+   "ci95": [
+    -2429.0568041127126,
+    1330.8568041127123
+   ]
+  },
+  "calls_before_first_playable": {
+   "plain": 23,
+   "padded": 21
+  },
+  "errors": 0
+ },
+ "rows": [
+  {
+   "pair": 0,
+   "order": 0,
+   "case": "unit-circle-to-sine",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 10420,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 10383,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 10383,
+     "request_bytes": 16968
+    }
+   ]
+  },
+  {
+   "pair": 0,
+   "order": 1,
+   "case": "unit-circle-to-sine",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 8849,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8841,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8841,
+     "request_bytes": 25336
+    }
+   ]
+  },
+  {
+   "pair": 1,
+   "order": 0,
+   "case": "parabola-basics",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 9654,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 9639,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 9639,
+     "request_bytes": 25326
+    }
+   ]
+  },
+  {
+   "pair": 1,
+   "order": 1,
+   "case": "parabola-basics",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 8759,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8748,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8748,
+     "request_bytes": 16958
+    }
+   ]
+  },
+  {
+   "pair": 2,
+   "order": 0,
+   "case": "parabola-transform",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 15874,
+   "calls_before_first_playable": 2,
+   "local_rejections": 1,
+   "bootstrap_ms": 9297,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 9297,
+     "request_bytes": 16978
+    },
+    {
+     "part": "section",
+     "section": 1,
+     "attempt": 1,
+     "elapsed_ms": 6546,
+     "request_bytes": 9941
+    }
+   ]
+  },
+  {
+   "pair": 2,
+   "order": 1,
+   "case": "parabola-transform",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 18503,
+   "calls_before_first_playable": 2,
+   "local_rejections": 1,
+   "bootstrap_ms": 9623,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 9623,
+     "request_bytes": 25346
+    },
+    {
+     "part": "section",
+     "section": 1,
+     "attempt": 1,
+     "elapsed_ms": 8853,
+     "request_bytes": 9969
+    }
+   ]
+  },
+  {
+   "pair": 3,
+   "order": 0,
+   "case": "parabola-two-parameter-control",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 11079,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 11051,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 11051,
+     "request_bytes": 25440
+    }
+   ]
+  },
+  {
+   "pair": 3,
+   "order": 1,
+   "case": "parabola-two-parameter-control",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 7172,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 7149,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 7149,
+     "request_bytes": 17072
+    }
+   ]
+  },
+  {
+   "pair": 4,
+   "order": 0,
+   "case": "three-static-function-comparison",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 10134,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 10120,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 10120,
+     "request_bytes": 16998
+    }
+   ]
+  },
+  {
+   "pair": 4,
+   "order": 1,
+   "case": "three-static-function-comparison",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 8889,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8874,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8874,
+     "request_bytes": 25366
+    }
+   ]
+  },
+  {
+   "pair": 5,
+   "order": 0,
+   "case": "polynomial-static-comparison",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 10398,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 10387,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 10387,
+     "request_bytes": 25382
+    }
+   ]
+  },
+  {
+   "pair": 5,
+   "order": 1,
+   "case": "polynomial-static-comparison",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 9526,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 9517,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 9517,
+     "request_bytes": 17014
+    }
+   ]
+  },
+  {
+   "pair": 6,
+   "order": 0,
+   "case": "trigonometric-static-comparison",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 8472,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8454,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8454,
+     "request_bytes": 17018
+    }
+   ]
+  },
+  {
+   "pair": 6,
+   "order": 1,
+   "case": "trigonometric-static-comparison",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 9485,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 9465,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 9465,
+     "request_bytes": 25386
+    }
+   ]
+  },
+  {
+   "pair": 7,
+   "order": 0,
+   "case": "shifted-parabolas-static-comparison",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 8029,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8020,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8020,
+     "request_bytes": 25360
+    }
+   ]
+  },
+  {
+   "pair": 7,
+   "order": 1,
+   "case": "shifted-parabolas-static-comparison",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 8505,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8489,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8489,
+     "request_bytes": 16992
+    }
+   ]
+  },
+  {
+   "pair": 8,
+   "order": 0,
+   "case": "absolute-value-static-comparison",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 4815,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 4807,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 4807,
+     "request_bytes": 17028
+    }
+   ]
+  },
+  {
+   "pair": 8,
+   "order": 1,
+   "case": "absolute-value-static-comparison",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 9757,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 9748,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 9748,
+     "request_bytes": 25396
+    }
+   ]
+  },
+  {
+   "pair": 9,
+   "order": 0,
+   "case": "cubic-sampled-point",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 7684,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 7678,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 7678,
+     "request_bytes": 25420
+    }
+   ]
+  },
+  {
+   "pair": 9,
+   "order": 1,
+   "case": "cubic-sampled-point",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 6975,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 6969,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 6969,
+     "request_bytes": 17052
+    }
+   ]
+  },
+  {
+   "pair": 10,
+   "order": 0,
+   "case": "circle-arc-length",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 8065,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8059,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8059,
+     "request_bytes": 16932
+    }
+   ]
+  },
+  {
+   "pair": 10,
+   "order": 1,
+   "case": "circle-arc-length",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 8339,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8335,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8335,
+     "request_bytes": 25300
+    }
+   ]
+  },
+  {
+   "pair": 11,
+   "order": 0,
+   "case": "spring-oscillation",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 7285,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 7280,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 7280,
+     "request_bytes": 25444
+    }
+   ]
+  },
+  {
+   "pair": 11,
+   "order": 1,
+   "case": "spring-oscillation",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 8936,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8931,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8931,
+     "request_bytes": 17076
+    }
+   ]
+  },
+  {
+   "pair": 12,
+   "order": 0,
+   "case": "cube-section",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 5606,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 5598,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 5598,
+     "request_bytes": 17232
+    }
+   ]
+  },
+  {
+   "pair": 12,
+   "order": 1,
+   "case": "cube-section",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 6729,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 6725,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 6725,
+     "request_bytes": 25600
+    }
+   ]
+  },
+  {
+   "pair": 13,
+   "order": 0,
+   "case": "paraboloid-section",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 6857,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 6850,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 6850,
+     "request_bytes": 25536
+    }
+   ]
+  },
+  {
+   "pair": 13,
+   "order": 1,
+   "case": "paraboloid-section",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 11260,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 11257,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 11257,
+     "request_bytes": 17168
+    }
+   ]
+  },
+  {
+   "pair": 14,
+   "order": 0,
+   "case": "natural-log-origin",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 25324,
+   "calls_before_first_playable": 3,
+   "local_rejections": 2,
+   "bootstrap_ms": 8612,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8612,
+     "request_bytes": 16890
+    },
+    {
+     "part": "section",
+     "section": 1,
+     "attempt": 1,
+     "elapsed_ms": 8641,
+     "request_bytes": 9875
+    },
+    {
+     "part": "section",
+     "section": 1,
+     "attempt": 2,
+     "elapsed_ms": 8017,
+     "request_bytes": 9951
+    }
+   ]
+  },
+  {
+   "pair": 14,
+   "order": 1,
+   "case": "natural-log-origin",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 10278,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 10272,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 10272,
+     "request_bytes": 25258
+    }
+   ]
+  },
+  {
+   "pair": 15,
+   "order": 0,
+   "case": "unit-circle-to-sine",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 12285,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 12276,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 12276,
+     "request_bytes": 25336
+    }
+   ]
+  },
+  {
+   "pair": 15,
+   "order": 1,
+   "case": "unit-circle-to-sine",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 8537,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8531,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8531,
+     "request_bytes": 16968
+    }
+   ]
+  },
+  {
+   "pair": 16,
+   "order": 0,
+   "case": "parabola-basics",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 6577,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 6567,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 6567,
+     "request_bytes": 16958
+    }
+   ]
+  },
+  {
+   "pair": 16,
+   "order": 1,
+   "case": "parabola-basics",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 9125,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 9117,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 9117,
+     "request_bytes": 25326
+    }
+   ]
+  },
+  {
+   "pair": 17,
+   "order": 0,
+   "case": "parabola-transform",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 8634,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8611,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8611,
+     "request_bytes": 25346
+    }
+   ]
+  },
+  {
+   "pair": 17,
+   "order": 1,
+   "case": "parabola-transform",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 10449,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 10427,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 10427,
+     "request_bytes": 16978
+    }
+   ]
+  },
+  {
+   "pair": 18,
+   "order": 0,
+   "case": "parabola-two-parameter-control",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 11401,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 11377,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 11377,
+     "request_bytes": 17072
+    }
+   ]
+  },
+  {
+   "pair": 18,
+   "order": 1,
+   "case": "parabola-two-parameter-control",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 8124,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 8111,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 8111,
+     "request_bytes": 25440
+    }
+   ]
+  },
+  {
+   "pair": 19,
+   "order": 0,
+   "case": "three-static-function-comparison",
+   "padded": true,
+   "added_bytes": 8368,
+   "outcome": "first_playable",
+   "first_playable_ms": 5576,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 5566,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 5566,
+     "request_bytes": 25366
+    }
+   ]
+  },
+  {
+   "pair": 19,
+   "order": 1,
+   "case": "three-static-function-comparison",
+   "padded": false,
+   "added_bytes": 0,
+   "outcome": "first_playable",
+   "first_playable_ms": 9734,
+   "calls_before_first_playable": 1,
+   "local_rejections": 0,
+   "bootstrap_ms": 9723,
+   "calls": [
+    {
+     "part": "bootstrap",
+     "attempt": 1,
+     "elapsed_ms": 9723,
+     "request_bytes": 16998
+    }
+   ]
+  }
+ ]
+}

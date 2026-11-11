@@ -212,3 +212,27 @@ export async function measureRequestHashes(api, fixtures, helpers) {
   }
   return { hashes, lessons };
 }
+
+/**
+ * Bytes a plugin adds to a broad request: its recipes' model guidance and
+ * model parameter names, its prompt rules and its schema fragments
+ * (decision S14 budgets in eval/payload-ceilings.json).
+ */
+export function pluginFootprint(plugin) {
+  const bytes = (value) => Buffer.byteLength(typeof value === "string" ? value : JSON.stringify(value));
+  const guidance = Object.values(plugin.recipes).reduce((sum, recipe) =>
+    sum + bytes(recipe.model_guidance ?? "") + bytes(recipe.model_parameter_names ?? []), 0);
+  const rules = Object.values(plugin.prompt_rules ?? {}).reduce((sum, text) => sum + bytes(text), 0);
+  return guidance + rules + bytes(plugin.schema_properties ?? {});
+}
+
+/** Plugins over their budget, and installed plugins without one. */
+export function checkPluginBudgets(plugins, ceilings) {
+  const budgets = ceilings.plugin_budgets?.budgets ?? {};
+  return plugins.flatMap((plugin) => {
+    const id = plugin.manifest.id;
+    if (budgets[id] === undefined) return [`${id}: no plugin budget recorded`];
+    const footprint = pluginFootprint(plugin);
+    return footprint > budgets[id] ? [`${id}: ${footprint} B exceeds its budget ${budgets[id]} B`] : [];
+  });
+}
