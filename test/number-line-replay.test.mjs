@@ -150,3 +150,20 @@ for (const turn of run7.turns) {
   });
 }
 
+test("a visual whose own range clamps a task onto its starting value moves the task's target (probe 3: unit squares 15 → 20, both capped)", async () => {
+  // The fallback outline chose a unit-square array: 15 squares, task "set it to 20". The array caps its
+  // count, so both became the same and OLL rejected the task as already met, three times over.
+  const fixture = JSON.parse(await readFile(new URL("./fixtures/clamped-met-target-replies.json", import.meta.url), "utf8"));
+  const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+  let next = 0;
+  let lesson;
+  await assert.rejects(generateLessonPlanWithModel(async () => JSON.stringify(fixture.replies[next++]), { turn_id: "clamped", learner_request: fixture.request, input_modality: "text", request_source: "self_contained" }, {
+    on_playable_prefix: ({ compiled }) => { lesson = compiled.lesson; throw new Error("first playable"); },
+  }), /first playable/);
+  const count = lesson.lesson.variables[0];
+  const task = lesson.lesson.tasks.find((entry) => entry.completion.expression === count.as);
+  assert.ok(Math.abs(task.completion.value - count.initial) > task.completion.tolerance, `${task.completion.value} vs ${count.initial}`);
+  assert.ok(task.completion.value >= count.min && task.completion.value <= count.max);
+  assert.match(task.prompt, new RegExp(String(task.completion.value)));
+});
+

@@ -332,6 +332,35 @@ function compilePlainContent(
  * Other visuals' targets are moved to the end of the range when the model's reply is lowered, as before.
  * The plan is the compiler's own copy, so each compile of a growing lesson does this once.
  */
+/** Moves a practice target its number already starts at to the far end of its range, on its slider. */
+function moveMetTarget(
+  plan: LessonPlan,
+  activity: Extract<NonNullable<LessonPlan["sections"][number]["student_activities"]>[number], { kind: "number_target" }>,
+  definition: NonNullable<LessonPlan["numbers"]>[number],
+  path: string,
+): void {
+  const step = definition.student_control?.step;
+  const onSlider = (value: number) => {
+    let reachable = Math.min(definition.max, Math.max(definition.min, value));
+    if (typeof step === "number" && Number.isFinite(step) && step > 0) {
+      reachable = Math.min(definition.max, Math.max(definition.min, definition.min + Math.round((reachable - definition.min) / step) * step));
+    }
+    return Number(reachable.toPrecision(12));
+  };
+  const alternative = [definition.min, definition.max]
+    .sort((a, b) => Math.abs(b - definition.initial) - Math.abs(a - definition.initial))
+    .map(onSlider)
+    .find((value) => Math.abs(value - definition.initial) > activity.tolerance * (1 + 1e-9));
+  if (alternative === undefined) fail("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
+  activity.value = alternative;
+  const label = definition.label?.trim() || compileText(plan, "数值");
+  const unit = definition.unit?.trim();
+  const formatted = Number(alternative.toPrecision(12));
+  activity.prompt = compileText(plan, "请把{{v0}}调到 {{v1}}{{v2}}。", { v0: label, v1: formatted, v2: unit ? ` ${unit}` : "" });
+  activity.hints = [compileText(plan, "拖动左下角的滑杆，观察数值和画面同步变化。")];
+  activity.success_message = compileText(plan, "完成，{{v0}}已经调到 {{v1}}{{v2}}。", { v0: label, v1: formatted, v2: unit ? ` ${unit}` : "" });
+}
+
 function resolveMetNumberTargets(plan: LessonPlan): void {
   const lineNumbers = new Set<number>();
   // Where each number's line is first drawn, so the number can move there as the line appears.
@@ -360,8 +389,16 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
       if (activity.kind !== "number_target" || activity.expression || activity.number_controls.length !== 1) continue;
       const number = activity.number_controls[0]!.number;
       const definition = plan.numbers?.[number - 1];
-      if (!lineNumbers.has(number) || !definition || !lastMoment) continue;
-      const met = (value: number) => Math.abs(activity.value - value) <= activity.tolerance;
+      if (!definition || !lastMoment) continue;
+      const met = (value: number) => Math.abs(activity.value - value) <= activity.tolerance * (1 + 1e-9);
+      if (!lineNumbers.has(number)) {
+        // Other visuals: the reply's lowering already moved a target its starting value met, but a
+        // visual's own range can clamp both afterwards to the same limit (a unit-square array of 15,
+        // target 20, both capped): move the target to the end of the range farthest from the start,
+        // as lowering does, and name it in the task's words.
+        if (met(definition.initial)) moveMetTarget(plan, activity, definition, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`);
+        continue;
+      }
       const metAtStart = met(definition.initial);
       if (!metAtStart && !met(valueAtEnd(number))) continue;
       const path = `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`;
