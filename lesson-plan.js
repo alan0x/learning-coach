@@ -12877,9 +12877,36 @@ var near2 = (value2, grid) => Math.abs(value2 - Math.round(value2 / grid) * grid
 var snap = (value2, grid) => Number((Math.round(value2 / grid) * grid).toPrecision(12));
 var floorTo = (value2, grid) => Number((Math.ceil(value2 / grid - 1e-9) * grid).toPrecision(12));
 var ceilTo = (value2, grid) => Number((Math.floor(value2 / grid + 1e-9) * grid).toPrecision(12));
-function inferDenominator(values) {
+var gcd2 = (a, b) => b === 0 ? a : gcd2(b, a % b);
+var repeats = (numerator, denominator) => {
+  let rest = denominator / gcd2(Math.abs(numerator), denominator);
+  for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime;
+  return rest !== 1;
+};
+var exactlyOn = (value2, denominator) => Math.abs(value2 * denominator - Math.round(value2 * denominator)) <= 1e-9 * Math.max(1, Math.abs(value2 * denominator));
+var decimalPlaces2 = (value2) => {
+  const text3 = String(Math.abs(value2));
+  if (text3.includes("e")) return 0;
+  return text3.includes(".") ? text3.length - text3.indexOf(".") - 1 : 0;
+};
+var roundedFrom = (value2, denominator) => {
+  const places = decimalPlaces2(value2);
+  if (places < 2 || places > 12) return false;
+  const numerator = Math.round(value2 * denominator);
+  if (!repeats(numerator, denominator)) return false;
+  const lowest = denominator / gcd2(Math.abs(numerator), denominator);
+  if (places === 2 && lowest !== 3 && lowest !== 6) return false;
+  const exact = numerator / denominator;
+  const scale = 10 ** places;
+  return Math.abs(value2 - Number(exact.toFixed(places))) < 0.5 / scale / 1e3 || Math.abs(value2 - Math.trunc(exact * scale) / scale) < 0.5 / scale / 1e3;
+};
+function inferDenominator(values, { approximate = true } = {}) {
   for (let denominator = 1; denominator <= 24; denominator += 1) {
-    if (values.every((value2) => near2(value2, 1 / denominator))) return denominator;
+    if (values.every((value2) => exactlyOn(value2, denominator))) return denominator;
+  }
+  if (!approximate) return void 0;
+  for (let denominator = 1; denominator <= 24; denominator += 1) {
+    if (values.every((value2) => exactlyOn(value2, denominator) || roundedFrom(value2, denominator))) return denominator;
   }
   return void 0;
 }
