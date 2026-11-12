@@ -299,3 +299,9 @@ Owner-approved; 107 model calls (about $0.80); `eval/trial-recipe-speed-number-l
   - The earlier claim that other-subject requests were slower *because of* the bigger prompt is withdrawn; ten pairs cannot show it.
   - Runs 3 to 5 pooled (60 pairs): median −0.36 s.
 
+
+### Run 6 rules (owner, set before the run)
+
+- **Quality:** the hard checks above and the slip rule (option B). Near misses that draw a number line are hard misses.
+- **Speed (option a):** the paired median must be at most +0.5 s. If run 6 misses only on speed and the 95% interval of its median includes zero, the 20 speed pairs are repeated once, without quality cases (about $0.35), and speed is judged on all 40 pairs. No further repeats.
+- Approved: about $0.95, `--pairs 20 --quality-repeats 3 --max-calls 130`.
