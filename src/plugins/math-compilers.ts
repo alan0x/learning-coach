@@ -551,11 +551,91 @@ function compileCircleArea(
 }
 
 
-/** Every count of parts per unit OLL draws (1–12), fewest first. */
-const NUMBER_LINE_SPLITS = Array.from({ length: 12 }, (_unused, index) => index + 1);
+/** Every count of parts per unit OLL draws (1–24; decision 0016), fewest first. */
+const NUMBER_LINE_SPLITS = Array.from({ length: NUMBER_LINE_LIMITS.subdivisions }, (_unused, index) => index + 1);
 /** Whether 1/parts has a finite decimal: its only prime factors are 2 and 5. */
 const exactDecimal = (parts: number) => { let rest = parts; for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime; return rest === 1; };
 const onGrid = (value: number, parts: number) => Math.abs(value * parts - Math.round(value * parts)) < 1e-9;
+
+/** The label style the question's notation asks for: "decimal" labels 0.8, not 8/10 (only the model sees it). */
+function numberLineLabelStyle(content: LessonPlanVisualContent, path: string): { title: unknown; labelStyle: unknown } {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "label_style"], path);
+  if (input.label_style !== undefined && input.label_style !== "decimal" && input.label_style !== "fraction") {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.label_style`, "label_style is decimal or fraction");
+  }
+  return { title: input.title, labelStyle: input.label_style };
+}
+
+/**
+ * The range and ticks of a number line in the family (decisions 0013 and 0016):
+ * - the range covers every value a slider can reach (`values`), with 0 and a unit of margin;
+ * - the ticks hold every value in `grid` (ranges, starting values, slider steps), or failing that the
+ *   values the lesson itself shows (`shown`): the finest whole step of 1, 2, 5 or 10 with at most 60
+ *   ticks, else one-unit ticks split into the fewest parts (up to 24) within OLL's tick limit;
+ * - values no ticks can hold are refused as a fault the outline owns (they and the visual were chosen
+ *   there), so the outline is asked again without the number line.
+ */
+function numberLineFrame(values: readonly number[], grid: readonly number[], shown: readonly number[], labelStyle: unknown, path: string) {
+  const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
+  const max = Math.ceil(Math.max(...values, 0)) + 1;
+  const span = max - min;
+  const holdAll = (count: number, of: readonly number[]) => of.every((value) => onGrid(value / count, 1));
+  const ticksFor = (of: readonly number[]) => {
+    const whole = [1, 2, 5, 10].find((count) => span / count <= 60 && holdAll(count, of));
+    if (whole) return { step: whole, subdivisions: 1 };
+    const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value) => onGrid(value, count)) && span * count <= NUMBER_LINE_LIMITS.ticks);
+    return parts ? { step: 1, subdivisions: parts } : undefined;
+  };
+  const ticks = ticksFor(grid) ?? ticksFor(shown);
+  if (!ticks) {
+    fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`,
+      `a number line can split each unit into at most ${NUMBER_LINE_LIMITS.subdivisions} equal parts; these values need finer ticks, so choose another visual`);
+  }
+  return {
+    range: { min, max },
+    step: ticks.step, subdivisions: ticks.subdivisions,
+    ticks: {
+      step: ticks.step, subdivisions: ticks.subdivisions, labels: ticks.subdivisions > 1 ? "all" as const : "major" as const,
+      // Decimals only where they are exact (halves, fifths, tenths …): thirds stay fractions, never 0.333.
+      ...(labelStyle === "decimal" && ticks.subdivisions > 1 && exactDecimal(ticks.subdivisions) ? { format: "decimal" as const } : {}),
+    },
+  };
+}
+
+/**
+ * Two numbers compared on one number line (decision 0016): each is a point, on ticks that hold both
+ * (their common denominator, up to 24 parts per unit), labelled with the lesson number's name.
+ */
+function compileNumberLineCompare(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const { title, labelStyle } = numberLineLabelStyle(content, path);
+  const [firstNumber, secondNumber] = content.numbers ?? [];
+  if (!firstNumber || !secondNumber) fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "comparing on a number line needs the two lesson numbers it compares");
+  const first = numberDefinition(plan, firstNumber, `${path}.numbers[0]`);
+  const second = numberDefinition(plan, secondNumber, `${path}.numbers[1]`);
+  const values = [first.min, first.max, first.initial, second.min, second.max, second.initial];
+  const steps = [first.student_control?.step, second.student_control?.step].filter((step): step is number => typeof step === "number" && step > 0);
+  const shown = [first.initial, ...lessonValues(plan, firstNumber), second.initial, ...lessonValues(plan, secondNumber)];
+  const frame = numberLineFrame(values, [...values, ...steps], shown, labelStyle, path);
+  const point = (as: string, number: number, definition: typeof first) => ({
+    as, value: { expression: variableAlias(number), initial: definition.initial },
+    label: definition.label?.trim() || compileText(plan, "数值"),
+  });
+  const built = buildNumberLine({
+    as: base, role, place: placement,
+    title: optionalText(title, compileText(plan, "数轴"), `${path}.title`),
+    range: frame.range, ticks: frame.ticks,
+    points: [point("first", firstNumber, first), point("second", secondNumber, second)],
+  });
+  return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.second! })) };
+}
 
 /**
  * A number line (OLL decision 0013) from the visual's numbers: the first is
@@ -571,12 +651,7 @@ function compileNumberLine(
   plan: LessonPlan,
   path: string,
 ): CompiledVisual {
-  const input = parameters(content);
-  allowParameterKeys(input, ["title", "label_style"], path);
-  // How the question writes its numbers, which only the model sees: "decimal" labels 0.8, not 8/10.
-  if (input.label_style !== undefined && input.label_style !== "decimal" && input.label_style !== "fraction") {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.label_style`, "label_style is decimal or fraction");
-  }
+  const { title, labelStyle } = numberLineLabelStyle(content, path);
   const [startNumber, changeNumber] = content.numbers ?? [];
   // A number line with no lesson number has nothing to show (run 7: an outline with no numbers).
   if (!startNumber) fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "a number line needs at least one lesson number for its start");
@@ -593,38 +668,14 @@ function compileNumberLine(
     ...(change ? [change.min, change.max, change.initial] : []),
     ...[start?.student_control?.step, change?.student_control?.step].filter((step): step is number => typeof step === "number" && step > 0),
   ];
-  const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
-  const max = Math.ceil(Math.max(...values, 0)) + 1;
-  const span = max - min;
-  // The ticks: first those that hold every value a slider can reach (ranges, starting values, steps);
-  // failing that, those that hold the values the lesson itself shows (starting values, animation and
-  // practice targets), since a slider step derived from the range (0.325) may fit no ticks at all.
-  // At each level: the finest whole step of 1, 2, 5 or 10 with at most 60 ticks; then one-unit ticks,
-  // split into the fewest parts (up to 12) that hold the values, up to OLL's tick limit.
   const shown = [
     ...(start && startNumber ? [start.initial, ...lessonValues(plan, startNumber)] : []),
     ...(change && changeNumber ? [change.initial, ...lessonValues(plan, changeNumber)] : []),
     ...(start && change && changeNumber ? [change.initial, ...lessonValues(plan, changeNumber)].map((value) => start.initial + value) : []),
   ];
-  const holdAll = (count: number, of: readonly number[]) => of.every((value) => onGrid(value / count, 1));
-  const ticksFor = (of: readonly number[]) => {
-    const whole = [1, 2, 5, 10].find((count) => span / count <= 60 && holdAll(count, of));
-    if (whole) return { step: whole, subdivisions: 1 };
-    // One-unit ticks (whole values: no parts), else the fewest parts that hold them, within OLL's limit.
-    const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value) => onGrid(value, count)) && span * count <= NUMBER_LINE_LIMITS.ticks);
-    if (parts) return { step: 1, subdivisions: parts };
-    return undefined;
-  };
-  const ticks = ticksFor(grid) ?? ticksFor(shown);
-  // Values no ticks can hold (2/3 and 3/5 together need fifteenths) would sit between ticks with no
-  // number under them. Refuse, so the model can choose another visual or other values: a line the
-  // learner cannot read teaches nothing (run 6, NM-01, three times).
-  if (!ticks) {
-    // The values and the visual were chosen in the outline, so only a new outline can fix this.
-    fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`,
-      "a number line can split each unit into at most 12 equal parts; these values need finer ticks, so choose another visual");
-  }
-  const { step, subdivisions } = ticks;
+  // Values no ticks can hold would sit between ticks with no number under them (run 6, NM-01): refused.
+  const frame = numberLineFrame(values, grid, shown, labelStyle, path);
+  const { step, subdivisions } = frame;
   // Hops are counted on the ticks actually drawn: every reachable change, and the slider's step,
   // must be a whole number of the smallest ticks, and the longest change at most 24 of them.
   const unit = step / subdivisions;
@@ -639,13 +690,9 @@ function compileNumberLine(
   const changeVariable = changeNumber ? variableAlias(changeNumber) : undefined;
   const built = buildNumberLine({
     as: base, role, place: placement,
-    title: optionalText(input.title, compileText(plan, "数轴"), `${path}.title`),
-    range: { min, max },
-    ticks: {
-      step, subdivisions, labels: subdivisions > 1 ? "all" : "major",
-      // Decimals only where they are exact (halves, fifths, tenths …): thirds stay fractions, never 0.333.
-      ...(input.label_style === "decimal" && subdivisions > 1 && exactDecimal(subdivisions) ? { format: "decimal" as const } : {}),
-    },
+    title: optionalText(title, compileText(plan, "数轴"), `${path}.title`),
+    range: frame.range,
+    ticks: frame.ticks,
     ...(start && startVariable ? { points: [
       { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "起点") },
       ...(change && changeVariable ? [{ as: "end", value: { expression: `(${startVariable})+(${changeVariable})`, initial: start.initial + change.initial }, label: compileText(plan, "终点") }] : []),
@@ -657,6 +704,7 @@ function compileNumberLine(
 
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
+  number_line_compare: compileNumberLineCompare,
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_polygon_bounds: compileCirclePolygonBounds,

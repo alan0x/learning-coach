@@ -167,7 +167,23 @@ export const MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line"],
-    model_guidance: "数轴：起点加一次移动，终点由程序算；数值写实际大小（3/4 写 0.75）。a + b：起点 a，移动 b；比较两个数：起点是较小的数，移动是差；问一个数的位置：起点 0；按分数数数：移动写一步（0.25）。题目写小数时 label_style 用 decimal。不用于不等式、绝对值、四舍五入、分母大于 12 的分数或函数图像",
+    model_guidance: "数轴：起点加一次移动，终点由程序算；数值写实际大小（3/4 写 0.75）。a + b：起点 a，移动 b；比较两个数：起点是较小的数，移动是差；问一个数的位置：起点 0；按分数数数：移动写一步（0.25）。题目写小数时 label_style 用 decimal。不用于不等式、绝对值、四舍五入或函数图像",
+  },
+  // Decision 0016: comparing two numbers. Each is a point; the ticks hold both (their common
+  // denominator, up to 24 parts per unit). The shared rules (actual size, label_style) are on the
+  // number line's card; this card adds one line.
+  number_line_compare: {
+    parts: ["whole", "first", "second", "primary_control"],
+    number_inputs: ["first", "second"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: ["title", "label_style"],
+    model_parameter_names: ["title", "label_style"],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["number_line"],
+    student_controls: ["slider"],
+    required_features: ["number_line", "number_comparison"],
+    model_guidance: "数轴比较：两个数值是要比较的两个数，各画一点（2/3 和 3/5 也能画）",
   },
 } as const;
 
@@ -201,6 +217,7 @@ const MATH_SCHEMA_PROPERTIES = {
   },
   circle_area_rearrangement: { radius: { type: "number", minimum: 0 } },
   number_line: { label_style: { enum: ["decimal", "fraction"] } },
+  number_line_compare: { label_style: { enum: ["decimal", "fraction"] } },
 };
 
 export const MATH_PLUGIN = {

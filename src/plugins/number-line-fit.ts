@@ -30,9 +30,9 @@ const snap = (value: number, grid: number) => Number((Math.round(value / grid) *
 const floorTo = (value: number, grid: number) => Number((Math.ceil(value / grid - 1e-9) * grid).toPrecision(12));
 const ceilTo = (value: number, grid: number) => Number((Math.floor(value / grid + 1e-9) * grid).toPrecision(12));
 
-/** The smallest denominator 1–12 that puts every value within 0.01 of one of its fractions. */
+/** The smallest denominator 1–24 (decision 0016) that puts every value near one of its fractions. */
 export function inferDenominator(values: readonly number[]): number | undefined {
-  for (let denominator = 1; denominator <= 12; denominator += 1) {
+  for (let denominator = 1; denominator <= 24; denominator += 1) {
     if (values.every((value) => near(value, 1 / denominator))) return denominator;
   }
   return undefined;
@@ -169,3 +169,49 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   if (changeIndex && change) fitted.set(changeIndex, step);
   return fitted;
 }
+
+/**
+ * Fits two compared numbers (decision 0016) in place: both values, and the values the lesson sets them
+ * to, snap to their common denominator (up to 24); the sliders step by it; each range narrows to the
+ * whole units around both values, never past what the model allowed and always keeping the values.
+ * Shared numbers and numbers an expression task reads are left as written, as for the number line.
+ */
+export function fitComparedNumbers(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>): Map<number, number> {
+  const fitted = new Map<number, number>();
+  const indexes = (content.numbers ?? []).slice(0, 2);
+  if (indexes.length < 2 || !plan.numbers || indexes.some((index) => sharedNumbers.has(index))) return fitted;
+  const ours = new Set(indexes);
+  const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) =>
+    activity.kind === "number_target" && activity.expression !== undefined
+    && (activity.number_controls.some((control) => ours.has(control.number))
+      || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
+  if (expressionTask) return fitted;
+  const definitions = indexes.map((index) => plan.numbers![index - 1]);
+  if (definitions.some((definition) => !definition)) return fitted;
+  const values = indexes.flatMap((index, position) => [definitions[position]!.initial, ...lessonValues(plan, index)]);
+  const denominator = inferDenominator(values);
+  if (!denominator) return fitted;
+  const grid = 1 / denominator;
+  const low = Math.floor(Math.min(...values) + 1e-9);
+  const high = Math.max(low + 1, Math.ceil(Math.max(...values) - 1e-9));
+  const original = definitions.map((definition) => structuredClone(definition!));
+  for (const [position, definition] of definitions.entries()) {
+    const own = [definition!.initial, ...lessonValues(plan, indexes[position]!)].map((value) => snap(value, grid));
+    definition!.initial = snap(definition!.initial, grid);
+    if (definition!.student_control) definition!.student_control.step = grid;
+    definition!.min = floorTo(Math.max(definition!.min, Math.min(low, ...own)), grid);
+    definition!.max = ceilTo(Math.min(definition!.max, Math.max(high, ...own)), grid);
+  }
+  const valid = definitions.every((definition) => definition!.min < definition!.max && definition!.initial >= definition!.min && definition!.initial <= definition!.max);
+  if (!valid) {
+    // Keep the model's ranges, but the values and sliders still sit on the common ticks.
+    for (const [position, definition] of definitions.entries()) {
+      definition!.min = original[position]!.min;
+      definition!.max = original[position]!.max;
+      definition!.initial = Math.min(definition!.max, Math.max(definition!.min, definition!.initial));
+    }
+  }
+  for (const index of indexes) fitted.set(index, grid);
+  return fitted;
+}
+

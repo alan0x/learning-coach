@@ -184,12 +184,21 @@ test("a slider step no count of parts can hold gives way to the values' own deno
   assert.equal(result.content.jumps[0].hops, true);
 });
 
-test("values no ticks can hold are refused, so the model can choose another visual (run 6: 2/3 and 3/5 need fifteenths)", () => {
+test("values no ticks can hold are refused, so the model can choose another visual (2/3 and 1/25 need 75ths, beyond 24 parts)", () => {
+  const result = compile([
+    { initial: 0.04, min: 0, max: 1, label: "起点" },
+    { initial: 2 / 3 - 0.04, min: 0, max: 1, label: "差", student_control: { kind: "slider", step: 1 / 75 } },
+  ]);
+  assert.match(result.error ?? "", /at most 24 equal parts/);
+});
+
+test("2/3 and 3/5 now share fifteenths (decision 0016: up to 24 parts per unit)", () => {
   const result = compile([
     { initial: 0.6, min: 0, max: 1, label: "起点" },
     { initial: 2 / 3 - 0.6, min: 0, max: 1, label: "差", student_control: { kind: "slider", step: 1 / 15 } },
   ]);
-  assert.match(result.error ?? "", /at most 12 equal parts/);
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.content.ticks.subdivisions, 15);
 });
 // Shapes the model wrote in speed gate run 3 (2026-11-11), fitted to what the lesson teaches.
 test("run 3: thirds written as 0.33 and 0.67 with a 0.1 step are drawn in thirds, exactly", () => {

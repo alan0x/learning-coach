@@ -286,7 +286,12 @@ export function recipesInPart(part) {
   const motion = writes.some((action) => action.kind === "geometry" && String(action.as).endsWith("-track")
     && (action.content?.points ?? []).some((point) => point.as === "object"));
   if (motion) found.push("constant_speed_motion");
-  if (writes.some((action) => action.kind === "number_line")) found.push("number_line");
+  // The number-line family (decision 0016): a comparison draws points "first" and "second"; the
+  // start-plus-move line draws "start" (and "end").
+  for (const write of writes.filter((action) => action.kind === "number_line")) {
+    const points = new Set((write.content?.points ?? []).map((point) => point.as));
+    found.push(points.has("first") && points.has("second") ? "number_line_compare" : "number_line");
+  }
   return found;
 }
 
@@ -365,7 +370,8 @@ async function main() {
   // A probe (--cases NL-03,NM-01) runs only the named cases, on the candidate arm, with no speed pairs:
   // a cheap first look at how the model meets a change, before any gate run.
   const probeIds = option("--cases")?.split(",").map((id) => id.trim()).filter(Boolean);
-  const allCases = [...fitting, ...(TRIAL_QUALITY_CASES[recipes.split(",")[0].trim()] ?? [])];
+  // Any case of any trial recipe can be probed (number_line,number_line_compare offers both).
+  const allCases = [...Object.values(TRIAL_CASES).flat(), ...Object.values(TRIAL_QUALITY_CASES).flat()];
   const qualityCases = (probeIds ? probeIds.map((id) => {
     const item = allCases.find((entry) => entry.id === id);
     if (!item) throw new Error(`no case '${id}'`);
