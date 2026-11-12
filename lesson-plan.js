@@ -16518,6 +16518,25 @@ function compilePlainContent(kind, content, options, path) {
   }
   fail2("LESSON_PLAN_COMPILER", path, `unsupported plain board kind '${kind}'`);
 }
+function moveMetTarget(plan, activity, definition, path) {
+  const step = definition.student_control?.step;
+  const onSlider = (value2) => {
+    let reachable = Math.min(definition.max, Math.max(definition.min, value2));
+    if (typeof step === "number" && Number.isFinite(step) && step > 0) {
+      reachable = Math.min(definition.max, Math.max(definition.min, definition.min + Math.round((reachable - definition.min) / step) * step));
+    }
+    return Number(reachable.toPrecision(12));
+  };
+  const alternative = [definition.min, definition.max].sort((a, b) => Math.abs(b - definition.initial) - Math.abs(a - definition.initial)).map(onSlider).find((value2) => Math.abs(value2 - definition.initial) > activity.tolerance * (1 + 1e-9));
+  if (alternative === void 0) fail2("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
+  activity.value = alternative;
+  const label = definition.label?.trim() || compileText(plan, "\u6570\u503C");
+  const unit = definition.unit?.trim();
+  const formatted = Number(alternative.toPrecision(12));
+  activity.prompt = compileText(plan, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formatted, v2: unit ? ` ${unit}` : "" });
+  activity.hints = [compileText(plan, "\u62D6\u52A8\u5DE6\u4E0B\u89D2\u7684\u6ED1\u6746\uFF0C\u89C2\u5BDF\u6570\u503C\u548C\u753B\u9762\u540C\u6B65\u53D8\u5316\u3002")];
+  activity.success_message = compileText(plan, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formatted, v2: unit ? ` ${unit}` : "" });
+}
 function resolveMetNumberTargets(plan) {
   const lineNumbers = /* @__PURE__ */ new Set();
   const lineCreations = /* @__PURE__ */ new Map();
@@ -16543,8 +16562,12 @@ function resolveMetNumberTargets(plan) {
       if (activity.kind !== "number_target" || activity.expression || activity.number_controls.length !== 1) continue;
       const number = activity.number_controls[0].number;
       const definition = plan.numbers?.[number - 1];
-      if (!lineNumbers.has(number) || !definition || !lastMoment) continue;
-      const met = (value2) => Math.abs(activity.value - value2) <= activity.tolerance;
+      if (!definition || !lastMoment) continue;
+      const met = (value2) => Math.abs(activity.value - value2) <= activity.tolerance * (1 + 1e-9);
+      if (!lineNumbers.has(number)) {
+        if (met(definition.initial)) moveMetTarget(plan, activity, definition, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`);
+        continue;
+      }
       const metAtStart = met(definition.initial);
       if (!metAtStart && !met(valueAtEnd(number))) continue;
       const path = `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`;

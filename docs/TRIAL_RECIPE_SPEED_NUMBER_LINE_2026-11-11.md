@@ -410,3 +410,56 @@ Owner-approved; about $1.05; `eval/trial-recipe-speed-number-line-2026-11-12-run
 - With both clamped to the same value, OLL rejects the task as already met.
 - This is a defect in the shared range clamping, not in the number line; it would affect this request without the number line too. It is reported to the owner, not fixed, since the fix changes other visuals' lessons.
 
+
+### Run 8 rules (owner-approved 2026-11-12, set before the run)
+
+- **Frozen code:** `fix/clamped-met-target`, which includes #63, #64 (model-number scale up to 12, with the owner-accepted ceiling raise) and #65 (clamped targets). Every model-facing change since run 7 has had a clean probe (probes 1–3).
+- **Rules unchanged from runs 6 and 7:**
+  - the hard checks;
+  - the slip rule (option B);
+  - speed option (a);
+  - near misses on both arms, with a hand read when a number line is drawn;
+  - the harness's 3-call cap per turn.
+- **Speed comparison:** run 8 was also meant to be the live speed comparison for the ceiling raise (decision S6). **Correction:** both of its arms ran the same build, so it cannot measure that change. The raise is pending the owner again.
+- **Budget:** about $1.15, `--pairs 20 --quality-repeats 3 --max-calls 160` (run 7 lost three runs at 140).
+
+## Run 8 (2026-11-12): fails under the rules set before it
+
+Owner-approved; 148 calls (about $1.10); `eval/trial-recipe-speed-number-line-2026-11-12-run8.json`. All planned runs ran.
+
+**Speed: passes by the rule, narrowly.** The paired median is +0.39 s against +0.5 s, and the candidate prompt adds +121 tokens. The baseline's median moved from 7.5 s (run 7) to 11.3 s on an identical prompt, so this is not a clean measurement. It is not a comparison for the ceiling raise either: both arms ran the same build.
+
+**Number-line requests: 40 of 40 pass every hard check.** Step-by-step renders confirm what learners see:
+- 3 + (−5) with hops;
+- 0.5 → 0.8 with decimal labels;
+- 1/3 + 2/3 = 1 in thirds;
+- 0 → 3/4 in quarters;
+- the reset returns before the learner's turn.
+
+A DOM probe settled run 6's puzzling screenshot: the board does redraw a point as its number animates (the start moves to 5 at step 11, then back). The earlier frame-capture script was at fault.
+
+**Pooled across run 8 and probes 1–3:** every number-line request passed the hard checks, 59 of 59 lessons (run 8: 40; probes: 5, 8 and 6).
+
+**Near misses: 3 hard misses on 3 requests, so the slip rule fails.**
+- **NM-02 (x > −2), pair 45:** a filled dot at −2 and a jump, while the narration says "open circle" and "ray". Misleading.
+- **NM-03 (round 47), pair 46:** a point at 47 on a line from 0 to 49. 50 is not on it, although the narration uses 40, 45 and 50. Misleading.
+- **NM-01, pair 30:** the outline was refused for fifteenths and asked again without the number line. The new lesson (a unit-square rectangle) then missed its column and row numbers and hit the harness's 3-call cap; live, a section retry would follow. A model slip in the fallback lesson, not the number line.
+- **NM-04, pair 47:** drew a number line (3, then ±2 to 5 and 1) consistent with its narration. Acceptable.
+
+**Against the baseline arm (today, without the number line), read to the same standard:**
+- Today's lessons fake a number line as a plot of y = 0 with dots, and often mislead:
+  - NM-01: "3/5" placed at 0.2, and a lesson with no points;
+  - NM-02: a filled dot at −2 with no ray, twice;
+  - NM-04: a point at 2 where the narration says 1 and 5.
+- Two baseline turns produced no lesson.
+- NM-03 is sound in all three baseline turns.
+- The candidate is roughly level with today on these requests, misleading in different ways, but 12 lessons against 12 is thin.
+- Across runs 6–8, 6 of 27 inequality, rounding and absolute-value turns drew a number line, and about 4–5 of those misled.
+
+**Design note.** The baseline arm was added so "worse than today" could be measured, but near misses were still judged by the same one-slip rule as in-scope lessons. Whether out-of-scope requests must never mislead, or only be no worse than today, is the owner's question. It was not settled before the run.
+
+### Owner decisions after run 8 (2026-11-12)
+
+1. **Requests the number line cannot show yet must never mislead** (option b). The recipe is extended to show them (inequalities, intervals, comparing two numbers, rounding) through a decision record before any code, then probes and a gate run. The recipe stays a trial until then.
+2. **The model-number scale fix's payload ceiling raise** (+15–30 B schema) is a one-off exception to decision S6, with no live comparison (option a).
+
