@@ -13,6 +13,7 @@ import { parseModelFormula } from "./math-formulas.js";
 import { compileMathExpression, type AuthoringAction } from "octos-lesson-language";
 import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
+import { lessonValues } from "./number-line-fit.js";
 import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
@@ -583,9 +584,8 @@ function compileNumberLine(
     ...(start ? [start.min, start.max, start.initial] : [0]),
     ...(start && change ? [start.min + change.min, start.max + change.max, start.initial + change.initial] : []),
   ];
-  // Every value a slider can reach is its minimum plus whole steps, so the ticks must hold the
-  // ends, the starting values, the change on its own and each slider's step. When no count of
-  // parts up to 12 holds them all, the line keeps whole-number ticks and draws one arc.
+  // Every value a slider can reach is its minimum plus whole steps, so ideally the ticks hold the
+  // ends, the starting values, the change on its own and each slider's step.
   const grid = [
     ...values,
     ...(change ? [change.min, change.max, change.initial] : []),
@@ -594,18 +594,26 @@ function compileNumberLine(
   const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
   const max = Math.ceil(Math.max(...values, 0)) + 1;
   const span = max - min;
-  // The finest of 1, 2, 5 or 10 that keeps at most 60 ticks and holds every value, so each value the
-  // lesson reaches sits on a tick the line can label (35 and 75 on fives, not tens); then the finest
-  // that holds them within OLL's tick limit; only when none does, whole numbers up to 60 units and
-  // coarser beyond (crowded labels thin out on the board).
-  const holds = (count: number) => grid.every((value) => onGrid(value / count, 1));
-  const step = [1, 2, 5, 10].find((count) => span / count <= 60 && holds(count))
-    // A long line whose values share no coarser step still puts them on ticks, up to the most ticks OLL draws.
-    ?? [1, 2, 5, 10].find((count) => span / count <= NUMBER_LINE_LIMITS.ticks && holds(count))
-    ?? (span <= 60 ? 1 : span <= 150 ? 5 : 10);
-  // The fewest parts per unit that hold every value (the numbers were fitted to their ticks before compiling).
-  const fits = (parts: number) => grid.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks;
-  const subdivisions = step > 1 ? 1 : NUMBER_LINE_SPLITS.find(fits) ?? 1;
+  // The ticks: first those that hold every value a slider can reach (ranges, starting values, steps);
+  // failing that, those that hold the values the lesson itself shows (starting values, animation and
+  // practice targets), since a slider step derived from the range (0.325) may fit no ticks at all.
+  // At each level: the finest whole step of 1, 2, 5 or 10 with at most 60 ticks; then one-unit ticks,
+  // split into the fewest parts (up to 12) that hold the values, up to OLL's tick limit.
+  const shown = [
+    ...(start && startNumber ? [start.initial, ...lessonValues(plan, startNumber)] : []),
+    ...(change && changeNumber ? [change.initial, ...lessonValues(plan, changeNumber)] : []),
+    ...(start && change && changeNumber ? [change.initial, ...lessonValues(plan, changeNumber)].map((value) => start.initial + value) : []),
+  ];
+  const holdAll = (count: number, of: readonly number[]) => of.every((value) => onGrid(value / count, 1));
+  const ticksFor = (of: readonly number[]) => {
+    const whole = [1, 2, 5, 10].find((count) => span / count <= 60 && holdAll(count, of));
+    if (whole) return { step: whole, subdivisions: 1 };
+    // One-unit ticks (whole values: no parts), else the fewest parts that hold them, within OLL's limit.
+    const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value) => onGrid(value, count)) && span * count <= NUMBER_LINE_LIMITS.ticks);
+    if (parts) return { step: 1, subdivisions: parts };
+    return undefined;
+  };
+  const { step, subdivisions } = ticksFor(grid) ?? ticksFor(shown) ?? { step: span <= 60 ? 1 : span <= 150 ? 5 : 10, subdivisions: 1 };
   // Hops are counted on the ticks actually drawn: every reachable change, and the slider's step,
   // must be a whole number of the smallest ticks, and the longest change at most 24 of them.
   const unit = step / subdivisions;

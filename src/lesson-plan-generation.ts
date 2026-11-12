@@ -1298,6 +1298,8 @@ function lowerModelActivityNumbers(
   outline: LessonPlanOutline,
   expectedSection: number,
   language?: string,
+  /** Numbers a number line shows: their targets stay as written, and a met target is resolved at compile. */
+  exactNumbers: ReadonlySet<number> = new Set(),
 ): Record<string, unknown> {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
@@ -1340,6 +1342,19 @@ function lowerModelActivityNumbers(
       }
       return reachable;
     };
+    if (exactNumbers.has(numberIndex)) {
+      // A number line fits its ticks to the values the model wrote (0.75): rounding onto the slider's
+      // derived step (span / 200, anchored at the minimum) would hide them (0.76; 50.05 in run 5). Half
+      // a step of tolerance keeps the target reachable; the margin absorbs floating-point error. A
+      // target the number already starts at is resolved at compile (resolveMetNumberTargets).
+      lowered.value = Math.round(Math.min(maximum, Math.max(minimum, requestedValue)) * 10 ** 12) / 10 ** 12;
+      lowered.tolerance = Math.max(
+        typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
+        range / 1000,
+        1e-6,
+      ) * (1 + 1e-9);
+      return lowered;
+    }
     let reachableValue = snapToReachableValue(requestedValue);
     const tolerance = Math.max(
       typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
@@ -1884,6 +1899,12 @@ function lowerModelSectionDraft(
       );
     }
   }
+  // Numbers this section's number line shows (its visual is created here; one created in an earlier
+  // section is not seen, and its targets are rounded as for any slider).
+  const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
+    const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
+    return entry.action === "create" && entry.kind === "visual" && entry.content?.capability === "number_line" ? entry.content.numbers ?? [] : [];
+  }));
   const activities: Array<{ order: number; activity: Record<string, unknown> }> = [];
   const collectActivities = (values: unknown[], kind: "number_target" | "scene3d_view", path: string): void => {
     values.forEach((activity, index) => {
@@ -1896,7 +1917,7 @@ function lowerModelSectionDraft(
       if (kind === "number_target" && lowered.reference !== undefined) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };

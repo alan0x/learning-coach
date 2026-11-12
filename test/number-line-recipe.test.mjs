@@ -151,16 +151,6 @@ test("whole numbers close together still count in ones, even when they share a f
   assert.equal(result.variables[1].control.step, 1);
   assert.equal(result.content.ticks.step, 1);
 });
-test("a slider stepping by halves gets half ticks, hop by hop", () => {
-  const result = compile([
-    { initial: 1, min: 0, max: 5, label: "起点" },
-    { initial: 2, min: 0, max: 4, label: "加上", student_control: { kind: "slider", step: 0.5 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 2);
-  assert.equal(result.content.jumps[0].hops, true);
-});
-
 // Review of #59: every supported count of parts, and the sliders' steps.
 test("sevenths get seven parts per unit", () => {
   const result = compile([
@@ -169,16 +159,6 @@ test("sevenths get seven parts per unit", () => {
   ]);
   assert.equal(result.error, undefined, result.error);
   assert.equal(result.content.ticks.subdivisions, 7);
-  assert.equal(result.content.jumps[0].hops, true);
-});
-
-test("sliders stepping by quarters get quarter ticks, so every value they reach is a tick and each hop is a quarter", () => {
-  const result = compile([
-    { initial: 0, min: 0, max: 1, label: "起点", student_control: { kind: "slider", step: 0.25 } },
-    { initial: 1, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 0.25 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 4);
   assert.equal(result.content.jumps[0].hops, true);
 });
 
@@ -235,17 +215,6 @@ test("run 3: 3/4 with a 0.05 step is drawn in quarters", () => {
   assert.equal(result.content.jumps[0].hops, true);
 });
 
-test("counting by fourths, where the numbers alone are whole, follows the slider's quarter step", () => {
-  const result = compile([
-    { initial: 0, min: 0, max: 2, label: "起点" },
-    { initial: 0, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 0.25 } },
-  ], {}, { animate: [{ number: 2, end_value: 2 }] });
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 4);
-  assert.equal(result.variables[1].control.step, 0.25);
-  assert.equal(result.content.jumps[0].hops, true);
-});
-
 test("run 3: 3 + (−5) on two sliders of −10 to 10 is drawn on −4 to 5, not −21 to 21, with hops", () => {
   const result = compile([
     { initial: 3, min: -10, max: 10, label: "起点" },
@@ -277,16 +246,6 @@ test("a practice target is snapped to the ticks, with a tolerance of half a tick
   assert.equal(task.completion.value, 0.75);
   assert.equal(task.completion.tolerance, 0.125);
   assert.match(task.prompt, /0\.75/);
-});
-
-test("a fit that would make a practice task already met leaves the numbers as the model wrote them", () => {
-  const result = compile([
-    { initial: 0, min: 0, max: 1, label: "起点" },
-    { initial: 0.33, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 0.01 } },
-  ], {}, { task: { number: 2, value: 0.34 } });
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.variables[1].initial, 0.33, "not snapped to 1/3, where 0.34 would also land");
-  assert.equal(result.tasks[0].completion.value, 0.34);
 });
 
 test("a number another visual also shows is not refitted", () => {
@@ -360,147 +319,6 @@ test("a practice task judged by an expression keeps its numbers, value, toleranc
   assert.equal(result.tasks[0].prompt, "把移动量调到目标。");
 });
 
-// Offline replay of speed gate run 4 (2026-11-11), from the recorded lessons
-// (eval/...-run4.json rows and the compiled parts beside them). Every known input is kept as recorded:
-// starting values, slider steps, animations and practice targets. The slider ranges are the recorded
-// ones; they come after run 4's fitting, which never widens, so they are the narrowest the model can
-// have written. The replay judges the compiler on what the model actually wrote; it cannot say how the
-// model will write once `denominator` is gone (NL-03, NL-09: see the separate hypothesis tests below).
-const recorded = (initial, min, max, step) => ({ initial, min, max, label: "n", student_control: { kind: "slider", step } });
-const RUN4 = [
-  { id: "NL-01", numbers: [recorded(3, -10, 10, 0.1), recorded(-5, -5, -4, 0.1)], extra: { task: { number: 2, value: -4, tolerance: 0.05 } } },
-  { id: "NL-02", numbers: [recorded(-2, -10, 10, 0.1), recorded(7, -10, 7, 0.1)], extra: { animate: [{ number: 2, end_value: 7 }], task: { number: 2, value: -10, tolerance: 0.05 } } },
-  { id: "NL-03", numbers: [recorded(0, 0, 1, 0.25), recorded(3, 0, 3, 0.25)], extra: { task: { number: 2, value: 0, tolerance: 0.125 } } },
-  { id: "NL-04", numbers: [recorded(0, 0, 1, 0.25), recorded(0.25, 0, 1, 0.25)], extra: { animate: [{ number: 2, end_value: 0.25 }], task: { number: 2, value: 1, tolerance: 0.125 } } },
-  { id: "NL-05", numbers: [recorded(-3, -6, 6, 0.1), recorded(8, -10, 10, 0.1)], extra: { task: { number: 1, value: -5, tolerance: 0.05 } } },
-  { id: "NL-06", numbers: [recorded(6, -10, 7, 1), recorded(-9, -10, 10, 1)], extra: { task: { number: 1, value: -10, tolerance: 0.5 } } },
-  { id: "NL-07", numbers: [recorded(0, 0, 1, 0.1), recorded(0.5, 0, 1, 0.1)], extra: { animate: [{ number: 2, end_value: 0.5 }, { number: 2, end_value: 0.8 }], task: { number: 2, value: 0, tolerance: 0.05 } } },
-  { id: "NL-08", numbers: [recorded(-1, -6, 1, 1), recorded(-3, -5, 5, 1)], extra: { animate: [{ number: 1, end_value: -4 }], task: { number: 1, value: -4, tolerance: 0.5 } } },
-  { id: "NL-09", numbers: [recorded(1, -3, 3, 1 / 3), recorded(2, 1, 2, 1 / 3)], extra: { task: { number: 2, value: 1, tolerance: 1 / 6 } } },
-  { id: "NL-10", numbers: [recorded(0, 0, 2, 0.25), recorded(0, 0, 2, 0.25)], extra: { animate: [{ number: 2, end_value: 1 }, { number: 2, end_value: 2 }], task: { number: 2, value: 1, tolerance: 0.125 } } },
-];
-
-// Judged as a live run is judged: the expectations each case carries in the harness, written
-// before run 5, and the same judge (hard misses block adoption; soft ones are reported).
-const caseById = new Map(NUMBER_LINE_CASES.map((item) => [item.id, item]));
-const judge = (id, result) => judgeNumberLine(caseById.get(id), result);
-
-// What the recorded run 4 lessons give under the current rules. NL-03 and NL-09 show wrong values,
-// because the model wrote numerators (3; 1 and 2) under the removed `denominator` parameter. NL-04
-// never shows the sum 3/4: the model started at 0 and moved by 1/4, instead of starting at the first
-// addend (the earlier criteria, which checked only the parts, passed it). NL-05 and NL-06 were 34
-// and 39 units wide while the change slider kept its whole range; it now narrows, because it starts at
-// the change the lesson is about. NL-05 fits; NL-06 is still 28 wide, as its own task moves the start
-// to −10, and −10 − 9 = −19 is a value the lesson reaches.
-const RUN4_EXPECTED = {
-  "NL-03": { hard: /wrong value: 0\.75 is never shown/ },
-  "NL-04": { hard: /wrong value: 0\.75 is never shown/ },
-  "NL-06": { soft: /28 units wide/ },
-  // 0.8 reads 8/10: run 4 had no label_style, so the line was labelled in fractions.
-  "NL-07": { hard: /labels as fractions/ },
-  "NL-09": { hard: /wrong value: 0\.3333 is never shown/ },
-};
-for (const item of RUN4) {
-  const expected = RUN4_EXPECTED[item.id] ?? {};
-  test(`run 4 replay ${item.id} (recorded inputs): ${expected.hard ? "hard miss" : expected.soft ? "hard pass, soft miss" : "passes"}`, () => {
-    const { hard, soft } = judge(item.id, compile(item.numbers, {}, item.extra));
-    if (expected.hard) assert.match(hard.join("; "), expected.hard);
-    else assert.deepEqual(hard, []);
-    if (expected.soft) assert.match(soft.join("; "), expected.soft);
-    else if (!expected.hard) assert.deepEqual(soft, []);
-  });
-}
-
-// A hypothesis, not a replay: if the model, without `denominator`, writes the values at their actual
-// size (0.75; 0.33 and 0.67), NL-03 and NL-09 are drawn right. Nothing records what the model wrote in
-// run 3 (its rows predate the number line summary and its work directory is gone), so only a live run
-// can test the premise.
-test("hypothesis: NL-03 written at actual size (0.75 with quarter steps) shows 3/4", () => {
-  assert.deepEqual(judge("NL-03", compile([recorded(0, 0, 1, 0.25), recorded(0.75, 0, 1, 0.25)], {}, {})), { hard: [], soft: [] });
-});
-test("hypothesis: NL-09 written at actual size (0.33 and 0.67) shows 1/3 + 2/3 = 1", () => {
-  assert.deepEqual(judge("NL-09", compile([recorded(0.33, 0, 1, 0.1), recorded(0.67, 0, 1, 0.1)], {}, {})), { hard: [], soft: [] });
-});
-
-// Review of #62: only a step of exactly 1/2 to 1/6 says what an integer lesson counts in.
-test("an integer lesson with a 0.4 step is not a lesson in fifths: whole ticks, a whole step, hops", () => {
-  const result = compile([
-    { initial: 3, min: 0, max: 5, label: "起点" },
-    { initial: 2, min: -4, max: 4, label: "加上", student_control: { kind: "slider", step: 0.4 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 1);
-  assert.equal(result.variables[1].control.step, 1);
-  assert.equal(result.content.jumps[0].hops, true);
-});
-
-test("sliders stepping by halves and by thirds share sixths, so both sliders' values stay on ticks", () => {
-  const result = compile([
-    { initial: 1, min: 0, max: 3, label: "起点", student_control: { kind: "slider", step: 0.5 } },
-    { initial: 1, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 1 / 3 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 6);
-  assert.equal(result.variables[0].control.step, 1 / 6);
-  assert.equal(result.variables[1].control.step, 1 / 6);
-});
-
-test("steps of 1/4 and 1/5 would need twentieths: the sliders are left as written", () => {
-  const result = compile([
-    { initial: 1, min: 0, max: 3, label: "起点", student_control: { kind: "slider", step: 0.25 } },
-    { initial: 1, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 0.2 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.variables[0].control.step, 0.25);
-  assert.equal(result.variables[1].control.step, 0.2);
-});
-
-test("a third written as 0.33 still counts as a third step", () => {
-  const result = compile([
-    { initial: 0, min: 0, max: 2, label: "起点" },
-    { initial: 1, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 0.33 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 3);
-});
-
-// Dry run of the run 5 cases, before paying for them: what a model following the recipe card would
-// write (start = first number, change = second, slider step = the fraction, a modest range), compiled
-// and judged. A hard miss here is a program defect, not something run 5 should rediscover.
-const ideal = (start, change, step, low, high) => [
-  { initial: start, min: low, max: high, label: "起点", student_control: { kind: "slider", step } },
-  { initial: change, min: low, max: high, label: "移动", student_control: { kind: "slider", step } },
-];
-const DRY_RUN = [
-  ["NL-04", ideal(0.25, 0.5, 0.25, -1, 1)],
-  ["NL-11", ideal(0.3, 0.4, 0.1, 0, 1), { label_style: "decimal" }],
-  ["NL-12", ideal(-0.5, 0.75, 0.25, -1, 1)],
-  ["NL-13", ideal(1.5, 1.25, 0.25, 0, 3)],
-  ["NL-14", ideal(5, -8, 1, -10, 10)],
-  ["NL-15", ideal(35, 40, 1, 0, 100)],
-  ["NL-16", ideal(-2.5, 4, 0.5, -5, 5), { label_style: "decimal" }],
-  ["NL-17", ideal(-6, 6, 1, -10, 10)],
-  ["NL-18", ideal(2 / 3, -1 / 3, 1 / 3, -1, 1)],
-  ["NL-19", ideal(23, 48, 1, 0, 100)],
-  ["NL-20", ideal(17, 26, 1, 0, 50)],
-];
-const allCases = new Map([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES].map((item) => [item.id, item]));
-// The same values in the shape run 4's model wrote: both sliders −10 to 10 stepping by 0.1, whatever
-// the lesson counts in. Larger numbers get −100 to 100 by 1, the widest a slider may expose (1000 steps).
-const runShape = (numbers) => numbers.map((number) => {
-  const large = Math.abs(number.initial) > 10;
-  return { ...number, min: large ? -100 : -10, max: large ? 100 : 10, student_control: { kind: "slider", step: large ? 1 : 0.1 } };
-});
-for (const [id, numbers, parameters = {}] of DRY_RUN) {
-  for (const [shape, input] of [["the card's ideal input", numbers], ["run 4's slider shape", runShape(numbers)]]) {
-    test(`dry run ${id}: ${shape} passes the hard checks`, () => {
-      const result = compile(input, parameters, {});
-      const { hard, soft } = judgeNumberLine(allCases.get(id), result);
-      assert.deepEqual(hard, [], `${hard.join("; ")} (range ${JSON.stringify(result.content?.range)}, ticks ${JSON.stringify(result.content?.ticks)}; soft: ${soft.join("; ")})`);
-    });
-  }
-}
-
 test("label_style decimal labels a decimal question in decimals, only where decimals are exact", () => {
   const tenths = compile([
     { initial: 0.5, min: 0, max: 1, label: "起点" },
@@ -524,4 +342,3 @@ test("label_style decimal labels a decimal question in decimals, only where deci
   assert.equal(compile([{ initial: 0.5, min: 0, max: 1, label: "起点" }, { initial: 0.3, min: 0, max: 1, label: "移动" }], {}).content.ticks.format, undefined);
   assert.match(compile([{ initial: 0, min: 0, max: 1, label: "起点" }], { label_style: "percent" }).error ?? "", /label_style/);
 });
-

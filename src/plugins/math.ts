@@ -167,7 +167,7 @@ export const MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line"],
-    model_guidance: "数轴：两个数值依次是起点和移动量，终点由程序计算；适合整数、分数、小数的加减和数在数轴上的位置。a + b 的起点是 a、移动量是 b（1/4 + 2/4：起点 0.25，移动量 0.5；6 − 9：起点 6，移动量 −9）；只问一个数的位置时，起点 0，移动量是这个数。数值写实际大小（3/4 写 0.75，不写 3）；讲分数时滑杆步长用这个分数（四分之一写 0.25）。题目用小数写（0.5、−2.5）时 label_style 写 decimal，刻度就标 0.5 而不是 5/10；数值仍写实际大小。不用于函数图像",
+    model_guidance: "数轴：起点加一次移动，终点由程序算；数值写实际大小（3/4 写 0.75）。a + b：起点 a，移动 b；问一个数的位置：起点 0；按分数数数：移动写一步（0.25）。题目写小数时 label_style 用 decimal。不用于不等式、绝对值、四舍五入、比较两个数或函数图像",
   },
 } as const;
 

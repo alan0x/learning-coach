@@ -238,3 +238,47 @@ Owner-approved; 107 model calls (about $0.80); `eval/trial-recipe-speed-number-l
 
 **Stop rule.** It fired: near misses are a new kind of hard miss. Narrowing what the recipe offers is the right answer for them. The program defects affect whole-number lessons too, so narrowing would not fix those; they are fixed instead. The recipe stays a trial. A replay pass on run 5 counts as tuning, not as passing the gate. Adoption needs a fresh run.
 
+## After run 5: fixes, and owner decisions
+
+**Owner decisions.**
+1. A target the number already starts at: option (a). The line goes back to where it starts before the learner tries.
+2. Narrow the recipe to one start plus one move.
+3. Trim the prompt cost.
+
+**Program fixes.** The model never writes a slider step, so all of these are tested through the real path from a model reply to a lesson:
+- **Targets stay as the model wrote them.** For a number this section's number line shows, lowering the model's reply no longer rounds the practice target onto the derived step (0.75 stays 0.75). The tolerance (half a step) gains a floating-point margin. Every other number is handled exactly as before; the digests of all 920 recorded lessons for other recipes are unchanged.
+  - Limit: a number line created in an earlier section is not seen when a later section is lowered. Its targets are rounded as for any slider, and the fit's own snapping recovers small rounding errors.
+- **Option (a) at compile time.** OLL rejects a task the starting values already meet, so the number:
+  - starts at 0 (or the end of its range farthest from the target);
+  - moves to the value the lesson shows as soon as the line appears;
+  - returns after the last moment.
+
+  Animations are appended, never inserted, because references are recorded by position.
+- **The fit reads values only.** A slider step is never evidence, so `wholeLessonDenominator` is removed. The fit no longer discards itself: a window the numbers do not fit keeps the model's ranges, with values and sliders still on the lesson's ticks.
+- **Compiler ticks, in order:**
+  1. a whole step of 1, 2, 5 or 10 with at most 60 ticks;
+  2. one-unit ticks split into the fewest parts that hold the values, within OLL's 240-tick limit.
+
+  It tries the full grid first (ranges, starting values, steps), then the values the lesson itself shows.
+- **Recipe card**, 602 → 331 bytes:
+  - "one start plus one move";
+  - not for inequalities, absolute value, rounding, comparing two numbers, or graphs;
+  - for counting by a fraction, the move is one step (0.25);
+  - the slider-step sentence is removed, since the model cannot write a step.
+
+  The candidate request now adds 430 bytes (run 5: 701; just after run 4: 340), an estimated +120 tokens (run 5: +200; runs 3–4: about +84).
+
+**Checked offline (this is tuning on run 5's own replies, not a gate pass).**
+- All 40 recorded run 5 turns replay through the real path (`test/number-line-replay.test.mjs`, fixture `test/fixtures/number-line-run5-replies.json`, model text only). 39 pass the hard checks. The 40th is NL-18's scale slip, which belongs to the model.
+- Renders confirm whole-number lines draw one-unit ticks with labels every 5, and that the reset leaves a readable starting line.
+
+**Known soft findings.**
+- "Count by fourths" with whole values only (NL-10) draws whole ticks. The card now asks for a one-step move, which run 6 measures.
+- Quarter labels are unreduced by design (decision 0013), so −1/2 reads −2/4.
+
+**Reported separately, affecting every recipe:**
+- the shared already-met guard's floating-point comparison (0.76 − 0.75 > 0.01);
+- section retries cannot repair a bad number in the outline (NL-18).
+
+**Run 6** needs the owner's approval. It runs the same cases and repeats, with the same gate and slip rule.
+
