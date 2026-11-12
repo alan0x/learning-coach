@@ -130,13 +130,16 @@ export function numberLineLesson(part) {
   const actions = (part.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? []);
   const write = actions.find((action) => action.do === "write" && action.kind === "number_line");
   if (!write) return undefined;
-  // What the lesson does to the line, in order: animations change values; a focus or point on one of
-  // the line's parts ("line#end") reveals a point shown only when emphasized.
+  // What the lesson does to the line, in order: animations change values, and emphasis on one of the
+  // line's parts ("line#end") shows a point that is shown only when emphasized; emphasis "none" hides it
+  // again. That is what the runtime does: `emphasize` becomes board.emphasize, whose state the number
+  // line's styles use; `point` (teacher.point) and `focus` (board.focus) leave a hidden point hidden
+  // (review of #63, checked in Chromium playback).
   const partOf = (target) => (typeof target === "string" && target.startsWith(`${write.as}#`) ? target.slice(write.as.length + 1) : undefined);
   const sequence = actions.flatMap((action) => {
     if (action.do === "animate") return [{ kind: "animate", variable: action.variable, value: action.value }];
-    const targets = action.do === "focus" ? action.targets ?? [] : action.do === "point" ? [action.target] : [];
-    return targets.map(partOf).filter(Boolean).map((part) => ({ kind: "reveal", part }));
+    const part = action.do === "emphasize" ? partOf(action.target) : undefined;
+    return part ? [{ kind: action.emphasis === "none" ? "hide" : "reveal", part }] : [];
   });
   return {
     content: write.content, variables: part.lesson?.variables ?? [], tasks: part.lesson?.tasks ?? [],
@@ -189,7 +192,8 @@ export function lessonShownStates({ content, variables, animations, sequence: st
   sequence.push(pointsAt(current));
   for (const step of steps ?? animations.map(([variable, value]) => ({ kind: "animate", variable, value }))) {
     if (step.kind === "animate") current = { ...current, [step.variable]: step.value };
-    else revealed.add(step.part);
+    else if (step.kind === "reveal") revealed.add(step.part);
+    else revealed.delete(step.part);
     sequence.push(pointsAt(current));
   }
   return sequence;
