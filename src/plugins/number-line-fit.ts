@@ -5,6 +5,7 @@
 // - each unit is split into the lesson's denominator (the smallest 1–12 its
 //   values use, else a coarse slider step such as 0.25), and the numbers'
 //   starting values, ranges and slider steps are snapped onto those ticks;
+//   whole numbers too far apart to count in ones are counted in 2s, 5s or 10s;
 // - the numbers' ranges shrink to a window around the values the lesson uses
 //   (0, the start, the end, animation targets and practice targets), so the
 //   line is readable and hops fit.
@@ -108,12 +109,27 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   const values = [...startValues, ...changeValues];
   const fromValues = inferDenominator(values);
   const denominator = fromValues === 1 ? wholeLessonDenominator([start.student_control?.step, change?.student_control?.step]) : fromValues;
-  const grid = denominator ? 1 / denominator : undefined;
+  let grid = denominator ? 1 / denominator : undefined;
 
   const used = [0, ...shown];
-  const low = Math.floor(Math.min(...used)) - 1;
-  const high = Math.ceil(Math.max(...used)) + 1;
-  const windowFits = high - low <= MAX_WINDOW;
+  let low = Math.floor(Math.min(...used)) - 1;
+  let high = Math.ceil(Math.max(...used)) + 1;
+  let windowFits = high - low <= MAX_WINDOW;
+  // Whole numbers too far apart to count in ones (35 and 75 on a line from 0) are counted in the
+  // smallest of 2, 5 or 10 that every value is a multiple of, as a fraction lesson counts in its parts:
+  // the values, slider steps and window snap to it, so each value sits on a tick the line can label.
+  let unit = 1;
+  if (denominator === 1 && !windowFits) {
+    const coarse = [2, 5, 10].find((count) => values.every((value) => near(value / count, 1))
+      && (Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2) <= MAX_WINDOW);
+    if (coarse) {
+      unit = coarse;
+      grid = coarse;
+      low = (Math.floor(Math.min(...used) / coarse) - 1) * coarse;
+      high = (Math.ceil(Math.max(...used) / coarse) + 1) * coarse;
+      windowFits = true;
+    }
+  }
 
   const fit = (definition: LessonPlanNumber, values: readonly number[], range: [number, number] | undefined) => {
     if (grid) {
@@ -143,7 +159,7 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
     if (!windowFits) return undefined;
     if (values.length > 1) return window;
     if (definition.student_control && carriesAnswer) return undefined;
-    return [definition.initial - 1, definition.initial + 1];
+    return [definition.initial - unit, definition.initial + unit];
   };
   fit(start, startValues.map((value) => (grid ? snap(value, grid) : value)), rangeFor(start, startValues, [low, high], false));
   if (change) {

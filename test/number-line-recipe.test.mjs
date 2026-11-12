@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { NUMBER_LINE_CASES, judgeNumberLine } from "../scripts/eval-trial-recipe-speed.mjs";
+import { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, judgeNumberLine } from "../scripts/eval-trial-recipe-speed.mjs";
 
 const api = await import(new URL("../lesson-plan.js", import.meta.url));
 
@@ -115,14 +115,25 @@ test("a far start is kept near its value, while the change slider a learner move
   assert.equal(result.content.ticks.step, 5);
   assert.equal(result.content.jumps[0].hops, false);
 });
-test("values the lesson really uses far apart keep a long line with coarser ticks and one arc", () => {
+test("whole numbers far apart are counted in fives (the smallest count that fits): ticks hold every value, and the slider steps by them", () => {
   const result = compile([
     { initial: 0, min: 0, max: 10, label: "起点" },
     { initial: 100, min: 0, max: 100, label: "加上", student_control: { kind: "slider", step: 1 } },
   ]);
   assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.step, 5);
-  assert.equal(result.content.jumps[0].hops, false);
+  assert.equal(result.variables[1].control.step, 5);
+  assert.ok([5, 10].includes(result.content.ticks.step), JSON.stringify(result.content.ticks));
+  assert.equal(result.content.jumps[0].hops, true);
+  assert.deepEqual(judgeNumberLine({ expect: { values: [0, 100], change: 100 } }, result), { hard: [], soft: [] });
+});
+test("whole numbers close together still count in ones, even when they share a factor", () => {
+  // −6 + 6: multiples of 2 and 6, but the line is short, so a learner can still try 5.
+  const result = compile([
+    { initial: -6, min: -10, max: 10, label: "起点", student_control: { kind: "slider", step: 1 } },
+    { initial: 6, min: -10, max: 10, label: "移动", student_control: { kind: "slider", step: 1 } },
+  ]);
+  assert.equal(result.variables[1].control.step, 1);
+  assert.equal(result.content.ticks.step, 1);
 });
 test("a slider stepping by halves gets half ticks, hop by hop", () => {
   const result = compile([
@@ -367,6 +378,8 @@ const RUN4_EXPECTED = {
   "NL-04": { hard: /wrong value: 0\.75 is never shown/ },
   "NL-05": { soft: /34 units wide/ },
   "NL-06": { soft: /39 units wide/ },
+  // 0.8 reads 8/10: the recipe labels split units as fractions (a soft miss until the owner decides).
+  "NL-07": { soft: /labels as fractions/ },
   "NL-09": { hard: /wrong value: 0\.3333 is never shown/ },
 };
 for (const item of RUN4) {
@@ -432,3 +445,31 @@ test("a third written as 0.33 still counts as a third step", () => {
   assert.equal(result.error, undefined, result.error);
   assert.equal(result.content.ticks.subdivisions, 3);
 });
+
+// Dry run of the run 5 cases, before paying for them: what a model following the recipe card would
+// write (start = first number, change = second, slider step = the fraction, a modest range), compiled
+// and judged. A hard miss here is a program defect, not something run 5 should rediscover.
+const ideal = (start, change, step, low, high) => [
+  { initial: start, min: low, max: high, label: "起点", student_control: { kind: "slider", step } },
+  { initial: change, min: low, max: high, label: "移动", student_control: { kind: "slider", step } },
+];
+const DRY_RUN = [
+  ["NL-04", ideal(0.25, 0.5, 0.25, -1, 1)],
+  ["NL-11", ideal(0.3, 0.4, 0.1, 0, 1)],
+  ["NL-12", ideal(-0.5, 0.75, 0.25, -1, 1)],
+  ["NL-13", ideal(1.5, 1.25, 0.25, 0, 3)],
+  ["NL-14", ideal(5, -8, 1, -10, 10)],
+  ["NL-15", ideal(35, 40, 1, 0, 100)],
+  ["NL-16", ideal(-2.5, 4, 0.5, -5, 5)],
+  ["NL-17", ideal(-6, 6, 1, -10, 10)],
+  ["NL-18", ideal(2 / 3, -1 / 3, 1 / 3, -1, 1)],
+];
+const allCases = new Map([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES].map((item) => [item.id, item]));
+for (const [id, numbers] of DRY_RUN) {
+  test(`dry run ${id}: the card's ideal input passes the hard checks`, () => {
+    const result = compile(numbers, {}, {});
+    const { hard, soft } = judgeNumberLine(allCases.get(id), result);
+    assert.deepEqual(hard, [], `${hard.join("; ")} (range ${JSON.stringify(result.content?.range)}, ticks ${JSON.stringify(result.content?.ticks)}; soft: ${soft.join("; ")})`);
+  });
+}
+

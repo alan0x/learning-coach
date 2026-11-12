@@ -141,6 +141,7 @@ A single "8 of 10" let a wrong value through as a formal pass. The gate is now s
   - **Readable:** every visible point, in every state the lesson reaches, sits on a tick the label policy labels, so its number is drawn.
   - **Near misses:** for a request the recipe cannot express, if the model uses the recipe anyway, the line is read by hand, and a misleading line is a hard miss.
 - **Soft: reported, not blocking.** An integer line spans more than 24 units or has no hops, or a fraction line uses different parts than expected (sixths for thirds).
+- **Awaiting the owner's decision: label format.** A decimal question gets fraction labels: "compare 0.5 and 0.8" shows 8/10 under the end. Run 5 records this as a soft miss on NL-07, NL-11 and NL-16. If the owner makes it hard, the recipe would let the model choose decimal or fraction labels, which it can see in the question.
 
 The judge is `judgeNumberLine` in the harness. The offline replay test uses the same function and the same expectations, so the live and offline checks cannot drift apart.
 
@@ -149,10 +150,21 @@ The judge is `judgeNumberLine` in the harness. The offline replay test uses the 
 - NL-03 and NL-09 show wrong values (numerators written under the removed `denominator`).
 - **NL-04 never shows the sum 3/4.** The model started at 0 and moved by 1/4 instead of starting at the first addend. The earlier criteria checked only the parts and passed it.
 - NL-05 and NL-06 pass the hard checks, with soft misses: 34 and 39 units wide.
+- NL-07 passes the hard checks, with a soft miss on format: 0.8 reads 8/10.
 
 The recipe card now maps the question to the two numbers explicitly: for a + b, start at a and move by b (1/4 + 2/4: start 0.25, move 0.5; 6 − 9: start 6, move −9); for "where is x", start at 0 and move by x.
 
 **Evidence correction.** Earlier notes said run 3 showed the model writing actual values (0.75; 0.33 and 0.67). Nothing records that: run 3's rows have no number line summary, and its work directory is gone. The premise that the model writes actual values once `denominator` is gone is untested, and only run 5 can test it.
+
+### Dry run of the cases, before paying for them
+
+Each held-out case, and NL-04, was compiled offline from the input a model following the recipe card would write (start = the first number, change = the second, slider step = the fraction). Then it was judged.
+
+**NL-15** ("from 35, count on 40, on a 0–100 line") failed on this ideal input. The line ran −1 to 201 with ticks every 10, so 35 and 75 sat on no tick. That was a program defect, now fixed in two places:
+- **Fit:** a whole-number lesson too wide to count in ones counts in the smallest of 2, 5 or 10 that divides every value it uses. Snapping, the slider step and the window then use that unit, the way a fraction lesson counts in its parts. A short lesson still counts in ones, even when its values share a factor: −6 + 6 keeps steps of 1.
+- **Compiler:** the tick step is the finest of 1, 2, 5 or 10 that keeps at most 60 ticks and holds every value.
+
+All nine cases now pass the hard checks on ideal input. This is a test (`dry run …`), not a prediction of what the model will write.
 
 ### Cases for run 5 (written before the run)
 
@@ -160,11 +172,19 @@ The recipe card now maps the question to the two numbers explicitly: for a + b, 
 - **Quality cases,** once each on the candidate arm only:
   - eight held-out number-line requests no fix was tuned against: tenths, negative fractions, mixed numbers, 5 − 8, a 0–100 line, −2.5 + 4, a walk to 0, 2/3 − 1/3;
   - four near misses the recipe cannot express: comparing 2/3 with 3/5, x > −2, rounding 47, |x − 3| < 2.
-- **Cost:** about 66 model calls, roughly $0.60.
+- **Cost:**
+  - One pass of the quality cases: about 60 model calls, roughly $0.55.
+  - Repeating them three times (`--quality-repeats 3`): about 85 calls, roughly $0.80. Run with `--max-calls 100`.
+- **What a clean run proves.** One sample per case leaves a lot open. With 18 number-line samples and no failures, a true failure rate of up to about 1 in 6 (17%) is still plausible at 95% confidence. With the quality cases repeated three times (34 samples), it is about 1 in 11 (9%). Recommended: three repeats.
+- **NL-08** expects −4 and −1 but no particular change, since moving either way answers "why is −4 less than −1".
 - Expected values for every case are in `NUMBER_LINE_CASES` and `NUMBER_LINE_QUALITY_CASES`.
 
 ### Run 5 procedure and stop rule
 
+- **Nothing is passed over silently:**
+  - A case with expectations that produced no judged first part is a hard miss ("not judged").
+  - A budget that ran out is reported as `not_run`.
+  - A hard miss on a lesson with more than one part is marked for hand review, because the judge reads only the first part.
 - The run keeps every raw model reply. The work directory is copied out of the system temp folder straight after the run (kept locally, not committed), so later fixes can be replayed against real output for free.
 - **Pass:** every hard check holds on all 18 number-line cases and on any near miss the model draws. Then adoption goes in a separate change, after the OLL pin bumps. Before that change lands, one real lesson is played in the installed app at phone width.
 - **Stop rule:** a hard miss of a kind already fixed is a defect to fix and re-check offline. A hard miss of a new kind means narrowing what the recipe offers, for example to integers only, or dropping a request type. It does not mean another patch.

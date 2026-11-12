@@ -588,8 +588,11 @@ function compileNumberLine(
   const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
   const max = Math.ceil(Math.max(...values, 0)) + 1;
   const span = max - min;
-  // Whole-number ticks up to 60 units (crowded labels thin out on the board); coarser beyond.
-  const step = span <= 60 ? 1 : span <= 150 ? 5 : 10;
+  // The finest of 1, 2, 5 or 10 that keeps at most 60 ticks and holds every value, so each value the
+  // lesson reaches sits on a tick the line can label (35 and 75 on fives, not tens); when none holds
+  // them all, whole numbers up to 60 units and coarser beyond (crowded labels thin out on the board).
+  const step = [1, 2, 5, 10].find((count) => span / count <= 60 && grid.every((value) => onGrid(value / count, 1)))
+    ?? (span <= 60 ? 1 : span <= 150 ? 5 : 10);
   // The fewest parts per unit that hold every value (the numbers were fitted to their ticks before compiling).
   const fits = (parts: number) => grid.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks;
   const subdivisions = step > 1 ? 1 : NUMBER_LINE_SPLITS.find(fits) ?? 1;

@@ -15973,7 +15973,7 @@ function compileNumberLine(base, content, role, placement, plan, path) {
   const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
   const max = Math.ceil(Math.max(...values, 0)) + 1;
   const span2 = max - min;
-  const step = span2 <= 60 ? 1 : span2 <= 150 ? 5 : 10;
+  const step = [1, 2, 5, 10].find((count) => span2 / count <= 60 && grid.every((value2) => onGrid(value2 / count, 1))) ?? (span2 <= 60 ? 1 : span2 <= 150 ? 5 : 10);
   const fits = (parts) => grid.every((value2) => onGrid(value2, parts)) && span2 * parts <= NUMBER_LINE_LIMITS.ticks;
   const subdivisions = step > 1 ? 1 : NUMBER_LINE_SPLITS.find(fits) ?? 1;
   const unit = step / subdivisions;
@@ -16187,11 +16187,22 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
   const values = [...startValues, ...changeValues];
   const fromValues = inferDenominator(values);
   const denominator = fromValues === 1 ? wholeLessonDenominator([start.student_control?.step, change?.student_control?.step]) : fromValues;
-  const grid = denominator ? 1 / denominator : void 0;
+  let grid = denominator ? 1 / denominator : void 0;
   const used = [0, ...shown];
-  const low = Math.floor(Math.min(...used)) - 1;
-  const high = Math.ceil(Math.max(...used)) + 1;
-  const windowFits = high - low <= MAX_WINDOW;
+  let low = Math.floor(Math.min(...used)) - 1;
+  let high = Math.ceil(Math.max(...used)) + 1;
+  let windowFits = high - low <= MAX_WINDOW;
+  let unit = 1;
+  if (denominator === 1 && !windowFits) {
+    const coarse = [2, 5, 10].find((count) => values.every((value2) => near2(value2 / count, 1)) && Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2 <= MAX_WINDOW);
+    if (coarse) {
+      unit = coarse;
+      grid = coarse;
+      low = (Math.floor(Math.min(...used) / coarse) - 1) * coarse;
+      high = (Math.ceil(Math.max(...used) / coarse) + 1) * coarse;
+      windowFits = true;
+    }
+  }
   const fit = (definition, values2, range) => {
     if (grid) {
       definition.initial = snap2(definition.initial, grid);
@@ -16211,7 +16222,7 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
     if (!windowFits) return void 0;
     if (values2.length > 1) return window;
     if (definition.student_control && carriesAnswer) return void 0;
-    return [definition.initial - 1, definition.initial + 1];
+    return [definition.initial - unit, definition.initial + unit];
   };
   fit(start, startValues.map((value2) => grid ? snap2(value2, grid) : value2), rangeFor(start, startValues, [low, high], false));
   if (change) {

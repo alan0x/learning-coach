@@ -17,7 +17,8 @@
 // is printed or written except the provider and model.
 //
 //   node scripts/eval-trial-recipe-speed.mjs --build <dir with main + lesson-plan.js>
-//     --octos-profile ~/.octos/profiles/<id>.json [--recipes constant_speed_motion] [--pairs 20] [--max-calls 60] [--out <report.json>]
+//     --octos-profile ~/.octos/profiles/<id>.json [--recipes constant_speed_motion] [--pairs 20] [--max-calls 60]
+//     [--quality-repeats 1] [--out <report.json>]
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -47,7 +48,9 @@ export const MOTION_CASES = [
  * - `values`: numbers some point must sit on, in some state the lesson reaches (a hard check);
  * - `change`: the change the question asks for, which a slider or an animation must reach (hard);
  * - `parts`: the parts per unit a well-chosen line uses (soft: other parts can still be right);
- * - `integer`: an integer question, whose line should span at most 24 units with hops (soft).
+ * - `integer`: an integer question, whose line should span at most 24 units with hops (soft);
+ * - `format`: "decimal" when the question writes decimals, so 0.8 should read 0.8, not 8/10 (soft
+ *   until the owner decides).
  * NL-01 to NL-10 are the requests runs 1–4 were tuned against.
  */
 export const NUMBER_LINE_CASES = [
@@ -57,8 +60,8 @@ export const NUMBER_LINE_CASES = [
   { id: "NL-04", prompt: "How do I add 1/4 and 2/4 on a number line?", expect: { values: [0.25, 0.75], parts: 4 } },
   { id: "NL-05", prompt: "温度从零下 3 度升高 8 度，用数轴表示是多少度？", expect: { values: [-3, 5], change: 8, integer: true } },
   { id: "NL-06", prompt: "Use a number line to explain 6 - 9.", expect: { values: [6, -3], change: -9, integer: true } },
-  { id: "NL-07", prompt: "在数轴上比较 0.5 和 0.8 哪个大。", expect: { values: [0.5, 0.8], parts: 10 } },
-  { id: "NL-08", prompt: "Why is -4 less than -1? Show it on a number line.", expect: { values: [-4, -1], change: -3, integer: true } },
+  { id: "NL-07", prompt: "在数轴上比较 0.5 和 0.8 哪个大。", expect: { values: [0.5, 0.8], parts: 10, format: "decimal" } },
+  { id: "NL-08", prompt: "Why is -4 less than -1? Show it on a number line.", expect: { values: [-4, -1], integer: true } },
   { id: "NL-09", prompt: "从 1/3 出发，再加 2/3，在数轴上是多少？", expect: { values: [1 / 3, 1], parts: 3 } },
   { id: "NL-10", prompt: "Count by fourths from 0 to 2 on a number line.", expect: { values: [0, 2], parts: 4 } },
 ];
@@ -71,12 +74,12 @@ export const NUMBER_LINE_CASES = [
  *   recipe for one, the line is read by hand, and a misleading one is a hard failure.
  */
 export const NUMBER_LINE_QUALITY_CASES = [
-  { id: "NL-11", prompt: "在数轴上从 0.3 出发加 0.4 是多少？", expect: { values: [0.3, 0.7], parts: 10 } },
+  { id: "NL-11", prompt: "在数轴上从 0.3 出发加 0.4 是多少？", expect: { values: [0.3, 0.7], parts: 10, format: "decimal" } },
   { id: "NL-12", prompt: "Show -1/2 + 3/4 on a number line.", expect: { values: [-0.5, 0.25], parts: 4 } },
   { id: "NL-13", prompt: "用数轴表示 1 又 1/2 加上 1 又 1/4。", expect: { values: [1.5, 2.75], parts: 4 } },
   { id: "NL-14", prompt: "Use a number line to show 5 - 8.", expect: { values: [5, -3], change: -8, integer: true } },
   { id: "NL-15", prompt: "在 0 到 100 的数轴上，从 35 往后数 40 是多少？", expect: { values: [35, 75], change: 40 } },
-  { id: "NL-16", prompt: "What is -2.5 + 4? Show it on a number line.", expect: { values: [-2.5, 1.5], parts: 2 } },
+  { id: "NL-16", prompt: "What is -2.5 + 4? Show it on a number line.", expect: { values: [-2.5, 1.5], parts: 2, format: "decimal" } },
   { id: "NL-17", prompt: "从 -6 出发向右走 6 格，用数轴看看到了哪里。", expect: { values: [-6, 0], change: 6, integer: true } },
   { id: "NL-18", prompt: "Show 2/3 - 1/3 on a number line.", expect: { values: [2 / 3, 1 / 3], parts: 3 } },
   { id: "NM-01", prompt: "用数轴比较 2/3 和 3/5 哪个大。", nearMiss: true },
@@ -192,6 +195,9 @@ export function judgeNumberLine(item, lesson) {
   if (unreadable.size) hard.push(`unreadable: ${[...unreadable].join(", ")} on no labelled tick`);
   const parts = content.ticks?.subdivisions ?? 1;
   if (expect.parts && parts !== expect.parts) soft.push(`${parts} parts, not ${expect.parts}`);
+  // Labels are fractions unless the card asks otherwise (OLL's default for split units).
+  const format = content.ticks?.format ?? (parts > 1 ? "fraction" : "integer");
+  if (expect.format === "decimal" && format !== "decimal") soft.push(`labels as ${format}s, the question writes decimals`);
   if (expect.integer) {
     const span = content.range.max - content.range.min;
     if (span > 24) soft.push(`${span} units wide`);
@@ -276,11 +282,12 @@ async function main() {
   const route = { provider: routeEnv.OCTOS_PROFILE_LLM_PROVIDER, model: routeEnv.OCTOS_PROFILE_LLM_MODEL };
   const budget = { remaining: maxCalls };
   const rows = [];
+  const notRun = [];
   const persist = async () => {
     if (!out) return;
     await mkdir(dirname(resolve(out)), { recursive: true });
     // The compiled first parts stay in work_dir after the run, as evidence of what each lesson drew.
-    await writeFile(resolve(out), `${JSON.stringify({ measured_at: new Date().toISOString(), ...route, trial_recipes: recipes, pairs, max_calls: maxCalls, work_dir: workDir, summary: summarize(rows), rows }, null, 1)}\n`);
+    await writeFile(resolve(out), `${JSON.stringify({ measured_at: new Date().toISOString(), ...route, trial_recipes: recipes, pairs, max_calls: maxCalls, work_dir: workDir, summary: { ...summarize(rows), ...(notRun.length ? { not_run: notRun } : {}) }, rows }, null, 1)}\n`);
   };
   console.error(JSON.stringify({ stage: "trial-recipe-speed", ...route, trial_recipes: recipes, pairs, max_calls: maxCalls }));
   const { appendFileSync, readFileSync } = await import("node:fs");
@@ -301,6 +308,14 @@ async function main() {
     });
     const { first_part_path: _path, ...kept } = tool;
     const row = { pair, case: item.id, kind: item.kind, arm, order: order.indexOf(arm), ...kept };
+    // A case with expectations that produced no judged part is a hard miss, never a silent gap.
+    if (arm === "candidate" && item.expect && !row.quality) row.quality = { hard: [`not judged: ${row.outcome}`], soft: [] };
+    // The judge sees the first part only; a later part may show what it lacks, so such misses go to hand review.
+    try {
+      const { readdirSync } = await import("node:fs");
+      row.lesson_parts = readdirSync(join(workDir, "study", "oll")).filter((name) => name.startsWith(`${input.turn_id}.part-`)).length;
+    } catch { row.lesson_parts = null; }
+    if (row.quality?.hard.length && row.lesson_parts > 1) row.quality.review = "later parts not judged: read by hand";
     rows.push(row);
     console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null, ...(row.quality ? { hard: row.quality.hard } : {}) }));
     await persist();
@@ -313,12 +328,18 @@ async function main() {
       await runOne(pair, item, arm, order);
     }
   }
-  for (const [index, item] of qualityCases.entries()) {
+  const repeats = Number(option("--quality-repeats", "1"));
+  const queue = Array.from({ length: repeats }, () => qualityCases).flat();
+  for (const [index, item] of queue.entries()) {
     if (budget.remaining <= 0) break;
     await runOne(pairs + index, item, "candidate", ["candidate"]);
   }
+  // Every planned case must have run: a budget that ran out is reported, not passed over.
+  const ran = rows.filter((row) => row.arm === "candidate").length;
+  const planned = pairs + queue.length;
+  notRun.push(...(ran < planned ? [`${planned - ran} candidate runs did not run (budget ${maxCalls} calls)`] : []));
   await persist();
-  console.log(JSON.stringify(summarize(rows), null, 2));
+  console.log(JSON.stringify({ ...summarize(rows), ...(notRun.length ? { not_run: notRun } : {}) }, null, 2));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) await main();

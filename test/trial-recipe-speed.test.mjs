@@ -106,3 +106,11 @@ test("speed is summarized over the pairs only; quality rows are summarized apart
   assert.deepEqual(summary.quality.hard_misses, [{ case: "C-1", hard: ["wrong value: 0.75 is never shown"] }]);
   assert.deepEqual(summary.quality.near_misses_for_review, [{ case: "C-2", recipes: ["number_line"] }]);
 });
+
+test("a decimal question labelled in fractions is a soft miss, recorded for the owner's decision", () => {
+  const lesson = lineLesson({ range: { min: -1, max: 2 }, ticks: { step: 1, subdivisions: 10, labels: "all" }, start: 0.5, change: 0.3, changeRange: [0, 1] });
+  const { hard, soft } = judgeNumberLine({ expect: { values: [0.5, 0.8], parts: 10, format: "decimal" } }, lesson);
+  assert.deepEqual(hard, []);
+  assert.deepEqual(soft, ["labels as fractions, the question writes decimals"]);
+});
+
