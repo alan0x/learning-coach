@@ -164,7 +164,12 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
   const visualsUsing = new Map<number, number>();
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
-    for (const number of new Set((action.content as LessonPlanVisualContent).numbers ?? [])) visualsUsing.set(number, (visualsUsing.get(number) ?? 0) + 1);
+    // The numbers a visual binds, as the loop below resolves them: a function plot's come from its
+    // formula and sample points, not only from its number list.
+    const content = action.content as LessonPlanVisualContent;
+    const bound = RECIPE_HOOKS[content.capability]?.bound_numbers?.(content);
+    const numbers = bound?.length ? bound : bound ? [] : content.numbers ?? [];
+    for (const number of new Set(numbers)) visualsUsing.set(number, (visualsUsing.get(number) ?? 0) + 1);
   }
   const publishedPlotNumbers = new Set<number>();
   for (const [sectionIndex, section] of plan.sections.entries()) {

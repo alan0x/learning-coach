@@ -15030,6 +15030,9 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
   const [startIndex, changeIndex] = content.numbers ?? [];
   if (!startIndex || !plan.numbers) return fitted;
   if (sharedNumbers.has(startIndex) || changeIndex && sharedNumbers.has(changeIndex)) return fitted;
+  const ours = new Set([startIndex, changeIndex].filter((index) => index !== void 0));
+  const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) => activity.kind === "number_target" && activity.expression !== void 0 && (activity.number_controls.some((control) => ours.has(control.number)) || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
+  if (expressionTask) return fitted;
   const start = plan.numbers[startIndex - 1];
   const change = changeIndex ? plan.numbers[changeIndex - 1] : void 0;
   if (!start) return fitted;
@@ -15046,7 +15049,6 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
   const low = Math.floor(Math.min(...used)) - 1;
   const high = Math.ceil(Math.max(...used)) + 1;
   const windowFits = high - low <= MAX_WINDOW;
-  const READABLE = 24;
   const fit = (definition, values2, range) => {
     if (grid) {
       definition.initial = snap(definition.initial, grid);
@@ -15062,12 +15064,15 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
       definition.max = ceilTo(definition.max, grid);
     }
   };
-  const startDriven = startValues.length > 1;
-  fit(start, startValues.map((value2) => grid ? snap(value2, grid) : value2), windowFits ? startDriven ? [low, high] : [start.initial - 1, start.initial + 1] : void 0);
+  const rangeFor = (definition, values2, window) => {
+    if (!windowFits) return void 0;
+    if (values2.length > 1) return window;
+    if (definition.student_control) return void 0;
+    return [definition.initial - 1, definition.initial + 1];
+  };
+  fit(start, startValues.map((value2) => grid ? snap(value2, grid) : value2), rangeFor(start, startValues, [low, high]));
   if (change) {
-    const reach = [start.min + change.min, start.max + change.max, ...used];
-    const readable = Math.ceil(Math.max(...reach)) - Math.floor(Math.min(...reach)) + 2 <= READABLE;
-    fit(change, changeValues.map((value2) => grid ? snap(value2, grid) : value2), windowFits && !readable ? [low - start.min, high - start.max] : void 0);
+    fit(change, changeValues.map((value2) => grid ? snap(value2, grid) : value2), rangeFor(change, changeValues, [low - start.min, high - start.max]));
   }
   const valid = [start, change].every((definition) => !definition || definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max);
   const trivialTask = grid !== void 0 && [[startIndex, start], [changeIndex, change]].some(([index, definition]) => index !== void 0 && definition !== void 0 && taskValues(plan, index).some((value2) => Math.abs(snap(value2, grid) - definition.initial) < grid / 2));
@@ -16330,7 +16335,10 @@ function normalizeProgramOwnedNumberRanges(plan) {
   const visualsUsing = /* @__PURE__ */ new Map();
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
-    for (const number of new Set(action.content.numbers ?? [])) visualsUsing.set(number, (visualsUsing.get(number) ?? 0) + 1);
+    const content = action.content;
+    const bound = RECIPE_HOOKS[content.capability]?.bound_numbers?.(content);
+    const numbers = bound?.length ? bound : bound ? [] : content.numbers ?? [];
+    for (const number of new Set(numbers)) visualsUsing.set(number, (visualsUsing.get(number) ?? 0) + 1);
   }
   const publishedPlotNumbers = /* @__PURE__ */ new Set();
   for (const [sectionIndex, section] of plan.sections.entries()) {

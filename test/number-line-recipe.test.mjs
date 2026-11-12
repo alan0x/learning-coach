@@ -28,7 +28,8 @@ const compile = (numbers, parameters = {}, extra = {}) => {
     if (plan.sections[0].student_activities) delete plan.sections[0].student_activities;
     const extra = ${JSON.stringify(extra)};
     for (const animation of extra.animate ?? []) plan.sections[0].moments[0].actions.push({ action: "animate", number: animation.number, end_value: animation.end_value, easing: "linear", duration_intent: "normal", timing: "during_speech" });
-    if (extra.task) plan.sections[0].student_activities = [{ kind: "number_target", prompt: "把移动量调到目标。", number_controls: [{ number: extra.task.number, controls: ["slider"] }], value: extra.task.value, tolerance: extra.task.tolerance ?? 0.005, hints: ["看刻度。"] }];
+    if (extra.task) plan.sections[0].student_activities = [{ kind: "number_target", prompt: "把移动量调到目标。", number_controls: [{ number: extra.task.number, controls: ["slider"] }], value: extra.task.value, tolerance: extra.task.tolerance ?? 0.005, hints: ["看刻度。"], ...(extra.task.expression ? { expression: extra.task.expression } : {}) }];
+    if (extra.plotSample) plan.sections[0].moments[0].actions.push({ action: "create", kind: "visual", role: "supporting_visual", content: { capability: "function_plot", parameters: { expression: "x^2", sample_x_numbers: [extra.plotSample] } }, placement: { relation: "new_region" } });
     if (extra.shared) plan.sections[0].moments[0].actions.push({ action: "create", kind: "visual", role: "supporting_visual", content: { capability: "number_line", parameters: {}, numbers: [extra.shared] }, placement: { relation: "new_region" } });
     try {
       const compiled = api.compileAndValidateLessonPlan(plan);
@@ -100,17 +101,19 @@ test("6 − 9 with wide sliders and a change starting at 0 compiles, hop by hop 
   assert.deepEqual(result.content.jumps[0], { as: "move", from: "start", by: 0, hops: true });
 });
 
-test("wide sliders around a far start shrink to a readable line with hops", () => {
+test("a far start is kept near its value, while the change slider a learner moves keeps its whole range", () => {
   const result = compile([
     { initial: 20, min: 0, max: 100, label: "起点" },
     { initial: -7, min: -50, max: 50, label: "加上", student_control: { kind: "slider", step: 1 } },
   ]);
   assert.equal(result.error, undefined, result.error);
-  // 20 − 7: the start is kept near 20 and the change, which would make the line 140 units long, is narrowed to −20 to 0.
-  assert.deepEqual(result.content.range, { min: -2, max: 22 });
-  assert.equal(result.content.jumps[0].hops, true);
+  // The start (no slider, not driven) shrinks to 19–21. The change keeps −50 to 50: a wide line with
+  // coarser ticks and one arc, rather than a change the learner cannot drag where the narration goes.
+  assert.deepEqual([result.variables[0].min, result.variables[0].max], [19, 21]);
+  assert.deepEqual([result.variables[1].min, result.variables[1].max], [-50, 50]);
+  assert.equal(result.content.ticks.step, 5);
+  assert.equal(result.content.jumps[0].hops, false);
 });
-
 test("values the lesson really uses far apart keep a long line with coarser ticks and one arc", () => {
   const result = compile([
     { initial: 0, min: 0, max: 10, label: "起点" },
@@ -272,4 +275,38 @@ test("a denominator out of range is clamped, never refused", () => {
   ], { denominator: 50 });
   assert.equal(result.error, undefined, result.error);
   assert.equal(result.content.ticks.subdivisions, 12);
+});
+
+// Advisor review of the fit (2026-11-11).
+for (const reach of [12, 15]) {
+  test(`6 − 9 with a change slider of ±${reach} that nothing drives keeps −9 reachable`, () => {
+    const result = compile([
+      { initial: 6, min: 0, max: 10, label: "起点" },
+      { initial: 0, min: -reach, max: reach, label: "减去", student_control: { kind: "slider", step: 1 } },
+    ]);
+    assert.equal(result.error, undefined, result.error);
+    assert.ok(result.variables[1].min <= -9, `the change reaches −9 (min ${result.variables[1].min})`);
+  });
+}
+
+test("a number a function plot binds through its sample point is not refitted", () => {
+  const result = compile([
+    { initial: 3, min: -10, max: 10, label: "起点" },
+    { initial: -5, min: -10, max: 10, label: "加上", student_control: { kind: "slider", step: 1 } },
+  ], {}, { plotSample: 1 });
+  assert.equal(result.error, undefined, result.error);
+  assert.deepEqual([result.variables[0].min, result.variables[0].max], [-10, 10]);
+});
+
+test("a practice task judged by an expression keeps its numbers, value, tolerance and prompt as written", () => {
+  // change + 3 = −2: reads only the number the learner moves.
+  const expression = [{ kind: "number", number: 2 }, { kind: "literal", value: 3 }, { kind: "operator", operator: "add" }];
+  const result = compile([
+    { initial: 3, min: -10, max: 10, label: "起点" },
+    { initial: 0, min: -10, max: 10, label: "加上", student_control: { kind: "slider", step: 1 } },
+  ], {}, { task: { number: 2, value: -2, tolerance: 0.5, expression } });
+  assert.equal(result.error, undefined, result.error);
+  assert.deepEqual([result.variables[0].min, result.variables[0].max], [-10, 10]);
+  assert.equal(result.variables[1].control.step, 1);
+  assert.equal(result.tasks[0].prompt, "把移动量调到目标。");
 });

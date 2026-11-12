@@ -71,6 +71,14 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   if (!startIndex || !plan.numbers) return fitted;
   // A number another visual shows is that visual's too: changing it here would change it there.
   if (sharedNumbers.has(startIndex) || (changeIndex && sharedNumbers.has(changeIndex))) return fitted;
+  // A practice task judged by an expression ("start + change = 5") depends on the numbers' exact
+  // ranges and steps in ways a refit could break; leave its numbers as the model wrote them.
+  const ours = new Set([startIndex, changeIndex].filter((index): index is number => index !== undefined));
+  const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) =>
+    activity.kind === "number_target" && activity.expression !== undefined
+    && (activity.number_controls.some((control) => ours.has(control.number))
+      || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
+  if (expressionTask) return fitted;
   const start = plan.numbers[startIndex - 1];
   const change = changeIndex ? plan.numbers[changeIndex - 1] : undefined;
   if (!start) return fitted;
@@ -92,8 +100,6 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   const low = Math.floor(Math.min(...used)) - 1;
   const high = Math.ceil(Math.max(...used)) + 1;
   const windowFits = high - low <= MAX_WINDOW;
-  /** The widest a line may get before the change's own range is narrowed too. */
-  const READABLE = 24;
 
   const fit = (definition: LessonPlanNumber, values: readonly number[], range: [number, number] | undefined) => {
     if (grid) {
@@ -112,17 +118,22 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
     }
   };
 
-  // A start the lesson does not move (no animation or practice on it) gets a short range around its value.
-  const startDriven = startValues.length > 1;
-  fit(start, startValues.map((value) => (grid ? snap(value, grid) : value)), windowFits
-    ? (startDriven ? [low, high] : [start.initial - 1, start.initial + 1]) : undefined);
+  // Which range a number keeps:
+  // - one the lesson drives (an animation or a practice target) shrinks to the window around the
+  //   values the lesson uses, which still holds every value it drives;
+  // - one with a slider nothing drives keeps the model's range: the learner is meant to move it,
+  //   perhaps to a value only the narration names, so a wider line beats an unreachable answer;
+  // - one with neither is fixed in effect, and keeps a short range around its value.
+  const rangeFor = (definition: LessonPlanNumber, values: readonly number[], window: [number, number]): [number, number] | undefined => {
+    if (!windowFits) return undefined;
+    if (values.length > 1) return window;
+    if (definition.student_control) return undefined;
+    return [definition.initial - 1, definition.initial + 1];
+  };
+  fit(start, startValues.map((value) => (grid ? snap(value, grid) : value)), rangeFor(start, startValues, [low, high]));
   if (change) {
-    // The change keeps the range the model gave, so a learner can still drag it where the
-    // narration goes, unless that makes the line too wide to read. Then every start and change
-    // together must stay in the window: change in [low − start.min, high − start.max].
-    const reach = [start.min + change.min, start.max + change.max, ...used];
-    const readable = Math.ceil(Math.max(...reach)) - Math.floor(Math.min(...reach)) + 2 <= READABLE;
-    fit(change, changeValues.map((value) => (grid ? snap(value, grid) : value)), windowFits && !readable ? [low - start.min, high - start.max] : undefined);
+    // Every start and change together stays in the window: change in [low − start.min, high − start.max].
+    fit(change, changeValues.map((value) => (grid ? snap(value, grid) : value)), rangeFor(change, changeValues, [low - start.min, high - start.max]));
   }
 
   const valid = [start, change].every((definition) => !definition

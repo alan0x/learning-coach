@@ -67,13 +67,20 @@ export function numberLineInPart(part) {
   const write = (part.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? [])
     .find((action) => action.do === "write" && action.kind === "number_line");
   if (!write) return undefined;
-  const { range, ticks, jumps = [], points = [] } = write.content ?? {};
+  const { range, ticks, jumps = [], points = [], bindings = [] } = write.content ?? {};
+  // The sliders behind the start and the change, so a check can see which answers a learner can reach.
+  const slider = (target) => {
+    const name = bindings.find((binding) => binding.target === target)?.expression?.trim();
+    const variable = (part.lesson?.variables ?? []).find((candidate) => candidate.as === name);
+    return variable ? { min: variable.min, max: variable.max, initial: variable.initial, step: variable.control?.step ?? null } : null;
+  };
   return {
     span: range ? range.max - range.min : null, range: range ?? null,
     subdivisions: ticks?.subdivisions ?? 1, step: ticks?.step ?? null,
     hops: jumps[0]?.hops ?? null, by: jumps[0]?.by ?? null,
     start: points.find((point) => point.as === "start")?.value ?? null,
     end: points.find((point) => point.as === "end")?.value ?? null,
+    start_slider: slider("start.value"), change_slider: slider("move.by"),
   };
 }
 

@@ -41,8 +41,11 @@ The speed gate passes. Adoption in AI lessons waits until the line teaches what 
 The program now fits a number line's numbers to what the lesson teaches (`src/plugins/number-line-fit.ts`), during the normalization of program-owned number ranges:
 - **Denominator.** The model may give `denominator` (1–12; clamped, never refused). Otherwise the program takes the smallest denominator that puts the start, the end, animation targets and practice targets on its fractions. A clean slider step such as 0.25 is tried first; a fine step such as 0.05 is ignored. 0.33 counts as 1/3, but 1/11 does not count as 1/10.
 - **Snapping.** Starting values, ranges and slider steps snap to those ticks. Animation targets and practice targets snap with them; a practice task gets a tolerance of half a tick and a prompt naming the snapped value.
-- **Window.** A start the lesson does not move is kept within one unit of its value. The change keeps the range the model gave, so a learner can still drag it where the narration goes, unless the line would then be wider than 24 units; in that case the change is narrowed to the values the lesson uses.
-- **No new rejections.** The numbers are left as the model wrote them if another visual also shows them, or if snapping would make a practice task already met.
+- **Window.** The range a number keeps depends on its role:
+  - A number the lesson drives (by an animation or a practice target) shrinks to a window around the values the lesson uses.
+  - A number with a slider that nothing drives keeps the model's range. The learner is meant to move it, perhaps to a value only the narration names, so a wider line is better than an unreachable answer.
+  - A number with neither keeps a short range around its value.
+- **No new rejections.** The numbers are left as the model wrote them in three cases: another visual also shows them (counting numbers a plot binds through its formula or sample points), a practice task judged by an expression reads or controls them, or snapping would make a practice task already met.
 
 ## Run 4 pass criteria (set before the run)
 
@@ -53,5 +56,5 @@ Speed, as for runs 1–3:
 
 Quality, read from each candidate row's `number_line` summary:
 - **Fraction requests get their denominator:** NL-03 (3/4) and NL-04 (1/4 + 2/4) in quarters, NL-09 (1/3 + 2/3) in thirds, NL-10 (counting by fourths) in quarters, and NL-07 (0.5 and 0.8) in tenths.
-- **Integer requests get a readable line with hops:** NL-01, NL-02, NL-05, NL-06 and NL-08 span at most 24 units with hops on.
+- **Integer requests get a readable line with hops, and the answer stays reachable:** NL-01, NL-02, NL-05, NL-06 and NL-08 span at most 24 units with hops on. Their change slider (`change_slider` in the row), or an animation, reaches the change the question asks for: −5 (NL-01), 7 (NL-02), 8 (NL-05), −9 (NL-06) and 3 (NL-08). A short line that cannot reach the answer counts as a miss.
 - **At least 8 of these 10 checks pass.** A miss is recorded with the line the model and program produced.

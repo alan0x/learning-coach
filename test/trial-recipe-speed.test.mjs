@@ -33,10 +33,15 @@ test("the number line trial has its own fitting requests, and its card is recogn
 });
 
 test("a first part's number line is summarised for judging quality", () => {
-  const part = { steps: [{ beats: [{ actions: [{ do: "write", as: "v1", kind: "number_line", content: {
-    range: { min: -1, max: 3 }, ticks: { step: 1, subdivisions: 4 },
-    points: [{ as: "start", value: 0 }, { as: "end", value: 0.75 }], jumps: [{ as: "move", from: "start", by: 0.75, hops: true }],
-  } }] }] }] };
-  assert.deepEqual(numberLineInPart(part), { span: 4, range: { min: -1, max: 3 }, subdivisions: 4, step: 1, hops: true, by: 0.75, start: 0, end: 0.75 });
+  const part = { lesson: { variables: [{ as: "number_02", min: 0, max: 1, initial: 0.75, control: { kind: "slider", step: 0.25 } }] },
+    steps: [{ beats: [{ actions: [{ do: "write", as: "v1", kind: "number_line", content: {
+      range: { min: -1, max: 3 }, ticks: { step: 1, subdivisions: 4 },
+      points: [{ as: "start", value: 0 }, { as: "end", value: 0.75 }], jumps: [{ as: "move", from: "start", by: 0.75, hops: true }],
+      bindings: [{ target: "move.by", expression: "number_02" }],
+    } }] }] }] };
+  assert.deepEqual(numberLineInPart(part), {
+    span: 4, range: { min: -1, max: 3 }, subdivisions: 4, step: 1, hops: true, by: 0.75, start: 0, end: 0.75,
+    start_slider: null, change_slider: { min: 0, max: 1, initial: 0.75, step: 0.25 },
+  });
   assert.equal(numberLineInPart({ steps: [] }), undefined);
 });
