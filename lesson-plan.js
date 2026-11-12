@@ -18682,7 +18682,7 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
       1e-6
     );
     const initial = Number(definition.initial);
-    if (Math.abs(reachableValue - initial) <= tolerance) {
+    if (Math.abs(reachableValue - initial) <= tolerance * (1 + 1e-9)) {
       const alternatives = [minimum, maximum].map(snapToReachableValue).filter((value2, index, values) => values.indexOf(value2) === index).sort((left, right) => Math.abs(right - initial) - Math.abs(left - initial));
       const alternative = alternatives.find((value2) => Math.abs(value2 - initial) > tolerance);
       if (alternative === void 0) {

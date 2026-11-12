@@ -405,3 +405,8 @@ Owner-approved; about $1.05; `eval/trial-recipe-speed-number-line-2026-11-12-run
 
 **Not done overnight.** The gate run waits for the owner's decision on the ceilings, since its request sizes depend on it.
 
+**Probe 3, NM-01's cap, classified.** The fallback outline (no number line) chose the unit-square array, with 15 squares (range 1–20) and a task "set it to 20".
+- That visual's program-owned range clamps both the starting value and the target to its own limit, after the already-met guard has run.
+- With both clamped to the same value, OLL rejects the task as already met.
+- This is a defect in the shared range clamping, not in the number line; it would affect this request without the number line too. It is reported to the owner, not fixed, since the fix changes other visuals' lessons.
+
