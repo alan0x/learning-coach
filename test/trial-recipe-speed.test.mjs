@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { MOTION_CASES, NUMBER_LINE_CASES, OTHER_CASE_IDS, TRIAL_CASES, numberLineInPart, numberLineLesson, recipesInPart, summarize } from "../scripts/eval-trial-recipe-speed.mjs";
+import { MOTION_CASES, NUMBER_LINE_CASES, OTHER_CASE_IDS, TRIAL_CASES, numberLineInPart, numberLineLesson, lessonShownStates, recipesInPart, summarize } from "../scripts/eval-trial-recipe-speed.mjs";
 
 test("trial-recipe cases pair motion requests with held-out requests from other subjects", async () => {
   const heldOut = new Set(JSON.parse(await readFile(new URL("../eval/subject-routing-heldout.json", import.meta.url), "utf8")).cases.map((item) => item.id));
@@ -201,23 +201,42 @@ test("the harness runs pairs and quality cases, keeps raw replies, judges each c
   assert.match(short.summary.not_run.join(), /did not run \(budget 3 calls\)/);
 });
 
-test("a point kept hidden throughout does not count as shown; once something reveals it, it does (review of #63)", () => {
-  const lesson = lineLesson({ range: { min: -1, max: 2 }, ticks: { step: 1, subdivisions: 4, labels: "all" }, start: 0, change: 0.75, changeRange: [0, 1], latentEnd: true });
-  const item = { expect: { values: [0.75], parts: 4 } };
-  assert.match(judgeNumberLine(item, { ...lesson, sequence: [] }).hard.join(), /wrong value: 0\.75 is never shown/);
-  assert.deepEqual(judgeNumberLine(item, { ...lesson, sequence: [{ kind: "reveal", part: "end" }] }).hard, []);
+// Review of #63: which actions reveal a point shown only when emphasized is the runtime's choice, and the
+// judge must follow it. Both lessons below are valid OLL (they normalize), with a visible start at 0 and an
+// end at 0.75 shown only when emphasized: pointing at the end leaves it hidden in playback; emphasizing
+// it shows it; emphasis "none" hides it again.
+const hiddenEndLesson = (extra) => ({
+  dsl: "octos.lesson", version: "0.1", profile: "authoring",
+  lesson: { mode: "explain", language: "zh-CN", title: "3/4", goals: ["找 3/4"], variables: [{ as: "n1", initial: 0, min: 0, max: 1, label: "起点" }, { as: "n2", initial: 0.75, min: 0, max: 1, label: "移动" }] },
+  steps: [{ key: "s", purpose: "看", beats: [
+    { key: "b", say: "看数轴。", actions: [{ do: "write", as: "line", kind: "number_line", role: "main_visual", place: { relation: "new_region" }, content: {
+      range: { min: -1, max: 2 }, ticks: { step: 1, subdivisions: 4, labels: "all" },
+      points: [{ as: "start", value: 0, label: "起点" }, { as: "end", value: 0.75, label: "终点", shown: "when_emphasized" }],
+      jumps: [{ as: "move", from: "start", by: 0.75, hops: true }],
+      bindings: [{ target: "start.value", expression: "n1" }, { target: "end.value", expression: "n1 + n2" }, { target: "move.by", expression: "n2" }],
+    } }] },
+    { key: "c", say: "终点在这里。", actions: extra },
+  ] }],
+  close: { summary: "完。", focus: ["line"] },
+});
+const hiddenEndCase = { expect: { values: [0.75], parts: 4 } };
+
+test("the lessons used for reveals are valid OLL", async () => {
+  const { normalizeAuthoringLesson } = await import("octos-lesson-language");
+  for (const extra of [[{ do: "point", target: "line#end" }], [{ do: "emphasize", target: "line#end", emphasis: "focus" }]]) {
+    assert.ok(normalizeAuthoringLesson(hiddenEndLesson(extra), { lessonId: "l", boardId: "b", baseRevision: 0, regionIntent: "new_topic" }).length > 0);
+  }
 });
 
-test("the lesson's actions give the order: a focus or point on a part of the line reveals it", () => {
-  const part = {
-    lesson: { variables: [{ as: "n1", initial: 0 }] },
-    steps: [{ beats: [{ actions: [
-      { do: "write", as: "line", kind: "number_line", content: { range: { min: 0, max: 1 }, points: [] } },
-      { do: "animate", variable: "n1", value: 0.5 },
-      { do: "focus", targets: ["line#end", "other#x"] },
-      { do: "point", target: "line#start" },
-    ] }] }],
-  };
-  assert.deepEqual(numberLineLesson(part).sequence, [{ kind: "animate", variable: "n1", value: 0.5 }, { kind: "reveal", part: "end" }, { kind: "reveal", part: "start" }]);
+test("pointing at a hidden end leaves it hidden: 3/4 is never shown", () => {
+  assert.match(judgeNumberLine(hiddenEndCase, numberLineLesson(hiddenEndLesson([{ do: "point", target: "line#end" }]))).hard.join(), /wrong value: 0\.75 is never shown/);
+  assert.match(judgeNumberLine(hiddenEndCase, numberLineLesson(hiddenEndLesson([{ do: "focus", targets: ["line#end"], intent: "看终点" }]))).hard.join(), /0\.75 is never shown/);
+});
+
+test("emphasizing a hidden end shows it; emphasis none hides it again", () => {
+  assert.deepEqual(judgeNumberLine(hiddenEndCase, numberLineLesson(hiddenEndLesson([{ do: "emphasize", target: "line#end", emphasis: "focus" }]))).hard, []);
+  const line = numberLineLesson(hiddenEndLesson([{ do: "emphasize", target: "line#end", emphasis: "focus" }, { do: "emphasize", target: "line#end", emphasis: "none" }]));
+  assert.deepEqual(line.sequence, [{ kind: "reveal", part: "end" }, { kind: "hide", part: "end" }]);
+  assert.deepEqual(lessonShownStates(line).map((state) => Object.keys(state).sort().join(",")), ["start", "end,start", "start"]);
 });
 
