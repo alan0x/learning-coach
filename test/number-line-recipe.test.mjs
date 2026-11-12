@@ -100,10 +100,52 @@ test("a long line uses coarser ticks and one arc instead of hops", () => {
   assert.equal(result.content.jumps[0].hops, false);
 });
 
-test("a slider stepping by halves on a whole-number line is drawn as one arc", () => {
+test("a slider stepping by halves gets half ticks, hop by hop", () => {
   const result = compile([
     { initial: 1, min: 0, max: 5, label: "起点" },
     { initial: 2, min: 0, max: 4, label: "加上", student_control: { kind: "slider", step: 0.5 } },
+  ]);
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.content.ticks.subdivisions, 2);
+  assert.equal(result.content.jumps[0].hops, true);
+});
+
+// Review of #59: every supported count of parts, and the sliders' steps.
+test("sevenths get seven parts per unit", () => {
+  const result = compile([
+    { initial: 1 / 7, min: 0, max: 1, label: "起点" },
+    { initial: 2 / 7, min: 0, max: 1, label: "加上" },
+  ]);
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.content.ticks.subdivisions, 7);
+  assert.equal(result.content.jumps[0].hops, true);
+});
+
+test("sliders stepping by quarters get quarter ticks, so every value they reach is a tick and each hop is a quarter", () => {
+  const result = compile([
+    { initial: 0, min: 0, max: 1, label: "起点", student_control: { kind: "slider", step: 0.25 } },
+    { initial: 1, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 0.25 } },
+  ]);
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.content.ticks.subdivisions, 4);
+  assert.equal(result.content.jumps[0].hops, true);
+});
+
+test("ninths and elevenths are found too", () => {
+  for (const parts of [9, 11]) {
+    const result = compile([
+      { initial: 0, min: 0, max: 1, label: "起点" },
+      { initial: 1 / parts, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 1 / parts } },
+    ]);
+    assert.equal(result.error, undefined, result.error);
+    assert.equal(result.content.ticks.subdivisions, parts);
+  }
+});
+
+test("a slider step no count of parts up to 12 can hold keeps whole-number ticks and one arc", () => {
+  const result = compile([
+    { initial: 0, min: 0, max: 1, label: "起点" },
+    { initial: 0.3, min: 0, max: 1.5, label: "加上", student_control: { kind: "slider", step: 0.15 } },
   ]);
   assert.equal(result.error, undefined, result.error);
   assert.equal(result.content.ticks.subdivisions, 1);

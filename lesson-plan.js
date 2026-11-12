@@ -15954,7 +15954,7 @@ function compileCircleArea(base, content, role, placement, plan, path) {
     ...variable && d ? { progress: { expression: `(${variable}-${d.min})/(${d.max - d.min})`, initial: (d.initial - d.min) / (d.max - d.min) } } : {}
   }));
 }
-var NUMBER_LINE_SPLITS = [1, 2, 3, 4, 5, 6, 8, 10, 12];
+var NUMBER_LINE_SPLITS = Array.from({ length: 12 }, (_unused, index) => index + 1);
 var onGrid = (value2, parts) => Math.abs(value2 * parts - Math.round(value2 * parts)) < 1e-9;
 function compileNumberLine(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -15966,11 +15966,16 @@ function compileNumberLine(base, content, role, placement, plan, path) {
     ...start ? [start.min, start.max, start.initial] : [0],
     ...start && change ? [start.min + change.min, start.max + change.max, start.initial + change.initial] : []
   ];
+  const grid = [
+    ...values,
+    ...change ? [change.min, change.max, change.initial] : [],
+    ...[start?.student_control?.step, change?.student_control?.step].filter((step2) => typeof step2 === "number" && step2 > 0)
+  ];
   const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
   const max = Math.ceil(Math.max(...values, 0)) + 1;
   const span2 = max - min;
   const step = span2 <= 60 ? 1 : span2 <= 150 ? 5 : 10;
-  const subdivisions = step > 1 ? 1 : input.subdivisions !== void 0 ? optionalInteger(input.subdivisions, 1, 1, 12, `${path}.subdivisions`) : NUMBER_LINE_SPLITS.find((parts) => values.every((value2) => onGrid(value2, parts)) && span2 * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
+  const subdivisions = step > 1 ? 1 : input.subdivisions !== void 0 ? optionalInteger(input.subdivisions, 1, 1, 12, `${path}.subdivisions`) : NUMBER_LINE_SPLITS.find((parts) => grid.every((value2) => onGrid(value2, parts)) && span2 * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
   if (span2 / step * subdivisions > NUMBER_LINE_LIMITS.ticks) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.subdivisions`, "the numbers' range is too long for this many parts per unit");
   const unit = step / subdivisions;
   const whole = (value2) => onGrid(value2 / unit, 1);

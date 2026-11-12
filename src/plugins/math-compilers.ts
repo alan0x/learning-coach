@@ -550,8 +550,8 @@ function compileCircleArea(
 }
 
 
-/** Each unit split into this many parts, when every value of the lesson's numbers falls on such a part. */
-const NUMBER_LINE_SPLITS = [1, 2, 3, 4, 5, 6, 8, 10, 12];
+/** Every count of parts per unit OLL draws (1–12), fewest first. */
+const NUMBER_LINE_SPLITS = Array.from({ length: 12 }, (_unused, index) => index + 1);
 const onGrid = (value: number, parts: number) => Math.abs(value * parts - Math.round(value * parts)) < 1e-9;
 
 /**
@@ -577,6 +577,14 @@ function compileNumberLine(
     ...(start ? [start.min, start.max, start.initial] : [0]),
     ...(start && change ? [start.min + change.min, start.max + change.max, start.initial + change.initial] : []),
   ];
+  // Every value a slider can reach is its minimum plus whole steps, so the ticks must hold the
+  // ends, the starting values, the change on its own and each slider's step. When no count of
+  // parts up to 12 holds them all, the line keeps whole-number ticks and draws one arc.
+  const grid = [
+    ...values,
+    ...(change ? [change.min, change.max, change.initial] : []),
+    ...[start?.student_control?.step, change?.student_control?.step].filter((step): step is number => typeof step === "number" && step > 0),
+  ];
   const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
   const max = Math.ceil(Math.max(...values, 0)) + 1;
   const span = max - min;
@@ -584,7 +592,7 @@ function compileNumberLine(
   const step = span <= 60 ? 1 : span <= 150 ? 5 : 10;
   const subdivisions = step > 1 ? 1 : input.subdivisions !== undefined
     ? optionalInteger(input.subdivisions, 1, 1, 12, `${path}.subdivisions`)
-    : NUMBER_LINE_SPLITS.find((parts) => values.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
+    : NUMBER_LINE_SPLITS.find((parts) => grid.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
   if ((span / step) * subdivisions > NUMBER_LINE_LIMITS.ticks) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.subdivisions`, "the numbers' range is too long for this many parts per unit");
   // Hops are counted on the ticks actually drawn: every reachable change, and the slider's step,
   // must be a whole number of the smallest ticks, and the longest change at most 24 of them.
