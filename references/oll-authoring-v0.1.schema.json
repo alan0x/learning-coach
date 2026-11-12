@@ -172,7 +172,7 @@
                   "controls": {
                     "type": "array",
                     "minItems": 1,
-                    "items": {"enum": ["slider", "geometry_point"]}
+                    "items": {"enum": ["slider", "geometry_point", "number_line_point"]}
                   }
                 }
               },
@@ -305,7 +305,7 @@
         "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view"]},
         "when": {"enum": ["before_speech", "during_speech", "after_speech"]},
         "as": {"$ref": "#/$defs/alias"},
-        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink"]},
+        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line"]},
         "role": {"type": "string"},
         "content": {"type": "object"},
         "place": {"$ref": "#/$defs/placement"},
@@ -375,6 +375,13 @@
             "properties": {"do": {"const": "write"}, "kind": {"const": "scene3d"}}
           },
           "then": {"properties": {"content": {"$ref": "#/$defs/scene3dContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "number_line"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/numberLineContent"}}}
         },
         {
           "if": {"properties": {"do": {"const": "revise"}}},
@@ -574,6 +581,19 @@
     "plotContent": {
       "type": "object",
       "properties": {
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
+    "numberLineContent": {
+      "type": "object",
+      "required": ["range"],
+      "properties": {
+        "range": {"type": "object", "required": ["min", "max"]},
         "bindings": {
           "type": "array",
           "minItems": 1,

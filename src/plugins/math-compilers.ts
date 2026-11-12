@@ -2,7 +2,7 @@
 import {
   buildCircleAndArc, buildCircleAreaRearrangement, buildCirclePolygons, buildCoordinateCircle, buildFunctionPlot,
   buildCubeWithSection, buildFunctionSurface, buildGeometricRearrangement, buildImplicitSurface,
-  buildUnitCircle, buildUnitSquareArray, rearrangementRecipe,
+  buildNumberLine, buildUnitCircle, buildUnitSquareArray, rearrangementRecipe, NUMBER_LINE_LIMITS,
   type BuiltRecipe, type RearrangementConstruction,
 } from "octos-lesson-language/plugin-math";
 import { compileText } from "../lesson-text.js";
@@ -550,7 +550,76 @@ function compileCircleArea(
 }
 
 
+/** Every count of parts per unit OLL draws (1–12), fewest first. */
+const NUMBER_LINE_SPLITS = Array.from({ length: 12 }, (_unused, index) => index + 1);
+const onGrid = (value: number, parts: number) => Math.abs(value * parts - Math.round(value * parts)) < 1e-9;
+
+/**
+ * A number line (OLL decision 0013) from the visual's numbers: the first is
+ * the start, the second the change; the program computes where the jump ends.
+ * The line covers every value either number can take, so a slider never
+ * carries a part off it.
+ */
+function compileNumberLine(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title"], path);
+  const [startNumber, changeNumber] = content.numbers ?? [];
+  const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : undefined;
+  const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : undefined;
+  const values = [
+    ...(start ? [start.min, start.max, start.initial] : [0]),
+    ...(start && change ? [start.min + change.min, start.max + change.max, start.initial + change.initial] : []),
+  ];
+  // Every value a slider can reach is its minimum plus whole steps, so the ticks must hold the
+  // ends, the starting values, the change on its own and each slider's step. When no count of
+  // parts up to 12 holds them all, the line keeps whole-number ticks and draws one arc.
+  const grid = [
+    ...values,
+    ...(change ? [change.min, change.max, change.initial] : []),
+    ...[start?.student_control?.step, change?.student_control?.step].filter((step): step is number => typeof step === "number" && step > 0),
+  ];
+  const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
+  const max = Math.ceil(Math.max(...values, 0)) + 1;
+  const span = max - min;
+  // Whole-number ticks up to 60 units (crowded labels thin out on the board); coarser beyond.
+  const step = span <= 60 ? 1 : span <= 150 ? 5 : 10;
+  const subdivisions = step > 1 ? 1
+    : NUMBER_LINE_SPLITS.find((parts) => grid.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
+  // Hops are counted on the ticks actually drawn: every reachable change, and the slider's step,
+  // must be a whole number of the smallest ticks, and the longest change at most 24 of them.
+  const unit = step / subdivisions;
+  const whole = (value: number) => onGrid(value / unit, 1);
+  const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
+  const sliderStep = change?.student_control?.step;
+  const hopsFit = change !== undefined && [change.min, change.max, change.initial].every(whole)
+    && (sliderStep === undefined || whole(sliderStep)) && Math.ceil(reach / unit - 1e-9) <= NUMBER_LINE_LIMITS.hops;
+  // The model is not asked: it cannot see these limits, and a choice the line cannot draw would only be retried.
+  const hops = hopsFit;
+  const startVariable = startNumber ? variableAlias(startNumber) : undefined;
+  const changeVariable = changeNumber ? variableAlias(changeNumber) : undefined;
+  const built = buildNumberLine({
+    as: base, role, place: placement,
+    title: optionalText(input.title, compileText(plan, "数轴"), `${path}.title`),
+    range: { min, max },
+    ticks: { step, subdivisions, labels: subdivisions > 1 ? "all" : "major" },
+    ...(start && startVariable ? { points: [
+      { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "起点") },
+      ...(change && changeVariable ? [{ as: "end", value: { expression: `(${startVariable})+(${changeVariable})`, initial: start.initial + change.initial }, label: compileText(plan, "终点") }] : []),
+    ] } : {}),
+    ...(change && changeVariable && start ? { jumps: [{ as: "move", from: "start", by: { expression: changeVariable, initial: change.initial }, hops }] } : {}),
+  });
+  return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, ...(built.parts.move ? { primary_control: built.parts.move } : {}) })) };
+}
+
 export const MATH_COMPILERS = {
+  number_line: compileNumberLine,
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_polygon_bounds: compileCirclePolygonBounds,

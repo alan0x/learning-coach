@@ -40,6 +40,22 @@ export const MOTION_CASES = [
   { id: "CS-09", prompt: "小明以 1.5 m/s 匀速走路，10 秒走多远？用图像讲讲。" },
   { id: "CS-10", prompt: "Explain speed = distance ÷ time with a moving object." },
 ];
+/** Requests the number line recipe fits (OLL decision 0013): integers, fractions and decimals on a line, Chinese and English. */
+export const NUMBER_LINE_CASES = [
+  { id: "NL-01", prompt: "用数轴讲一讲 3 加上负 5 等于多少。" },
+  { id: "NL-02", prompt: "Show me on a number line why -2 + 7 = 5." },
+  { id: "NL-03", prompt: "3/4 在数轴上的哪里？" },
+  { id: "NL-04", prompt: "How do I add 1/4 and 2/4 on a number line?" },
+  { id: "NL-05", prompt: "温度从零下 3 度升高 8 度，用数轴表示是多少度？" },
+  { id: "NL-06", prompt: "Use a number line to explain 6 - 9." },
+  { id: "NL-07", prompt: "在数轴上比较 0.5 和 0.8 哪个大。" },
+  { id: "NL-08", prompt: "Why is -4 less than -1? Show it on a number line." },
+  { id: "NL-09", prompt: "从 1/3 出发，再加 2/3，在数轴上是多少？" },
+  { id: "NL-10", prompt: "Count by fourths from 0 to 2 on a number line." },
+];
+/** The requests each trial recipe fits. */
+export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
+
 /** Held-out requests the recipe does not fit (subject-routing-heldout.json). */
 export const OTHER_CASE_IDS = ["HO-MA-01", "HO-PH-02", "HO-CH-01", "HO-BI-01", "HO-ES-01", "HO-MA-04", "HO-PH-04", "HO-CH-04", "HO-BI-04", "HO-ES-04"];
 
@@ -51,6 +67,7 @@ export function recipesInPart(part) {
   const motion = writes.some((action) => action.kind === "geometry" && String(action.as).endsWith("-track")
     && (action.content?.points ?? []).some((point) => point.as === "object"));
   if (motion) found.push("constant_speed_motion");
+  if (writes.some((action) => action.kind === "number_line")) found.push("number_line");
   return found;
 }
 
@@ -94,7 +111,10 @@ async function main() {
   if (!profilePath) throw new Error("--octos-profile is required");
   const routeEnv = await profileRouteEnvironment(profilePath);
   const heldOut = new Map(JSON.parse(await readFile(join(root, "eval/subject-routing-heldout.json"), "utf8")).cases.map((item) => [item.id, item]));
-  const cases = MOTION_CASES.flatMap((motion, index) => [{ ...motion, kind: "motion" }, { ...heldOut.get(OTHER_CASE_IDS[index]), kind: "other" }]);
+  const fitting = TRIAL_CASES[recipes.split(",")[0].trim()];
+  if (!fitting) throw new Error(`no fitting requests for trial recipe '${recipes}'`);
+  // "motion" marks requests the trial recipe fits, whichever recipe that is.
+  const cases = fitting.flatMap((fit, index) => [{ ...fit, kind: "motion" }, { ...heldOut.get(OTHER_CASE_IDS[index]), kind: "other" }]);
   const workDir = await mkdtemp(join(tmpdir(), "coach-trial-"));
   const env = { ...process.env, ...routeEnv, OCTOS_WORK_DIR: workDir };
   delete env.LEARNING_COACH_TRIAL_RECIPES;

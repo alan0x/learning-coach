@@ -7417,7 +7417,7 @@ var v0_1_schema_default = {
                   controls: {
                     type: "array",
                     minItems: 1,
-                    items: { enum: ["slider", "geometry_point"] }
+                    items: { enum: ["slider", "geometry_point", "number_line_point"] }
                   }
                 }
               },
@@ -7552,7 +7552,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7622,6 +7622,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "scene3d" } }
           },
           then: { properties: { content: { $ref: "#/$defs/scene3dContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "number_line" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/numberLineContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -7826,6 +7833,19 @@ var v0_1_schema_default = {
     plotContent: {
       type: "object",
       properties: {
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
+    numberLineContent: {
+      type: "object",
+      required: ["range"],
+      properties: {
+        range: { type: "object", required: ["min", "max"] },
         bindings: {
           type: "array",
           minItems: 1,
@@ -8275,6 +8295,16 @@ function compileMathExpression(expression, allowedVariables) {
   return new ExpressionParser(tokenize(normalizeExpression(expression)), variables).parse();
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line.js
+var NUMBER_LINE_KIND = "number_line";
+var NUMBER_LINE_FEATURE = "plugin:math/number-line@1";
+var NUMBER_LINE_PLUGIN_VERSION = "0.2.0";
+var NUMBER_LINE_BINDINGS = {
+  points: ["value"],
+  jumps: ["from", "by"],
+  intervals: ["from", "to"]
+};
+
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_NODE_KINDS = [
   "text",
@@ -8316,7 +8346,8 @@ var OLL_BINDING_CAPABILITIES = {
   scene3d: {
     sections: ["value"],
     objects: ["unfold"]
-  }
+  },
+  number_line: NUMBER_LINE_BINDINGS
 };
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
 function collectBindingCapabilities() {
@@ -8337,6 +8368,16 @@ function collectBindingCapabilities() {
   ])));
 }
 var OLL_CANONICAL_BINDING_CAPABILITIES = collectBindingCapabilities();
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/manifest.js
+var MATH_PLUGIN_MANIFEST = {
+  id: "math",
+  // 0.2.0: the number line (decision 0013).
+  version: "0.2.0",
+  // Every subject plugin depends on the shared tools (decision 0012).
+  depends: { shared: "0.1.0" },
+  ollCore: ">=0.10.0"
+};
 
 // node_modules/octos-lesson-language/dist/packages/core/src/execution-requirements.js
 var OLL_EXECUTION_FEATURES = Object.freeze({
@@ -8383,6 +8424,19 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "scene3d:unfold": "0.9.0",
   "scene3d:face-targets": "0.10.0"
 });
+var looksLikeNumberLine = (content) => typeof content.range === "object" && content.range !== null && ["points", "jumps", "intervals", "ticks"].some((field) => field in content);
+var FIRST_PARTY_EXTENSIONS = Object.freeze([
+  {
+    plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION },
+    detect(content, kind, use) {
+      if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content))
+        use(NUMBER_LINE_FEATURE);
+    }
+  }
+]);
+var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });

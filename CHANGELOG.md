@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.28.0 - 2026-11-11
+
+- `number_line` in the math plugin (OLL decision 0013, grades 3–8 math first).
+  - The visual's two numbers are the start and the change; the end point is bound to their sum, so the program, not the model, computes where a jump lands.
+  - The model gives only the two numbers (and a title). The program chooses the parts per unit and whether to draw hops from them, because the model cannot see the limits those depend on.
+  - The line covers every value the numbers can reach.
+  - Each unit is split into the fewest parts (1–12) that put every reachable value on a tick: the numbers' ends, starting values and slider steps. When no count up to 12 does, the line keeps whole-number ticks and draws one arc. Jumps are drawn hop by hop when every reachable change is a whole number of parts and needs at most 24 hops.
+  - It is a **trial recipe**, offered to the model only when `LEARNING_COACH_TRIAL_RECIPES` names it, so live requests are byte-identical until its speed gate passes. `eval-trial-recipe-speed.mjs --recipes number_line` has ten number-line requests for that gate.
+- Number-line bindings count as visual effects in the check that every numeric control drives a visual.
+- Uses OLL `71b1d6d`, with the math plugin at 0.2.0: compiled lessons record `math: "0.2.0"`.
+
 ## 0.27.0 - 2026-11-11
 
 - `constant_speed_motion` in the physics plugin (subject plan P2 physics pilot): an object on a track linked to its distance–time graph, with time and speed as lesson numbers, compiled through OLL's `buildConstantSpeedMotion`. It is a **trial recipe**: installed and tested, but offered to the model only when `LEARNING_COACH_TRIAL_RECIPES` names it, so live requests are byte-identical. It passed its speed gate (`docs/TRIAL_RECIPE_SPEED_2026-11-11.md`). The product owner keeps it a trial until the per-subject quality review.
