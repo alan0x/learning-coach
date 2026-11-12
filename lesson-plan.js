@@ -12900,6 +12900,19 @@ var roundedFrom = (value2, denominator) => {
   const scale = 10 ** places;
   return Math.abs(value2 - Number(exact.toFixed(places))) < 0.5 / scale / 1e3 || Math.abs(value2 - Math.trunc(exact * scale) / scale) < 0.5 / scale / 1e3;
 };
+function valuesGrid(values, content) {
+  const literal = content.parameters?.label_style === "decimal";
+  const denominator = inferDenominator(values, { approximate: !literal });
+  if (!denominator) return void 0;
+  const grid = 1 / denominator;
+  const snapped = values.map((value2) => snap(value2, grid));
+  for (let i = 0; i < values.length; i += 1) for (let j = i + 1; j < values.length; j += 1) {
+    const written = Math.sign(Number((values[i] - values[j]).toPrecision(12)));
+    const drawn = Math.sign(Number((snapped[i] - snapped[j]).toPrecision(12)));
+    if (written !== drawn) return void 0;
+  }
+  return denominator;
+}
 function inferDenominator(values, { approximate = true } = {}) {
   for (let denominator = 1; denominator <= 24; denominator += 1) {
     if (values.every((value2) => exactlyOn(value2, denominator))) return denominator;
@@ -12938,7 +12951,7 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
   const changeValues = change ? [change.initial, ...lessonValues(plan, changeIndex)] : [];
   const shown = [...startValues, ...changeValues.map((value2) => start.initial + value2)];
   const values = [...startValues, ...changeValues];
-  const denominator = inferDenominator(values);
+  const denominator = valuesGrid(values, content);
   let grid = denominator ? 1 / denominator : void 0;
   const withZero = [0, ...shown];
   const used = Math.ceil(Math.max(...withZero)) - Math.floor(Math.min(...withZero)) + 2 <= MAX_WINDOW ? withZero : shown;
@@ -13010,7 +13023,7 @@ function fitComparedNumbers(content, plan, sharedNumbers) {
   const definitions = indexes.map((index) => plan.numbers[index - 1]);
   if (definitions.some((definition) => !definition)) return fitted;
   const values = indexes.flatMap((index, position) => [definitions[position].initial, ...lessonValues(plan, index)]);
-  const denominator = inferDenominator(values);
+  const denominator = valuesGrid(values, content);
   if (!denominator) return fitted;
   const grid = 1 / denominator;
   const low = Math.floor(Math.min(...values) + 1e-9);

@@ -67,6 +67,25 @@ const roundedFrom = (value: number, denominator: number) => {
 };
 
 /**
+ * The grid for a lesson's values, without changing how they relate (review of #67): snapped onto it, two
+ * different values must stay different and in the same order (0.66 and 0.67 must not both become 2/3).
+ * Values written as decimals in a decimal question are taken literally: no fraction is recovered from them.
+ */
+export function valuesGrid(values: readonly number[], content: LessonPlanVisualContent): number | undefined {
+  const literal = (content.parameters as { label_style?: unknown } | undefined)?.label_style === "decimal";
+  const denominator = inferDenominator(values, { approximate: !literal });
+  if (!denominator) return undefined;
+  const grid = 1 / denominator;
+  const snapped = values.map((value) => snap(value, grid));
+  for (let i = 0; i < values.length; i += 1) for (let j = i + 1; j < values.length; j += 1) {
+    const written = Math.sign(Number((values[i]! - values[j]!).toPrecision(12)));
+    const drawn = Math.sign(Number((snapped[i]! - snapped[j]!).toPrecision(12)));
+    if (written !== drawn) return undefined;
+  }
+  return denominator;
+}
+
+/**
  * The smallest denominator 1–24 (decision 0016) whose fractions hold every value:
  * - first exactly, so the numbers a lesson names keep their positions (review of #67: 0.5 and 0.51 must
  *   not both become 0.5; 5/24 and 19/24 must not become 1/5 and 4/5);
@@ -133,7 +152,7 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   // evidence: the model does not write one, and the step it arrives with is derived from the range
   // (span / 200), so 0.5 on a 0–100 range says nothing about halves (run 5).
   const values = [...startValues, ...changeValues];
-  const denominator = inferDenominator(values);
+  const denominator = valuesGrid(values, content);
   let grid = denominator ? 1 / denominator : undefined;
 
   // 0 anchors the line when it fits; a lesson far from 0 (23 + 48) is shown around its own values.
@@ -238,9 +257,10 @@ export function fitComparedNumbers(content: LessonPlanVisualContent, plan: Lesso
   if (definitions.some((definition) => !definition)) return fitted;
   const values = indexes.flatMap((index, position) => [definitions[position]!.initial, ...lessonValues(plan, index)]);
   // Compared values are the question itself: an exact grid, or the repeating fractions the values show
-  // rounded (0.8333 is 5/6), never a coarser grid that moves them (0.51 is not 1/2). Values no grid up
-  // to 24 parts holds are left as written, and the line refuses them (the outline is asked again).
-  const denominator = inferDenominator(values);
+  // rounded (0.8333 is 5/6), never one that makes different values equal or swaps their order (0.66 and
+  // 0.67), nor fractions read from a decimal question's decimals. Values no grid up to 24 parts holds are
+  // left as written, and the line refuses them (the outline is asked again).
+  const denominator = valuesGrid(values, content);
   if (!denominator) return fitted;
   const grid = 1 / denominator;
   const low = Math.floor(Math.min(...values) + 1e-9);

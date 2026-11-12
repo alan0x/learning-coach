@@ -287,3 +287,42 @@ test("comparing 2/3 and 3/5 shares fifteenths; 5/6 and 7/8 share 24ths (decision
   assert.deepEqual(judgeNumberLine(caseById.get("CMP-03"), twentyFourths).hard, []);
 });
 
+// Review of #67: different requested values must never become one point. 0.66 is 2/3 cut to two places
+// and 0.67 is 2/3 rounded; 0.166 and 0.167 the same for 1/6. Snapped to 2/3 (1/6), they would coincide
+// while keeping their own labels. The fit keeps them as written, and the line, which no grid up to 24
+// parts can draw them on, is refused: the outline is asked again without the number line.
+for (const [low, high] of [[0.66, 0.67], [0.166, 0.167]]) {
+  for (const decimalQuestion of [true, false]) {
+    test(`comparing ${low} and ${high}${decimalQuestion ? " in a decimal question" : ""}: never one point; refused at the outline (review of #67)`, async () => {
+      const reply = compareReply([low, String(low)], [high, String(high)], { activities: [] });
+      const parameters = reply.course.first_section.moments[0].visual_creates[0].content.parameters;
+      if (decimalQuestion) parameters.label_style = "decimal"; else delete parameters.label_style;
+      const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+      const rejected = [];
+      const labels = [];
+      let drawn;
+      await assert.rejects(generateLessonPlanWithModel(async (request) => {
+        labels.push(request.label);
+        if (request.label === "lesson-plan-bootstrap") return JSON.stringify(reply);
+        throw new Error(`stop: ${request.label}`);
+      }, { turn_id: "literal", learner_request: `Compare ${low} and ${high} on a number line.`, input_modality: "text", request_source: "self_contained" }, {
+        on_rejected_part: (event) => rejected.push(event.error.code),
+        on_playable_prefix: ({ compiled }) => { drawn = numberLineLesson(compiled.lesson); },
+      }), /stop: lesson-plan-outline/);
+      assert.equal(drawn, undefined, "no lesson with coincident points is published");
+      assert.deepEqual(labels, ["lesson-plan-bootstrap", "lesson-plan-outline"]);
+      assert.ok(rejected.includes("LESSON_PLAN_OUTLINE_VISUAL"), rejected.join());
+    });
+  }
+}
+
+test("fraction recovery still works where it is unambiguous: 0.8333 and 0.875 (5/6 and 7/8) on 24ths", async () => {
+  // A fraction question (no decimal labels), as the model wrote it in compare probe 1.
+  const reply = compareReply([0.8333, "5/6"], [0.875, "7/8"], { activities: [] });
+  delete reply.course.first_section.moments[0].visual_creates[0].content.parameters.label_style;
+  const line = numberLineLesson(await compileCompare(reply, caseById.get("CMP-03").prompt));
+  assert.equal(line.content.ticks.subdivisions, 24);
+  const values = line.variables.map((variable) => variable.initial);
+  assert.ok(Math.abs(values[0] - 5 / 6) < 1e-9 && Math.abs(values[1] - 7 / 8) < 1e-9, JSON.stringify(values));
+});
+
