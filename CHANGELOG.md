@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.27.0 - 2026-11-11
+
+- `constant_speed_motion` in the physics plugin (subject plan P2 physics pilot): an object on a track linked to its distance–time graph, with time and speed as lesson numbers, compiled through OLL's `buildConstantSpeedMotion`. It is a **trial recipe**: installed and tested, but offered to the model only when `LEARNING_COACH_TRIAL_RECIPES` names it, so live requests are byte-identical. It passed its speed gate (`docs/TRIAL_RECIPE_SPEED_2026-11-11.md`). The product owner keeps it a trial until the per-subject quality review.
+- Uses OLL `4389a02`. Geometry cards show their axis labels again, and cards are drawn at their layout size (rendering only).
+- `scripts/eval-shadow-speed.mjs` and `scripts/eval-trial-recipe-speed.mjs`: the speed gates for shadow mode and for trial recipes.
+
 ## 0.26.0 - 2026-11-10
 
 - Subject signal in shadow mode (subject plan P2).
