@@ -16146,6 +16146,14 @@ function inferDenominator(values) {
   }
   return void 0;
 }
+var UNIT_STEPS = [2, 3, 4, 5, 6];
+var gcd2 = (a, b) => b === 0 ? a : gcd2(b, a % b);
+function wholeLessonDenominator(steps) {
+  const units = steps.filter((step) => typeof step === "number" && step > 0).map((step) => UNIT_STEPS.find((parts) => Math.abs(step - 1 / parts) <= fractionTolerance(parts))).filter((parts) => parts !== void 0);
+  if (!units.length) return 1;
+  const common = units.reduce((lcm, parts) => lcm * parts / gcd2(lcm, parts), 1);
+  return common <= 12 ? common : void 0;
+}
 function lessonValues(plan, number) {
   const values = [];
   for (const section of plan.sections) {
@@ -16178,8 +16186,7 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
   const shown = [...startValues, ...changeValues.map((value2) => start.initial + value2)];
   const values = [...startValues, ...changeValues];
   const fromValues = inferDenominator(values);
-  const coarseSteps = [start.student_control?.step, change?.student_control?.step].filter((step2) => typeof step2 === "number" && step2 > 0).map((step2) => inferDenominator([step2])).filter((parts) => parts !== void 0 && parts >= 2 && parts <= 6);
-  const denominator = fromValues === 1 && coarseSteps.length ? Math.max(...coarseSteps) : fromValues;
+  const denominator = fromValues === 1 ? wholeLessonDenominator([start.student_control?.step, change?.student_control?.step]) : fromValues;
   const grid = denominator ? 1 / denominator : void 0;
   const used = [0, ...shown];
   const low = Math.floor(Math.min(...used)) - 1;

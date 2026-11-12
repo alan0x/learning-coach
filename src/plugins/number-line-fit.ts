@@ -33,6 +33,26 @@ export function inferDenominator(values: readonly number[]): number | undefined 
   return undefined;
 }
 
+const UNIT_STEPS = [2, 3, 4, 5, 6];
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+
+/**
+ * The denominator of a lesson whose values are all whole numbers, from its slider steps:
+ * - a step of exactly 1/2 to 1/6 (counting by fourths) says what the lesson counts in;
+ * - several such steps share their least common denominator (halves and thirds: sixths), so
+ *   every value either slider reaches stays on a tick;
+ * - when that denominator would exceed 12, the sliders are left as written (undefined);
+ * - any other step (0.1, 0.4, 1.5) says nothing about fractions, and the lesson is whole (1).
+ */
+export function wholeLessonDenominator(steps: ReadonlyArray<number | undefined>): number | undefined {
+  const units = steps.filter((step): step is number => typeof step === "number" && step > 0)
+    .map((step) => UNIT_STEPS.find((parts) => Math.abs(step - 1 / parts) <= fractionTolerance(parts)))
+    .filter((parts): parts is number => parts !== undefined);
+  if (!units.length) return 1;
+  const common = units.reduce((lcm, parts) => (lcm * parts) / gcd(lcm, parts), 1);
+  return common <= 12 ? common : undefined;
+}
+
 /** Values the lesson sets a number to: animation end values and practice targets on the number itself. */
 function lessonValues(plan: LessonPlan, number: number): number[] {
   const values: number[] = [];
@@ -87,10 +107,7 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   // by fourths): a fine step such as 0.1 on an integer lesson is not a lesson in tenths.
   const values = [...startValues, ...changeValues];
   const fromValues = inferDenominator(values);
-  const coarseSteps = [start.student_control?.step, change?.student_control?.step]
-    .filter((step): step is number => typeof step === "number" && step > 0)
-    .map((step) => inferDenominator([step])).filter((parts): parts is number => parts !== undefined && parts >= 2 && parts <= 6);
-  const denominator = fromValues === 1 && coarseSteps.length ? Math.max(...coarseSteps) : fromValues;
+  const denominator = fromValues === 1 ? wholeLessonDenominator([start.student_control?.step, change?.student_control?.step]) : fromValues;
   const grid = denominator ? 1 / denominator : undefined;
 
   const used = [0, ...shown];

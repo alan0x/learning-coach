@@ -94,8 +94,13 @@ The recipe stays a trial.
 - **`denominator` removed.** The model gives only the two numbers, at their actual size. The guidance says so explicitly ("3/4 is 0.75, not 3"), and that fractions are shown by the slider step (0.25 for quarters), as in run 3.
 - **The values decide the denominator.** Only when they are all whole numbers can a slider step decide it, and only a coarse one (1/2 to 1/6, as in counting by fourths). A 0.1 step on an integer lesson gives whole-number ticks and a whole-number step.
 - **A start nothing drives is kept within one unit of its value, even with a slider.** Only a change slider keeps its whole range, because it carries the answer.
-- **Offline replay.** The ten run-4 lessons, rebuilt from their recorded rows, now meet the criteria below, including the value checks (`test/number-line-recipe.test.mjs`, "run 4 replay"). Against run 4's code the same replay fails NL-01, NL-02, NL-05 and NL-06, as the live run did.
-  - The replay cannot reproduce the model's behaviour. NL-03 and NL-09 use the values the model wrote in run 3, so only a live run shows whether removing `denominator` brings those values back.
+- **Offline replay, corrected after review of #62.** The ten run-4 lessons are rebuilt with every recorded input: starting values, slider steps, animations, practice targets, and slider ranges as recorded (after run 4's fitting, so at most as wide as the model wrote). Under the current rules they score **6 of 10**:
+  - NL-01, NL-02, NL-04, NL-07, NL-08 and NL-10 pass.
+  - NL-03 and NL-09 show wrong values, because the model wrote numerators under the removed `denominator`.
+  - NL-05 and NL-06 are 34 and 39 units wide. Their own practice tasks drive the start (to −5 and −10), while the change keeps its range so the answer stays reachable.
+  - Separate tests, labelled as a hypothesis, show NL-03 and NL-09 pass if the model writes values as in run 3 (0.75; 0.33 and 0.67). Only a live run can confirm that premise.
+  - An earlier version of this replay reported 10 of 10. It had left out NL-05's and NL-06's practice tasks and changed NL-04's values, so that figure was wrong.
+- **Steps.** A slider step counts for an integer lesson only when it is 1/2 to 1/6 (0.33 counts as 1/3). Several such steps share their least common denominator (halves and thirds give sixths). When that would exceed 12, the sliders are left as written. Any other step (0.1, 0.4, 1.5) is ignored.
 - **Raw output kept.** The harness now keeps every raw model reply beside the compiled parts (`OLL_DEBUG_GENERATION=1`, which now also logs streamed replies), so later fits can be replayed against real model output at no cost.
 
 ## Run 5 pass criteria (set before the run)
@@ -107,5 +112,6 @@ The run 4 criteria, with value checks added. A formal pass that shows the wrong 
 - **NL-07** draws tenths; **NL-10** draws quarters.
 - **NL-01, NL-02, NL-05, NL-06 and NL-08** span at most 24 units with hops on, and reach −5, 7, 8, −9 and −3 respectively.
 - At least 8 of the 10 pass, with no wrong values. Speed as before.
+- From the replay: if the model writes values again, 8 of 10 is within reach, but only just. Lessons like NL-05 and NL-06, whose own tasks move the start far, still miss on width.
 
 **Stop rule (proposed to the owner).** If run 5 misses these criteria, the number line stays a trial recipe and the work moves to decision 0014. Learners lose nothing, because Studio and CoursePacks already have the number line.
