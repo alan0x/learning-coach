@@ -380,3 +380,14 @@ Owner-approved; about $1.05; `eval/trial-recipe-speed-number-line-2026-11-12-run
 - NM-01: one turn hit the cap, because the fallback outline still picked the number line through the schema's feature enum. Fixed: excluded capabilities' features are removed from the fallback schema.
 - The card now says how a comparison maps to the line: start at the smaller number, move by the difference. Then 2/3 versus 3/5 needs fifteenths, is refused, and falls back. Probe 2 checks this.
 
+**Probe 2** (candidate arm only, 13 lessons, 34 counted calls):
+- **Number-line requests: 8 of 8 pass every hard check:** NL-07 and NL-08 (comparisons that fit a start plus a difference) 2/2 each, NL-03 2/2, NL-10 2/2.
+- **NM-01 ("compare 2/3 and 3/5"):**
+  - 1 of 5 got a lesson without the number line through the new path: fifteenths refused at bootstrap, outline asked again without the number line, a lesson in 19 s.
+  - 4 of 5 hit the harness's 3-call cap. Each started with **2/3 written at the wrong scale**, so the outline retry, section 1's fifteenths refusal and the outline restart needed a 4th and 5th call. Live, those would continue, but about 25–30 s to first playable is too slow.
+
+**The wrong-scale slip, measured.** Across runs 5–7 and both probes, 9 of the 24 turns that wrote a repeating third wrote it at the wrong scale (37%).
+- The cause is the shared number schema: a mantissa of up to 12 digits, but a scale of only 0–6. The model writes 2/3 to 12 places (666666666667) and, unable to give scale 12, picks a smaller one.
+- It affects any visual given a third, but only number-line lessons write thirds here.
+- Fixing it changes the schema every lesson request uses, so it is put to the owner as a separate change. One option: allow scale up to 12, consistent with the mantissa.
+
