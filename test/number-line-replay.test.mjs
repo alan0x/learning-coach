@@ -1,7 +1,7 @@
 // Number line lessons through the real path, from the model's reply to the lesson. The trial recipe
 // is offered only when LEARNING_COACH_TRIAL_RECIPES names it, which Coach reads as it loads; this file
 // sets it first (the recipe tests check the default in their own process).
-process.env.LEARNING_COACH_TRIAL_RECIPES = "number_line,number_line_compare";
+process.env.LEARNING_COACH_TRIAL_RECIPES = "number_line,number_line_compare,number_line_solution";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
@@ -10,9 +10,9 @@ import test from "node:test";
 // (span / 200). These tests go through the real path, from the model's reply to the lesson, with the
 // replies recorded in speed check run 5 (2026-11-11), so they see what a live lesson sees.
 const { replayTurn } = await import(new URL("../scripts/replay-trial-recipe.mjs", import.meta.url));
-const { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, NUMBER_LINE_COMPARE_CASES, judgeNumberLine, numberLineLesson } = await import(new URL("../scripts/eval-trial-recipe-speed.mjs", import.meta.url));
+const { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, NUMBER_LINE_COMPARE_CASES, NUMBER_LINE_SOLUTION_CASES, judgeNumberLine, numberLineLesson } = await import(new URL("../scripts/eval-trial-recipe-speed.mjs", import.meta.url));
 const run5 = JSON.parse(await readFile(new URL("./fixtures/number-line-run5-replies.json", import.meta.url), "utf8"));
-const caseById = new Map([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES, ...NUMBER_LINE_COMPARE_CASES].map((item) => [item.id, item]));
+const caseById = new Map([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES, ...NUMBER_LINE_COMPARE_CASES, ...NUMBER_LINE_SOLUTION_CASES].map((item) => [item.id, item]));
 const replay = (turn) => replayTurn(turn.replies.map((reply) => JSON.stringify(reply)), caseById.get(turn.case).prompt);
 
 // Run 5's turns, judged as the live run judged them. 29 of 40 passed live; every unreadable line was the
@@ -259,9 +259,15 @@ const compareReply = (first, second, extra = {}) => {
 const compileCompare = async (reply, prompt) => {
   const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
   let lesson;
-  await assert.rejects(generateLessonPlanWithModel(async () => JSON.stringify(reply), { turn_id: "compare", learner_request: prompt, input_modality: "text", request_source: "self_contained" }, {
-    on_playable_prefix: ({ compiled }) => { lesson = compiled.lesson; throw new Error("first playable"); },
-  }), /first playable/);
+  const rejected = [];
+  try {
+    await generateLessonPlanWithModel(async () => JSON.stringify(reply), { turn_id: "compare", learner_request: prompt, input_modality: "text", request_source: "self_contained" }, {
+      on_rejected_part: (event) => rejected.push(`${event.label}: ${event.error.message}`),
+      on_playable_prefix: ({ compiled }) => { lesson = compiled.lesson; throw new Error("first playable"); },
+    });
+  } catch (error) {
+    if (!lesson) throw new Error(`no first playable part: ${rejected[0] ?? error.message}`);
+  }
   return lesson;
 };
 
@@ -324,5 +330,41 @@ test("fraction recovery still works where it is unambiguous: 0.8333 and 0.875 (5
   assert.equal(line.content.ticks.subdivisions, 24);
   const values = line.variables.map((variable) => variable.initial);
   assert.ok(Math.abs(values[0] - 5 / 6) < 1e-9 && Math.abs(values[1] - 7 / 8) < 1e-9, JSON.stringify(values));
+});
+
+// Decision 0016: solution sets (number_line_solution). Built from the same recorded reply: the outline asks
+// for solution_set, its numbers are the boundaries, and the visual names the relation.
+const solutionReply = (relation, bounds) => {
+  const reply = compareReply(...[...bounds, ...bounds].slice(0, 2).map((value, index) => [value, index === 0 ? "a" : "b"]), { activities: [] });
+  reply.course.outline.numbers = reply.course.outline.numbers.slice(0, bounds.length).map((number) => ({ ...number, min: { mantissa: -10, scale: 0 }, max: { mantissa: 10, scale: 0 } }));
+  reply.course.outline.course_visuals[0].required_features = ["number_line", "solution_set"];
+  const create = reply.course.first_section.moments[0].visual_creates[0].content;
+  create.parameters = { relation };
+  create.numbers = bounds.map((_value, index) => index + 1);
+  return reply;
+};
+for (const [id, relation, bounds] of [["SOL-01", "x>a", [-2]], ["SOL-02", "x<=a", [3]], ["SOL-03", "a<x<=b", [1, 4]], ["SOL-04", "a<x<b", [1, 5]], ["SOL-05", "x<a|x>=b", [-1, 2]]]) {
+  test(`${id} (${relation}): the program draws the exact solution set, ends open or filled, rays or interval`, async () => {
+    const line = numberLineLesson(await compileCompare(solutionReply(relation, bounds), caseById.get(id).prompt));
+    assert.deepEqual(judgeNumberLine(caseById.get(id), line).hard, []);
+  });
+}
+
+test("the solution-set check catches a wrong end, a filled point on an open end, and boundaries out of order", async () => {
+  // x >= -2 drawn for "x > -2": the end is filled where it should be open.
+  const filledEnd = numberLineLesson(await compileCompare(solutionReply("x>=a", [-2]), caseById.get("SOL-01").prompt));
+  assert.match(judgeNumberLine(caseById.get("SOL-01"), filledEnd).hard.join(), /wrong solution set: expected \(-2, \+∞, drawn \[-2, \+∞/);
+  // A filled point drawn on the open end reads as filled.
+  const withPoint = structuredClone(numberLineLesson(await compileCompare(solutionReply("x>a", [-2]), caseById.get("SOL-01").prompt)));
+  withPoint.content.points = [{ as: "dot", value: -2 }];
+  assert.match(judgeNumberLine(caseById.get("SOL-01"), withPoint).hard.join(), /filled point sits on the open end -2/);
+  // a must be below b: refused as a parameter fault of the section.
+  const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+  const rejected = [];
+  await assert.rejects(generateLessonPlanWithModel(async (request) => {
+    if (request.label === "lesson-plan-bootstrap") return JSON.stringify(solutionReply("a<x<b", [5, 1]));
+    throw new Error("stop");
+  }, { turn_id: "order", learner_request: "x between 1 and 5", input_modality: "text", request_source: "self_contained" }, { on_rejected_part: (event) => rejected.push(event.error.message) }), /stop/);
+  assert.ok(rejected.some((message) => /smaller than the second/.test(message)), rejected.join());
 });
 

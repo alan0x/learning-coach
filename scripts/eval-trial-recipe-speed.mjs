@@ -201,6 +201,36 @@ export function numberLineStates({ content, variables, tasks, animations }) {
   })));
 }
 
+/** The variables' values in each state the lesson shows: the starting values, then after each animation. */
+function variableStates({ variables, animations, sequence: steps }) {
+  let current = Object.fromEntries(variables.map((variable) => [variable.as, variable.initial]));
+  const states = [current];
+  for (const step of steps ?? animations.map(([variable, value]) => ({ kind: "animate", variable, value }))) {
+    if (step.kind !== "animate") continue;
+    current = { ...current, [step.variable]: step.value };
+    states.push(current);
+  }
+  return states;
+}
+
+/** A line's solution-set pieces at one state: each interval's ends (null: a ray runs on) and which ends are included. */
+export function solutionPieces(content, values) {
+  const evaluate = (expression) => {
+    const text = String(expression).replace(/[a-z][a-z0-9_]*/gu, (name) => (name in values ? `(${values[name]})` : "NaN"));
+    return /^[-+*/().\d\seNa]+$/u.test(text) ? Number(Function(`"use strict"; return (${text});`)()) : Number.NaN;
+  };
+  const fraction = (value) => (typeof value === "string" && value.includes("/") ? value.trim().split("/").map(Number).reduce((a, b) => a / b) : Number(value));
+  const end = (interval, side) => {
+    if (interval[side] === null || interval[side] === undefined) return null;
+    const binding = (content.bindings ?? []).find((entry) => entry.target === `${interval.as}.${side}`);
+    return binding ? evaluate(binding.expression) : fraction(interval[side]);
+  };
+  return (content.intervals ?? []).map((interval) => ({
+    from: end(interval, "from"), to: end(interval, "to"),
+    fromClosed: interval.from_closed ?? true, toClosed: interval.to_closed ?? true,
+  }));
+}
+
 /** The points' values in each state the lesson shows: the starting values, then after each animation. */
 export function lessonShownStates({ content, variables, animations, sequence: steps }) {
   // Review of #63: a point shown only when emphasized counts only once something reveals it, so an
@@ -245,8 +275,11 @@ export function judgeNumberLine(item, lesson) {
   // target is the learner's to reach, not something the lesson shows (run 6: a line that showed
   // 0 − 8 throughout would have passed "5 − 8" on the task's target alone).
   const shownStates = lessonShownStates(lesson);
+  // A solution set's interval and ray ends are values the lesson shows too (decision 0016).
+  const endStates = variableStates(lesson).map((values) => Object.fromEntries(solutionPieces(content, values)
+    .flatMap((piece, index) => [[`set${index}.from`, piece.from], [`set${index}.to`, piece.to]]).filter(([, end]) => end !== null)));
   for (const value of expect.values ?? []) {
-    if (!shownStates.some((state) => Object.values(state).some((shown) => close(shown, value)))) {
+    if (![...shownStates, ...endStates].some((state) => Object.values(state).some((shown) => close(shown, value)))) {
       hard.push(`wrong value: ${Number(value.toFixed(4))} is never shown (points: ${[...new Set(shownStates.flatMap((state) => Object.values(state)).map((shown) => Number(shown.toFixed(4))))].join(", ")})`);
     }
   }
@@ -270,11 +303,34 @@ export function judgeNumberLine(item, lesson) {
       hard.push(`practice task already met when it starts (${name} ends at ${Number(atEnd.get(name).toFixed(4))})`);
     }
   }
+  // A solution set (decision 0016): some state the lesson shows draws exactly the expected pieces, each
+  // end open or included as expected, and no filled point sits on an end left open.
+  if (expect.solution) {
+    const sameEnd = (a, b) => (a === null || b === null ? a === b : close(a, b));
+    const matches = (pieces) => pieces.length === expect.solution.length && expect.solution.every((want) => pieces.some((piece) =>
+      sameEnd(piece.from, want.from ?? null) && sameEnd(piece.to, want.to ?? null)
+      && (want.from === null || want.from === undefined || piece.fromClosed === Boolean(want.fromClosed))
+      && (want.to === null || want.to === undefined || piece.toClosed === Boolean(want.toClosed))));
+    const states = variableStates(lesson);
+    const drawn = states.map((values) => solutionPieces(content, values));
+    if (!drawn.some(matches)) {
+      const describe = (pieces) => pieces.map((piece) => `${piece.from === null ? "−∞" : `${piece.fromClosed ? "[" : "("}${Number(piece.from.toFixed(4))}`}, ${piece.to === null ? "+∞" : `${Number(piece.to.toFixed(4))}${piece.toClosed ? "]" : ")"}`}`).join(" ∪ ") || "nothing";
+      hard.push(`wrong solution set: expected ${describe(expect.solution.map((want) => ({ from: want.from ?? null, to: want.to ?? null, fromClosed: Boolean(want.fromClosed), toClosed: Boolean(want.toClosed) })))}, drawn ${describe(drawn.at(-1) ?? [])}`);
+    }
+    const openEnds = expect.solution.flatMap((want) => [want.from !== null && want.from !== undefined && !want.fromClosed ? want.from : undefined, want.to !== null && want.to !== undefined && !want.toClosed ? want.to : undefined]).filter((value) => value !== undefined);
+    const filled = (content.points ?? []).filter((point) => point.style !== "open" && point.shown !== "when_emphasized");
+    for (const state of lessonShownStates(lesson)) {
+      for (const point of filled) if (openEnds.some((value) => state[point.as] !== undefined && close(state[point.as], value))) hard.push(`a filled point sits on the open end ${state[point.as]}`);
+    }
+  }
   const labelled = planNumberLineTicks(content).filter((tick) => tick.label).map((tick) => tick.value);
   const visible = new Set((content.points ?? []).filter((point) => point.shown !== "when_emphasized").map((point) => point.as));
   const unreadable = new Set();
   for (const state of states) for (const [as, value] of Object.entries(state)) {
     if (visible.has(as) && !labelled.some((tick) => close(tick, value))) unreadable.add(`${as} at ${Number(value.toFixed(4))}`);
+  }
+  for (const state of endStates) for (const [end, value] of Object.entries(state)) {
+    if (!labelled.some((tick) => close(tick, value))) unreadable.add(`${end} at ${Number(value.toFixed(4))}`);
   }
   if (unreadable.size) hard.push(`unreadable: ${[...unreadable].join(", ")} on no labelled tick`);
   const parts = content.ticks?.subdivisions ?? 1;

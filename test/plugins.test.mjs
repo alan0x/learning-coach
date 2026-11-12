@@ -71,7 +71,7 @@ test("recipe hooks and section facts are keyed by known recipes, and unknown nam
     for (const recipe of Object.keys(table)) assert.ok(RECIPE_CATALOG_ORDER.includes(recipe) || api.TRIAL_RECIPES.includes(recipe), recipe);
     for (const name of ["constructor", "toString", "__proto__", "hasOwnProperty"]) assert.equal(table[name], undefined, name);
   }
-  assert.deepEqual(Object.keys(RECIPE_HOOKS).sort(), ["coordinate_circle", "function_plot", "function_surface_with_section", "implicit_surface_with_section", "number_line", "number_line_compare", "process_diagram"]);
+  assert.deepEqual(Object.keys(RECIPE_HOOKS).sort(), ["coordinate_circle", "function_plot", "function_surface_with_section", "implicit_surface_with_section", "number_line", "number_line_compare", "number_line_solution", "process_diagram"]);
 });
 
 // A repair request names the first problem found, so moving recipes into

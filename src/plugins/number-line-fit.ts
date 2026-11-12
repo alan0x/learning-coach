@@ -238,15 +238,16 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
 }
 
 /**
- * Fits two compared numbers (decision 0016) in place: both values, and the values the lesson sets them
+ * Fits the points a line shows (decision 0016): two compared numbers, or a solution set's boundaries, in place: both values, and the values the lesson sets them
  * to, snap to their common denominator (up to 24); the sliders step by it; each range narrows to the
  * whole units around both values, never past what the model allowed and always keeping the values.
  * Shared numbers and numbers an expression task reads are left as written, as for the number line.
  */
 export function fitComparedNumbers(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>): Map<number, number> {
   const fitted = new Map<number, number>();
+  // Two compared numbers, or a solution set's one or two boundaries (decision 0016).
   const indexes = (content.numbers ?? []).slice(0, 2);
-  if (indexes.length < 2 || !plan.numbers || indexes.some((index) => sharedNumbers.has(index))) return fitted;
+  if (indexes.length < 1 || !plan.numbers || indexes.some((index) => sharedNumbers.has(index))) return fitted;
   const ours = new Set(indexes);
   const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) =>
     activity.kind === "number_target" && activity.expression !== undefined
@@ -283,6 +284,35 @@ export function fitComparedNumbers(content: LessonPlanVisualContent, plan: Lesso
     }
   }
   for (const index of indexes) fitted.set(index, grid);
+  return fitted;
+}
+
+/**
+ * Fits a solution set's boundaries (decision 0016): as for compared numbers, then, with two boundaries,
+ * keeps their ranges apart, so a slider can never carry the lower boundary past the upper one (OLL checks
+ * every interval runs from smaller to larger at every slider extreme). The split falls between them, on
+ * the grid when there is one.
+ */
+export function fitSolutionNumbers(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>): Map<number, number> {
+  const fitted = fitComparedNumbers(content, plan, sharedNumbers);
+  const [lowIndex, highIndex] = content.numbers ?? [];
+  const low = lowIndex ? plan.numbers?.[lowIndex - 1] : undefined;
+  const high = highIndex ? plan.numbers?.[highIndex - 1] : undefined;
+  if (!low || !high || !(low.initial < high.initial) || sharedNumbers.has(lowIndex!) || sharedNumbers.has(highIndex!)) return fitted;
+  if (low.max < high.min) return fitted;
+  const grid = fitted.get(lowIndex!) || undefined;
+  const middle = (low.initial + high.initial) / 2;
+  // (floorTo and ceilTo round inwards, for ranges: floorTo rounds up, ceilTo down; corrected below.)
+  let lowMax = grid ? floorTo(middle - 1e-9, grid) : middle;
+  let highMin = grid ? ceilTo(middle, grid) : middle;
+  if (grid && lowMax > middle) lowMax -= grid;
+  if (grid && highMin < middle) highMin += grid;
+  // On a grid, the two may meet at the middle tick: the lower boundary stops one tick short.
+  if (lowMax >= highMin) lowMax = grid ? Number((highMin - grid).toPrecision(12)) : highMin - Math.max(1e-6, (high.initial - low.initial) / 1000);
+  if (lowMax < low.initial || highMin > high.initial) return fitted;
+  low.max = Math.min(low.max, lowMax);
+  high.min = Math.max(high.min, highMin);
+  if (low.min >= low.max || high.min >= high.max) return fitted;
   return fitted;
 }
 
