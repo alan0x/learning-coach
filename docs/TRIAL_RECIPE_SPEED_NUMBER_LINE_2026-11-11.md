@@ -338,3 +338,7 @@ Owner-approved; 111 model calls (about $0.95); `eval/trial-recipe-speed-number-l
   - near misses run on both arms, so a lesson can be compared with what the request gets today.
 - **When generation gives up,** the learner sees "课程生成失败，请重试。" ("lesson generation failed, please try again").
 
+
+### Run 7 rules (owner-approved, set before the run)
+
+The run 6 rules are unchanged: the hard checks, the slip rule (option B), and speed option (a). Near misses run on both arms; a candidate near miss that draws a number line gets the ordinary hard checks plus a hand read. About $1.05: `--pairs 20 --quality-repeats 3 --max-calls 140`.
