@@ -19863,18 +19863,17 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     }
     return void 0;
   };
-  const earlyOutlineResult = await requestOutline();
-  if (earlyOutlineResult) return earlyOutlineResult;
-  if (!outline) throw outlineError;
-  for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
-  await options.on_outline_ready?.({
-    sections: outline.sections.length,
-    course_visuals: outline.course_visuals?.length ?? 0,
-    request_parts: fixedRequestParts.length,
-    camera_observation: stableCameraObservation !== void 0
-  });
-  const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
-  if (unsupported) {
+  const acceptOutline = async () => {
+    if (!outline) throw outlineError;
+    for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
+    await options.on_outline_ready?.({
+      sections: outline.sections.length,
+      course_visuals: outline.course_visuals?.length ?? 0,
+      request_parts: fixedRequestParts.length,
+      camera_observation: stableCameraObservation !== void 0
+    });
+    const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
+    if (!unsupported) return void 0;
     const reason = unsupported.reason?.trim();
     const learnerResponse = reason && reason.length <= 480 && !/\$lesson|LESSON_PLAN_|already exhausted|do not call|internal attempts/iu.test(reason) ? lessonText(input.language, "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF1A{{v0}}", { v0: reason }) : lessonText(input.language, "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002");
     return {
@@ -19882,7 +19881,11 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       learner_response: learnerResponse,
       model_calls: modelCalls
     };
-  }
+  };
+  const earlyOutlineResult = await requestOutline();
+  if (earlyOutlineResult) return earlyOutlineResult;
+  const outlineResult = await acceptOutline();
+  if (outlineResult) return outlineResult;
   const currentNumbersBefore = (section) => {
     const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
     for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
@@ -20045,8 +20048,8 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       drafts.length = 0;
       const early = await requestOutline();
       if (early) return early;
-      if (!outline) throw outlineError;
-      for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
+      const replacementResult = await acceptOutline();
+      if (replacementResult) return replacementResult;
       return acceptFirstSection();
     }
   };
@@ -20164,6 +20167,39 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     ...stableCameraObservation ? { camera_observation: stableCameraObservation } : {}
   };
 }
+
+// src/raw-reply.ts
+var RAW_REPLY_PREFIX = "learning-coach: raw ";
+function frameRawReply(record3) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record3)}
+`;
+}
+function envelopeText(payload) {
+  const candidates = payload?.candidates;
+  if (!Array.isArray(candidates)) return void 0;
+  const text3 = candidates.flatMap((candidate) => candidate.content?.parts ?? []).map((part) => typeof part.text === "string" ? part.text : "").join("");
+  return text3 || void 0;
+}
+function modelTextFromRawReply(line) {
+  const rest = line.startsWith(RAW_REPLY_PREFIX) ? line.slice(RAW_REPLY_PREFIX.length) : line;
+  if (rest.startsWith("{")) {
+    try {
+      const record3 = JSON.parse(rest);
+      if (record3.kind === "content" && typeof record3.body === "string") return record3.body;
+      if (record3.kind === "payload") return envelopeText(record3.body);
+    } catch {
+    }
+  }
+  const legacy = /^[^{]*? (payload|content): /u.exec(rest);
+  if (!legacy) return void 0;
+  const body = rest.slice(legacy[0].length);
+  if (legacy[1] === "content") return body || void 0;
+  try {
+    return envelopeText(JSON.parse(body));
+  } catch {
+    return void 0;
+  }
+}
 export {
   INSTALLED_PLUGINS,
   LESSON_PLAN_CAPABILITIES,
@@ -20180,6 +20216,7 @@ export {
   OFFERED_RECIPES,
   PLUGIN_COMPILERS,
   PROCESS_DIAGRAM_CONTRACT,
+  RAW_REPLY_PREFIX,
   RECIPE_CATALOG_ORDER,
   RECIPE_HOOKS,
   RECIPE_PLUGIN,
@@ -20203,11 +20240,13 @@ export {
   compileLessonPlan,
   deriveLessonRequestParts,
   enabledTrialRecipes,
+  frameRawReply,
   generateLessonPlanWithModel,
   includeWrittenCardsInFocus,
   lessonPlanPlugins,
   matchLessonPlanCapability,
   mathExpressionToOll,
+  modelTextFromRawReply,
   numericAnswerTolerance,
   promptSlot,
   resolveLessonPlan,
