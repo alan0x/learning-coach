@@ -1,12 +1,11 @@
 import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
-import { LESSON_PLAN_CAPABILITY_REGISTRY, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_REGISTRY, isNumberLineCapability, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
 import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen } from "./recipe-kit.js";
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
 import { PLUGIN_HOOKS, RECIPE_HOOKS } from "./plugins/hooks.js";
-import { fitNumberLineNumbers } from "./plugins/number-line-fit.js";
 export { PLUGIN_COMPILERS };
 
 export { LESSON_PLAN_SCENE_INITIAL_CAMERAS, includeWrittenCardsInFocus, mathExpressionToOll } from "./recipe-kit.js";
@@ -185,9 +184,10 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
         if (content.capability === "function_plot") {
           for (const number of bound ?? []) newPlotNumbers.add(number);
         }
-        if (content.capability === "number_line" && action.action === "create") {
+        const fit = RECIPE_HOOKS[content.capability]?.fit_numbers;
+        if (fit && action.action === "create") {
           const shared = new Set([...visualsUsing].filter(([number, count]) => count > 1 && content.numbers?.includes(number)).map(([number]) => number));
-          for (const [number, step] of fitNumberLineNumbers(content, plan, shared)) {
+          for (const [number, step] of fit(content, plan, shared)) {
             constrained.add(number);
             if (step > 0) tickSteps.set(number, step);
           }
@@ -366,7 +366,7 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
   // Where each number's line is first drawn, so the number can move there as the line appears.
   const lineCreations = new Map<number, { moment: LessonPlan["sections"][number]["moments"][number]; isStart: boolean }>();
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
-    if (action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "number_line") {
+    if (action.action === "create" && action.kind === "visual" && isNumberLineCapability((action.content as LessonPlanVisualContent).capability)) {
       for (const [position, number] of ((action.content as LessonPlanVisualContent).numbers ?? []).entries()) {
         lineNumbers.add(number);
         if (!lineCreations.has(number)) lineCreations.set(number, { moment, isStart: position === 0 });

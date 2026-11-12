@@ -5,6 +5,7 @@ import { lessonText } from "../lesson-text.js";
 import { assertRange, fail, mathExpressionToOll, optionalNumber, parameters, safeFunctionExpression } from "../recipe-kit.js";
 import { implicitSurfaceDomain } from "../scene3d-surfaces.js";
 import type { PluginHooks, RecipeHooks } from "./hooks.js";
+import { fitNumberLineNumbers } from "./number-line-fit.js";
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./math-teaching-contracts.js";
 import { formulaError, parseModelFormula } from "./math-formulas.js";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
@@ -89,6 +90,7 @@ function surfaceSectionRange(content: LessonPlanVisualContent, path: string): { 
 }
 
 export const MATH_HOOKS: Record<string, RecipeHooks> = {
+  number_line: { fit_numbers: fitNumberLineNumbers },
   implicit_surface_with_section: {
     section_range: surfaceSectionRange,
     lower_model_parameters(parameters) {

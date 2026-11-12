@@ -18,6 +18,16 @@ export type LessonPlanCapability = keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY;
 export type LessonPlanVisualFeature = typeof LESSON_PLAN_CAPABILITY_REGISTRY[LessonPlanCapability]["required_features"][number];
 
 export const LESSON_PLAN_CAPABILITY_NAMES = Object.keys(LESSON_PLAN_CAPABILITY_REGISTRY) as LessonPlanCapability[];
+
+/**
+ * Whether a recipe draws a number line (OLL decisions 0013 and 0016). Every safeguard the number line
+ * needs applies to the whole family, not to one recipe name: targets kept as written, a task already met
+ * at the start, faults only the outline can fix, and the exclusion that follows them.
+ */
+export function isNumberLineCapability(capability: string | undefined): boolean {
+  const recipe = capability === undefined ? undefined : (LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { output_kinds: readonly string[] } | undefined>)[capability];
+  return Boolean(recipe?.output_kinds.includes("number_line"));
+}
 export const LESSON_PLAN_VISUAL_FEATURES = [...new Set(
   LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features]),
 )] as LessonPlanVisualFeature[];

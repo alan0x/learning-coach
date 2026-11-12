@@ -37,6 +37,12 @@ export interface RecipeHooks {
   validate_numbers?(numbers: unknown[], content: Record<string, unknown>, context: RecipeValidationContext): void;
   /** Lesson numbers that drive this visual, when its parameters decide them. */
   bound_numbers?(content: LessonPlanVisualContent): number[];
+  /**
+   * Fits the numbers a newly created visual shows to what the lesson teaches (a number line's ticks),
+   * in place; returns each fitted number with its tick step (0: ranges only). `shared` holds numbers
+   * another visual also shows, which a recipe must leave alone.
+   */
+  fit_numbers?(content: LessonPlanVisualContent, plan: LessonPlan, shared: ReadonlySet<number>): Map<number, number>;
 }
 
 export type { LessonPlanMathExpression };
