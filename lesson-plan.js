@@ -12001,7 +12001,7 @@ var MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line"],
-    model_guidance: "\u6570\u8F74\uFF1A\u8D77\u70B9\u52A0\u4E00\u6B21\u79FB\u52A8\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF09\u3002a + b\uFF1A\u8D77\u70B9 a\uFF0C\u79FB\u52A8 b\uFF1B\u95EE\u4E00\u4E2A\u6570\u7684\u4F4D\u7F6E\uFF1A\u8D77\u70B9 0\uFF1B\u6309\u5206\u6570\u6570\u6570\uFF1A\u79FB\u52A8\u5199\u4E00\u6B65\uFF080.25\uFF09\u3002\u9898\u76EE\u5199\u5C0F\u6570\u65F6 label_style \u7528 decimal\u3002\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5F0F\u3001\u7EDD\u5BF9\u503C\u3001\u56DB\u820D\u4E94\u5165\u3001\u6BD4\u8F83\u4E24\u4E2A\u6570\u6216\u51FD\u6570\u56FE\u50CF"
+    model_guidance: "\u6570\u8F74\uFF1A\u8D77\u70B9\u52A0\u4E00\u6B21\u79FB\u52A8\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF09\u3002a + b\uFF1A\u8D77\u70B9 a\uFF0C\u79FB\u52A8 b\uFF1B\u95EE\u4E00\u4E2A\u6570\u7684\u4F4D\u7F6E\uFF1A\u8D77\u70B9 0\uFF1B\u6309\u5206\u6570\u6570\u6570\uFF1A\u79FB\u52A8\u5199\u4E00\u6B65\uFF080.25\uFF09\u3002\u9898\u76EE\u5199\u5C0F\u6570\u65F6 label_style \u7528 decimal\u3002\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5F0F\u3001\u7EDD\u5BF9\u503C\u3001\u56DB\u820D\u4E94\u5165\u3001\u5206\u6BCD\u5927\u4E8E 12 \u7684\u5206\u6570\u6216\u51FD\u6570\u56FE\u50CF"
   }
 };
 var text2 = { type: "string" };
@@ -16516,16 +16516,28 @@ function resolveMetNumberTargets(plan) {
     if (action.action === "create" && action.kind === "visual" && action.content.capability === "number_line") {
       for (const number of action.content.numbers ?? []) {
         lineNumbers.add(number);
-        if (!lineCreations.has(number)) lineCreations.set(number, { moment });
+        if (!lineCreations.has(number)) lineCreations.set(number, moment);
       }
     }
   }
+  const lastMoment = plan.sections.at(-1)?.moments.at(-1);
+  const resetNumbers = /* @__PURE__ */ new Set();
+  const valueAtEnd = (number) => {
+    let value2 = plan.numbers[number - 1].initial;
+    for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+      if (action.action === "animate" && action.number === number) value2 = action.end_value;
+    }
+    return value2;
+  };
   for (const [sectionIndex, section] of plan.sections.entries()) {
     for (const [activityIndex, activity] of (section.student_activities ?? []).entries()) {
       if (activity.kind !== "number_target" || activity.expression || activity.number_controls.length !== 1) continue;
       const number = activity.number_controls[0].number;
       const definition = plan.numbers?.[number - 1];
-      if (!lineNumbers.has(number) || !definition || Math.abs(activity.value - definition.initial) > activity.tolerance) continue;
+      if (!lineNumbers.has(number) || !definition || !lastMoment) continue;
+      const met = (value2) => Math.abs(activity.value - value2) <= activity.tolerance;
+      const metAtStart = met(definition.initial);
+      if (!metAtStart && !met(valueAtEnd(number))) continue;
       const path = `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`;
       const step = definition.student_control?.step;
       const onSlider = (value2) => {
@@ -16535,15 +16547,20 @@ function resolveMetNumberTargets(plan) {
         }
         return Number(reachable.toPrecision(12));
       };
-      const away = (candidates) => candidates.map(onSlider).find((value2) => Math.abs(value2 - activity.value) > activity.tolerance);
-      const reset = away([0, ...[definition.min, definition.max].sort((a, b) => Math.abs(b - activity.value) - Math.abs(a - activity.value))]);
+      const reset = [0, ...[definition.min, definition.max].sort((a, b) => Math.abs(b - activity.value) - Math.abs(a - activity.value))].map(onSlider).find((value2) => !met(value2));
       if (reset === void 0) fail2("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
-      const shown = definition.initial;
-      const created = lineCreations.get(number);
-      if (!created) continue;
-      definition.initial = reset;
-      created.moment.actions.push({ action: "animate", number, end_value: shown, easing: "ease_in_out", duration_intent: "normal", timing: "during_speech" });
-      section.moments.at(-1).actions.push({ action: "animate", number, end_value: reset, easing: "ease_in_out", duration_intent: "brief", timing: "after_speech" });
+      if (metAtStart) {
+        const shown = definition.initial;
+        definition.initial = reset;
+        const created = lineCreations.get(number);
+        if (created && !created.actions.some((action) => action.action === "animate" && action.number === number)) {
+          created.actions.push({ action: "animate", number, end_value: shown, easing: "ease_in_out", duration_intent: "normal", timing: "during_speech" });
+        }
+      }
+      if (met(valueAtEnd(number)) && !resetNumbers.has(number)) {
+        resetNumbers.add(number);
+        lastMoment.actions.push({ action: "animate", number, end_value: reset, easing: "ease_in_out", duration_intent: "brief", timing: "after_speech" });
+      }
     }
   }
 }

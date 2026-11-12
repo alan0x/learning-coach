@@ -186,7 +186,8 @@ test("the harness runs pairs and quality cases, keeps raw replies, judges each c
   assert.match(nl11.quality.hard.join(), /wrong value: 0\.3 is never shown/);
   assert.equal(nl11.quality.review, "later sections not judged: read by hand");
   assert.equal(full.summary.quality.near_misses_for_review.length, 4);
-  assert.equal(full.rows.filter((row) => row.kind === "near_miss" && row.quality).length, 0, "near misses are read by hand, not judged");
+  // Near misses are judged mechanically since the card excludes them: drawing the number line is a hard miss.
+  assert.ok(full.rows.filter((row) => row.kind === "near_miss").every((row) => row.quality?.hard[0] === "the number line was drawn for a request it cannot show"));
   // A budget too small for the plan is reported, never passed over.
   await run(3, join(dir, "short.json"));
   const short = JSON.parse(await readFile(join(dir, "short.json"), "utf8"));

@@ -21,6 +21,8 @@ const replay = (turn) => replayTurn(turn.replies.map((reply) => JSON.stringify(r
 // the wrong decimal scale (66,666,666,666.7) in the outline, which section retries cannot change.
 for (const turn of run5.turns) {
   const modelSlip = turn.case === "NL-18" && turn.pair === 55;
+  // Written under run 5's card, which did not ask for one step as the move (see the NL-10 test below).
+  if (turn.case === "NL-10") continue;
   test(`run 5 replay ${turn.case} (pair ${turn.pair}): ${modelSlip ? "the model's slip stays a miss" : "passes the hard checks"}`, async () => {
     const { lesson, error } = await replay(turn);
     if (modelSlip) { assert.equal(lesson, undefined); assert.match(error, /exhausted/); return; }
@@ -48,9 +50,51 @@ test("whole-number lessons get whole-number ticks however their derived slider s
   assert.ok(line.variables.every((variable) => variable.control.step === 1));
 });
 
-test("an open question: counting by fourths with whole values only (0, 1, 2) draws whole ticks", async () => {
-  // Nothing the model writes says "fourths" when every value is whole; a soft miss in run 5 (NL-10).
+test("counting by fourths with whole values only (run 5's card) never shows a fourth: a hard miss the new card addresses", async () => {
+  // Run 5's NL-10 moved 0 → 1 → 2. The card now asks for one step (0.25) as the move; run 6 measures it.
   const { lesson } = await replay(run5.turns.find((turn) => turn.case === "NL-10"));
-  assert.deepEqual(judgeNumberLine(caseById.get("NL-10"), numberLineLesson(lesson)).soft, ["1 parts, not 4"]);
+  const { hard, soft } = judgeNumberLine(caseById.get("NL-10"), numberLineLesson(lesson));
+  assert.match(hard.join(), /0\.25 is never shown/);
+  assert.deepEqual(soft, ["1 parts, not 4"]);
+});
+
+test("a target the lesson ends on: the line goes back to 0 after the last moment (run 5's NL-19 animated to 48, then asked for 48)", async () => {
+  const { lesson } = await replay(run5.turns.find((turn) => turn.pair === 28));
+  const line = numberLineLesson(lesson);
+  const change = line.variables[1];
+  assert.equal(change.initial, 0);
+  const moves = line.animations.filter(([variable]) => variable === change.as).map(([, value]) => value);
+  assert.equal(moves.at(-1), 0);
+  assert.deepEqual(line.tasks.map((task) => task.completion.value), [48]);
+  assert.ok(!judgeNumberLine(caseById.get("NL-19"), line).hard.some((miss) => /already met/.test(miss)));
+});
+
+test("a lesson of two sections: every compile of the growing lesson returns the line once, at the lesson's end", async () => {
+  // Run 5's NL-20 (17 + 26) planned two sections; the run stopped at the first. Its second section is
+  // written here in the model's format: it breaks 26 into 3 and 23, ends on 26, and asks for 26 again.
+  const turn = run5.turns.find((entry) => entry.pair === 43);
+  const second = {
+    moments: [
+      { narration: "Break 26 into friendly jumps: first 3, to reach 20.", delivery: "patient", animations: [{ timing: "during_speech", number: 2, end_value: { mantissa: 3, scale: 0 }, duration_intent: "normal" }] },
+      { narration: "Then 23 more: 26 in all, and we land on 43.", delivery: "encouraging", animations: [{ timing: "during_speech", number: 2, end_value: { mantissa: 26, scale: 0 }, duration_intent: "normal" }] },
+    ],
+    number_activities: [{ prompt: "Set the change to 26 once more.", hints: ["Move the slider to 26."], number: 2, value_mantissa: 26, value_scale: 0 }],
+  };
+  const replies = [...turn.replies, second].map((reply) => JSON.stringify(reply));
+  const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+  const prefixes = [];
+  let next = 0;
+  const generated = await generateLessonPlanWithModel(async () => replies[next++], { turn_id: "two-sections", learner_request: caseById.get("NL-20").prompt, input_modality: "text", request_source: "self_contained" }, {
+    on_playable_prefix: ({ compiled, completed_sections }) => prefixes.push({ sections: completed_sections, line: numberLineLesson(compiled.lesson) }),
+  });
+  assert.deepEqual(prefixes.map((prefix) => prefix.sections), [1, 2]);
+  for (const { line } of [...prefixes, { line: numberLineLesson(generated.lesson) }]) {
+    const change = line.variables[1];
+    const moves = line.animations.filter(([variable]) => variable === change.as).map(([, value]) => value);
+    assert.equal(change.initial, 0);
+    assert.equal(moves.filter((value) => value === 0).length, 1, `one return to 0: ${moves.join(", ")}`);
+    assert.equal(moves.at(-1), 0);
+    assert.ok(!judgeNumberLine(caseById.get("NL-20"), line).hard.some((miss) => /already met/.test(miss)));
+  }
 });
 

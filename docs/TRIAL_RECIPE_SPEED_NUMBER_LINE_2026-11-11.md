@@ -282,3 +282,20 @@ Owner-approved; 107 model calls (about $0.80); `eval/trial-recipe-speed-number-l
 
 **Run 6** needs the owner's approval. It runs the same cases and repeats, with the same gate and slip rule.
 
+### Before run 6: what Fable's review of the fixes found
+
+- **The card and the cases disagreed.** "Not for comparing two numbers" would have turned NL-07 ("compare 0.5 and 0.8") and NL-08 into misses.
+  - A comparison that fits a start plus a move stays in. The card instead excludes fractions over twelfths, which is what made "compare 2/3 and 3/5" unreadable.
+  - NM-01 to NM-04 now have a mechanical expectation: drawing a number line for one is a hard miss.
+  - NL-10 ("count by fourths") must show 0.25.
+- **A task met at the end of the lesson.**
+  - Option (a) first covered only a target equal to the starting value. In 4 of run 5's 40 turns (NL-10, NL-17 twice, NL-19), the lesson animated the number to the target and then asked for it. Every one passed silently.
+  - The reset now applies whenever the lesson ends on the target: once per number, after the last moment.
+  - The judge gains the hard check "practice task already met when it starts".
+  - A two-section lesson is tested through every partial compile.
+- **The speed criterion is noisy.**
+  - Bootstrapping the saved pairs, a version with no real cost exceeds the +0.5 s median about 1 time in 8 with 20 pairs (4–14% across runs 3–5), and still 10% with 60, because the pairs have heavy tails (−16.8 s to +9.6 s).
+  - Run 5's median of +1.0 s has a 95% interval of [−0.9 s, +2.1 s]: inconclusive, not evidence of a slowdown.
+  - The earlier claim that other-subject requests were slower *because of* the bigger prompt is withdrawn; ten pairs cannot show it.
+  - Runs 3 to 5 pooled (60 pairs): median −0.36 s.
+

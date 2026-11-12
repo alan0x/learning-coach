@@ -63,15 +63,15 @@ export const NUMBER_LINE_CASES = [
   { id: "NL-07", prompt: "在数轴上比较 0.5 和 0.8 哪个大。", expect: { values: [0.5, 0.8], parts: 10, format: "decimal" } },
   { id: "NL-08", prompt: "Why is -4 less than -1? Show it on a number line.", expect: { values: [-4, -1], integer: true } },
   { id: "NL-09", prompt: "从 1/3 出发，再加 2/3，在数轴上是多少？", expect: { values: [1 / 3, 1], parts: 3 } },
-  { id: "NL-10", prompt: "Count by fourths from 0 to 2 on a number line.", expect: { values: [0, 2], parts: 4 } },
+  { id: "NL-10", prompt: "Count by fourths from 0 to 2 on a number line.", expect: { values: [0, 0.25], parts: 4 } },
 ];
 
 /**
  * Quality cases, run once each on the candidate arm only (no speed pair), written before run 5:
  * - held-out number line requests no fix was tuned against (NL-11 to NL-18);
- * - near misses the recipe cannot express (NM-01 to NM-04): comparing two fractions, an
- *   inequality, rounding, an absolute value. A live lesson will meet them; if the model uses the
- *   recipe for one, the line is read by hand, and a misleading one is a hard failure.
+ * - near misses the recipe cannot express (NM-01 to NM-04): fifteenths (comparing 2/3 and 3/5), an
+ *   inequality, rounding, an absolute value. The recipe card excludes them (owner, after run 5), so
+ *   drawing a number line for one is a hard miss.
  */
 export const NUMBER_LINE_QUALITY_CASES = [
   { id: "NL-11", prompt: "在数轴上从 0.3 出发加 0.4 是多少？", expect: { values: [0.3, 0.7], parts: 10, format: "decimal" } },
@@ -84,10 +84,10 @@ export const NUMBER_LINE_QUALITY_CASES = [
   { id: "NL-18", prompt: "Show 2/3 - 1/3 on a number line.", expect: { values: [2 / 3, 1 / 3], parts: 3 } },
   { id: "NL-19", prompt: "用数轴算 23 + 48。", expect: { values: [23, 71], change: 48 } },
   { id: "NL-20", prompt: "Use an open number line to add 17 and 26.", expect: { values: [17, 43], change: 26 } },
-  { id: "NM-01", prompt: "用数轴比较 2/3 和 3/5 哪个大。", nearMiss: true },
-  { id: "NM-02", prompt: "Graph x > -2 on a number line.", nearMiss: true },
-  { id: "NM-03", prompt: "用数轴说明 47 四舍五入到十位是多少。", nearMiss: true },
-  { id: "NM-04", prompt: "Solve |x - 3| < 2 on a number line.", nearMiss: true },
+  { id: "NM-01", prompt: "用数轴比较 2/3 和 3/5 哪个大。", nearMiss: true, expect: { notRecipe: true } },
+  { id: "NM-02", prompt: "Graph x > -2 on a number line.", nearMiss: true, expect: { notRecipe: true } },
+  { id: "NM-03", prompt: "用数轴说明 47 四舍五入到十位是多少。", nearMiss: true, expect: { notRecipe: true } },
+  { id: "NM-04", prompt: "Solve |x - 3| < 2 on a number line.", nearMiss: true, expect: { notRecipe: true } },
 ];
 export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES };
 
@@ -167,12 +167,14 @@ export function numberLineStates({ content, variables, tasks, animations }) {
  * - hard: compiled; every value the question names is shown by a point in some state; the asked-for
  *   change is reachable (by an animation, or on the slider's grid from its minimum); and every visible point, in every state, sits on a tick the label policy
  *   labels, so its number is drawn (OLL draws a labelled tick under a point even when labels thin);
- * - hard, too: a question written in decimals is labelled in decimals;
+ * - hard, too: a question written in decimals is labelled in decimals, and no practice task is already
+ *   met when the lesson ends;
  * - soft: the parts per unit, and for integer questions a span of at most 24 units with hops.
  * Returns the lists of misses, empty when it passes.
  */
 export function judgeNumberLine(item, lesson) {
   const hard = [], soft = [];
+  if (item.expect?.notRecipe) return { hard: lesson ? ["the number line was drawn for a request it cannot show"] : [], soft };
   if (!lesson) return { hard: ["no number line"], soft };
   if (lesson.error) return { hard: [`compile error: ${String(lesson.error).slice(0, 80)}`], soft };
   const { content, variables, animations } = lesson;
@@ -192,6 +194,16 @@ export function judgeNumberLine(item, lesson) {
     const onSlider = change && change.min - 1e-9 <= expect.change && expect.change <= change.max + 1e-9
       && (!step || close(Math.round((expect.change - change.min) / step) * step + change.min, expect.change));
     if (!change || !(onSlider || animated.some((value) => close(value, expect.change)))) hard.push(`cannot reach ${expect.change}`);
+  }
+  // A practice task the learner finds already met (the lesson ended where the task points) has nothing to do.
+  const atEnd = new Map(variables.map((variable) => [variable.as, variable.initial]));
+  for (const [variable, value] of animations) atEnd.set(variable, value);
+  for (const task of lesson.tasks ?? []) {
+    const completion = task.completion ?? {};
+    const name = String(completion.expression ?? "").trim();
+    if (completion.kind === "expression_target" && atEnd.has(name) && Math.abs(atEnd.get(name) - completion.value) <= (completion.tolerance ?? 0)) {
+      hard.push(`practice task already met when it starts (${name} ends at ${Number(atEnd.get(name).toFixed(4))})`);
+    }
   }
   const labelled = planNumberLineTicks(content).filter((tick) => tick.label).map((tick) => tick.value);
   const visible = new Set((content.points ?? []).filter((point) => point.shown !== "when_emphasized").map((point) => point.as));

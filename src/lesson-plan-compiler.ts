@@ -321,32 +321,49 @@ function compilePlainContent(
 }
 
 /**
- * A practice target the number already starts at would be a task with nothing to do (the model set the
- * change to 0.75, then asked the learner to set it to 0.75).
- * On a number line, the line goes back to where it starts before the learner tries (owner, option a),
- * and the target stays the one the lesson is about. OLL rejects a task the starting values already
- * meet, so the number starts at 0 (or the end of its range farthest from the target), moves to the
- * value the lesson shows as the line appears, and returns after the last moment's speech. (Other visuals' targets are moved to the end
- * of the range when the model's reply is lowered, as before.)
+ * A practice task already met when the learner reaches it would have nothing to do. On a number line
+ * (owner, option a, after run 5), the line goes back to where it starts before the learner tries, and
+ * the target stays the one the lesson is about:
+ * - met at the end of the lesson (the model animated the change to 48, then asked for 48): the number
+ *   returns to 0 (or the end of its range farthest from the target) after the last moment's speech;
+ * - met by the starting value itself (the change starts at 0.75 and the task asks for 0.75), which OLL
+ *   rejects outright: the number also starts there, and moves to the value the lesson shows as soon
+ *   as its line appears (unless that moment already animates it).
+ * Other visuals' targets are moved to the end of the range when the model's reply is lowered, as before.
+ * The plan is the compiler's own copy, so each compile of a growing lesson does this once.
  */
 function resolveMetNumberTargets(plan: LessonPlan): void {
   const lineNumbers = new Set<number>();
   // Where each number's line is first drawn, so the number can move there as the line appears.
-  const lineCreations = new Map<number, { moment: LessonPlan["sections"][number]["moments"][number] }>();
+  const lineCreations = new Map<number, LessonPlan["sections"][number]["moments"][number]>();
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "number_line") {
       for (const number of (action.content as LessonPlanVisualContent).numbers ?? []) {
         lineNumbers.add(number);
-        if (!lineCreations.has(number)) lineCreations.set(number, { moment });
+        if (!lineCreations.has(number)) lineCreations.set(number, moment);
       }
     }
   }
+  const lastMoment = plan.sections.at(-1)?.moments.at(-1);
+  // One return per number, however many of its tasks the lesson's end would meet.
+  const resetNumbers = new Set<number>();
+  // A number's value when the lesson ends: its starting value, then each animation in order.
+  const valueAtEnd = (number: number) => {
+    let value = plan.numbers![number - 1]!.initial;
+    for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+      if (action.action === "animate" && action.number === number) value = action.end_value;
+    }
+    return value;
+  };
   for (const [sectionIndex, section] of plan.sections.entries()) {
     for (const [activityIndex, activity] of (section.student_activities ?? []).entries()) {
       if (activity.kind !== "number_target" || activity.expression || activity.number_controls.length !== 1) continue;
       const number = activity.number_controls[0]!.number;
       const definition = plan.numbers?.[number - 1];
-      if (!lineNumbers.has(number) || !definition || Math.abs(activity.value - definition.initial) > activity.tolerance) continue;
+      if (!lineNumbers.has(number) || !definition || !lastMoment) continue;
+      const met = (value: number) => Math.abs(activity.value - value) <= activity.tolerance;
+      const metAtStart = met(definition.initial);
+      if (!metAtStart && !met(valueAtEnd(number))) continue;
       const path = `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`;
       const step = definition.student_control?.step;
       const onSlider = (value: number) => {
@@ -356,18 +373,22 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
         }
         return Number(reachable.toPrecision(12));
       };
-      const away = (candidates: number[]) => candidates.map(onSlider).find((value) => Math.abs(value - activity.value) > activity.tolerance);
-      const reset = away([0, ...[definition.min, definition.max].sort((a, b) => Math.abs(b - activity.value) - Math.abs(a - activity.value))]);
+      const reset = [0, ...[definition.min, definition.max].sort((a, b) => Math.abs(b - activity.value) - Math.abs(a - activity.value))]
+        .map(onSlider).find((value) => !met(value));
       if (reset === undefined) fail("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
-      // OLL rejects a task the starting values already meet, so the number starts at the reset value,
-      // moves to what the lesson shows as soon as the line appears, and comes back for the learner.
-      const shown = definition.initial;
-      const created = lineCreations.get(number);
-      if (!created) continue;
-      definition.initial = reset;
-      // Appended, never inserted: references were recorded by each action's position.
-      created.moment.actions.push({ action: "animate", number, end_value: shown, easing: "ease_in_out", duration_intent: "normal", timing: "during_speech" });
-      section.moments.at(-1)!.actions.push({ action: "animate", number, end_value: reset, easing: "ease_in_out", duration_intent: "brief", timing: "after_speech" });
+      if (metAtStart) {
+        const shown = definition.initial;
+        definition.initial = reset;
+        // Appended, never inserted: references were recorded by each action's position.
+        const created = lineCreations.get(number);
+        if (created && !created.actions.some((action) => action.action === "animate" && action.number === number)) {
+          created.actions.push({ action: "animate", number, end_value: shown, easing: "ease_in_out", duration_intent: "normal", timing: "during_speech" });
+        }
+      }
+      if (met(valueAtEnd(number)) && !resetNumbers.has(number)) {
+        resetNumbers.add(number);
+        lastMoment.actions.push({ action: "animate", number, end_value: reset, easing: "ease_in_out", duration_intent: "brief", timing: "after_speech" });
+      }
     }
   }
 }
