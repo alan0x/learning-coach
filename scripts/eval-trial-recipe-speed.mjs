@@ -103,7 +103,20 @@ export const NUMBER_LINE_COMPARE_CASES = [
   { id: "CMP-04", prompt: "Compare 0.35 and 0.4 on a number line.", expect: { values: [0.35, 0.4], format: "decimal" } },
   { id: "CMP-05", prompt: "比较 -3 和 2，哪个数在数轴上更靠右？", expect: { values: [-3, 2] } },
 ];
-export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES };
+/**
+ * Solution sets (decision 0016, number_line_solution), written before the recipe or any probe. Beyond
+ * the boundary values, `solution` gives the exact set: each piece's ends (null: the ray runs on) and
+ * whether each end is included (a filled circle) or not (an open one). SOL-06 must be solved first.
+ */
+export const NUMBER_LINE_SOLUTION_CASES = [
+  { id: "SOL-01", prompt: "Graph x > -2 on a number line.", expect: { values: [-2], solution: [{ from: -2, to: null, fromClosed: false }] } },
+  { id: "SOL-02", prompt: "在数轴上表示 x ≤ 3 的解集。", expect: { values: [3], solution: [{ from: null, to: 3, toClosed: true }] } },
+  { id: "SOL-03", prompt: "Show the solution of 1 < x ≤ 4 on a number line.", expect: { values: [1, 4], solution: [{ from: 1, to: 4, fromClosed: false, toClosed: true }] } },
+  { id: "SOL-04", prompt: "用数轴表示 |x − 3| < 2 的解。", expect: { values: [1, 5], solution: [{ from: 1, to: 5, fromClosed: false, toClosed: false }] } },
+  { id: "SOL-05", prompt: "Graph the solution of x < -1 or x ≥ 2 on a number line.", expect: { values: [-1, 2], solution: [{ from: null, to: -1, toClosed: false }, { from: 2, to: null, fromClosed: true }] } },
+  { id: "SOL-06", prompt: "解不等式 2x + 1 > 7，并在数轴上表示解集。", expect: { values: [3], solution: [{ from: 3, to: null, fromClosed: false }] } },
+];
+export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES };
 
 /** The requests each trial recipe fits. */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
