@@ -458,3 +458,8 @@ A DOM probe settled run 6's puzzling screenshot: the board does redraw a point a
 
 **Design note.** The baseline arm was added so "worse than today" could be measured, but near misses were still judged by the same one-slip rule as in-scope lessons. Whether out-of-scope requests must never mislead, or only be no worse than today, is the owner's question. It was not settled before the run.
 
+### Owner decisions after run 8 (2026-11-12)
+
+1. **Requests the number line cannot show yet must never mislead** (option b). The recipe is extended to show them (inequalities, intervals, comparing two numbers, rounding) through a decision record before any code, then probes and a gate run. The recipe stays a trial until then.
+2. **The model-number scale fix's payload ceiling raise** (+15–30 B schema) is a one-off exception to decision S6, with no live comparison (option a).
+
