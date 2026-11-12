@@ -7,7 +7,7 @@
 //   LEARNING_COACH_TRIAL_RECIPES=number_line node scripts/replay-trial-recipe.mjs --report <run.json> --work <dir> [--json]
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, judgeNumberLine, numberLineLesson, slipVerdict } from "./eval-trial-recipe-speed.mjs";
+import { TRIAL_CASES, TRIAL_QUALITY_CASES, judgeNumberLine, numberLineLesson, slipVerdict } from "./eval-trial-recipe-speed.mjs";
 
 const { generateLessonPlanWithModel, modelTextFromRawReply } = await import(new URL("../lesson-plan.js", import.meta.url));
 
@@ -47,7 +47,8 @@ async function main() {
   const report = JSON.parse(await readFile(option("--report"), "utf8"));
   const work = option("--work");
   const files = await readdir(work);
-  const cases = new Map([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES].map((item) => [item.id, item]));
+  // Every trial recipe's cases, so a probe offering several recipes is judged in full.
+  const cases = new Map([...Object.values(TRIAL_CASES).flat(), ...Object.values(TRIAL_QUALITY_CASES).flat()].map((item) => [item.id, item]));
   const { caseLanguage } = await import("./eval-shadow-speed.mjs");
   const judged = [];
   for (const row of report.rows.filter((entry) => entry.arm === "candidate" && cases.get(entry.case)?.expect)) {

@@ -16134,9 +16134,14 @@ function numberLineLabelStyle(content, path) {
   }
   return { title: input.title, labelStyle: input.label_style };
 }
-function numberLineFrame(values, grid, shown, labelStyle, path) {
-  const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
-  const max = Math.ceil(Math.max(...values, 0)) + 1;
+function numberLineFrame(values, grid, shown, labelStyle, path, fit = "margin") {
+  let min = fit === "tight" ? Math.floor(Math.min(...values) + 1e-9) : Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
+  let max = fit === "tight" ? Math.ceil(Math.max(...values) - 1e-9) : Math.ceil(Math.max(...values, 0)) + 1;
+  if (fit === "tight") {
+    if (min > 0 && min <= 2) min = 0;
+    if (max < 0 && max >= -2) max = 0;
+    if (max <= min) max = min + 1;
+  }
   const span2 = max - min;
   const holdAll = (count, of) => of.every((value2) => onGrid(value2 / count, 1));
   const ticksFor = (of) => {
@@ -16175,7 +16180,7 @@ function compileNumberLineCompare(base, content, role, placement, plan, path) {
   const values = [first.min, first.max, first.initial, second.min, second.max, second.initial];
   const steps = [first.student_control?.step, second.student_control?.step].filter((step) => typeof step === "number" && step > 0);
   const shown = [first.initial, ...lessonValues(plan, firstNumber), second.initial, ...lessonValues(plan, secondNumber)];
-  const frame = numberLineFrame(values, [...values, ...steps], shown, labelStyle, path);
+  const frame = numberLineFrame(values, [...values, ...steps], shown, labelStyle, path, "tight");
   const point = (as, number, definition) => ({
     as,
     value: { expression: variableAlias(number), initial: definition.initial },

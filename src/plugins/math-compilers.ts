@@ -576,9 +576,17 @@ function numberLineLabelStyle(content: LessonPlanVisualContent, path: string): {
  * - values no ticks can hold are refused as a fault the outline owns (they and the visual were chosen
  *   there), so the outline is asked again without the number line.
  */
-function numberLineFrame(values: readonly number[], grid: readonly number[], shown: readonly number[], labelStyle: unknown, path: string) {
-  const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
-  const max = Math.ceil(Math.max(...values, 0)) + 1;
+function numberLineFrame(values: readonly number[], grid: readonly number[], shown: readonly number[], labelStyle: unknown, path: string, fit: "margin" | "tight" = "margin") {
+  // "margin": a unit around 0 and the values, room for a move to land. "tight" (a comparison): only the
+  // whole units the values span, so close values stand apart (5/6 and 7/8 on 0–1, not −1–2), widened to
+  // include 0 when it is within 2 units, which orients negatives.
+  let min = fit === "tight" ? Math.floor(Math.min(...values) + 1e-9) : Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
+  let max = fit === "tight" ? Math.ceil(Math.max(...values) - 1e-9) : Math.ceil(Math.max(...values, 0)) + 1;
+  if (fit === "tight") {
+    if (min > 0 && min <= 2) min = 0;
+    if (max < 0 && max >= -2) max = 0;
+    if (max <= min) max = min + 1;
+  }
   const span = max - min;
   const holdAll = (count: number, of: readonly number[]) => of.every((value) => onGrid(value / count, 1));
   const ticksFor = (of: readonly number[]) => {
@@ -623,7 +631,7 @@ function compileNumberLineCompare(
   const values = [first.min, first.max, first.initial, second.min, second.max, second.initial];
   const steps = [first.student_control?.step, second.student_control?.step].filter((step): step is number => typeof step === "number" && step > 0);
   const shown = [first.initial, ...lessonValues(plan, firstNumber), second.initial, ...lessonValues(plan, secondNumber)];
-  const frame = numberLineFrame(values, [...values, ...steps], shown, labelStyle, path);
+  const frame = numberLineFrame(values, [...values, ...steps], shown, labelStyle, path, "tight");
   const point = (as: string, number: number, definition: typeof first) => ({
     as, value: { expression: variableAlias(number), initial: definition.initial },
     label: definition.label?.trim() || compileText(plan, "数值"),
