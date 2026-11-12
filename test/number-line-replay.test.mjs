@@ -1,7 +1,7 @@
 // Number line lessons through the real path, from the model's reply to the lesson. The trial recipe
 // is offered only when LEARNING_COACH_TRIAL_RECIPES names it, which Coach reads as it loads; this file
 // sets it first (the recipe tests check the default in their own process).
-process.env.LEARNING_COACH_TRIAL_RECIPES = "number_line";
+process.env.LEARNING_COACH_TRIAL_RECIPES = "number_line,number_line_compare";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
@@ -10,9 +10,9 @@ import test from "node:test";
 // (span / 200). These tests go through the real path, from the model's reply to the lesson, with the
 // replies recorded in speed check run 5 (2026-11-11), so they see what a live lesson sees.
 const { replayTurn } = await import(new URL("../scripts/replay-trial-recipe.mjs", import.meta.url));
-const { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, judgeNumberLine, numberLineLesson } = await import(new URL("../scripts/eval-trial-recipe-speed.mjs", import.meta.url));
+const { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, NUMBER_LINE_COMPARE_CASES, judgeNumberLine, numberLineLesson } = await import(new URL("../scripts/eval-trial-recipe-speed.mjs", import.meta.url));
 const run5 = JSON.parse(await readFile(new URL("./fixtures/number-line-run5-replies.json", import.meta.url), "utf8"));
-const caseById = new Map([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES].map((item) => [item.id, item]));
+const caseById = new Map([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES, ...NUMBER_LINE_COMPARE_CASES].map((item) => [item.id, item]));
 const replay = (turn) => replayTurn(turn.replies.map((reply) => JSON.stringify(reply)), caseById.get(turn.case).prompt);
 
 // Run 5's turns, judged as the live run judged them. 29 of 40 passed live; every unreadable line was the
@@ -116,10 +116,38 @@ test("a starting value at the wrong scale is refused in the outline, where a ret
   assert.match(rejected[0].error.message, /mantissa and scale/);
 });
 
-// Run 7: faults only the outline can fix. "Compare 2/3 and 3/5" needs fifteenths, and an outline declared
+// Run 7: faults only the outline can fix. "Compare 2/3 and 3/5" needed fifteenths (now with 3/5 replaced by 1/25: 75ths), and an outline declared
 // no numbers for its number line; each failed three times at section 1, where retries can only rewrite
 // the section. Now the bootstrap is rejected and the outline is asked again, without the number line.
-const run7 = JSON.parse(await readFile(new URL("./fixtures/number-line-run7-outline-faults.json", import.meta.url), "utf8"));
+
+// Decision 0016 lets a unit split into 24 parts, so 2/3 and 3/5 (fifteenths) now draw. The tests of the
+// "too fine for the ticks" path keep the recorded replies but replace 3/5 (written as 0.6, or as the
+// difference 1/15) with 1/25: 2/3 and 1/25 need 75ths, still beyond 24.
+const tooFine = (replies) => {
+  const value = (mantissa, scale) => Number(mantissa) / 10 ** Number(scale);
+  const swap = (mantissa, scale) => {
+    const v = value(mantissa, scale);
+    return Math.abs(v - 0.6) < 1e-6 || Math.abs(v - 1 / 15) < 1e-3 ? [4, 2] : undefined;
+  };
+  const walk = (node) => {
+    if (!node || typeof node !== "object") return node;
+    if ("mantissa" in node && "scale" in node) {
+      const replaced = swap(node.mantissa, node.scale);
+      if (replaced) { node.mantissa = replaced[0]; node.scale = replaced[1]; }
+    }
+    for (const [key, child] of Object.entries(node)) {
+      if (key.endsWith("_mantissa")) {
+        const scaleKey = key.replace(/_mantissa$/u, "_scale");
+        const replaced = swap(child, node[scaleKey]);
+        if (replaced) { node[key] = replaced[0]; node[scaleKey] = replaced[1]; }
+      } else walk(child);
+    }
+    return node;
+  };
+  return replies.map((reply) => walk(structuredClone(reply)));
+};
+const run7Recorded = JSON.parse(await readFile(new URL("./fixtures/number-line-run7-outline-faults.json", import.meta.url), "utf8"));
+const run7 = { ...run7Recorded, turns: run7Recorded.turns.map((turn) => (turn.case === "NM-01" ? { ...turn, replies: tooFine(turn.replies) } : turn)) };
 for (const turn of run7.turns) {
   test(`run 7 ${turn.case} (pair ${turn.pair}): a fault the outline owns asks for a new outline without the number line`, async () => {
     const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
@@ -153,7 +181,8 @@ for (const turn of run7.turns) {
 test("a visual whose own range clamps a task onto its starting value moves the task's target (probe 3: unit squares 15 → 20, both capped)", async () => {
   // The fallback outline chose a unit-square array: 15 squares, task "set it to 20". The array caps its
   // count, so both became the same and OLL rejected the task as already met, three times over.
-  const fixture = JSON.parse(await readFile(new URL("./fixtures/clamped-met-target-replies.json", import.meta.url), "utf8"));
+  const recorded = JSON.parse(await readFile(new URL("./fixtures/clamped-met-target-replies.json", import.meta.url), "utf8"));
+  const fixture = { ...recorded, replies: tooFine(recorded.replies) };
   const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
   let next = 0;
   let lesson;
@@ -209,5 +238,91 @@ test("logger, capture and replay agree: streamed (pretty-printed) and envelope r
   const streamed = recordedReplies(api.frameRawReply({ provider: "google", label: "lesson-plan-bootstrap", kind: "content", body: JSON.stringify(first.replies[0], null, 2) }).slice(api.RAW_REPLY_PREFIX.length));
   const { lesson } = await replay({ ...first, replies: streamed.map((text) => JSON.parse(text)) });
   assert.deepEqual(judgeNumberLine(caseById.get("NL-01"), numberLineLesson(lesson)).hard, []);
+});
+
+// Decision 0016: comparing two numbers (number_line_compare). Built from run 5's "compare 0.5 and 0.8"
+// reply: the outline asks for number_comparison, and its two numbers are the two compared values.
+const compareReply = (first, second, extra = {}) => {
+  const turn = run5.turns.find((entry) => entry.case === "NL-07");
+  const reply = structuredClone(turn.replies[0]);
+  const decimal = (value) => {
+    for (let scale = 0; scale <= 12; scale += 1) if (Math.abs(Math.round(value * 10 ** scale) - value * 10 ** scale) < 1e-6) return { mantissa: Math.round(value * 10 ** scale), scale };
+    return { mantissa: Math.round(value * 1e12), scale: 12 };
+  };
+  reply.course.outline.numbers = [first, second].map(([value, label]) => ({ initial: decimal(value), min: { mantissa: 0, scale: 0 }, max: { mantissa: 1, scale: 0 }, label, unit: "" }));
+  reply.course.outline.course_visuals[0].required_features = ["number_line", "number_comparison"];
+  const section = reply.course.first_section;
+  for (const moment of section.moments) delete moment.animations;
+  section.number_activities = extra.activities ?? section.number_activities.map((activity) => ({ ...activity, number: 2, value_mantissa: decimal(second[0]).mantissa, value_scale: decimal(second[0]).scale }));
+  return reply;
+};
+const compileCompare = async (reply, prompt) => {
+  const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+  let lesson;
+  await assert.rejects(generateLessonPlanWithModel(async () => JSON.stringify(reply), { turn_id: "compare", learner_request: prompt, input_modality: "text", request_source: "self_contained" }, {
+    on_playable_prefix: ({ compiled }) => { lesson = compiled.lesson; throw new Error("first playable"); },
+  }), /first playable/);
+  return lesson;
+};
+
+test("comparing 0.5 and 0.8: two points on tenths, labelled in decimals, and the line returns before the learner's turn", async () => {
+  const lesson = await compileCompare(compareReply([0.5, "0.5"], [0.8, "0.8"]), caseById.get("NL-07").prompt);
+  const line = numberLineLesson(lesson);
+  assert.deepEqual(line.content.points.map((point) => [point.as, point.label]), [["first", "0.5"], ["second", "0.8"]]);
+  assert.deepEqual([line.content.ticks.subdivisions, line.content.ticks.format], [10, "decimal"]);
+  assert.deepEqual(judgeNumberLine(caseById.get("NL-07"), line).hard, []);
+  // The recorded task asks for 0.8, where the second number starts: it starts at 0, moves to 0.8 as
+  // the line appears, and returns for the learner (owner's option a, through the family safeguard).
+  const second = line.variables[1];
+  assert.equal(second.initial, 0);
+  assert.deepEqual(line.animations.filter(([variable]) => variable === second.as).map(([, value]) => value), [0.8, 0]);
+});
+
+test("comparing 2/3 and 3/5 shares fifteenths; 5/6 and 7/8 share 24ths (decision 0016)", async () => {
+  const fifteenths = numberLineLesson(await compileCompare(compareReply([2 / 3, "2/3"], [0.6, "3/5"], { activities: [] }), "用数轴比较 2/3 和 3/5 哪个大。"));
+  assert.equal(fifteenths.content.ticks.subdivisions, 15);
+  assert.deepEqual(judgeNumberLine({ expect: { values: [2 / 3, 0.6] } }, fifteenths).hard, []);
+  const twentyFourths = numberLineLesson(await compileCompare(compareReply([5 / 6, "5/6"], [7 / 8, "7/8"], { activities: [] }), caseById.get("CMP-03").prompt));
+  assert.equal(twentyFourths.content.ticks.subdivisions, 24);
+  assert.deepEqual(judgeNumberLine(caseById.get("CMP-03"), twentyFourths).hard, []);
+});
+
+// Review of #67: different requested values must never become one point. 0.66 is 2/3 cut to two places
+// and 0.67 is 2/3 rounded; 0.166 and 0.167 the same for 1/6. Snapped to 2/3 (1/6), they would coincide
+// while keeping their own labels. The fit keeps them as written, and the line, which no grid up to 24
+// parts can draw them on, is refused: the outline is asked again without the number line.
+for (const [low, high] of [[0.66, 0.67], [0.166, 0.167]]) {
+  for (const decimalQuestion of [true, false]) {
+    test(`comparing ${low} and ${high}${decimalQuestion ? " in a decimal question" : ""}: never one point; refused at the outline (review of #67)`, async () => {
+      const reply = compareReply([low, String(low)], [high, String(high)], { activities: [] });
+      const parameters = reply.course.first_section.moments[0].visual_creates[0].content.parameters;
+      if (decimalQuestion) parameters.label_style = "decimal"; else delete parameters.label_style;
+      const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+      const rejected = [];
+      const labels = [];
+      let drawn;
+      await assert.rejects(generateLessonPlanWithModel(async (request) => {
+        labels.push(request.label);
+        if (request.label === "lesson-plan-bootstrap") return JSON.stringify(reply);
+        throw new Error(`stop: ${request.label}`);
+      }, { turn_id: "literal", learner_request: `Compare ${low} and ${high} on a number line.`, input_modality: "text", request_source: "self_contained" }, {
+        on_rejected_part: (event) => rejected.push(event.error.code),
+        on_playable_prefix: ({ compiled }) => { drawn = numberLineLesson(compiled.lesson); },
+      }), /stop: lesson-plan-outline/);
+      assert.equal(drawn, undefined, "no lesson with coincident points is published");
+      assert.deepEqual(labels, ["lesson-plan-bootstrap", "lesson-plan-outline"]);
+      assert.ok(rejected.includes("LESSON_PLAN_OUTLINE_VISUAL"), rejected.join());
+    });
+  }
+}
+
+test("fraction recovery still works where it is unambiguous: 0.8333 and 0.875 (5/6 and 7/8) on 24ths", async () => {
+  // A fraction question (no decimal labels), as the model wrote it in compare probe 1.
+  const reply = compareReply([0.8333, "5/6"], [0.875, "7/8"], { activities: [] });
+  delete reply.course.first_section.moments[0].visual_creates[0].content.parameters.label_style;
+  const line = numberLineLesson(await compileCompare(reply, caseById.get("CMP-03").prompt));
+  assert.equal(line.content.ticks.subdivisions, 24);
+  const values = line.variables.map((variable) => variable.initial);
+  assert.ok(Math.abs(values[0] - 5 / 6) < 1e-9 && Math.abs(values[1] - 7 / 8) < 1e-9, JSON.stringify(values));
 });
 

@@ -2515,9 +2515,11 @@ export async function generateLessonPlanWithModel(
   // so the worst case is the lesson the request gets without them.
   const excludedCapabilities = new Set<string>();
   // A fault only the outline can fix comes from a number line (values its ticks cannot hold, or no lesson
-  // numbers): the outline is asked again without the number-line recipes it used.
+  // numbers). Every recipe in the family draws the same line from the same numbers, so the outline is
+  // asked again without any of them: the worst case is the lesson the request gets without a number line.
   const excludeNumberLines = (from: LessonPlanOutline) => {
-    for (const capability of outlineCapabilities(from)) if (isNumberLineCapability(capability)) excludedCapabilities.add(capability);
+    if (![...outlineCapabilities(from)].some((capability) => isNumberLineCapability(capability))) return;
+    for (const capability of LESSON_PLAN_CAPABILITY_NAMES) if (isNumberLineCapability(capability)) excludedCapabilities.add(capability);
   };
   let outlineError: unknown;
   let stableCameraObservation: CameraLessonObservation | undefined;

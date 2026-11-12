@@ -8365,7 +8365,8 @@ var NUMBER_LINE_LIMITS = {
   intervals: 4,
   /** Smallest ticks across the whole range. */
   ticks: 240,
-  subdivisions: 12,
+  // 24 parts per unit, so two fractions such as 2/3 and 3/5 share fifteenths (0016).
+  subdivisions: 24,
   denominator: 1e3,
   /** A jump drawn hop by hop has at most this many hops. */
   hops: 24
@@ -12001,7 +12002,23 @@ var MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line"],
-    model_guidance: "\u6570\u8F74\uFF1A\u8D77\u70B9\u52A0\u4E00\u6B21\u79FB\u52A8\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF09\u3002a + b\uFF1A\u8D77\u70B9 a\uFF0C\u79FB\u52A8 b\uFF1B\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u8D77\u70B9\u662F\u8F83\u5C0F\u7684\u6570\uFF0C\u79FB\u52A8\u662F\u5DEE\uFF1B\u95EE\u4E00\u4E2A\u6570\u7684\u4F4D\u7F6E\uFF1A\u8D77\u70B9 0\uFF1B\u6309\u5206\u6570\u6570\u6570\uFF1A\u79FB\u52A8\u5199\u4E00\u6B65\uFF080.25\uFF09\u3002\u9898\u76EE\u5199\u5C0F\u6570\u65F6 label_style \u7528 decimal\u3002\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5F0F\u3001\u7EDD\u5BF9\u503C\u3001\u56DB\u820D\u4E94\u5165\u3001\u5206\u6BCD\u5927\u4E8E 12 \u7684\u5206\u6570\u6216\u51FD\u6570\u56FE\u50CF"
+    model_guidance: "\u6570\u8F74\uFF1A\u8D77\u70B9\u52A0\u4E00\u6B21\u79FB\u52A8\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF09\u3002a + b\uFF1A\u8D77\u70B9 a\uFF0C\u79FB\u52A8 b\uFF1B\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u8D77\u70B9\u662F\u8F83\u5C0F\u7684\u6570\uFF0C\u79FB\u52A8\u662F\u5DEE\uFF1B\u95EE\u4E00\u4E2A\u6570\u7684\u4F4D\u7F6E\uFF1A\u8D77\u70B9 0\uFF1B\u6309\u5206\u6570\u6570\u6570\uFF1A\u79FB\u52A8\u5199\u4E00\u6B65\uFF080.25\uFF09\u3002\u9898\u76EE\u5199\u5C0F\u6570\u65F6 label_style \u7528 decimal\u3002\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5F0F\u3001\u7EDD\u5BF9\u503C\u3001\u56DB\u820D\u4E94\u5165\u6216\u51FD\u6570\u56FE\u50CF"
+  },
+  // Decision 0016: comparing two numbers. Each is a point; the ticks hold both (their common
+  // denominator, up to 24 parts per unit). The shared rules (actual size, label_style) are on the
+  // number line's card; this card adds one line.
+  number_line_compare: {
+    parts: ["whole", "first", "second", "primary_control"],
+    number_inputs: ["first", "second"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: ["title", "label_style"],
+    model_parameter_names: ["title", "label_style"],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["number_line"],
+    student_controls: ["slider"],
+    required_features: ["number_line", "number_comparison"],
+    model_guidance: "\u6570\u8F74\u6BD4\u8F83\uFF1A\u4E24\u4E2A\u6570\u503C\u662F\u8981\u6BD4\u8F83\u7684\u4E24\u4E2A\u6570\uFF0C\u5404\u753B\u4E00\u70B9\uFF082/3 \u548C 3/5 \u4E5F\u80FD\u753B\uFF09"
   }
 };
 var text2 = { type: "string" };
@@ -12030,7 +12047,8 @@ var MATH_SCHEMA_PROPERTIES = {
     leg_b: { type: "number", minimum: 0 }
   },
   circle_area_rearrangement: { radius: { type: "number", minimum: 0 } },
-  number_line: { label_style: { enum: ["decimal", "fraction"] } }
+  number_line: { label_style: { enum: ["decimal", "fraction"] } },
+  number_line_compare: { label_style: { enum: ["decimal", "fraction"] } }
 };
 var MATH_PLUGIN = {
   // The manifest and the Jev subject line are the OLL shared layer's.
@@ -12402,7 +12420,7 @@ var RECIPE_CATALOG_ORDER = [
   "circle_area_rearrangement",
   "process_diagram"
 ];
-var TRIAL_RECIPES = ["constant_speed_motion", "number_line"];
+var TRIAL_RECIPES = ["constant_speed_motion", "number_line", "number_line_compare"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -12859,9 +12877,49 @@ var near2 = (value2, grid) => Math.abs(value2 - Math.round(value2 / grid) * grid
 var snap = (value2, grid) => Number((Math.round(value2 / grid) * grid).toPrecision(12));
 var floorTo = (value2, grid) => Number((Math.ceil(value2 / grid - 1e-9) * grid).toPrecision(12));
 var ceilTo = (value2, grid) => Number((Math.floor(value2 / grid + 1e-9) * grid).toPrecision(12));
-function inferDenominator(values) {
-  for (let denominator = 1; denominator <= 12; denominator += 1) {
-    if (values.every((value2) => near2(value2, 1 / denominator))) return denominator;
+var gcd2 = (a, b) => b === 0 ? a : gcd2(b, a % b);
+var repeats = (numerator, denominator) => {
+  let rest = denominator / gcd2(Math.abs(numerator), denominator);
+  for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime;
+  return rest !== 1;
+};
+var exactlyOn = (value2, denominator) => Math.abs(value2 * denominator - Math.round(value2 * denominator)) <= 1e-9 * Math.max(1, Math.abs(value2 * denominator));
+var decimalPlaces2 = (value2) => {
+  const text3 = String(Math.abs(value2));
+  if (text3.includes("e")) return 0;
+  return text3.includes(".") ? text3.length - text3.indexOf(".") - 1 : 0;
+};
+var roundedFrom = (value2, denominator) => {
+  const places = decimalPlaces2(value2);
+  if (places < 2 || places > 12) return false;
+  const numerator = Math.round(value2 * denominator);
+  if (!repeats(numerator, denominator)) return false;
+  const lowest = denominator / gcd2(Math.abs(numerator), denominator);
+  if (places === 2 && lowest !== 3 && lowest !== 6) return false;
+  const exact = numerator / denominator;
+  const scale = 10 ** places;
+  return Math.abs(value2 - Number(exact.toFixed(places))) < 0.5 / scale / 1e3 || Math.abs(value2 - Math.trunc(exact * scale) / scale) < 0.5 / scale / 1e3;
+};
+function valuesGrid(values, content) {
+  const literal = content.parameters?.label_style === "decimal";
+  const denominator = inferDenominator(values, { approximate: !literal });
+  if (!denominator) return void 0;
+  const grid = 1 / denominator;
+  const snapped = values.map((value2) => snap(value2, grid));
+  for (let i = 0; i < values.length; i += 1) for (let j = i + 1; j < values.length; j += 1) {
+    const written = Math.sign(Number((values[i] - values[j]).toPrecision(12)));
+    const drawn = Math.sign(Number((snapped[i] - snapped[j]).toPrecision(12)));
+    if (written !== drawn) return void 0;
+  }
+  return denominator;
+}
+function inferDenominator(values, { approximate = true } = {}) {
+  for (let denominator = 1; denominator <= 24; denominator += 1) {
+    if (values.every((value2) => exactlyOn(value2, denominator))) return denominator;
+  }
+  if (!approximate) return void 0;
+  for (let denominator = 1; denominator <= 24; denominator += 1) {
+    if (values.every((value2) => exactlyOn(value2, denominator) || roundedFrom(value2, denominator))) return denominator;
   }
   return void 0;
 }
@@ -12893,7 +12951,7 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
   const changeValues = change ? [change.initial, ...lessonValues(plan, changeIndex)] : [];
   const shown = [...startValues, ...changeValues.map((value2) => start.initial + value2)];
   const values = [...startValues, ...changeValues];
-  const denominator = inferDenominator(values);
+  const denominator = valuesGrid(values, content);
   let grid = denominator ? 1 / denominator : void 0;
   const withZero = [0, ...shown];
   const used = Math.ceil(Math.max(...withZero)) - Math.floor(Math.min(...withZero)) + 2 <= MAX_WINDOW ? withZero : shown;
@@ -12953,6 +13011,40 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
   const step = grid ?? 0;
   fitted.set(startIndex, step);
   if (changeIndex && change) fitted.set(changeIndex, step);
+  return fitted;
+}
+function fitComparedNumbers(content, plan, sharedNumbers) {
+  const fitted = /* @__PURE__ */ new Map();
+  const indexes = (content.numbers ?? []).slice(0, 2);
+  if (indexes.length < 2 || !plan.numbers || indexes.some((index) => sharedNumbers.has(index))) return fitted;
+  const ours = new Set(indexes);
+  const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) => activity.kind === "number_target" && activity.expression !== void 0 && (activity.number_controls.some((control) => ours.has(control.number)) || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
+  if (expressionTask) return fitted;
+  const definitions = indexes.map((index) => plan.numbers[index - 1]);
+  if (definitions.some((definition) => !definition)) return fitted;
+  const values = indexes.flatMap((index, position) => [definitions[position].initial, ...lessonValues(plan, index)]);
+  const denominator = valuesGrid(values, content);
+  if (!denominator) return fitted;
+  const grid = 1 / denominator;
+  const low = Math.floor(Math.min(...values) + 1e-9);
+  const high = Math.max(low + 1, Math.ceil(Math.max(...values) - 1e-9));
+  const original = definitions.map((definition) => structuredClone(definition));
+  for (const [position, definition] of definitions.entries()) {
+    const own = [definition.initial, ...lessonValues(plan, indexes[position])].map((value2) => snap(value2, grid));
+    definition.initial = snap(definition.initial, grid);
+    if (definition.student_control) definition.student_control.step = grid;
+    definition.min = floorTo(Math.max(definition.min, Math.min(low, ...own)), grid);
+    definition.max = ceilTo(Math.min(definition.max, Math.max(high, ...own)), grid);
+  }
+  const valid = definitions.every((definition) => definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max);
+  if (!valid) {
+    for (const [position, definition] of definitions.entries()) {
+      definition.min = original[position].min;
+      definition.max = original[position].max;
+      definition.initial = Math.min(definition.max, Math.max(definition.min, definition.initial));
+    }
+  }
+  for (const index of indexes) fitted.set(index, grid);
   return fitted;
 }
 
@@ -13668,6 +13760,7 @@ function surfaceSectionRange(content, path) {
 }
 var MATH_HOOKS = {
   number_line: { fit_numbers: fitNumberLineNumbers },
+  number_line_compare: { fit_numbers: fitComparedNumbers },
   implicit_surface_with_section: {
     section_range: surfaceSectionRange,
     lower_model_parameters(parameters3) {
@@ -16066,19 +16159,86 @@ function compileCircleArea(base, content, role, placement, plan, path) {
     ...variable && d ? { progress: { expression: `(${variable}-${d.min})/(${d.max - d.min})`, initial: (d.initial - d.min) / (d.max - d.min) } } : {}
   }));
 }
-var NUMBER_LINE_SPLITS = Array.from({ length: 12 }, (_unused, index) => index + 1);
+var NUMBER_LINE_SPLITS = Array.from({ length: NUMBER_LINE_LIMITS.subdivisions }, (_unused, index) => index + 1);
 var exactDecimal = (parts) => {
   let rest = parts;
   for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime;
   return rest === 1;
 };
 var onGrid = (value2, parts) => Math.abs(value2 * parts - Math.round(value2 * parts)) < 1e-9;
-function compileNumberLine(base, content, role, placement, plan, path) {
+function numberLineLabelStyle(content, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "label_style"], path);
   if (input.label_style !== void 0 && input.label_style !== "decimal" && input.label_style !== "fraction") {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.label_style`, "label_style is decimal or fraction");
   }
+  return { title: input.title, labelStyle: input.label_style };
+}
+function numberLineFrame(values, grid, shown, labelStyle, path, fit = "margin") {
+  let min = fit === "tight" ? Math.floor(Math.min(...values) + 1e-9) : Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
+  let max = fit === "tight" ? Math.ceil(Math.max(...values) - 1e-9) : Math.ceil(Math.max(...values, 0)) + 1;
+  if (fit === "tight") {
+    if (min > 0 && min <= 2) min = 0;
+    if (max < 0 && max >= -2) max = 0;
+    if (max <= min) max = min + 1;
+  }
+  const span2 = max - min;
+  const holdAll = (count, of) => of.every((value2) => onGrid(value2 / count, 1));
+  const ticksFor = (of) => {
+    const whole = [1, 2, 5, 10].find((count) => span2 / count <= 60 && holdAll(count, of));
+    if (whole) return { step: whole, subdivisions: 1 };
+    const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value2) => onGrid(value2, count)) && span2 * count <= NUMBER_LINE_LIMITS.ticks);
+    return parts ? { step: 1, subdivisions: parts } : void 0;
+  };
+  const ticks = ticksFor(grid) ?? ticksFor(shown);
+  if (!ticks) {
+    fail2(
+      "LESSON_PLAN_OUTLINE_VISUAL",
+      `${path}.numbers`,
+      `a number line can split each unit into at most ${NUMBER_LINE_LIMITS.subdivisions} equal parts; these values need finer ticks, so choose another visual`
+    );
+  }
+  return {
+    range: { min, max },
+    step: ticks.step,
+    subdivisions: ticks.subdivisions,
+    ticks: {
+      step: ticks.step,
+      subdivisions: ticks.subdivisions,
+      labels: ticks.subdivisions > 1 ? "all" : "major",
+      // Decimals only where they are exact (halves, fifths, tenths …): thirds stay fractions, never 0.333.
+      ...labelStyle === "decimal" && ticks.subdivisions > 1 && exactDecimal(ticks.subdivisions) ? { format: "decimal" } : {}
+    }
+  };
+}
+function compileNumberLineCompare(base, content, role, placement, plan, path) {
+  const { title, labelStyle } = numberLineLabelStyle(content, path);
+  const [firstNumber, secondNumber] = content.numbers ?? [];
+  if (!firstNumber || !secondNumber) fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "comparing on a number line needs the two lesson numbers it compares");
+  const first = numberDefinition(plan, firstNumber, `${path}.numbers[0]`);
+  const second = numberDefinition(plan, secondNumber, `${path}.numbers[1]`);
+  const values = [first.min, first.max, first.initial, second.min, second.max, second.initial];
+  const steps = [first.student_control?.step, second.student_control?.step].filter((step) => typeof step === "number" && step > 0);
+  const shown = [first.initial, ...lessonValues(plan, firstNumber), second.initial, ...lessonValues(plan, secondNumber)];
+  const frame = numberLineFrame(values, [...values, ...steps], shown, labelStyle, path, "tight");
+  const point = (as, number, definition) => ({
+    as,
+    value: { expression: variableAlias(number), initial: definition.initial },
+    label: definition.label?.trim() || compileText(plan, "\u6570\u503C")
+  });
+  const built = buildNumberLine({
+    as: base,
+    role,
+    place: placement,
+    title: optionalText(title, compileText(plan, "\u6570\u8F74"), `${path}.title`),
+    range: frame.range,
+    ticks: frame.ticks,
+    points: [point("first", firstNumber, first), point("second", secondNumber, second)]
+  });
+  return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.second })) };
+}
+function compileNumberLine(base, content, role, placement, plan, path) {
+  const { title, labelStyle } = numberLineLabelStyle(content, path);
   const [startNumber, changeNumber] = content.numbers ?? [];
   if (!startNumber) fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "a number line needs at least one lesson number for its start");
   const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : void 0;
@@ -16092,31 +16252,13 @@ function compileNumberLine(base, content, role, placement, plan, path) {
     ...change ? [change.min, change.max, change.initial] : [],
     ...[start?.student_control?.step, change?.student_control?.step].filter((step2) => typeof step2 === "number" && step2 > 0)
   ];
-  const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
-  const max = Math.ceil(Math.max(...values, 0)) + 1;
-  const span2 = max - min;
   const shown = [
     ...start && startNumber ? [start.initial, ...lessonValues(plan, startNumber)] : [],
     ...change && changeNumber ? [change.initial, ...lessonValues(plan, changeNumber)] : [],
     ...start && change && changeNumber ? [change.initial, ...lessonValues(plan, changeNumber)].map((value2) => start.initial + value2) : []
   ];
-  const holdAll = (count, of) => of.every((value2) => onGrid(value2 / count, 1));
-  const ticksFor = (of) => {
-    const whole2 = [1, 2, 5, 10].find((count) => span2 / count <= 60 && holdAll(count, of));
-    if (whole2) return { step: whole2, subdivisions: 1 };
-    const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value2) => onGrid(value2, count)) && span2 * count <= NUMBER_LINE_LIMITS.ticks);
-    if (parts) return { step: 1, subdivisions: parts };
-    return void 0;
-  };
-  const ticks = ticksFor(grid) ?? ticksFor(shown);
-  if (!ticks) {
-    fail2(
-      "LESSON_PLAN_OUTLINE_VISUAL",
-      `${path}.numbers`,
-      "a number line can split each unit into at most 12 equal parts; these values need finer ticks, so choose another visual"
-    );
-  }
-  const { step, subdivisions } = ticks;
+  const frame = numberLineFrame(values, grid, shown, labelStyle, path);
+  const { step, subdivisions } = frame;
   const unit = step / subdivisions;
   const whole = (value2) => onGrid(value2 / unit, 1);
   const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
@@ -16129,15 +16271,9 @@ function compileNumberLine(base, content, role, placement, plan, path) {
     as: base,
     role,
     place: placement,
-    title: optionalText(input.title, compileText(plan, "\u6570\u8F74"), `${path}.title`),
-    range: { min, max },
-    ticks: {
-      step,
-      subdivisions,
-      labels: subdivisions > 1 ? "all" : "major",
-      // Decimals only where they are exact (halves, fifths, tenths …): thirds stay fractions, never 0.333.
-      ...input.label_style === "decimal" && subdivisions > 1 && exactDecimal(subdivisions) ? { format: "decimal" } : {}
-    },
+    title: optionalText(title, compileText(plan, "\u6570\u8F74"), `${path}.title`),
+    range: frame.range,
+    ticks: frame.ticks,
     ...start && startVariable ? { points: [
       { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "\u8D77\u70B9") },
       ...change && changeVariable ? [{ as: "end", value: { expression: `(${startVariable})+(${changeVariable})`, initial: start.initial + change.initial }, label: compileText(plan, "\u7EC8\u70B9") }] : []
@@ -16148,6 +16284,7 @@ function compileNumberLine(base, content, role, placement, plan, path) {
 }
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
+  number_line_compare: compileNumberLineCompare,
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_polygon_bounds: compileCirclePolygonBounds,
@@ -19644,7 +19781,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   let bootstrappedFirstSection;
   const excludedCapabilities = /* @__PURE__ */ new Set();
   const excludeNumberLines = (from) => {
-    for (const capability2 of outlineCapabilities(from)) if (isNumberLineCapability(capability2)) excludedCapabilities.add(capability2);
+    if (![...outlineCapabilities(from)].some((capability2) => isNumberLineCapability(capability2))) return;
+    for (const capability2 of LESSON_PLAN_CAPABILITY_NAMES) if (isNumberLineCapability(capability2)) excludedCapabilities.add(capability2);
   };
   let outlineError;
   let stableCameraObservation;

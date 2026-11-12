@@ -463,3 +463,14 @@ A DOM probe settled run 6's puzzling screenshot: the board does redraw a point a
 1. **Requests the number line cannot show yet must never mislead** (option b). The recipe is extended to show them (inequalities, intervals, comparing two numbers, rounding) through a decision record before any code, then probes and a gate run. The recipe stays a trial until then.
 2. **The model-number scale fix's payload ceiling raise** (+15–30 B schema) is a one-off exception to decision S6, with no live comparison (option a).
 
+## Decision 0016, type 1 of 3: comparing two numbers
+
+**Recipe:** `number_line_compare` (trial). The outline asks for `number_line` plus `number_comparison`, and the model gives the two numbers at their actual size. Each number is a point labelled with its name, on ticks that hold both: their common denominator, up to 24 parts per unit (OLL #53). The line covers only the whole units the values span, widened to include 0 when 0 is within 2 units. All of the family's safeguards apply.
+
+**Cases written before the recipe:** CMP-01 to CMP-05 (3/4 vs 2/3; −1.5 vs −2; 5/6 vs 7/8, which needs 24ths; 0.35 vs 0.4, twentieths with decimal labels; −3 vs 2).
+
+**Probe 1** (offering `number_line` and `number_line_compare`; 12 lessons, 21 counted calls, about $0.20): **the model chose the compare recipe 12 of 12 times, and all 12 pass every hard check, with no retries.**
+- That includes NM-01 ("compare 2/3 and 3/5"), twice. It failed every gate run before.
+- The two older comparisons (NL-07 0.5 vs 0.8; NL-08 −4 vs −1) also moved to the new recipe; NL-08's "no hops" is a soft note, as expected for a comparison.
+- The renders were correct, but the first version kept the number line's margins: 5/6 and 7/8 crowded on −1 to 2. Comparisons now use a tight frame (0 to 1). On replay of the probe's recorded replies, all 12 still pass, and the renders read clearly.
+

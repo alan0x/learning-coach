@@ -30,10 +30,77 @@ const snap = (value: number, grid: number) => Number((Math.round(value / grid) *
 const floorTo = (value: number, grid: number) => Number((Math.ceil(value / grid - 1e-9) * grid).toPrecision(12));
 const ceilTo = (value: number, grid: number) => Number((Math.floor(value / grid + 1e-9) * grid).toPrecision(12));
 
-/** The smallest denominator 1–12 that puts every value within 0.01 of one of its fractions. */
-export function inferDenominator(values: readonly number[]): number | undefined {
-  for (let denominator = 1; denominator <= 12; denominator += 1) {
-    if (values.every((value) => near(value, 1 / denominator))) return denominator;
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+/** Whether n/d in lowest terms has a repeating decimal (its denominator has a prime factor other than 2 or 5). */
+const repeats = (numerator: number, denominator: number) => {
+  let rest = denominator / gcd(Math.abs(numerator), denominator);
+  for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime;
+  return rest !== 1;
+};
+/** A value exactly on 1/d's grid, up to floating-point error (2/3 written to 12 places counts). */
+const exactlyOn = (value: number, denominator: number) => Math.abs(value * denominator - Math.round(value * denominator)) <= 1e-9 * Math.max(1, Math.abs(value * denominator));
+/** How many decimal places a value is written to (0.8333 → 4). */
+const decimalPlaces = (value: number) => {
+  const text = String(Math.abs(value));
+  if (text.includes("e")) return 0;
+  return text.includes(".") ? text.length - text.indexOf(".") - 1 : 0;
+};
+/**
+ * A value written as a repeating fraction of 1/d's grid, rounded or cut to the places it shows: 0.67,
+ * 0.6666 and 0.666667 are 2/3, and 0.8333 is 5/6. Never a terminating value (0.51 is not 1/2), never one
+ * a place off (0.34 is not 1/3, which shows as 0.33), never one place only (0.3 is 3/10), and at two
+ * places only thirds and sixths.
+ */
+const roundedFrom = (value: number, denominator: number) => {
+  const places = decimalPlaces(value);
+  if (places < 2 || places > 12) return false;
+  const numerator = Math.round(value * denominator);
+  if (!repeats(numerator, denominator)) return false;
+  // Two places identify only thirds and sixths (0.33, 0.67, 0.17, 0.83, as the model writes them); with
+  // denominators up to 24, nearly any two-place value is near some fraction (0.04 is 1/21 cut short).
+  const lowest = denominator / gcd(Math.abs(numerator), denominator);
+  if (places === 2 && lowest !== 3 && lowest !== 6) return false;
+  const exact = numerator / denominator;
+  const scale = 10 ** places;
+  return Math.abs(value - Number(exact.toFixed(places))) < 0.5 / scale / 1000
+    || Math.abs(value - Math.trunc(exact * scale) / scale) < 0.5 / scale / 1000;
+};
+
+/**
+ * The grid for a lesson's values, without changing how they relate (review of #67): snapped onto it, two
+ * different values must stay different and in the same order (0.66 and 0.67 must not both become 2/3).
+ * Values written as decimals in a decimal question are taken literally: no fraction is recovered from them.
+ */
+export function valuesGrid(values: readonly number[], content: LessonPlanVisualContent): number | undefined {
+  const literal = (content.parameters as { label_style?: unknown } | undefined)?.label_style === "decimal";
+  const denominator = inferDenominator(values, { approximate: !literal });
+  if (!denominator) return undefined;
+  const grid = 1 / denominator;
+  const snapped = values.map((value) => snap(value, grid));
+  for (let i = 0; i < values.length; i += 1) for (let j = i + 1; j < values.length; j += 1) {
+    const written = Math.sign(Number((values[i]! - values[j]!).toPrecision(12)));
+    const drawn = Math.sign(Number((snapped[i]! - snapped[j]!).toPrecision(12)));
+    if (written !== drawn) return undefined;
+  }
+  return denominator;
+}
+
+/**
+ * The smallest denominator 1–24 (decision 0016) whose fractions hold every value:
+ * - first exactly, so the numbers a lesson names keep their positions (review of #67: 0.5 and 0.51 must
+ *   not both become 0.5; 5/24 and 19/24 must not become 1/5 and 4/5);
+ * - then, only with `approximate`, letting a value stand for the repeating fraction it shows rounded or
+ *   cut (0.33 for 1/3, as in run 3; 0.8333 for 5/6, as in compare probe 1). A terminating value (0.51)
+ *   and one a place off (0.34) are never moved.
+ * Undefined when none does; the values are then left as written.
+ */
+export function inferDenominator(values: readonly number[], { approximate = true }: { approximate?: boolean } = {}): number | undefined {
+  for (let denominator = 1; denominator <= 24; denominator += 1) {
+    if (values.every((value) => exactlyOn(value, denominator))) return denominator;
+  }
+  if (!approximate) return undefined;
+  for (let denominator = 1; denominator <= 24; denominator += 1) {
+    if (values.every((value) => exactlyOn(value, denominator) || roundedFrom(value, denominator))) return denominator;
   }
   return undefined;
 }
@@ -85,7 +152,7 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   // evidence: the model does not write one, and the step it arrives with is derived from the range
   // (span / 200), so 0.5 on a 0–100 range says nothing about halves (run 5).
   const values = [...startValues, ...changeValues];
-  const denominator = inferDenominator(values);
+  const denominator = valuesGrid(values, content);
   let grid = denominator ? 1 / denominator : undefined;
 
   // 0 anchors the line when it fits; a lesson far from 0 (23 + 48) is shown around its own values.
@@ -169,3 +236,53 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   if (changeIndex && change) fitted.set(changeIndex, step);
   return fitted;
 }
+
+/**
+ * Fits two compared numbers (decision 0016) in place: both values, and the values the lesson sets them
+ * to, snap to their common denominator (up to 24); the sliders step by it; each range narrows to the
+ * whole units around both values, never past what the model allowed and always keeping the values.
+ * Shared numbers and numbers an expression task reads are left as written, as for the number line.
+ */
+export function fitComparedNumbers(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>): Map<number, number> {
+  const fitted = new Map<number, number>();
+  const indexes = (content.numbers ?? []).slice(0, 2);
+  if (indexes.length < 2 || !plan.numbers || indexes.some((index) => sharedNumbers.has(index))) return fitted;
+  const ours = new Set(indexes);
+  const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) =>
+    activity.kind === "number_target" && activity.expression !== undefined
+    && (activity.number_controls.some((control) => ours.has(control.number))
+      || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
+  if (expressionTask) return fitted;
+  const definitions = indexes.map((index) => plan.numbers![index - 1]);
+  if (definitions.some((definition) => !definition)) return fitted;
+  const values = indexes.flatMap((index, position) => [definitions[position]!.initial, ...lessonValues(plan, index)]);
+  // Compared values are the question itself: an exact grid, or the repeating fractions the values show
+  // rounded (0.8333 is 5/6), never one that makes different values equal or swaps their order (0.66 and
+  // 0.67), nor fractions read from a decimal question's decimals. Values no grid up to 24 parts holds are
+  // left as written, and the line refuses them (the outline is asked again).
+  const denominator = valuesGrid(values, content);
+  if (!denominator) return fitted;
+  const grid = 1 / denominator;
+  const low = Math.floor(Math.min(...values) + 1e-9);
+  const high = Math.max(low + 1, Math.ceil(Math.max(...values) - 1e-9));
+  const original = definitions.map((definition) => structuredClone(definition!));
+  for (const [position, definition] of definitions.entries()) {
+    const own = [definition!.initial, ...lessonValues(plan, indexes[position]!)].map((value) => snap(value, grid));
+    definition!.initial = snap(definition!.initial, grid);
+    if (definition!.student_control) definition!.student_control.step = grid;
+    definition!.min = floorTo(Math.max(definition!.min, Math.min(low, ...own)), grid);
+    definition!.max = ceilTo(Math.min(definition!.max, Math.max(high, ...own)), grid);
+  }
+  const valid = definitions.every((definition) => definition!.min < definition!.max && definition!.initial >= definition!.min && definition!.initial <= definition!.max);
+  if (!valid) {
+    // Keep the model's ranges, but the values and sliders still sit on the common ticks.
+    for (const [position, definition] of definitions.entries()) {
+      definition!.min = original[position]!.min;
+      definition!.max = original[position]!.max;
+      definition!.initial = Math.min(definition!.max, Math.max(definition!.min, definition!.initial));
+    }
+  }
+  for (const index of indexes) fitted.set(index, grid);
+  return fitted;
+}
+

@@ -240,3 +240,9 @@ test("emphasizing a hidden end shows it; emphasis none hides it again", () => {
   assert.deepEqual(lessonShownStates(line).map((state) => Object.keys(state).sort().join(",")), ["start", "end,start", "start"]);
 });
 
+test("the recipes a part used tell a comparison from a start plus a move (decision 0016)", () => {
+  const part = (points) => ({ steps: [{ beats: [{ actions: [{ do: "write", kind: "number_line", content: { points: points.map((as) => ({ as })) } }] }] }] });
+  assert.deepEqual(recipesInPart(part(["first", "second"])), ["number_line_compare"]);
+  assert.deepEqual(recipesInPart(part(["start", "end"])), ["number_line"]);
+});
+

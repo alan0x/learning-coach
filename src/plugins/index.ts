@@ -45,7 +45,7 @@ export const RECIPE_CATALOG_ORDER = [
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-export const TRIAL_RECIPES = ["constant_speed_motion", "number_line"] as const satisfies readonly (keyof AllRecipes)[];
+export const TRIAL_RECIPES = ["constant_speed_motion", "number_line", "number_line_compare"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {

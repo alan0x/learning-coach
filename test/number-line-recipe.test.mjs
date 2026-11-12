@@ -20,10 +20,10 @@ const compile = (numbers, parameters = {}, extra = {}) => {
     const { samplePlan } = await import(${JSON.stringify(new URL("./sample-plans.mjs", import.meta.url).href)});
     const plan = samplePlan("spring_and_mass");
     const visual = plan.sections[0].moments[0].actions[0].content;
-    visual.capability = "number_line";
+    visual.capability = ${JSON.stringify(extra.capability ?? "number_line")};
     visual.parameters = ${JSON.stringify(parameters)};
     visual.numbers = ${JSON.stringify(numbers.map((_number, index) => index + 1))};
-    plan.sections[0].reusable_items[0].capability = "number_line";
+    plan.sections[0].reusable_items[0].capability = ${JSON.stringify(extra.capability ?? "number_line")};
     plan.numbers = ${JSON.stringify(numbers)};
     plan.sections[0].moments[0].actions = plan.sections[0].moments[0].actions.filter((action) => action.action !== "animate");
     if (plan.sections[0].student_activities) delete plan.sections[0].student_activities;
@@ -42,7 +42,7 @@ const compile = (numbers, parameters = {}, extra = {}) => {
     }
   `;
   return JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", script], {
-    env: { ...process.env, LEARNING_COACH_TRIAL_RECIPES: "number_line" },
+    env: { ...process.env, LEARNING_COACH_TRIAL_RECIPES: "number_line,number_line_compare" },
     cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8",
   }));
 };
@@ -184,12 +184,21 @@ test("a slider step no count of parts can hold gives way to the values' own deno
   assert.equal(result.content.jumps[0].hops, true);
 });
 
-test("values no ticks can hold are refused, so the model can choose another visual (run 6: 2/3 and 3/5 need fifteenths)", () => {
+test("values no ticks can hold are refused, so the model can choose another visual (2/3 and 1/25 need 75ths, beyond 24 parts)", () => {
+  const result = compile([
+    { initial: 0.04, min: 0, max: 1, label: "起点" },
+    { initial: 2 / 3 - 0.04, min: 0, max: 1, label: "差", student_control: { kind: "slider", step: 1 / 75 } },
+  ]);
+  assert.match(result.error ?? "", /at most 24 equal parts/);
+});
+
+test("2/3 and 3/5 now share fifteenths (decision 0016: up to 24 parts per unit)", () => {
   const result = compile([
     { initial: 0.6, min: 0, max: 1, label: "起点" },
     { initial: 2 / 3 - 0.6, min: 0, max: 1, label: "差", student_control: { kind: "slider", step: 1 / 15 } },
   ]);
-  assert.match(result.error ?? "", /at most 12 equal parts/);
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.content.ticks.subdivisions, 15);
 });
 // Shapes the model wrote in speed gate run 3 (2026-11-11), fitted to what the lesson teaches.
 test("run 3: thirds written as 0.33 and 0.67 with a 0.1 step are drawn in thirds, exactly", () => {
@@ -225,25 +234,56 @@ test("run 3: 3 + (−5) on two sliders of −10 to 10 is drawn on −4 to 5, not
   assert.equal(result.content.jumps[0].hops, true);
 });
 
-test("an animation target is snapped to the ticks and stays inside the fitted range", () => {
+test("an animation target rounded from a repeating fraction is snapped to its ticks (1.33 is 4/3)", () => {
   const result = compile([
     { initial: 0, min: 0, max: 2, label: "起点" },
     { initial: 0, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 0.01 } },
-  ], {}, { animate: [{ number: 2, end_value: 1.24 }] });
+  ], {}, { animate: [{ number: 2, end_value: 1.33 }] });
   assert.equal(result.error, undefined, result.error);
-  assert.deepEqual(result.animations, [["number_02", 1.25]]);
+  assert.equal(result.content.ticks.subdivisions, 3);
+  assert.ok(Math.abs(result.animations[0][1] - 4 / 3) < 1e-9, String(result.animations[0][1]));
 });
 
-test("a practice target is snapped to the ticks, with a tolerance of half a tick and a prompt naming the snapped value", () => {
+test("a practice target rounded from a repeating fraction is snapped to its ticks, with a tolerance of half a tick (0.67 is 2/3)", () => {
   const result = compile([
     { initial: 0, min: 0, max: 1, label: "起点" },
     { initial: 0, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 0.01 } },
-  ], {}, { task: { number: 2, value: 0.74 } });
+  ], {}, { task: { number: 2, value: 0.67 } });
   assert.equal(result.error, undefined, result.error);
   const task = result.tasks[0];
-  assert.equal(task.completion.value, 0.75);
-  assert.equal(task.completion.tolerance, 0.125);
-  assert.match(task.prompt, /0\.75/);
+  assert.ok(Math.abs(task.completion.value - 2 / 3) < 1e-9, String(task.completion.value));
+  assert.ok(Math.abs(task.completion.tolerance - 1 / 6) < 1e-9);
+});
+
+// Review of #67: the numbers a lesson names keep their positions. A terminating value is never rounded
+// onto a coarser grid; only a value rounded from a repeating fraction (0.33 for 1/3) is read as one.
+test("a terminating value is never moved onto a coarser grid (0.51 stays 0.51, refused rather than drawn at 0.5)", () => {
+  const result = compile([
+    { initial: 0.5, min: 0, max: 1, label: "起点" },
+    { initial: 0.01, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 0.01 } },
+  ]);
+  assert.match(result.error ?? "", /at most 24 equal parts/);
+});
+
+test("comparing 0.5 and 0.51: the values are kept, and a line that cannot show them both is refused (review of #67)", () => {
+  const result = compile([
+    { initial: 0.5, min: 0, max: 2, label: "0.5", student_control: { kind: "slider", step: 0.01 } },
+    { initial: 0.51, min: 0, max: 2, label: "0.51", student_control: { kind: "slider", step: 0.01 } },
+  ], {}, { capability: "number_line_compare" });
+  // No grid up to 24 parts holds 0.51: the outline is asked again without the number line.
+  assert.match(result.error ?? "", /LESSON_PLAN_OUTLINE_VISUAL|at most 24 equal parts/);
+});
+
+test("comparing 5/24 and 19/24: both stay where they are, on 24ths, not moved to 1/5 and 4/5 (review of #67)", () => {
+  const result = compile([
+    { initial: 5 / 24, min: 0, max: 2, label: "5/24", student_control: { kind: "slider", step: 0.01 } },
+    { initial: 19 / 24, min: 0, max: 2, label: "19/24", student_control: { kind: "slider", step: 0.01 } },
+  ], {}, { capability: "number_line_compare" });
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.content.ticks.subdivisions, 24);
+  assert.deepEqual(result.content.points.map((point) => [point.as, point.label]), [["first", "5/24"], ["second", "19/24"]]);
+  const values = result.variables.map((variable) => variable.initial);
+  assert.ok(Math.abs(values[0] - 5 / 24) < 1e-9 && Math.abs(values[1] - 19 / 24) < 1e-9, JSON.stringify(values));
 });
 
 test("a number another visual also shows is not refitted", () => {
@@ -340,3 +380,26 @@ test("label_style decimal labels a decimal question in decimals, only where deci
   assert.equal(compile([{ initial: 0.5, min: 0, max: 1, label: "起点" }, { initial: 0.3, min: 0, max: 1, label: "移动" }], {}).content.ticks.format, undefined);
   assert.match(compile([{ initial: 0, min: 0, max: 1, label: "起点" }], { label_style: "percent" }).error ?? "", /label_style/);
 });
+
+test("a value is read as a repeating fraction only when it shows that fraction rounded or cut (review of #67)", () => {
+  // 0.8333 and 0.875 are 5/6 and 7/8 (as the model wrote them in compare probe 1): 24ths.
+  const shown = compile([
+    { initial: 0.8333, min: 0, max: 1, label: "5/6", student_control: { kind: "slider", step: 0.01 } },
+    { initial: 0.875, min: 0, max: 1, label: "7/8", student_control: { kind: "slider", step: 0.01 } },
+  ], {}, { capability: "number_line_compare" });
+  assert.equal(shown.error, undefined, shown.error);
+  assert.equal(shown.content.ticks.subdivisions, 24);
+  // 0.34 is not 1/3 (which shows as 0.33): compared with 1/3 it keeps its own place, or the line is refused.
+  const offByOne = compile([
+    { initial: 0.34, min: 0, max: 1, label: "0.34", student_control: { kind: "slider", step: 0.01 } },
+    { initial: 1 / 3, min: 0, max: 1, label: "1/3", student_control: { kind: "slider", step: 0.01 } },
+  ], {}, { capability: "number_line_compare" });
+  assert.ok(offByOne.error || Math.abs(offByOne.variables[0].initial - 0.34) < 1e-12, JSON.stringify(offByOne.variables ?? offByOne.error));
+  // 0.04 is 1/25, not 1/21 cut to two places: with 2/3 no ticks hold it, and the line is refused.
+  const twoPlaces = compile([
+    { initial: 0.04, min: 0, max: 1, label: "1/25", student_control: { kind: "slider", step: 0.01 } },
+    { initial: 2 / 3, min: 0, max: 1, label: "2/3", student_control: { kind: "slider", step: 0.01 } },
+  ], {}, { capability: "number_line_compare" });
+  assert.match(twoPlaces.error ?? "", /at most 24 equal parts/);
+});
+
