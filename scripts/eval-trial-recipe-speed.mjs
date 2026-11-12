@@ -49,8 +49,8 @@ export const MOTION_CASES = [
  * - `change`: the change the question asks for, which a slider or an animation must reach (hard);
  * - `parts`: the parts per unit a well-chosen line uses (soft: other parts can still be right);
  * - `integer`: an integer question, whose line should span at most 24 units with hops (soft);
- * - `format`: "decimal" when the question writes decimals, so 0.8 should read 0.8, not 8/10 (soft
- *   until the owner decides).
+ * - `format`: "decimal" when the question writes decimals, so 0.8 reads 0.8, not 8/10 (hard: the
+ *   learner reads the line in the question's notation).
  * NL-01 to NL-10 are the requests runs 1–4 were tuned against.
  */
 export const NUMBER_LINE_CASES = [
@@ -167,6 +167,7 @@ export function numberLineStates({ content, variables, tasks, animations }) {
  * - hard: compiled; every value the question names is shown by a point in some state; the asked-for
  *   change is reachable (by an animation, or on the slider's grid from its minimum); and every visible point, in every state, sits on a tick the label policy
  *   labels, so its number is drawn (OLL draws a labelled tick under a point even when labels thin);
+ * - hard, too: a question written in decimals is labelled in decimals;
  * - soft: the parts per unit, and for integer questions a span of at most 24 units with hops.
  * Returns the lists of misses, empty when it passes.
  */
@@ -201,9 +202,10 @@ export function judgeNumberLine(item, lesson) {
   if (unreadable.size) hard.push(`unreadable: ${[...unreadable].join(", ")} on no labelled tick`);
   const parts = content.ticks?.subdivisions ?? 1;
   if (expect.parts && parts !== expect.parts) soft.push(`${parts} parts, not ${expect.parts}`);
-  // Labels are fractions unless the card asks otherwise (OLL's default for split units).
+  // Labels are fractions unless the card asks otherwise (OLL's default for split units). A line with
+  // whole-number ticks only labels integers, which read the same either way.
   const format = content.ticks?.format ?? (parts > 1 ? "fraction" : "integer");
-  if (expect.format === "decimal" && format !== "decimal") soft.push(`labels as ${format}s, the question writes decimals`);
+  if (expect.format === "decimal" && format === "fraction") hard.push("labels as fractions, the question writes decimals");
   if (expect.integer) {
     const span = content.range.max - content.range.min;
     if (span > 24) soft.push(`${span} units wide`);
@@ -231,6 +233,22 @@ const median = (values) => {
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
+/**
+ * The owner's rule for run 5 (2026-11-11, option B): the program may cause no hard miss; the model
+ * may slip once, and never twice on the same request. Whether a miss is the model's is read by hand
+ * from its raw reply, so one miss is "review", not "pass"; near misses are always read by hand.
+ */
+export function slipVerdict(judged) {
+  const misses = judged.filter((row) => row.quality.hard.length);
+  const byCase = new Map();
+  for (const row of misses) byCase.set(row.case, (byCase.get(row.case) ?? 0) + 1);
+  const repeated = [...byCase].filter(([, count]) => count > 1).map(([id]) => id);
+  if (repeated.length) return { result: "fail", reason: `the same request missed more than once: ${repeated.join(", ")}` };
+  if (misses.length > 1) return { result: "fail", reason: `${misses.length} hard misses; at most one model slip is allowed` };
+  if (misses.length === 1) return { result: "review", reason: `one hard miss (${misses[0].case}): it passes only if its raw reply shows the model's slip, not the program's` };
+  return { result: "pass", reason: "no hard misses" };
+}
+
 export function summarize(rows) {
   const group = (filter) => {
     const ok = (arm) => rows.filter((row) => filter(row) && row.arm === arm && row.outcome === "first_playable");
@@ -257,6 +275,7 @@ export function summarize(rows) {
     hard_misses: judged.filter((row) => row.quality.hard.length).map((row) => ({ case: row.case, hard: row.quality.hard, ...(row.quality.review ? { review: row.quality.review } : {}) })),
     soft_misses: judged.filter((row) => row.quality.soft.length).map((row) => ({ case: row.case, soft: row.quality.soft })),
     near_misses_for_review: rows.filter((row) => row.kind === "near_miss").map((row) => ({ case: row.case, recipes: row.recipes ?? null })),
+    verdict: slipVerdict(judged),
   } : undefined;
   // Speed is measured on the pairs only; quality cases run on one arm and would skew the medians.
   return { all: group((row) => row.kind === "motion" || row.kind === "other"), motion: group((row) => row.kind === "motion"), other: group((row) => row.kind === "other"), ...(quality ? { quality } : {}) };

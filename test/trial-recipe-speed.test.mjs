@@ -47,7 +47,7 @@ test("a first part's number line is summarised for judging quality", () => {
 });
 
 // The number line judge (hard and soft checks, set before run 5).
-const { judgeNumberLine, numberLineStates, NUMBER_LINE_QUALITY_CASES, TRIAL_QUALITY_CASES } = await import("../scripts/eval-trial-recipe-speed.mjs");
+const { judgeNumberLine, numberLineStates, slipVerdict, NUMBER_LINE_QUALITY_CASES, TRIAL_QUALITY_CASES } = await import("../scripts/eval-trial-recipe-speed.mjs");
 const lineLesson = ({ range = { min: -4, max: 4 }, ticks = { step: 1 }, start = 3, change = -5, changeRange = [-5, 0], animations = [], tasks = [], latentEnd = false } = {}) => ({
   content: {
     range, ticks,
@@ -112,11 +112,20 @@ test("speed is summarized over the pairs only; quality rows are summarized apart
   assert.deepEqual(summary.quality.near_misses_for_review, [{ case: "C-2", recipes: ["number_line"] }]);
 });
 
-test("a decimal question labelled in fractions is a soft miss, recorded for the owner's decision", () => {
+test("a decimal question labelled in fractions is a hard miss; decimal labels pass", () => {
   const lesson = lineLesson({ range: { min: -1, max: 2 }, ticks: { step: 1, subdivisions: 10, labels: "all" }, start: 0.5, change: 0.3, changeRange: [0, 1] });
-  const { hard, soft } = judgeNumberLine({ expect: { values: [0.5, 0.8], parts: 10, format: "decimal" } }, lesson);
-  assert.deepEqual(hard, []);
-  assert.deepEqual(soft, ["labels as fractions, the question writes decimals"]);
+  const item = { expect: { values: [0.5, 0.8], parts: 10, format: "decimal" } };
+  assert.deepEqual(judgeNumberLine(item, lesson).hard, ["labels as fractions, the question writes decimals"]);
+  lesson.content.ticks.format = "decimal";
+  assert.deepEqual(judgeNumberLine(item, lesson), { hard: [], soft: [] });
+});
+
+test("the slip rule: no miss passes, one miss is read by hand, two misses or a repeated request fail", () => {
+  const row = (id, hard = []) => ({ case: id, quality: { hard, soft: [] } });
+  assert.equal(slipVerdict([row("NL-01"), row("NL-02")]).result, "pass");
+  assert.equal(slipVerdict([row("NL-01", ["x"]), row("NL-02")]).result, "review");
+  assert.equal(slipVerdict([row("NL-01", ["x"]), row("NL-02", ["y"])]).result, "fail");
+  assert.match(slipVerdict([row("NL-11", ["x"]), row("NL-11", ["x"])]).reason, /same request missed more than once: NL-11/);
 });
 
 // The harness end to end, against a stub build that talks like Coach: one model call, one raw reply,

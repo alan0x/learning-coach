@@ -89,7 +89,9 @@ test("the model is not asked for subdivisions or hops: the schema offers neither
     { initial: 0, min: 0, max: 1, label: "起点" },
     { initial: 1.3, min: 0, max: 2.7, label: "加上", student_control: { kind: "slider", step: 0.1 } },
   ]).content.jumps[0].hops, true);
-  assert.equal(api.RECIPE_SCHEMA_PROPERTIES.number_line, undefined, "no number-line parameters: a denominator made the model write numerators (run 4)");
+  // The only model parameter is how labels are written; nothing that changes what a number means
+  // (a denominator made the model write numerators in run 4).
+  assert.deepEqual(Object.keys(api.RECIPE_SCHEMA_PROPERTIES.number_line), ["label_style"]);
   assert.match(compile([{ initial: 0, min: 0, max: 1, label: "起点" }], { hops: true }).error ?? "", /hops/);
 });
 
@@ -394,8 +396,8 @@ const RUN4_EXPECTED = {
   "NL-03": { hard: /wrong value: 0\.75 is never shown/ },
   "NL-04": { hard: /wrong value: 0\.75 is never shown/ },
   "NL-06": { soft: /28 units wide/ },
-  // 0.8 reads 8/10: the recipe labels split units as fractions (a soft miss until the owner decides).
-  "NL-07": { soft: /labels as fractions/ },
+  // 0.8 reads 8/10: run 4 had no label_style, so the line was labelled in fractions.
+  "NL-07": { hard: /labels as fractions/ },
   "NL-09": { hard: /wrong value: 0\.3333 is never shown/ },
 };
 for (const item of RUN4) {
@@ -471,12 +473,12 @@ const ideal = (start, change, step, low, high) => [
 ];
 const DRY_RUN = [
   ["NL-04", ideal(0.25, 0.5, 0.25, -1, 1)],
-  ["NL-11", ideal(0.3, 0.4, 0.1, 0, 1)],
+  ["NL-11", ideal(0.3, 0.4, 0.1, 0, 1), { label_style: "decimal" }],
   ["NL-12", ideal(-0.5, 0.75, 0.25, -1, 1)],
   ["NL-13", ideal(1.5, 1.25, 0.25, 0, 3)],
   ["NL-14", ideal(5, -8, 1, -10, 10)],
   ["NL-15", ideal(35, 40, 1, 0, 100)],
-  ["NL-16", ideal(-2.5, 4, 0.5, -5, 5)],
+  ["NL-16", ideal(-2.5, 4, 0.5, -5, 5), { label_style: "decimal" }],
   ["NL-17", ideal(-6, 6, 1, -10, 10)],
   ["NL-18", ideal(2 / 3, -1 / 3, 1 / 3, -1, 1)],
   ["NL-19", ideal(23, 48, 1, 0, 100)],
@@ -489,13 +491,37 @@ const runShape = (numbers) => numbers.map((number) => {
   const large = Math.abs(number.initial) > 10;
   return { ...number, min: large ? -100 : -10, max: large ? 100 : 10, student_control: { kind: "slider", step: large ? 1 : 0.1 } };
 });
-for (const [id, numbers] of DRY_RUN) {
+for (const [id, numbers, parameters = {}] of DRY_RUN) {
   for (const [shape, input] of [["the card's ideal input", numbers], ["run 4's slider shape", runShape(numbers)]]) {
     test(`dry run ${id}: ${shape} passes the hard checks`, () => {
-      const result = compile(input, {}, {});
+      const result = compile(input, parameters, {});
       const { hard, soft } = judgeNumberLine(allCases.get(id), result);
       assert.deepEqual(hard, [], `${hard.join("; ")} (range ${JSON.stringify(result.content?.range)}, ticks ${JSON.stringify(result.content?.ticks)}; soft: ${soft.join("; ")})`);
     });
   }
 }
+
+test("label_style decimal labels a decimal question in decimals, only where decimals are exact", () => {
+  const tenths = compile([
+    { initial: 0.5, min: 0, max: 1, label: "起点" },
+    { initial: 0.3, min: 0, max: 1, label: "移动", student_control: { kind: "slider", step: 0.1 } },
+  ], { label_style: "decimal" });
+  assert.equal(tenths.content.ticks.format, "decimal");
+  assert.deepEqual(judgeNumberLine({ expect: { values: [0.5, 0.8], parts: 10, format: "decimal" } }, tenths), { hard: [], soft: [] });
+  const halves = compile([
+    { initial: -2.5, min: -3, max: -2, label: "起点" },
+    { initial: 4, min: 0, max: 5, label: "移动", student_control: { kind: "slider", step: 0.5 } },
+  ], { label_style: "decimal" });
+  assert.equal(halves.content.ticks.format, "decimal");
+  // Thirds have no exact decimal: they stay fractions, never 0.333.
+  const thirds = compile([
+    { initial: 1 / 3, min: 0, max: 1, label: "起点" },
+    { initial: 2 / 3, min: 0, max: 1, label: "移动", student_control: { kind: "slider", step: 1 / 3 } },
+  ], { label_style: "decimal" });
+  assert.equal(thirds.content.ticks.subdivisions, 3);
+  assert.equal(thirds.content.ticks.format, undefined);
+  // Without it, and with "fraction", labels stay fractions; anything else is refused.
+  assert.equal(compile([{ initial: 0.5, min: 0, max: 1, label: "起点" }, { initial: 0.3, min: 0, max: 1, label: "移动" }], {}).content.ticks.format, undefined);
+  assert.match(compile([{ initial: 0, min: 0, max: 1, label: "起点" }], { label_style: "percent" }).error ?? "", /label_style/);
+});
 

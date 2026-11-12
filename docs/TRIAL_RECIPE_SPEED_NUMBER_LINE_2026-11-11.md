@@ -141,7 +141,7 @@ A single "8 of 10" let a wrong value through as a formal pass. The gate is now s
   - **Readable:** every visible point, in every state the lesson reaches, sits on a tick the label policy labels, so its number is drawn.
   - **Near misses:** for a request the recipe cannot express, if the model uses the recipe anyway, the line is read by hand, and a misleading line is a hard miss.
 - **Soft: reported, not blocking.** An integer line spans more than 24 units or has no hops, or a fraction line uses different parts than expected (sixths for thirds).
-- **Awaiting the owner's decision: label format.** A decimal question gets fraction labels: "compare 0.5 and 0.8" shows 8/10 under the end. Run 5 records this as a soft miss on NL-07, NL-11 and NL-16. If the owner makes it hard, the recipe would let the model choose decimal or fraction labels, which it can see in the question.
+- **Hard, as recommended (see the owner decisions below): label format.** A decimal question labelled in fractions ("compare 0.5 and 0.8" showing 8/10) is a hard miss on NL-07, NL-11 and NL-16.
 
 The judge is `judgeNumberLine` in the harness. The offline replay test uses the same function and the same expectations, so the live and offline checks cannot drift apart.
 
@@ -198,4 +198,11 @@ A rendered 23 + 48 line was readable on values but still looked like a comb, wit
 - The run keeps every raw model reply. The work directory is copied out of the system temp folder straight after the run (kept locally, not committed), so later fixes can be replayed against real output for free.
 - **Pass:** every hard check holds on all number-line cases (with the slip allowance the owner sets) and on any near miss the model draws. Then adoption goes in a separate change, after the OLL pin bumps. Before that change lands, one real lesson is played in the installed app at phone width.
 - **Stop rule:** a hard miss of a kind already fixed is a defect to fix and re-check offline. A hard miss of a new kind means narrowing what the recipe offers, for example to integers only, or dropping a request type. It does not mean another patch.
+
+### Owner decisions (2026-11-11)
+
+1. **The hard/soft gate:** agreed.
+2. **A single model slip:** option B. The program may cause no hard miss. The model may slip once, and never twice on the same request. Whether a miss is the model's is read by hand from its raw reply, so the summary's verdict (`slipVerdict`) for one miss is "review", not "pass". Two misses, or the same request missing twice, fail.
+3. **Label format:** the owner asked for a recommendation. The recommendation is to label in the question's notation and count it as a hard check. "Compare 0.5 and 0.8" would otherwise show 5/10 and 8/10, a second notation that assumes the learner already knows 0.8 = 8/10 (grade 4, 4.NF.6), and "−2.5 + 4" would show −5/2. Only the model sees how the question is written, so the recipe gains one optional parameter, `label_style` (`decimal` or `fraction`). It changes labels, never values. The program honours `decimal` only where decimals are exact (halves, quarters, fifths, tenths), so thirds never read 0.333. Because run 4 showed that a parameter can change how the model writes numbers, run 5 tests this with the value checks in force. Pending the owner's confirmation.
+4. **Run 5:** approved, with the quality cases repeated three times (`--quality-repeats 3 --max-calls 110`).
 

@@ -552,6 +552,8 @@ function compileCircleArea(
 
 /** Every count of parts per unit OLL draws (1–12), fewest first. */
 const NUMBER_LINE_SPLITS = Array.from({ length: 12 }, (_unused, index) => index + 1);
+/** Whether 1/parts has a finite decimal: its only prime factors are 2 and 5. */
+const exactDecimal = (parts: number) => { let rest = parts; for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime; return rest === 1; };
 const onGrid = (value: number, parts: number) => Math.abs(value * parts - Math.round(value * parts)) < 1e-9;
 
 /**
@@ -569,7 +571,11 @@ function compileNumberLine(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title"], path);
+  allowParameterKeys(input, ["title", "label_style"], path);
+  // How the question writes its numbers, which only the model sees: "decimal" labels 0.8, not 8/10.
+  if (input.label_style !== undefined && input.label_style !== "decimal" && input.label_style !== "fraction") {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.label_style`, "label_style is decimal or fraction");
+  }
   const [startNumber, changeNumber] = content.numbers ?? [];
   const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : undefined;
   const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : undefined;
@@ -616,7 +622,11 @@ function compileNumberLine(
     as: base, role, place: placement,
     title: optionalText(input.title, compileText(plan, "数轴"), `${path}.title`),
     range: { min, max },
-    ticks: { step, subdivisions, labels: subdivisions > 1 ? "all" : "major" },
+    ticks: {
+      step, subdivisions, labels: subdivisions > 1 ? "all" : "major",
+      // Decimals only where they are exact (halves, fifths, tenths …): thirds stay fractions, never 0.333.
+      ...(input.label_style === "decimal" && subdivisions > 1 && exactDecimal(subdivisions) ? { format: "decimal" as const } : {}),
+    },
     ...(start && startVariable ? { points: [
       { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "起点") },
       ...(change && changeVariable ? [{ as: "end", value: { expression: `(${startVariable})+(${changeVariable})`, initial: start.initial + change.initial }, label: compileText(plan, "终点") }] : []),

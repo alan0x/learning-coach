@@ -11992,14 +11992,16 @@ var MATH_RECIPES = {
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
     // The model gives only the numbers, at their actual size; the program decides the parts per
     // unit and the hops. (A `denominator` parameter made the model write numerators: 3 for 3/4.)
-    parameter_names: ["title"],
-    model_parameter_names: ["title"],
+    // label_style is how the question writes its numbers (0.8 or 8/10), which only the model sees;
+    // it changes the labels, never the values.
+    parameter_names: ["title", "label_style"],
+    model_parameter_names: ["title", "label_style"],
     required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line"],
-    model_guidance: "\u6570\u8F74\uFF1A\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u79FB\u52A8\u91CF\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u8BA1\u7B97\uFF1B\u9002\u5408\u6574\u6570\u3001\u5206\u6570\u3001\u5C0F\u6570\u7684\u52A0\u51CF\u548C\u6570\u5728\u6570\u8F74\u4E0A\u7684\u4F4D\u7F6E\u3002a + b \u7684\u8D77\u70B9\u662F a\u3001\u79FB\u52A8\u91CF\u662F b\uFF081/4 + 2/4\uFF1A\u8D77\u70B9 0.25\uFF0C\u79FB\u52A8\u91CF 0.5\uFF1B6 \u2212 9\uFF1A\u8D77\u70B9 6\uFF0C\u79FB\u52A8\u91CF \u22129\uFF09\uFF1B\u53EA\u95EE\u4E00\u4E2A\u6570\u7684\u4F4D\u7F6E\u65F6\uFF0C\u8D77\u70B9 0\uFF0C\u79FB\u52A8\u91CF\u662F\u8FD9\u4E2A\u6570\u3002\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF0C\u4E0D\u5199 3\uFF09\uFF1B\u8BB2\u5206\u6570\u65F6\u6ED1\u6746\u6B65\u957F\u7528\u8FD9\u4E2A\u5206\u6570\uFF08\u56DB\u5206\u4E4B\u4E00\u5199 0.25\uFF09\u3002\u4E0D\u7528\u4E8E\u51FD\u6570\u56FE\u50CF"
+    model_guidance: "\u6570\u8F74\uFF1A\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u79FB\u52A8\u91CF\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u8BA1\u7B97\uFF1B\u9002\u5408\u6574\u6570\u3001\u5206\u6570\u3001\u5C0F\u6570\u7684\u52A0\u51CF\u548C\u6570\u5728\u6570\u8F74\u4E0A\u7684\u4F4D\u7F6E\u3002a + b \u7684\u8D77\u70B9\u662F a\u3001\u79FB\u52A8\u91CF\u662F b\uFF081/4 + 2/4\uFF1A\u8D77\u70B9 0.25\uFF0C\u79FB\u52A8\u91CF 0.5\uFF1B6 \u2212 9\uFF1A\u8D77\u70B9 6\uFF0C\u79FB\u52A8\u91CF \u22129\uFF09\uFF1B\u53EA\u95EE\u4E00\u4E2A\u6570\u7684\u4F4D\u7F6E\u65F6\uFF0C\u8D77\u70B9 0\uFF0C\u79FB\u52A8\u91CF\u662F\u8FD9\u4E2A\u6570\u3002\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF0C\u4E0D\u5199 3\uFF09\uFF1B\u8BB2\u5206\u6570\u65F6\u6ED1\u6746\u6B65\u957F\u7528\u8FD9\u4E2A\u5206\u6570\uFF08\u56DB\u5206\u4E4B\u4E00\u5199 0.25\uFF09\u3002\u9898\u76EE\u7528\u5C0F\u6570\u5199\uFF080.5\u3001\u22122.5\uFF09\u65F6 label_style \u5199 decimal\uFF0C\u523B\u5EA6\u5C31\u6807 0.5 \u800C\u4E0D\u662F 5/10\uFF1B\u6570\u503C\u4ECD\u5199\u5B9E\u9645\u5927\u5C0F\u3002\u4E0D\u7528\u4E8E\u51FD\u6570\u56FE\u50CF"
   }
 };
 var text2 = { type: "string" };
@@ -12027,7 +12029,8 @@ var MATH_SCHEMA_PROPERTIES = {
     leg_a: { type: "number", minimum: 0 },
     leg_b: { type: "number", minimum: 0 }
   },
-  circle_area_rearrangement: { radius: { type: "number", minimum: 0 } }
+  circle_area_rearrangement: { radius: { type: "number", minimum: 0 } },
+  number_line: { label_style: { enum: ["decimal", "fraction"] } }
 };
 var MATH_PLUGIN = {
   // The manifest and the Jev subject line are the OLL shared layer's.
@@ -12439,7 +12442,8 @@ var SCHEMA_PROPERTY_ORDER = [
   "leg_a",
   "leg_b",
   "steps",
-  "speed"
+  "speed",
+  "label_style"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text3 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -15954,10 +15958,18 @@ function compileCircleArea(base, content, role, placement, plan, path) {
   }));
 }
 var NUMBER_LINE_SPLITS = Array.from({ length: 12 }, (_unused, index) => index + 1);
+var exactDecimal = (parts) => {
+  let rest = parts;
+  for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime;
+  return rest === 1;
+};
 var onGrid = (value2, parts) => Math.abs(value2 * parts - Math.round(value2 * parts)) < 1e-9;
 function compileNumberLine(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title"], path);
+  allowParameterKeys(input, ["title", "label_style"], path);
+  if (input.label_style !== void 0 && input.label_style !== "decimal" && input.label_style !== "fraction") {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.label_style`, "label_style is decimal or fraction");
+  }
   const [startNumber, changeNumber] = content.numbers ?? [];
   const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : void 0;
   const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : void 0;
@@ -15991,7 +16003,13 @@ function compileNumberLine(base, content, role, placement, plan, path) {
     place: placement,
     title: optionalText(input.title, compileText(plan, "\u6570\u8F74"), `${path}.title`),
     range: { min, max },
-    ticks: { step, subdivisions, labels: subdivisions > 1 ? "all" : "major" },
+    ticks: {
+      step,
+      subdivisions,
+      labels: subdivisions > 1 ? "all" : "major",
+      // Decimals only where they are exact (halves, fifths, tenths …): thirds stay fractions, never 0.333.
+      ...input.label_style === "decimal" && subdivisions > 1 && exactDecimal(subdivisions) ? { format: "decimal" } : {}
+    },
     ...start && startVariable ? { points: [
       { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "\u8D77\u70B9") },
       ...change && changeVariable ? [{ as: "end", value: { expression: `(${startVariable})+(${changeVariable})`, initial: start.initial + change.initial }, label: compileText(plan, "\u7EC8\u70B9") }] : []
