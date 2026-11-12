@@ -82,6 +82,8 @@ export const NUMBER_LINE_QUALITY_CASES = [
   { id: "NL-16", prompt: "What is -2.5 + 4? Show it on a number line.", expect: { values: [-2.5, 1.5], parts: 2, format: "decimal" } },
   { id: "NL-17", prompt: "从 -6 出发向右走 6 格，用数轴看看到了哪里。", expect: { values: [-6, 0], change: 6, integer: true } },
   { id: "NL-18", prompt: "Show 2/3 - 1/3 on a number line.", expect: { values: [2 / 3, 1 / 3], parts: 3 } },
+  { id: "NL-19", prompt: "用数轴算 23 + 48。", expect: { values: [23, 71], change: 48 } },
+  { id: "NL-20", prompt: "Use an open number line to add 17 and 26.", expect: { values: [17, 43], change: 26 } },
   { id: "NM-01", prompt: "用数轴比较 2/3 和 3/5 哪个大。", nearMiss: true },
   { id: "NM-02", prompt: "Graph x > -2 on a number line.", nearMiss: true },
   { id: "NM-03", prompt: "用数轴说明 47 四舍五入到十位是多少。", nearMiss: true },
@@ -163,7 +165,7 @@ export function numberLineStates({ content, variables, tasks, animations }) {
 /**
  * Judges one number line against its case's expectations (set before the run):
  * - hard: compiled; every value the question names is shown by a point in some state; the asked-for
- *   change is reachable; and every visible point, in every state, sits on a tick the label policy
+ *   change is reachable (by an animation, or on the slider's grid from its minimum); and every visible point, in every state, sits on a tick the label policy
  *   labels, so its number is drawn (OLL draws a labelled tick under a point even when labels thin);
  * - soft: the parts per unit, and for integer questions a span of at most 24 units with hops.
  * Returns the lists of misses, empty when it passes.
@@ -184,7 +186,11 @@ export function judgeNumberLine(item, lesson) {
     const name = String((content.bindings ?? []).find((binding) => binding.target === "move.by")?.expression ?? "").trim();
     const change = variables.find((variable) => variable.as === name);
     const animated = animations.filter(([variable]) => variable === name).map(([, value]) => value);
-    if (!change || !((change.min <= expect.change && expect.change <= change.max) || animated.some((value) => close(value, expect.change)))) hard.push(`cannot reach ${expect.change}`);
+    // A slider reaches its minimum plus whole steps; the fit may have coarsened the step (1 to 5).
+    const step = change?.control?.step;
+    const onSlider = change && change.min - 1e-9 <= expect.change && expect.change <= change.max + 1e-9
+      && (!step || close(Math.round((expect.change - change.min) / step) * step + change.min, expect.change));
+    if (!change || !(onSlider || animated.some((value) => close(value, expect.change)))) hard.push(`cannot reach ${expect.change}`);
   }
   const labelled = planNumberLineTicks(content).filter((tick) => tick.label).map((tick) => tick.value);
   const visible = new Set((content.points ?? []).filter((point) => point.shown !== "when_emphasized").map((point) => point.as));
@@ -248,7 +254,7 @@ export function summarize(rows) {
   const quality = judged.length ? {
     judged: judged.length,
     hard_pass: judged.filter((row) => !row.quality.hard.length).length,
-    hard_misses: judged.filter((row) => row.quality.hard.length).map((row) => ({ case: row.case, hard: row.quality.hard })),
+    hard_misses: judged.filter((row) => row.quality.hard.length).map((row) => ({ case: row.case, hard: row.quality.hard, ...(row.quality.review ? { review: row.quality.review } : {}) })),
     soft_misses: judged.filter((row) => row.quality.soft.length).map((row) => ({ case: row.case, soft: row.quality.soft })),
     near_misses_for_review: rows.filter((row) => row.kind === "near_miss").map((row) => ({ case: row.case, recipes: row.recipes ?? null })),
   } : undefined;
@@ -310,12 +316,9 @@ async function main() {
     const row = { pair, case: item.id, kind: item.kind, arm, order: order.indexOf(arm), ...kept };
     // A case with expectations that produced no judged part is a hard miss, never a silent gap.
     if (arm === "candidate" && item.expect && !row.quality) row.quality = { hard: [`not judged: ${row.outcome}`], soft: [] };
-    // The judge sees the first part only; a later part may show what it lacks, so such misses go to hand review.
-    try {
-      const { readdirSync } = await import("node:fs");
-      row.lesson_parts = readdirSync(join(workDir, "study", "oll")).filter((name) => name.startsWith(`${input.turn_id}.part-`)).length;
-    } catch { row.lesson_parts = null; }
-    if (row.quality?.hard.length && row.lesson_parts > 1) row.quality.review = "later parts not judged: read by hand";
+    // The run stops at the first playable part, so the judge sees only the first section; when the
+    // outline has more, a later section may show what the first lacks, and the miss is read by hand.
+    if (row.quality?.hard.length && row.sections > 1) row.quality.review = "later sections not judged: read by hand";
     rows.push(row);
     console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null, ...(row.quality ? { hard: row.quality.hard } : {}) }));
     await persist();

@@ -76,6 +76,11 @@ test("the judge passes a correct line and names each hard miss", () => {
   assert.match(judgeNumberLine({ expect: {} }, lineLesson({ ticks: { step: 1, subdivisions: 4 }, start: 0, change: 0.75, changeRange: [0, 1] })).hard.join(), /unreadable: end at 0\.75/);
   // A hidden end is not judged for readability; it is kept back on purpose.
   assert.deepEqual(judgeNumberLine({ expect: {} }, lineLesson({ ticks: { step: 1, subdivisions: 4 }, start: 0, change: 0.75, changeRange: [0, 1], latentEnd: true })).hard, []);
+  // In range but off the slider's grid: a slider from −5 stepping by 2 reaches −5, −3, −1 … never −4.
+  const offGrid = lineLesson({ changeRange: [-5, 5] });
+  offGrid.variables[1].control = { step: 2 };
+  assert.match(judgeNumberLine({ expect: { change: -4 } }, offGrid).hard.join(), /cannot reach -4/);
+  assert.deepEqual(judgeNumberLine({ expect: { change: -5 } }, offGrid).hard, []);
   assert.match(judgeNumberLine(item, { error: "boom" }).hard.join(), /compile error/);
   assert.deepEqual(judgeNumberLine(item, undefined).hard, ["no number line"]);
 });
@@ -90,7 +95,7 @@ test("quality cases are written before the run: every held-out case expects valu
   assert.equal(TRIAL_QUALITY_CASES.number_line, NUMBER_LINE_QUALITY_CASES);
   for (const item of NUMBER_LINE_QUALITY_CASES) assert.ok(item.nearMiss || item.expect?.values?.length, item.id);
   for (const item of NUMBER_LINE_CASES) assert.ok(item.expect?.values?.length, item.id);
-  assert.equal(new Set([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES].map((item) => item.id)).size, 22);
+  assert.equal(new Set([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES].map((item) => item.id)).size, 24);
 });
 
 test("speed is summarized over the pairs only; quality rows are summarized apart", () => {
@@ -112,5 +117,70 @@ test("a decimal question labelled in fractions is a soft miss, recorded for the 
   const { hard, soft } = judgeNumberLine({ expect: { values: [0.5, 0.8], parts: 10, format: "decimal" } }, lesson);
   assert.deepEqual(hard, []);
   assert.deepEqual(soft, ["labels as fractions, the question writes decimals"]);
+});
+
+// The harness end to end, against a stub build that talks like Coach: one model call, one raw reply,
+// an outline of two sections, the first part (a compiled number line), then first playable.
+test("the harness runs pairs and quality cases, keeps raw replies, judges each case, and reports what did not run", async () => {
+  const { mkdtemp, writeFile, mkdir, readdir } = await import("node:fs/promises");
+  const { execFile } = await import("node:child_process");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const dir = await mkdtemp(join(tmpdir(), "harness-smoke-"));
+  const part = {
+    dsl: "octos.lesson", version: "0.1", profile: "authoring",
+    lesson: { mode: "explain", language: "zh-CN", title: "数轴", goals: ["看"], variables: [
+      { as: "number_01", initial: 35, min: 30, max: 40, label: "起点" }, { as: "number_02", initial: 40, min: 0, max: 100, label: "移动" },
+    ] },
+    steps: [{ key: "s", purpose: "看", beats: [{ key: "b", say: "看。", actions: [{ do: "write", as: "line", kind: "number_line", role: "main_visual", place: { relation: "new_region" }, content: {
+      range: { min: 0, max: 141 }, ticks: { step: 5, subdivisions: 1, labels: "major" },
+      points: [{ as: "start", value: 35, label: "起点" }, { as: "end", value: 75, label: "终点" }],
+      jumps: [{ as: "move", from: "start", by: 40, hops: true }],
+      bindings: [{ target: "start.value", expression: "number_01" }, { target: "end.value", expression: "(number_01)+(number_02)" }, { target: "move.by", expression: "number_02" }],
+    } }] }] }],
+    close: { summary: "完。", focus: ["line"] },
+  };
+  await writeFile(join(dir, "part.json"), JSON.stringify(part));
+  await writeFile(join(dir, "main"), `
+    const { mkdirSync, copyFileSync } = await import("node:fs");
+    let input = ""; process.stdin.on("data", (chunk) => { input += chunk; });
+    process.stdin.on("end", () => {
+      const { turn_id } = JSON.parse(input);
+      const dir = process.env.OCTOS_WORK_DIR + "/study/oll"; mkdirSync(dir, { recursive: true });
+      const path = dir + "/" + turn_id + ".part-001.octos-lesson.json"; copyFileSync(${JSON.stringify(join(dir, "part.json"))}, path);
+      const say = (line) => process.stderr.write(line + "\\n");
+      say('learning-coach: {"stage":"model-call","status":"started"}');
+      say('learning-coach: raw stub lesson-plan-bootstrap content: {"numbers":[35,40]}');
+      say('learning-coach: {"stage":"lesson-plan-outline-ready","status":"completed","sections":2}');
+      say(JSON.stringify({ type: "artifact", path }));
+      say('learning-coach: {"stage":"lesson-prefix-published","status":"completed"}');
+      setInterval(() => {}, 1000);
+    });
+  `);
+  await writeFile(join(dir, "profile.json"), JSON.stringify({ config: { llm: { primary: { family_id: "stub", model_id: "stub-1", route: { api_key_env: "STUB_KEY" } } }, env_vars: { STUB_KEY: "x" } } }));
+  const script = fileURLToPath(new URL("../scripts/eval-trial-recipe-speed.mjs", import.meta.url));
+  const run = (calls, out) => new Promise((done, fail) => execFile(process.execPath, [script, "--build", dir, "--recipes", "number_line", "--octos-profile", join(dir, "profile.json"), "--pairs", "2", "--max-calls", String(calls), "--out", out],
+    { timeout: 60000 }, (error) => (error ? fail(error) : done())));
+  await run(100, join(dir, "full.json"));
+  const full = JSON.parse(await readFile(join(dir, "full.json"), "utf8"));
+  assert.equal(full.rows.length, 4 + NUMBER_LINE_QUALITY_CASES.length, "2 pairs, then every quality case once");
+  assert.equal(full.summary.all.complete_pairs, 2);
+  assert.equal(full.summary.not_run, undefined);
+  const raw = (await readdir(full.work_dir)).filter((name) => name.endsWith(".raw-model.txt"));
+  assert.equal(raw.length, full.rows.length, "every run keeps its raw reply");
+  assert.match(await readFile(join(full.work_dir, raw[0]), "utf8"), /lesson-plan-bootstrap content/);
+  const nl15 = full.rows.find((row) => row.case === "NL-15");
+  assert.deepEqual(nl15.quality, { hard: [], soft: [] });
+  assert.equal(nl15.sections, 2);
+  const nl11 = full.rows.find((row) => row.case === "NL-11");
+  assert.match(nl11.quality.hard.join(), /wrong value: 0\.3 is never shown/);
+  assert.equal(nl11.quality.review, "later sections not judged: read by hand");
+  assert.equal(full.summary.quality.near_misses_for_review.length, 4);
+  assert.equal(full.rows.filter((row) => row.kind === "near_miss" && row.quality).length, 0, "near misses are read by hand, not judged");
+  // A budget too small for the plan is reported, never passed over.
+  await run(3, join(dir, "short.json"));
+  const short = JSON.parse(await readFile(join(dir, "short.json"), "utf8"));
+  assert.match(short.summary.not_run.join(), /did not run \(budget 3 calls\)/);
 });
 

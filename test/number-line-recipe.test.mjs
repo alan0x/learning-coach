@@ -79,11 +79,16 @@ test("fractions choose the parts per unit that put every value on a tick", () =>
 test("the model is not asked for subdivisions or hops: the schema offers neither, and the program decides both", () => {
   const result = compile([
     { initial: 0, min: 0, max: 1, label: "起点" },
-    { initial: 1.3, min: 0, max: 2.7, label: "加上", student_control: { kind: "slider", step: 0.1 } },
+    { initial: 2.3, min: 0, max: 2.7, label: "加上", student_control: { kind: "slider", step: 0.1 } },
   ]);
   assert.equal(result.error, undefined, result.error);
   assert.equal(result.content.ticks.subdivisions, 10);
   assert.equal(result.content.jumps[0].hops, false, "27 tenth-hops exceed the 24-hop limit, so one arc");
+  // A change of 1.3 narrows to its window, and its tenth-hops fit.
+  assert.equal(compile([
+    { initial: 0, min: 0, max: 1, label: "起点" },
+    { initial: 1.3, min: 0, max: 2.7, label: "加上", student_control: { kind: "slider", step: 0.1 } },
+  ]).content.jumps[0].hops, true);
   assert.equal(api.RECIPE_SCHEMA_PROPERTIES.number_line, undefined, "no number-line parameters: a denominator made the model write numerators (run 4)");
   assert.match(compile([{ initial: 0, min: 0, max: 1, label: "起点" }], { hops: true }).error ?? "", /hops/);
 });
@@ -102,29 +107,38 @@ test("6 − 9 with wide sliders and a change starting at 0 compiles, hop by hop 
   assert.deepEqual(result.content.jumps[0], { as: "move", from: "start", by: 0, hops: true });
 });
 
-test("a far start is kept near its value, while the change slider a learner moves keeps its whole range", () => {
+test("a far start is kept near its value, while a change slider starting at 0, for the learner to set, keeps its whole range", () => {
   const result = compile([
+    { initial: 20, min: 0, max: 100, label: "起点" },
+    { initial: 0, min: -50, max: 50, label: "加上", student_control: { kind: "slider", step: 1 } },
+  ]);
+  assert.equal(result.error, undefined, result.error);
+  // The start (no slider, not driven) shrinks to 19–21. The change keeps −50 to 50: a wide line and
+  // one arc, rather than a change the learner cannot drag where the narration goes. The ticks are
+  // whole numbers, so 20 sits on a labelled tick wherever the learner takes the end.
+  assert.deepEqual([result.variables[0].min, result.variables[0].max], [19, 21]);
+  assert.deepEqual([result.variables[1].min, result.variables[1].max], [-50, 50]);
+  assert.equal(result.content.ticks.step, 1);
+  assert.equal(result.content.jumps[0].hops, false);
+  assert.deepEqual(judgeNumberLine({ expect: { values: [20] } }, result).hard, []);
+  // A change that starts at −7 states the change the lesson is about: it narrows, and −7 stays.
+  const stated = compile([
     { initial: 20, min: 0, max: 100, label: "起点" },
     { initial: -7, min: -50, max: 50, label: "加上", student_control: { kind: "slider", step: 1 } },
   ]);
-  assert.equal(result.error, undefined, result.error);
-  // The start (no slider, not driven) shrinks to 19–21. The change keeps −50 to 50: a wide line with
-  // coarser ticks and one arc, rather than a change the learner cannot drag where the narration goes.
-  assert.deepEqual([result.variables[0].min, result.variables[0].max], [19, 21]);
-  assert.deepEqual([result.variables[1].min, result.variables[1].max], [-50, 50]);
-  assert.equal(result.content.ticks.step, 5);
-  assert.equal(result.content.jumps[0].hops, false);
+  assert.ok(stated.variables[1].min <= -7 && stated.variables[1].max < 50, JSON.stringify(stated.variables[1]));
+  assert.deepEqual(judgeNumberLine({ expect: { values: [20, 13], change: -7 } }, stated), { hard: [], soft: [] });
 });
-test("whole numbers far apart are counted in fives (the smallest count that fits): ticks hold every value, and the slider steps by them", () => {
+test("whole numbers far apart are counted in the smallest of 2, 5 or 10 that fits: ticks hold every value, and the slider steps by it", () => {
   const result = compile([
     { initial: 0, min: 0, max: 10, label: "起点" },
     { initial: 100, min: 0, max: 100, label: "加上", student_control: { kind: "slider", step: 1 } },
   ]);
   assert.equal(result.error, undefined, result.error);
-  assert.equal(result.variables[1].control.step, 5);
-  assert.ok([5, 10].includes(result.content.ticks.step), JSON.stringify(result.content.ticks));
-  assert.equal(result.content.jumps[0].hops, true);
-  assert.deepEqual(judgeNumberLine({ expect: { values: [0, 100], change: 100 } }, result), { hard: [], soft: [] });
+  // 0 and 100 are even, and 0 to 100 in twos fits the window: the slider steps by 2.
+  assert.equal(result.variables[1].control.step, 2);
+  assert.equal(result.content.ticks.step, 2);
+  assert.deepEqual(judgeNumberLine({ expect: { values: [0, 100], change: 100 } }, result).hard, []);
 });
 test("whole numbers close together still count in ones, even when they share a factor", () => {
   // −6 + 6: multiples of 2 and 6, but the line is short, so a learner can still try 5.
@@ -230,13 +244,15 @@ test("counting by fourths, where the numbers alone are whole, follows the slider
   assert.equal(result.content.jumps[0].hops, true);
 });
 
-test("run 3: 3 + (−5) on two sliders of −10 to 10 is drawn on −9 to 15, not −21 to 21, with hops", () => {
+test("run 3: 3 + (−5) on two sliders of −10 to 10 is drawn on −4 to 5, not −21 to 21, with hops", () => {
   const result = compile([
     { initial: 3, min: -10, max: 10, label: "起点" },
     { initial: -5, min: -10, max: 10, label: "加上", student_control: { kind: "slider", step: 1 } },
   ]);
   assert.equal(result.error, undefined, result.error);
-  assert.deepEqual(result.content.range, { min: -9, max: 15 });
+  // The change starts at −5, the change the lesson is about, so it narrows to the window around 0, 3 and −2.
+  assert.deepEqual(result.content.range, { min: -4, max: 5 });
+  assert.ok(result.variables[1].min <= -5);
   assert.equal(result.content.jumps[0].hops, true);
 });
 
@@ -370,14 +386,14 @@ const judge = (id, result) => judgeNumberLine(caseById.get(id), result);
 // What the recorded run 4 lessons give under the current rules. NL-03 and NL-09 show wrong values,
 // because the model wrote numerators (3; 1 and 2) under the removed `denominator` parameter. NL-04
 // never shows the sum 3/4: the model started at 0 and moved by 1/4, instead of starting at the first
-// addend (the earlier criteria, which checked only the parts, passed it). NL-05
-// and NL-06 pass the hard checks but are wide (34 and 39 units): their own practice tasks drive the
-// start (to −5 and −10) while the change keeps its range for the answer.
+// addend (the earlier criteria, which checked only the parts, passed it). NL-05 and NL-06 were 34
+// and 39 units wide while the change slider kept its whole range; it now narrows, because it starts at
+// the change the lesson is about. NL-05 fits; NL-06 is still 28 wide, as its own task moves the start
+// to −10, and −10 − 9 = −19 is a value the lesson reaches.
 const RUN4_EXPECTED = {
   "NL-03": { hard: /wrong value: 0\.75 is never shown/ },
   "NL-04": { hard: /wrong value: 0\.75 is never shown/ },
-  "NL-05": { soft: /34 units wide/ },
-  "NL-06": { soft: /39 units wide/ },
+  "NL-06": { soft: /28 units wide/ },
   // 0.8 reads 8/10: the recipe labels split units as fractions (a soft miss until the owner decides).
   "NL-07": { soft: /labels as fractions/ },
   "NL-09": { hard: /wrong value: 0\.3333 is never shown/ },
@@ -463,13 +479,23 @@ const DRY_RUN = [
   ["NL-16", ideal(-2.5, 4, 0.5, -5, 5)],
   ["NL-17", ideal(-6, 6, 1, -10, 10)],
   ["NL-18", ideal(2 / 3, -1 / 3, 1 / 3, -1, 1)],
+  ["NL-19", ideal(23, 48, 1, 0, 100)],
+  ["NL-20", ideal(17, 26, 1, 0, 50)],
 ];
 const allCases = new Map([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES].map((item) => [item.id, item]));
+// The same values in the shape run 4's model wrote: both sliders −10 to 10 stepping by 0.1, whatever
+// the lesson counts in. Larger numbers get −100 to 100 by 1, the widest a slider may expose (1000 steps).
+const runShape = (numbers) => numbers.map((number) => {
+  const large = Math.abs(number.initial) > 10;
+  return { ...number, min: large ? -100 : -10, max: large ? 100 : 10, student_control: { kind: "slider", step: large ? 1 : 0.1 } };
+});
 for (const [id, numbers] of DRY_RUN) {
-  test(`dry run ${id}: the card's ideal input passes the hard checks`, () => {
-    const result = compile(numbers, {}, {});
-    const { hard, soft } = judgeNumberLine(allCases.get(id), result);
-    assert.deepEqual(hard, [], `${hard.join("; ")} (range ${JSON.stringify(result.content?.range)}, ticks ${JSON.stringify(result.content?.ticks)}; soft: ${soft.join("; ")})`);
-  });
+  for (const [shape, input] of [["the card's ideal input", numbers], ["run 4's slider shape", runShape(numbers)]]) {
+    test(`dry run ${id}: ${shape} passes the hard checks`, () => {
+      const result = compile(input, {}, {});
+      const { hard, soft } = judgeNumberLine(allCases.get(id), result);
+      assert.deepEqual(hard, [], `${hard.join("; ")} (range ${JSON.stringify(result.content?.range)}, ticks ${JSON.stringify(result.content?.ticks)}; soft: ${soft.join("; ")})`);
+    });
+  }
 }
 

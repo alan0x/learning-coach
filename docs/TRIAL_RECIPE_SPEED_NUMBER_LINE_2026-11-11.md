@@ -149,7 +149,7 @@ The judge is `judgeNumberLine` in the harness. The offline replay test uses the 
 
 - NL-03 and NL-09 show wrong values (numerators written under the removed `denominator`).
 - **NL-04 never shows the sum 3/4.** The model started at 0 and moved by 1/4 instead of starting at the first addend. The earlier criteria checked only the parts and passed it.
-- NL-05 and NL-06 pass the hard checks, with soft misses: 34 and 39 units wide.
+- NL-05 and NL-06 pass the hard checks. They were 34 and 39 units wide; with the narrowing below, NL-05 fits and NL-06 is 28 units wide (its own task moves the start to −10, and −10 − 9 = −19).
 - NL-07 passes the hard checks, with a soft miss on format: 0.8 reads 8/10.
 
 The recipe card now maps the question to the two numbers explicitly: for a + b, start at a and move by b (1/4 + 2/4: start 0.25, move 0.5; 6 − 9: start 6, move −9); for "where is x", start at 0 and move by x.
@@ -164,18 +164,26 @@ Each held-out case, and NL-04, was compiled offline from the input a model follo
 - **Fit:** a whole-number lesson too wide to count in ones counts in the smallest of 2, 5 or 10 that divides every value it uses. Snapping, the slider step and the window then use that unit, the way a fraction lesson counts in its parts. A short lesson still counts in ones, even when its values share a factor: −6 + 6 keeps steps of 1.
 - **Compiler:** the tick step is the finest of 1, 2, 5 or 10 that keeps at most 60 ticks and holds every value.
 
-All nine cases now pass the hard checks on ideal input. This is a test (`dry run …`), not a prediction of what the model will write.
+**Two-digit addition** (NL-19, 23 + 48, and NL-20, 17 + 26 on an open number line) failed the same way when Fable's review added them. Their values share no factor of 2, 5 or 10, and the change slider kept its 0–100 range, so the line ran 0–200 with ticks every 10. Three changes fixed it:
+- **Compiler, by construction:** when no step with at most 60 ticks holds every value, the finest step that holds them all within OLL's 240-tick limit is used, before any step that does not.
+- **Fit, change slider:** an undriven change slider that **starts at a value other than 0** states the change the lesson is about, and narrows to the window (which always keeps that value). One that **starts at 0** is for the learner to set, perhaps to an answer only the narration names ("6 − 9"), and keeps its range.
+- **Fit, window:** 0 is left out of the window when including it would make the window too wide (23 + 48 is shown around 23 to 71), and the window grows to 58 units, which still gives one tick per unit.
+
+A rendered 23 + 48 line was readable on values but still looked like a comb, with labels every 13. That is fixed in OLL #51: labels thin on strides people count by (every 2, 5, 10, 20 …).
+
+**Shapes.** Every case is dry-run twice: once with the card's ideal input, and once in the shape run 4's model actually wrote (sliders −10 to 10 by 0.1, or −100 to 100 by 1 for larger numbers). All 22 pass the hard checks. This is a test (`dry run …`), not a prediction of what the model will write.
 
 ### Cases for run 5 (written before the run)
 
 - **Speed pairs:** NL-01 to NL-10 against ten other-subject requests, unchanged.
 - **Quality cases,** once each on the candidate arm only:
-  - eight held-out number-line requests no fix was tuned against: tenths, negative fractions, mixed numbers, 5 − 8, a 0–100 line, −2.5 + 4, a walk to 0, 2/3 − 1/3;
+  - ten held-out number-line requests: tenths, negative fractions, mixed numbers, 5 − 8, a 0–100 line, −2.5 + 4, a walk to 0, 2/3 − 1/3, and two-digit addition (23 + 48; 17 + 26). The fixes above were checked against these cases offline, using inputs I wrote, but never against model output;
   - four near misses the recipe cannot express: comparing 2/3 with 3/5, x > −2, rounding 47, |x − 3| < 2.
 - **Cost:**
   - One pass of the quality cases: about 60 model calls, roughly $0.55.
-  - Repeating them three times (`--quality-repeats 3`): about 85 calls, roughly $0.80. Run with `--max-calls 100`.
-- **What a clean run proves.** One sample per case leaves a lot open. With 18 number-line samples and no failures, a true failure rate of up to about 1 in 6 (17%) is still plausible at 95% confidence. With the quality cases repeated three times (34 samples), it is about 1 in 11 (9%). Recommended: three repeats.
+  - Repeating them three times (`--quality-repeats 3`): about 90 calls, roughly $0.85. Run with `--max-calls 110`.
+- **What a clean run proves.** One sample per case leaves a lot open. With 20 number-line samples and no failures, a true failure rate of up to about 1 in 7 (15%) is still plausible at 95% confidence. With the held-out cases repeated three times (40 samples), it is about 1 in 13 (7.5%). Recommended: three repeats.
+- **A single model slip (owner to decide before the run).** At 40 samples written by the model, a single slip like NL-04's (start at 0 instead of the first addend) would fail a zero-tolerance gate. The choice: zero tolerance, which means narrowing the recipe after any slip, or a stated allowance for misses caused by the model (for example, at most one, and not twice on the same case). Misses caused by the program are allowed nowhere.
 - **NL-08** expects −4 and −1 but no particular change, since moving either way answers "why is −4 less than −1".
 - Expected values for every case are in `NUMBER_LINE_CASES` and `NUMBER_LINE_QUALITY_CASES`.
 
@@ -184,8 +192,10 @@ All nine cases now pass the hard checks on ideal input. This is a test (`dry run
 - **Nothing is passed over silently:**
   - A case with expectations that produced no judged first part is a hard miss ("not judged").
   - A budget that ran out is reported as `not_run`.
-  - A hard miss on a lesson with more than one part is marked for hand review, because the judge reads only the first part.
+  - The run stops at the first playable part, so the judge sees only the first section. A hard miss on a lesson whose outline has more than one section is marked for hand review.
+  - "Reachable" means on the slider's grid from its minimum, not just inside its range, since the fit may coarsen a step.
+  - The harness itself is tested end to end against a stub build: raw replies kept, every case judged, multi-section misses flagged, an exhausted budget reported.
 - The run keeps every raw model reply. The work directory is copied out of the system temp folder straight after the run (kept locally, not committed), so later fixes can be replayed against real output for free.
-- **Pass:** every hard check holds on all 18 number-line cases and on any near miss the model draws. Then adoption goes in a separate change, after the OLL pin bumps. Before that change lands, one real lesson is played in the installed app at phone width.
+- **Pass:** every hard check holds on all number-line cases (with the slip allowance the owner sets) and on any near miss the model draws. Then adoption goes in a separate change, after the OLL pin bumps. Before that change lands, one real lesson is played in the installed app at phone width.
 - **Stop rule:** a hard miss of a kind already fixed is a defect to fix and re-check offline. A hard miss of a new kind means narrowing what the recipe offers, for example to integers only, or dropping a request type. It does not mean another patch.
 

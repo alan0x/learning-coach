@@ -18,8 +18,11 @@ import type { LessonPlan, LessonPlanNumber, LessonPlanVisualContent } from "../l
  * so neighbouring denominators stay apart.
  */
 const fractionTolerance = (denominator: number) => Math.min(0.011, 0.25 / (denominator * denominator));
-/** The widest window the fit narrows a line to; anything wider keeps every reachable value. */
-const MAX_WINDOW = 40;
+/**
+ * The widest window the fit narrows a line to, in its counting unit; anything wider keeps every
+ * reachable value. With the compiler's padding a window this wide still draws a tick per unit (60).
+ */
+const MAX_WINDOW = 58;
 
 const near = (value: number, grid: number) => Math.abs(value - Math.round(value / grid) * grid) <= fractionTolerance(Math.round(1 / grid));
 const snap = (value: number, grid: number) => Number((Math.round(value / grid) * grid).toPrecision(12));
@@ -111,7 +114,9 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   const denominator = fromValues === 1 ? wholeLessonDenominator([start.student_control?.step, change?.student_control?.step]) : fromValues;
   let grid = denominator ? 1 / denominator : undefined;
 
-  const used = [0, ...shown];
+  // 0 anchors the line when it fits; a lesson far from 0 (23 + 48) is shown around its own values.
+  const withZero = [0, ...shown];
+  const used = Math.ceil(Math.max(...withZero)) - Math.floor(Math.min(...withZero)) + 2 <= MAX_WINDOW ? withZero : shown;
   let low = Math.floor(Math.min(...used)) - 1;
   let high = Math.ceil(Math.max(...used)) + 1;
   let windowFits = high - low <= MAX_WINDOW;
@@ -151,14 +156,18 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   // Which range a number keeps:
   // - one the lesson drives (an animation or a practice target) shrinks to the window around the
   //   values the lesson uses, which still holds every value it drives;
-  // - a change with a slider nothing drives keeps the model's range: the learner is meant to move it,
-  //   perhaps to a value only the narration names, so a wider line beats an unreachable answer;
+  // - a change with a slider nothing drives, starting at 0, keeps the model's range: the learner is
+  //   meant to find the change, perhaps one only the narration names ("6 − 9"), so a wider line beats
+  //   an unreachable answer;
+  // - one starting elsewhere states the change the lesson is about (3/4 in −1/2 + 3/4): it shrinks to
+  //   the window, which always keeps that value. Keeping ±10 squeezed −1/2 + 3/4 into one unit of 25;
   // - one with neither is fixed in effect, and keeps a short range around its value.
   // - a start nothing drives keeps a short range even with a slider: the answer is carried by the change.
   const rangeFor = (definition: LessonPlanNumber, values: readonly number[], window: [number, number], carriesAnswer: boolean): [number, number] | undefined => {
     if (!windowFits) return undefined;
     if (values.length > 1) return window;
-    if (definition.student_control && carriesAnswer) return undefined;
+    if (definition.student_control && carriesAnswer && definition.initial === 0) return undefined;
+    if (definition.student_control && carriesAnswer) return window;
     return [definition.initial - unit, definition.initial + unit];
   };
   fit(start, startValues.map((value) => (grid ? snap(value, grid) : value)), rangeFor(start, startValues, [low, high], false));
