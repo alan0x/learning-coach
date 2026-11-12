@@ -5,10 +5,12 @@
 // - each unit is split into the lesson's denominator (the smallest 1–12 its
 //   values use, else a coarse slider step such as 0.25), and the numbers'
 //   starting values, ranges and slider steps are snapped onto those ticks;
+//   whole numbers too far apart to count in ones are counted in 2s, 5s or 10s;
 // - the numbers' ranges shrink to a window around the values the lesson uses
 //   (0, the start, the end, animation targets and practice targets), so the
 //   line is readable and hops fit.
-// Nothing here rejects: a lesson the fit cannot improve keeps its numbers.
+// Nothing here rejects, and the fit never discards itself: a window that does not fit keeps the
+// model's ranges, but the values and sliders still sit on the lesson's ticks.
 import type { LessonPlan, LessonPlanNumber, LessonPlanVisualContent } from "../lesson-plan.js";
 
 /**
@@ -17,8 +19,11 @@ import type { LessonPlan, LessonPlanNumber, LessonPlanVisualContent } from "../l
  * so neighbouring denominators stay apart.
  */
 const fractionTolerance = (denominator: number) => Math.min(0.011, 0.25 / (denominator * denominator));
-/** The widest window the fit narrows a line to; anything wider keeps every reachable value. */
-const MAX_WINDOW = 40;
+/**
+ * The widest window the fit narrows a line to, in its counting unit; anything wider keeps every
+ * reachable value. With the compiler's padding a window this wide still draws a tick per unit (60).
+ */
+const MAX_WINDOW = 58;
 
 const near = (value: number, grid: number) => Math.abs(value - Math.round(value / grid) * grid) <= fractionTolerance(Math.round(1 / grid));
 const snap = (value: number, grid: number) => Number((Math.round(value / grid) * grid).toPrecision(12));
@@ -33,28 +38,8 @@ export function inferDenominator(values: readonly number[]): number | undefined 
   return undefined;
 }
 
-const UNIT_STEPS = [2, 3, 4, 5, 6];
-const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
-
-/**
- * The denominator of a lesson whose values are all whole numbers, from its slider steps:
- * - a step of exactly 1/2 to 1/6 (counting by fourths) says what the lesson counts in;
- * - several such steps share their least common denominator (halves and thirds: sixths), so
- *   every value either slider reaches stays on a tick;
- * - when that denominator would exceed 12, the sliders are left as written (undefined);
- * - any other step (0.1, 0.4, 1.5) says nothing about fractions, and the lesson is whole (1).
- */
-export function wholeLessonDenominator(steps: ReadonlyArray<number | undefined>): number | undefined {
-  const units = steps.filter((step): step is number => typeof step === "number" && step > 0)
-    .map((step) => UNIT_STEPS.find((parts) => Math.abs(step - 1 / parts) <= fractionTolerance(parts)))
-    .filter((parts): parts is number => parts !== undefined);
-  if (!units.length) return 1;
-  const common = units.reduce((lcm, parts) => (lcm * parts) / gcd(lcm, parts), 1);
-  return common <= 12 ? common : undefined;
-}
-
 /** Values the lesson sets a number to: animation end values and practice targets on the number itself. */
-function lessonValues(plan: LessonPlan, number: number): number[] {
+export function lessonValues(plan: LessonPlan, number: number): number[] {
   const values: number[] = [];
   for (const section of plan.sections) {
     for (const moment of section.moments) for (const action of moment.actions) {
@@ -65,12 +50,6 @@ function lessonValues(plan: LessonPlan, number: number): number[] {
     }
   }
   return values;
-}
-
-/** Practice targets set directly on a number. */
-function taskValues(plan: LessonPlan, number: number): number[] {
-  return plan.sections.flatMap((section) => (section.student_activities ?? []).flatMap((activity) =>
-    activity.kind === "number_target" && !activity.expression && activity.number_controls[0]?.number === number ? [activity.value] : []));
 }
 
 /**
@@ -102,18 +81,34 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   const changeValues = change ? [change.initial, ...lessonValues(plan, changeIndex!)] : [];
   // Points the line shows: the start's values, and the end for each value of the change.
   const shown = [...startValues, ...changeValues.map((value) => start.initial + value)];
-  // The values decide first: 0.33 and 0.67 are thirds. Only when they are all whole numbers can a
-  // slider step say what the lesson counts in, and only a coarse one (1/2 to 1/6, as in counting
-  // by fourths): a fine step such as 0.1 on an integer lesson is not a lesson in tenths.
+  // The values alone decide what the lesson counts in: 0.33 and 0.67 are thirds. A slider step is never
+  // evidence: the model does not write one, and the step it arrives with is derived from the range
+  // (span / 200), so 0.5 on a 0–100 range says nothing about halves (run 5).
   const values = [...startValues, ...changeValues];
-  const fromValues = inferDenominator(values);
-  const denominator = fromValues === 1 ? wholeLessonDenominator([start.student_control?.step, change?.student_control?.step]) : fromValues;
-  const grid = denominator ? 1 / denominator : undefined;
+  const denominator = inferDenominator(values);
+  let grid = denominator ? 1 / denominator : undefined;
 
-  const used = [0, ...shown];
-  const low = Math.floor(Math.min(...used)) - 1;
-  const high = Math.ceil(Math.max(...used)) + 1;
-  const windowFits = high - low <= MAX_WINDOW;
+  // 0 anchors the line when it fits; a lesson far from 0 (23 + 48) is shown around its own values.
+  const withZero = [0, ...shown];
+  const used = Math.ceil(Math.max(...withZero)) - Math.floor(Math.min(...withZero)) + 2 <= MAX_WINDOW ? withZero : shown;
+  let low = Math.floor(Math.min(...used)) - 1;
+  let high = Math.ceil(Math.max(...used)) + 1;
+  let windowFits = high - low <= MAX_WINDOW;
+  // Whole numbers too far apart to count in ones (35 and 75 on a line from 0) are counted in the
+  // smallest of 2, 5 or 10 that every value is a multiple of, as a fraction lesson counts in its parts:
+  // the values, slider steps and window snap to it, so each value sits on a tick the line can label.
+  let unit = 1;
+  if (denominator === 1 && !windowFits) {
+    const coarse = [2, 5, 10].find((count) => values.every((value) => near(value / count, 1))
+      && (Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2) <= MAX_WINDOW);
+    if (coarse) {
+      unit = coarse;
+      grid = coarse;
+      low = (Math.floor(Math.min(...used) / coarse) - 1) * coarse;
+      high = (Math.ceil(Math.max(...used) / coarse) + 1) * coarse;
+      windowFits = true;
+    }
+  }
 
   const fit = (definition: LessonPlanNumber, values: readonly number[], range: [number, number] | undefined) => {
     if (grid) {
@@ -135,15 +130,19 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   // Which range a number keeps:
   // - one the lesson drives (an animation or a practice target) shrinks to the window around the
   //   values the lesson uses, which still holds every value it drives;
-  // - a change with a slider nothing drives keeps the model's range: the learner is meant to move it,
-  //   perhaps to a value only the narration names, so a wider line beats an unreachable answer;
+  // - a change with a slider nothing drives, starting at 0, keeps the model's range: the learner is
+  //   meant to find the change, perhaps one only the narration names ("6 − 9"), so a wider line beats
+  //   an unreachable answer;
+  // - one starting elsewhere states the change the lesson is about (3/4 in −1/2 + 3/4): it shrinks to
+  //   the window, which always keeps that value. Keeping ±10 squeezed −1/2 + 3/4 into one unit of 25;
   // - one with neither is fixed in effect, and keeps a short range around its value.
   // - a start nothing drives keeps a short range even with a slider: the answer is carried by the change.
   const rangeFor = (definition: LessonPlanNumber, values: readonly number[], window: [number, number], carriesAnswer: boolean): [number, number] | undefined => {
     if (!windowFits) return undefined;
     if (values.length > 1) return window;
-    if (definition.student_control && carriesAnswer) return undefined;
-    return [definition.initial - 1, definition.initial + 1];
+    if (definition.student_control && carriesAnswer && definition.initial === 0) return undefined;
+    if (definition.student_control && carriesAnswer) return window;
+    return [definition.initial - unit, definition.initial + unit];
   };
   fit(start, startValues.map((value) => (grid ? snap(value, grid) : value)), rangeFor(start, startValues, [low, high], false));
   if (change) {
@@ -153,17 +152,17 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
 
   const valid = [start, change].every((definition) => !definition
     || (definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max));
-  // A snapped practice target the snapped starting value already meets would be a task with nothing to do.
-  const trivialTask = grid !== undefined && ([[startIndex, start], [changeIndex, change]] as Array<[number | undefined, LessonPlanNumber | undefined]>)
-    .some(([index, definition]) => index !== undefined && definition !== undefined
-      && taskValues(plan, index).some((value) => Math.abs(snap(value, grid) - definition.initial) < grid / 2));
-  if (!valid || trivialTask) {
-    // Leave the lesson as the model wrote it; the compiler draws what it can.
-    Object.assign(start, original[0]);
-    if (change) Object.assign(change, original[1]);
-    if (original[0]?.student_control === undefined) delete start.student_control;
-    if (change && original[1]?.student_control === undefined) delete change.student_control;
-    return fitted;
+  if (!valid) {
+    // A window the numbers do not fit: keep the model's ranges, but still put the values and the
+    // sliders on the lesson's ticks, so the line stays readable. (A target the number already starts
+    // at is resolved when the lesson compiles: the line goes back before the learner tries.)
+    for (const [definition, before] of [[start, original[0]], [change, original[1]]] as const) {
+      if (!definition || !before) continue;
+      definition.min = grid ? floorTo(before.min, grid) : before.min;
+      definition.max = grid ? ceilTo(before.max, grid) : before.max;
+      if (!(definition.min < definition.max)) { definition.min = before.min; definition.max = before.max; }
+      definition.initial = Math.min(definition.max, Math.max(definition.min, definition.initial));
+    }
   }
   const step = grid ?? 0;
   fitted.set(startIndex, step);

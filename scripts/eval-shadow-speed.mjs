@@ -135,6 +135,8 @@ export function runTool({ build, input, env, maxCalls, onCall = () => {}, onFirs
         try { entry = JSON.parse(json); } catch { continue; }
         if (!row.stages.includes(entry.stage)) row.stages.push(entry.stage);
         if (entry.stage === "lesson-plan-generation" && entry.status === "started") row.plugin_signal = entry.plugin_signal ?? null;
+        // The run stops at the first playable part; the outline says how many sections the whole lesson has.
+        if (entry.stage === "lesson-plan-outline-ready" && typeof entry.sections === "number") row.sections = entry.sections;
         if (entry.stage === "model-call" && entry.status === "started") {
           row.calls += 1;
           onCall();

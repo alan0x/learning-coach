@@ -11992,14 +11992,16 @@ var MATH_RECIPES = {
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
     // The model gives only the numbers, at their actual size; the program decides the parts per
     // unit and the hops. (A `denominator` parameter made the model write numerators: 3 for 3/4.)
-    parameter_names: ["title"],
-    model_parameter_names: ["title"],
+    // label_style is how the question writes its numbers (0.8 or 8/10), which only the model sees;
+    // it changes the labels, never the values.
+    parameter_names: ["title", "label_style"],
+    model_parameter_names: ["title", "label_style"],
     required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line"],
-    model_guidance: "\u6570\u8F74\uFF1A\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u79FB\u52A8\u91CF\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u8BA1\u7B97\uFF1B\u9002\u5408\u6574\u6570\u3001\u5206\u6570\u3001\u5C0F\u6570\u7684\u52A0\u51CF\u548C\u6570\u5728\u6570\u8F74\u4E0A\u7684\u4F4D\u7F6E\u3002\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF0C\u4E0D\u5199 3\uFF09\uFF1B\u8BB2\u5206\u6570\u65F6\u6ED1\u6746\u6B65\u957F\u7528\u8FD9\u4E2A\u5206\u6570\uFF08\u56DB\u5206\u4E4B\u4E00\u5199 0.25\uFF09\u3002\u4E0D\u7528\u4E8E\u51FD\u6570\u56FE\u50CF"
+    model_guidance: "\u6570\u8F74\uFF1A\u8D77\u70B9\u52A0\u4E00\u6B21\u79FB\u52A8\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF09\u3002a + b\uFF1A\u8D77\u70B9 a\uFF0C\u79FB\u52A8 b\uFF1B\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u8D77\u70B9\u662F\u8F83\u5C0F\u7684\u6570\uFF0C\u79FB\u52A8\u662F\u5DEE\uFF1B\u95EE\u4E00\u4E2A\u6570\u7684\u4F4D\u7F6E\uFF1A\u8D77\u70B9 0\uFF1B\u6309\u5206\u6570\u6570\u6570\uFF1A\u79FB\u52A8\u5199\u4E00\u6B65\uFF080.25\uFF09\u3002\u9898\u76EE\u5199\u5C0F\u6570\u65F6 label_style \u7528 decimal\u3002\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5F0F\u3001\u7EDD\u5BF9\u503C\u3001\u56DB\u820D\u4E94\u5165\u3001\u5206\u6BCD\u5927\u4E8E 12 \u7684\u5206\u6570\u6216\u51FD\u6570\u56FE\u50CF"
   }
 };
 var text2 = { type: "string" };
@@ -12027,7 +12029,8 @@ var MATH_SCHEMA_PROPERTIES = {
     leg_a: { type: "number", minimum: 0 },
     leg_b: { type: "number", minimum: 0 }
   },
-  circle_area_rearrangement: { radius: { type: "number", minimum: 0 } }
+  circle_area_rearrangement: { radius: { type: "number", minimum: 0 } },
+  number_line: { label_style: { enum: ["decimal", "fraction"] } }
 };
 var MATH_PLUGIN = {
   // The manifest and the Jev subject line are the OLL shared layer's.
@@ -12439,7 +12442,8 @@ var SCHEMA_PROPERTY_ORDER = [
   "leg_a",
   "leg_b",
   "steps",
-  "speed"
+  "speed",
+  "label_style"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text3 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -15499,6 +15503,110 @@ function planPlotView(input) {
   return { x: finalX, y: finalY, equalScale, piTicks, holes, adjustments };
 }
 
+// src/plugins/number-line-fit.ts
+var fractionTolerance = (denominator) => Math.min(0.011, 0.25 / (denominator * denominator));
+var MAX_WINDOW = 58;
+var near2 = (value2, grid) => Math.abs(value2 - Math.round(value2 / grid) * grid) <= fractionTolerance(Math.round(1 / grid));
+var snap2 = (value2, grid) => Number((Math.round(value2 / grid) * grid).toPrecision(12));
+var floorTo = (value2, grid) => Number((Math.ceil(value2 / grid - 1e-9) * grid).toPrecision(12));
+var ceilTo = (value2, grid) => Number((Math.floor(value2 / grid + 1e-9) * grid).toPrecision(12));
+function inferDenominator(values) {
+  for (let denominator = 1; denominator <= 12; denominator += 1) {
+    if (values.every((value2) => near2(value2, 1 / denominator))) return denominator;
+  }
+  return void 0;
+}
+function lessonValues(plan, number) {
+  const values = [];
+  for (const section of plan.sections) {
+    for (const moment of section.moments) for (const action of moment.actions) {
+      if (action.action === "animate" && action.number === number) values.push(action.end_value);
+    }
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind === "number_target" && !activity.expression && activity.number_controls[0]?.number === number) values.push(activity.value);
+    }
+  }
+  return values;
+}
+function fitNumberLineNumbers(content, plan, sharedNumbers) {
+  const fitted = /* @__PURE__ */ new Map();
+  const [startIndex, changeIndex] = content.numbers ?? [];
+  if (!startIndex || !plan.numbers) return fitted;
+  if (sharedNumbers.has(startIndex) || changeIndex && sharedNumbers.has(changeIndex)) return fitted;
+  const ours = new Set([startIndex, changeIndex].filter((index) => index !== void 0));
+  const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) => activity.kind === "number_target" && activity.expression !== void 0 && (activity.number_controls.some((control) => ours.has(control.number)) || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
+  if (expressionTask) return fitted;
+  const start = plan.numbers[startIndex - 1];
+  const change = changeIndex ? plan.numbers[changeIndex - 1] : void 0;
+  if (!start) return fitted;
+  const original = [start, change].map((definition) => definition && structuredClone(definition));
+  const startValues = [start.initial, ...lessonValues(plan, startIndex)];
+  const changeValues = change ? [change.initial, ...lessonValues(plan, changeIndex)] : [];
+  const shown = [...startValues, ...changeValues.map((value2) => start.initial + value2)];
+  const values = [...startValues, ...changeValues];
+  const denominator = inferDenominator(values);
+  let grid = denominator ? 1 / denominator : void 0;
+  const withZero = [0, ...shown];
+  const used = Math.ceil(Math.max(...withZero)) - Math.floor(Math.min(...withZero)) + 2 <= MAX_WINDOW ? withZero : shown;
+  let low = Math.floor(Math.min(...used)) - 1;
+  let high = Math.ceil(Math.max(...used)) + 1;
+  let windowFits = high - low <= MAX_WINDOW;
+  let unit = 1;
+  if (denominator === 1 && !windowFits) {
+    const coarse = [2, 5, 10].find((count) => values.every((value2) => near2(value2 / count, 1)) && Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2 <= MAX_WINDOW);
+    if (coarse) {
+      unit = coarse;
+      grid = coarse;
+      low = (Math.floor(Math.min(...used) / coarse) - 1) * coarse;
+      high = (Math.ceil(Math.max(...used) / coarse) + 1) * coarse;
+      windowFits = true;
+    }
+  }
+  const fit = (definition, values2, range) => {
+    if (grid) {
+      definition.initial = snap2(definition.initial, grid);
+      if (definition.student_control) definition.student_control.step = grid;
+    }
+    if (range) {
+      const lowest = Math.min(definition.initial, ...values2), highest = Math.max(definition.initial, ...values2);
+      definition.min = Math.max(definition.min, Math.min(range[0], lowest));
+      definition.max = Math.min(definition.max, Math.max(range[1], highest));
+    }
+    if (grid) {
+      definition.min = floorTo(definition.min, grid);
+      definition.max = ceilTo(definition.max, grid);
+    }
+  };
+  const rangeFor = (definition, values2, window, carriesAnswer) => {
+    if (!windowFits) return void 0;
+    if (values2.length > 1) return window;
+    if (definition.student_control && carriesAnswer && definition.initial === 0) return void 0;
+    if (definition.student_control && carriesAnswer) return window;
+    return [definition.initial - unit, definition.initial + unit];
+  };
+  fit(start, startValues.map((value2) => grid ? snap2(value2, grid) : value2), rangeFor(start, startValues, [low, high], false));
+  if (change) {
+    fit(change, changeValues.map((value2) => grid ? snap2(value2, grid) : value2), rangeFor(change, changeValues, [low - start.min, high - start.max], true));
+  }
+  const valid = [start, change].every((definition) => !definition || definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max);
+  if (!valid) {
+    for (const [definition, before] of [[start, original[0]], [change, original[1]]]) {
+      if (!definition || !before) continue;
+      definition.min = grid ? floorTo(before.min, grid) : before.min;
+      definition.max = grid ? ceilTo(before.max, grid) : before.max;
+      if (!(definition.min < definition.max)) {
+        definition.min = before.min;
+        definition.max = before.max;
+      }
+      definition.initial = Math.min(definition.max, Math.max(definition.min, definition.initial));
+    }
+  }
+  const step = grid ?? 0;
+  fitted.set(startIndex, step);
+  if (changeIndex && change) fitted.set(changeIndex, step);
+  return fitted;
+}
+
 // src/plugins/math-compilers.ts
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -15954,11 +16062,20 @@ function compileCircleArea(base, content, role, placement, plan, path) {
   }));
 }
 var NUMBER_LINE_SPLITS = Array.from({ length: 12 }, (_unused, index) => index + 1);
+var exactDecimal = (parts) => {
+  let rest = parts;
+  for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime;
+  return rest === 1;
+};
 var onGrid = (value2, parts) => Math.abs(value2 * parts - Math.round(value2 * parts)) < 1e-9;
 function compileNumberLine(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title"], path);
+  allowParameterKeys(input, ["title", "label_style"], path);
+  if (input.label_style !== void 0 && input.label_style !== "decimal" && input.label_style !== "fraction") {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.label_style`, "label_style is decimal or fraction");
+  }
   const [startNumber, changeNumber] = content.numbers ?? [];
+  if (!startNumber) fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "a number line needs at least one lesson number for its start");
   const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : void 0;
   const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : void 0;
   const values = [
@@ -15973,9 +16090,28 @@ function compileNumberLine(base, content, role, placement, plan, path) {
   const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
   const max = Math.ceil(Math.max(...values, 0)) + 1;
   const span2 = max - min;
-  const step = span2 <= 60 ? 1 : span2 <= 150 ? 5 : 10;
-  const fits = (parts) => grid.every((value2) => onGrid(value2, parts)) && span2 * parts <= NUMBER_LINE_LIMITS.ticks;
-  const subdivisions = step > 1 ? 1 : NUMBER_LINE_SPLITS.find(fits) ?? 1;
+  const shown = [
+    ...start && startNumber ? [start.initial, ...lessonValues(plan, startNumber)] : [],
+    ...change && changeNumber ? [change.initial, ...lessonValues(plan, changeNumber)] : [],
+    ...start && change && changeNumber ? [change.initial, ...lessonValues(plan, changeNumber)].map((value2) => start.initial + value2) : []
+  ];
+  const holdAll = (count, of) => of.every((value2) => onGrid(value2 / count, 1));
+  const ticksFor = (of) => {
+    const whole2 = [1, 2, 5, 10].find((count) => span2 / count <= 60 && holdAll(count, of));
+    if (whole2) return { step: whole2, subdivisions: 1 };
+    const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value2) => onGrid(value2, count)) && span2 * count <= NUMBER_LINE_LIMITS.ticks);
+    if (parts) return { step: 1, subdivisions: parts };
+    return void 0;
+  };
+  const ticks = ticksFor(grid) ?? ticksFor(shown);
+  if (!ticks) {
+    fail2(
+      "LESSON_PLAN_OUTLINE_VISUAL",
+      `${path}.numbers`,
+      "a number line can split each unit into at most 12 equal parts; these values need finer ticks, so choose another visual"
+    );
+  }
+  const { step, subdivisions } = ticks;
   const unit = step / subdivisions;
   const whole = (value2) => onGrid(value2 / unit, 1);
   const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
@@ -15990,7 +16126,13 @@ function compileNumberLine(base, content, role, placement, plan, path) {
     place: placement,
     title: optionalText(input.title, compileText(plan, "\u6570\u8F74"), `${path}.title`),
     range: { min, max },
-    ticks: { step, subdivisions, labels: subdivisions > 1 ? "all" : "major" },
+    ticks: {
+      step,
+      subdivisions,
+      labels: subdivisions > 1 ? "all" : "major",
+      // Decimals only where they are exact (halves, fifths, tenths …): thirds stay fractions, never 0.333.
+      ...input.label_style === "decimal" && subdivisions > 1 && exactDecimal(subdivisions) ? { format: "decimal" } : {}
+    },
     ...start && startVariable ? { points: [
       { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "\u8D77\u70B9") },
       ...change && changeVariable ? [{ as: "end", value: { expression: `(${startVariable})+(${changeVariable})`, initial: start.initial + change.initial }, label: compileText(plan, "\u7EC8\u70B9") }] : []
@@ -16132,105 +16274,6 @@ var VISUAL_COMPILERS = {
   ...PHYSICS_COMPILERS,
   ...SHARED_COMPILERS
 };
-
-// src/plugins/number-line-fit.ts
-var fractionTolerance = (denominator) => Math.min(0.011, 0.25 / (denominator * denominator));
-var MAX_WINDOW = 40;
-var near2 = (value2, grid) => Math.abs(value2 - Math.round(value2 / grid) * grid) <= fractionTolerance(Math.round(1 / grid));
-var snap2 = (value2, grid) => Number((Math.round(value2 / grid) * grid).toPrecision(12));
-var floorTo = (value2, grid) => Number((Math.ceil(value2 / grid - 1e-9) * grid).toPrecision(12));
-var ceilTo = (value2, grid) => Number((Math.floor(value2 / grid + 1e-9) * grid).toPrecision(12));
-function inferDenominator(values) {
-  for (let denominator = 1; denominator <= 12; denominator += 1) {
-    if (values.every((value2) => near2(value2, 1 / denominator))) return denominator;
-  }
-  return void 0;
-}
-var UNIT_STEPS = [2, 3, 4, 5, 6];
-var gcd2 = (a, b) => b === 0 ? a : gcd2(b, a % b);
-function wholeLessonDenominator(steps) {
-  const units = steps.filter((step) => typeof step === "number" && step > 0).map((step) => UNIT_STEPS.find((parts) => Math.abs(step - 1 / parts) <= fractionTolerance(parts))).filter((parts) => parts !== void 0);
-  if (!units.length) return 1;
-  const common = units.reduce((lcm, parts) => lcm * parts / gcd2(lcm, parts), 1);
-  return common <= 12 ? common : void 0;
-}
-function lessonValues(plan, number) {
-  const values = [];
-  for (const section of plan.sections) {
-    for (const moment of section.moments) for (const action of moment.actions) {
-      if (action.action === "animate" && action.number === number) values.push(action.end_value);
-    }
-    for (const activity of section.student_activities ?? []) {
-      if (activity.kind === "number_target" && !activity.expression && activity.number_controls[0]?.number === number) values.push(activity.value);
-    }
-  }
-  return values;
-}
-function taskValues(plan, number) {
-  return plan.sections.flatMap((section) => (section.student_activities ?? []).flatMap((activity) => activity.kind === "number_target" && !activity.expression && activity.number_controls[0]?.number === number ? [activity.value] : []));
-}
-function fitNumberLineNumbers(content, plan, sharedNumbers) {
-  const fitted = /* @__PURE__ */ new Map();
-  const [startIndex, changeIndex] = content.numbers ?? [];
-  if (!startIndex || !plan.numbers) return fitted;
-  if (sharedNumbers.has(startIndex) || changeIndex && sharedNumbers.has(changeIndex)) return fitted;
-  const ours = new Set([startIndex, changeIndex].filter((index) => index !== void 0));
-  const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) => activity.kind === "number_target" && activity.expression !== void 0 && (activity.number_controls.some((control) => ours.has(control.number)) || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
-  if (expressionTask) return fitted;
-  const start = plan.numbers[startIndex - 1];
-  const change = changeIndex ? plan.numbers[changeIndex - 1] : void 0;
-  if (!start) return fitted;
-  const original = [start, change].map((definition) => definition && structuredClone(definition));
-  const startValues = [start.initial, ...lessonValues(plan, startIndex)];
-  const changeValues = change ? [change.initial, ...lessonValues(plan, changeIndex)] : [];
-  const shown = [...startValues, ...changeValues.map((value2) => start.initial + value2)];
-  const values = [...startValues, ...changeValues];
-  const fromValues = inferDenominator(values);
-  const denominator = fromValues === 1 ? wholeLessonDenominator([start.student_control?.step, change?.student_control?.step]) : fromValues;
-  const grid = denominator ? 1 / denominator : void 0;
-  const used = [0, ...shown];
-  const low = Math.floor(Math.min(...used)) - 1;
-  const high = Math.ceil(Math.max(...used)) + 1;
-  const windowFits = high - low <= MAX_WINDOW;
-  const fit = (definition, values2, range) => {
-    if (grid) {
-      definition.initial = snap2(definition.initial, grid);
-      if (definition.student_control) definition.student_control.step = grid;
-    }
-    if (range) {
-      const lowest = Math.min(definition.initial, ...values2), highest = Math.max(definition.initial, ...values2);
-      definition.min = Math.max(definition.min, Math.min(range[0], lowest));
-      definition.max = Math.min(definition.max, Math.max(range[1], highest));
-    }
-    if (grid) {
-      definition.min = floorTo(definition.min, grid);
-      definition.max = ceilTo(definition.max, grid);
-    }
-  };
-  const rangeFor = (definition, values2, window, carriesAnswer) => {
-    if (!windowFits) return void 0;
-    if (values2.length > 1) return window;
-    if (definition.student_control && carriesAnswer) return void 0;
-    return [definition.initial - 1, definition.initial + 1];
-  };
-  fit(start, startValues.map((value2) => grid ? snap2(value2, grid) : value2), rangeFor(start, startValues, [low, high], false));
-  if (change) {
-    fit(change, changeValues.map((value2) => grid ? snap2(value2, grid) : value2), rangeFor(change, changeValues, [low - start.min, high - start.max], true));
-  }
-  const valid = [start, change].every((definition) => !definition || definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max);
-  const trivialTask = grid !== void 0 && [[startIndex, start], [changeIndex, change]].some(([index, definition]) => index !== void 0 && definition !== void 0 && taskValues(plan, index).some((value2) => Math.abs(snap2(value2, grid) - definition.initial) < grid / 2));
-  if (!valid || trivialTask) {
-    Object.assign(start, original[0]);
-    if (change) Object.assign(change, original[1]);
-    if (original[0]?.student_control === void 0) delete start.student_control;
-    if (change && original[1]?.student_control === void 0) delete change.student_control;
-    return fitted;
-  }
-  const step = grid ?? 0;
-  fitted.set(startIndex, step);
-  if (changeIndex && change) fitted.set(changeIndex, step);
-  return fitted;
-}
 
 // src/lesson-plan-compiler.ts
 function normalizedVisualIdentity(content, includeNumbers = true) {
@@ -16475,6 +16518,68 @@ function compilePlainContent(kind, content, options, path) {
   }
   fail2("LESSON_PLAN_COMPILER", path, `unsupported plain board kind '${kind}'`);
 }
+function resolveMetNumberTargets(plan) {
+  const lineNumbers = /* @__PURE__ */ new Set();
+  const lineCreations = /* @__PURE__ */ new Map();
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action === "create" && action.kind === "visual" && action.content.capability === "number_line") {
+      for (const [position, number] of (action.content.numbers ?? []).entries()) {
+        lineNumbers.add(number);
+        if (!lineCreations.has(number)) lineCreations.set(number, { moment, isStart: position === 0 });
+      }
+    }
+  }
+  const lastMoment = plan.sections.at(-1)?.moments.at(-1);
+  const resetNumbers = /* @__PURE__ */ new Set();
+  const valueAtEnd = (number) => {
+    let value2 = plan.numbers[number - 1].initial;
+    for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+      if (action.action === "animate" && action.number === number) value2 = action.end_value;
+    }
+    return value2;
+  };
+  for (const [sectionIndex, section] of plan.sections.entries()) {
+    for (const [activityIndex, activity] of (section.student_activities ?? []).entries()) {
+      if (activity.kind !== "number_target" || activity.expression || activity.number_controls.length !== 1) continue;
+      const number = activity.number_controls[0].number;
+      const definition = plan.numbers?.[number - 1];
+      if (!lineNumbers.has(number) || !definition || !lastMoment) continue;
+      const met = (value2) => Math.abs(activity.value - value2) <= activity.tolerance;
+      const metAtStart = met(definition.initial);
+      if (!metAtStart && !met(valueAtEnd(number))) continue;
+      const path = `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`;
+      const step = definition.student_control?.step;
+      const onSlider = (value2) => {
+        let reachable = Math.min(definition.max, Math.max(definition.min, value2));
+        if (typeof step === "number" && Number.isFinite(step) && step > 0) {
+          reachable = Math.min(definition.max, Math.max(definition.min, definition.min + Math.round((reachable - definition.min) / step) * step));
+        }
+        return Number(reachable.toPrecision(12));
+      };
+      const reset = [0, ...[definition.min, definition.max].sort((a, b) => Math.abs(b - activity.value) - Math.abs(a - activity.value))].map(onSlider).find((value2) => !met(value2));
+      if (reset === void 0) fail2("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
+      if (metAtStart) {
+        const shown = definition.initial;
+        definition.initial = reset;
+        const created = lineCreations.get(number);
+        if (created && !created.moment.actions.some((action) => action.action === "animate" && action.number === number)) {
+          created.moment.actions.push({
+            action: "animate",
+            number,
+            end_value: shown,
+            easing: "ease_in_out",
+            duration_intent: created.isStart ? "brief" : "normal",
+            timing: created.isStart ? "before_speech" : "during_speech"
+          });
+        }
+      }
+      if (met(valueAtEnd(number)) && !resetNumbers.has(number)) {
+        resetNumbers.add(number);
+        lastMoment.actions.push({ action: "animate", number, end_value: reset, easing: "ease_in_out", duration_intent: "brief", timing: "after_speech" });
+      }
+    }
+  }
+}
 function compileLessonPlan(value2, options = {}) {
   const resolved = resolveLessonPlan(value2, options);
   const plan = resolved.plan;
@@ -16482,6 +16587,7 @@ function compileLessonPlan(value2, options = {}) {
   for (const hooks of PLUGIN_HOOKS) hooks.normalize_plan?.(plan);
   for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
   normalizeProgramOwnedNumberRanges(plan);
+  resolveMetNumberTargets(plan);
   mergeEquivalentVisualInputs(plan);
   for (const [sectionIndex, section] of plan.sections.entries()) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
@@ -17224,17 +17330,17 @@ function bootstrapPermissiveOutline() {
     numbers: Array.from({ length: 16 }, () => ({ initial: 0, min: 0, max: 1 }))
   };
 }
-function buildLessonPlanOutlineJsonSchema(requestPartCount = 0) {
+function buildLessonPlanOutlineJsonSchema(requestPartCount = 0, excluded = []) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  return vertexCompatible(lessonPlanOutlineShapeJsonSchema(requestPartCount));
+  return vertexCompatible(lessonPlanOutlineShapeJsonSchema(requestPartCount, excluded));
 }
-function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
+function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0, excluded = []) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount);
+  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount, excluded);
   course.nullable = true;
   return vertexCompatible({
     ...object({
@@ -17307,7 +17413,13 @@ function buildCameraLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
     }, ["disposition", "learner_response", "image_observation", "course"])
   });
 }
-function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
+function outlineFeatures(excluded) {
+  if (!excluded.length) return LESSON_PLAN_VISUAL_FEATURES;
+  const kept = LESSON_PLAN_CAPABILITY_NAMES.filter((name) => !excluded.includes(name));
+  return LESSON_PLAN_VISUAL_FEATURES.filter((feature) => kept.some((name) => LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features.includes(feature)));
+}
+function lessonPlanOutlineShapeJsonSchema(requestPartCount, excluded = []) {
+  const features = outlineFeatures(excluded);
   return object({
     title: string(160),
     goals: { type: "array", minItems: 1, maxItems: 8, items: string(480) },
@@ -17332,8 +17444,8 @@ function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
         required_features: {
           type: "array",
           minItems: 1,
-          maxItems: LESSON_PLAN_VISUAL_FEATURES.length,
-          items: { enum: LESSON_PLAN_VISUAL_FEATURES }
+          maxItems: features.length,
+          items: { enum: features }
         },
         use_sections: { type: "array", maxItems: 24, items: integer(1, 24) },
         relation: { enum: ["primary", "supporting", "comparison"] },
@@ -17807,13 +17919,21 @@ function lowerModelOutline(value2, requestPartCount = 0) {
   const candidate = root;
   candidate.version = LESSON_PLAN_VERSION;
   if (Array.isArray(candidate.numbers)) {
-    candidate.numbers = candidate.numbers.map((entry) => {
+    candidate.numbers = candidate.numbers.map((entry, index) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
       const number = { ...entry };
       delete number.student_control;
       if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
       if (typeof number.label === "string" && !number.label.trim()) delete number.label;
+      const written = { initial: number.initial, min: number.min, max: number.max };
       normalizeModelNumberRange(number);
+      if (typeof number.min === "number" && typeof number.max === "number" && number.max - number.min > 1e6 && typeof written.min === "number" && typeof written.max === "number" && Math.abs(written.max - written.min) <= 1e6) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_NUMBER_RANGE",
+          `$lessonPlanOutline.numbers[${index}].initial`,
+          `the starting value ${String(written.initial)} lies far outside its range ${String(written.min)} to ${String(written.max)}; check the mantissa and scale (2/3 is mantissa 666667 with scale 6)`
+        );
+      }
       if (typeof number.min === "number" && Number.isFinite(number.min) && typeof number.max === "number" && Number.isFinite(number.max) && number.max > number.min) {
         number.student_control = {
           kind: "slider",
@@ -18511,7 +18631,7 @@ function lowerIntegerDecimal(record3, prefix, path) {
   delete record3[`${prefix}_scale`];
   return Number(mantissa) / 10 ** Number(scale);
 }
-function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language) {
+function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set()) {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
   lowered.hint_after_attempts = PROGRAM_HINT_AFTER_ATTEMPTS;
@@ -18544,6 +18664,15 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
       }
       return reachable;
     };
+    if (exactNumbers.has(numberIndex)) {
+      lowered.value = Math.round(Math.min(maximum, Math.max(minimum, requestedValue)) * 10 ** 12) / 10 ** 12;
+      lowered.tolerance = Math.max(
+        typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
+        range / 1e3,
+        1e-6
+      ) * (1 + 1e-9);
+      return lowered;
+    }
     let reachableValue = snapToReachableValue(requestedValue);
     const tolerance = Math.max(
       typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
@@ -19001,6 +19130,10 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
       );
     }
   }
+  const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
+    const entry = action;
+    return entry.action === "create" && entry.kind === "visual" && entry.content?.capability === "number_line" ? entry.content.numbers ?? [] : [];
+  }));
   const activities = [];
   const collectActivities = (values, kind, path) => {
     values.forEach((activity, index) => {
@@ -19013,7 +19146,7 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
       if (kind === "number_target" && lowered.reference !== void 0) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -19412,6 +19545,20 @@ function compilePrefix(outline, drafts, options) {
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
+var OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
+var isOutlineOwnedFault = (error) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
+var outlineCapabilities = (outline) => new Set((outline.course_visuals ?? []).map((visual) => visual.capability));
+function checkOutlineVisuals(outline, excluded) {
+  const used = outlineCapabilities(outline);
+  for (const capability2 of excluded) {
+    if (used.has(capability2)) {
+      throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability2} visual cannot show this request; choose another visual`);
+    }
+  }
+  if (used.has("number_line") && !outline.numbers?.length) {
+    throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.numbers", "a number line needs lesson numbers: declare the start (and the change) in numbers");
+  }
+}
 function canFallBackFromBootstrap(error) {
   if (error instanceof LessonPlanError) return true;
   const code = error && typeof error === "object" && "code" in error ? String(error.code ?? "") : "";
@@ -19464,6 +19611,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     draftAdjustments.delete(draft);
   };
   let bootstrappedFirstSection;
+  const excludedCapabilities = /* @__PURE__ */ new Set();
   let outlineError;
   let stableCameraObservation;
   const sectionErrors = /* @__PURE__ */ new Map();
@@ -19564,6 +19712,13 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     );
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
+      checkOutlineVisuals(outline, excludedCapabilities);
+    } catch (error) {
+      for (const capability2 of outlineCapabilities(outline)) if (capability2 === "number_line") excludedCapabilities.add(capability2);
+      outline = void 0;
+      throw error;
+    }
+    try {
       const firstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
           coerceLessonPlanBootstrapSectionModelNumbers(bootstrap.first_section),
@@ -19583,6 +19738,21 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         attempt: 1,
         error: rejectionDetails(error)
       });
+    }
+    let outlineFault;
+    if (bootstrappedFirstSection) {
+      try {
+        compilePrefix(outline, [bootstrappedFirstSection], options.compile);
+      } catch (error) {
+        if (isOutlineOwnedFault(error)) outlineFault = error;
+      }
+    }
+    if (outlineFault) {
+      excludedCapabilities.add("number_line");
+      outline = void 0;
+      bootstrappedFirstSection = void 0;
+      sectionErrors.delete(1);
+      throw outlineFault;
     }
   } catch (error) {
     const partialResponse = partialModelResponse(error);
@@ -19630,67 +19800,78 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       error: rejectionDetails(error)
     });
   }
-  for (let attempt = 1; !outline && attempt <= maxAttempts; attempt += 1) {
-    const observeCamera = (input.camera_input === true || input.selection_input === true) && stableCameraObservation === void 0;
-    try {
-      modelCalls += 1;
-      const raw = await model({
-        label: "lesson-plan-outline",
-        part: "outline",
-        attempt,
-        turn_id: input.turn_id,
-        system_prompt: withContextRules(observeCamera ? input.selection_input === true ? SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT : CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT, context),
-        prompt: JSON.stringify({
-          course_context: compactModelContext(stableCameraObservation ? { ...context, camera_observation: stableCameraObservation } : context),
-          request_parts: fixedRequestParts,
-          visual_recipe_columns: ["features", "numbers", "purpose"],
-          visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability2) => [
-            [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features],
-            [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
-            LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
-          ]),
-          ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
-        }),
-        response_schema: observeCamera ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
-        ...observeCamera ? { include_camera_media: true } : {}
-      });
-      const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
-      const admitted = admissionCourse(parsed, observeCamera);
-      if (admitted.result) return admitted.result;
-      outline = validateLessonPlanOutline(
-        lowerModelOutline(
-          coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
+  const requestOutline = async () => {
+    for (let attempt = 1; !outline && attempt <= maxAttempts; attempt += 1) {
+      const observeCamera = (input.camera_input === true || input.selection_input === true) && stableCameraObservation === void 0;
+      try {
+        modelCalls += 1;
+        const raw = await model({
+          label: "lesson-plan-outline",
+          part: "outline",
+          attempt,
+          turn_id: input.turn_id,
+          system_prompt: withContextRules(observeCamera ? input.selection_input === true ? SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT : CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT, context),
+          prompt: JSON.stringify({
+            course_context: compactModelContext(stableCameraObservation ? { ...context, camera_observation: stableCameraObservation } : context),
+            request_parts: fixedRequestParts,
+            visual_recipe_columns: ["features", "numbers", "purpose"],
+            visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.filter((capability2) => !excludedCapabilities.has(capability2)).map((capability2) => [
+              [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features],
+              [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
+              LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
+            ]),
+            ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
+          }),
+          response_schema: observeCamera ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length, [...excludedCapabilities]) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length, [...excludedCapabilities]),
+          ...observeCamera ? { include_camera_media: true } : {}
+        });
+        const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
+        const admitted = admissionCourse(parsed, observeCamera);
+        if (admitted.result) return admitted.result;
+        const candidateOutline = validateLessonPlanOutline(
+          lowerModelOutline(
+            coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
+            fixedRequestParts.length
+          ),
           fixedRequestParts.length
-        ),
-        fixedRequestParts.length
-      );
-    } catch (error) {
-      if (!(error instanceof LessonPlanError)) throw error;
-      outlineError = error;
-      await options.on_rejected_part?.({
-        label: "lesson-plan-outline",
-        attempt,
-        error: rejectionDetails(error)
-      });
-      if (observeCamera && stableCameraObservation === void 0) {
-        return {
-          disposition: "clarify",
-          learner_response: input.selection_input === true ? lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002") : lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002"),
-          model_calls: modelCalls
-        };
+        );
+        try {
+          checkOutlineVisuals(candidateOutline, excludedCapabilities);
+        } catch (error) {
+          if (outlineCapabilities(candidateOutline).has("number_line")) excludedCapabilities.add("number_line");
+          throw error;
+        }
+        outline = candidateOutline;
+      } catch (error) {
+        if (!(error instanceof LessonPlanError)) throw error;
+        outlineError = error;
+        await options.on_rejected_part?.({
+          label: "lesson-plan-outline",
+          attempt,
+          error: rejectionDetails(error)
+        });
+        if (observeCamera && stableCameraObservation === void 0) {
+          return {
+            disposition: "clarify",
+            learner_response: input.selection_input === true ? lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002") : lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002"),
+            model_calls: modelCalls
+          };
+        }
       }
     }
-  }
-  if (!outline) throw outlineError;
-  for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
-  await options.on_outline_ready?.({
-    sections: outline.sections.length,
-    course_visuals: outline.course_visuals?.length ?? 0,
-    request_parts: fixedRequestParts.length,
-    camera_observation: stableCameraObservation !== void 0
-  });
-  const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
-  if (unsupported) {
+    return void 0;
+  };
+  const acceptOutline = async () => {
+    if (!outline) throw outlineError;
+    for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
+    await options.on_outline_ready?.({
+      sections: outline.sections.length,
+      course_visuals: outline.course_visuals?.length ?? 0,
+      request_parts: fixedRequestParts.length,
+      camera_observation: stableCameraObservation !== void 0
+    });
+    const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
+    if (!unsupported) return void 0;
     const reason = unsupported.reason?.trim();
     const learnerResponse = reason && reason.length <= 480 && !/\$lesson|LESSON_PLAN_|already exhausted|do not call|internal attempts/iu.test(reason) ? lessonText(input.language, "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF1A{{v0}}", { v0: reason }) : lessonText(input.language, "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF0C\u56E0\u4E3A\u5176\u4E2D\u5305\u542B\u5C1A\u672A\u652F\u6301\u7684\u753B\u9762\u6216\u4E92\u52A8\u3002");
     return {
@@ -19698,7 +19879,11 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       learner_response: learnerResponse,
       model_calls: modelCalls
     };
-  }
+  };
+  const earlyOutlineResult = await requestOutline();
+  if (earlyOutlineResult) return earlyOutlineResult;
+  const outlineResult = await acceptOutline();
+  if (outlineResult) return outlineResult;
   const currentNumbersBefore = (section) => {
     const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
     for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
@@ -19824,6 +20009,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       try {
         prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
       } catch (error) {
+        if (section === 1 && isOutlineOwnedFault(error)) throw error;
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
@@ -19842,8 +20028,32 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       return;
     }
   };
+  let outlineRestarted = false;
+  const acceptFirstSection = async () => {
+    try {
+      await acceptSection(1, bootstrappedFirstSection);
+      return void 0;
+    } catch (error) {
+      if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
+      outlineRestarted = true;
+      await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
+      excludedCapabilities.add("number_line");
+      outlineError = error;
+      outline = void 0;
+      bootstrappedFirstSection = void 0;
+      sectionErrors.delete(1);
+      sectionAttempts.delete(1);
+      drafts.length = 0;
+      const early = await requestOutline();
+      if (early) return early;
+      const replacementResult = await acceptOutline();
+      if (replacementResult) return replacementResult;
+      return acceptFirstSection();
+    }
+  };
   try {
-    await acceptSection(1, bootstrappedFirstSection);
+    const early = await acceptFirstSection();
+    if (early) return early;
   } catch (error) {
     const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(1), input.language);
     if (!learnerResponse) throw error;

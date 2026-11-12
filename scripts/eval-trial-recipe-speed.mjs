@@ -17,13 +17,16 @@
 // is printed or written except the provider and model.
 //
 //   node scripts/eval-trial-recipe-speed.mjs --build <dir with main + lesson-plan.js>
-//     --octos-profile ~/.octos/profiles/<id>.json [--recipes constant_speed_motion] [--pairs 20] [--max-calls 60] [--out <report.json>]
+//     --octos-profile ~/.octos/profiles/<id>.json [--recipes constant_speed_motion] [--pairs 20] [--max-calls 60]
+//     [--quality-repeats 1] [--out <report.json>]
+//   A probe: --pairs 0 --cases NL-03,NM-01 --quality-repeats 5 (candidate arm only, no speed pairs).
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { profileRouteEnvironment } from "./eval-payload-padding.mjs";
 import { runTool, caseLanguage } from "./eval-shadow-speed.mjs";
+import { planNumberLineTicks } from "octos-lesson-language/plugin-math";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -40,19 +43,57 @@ export const MOTION_CASES = [
   { id: "CS-09", prompt: "小明以 1.5 m/s 匀速走路，10 秒走多远？用图像讲讲。" },
   { id: "CS-10", prompt: "Explain speed = distance ÷ time with a moving object." },
 ];
-/** Requests the number line recipe fits (OLL decision 0013): integers, fractions and decimals on a line, Chinese and English. */
+/**
+ * Requests the number line recipe fits (OLL decision 0013): integers, fractions and decimals on a
+ * line, Chinese and English. Each says, before any run, what a correct line must show:
+ * - `values`: numbers some point must sit on, in some state the lesson reaches (a hard check);
+ * - `change`: the change the question asks for, which a slider or an animation must reach (hard);
+ * - `parts`: the parts per unit a well-chosen line uses (soft: other parts can still be right);
+ * - `integer`: an integer question, whose line should span at most 24 units with hops (soft);
+ * - `format`: "decimal" when the question writes decimals, so 0.8 reads 0.8, not 8/10 (hard: the
+ *   learner reads the line in the question's notation).
+ * NL-01 to NL-10 are the requests runs 1–4 were tuned against.
+ */
 export const NUMBER_LINE_CASES = [
-  { id: "NL-01", prompt: "用数轴讲一讲 3 加上负 5 等于多少。" },
-  { id: "NL-02", prompt: "Show me on a number line why -2 + 7 = 5." },
-  { id: "NL-03", prompt: "3/4 在数轴上的哪里？" },
-  { id: "NL-04", prompt: "How do I add 1/4 and 2/4 on a number line?" },
-  { id: "NL-05", prompt: "温度从零下 3 度升高 8 度，用数轴表示是多少度？" },
-  { id: "NL-06", prompt: "Use a number line to explain 6 - 9." },
-  { id: "NL-07", prompt: "在数轴上比较 0.5 和 0.8 哪个大。" },
-  { id: "NL-08", prompt: "Why is -4 less than -1? Show it on a number line." },
-  { id: "NL-09", prompt: "从 1/3 出发，再加 2/3，在数轴上是多少？" },
-  { id: "NL-10", prompt: "Count by fourths from 0 to 2 on a number line." },
+  { id: "NL-01", prompt: "用数轴讲一讲 3 加上负 5 等于多少。", expect: { values: [3, -2], change: -5, integer: true } },
+  { id: "NL-02", prompt: "Show me on a number line why -2 + 7 = 5.", expect: { values: [-2, 5], change: 7, integer: true } },
+  { id: "NL-03", prompt: "3/4 在数轴上的哪里？", expect: { values: [0.75], parts: 4 } },
+  { id: "NL-04", prompt: "How do I add 1/4 and 2/4 on a number line?", expect: { values: [0.25, 0.75], parts: 4 } },
+  { id: "NL-05", prompt: "温度从零下 3 度升高 8 度，用数轴表示是多少度？", expect: { values: [-3, 5], change: 8, integer: true } },
+  { id: "NL-06", prompt: "Use a number line to explain 6 - 9.", expect: { values: [6, -3], change: -9, integer: true } },
+  { id: "NL-07", prompt: "在数轴上比较 0.5 和 0.8 哪个大。", expect: { values: [0.5, 0.8], parts: 10, format: "decimal" } },
+  { id: "NL-08", prompt: "Why is -4 less than -1? Show it on a number line.", expect: { values: [-4, -1], integer: true } },
+  { id: "NL-09", prompt: "从 1/3 出发，再加 2/3，在数轴上是多少？", expect: { values: [1 / 3, 1], parts: 3 } },
+  { id: "NL-10", prompt: "Count by fourths from 0 to 2 on a number line.", expect: { values: [0, 0.25], parts: 4 } },
 ];
+
+/**
+ * Quality cases, run once each on the candidate arm only (no speed pair), written before run 5:
+ * - held-out number line requests no fix was tuned against (NL-11 to NL-18);
+ * - near misses the recipe cannot fully express (NM-01 to NM-04): fifteenths (comparing 2/3 and 3/5),
+ *   an inequality, rounding, an absolute value. The card excludes them (owner, after run 5). A lesson
+ *   that avoids the number line passes; one that draws it gets the ordinary hard checks against the
+ *   values the request needs, and is read by hand. They run on both arms, so a lesson can be compared
+ *   with what the same request gets today.
+ */
+export const NUMBER_LINE_QUALITY_CASES = [
+  { id: "NL-11", prompt: "在数轴上从 0.3 出发加 0.4 是多少？", expect: { values: [0.3, 0.7], parts: 10, format: "decimal" } },
+  { id: "NL-12", prompt: "Show -1/2 + 3/4 on a number line.", expect: { values: [-0.5, 0.25], parts: 4 } },
+  { id: "NL-13", prompt: "用数轴表示 1 又 1/2 加上 1 又 1/4。", expect: { values: [1.5, 2.75], parts: 4 } },
+  { id: "NL-14", prompt: "Use a number line to show 5 - 8.", expect: { values: [5, -3], change: -8, integer: true } },
+  { id: "NL-15", prompt: "在 0 到 100 的数轴上，从 35 往后数 40 是多少？", expect: { values: [35, 75], change: 40 } },
+  { id: "NL-16", prompt: "What is -2.5 + 4? Show it on a number line.", expect: { values: [-2.5, 1.5], parts: 2, format: "decimal" } },
+  { id: "NL-17", prompt: "从 -6 出发向右走 6 格，用数轴看看到了哪里。", expect: { values: [-6, 0], change: 6, integer: true } },
+  { id: "NL-18", prompt: "Show 2/3 - 1/3 on a number line.", expect: { values: [2 / 3, 1 / 3], parts: 3 } },
+  { id: "NL-19", prompt: "用数轴算 23 + 48。", expect: { values: [23, 71], change: 48 } },
+  { id: "NL-20", prompt: "Use an open number line to add 17 and 26.", expect: { values: [17, 43], change: 26 } },
+  { id: "NM-01", prompt: "用数轴比较 2/3 和 3/5 哪个大。", nearMiss: true, expect: { values: [2 / 3, 0.6] } },
+  { id: "NM-02", prompt: "Graph x > -2 on a number line.", nearMiss: true, expect: { values: [-2] } },
+  { id: "NM-03", prompt: "用数轴说明 47 四舍五入到十位是多少。", nearMiss: true, expect: { values: [47, 50] } },
+  { id: "NM-04", prompt: "Solve |x - 3| < 2 on a number line.", nearMiss: true, expect: { values: [1, 5] } },
+];
+export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES };
+
 /** The requests each trial recipe fits. */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
 
@@ -84,6 +125,148 @@ export function numberLineInPart(part) {
   };
 }
 
+/** A first part's number line, with what drives it: the card, the variables, animations and tasks. */
+export function numberLineLesson(part) {
+  const actions = (part.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? []);
+  const write = actions.find((action) => action.do === "write" && action.kind === "number_line");
+  if (!write) return undefined;
+  // What the lesson does to the line, in order: animations change values, and emphasis on one of the
+  // line's parts ("line#end") shows a point that is shown only when emphasized; emphasis "none" hides it
+  // again. That is what the runtime does: `emphasize` becomes board.emphasize, whose state the number
+  // line's styles use; `point` (teacher.point) and `focus` (board.focus) leave a hidden point hidden
+  // (review of #63, checked in Chromium playback).
+  const partOf = (target) => (typeof target === "string" && target.startsWith(`${write.as}#`) ? target.slice(write.as.length + 1) : undefined);
+  const sequence = actions.flatMap((action) => {
+    if (action.do === "animate") return [{ kind: "animate", variable: action.variable, value: action.value }];
+    const part = action.do === "emphasize" ? partOf(action.target) : undefined;
+    return part ? [{ kind: action.emphasis === "none" ? "hide" : "reveal", part }] : [];
+  });
+  return {
+    content: write.content, variables: part.lesson?.variables ?? [], tasks: part.lesson?.tasks ?? [],
+    animations: actions.filter((action) => action.do === "animate").map((action) => [action.variable, action.value]),
+    sequence,
+  };
+}
+
+const close = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a));
+
+/**
+ * The states a lesson puts its number line in: every combination of each variable's starting
+ * value, animation targets and practice targets, with each point's value in that state.
+ */
+export function numberLineStates({ content, variables, tasks, animations }) {
+  const values = new Map(variables.map((variable) => [variable.as, [variable.initial]]));
+  for (const [variable, value] of animations) values.get(variable)?.push(value);
+  for (const task of tasks) {
+    const completion = task.completion ?? {};
+    if (completion.kind === "expression_target" && values.has(String(completion.expression).trim())) values.get(String(completion.expression).trim()).push(completion.value);
+  }
+  let states = [{}];
+  for (const [name, list] of values) states = states.flatMap((state) => [...new Set(list)].map((value) => ({ ...state, [name]: value })));
+  const evaluate = (expression, state) => {
+    const text = String(expression).replace(/[a-z][a-z0-9_]*/gu, (name) => (name in state ? `(${state[name]})` : "NaN"));
+    return /^[-+*/().\d\seNa]+$/u.test(text) ? Number(Function(`"use strict"; return (${text});`)()) : Number.NaN;
+  };
+  const fraction = (value) => (typeof value === "string" && value.includes("/") ? value.trim().split(/\s+/u).reduce((sum, piece) => {
+    const [top, bottom] = piece.split("/").map(Number);
+    return bottom ? sum + Math.sign(sum || top) * Math.abs(top) / bottom : sum + Number(piece);
+  }, 0) : Number(value));
+  return states.map((state) => Object.fromEntries((content.points ?? []).map((point) => {
+    const binding = (content.bindings ?? []).find((entry) => entry.target === `${point.as}.value`);
+    return [point.as, binding ? evaluate(binding.expression, state) : fraction(point.value)];
+  })));
+}
+
+/** The points' values in each state the lesson shows: the starting values, then after each animation. */
+export function lessonShownStates({ content, variables, animations, sequence: steps }) {
+  // Review of #63: a point shown only when emphasized counts only once something reveals it, so an
+  // answer kept hidden throughout does not satisfy "3/4 is shown".
+  const latent = new Set((content.points ?? []).filter((point) => point.shown === "when_emphasized").map((point) => point.as));
+  const revealed = new Set();
+  const sequence = [];
+  let current = Object.fromEntries(variables.map((variable) => [variable.as, variable.initial]));
+  const pointsAt = (values) => {
+    const all = numberLineStates({ content, variables: Object.entries(values).map(([as, initial]) => ({ as, initial })), tasks: [], animations: [] })[0];
+    return Object.fromEntries(Object.entries(all).filter(([as]) => !latent.has(as) || revealed.has(as)));
+  };
+  sequence.push(pointsAt(current));
+  for (const step of steps ?? animations.map(([variable, value]) => ({ kind: "animate", variable, value }))) {
+    if (step.kind === "animate") current = { ...current, [step.variable]: step.value };
+    else if (step.kind === "reveal") revealed.add(step.part);
+    else revealed.delete(step.part);
+    sequence.push(pointsAt(current));
+  }
+  return sequence;
+}
+
+/**
+ * Judges one number line against its case's expectations (set before the run):
+ * - hard: compiled; every value the question names is shown by a point in some state; the asked-for
+ *   change is reachable (by an animation, or on the slider's grid from its minimum); and every visible point, in every state, sits on a tick the label policy
+ *   labels, so its number is drawn (OLL draws a labelled tick under a point even when labels thin);
+ * - hard, too: a question written in decimals is labelled in decimals, and no practice task is already
+ *   met when the lesson ends;
+ * - soft: the parts per unit, and for integer questions a span of at most 24 units with hops.
+ * Returns the lists of misses, empty when it passes.
+ */
+export function judgeNumberLine(item, lesson) {
+  const hard = [], soft = [];
+  if (item.nearMiss && !lesson) return { hard: [], soft };
+  if (!lesson) return { hard: ["no number line"], soft };
+  if (lesson.error) return { hard: [`compile error: ${String(lesson.error).slice(0, 80)}`], soft };
+  const { content, variables, animations } = lesson;
+  const states = numberLineStates(lesson);
+  const expect = item.expect ?? {};
+  // What the lesson itself shows: its starting values, then each animation in order. A practice
+  // target is the learner's to reach, not something the lesson shows (run 6: a line that showed
+  // 0 − 8 throughout would have passed "5 − 8" on the task's target alone).
+  const shownStates = lessonShownStates(lesson);
+  for (const value of expect.values ?? []) {
+    if (!shownStates.some((state) => Object.values(state).some((shown) => close(shown, value)))) {
+      hard.push(`wrong value: ${Number(value.toFixed(4))} is never shown (points: ${[...new Set(shownStates.flatMap((state) => Object.values(state)).map((shown) => Number(shown.toFixed(4))))].join(", ")})`);
+    }
+  }
+  if (expect.change !== undefined) {
+    const name = String((content.bindings ?? []).find((binding) => binding.target === "move.by")?.expression ?? "").trim();
+    const change = variables.find((variable) => variable.as === name);
+    const animated = animations.filter(([variable]) => variable === name).map(([, value]) => value);
+    // A slider reaches its minimum plus whole steps; the fit may have coarsened the step (1 to 5).
+    const step = change?.control?.step;
+    const onSlider = change && change.min - 1e-9 <= expect.change && expect.change <= change.max + 1e-9
+      && (!step || close(Math.round((expect.change - change.min) / step) * step + change.min, expect.change));
+    if (!change || !(onSlider || animated.some((value) => close(value, expect.change)))) hard.push(`cannot reach ${expect.change}`);
+  }
+  // A practice task the learner finds already met (the lesson ended where the task points) has nothing to do.
+  const atEnd = new Map(variables.map((variable) => [variable.as, variable.initial]));
+  for (const [variable, value] of animations) atEnd.set(variable, value);
+  for (const task of lesson.tasks ?? []) {
+    const completion = task.completion ?? {};
+    const name = String(completion.expression ?? "").trim();
+    if (completion.kind === "expression_target" && atEnd.has(name) && Math.abs(atEnd.get(name) - completion.value) <= (completion.tolerance ?? 0)) {
+      hard.push(`practice task already met when it starts (${name} ends at ${Number(atEnd.get(name).toFixed(4))})`);
+    }
+  }
+  const labelled = planNumberLineTicks(content).filter((tick) => tick.label).map((tick) => tick.value);
+  const visible = new Set((content.points ?? []).filter((point) => point.shown !== "when_emphasized").map((point) => point.as));
+  const unreadable = new Set();
+  for (const state of states) for (const [as, value] of Object.entries(state)) {
+    if (visible.has(as) && !labelled.some((tick) => close(tick, value))) unreadable.add(`${as} at ${Number(value.toFixed(4))}`);
+  }
+  if (unreadable.size) hard.push(`unreadable: ${[...unreadable].join(", ")} on no labelled tick`);
+  const parts = content.ticks?.subdivisions ?? 1;
+  if (expect.parts && parts !== expect.parts) soft.push(`${parts} parts, not ${expect.parts}`);
+  // Labels are fractions unless the card asks otherwise (OLL's default for split units). A line with
+  // whole-number ticks only labels integers, which read the same either way.
+  const format = content.ticks?.format ?? (parts > 1 ? "fraction" : "integer");
+  if (expect.format === "decimal" && format === "fraction") hard.push("labels as fractions, the question writes decimals");
+  if (expect.integer) {
+    const span = content.range.max - content.range.min;
+    if (span > 24) soft.push(`${span} units wide`);
+    if (!(content.jumps ?? [])[0]?.hops) soft.push("no hops");
+  }
+  return { hard, soft };
+}
+
 /** The recipes whose builder output the first playable part contains. */
 export function recipesInPart(part) {
   const actions = (part.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? []);
@@ -103,6 +286,22 @@ const median = (values) => {
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
+/**
+ * The owner's rule for run 5 (2026-11-11, option B): the program may cause no hard miss; the model
+ * may slip once, and never twice on the same request. Whether a miss is the model's is read by hand
+ * from its raw reply, so one miss is "review", not "pass"; near misses are always read by hand.
+ */
+export function slipVerdict(judged) {
+  const misses = judged.filter((row) => row.quality.hard.length);
+  const byCase = new Map();
+  for (const row of misses) byCase.set(row.case, (byCase.get(row.case) ?? 0) + 1);
+  const repeated = [...byCase].filter(([, count]) => count > 1).map(([id]) => id);
+  if (repeated.length) return { result: "fail", reason: `the same request missed more than once: ${repeated.join(", ")}` };
+  if (misses.length > 1) return { result: "fail", reason: `${misses.length} hard misses; at most one model slip is allowed` };
+  if (misses.length === 1) return { result: "review", reason: `one hard miss (${misses[0].case}): it passes only if its raw reply shows the model's slip, not the program's` };
+  return { result: "pass", reason: "no hard misses" };
+}
+
 export function summarize(rows) {
   const group = (filter) => {
     const ok = (arm) => rows.filter((row) => filter(row) && row.arm === arm && row.outcome === "first_playable");
@@ -121,7 +320,18 @@ export function summarize(rows) {
       errors: rows.filter((row) => filter(row) && row.outcome !== "first_playable").length,
     };
   };
-  return { all: group(() => true), motion: group((row) => row.kind === "motion"), other: group((row) => row.kind === "other") };
+  // Quality, for recipes whose cases carry expectations: hard misses block, soft ones are reported.
+  const judged = rows.filter((row) => row.arm === "candidate" && row.quality);
+  const quality = judged.length ? {
+    judged: judged.length,
+    hard_pass: judged.filter((row) => !row.quality.hard.length).length,
+    hard_misses: judged.filter((row) => row.quality.hard.length).map((row) => ({ case: row.case, hard: row.quality.hard, ...(row.quality.review ? { review: row.quality.review } : {}) })),
+    soft_misses: judged.filter((row) => row.quality.soft.length).map((row) => ({ case: row.case, soft: row.quality.soft })),
+    near_misses_for_review: rows.filter((row) => row.kind === "near_miss" && row.arm === "candidate").map((row) => ({ case: row.case, recipes: row.recipes ?? null })),
+    verdict: slipVerdict(judged),
+  } : undefined;
+  // Speed is measured on the pairs only; quality cases run on one arm and would skew the medians.
+  return { all: group((row) => row.kind === "motion" || row.kind === "other"), motion: group((row) => row.kind === "motion"), other: group((row) => row.kind === "other"), ...(quality ? { quality } : {}) };
 }
 
 async function main() {
@@ -140,6 +350,16 @@ async function main() {
   if (!fitting) throw new Error(`no fitting requests for trial recipe '${recipes}'`);
   // "motion" marks requests the trial recipe fits, whichever recipe that is.
   const cases = fitting.flatMap((fit, index) => [{ ...fit, kind: "motion" }, { ...heldOut.get(OTHER_CASE_IDS[index]), kind: "other" }]);
+  // Quality cases run once each, candidate arm only, after the speed pairs.
+  // A probe (--cases NL-03,NM-01) runs only the named cases, on the candidate arm, with no speed pairs:
+  // a cheap first look at how the model meets a change, before any gate run.
+  const probeIds = option("--cases")?.split(",").map((id) => id.trim()).filter(Boolean);
+  const allCases = [...fitting, ...(TRIAL_QUALITY_CASES[recipes.split(",")[0].trim()] ?? [])];
+  const qualityCases = (probeIds ? probeIds.map((id) => {
+    const item = allCases.find((entry) => entry.id === id);
+    if (!item) throw new Error(`no case '${id}'`);
+    return item;
+  }) : TRIAL_QUALITY_CASES[recipes.split(",")[0].trim()] ?? []).map((item) => ({ ...item, kind: item.nearMiss ? "near_miss" : "quality" }));
   const workDir = await mkdtemp(join(tmpdir(), "coach-trial-"));
   // Coach logs each raw model reply, which the harness keeps beside the run's compiled parts, so a
   // later fit can be replayed against what the model actually wrote at no cost.
@@ -148,41 +368,66 @@ async function main() {
   const route = { provider: routeEnv.OCTOS_PROFILE_LLM_PROVIDER, model: routeEnv.OCTOS_PROFILE_LLM_MODEL };
   const budget = { remaining: maxCalls };
   const rows = [];
+  const notRun = [];
   const persist = async () => {
     if (!out) return;
     await mkdir(dirname(resolve(out)), { recursive: true });
     // The compiled first parts stay in work_dir after the run, as evidence of what each lesson drew.
-    await writeFile(resolve(out), `${JSON.stringify({ measured_at: new Date().toISOString(), ...route, trial_recipes: recipes, pairs, max_calls: maxCalls, work_dir: workDir, summary: summarize(rows), rows }, null, 1)}\n`);
+    await writeFile(resolve(out), `${JSON.stringify({ measured_at: new Date().toISOString(), ...route, trial_recipes: recipes, pairs, max_calls: maxCalls, work_dir: workDir, summary: { ...summarize(rows), ...(notRun.length ? { not_run: notRun } : {}) }, rows }, null, 1)}\n`);
   };
   console.error(JSON.stringify({ stage: "trial-recipe-speed", ...route, trial_recipes: recipes, pairs, max_calls: maxCalls }));
   const { appendFileSync, readFileSync } = await import("node:fs");
+  const runOne = async (pair, item, arm, order) => {
+    const input = { turn_id: `trial-${pair}-${arm}-${Date.now()}`, learner_request: item.prompt, request_source: "self_contained", language: caseLanguage(item), input_modality: "text" };
+    const tool = await runTool({
+      build, input, env: arm === "candidate" ? { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes } : env,
+      maxCalls: Math.min(3, budget.remaining), onCall: () => { budget.remaining -= 1; },
+      onRaw: (line) => appendFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), `${line}\n`),
+      onFirstPart: (path) => {
+        try {
+          const part = JSON.parse(readFileSync(path, "utf8"));
+          const line = numberLineInPart(part);
+          const judged = arm === "candidate" && item.expect ? { quality: judgeNumberLine(item, numberLineLesson(part)) } : {};
+          return { recipes: recipesInPart(part), ...(line ? { number_line: line } : {}), ...judged };
+        } catch { return { recipes: null }; }
+      },
+    });
+    const { first_part_path: _path, ...kept } = tool;
+    const row = { pair, case: item.id, kind: item.kind, arm, order: order.indexOf(arm), ...kept };
+    // A case with expectations that produced no judged part is a hard miss, never a silent gap.
+    if (arm === "candidate" && item.expect && !row.quality) row.quality = { hard: [`not judged: ${row.outcome}`], soft: [] };
+    // The run stops at the first playable part, so the judge sees only the first section; when the
+    // outline has more, a later section may show what the first lacks, and the miss is read by hand.
+    if (row.quality?.hard.length && row.sections > 1) row.quality.review = "later sections not judged: read by hand";
+    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).includes("number_line")) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew a number line: read by hand" };
+    rows.push(row);
+    console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null, ...(row.quality ? { hard: row.quality.hard } : {}) }));
+    await persist();
+  };
   for (let pair = 0; pair < pairs && budget.remaining > 0; pair += 1) {
     const item = cases[pair % cases.length];
     const order = Math.floor(pair / 2) % 2 === 0 ? ["baseline", "candidate"] : ["candidate", "baseline"];
     for (const arm of order) {
       if (budget.remaining <= 0) break;
-      const input = { turn_id: `trial-${pair}-${arm}-${Date.now()}`, learner_request: item.prompt, request_source: "self_contained", language: caseLanguage(item), input_modality: "text" };
-      const tool = await runTool({
-        build, input, env: arm === "candidate" ? { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes } : env,
-        maxCalls: Math.min(3, budget.remaining), onCall: () => { budget.remaining -= 1; },
-        onRaw: (line) => appendFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), `${line}\n`),
-        onFirstPart: (path) => {
-          try {
-            const part = JSON.parse(readFileSync(path, "utf8"));
-            const line = numberLineInPart(part);
-            return { recipes: recipesInPart(part), ...(line ? { number_line: line } : {}) };
-          } catch { return { recipes: null }; }
-        },
-      });
-      const { first_part_path: _path, ...kept } = tool;
-      const row = { pair, case: item.id, kind: item.kind, arm, order: order.indexOf(arm), ...kept };
-      rows.push(row);
-      console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null }));
-      await persist();
+      await runOne(pair, item, arm, order);
     }
   }
+  const repeats = Number(option("--quality-repeats", "1"));
+  const queue = Array.from({ length: repeats }, () => qualityCases).flat();
+  for (const [index, item] of queue.entries()) {
+    if (budget.remaining <= 0) break;
+    // Near misses run on both arms, alternating which goes first, so a lesson can be read against
+    // what the same request gets without the recipe.
+    const arms = item.nearMiss && !probeIds ? (index % 2 ? ["candidate", "baseline"] : ["baseline", "candidate"]) : ["candidate"];
+    for (const arm of arms) if (budget.remaining > 0) await runOne(pairs + index, item, arm, arms);
+  }
+  // Every planned case must have run: a budget that ran out is reported, not passed over.
+  const ran = rows.filter((row) => row.arm === "candidate").length;
+  const planned = pairs + queue.length;
+  // (Baseline near-miss runs are extra and not counted against the candidate plan.)
+  notRun.push(...(ran < planned ? [`${planned - ran} candidate runs did not run (budget ${maxCalls} calls)`] : []));
   await persist();
-  console.log(JSON.stringify(summarize(rows), null, 2));
+  console.log(JSON.stringify({ ...summarize(rows), ...(notRun.length ? { not_run: notRun } : {}) }, null, 2));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) await main();

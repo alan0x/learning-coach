@@ -13,6 +13,7 @@ import { parseModelFormula } from "./math-formulas.js";
 import { compileMathExpression, type AuthoringAction } from "octos-lesson-language";
 import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
+import { lessonValues } from "./number-line-fit.js";
 import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
@@ -552,6 +553,8 @@ function compileCircleArea(
 
 /** Every count of parts per unit OLL draws (1–12), fewest first. */
 const NUMBER_LINE_SPLITS = Array.from({ length: 12 }, (_unused, index) => index + 1);
+/** Whether 1/parts has a finite decimal: its only prime factors are 2 and 5. */
+const exactDecimal = (parts: number) => { let rest = parts; for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime; return rest === 1; };
 const onGrid = (value: number, parts: number) => Math.abs(value * parts - Math.round(value * parts)) < 1e-9;
 
 /**
@@ -569,17 +572,22 @@ function compileNumberLine(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title"], path);
+  allowParameterKeys(input, ["title", "label_style"], path);
+  // How the question writes its numbers, which only the model sees: "decimal" labels 0.8, not 8/10.
+  if (input.label_style !== undefined && input.label_style !== "decimal" && input.label_style !== "fraction") {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.label_style`, "label_style is decimal or fraction");
+  }
   const [startNumber, changeNumber] = content.numbers ?? [];
+  // A number line with no lesson number has nothing to show (run 7: an outline with no numbers).
+  if (!startNumber) fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "a number line needs at least one lesson number for its start");
   const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : undefined;
   const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : undefined;
   const values = [
     ...(start ? [start.min, start.max, start.initial] : [0]),
     ...(start && change ? [start.min + change.min, start.max + change.max, start.initial + change.initial] : []),
   ];
-  // Every value a slider can reach is its minimum plus whole steps, so the ticks must hold the
-  // ends, the starting values, the change on its own and each slider's step. When no count of
-  // parts up to 12 holds them all, the line keeps whole-number ticks and draws one arc.
+  // Every value a slider can reach is its minimum plus whole steps, so ideally the ticks hold the
+  // ends, the starting values, the change on its own and each slider's step.
   const grid = [
     ...values,
     ...(change ? [change.min, change.max, change.initial] : []),
@@ -588,11 +596,35 @@ function compileNumberLine(
   const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
   const max = Math.ceil(Math.max(...values, 0)) + 1;
   const span = max - min;
-  // Whole-number ticks up to 60 units (crowded labels thin out on the board); coarser beyond.
-  const step = span <= 60 ? 1 : span <= 150 ? 5 : 10;
-  // The fewest parts per unit that hold every value (the numbers were fitted to their ticks before compiling).
-  const fits = (parts: number) => grid.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks;
-  const subdivisions = step > 1 ? 1 : NUMBER_LINE_SPLITS.find(fits) ?? 1;
+  // The ticks: first those that hold every value a slider can reach (ranges, starting values, steps);
+  // failing that, those that hold the values the lesson itself shows (starting values, animation and
+  // practice targets), since a slider step derived from the range (0.325) may fit no ticks at all.
+  // At each level: the finest whole step of 1, 2, 5 or 10 with at most 60 ticks; then one-unit ticks,
+  // split into the fewest parts (up to 12) that hold the values, up to OLL's tick limit.
+  const shown = [
+    ...(start && startNumber ? [start.initial, ...lessonValues(plan, startNumber)] : []),
+    ...(change && changeNumber ? [change.initial, ...lessonValues(plan, changeNumber)] : []),
+    ...(start && change && changeNumber ? [change.initial, ...lessonValues(plan, changeNumber)].map((value) => start.initial + value) : []),
+  ];
+  const holdAll = (count: number, of: readonly number[]) => of.every((value) => onGrid(value / count, 1));
+  const ticksFor = (of: readonly number[]) => {
+    const whole = [1, 2, 5, 10].find((count) => span / count <= 60 && holdAll(count, of));
+    if (whole) return { step: whole, subdivisions: 1 };
+    // One-unit ticks (whole values: no parts), else the fewest parts that hold them, within OLL's limit.
+    const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value) => onGrid(value, count)) && span * count <= NUMBER_LINE_LIMITS.ticks);
+    if (parts) return { step: 1, subdivisions: parts };
+    return undefined;
+  };
+  const ticks = ticksFor(grid) ?? ticksFor(shown);
+  // Values no ticks can hold (2/3 and 3/5 together need fifteenths) would sit between ticks with no
+  // number under them. Refuse, so the model can choose another visual or other values: a line the
+  // learner cannot read teaches nothing (run 6, NM-01, three times).
+  if (!ticks) {
+    // The values and the visual were chosen in the outline, so only a new outline can fix this.
+    fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`,
+      "a number line can split each unit into at most 12 equal parts; these values need finer ticks, so choose another visual");
+  }
+  const { step, subdivisions } = ticks;
   // Hops are counted on the ticks actually drawn: every reachable change, and the slider's step,
   // must be a whole number of the smallest ticks, and the longest change at most 24 of them.
   const unit = step / subdivisions;
@@ -609,7 +641,11 @@ function compileNumberLine(
     as: base, role, place: placement,
     title: optionalText(input.title, compileText(plan, "数轴"), `${path}.title`),
     range: { min, max },
-    ticks: { step, subdivisions, labels: subdivisions > 1 ? "all" : "major" },
+    ticks: {
+      step, subdivisions, labels: subdivisions > 1 ? "all" : "major",
+      // Decimals only where they are exact (halves, fifths, tenths …): thirds stay fractions, never 0.333.
+      ...(input.label_style === "decimal" && subdivisions > 1 && exactDecimal(subdivisions) ? { format: "decimal" as const } : {}),
+    },
     ...(start && startVariable ? { points: [
       { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "起点") },
       ...(change && changeVariable ? [{ as: "end", value: { expression: `(${startVariable})+(${changeVariable})`, initial: start.initial + change.initial }, label: compileText(plan, "终点") }] : []),

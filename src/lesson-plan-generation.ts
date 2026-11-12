@@ -404,13 +404,25 @@ function lowerModelOutline(value: unknown, requestPartCount = 0): unknown {
   const candidate = root as Record<string, unknown>;
   candidate.version = LESSON_PLAN_VERSION;
   if (Array.isArray(candidate.numbers)) {
-    candidate.numbers = candidate.numbers.map((entry) => {
+    candidate.numbers = candidate.numbers.map((entry, index) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
       const number = { ...(entry as Record<string, unknown>) };
       delete number.student_control;
       if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
       if (typeof number.label === "string" && !number.label.trim()) delete number.label;
+      const written = { initial: number.initial, min: number.min, max: number.max };
       normalizeModelNumberRange(number);
+      // A starting value written at the wrong scale (2/3 as mantissa 666666666667, scale 1) would widen
+      // the range past anything a lesson can draw (a span over 1,000,000), and fail later where only a
+      // section is retried, never the outline (runs 5 and 6). Refuse it here, where the outline is retried.
+      if (typeof number.min === "number" && typeof number.max === "number" && number.max - number.min > 1e6
+        && typeof written.min === "number" && typeof written.max === "number" && Math.abs(written.max - written.min) <= 1e6) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_NUMBER_RANGE",
+          `$lessonPlanOutline.numbers[${index}].initial`,
+          `the starting value ${String(written.initial)} lies far outside its range ${String(written.min)} to ${String(written.max)}; check the mantissa and scale (2/3 is mantissa 666667 with scale 6)`,
+        );
+      }
       if (typeof number.min === "number"
         && Number.isFinite(number.min)
         && typeof number.max === "number"
@@ -1298,6 +1310,8 @@ function lowerModelActivityNumbers(
   outline: LessonPlanOutline,
   expectedSection: number,
   language?: string,
+  /** Numbers a number line shows: their targets stay as written, and a met target is resolved at compile. */
+  exactNumbers: ReadonlySet<number> = new Set(),
 ): Record<string, unknown> {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
@@ -1340,6 +1354,19 @@ function lowerModelActivityNumbers(
       }
       return reachable;
     };
+    if (exactNumbers.has(numberIndex)) {
+      // A number line fits its ticks to the values the model wrote (0.75): rounding onto the slider's
+      // derived step (span / 200, anchored at the minimum) would hide them (0.76; 50.05 in run 5). Half
+      // a step of tolerance keeps the target reachable; the margin absorbs floating-point error. A
+      // target the number already starts at is resolved at compile (resolveMetNumberTargets).
+      lowered.value = Math.round(Math.min(maximum, Math.max(minimum, requestedValue)) * 10 ** 12) / 10 ** 12;
+      lowered.tolerance = Math.max(
+        typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
+        range / 1000,
+        1e-6,
+      ) * (1 + 1e-9);
+      return lowered;
+    }
     let reachableValue = snapToReachableValue(requestedValue);
     const tolerance = Math.max(
       typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
@@ -1884,6 +1911,12 @@ function lowerModelSectionDraft(
       );
     }
   }
+  // Numbers this section's number line shows (its visual is created here; one created in an earlier
+  // section is not seen, and its targets are rounded as for any slider).
+  const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
+    const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
+    return entry.action === "create" && entry.kind === "visual" && entry.content?.capability === "number_line" ? entry.content.numbers ?? [] : [];
+  }));
   const activities: Array<{ order: number; activity: Record<string, unknown> }> = [];
   const collectActivities = (values: unknown[], kind: "number_target" | "scene3d_view", path: string): void => {
     values.forEach((activity, index) => {
@@ -1896,7 +1929,7 @@ function lowerModelSectionDraft(
       if (kind === "number_target" && lowered.reference !== undefined) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -2392,6 +2425,31 @@ function compilePrefix(
   return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
 
+/** A fault only a new outline can fix: the outline chose the visual and the numbers it cannot show. */
+const OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
+const isOutlineOwnedFault = (error: unknown) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
+
+/** The capabilities an outline uses, by its course visuals. */
+const outlineCapabilities = (outline: LessonPlanOutline) => new Set((outline.course_visuals ?? []).map((visual) => visual.capability));
+
+/**
+ * Faults the outline owns, found before it is accepted (runs 5–7: they surfaced in section 1, where
+ * retries can only rewrite the section, and the lesson failed three times):
+ * - a number line in an outline that declares no numbers;
+ * - an outline using a capability already found unable to show this request.
+ */
+function checkOutlineVisuals(outline: LessonPlanOutline, excluded: ReadonlySet<string>): void {
+  const used = outlineCapabilities(outline);
+  for (const capability of excluded) {
+    if (used.has(capability as never)) {
+      throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability} visual cannot show this request; choose another visual`);
+    }
+  }
+  if (used.has("number_line" as never) && !(outline.numbers?.length)) {
+    throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.numbers", "a number line needs lesson numbers: declare the start (and the change) in numbers");
+  }
+}
+
 function canFallBackFromBootstrap(error: unknown): boolean {
   if (error instanceof LessonPlanError) return true;
   const code = error && typeof error === "object" && "code" in error
@@ -2452,6 +2510,9 @@ export async function generateLessonPlanWithModel(
     draftAdjustments.delete(draft);
   };
   let bootstrappedFirstSection: LessonPlanSectionDraft | undefined;
+  // Capabilities that turned out unable to show this request; the fallback outline is asked without them,
+  // so the worst case is the lesson the request gets without them.
+  const excludedCapabilities = new Set<string>();
   let outlineError: unknown;
   let stableCameraObservation: CameraLessonObservation | undefined;
   const sectionErrors = new Map<number, unknown>();
@@ -2573,6 +2634,13 @@ export async function generateLessonPlanWithModel(
     );
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
+      checkOutlineVisuals(outline, excludedCapabilities);
+    } catch (error) {
+      for (const capability of outlineCapabilities(outline)) if (capability === "number_line") excludedCapabilities.add(capability);
+      outline = undefined;
+      throw error;
+    }
+    try {
       const firstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
           coerceLessonPlanBootstrapSectionModelNumbers(bootstrap.first_section),
@@ -2592,6 +2660,24 @@ export async function generateLessonPlanWithModel(
         attempt: 1,
         error: rejectionDetails(error),
       });
+    }
+    // Compile the first section against its outline now: a fault the outline owns (values no number
+    // line can show) rejects the whole bootstrap, so the outline is asked again, without that visual.
+    // Any other compile fault is the section's, and acceptSection retries it as before.
+    let outlineFault: unknown;
+    if (bootstrappedFirstSection) {
+      try {
+        compilePrefix(outline, [bootstrappedFirstSection], options.compile);
+      } catch (error) {
+        if (isOutlineOwnedFault(error)) outlineFault = error;
+      }
+    }
+    if (outlineFault) {
+      excludedCapabilities.add("number_line");
+      outline = undefined;
+      bootstrappedFirstSection = undefined;
+      sectionErrors.delete(1);
+      throw outlineFault;
     }
   } catch (error) {
     const partialResponse = partialModelResponse(error);
@@ -2646,6 +2732,8 @@ export async function generateLessonPlanWithModel(
 
   // A malformed/truncated combined response falls back once to the proven
   // outline-only path. The large combined request itself is never repeated.
+  // (Callable again when section 1 finds a fault only a new outline can fix.)
+  const requestOutline = async (): Promise<LessonPlanGenerationResult | undefined> => {
   for (let attempt = 1; !outline && attempt <= maxAttempts; attempt += 1) {
     const observeCamera = (input.camera_input === true || input.selection_input === true)
       && stableCameraObservation === undefined;
@@ -2669,7 +2757,7 @@ export async function generateLessonPlanWithModel(
             : context),
           request_parts: fixedRequestParts,
           visual_recipe_columns: ["features", "numbers", "purpose"],
-          visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability) => [
+          visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.filter((capability) => !excludedCapabilities.has(capability)).map((capability) => [
             [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features],
             [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
             LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
@@ -2679,20 +2767,27 @@ export async function generateLessonPlanWithModel(
         response_schema: observeCamera
           ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
           : admissionInput
-            ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
-            : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+            ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length, [...excludedCapabilities])
+            : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length, [...excludedCapabilities]),
         ...(observeCamera ? { include_camera_media: true } : {}),
       });
       const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
       const admitted = admissionCourse(parsed, observeCamera);
       if (admitted.result) return admitted.result;
-      outline = validateLessonPlanOutline(
+      const candidateOutline = validateLessonPlanOutline(
         lowerModelOutline(
           coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
           fixedRequestParts.length,
         ),
         fixedRequestParts.length,
       );
+      try {
+        checkOutlineVisuals(candidateOutline, excludedCapabilities);
+      } catch (error) {
+        if (outlineCapabilities(candidateOutline).has("number_line" as never)) excludedCapabilities.add("number_line");
+        throw error;
+      }
+      outline = candidateOutline;
     } catch (error) {
       if (!(error instanceof LessonPlanError)) throw error;
       outlineError = error;
@@ -2712,16 +2807,21 @@ export async function generateLessonPlanWithModel(
       }
     }
   }
-  if (!outline) throw outlineError;
-  for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
-  await options.on_outline_ready?.({
-    sections: outline.sections.length,
-    course_visuals: outline.course_visuals?.length ?? 0,
-    request_parts: fixedRequestParts.length,
-    camera_observation: stableCameraObservation !== undefined,
-  });
-  const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
-  if (unsupported) {
+  return undefined;
+  };
+  // Every accepted outline, the first and any replacement (review of #63), goes through the same steps:
+  // plugin preparation, the outline-ready report, and the check for content it cannot present.
+  const acceptOutline = async (): Promise<LessonPlanGenerationResult | undefined> => {
+    if (!outline) throw outlineError;
+    for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
+    await options.on_outline_ready?.({
+      sections: outline.sections.length,
+      course_visuals: outline.course_visuals?.length ?? 0,
+      request_parts: fixedRequestParts.length,
+      camera_observation: stableCameraObservation !== undefined,
+    });
+    const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
+    if (!unsupported) return undefined;
     const reason = unsupported.reason?.trim();
     const learnerResponse = reason
       && reason.length <= 480
@@ -2733,7 +2833,11 @@ export async function generateLessonPlanWithModel(
       learner_response: learnerResponse,
       model_calls: modelCalls,
     };
-  }
+  };
+  const earlyOutlineResult = await requestOutline();
+  if (earlyOutlineResult) return earlyOutlineResult;
+  const outlineResult = await acceptOutline();
+  if (outlineResult) return outlineResult;
 
   // Teacher animation state only: optional student practice is not run while
   // subsequent sections play. Retries must never include the rejected draft.
@@ -2883,6 +2987,8 @@ export async function generateLessonPlanWithModel(
       try {
         prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
       } catch (error) {
+        // A fault only the outline can fix is not retried as a section: the caller asks for a new outline.
+        if (section === 1 && isOutlineOwnedFault(error)) throw error;
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
@@ -2905,8 +3011,34 @@ export async function generateLessonPlanWithModel(
   // Section 1 normally comes from the combined response. If it was missing or
   // conflicts with the accepted outline, acceptSection regenerates only this
   // section through the ordinary exact-schema request.
+  // Once per lesson, a fault only the outline can fix (values a number line cannot show) sends the
+  // lesson back for a new outline, asked without that visual, instead of failing at section 1.
+  let outlineRestarted = false;
+  const acceptFirstSection = async (): Promise<LessonPlanGenerationResult | undefined> => {
+    try {
+      await acceptSection(1, bootstrappedFirstSection);
+      return undefined;
+    } catch (error) {
+      if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
+      outlineRestarted = true;
+      await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
+      excludedCapabilities.add("number_line");
+      outlineError = error;
+      outline = undefined;
+      bootstrappedFirstSection = undefined;
+      sectionErrors.delete(1);
+      sectionAttempts.delete(1);
+      drafts.length = 0;
+      const early = await requestOutline();
+      if (early) return early;
+      const replacementResult = await acceptOutline();
+      if (replacementResult) return replacementResult;
+      return acceptFirstSection();
+    }
+  };
   try {
-    await acceptSection(1, bootstrappedFirstSection);
+    const early = await acceptFirstSection();
+    if (early) return early;
   } catch (error) {
     const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(1), input.language);
     if (!learnerResponse) throw error;

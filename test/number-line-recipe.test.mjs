@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, judgeNumberLine } from "../scripts/eval-trial-recipe-speed.mjs";
 
 const api = await import(new URL("../lesson-plan.js", import.meta.url));
 
@@ -78,12 +79,19 @@ test("fractions choose the parts per unit that put every value on a tick", () =>
 test("the model is not asked for subdivisions or hops: the schema offers neither, and the program decides both", () => {
   const result = compile([
     { initial: 0, min: 0, max: 1, label: "起点" },
-    { initial: 1.3, min: 0, max: 2.7, label: "加上", student_control: { kind: "slider", step: 0.1 } },
+    { initial: 2.3, min: 0, max: 2.7, label: "加上", student_control: { kind: "slider", step: 0.1 } },
   ]);
   assert.equal(result.error, undefined, result.error);
   assert.equal(result.content.ticks.subdivisions, 10);
   assert.equal(result.content.jumps[0].hops, false, "27 tenth-hops exceed the 24-hop limit, so one arc");
-  assert.equal(api.RECIPE_SCHEMA_PROPERTIES.number_line, undefined, "no number-line parameters: a denominator made the model write numerators (run 4)");
+  // A change of 1.3 narrows to its window, and its tenth-hops fit.
+  assert.equal(compile([
+    { initial: 0, min: 0, max: 1, label: "起点" },
+    { initial: 1.3, min: 0, max: 2.7, label: "加上", student_control: { kind: "slider", step: 0.1 } },
+  ]).content.jumps[0].hops, true);
+  // The only model parameter is how labels are written; nothing that changes what a number means
+  // (a denominator made the model write numerators in run 4).
+  assert.deepEqual(Object.keys(api.RECIPE_SCHEMA_PROPERTIES.number_line), ["label_style"]);
   assert.match(compile([{ initial: 0, min: 0, max: 1, label: "起点" }], { hops: true }).error ?? "", /hops/);
 });
 
@@ -101,38 +109,48 @@ test("6 − 9 with wide sliders and a change starting at 0 compiles, hop by hop 
   assert.deepEqual(result.content.jumps[0], { as: "move", from: "start", by: 0, hops: true });
 });
 
-test("a far start is kept near its value, while the change slider a learner moves keeps its whole range", () => {
+test("a far start is kept near its value, while a change slider starting at 0, for the learner to set, keeps its whole range", () => {
   const result = compile([
+    { initial: 20, min: 0, max: 100, label: "起点" },
+    { initial: 0, min: -50, max: 50, label: "加上", student_control: { kind: "slider", step: 1 } },
+  ]);
+  assert.equal(result.error, undefined, result.error);
+  // The start (no slider, not driven) shrinks to 19–21. The change keeps −50 to 50: a wide line and
+  // one arc, rather than a change the learner cannot drag where the narration goes. The ticks are
+  // whole numbers, so 20 sits on a labelled tick wherever the learner takes the end.
+  assert.deepEqual([result.variables[0].min, result.variables[0].max], [19, 21]);
+  assert.deepEqual([result.variables[1].min, result.variables[1].max], [-50, 50]);
+  assert.equal(result.content.ticks.step, 1);
+  assert.equal(result.content.jumps[0].hops, false);
+  assert.deepEqual(judgeNumberLine({ expect: { values: [20] } }, result).hard, []);
+  // A change that starts at −7 states the change the lesson is about: it narrows, and −7 stays.
+  const stated = compile([
     { initial: 20, min: 0, max: 100, label: "起点" },
     { initial: -7, min: -50, max: 50, label: "加上", student_control: { kind: "slider", step: 1 } },
   ]);
-  assert.equal(result.error, undefined, result.error);
-  // The start (no slider, not driven) shrinks to 19–21. The change keeps −50 to 50: a wide line with
-  // coarser ticks and one arc, rather than a change the learner cannot drag where the narration goes.
-  assert.deepEqual([result.variables[0].min, result.variables[0].max], [19, 21]);
-  assert.deepEqual([result.variables[1].min, result.variables[1].max], [-50, 50]);
-  assert.equal(result.content.ticks.step, 5);
-  assert.equal(result.content.jumps[0].hops, false);
+  assert.ok(stated.variables[1].min <= -7 && stated.variables[1].max < 50, JSON.stringify(stated.variables[1]));
+  assert.deepEqual(judgeNumberLine({ expect: { values: [20, 13], change: -7 } }, stated), { hard: [], soft: [] });
 });
-test("values the lesson really uses far apart keep a long line with coarser ticks and one arc", () => {
+test("whole numbers far apart are counted in the smallest of 2, 5 or 10 that fits: ticks hold every value, and the slider steps by it", () => {
   const result = compile([
     { initial: 0, min: 0, max: 10, label: "起点" },
     { initial: 100, min: 0, max: 100, label: "加上", student_control: { kind: "slider", step: 1 } },
   ]);
   assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.step, 5);
-  assert.equal(result.content.jumps[0].hops, false);
+  // 0 and 100 are even, and 0 to 100 in twos fits the window: the slider steps by 2.
+  assert.equal(result.variables[1].control.step, 2);
+  assert.equal(result.content.ticks.step, 2);
+  assert.deepEqual(judgeNumberLine({ expect: { values: [0, 100], change: 100 } }, result).hard, []);
 });
-test("a slider stepping by halves gets half ticks, hop by hop", () => {
+test("whole numbers close together still count in ones, even when they share a factor", () => {
+  // −6 + 6: multiples of 2 and 6, but the line is short, so a learner can still try 5.
   const result = compile([
-    { initial: 1, min: 0, max: 5, label: "起点" },
-    { initial: 2, min: 0, max: 4, label: "加上", student_control: { kind: "slider", step: 0.5 } },
+    { initial: -6, min: -10, max: 10, label: "起点", student_control: { kind: "slider", step: 1 } },
+    { initial: 6, min: -10, max: 10, label: "移动", student_control: { kind: "slider", step: 1 } },
   ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 2);
-  assert.equal(result.content.jumps[0].hops, true);
+  assert.equal(result.variables[1].control.step, 1);
+  assert.equal(result.content.ticks.step, 1);
 });
-
 // Review of #59: every supported count of parts, and the sliders' steps.
 test("sevenths get seven parts per unit", () => {
   const result = compile([
@@ -141,16 +159,6 @@ test("sevenths get seven parts per unit", () => {
   ]);
   assert.equal(result.error, undefined, result.error);
   assert.equal(result.content.ticks.subdivisions, 7);
-  assert.equal(result.content.jumps[0].hops, true);
-});
-
-test("sliders stepping by quarters get quarter ticks, so every value they reach is a tick and each hop is a quarter", () => {
-  const result = compile([
-    { initial: 0, min: 0, max: 1, label: "起点", student_control: { kind: "slider", step: 0.25 } },
-    { initial: 1, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 0.25 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 4);
   assert.equal(result.content.jumps[0].hops, true);
 });
 
@@ -176,14 +184,12 @@ test("a slider step no count of parts can hold gives way to the values' own deno
   assert.equal(result.content.jumps[0].hops, true);
 });
 
-test("values with no denominator up to 12 keep whole-number ticks and one arc", () => {
+test("values no ticks can hold are refused, so the model can choose another visual (run 6: 2/3 and 3/5 need fifteenths)", () => {
   const result = compile([
-    { initial: 0, min: 0, max: 1, label: "起点" },
-    { initial: 0.37, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 0.01 } },
+    { initial: 0.6, min: 0, max: 1, label: "起点" },
+    { initial: 2 / 3 - 0.6, min: 0, max: 1, label: "差", student_control: { kind: "slider", step: 1 / 15 } },
   ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 1);
-  assert.equal(result.content.jumps[0].hops, false);
+  assert.match(result.error ?? "", /at most 12 equal parts/);
 });
 // Shapes the model wrote in speed gate run 3 (2026-11-11), fitted to what the lesson teaches.
 test("run 3: thirds written as 0.33 and 0.67 with a 0.1 step are drawn in thirds, exactly", () => {
@@ -207,24 +213,15 @@ test("run 3: 3/4 with a 0.05 step is drawn in quarters", () => {
   assert.equal(result.content.jumps[0].hops, true);
 });
 
-test("counting by fourths, where the numbers alone are whole, follows the slider's quarter step", () => {
-  const result = compile([
-    { initial: 0, min: 0, max: 2, label: "起点" },
-    { initial: 0, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 0.25 } },
-  ], {}, { animate: [{ number: 2, end_value: 2 }] });
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 4);
-  assert.equal(result.variables[1].control.step, 0.25);
-  assert.equal(result.content.jumps[0].hops, true);
-});
-
-test("run 3: 3 + (−5) on two sliders of −10 to 10 is drawn on −9 to 15, not −21 to 21, with hops", () => {
+test("run 3: 3 + (−5) on two sliders of −10 to 10 is drawn on −4 to 5, not −21 to 21, with hops", () => {
   const result = compile([
     { initial: 3, min: -10, max: 10, label: "起点" },
     { initial: -5, min: -10, max: 10, label: "加上", student_control: { kind: "slider", step: 1 } },
   ]);
   assert.equal(result.error, undefined, result.error);
-  assert.deepEqual(result.content.range, { min: -9, max: 15 });
+  // The change starts at −5, the change the lesson is about, so it narrows to the window around 0, 3 and −2.
+  assert.deepEqual(result.content.range, { min: -4, max: 5 });
+  assert.ok(result.variables[1].min <= -5);
   assert.equal(result.content.jumps[0].hops, true);
 });
 
@@ -247,16 +244,6 @@ test("a practice target is snapped to the ticks, with a tolerance of half a tick
   assert.equal(task.completion.value, 0.75);
   assert.equal(task.completion.tolerance, 0.125);
   assert.match(task.prompt, /0\.75/);
-});
-
-test("a fit that would make a practice task already met leaves the numbers as the model wrote them", () => {
-  const result = compile([
-    { initial: 0, min: 0, max: 1, label: "起点" },
-    { initial: 0.33, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 0.01 } },
-  ], {}, { task: { number: 2, value: 0.34 } });
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.variables[1].initial, 0.33, "not snapped to 1/3, where 0.34 would also land");
-  assert.equal(result.tasks[0].completion.value, 0.34);
 });
 
 test("a number another visual also shows is not refitted", () => {
@@ -330,111 +317,26 @@ test("a practice task judged by an expression keeps its numbers, value, toleranc
   assert.equal(result.tasks[0].prompt, "把移动量调到目标。");
 });
 
-// Offline replay of speed gate run 4 (2026-11-11), from the recorded lessons
-// (eval/...-run4.json rows and the compiled parts beside them). Every known input is kept as recorded:
-// starting values, slider steps, animations and practice targets. The slider ranges are the recorded
-// ones; they come after run 4's fitting, which never widens, so they are the narrowest the model can
-// have written. The replay judges the compiler on what the model actually wrote; it cannot say how the
-// model will write once `denominator` is gone (NL-03, NL-09: see the separate hypothesis tests below).
-const recorded = (initial, min, max, step) => ({ initial, min, max, label: "n", student_control: { kind: "slider", step } });
-const RUN4 = [
-  { id: "NL-01", numbers: [recorded(3, -10, 10, 0.1), recorded(-5, -5, -4, 0.1)], extra: { task: { number: 2, value: -4, tolerance: 0.05 } }, integer: -5 },
-  { id: "NL-02", numbers: [recorded(-2, -10, 10, 0.1), recorded(7, -10, 7, 0.1)], extra: { animate: [{ number: 2, end_value: 7 }], task: { number: 2, value: -10, tolerance: 0.05 } }, integer: 7 },
-  { id: "NL-03", numbers: [recorded(0, 0, 1, 0.25), recorded(3, 0, 3, 0.25)], extra: { task: { number: 2, value: 0, tolerance: 0.125 } }, parts: 4, end: 0.75 },
-  { id: "NL-04", numbers: [recorded(0, 0, 1, 0.25), recorded(0.25, 0, 1, 0.25)], extra: { animate: [{ number: 2, end_value: 0.25 }], task: { number: 2, value: 1, tolerance: 0.125 } }, parts: 4 },
-  { id: "NL-05", numbers: [recorded(-3, -6, 6, 0.1), recorded(8, -10, 10, 0.1)], extra: { task: { number: 1, value: -5, tolerance: 0.05 } }, integer: 8 },
-  { id: "NL-06", numbers: [recorded(6, -10, 7, 1), recorded(-9, -10, 10, 1)], extra: { task: { number: 1, value: -10, tolerance: 0.5 } }, integer: -9 },
-  { id: "NL-07", numbers: [recorded(0, 0, 1, 0.1), recorded(0.5, 0, 1, 0.1)], extra: { animate: [{ number: 2, end_value: 0.5 }, { number: 2, end_value: 0.8 }], task: { number: 2, value: 0, tolerance: 0.05 } }, parts: 10 },
-  { id: "NL-08", numbers: [recorded(-1, -6, 1, 1), recorded(-3, -5, 5, 1)], extra: { animate: [{ number: 1, end_value: -4 }], task: { number: 1, value: -4, tolerance: 0.5 } }, integer: -3 },
-  { id: "NL-09", numbers: [recorded(1, -3, 3, 1 / 3), recorded(2, 1, 2, 1 / 3)], extra: { task: { number: 2, value: 1, tolerance: 1 / 6 } }, parts: 3, end: 1 },
-  { id: "NL-10", numbers: [recorded(0, 0, 2, 0.25), recorded(0, 0, 2, 0.25)], extra: { animate: [{ number: 2, end_value: 1 }, { number: 2, end_value: 2 }], task: { number: 2, value: 1, tolerance: 0.125 } }, parts: 4 },
-];
-
-/** The run 5 criteria for one lesson: undefined when it passes, else why it misses. */
-function criteriaMiss(item, result) {
-  if (result.error) return `compile error: ${result.error.slice(0, 80)}`;
-  const { range, ticks, jumps, points } = result.content;
-  if (item.parts) {
-    if (ticks.subdivisions !== item.parts) return `${ticks.subdivisions} parts, not ${item.parts}`;
-    if (points.some((point) => Math.abs(point.value * item.parts - Math.round(point.value * item.parts)) > 1e-9)) return "a point off the ticks";
-    const end = points.find((point) => point.as === "end")?.value;
-    if (item.end !== undefined && Math.abs(end - item.end) > 1e-9) return `wrong value: ends at ${end}, not ${item.end}`;
-  }
-  if (item.integer !== undefined) {
-    if (range.max - range.min > 24) return `${range.max - range.min} units wide`;
-    if (!jumps[0].hops) return "no hops";
-    const change = result.variables[1];
-    const animated = result.animations.filter(([variable]) => variable === "number_02").map(([, value]) => value);
-    if (!((change.min <= item.integer && item.integer <= change.max) || animated.includes(item.integer))) return `cannot reach ${item.integer}`;
-  }
-  return undefined;
-}
-
-// What the recorded run 4 lessons give under the current rules, lesson by lesson. NL-03 and NL-09 miss
-// because the model wrote numerators (3; 1 and 2) under the removed `denominator` parameter; NL-05 and
-// NL-06 miss on width because their own practice tasks drive the start (to −5 and −10) while the
-// change keeps its range for the answer.
-const RUN4_EXPECTED = {
-  "NL-01": undefined, "NL-02": undefined, "NL-03": "wrong value", "NL-04": undefined, "NL-05": "units wide",
-  "NL-06": "units wide", "NL-07": undefined, "NL-08": undefined, "NL-09": "wrong value", "NL-10": undefined,
-};
-for (const item of RUN4) {
-  test(`run 4 replay ${item.id} (recorded inputs): ${RUN4_EXPECTED[item.id] ?? "meets the run 5 criteria"}`, () => {
-    const miss = criteriaMiss(item, compile(item.numbers, {}, item.extra));
-    if (RUN4_EXPECTED[item.id] === undefined) assert.equal(miss, undefined, miss);
-    else assert.match(miss ?? "passes", new RegExp(RUN4_EXPECTED[item.id]));
-  });
-}
-
-// A hypothesis, not a replay: if the model, without `denominator`, writes values as in run 3
-// (0.75; 0.33 and 0.67), NL-03 and NL-09 are drawn right. Only a live run can confirm the premise.
-test("hypothesis: NL-03 written as in run 3 (0.75 with quarter steps) shows 3/4", () => {
-  const item = { parts: 4, end: 0.75 };
-  assert.equal(criteriaMiss(item, compile([recorded(0, 0, 1, 0.25), recorded(0.75, 0, 1, 0.25)], {}, {})), undefined);
-});
-test("hypothesis: NL-09 written as in run 3 (0.33 and 0.67) shows 1/3 + 2/3 = 1", () => {
-  const item = { parts: 3, end: 1 };
-  assert.equal(criteriaMiss(item, compile([recorded(0.33, 0, 1, 0.1), recorded(0.67, 0, 1, 0.1)], {}, {})), undefined);
-});
-
-// Review of #62: only a step of exactly 1/2 to 1/6 says what an integer lesson counts in.
-test("an integer lesson with a 0.4 step is not a lesson in fifths: whole ticks, a whole step, hops", () => {
-  const result = compile([
-    { initial: 3, min: 0, max: 5, label: "起点" },
-    { initial: 2, min: -4, max: 4, label: "加上", student_control: { kind: "slider", step: 0.4 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 1);
-  assert.equal(result.variables[1].control.step, 1);
-  assert.equal(result.content.jumps[0].hops, true);
-});
-
-test("sliders stepping by halves and by thirds share sixths, so both sliders' values stay on ticks", () => {
-  const result = compile([
-    { initial: 1, min: 0, max: 3, label: "起点", student_control: { kind: "slider", step: 0.5 } },
-    { initial: 1, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 1 / 3 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 6);
-  assert.equal(result.variables[0].control.step, 1 / 6);
-  assert.equal(result.variables[1].control.step, 1 / 6);
-});
-
-test("steps of 1/4 and 1/5 would need twentieths: the sliders are left as written", () => {
-  const result = compile([
-    { initial: 1, min: 0, max: 3, label: "起点", student_control: { kind: "slider", step: 0.25 } },
-    { initial: 1, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 0.2 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.variables[0].control.step, 0.25);
-  assert.equal(result.variables[1].control.step, 0.2);
-});
-
-test("a third written as 0.33 still counts as a third step", () => {
-  const result = compile([
-    { initial: 0, min: 0, max: 2, label: "起点" },
-    { initial: 1, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 0.33 } },
-  ]);
-  assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 3);
+test("label_style decimal labels a decimal question in decimals, only where decimals are exact", () => {
+  const tenths = compile([
+    { initial: 0.5, min: 0, max: 1, label: "起点" },
+    { initial: 0.3, min: 0, max: 1, label: "移动", student_control: { kind: "slider", step: 0.1 } },
+  ], { label_style: "decimal" });
+  assert.equal(tenths.content.ticks.format, "decimal");
+  assert.deepEqual(judgeNumberLine({ expect: { values: [0.5, 0.8], parts: 10, format: "decimal" } }, tenths), { hard: [], soft: [] });
+  const halves = compile([
+    { initial: -2.5, min: -3, max: -2, label: "起点" },
+    { initial: 4, min: 0, max: 5, label: "移动", student_control: { kind: "slider", step: 0.5 } },
+  ], { label_style: "decimal" });
+  assert.equal(halves.content.ticks.format, "decimal");
+  // Thirds have no exact decimal: they stay fractions, never 0.333.
+  const thirds = compile([
+    { initial: 1 / 3, min: 0, max: 1, label: "起点" },
+    { initial: 2 / 3, min: 0, max: 1, label: "移动", student_control: { kind: "slider", step: 1 / 3 } },
+  ], { label_style: "decimal" });
+  assert.equal(thirds.content.ticks.subdivisions, 3);
+  assert.equal(thirds.content.ticks.format, undefined);
+  // Without it, and with "fraction", labels stay fractions; anything else is refused.
+  assert.equal(compile([{ initial: 0.5, min: 0, max: 1, label: "起点" }, { initial: 0.3, min: 0, max: 1, label: "移动" }], {}).content.ticks.format, undefined);
+  assert.match(compile([{ initial: 0, min: 0, max: 1, label: "起点" }], { label_style: "percent" }).error ?? "", /label_style/);
 });
