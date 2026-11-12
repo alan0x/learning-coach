@@ -17082,7 +17082,9 @@ function vertexCompatible(value2) {
       ...definitions,
       modelDecimal: object({
         mantissa: { type: "integer", minimum: -1e12, maximum: 1e12 },
-        scale: { enum: [0, 1, 2, 3, 4, 5, 6] }
+        // Up to 12 places, as many as the mantissa's 12 digits: 2/3 is { mantissa: 666666666667, scale: 12 }.
+        // With 6 the model, writing 2/3 to 12 places, had no valid scale and picked a wrong one (37% of thirds).
+        scale: { enum: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] }
       }, ["mantissa", "scale"])
     };
   }
@@ -17101,8 +17103,8 @@ function coerceModelNumbers(value2, schema, path) {
       throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected { mantissa, scale } for a decimal number");
     }
     const decimal = value2;
-    if (Object.keys(decimal).some((key) => key !== "mantissa" && key !== "scale") || !Number.isInteger(decimal.mantissa) || Math.abs(Number(decimal.mantissa)) > 1e12 || !Number.isInteger(decimal.scale) || Number(decimal.scale) < 0 || Number(decimal.scale) > 6) {
-      throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 6");
+    if (Object.keys(decimal).some((key) => key !== "mantissa" && key !== "scale") || !Number.isInteger(decimal.mantissa) || Math.abs(Number(decimal.mantissa)) > 1e12 || !Number.isInteger(decimal.scale) || Number(decimal.scale) < 0 || Number(decimal.scale) > 12) {
+      throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 12");
     }
     const number = Number(decimal.mantissa) / 10 ** Number(decimal.scale);
     if (!Number.isFinite(number)) {
@@ -17274,7 +17276,7 @@ function reusableBoardCreatesSchema(outline, sectionIndex) {
 function decimalIntegerFields(prefix) {
   return {
     [`${prefix}_mantissa`]: integer(-1e12, 1e12),
-    [`${prefix}_scale`]: { enum: [0, 1, 2, 3, 4, 5, 6] }
+    [`${prefix}_scale`]: { enum: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] }
   };
 }
 function activityCommonSchema() {
@@ -17931,7 +17933,7 @@ function lowerModelOutline(value2, requestPartCount = 0) {
         throw new LessonPlanError(
           "LESSON_PLAN_NUMBER_RANGE",
           `$lessonPlanOutline.numbers[${index}].initial`,
-          `the starting value ${String(written.initial)} lies far outside its range ${String(written.min)} to ${String(written.max)}; check the mantissa and scale (2/3 is mantissa 666667 with scale 6)`
+          `the starting value ${String(written.initial)} lies far outside its range ${String(written.min)} to ${String(written.max)}; check the mantissa and scale (2/3 is mantissa 666666666667 with scale 12)`
         );
       }
       if (typeof number.min === "number" && Number.isFinite(number.min) && typeof number.max === "number" && Number.isFinite(number.max) && number.max > number.min) {
@@ -18624,8 +18626,8 @@ function lowerModelActionReferences(actionName, action, currentMoment, numberCou
 function lowerIntegerDecimal(record3, prefix, path) {
   const mantissa = record3[`${prefix}_mantissa`];
   const scale = record3[`${prefix}_scale`];
-  if (!Number.isInteger(mantissa) || Math.abs(Number(mantissa)) > 1e12 || !Number.isInteger(scale) || Number(scale) < 0 || Number(scale) > 6) {
-    throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 6");
+  if (!Number.isInteger(mantissa) || Math.abs(Number(mantissa)) > 1e12 || !Number.isInteger(scale) || Number(scale) < 0 || Number(scale) > 12) {
+    throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 12");
   }
   delete record3[`${prefix}_mantissa`];
   delete record3[`${prefix}_scale`];
