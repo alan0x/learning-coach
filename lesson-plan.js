@@ -12852,6 +12852,110 @@ function scaledAngleExpression(variable, scale) {
   return scale === 1 ? variable : `(${variable})*pi/180`;
 }
 
+// src/plugins/number-line-fit.ts
+var fractionTolerance = (denominator) => Math.min(0.011, 0.25 / (denominator * denominator));
+var MAX_WINDOW = 58;
+var near2 = (value2, grid) => Math.abs(value2 - Math.round(value2 / grid) * grid) <= fractionTolerance(Math.round(1 / grid));
+var snap = (value2, grid) => Number((Math.round(value2 / grid) * grid).toPrecision(12));
+var floorTo = (value2, grid) => Number((Math.ceil(value2 / grid - 1e-9) * grid).toPrecision(12));
+var ceilTo = (value2, grid) => Number((Math.floor(value2 / grid + 1e-9) * grid).toPrecision(12));
+function inferDenominator(values) {
+  for (let denominator = 1; denominator <= 12; denominator += 1) {
+    if (values.every((value2) => near2(value2, 1 / denominator))) return denominator;
+  }
+  return void 0;
+}
+function lessonValues(plan, number) {
+  const values = [];
+  for (const section of plan.sections) {
+    for (const moment of section.moments) for (const action of moment.actions) {
+      if (action.action === "animate" && action.number === number) values.push(action.end_value);
+    }
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind === "number_target" && !activity.expression && activity.number_controls[0]?.number === number) values.push(activity.value);
+    }
+  }
+  return values;
+}
+function fitNumberLineNumbers(content, plan, sharedNumbers) {
+  const fitted = /* @__PURE__ */ new Map();
+  const [startIndex, changeIndex] = content.numbers ?? [];
+  if (!startIndex || !plan.numbers) return fitted;
+  if (sharedNumbers.has(startIndex) || changeIndex && sharedNumbers.has(changeIndex)) return fitted;
+  const ours = new Set([startIndex, changeIndex].filter((index) => index !== void 0));
+  const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) => activity.kind === "number_target" && activity.expression !== void 0 && (activity.number_controls.some((control) => ours.has(control.number)) || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
+  if (expressionTask) return fitted;
+  const start = plan.numbers[startIndex - 1];
+  const change = changeIndex ? plan.numbers[changeIndex - 1] : void 0;
+  if (!start) return fitted;
+  const original = [start, change].map((definition) => definition && structuredClone(definition));
+  const startValues = [start.initial, ...lessonValues(plan, startIndex)];
+  const changeValues = change ? [change.initial, ...lessonValues(plan, changeIndex)] : [];
+  const shown = [...startValues, ...changeValues.map((value2) => start.initial + value2)];
+  const values = [...startValues, ...changeValues];
+  const denominator = inferDenominator(values);
+  let grid = denominator ? 1 / denominator : void 0;
+  const withZero = [0, ...shown];
+  const used = Math.ceil(Math.max(...withZero)) - Math.floor(Math.min(...withZero)) + 2 <= MAX_WINDOW ? withZero : shown;
+  let low = Math.floor(Math.min(...used)) - 1;
+  let high = Math.ceil(Math.max(...used)) + 1;
+  let windowFits = high - low <= MAX_WINDOW;
+  let unit = 1;
+  if (denominator === 1 && !windowFits) {
+    const coarse = [2, 5, 10].find((count) => values.every((value2) => near2(value2 / count, 1)) && Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2 <= MAX_WINDOW);
+    if (coarse) {
+      unit = coarse;
+      grid = coarse;
+      low = (Math.floor(Math.min(...used) / coarse) - 1) * coarse;
+      high = (Math.ceil(Math.max(...used) / coarse) + 1) * coarse;
+      windowFits = true;
+    }
+  }
+  const fit = (definition, values2, range) => {
+    if (grid) {
+      definition.initial = snap(definition.initial, grid);
+      if (definition.student_control) definition.student_control.step = grid;
+    }
+    if (range) {
+      const lowest = Math.min(definition.initial, ...values2), highest = Math.max(definition.initial, ...values2);
+      definition.min = Math.max(definition.min, Math.min(range[0], lowest));
+      definition.max = Math.min(definition.max, Math.max(range[1], highest));
+    }
+    if (grid) {
+      definition.min = floorTo(definition.min, grid);
+      definition.max = ceilTo(definition.max, grid);
+    }
+  };
+  const rangeFor = (definition, values2, window, carriesAnswer) => {
+    if (!windowFits) return void 0;
+    if (values2.length > 1) return window;
+    if (definition.student_control && carriesAnswer && definition.initial === 0) return void 0;
+    if (definition.student_control && carriesAnswer) return window;
+    return [definition.initial - unit, definition.initial + unit];
+  };
+  fit(start, startValues.map((value2) => grid ? snap(value2, grid) : value2), rangeFor(start, startValues, [low, high], false));
+  if (change) {
+    fit(change, changeValues.map((value2) => grid ? snap(value2, grid) : value2), rangeFor(change, changeValues, [low - start.min, high - start.max], true));
+  }
+  const valid = [start, change].every((definition) => !definition || definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max);
+  if (!valid) {
+    for (const [definition, before] of [[start, original[0]], [change, original[1]]]) {
+      if (!definition || !before) continue;
+      definition.min = grid ? floorTo(before.min, grid) : before.min;
+      definition.max = grid ? ceilTo(before.max, grid) : before.max;
+      if (!(definition.min < definition.max)) {
+        definition.min = before.min;
+        definition.max = before.max;
+      }
+      definition.initial = Math.min(definition.max, Math.max(definition.min, definition.initial));
+    }
+  }
+  const step = grid ?? 0;
+  fitted.set(startIndex, step);
+  if (changeIndex && change) fitted.set(changeIndex, step);
+  return fitted;
+}
+
 // src/plugins/math-formulas.ts
 var formulaFunctions = /* @__PURE__ */ new Set([
   "abs",
@@ -13563,6 +13667,7 @@ function surfaceSectionRange(content, path) {
   return { min: Math.min(...values), max: Math.max(...values) };
 }
 var MATH_HOOKS = {
+  number_line: { fit_numbers: fitNumberLineNumbers },
   implicit_surface_with_section: {
     section_range: surfaceSectionRange,
     lower_model_parameters(parameters3) {
@@ -13762,6 +13867,10 @@ var PLUGIN_HOOKS = [MATH_PLUGIN_HOOKS];
 var LESSON_PLAN_VERSION = "0.1";
 var LESSON_PLAN_CAPABILITY_REGISTRY = PLUGIN_RECIPE_REGISTRY;
 var LESSON_PLAN_CAPABILITY_NAMES = Object.keys(LESSON_PLAN_CAPABILITY_REGISTRY);
+function isNumberLineCapability(capability2) {
+  const recipe = capability2 === void 0 ? void 0 : LESSON_PLAN_CAPABILITY_REGISTRY[capability2];
+  return Boolean(recipe?.output_kinds.includes("number_line"));
+}
 var LESSON_PLAN_VISUAL_FEATURES = [...new Set(
   LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features])
 )];
@@ -15028,7 +15137,7 @@ function niceStep(raw) {
   const normalized = raw / power;
   return ([1, 2, 2.5, 5, 10].find((value2) => normalized <= value2 + 1e-9) ?? 10) * power;
 }
-function snap(range, unit = 1) {
+function snap2(range, unit = 1) {
   const step = unit === 1 ? niceStep(span(range) / 20) : unit * Math.max(1, Math.round(span(range) / unit / 8));
   const round = (value2) => Number(value2.toPrecision(12));
   return { min: round(Math.floor(range.min / step + 1e-9) * step), max: round(Math.ceil(range.max / step - 1e-9) * step) };
@@ -15483,14 +15592,14 @@ function planPlotView(input) {
   const keepXMax = periodicWindow;
   let finalX = x;
   if (!acceptedX) {
-    finalX = snap(pad4(x, EDGE_INSET, { min: keepXMin, max: keepXMax }), piTicks ? Math.PI / 2 : 1);
+    finalX = snap2(pad4(x, EDGE_INSET, { min: keepXMin, max: keepXMax }), piTicks ? Math.PI / 2 : 1);
     if (keepXMin) finalX.min = x.min;
     if (keepXMax) finalX.max = x.max;
   }
   const keepYMin = quantityX && y.min === 0;
   let finalY = y;
   if (!acceptedY) {
-    finalY = identity ? { ...finalX } : snap(pad4(y, EDGE_INSET, { min: keepYMin }));
+    finalY = identity ? { ...finalX } : snap2(pad4(y, EDGE_INSET, { min: keepYMin }));
     if (keepYMin) finalY.min = 0;
   }
   const initialItems = base.filter((item) => item.state === initial);
@@ -15501,110 +15610,6 @@ function planPlotView(input) {
   const equalScale = plain && (identity || circular || perpendicular || allQuadratic && aspect >= EQUAL_ASPECT.min && aspect <= EQUAL_ASPECT.max);
   const holes = compiled.map((_, index) => initialItems.filter((item) => item.index === index).flatMap((item) => item.features.filter((feature) => feature.kind === "hole" && feature.x > finalX.min && feature.x < finalX.max && feature.y !== void 0 && feature.y > finalY.min && feature.y < finalY.max)).map((feature) => ({ x: feature.x, y: feature.y })));
   return { x: finalX, y: finalY, equalScale, piTicks, holes, adjustments };
-}
-
-// src/plugins/number-line-fit.ts
-var fractionTolerance = (denominator) => Math.min(0.011, 0.25 / (denominator * denominator));
-var MAX_WINDOW = 58;
-var near2 = (value2, grid) => Math.abs(value2 - Math.round(value2 / grid) * grid) <= fractionTolerance(Math.round(1 / grid));
-var snap2 = (value2, grid) => Number((Math.round(value2 / grid) * grid).toPrecision(12));
-var floorTo = (value2, grid) => Number((Math.ceil(value2 / grid - 1e-9) * grid).toPrecision(12));
-var ceilTo = (value2, grid) => Number((Math.floor(value2 / grid + 1e-9) * grid).toPrecision(12));
-function inferDenominator(values) {
-  for (let denominator = 1; denominator <= 12; denominator += 1) {
-    if (values.every((value2) => near2(value2, 1 / denominator))) return denominator;
-  }
-  return void 0;
-}
-function lessonValues(plan, number) {
-  const values = [];
-  for (const section of plan.sections) {
-    for (const moment of section.moments) for (const action of moment.actions) {
-      if (action.action === "animate" && action.number === number) values.push(action.end_value);
-    }
-    for (const activity of section.student_activities ?? []) {
-      if (activity.kind === "number_target" && !activity.expression && activity.number_controls[0]?.number === number) values.push(activity.value);
-    }
-  }
-  return values;
-}
-function fitNumberLineNumbers(content, plan, sharedNumbers) {
-  const fitted = /* @__PURE__ */ new Map();
-  const [startIndex, changeIndex] = content.numbers ?? [];
-  if (!startIndex || !plan.numbers) return fitted;
-  if (sharedNumbers.has(startIndex) || changeIndex && sharedNumbers.has(changeIndex)) return fitted;
-  const ours = new Set([startIndex, changeIndex].filter((index) => index !== void 0));
-  const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) => activity.kind === "number_target" && activity.expression !== void 0 && (activity.number_controls.some((control) => ours.has(control.number)) || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
-  if (expressionTask) return fitted;
-  const start = plan.numbers[startIndex - 1];
-  const change = changeIndex ? plan.numbers[changeIndex - 1] : void 0;
-  if (!start) return fitted;
-  const original = [start, change].map((definition) => definition && structuredClone(definition));
-  const startValues = [start.initial, ...lessonValues(plan, startIndex)];
-  const changeValues = change ? [change.initial, ...lessonValues(plan, changeIndex)] : [];
-  const shown = [...startValues, ...changeValues.map((value2) => start.initial + value2)];
-  const values = [...startValues, ...changeValues];
-  const denominator = inferDenominator(values);
-  let grid = denominator ? 1 / denominator : void 0;
-  const withZero = [0, ...shown];
-  const used = Math.ceil(Math.max(...withZero)) - Math.floor(Math.min(...withZero)) + 2 <= MAX_WINDOW ? withZero : shown;
-  let low = Math.floor(Math.min(...used)) - 1;
-  let high = Math.ceil(Math.max(...used)) + 1;
-  let windowFits = high - low <= MAX_WINDOW;
-  let unit = 1;
-  if (denominator === 1 && !windowFits) {
-    const coarse = [2, 5, 10].find((count) => values.every((value2) => near2(value2 / count, 1)) && Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2 <= MAX_WINDOW);
-    if (coarse) {
-      unit = coarse;
-      grid = coarse;
-      low = (Math.floor(Math.min(...used) / coarse) - 1) * coarse;
-      high = (Math.ceil(Math.max(...used) / coarse) + 1) * coarse;
-      windowFits = true;
-    }
-  }
-  const fit = (definition, values2, range) => {
-    if (grid) {
-      definition.initial = snap2(definition.initial, grid);
-      if (definition.student_control) definition.student_control.step = grid;
-    }
-    if (range) {
-      const lowest = Math.min(definition.initial, ...values2), highest = Math.max(definition.initial, ...values2);
-      definition.min = Math.max(definition.min, Math.min(range[0], lowest));
-      definition.max = Math.min(definition.max, Math.max(range[1], highest));
-    }
-    if (grid) {
-      definition.min = floorTo(definition.min, grid);
-      definition.max = ceilTo(definition.max, grid);
-    }
-  };
-  const rangeFor = (definition, values2, window, carriesAnswer) => {
-    if (!windowFits) return void 0;
-    if (values2.length > 1) return window;
-    if (definition.student_control && carriesAnswer && definition.initial === 0) return void 0;
-    if (definition.student_control && carriesAnswer) return window;
-    return [definition.initial - unit, definition.initial + unit];
-  };
-  fit(start, startValues.map((value2) => grid ? snap2(value2, grid) : value2), rangeFor(start, startValues, [low, high], false));
-  if (change) {
-    fit(change, changeValues.map((value2) => grid ? snap2(value2, grid) : value2), rangeFor(change, changeValues, [low - start.min, high - start.max], true));
-  }
-  const valid = [start, change].every((definition) => !definition || definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max);
-  if (!valid) {
-    for (const [definition, before] of [[start, original[0]], [change, original[1]]]) {
-      if (!definition || !before) continue;
-      definition.min = grid ? floorTo(before.min, grid) : before.min;
-      definition.max = grid ? ceilTo(before.max, grid) : before.max;
-      if (!(definition.min < definition.max)) {
-        definition.min = before.min;
-        definition.max = before.max;
-      }
-      definition.initial = Math.min(definition.max, Math.max(definition.min, definition.initial));
-    }
-  }
-  const step = grid ?? 0;
-  fitted.set(startIndex, step);
-  if (changeIndex && change) fitted.set(changeIndex, step);
-  return fitted;
 }
 
 // src/plugins/math-compilers.ts
@@ -16396,9 +16401,10 @@ function normalizeProgramOwnedNumberRanges(plan) {
         if (content.capability === "function_plot") {
           for (const number of bound ?? []) newPlotNumbers.add(number);
         }
-        if (content.capability === "number_line" && action.action === "create") {
+        const fit = RECIPE_HOOKS[content.capability]?.fit_numbers;
+        if (fit && action.action === "create") {
           const shared = new Set([...visualsUsing].filter(([number, count]) => count > 1 && content.numbers?.includes(number)).map(([number]) => number));
-          for (const [number, step] of fitNumberLineNumbers(content, plan, shared)) {
+          for (const [number, step] of fit(content, plan, shared)) {
             constrained.add(number);
             if (step > 0) tickSteps.set(number, step);
           }
@@ -16541,7 +16547,7 @@ function resolveMetNumberTargets(plan) {
   const lineNumbers = /* @__PURE__ */ new Set();
   const lineCreations = /* @__PURE__ */ new Map();
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
-    if (action.action === "create" && action.kind === "visual" && action.content.capability === "number_line") {
+    if (action.action === "create" && action.kind === "visual" && isNumberLineCapability(action.content.capability)) {
       for (const [position, number] of (action.content.numbers ?? []).entries()) {
         lineNumbers.add(number);
         if (!lineCreations.has(number)) lineCreations.set(number, { moment, isStart: position === 0 });
@@ -19157,7 +19163,7 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
   }
   const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
     const entry = action;
-    return entry.action === "create" && entry.kind === "visual" && entry.content?.capability === "number_line" ? entry.content.numbers ?? [] : [];
+    return entry.action === "create" && entry.kind === "visual" && isNumberLineCapability(entry.content?.capability) ? entry.content.numbers ?? [] : [];
   }));
   const activities = [];
   const collectActivities = (values, kind, path) => {
@@ -19580,7 +19586,7 @@ function checkOutlineVisuals(outline, excluded) {
       throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability2} visual cannot show this request; choose another visual`);
     }
   }
-  if (used.has("number_line") && !outline.numbers?.length) {
+  if ([...used].some((capability2) => isNumberLineCapability(capability2)) && !outline.numbers?.length) {
     throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.numbers", "a number line needs lesson numbers: declare the start (and the change) in numbers");
   }
 }
@@ -19637,6 +19643,9 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   };
   let bootstrappedFirstSection;
   const excludedCapabilities = /* @__PURE__ */ new Set();
+  const excludeNumberLines = (from) => {
+    for (const capability2 of outlineCapabilities(from)) if (isNumberLineCapability(capability2)) excludedCapabilities.add(capability2);
+  };
   let outlineError;
   let stableCameraObservation;
   const sectionErrors = /* @__PURE__ */ new Map();
@@ -19739,7 +19748,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     try {
       checkOutlineVisuals(outline, excludedCapabilities);
     } catch (error) {
-      for (const capability2 of outlineCapabilities(outline)) if (capability2 === "number_line") excludedCapabilities.add(capability2);
+      excludeNumberLines(outline);
       outline = void 0;
       throw error;
     }
@@ -19773,7 +19782,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       }
     }
     if (outlineFault) {
-      excludedCapabilities.add("number_line");
+      if (outline) excludeNumberLines(outline);
       outline = void 0;
       bootstrappedFirstSection = void 0;
       sectionErrors.delete(1);
@@ -19863,7 +19872,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         try {
           checkOutlineVisuals(candidateOutline, excludedCapabilities);
         } catch (error) {
-          if (outlineCapabilities(candidateOutline).has("number_line")) excludedCapabilities.add("number_line");
+          excludeNumberLines(candidateOutline);
           throw error;
         }
         outline = candidateOutline;
@@ -20062,7 +20071,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
       outlineRestarted = true;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
-      excludedCapabilities.add("number_line");
+      if (outline) excludeNumberLines(outline);
       outlineError = error;
       outline = void 0;
       bootstrappedFirstSection = void 0;
@@ -20266,6 +20275,7 @@ export {
   frameRawReply,
   generateLessonPlanWithModel,
   includeWrittenCardsInFocus,
+  isNumberLineCapability,
   lessonPlanPlugins,
   matchLessonPlanCapability,
   mathExpressionToOll,

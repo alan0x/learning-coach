@@ -67,10 +67,11 @@ test("recipes that share a schema property declare it identically, and every pro
 test("recipe hooks and section facts are keyed by known recipes, and unknown names find nothing", () => {
   const { RECIPE_HOOKS, SECTION_FACTS } = api;
   for (const table of [RECIPE_HOOKS, SECTION_FACTS]) {
-    for (const recipe of Object.keys(table)) assert.ok(RECIPE_CATALOG_ORDER.includes(recipe), recipe);
+    // Installed recipes: the catalog and the trial recipes (offered only when named).
+    for (const recipe of Object.keys(table)) assert.ok(RECIPE_CATALOG_ORDER.includes(recipe) || api.TRIAL_RECIPES.includes(recipe), recipe);
     for (const name of ["constructor", "toString", "__proto__", "hasOwnProperty"]) assert.equal(table[name], undefined, name);
   }
-  assert.deepEqual(Object.keys(RECIPE_HOOKS).sort(), ["coordinate_circle", "function_plot", "function_surface_with_section", "implicit_surface_with_section", "process_diagram"]);
+  assert.deepEqual(Object.keys(RECIPE_HOOKS).sort(), ["coordinate_circle", "function_plot", "function_surface_with_section", "implicit_surface_with_section", "number_line", "process_diagram"]);
 });
 
 // A repair request names the first problem found, so moving recipes into

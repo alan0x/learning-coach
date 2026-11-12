@@ -1,5 +1,6 @@
 import { lessonText } from "./lesson-text.js";
 import {
+  isNumberLineCapability,
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
@@ -1915,7 +1916,7 @@ function lowerModelSectionDraft(
   // section is not seen, and its targets are rounded as for any slider).
   const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
     const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
-    return entry.action === "create" && entry.kind === "visual" && entry.content?.capability === "number_line" ? entry.content.numbers ?? [] : [];
+    return entry.action === "create" && entry.kind === "visual" && isNumberLineCapability(entry.content?.capability) ? entry.content.numbers ?? [] : [];
   }));
   const activities: Array<{ order: number; activity: Record<string, unknown> }> = [];
   const collectActivities = (values: unknown[], kind: "number_target" | "scene3d_view", path: string): void => {
@@ -2445,7 +2446,7 @@ function checkOutlineVisuals(outline: LessonPlanOutline, excluded: ReadonlySet<s
       throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability} visual cannot show this request; choose another visual`);
     }
   }
-  if (used.has("number_line" as never) && !(outline.numbers?.length)) {
+  if ([...used].some((capability) => isNumberLineCapability(capability)) && !(outline.numbers?.length)) {
     throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.numbers", "a number line needs lesson numbers: declare the start (and the change) in numbers");
   }
 }
@@ -2513,6 +2514,11 @@ export async function generateLessonPlanWithModel(
   // Capabilities that turned out unable to show this request; the fallback outline is asked without them,
   // so the worst case is the lesson the request gets without them.
   const excludedCapabilities = new Set<string>();
+  // A fault only the outline can fix comes from a number line (values its ticks cannot hold, or no lesson
+  // numbers): the outline is asked again without the number-line recipes it used.
+  const excludeNumberLines = (from: LessonPlanOutline) => {
+    for (const capability of outlineCapabilities(from)) if (isNumberLineCapability(capability)) excludedCapabilities.add(capability);
+  };
   let outlineError: unknown;
   let stableCameraObservation: CameraLessonObservation | undefined;
   const sectionErrors = new Map<number, unknown>();
@@ -2636,7 +2642,7 @@ export async function generateLessonPlanWithModel(
     try {
       checkOutlineVisuals(outline, excludedCapabilities);
     } catch (error) {
-      for (const capability of outlineCapabilities(outline)) if (capability === "number_line") excludedCapabilities.add(capability);
+      excludeNumberLines(outline);
       outline = undefined;
       throw error;
     }
@@ -2673,7 +2679,7 @@ export async function generateLessonPlanWithModel(
       }
     }
     if (outlineFault) {
-      excludedCapabilities.add("number_line");
+      if (outline) excludeNumberLines(outline);
       outline = undefined;
       bootstrappedFirstSection = undefined;
       sectionErrors.delete(1);
@@ -2784,7 +2790,7 @@ export async function generateLessonPlanWithModel(
       try {
         checkOutlineVisuals(candidateOutline, excludedCapabilities);
       } catch (error) {
-        if (outlineCapabilities(candidateOutline).has("number_line" as never)) excludedCapabilities.add("number_line");
+        excludeNumberLines(candidateOutline);
         throw error;
       }
       outline = candidateOutline;
@@ -3022,7 +3028,7 @@ export async function generateLessonPlanWithModel(
       if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
       outlineRestarted = true;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
-      excludedCapabilities.add("number_line");
+      if (outline) excludeNumberLines(outline);
       outlineError = error;
       outline = undefined;
       bootstrappedFirstSection = undefined;
