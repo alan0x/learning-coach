@@ -16075,6 +16075,7 @@ function compileNumberLine(base, content, role, placement, plan, path) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.label_style`, "label_style is decimal or fraction");
   }
   const [startNumber, changeNumber] = content.numbers ?? [];
+  if (!startNumber) fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "a number line needs at least one lesson number for its start");
   const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : void 0;
   const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : void 0;
   const values = [
@@ -16105,9 +16106,9 @@ function compileNumberLine(base, content, role, placement, plan, path) {
   const ticks = ticksFor(grid) ?? ticksFor(shown);
   if (!ticks) {
     fail2(
-      "LESSON_PLAN_CAPABILITY_PARAMETER",
+      "LESSON_PLAN_OUTLINE_VISUAL",
       `${path}.numbers`,
-      "a number line can split each unit into at most 12 equal parts; these values need finer ticks, so use another visual or values whose fractions share a denominator up to 12"
+      "a number line can split each unit into at most 12 equal parts; these values need finer ticks, so choose another visual"
     );
   }
   const { step, subdivisions } = ticks;
@@ -19538,6 +19539,20 @@ function compilePrefix(outline, drafts, options) {
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
+var OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
+var isOutlineOwnedFault = (error) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
+var outlineCapabilities = (outline) => new Set((outline.course_visuals ?? []).map((visual) => visual.capability));
+function checkOutlineVisuals(outline, excluded) {
+  const used = outlineCapabilities(outline);
+  for (const capability2 of excluded) {
+    if (used.has(capability2)) {
+      throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability2} visual cannot show this request; choose another visual`);
+    }
+  }
+  if (used.has("number_line") && !outline.numbers?.length) {
+    throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.numbers", "a number line needs lesson numbers: declare the start (and the change) in numbers");
+  }
+}
 function canFallBackFromBootstrap(error) {
   if (error instanceof LessonPlanError) return true;
   const code = error && typeof error === "object" && "code" in error ? String(error.code ?? "") : "";
@@ -19590,6 +19605,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     draftAdjustments.delete(draft);
   };
   let bootstrappedFirstSection;
+  const excludedCapabilities = /* @__PURE__ */ new Set();
   let outlineError;
   let stableCameraObservation;
   const sectionErrors = /* @__PURE__ */ new Map();
@@ -19690,6 +19706,13 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     );
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
+      checkOutlineVisuals(outline, excludedCapabilities);
+    } catch (error) {
+      for (const capability2 of outlineCapabilities(outline)) if (capability2 === "number_line") excludedCapabilities.add(capability2);
+      outline = void 0;
+      throw error;
+    }
+    try {
       const firstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
           coerceLessonPlanBootstrapSectionModelNumbers(bootstrap.first_section),
@@ -19709,6 +19732,21 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         attempt: 1,
         error: rejectionDetails(error)
       });
+    }
+    let outlineFault;
+    if (bootstrappedFirstSection) {
+      try {
+        compilePrefix(outline, [bootstrappedFirstSection], options.compile);
+      } catch (error) {
+        if (isOutlineOwnedFault(error)) outlineFault = error;
+      }
+    }
+    if (outlineFault) {
+      excludedCapabilities.add("number_line");
+      outline = void 0;
+      bootstrappedFirstSection = void 0;
+      sectionErrors.delete(1);
+      throw outlineFault;
     }
   } catch (error) {
     const partialResponse = partialModelResponse(error);
@@ -19756,57 +19794,69 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       error: rejectionDetails(error)
     });
   }
-  for (let attempt = 1; !outline && attempt <= maxAttempts; attempt += 1) {
-    const observeCamera = (input.camera_input === true || input.selection_input === true) && stableCameraObservation === void 0;
-    try {
-      modelCalls += 1;
-      const raw = await model({
-        label: "lesson-plan-outline",
-        part: "outline",
-        attempt,
-        turn_id: input.turn_id,
-        system_prompt: withContextRules(observeCamera ? input.selection_input === true ? SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT : CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT, context),
-        prompt: JSON.stringify({
-          course_context: compactModelContext(stableCameraObservation ? { ...context, camera_observation: stableCameraObservation } : context),
-          request_parts: fixedRequestParts,
-          visual_recipe_columns: ["features", "numbers", "purpose"],
-          visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability2) => [
-            [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features],
-            [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
-            LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
-          ]),
-          ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
-        }),
-        response_schema: observeCamera ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
-        ...observeCamera ? { include_camera_media: true } : {}
-      });
-      const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
-      const admitted = admissionCourse(parsed, observeCamera);
-      if (admitted.result) return admitted.result;
-      outline = validateLessonPlanOutline(
-        lowerModelOutline(
-          coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
+  const requestOutline = async () => {
+    for (let attempt = 1; !outline && attempt <= maxAttempts; attempt += 1) {
+      const observeCamera = (input.camera_input === true || input.selection_input === true) && stableCameraObservation === void 0;
+      try {
+        modelCalls += 1;
+        const raw = await model({
+          label: "lesson-plan-outline",
+          part: "outline",
+          attempt,
+          turn_id: input.turn_id,
+          system_prompt: withContextRules(observeCamera ? input.selection_input === true ? SELECTION_ADMISSION_OUTLINE_SYSTEM_PROMPT : CAMERA_ADMISSION_OUTLINE_SYSTEM_PROMPT : admissionInput ? ADMISSION_OUTLINE_SYSTEM_PROMPT : OUTLINE_SYSTEM_PROMPT, context),
+          prompt: JSON.stringify({
+            course_context: compactModelContext(stableCameraObservation ? { ...context, camera_observation: stableCameraObservation } : context),
+            request_parts: fixedRequestParts,
+            visual_recipe_columns: ["features", "numbers", "purpose"],
+            visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.filter((capability2) => !excludedCapabilities.has(capability2)).map((capability2) => [
+              [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].required_features],
+              [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_inputs],
+              LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_guidance
+            ]),
+            ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
+          }),
+          response_schema: observeCamera ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+          ...observeCamera ? { include_camera_media: true } : {}
+        });
+        const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
+        const admitted = admissionCourse(parsed, observeCamera);
+        if (admitted.result) return admitted.result;
+        const candidateOutline = validateLessonPlanOutline(
+          lowerModelOutline(
+            coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
+            fixedRequestParts.length
+          ),
           fixedRequestParts.length
-        ),
-        fixedRequestParts.length
-      );
-    } catch (error) {
-      if (!(error instanceof LessonPlanError)) throw error;
-      outlineError = error;
-      await options.on_rejected_part?.({
-        label: "lesson-plan-outline",
-        attempt,
-        error: rejectionDetails(error)
-      });
-      if (observeCamera && stableCameraObservation === void 0) {
-        return {
-          disposition: "clarify",
-          learner_response: input.selection_input === true ? lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002") : lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002"),
-          model_calls: modelCalls
-        };
+        );
+        try {
+          checkOutlineVisuals(candidateOutline, excludedCapabilities);
+        } catch (error) {
+          if (outlineCapabilities(candidateOutline).has("number_line")) excludedCapabilities.add("number_line");
+          throw error;
+        }
+        outline = candidateOutline;
+      } catch (error) {
+        if (!(error instanceof LessonPlanError)) throw error;
+        outlineError = error;
+        await options.on_rejected_part?.({
+          label: "lesson-plan-outline",
+          attempt,
+          error: rejectionDetails(error)
+        });
+        if (observeCamera && stableCameraObservation === void 0) {
+          return {
+            disposition: "clarify",
+            learner_response: input.selection_input === true ? lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002") : lessonText(input.language, "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002"),
+            model_calls: modelCalls
+          };
+        }
       }
     }
-  }
+    return void 0;
+  };
+  const earlyOutlineResult = await requestOutline();
+  if (earlyOutlineResult) return earlyOutlineResult;
   if (!outline) throw outlineError;
   for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
   await options.on_outline_ready?.({
@@ -19950,6 +20000,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       try {
         prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
       } catch (error) {
+        if (section === 1 && isOutlineOwnedFault(error)) throw error;
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
@@ -19968,8 +20019,32 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       return;
     }
   };
+  let outlineRestarted = false;
+  const acceptFirstSection = async () => {
+    try {
+      await acceptSection(1, bootstrappedFirstSection);
+      return void 0;
+    } catch (error) {
+      if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
+      outlineRestarted = true;
+      await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
+      excludedCapabilities.add("number_line");
+      outlineError = error;
+      outline = void 0;
+      bootstrappedFirstSection = void 0;
+      sectionErrors.delete(1);
+      sectionAttempts.delete(1);
+      drafts.length = 0;
+      const early = await requestOutline();
+      if (early) return early;
+      if (!outline) throw outlineError;
+      for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
+      return acceptFirstSection();
+    }
+  };
   try {
-    await acceptSection(1, bootstrappedFirstSection);
+    const early = await acceptFirstSection();
+    if (early) return early;
   } catch (error) {
     const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(1), input.language);
     if (!learnerResponse) throw error;

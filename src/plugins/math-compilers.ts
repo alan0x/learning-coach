@@ -578,6 +578,8 @@ function compileNumberLine(
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.label_style`, "label_style is decimal or fraction");
   }
   const [startNumber, changeNumber] = content.numbers ?? [];
+  // A number line with no lesson number has nothing to show (run 7: an outline with no numbers).
+  if (!startNumber) fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "a number line needs at least one lesson number for its start");
   const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : undefined;
   const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : undefined;
   const values = [
@@ -618,8 +620,9 @@ function compileNumberLine(
   // number under them. Refuse, so the model can choose another visual or other values: a line the
   // learner cannot read teaches nothing (run 6, NM-01, three times).
   if (!ticks) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`,
-      "a number line can split each unit into at most 12 equal parts; these values need finer ticks, so use another visual or values whose fractions share a denominator up to 12");
+    // The values and the visual were chosen in the outline, so only a new outline can fix this.
+    fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`,
+      "a number line can split each unit into at most 12 equal parts; these values need finer ticks, so choose another visual");
   }
   const { step, subdivisions } = ticks;
   // Hops are counted on the ticks actually drawn: every reachable change, and the slider's step,

@@ -2425,6 +2425,31 @@ function compilePrefix(
   return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
 
+/** A fault only a new outline can fix: the outline chose the visual and the numbers it cannot show. */
+const OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
+const isOutlineOwnedFault = (error: unknown) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
+
+/** The capabilities an outline uses, by its course visuals. */
+const outlineCapabilities = (outline: LessonPlanOutline) => new Set((outline.course_visuals ?? []).map((visual) => visual.capability));
+
+/**
+ * Faults the outline owns, found before it is accepted (runs 5–7: they surfaced in section 1, where
+ * retries can only rewrite the section, and the lesson failed three times):
+ * - a number line in an outline that declares no numbers;
+ * - an outline using a capability already found unable to show this request.
+ */
+function checkOutlineVisuals(outline: LessonPlanOutline, excluded: ReadonlySet<string>): void {
+  const used = outlineCapabilities(outline);
+  for (const capability of excluded) {
+    if (used.has(capability as never)) {
+      throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability} visual cannot show this request; choose another visual`);
+    }
+  }
+  if (used.has("number_line" as never) && !(outline.numbers?.length)) {
+    throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.numbers", "a number line needs lesson numbers: declare the start (and the change) in numbers");
+  }
+}
+
 function canFallBackFromBootstrap(error: unknown): boolean {
   if (error instanceof LessonPlanError) return true;
   const code = error && typeof error === "object" && "code" in error
@@ -2485,6 +2510,9 @@ export async function generateLessonPlanWithModel(
     draftAdjustments.delete(draft);
   };
   let bootstrappedFirstSection: LessonPlanSectionDraft | undefined;
+  // Capabilities that turned out unable to show this request; the fallback outline is asked without them,
+  // so the worst case is the lesson the request gets without them.
+  const excludedCapabilities = new Set<string>();
   let outlineError: unknown;
   let stableCameraObservation: CameraLessonObservation | undefined;
   const sectionErrors = new Map<number, unknown>();
@@ -2606,6 +2634,13 @@ export async function generateLessonPlanWithModel(
     );
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
+      checkOutlineVisuals(outline, excludedCapabilities);
+    } catch (error) {
+      for (const capability of outlineCapabilities(outline)) if (capability === "number_line") excludedCapabilities.add(capability);
+      outline = undefined;
+      throw error;
+    }
+    try {
       const firstSection = lowerModelSectionDraft(
         reconcileBootstrapFirstSectionPositions(
           coerceLessonPlanBootstrapSectionModelNumbers(bootstrap.first_section),
@@ -2625,6 +2660,24 @@ export async function generateLessonPlanWithModel(
         attempt: 1,
         error: rejectionDetails(error),
       });
+    }
+    // Compile the first section against its outline now: a fault the outline owns (values no number
+    // line can show) rejects the whole bootstrap, so the outline is asked again, without that visual.
+    // Any other compile fault is the section's, and acceptSection retries it as before.
+    let outlineFault: unknown;
+    if (bootstrappedFirstSection) {
+      try {
+        compilePrefix(outline, [bootstrappedFirstSection], options.compile);
+      } catch (error) {
+        if (isOutlineOwnedFault(error)) outlineFault = error;
+      }
+    }
+    if (outlineFault) {
+      excludedCapabilities.add("number_line");
+      outline = undefined;
+      bootstrappedFirstSection = undefined;
+      sectionErrors.delete(1);
+      throw outlineFault;
     }
   } catch (error) {
     const partialResponse = partialModelResponse(error);
@@ -2679,6 +2732,8 @@ export async function generateLessonPlanWithModel(
 
   // A malformed/truncated combined response falls back once to the proven
   // outline-only path. The large combined request itself is never repeated.
+  // (Callable again when section 1 finds a fault only a new outline can fix.)
+  const requestOutline = async (): Promise<LessonPlanGenerationResult | undefined> => {
   for (let attempt = 1; !outline && attempt <= maxAttempts; attempt += 1) {
     const observeCamera = (input.camera_input === true || input.selection_input === true)
       && stableCameraObservation === undefined;
@@ -2702,7 +2757,7 @@ export async function generateLessonPlanWithModel(
             : context),
           request_parts: fixedRequestParts,
           visual_recipe_columns: ["features", "numbers", "purpose"],
-          visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.map((capability) => [
+          visual_recipes: LESSON_PLAN_CAPABILITY_NAMES.filter((capability) => !excludedCapabilities.has(capability)).map((capability) => [
             [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].required_features],
             [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].number_inputs],
             LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_guidance,
@@ -2719,13 +2774,20 @@ export async function generateLessonPlanWithModel(
       const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");
       const admitted = admissionCourse(parsed, observeCamera);
       if (admitted.result) return admitted.result;
-      outline = validateLessonPlanOutline(
+      const candidateOutline = validateLessonPlanOutline(
         lowerModelOutline(
           coerceLessonPlanOutlineModelNumbers(admitted.course, fixedRequestParts.length),
           fixedRequestParts.length,
         ),
         fixedRequestParts.length,
       );
+      try {
+        checkOutlineVisuals(candidateOutline, excludedCapabilities);
+      } catch (error) {
+        if (outlineCapabilities(candidateOutline).has("number_line" as never)) excludedCapabilities.add("number_line");
+        throw error;
+      }
+      outline = candidateOutline;
     } catch (error) {
       if (!(error instanceof LessonPlanError)) throw error;
       outlineError = error;
@@ -2745,6 +2807,10 @@ export async function generateLessonPlanWithModel(
       }
     }
   }
+  return undefined;
+  };
+  const earlyOutlineResult = await requestOutline();
+  if (earlyOutlineResult) return earlyOutlineResult;
   if (!outline) throw outlineError;
   for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
   await options.on_outline_ready?.({
@@ -2916,6 +2982,8 @@ export async function generateLessonPlanWithModel(
       try {
         prefix = compilePrefix(outline, drafts.slice(0, section), options.compile);
       } catch (error) {
+        // A fault only the outline can fix is not retried as a section: the caller asks for a new outline.
+        if (section === 1 && isOutlineOwnedFault(error)) throw error;
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
@@ -2938,8 +3006,34 @@ export async function generateLessonPlanWithModel(
   // Section 1 normally comes from the combined response. If it was missing or
   // conflicts with the accepted outline, acceptSection regenerates only this
   // section through the ordinary exact-schema request.
+  // Once per lesson, a fault only the outline can fix (values a number line cannot show) sends the
+  // lesson back for a new outline, asked without that visual, instead of failing at section 1.
+  let outlineRestarted = false;
+  const acceptFirstSection = async (): Promise<LessonPlanGenerationResult | undefined> => {
+    try {
+      await acceptSection(1, bootstrappedFirstSection);
+      return undefined;
+    } catch (error) {
+      if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
+      outlineRestarted = true;
+      await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
+      excludedCapabilities.add("number_line");
+      outlineError = error;
+      outline = undefined;
+      bootstrappedFirstSection = undefined;
+      sectionErrors.delete(1);
+      sectionAttempts.delete(1);
+      drafts.length = 0;
+      const early = await requestOutline();
+      if (early) return early;
+      if (!outline) throw outlineError;
+      for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
+      return acceptFirstSection();
+    }
+  };
   try {
-    await acceptSection(1, bootstrappedFirstSection);
+    const early = await acceptFirstSection();
+    if (early) return early;
   } catch (error) {
     const learnerResponse = unsupportedSectionResponse(error, sectionErrors.get(1), input.language);
     if (!learnerResponse) throw error;

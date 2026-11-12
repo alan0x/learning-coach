@@ -116,3 +116,36 @@ test("a starting value at the wrong scale is refused in the outline, where a ret
   assert.match(rejected[0].error.message, /mantissa and scale/);
 });
 
+// Run 7: faults only the outline can fix. "Compare 2/3 and 3/5" needs fifteenths, and an outline declared
+// no numbers for its number line; each failed three times at section 1, where retries can only rewrite
+// the section. Now the bootstrap is rejected and the outline is asked again, without the number line.
+const run7 = JSON.parse(await readFile(new URL("./fixtures/number-line-run7-outline-faults.json", import.meta.url), "utf8"));
+for (const turn of run7.turns) {
+  test(`run 7 ${turn.case} (pair ${turn.pair}): a fault the outline owns asks for a new outline without the number line`, async () => {
+    const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+    const requests = [];
+    const rejected = [];
+    await assert.rejects(generateLessonPlanWithModel(async (request) => {
+      requests.push(request);
+      // The bootstrap may itself be rejected for a wrong-scale number first (2/3 as 666666666667, scale 1);
+      // then the recorded outline retry is replayed, and its section 1 is compiled in turn.
+      if (request.label === "lesson-plan-bootstrap") return JSON.stringify(turn.replies[0]);
+      // The recorded replies, in order, while the number line is still offered; the request that no
+      // longer offers it is where this test stops.
+      const offered = request.label !== "lesson-plan-outline"
+        || JSON.parse(request.prompt).visual_recipes.some(([features]) => features.includes("number_line"));
+      const recorded = turn.replies[requests.length - 1];
+      if (offered && recorded) return JSON.stringify(recorded);
+      throw new Error("stop: " + request.label);
+    }, { turn_id: "outline-fault", learner_request: caseById.get(turn.case).prompt, input_modality: "text", request_source: "self_contained" }, {
+      on_rejected_part: (event) => rejected.push(event),
+    }), /stop: lesson-plan-outline/);
+    const last = requests.at(-1);
+    assert.equal(last.label, "lesson-plan-outline");
+    const prompt = JSON.parse(last.prompt);
+    assert.ok(!prompt.visual_recipes.some(([features]) => features.includes("number_line")), "the new outline is asked without the number line");
+    assert.match(prompt.previous_validation_error ?? "", /number line|number_line/);
+    assert.ok(rejected.some((event) => event.error.code === "LESSON_PLAN_OUTLINE_VISUAL"));
+  });
+}
+
