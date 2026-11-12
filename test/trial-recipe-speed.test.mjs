@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { MOTION_CASES, NUMBER_LINE_CASES, OTHER_CASE_IDS, TRIAL_CASES, numberLineInPart, recipesInPart, summarize } from "../scripts/eval-trial-recipe-speed.mjs";
+import { MOTION_CASES, NUMBER_LINE_CASES, OTHER_CASE_IDS, TRIAL_CASES, numberLineInPart, numberLineLesson, recipesInPart, summarize } from "../scripts/eval-trial-recipe-speed.mjs";
 
 test("trial-recipe cases pair motion requests with held-out requests from other subjects", async () => {
   const heldOut = new Set(JSON.parse(await readFile(new URL("../eval/subject-routing-heldout.json", import.meta.url), "utf8")).cases.map((item) => item.id));
@@ -199,5 +199,25 @@ test("the harness runs pairs and quality cases, keeps raw replies, judges each c
   await run(3, join(dir, "short.json"));
   const short = JSON.parse(await readFile(join(dir, "short.json"), "utf8"));
   assert.match(short.summary.not_run.join(), /did not run \(budget 3 calls\)/);
+});
+
+test("a point kept hidden throughout does not count as shown; once something reveals it, it does (review of #63)", () => {
+  const lesson = lineLesson({ range: { min: -1, max: 2 }, ticks: { step: 1, subdivisions: 4, labels: "all" }, start: 0, change: 0.75, changeRange: [0, 1], latentEnd: true });
+  const item = { expect: { values: [0.75], parts: 4 } };
+  assert.match(judgeNumberLine(item, { ...lesson, sequence: [] }).hard.join(), /wrong value: 0\.75 is never shown/);
+  assert.deepEqual(judgeNumberLine(item, { ...lesson, sequence: [{ kind: "reveal", part: "end" }] }).hard, []);
+});
+
+test("the lesson's actions give the order: a focus or point on a part of the line reveals it", () => {
+  const part = {
+    lesson: { variables: [{ as: "n1", initial: 0 }] },
+    steps: [{ beats: [{ actions: [
+      { do: "write", as: "line", kind: "number_line", content: { range: { min: 0, max: 1 }, points: [] } },
+      { do: "animate", variable: "n1", value: 0.5 },
+      { do: "focus", targets: ["line#end", "other#x"] },
+      { do: "point", target: "line#start" },
+    ] }] }],
+  };
+  assert.deepEqual(numberLineLesson(part).sequence, [{ kind: "animate", variable: "n1", value: 0.5 }, { kind: "reveal", part: "end" }, { kind: "reveal", part: "start" }]);
 });
 
