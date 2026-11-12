@@ -92,7 +92,18 @@ export const NUMBER_LINE_QUALITY_CASES = [
   { id: "NM-03", prompt: "用数轴说明 47 四舍五入到十位是多少。", nearMiss: true, expect: { values: [47, 50] } },
   { id: "NM-04", prompt: "Solve |x - 3| < 2 on a number line.", nearMiss: true, expect: { values: [1, 5] } },
 ];
-export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES };
+/**
+ * Comparing two numbers (decision 0016, number_line_compare), written before the recipe or any probe:
+ * both values must be shown on labelled ticks. CMP-03 needs 24ths (5/6 and 7/8), CMP-04 twentieths.
+ */
+export const NUMBER_LINE_COMPARE_CASES = [
+  { id: "CMP-01", prompt: "在数轴上比较 3/4 和 2/3 哪个大。", expect: { values: [0.75, 2 / 3] } },
+  { id: "CMP-02", prompt: "Which is bigger, -1.5 or -2? Show both on a number line.", expect: { values: [-1.5, -2] } },
+  { id: "CMP-03", prompt: "用数轴比较 5/6 和 7/8 的大小。", expect: { values: [5 / 6, 7 / 8] } },
+  { id: "CMP-04", prompt: "Compare 0.35 and 0.4 on a number line.", expect: { values: [0.35, 0.4], format: "decimal" } },
+  { id: "CMP-05", prompt: "比较 -3 和 2，哪个数在数轴上更靠右？", expect: { values: [-3, 2] } },
+];
+export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES };
 
 /** The requests each trial recipe fits. */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
