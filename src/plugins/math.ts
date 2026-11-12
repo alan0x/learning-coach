@@ -152,6 +152,20 @@ export const MATH_RECIPES = {
     required_features: ["circle_area_rearrangement"],
     model_guidance: "圆面积：扇形等积重排，底趋近πr、高趋近r",
   },
+  number_line: {
+    parts: ["whole", "start", "end", "move", "primary_control"],
+    number_inputs: ["start", "change"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
+    // How finely to split each unit and whether to draw hops are the program's: they follow the numbers.
+    parameter_names: ["title"],
+    model_parameter_names: ["title"],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["number_line"],
+    student_controls: ["slider"],
+    required_features: ["number_line"],
+    model_guidance: "数轴：两个数值依次是起点和移动量，终点、刻度份数和是否一格一跳都由程序按数值决定；适合整数、分数、小数的加减和数在数轴上的位置。分数用滑杆步长表示（如 0.25 即四分之一）。不用于函数图像",
+  },
 } as const;
 
 // Provider-schema properties each recipe adds to a visual's parameters.

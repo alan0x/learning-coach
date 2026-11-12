@@ -659,7 +659,7 @@ function validateCompiledVisualEffects(lesson: AuthoringLesson): void {
 
   const visualExpressions: unknown[] = [];
   lesson.steps.forEach((step) => step.beats.forEach((beat) => beat.actions.forEach((action) => {
-    if (action.do !== "write" || !["geometry", "plot", "scene3d"].includes(action.kind)) return;
+    if (action.do !== "write" || !["geometry", "plot", "scene3d", "number_line"].includes(action.kind)) return;
     const content = action.content as Record<string, unknown>;
     const bindings = Array.isArray(content.bindings) ? content.bindings : [];
     bindings.forEach((binding) => {
