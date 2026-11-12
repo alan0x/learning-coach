@@ -1,0 +1,890 @@
+{
+ "measured_at": "2026-11-12T17:48:19.278Z",
+ "provider": "google",
+ "model": "gemini-3.6-flash",
+ "trial_recipes": "number_line,number_line_compare,number_line_solution",
+ "pairs": 0,
+ "max_calls": 35,
+ "work_dir": "/var/folders/20/mdcwv27n3fv_4mqg_y_x_bkm0000gn/T/coach-trial-DJ5yy5",
+ "summary": {
+  "all": {
+   "complete_pairs": 0,
+   "p50_first_playable_ms": {
+    "baseline": null,
+    "candidate": null
+   },
+   "p50_prompt_tokens": {
+    "baseline": null,
+    "candidate": null
+   },
+   "paired_difference_ms": {
+    "median": null,
+    "mean": null,
+    "ci95": null
+   },
+   "candidate_used_trial_recipe": 0,
+   "errors": 0
+  },
+  "motion": {
+   "complete_pairs": 0,
+   "p50_first_playable_ms": {
+    "baseline": null,
+    "candidate": null
+   },
+   "p50_prompt_tokens": {
+    "baseline": null,
+    "candidate": null
+   },
+   "paired_difference_ms": {
+    "median": null,
+    "mean": null,
+    "ci95": null
+   },
+   "candidate_used_trial_recipe": 0,
+   "errors": 0
+  },
+  "other": {
+   "complete_pairs": 0,
+   "p50_first_playable_ms": {
+    "baseline": null,
+    "candidate": null
+   },
+   "p50_prompt_tokens": {
+    "baseline": null,
+    "candidate": null
+   },
+   "paired_difference_ms": {
+    "median": null,
+    "mean": null,
+    "ci95": null
+   },
+   "candidate_used_trial_recipe": 0,
+   "errors": 0
+  },
+  "quality": {
+   "judged": 11,
+   "hard_pass": 10,
+   "hard_misses": [
+    {
+     "case": "SOL-06",
+     "hard": [
+      "no number line"
+     ],
+     "review": "later sections not judged: read by hand"
+    }
+   ],
+   "soft_misses": [],
+   "near_misses_for_review": [
+    {
+     "case": "NM-02",
+     "recipes": [
+      "number_line"
+     ]
+    },
+    {
+     "case": "NM-04",
+     "recipes": [
+      "number_line"
+     ]
+    }
+   ],
+   "verdict": {
+    "result": "review",
+    "reason": "one hard miss (SOL-06): it passes only if its raw reply shows the model's slip, not the program's"
+   }
+  }
+ },
+ "rows": [
+  {
+   "pair": 0,
+   "case": "SOL-01",
+   "kind": "quality",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 7366,
+   "calls": 2,
+   "prompt_tokens": 2757,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 2,
+   "recipes": [
+    "number_line"
+   ],
+   "number_line": {
+    "span": 7,
+    "range": {
+     "min": -4,
+     "max": 3
+    },
+    "subdivisions": 1,
+    "step": 1,
+    "hops": null,
+    "by": null,
+    "start": null,
+    "end": null,
+    "start_slider": null,
+    "change_slider": null
+   },
+   "quality": {
+    "hard": [],
+    "soft": []
+   }
+  },
+  {
+   "pair": 1,
+   "case": "SOL-02",
+   "kind": "quality",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 7153,
+   "calls": 2,
+   "prompt_tokens": 2684,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 1,
+   "recipes": [
+    "number_line"
+   ],
+   "number_line": {
+    "span": 6,
+    "range": {
+     "min": -1,
+     "max": 5
+    },
+    "subdivisions": 1,
+    "step": 1,
+    "hops": null,
+    "by": null,
+    "start": null,
+    "end": null,
+    "start_slider": null,
+    "change_slider": null
+   },
+   "quality": {
+    "hard": [],
+    "soft": []
+   }
+  },
+  {
+   "pair": 2,
+   "case": "SOL-03",
+   "kind": "quality",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 6664,
+   "calls": 2,
+   "prompt_tokens": 2769,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 1,
+   "recipes": [
+    "number_line"
+   ],
+   "number_line": {
+    "span": 7,
+    "range": {
+     "min": -1,
+     "max": 6
+    },
+    "subdivisions": 1,
+    "step": 1,
+    "hops": null,
+    "by": null,
+    "start": null,
+    "end": null,
+    "start_slider": null,
+    "change_slider": null
+   },
+   "quality": {
+    "hard": [],
+    "soft": []
+   }
+  },
+  {
+   "pair": 3,
+   "case": "SOL-04",
+   "kind": "quality",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 9420,
+   "calls": 2,
+   "prompt_tokens": 2690,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 2,
+   "recipes": [
+    "number_line"
+   ],
+   "number_line": {
+    "span": 8,
+    "range": {
+     "min": -1,
+     "max": 7
+    },
+    "subdivisions": 1,
+    "step": 1,
+    "hops": null,
+    "by": null,
+    "start": null,
+    "end": null,
+    "start_slider": null,
+    "change_slider": null
+   },
+   "quality": {
+    "hard": [],
+    "soft": []
+   }
+  },
+  {
+   "pair": 4,
+   "case": "SOL-05",
+   "kind": "quality",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 9571,
+   "calls": 2,
+   "prompt_tokens": 2773,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 1,
+   "recipes": [
+    "number_line"
+   ],
+   "number_line": {
+    "span": 8,
+    "range": {
+     "min": -3,
+     "max": 5
+    },
+    "subdivisions": 1,
+    "step": 1,
+    "hops": null,
+    "by": null,
+    "start": null,
+    "end": null,
+    "start_slider": null,
+    "change_slider": null
+   },
+   "quality": {
+    "hard": [],
+    "soft": []
+   }
+  },
+  {
+   "pair": 5,
+   "case": "SOL-06",
+   "kind": "quality",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 6532,
+   "calls": 1,
+   "prompt_tokens": 2700,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 1,
+   "recipes": [
+    "number_line"
+   ],
+   "number_line": {
+    "span": 6,
+    "range": {
+     "min": 0,
+     "max": 6
+    },
+    "subdivisions": 1,
+    "step": 1,
+    "hops": null,
+    "by": null,
+    "start": null,
+    "end": null,
+    "start_slider": null,
+    "change_slider": null
+   },
+   "quality": {
+    "hard": [],
+    "soft": []
+   }
+  },
+  {
+   "pair": 6,
+   "case": "NM-02",
+   "kind": "near_miss",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 8784,
+   "calls": 1,
+   "prompt_tokens": 2757,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 1,
+   "recipes": [
+    "number_line"
+   ],
+   "number_line": {
+    "span": 7,
+    "range": {
+     "min": -4,
+     "max": 3
+    },
+    "subdivisions": 1,
+    "step": 1,
+    "hops": null,
+    "by": null,
+    "start": null,
+    "end": null,
+    "start_slider": null,
+    "change_slider": null
+   },
+   "quality": {
+    "hard": [],
+    "soft": [],
+    "review": "near miss drew a number line: read by hand"
+   }
+  },
+  {
+   "pair": 7,
+   "case": "NM-04",
+   "kind": "near_miss",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 8355,
+   "calls": 1,
+   "prompt_tokens": 2767,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 1,
+   "recipes": [
+    "number_line"
+   ],
+   "number_line": {
+    "span": 8,
+    "range": {
+     "min": -1,
+     "max": 7
+    },
+    "subdivisions": 1,
+    "step": 1,
+    "hops": null,
+    "by": null,
+    "start": null,
+    "end": null,
+    "start_slider": null,
+    "change_slider": null
+   },
+   "quality": {
+    "hard": [],
+    "soft": [],
+    "review": "near miss drew a number line: read by hand"
+   }
+  },
+  {
+   "pair": 8,
+   "case": "SOL-03",
+   "kind": "quality",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 8927,
+   "calls": 2,
+   "prompt_tokens": 2769,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 1,
+   "recipes": [
+    "number_line"
+   ],
+   "number_line": {
+    "span": 8,
+    "range": {
+     "min": -1,
+     "max": 7
+    },
+    "subdivisions": 1,
+    "step": 1,
+    "hops": null,
+    "by": null,
+    "start": null,
+    "end": null,
+    "start_slider": null,
+    "change_slider": null
+   },
+   "quality": {
+    "hard": [],
+    "soft": []
+   }
+  },
+  {
+   "pair": 9,
+   "case": "SOL-05",
+   "kind": "quality",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 11079,
+   "calls": 1,
+   "prompt_tokens": 2773,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 1,
+   "recipes": [
+    "number_line"
+   ],
+   "number_line": {
+    "span": 8,
+    "range": {
+     "min": -4,
+     "max": 4
+    },
+    "subdivisions": 1,
+    "step": 1,
+    "hops": null,
+    "by": null,
+    "start": null,
+    "end": null,
+    "start_slider": null,
+    "change_slider": null
+   },
+   "quality": {
+    "hard": [],
+    "soft": []
+   }
+  },
+  {
+   "pair": 10,
+   "case": "SOL-06",
+   "kind": "quality",
+   "arm": "candidate",
+   "order": 0,
+   "first_playable_ms": 7445,
+   "calls": 1,
+   "prompt_tokens": 2700,
+   "plugin_signal": {
+    "plugin_source": "absent",
+    "plugins": [],
+    "scoped": false,
+    "scoped_plugins": [
+     "math",
+     "physics",
+     "chemistry",
+     "biology",
+     "earth_space",
+     "shared"
+    ],
+    "scoped_recipes": [
+     "function_plot",
+     "unit_circle_projection",
+     "circle_polygon_bounds",
+     "circle_and_arc",
+     "cube_with_section",
+     "function_surface_with_section",
+     "implicit_surface_with_section",
+     "coordinate_circle",
+     "rectangle_unit_square_array",
+     "geometric_rearrangement",
+     "circle_area_rearrangement",
+     "number_line",
+     "number_line_compare",
+     "number_line_solution",
+     "spring_and_mass",
+     "constant_speed_motion",
+     "process_diagram"
+    ]
+   },
+   "stages": [
+    "tool-invocation",
+    "lesson-plan-generation",
+    "model-call",
+    "lesson-plan-outline-ready",
+    "lesson-prefix-published"
+   ],
+   "outcome": "first_playable",
+   "sections": 2,
+   "recipes": [],
+   "quality": {
+    "hard": [
+     "no number line"
+    ],
+    "soft": [],
+    "review": "later sections not judged: read by hand"
+   }
+  }
+ ]
+}

@@ -359,7 +359,8 @@ export function recipesInPart(part) {
   // start-plus-move line draws "start" (and "end").
   for (const write of writes.filter((action) => action.kind === "number_line")) {
     const points = new Set((write.content?.points ?? []).map((point) => point.as));
-    found.push(points.has("first") && points.has("second") ? "number_line_compare" : "number_line");
+    found.push((write.content?.intervals ?? []).length ? "number_line_solution"
+      : points.has("first") && points.has("second") ? "number_line_compare" : "number_line");
   }
   return found;
 }

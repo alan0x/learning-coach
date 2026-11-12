@@ -244,5 +244,8 @@ test("the recipes a part used tell a comparison from a start plus a move (decisi
   const part = (points) => ({ steps: [{ beats: [{ actions: [{ do: "write", kind: "number_line", content: { points: points.map((as) => ({ as })) } }] }] }] });
   assert.deepEqual(recipesInPart(part(["first", "second"])), ["number_line_compare"]);
   assert.deepEqual(recipesInPart(part(["start", "end"])), ["number_line"]);
+  const solution = part([]);
+  solution.steps[0].beats[0].actions[0].content.intervals = [{ as: "set", from: -2, to: null }];
+  assert.deepEqual(recipesInPart(solution), ["number_line_solution"]);
 });
 

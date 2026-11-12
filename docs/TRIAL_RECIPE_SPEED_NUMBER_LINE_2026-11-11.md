@@ -474,3 +474,13 @@ A DOM probe settled run 6's puzzling screenshot: the board does redraw a point a
 - The two older comparisons (NL-07 0.5 vs 0.8; NL-08 −4 vs −1) also moved to the new recipe; NL-08's "no hops" is a soft note, as expected for a comparison.
 - The renders were correct, but the first version kept the number line's margins: 5/6 and 7/8 crowded on −1 to 2. Comparisons now use a tight frame (0 to 1). On replay of the probe's recorded replies, all 12 still pass, and the renders read clearly.
 
+## Decision 0016, type 2 of 3: solution sets
+
+**Recipe:** `number_line_solution` (trial). The outline asks for `number_line` plus `solution_set`. The model solves for the boundaries and names the relation: one of 12 forms, from `x>a` to `x<=a|x>b`; |x − 3| < 2 is written `a<x<b` with a = 1 and b = 5. The program draws every end, open or filled, and every ray or interval from the relation. With two boundaries, the fit keeps their slider ranges apart, so the lower can never pass the upper.
+
+**Judge:** a new hard check. Some state the lesson shows must draw exactly the expected pieces, each end open or included as expected, and no filled point may sit on an open end. Interval ends count as shown values and must be readable.
+
+**Cases written before the recipe:** SOL-01 to SOL-06 (x > −2; x ≤ 3; 1 < x ≤ 4; |x − 3| < 2; x < −1 or x ≥ 2; solve 2x + 1 > 7 first).
+
+**Probe 1** (offering all three number-line recipes; 11 lessons, 17 counted calls, about $0.15): **10 of 11 drew the solution set and pass every hard check, including the exact ends and rays.** That includes NM-02 (x > −2) and NM-04 (|x − 3| < 2), which misled in every earlier gate run. The 11th (SOL-06, "solve 2x + 1 > 7") solves the inequality in section 1 and plans the number line with `solution_set` for section 2. The harness flagged it for hand review, and it is correct as a lesson. Renders checked: x > −2; 1 < x ≤ 4; x < −1 or x ≥ 2.
+
