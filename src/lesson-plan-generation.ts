@@ -2767,8 +2767,8 @@ export async function generateLessonPlanWithModel(
         response_schema: observeCamera
           ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
           : admissionInput
-            ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length)
-            : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+            ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length, [...excludedCapabilities])
+            : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length, [...excludedCapabilities]),
         ...(observeCamera ? { include_camera_media: true } : {}),
       });
       const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");

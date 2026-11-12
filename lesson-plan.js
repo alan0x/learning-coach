@@ -12001,7 +12001,7 @@ var MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line"],
-    model_guidance: "\u6570\u8F74\uFF1A\u8D77\u70B9\u52A0\u4E00\u6B21\u79FB\u52A8\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF09\u3002a + b\uFF1A\u8D77\u70B9 a\uFF0C\u79FB\u52A8 b\uFF1B\u95EE\u4E00\u4E2A\u6570\u7684\u4F4D\u7F6E\uFF1A\u8D77\u70B9 0\uFF1B\u6309\u5206\u6570\u6570\u6570\uFF1A\u79FB\u52A8\u5199\u4E00\u6B65\uFF080.25\uFF09\u3002\u9898\u76EE\u5199\u5C0F\u6570\u65F6 label_style \u7528 decimal\u3002\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5F0F\u3001\u7EDD\u5BF9\u503C\u3001\u56DB\u820D\u4E94\u5165\u3001\u5206\u6BCD\u5927\u4E8E 12 \u7684\u5206\u6570\u6216\u51FD\u6570\u56FE\u50CF"
+    model_guidance: "\u6570\u8F74\uFF1A\u8D77\u70B9\u52A0\u4E00\u6B21\u79FB\u52A8\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF09\u3002a + b\uFF1A\u8D77\u70B9 a\uFF0C\u79FB\u52A8 b\uFF1B\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u8D77\u70B9\u662F\u8F83\u5C0F\u7684\u6570\uFF0C\u79FB\u52A8\u662F\u5DEE\uFF1B\u95EE\u4E00\u4E2A\u6570\u7684\u4F4D\u7F6E\uFF1A\u8D77\u70B9 0\uFF1B\u6309\u5206\u6570\u6570\u6570\uFF1A\u79FB\u52A8\u5199\u4E00\u6B65\uFF080.25\uFF09\u3002\u9898\u76EE\u5199\u5C0F\u6570\u65F6 label_style \u7528 decimal\u3002\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5F0F\u3001\u7EDD\u5BF9\u503C\u3001\u56DB\u820D\u4E94\u5165\u3001\u5206\u6BCD\u5927\u4E8E 12 \u7684\u5206\u6570\u6216\u51FD\u6570\u56FE\u50CF"
   }
 };
 var text2 = { type: "string" };
@@ -17330,17 +17330,17 @@ function bootstrapPermissiveOutline() {
     numbers: Array.from({ length: 16 }, () => ({ initial: 0, min: 0, max: 1 }))
   };
 }
-function buildLessonPlanOutlineJsonSchema(requestPartCount = 0) {
+function buildLessonPlanOutlineJsonSchema(requestPartCount = 0, excluded = []) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  return vertexCompatible(lessonPlanOutlineShapeJsonSchema(requestPartCount));
+  return vertexCompatible(lessonPlanOutlineShapeJsonSchema(requestPartCount, excluded));
 }
-function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
+function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0, excluded = []) {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount);
+  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount, excluded);
   course.nullable = true;
   return vertexCompatible({
     ...object({
@@ -17413,7 +17413,13 @@ function buildCameraLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0) {
     }, ["disposition", "learner_response", "image_observation", "course"])
   });
 }
-function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
+function outlineFeatures(excluded) {
+  if (!excluded.length) return LESSON_PLAN_VISUAL_FEATURES;
+  const kept = LESSON_PLAN_CAPABILITY_NAMES.filter((name) => !excluded.includes(name));
+  return LESSON_PLAN_VISUAL_FEATURES.filter((feature) => kept.some((name) => LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features.includes(feature)));
+}
+function lessonPlanOutlineShapeJsonSchema(requestPartCount, excluded = []) {
+  const features = outlineFeatures(excluded);
   return object({
     title: string(160),
     goals: { type: "array", minItems: 1, maxItems: 8, items: string(480) },
@@ -17438,8 +17444,8 @@ function lessonPlanOutlineShapeJsonSchema(requestPartCount) {
         required_features: {
           type: "array",
           minItems: 1,
-          maxItems: LESSON_PLAN_VISUAL_FEATURES.length,
-          items: { enum: LESSON_PLAN_VISUAL_FEATURES }
+          maxItems: features.length,
+          items: { enum: features }
         },
         use_sections: { type: "array", maxItems: 24, items: integer(1, 24) },
         relation: { enum: ["primary", "supporting", "comparison"] },
@@ -19816,7 +19822,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
             ]),
             ...outlineError ? { previous_validation_error: errorFeedback(outlineError) } : {}
           }),
-          response_schema: observeCamera ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length),
+          response_schema: observeCamera ? buildCameraLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length) : admissionInput ? buildLessonPlanAdmissionOutlineJsonSchema(fixedRequestParts.length, [...excludedCapabilities]) : buildLessonPlanOutlineJsonSchema(fixedRequestParts.length, [...excludedCapabilities]),
           ...observeCamera ? { include_camera_media: true } : {}
         });
         const parsed = parseModelJson(raw, admissionInput ? "lessonPlanEnvelope" : "lessonPlanOutline");

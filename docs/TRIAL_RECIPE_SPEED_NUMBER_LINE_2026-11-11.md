@@ -365,3 +365,18 @@ Owner-approved; about $1.05; `eval/trial-recipe-speed-number-line-2026-11-12-run
 
 **Process.** Every run since run 5 carried model-facing changes (card text, a parameter, refusal messages) that had never been seen live, so each gate run was also the first experiment with those changes. The stop rule has now fired three times.
 
+## After run 7 (owner: option A): one fix for faults the outline owns, then probes before any gate
+
+**The fix.** A fault only the outline can fix now goes back to the outline (`LESSON_PLAN_OUTLINE_VISUAL`).
+- **Sources:** values no ticks can hold; a number line with no lesson number; an outline using an excluded capability.
+- **At bootstrap,** section 1 is compiled before the outline is accepted.
+- **From the fallback path,** section 1 restarts the outline once.
+- **The new outline is asked without the number line,** both in the recipe list and in the schema's feature enum, so the worst case is the lesson the request gets today.
+- Run 7's recorded turns (NM-01 ×3, NL-11) now all lead to that request. No regressions on replay of runs 5–7, and other recipes' schemas and digests are unchanged.
+
+**Probe 1** (candidate arm only, 7 lessons, 14 counted calls):
+- NL-03 2/2, NL-10 2/2 (now shows 0.25) and NL-11 1/1 pass. Run 7's NL-03 miss looks like a one-off, not the card.
+- NM-01: one turn drew a readable line showing only 2/3 (never 3/5).
+- NM-01: one turn hit the cap, because the fallback outline still picked the number line through the schema's feature enum. Fixed: excluded capabilities' features are removed from the fallback schema.
+- The card now says how a comparison maps to the line: start at the smaller number, move by the difference. Then 2/3 versus 3/5 needs fifteenths, is refused, and falls back. Probe 2 checks this.
+

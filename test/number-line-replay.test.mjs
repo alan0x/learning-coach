@@ -144,6 +144,7 @@ for (const turn of run7.turns) {
     assert.equal(last.label, "lesson-plan-outline");
     const prompt = JSON.parse(last.prompt);
     assert.ok(!prompt.visual_recipes.some(([features]) => features.includes("number_line")), "the new outline is asked without the number line");
+    assert.ok(!JSON.stringify(last.response_schema).includes('"number_line"'), "its schema no longer offers the number line's feature either");
     assert.match(prompt.previous_validation_error ?? "", /number line|number_line/);
     assert.ok(rejected.some((event) => event.error.code === "LESSON_PLAN_OUTLINE_VISUAL"));
   });

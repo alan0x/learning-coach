@@ -395,11 +395,11 @@ function bootstrapPermissiveOutline(): LessonPlanOutline {
   } as LessonPlanOutline;
 }
 
-export function buildLessonPlanOutlineJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
+export function buildLessonPlanOutlineJsonSchema(requestPartCount = 0, excluded: readonly string[] = []): LessonPlanJsonSchema {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  return vertexCompatible(lessonPlanOutlineShapeJsonSchema(requestPartCount));
+  return vertexCompatible(lessonPlanOutlineShapeJsonSchema(requestPartCount, excluded));
 }
 
 /**
@@ -407,11 +407,11 @@ export function buildLessonPlanOutlineJsonSchema(requestPartCount = 0): LessonPl
  * malformed or truncated. It keeps admission and the outline in one call;
  * section 1 is then requested separately against the accepted outline.
  */
-export function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0): LessonPlanJsonSchema {
+export function buildLessonPlanAdmissionOutlineJsonSchema(requestPartCount = 0, excluded: readonly string[] = []): LessonPlanJsonSchema {
   if (!Number.isInteger(requestPartCount) || requestPartCount < 0 || requestPartCount > 64) {
     throw new LessonPlanError("LESSON_PLAN_REQUEST_COVERAGE", "$requestPartCount", "expected an integer from 0 to 64");
   }
-  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount);
+  const course = lessonPlanOutlineShapeJsonSchema(requestPartCount, excluded);
   course.nullable = true;
   return vertexCompatible({
     ...object({
@@ -501,7 +501,15 @@ export function buildCameraLessonPlanAdmissionOutlineJsonSchema(requestPartCount
   });
 }
 
-function lessonPlanOutlineShapeJsonSchema(requestPartCount: number): LessonPlanJsonSchema {
+/** The visual features an outline may ask for: every feature some capability not excluded requires. */
+function outlineFeatures(excluded: readonly string[]): readonly string[] {
+  if (!excluded.length) return LESSON_PLAN_VISUAL_FEATURES;
+  const kept = LESSON_PLAN_CAPABILITY_NAMES.filter((name) => !excluded.includes(name));
+  return LESSON_PLAN_VISUAL_FEATURES.filter((feature) => kept.some((name) => (LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features as readonly string[]).includes(feature)));
+}
+
+function lessonPlanOutlineShapeJsonSchema(requestPartCount: number, excluded: readonly string[] = []): LessonPlanJsonSchema {
+  const features = outlineFeatures(excluded);
   return object({
     title: string(160),
     goals: { type: "array", minItems: 1, maxItems: 8, items: string(480) },
@@ -526,8 +534,8 @@ function lessonPlanOutlineShapeJsonSchema(requestPartCount: number): LessonPlanJ
         required_features: {
           type: "array",
           minItems: 1,
-          maxItems: LESSON_PLAN_VISUAL_FEATURES.length,
-          items: { enum: LESSON_PLAN_VISUAL_FEATURES },
+          maxItems: features.length,
+          items: { enum: features },
         },
         use_sections: { type: "array", maxItems: 24, items: integer(1, 24) },
         relation: { enum: ["primary", "supporting", "comparison"] },
