@@ -410,3 +410,15 @@ Owner-approved; about $1.05; `eval/trial-recipe-speed-number-line-2026-11-12-run
 - With both clamped to the same value, OLL rejects the task as already met.
 - This is a defect in the shared range clamping, not in the number line; it would affect this request without the number line too. It is reported to the owner, not fixed, since the fix changes other visuals' lessons.
 
+
+### Run 8 rules (owner-approved 2026-11-12, set before the run)
+
+- **Frozen code:** `fix/clamped-met-target`, which includes #63, #64 (model-number scale up to 12, with the owner-accepted ceiling raise) and #65 (clamped targets). Every model-facing change since run 7 has had a clean probe (probes 1–3).
+- **Rules unchanged from runs 6 and 7:**
+  - the hard checks;
+  - the slip rule (option B);
+  - speed option (a);
+  - near misses on both arms, with a hand read when a number line is drawn;
+  - the harness's 3-call cap per turn.
+- **Speed comparison:** run 8 is also the live speed comparison the owner set for the ceiling raise (decision S6).
+- **Budget:** about $1.15, `--pairs 20 --quality-repeats 3 --max-calls 160` (run 7 lost three runs at 140).
