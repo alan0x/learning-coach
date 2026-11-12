@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Number line fitted to the lesson** (trial recipe): the program fits a number line's numbers to what the lesson teaches, so fraction lessons show their fraction ticks and lines stay readable (`docs/TRIAL_RECIPE_SPEED_NUMBER_LINE_2026-11-11.md`, "The fit").
+  - The model may give a `denominator` (1–12, clamped). Otherwise it is taken from the lesson's values and clean slider steps.
+  - Starting values, ranges, slider steps, animation targets and practice targets snap to its ticks.
+  - A number the lesson drives shrinks to a window around the values the lesson uses. A slider nothing drives keeps the model's range, so the answer stays reachable. A number with neither keeps a short range.
+  - Nothing new is refused. Numbers are left as written when another visual also shows them (including through a plot's formula or sample points), when a practice task judged by an expression reads or controls them, or when snapping would make a practice task already met.
+- The trial-recipe speed harness records what each number-line first part drew (range, parts, hops, start and end) and keeps the compiled parts.
+
 ## 0.28.0 - 2026-11-11
 
 - `number_line` in the math plugin (OLL decision 0013, grades 3–8 math first).

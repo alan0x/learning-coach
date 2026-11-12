@@ -156,15 +156,16 @@ export const MATH_RECIPES = {
     parts: ["whole", "start", "end", "move", "primary_control"],
     number_inputs: ["start", "change"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
-    // How finely to split each unit and whether to draw hops are the program's: they follow the numbers.
-    parameter_names: ["title"],
-    model_parameter_names: ["title"],
+    // The model may say which fraction the lesson is about (denominator); the program fits the
+    // numbers to it, and decides the parts per unit and the hops.
+    parameter_names: ["title", "denominator"],
+    model_parameter_names: ["title", "denominator"],
     required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line"],
-    model_guidance: "数轴：两个数值依次是起点和移动量，终点、刻度份数和是否一格一跳都由程序按数值决定；适合整数、分数、小数的加减和数在数轴上的位置。分数用滑杆步长表示（如 0.25 即四分之一）。不用于函数图像",
+    model_guidance: "数轴：两个数值依次是起点和移动量，终点由程序计算；适合整数、分数、小数的加减和数在数轴上的位置。讲分数时 denominator 写分母（如四分之几写 4，十分位小数写 10），程序把数值对齐到刻度。不用于函数图像",
   },
 } as const;
 
@@ -197,6 +198,7 @@ const MATH_SCHEMA_PROPERTIES = {
     leg_b: { type: "number", minimum: 0 },
   },
   circle_area_rearrangement: { radius: { type: "number", minimum: 0 } },
+  number_line: { denominator: { type: "integer", minimum: 1, maximum: 12 } },
 };
 
 export const MATH_PLUGIN = {

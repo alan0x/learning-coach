@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { MOTION_CASES, NUMBER_LINE_CASES, OTHER_CASE_IDS, TRIAL_CASES, recipesInPart, summarize } from "../scripts/eval-trial-recipe-speed.mjs";
+import { MOTION_CASES, NUMBER_LINE_CASES, OTHER_CASE_IDS, TRIAL_CASES, numberLineInPart, recipesInPart, summarize } from "../scripts/eval-trial-recipe-speed.mjs";
 
 test("trial-recipe cases pair motion requests with held-out requests from other subjects", async () => {
   const heldOut = new Set(JSON.parse(await readFile(new URL("../eval/subject-routing-heldout.json", import.meta.url), "utf8")).cases.map((item) => item.id));
@@ -30,4 +30,18 @@ test("the number line trial has its own fitting requests, and its card is recogn
   assert.deepEqual(MOTION_CASES, TRIAL_CASES.constant_speed_motion);
   const part = { steps: [{ beats: [{ actions: [{ do: "write", as: "v1", kind: "number_line", content: { range: { min: 0, max: 1 } } }] }] }] };
   assert.deepEqual(recipesInPart(part), ["number_line"]);
+});
+
+test("a first part's number line is summarised for judging quality", () => {
+  const part = { lesson: { variables: [{ as: "number_02", min: 0, max: 1, initial: 0.75, control: { kind: "slider", step: 0.25 } }] },
+    steps: [{ beats: [{ actions: [{ do: "write", as: "v1", kind: "number_line", content: {
+      range: { min: -1, max: 3 }, ticks: { step: 1, subdivisions: 4 },
+      points: [{ as: "start", value: 0 }, { as: "end", value: 0.75 }], jumps: [{ as: "move", from: "start", by: 0.75, hops: true }],
+      bindings: [{ target: "move.by", expression: "number_02" }],
+    } }] }] }] };
+  assert.deepEqual(numberLineInPart(part), {
+    span: 4, range: { min: -1, max: 3 }, subdivisions: 4, step: 1, hops: true, by: 0.75, start: 0, end: 0.75,
+    start_slider: null, change_slider: { min: 0, max: 1, initial: 0.75, step: 0.25 },
+  });
+  assert.equal(numberLineInPart({ steps: [] }), undefined);
 });

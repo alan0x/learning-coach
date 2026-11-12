@@ -8,6 +8,7 @@ import {
 import { compileText } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
+import { requestedDenominator } from "./number-line-fit.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
 import { compileMathExpression, type AuthoringAction } from "octos-lesson-language";
@@ -569,7 +570,7 @@ function compileNumberLine(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title"], path);
+  allowParameterKeys(input, ["title", "denominator"], path);
   const [startNumber, changeNumber] = content.numbers ?? [];
   const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : undefined;
   const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : undefined;
@@ -590,8 +591,12 @@ function compileNumberLine(
   const span = max - min;
   // Whole-number ticks up to 60 units (crowded labels thin out on the board); coarser beyond.
   const step = span <= 60 ? 1 : span <= 150 ? 5 : 10;
+  // The lesson's own denominator first (the numbers were fitted to it), else the fewest parts that hold every value.
+  const denominator = requestedDenominator(input.denominator);
+  const fits = (parts: number) => grid.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks;
   const subdivisions = step > 1 ? 1
-    : NUMBER_LINE_SPLITS.find((parts) => grid.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
+    : denominator !== undefined && fits(denominator) ? denominator
+    : NUMBER_LINE_SPLITS.find(fits) ?? 1;
   // Hops are counted on the ticks actually drawn: every reachable change, and the slider's step,
   // must be a whole number of the smallest ticks, and the longest change at most 24 of them.
   const unit = step / subdivisions;
