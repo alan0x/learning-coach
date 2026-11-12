@@ -19,6 +19,7 @@
 //   node scripts/eval-trial-recipe-speed.mjs --build <dir with main + lesson-plan.js>
 //     --octos-profile ~/.octos/profiles/<id>.json [--recipes constant_speed_motion] [--pairs 20] [--max-calls 60]
 //     [--quality-repeats 1] [--out <report.json>]
+//   A probe: --pairs 0 --cases NL-03,NM-01 --quality-repeats 5 (candidate arm only, no speed pairs).
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -329,7 +330,15 @@ async function main() {
   // "motion" marks requests the trial recipe fits, whichever recipe that is.
   const cases = fitting.flatMap((fit, index) => [{ ...fit, kind: "motion" }, { ...heldOut.get(OTHER_CASE_IDS[index]), kind: "other" }]);
   // Quality cases run once each, candidate arm only, after the speed pairs.
-  const qualityCases = (TRIAL_QUALITY_CASES[recipes.split(",")[0].trim()] ?? []).map((item) => ({ ...item, kind: item.nearMiss ? "near_miss" : "quality" }));
+  // A probe (--cases NL-03,NM-01) runs only the named cases, on the candidate arm, with no speed pairs:
+  // a cheap first look at how the model meets a change, before any gate run.
+  const probeIds = option("--cases")?.split(",").map((id) => id.trim()).filter(Boolean);
+  const allCases = [...fitting, ...(TRIAL_QUALITY_CASES[recipes.split(",")[0].trim()] ?? [])];
+  const qualityCases = (probeIds ? probeIds.map((id) => {
+    const item = allCases.find((entry) => entry.id === id);
+    if (!item) throw new Error(`no case '${id}'`);
+    return item;
+  }) : TRIAL_QUALITY_CASES[recipes.split(",")[0].trim()] ?? []).map((item) => ({ ...item, kind: item.nearMiss ? "near_miss" : "quality" }));
   const workDir = await mkdtemp(join(tmpdir(), "coach-trial-"));
   // Coach logs each raw model reply, which the harness keeps beside the run's compiled parts, so a
   // later fit can be replayed against what the model actually wrote at no cost.
@@ -388,7 +397,7 @@ async function main() {
     if (budget.remaining <= 0) break;
     // Near misses run on both arms, alternating which goes first, so a lesson can be read against
     // what the same request gets without the recipe.
-    const arms = item.nearMiss ? (index % 2 ? ["candidate", "baseline"] : ["baseline", "candidate"]) : ["candidate"];
+    const arms = item.nearMiss && !probeIds ? (index % 2 ? ["candidate", "baseline"] : ["baseline", "candidate"]) : ["candidate"];
     for (const arm of arms) if (budget.remaining > 0) await runOne(pairs + index, item, arm, arms);
   }
   // Every planned case must have run: a budget that ran out is reported, not passed over.

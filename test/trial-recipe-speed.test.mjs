@@ -190,6 +190,11 @@ test("the harness runs pairs and quality cases, keeps raw replies, judges each c
   const nearMisses = full.rows.filter((row) => row.kind === "near_miss");
   assert.equal(nearMisses.filter((row) => row.arm === "baseline").length, 4);
   assert.ok(nearMisses.filter((row) => row.arm === "candidate").every((row) => row.quality?.review === "near miss drew a number line: read by hand"));
+  // A probe: only the named cases, candidate arm only, no speed pairs.
+  await new Promise((done, fail) => execFile(process.execPath, [script, "--build", dir, "--recipes", "number_line", "--octos-profile", join(dir, "profile.json"), "--pairs", "0", "--cases", "NL-03,NM-01", "--quality-repeats", "2", "--max-calls", "20", "--out", join(dir, "probe.json")],
+    { timeout: 60000 }, (error) => (error ? fail(error) : done())));
+  const probe = JSON.parse(await readFile(join(dir, "probe.json"), "utf8"));
+  assert.deepEqual(probe.rows.map((row) => [row.case, row.arm]), [["NL-03", "candidate"], ["NM-01", "candidate"], ["NL-03", "candidate"], ["NM-01", "candidate"]]);
   // A budget too small for the plan is reported, never passed over.
   await run(3, join(dir, "short.json"));
   const short = JSON.parse(await readFile(join(dir, "short.json"), "utf8"));
