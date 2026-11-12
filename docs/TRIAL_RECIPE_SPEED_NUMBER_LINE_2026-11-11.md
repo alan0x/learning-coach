@@ -206,3 +206,35 @@ A rendered 23 + 48 line was readable on values but still looked like a comb, wit
 3. **Label format:** the owner asked for a recommendation. The recommendation is to label in the question's notation and count it as a hard check. "Compare 0.5 and 0.8" would otherwise show 5/10 and 8/10, a second notation that assumes the learner already knows 0.8 = 8/10 (grade 4, 4.NF.6), and "−2.5 + 4" would show −5/2. Only the model sees how the question is written, so the recipe gains one optional parameter, `label_style` (`decimal` or `fraction`). It changes labels, never values. The program honours `decimal` only where decimals are exact (halves, quarters, fifths, tenths), so thirds never read 0.333. Because run 4 showed that a parameter can change how the model writes numbers, run 5 tests this with the value checks in force. Pending the owner's confirmation.
 4. **Run 5:** approved, with the quality cases repeated three times (`--quality-repeats 3 --max-calls 110`).
 
+## Run 5: fails on quality and on speed
+
+Owner-approved; 107 model calls (about $0.80); `eval/trial-recipe-speed-number-line-2026-11-11-run5.json`. The raw replies are kept locally, and `scripts/replay-trial-recipe.mjs` replays them through the current build. The replay reproduces all 40 recorded verdicts.
+
+**Speed: misses the written criterion.**
+- The paired median is **+1.0 s** against the +0.5 s limit (mean −0.3 s, 95% CI [−3.0, +2.3]).
+- Requests the number line fits are about even (median +0.16 s). Other-subject requests pay for the larger prompt without using it (median +1.9 s).
+- The candidate prompt adds **+200 tokens**, against +84 in runs 3 and 4. The recipe card's worked examples and `label_style` cost about 116 more.
+
+**Recipe choice.** Chosen for 10 of 10 number-line requests. One other-subject request also drew a number line (HO-CH-04, "why do acid and base mix to neutral?"): a pH scale from 0 to 14 with "set pH to 7". Read by hand, it is a sensible use, not a misroute.
+
+**Values: the model writes numbers at their actual size.** Every value check passed. 3/4 is written as 0.75, decimal questions get `label_style: "decimal"`, and a + b starts at a. The premise run 4 left open holds.
+
+**Quality: 29 of 40 pass the hard checks; under the slip rule, fail** (NL-12, NL-15, NL-19 and NL-20 each missed more than once). Classified from the raw replies:
+- **Program defects** account for every "unreadable" miss.
+  - The model never writes a slider step: `lowerModelOutline` derives one from the range (span/200: 0.02, 0.325, 0.5 …).
+  - **Practice targets are rounded onto that derived grid before the fit** (0.75 → 0.76, 50 → 50.05). The fit then misreads them (NL-15: no denominator fits 50.05), or sees a task already met and **discards itself** (NL-03, NL-12).
+  - **The fit read the derived step as the lesson's unit.** A 0.5 step on 23 + 48 meant halves, and the compiler, with no step holding halves on a long line, fell back to ticks every 5 or 10 (NL-19, NL-20).
+  - The offline tests missed all of this because they compiled plans with hand-written slider steps, skipping the real path from model output to plan. The dry runs and the "faithful" run 4 replay are void on this point.
+- **Model slips.**
+  - NL-03 and NL-12 set the change to the target and then asked the learner to set it to that same value. This breaks an existing prompt rule, and the shared guard missed it through a floating-point error (0.76 − 0.75 > 0.01).
+  - NL-18 (once): 2/3 was written with the wrong decimal scale (66,666,666,666.7). The bad number sits in the outline, which section retries cannot change, so all three attempts failed.
+- **Near misses: the model used the number line on 12 of 12, and most are misleading.**
+  - NM-01 (compare 2/3 and 3/5): the narration describes fifteenths and two points, but the line shows one point.
+  - NM-02 (x > −2): a jump from 0 to −2, with no open circle and no ray.
+  - NM-04 (|x − 3| < 2): no interval.
+  - Several practice tasks are meaningless ("set the center to −10").
+  - NM-03 (rounding 47) is partly sound.
+  - The recipe offers one start and one change, and nothing in the card stops it being used for what that cannot show.
+
+**Stop rule.** It fired: near misses are a new kind of hard miss. Narrowing what the recipe offers is the right answer for them. The program defects affect whole-number lessons too, so narrowing would not fix those; they are fixed instead. The recipe stays a trial. A replay pass on run 5 counts as tuning, not as passing the gate. Adoption needs a fresh run.
+
