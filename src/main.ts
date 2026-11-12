@@ -1823,6 +1823,10 @@ async function callStreamingBootstrapModel(
         lesson_plan_part: request.lessonPlanPart ?? "bootstrap",
         ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
       });
+      if (process.env.OLL_DEBUG_GENERATION === "1") {
+        // The streamed reply, as the non-streaming path logs its payload (evaluation harnesses keep these).
+        process.stderr.write(`learning-coach: raw ${provider} ${request.label} content: ${result.content.slice(0, 16_000)}\n`);
+      }
       return result.content;
     }
     throw new ToolExecutionError(

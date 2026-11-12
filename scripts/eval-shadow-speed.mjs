@@ -110,7 +110,7 @@ async function askGate(key, body) {
 }
 
 /** Starts the Coach tool as Octos does and stops it at the first playable section. */
-export function runTool({ build, input, env, maxCalls, onCall = () => {}, onFirstPart }) {
+export function runTool({ build, input, env, maxCalls, onCall = () => {}, onFirstPart, onRaw }) {
   return new Promise((resolvePromise) => {
     const startedAt = Date.now();
     const child = spawn(process.execPath, [join(build, "main"), "oll_generate_lesson"], { env, stdio: ["pipe", "ignore", "pipe"] });
@@ -127,6 +127,8 @@ export function runTool({ build, input, env, maxCalls, onCall = () => {}, onFirs
           try { row.first_part_path ??= JSON.parse(line).path ?? null; } catch { /* not an artifact line */ }
           continue;
         }
+        // With OLL_DEBUG_GENERATION=1 Coach also logs each raw model reply; a caller may keep them.
+        if (onRaw && line.startsWith("learning-coach: raw ")) { onRaw(line.slice("learning-coach: raw ".length)); continue; }
         const json = line.startsWith("learning-coach: {") ? line.slice("learning-coach: ".length) : undefined;
         if (!json) continue;
         let entry;

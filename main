@@ -10483,6 +10483,10 @@ async function callStreamingBootstrapModel(client, request) {
         lesson_plan_part: request.lessonPlanPart ?? "bootstrap",
         ...request.lessonPlanAttempt === void 0 ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }
       });
+      if (process.env.OLL_DEBUG_GENERATION === "1") {
+        process.stderr.write(`learning-coach: raw ${provider} ${request.label} content: ${result.content.slice(0, 16e3)}
+`);
+      }
       return result.content;
     }
     throw new ToolExecutionError(

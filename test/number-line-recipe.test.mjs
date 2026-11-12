@@ -83,7 +83,7 @@ test("the model is not asked for subdivisions or hops: the schema offers neither
   assert.equal(result.error, undefined, result.error);
   assert.equal(result.content.ticks.subdivisions, 10);
   assert.equal(result.content.jumps[0].hops, false, "27 tenth-hops exceed the 24-hop limit, so one arc");
-  assert.deepEqual(api.RECIPE_SCHEMA_PROPERTIES.number_line, { denominator: { type: "integer", minimum: 1, maximum: 12 } }, "the model may give only the denominator");
+  assert.equal(api.RECIPE_SCHEMA_PROPERTIES.number_line, undefined, "no number-line parameters: a denominator made the model write numerators (run 4)");
   assert.match(compile([{ initial: 0, min: 0, max: 1, label: "起点" }], { hops: true }).error ?? "", /hops/);
 });
 
@@ -207,11 +207,11 @@ test("run 3: 3/4 with a 0.05 step is drawn in quarters", () => {
   assert.equal(result.content.jumps[0].hops, true);
 });
 
-test("run 3: counting by fourths, where the numbers alone say nothing, follows the model's denominator", () => {
+test("counting by fourths, where the numbers alone are whole, follows the slider's quarter step", () => {
   const result = compile([
     { initial: 0, min: 0, max: 2, label: "起点" },
-    { initial: 0, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 0.1 } },
-  ], { denominator: 4 }, { animate: [{ number: 2, end_value: 2 }] });
+    { initial: 0, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 0.25 } },
+  ], {}, { animate: [{ number: 2, end_value: 2 }] });
   assert.equal(result.error, undefined, result.error);
   assert.equal(result.content.ticks.subdivisions, 4);
   assert.equal(result.variables[1].control.step, 0.25);
@@ -232,7 +232,7 @@ test("an animation target is snapped to the ticks and stays inside the fitted ra
   const result = compile([
     { initial: 0, min: 0, max: 2, label: "起点" },
     { initial: 0, min: 0, max: 2, label: "加上", student_control: { kind: "slider", step: 0.01 } },
-  ], { denominator: 4 }, { animate: [{ number: 2, end_value: 1.24 }] });
+  ], {}, { animate: [{ number: 2, end_value: 1.24 }] });
   assert.equal(result.error, undefined, result.error);
   assert.deepEqual(result.animations, [["number_02", 1.25]]);
 });
@@ -241,7 +241,7 @@ test("a practice target is snapped to the ticks, with a tolerance of half a tick
   const result = compile([
     { initial: 0, min: 0, max: 1, label: "起点" },
     { initial: 0, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 0.01 } },
-  ], { denominator: 4 }, { task: { number: 2, value: 0.74 } });
+  ], {}, { task: { number: 2, value: 0.74 } });
   assert.equal(result.error, undefined, result.error);
   const task = result.tasks[0];
   assert.equal(task.completion.value, 0.75);
@@ -268,15 +268,34 @@ test("a number another visual also shows is not refitted", () => {
   assert.deepEqual([result.variables[0].min, result.variables[0].max], [-10, 10]);
 });
 
-test("a denominator out of range is clamped, never refused", () => {
+// Run 4 (2026-11-11): the shapes behind its failures.
+test("run 4: a fine 0.1 change step on an integer lesson gives whole-number ticks, a whole step and hops (NL-01, NL-02, NL-05)", () => {
   const result = compile([
-    { initial: 0, min: 0, max: 1, label: "起点" },
-    { initial: 0.5, min: 0, max: 1, label: "加上", student_control: { kind: "slider", step: 0.5 } },
-  ], { denominator: 50 });
+    { initial: 3, min: -10, max: 10, label: "起点", student_control: { kind: "slider", step: 1 } },
+    { initial: -5, min: -10, max: 10, label: "加上", student_control: { kind: "slider", step: 0.1 } },
+  ]);
   assert.equal(result.error, undefined, result.error);
-  assert.equal(result.content.ticks.subdivisions, 12);
+  assert.equal(result.content.ticks.subdivisions, 1);
+  assert.equal(result.variables[1].control.step, 1, "the integer lesson's slider steps by whole units");
+  assert.equal(result.content.jumps[0].hops, true);
+  assert.ok(result.content.range.max - result.content.range.min <= 24, `24 units at most, got ${JSON.stringify(result.content.range)}`);
 });
 
+test("run 4: a start slider nothing drives is kept near its value, so the line stays short (NL-06)", () => {
+  const result = compile([
+    { initial: 6, min: -10, max: 10, label: "起点", student_control: { kind: "slider", step: 1 } },
+    { initial: -9, min: -10, max: 10, label: "减去", student_control: { kind: "slider", step: 1 } },
+  ]);
+  assert.equal(result.error, undefined, result.error);
+  assert.deepEqual([result.variables[0].min, result.variables[0].max], [5, 7]);
+  assert.ok(result.content.range.max - result.content.range.min <= 24, `24 units at most, got ${JSON.stringify(result.content.range)}`);
+  assert.equal(result.content.jumps[0].hops, true);
+  assert.ok(result.variables[1].min <= -9, "−9 stays reachable");
+});
+
+test("no number-line parameter is accepted: the schema offers none", () => {
+  assert.match(compile([{ initial: 0, min: 0, max: 1, label: "起点" }], { denominator: 4 }).error ?? "", /unsupported capability parameter/);
+});
 // Advisor review of the fit (2026-11-11).
 for (const reach of [12, 15]) {
   test(`6 − 9 with a change slider of ±${reach} that nothing drives keeps −9 reachable`, () => {
@@ -310,3 +329,41 @@ test("a practice task judged by an expression keeps its numbers, value, toleranc
   assert.equal(result.variables[1].control.step, 1);
   assert.equal(result.tasks[0].prompt, "把移动量调到目标。");
 });
+
+// Offline replay of speed gate run 4 (2026-11-11): each number-line lesson, rebuilt from its recorded
+// row (starting values, slider steps, animations and practice targets; ranges as the model writes
+// them, ±10, since a driven number's original range is not recorded), compiled under the current
+// rules and judged by the run 5 criteria, including the values drawn. NL-03 and NL-09 use the values
+// the model wrote in run 3 (0.75; 0.33 and 0.67): run 4's numerators came from the parameter since removed.
+const slider = (initial, step, min = -10, max = 10) => ({ initial, min, max, label: "n", student_control: { kind: "slider", step } });
+const RUN4 = [
+  { id: "NL-01", numbers: [slider(3, 0.1), slider(-5, 0.1)], extra: { task: { number: 2, value: -4, tolerance: 0.05 } }, integer: -5 },
+  { id: "NL-02", numbers: [slider(-2, 0.1), slider(7, 0.1)], extra: { animate: [{ number: 2, end_value: 7 }] }, integer: 7 },
+  { id: "NL-03", numbers: [slider(0, 0.25, 0, 1), slider(0.75, 0.25, 0, 1)], extra: {}, parts: 4, end: 0.75 },
+  { id: "NL-04", numbers: [slider(0.25, 0.25, 0, 1), slider(0.5, 0.25, 0, 1)], extra: {}, parts: 4, end: 0.75 },
+  { id: "NL-05", numbers: [slider(-3, 0.1, -6, 6), slider(8, 0.1)], extra: {}, integer: 8 },
+  { id: "NL-06", numbers: [slider(6, 1), slider(-9, 1)], extra: {}, integer: -9 },
+  { id: "NL-07", numbers: [slider(0, 0.1, 0, 1), slider(0.5, 0.1, 0, 1)], extra: { animate: [{ number: 2, end_value: 0.8 }] }, parts: 10 },
+  { id: "NL-08", numbers: [slider(-1, 1, -6, 1), slider(-3, 1, -5, 5)], extra: {}, integer: -3 },
+  { id: "NL-09", numbers: [slider(0.33, 0.1, 0, 1), slider(0.67, 0.1, 0, 1)], extra: {}, parts: 3, end: 1 },
+  { id: "NL-10", numbers: [slider(0, 0.25, 0, 2), slider(0, 0.25, 0, 2)], extra: { animate: [{ number: 2, end_value: 1 }, { number: 2, end_value: 2 }] }, parts: 4 },
+];
+for (const item of RUN4) {
+  test(`run 4 replay ${item.id} meets the run 5 criteria`, () => {
+    const result = compile(item.numbers, {}, item.extra);
+    assert.equal(result.error, undefined, result.error);
+    const { range, ticks, jumps, points } = result.content;
+    if (item.parts) {
+      assert.equal(ticks.subdivisions, item.parts, "the request's denominator");
+      for (const point of points) assert.ok(Math.abs(point.value * item.parts - Math.round(point.value * item.parts)) < 1e-9, `${point.as} = ${point.value} sits on a tick`);
+      if (item.end !== undefined) assert.ok(Math.abs(points.find((point) => point.as === "end").value - item.end) < 1e-9, `the end is ${item.end}`);
+    }
+    if (item.integer !== undefined) {
+      assert.ok(range.max - range.min <= 24, `24 units at most, got ${range.min}..${range.max}`);
+      assert.equal(jumps[0].hops, true);
+      const change = result.variables[1];
+      const animated = result.animations.filter(([variable]) => variable === "number_02").map(([, value]) => value);
+      assert.ok((change.min <= item.integer && item.integer <= change.max) || animated.includes(item.integer), `the change reaches ${item.integer}`);
+    }
+  });
+}
