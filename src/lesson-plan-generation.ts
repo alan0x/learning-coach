@@ -2809,18 +2809,19 @@ export async function generateLessonPlanWithModel(
   }
   return undefined;
   };
-  const earlyOutlineResult = await requestOutline();
-  if (earlyOutlineResult) return earlyOutlineResult;
-  if (!outline) throw outlineError;
-  for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
-  await options.on_outline_ready?.({
-    sections: outline.sections.length,
-    course_visuals: outline.course_visuals?.length ?? 0,
-    request_parts: fixedRequestParts.length,
-    camera_observation: stableCameraObservation !== undefined,
-  });
-  const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
-  if (unsupported) {
+  // Every accepted outline, the first and any replacement (review of #63), goes through the same steps:
+  // plugin preparation, the outline-ready report, and the check for content it cannot present.
+  const acceptOutline = async (): Promise<LessonPlanGenerationResult | undefined> => {
+    if (!outline) throw outlineError;
+    for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
+    await options.on_outline_ready?.({
+      sections: outline.sections.length,
+      course_visuals: outline.course_visuals?.length ?? 0,
+      request_parts: fixedRequestParts.length,
+      camera_observation: stableCameraObservation !== undefined,
+    });
+    const unsupported = outline.request_coverage?.find((item) => item.treatment === "unsupported");
+    if (!unsupported) return undefined;
     const reason = unsupported.reason?.trim();
     const learnerResponse = reason
       && reason.length <= 480
@@ -2832,7 +2833,11 @@ export async function generateLessonPlanWithModel(
       learner_response: learnerResponse,
       model_calls: modelCalls,
     };
-  }
+  };
+  const earlyOutlineResult = await requestOutline();
+  if (earlyOutlineResult) return earlyOutlineResult;
+  const outlineResult = await acceptOutline();
+  if (outlineResult) return outlineResult;
 
   // Teacher animation state only: optional student practice is not run while
   // subsequent sections play. Retries must never include the rejected draft.
@@ -3026,8 +3031,8 @@ export async function generateLessonPlanWithModel(
       drafts.length = 0;
       const early = await requestOutline();
       if (early) return early;
-      if (!outline) throw outlineError;
-      for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
+      const replacementResult = await acceptOutline();
+      if (replacementResult) return replacementResult;
       return acceptFirstSection();
     }
   };

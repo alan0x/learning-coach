@@ -9,18 +9,16 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, judgeNumberLine, numberLineLesson, slipVerdict } from "./eval-trial-recipe-speed.mjs";
 
-const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+const { generateLessonPlanWithModel, modelTextFromRawReply } = await import(new URL("../lesson-plan.js", import.meta.url));
 
-/** The model's text in each recorded reply line, in order. */
+/**
+ * The model's text in each recorded reply line, in order: framed records, and the older streamed
+ * ("content: …") and provider-envelope ("payload: …") lines (review of #63: streamed lines were dropped).
+ */
 export function recordedReplies(raw) {
   return raw.split("\n").flatMap((line) => {
-    const start = line.indexOf("{");
-    if (start < 0) return [];
-    try {
-      const payload = JSON.parse(line.slice(start));
-      const text = (payload.candidates ?? []).flatMap((candidate) => candidate.content?.parts ?? []).map((part) => part.text ?? "").join("");
-      return text ? [text] : [];
-    } catch { return []; }
+    const text = line.trim() ? modelTextFromRawReply(line) : undefined;
+    return text ? [text] : [];
   });
 }
 

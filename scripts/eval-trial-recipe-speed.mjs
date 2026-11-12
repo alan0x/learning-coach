@@ -130,9 +130,18 @@ export function numberLineLesson(part) {
   const actions = (part.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? []);
   const write = actions.find((action) => action.do === "write" && action.kind === "number_line");
   if (!write) return undefined;
+  // What the lesson does to the line, in order: animations change values; a focus or point on one of
+  // the line's parts ("line#end") reveals a point shown only when emphasized.
+  const partOf = (target) => (typeof target === "string" && target.startsWith(`${write.as}#`) ? target.slice(write.as.length + 1) : undefined);
+  const sequence = actions.flatMap((action) => {
+    if (action.do === "animate") return [{ kind: "animate", variable: action.variable, value: action.value }];
+    const targets = action.do === "focus" ? action.targets ?? [] : action.do === "point" ? [action.target] : [];
+    return targets.map(partOf).filter(Boolean).map((part) => ({ kind: "reveal", part }));
+  });
   return {
     content: write.content, variables: part.lesson?.variables ?? [], tasks: part.lesson?.tasks ?? [],
     animations: actions.filter((action) => action.do === "animate").map((action) => [action.variable, action.value]),
+    sequence,
   };
 }
 
@@ -166,13 +175,21 @@ export function numberLineStates({ content, variables, tasks, animations }) {
 }
 
 /** The points' values in each state the lesson shows: the starting values, then after each animation. */
-export function lessonShownStates({ content, variables, animations }) {
+export function lessonShownStates({ content, variables, animations, sequence: steps }) {
+  // Review of #63: a point shown only when emphasized counts only once something reveals it, so an
+  // answer kept hidden throughout does not satisfy "3/4 is shown".
+  const latent = new Set((content.points ?? []).filter((point) => point.shown === "when_emphasized").map((point) => point.as));
+  const revealed = new Set();
   const sequence = [];
   let current = Object.fromEntries(variables.map((variable) => [variable.as, variable.initial]));
-  const pointsAt = (values) => numberLineStates({ content, variables: Object.entries(values).map(([as, initial]) => ({ as, initial })), tasks: [], animations: [] })[0];
+  const pointsAt = (values) => {
+    const all = numberLineStates({ content, variables: Object.entries(values).map(([as, initial]) => ({ as, initial })), tasks: [], animations: [] })[0];
+    return Object.fromEntries(Object.entries(all).filter(([as]) => !latent.has(as) || revealed.has(as)));
+  };
   sequence.push(pointsAt(current));
-  for (const [variable, value] of animations) {
-    current = { ...current, [variable]: value };
+  for (const step of steps ?? animations.map(([variable, value]) => ({ kind: "animate", variable, value }))) {
+    if (step.kind === "animate") current = { ...current, [step.variable]: step.value };
+    else revealed.add(step.part);
     sequence.push(pointsAt(current));
   }
   return sequence;

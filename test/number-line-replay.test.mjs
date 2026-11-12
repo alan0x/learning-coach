@@ -150,3 +150,47 @@ for (const turn of run7.turns) {
   });
 }
 
+test("a replacement outline goes through the same acceptance: one that marks the request unsupported ends the lesson there (review of #63)", async () => {
+  // Run 7's first NM-01 turn: the bootstrap fails its scale check, the fallback outline's section 1 needs
+  // fifteenths, and the outline is asked again without the number line. That replacement says the
+  // request cannot be presented: the learner gets that answer, and no further section is requested.
+  const turn = run7.turns[0];
+  const replacement = structuredClone(turn.replies[1]);
+  replacement.course.course_visuals = [];
+  replacement.course.request_coverage = [{ treatment: "unsupported", sections: [], reason: "比较这两个分数需要更细的刻度。" }];
+  const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+  const labels = [];
+  const outlines = [];
+  const result = await generateLessonPlanWithModel(async (request) => {
+    labels.push(request.label);
+    if (labels.length <= 3) return JSON.stringify(turn.replies[labels.length - 1]);
+    if (labels.length === 4) return JSON.stringify(replacement);
+    throw new Error(`unexpected request ${request.label}`);
+  }, { turn_id: "unsupported-replacement", learner_request: caseById.get("NM-01").prompt, input_modality: "text", request_source: "self_contained" }, {
+    on_outline_ready: (event) => outlines.push(event.sections),
+  });
+  assert.deepEqual(labels, ["lesson-plan-bootstrap", "lesson-plan-outline", "lesson-plan-section", "lesson-plan-outline"]);
+  assert.equal(result.disposition, "unsupported");
+  assert.match(result.learner_response, /更细的刻度/);
+  assert.equal(outlines.length, 2, "the outline-ready report is refreshed for the replacement");
+});
+
+test("logger, capture and replay agree: streamed (pretty-printed) and envelope replies come back whole (review of #63)", async () => {
+  const api = await import(new URL("../lesson-plan.js", import.meta.url));
+  const { recordedReplies } = await import(new URL("../scripts/replay-trial-recipe.mjs", import.meta.url));
+  // As the harness keeps them: each framed line without its prefix, one per line.
+  const turn = run7.turns[0];
+  const lines = [
+    api.frameRawReply({ provider: "google", label: "lesson-plan-bootstrap", kind: "content", body: JSON.stringify(turn.replies[0], null, 2) }),
+    api.frameRawReply({ provider: "Gemini API", label: "lesson-plan-outline", kind: "payload", body: { candidates: [{ content: { parts: [{ text: JSON.stringify(turn.replies[1]) }] } }] } }),
+    api.frameRawReply({ provider: "google", label: "lesson-plan-section", kind: "content", body: JSON.stringify(turn.replies[2], null, 2) }),
+  ].map((line) => line.slice(api.RAW_REPLY_PREFIX.length));
+  const texts = recordedReplies(lines.join(""));
+  assert.deepEqual(texts.map((text) => JSON.parse(text)), turn.replies);
+  // Replayed, the streamed bootstrap reaches the same outcome as the recorded one.
+  const first = run5.turns.find((entry) => entry.case === "NL-01");
+  const streamed = recordedReplies(api.frameRawReply({ provider: "google", label: "lesson-plan-bootstrap", kind: "content", body: JSON.stringify(first.replies[0], null, 2) }).slice(api.RAW_REPLY_PREFIX.length));
+  const { lesson } = await replay({ ...first, replies: streamed.map((text) => JSON.parse(text)) });
+  assert.deepEqual(judgeNumberLine(caseById.get("NL-01"), numberLineLesson(lesson)).hard, []);
+});
+
