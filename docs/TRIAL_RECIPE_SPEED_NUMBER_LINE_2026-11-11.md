@@ -342,3 +342,26 @@ Owner-approved; 111 model calls (about $0.95); `eval/trial-recipe-speed-number-l
 ### Run 7 rules (owner-approved, set before the run)
 
 The run 6 rules are unchanged: the hard checks, the slip rule (option B), and speed option (a). Near misses run on both arms; a candidate near miss that draws a number line gets the ordinary hard checks plus a hand read. About $1.05: `--pairs 20 --quality-repeats 3 --max-calls 140`.
+
+## Run 7 (2026-11-12): speed passes; quality fails; stop rule fires a third time
+
+Owner-approved; about $1.05; `eval/trial-recipe-speed-number-line-2026-11-12-run7.json`. Three candidate runs did not fit the 140-call budget: the counter also counts a call started as a run stops, and the near-miss baseline arm cost more than estimated.
+
+- **Speed: passes.** Paired median −0.27 s; +107 prompt tokens. Recipe chosen for 10 of 10 number-line requests and 0 of 10 others.
+- **Outline retry for a wrong-scale number works.** NL-18 passed 3 of 3. Two turns (pairs 41 and 55) had the 2/3 scale slip and were fixed by one outline retry, confirmed by replay. The slip appeared in 3 of the 4 turns involving 2/3, and the retry costs about 7 s to first playable (16.3–16.5 s against 9.6 s).
+- **Hard misses:**
+  - **NM-01 ("compare 2/3 and 3/5"): no lesson, 3 of 3 times.** The compiler's refusal (fifteenths) went to section retries, which cannot change the visual the outline chose. The baseline arm produced a lesson (a plot) 3 of 3 times. **The refusal made this request worse than today**; I had applied it on Fable's advice, which Fable has since withdrawn.
+  - **NL-11 (0.3 + 0.4): an empty number line.** The outline declared no numbers, the first section was rejected for referencing number 1, and the retry passed validation by dropping its numbers. A number line with no numbers compiled.
+  - **NL-03 ("where is 3/4"): wrong value.** The model moved by one quarter (0.25), kept a third number "target 3/4" off the line, and narrated counting three quarters. The card was unchanged since run 6, where NL-03 passed, and NL-01 to NL-10 get one sample per run, so the cause is unclassified. The card's "counting by a fraction: one step" is a hypothesis.
+- **Near misses against the baseline arm.** The baseline (today) gave every near miss a plot-based lesson, except one call cap on NM-03. The candidate gave:
+  - no lesson for NM-01;
+  - a misleading line for NM-02 once (a jump 0 → 3);
+  - flow charts for NM-03 that tell the learner "the tool doesn't support rounding" (the existing substitution rule);
+  - fine lessons for NM-04.
+
+  The card's exclusion list seems to push the model away from the plot it uses today.
+
+**The common defect.** NL-18 (runs 5 and 6), NM-01 and NL-11 are one problem: the outline is accepted, and the first section then finds a fault only the outline can fix. Section retries can't fix it.
+
+**Process.** Every run since run 5 carried model-facing changes (card text, a parameter, refusal messages) that had never been seen live, so each gate run was also the first experiment with those changes. The stop rule has now fired three times.
+
