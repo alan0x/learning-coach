@@ -186,6 +186,13 @@ export function numberLineLesson(part) {
 
 const close = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a));
 
+/** A binding's value at given variable values: arithmetic and OLL's floor, round, ceil and abs. */
+export function evaluateExpression(expression, values) {
+  const text = String(expression)
+    .replace(/[a-z][a-z0-9_]*/gu, (name) => (["floor", "round", "ceil", "abs"].includes(name) ? `Math.${name}` : name in values ? `(${values[name]})` : "NaN"));
+  return /^(?:[-+*/().\d\seNa,]|Math\.(?:floor|round|ceil|abs))+$/u.test(text) ? Number(Function(`"use strict"; return (${text});`)()) : Number.NaN;
+}
+
 /**
  * The states a lesson puts its number line in: every combination of each variable's starting
  * value, animation targets and practice targets, with each point's value in that state.
@@ -199,10 +206,7 @@ export function numberLineStates({ content, variables, tasks, animations }) {
   }
   let states = [{}];
   for (const [name, list] of values) states = states.flatMap((state) => [...new Set(list)].map((value) => ({ ...state, [name]: value })));
-  const evaluate = (expression, state) => {
-    const text = String(expression).replace(/[a-z][a-z0-9_]*/gu, (name) => (name in state ? `(${state[name]})` : "NaN"));
-    return /^[-+*/().\d\seNa]+$/u.test(text) ? Number(Function(`"use strict"; return (${text});`)()) : Number.NaN;
-  };
+  const evaluate = (expression, state) => evaluateExpression(expression, state);
   const fraction = (value) => (typeof value === "string" && value.includes("/") ? value.trim().split(/\s+/u).reduce((sum, piece) => {
     const [top, bottom] = piece.split("/").map(Number);
     return bottom ? sum + Math.sign(sum || top) * Math.abs(top) / bottom : sum + Number(piece);
@@ -227,10 +231,7 @@ function variableStates({ variables, animations, sequence: steps }) {
 
 /** A line's solution-set pieces at one state: each interval's ends (null: a ray runs on) and which ends are included. */
 export function solutionPieces(content, values) {
-  const evaluate = (expression) => {
-    const text = String(expression).replace(/[a-z][a-z0-9_]*/gu, (name) => (name in values ? `(${values[name]})` : "NaN"));
-    return /^[-+*/().\d\seNa]+$/u.test(text) ? Number(Function(`"use strict"; return (${text});`)()) : Number.NaN;
-  };
+  const evaluate = (expression) => evaluateExpression(expression, values);
   const fraction = (value) => (typeof value === "string" && value.includes("/") ? value.trim().split("/").map(Number).reduce((a, b) => a / b) : Number(value));
   const end = (interval, side) => {
     if (interval[side] === null || interval[side] === undefined) return null;
@@ -334,6 +335,19 @@ export function judgeNumberLine(item, lesson) {
     for (const state of lessonShownStates(lesson)) {
       for (const point of filled) if (openEnds.some((value) => state[point.as] !== undefined && close(state[point.as], value))) hard.push(`a filled point sits on the open end ${state[point.as]}`);
     }
+  }
+  // Rounding (decision 0016): some state the lesson shows jumps from the number to the expected result.
+  if (expect.rounding) {
+    const ends = variableStates(lesson).flatMap((values) => {
+      const points = numberLineStates({ content, variables: Object.entries(values).map(([as, initial]) => ({ as, initial })), tasks: [], animations: [] })[0];
+      return (content.jumps ?? []).map((jump) => {
+        const bound = (side) => (content.bindings ?? []).find((entry) => entry.target === `${jump.as}.${side}`);
+        const from = typeof jump.from === "string" && jump.from in points ? points[jump.from] : bound("from") ? evaluateExpression(bound("from").expression, values) : Number(jump.from);
+        const by = bound("by") ? evaluateExpression(bound("by").expression, values) : Number(jump.by);
+        return from + by;
+      });
+    });
+    if (!ends.some((end) => close(end, expect.rounding.result))) hard.push(`wrong rounding: no jump ends at ${expect.rounding.result} (ends: ${[...new Set(ends.map((end) => Number(end.toFixed(6))))].join(", ") || "none"})`);
   }
   const labelled = planNumberLineTicks(content).filter((tick) => tick.label).map((tick) => tick.value);
   const visible = new Set((content.points ?? []).filter((point) => point.shown !== "when_emphasized").map((point) => point.as));

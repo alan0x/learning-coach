@@ -12034,6 +12034,21 @@ var MATH_RECIPES = {
     student_controls: ["slider"],
     required_features: ["number_line", "solution_set"],
     model_guidance: "\u6570\u8F74\u89E3\u96C6\uFF1A\u5148\u89E3\u51FA\u8FB9\u754C\uFF1Brelation \u5199\u89E3\u96C6\u5F62\u5F0F\uFF0C\u6570\u503C\u4F9D\u6B21\u662F a\u3001b\uFF08|x\u22123|<2 \u5199 a<x<b\uFF0Ca=1\uFF0Cb=5\uFF09"
+  },
+  // Decision 0016: rounding. The model gives the number and the place; the program draws the two
+  // neighbours, the halfway point and the jump to the result.
+  number_line_rounding: {
+    parts: ["whole", "number", "lower", "upper", "middle", "move", "primary_control"],
+    number_inputs: ["number"],
+    number_input_policies: [{ kind: "unbounded" }],
+    parameter_names: ["title", "place"],
+    model_parameter_names: ["title", "place"],
+    required_model_schema_parameters: ["place"],
+    semantic_parameters: ["place"],
+    output_kinds: ["number_line"],
+    student_controls: ["slider"],
+    required_features: ["number_line", "rounding"],
+    model_guidance: "\u6570\u8F74\u53D6\u6574\uFF1A\u6570\u503C\u662F\u8981\u53D6\u6574\u7684\u6570\uFF0Cplace \u5199\u53D6\u5230\u54EA\u4E00\u4F4D\uFF1B\u4E24\u4FA7\u7684\u6570\u548C\u7ED3\u679C\u7531\u7A0B\u5E8F\u7B97"
   }
 };
 var text2 = { type: "string" };
@@ -12067,7 +12082,8 @@ var MATH_SCHEMA_PROPERTIES = {
   number_line_solution: {
     label_style: { enum: ["decimal", "fraction"] },
     relation: { enum: ["x>a", "x>=a", "x<a", "x<=a", "a<x<b", "a<=x<=b", "a<x<=b", "a<=x<b", "x<a|x>b", "x<=a|x>=b", "x<a|x>=b", "x<=a|x>b"] }
-  }
+  },
+  number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } }
 };
 var MATH_PLUGIN = {
   // The manifest and the Jev subject line are the OLL shared layer's.
@@ -12439,7 +12455,7 @@ var RECIPE_CATALOG_ORDER = [
   "circle_area_rearrangement",
   "process_diagram"
 ];
-var TRIAL_RECIPES = ["constant_speed_motion", "number_line", "number_line_compare", "number_line_solution"];
+var TRIAL_RECIPES = ["constant_speed_motion", "number_line", "number_line_compare", "number_line_solution", "number_line_rounding"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -12481,7 +12497,8 @@ var SCHEMA_PROPERTY_ORDER = [
   "steps",
   "speed",
   "label_style",
-  "relation"
+  "relation",
+  "place"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text3 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -13085,6 +13102,37 @@ function fitSolutionNumbers(content, plan, sharedNumbers) {
   low.max = Math.min(low.max, lowMax);
   high.min = Math.max(high.min, highMin);
   if (low.min >= low.max || high.min >= high.max) return fitted;
+  return fitted;
+}
+var ROUNDING_UNITS = { hundreds: 100, tens: 10, ones: 1, tenths: 0.1, hundredths: 0.01 };
+function fitRoundingNumbers(content, plan, sharedNumbers) {
+  const fitted = /* @__PURE__ */ new Map();
+  const [index] = content.numbers ?? [];
+  const unit = ROUNDING_UNITS[String(content.parameters?.place)];
+  const definition = index ? plan.numbers?.[index - 1] : void 0;
+  if (!index || !unit || !definition || sharedNumbers.has(index)) return fitted;
+  const values = [definition.initial, ...lessonValues(plan, index)];
+  const on = (value2, step) => {
+    const count = value2 / step;
+    return Math.abs(count - Math.round(count)) <= 1e-9 * Math.max(1, Math.abs(count));
+  };
+  const minor = [unit / 10, unit / 100].map((step) => Number(step.toPrecision(12))).find((step) => values.every((value2) => on(value2, step)));
+  if (!minor) return fitted;
+  if (definition.student_control) definition.student_control.step = minor;
+  const decade = (value2) => Math.floor(value2 / unit + 1e-9);
+  if (values.every((value2) => decade(value2) === decade(values[0]))) {
+    const lower = Number((decade(values[0]) * unit).toPrecision(12));
+    const upper = Number((lower + unit - minor).toPrecision(12));
+    if (lower < upper) {
+      definition.min = Math.max(definition.min, lower) <= definition.initial ? Math.max(definition.min, lower) : lower;
+      definition.max = Math.min(definition.max, upper) >= definition.initial ? Math.min(definition.max, upper) : upper;
+      if (!(definition.min < definition.max)) {
+        definition.min = lower;
+        definition.max = upper;
+      }
+    }
+  }
+  fitted.set(index, 0);
   return fitted;
 }
 
@@ -13802,6 +13850,7 @@ var MATH_HOOKS = {
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
   number_line_solution: { fit_numbers: fitSolutionNumbers },
+  number_line_rounding: { fit_numbers: fitRoundingNumbers },
   implicit_surface_with_section: {
     section_range: surfaceSectionRange,
     lower_model_parameters(parameters3) {
@@ -16331,6 +16380,72 @@ function compileNumberLineSolution(base, content, role, placement, plan, path) {
   });
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.set })) };
 }
+var nameOf = (definition, value2) => {
+  const label = definition.label?.trim();
+  return label && Number(label) !== value2 ? label : void 0;
+};
+var ROUNDING_PLACES = { hundreds: 100, tens: 10, ones: 1, tenths: 0.1, hundredths: 0.01 };
+function roundingTicks(value2, unit) {
+  const major = Number((unit / 10).toPrecision(12));
+  for (const minor of [major, Number((unit / 100).toPrecision(12))]) {
+    const steps = value2 / minor;
+    if (Math.abs(steps - Math.round(steps)) <= 1e-9 * Math.max(1, Math.abs(steps))) return { major, minor };
+  }
+  return void 0;
+}
+function compileNumberLineRounding(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "place"], path);
+  const unit = ROUNDING_PLACES[input.place];
+  if (!unit) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.place`, `place is one of ${Object.keys(ROUNDING_PLACES).join(", ")}`);
+  const [numberIndex] = content.numbers ?? [];
+  if (!numberIndex) fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "rounding on a number line needs the lesson number it rounds");
+  const definition = numberDefinition(plan, numberIndex, `${path}.numbers[0]`);
+  const reached = [definition.min, definition.max, definition.initial, ...lessonValues(plan, numberIndex)];
+  const ticks = reached.map((value2) => roundingTicks(value2, unit));
+  if (ticks.some((tick) => !tick)) {
+    fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "a rounding line marks every hundredth of the place at most; this number needs finer ticks, so choose another visual");
+  }
+  const minor = Math.min(...ticks.map((tick) => tick.minor));
+  const major = ticks[0].major;
+  const scale = unit < 1 ? Math.round(1 / unit) : 1;
+  const steps = (variable2) => unit < 1 ? `floor(${variable2} * ${scale} + 0.000000001)` : `floor(${variable2} / ${unit} + 0.000000001)`;
+  const at = (expression) => unit < 1 ? `(${expression}) / ${scale}` : `(${expression}) * ${unit}`;
+  const stepsOf = (value2) => Math.floor(unit < 1 ? value2 * scale + 1e-9 : value2 / unit + 1e-9);
+  const valueAt = (count) => Number((unit < 1 ? count / scale : count * unit).toPrecision(12));
+  const variable = variableAlias(numberIndex);
+  const lowerSteps = stepsOf(definition.initial);
+  const lower = valueAt(lowerSteps), upper = valueAt(lowerSteps + 1), middle = valueAt(lowerSteps + 0.5);
+  const result = definition.initial - lower >= unit / 2 - 1e-9 ? upper : lower;
+  const lowest = valueAt(stepsOf(Math.min(...reached))), highest = valueAt(stepsOf(Math.max(...reached)) + 1);
+  const margin = major * 2;
+  const range = { min: Number((lowest - margin).toPrecision(12)), max: Number((highest + margin).toPrecision(12)) };
+  if ((range.max - range.min) / minor > NUMBER_LINE_LIMITS.ticks) {
+    fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "the rounding line would hold too many ticks for this number's range; choose another visual");
+  }
+  const built = buildNumberLine({
+    as: base,
+    role,
+    place: placement,
+    title: optionalText(input.title, compileText(plan, "\u6570\u8F74"), `${path}.title`),
+    range,
+    ticks: {
+      step: major,
+      subdivisions: Math.round(major / minor),
+      labels: major === minor ? "major" : "all",
+      ...Number.isInteger(major) ? {} : { format: "decimal" }
+    },
+    points: [
+      { as: "lower", value: { expression: at(steps(variable)), initial: lower } },
+      { as: "middle", value: { expression: at(`${steps(variable)} + 0.5`), initial: middle }, style: "open" },
+      { as: "upper", value: { expression: at(`${steps(variable)} + 1`), initial: upper } },
+      // Its tick already shows the number; a name that only repeats it ("362") is left off.
+      { as: "number", value: { expression: variable, initial: definition.initial }, ...nameOf(definition, definition.initial) ? { label: nameOf(definition, definition.initial) } : {} }
+    ],
+    jumps: [{ as: "move", from: "number", by: { expression: `${at(unit < 1 ? `floor(${variable} * ${scale} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }]
+  });
+  return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.move })) };
+}
 function compileNumberLine(base, content, role, placement, plan, path) {
   const { title, labelStyle } = numberLineLabelStyle(content, path);
   const [startNumber, changeNumber] = content.numbers ?? [];
@@ -16380,6 +16495,7 @@ var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
   number_line_solution: compileNumberLineSolution,
+  number_line_rounding: compileNumberLineRounding,
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_polygon_bounds: compileCirclePolygonBounds,

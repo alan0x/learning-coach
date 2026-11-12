@@ -710,6 +710,94 @@ function compileNumberLineSolution(
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.set! })) };
 }
 
+/** A point's name: the lesson number's label, unless it only repeats the value its tick already shows. */
+const nameOf = (definition: { label?: string }, value: number): string | undefined => {
+  const label = definition.label?.trim();
+  return label && Number(label) !== value ? label : undefined;
+};
+
+/** The place a number is rounded to (decision 0016), as the size of one step at that place. */
+export const ROUNDING_PLACES = { hundreds: 100, tens: 10, ones: 1, tenths: 0.1, hundredths: 0.01 } as const;
+
+/**
+ * The ticks of a rounding line: majors a tenth of the place (ones for tens), split again only as far
+ * as the number needs to sit on its own tick (362 between hundreds needs ones). Undefined when no
+ * split up to a hundredth of the place holds it.
+ */
+export function roundingTicks(value: number, unit: number): { major: number; minor: number } | undefined {
+  const major = Number((unit / 10).toPrecision(12));
+  for (const minor of [major, Number((unit / 100).toPrecision(12))]) {
+    const steps = value / minor;
+    if (Math.abs(steps - Math.round(steps)) <= 1e-9 * Math.max(1, Math.abs(steps))) return { major, minor };
+  }
+  return undefined;
+}
+
+/**
+ * Rounding on a number line (decision 0016): the model gives the number and the place; the program draws
+ * the two neighbours it falls between, the halfway point (open), and a jump from the number to the result
+ * (halves round up, as taught). All follow the number's lesson variable through OLL expressions, so a
+ * slider moving the number moves them too. The number itself is never moved: the question is about it.
+ */
+function compileNumberLineRounding(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "place"], path);
+  const unit = ROUNDING_PLACES[input.place as keyof typeof ROUNDING_PLACES];
+  if (!unit) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.place`, `place is one of ${Object.keys(ROUNDING_PLACES).join(", ")}`);
+  const [numberIndex] = content.numbers ?? [];
+  if (!numberIndex) fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "rounding on a number line needs the lesson number it rounds");
+  const definition = numberDefinition(plan, numberIndex, `${path}.numbers[0]`);
+  const reached = [definition.min, definition.max, definition.initial, ...lessonValues(plan, numberIndex)];
+  const ticks = reached.map((value) => roundingTicks(value, unit));
+  if (ticks.some((tick) => !tick)) {
+    fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "a rounding line marks every hundredth of the place at most; this number needs finer ticks, so choose another visual");
+  }
+  const minor = Math.min(...ticks.map((tick) => tick!.minor));
+  const major = ticks[0]!.major;
+  // Whole steps of the place are counted by k = 1/unit when the place is below one, so floating-point
+  // division never puts 0.3 under 0.2 (0.3 / 0.1 is 2.9999…).
+  const scale = unit < 1 ? Math.round(1 / unit) : 1;
+  const steps = (variable: string) => (unit < 1 ? `floor(${variable} * ${scale} + 0.000000001)` : `floor(${variable} / ${unit} + 0.000000001)`);
+  const at = (expression: string) => (unit < 1 ? `(${expression}) / ${scale}` : `(${expression}) * ${unit}`);
+  const stepsOf = (value: number) => Math.floor(unit < 1 ? value * scale + 1e-9 : value / unit + 1e-9);
+  const valueAt = (count: number) => Number((unit < 1 ? count / scale : count * unit).toPrecision(12));
+  const variable = variableAlias(numberIndex);
+  const lowerSteps = stepsOf(definition.initial);
+  const lower = valueAt(lowerSteps), upper = valueAt(lowerSteps + 1), middle = valueAt(lowerSteps + 0.5);
+  const result = definition.initial - lower >= unit / 2 - 1e-9 ? upper : lower;
+  const lowest = valueAt(stepsOf(Math.min(...reached))), highest = valueAt(stepsOf(Math.max(...reached)) + 1);
+  const margin = major * 2;
+  const range = { min: Number((lowest - margin).toPrecision(12)), max: Number((highest + margin).toPrecision(12)) };
+  if ((range.max - range.min) / minor > NUMBER_LINE_LIMITS.ticks) {
+    fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "the rounding line would hold too many ticks for this number's range; choose another visual");
+  }
+  const built = buildNumberLine({
+    as: base, role, place: placement,
+    title: optionalText(input.title, compileText(plan, "数轴"), `${path}.title`),
+    range,
+    ticks: {
+      step: major, subdivisions: Math.round(major / minor), labels: major === minor ? "major" : "all",
+      ...(Number.isInteger(major) ? {} : { format: "decimal" as const }),
+    },
+    points: [
+      { as: "lower", value: { expression: at(steps(variable)), initial: lower } },
+      { as: "middle", value: { expression: at(`${steps(variable)} + 0.5`), initial: middle }, style: "open" },
+      { as: "upper", value: { expression: at(`${steps(variable)} + 1`), initial: upper } },
+      // Its tick already shows the number; a name that only repeats it ("362") is left off.
+      { as: "number", value: { expression: variable, initial: definition.initial }, ...(nameOf(definition, definition.initial) ? { label: nameOf(definition, definition.initial)! } : {}) },
+    ],
+    jumps: [{ as: "move", from: "number", by: { expression: `${at(unit < 1 ? `floor(${variable} * ${scale} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }],
+  });
+  return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.move! })) };
+}
+
 /**
  * A number line (OLL decision 0013) from the visual's numbers: the first is
  * the start, the second the change; the program computes where the jump ends.
@@ -779,6 +867,7 @@ export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
   number_line_solution: compileNumberLineSolution,
+  number_line_rounding: compileNumberLineRounding,
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_polygon_bounds: compileCirclePolygonBounds,

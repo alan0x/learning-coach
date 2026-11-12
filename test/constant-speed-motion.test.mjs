@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const api = await import(new URL("../lesson-plan.js", import.meta.url));
 
 test("by default the trial recipe is installed but not offered", () => {
-  assert.deepEqual([...api.TRIAL_RECIPES], ["constant_speed_motion", "number_line", "number_line_compare", "number_line_solution"]);
+  assert.deepEqual([...api.TRIAL_RECIPES], ["constant_speed_motion", "number_line", "number_line_compare", "number_line_solution", "number_line_rounding"]);
   assert.equal(api.OFFERED_RECIPES.includes("constant_speed_motion"), false);
   assert.equal(api.LESSON_PLAN_CAPABILITY_NAMES.includes("constant_speed_motion"), false);
   assert.equal(api.RECIPE_PLUGIN.constant_speed_motion, "physics");
