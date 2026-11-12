@@ -19955,6 +19955,39 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     ...stableCameraObservation ? { camera_observation: stableCameraObservation } : {}
   };
 }
+
+// src/raw-reply.ts
+var RAW_REPLY_PREFIX = "learning-coach: raw ";
+function frameRawReply(record3) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record3)}
+`;
+}
+function envelopeText(payload) {
+  const candidates = payload?.candidates;
+  if (!Array.isArray(candidates)) return void 0;
+  const text3 = candidates.flatMap((candidate) => candidate.content?.parts ?? []).map((part) => typeof part.text === "string" ? part.text : "").join("");
+  return text3 || void 0;
+}
+function modelTextFromRawReply(line) {
+  const rest = line.startsWith(RAW_REPLY_PREFIX) ? line.slice(RAW_REPLY_PREFIX.length) : line;
+  if (rest.startsWith("{")) {
+    try {
+      const record3 = JSON.parse(rest);
+      if (record3.kind === "content" && typeof record3.body === "string") return record3.body;
+      if (record3.kind === "payload") return envelopeText(record3.body);
+    } catch {
+    }
+  }
+  const legacy = /^[^{]*? (payload|content): /u.exec(rest);
+  if (!legacy) return void 0;
+  const body = rest.slice(legacy[0].length);
+  if (legacy[1] === "content") return body || void 0;
+  try {
+    return envelopeText(JSON.parse(body));
+  } catch {
+    return void 0;
+  }
+}
 export {
   INSTALLED_PLUGINS,
   LESSON_PLAN_CAPABILITIES,
@@ -19971,6 +20004,7 @@ export {
   OFFERED_RECIPES,
   PLUGIN_COMPILERS,
   PROCESS_DIAGRAM_CONTRACT,
+  RAW_REPLY_PREFIX,
   RECIPE_CATALOG_ORDER,
   RECIPE_HOOKS,
   RECIPE_PLUGIN,
@@ -19994,11 +20028,13 @@ export {
   compileLessonPlan,
   deriveLessonRequestParts,
   enabledTrialRecipes,
+  frameRawReply,
   generateLessonPlanWithModel,
   includeWrittenCardsInFocus,
   lessonPlanPlugins,
   matchLessonPlanCapability,
   mathExpressionToOll,
+  modelTextFromRawReply,
   numericAnswerTolerance,
   promptSlot,
   resolveLessonPlan,

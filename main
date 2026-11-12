@@ -7172,6 +7172,13 @@ var require__ = __commonJS({
 // src/main.ts
 import { appendFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 
+// src/raw-reply.ts
+var RAW_REPLY_PREFIX = "learning-coach: raw ";
+function frameRawReply(record) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record)}
+`;
+}
+
 // src/plugin-signal.ts
 var PluginSignalError = class extends Error {
   constructor(code, message) {
@@ -10484,8 +10491,7 @@ async function callStreamingBootstrapModel(client, request) {
         ...request.lessonPlanAttempt === void 0 ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }
       });
       if (process.env.OLL_DEBUG_GENERATION === "1") {
-        process.stderr.write(`learning-coach: raw ${provider} ${request.label} content: ${result.content.slice(0, 16e3)}
-`);
+        process.stderr.write(frameRawReply({ provider, label: request.label, kind: "content", body: result.content }));
       }
       return result.content;
     }
@@ -10637,8 +10643,7 @@ async function callStructuredModel(client, request) {
       throw new Error(`${providerName} returned a non-JSON API response: ${error.message}`);
     }
     if (process.env.OLL_DEBUG_GENERATION === "1") {
-      process.stderr.write(`learning-coach: raw ${providerName} ${request.label} payload: ${JSON.stringify(payload).slice(0, 16e3)}
-`);
+      process.stderr.write(frameRawReply({ provider: providerName, label: request.label, kind: "payload", body: payload }));
     }
     const content = geminiResponseContent(payload, provider);
     const root = isRecord2(payload) ? payload : {};
