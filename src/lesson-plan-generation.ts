@@ -420,7 +420,7 @@ function lowerModelOutline(value: unknown, requestPartCount = 0): unknown {
         throw new LessonPlanError(
           "LESSON_PLAN_NUMBER_RANGE",
           `$lessonPlanOutline.numbers[${index}].initial`,
-          `the starting value ${String(written.initial)} lies far outside its range ${String(written.min)} to ${String(written.max)}; check the mantissa and scale (2/3 is mantissa 666667 with scale 6)`,
+          `the starting value ${String(written.initial)} lies far outside its range ${String(written.min)} to ${String(written.max)}; check the mantissa and scale (2/3 is mantissa 666666666667 with scale 12)`,
         );
       }
       if (typeof number.min === "number"
@@ -1295,8 +1295,8 @@ function lowerIntegerDecimal(record: Record<string, unknown>, prefix: string, pa
     || Math.abs(Number(mantissa)) > 1_000_000_000_000
     || !Number.isInteger(scale)
     || Number(scale) < 0
-    || Number(scale) > 6) {
-    throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 6");
+    || Number(scale) > 12) {
+    throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 12");
   }
   delete record[`${prefix}_mantissa`];
   delete record[`${prefix}_scale`];
