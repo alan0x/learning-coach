@@ -59,6 +59,24 @@ export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: N
 /** Held-out requests the recipe does not fit (subject-routing-heldout.json). */
 export const OTHER_CASE_IDS = ["HO-MA-01", "HO-PH-02", "HO-CH-01", "HO-BI-01", "HO-ES-01", "HO-MA-04", "HO-PH-04", "HO-CH-04", "HO-BI-04", "HO-ES-04"];
 
+/**
+ * What a first part's number line shows, for judging quality alongside speed:
+ * the range, ticks, hops, start and end. Undefined when it has none.
+ */
+export function numberLineInPart(part) {
+  const write = (part.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? [])
+    .find((action) => action.do === "write" && action.kind === "number_line");
+  if (!write) return undefined;
+  const { range, ticks, jumps = [], points = [] } = write.content ?? {};
+  return {
+    span: range ? range.max - range.min : null, range: range ?? null,
+    subdivisions: ticks?.subdivisions ?? 1, step: ticks?.step ?? null,
+    hops: jumps[0]?.hops ?? null, by: jumps[0]?.by ?? null,
+    start: points.find((point) => point.as === "start")?.value ?? null,
+    end: points.find((point) => point.as === "end")?.value ?? null,
+  };
+}
+
 /** The recipes whose builder output the first playable part contains. */
 export function recipesInPart(part) {
   const actions = (part.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? []);
@@ -124,7 +142,8 @@ async function main() {
   const persist = async () => {
     if (!out) return;
     await mkdir(dirname(resolve(out)), { recursive: true });
-    await writeFile(resolve(out), `${JSON.stringify({ measured_at: new Date().toISOString(), ...route, trial_recipes: recipes, pairs, max_calls: maxCalls, summary: summarize(rows), rows }, null, 1)}\n`);
+    // The compiled first parts stay in work_dir after the run, as evidence of what each lesson drew.
+    await writeFile(resolve(out), `${JSON.stringify({ measured_at: new Date().toISOString(), ...route, trial_recipes: recipes, pairs, max_calls: maxCalls, work_dir: workDir, summary: summarize(rows), rows }, null, 1)}\n`);
   };
   console.error(JSON.stringify({ stage: "trial-recipe-speed", ...route, trial_recipes: recipes, pairs, max_calls: maxCalls }));
   const { readFileSync } = await import("node:fs");
@@ -137,7 +156,13 @@ async function main() {
       const tool = await runTool({
         build, input, env: arm === "candidate" ? { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes } : env,
         maxCalls: Math.min(3, budget.remaining), onCall: () => { budget.remaining -= 1; },
-        onFirstPart: (path) => { try { return { recipes: recipesInPart(JSON.parse(readFileSync(path, "utf8"))) }; } catch { return { recipes: null }; } },
+        onFirstPart: (path) => {
+          try {
+            const part = JSON.parse(readFileSync(path, "utf8"));
+            const line = numberLineInPart(part);
+            return { recipes: recipesInPart(part), ...(line ? { number_line: line } : {}) };
+          } catch { return { recipes: null }; }
+        },
       });
       const { first_part_path: _path, ...kept } = tool;
       const row = { pair, case: item.id, kind: item.kind, arm, order: order.indexOf(arm), ...kept };

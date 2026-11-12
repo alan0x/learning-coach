@@ -6,6 +6,7 @@ import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safe
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
 import { PLUGIN_HOOKS, RECIPE_HOOKS } from "./plugins/hooks.js";
+import { fitNumberLineNumbers } from "./plugins/number-line-fit.js";
 export { PLUGIN_COMPILERS };
 
 export { LESSON_PLAN_SCENE_INITIAL_CAMERAS, includeWrittenCardsInFocus, mathExpressionToOll } from "./recipe-kit.js";
@@ -157,6 +158,14 @@ function positiveIntegerProgramRange(
 function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
   const constrained = new Set<number>();
   const integerSides = new Set<number>();
+  // Numbers a number line fitted to its ticks, with the tick step (0: ranges only, no ticks to snap to).
+  const tickSteps = new Map<number, number>();
+  // How many visuals show each number: a number line fits only numbers no other visual shows.
+  const visualsUsing = new Map<number, number>();
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action !== "create" || action.kind !== "visual") continue;
+    for (const number of new Set((action.content as LessonPlanVisualContent).numbers ?? [])) visualsUsing.set(number, (visualsUsing.get(number) ?? 0) + 1);
+  }
   const publishedPlotNumbers = new Set<number>();
   for (const [sectionIndex, section] of plan.sections.entries()) {
     const newPlotNumbers = new Set<number>();
@@ -170,6 +179,13 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
         else if (bound) delete content.numbers;
         if (content.capability === "function_plot") {
           for (const number of bound ?? []) newPlotNumbers.add(number);
+        }
+        if (content.capability === "number_line" && action.action === "create") {
+          const shared = new Set([...visualsUsing].filter(([number, count]) => count > 1 && content.numbers?.includes(number)).map(([number]) => number));
+          for (const [number, step] of fitNumberLineNumbers(content, plan, shared)) {
+            constrained.add(number);
+            if (step > 0) tickSteps.set(number, step);
+          }
         }
         const policies = LESSON_PLAN_CAPABILITY_REGISTRY[content.capability].number_input_policies;
         for (const [inputIndex, numberIndex] of (content.numbers ?? []).entries()) {
@@ -217,12 +233,18 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
     for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
   if (constrained.size === 0) return;
+  // Side counts are whole numbers; a fitted number line's numbers sit on its ticks.
+  const roundToProgramGrid = (number: number, value: number) => {
+    if (integerSides.has(number)) return Math.round(value);
+    const step = tickSteps.get(number);
+    return step ? Number((Math.round(value / step) * step).toPrecision(12)) : value;
+  };
   for (const section of plan.sections) {
     for (const moment of section.moments) {
       for (const action of moment.actions) {
         if (action.action !== "animate" || !constrained.has(action.number)) continue;
         const definition = plan.numbers![action.number - 1]!;
-        action.end_value = Math.min(definition.max, Math.max(definition.min, integerSides.has(action.number) ? Math.round(action.end_value) : action.end_value));
+        action.end_value = Math.min(definition.max, Math.max(definition.min, roundToProgramGrid(action.number, action.end_value)));
       }
     }
     for (const activity of section.student_activities ?? []) {
@@ -231,7 +253,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
       if (!number || !constrained.has(number)) continue;
       const definition = plan.numbers![number - 1]!;
       const original = activity.value;
-      activity.value = Math.min(definition.max, Math.max(definition.min, integerSides.has(number) ? Math.round(activity.value) : activity.value));
+      activity.value = Math.min(definition.max, Math.max(definition.min, activity.expression ? activity.value : roundToProgramGrid(number, activity.value)));
       activity.tolerance = Math.max(
         (definition.student_control?.step ?? (definition.max - definition.min) / 200) / 2,
         (definition.max - definition.min) / 1_000,
