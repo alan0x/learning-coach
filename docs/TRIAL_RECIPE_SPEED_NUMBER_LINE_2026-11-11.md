@@ -391,3 +391,17 @@ Owner-approved; about $1.05; `eval/trial-recipe-speed-number-line-2026-11-12-run
 - It affects any visual given a third, but only number-line lessons write thirds here.
 - Fixing it changes the schema every lesson request uses, so it is put to the owner as a separate change. One option: allow scale up to 12, consistent with the mantissa.
 
+### Model-number scale fix (owner-approved 2026-11-12; branch `fix/model-number-scale`)
+
+**The fix.** The shared schema now allows a decimal scale up to 12, as many places as the mantissa's 12 digits allow.
+- Request digests are re-recorded; every produced lesson digest is unchanged.
+- The schema grows by 15–30 B on the fallback-outline, section-retry, section-repair and later-section paths, which exceeds their payload ceilings.
+- Decision S6 requires a plan change and a live speed comparison to raise a ceiling. The raise is therefore a separate commit, pending the owner.
+
+**Probe 3** (fix build; thirds only; 9 lessons, 21 counted calls):
+- **No wrong-scale thirds:** 0 of the 8 turns that wrote a third (before: 9 of 24). 2/3 is written as 666666666667 with scale 12, and 1/15 correctly as 66666666667 with scale 12.
+- **NL-09 3/3 and NL-18 3/3 pass every hard check.** NL-18 needed no outline retry.
+- **NM-01:** a lesson without the number line 2/3 times, through the new path (about 19 s). The third hit the harness's 3-call cap: after the restart, the new lesson's section 1 met OLL's generic "task already satisfied" rule (the shared already-met guard's floating-point error, reported separately). Live, it would retry.
+
+**Not done overnight.** The gate run waits for the owner's decision on the ceilings, since its request sizes depend on it.
+
