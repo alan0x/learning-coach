@@ -8490,9 +8490,11 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
     if (typeof point.as === "string")
       pointAliases.add(point.as);
   }
+  const bound = new Set((Array.isArray(content.bindings) ? content.bindings : []).map((binding) => binding.target).filter((target) => typeof target === "string"));
   for (const [index, jump] of list(content.jumps, `${path}/jumps`, NUMBER_LINE_LIMITS.jumps, fail4).entries()) {
     const jumpPath = `${path}/jumps/${index}`;
     only(jump, ["as", "from", "by", "label", "hops"], jumpPath, fail4);
+    const loose = options.boundValues || bound.has(`${jump.as}.by`) || bound.has(`${jump.as}.from`);
     let start;
     if (typeof jump.from === "string" && numberLineValue(jump.from) === void 0) {
       if (!pointAliases.has(jump.from))
@@ -8503,7 +8505,7 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
       start = value(jump.from, `${jumpPath}/from`, fail4);
     }
     const by = value(jump.by, `${jumpPath}/by`, fail4);
-    if (by === 0 && !options.boundValues)
+    if (by === 0 && !loose)
       fail4(`${jumpPath}/by`, "A jump moves by a nonzero amount");
     const end = start + by;
     if (start < min - 1e-9 || start > max + 1e-9 || end < min - 1e-9 || end > max + 1e-9)
@@ -8514,7 +8516,7 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
     if (jump.hops) {
       const count = Math.abs(by) / unit;
       const whole = near(count, Math.round(count), count);
-      if (!whole && !options.boundValues || Math.ceil(count - 1e-9) > NUMBER_LINE_LIMITS.hops) {
+      if (!whole && !loose || Math.ceil(count - 1e-9) > NUMBER_LINE_LIMITS.hops) {
         fail4(`${jumpPath}/hops`, `A jump drawn hop by hop moves a whole number of the smallest ticks, at most ${NUMBER_LINE_LIMITS.hops}`);
       }
     }
@@ -15967,10 +15969,14 @@ function compileNumberLine(base, content, role, placement, plan, path) {
   const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
   const max = Math.ceil(Math.max(...values, 0)) + 1;
   const span2 = max - min;
-  const subdivisions = input.subdivisions !== void 0 ? optionalInteger(input.subdivisions, 1, 1, 12, `${path}.subdivisions`) : NUMBER_LINE_SPLITS.find((parts) => values.every((value2) => onGrid(value2, parts)) && span2 * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
-  if (span2 * subdivisions > NUMBER_LINE_LIMITS.ticks) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.subdivisions`, "the numbers' range is too long for this many parts per unit");
+  const step = span2 <= 60 ? 1 : span2 <= 150 ? 5 : 10;
+  const subdivisions = step > 1 ? 1 : input.subdivisions !== void 0 ? optionalInteger(input.subdivisions, 1, 1, 12, `${path}.subdivisions`) : NUMBER_LINE_SPLITS.find((parts) => values.every((value2) => onGrid(value2, parts)) && span2 * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
+  if (span2 / step * subdivisions > NUMBER_LINE_LIMITS.ticks) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.subdivisions`, "the numbers' range is too long for this many parts per unit");
+  const unit = step / subdivisions;
+  const whole = (value2) => onGrid(value2 / unit, 1);
   const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
-  const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every((value2) => onGrid(value2, subdivisions)) && Math.ceil(reach * subdivisions - 1e-9) <= NUMBER_LINE_LIMITS.hops;
+  const sliderStep = change?.student_control?.step;
+  const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every(whole) && (sliderStep === void 0 || whole(sliderStep)) && Math.ceil(reach / unit - 1e-9) <= NUMBER_LINE_LIMITS.hops;
   if (input.hops === true && !hopsFit) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.hops`, "hop by hop needs a change of whole parts and at most 24 hops");
   const hops = input.hops === void 0 ? hopsFit : input.hops === true;
   const startVariable = startNumber ? variableAlias(startNumber) : void 0;
@@ -15981,7 +15987,7 @@ function compileNumberLine(base, content, role, placement, plan, path) {
     place: placement,
     title: optionalText(input.title, compileText(plan, "\u6570\u8F74"), `${path}.title`),
     range: { min, max },
-    ticks: { step: span2 > 24 ? span2 > 60 ? 10 : 5 : 1, subdivisions: span2 > 24 ? 1 : subdivisions, labels: subdivisions > 1 && span2 <= 24 ? "all" : "major" },
+    ticks: { step, subdivisions, labels: subdivisions > 1 ? "all" : "major" },
     ...start && startVariable ? { points: [
       { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "\u8D77\u70B9") },
       ...change && changeVariable ? [{ as: "end", value: { expression: `(${startVariable})+(${changeVariable})`, initial: start.initial + change.initial }, label: compileText(plan, "\u7EC8\u70B9") }] : []

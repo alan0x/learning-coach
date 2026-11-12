@@ -75,3 +75,37 @@ test("hop by hop is refused when a change could not be counted in whole parts", 
   ], { hops: true, subdivisions: 1 });
   assert.match(result.error ?? "", /hop by hop needs a change of whole parts/);
 });
+
+// Regressions from the speed gate (2026-11-11): the model writes wide sliders
+// and starts the change at 0, then animates it.
+test("6 − 9 with wide sliders and a change starting at 0 compiles, hop by hop on whole-number ticks", () => {
+  const result = compile([
+    { initial: 6, min: 0, max: 10, label: "起点" },
+    { initial: 0, min: -10, max: 10, label: "减去", student_control: { kind: "slider", step: 1 } },
+  ]);
+  assert.equal(result.error, undefined, result.error);
+  assert.deepEqual(result.content.range, { min: -11, max: 21 });
+  assert.deepEqual(result.content.ticks, { step: 1, subdivisions: 1, labels: "major" });
+  assert.deepEqual(result.content.jumps[0], { as: "move", from: "start", by: 0, hops: true });
+});
+
+test("a long line uses coarser ticks and one arc instead of hops", () => {
+  const result = compile([
+    { initial: 20, min: 0, max: 100, label: "起点" },
+    { initial: -7, min: -50, max: 50, label: "加上", student_control: { kind: "slider", step: 1 } },
+  ]);
+  assert.equal(result.error, undefined, result.error);
+  // Reachable values run from −50 to 150: a 202-unit line gets a tick every 10.
+  assert.equal(result.content.ticks.step, 10);
+  assert.equal(result.content.jumps[0].hops, false);
+});
+
+test("a slider stepping by halves on a whole-number line is drawn as one arc", () => {
+  const result = compile([
+    { initial: 1, min: 0, max: 5, label: "起点" },
+    { initial: 2, min: 0, max: 4, label: "加上", student_control: { kind: "slider", step: 0.5 } },
+  ]);
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.content.ticks.subdivisions, 1);
+  assert.equal(result.content.jumps[0].hops, false);
+});

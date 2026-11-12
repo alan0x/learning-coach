@@ -580,14 +580,20 @@ function compileNumberLine(
   const min = Math.floor(Math.min(...values, 0)) - (Math.min(...values) <= 0 ? 1 : 0);
   const max = Math.ceil(Math.max(...values, 0)) + 1;
   const span = max - min;
-  const subdivisions = input.subdivisions !== undefined
+  // Whole-number ticks up to 60 units (crowded labels thin out on the board); coarser beyond.
+  const step = span <= 60 ? 1 : span <= 150 ? 5 : 10;
+  const subdivisions = step > 1 ? 1 : input.subdivisions !== undefined
     ? optionalInteger(input.subdivisions, 1, 1, 12, `${path}.subdivisions`)
     : NUMBER_LINE_SPLITS.find((parts) => values.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
-  if (span * subdivisions > NUMBER_LINE_LIMITS.ticks) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.subdivisions`, "the numbers' range is too long for this many parts per unit");
-  // Hop by hop only when every reachable change is a whole number of parts and needs few enough hops.
+  if ((span / step) * subdivisions > NUMBER_LINE_LIMITS.ticks) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.subdivisions`, "the numbers' range is too long for this many parts per unit");
+  // Hops are counted on the ticks actually drawn: every reachable change, and the slider's step,
+  // must be a whole number of the smallest ticks, and the longest change at most 24 of them.
+  const unit = step / subdivisions;
+  const whole = (value: number) => onGrid(value / unit, 1);
   const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
-  const hopsFit = change !== undefined && [change.min, change.max, change.initial].every((value) => onGrid(value, subdivisions))
-    && Math.ceil(reach * subdivisions - 1e-9) <= NUMBER_LINE_LIMITS.hops;
+  const sliderStep = change?.student_control?.step;
+  const hopsFit = change !== undefined && [change.min, change.max, change.initial].every(whole)
+    && (sliderStep === undefined || whole(sliderStep)) && Math.ceil(reach / unit - 1e-9) <= NUMBER_LINE_LIMITS.hops;
   if (input.hops === true && !hopsFit) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.hops`, "hop by hop needs a change of whole parts and at most 24 hops");
   const hops = input.hops === undefined ? hopsFit : input.hops === true;
   const startVariable = startNumber ? variableAlias(startNumber) : undefined;
@@ -596,7 +602,7 @@ function compileNumberLine(
     as: base, role, place: placement,
     title: optionalText(input.title, compileText(plan, "数轴"), `${path}.title`),
     range: { min, max },
-    ticks: { step: span > 24 ? (span > 60 ? 10 : 5) : 1, subdivisions: span > 24 ? 1 : subdivisions, labels: subdivisions > 1 && span <= 24 ? "all" : "major" },
+    ticks: { step, subdivisions, labels: subdivisions > 1 ? "all" : "major" },
     ...(start && startVariable ? { points: [
       { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "起点") },
       ...(change && changeVariable ? [{ as: "end", value: { expression: `(${startVariable})+(${changeVariable})`, initial: start.initial + change.initial }, label: compileText(plan, "终点") }] : []),
