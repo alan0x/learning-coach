@@ -116,7 +116,19 @@ export const NUMBER_LINE_SOLUTION_CASES = [
   { id: "SOL-05", prompt: "Graph the solution of x < -1 or x ≥ 2 on a number line.", expect: { values: [-1, 2], solution: [{ from: null, to: -1, toClosed: false }, { from: 2, to: null, fromClosed: true }] } },
   { id: "SOL-06", prompt: "解不等式 2x + 1 > 7，并在数轴上表示解集。", expect: { values: [3], solution: [{ from: 3, to: null, fromClosed: false }] } },
 ];
-export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES };
+/**
+ * Rounding (decision 0016, number_line_rounding), written before the recipe or any probe: the number and
+ * the two neighbours it falls between are shown, and `rounding.result` is where a jump from the number
+ * ends (halves round up, as taught in grade 3). RND-04 needs hundredths; RND-05 is the halfway case.
+ */
+export const NUMBER_LINE_ROUNDING_CASES = [
+  { id: "RND-01", prompt: "用数轴说明 47 四舍五入到十位是多少。", expect: { values: [40, 47, 50], rounding: { result: 50 } } },
+  { id: "RND-02", prompt: "Round 362 to the nearest hundred using a number line.", expect: { values: [300, 362, 400], rounding: { result: 400 } } },
+  { id: "RND-03", prompt: "把 3.6 四舍五入到个位，用数轴表示。", expect: { values: [3, 3.6, 4], rounding: { result: 4 } } },
+  { id: "RND-04", prompt: "Round 1.24 to the nearest tenth on a number line.", expect: { values: [1.2, 1.24, 1.3], rounding: { result: 1.2 } } },
+  { id: "RND-05", prompt: "Use a number line to round 85 to the nearest ten.", expect: { values: [80, 85, 90], rounding: { result: 90 } } },
+];
+export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES };
 
 /** The requests each trial recipe fits. */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
