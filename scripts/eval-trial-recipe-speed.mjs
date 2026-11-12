@@ -386,7 +386,8 @@ export function recipesInPart(part) {
   for (const write of writes.filter((action) => action.kind === "number_line")) {
     const points = new Set((write.content?.points ?? []).map((point) => point.as));
     found.push((write.content?.intervals ?? []).length ? "number_line_solution"
-      : points.has("first") && points.has("second") ? "number_line_compare" : "number_line");
+      : points.has("first") && points.has("second") ? "number_line_compare"
+        : points.has("lower") && points.has("upper") ? "number_line_rounding" : "number_line");
   }
   return found;
 }
