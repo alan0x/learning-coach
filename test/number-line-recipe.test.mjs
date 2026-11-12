@@ -68,12 +68,16 @@ test("fractions choose the parts per unit that put every value on a tick", () =>
   assert.equal(result.content.jumps[0].hops, true);
 });
 
-test("hop by hop is refused when a change could not be counted in whole parts", () => {
+test("the model is not asked for subdivisions or hops: the schema offers neither, and the program decides both", () => {
   const result = compile([
     { initial: 0, min: 0, max: 1, label: "起点" },
     { initial: 1.3, min: 0, max: 2.7, label: "加上", student_control: { kind: "slider", step: 0.1 } },
-  ], { hops: true, subdivisions: 1 });
-  assert.match(result.error ?? "", /hop by hop needs a change of whole parts/);
+  ]);
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.content.ticks.subdivisions, 10);
+  assert.equal(result.content.jumps[0].hops, false, "27 tenth-hops exceed the 24-hop limit, so one arc");
+  assert.equal(api.RECIPE_SCHEMA_PROPERTIES.number_line, undefined, "no number-line parameters in the provider schema");
+  assert.match(compile([{ initial: 0, min: 0, max: 1, label: "起点" }], { hops: true }).error ?? "", /hops/);
 });
 
 // Regressions from the speed gate (2026-11-11): the model writes wide sliders

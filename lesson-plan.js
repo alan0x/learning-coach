@@ -11990,14 +11990,15 @@ var MATH_RECIPES = {
     parts: ["whole", "start", "end", "move", "primary_control"],
     number_inputs: ["start", "change"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "subdivisions", "hops"],
-    model_parameter_names: ["title", "subdivisions", "hops"],
+    // How finely to split each unit and whether to draw hops are the program's: they follow the numbers.
+    parameter_names: ["title"],
+    model_parameter_names: ["title"],
     required_model_schema_parameters: [],
-    semantic_parameters: ["subdivisions", "hops"],
+    semantic_parameters: [],
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line"],
-    model_guidance: "\u6570\u8F74\uFF1A\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u79FB\u52A8\u91CF\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u8BA1\u7B97\uFF1B\u9002\u5408\u6574\u6570\u3001\u5206\u6570\u3001\u5C0F\u6570\u7684\u52A0\u51CF\u548C\u6570\u5728\u6570\u8F74\u4E0A\u7684\u4F4D\u7F6E\u3002subdivisions \u662F\u6BCF\u4E2A\u5355\u4F4D\u5206\u6210\u51E0\u4EFD\uFF08\u5206\u6570\u7528 2\u201312\uFF09\uFF0Chops \u4E3A true \u65F6\u4E00\u683C\u4E00\u8DF3\u3002\u4E0D\u7528\u4E8E\u51FD\u6570\u56FE\u50CF\u6216\u4E0D\u7B49\u5F0F\u4EE5\u5916\u7684\u5750\u6807\u95EE\u9898"
+    model_guidance: "\u6570\u8F74\uFF1A\u4E24\u4E2A\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u79FB\u52A8\u91CF\uFF0C\u7EC8\u70B9\u3001\u523B\u5EA6\u4EFD\u6570\u548C\u662F\u5426\u4E00\u683C\u4E00\u8DF3\u90FD\u7531\u7A0B\u5E8F\u6309\u6570\u503C\u51B3\u5B9A\uFF1B\u9002\u5408\u6574\u6570\u3001\u5206\u6570\u3001\u5C0F\u6570\u7684\u52A0\u51CF\u548C\u6570\u5728\u6570\u8F74\u4E0A\u7684\u4F4D\u7F6E\u3002\u5206\u6570\u7528\u6ED1\u6746\u6B65\u957F\u8868\u793A\uFF08\u5982 0.25 \u5373\u56DB\u5206\u4E4B\u4E00\uFF09\u3002\u4E0D\u7528\u4E8E\u51FD\u6570\u56FE\u50CF"
   }
 };
 var text2 = { type: "string" };
@@ -12025,8 +12026,7 @@ var MATH_SCHEMA_PROPERTIES = {
     leg_a: { type: "number", minimum: 0 },
     leg_b: { type: "number", minimum: 0 }
   },
-  circle_area_rearrangement: { radius: { type: "number", minimum: 0 } },
-  number_line: { subdivisions: { type: "integer", minimum: 1, maximum: 12 }, hops: { type: "boolean" } }
+  circle_area_rearrangement: { radius: { type: "number", minimum: 0 } }
 };
 var MATH_PLUGIN = {
   // The manifest and the Jev subject line are the OLL shared layer's.
@@ -12438,9 +12438,7 @@ var SCHEMA_PROPERTY_ORDER = [
   "leg_a",
   "leg_b",
   "steps",
-  "speed",
-  "subdivisions",
-  "hops"
+  "speed"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text3 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -15958,7 +15956,7 @@ var NUMBER_LINE_SPLITS = Array.from({ length: 12 }, (_unused, index) => index + 
 var onGrid = (value2, parts) => Math.abs(value2 * parts - Math.round(value2 * parts)) < 1e-9;
 function compileNumberLine(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "subdivisions", "hops"], path);
+  allowParameterKeys(input, ["title"], path);
   const [startNumber, changeNumber] = content.numbers ?? [];
   const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : void 0;
   const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : void 0;
@@ -15975,15 +15973,13 @@ function compileNumberLine(base, content, role, placement, plan, path) {
   const max = Math.ceil(Math.max(...values, 0)) + 1;
   const span2 = max - min;
   const step = span2 <= 60 ? 1 : span2 <= 150 ? 5 : 10;
-  const subdivisions = step > 1 ? 1 : input.subdivisions !== void 0 ? optionalInteger(input.subdivisions, 1, 1, 12, `${path}.subdivisions`) : NUMBER_LINE_SPLITS.find((parts) => grid.every((value2) => onGrid(value2, parts)) && span2 * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
-  if (span2 / step * subdivisions > NUMBER_LINE_LIMITS.ticks) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.subdivisions`, "the numbers' range is too long for this many parts per unit");
+  const subdivisions = step > 1 ? 1 : NUMBER_LINE_SPLITS.find((parts) => grid.every((value2) => onGrid(value2, parts)) && span2 * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
   const unit = step / subdivisions;
   const whole = (value2) => onGrid(value2 / unit, 1);
   const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
   const sliderStep = change?.student_control?.step;
   const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every(whole) && (sliderStep === void 0 || whole(sliderStep)) && Math.ceil(reach / unit - 1e-9) <= NUMBER_LINE_LIMITS.hops;
-  if (input.hops === true && !hopsFit) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.hops`, "hop by hop needs a change of whole parts and at most 24 hops");
-  const hops = input.hops === void 0 ? hopsFit : input.hops === true;
+  const hops = hopsFit;
   const startVariable = startNumber ? variableAlias(startNumber) : void 0;
   const changeVariable = changeNumber ? variableAlias(changeNumber) : void 0;
   const built = buildNumberLine({

@@ -569,7 +569,7 @@ function compileNumberLine(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "subdivisions", "hops"], path);
+  allowParameterKeys(input, ["title"], path);
   const [startNumber, changeNumber] = content.numbers ?? [];
   const start = startNumber ? numberDefinition(plan, startNumber, `${path}.numbers[0]`) : undefined;
   const change = changeNumber ? numberDefinition(plan, changeNumber, `${path}.numbers[1]`) : undefined;
@@ -590,10 +590,8 @@ function compileNumberLine(
   const span = max - min;
   // Whole-number ticks up to 60 units (crowded labels thin out on the board); coarser beyond.
   const step = span <= 60 ? 1 : span <= 150 ? 5 : 10;
-  const subdivisions = step > 1 ? 1 : input.subdivisions !== undefined
-    ? optionalInteger(input.subdivisions, 1, 1, 12, `${path}.subdivisions`)
+  const subdivisions = step > 1 ? 1
     : NUMBER_LINE_SPLITS.find((parts) => grid.every((value) => onGrid(value, parts)) && span * parts <= NUMBER_LINE_LIMITS.ticks) ?? 1;
-  if ((span / step) * subdivisions > NUMBER_LINE_LIMITS.ticks) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.subdivisions`, "the numbers' range is too long for this many parts per unit");
   // Hops are counted on the ticks actually drawn: every reachable change, and the slider's step,
   // must be a whole number of the smallest ticks, and the longest change at most 24 of them.
   const unit = step / subdivisions;
@@ -602,8 +600,8 @@ function compileNumberLine(
   const sliderStep = change?.student_control?.step;
   const hopsFit = change !== undefined && [change.min, change.max, change.initial].every(whole)
     && (sliderStep === undefined || whole(sliderStep)) && Math.ceil(reach / unit - 1e-9) <= NUMBER_LINE_LIMITS.hops;
-  if (input.hops === true && !hopsFit) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.hops`, "hop by hop needs a change of whole parts and at most 24 hops");
-  const hops = input.hops === undefined ? hopsFit : input.hops === true;
+  // The model is not asked: it cannot see these limits, and a choice the line cannot draw would only be retried.
+  const hops = hopsFit;
   const startVariable = startNumber ? variableAlias(startNumber) : undefined;
   const changeVariable = changeNumber ? variableAlias(changeNumber) : undefined;
   const built = buildNumberLine({
