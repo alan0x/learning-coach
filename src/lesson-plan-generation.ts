@@ -404,13 +404,25 @@ function lowerModelOutline(value: unknown, requestPartCount = 0): unknown {
   const candidate = root as Record<string, unknown>;
   candidate.version = LESSON_PLAN_VERSION;
   if (Array.isArray(candidate.numbers)) {
-    candidate.numbers = candidate.numbers.map((entry) => {
+    candidate.numbers = candidate.numbers.map((entry, index) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
       const number = { ...(entry as Record<string, unknown>) };
       delete number.student_control;
       if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
       if (typeof number.label === "string" && !number.label.trim()) delete number.label;
+      const written = { initial: number.initial, min: number.min, max: number.max };
       normalizeModelNumberRange(number);
+      // A starting value written at the wrong scale (2/3 as mantissa 666666666667, scale 1) would widen
+      // the range past anything a lesson can draw (a span over 1,000,000), and fail later where only a
+      // section is retried, never the outline (runs 5 and 6). Refuse it here, where the outline is retried.
+      if (typeof number.min === "number" && typeof number.max === "number" && number.max - number.min > 1e6
+        && typeof written.min === "number" && typeof written.max === "number" && Math.abs(written.max - written.min) <= 1e6) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_NUMBER_RANGE",
+          `$lessonPlanOutline.numbers[${index}].initial`,
+          `the starting value ${String(written.initial)} lies far outside its range ${String(written.min)} to ${String(written.max)}; check the mantissa and scale (2/3 is mantissa 666667 with scale 6)`,
+        );
+      }
       if (typeof number.min === "number"
         && Number.isFinite(number.min)
         && typeof number.max === "number"

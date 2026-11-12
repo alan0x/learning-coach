@@ -613,7 +613,15 @@ function compileNumberLine(
     if (parts) return { step: 1, subdivisions: parts };
     return undefined;
   };
-  const { step, subdivisions } = ticksFor(grid) ?? ticksFor(shown) ?? { step: span <= 60 ? 1 : span <= 150 ? 5 : 10, subdivisions: 1 };
+  const ticks = ticksFor(grid) ?? ticksFor(shown);
+  // Values no ticks can hold (2/3 and 3/5 together need fifteenths) would sit between ticks with no
+  // number under them. Refuse, so the model can choose another visual or other values: a line the
+  // learner cannot read teaches nothing (run 6, NM-01, three times).
+  if (!ticks) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`,
+      "a number line can split each unit into at most 12 equal parts; these values need finer ticks, so use another visual or values whose fractions share a denominator up to 12");
+  }
+  const { step, subdivisions } = ticks;
   // Hops are counted on the ticks actually drawn: every reachable change, and the slider's step,
   // must be a whole number of the smallest ticks, and the longest change at most 24 of them.
   const unit = step / subdivisions;

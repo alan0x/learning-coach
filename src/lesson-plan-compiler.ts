@@ -335,12 +335,12 @@ function compilePlainContent(
 function resolveMetNumberTargets(plan: LessonPlan): void {
   const lineNumbers = new Set<number>();
   // Where each number's line is first drawn, so the number can move there as the line appears.
-  const lineCreations = new Map<number, LessonPlan["sections"][number]["moments"][number]>();
+  const lineCreations = new Map<number, { moment: LessonPlan["sections"][number]["moments"][number]; isStart: boolean }>();
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "number_line") {
-      for (const number of (action.content as LessonPlanVisualContent).numbers ?? []) {
+      for (const [position, number] of ((action.content as LessonPlanVisualContent).numbers ?? []).entries()) {
         lineNumbers.add(number);
-        if (!lineCreations.has(number)) lineCreations.set(number, moment);
+        if (!lineCreations.has(number)) lineCreations.set(number, { moment, isStart: position === 0 });
       }
     }
   }
@@ -380,9 +380,15 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
         const shown = definition.initial;
         definition.initial = reset;
         // Appended, never inserted: references were recorded by each action's position.
+        // The change moves while the teacher speaks, as the demonstration itself ("move 3 quarters");
+        // the start moves before the speech, so the line never shows another problem while the
+        // teacher says "we start at 5".
         const created = lineCreations.get(number);
-        if (created && !created.actions.some((action) => action.action === "animate" && action.number === number)) {
-          created.actions.push({ action: "animate", number, end_value: shown, easing: "ease_in_out", duration_intent: "normal", timing: "during_speech" });
+        if (created && !created.moment.actions.some((action) => action.action === "animate" && action.number === number)) {
+          created.moment.actions.push({
+            action: "animate", number, end_value: shown, easing: "ease_in_out",
+            duration_intent: created.isStart ? "brief" : "normal", timing: created.isStart ? "before_speech" : "during_speech",
+          });
         }
       }
       if (met(valueAtEnd(number)) && !resetNumbers.has(number)) {

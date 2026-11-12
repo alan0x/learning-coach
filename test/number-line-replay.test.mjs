@@ -98,3 +98,21 @@ test("a lesson of two sections: every compile of the growing lesson returns the 
   }
 });
 
+test("a starting value at the wrong scale is refused in the outline, where a retry can fix it (NL-18 in runs 5 and 6)", async () => {
+  // The model wrote 2/3 as mantissa 666666666667 with scale 1. Before, the range widened to fit it
+  // and the lesson failed three times at compile, where only the section is retried.
+  const turn = run5.turns.find((entry) => entry.pair === 55);
+  const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+  const requests = [], rejected = [];
+  await assert.rejects(generateLessonPlanWithModel(async (request) => {
+    requests.push(request.label);
+    if (requests.length > 1) throw new Error("stop after the retry is requested");
+    return JSON.stringify(turn.replies[0]);
+  }, { turn_id: "scale", learner_request: caseById.get("NL-18").prompt, input_modality: "text", request_source: "self_contained" }, {
+    on_rejected_part: (event) => rejected.push(event),
+  }));
+  assert.deepEqual(requests, ["lesson-plan-bootstrap", "lesson-plan-outline"]);
+  assert.equal(rejected[0].error.code, "LESSON_PLAN_NUMBER_RANGE");
+  assert.match(rejected[0].error.message, /mantissa and scale/);
+});
+

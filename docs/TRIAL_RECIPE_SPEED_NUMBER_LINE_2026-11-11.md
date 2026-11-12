@@ -305,3 +305,36 @@ Owner-approved; 107 model calls (about $0.80); `eval/trial-recipe-speed-number-l
 - **Quality:** the hard checks above and the slip rule (option B). Near misses that draw a number line are hard misses.
 - **Speed (option a):** the paired median must be at most +0.5 s. If run 6 misses only on speed and the 95% interval of its median includes zero, the 20 speed pairs are repeated once, without quality cases (about $0.35), and speed is judged on all 40 pairs. No further repeats.
 - Approved: about $0.95, `--pairs 20 --quality-repeats 3 --max-calls 130`.
+
+## Run 6: speed passes; quality fails
+
+Owner-approved; 111 model calls (about $0.95); `eval/trial-recipe-speed-number-line-2026-11-11-run6.json`. Raw replies are kept locally.
+
+**Speed: passes by the rule set before the run.**
+- Paired median −2.8 s, 95% interval [−5.9, −0.6]; the candidate prompt adds +107 tokens.
+- The gain is not a recipe effect: the baseline's median moved from 7.7 s to 10.0 s on an identical prompt, and retries were similar on both arms (6 and 5 turns).
+- Honest reading: no sign of a slowdown.
+- Recipe chosen for 10 of 10 number-line requests and 0 of 10 others.
+
+**Number-line requests: 39 of 40 pass every hard check.**
+- The 40th is NL-18 hitting the call cap: the same decimal-scale slip as in run 5 (2/3 written as mantissa 666666666667, scale 1). That is 2 of 6 NL-18 turns across the two runs.
+- The reset (option a) fired in **22 of 40** lessons. "Show it, then ask the learner to do it" is the model's normal pattern.
+- Rendering the reset step by step found a flaw: when the reset applied to the *start*, the line appeared as 0 − 8 while the teacher said "we start at 5", before moving. Fixed: the start now moves before the speech; the change still moves during it, as the demonstration.
+- The judge treated a practice target as something the lesson shows, so it could not have caught a line that showed a wrong problem throughout. It now checks values only against what the lesson shows (starting values, then each animation in order). No run 5 or run 6 lesson fails the stricter check.
+
+**Near misses: 7 hard misses on 5 requests; fails the slip rule.**
+- NM-01 ("compare 2/3 and 3/5") drew a number line 3 of 3 times, each misleading: one point on whole ticks while the narration describes fifteenths. The card's "fractions over twelfths" didn't exclude it, because 2/3 and 3/5 have small denominators; their common one, 15, is the problem.
+- NM-02 (x > −2) once, misleading.
+- NM-03 (rounding 47) once: a point at 47, never showing 50.
+- NM-04 (|x − 3| < 2) once hit the call cap through a *function plot*, not a number line. Judging near misses as "recipe not used" was too coarse: it charged NM-04's plot failure to the number line and missed that NM-03's line was partly sound.
+- Twice the narration said a component "does not support" something. That is the existing rule (line 147 of the generation prompt: when the visual form isn't possible, teach with another and say in one sentence what was substituted), phrased technically. No new rule added.
+
+**Fixes after run 6 (offline).**
+- **Card text is not a control; the compiler is.** When no ticks can hold the lesson's own values, the number line is now refused with a message the model can act on ("at most 12 equal parts … use another visual …"), instead of being drawn unreadable. This reverses "nothing here rejects" for lines that would be unreadable anyway; the cost is a retry. On run 6's replies, NM-01 is refused; only a live run shows what the model chooses next.
+- **A number at the wrong scale is refused where a retry can fix it.** Widening a range to fit a starting value is refused when it would exceed the 1,000,000 span no lesson can draw. The error goes to the outline retry (tested on NL-18's reply), not to section retries that cannot change it. The other recipes' 920 recorded lesson digests are unchanged.
+- **Near misses for the next run:**
+  - a lesson that avoids the number line passes;
+  - one that draws it gets the ordinary hard checks against the values the request needs (2/3 and 0.6; −2; 47 and 50; 1 and 5), plus a hand read;
+  - near misses run on both arms, so a lesson can be compared with what the request gets today.
+- **When generation gives up,** the learner sees "课程生成失败，请重试。" ("lesson generation failed, please try again").
+

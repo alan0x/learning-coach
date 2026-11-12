@@ -173,7 +173,7 @@ test("the harness runs pairs and quality cases, keeps raw replies, judges each c
     { timeout: 60000 }, (error) => (error ? fail(error) : done())));
   await run(100, join(dir, "full.json"));
   const full = JSON.parse(await readFile(join(dir, "full.json"), "utf8"));
-  assert.equal(full.rows.length, 4 + NUMBER_LINE_QUALITY_CASES.length, "2 pairs, then every quality case once");
+  assert.equal(full.rows.length, 4 + NUMBER_LINE_QUALITY_CASES.length + 4, "2 pairs, every quality case once, and near misses on the baseline arm too");
   assert.equal(full.summary.all.complete_pairs, 2);
   assert.equal(full.summary.not_run, undefined);
   const raw = (await readdir(full.work_dir)).filter((name) => name.endsWith(".raw-model.txt"));
@@ -186,8 +186,10 @@ test("the harness runs pairs and quality cases, keeps raw replies, judges each c
   assert.match(nl11.quality.hard.join(), /wrong value: 0\.3 is never shown/);
   assert.equal(nl11.quality.review, "later sections not judged: read by hand");
   assert.equal(full.summary.quality.near_misses_for_review.length, 4);
-  // Near misses are judged mechanically since the card excludes them: drawing the number line is a hard miss.
-  assert.ok(full.rows.filter((row) => row.kind === "near_miss").every((row) => row.quality?.hard[0] === "the number line was drawn for a request it cannot show"));
+  // Near misses run on both arms; a candidate one that draws a number line is checked and read by hand.
+  const nearMisses = full.rows.filter((row) => row.kind === "near_miss");
+  assert.equal(nearMisses.filter((row) => row.arm === "baseline").length, 4);
+  assert.ok(nearMisses.filter((row) => row.arm === "candidate").every((row) => row.quality?.review === "near miss drew a number line: read by hand"));
   // A budget too small for the plan is reported, never passed over.
   await run(3, join(dir, "short.json"));
   const short = JSON.parse(await readFile(join(dir, "short.json"), "utf8"));

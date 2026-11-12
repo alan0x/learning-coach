@@ -69,9 +69,11 @@ export const NUMBER_LINE_CASES = [
 /**
  * Quality cases, run once each on the candidate arm only (no speed pair), written before run 5:
  * - held-out number line requests no fix was tuned against (NL-11 to NL-18);
- * - near misses the recipe cannot express (NM-01 to NM-04): fifteenths (comparing 2/3 and 3/5), an
- *   inequality, rounding, an absolute value. The recipe card excludes them (owner, after run 5), so
- *   drawing a number line for one is a hard miss.
+ * - near misses the recipe cannot fully express (NM-01 to NM-04): fifteenths (comparing 2/3 and 3/5),
+ *   an inequality, rounding, an absolute value. The card excludes them (owner, after run 5). A lesson
+ *   that avoids the number line passes; one that draws it gets the ordinary hard checks against the
+ *   values the request needs, and is read by hand. They run on both arms, so a lesson can be compared
+ *   with what the same request gets today.
  */
 export const NUMBER_LINE_QUALITY_CASES = [
   { id: "NL-11", prompt: "在数轴上从 0.3 出发加 0.4 是多少？", expect: { values: [0.3, 0.7], parts: 10, format: "decimal" } },
@@ -84,10 +86,10 @@ export const NUMBER_LINE_QUALITY_CASES = [
   { id: "NL-18", prompt: "Show 2/3 - 1/3 on a number line.", expect: { values: [2 / 3, 1 / 3], parts: 3 } },
   { id: "NL-19", prompt: "用数轴算 23 + 48。", expect: { values: [23, 71], change: 48 } },
   { id: "NL-20", prompt: "Use an open number line to add 17 and 26.", expect: { values: [17, 43], change: 26 } },
-  { id: "NM-01", prompt: "用数轴比较 2/3 和 3/5 哪个大。", nearMiss: true, expect: { notRecipe: true } },
-  { id: "NM-02", prompt: "Graph x > -2 on a number line.", nearMiss: true, expect: { notRecipe: true } },
-  { id: "NM-03", prompt: "用数轴说明 47 四舍五入到十位是多少。", nearMiss: true, expect: { notRecipe: true } },
-  { id: "NM-04", prompt: "Solve |x - 3| < 2 on a number line.", nearMiss: true, expect: { notRecipe: true } },
+  { id: "NM-01", prompt: "用数轴比较 2/3 和 3/5 哪个大。", nearMiss: true, expect: { values: [2 / 3, 0.6] } },
+  { id: "NM-02", prompt: "Graph x > -2 on a number line.", nearMiss: true, expect: { values: [-2] } },
+  { id: "NM-03", prompt: "用数轴说明 47 四舍五入到十位是多少。", nearMiss: true, expect: { values: [47, 50] } },
+  { id: "NM-04", prompt: "Solve |x - 3| < 2 on a number line.", nearMiss: true, expect: { values: [1, 5] } },
 ];
 export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES };
 
@@ -162,6 +164,19 @@ export function numberLineStates({ content, variables, tasks, animations }) {
   })));
 }
 
+/** The points' values in each state the lesson shows: the starting values, then after each animation. */
+export function lessonShownStates({ content, variables, animations }) {
+  const sequence = [];
+  let current = Object.fromEntries(variables.map((variable) => [variable.as, variable.initial]));
+  const pointsAt = (values) => numberLineStates({ content, variables: Object.entries(values).map(([as, initial]) => ({ as, initial })), tasks: [], animations: [] })[0];
+  sequence.push(pointsAt(current));
+  for (const [variable, value] of animations) {
+    current = { ...current, [variable]: value };
+    sequence.push(pointsAt(current));
+  }
+  return sequence;
+}
+
 /**
  * Judges one number line against its case's expectations (set before the run):
  * - hard: compiled; every value the question names is shown by a point in some state; the asked-for
@@ -174,15 +189,19 @@ export function numberLineStates({ content, variables, tasks, animations }) {
  */
 export function judgeNumberLine(item, lesson) {
   const hard = [], soft = [];
-  if (item.expect?.notRecipe) return { hard: lesson ? ["the number line was drawn for a request it cannot show"] : [], soft };
+  if (item.nearMiss && !lesson) return { hard: [], soft };
   if (!lesson) return { hard: ["no number line"], soft };
   if (lesson.error) return { hard: [`compile error: ${String(lesson.error).slice(0, 80)}`], soft };
   const { content, variables, animations } = lesson;
   const states = numberLineStates(lesson);
   const expect = item.expect ?? {};
+  // What the lesson itself shows: its starting values, then each animation in order. A practice
+  // target is the learner's to reach, not something the lesson shows (run 6: a line that showed
+  // 0 − 8 throughout would have passed "5 − 8" on the task's target alone).
+  const shownStates = lessonShownStates(lesson);
   for (const value of expect.values ?? []) {
-    if (!states.some((state) => Object.values(state).some((shown) => close(shown, value)))) {
-      hard.push(`wrong value: ${Number(value.toFixed(4))} is never shown (points: ${[...new Set(states.flatMap((state) => Object.values(state)).map((shown) => Number(shown.toFixed(4))))].join(", ")})`);
+    if (!shownStates.some((state) => Object.values(state).some((shown) => close(shown, value)))) {
+      hard.push(`wrong value: ${Number(value.toFixed(4))} is never shown (points: ${[...new Set(shownStates.flatMap((state) => Object.values(state)).map((shown) => Number(shown.toFixed(4))))].join(", ")})`);
     }
   }
   if (expect.change !== undefined) {
@@ -286,7 +305,7 @@ export function summarize(rows) {
     hard_pass: judged.filter((row) => !row.quality.hard.length).length,
     hard_misses: judged.filter((row) => row.quality.hard.length).map((row) => ({ case: row.case, hard: row.quality.hard, ...(row.quality.review ? { review: row.quality.review } : {}) })),
     soft_misses: judged.filter((row) => row.quality.soft.length).map((row) => ({ case: row.case, soft: row.quality.soft })),
-    near_misses_for_review: rows.filter((row) => row.kind === "near_miss").map((row) => ({ case: row.case, recipes: row.recipes ?? null })),
+    near_misses_for_review: rows.filter((row) => row.kind === "near_miss" && row.arm === "candidate").map((row) => ({ case: row.case, recipes: row.recipes ?? null })),
     verdict: slipVerdict(judged),
   } : undefined;
   // Speed is measured on the pairs only; quality cases run on one arm and would skew the medians.
@@ -350,6 +369,7 @@ async function main() {
     // The run stops at the first playable part, so the judge sees only the first section; when the
     // outline has more, a later section may show what the first lacks, and the miss is read by hand.
     if (row.quality?.hard.length && row.sections > 1) row.quality.review = "later sections not judged: read by hand";
+    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).includes("number_line")) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew a number line: read by hand" };
     rows.push(row);
     console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null, ...(row.quality ? { hard: row.quality.hard } : {}) }));
     await persist();
@@ -366,11 +386,15 @@ async function main() {
   const queue = Array.from({ length: repeats }, () => qualityCases).flat();
   for (const [index, item] of queue.entries()) {
     if (budget.remaining <= 0) break;
-    await runOne(pairs + index, item, "candidate", ["candidate"]);
+    // Near misses run on both arms, alternating which goes first, so a lesson can be read against
+    // what the same request gets without the recipe.
+    const arms = item.nearMiss ? (index % 2 ? ["candidate", "baseline"] : ["baseline", "candidate"]) : ["candidate"];
+    for (const arm of arms) if (budget.remaining > 0) await runOne(pairs + index, item, arm, arms);
   }
   // Every planned case must have run: a budget that ran out is reported, not passed over.
   const ran = rows.filter((row) => row.arm === "candidate").length;
   const planned = pairs + queue.length;
+  // (Baseline near-miss runs are extra and not counted against the candidate plan.)
   notRun.push(...(ran < planned ? [`${planned - ran} candidate runs did not run (budget ${maxCalls} calls)`] : []));
   await persist();
   console.log(JSON.stringify({ ...summarize(rows), ...(notRun.length ? { not_run: notRun } : {}) }, null, 2));

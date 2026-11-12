@@ -16102,7 +16102,15 @@ function compileNumberLine(base, content, role, placement, plan, path) {
     if (parts) return { step: 1, subdivisions: parts };
     return void 0;
   };
-  const { step, subdivisions } = ticksFor(grid) ?? ticksFor(shown) ?? { step: span2 <= 60 ? 1 : span2 <= 150 ? 5 : 10, subdivisions: 1 };
+  const ticks = ticksFor(grid) ?? ticksFor(shown);
+  if (!ticks) {
+    fail2(
+      "LESSON_PLAN_CAPABILITY_PARAMETER",
+      `${path}.numbers`,
+      "a number line can split each unit into at most 12 equal parts; these values need finer ticks, so use another visual or values whose fractions share a denominator up to 12"
+    );
+  }
+  const { step, subdivisions } = ticks;
   const unit = step / subdivisions;
   const whole = (value2) => onGrid(value2 / unit, 1);
   const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
@@ -16514,9 +16522,9 @@ function resolveMetNumberTargets(plan) {
   const lineCreations = /* @__PURE__ */ new Map();
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action === "create" && action.kind === "visual" && action.content.capability === "number_line") {
-      for (const number of action.content.numbers ?? []) {
+      for (const [position, number] of (action.content.numbers ?? []).entries()) {
         lineNumbers.add(number);
-        if (!lineCreations.has(number)) lineCreations.set(number, moment);
+        if (!lineCreations.has(number)) lineCreations.set(number, { moment, isStart: position === 0 });
       }
     }
   }
@@ -16553,8 +16561,15 @@ function resolveMetNumberTargets(plan) {
         const shown = definition.initial;
         definition.initial = reset;
         const created = lineCreations.get(number);
-        if (created && !created.actions.some((action) => action.action === "animate" && action.number === number)) {
-          created.actions.push({ action: "animate", number, end_value: shown, easing: "ease_in_out", duration_intent: "normal", timing: "during_speech" });
+        if (created && !created.moment.actions.some((action) => action.action === "animate" && action.number === number)) {
+          created.moment.actions.push({
+            action: "animate",
+            number,
+            end_value: shown,
+            easing: "ease_in_out",
+            duration_intent: created.isStart ? "brief" : "normal",
+            timing: created.isStart ? "before_speech" : "during_speech"
+          });
         }
       }
       if (met(valueAtEnd(number)) && !resetNumbers.has(number)) {
@@ -17897,13 +17912,21 @@ function lowerModelOutline(value2, requestPartCount = 0) {
   const candidate = root;
   candidate.version = LESSON_PLAN_VERSION;
   if (Array.isArray(candidate.numbers)) {
-    candidate.numbers = candidate.numbers.map((entry) => {
+    candidate.numbers = candidate.numbers.map((entry, index) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
       const number = { ...entry };
       delete number.student_control;
       if (typeof number.unit === "string" && !number.unit.trim()) delete number.unit;
       if (typeof number.label === "string" && !number.label.trim()) delete number.label;
+      const written = { initial: number.initial, min: number.min, max: number.max };
       normalizeModelNumberRange(number);
+      if (typeof number.min === "number" && typeof number.max === "number" && number.max - number.min > 1e6 && typeof written.min === "number" && typeof written.max === "number" && Math.abs(written.max - written.min) <= 1e6) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_NUMBER_RANGE",
+          `$lessonPlanOutline.numbers[${index}].initial`,
+          `the starting value ${String(written.initial)} lies far outside its range ${String(written.min)} to ${String(written.max)}; check the mantissa and scale (2/3 is mantissa 666667 with scale 6)`
+        );
+      }
       if (typeof number.min === "number" && Number.isFinite(number.min) && typeof number.max === "number" && Number.isFinite(number.max) && number.max > number.min) {
         number.student_control = {
           kind: "slider",
