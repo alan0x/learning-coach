@@ -1,4 +1,5 @@
 import { appendFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { frameRawReply } from "./raw-reply.js";
 import { checkPluginIds, parsePluginSignal, PluginSignalError, pluginsOutsideScope, shadowScope, type PluginSignal } from "./plugin-signal.js";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
@@ -1823,6 +1824,10 @@ async function callStreamingBootstrapModel(
         lesson_plan_part: request.lessonPlanPart ?? "bootstrap",
         ...(request.lessonPlanAttempt === undefined ? {} : { lesson_plan_attempt: request.lessonPlanAttempt }),
       });
+      if (process.env.OLL_DEBUG_GENERATION === "1") {
+        // The streamed reply, as the non-streaming path logs its payload (evaluation harnesses keep these).
+        process.stderr.write(frameRawReply({ provider, label: request.label, kind: "content", body: result.content }));
+      }
       return result.content;
     }
     throw new ToolExecutionError(
@@ -2005,7 +2010,7 @@ export async function callStructuredModel(
       throw new Error(`${providerName} returned a non-JSON API response: ${(error as Error).message}`);
     }
     if (process.env.OLL_DEBUG_GENERATION === "1") {
-      process.stderr.write(`learning-coach: raw ${providerName} ${request.label} payload: ${JSON.stringify(payload).slice(0, 16_000)}\n`);
+      process.stderr.write(frameRawReply({ provider: providerName, label: request.label, kind: "payload", body: payload }));
     }
     const content = geminiResponseContent(payload, provider);
     const root = isRecord(payload) ? payload : {};

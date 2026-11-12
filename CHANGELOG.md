@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Number line, after speed gate run 4.**
+  - The `denominator` parameter is removed. With it, the model wrote numerators: 3 for 3/4.
+  - The values choose the denominator; a coarse slider step (1/2 to 1/6) counts only when the values are whole.
+  - A start that nothing drives is kept near its value, even with a slider.
+  - An offline replay of run 4's ten lessons meets the run 5 criteria.
+  - With `OLL_DEBUG_GENERATION=1`, streamed model replies are logged too, and the speed harness keeps them.
 - **Number line fitted to the lesson** (trial recipe): the program fits a number line's numbers to what the lesson teaches, so fraction lessons show their fraction ticks and lines stay readable (`docs/TRIAL_RECIPE_SPEED_NUMBER_LINE_2026-11-11.md`, "The fit").
   - The model may give a `denominator` (1–12, clamped). Otherwise it is taken from the lesson's values and clean slider steps.
   - Starting values, ranges, slider steps, animation targets and practice targets snap to its ticks.

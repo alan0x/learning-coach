@@ -141,7 +141,9 @@ async function main() {
   // "motion" marks requests the trial recipe fits, whichever recipe that is.
   const cases = fitting.flatMap((fit, index) => [{ ...fit, kind: "motion" }, { ...heldOut.get(OTHER_CASE_IDS[index]), kind: "other" }]);
   const workDir = await mkdtemp(join(tmpdir(), "coach-trial-"));
-  const env = { ...process.env, ...routeEnv, OCTOS_WORK_DIR: workDir };
+  // Coach logs each raw model reply, which the harness keeps beside the run's compiled parts, so a
+  // later fit can be replayed against what the model actually wrote at no cost.
+  const env = { ...process.env, ...routeEnv, OCTOS_WORK_DIR: workDir, OLL_DEBUG_GENERATION: "1" };
   delete env.LEARNING_COACH_TRIAL_RECIPES;
   const route = { provider: routeEnv.OCTOS_PROFILE_LLM_PROVIDER, model: routeEnv.OCTOS_PROFILE_LLM_MODEL };
   const budget = { remaining: maxCalls };
@@ -153,7 +155,7 @@ async function main() {
     await writeFile(resolve(out), `${JSON.stringify({ measured_at: new Date().toISOString(), ...route, trial_recipes: recipes, pairs, max_calls: maxCalls, work_dir: workDir, summary: summarize(rows), rows }, null, 1)}\n`);
   };
   console.error(JSON.stringify({ stage: "trial-recipe-speed", ...route, trial_recipes: recipes, pairs, max_calls: maxCalls }));
-  const { readFileSync } = await import("node:fs");
+  const { appendFileSync, readFileSync } = await import("node:fs");
   for (let pair = 0; pair < pairs && budget.remaining > 0; pair += 1) {
     const item = cases[pair % cases.length];
     const order = Math.floor(pair / 2) % 2 === 0 ? ["baseline", "candidate"] : ["candidate", "baseline"];
@@ -163,6 +165,7 @@ async function main() {
       const tool = await runTool({
         build, input, env: arm === "candidate" ? { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes } : env,
         maxCalls: Math.min(3, budget.remaining), onCall: () => { budget.remaining -= 1; },
+        onRaw: (line) => appendFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), `${line}\n`),
         onFirstPart: (path) => {
           try {
             const part = JSON.parse(readFileSync(path, "utf8"));
