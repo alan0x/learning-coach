@@ -45,3 +45,64 @@ test("a first part's number line is summarised for judging quality", () => {
   });
   assert.equal(numberLineInPart({ steps: [] }), undefined);
 });
+
+// The number line judge (hard and soft checks, set before run 5).
+const { judgeNumberLine, numberLineStates, NUMBER_LINE_QUALITY_CASES, TRIAL_QUALITY_CASES } = await import("../scripts/eval-trial-recipe-speed.mjs");
+const lineLesson = ({ range = { min: -4, max: 4 }, ticks = { step: 1 }, start = 3, change = -5, changeRange = [-5, 0], animations = [], tasks = [], latentEnd = false } = {}) => ({
+  content: {
+    range, ticks,
+    points: [{ as: "start", value: start, label: "起点" }, { as: "end", value: start + change, label: "终点", ...(latentEnd ? { shown: "when_emphasized" } : {}) }],
+    jumps: [{ as: "move", from: "start", by: change, hops: true }],
+    bindings: [{ target: "start.value", expression: "number_01" }, { target: "end.value", expression: "(number_01)+(number_02)" }, { target: "move.by", expression: "number_02" }],
+  },
+  variables: [{ as: "number_01", initial: start, min: start - 1, max: start + 1 }, { as: "number_02", initial: change, min: changeRange[0], max: changeRange[1] }],
+  tasks, animations,
+});
+
+test("number line states combine each variable's starting, animated and target values", () => {
+  const states = numberLineStates(lineLesson({ animations: [["number_02", -4]], tasks: [{ completion: { kind: "expression_target", expression: "number_01", value: 2 } }] }));
+  assert.deepEqual(states.map((state) => [state.start, state.end]), [[3, -2], [3, -1], [2, -3], [2, -2]]);
+});
+
+test("the judge passes a correct line and names each hard miss", () => {
+  const item = { expect: { values: [3, -2], change: -5, integer: true } };
+  assert.deepEqual(judgeNumberLine(item, lineLesson()), { hard: [], soft: [] });
+  // The numerator mistake of run 4: 3/4 drawn as 3.
+  assert.match(judgeNumberLine({ expect: { values: [0.75], parts: 4 } }, lineLesson({ range: { min: -1, max: 5 }, ticks: { step: 1, subdivisions: 4 }, start: 0, change: 3, changeRange: [0, 3] })).hard.join(), /wrong value: 0\.75 is never shown/);
+  assert.match(judgeNumberLine(item, lineLesson({ changeRange: [-5, -4], change: -4 })).hard.join(), /cannot reach -5|wrong value/);
+  // A point stopped between ticks has no number under it.
+  assert.match(judgeNumberLine({ expect: {} }, lineLesson({ animations: [["number_02", -4.5]] })).hard.join(), /unreadable: end at -1\.5/);
+  // A fourth under "major" labels is unlabelled: a point there is unreadable, as the learner sees it.
+  assert.match(judgeNumberLine({ expect: {} }, lineLesson({ ticks: { step: 1, subdivisions: 4 }, start: 0, change: 0.75, changeRange: [0, 1] })).hard.join(), /unreadable: end at 0\.75/);
+  // A hidden end is not judged for readability; it is kept back on purpose.
+  assert.deepEqual(judgeNumberLine({ expect: {} }, lineLesson({ ticks: { step: 1, subdivisions: 4 }, start: 0, change: 0.75, changeRange: [0, 1], latentEnd: true })).hard, []);
+  assert.match(judgeNumberLine(item, { error: "boom" }).hard.join(), /compile error/);
+  assert.deepEqual(judgeNumberLine(item, undefined).hard, ["no number line"]);
+});
+
+test("width, hops and parts are soft", () => {
+  const { hard, soft } = judgeNumberLine({ expect: { values: [3, -2], change: -5, integer: true, parts: 2 } }, lineLesson({ range: { min: -20, max: 20 } }));
+  assert.deepEqual(hard, []);
+  assert.deepEqual(soft, ["1 parts, not 2", "40 units wide"]);
+});
+
+test("quality cases are written before the run: every held-out case expects values, near misses are read by hand", () => {
+  assert.equal(TRIAL_QUALITY_CASES.number_line, NUMBER_LINE_QUALITY_CASES);
+  for (const item of NUMBER_LINE_QUALITY_CASES) assert.ok(item.nearMiss || item.expect?.values?.length, item.id);
+  for (const item of NUMBER_LINE_CASES) assert.ok(item.expect?.values?.length, item.id);
+  assert.equal(new Set([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES].map((item) => item.id)).size, 22);
+});
+
+test("speed is summarized over the pairs only; quality rows are summarized apart", () => {
+  const row = (pair, arm, kind, ms, extra = {}) => ({ pair, arm, kind, case: `C-${pair}`, outcome: "first_playable", first_playable_ms: ms, prompt_tokens: 1, ...extra });
+  const summary = summarize([
+    row(0, "baseline", "motion", 1000), row(0, "candidate", "motion", 1100, { quality: { hard: [], soft: [] } }),
+    row(1, "candidate", "quality", 99999, { quality: { hard: ["wrong value: 0.75 is never shown"], soft: [] } }),
+    row(2, "candidate", "near_miss", 5000, { recipes: ["number_line"] }),
+  ]);
+  assert.equal(summary.all.p50_first_playable_ms.candidate, 1100);
+  assert.equal(summary.quality.judged, 2);
+  assert.equal(summary.quality.hard_pass, 1);
+  assert.deepEqual(summary.quality.hard_misses, [{ case: "C-1", hard: ["wrong value: 0.75 is never shown"] }]);
+  assert.deepEqual(summary.quality.near_misses_for_review, [{ case: "C-2", recipes: ["number_line"] }]);
+});

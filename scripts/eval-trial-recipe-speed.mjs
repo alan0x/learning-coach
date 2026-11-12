@@ -24,6 +24,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { profileRouteEnvironment } from "./eval-payload-padding.mjs";
 import { runTool, caseLanguage } from "./eval-shadow-speed.mjs";
+import { planNumberLineTicks } from "octos-lesson-language/plugin-math";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -40,19 +41,51 @@ export const MOTION_CASES = [
   { id: "CS-09", prompt: "小明以 1.5 m/s 匀速走路，10 秒走多远？用图像讲讲。" },
   { id: "CS-10", prompt: "Explain speed = distance ÷ time with a moving object." },
 ];
-/** Requests the number line recipe fits (OLL decision 0013): integers, fractions and decimals on a line, Chinese and English. */
+/**
+ * Requests the number line recipe fits (OLL decision 0013): integers, fractions and decimals on a
+ * line, Chinese and English. Each says, before any run, what a correct line must show:
+ * - `values`: numbers some point must sit on, in some state the lesson reaches (a hard check);
+ * - `change`: the change the question asks for, which a slider or an animation must reach (hard);
+ * - `parts`: the parts per unit a well-chosen line uses (soft: other parts can still be right);
+ * - `integer`: an integer question, whose line should span at most 24 units with hops (soft).
+ * NL-01 to NL-10 are the requests runs 1–4 were tuned against.
+ */
 export const NUMBER_LINE_CASES = [
-  { id: "NL-01", prompt: "用数轴讲一讲 3 加上负 5 等于多少。" },
-  { id: "NL-02", prompt: "Show me on a number line why -2 + 7 = 5." },
-  { id: "NL-03", prompt: "3/4 在数轴上的哪里？" },
-  { id: "NL-04", prompt: "How do I add 1/4 and 2/4 on a number line?" },
-  { id: "NL-05", prompt: "温度从零下 3 度升高 8 度，用数轴表示是多少度？" },
-  { id: "NL-06", prompt: "Use a number line to explain 6 - 9." },
-  { id: "NL-07", prompt: "在数轴上比较 0.5 和 0.8 哪个大。" },
-  { id: "NL-08", prompt: "Why is -4 less than -1? Show it on a number line." },
-  { id: "NL-09", prompt: "从 1/3 出发，再加 2/3，在数轴上是多少？" },
-  { id: "NL-10", prompt: "Count by fourths from 0 to 2 on a number line." },
+  { id: "NL-01", prompt: "用数轴讲一讲 3 加上负 5 等于多少。", expect: { values: [3, -2], change: -5, integer: true } },
+  { id: "NL-02", prompt: "Show me on a number line why -2 + 7 = 5.", expect: { values: [-2, 5], change: 7, integer: true } },
+  { id: "NL-03", prompt: "3/4 在数轴上的哪里？", expect: { values: [0.75], parts: 4 } },
+  { id: "NL-04", prompt: "How do I add 1/4 and 2/4 on a number line?", expect: { values: [0.25, 0.75], parts: 4 } },
+  { id: "NL-05", prompt: "温度从零下 3 度升高 8 度，用数轴表示是多少度？", expect: { values: [-3, 5], change: 8, integer: true } },
+  { id: "NL-06", prompt: "Use a number line to explain 6 - 9.", expect: { values: [6, -3], change: -9, integer: true } },
+  { id: "NL-07", prompt: "在数轴上比较 0.5 和 0.8 哪个大。", expect: { values: [0.5, 0.8], parts: 10 } },
+  { id: "NL-08", prompt: "Why is -4 less than -1? Show it on a number line.", expect: { values: [-4, -1], change: -3, integer: true } },
+  { id: "NL-09", prompt: "从 1/3 出发，再加 2/3，在数轴上是多少？", expect: { values: [1 / 3, 1], parts: 3 } },
+  { id: "NL-10", prompt: "Count by fourths from 0 to 2 on a number line.", expect: { values: [0, 2], parts: 4 } },
 ];
+
+/**
+ * Quality cases, run once each on the candidate arm only (no speed pair), written before run 5:
+ * - held-out number line requests no fix was tuned against (NL-11 to NL-18);
+ * - near misses the recipe cannot express (NM-01 to NM-04): comparing two fractions, an
+ *   inequality, rounding, an absolute value. A live lesson will meet them; if the model uses the
+ *   recipe for one, the line is read by hand, and a misleading one is a hard failure.
+ */
+export const NUMBER_LINE_QUALITY_CASES = [
+  { id: "NL-11", prompt: "在数轴上从 0.3 出发加 0.4 是多少？", expect: { values: [0.3, 0.7], parts: 10 } },
+  { id: "NL-12", prompt: "Show -1/2 + 3/4 on a number line.", expect: { values: [-0.5, 0.25], parts: 4 } },
+  { id: "NL-13", prompt: "用数轴表示 1 又 1/2 加上 1 又 1/4。", expect: { values: [1.5, 2.75], parts: 4 } },
+  { id: "NL-14", prompt: "Use a number line to show 5 - 8.", expect: { values: [5, -3], change: -8, integer: true } },
+  { id: "NL-15", prompt: "在 0 到 100 的数轴上，从 35 往后数 40 是多少？", expect: { values: [35, 75], change: 40 } },
+  { id: "NL-16", prompt: "What is -2.5 + 4? Show it on a number line.", expect: { values: [-2.5, 1.5], parts: 2 } },
+  { id: "NL-17", prompt: "从 -6 出发向右走 6 格，用数轴看看到了哪里。", expect: { values: [-6, 0], change: 6, integer: true } },
+  { id: "NL-18", prompt: "Show 2/3 - 1/3 on a number line.", expect: { values: [2 / 3, 1 / 3], parts: 3 } },
+  { id: "NM-01", prompt: "用数轴比较 2/3 和 3/5 哪个大。", nearMiss: true },
+  { id: "NM-02", prompt: "Graph x > -2 on a number line.", nearMiss: true },
+  { id: "NM-03", prompt: "用数轴说明 47 四舍五入到十位是多少。", nearMiss: true },
+  { id: "NM-04", prompt: "Solve |x - 3| < 2 on a number line.", nearMiss: true },
+];
+export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES };
+
 /** The requests each trial recipe fits. */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
 
@@ -82,6 +115,89 @@ export function numberLineInPart(part) {
     end: points.find((point) => point.as === "end")?.value ?? null,
     start_slider: slider("start.value"), change_slider: slider("move.by"),
   };
+}
+
+/** A first part's number line, with what drives it: the card, the variables, animations and tasks. */
+export function numberLineLesson(part) {
+  const actions = (part.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? []);
+  const write = actions.find((action) => action.do === "write" && action.kind === "number_line");
+  if (!write) return undefined;
+  return {
+    content: write.content, variables: part.lesson?.variables ?? [], tasks: part.lesson?.tasks ?? [],
+    animations: actions.filter((action) => action.do === "animate").map((action) => [action.variable, action.value]),
+  };
+}
+
+const close = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a));
+
+/**
+ * The states a lesson puts its number line in: every combination of each variable's starting
+ * value, animation targets and practice targets, with each point's value in that state.
+ */
+export function numberLineStates({ content, variables, tasks, animations }) {
+  const values = new Map(variables.map((variable) => [variable.as, [variable.initial]]));
+  for (const [variable, value] of animations) values.get(variable)?.push(value);
+  for (const task of tasks) {
+    const completion = task.completion ?? {};
+    if (completion.kind === "expression_target" && values.has(String(completion.expression).trim())) values.get(String(completion.expression).trim()).push(completion.value);
+  }
+  let states = [{}];
+  for (const [name, list] of values) states = states.flatMap((state) => [...new Set(list)].map((value) => ({ ...state, [name]: value })));
+  const evaluate = (expression, state) => {
+    const text = String(expression).replace(/[a-z][a-z0-9_]*/gu, (name) => (name in state ? `(${state[name]})` : "NaN"));
+    return /^[-+*/().\d\seNa]+$/u.test(text) ? Number(Function(`"use strict"; return (${text});`)()) : Number.NaN;
+  };
+  const fraction = (value) => (typeof value === "string" && value.includes("/") ? value.trim().split(/\s+/u).reduce((sum, piece) => {
+    const [top, bottom] = piece.split("/").map(Number);
+    return bottom ? sum + Math.sign(sum || top) * Math.abs(top) / bottom : sum + Number(piece);
+  }, 0) : Number(value));
+  return states.map((state) => Object.fromEntries((content.points ?? []).map((point) => {
+    const binding = (content.bindings ?? []).find((entry) => entry.target === `${point.as}.value`);
+    return [point.as, binding ? evaluate(binding.expression, state) : fraction(point.value)];
+  })));
+}
+
+/**
+ * Judges one number line against its case's expectations (set before the run):
+ * - hard: compiled; every value the question names is shown by a point in some state; the asked-for
+ *   change is reachable; and every visible point, in every state, sits on a tick the label policy
+ *   labels, so its number is drawn (OLL draws a labelled tick under a point even when labels thin);
+ * - soft: the parts per unit, and for integer questions a span of at most 24 units with hops.
+ * Returns the lists of misses, empty when it passes.
+ */
+export function judgeNumberLine(item, lesson) {
+  const hard = [], soft = [];
+  if (!lesson) return { hard: ["no number line"], soft };
+  if (lesson.error) return { hard: [`compile error: ${String(lesson.error).slice(0, 80)}`], soft };
+  const { content, variables, animations } = lesson;
+  const states = numberLineStates(lesson);
+  const expect = item.expect ?? {};
+  for (const value of expect.values ?? []) {
+    if (!states.some((state) => Object.values(state).some((shown) => close(shown, value)))) {
+      hard.push(`wrong value: ${Number(value.toFixed(4))} is never shown (points: ${[...new Set(states.flatMap((state) => Object.values(state)).map((shown) => Number(shown.toFixed(4))))].join(", ")})`);
+    }
+  }
+  if (expect.change !== undefined) {
+    const name = String((content.bindings ?? []).find((binding) => binding.target === "move.by")?.expression ?? "").trim();
+    const change = variables.find((variable) => variable.as === name);
+    const animated = animations.filter(([variable]) => variable === name).map(([, value]) => value);
+    if (!change || !((change.min <= expect.change && expect.change <= change.max) || animated.some((value) => close(value, expect.change)))) hard.push(`cannot reach ${expect.change}`);
+  }
+  const labelled = planNumberLineTicks(content).filter((tick) => tick.label).map((tick) => tick.value);
+  const visible = new Set((content.points ?? []).filter((point) => point.shown !== "when_emphasized").map((point) => point.as));
+  const unreadable = new Set();
+  for (const state of states) for (const [as, value] of Object.entries(state)) {
+    if (visible.has(as) && !labelled.some((tick) => close(tick, value))) unreadable.add(`${as} at ${Number(value.toFixed(4))}`);
+  }
+  if (unreadable.size) hard.push(`unreadable: ${[...unreadable].join(", ")} on no labelled tick`);
+  const parts = content.ticks?.subdivisions ?? 1;
+  if (expect.parts && parts !== expect.parts) soft.push(`${parts} parts, not ${expect.parts}`);
+  if (expect.integer) {
+    const span = content.range.max - content.range.min;
+    if (span > 24) soft.push(`${span} units wide`);
+    if (!(content.jumps ?? [])[0]?.hops) soft.push("no hops");
+  }
+  return { hard, soft };
 }
 
 /** The recipes whose builder output the first playable part contains. */
@@ -121,7 +237,17 @@ export function summarize(rows) {
       errors: rows.filter((row) => filter(row) && row.outcome !== "first_playable").length,
     };
   };
-  return { all: group(() => true), motion: group((row) => row.kind === "motion"), other: group((row) => row.kind === "other") };
+  // Quality, for recipes whose cases carry expectations: hard misses block, soft ones are reported.
+  const judged = rows.filter((row) => row.arm === "candidate" && row.quality);
+  const quality = judged.length ? {
+    judged: judged.length,
+    hard_pass: judged.filter((row) => !row.quality.hard.length).length,
+    hard_misses: judged.filter((row) => row.quality.hard.length).map((row) => ({ case: row.case, hard: row.quality.hard })),
+    soft_misses: judged.filter((row) => row.quality.soft.length).map((row) => ({ case: row.case, soft: row.quality.soft })),
+    near_misses_for_review: rows.filter((row) => row.kind === "near_miss").map((row) => ({ case: row.case, recipes: row.recipes ?? null })),
+  } : undefined;
+  // Speed is measured on the pairs only; quality cases run on one arm and would skew the medians.
+  return { all: group((row) => row.kind === "motion" || row.kind === "other"), motion: group((row) => row.kind === "motion"), other: group((row) => row.kind === "other"), ...(quality ? { quality } : {}) };
 }
 
 async function main() {
@@ -140,6 +266,8 @@ async function main() {
   if (!fitting) throw new Error(`no fitting requests for trial recipe '${recipes}'`);
   // "motion" marks requests the trial recipe fits, whichever recipe that is.
   const cases = fitting.flatMap((fit, index) => [{ ...fit, kind: "motion" }, { ...heldOut.get(OTHER_CASE_IDS[index]), kind: "other" }]);
+  // Quality cases run once each, candidate arm only, after the speed pairs.
+  const qualityCases = (TRIAL_QUALITY_CASES[recipes.split(",")[0].trim()] ?? []).map((item) => ({ ...item, kind: item.nearMiss ? "near_miss" : "quality" }));
   const workDir = await mkdtemp(join(tmpdir(), "coach-trial-"));
   // Coach logs each raw model reply, which the harness keeps beside the run's compiled parts, so a
   // later fit can be replayed against what the model actually wrote at no cost.
@@ -156,30 +284,38 @@ async function main() {
   };
   console.error(JSON.stringify({ stage: "trial-recipe-speed", ...route, trial_recipes: recipes, pairs, max_calls: maxCalls }));
   const { appendFileSync, readFileSync } = await import("node:fs");
+  const runOne = async (pair, item, arm, order) => {
+    const input = { turn_id: `trial-${pair}-${arm}-${Date.now()}`, learner_request: item.prompt, request_source: "self_contained", language: caseLanguage(item), input_modality: "text" };
+    const tool = await runTool({
+      build, input, env: arm === "candidate" ? { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes } : env,
+      maxCalls: Math.min(3, budget.remaining), onCall: () => { budget.remaining -= 1; },
+      onRaw: (line) => appendFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), `${line}\n`),
+      onFirstPart: (path) => {
+        try {
+          const part = JSON.parse(readFileSync(path, "utf8"));
+          const line = numberLineInPart(part);
+          const judged = arm === "candidate" && item.expect ? { quality: judgeNumberLine(item, numberLineLesson(part)) } : {};
+          return { recipes: recipesInPart(part), ...(line ? { number_line: line } : {}), ...judged };
+        } catch { return { recipes: null }; }
+      },
+    });
+    const { first_part_path: _path, ...kept } = tool;
+    const row = { pair, case: item.id, kind: item.kind, arm, order: order.indexOf(arm), ...kept };
+    rows.push(row);
+    console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null, ...(row.quality ? { hard: row.quality.hard } : {}) }));
+    await persist();
+  };
   for (let pair = 0; pair < pairs && budget.remaining > 0; pair += 1) {
     const item = cases[pair % cases.length];
     const order = Math.floor(pair / 2) % 2 === 0 ? ["baseline", "candidate"] : ["candidate", "baseline"];
     for (const arm of order) {
       if (budget.remaining <= 0) break;
-      const input = { turn_id: `trial-${pair}-${arm}-${Date.now()}`, learner_request: item.prompt, request_source: "self_contained", language: caseLanguage(item), input_modality: "text" };
-      const tool = await runTool({
-        build, input, env: arm === "candidate" ? { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes } : env,
-        maxCalls: Math.min(3, budget.remaining), onCall: () => { budget.remaining -= 1; },
-        onRaw: (line) => appendFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), `${line}\n`),
-        onFirstPart: (path) => {
-          try {
-            const part = JSON.parse(readFileSync(path, "utf8"));
-            const line = numberLineInPart(part);
-            return { recipes: recipesInPart(part), ...(line ? { number_line: line } : {}) };
-          } catch { return { recipes: null }; }
-        },
-      });
-      const { first_part_path: _path, ...kept } = tool;
-      const row = { pair, case: item.id, kind: item.kind, arm, order: order.indexOf(arm), ...kept };
-      rows.push(row);
-      console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null }));
-      await persist();
+      await runOne(pair, item, arm, order);
     }
+  }
+  for (const [index, item] of qualityCases.entries()) {
+    if (budget.remaining <= 0) break;
+    await runOne(pairs + index, item, "candidate", ["candidate"]);
   }
   await persist();
   console.log(JSON.stringify(summarize(rows), null, 2));

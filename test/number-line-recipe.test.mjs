@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { NUMBER_LINE_CASES, judgeNumberLine } from "../scripts/eval-trial-recipe-speed.mjs";
 
 const api = await import(new URL("../lesson-plan.js", import.meta.url));
 
@@ -338,63 +339,56 @@ test("a practice task judged by an expression keeps its numbers, value, toleranc
 // model will write once `denominator` is gone (NL-03, NL-09: see the separate hypothesis tests below).
 const recorded = (initial, min, max, step) => ({ initial, min, max, label: "n", student_control: { kind: "slider", step } });
 const RUN4 = [
-  { id: "NL-01", numbers: [recorded(3, -10, 10, 0.1), recorded(-5, -5, -4, 0.1)], extra: { task: { number: 2, value: -4, tolerance: 0.05 } }, integer: -5 },
-  { id: "NL-02", numbers: [recorded(-2, -10, 10, 0.1), recorded(7, -10, 7, 0.1)], extra: { animate: [{ number: 2, end_value: 7 }], task: { number: 2, value: -10, tolerance: 0.05 } }, integer: 7 },
-  { id: "NL-03", numbers: [recorded(0, 0, 1, 0.25), recorded(3, 0, 3, 0.25)], extra: { task: { number: 2, value: 0, tolerance: 0.125 } }, parts: 4, end: 0.75 },
-  { id: "NL-04", numbers: [recorded(0, 0, 1, 0.25), recorded(0.25, 0, 1, 0.25)], extra: { animate: [{ number: 2, end_value: 0.25 }], task: { number: 2, value: 1, tolerance: 0.125 } }, parts: 4 },
-  { id: "NL-05", numbers: [recorded(-3, -6, 6, 0.1), recorded(8, -10, 10, 0.1)], extra: { task: { number: 1, value: -5, tolerance: 0.05 } }, integer: 8 },
-  { id: "NL-06", numbers: [recorded(6, -10, 7, 1), recorded(-9, -10, 10, 1)], extra: { task: { number: 1, value: -10, tolerance: 0.5 } }, integer: -9 },
-  { id: "NL-07", numbers: [recorded(0, 0, 1, 0.1), recorded(0.5, 0, 1, 0.1)], extra: { animate: [{ number: 2, end_value: 0.5 }, { number: 2, end_value: 0.8 }], task: { number: 2, value: 0, tolerance: 0.05 } }, parts: 10 },
-  { id: "NL-08", numbers: [recorded(-1, -6, 1, 1), recorded(-3, -5, 5, 1)], extra: { animate: [{ number: 1, end_value: -4 }], task: { number: 1, value: -4, tolerance: 0.5 } }, integer: -3 },
-  { id: "NL-09", numbers: [recorded(1, -3, 3, 1 / 3), recorded(2, 1, 2, 1 / 3)], extra: { task: { number: 2, value: 1, tolerance: 1 / 6 } }, parts: 3, end: 1 },
-  { id: "NL-10", numbers: [recorded(0, 0, 2, 0.25), recorded(0, 0, 2, 0.25)], extra: { animate: [{ number: 2, end_value: 1 }, { number: 2, end_value: 2 }], task: { number: 2, value: 1, tolerance: 0.125 } }, parts: 4 },
+  { id: "NL-01", numbers: [recorded(3, -10, 10, 0.1), recorded(-5, -5, -4, 0.1)], extra: { task: { number: 2, value: -4, tolerance: 0.05 } } },
+  { id: "NL-02", numbers: [recorded(-2, -10, 10, 0.1), recorded(7, -10, 7, 0.1)], extra: { animate: [{ number: 2, end_value: 7 }], task: { number: 2, value: -10, tolerance: 0.05 } } },
+  { id: "NL-03", numbers: [recorded(0, 0, 1, 0.25), recorded(3, 0, 3, 0.25)], extra: { task: { number: 2, value: 0, tolerance: 0.125 } } },
+  { id: "NL-04", numbers: [recorded(0, 0, 1, 0.25), recorded(0.25, 0, 1, 0.25)], extra: { animate: [{ number: 2, end_value: 0.25 }], task: { number: 2, value: 1, tolerance: 0.125 } } },
+  { id: "NL-05", numbers: [recorded(-3, -6, 6, 0.1), recorded(8, -10, 10, 0.1)], extra: { task: { number: 1, value: -5, tolerance: 0.05 } } },
+  { id: "NL-06", numbers: [recorded(6, -10, 7, 1), recorded(-9, -10, 10, 1)], extra: { task: { number: 1, value: -10, tolerance: 0.5 } } },
+  { id: "NL-07", numbers: [recorded(0, 0, 1, 0.1), recorded(0.5, 0, 1, 0.1)], extra: { animate: [{ number: 2, end_value: 0.5 }, { number: 2, end_value: 0.8 }], task: { number: 2, value: 0, tolerance: 0.05 } } },
+  { id: "NL-08", numbers: [recorded(-1, -6, 1, 1), recorded(-3, -5, 5, 1)], extra: { animate: [{ number: 1, end_value: -4 }], task: { number: 1, value: -4, tolerance: 0.5 } } },
+  { id: "NL-09", numbers: [recorded(1, -3, 3, 1 / 3), recorded(2, 1, 2, 1 / 3)], extra: { task: { number: 2, value: 1, tolerance: 1 / 6 } } },
+  { id: "NL-10", numbers: [recorded(0, 0, 2, 0.25), recorded(0, 0, 2, 0.25)], extra: { animate: [{ number: 2, end_value: 1 }, { number: 2, end_value: 2 }], task: { number: 2, value: 1, tolerance: 0.125 } } },
 ];
 
-/** The run 5 criteria for one lesson: undefined when it passes, else why it misses. */
-function criteriaMiss(item, result) {
-  if (result.error) return `compile error: ${result.error.slice(0, 80)}`;
-  const { range, ticks, jumps, points } = result.content;
-  if (item.parts) {
-    if (ticks.subdivisions !== item.parts) return `${ticks.subdivisions} parts, not ${item.parts}`;
-    if (points.some((point) => Math.abs(point.value * item.parts - Math.round(point.value * item.parts)) > 1e-9)) return "a point off the ticks";
-    const end = points.find((point) => point.as === "end")?.value;
-    if (item.end !== undefined && Math.abs(end - item.end) > 1e-9) return `wrong value: ends at ${end}, not ${item.end}`;
-  }
-  if (item.integer !== undefined) {
-    if (range.max - range.min > 24) return `${range.max - range.min} units wide`;
-    if (!jumps[0].hops) return "no hops";
-    const change = result.variables[1];
-    const animated = result.animations.filter(([variable]) => variable === "number_02").map(([, value]) => value);
-    if (!((change.min <= item.integer && item.integer <= change.max) || animated.includes(item.integer))) return `cannot reach ${item.integer}`;
-  }
-  return undefined;
-}
+// Judged as a live run is judged: the expectations each case carries in the harness, written
+// before run 5, and the same judge (hard misses block adoption; soft ones are reported).
+const caseById = new Map(NUMBER_LINE_CASES.map((item) => [item.id, item]));
+const judge = (id, result) => judgeNumberLine(caseById.get(id), result);
 
-// What the recorded run 4 lessons give under the current rules, lesson by lesson. NL-03 and NL-09 miss
-// because the model wrote numerators (3; 1 and 2) under the removed `denominator` parameter; NL-05 and
-// NL-06 miss on width because their own practice tasks drive the start (to −5 and −10) while the
-// change keeps its range for the answer.
+// What the recorded run 4 lessons give under the current rules. NL-03 and NL-09 show wrong values,
+// because the model wrote numerators (3; 1 and 2) under the removed `denominator` parameter. NL-04
+// never shows the sum 3/4: the model started at 0 and moved by 1/4, instead of starting at the first
+// addend (the earlier criteria, which checked only the parts, passed it). NL-05
+// and NL-06 pass the hard checks but are wide (34 and 39 units): their own practice tasks drive the
+// start (to −5 and −10) while the change keeps its range for the answer.
 const RUN4_EXPECTED = {
-  "NL-01": undefined, "NL-02": undefined, "NL-03": "wrong value", "NL-04": undefined, "NL-05": "units wide",
-  "NL-06": "units wide", "NL-07": undefined, "NL-08": undefined, "NL-09": "wrong value", "NL-10": undefined,
+  "NL-03": { hard: /wrong value: 0\.75 is never shown/ },
+  "NL-04": { hard: /wrong value: 0\.75 is never shown/ },
+  "NL-05": { soft: /34 units wide/ },
+  "NL-06": { soft: /39 units wide/ },
+  "NL-09": { hard: /wrong value: 0\.3333 is never shown/ },
 };
 for (const item of RUN4) {
-  test(`run 4 replay ${item.id} (recorded inputs): ${RUN4_EXPECTED[item.id] ?? "meets the run 5 criteria"}`, () => {
-    const miss = criteriaMiss(item, compile(item.numbers, {}, item.extra));
-    if (RUN4_EXPECTED[item.id] === undefined) assert.equal(miss, undefined, miss);
-    else assert.match(miss ?? "passes", new RegExp(RUN4_EXPECTED[item.id]));
+  const expected = RUN4_EXPECTED[item.id] ?? {};
+  test(`run 4 replay ${item.id} (recorded inputs): ${expected.hard ? "hard miss" : expected.soft ? "hard pass, soft miss" : "passes"}`, () => {
+    const { hard, soft } = judge(item.id, compile(item.numbers, {}, item.extra));
+    if (expected.hard) assert.match(hard.join("; "), expected.hard);
+    else assert.deepEqual(hard, []);
+    if (expected.soft) assert.match(soft.join("; "), expected.soft);
+    else if (!expected.hard) assert.deepEqual(soft, []);
   });
 }
 
-// A hypothesis, not a replay: if the model, without `denominator`, writes values as in run 3
-// (0.75; 0.33 and 0.67), NL-03 and NL-09 are drawn right. Only a live run can confirm the premise.
-test("hypothesis: NL-03 written as in run 3 (0.75 with quarter steps) shows 3/4", () => {
-  const item = { parts: 4, end: 0.75 };
-  assert.equal(criteriaMiss(item, compile([recorded(0, 0, 1, 0.25), recorded(0.75, 0, 1, 0.25)], {}, {})), undefined);
+// A hypothesis, not a replay: if the model, without `denominator`, writes the values at their actual
+// size (0.75; 0.33 and 0.67), NL-03 and NL-09 are drawn right. Nothing records what the model wrote in
+// run 3 (its rows predate the number line summary and its work directory is gone), so only a live run
+// can test the premise.
+test("hypothesis: NL-03 written at actual size (0.75 with quarter steps) shows 3/4", () => {
+  assert.deepEqual(judge("NL-03", compile([recorded(0, 0, 1, 0.25), recorded(0.75, 0, 1, 0.25)], {}, {})), { hard: [], soft: [] });
 });
-test("hypothesis: NL-09 written as in run 3 (0.33 and 0.67) shows 1/3 + 2/3 = 1", () => {
-  const item = { parts: 3, end: 1 };
-  assert.equal(criteriaMiss(item, compile([recorded(0.33, 0, 1, 0.1), recorded(0.67, 0, 1, 0.1)], {}, {})), undefined);
+test("hypothesis: NL-09 written at actual size (0.33 and 0.67) shows 1/3 + 2/3 = 1", () => {
+  assert.deepEqual(judge("NL-09", compile([recorded(0.33, 0, 1, 0.1), recorded(0.67, 0, 1, 0.1)], {}, {})), { hard: [], soft: [] });
 });
 
 // Review of #62: only a step of exactly 1/2 to 1/6 says what an integer lesson counts in.

@@ -103,7 +103,7 @@ The recipe stays a trial.
 - **Steps.** A slider step counts for an integer lesson only when it is 1/2 to 1/6 (0.33 counts as 1/3). Several such steps share their least common denominator (halves and thirds give sixths). When that would exceed 12, the sliders are left as written. Any other step (0.1, 0.4, 1.5) is ignored.
 - **Raw output kept.** The harness now keeps every raw model reply beside the compiled parts (`OLL_DEBUG_GENERATION=1`, which now also logs streamed replies), so later fits can be replayed against real model output at no cost.
 
-## Run 5 pass criteria (set before the run)
+## Run 5 pass criteria (superseded by the gate below)
 
 The run 4 criteria, with value checks added. A formal pass that shows the wrong value counts as a miss.
 - **NL-03** draws quarters, and its start or end is 0.75.
@@ -115,3 +115,57 @@ The run 4 criteria, with value checks added. A formal pass that shows the wrong 
 - From the replay: if the model writes values again, 8 of 10 is within reach, but only just. Lessons like NL-05 and NL-06, whose own tasks move the start far, still miss on width.
 
 **Stop rule (proposed to the owner).** If run 5 misses these criteria, the number line stays a trial recipe and the work moves to decision 0014. Learners lose nothing, because Studio and CoursePacks already have the number line.
+
+## Before run 5: rendering the lessons, and a redefined gate
+
+The owner asked for the number line to be reliable in live lessons before decision 0014. Four paid runs had each found a new kind of failure, and every check so far had been numeric. So, before asking for run 5, the run 4 lessons were rendered in the player and the gate was rebuilt. None of this cost anything.
+
+### What rendering showed
+
+Run 4's compiled lessons, played through and drawn with the OLL runtime:
+- **A point's number could vanish.** On NL-05 (−3 + 8, 34 units) labels thin to every 3, so the end sits on 5 with no number under it. On NL-08 (19 units, a "pass" under the span criterion) the end at −7 is unlabelled. The learner sees "终点" but cannot read its value. NL-01's and NL-06's ends were labelled only by luck.
+- **Point names ran together:** "Start" at 0 and "End" at 1/4 read as "Start End" (NL-04).
+- **Width itself is legible.** Once every point keeps its number, a 34- or 39-unit line wastes space but reads correctly.
+
+This was a runtime defect, which Studio and CoursePack lines share, so it is fixed in OLL (octos-lesson-language #51). When labels thin, the ticks under visible points and jump ends keep their numbers, and these follow animations and drags. Their labelled neighbours give way, and names that would overlap go on further rows. A hidden (`when_emphasized`) answer is not revealed. Coach, Learn and the course library must pin that commit before adoption.
+
+### The gate: hard and soft (proposed to the owner)
+
+A single "8 of 10" let a wrong value through as a formal pass. The gate is now split:
+- **Hard: every case must pass.** Any miss blocks adoption.
+  - Speed, as in runs 1–4.
+  - The recipe is chosen for number-line requests and not for the others.
+  - The lesson compiles.
+  - **Right values:** every number the question names is shown by a point in some state the lesson reaches. These values are written into the harness for each case before the run.
+  - **Reachable:** the asked-for change is reachable by a slider or an animation.
+  - **Readable:** every visible point, in every state the lesson reaches, sits on a tick the label policy labels, so its number is drawn.
+  - **Near misses:** for a request the recipe cannot express, if the model uses the recipe anyway, the line is read by hand, and a misleading line is a hard miss.
+- **Soft: reported, not blocking.** An integer line spans more than 24 units or has no hops, or a fraction line uses different parts than expected (sixths for thirds).
+
+The judge is `judgeNumberLine` in the harness. The offline replay test uses the same function and the same expectations, so the live and offline checks cannot drift apart.
+
+### Run 4 rescored under the hard gate: 7 of 10
+
+- NL-03 and NL-09 show wrong values (numerators written under the removed `denominator`).
+- **NL-04 never shows the sum 3/4.** The model started at 0 and moved by 1/4 instead of starting at the first addend. The earlier criteria checked only the parts and passed it.
+- NL-05 and NL-06 pass the hard checks, with soft misses: 34 and 39 units wide.
+
+The recipe card now maps the question to the two numbers explicitly: for a + b, start at a and move by b (1/4 + 2/4: start 0.25, move 0.5; 6 − 9: start 6, move −9); for "where is x", start at 0 and move by x.
+
+**Evidence correction.** Earlier notes said run 3 showed the model writing actual values (0.75; 0.33 and 0.67). Nothing records that: run 3's rows have no number line summary, and its work directory is gone. The premise that the model writes actual values once `denominator` is gone is untested, and only run 5 can test it.
+
+### Cases for run 5 (written before the run)
+
+- **Speed pairs:** NL-01 to NL-10 against ten other-subject requests, unchanged.
+- **Quality cases,** once each on the candidate arm only:
+  - eight held-out number-line requests no fix was tuned against: tenths, negative fractions, mixed numbers, 5 − 8, a 0–100 line, −2.5 + 4, a walk to 0, 2/3 − 1/3;
+  - four near misses the recipe cannot express: comparing 2/3 with 3/5, x > −2, rounding 47, |x − 3| < 2.
+- **Cost:** about 66 model calls, roughly $0.60.
+- Expected values for every case are in `NUMBER_LINE_CASES` and `NUMBER_LINE_QUALITY_CASES`.
+
+### Run 5 procedure and stop rule
+
+- The run keeps every raw model reply. The work directory is copied out of the system temp folder straight after the run (kept locally, not committed), so later fixes can be replayed against real output for free.
+- **Pass:** every hard check holds on all 18 number-line cases and on any near miss the model draws. Then adoption goes in a separate change, after the OLL pin bumps. Before that change lands, one real lesson is played in the installed app at phone width.
+- **Stop rule:** a hard miss of a kind already fixed is a defect to fix and re-check offline. A hard miss of a new kind means narrowing what the recipe offers, for example to integers only, or dropping a request type. It does not mean another patch.
+
