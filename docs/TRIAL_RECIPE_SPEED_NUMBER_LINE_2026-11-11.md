@@ -438,7 +438,7 @@ Owner-approved; 148 calls (about $1.10); `eval/trial-recipe-speed-number-line-20
 
 A DOM probe settled run 6's puzzling screenshot: the board does redraw a point as its number animates (the start moves to 5 at step 11, then back). The earlier frame-capture script was at fault.
 
-**Pooled across run 8 and probes 1–3:** every number-line request passed the hard checks, 62 of 62 lessons.
+**Pooled across run 8 and probes 1–3:** every number-line request passed the hard checks, 59 of 59 lessons (run 8: 40; probes: 5, 8 and 6).
 
 **Near misses: 3 hard misses on 3 requests, so the slip rule fails.**
 - **NM-02 (x > −2), pair 45:** a filled dot at −2 and a jump, while the narration says "open circle" and "ray". Misleading.
