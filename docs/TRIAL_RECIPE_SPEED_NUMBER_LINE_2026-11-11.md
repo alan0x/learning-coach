@@ -503,3 +503,13 @@ A DOM probe settled run 6's puzzling screenshot: the board does redraw a point a
 
 
 **Review fixes (#68, #69).** Solution sets: the split between the two boundaries' slider ranges now falls between every value the lesson gives them (an animation to a = 4 in 1 < x < 5 stays 4), each boundary keeps a usable range when the boundaries are adjacent ticks (1 < x < 2), and a lesson that moves a past b is refused as a section fault instead of being redrawn with changed values. Rounding: the judge requires a jump from the rounded number itself to the result (a 40 → 50 jump beside 47 fails). Replaying the recorded probes under these checks gives the same results: rounding 10/10, solution sets 10/11 (SOL-06 shows its line in section 2, as before).
+
+### Run 9 rules: the gate on frozen code (owner-approved 2026-11-12, set before the run)
+
+- **Frozen code:** Coach main 3242238 (#68 and #69 merged, with their review fixes). All four number-line recipes offered: `number_line`, `number_line_compare`, `number_line_solution`, `number_line_rounding`.
+- **Speed:** 20 pairs on NL-01..10, speed option (a): the paired median must stay within +0.5 s, with one repeat if inconclusive.
+- **Quality:** every quality case twice (NL-11..20, CMP-01..05, SOL-01..06, RND-01..05, NM-01..04): 60 candidate lessons.
+  - In scope (NL, CMP, SOL, RND, and NM-01..04, which decision 0016 now covers as compare, solution and rounding requests): **never mislead**, by the hard checks, with the one-slip rule (option B: at most one model slip, never twice on the same request).
+  - NM-01..04 also run on the baseline arm, read by hand against today.
+  - A lesson whose number line appears only in a later section is read by hand.
+- **Budget:** `--pairs 20 --quality-repeats 2 --max-calls 190`, about $1.25 expected (at most about $1.40). Three repeats would cost about $1.65, above the approved figure.
