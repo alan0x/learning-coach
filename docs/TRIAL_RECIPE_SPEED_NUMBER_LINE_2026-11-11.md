@@ -529,3 +529,10 @@ Owner-approved; 110 calls (about $0.80); `eval/trial-recipe-speed-number-line-20
 - requests that use the number line: −3.7 s (95% interval −6.7 to −0.4 s);
 - the other held-out requests, which the candidate's larger prompt (+107 to +252 tokens) reaches without the recipe being used: **+1.7 s (95% interval +0.7 to +2.8 s)**, slower in 72% of pairs.
 - Part of this is retries: 5 of 50 candidate turns made extra calls against 1 of 50 baseline turns. None involved the number line (for example, a unit circle drawn for an Earth-science request). The cause is not established. Eight of the ten held-out requests are science, which is now paused.
+
+### Run 9b rules: completing run 9 (owner-approved 2026-11-12, set before the run)
+
+- **Same frozen product code** as run 9 (Coach main 3242238); only the harness fix differs. All four number-line recipes offered.
+- **Quality:** the cases run 9 missed, twice each: CMP-01..05, SOL-01..06, RND-01..05 (32 lessons). In scope: never mislead, by the hard checks. The slip rule (option B) applies to runs 9 and 9b together.
+- **Speed (option a, its one allowed repeat):** 20 more speed pairs on NL-01..10. Speed is judged on all 40 pairs of runs 9 and 9b: the paired median must be at most +0.5 s. No further repeats.
+- **Budget:** `--pairs 20 --cases <the 16 cases> --quality-repeats 2 --max-calls 120`, about $0.75.
