@@ -12453,9 +12453,16 @@ var RECIPE_CATALOG_ORDER = [
   "rectangle_unit_square_array",
   "geometric_rearrangement",
   "circle_area_rearrangement",
-  "process_diagram"
+  "process_diagram",
+  // Number line (OLL decision 0013) and its question types (0016): adopted 2026-11-12 after the gate on
+  // the rewritten cards passed (Coach docs/TRIAL_RECIPE_SPEED_NUMBER_LINE_2026-11-11.md, runs 11 and 11b).
+  // They stay last, where the gate measured them.
+  "number_line",
+  "number_line_compare",
+  "number_line_solution",
+  "number_line_rounding"
 ];
-var TRIAL_RECIPES = ["constant_speed_motion", "number_line", "number_line_compare", "number_line_solution", "number_line_rounding"];
+var TRIAL_RECIPES = ["constant_speed_motion"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));

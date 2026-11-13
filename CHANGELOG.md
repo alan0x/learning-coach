@@ -1,6 +1,27 @@
 # Changelog
 
-## Unreleased
+## 0.29.0 - 2026-11-12
+
+- **The number line is offered in AI lessons** (OLL decisions 0013 and 0016). `number_line`, `number_line_compare`, `number_line_solution` and `number_line_rounding` move from the trial list to the end of the catalog, where the gate measured them. The live first request is byte-identical to the gate's candidate request.
+  - **Gate on the frozen rewrite** (runs 11 and 11b, `docs/TRIAL_RECIPE_SPEED_NUMBER_LINE_2026-11-11.md`):
+    - all 80 planned lessons pass every hard check;
+    - requests the number line fits start 3.8 s sooner;
+    - requests it does not fit start +0.15 s later, within the owner's +0.5 s rule, which judges each group on its own.
+  - **Cards rewritten** after runs 9 and 9b showed other requests 2.8 s slower, with the model thinking more often:
+    - a stale "not for inequalities, rounding" clause and a duplicate compare path are gone;
+    - each card states its scope in its opening words;
+    - the four cards shrink from 1,203 to 524 bytes.
+  - **Comparing two numbers, solution sets and rounding** (decision 0016): the program draws open and filled ends, rays, intervals, neighbours, the halfway point and the rounding jump; the model gives only the numbers, the relation or the place.
+- **Payload:**
+  - Fallback-outline ceilings are raised to the measured maxima with the four recipes on (owner-approved under S6).
+  - Math's plugin budget is 9,900 B (plan Q1; #71).
+- **Speed harness:**
+  - Fitting and other requests are judged separately (`speed` verdict); a planned group with no complete pairs is incomplete, not a pass.
+  - New options: a third arm for an earlier build (`--previous-build`) and other-only pairs (`--other-cases`).
+  - Each turn's thinking tokens are recorded.
+  - Every named recipe's quality cases run.
+
+### Earlier work in this release
 
 - **Number line, after speed gate run 4.**
   - The `denominator` parameter is removed. With it, the model wrote numerators: 3 for 3/4.

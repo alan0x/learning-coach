@@ -111,7 +111,7 @@ test("the capability registry separates model teaching choices from program exec
 
 
 test("every registered visual capability has a fixed valid Lesson Plan sample", () => {
-  assert.equal(capabilities.length, 13);
+  assert.equal(capabilities.length, 17);
   assert.deepEqual([...LESSON_PLAN_CAPABILITY_NAMES].sort(), [...capabilities].sort());
   for (const capability of capabilities) {
     assert.deepEqual(
@@ -155,6 +155,10 @@ test("all fixed capability samples compile through the complete OLL validation p
     geometric_rearrangement: ["geometry"],
     circle_area_rearrangement: ["geometry", "geometry"],
     process_diagram: ["diagram"],
+    number_line: ["number_line"],
+    number_line_compare: ["number_line"],
+    number_line_solution: ["number_line"],
+    number_line_rounding: ["number_line"],
   };
   for (const capability of capabilities) {
     const compiled = compileAndValidateLessonPlan(samplePlan(capability));
@@ -679,7 +683,7 @@ test("presentation-only changes do not duplicate any current cross-subject visua
     const baselineVisualWrites = baselineLesson.steps.flatMap((step) => step.beats)
       .flatMap((beat) => beat.actions)
       .filter((action) => action.do === "write"
-        && ["plot", "geometry", "scene3d", "diagram"].includes(action.kind));
+        && ["plot", "geometry", "scene3d", "diagram", "number_line"].includes(action.kind));
     const original = plan.sections[0].moments[0].actions[0].content;
     const duplicate = structuredClone(original);
     duplicate.parameters = {
@@ -705,7 +709,7 @@ test("presentation-only changes do not duplicate any current cross-subject visua
     const visualWrites = lesson.steps.flatMap((step) => step.beats)
       .flatMap((beat) => beat.actions)
       .filter((action) => action.do === "write"
-        && ["plot", "geometry", "scene3d", "diagram"].includes(action.kind));
+        && ["plot", "geometry", "scene3d", "diagram", "number_line"].includes(action.kind));
     assert.equal(visualWrites.length, baselineVisualWrites.length, capability);
   }
 });
