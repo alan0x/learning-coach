@@ -274,6 +274,9 @@ test("speed is judged separately for requests the recipe fits and requests it do
   // A group the run leaves out is not judged; a planned group with no complete pairs makes it incomplete.
   assert.equal(speedVerdict({ motion: summary.motion, other: { complete_pairs: 0 } }, ["fitting"]).result, "pass");
   assert.equal(speedVerdict({ motion: summary.motion, other: { complete_pairs: 0 } }).result, "incomplete");
+  // A quality-only run (no speed pairs, like run 11b) gives no speed verdict, never a pass.
+  assert.equal(summarize([]).speed.result, "not judged");
+  assert.equal(summarize([{ pair: 0, kind: "solution", arm: "candidate", case: "SOL-01", outcome: "first_playable", first_playable_ms: 1, quality: { hard: [], soft: [] } }]).speed.result, "not judged");
   // A third arm is summarised against the same baseline.
   const three = summarize([...rows, { ...row(1, "other", "previous", 12000, 900) }]);
   assert.equal(three.previous.other.paired_difference_ms.median, 4000);

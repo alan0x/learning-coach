@@ -74,8 +74,8 @@
    "errors": 0
   },
   "speed": {
-   "result": "pass",
-   "reason": ""
+   "result": "not judged",
+   "reason": "no speed pairs: a quality-only run"
   },
   "quality": {
    "judged": 3,
