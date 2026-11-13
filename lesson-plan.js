@@ -12019,6 +12019,21 @@ var MATH_RECIPES = {
     student_controls: ["slider"],
     required_features: ["number_line", "number_comparison"],
     model_guidance: "\u6570\u8F74\u6BD4\u8F83\uFF1A\u4E24\u4E2A\u6570\u503C\u662F\u8981\u6BD4\u8F83\u7684\u4E24\u4E2A\u6570\uFF0C\u5404\u753B\u4E00\u70B9\uFF082/3 \u548C 3/5 \u4E5F\u80FD\u753B\uFF09"
+  },
+  // Decision 0016: a solution set. The model names the relation and gives the boundaries (solved first);
+  // the program draws open or filled ends and the rays or interval.
+  number_line_solution: {
+    parts: ["whole", "set", "set2", "primary_control"],
+    number_inputs: ["a", "b"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: ["title", "label_style", "relation"],
+    model_parameter_names: ["title", "label_style", "relation"],
+    required_model_schema_parameters: ["relation"],
+    semantic_parameters: ["relation"],
+    output_kinds: ["number_line"],
+    student_controls: ["slider"],
+    required_features: ["number_line", "solution_set"],
+    model_guidance: "\u6570\u8F74\u89E3\u96C6\uFF1A\u5148\u89E3\u51FA\u8FB9\u754C\uFF1Brelation \u5199\u89E3\u96C6\u5F62\u5F0F\uFF0C\u6570\u503C\u4F9D\u6B21\u662F a\u3001b\uFF08|x\u22123|<2 \u5199 a<x<b\uFF0Ca=1\uFF0Cb=5\uFF09"
   }
 };
 var text2 = { type: "string" };
@@ -12048,7 +12063,11 @@ var MATH_SCHEMA_PROPERTIES = {
   },
   circle_area_rearrangement: { radius: { type: "number", minimum: 0 } },
   number_line: { label_style: { enum: ["decimal", "fraction"] } },
-  number_line_compare: { label_style: { enum: ["decimal", "fraction"] } }
+  number_line_compare: { label_style: { enum: ["decimal", "fraction"] } },
+  number_line_solution: {
+    label_style: { enum: ["decimal", "fraction"] },
+    relation: { enum: ["x>a", "x>=a", "x<a", "x<=a", "a<x<b", "a<=x<=b", "a<x<=b", "a<=x<b", "x<a|x>b", "x<=a|x>=b", "x<a|x>=b", "x<=a|x>b"] }
+  }
 };
 var MATH_PLUGIN = {
   // The manifest and the Jev subject line are the OLL shared layer's.
@@ -12420,7 +12439,7 @@ var RECIPE_CATALOG_ORDER = [
   "circle_area_rearrangement",
   "process_diagram"
 ];
-var TRIAL_RECIPES = ["constant_speed_motion", "number_line", "number_line_compare"];
+var TRIAL_RECIPES = ["constant_speed_motion", "number_line", "number_line_compare", "number_line_solution"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -12461,7 +12480,8 @@ var SCHEMA_PROPERTY_ORDER = [
   "leg_b",
   "steps",
   "speed",
-  "label_style"
+  "label_style",
+  "relation"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text3 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -13016,7 +13036,7 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
 function fitComparedNumbers(content, plan, sharedNumbers) {
   const fitted = /* @__PURE__ */ new Map();
   const indexes = (content.numbers ?? []).slice(0, 2);
-  if (indexes.length < 2 || !plan.numbers || indexes.some((index) => sharedNumbers.has(index))) return fitted;
+  if (indexes.length < 1 || !plan.numbers || indexes.some((index) => sharedNumbers.has(index))) return fitted;
   const ours = new Set(indexes);
   const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) => activity.kind === "number_target" && activity.expression !== void 0 && (activity.number_controls.some((control) => ours.has(control.number)) || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
   if (expressionTask) return fitted;
@@ -13045,6 +13065,33 @@ function fitComparedNumbers(content, plan, sharedNumbers) {
     }
   }
   for (const index of indexes) fitted.set(index, grid);
+  return fitted;
+}
+function fitSolutionNumbers(content, plan, sharedNumbers) {
+  const [lowIndex, highIndex] = content.numbers ?? [];
+  const model = [lowIndex, highIndex].map((index) => index ? structuredClone(plan.numbers?.[index - 1]) : void 0);
+  const fitted = fitComparedNumbers(content, plan, sharedNumbers);
+  const low = lowIndex ? plan.numbers?.[lowIndex - 1] : void 0;
+  const high = highIndex ? plan.numbers?.[highIndex - 1] : void 0;
+  if (!low || !high || sharedNumbers.has(lowIndex) || sharedNumbers.has(highIndex)) return fitted;
+  const grid = fitted.get(lowIndex) || void 0;
+  const lowTop = Math.max(low.initial, ...lessonValues(plan, lowIndex).map((value2) => grid ? snap(value2, grid) : value2));
+  const highBottom = Math.min(high.initial, ...lessonValues(plan, highIndex).map((value2) => grid ? snap(value2, grid) : value2));
+  if (!(lowTop < highBottom)) return fitted;
+  const middle = (lowTop + highBottom) / 2;
+  const lowMax = grid ? Number((Math.ceil(middle / grid - 1e-9) * grid - grid).toPrecision(12)) : lowTop + (highBottom - lowTop) / 3;
+  const highMin = grid ? Number((lowMax + grid).toPrecision(12)) : highBottom - (highBottom - lowTop) / 3;
+  const lowRange = [
+    low.min < lowMax ? low.min : model[0].min < lowMax ? Math.max(model[0].min, lowMax - 1) : lowMax - 1,
+    Math.min(low.max, lowMax)
+  ];
+  const highRange = [
+    Math.max(high.min, highMin),
+    high.max > highMin ? high.max : model[1].max > highMin ? Math.min(model[1].max, highMin + 1) : highMin + 1
+  ];
+  if (!(lowRange[0] < lowRange[1] && highRange[0] < highRange[1])) return fitted;
+  [low.min, low.max] = lowRange;
+  [high.min, high.max] = highRange;
   return fitted;
 }
 
@@ -13761,6 +13808,7 @@ function surfaceSectionRange(content, path) {
 var MATH_HOOKS = {
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
+  number_line_solution: { fit_numbers: fitSolutionNumbers },
   implicit_surface_with_section: {
     section_range: surfaceSectionRange,
     lower_model_parameters(parameters3) {
@@ -16237,6 +16285,65 @@ function compileNumberLineCompare(base, content, role, placement, plan, path) {
   });
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.second })) };
 }
+var SOLUTION_RELATIONS = {
+  "x>a": { bounds: 1, pieces: [{ from: "a", to: null, fromClosed: false }] },
+  "x>=a": { bounds: 1, pieces: [{ from: "a", to: null, fromClosed: true }] },
+  "x<a": { bounds: 1, pieces: [{ from: null, to: "a", toClosed: false }] },
+  "x<=a": { bounds: 1, pieces: [{ from: null, to: "a", toClosed: true }] },
+  "a<x<b": { bounds: 2, pieces: [{ from: "a", to: "b", fromClosed: false, toClosed: false }] },
+  "a<=x<=b": { bounds: 2, pieces: [{ from: "a", to: "b", fromClosed: true, toClosed: true }] },
+  "a<x<=b": { bounds: 2, pieces: [{ from: "a", to: "b", fromClosed: false, toClosed: true }] },
+  "a<=x<b": { bounds: 2, pieces: [{ from: "a", to: "b", fromClosed: true, toClosed: false }] },
+  "x<a|x>b": { bounds: 2, pieces: [{ from: null, to: "a", toClosed: false }, { from: "b", to: null, fromClosed: false }] },
+  "x<=a|x>=b": { bounds: 2, pieces: [{ from: null, to: "a", toClosed: true }, { from: "b", to: null, fromClosed: true }] },
+  "x<a|x>=b": { bounds: 2, pieces: [{ from: null, to: "a", toClosed: false }, { from: "b", to: null, fromClosed: true }] },
+  "x<=a|x>b": { bounds: 2, pieces: [{ from: null, to: "a", toClosed: true }, { from: "b", to: null, fromClosed: false }] }
+};
+var SOLUTION_RELATION_NAMES = Object.keys(SOLUTION_RELATIONS);
+function compileNumberLineSolution(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "label_style", "relation"], path);
+  const { title, labelStyle } = numberLineLabelStyle({ ...content, parameters: { title: input.title, label_style: input.label_style } }, path);
+  const relation = SOLUTION_RELATIONS[input.relation];
+  if (!relation) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.relation`, `relation is one of ${SOLUTION_RELATION_NAMES.join(", ")}`);
+  const numbers = content.numbers ?? [];
+  if (numbers.length < relation.bounds) fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, `the relation ${String(input.relation)} needs ${relation.bounds} lesson number(s) for its boundaries`);
+  const bounds = numbers.slice(0, relation.bounds).map((number, index) => ({ number, definition: numberDefinition(plan, number, `${path}.numbers[${index}]`) }));
+  if (bounds.length === 2 && !(bounds[0].definition.initial < bounds[1].definition.initial)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "the first boundary (a) must be smaller than the second (b)");
+  }
+  if (bounds.length === 2) {
+    const [first, second] = bounds.map(({ number, definition }) => [definition.initial, ...lessonValues(plan, number)]);
+    if (!(Math.max(...first) < Math.min(...second))) {
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "every value the lesson gives the first boundary (a) must stay smaller than every value it gives the second (b)");
+    }
+  }
+  const values = bounds.flatMap(({ definition }) => [definition.min, definition.max, definition.initial]);
+  const steps = bounds.map(({ definition }) => definition.student_control?.step).filter((step) => typeof step === "number" && step > 0);
+  const shown = bounds.flatMap(({ number, definition }) => [definition.initial, ...lessonValues(plan, number)]);
+  const frame = numberLineFrame([...values, Math.min(...values) - 2, Math.max(...values) + 2], [...values, ...steps], shown, labelStyle, path, "tight");
+  const at = (name) => {
+    if (name === null) return null;
+    const bound = bounds[name === "a" ? 0 : 1];
+    return { expression: variableAlias(bound.number), initial: bound.definition.initial };
+  };
+  const built = buildNumberLine({
+    as: base,
+    role,
+    place: placement,
+    title: optionalText(title, compileText(plan, "\u6570\u8F74"), `${path}.title`),
+    range: frame.range,
+    ticks: frame.ticks,
+    intervals: relation.pieces.map((piece, index) => ({
+      as: index === 0 ? "set" : "set2",
+      from: at(piece.from),
+      to: at(piece.to),
+      ...piece.from !== null ? { from_closed: Boolean(piece.fromClosed) } : {},
+      ...piece.to !== null ? { to_closed: Boolean(piece.toClosed) } : {}
+    }))
+  });
+  return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.set })) };
+}
 function compileNumberLine(base, content, role, placement, plan, path) {
   const { title, labelStyle } = numberLineLabelStyle(content, path);
   const [startNumber, changeNumber] = content.numbers ?? [];
@@ -16285,6 +16392,7 @@ function compileNumberLine(base, content, role, placement, plan, path) {
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
+  number_line_solution: compileNumberLineSolution,
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_polygon_bounds: compileCirclePolygonBounds,

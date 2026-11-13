@@ -185,6 +185,21 @@ export const MATH_RECIPES = {
     required_features: ["number_line", "number_comparison"],
     model_guidance: "数轴比较：两个数值是要比较的两个数，各画一点（2/3 和 3/5 也能画）",
   },
+  // Decision 0016: a solution set. The model names the relation and gives the boundaries (solved first);
+  // the program draws open or filled ends and the rays or interval.
+  number_line_solution: {
+    parts: ["whole", "set", "set2", "primary_control"],
+    number_inputs: ["a", "b"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: ["title", "label_style", "relation"],
+    model_parameter_names: ["title", "label_style", "relation"],
+    required_model_schema_parameters: ["relation"],
+    semantic_parameters: ["relation"],
+    output_kinds: ["number_line"],
+    student_controls: ["slider"],
+    required_features: ["number_line", "solution_set"],
+    model_guidance: "数轴解集：先解出边界；relation 写解集形式，数值依次是 a、b（|x−3|<2 写 a<x<b，a=1，b=5）",
+  },
 } as const;
 
 // Provider-schema properties each recipe adds to a visual's parameters.
@@ -218,6 +233,10 @@ const MATH_SCHEMA_PROPERTIES = {
   circle_area_rearrangement: { radius: { type: "number", minimum: 0 } },
   number_line: { label_style: { enum: ["decimal", "fraction"] } },
   number_line_compare: { label_style: { enum: ["decimal", "fraction"] } },
+  number_line_solution: {
+    label_style: { enum: ["decimal", "fraction"] },
+    relation: { enum: ["x>a", "x>=a", "x<a", "x<=a", "a<x<b", "a<=x<=b", "a<x<=b", "a<=x<b", "x<a|x>b", "x<=a|x>=b", "x<a|x>=b", "x<=a|x>b"] },
+  },
 };
 
 export const MATH_PLUGIN = {

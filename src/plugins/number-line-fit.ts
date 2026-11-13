@@ -238,15 +238,16 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
 }
 
 /**
- * Fits two compared numbers (decision 0016) in place: both values, and the values the lesson sets them
+ * Fits the points a line shows (decision 0016): two compared numbers, or a solution set's boundaries, in place: both values, and the values the lesson sets them
  * to, snap to their common denominator (up to 24); the sliders step by it; each range narrows to the
  * whole units around both values, never past what the model allowed and always keeping the values.
  * Shared numbers and numbers an expression task reads are left as written, as for the number line.
  */
 export function fitComparedNumbers(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>): Map<number, number> {
   const fitted = new Map<number, number>();
+  // Two compared numbers, or a solution set's one or two boundaries (decision 0016).
   const indexes = (content.numbers ?? []).slice(0, 2);
-  if (indexes.length < 2 || !plan.numbers || indexes.some((index) => sharedNumbers.has(index))) return fitted;
+  if (indexes.length < 1 || !plan.numbers || indexes.some((index) => sharedNumbers.has(index))) return fitted;
   const ours = new Set(indexes);
   const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) =>
     activity.kind === "number_target" && activity.expression !== undefined
@@ -286,3 +287,43 @@ export function fitComparedNumbers(content: LessonPlanVisualContent, plan: Lesso
   return fitted;
 }
 
+/**
+ * Fits a solution set's boundaries (decision 0016): as for compared numbers, then, with two boundaries,
+ * keeps their ranges apart, so a slider can never carry the lower boundary past the upper one (OLL checks
+ * every interval runs from smaller to larger at every slider extreme). The split falls between every
+ * value the lesson gives the lower boundary and every value it gives the upper one (review of #68: an
+ * animation to a = 4 in 1 < x < 5 must stay 4), on the grid when there is one. Each range keeps a usable
+ * span below or above the split: in 1 < x < 2 the lower boundary runs [0, 1] and the upper [2, 3], within
+ * the model's ranges where they allow it. Values that cross are left alone: the compiler refuses them.
+ */
+export function fitSolutionNumbers(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>): Map<number, number> {
+  const [lowIndex, highIndex] = content.numbers ?? [];
+  const model = [lowIndex, highIndex].map((index) => (index ? structuredClone(plan.numbers?.[index - 1]) : undefined));
+  const fitted = fitComparedNumbers(content, plan, sharedNumbers);
+  const low = lowIndex ? plan.numbers?.[lowIndex - 1] : undefined;
+  const high = highIndex ? plan.numbers?.[highIndex - 1] : undefined;
+  if (!low || !high || sharedNumbers.has(lowIndex!) || sharedNumbers.has(highIndex!)) return fitted;
+  const grid = fitted.get(lowIndex!) || undefined;
+  const lowTop = Math.max(low.initial, ...lessonValues(plan, lowIndex!).map((value) => (grid ? snap(value, grid) : value)));
+  const highBottom = Math.min(high.initial, ...lessonValues(plan, highIndex!).map((value) => (grid ? snap(value, grid) : value)));
+  if (!(lowTop < highBottom)) return fitted;
+  // The split: the last tick below the middle and the next one; both stay between the two value sets,
+  // since lowTop and highBottom are themselves ticks at least one apart.
+  const middle = (lowTop + highBottom) / 2;
+  const lowMax = grid ? Number((Math.ceil(middle / grid - 1e-9) * grid - grid).toPrecision(12)) : lowTop + (highBottom - lowTop) / 3;
+  const highMin = grid ? Number((lowMax + grid).toPrecision(12)) : highBottom - (highBottom - lowTop) / 3;
+  // The candidate ranges, decided before anything is changed: each side keeps its range up to the split,
+  // and gets at least one unit beyond it, from the model's range when that leaves one, else past it.
+  const lowRange: [number, number] = [
+    low.min < lowMax ? low.min : model[0]!.min < lowMax ? Math.max(model[0]!.min, lowMax - 1) : lowMax - 1,
+    Math.min(low.max, lowMax),
+  ];
+  const highRange: [number, number] = [
+    Math.max(high.min, highMin),
+    high.max > highMin ? high.max : model[1]!.max > highMin ? Math.min(model[1]!.max, highMin + 1) : highMin + 1,
+  ];
+  if (!(lowRange[0] < lowRange[1] && highRange[0] < highRange[1])) return fitted;
+  [low.min, low.max] = lowRange;
+  [high.min, high.max] = highRange;
+  return fitted;
+}

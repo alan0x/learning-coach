@@ -645,6 +645,79 @@ function compileNumberLineCompare(
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.second! })) };
 }
 
+/** The solution sets a line draws (decision 0016): a relation names the form; a and b are the boundaries. */
+const SOLUTION_RELATIONS = {
+  "x>a": { bounds: 1, pieces: [{ from: "a", to: null, fromClosed: false }] },
+  "x>=a": { bounds: 1, pieces: [{ from: "a", to: null, fromClosed: true }] },
+  "x<a": { bounds: 1, pieces: [{ from: null, to: "a", toClosed: false }] },
+  "x<=a": { bounds: 1, pieces: [{ from: null, to: "a", toClosed: true }] },
+  "a<x<b": { bounds: 2, pieces: [{ from: "a", to: "b", fromClosed: false, toClosed: false }] },
+  "a<=x<=b": { bounds: 2, pieces: [{ from: "a", to: "b", fromClosed: true, toClosed: true }] },
+  "a<x<=b": { bounds: 2, pieces: [{ from: "a", to: "b", fromClosed: false, toClosed: true }] },
+  "a<=x<b": { bounds: 2, pieces: [{ from: "a", to: "b", fromClosed: true, toClosed: false }] },
+  "x<a|x>b": { bounds: 2, pieces: [{ from: null, to: "a", toClosed: false }, { from: "b", to: null, fromClosed: false }] },
+  "x<=a|x>=b": { bounds: 2, pieces: [{ from: null, to: "a", toClosed: true }, { from: "b", to: null, fromClosed: true }] },
+  "x<a|x>=b": { bounds: 2, pieces: [{ from: null, to: "a", toClosed: false }, { from: "b", to: null, fromClosed: true }] },
+  "x<=a|x>b": { bounds: 2, pieces: [{ from: null, to: "a", toClosed: true }, { from: "b", to: null, fromClosed: false }] },
+} as const;
+export const SOLUTION_RELATION_NAMES = Object.keys(SOLUTION_RELATIONS) as Array<keyof typeof SOLUTION_RELATIONS>;
+
+/**
+ * A solution set on a number line (decision 0016): the model names the relation and gives the boundaries;
+ * the program draws every end open or filled and every ray or interval from the relation, so no circle
+ * is the model's to draw. Boundaries follow their lesson numbers; the line leaves room for the rays.
+ */
+function compileNumberLineSolution(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "label_style", "relation"], path);
+  const { title, labelStyle } = numberLineLabelStyle({ ...content, parameters: { title: input.title, label_style: input.label_style } } as LessonPlanVisualContent, path);
+  const relation = SOLUTION_RELATIONS[input.relation as keyof typeof SOLUTION_RELATIONS];
+  if (!relation) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.relation`, `relation is one of ${SOLUTION_RELATION_NAMES.join(", ")}`);
+  const numbers = content.numbers ?? [];
+  if (numbers.length < relation.bounds) fail("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, `the relation ${String(input.relation)} needs ${relation.bounds} lesson number(s) for its boundaries`);
+  const bounds = numbers.slice(0, relation.bounds).map((number, index) => ({ number, definition: numberDefinition(plan, number, `${path}.numbers[${index}]`) }));
+  if (bounds.length === 2 && !(bounds[0]!.definition.initial < bounds[1]!.definition.initial)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "the first boundary (a) must be smaller than the second (b)");
+  }
+  // Every value the lesson moves a to stays below every value it moves b to; the fit keeps the two
+  // sliders' ranges apart between them, and never changes a value to make them fit (review of #68).
+  if (bounds.length === 2) {
+    const [first, second] = bounds.map(({ number, definition }) => [definition.initial, ...lessonValues(plan, number)]);
+    if (!(Math.max(...first!) < Math.min(...second!))) {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "every value the lesson gives the first boundary (a) must stay smaller than every value it gives the second (b)");
+    }
+  }
+  const values = bounds.flatMap(({ definition }) => [definition.min, definition.max, definition.initial]);
+  const steps = bounds.map(({ definition }) => definition.student_control?.step).filter((step): step is number => typeof step === "number" && step > 0);
+  const shown = bounds.flatMap(({ number, definition }) => [definition.initial, ...lessonValues(plan, number)]);
+  // Two units past the boundaries, so a ray visibly runs on.
+  const frame = numberLineFrame([...values, Math.min(...values) - 2, Math.max(...values) + 2], [...values, ...steps], shown, labelStyle, path, "tight");
+  const at = (name: "a" | "b" | null) => {
+    if (name === null) return null;
+    const bound = bounds[name === "a" ? 0 : 1]!;
+    return { expression: variableAlias(bound.number), initial: bound.definition.initial };
+  };
+  const built = buildNumberLine({
+    as: base, role, place: placement,
+    title: optionalText(title, compileText(plan, "数轴"), `${path}.title`),
+    range: frame.range, ticks: frame.ticks,
+    intervals: relation.pieces.map((piece, index) => ({
+      as: index === 0 ? "set" : "set2",
+      from: at(piece.from), to: at(piece.to),
+      ...(piece.from !== null ? { from_closed: Boolean((piece as { fromClosed?: boolean }).fromClosed) } : {}),
+      ...(piece.to !== null ? { to_closed: Boolean((piece as { toClosed?: boolean }).toClosed) } : {}),
+    })),
+  });
+  return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.set! })) };
+}
+
 /**
  * A number line (OLL decision 0013) from the visual's numbers: the first is
  * the start, the second the change; the program computes where the jump ends.
@@ -713,6 +786,7 @@ function compileNumberLine(
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
+  number_line_solution: compileNumberLineSolution,
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_polygon_bounds: compileCirclePolygonBounds,
