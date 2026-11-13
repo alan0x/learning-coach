@@ -1,0 +1,1368 @@
+{
+  "suite": "M1 coverage baseline for the K–12 math expressiveness question set",
+  "question_set": "testsuite/math-expressiveness-question-set.json (version 2, frozen)",
+  "measured_against": "Coach 0.29.0 (main b2f1ec9): the math recipes in src/plugins/math.ts, plus the board (text, formulas, notes, tables) and process_diagram. OLL node kinds a lesson cannot reach through a recipe do not count.",
+  "date": "2026-11-13",
+  "method": "Tagged by hand from each question's teacher_picture, by the rules below, without generating lessons. Held-out questions are tagged too, but are never used to rank candidates; their notes are left out.",
+  "rules": {
+    "fully": "An existing recipe, or the board, draws the picture's essential relationship. Styling does not count against it (a horizontal number line for a thermometer).",
+    "partly": "An existing recipe draws a core part of the picture, or the same relationship in another standard representation (a number line for fraction bars), but something the picture needs is missing.",
+    "extend": "Nothing draws it today; an existing recipe or OLL node could, with a new parameter, part or layout.",
+    "new": "Nothing draws it today, and no existing recipe is close: it needs a new component.",
+    "completes_with": "For partly, extend and new: the candidate that would make the question fully covered.",
+    "board": "Questions tagged 'no visual needed' or 'table' count as fully covered by the board. needs_a_picture leaves out the 'no visual needed' ones."
+  },
+  "existing_components": [
+    "number_line",
+    "number_line_compare",
+    "number_line_solution",
+    "number_line_rounding",
+    "function_plot",
+    "unit_circle_projection",
+    "coordinate_circle",
+    "circle_and_arc",
+    "circle_polygon_bounds",
+    "circle_area_rearrangement",
+    "geometric_rearrangement",
+    "rectangle_unit_square_array",
+    "cube_with_section",
+    "function_surface_with_section",
+    "implicit_surface_with_section",
+    "board"
+  ],
+  "candidates": {
+    "number_line_ext": {
+      "split": "extend",
+      "cost_estimate": "small",
+      "plan": "§6 Number line",
+      "draws": "several moves on one line, wider ranges, double number line, words at points"
+    },
+    "function_plot_ext": {
+      "split": "extend",
+      "cost_estimate": "small",
+      "plan": "§6 Function plot",
+      "draws": "slope triangle, marked intercepts and intervals, vertical guide lines, piecewise curves with open/closed ends, holes, area under a curve"
+    },
+    "coordinate_plane_ext": {
+      "split": "extend",
+      "cost_estimate": "medium",
+      "plan": "§6 Coordinate plane",
+      "draws": "plotted points, polygons, arrows and their transformations on a grid; mapping diagrams"
+    },
+    "circle_and_arc_ext": {
+      "split": "extend",
+      "cost_estimate": "small",
+      "plan": "added (§6 Geometry)",
+      "draws": "diameter, inscribed angle, arc marked equal to the radius"
+    },
+    "geometry_polygon_figure": {
+      "split": "extend",
+      "cost_estimate": "medium",
+      "plan": "§6 Geometry (split)",
+      "draws": "labelled triangles and polygons with side lengths and angles computed by the program"
+    },
+    "geometry_angles": {
+      "split": "extend",
+      "cost_estimate": "small-medium",
+      "plan": "§6 Geometry (split)",
+      "draws": "angle measures, benchmark angles, parallel lines and a transversal"
+    },
+    "geometry_constructions": {
+      "split": "extend",
+      "cost_estimate": "medium",
+      "plan": "§6 Geometry (split)",
+      "draws": "compass-and-ruler steps"
+    },
+    "geometry_symmetry_transformations": {
+      "split": "extend",
+      "cost_estimate": "medium",
+      "plan": "§6 Geometry (split)",
+      "draws": "lines of symmetry, enlargement from a center"
+    },
+    "solids_3d_ext": {
+      "split": "extend",
+      "cost_estimate": "medium",
+      "plan": "added",
+      "draws": "solids beyond the cube: prisms, cylinders, cones, spheres, composite boxes"
+    },
+    "unit_square_array_ext": {
+      "split": "extend",
+      "cost_estimate": "small",
+      "plan": "added",
+      "draws": "more than 8 rows or columns, several rectangles, irregular grid shapes"
+    },
+    "rearrangement_ext": {
+      "split": "extend",
+      "cost_estimate": "small-medium",
+      "plan": "added",
+      "draws": "more piece sets (half-circles, staircases)"
+    },
+    "fraction_area_model": {
+      "split": "new",
+      "cost_estimate": "large",
+      "plan": "§6 Fraction and area models (0014)",
+      "draws": "bars, circles and grids in equal parts; the area model for multiplication"
+    },
+    "data_charts": {
+      "split": "new",
+      "cost_estimate": "large",
+      "plan": "§6 Data charts (0015)",
+      "draws": "picture/bar graphs, dot plots, histograms, box plots, scatter plots, a shaded distribution"
+    },
+    "place_value": {
+      "split": "new",
+      "cost_estimate": "medium",
+      "plan": "§6 Place value",
+      "draws": "base-ten blocks and place-value charts"
+    },
+    "tape_diagram_ratio_table": {
+      "split": "new",
+      "cost_estimate": "medium",
+      "plan": "§6 Tape diagrams and ratio tables",
+      "draws": "bars of labelled parts and totals"
+    },
+    "probability": {
+      "split": "new",
+      "cost_estimate": "medium",
+      "plan": "§6 Probability",
+      "draws": "spinners, outcome grids, probability trees"
+    },
+    "clocks_money": {
+      "split": "new",
+      "cost_estimate": "medium",
+      "plan": "§6 Clocks and money",
+      "draws": ""
+    },
+    "counters_ten_frames": {
+      "split": "new",
+      "cost_estimate": "medium",
+      "plan": "added",
+      "draws": "counters, ten frames, groups of objects, repeating rows"
+    },
+    "measurement_tools": {
+      "split": "new",
+      "cost_estimate": "medium",
+      "plan": "added",
+      "draws": "rulers, lengths side by side, non-standard units, containers"
+    },
+    "balance": {
+      "split": "new",
+      "cost_estimate": "small-medium",
+      "plan": "added",
+      "draws": "a balance with two sides"
+    },
+    "written_method": {
+      "split": "new",
+      "cost_estimate": "medium",
+      "plan": "added",
+      "draws": "column arithmetic and long division laid out step by step"
+    },
+    "illustration": {
+      "split": "new",
+      "cost_estimate": "out of scope",
+      "plan": "added",
+      "draws": "a picture of a scene"
+    }
+  },
+  "cost_note": "Costs are rough estimates for ordering, not commitments: small = new parameters on an existing recipe; medium = a new recipe on an existing OLL node kind; large = a new OLL node kind with its own judge.",
+  "summary": {
+    "all": {
+      "K-2": {
+        "n": 30,
+        "fully_by_component": 1,
+        "fully_by_board": 3,
+        "partly": 6,
+        "extend": 0,
+        "new": 20
+      },
+      "3-5": {
+        "n": 40,
+        "fully_by_component": 3,
+        "fully_by_board": 3,
+        "partly": 10,
+        "extend": 8,
+        "new": 16
+      },
+      "6-8": {
+        "n": 40,
+        "fully_by_component": 7,
+        "fully_by_board": 6,
+        "partly": 4,
+        "extend": 11,
+        "new": 12
+      },
+      "9-12": {
+        "n": 50,
+        "fully_by_component": 16,
+        "fully_by_board": 7,
+        "partly": 9,
+        "extend": 12,
+        "new": 6
+      },
+      "all": {
+        "n": 160,
+        "fully_by_component": 27,
+        "fully_by_board": 19,
+        "partly": 29,
+        "extend": 31,
+        "new": 54
+      }
+    },
+    "needs_a_picture": {
+      "K-2": {
+        "n": 27,
+        "fully_by_component": 1,
+        "fully_by_board": 0,
+        "partly": 6,
+        "extend": 0,
+        "new": 20
+      },
+      "3-5": {
+        "n": 37,
+        "fully_by_component": 3,
+        "fully_by_board": 0,
+        "partly": 10,
+        "extend": 8,
+        "new": 16
+      },
+      "6-8": {
+        "n": 36,
+        "fully_by_component": 7,
+        "fully_by_board": 2,
+        "partly": 4,
+        "extend": 11,
+        "new": 12
+      },
+      "9-12": {
+        "n": 45,
+        "fully_by_component": 16,
+        "fully_by_board": 2,
+        "partly": 9,
+        "extend": 12,
+        "new": 6
+      },
+      "all": {
+        "n": 145,
+        "fully_by_component": 27,
+        "fully_by_board": 4,
+        "partly": 29,
+        "extend": 31,
+        "new": 54
+      }
+    },
+    "without_natural_set": {
+      "K-2": {
+        "n": 30,
+        "fully_by_component": 1,
+        "fully_by_board": 3,
+        "partly": 6,
+        "extend": 0,
+        "new": 20
+      },
+      "3-5": {
+        "n": 40,
+        "fully_by_component": 3,
+        "fully_by_board": 3,
+        "partly": 10,
+        "extend": 8,
+        "new": 16
+      },
+      "6-8": {
+        "n": 38,
+        "fully_by_component": 5,
+        "fully_by_board": 6,
+        "partly": 4,
+        "extend": 11,
+        "new": 12
+      },
+      "9-12": {
+        "n": 40,
+        "fully_by_component": 9,
+        "fully_by_board": 6,
+        "partly": 9,
+        "extend": 11,
+        "new": 5
+      },
+      "all": {
+        "n": 148,
+        "fully_by_component": 18,
+        "fully_by_board": 18,
+        "partly": 29,
+        "extend": 30,
+        "new": 53
+      }
+    },
+    "open": {
+      "K-2": {
+        "n": 22,
+        "fully_by_component": 0,
+        "fully_by_board": 2,
+        "partly": 4,
+        "extend": 0,
+        "new": 16
+      },
+      "3-5": {
+        "n": 30,
+        "fully_by_component": 1,
+        "fully_by_board": 2,
+        "partly": 7,
+        "extend": 6,
+        "new": 14
+      },
+      "6-8": {
+        "n": 30,
+        "fully_by_component": 5,
+        "fully_by_board": 4,
+        "partly": 4,
+        "extend": 9,
+        "new": 8
+      },
+      "9-12": {
+        "n": 37,
+        "fully_by_component": 12,
+        "fully_by_board": 6,
+        "partly": 6,
+        "extend": 9,
+        "new": 4
+      },
+      "all": {
+        "n": 119,
+        "fully_by_component": 18,
+        "fully_by_board": 14,
+        "partly": 21,
+        "extend": 24,
+        "new": 42
+      }
+    },
+    "held_out": {
+      "K-2": {
+        "n": 8,
+        "fully_by_component": 1,
+        "fully_by_board": 1,
+        "partly": 2,
+        "extend": 0,
+        "new": 4
+      },
+      "3-5": {
+        "n": 10,
+        "fully_by_component": 2,
+        "fully_by_board": 1,
+        "partly": 3,
+        "extend": 2,
+        "new": 2
+      },
+      "6-8": {
+        "n": 10,
+        "fully_by_component": 2,
+        "fully_by_board": 2,
+        "partly": 0,
+        "extend": 2,
+        "new": 4
+      },
+      "9-12": {
+        "n": 13,
+        "fully_by_component": 4,
+        "fully_by_board": 1,
+        "partly": 3,
+        "extend": 3,
+        "new": 2
+      },
+      "all": {
+        "n": 41,
+        "fully_by_component": 9,
+        "fully_by_board": 5,
+        "partly": 8,
+        "extend": 7,
+        "new": 12
+      }
+    },
+    "candidates_by_open_gain": [
+      {
+        "candidate": "fraction_area_model",
+        "open": {
+          "total": 10,
+          "from_not": 6,
+          "from_partly": 4,
+          "K-2": 2,
+          "3-5": 7,
+          "6-8": 0,
+          "9-12": 1
+        },
+        "held_out": 2
+      },
+      {
+        "candidate": "counters_ten_frames",
+        "open": {
+          "total": 9,
+          "from_not": 9,
+          "from_partly": 0,
+          "K-2": 8,
+          "3-5": 1,
+          "6-8": 0,
+          "9-12": 0
+        },
+        "held_out": 2
+      },
+      {
+        "candidate": "data_charts",
+        "open": {
+          "total": 8,
+          "from_not": 7,
+          "from_partly": 1,
+          "K-2": 1,
+          "3-5": 2,
+          "6-8": 3,
+          "9-12": 2
+        },
+        "held_out": 3
+      },
+      {
+        "candidate": "geometry_polygon_figure",
+        "open": {
+          "total": 7,
+          "from_not": 7,
+          "from_partly": 0,
+          "K-2": 0,
+          "3-5": 1,
+          "6-8": 4,
+          "9-12": 2
+        },
+        "held_out": 1
+      },
+      {
+        "candidate": "place_value",
+        "open": {
+          "total": 6,
+          "from_not": 6,
+          "from_partly": 0,
+          "K-2": 3,
+          "3-5": 3,
+          "6-8": 0,
+          "9-12": 0
+        },
+        "held_out": 1
+      },
+      {
+        "candidate": "solids_3d_ext",
+        "open": {
+          "total": 6,
+          "from_not": 4,
+          "from_partly": 2,
+          "K-2": 1,
+          "3-5": 2,
+          "6-8": 2,
+          "9-12": 1
+        },
+        "held_out": 0
+      },
+      {
+        "candidate": "probability",
+        "open": {
+          "total": 5,
+          "from_not": 5,
+          "from_partly": 0,
+          "K-2": 0,
+          "3-5": 1,
+          "6-8": 2,
+          "9-12": 2
+        },
+        "held_out": 1
+      },
+      {
+        "candidate": "number_line_ext",
+        "open": {
+          "total": 5,
+          "from_not": 2,
+          "from_partly": 3,
+          "K-2": 1,
+          "3-5": 1,
+          "6-8": 3,
+          "9-12": 0
+        },
+        "held_out": 1
+      },
+      {
+        "candidate": "function_plot_ext",
+        "open": {
+          "total": 5,
+          "from_not": 1,
+          "from_partly": 4,
+          "K-2": 0,
+          "3-5": 0,
+          "6-8": 2,
+          "9-12": 3
+        },
+        "held_out": 3
+      },
+      {
+        "candidate": "tape_diagram_ratio_table",
+        "open": {
+          "total": 4,
+          "from_not": 4,
+          "from_partly": 0,
+          "K-2": 0,
+          "3-5": 1,
+          "6-8": 3,
+          "9-12": 0
+        },
+        "held_out": 2
+      },
+      {
+        "candidate": "coordinate_plane_ext",
+        "open": {
+          "total": 4,
+          "from_not": 3,
+          "from_partly": 1,
+          "K-2": 0,
+          "3-5": 0,
+          "6-8": 0,
+          "9-12": 4
+        },
+        "held_out": 2
+      },
+      {
+        "candidate": "measurement_tools",
+        "open": {
+          "total": 3,
+          "from_not": 2,
+          "from_partly": 1,
+          "K-2": 3,
+          "3-5": 0,
+          "6-8": 0,
+          "9-12": 0
+        },
+        "held_out": 2
+      },
+      {
+        "candidate": "clocks_money",
+        "open": {
+          "total": 2,
+          "from_not": 2,
+          "from_partly": 0,
+          "K-2": 1,
+          "3-5": 1,
+          "6-8": 0,
+          "9-12": 0
+        },
+        "held_out": 0
+      },
+      {
+        "candidate": "geometry_angles",
+        "open": {
+          "total": 2,
+          "from_not": 2,
+          "from_partly": 0,
+          "K-2": 0,
+          "3-5": 0,
+          "6-8": 1,
+          "9-12": 1
+        },
+        "held_out": 1
+      },
+      {
+        "candidate": "geometry_symmetry_transformations",
+        "open": {
+          "total": 2,
+          "from_not": 2,
+          "from_partly": 0,
+          "K-2": 0,
+          "3-5": 1,
+          "6-8": 1,
+          "9-12": 0
+        },
+        "held_out": 0
+      },
+      {
+        "candidate": "rearrangement_ext",
+        "open": {
+          "total": 2,
+          "from_not": 1,
+          "from_partly": 1,
+          "K-2": 0,
+          "3-5": 1,
+          "6-8": 0,
+          "9-12": 1
+        },
+        "held_out": 0
+      },
+      {
+        "candidate": "unit_square_array_ext",
+        "open": {
+          "total": 2,
+          "from_not": 1,
+          "from_partly": 1,
+          "K-2": 0,
+          "3-5": 2,
+          "6-8": 0,
+          "9-12": 0
+        },
+        "held_out": 1
+      },
+      {
+        "candidate": "written_method",
+        "open": {
+          "total": 2,
+          "from_not": 0,
+          "from_partly": 2,
+          "K-2": 0,
+          "3-5": 1,
+          "6-8": 0,
+          "9-12": 1
+        },
+        "held_out": 0
+      },
+      {
+        "candidate": "balance",
+        "open": {
+          "total": 1,
+          "from_not": 1,
+          "from_partly": 0,
+          "K-2": 0,
+          "3-5": 1,
+          "6-8": 0,
+          "9-12": 0
+        },
+        "held_out": 0
+      },
+      {
+        "candidate": "geometry_constructions",
+        "open": {
+          "total": 1,
+          "from_not": 1,
+          "from_partly": 0,
+          "K-2": 0,
+          "3-5": 1,
+          "6-8": 0,
+          "9-12": 0
+        },
+        "held_out": 1
+      },
+      {
+        "candidate": "circle_and_arc_ext",
+        "open": {
+          "total": 1,
+          "from_not": 0,
+          "from_partly": 1,
+          "K-2": 0,
+          "3-5": 0,
+          "6-8": 0,
+          "9-12": 1
+        },
+        "held_out": 2
+      }
+    ]
+  },
+  "tags": {
+    "K2-01": {
+      "coverage": "partly",
+      "component": "number_line",
+      "completes_with": "number_line_ext",
+      "note": "one move per line; the picture makes two jumps through 50"
+    },
+    "K2-02": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames"
+    },
+    "K2-03": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames"
+    },
+    "K2-04": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames"
+    },
+    "K2-05": {
+      "coverage": "new",
+      "completes_with": "tape_diagram_ratio_table"
+    },
+    "K2-06": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames",
+      "note": "a repeating row of objects"
+    },
+    "K2-07": {
+      "coverage": "partly",
+      "component": "number_line",
+      "completes_with": "number_line_ext"
+    },
+    "K2-08": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames"
+    },
+    "K2-09": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames"
+    },
+    "K2-10": {
+      "coverage": "new",
+      "completes_with": "data_charts"
+    },
+    "K2-11": {
+      "coverage": "partly",
+      "component": "number_line_compare",
+      "completes_with": "fraction_area_model",
+      "note": "1/4 and 1/8 compared as points; no equal pieces of one whole"
+    },
+    "K2-12": {
+      "coverage": "new",
+      "completes_with": "fraction_area_model"
+    },
+    "K2-13": {
+      "coverage": "new",
+      "completes_with": "illustration"
+    },
+    "K2-14": {
+      "coverage": "partly",
+      "component": "cube_with_section",
+      "completes_with": "solids_3d_ext",
+      "note": "only the cube; no sphere or flat shapes beside"
+    },
+    "K2-15": {
+      "coverage": "fully",
+      "component": "cube_with_section"
+    },
+    "K2-16": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "K2-17": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames"
+    },
+    "K2-18": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "K2-19": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames"
+    },
+    "K2-20": {
+      "coverage": "new",
+      "completes_with": "clocks_money"
+    },
+    "K2-21": {
+      "coverage": "new",
+      "completes_with": "measurement_tools"
+    },
+    "K2-22": {
+      "coverage": "partly",
+      "component": "number_line",
+      "completes_with": "measurement_tools",
+      "note": "a number line stands in for the ruler"
+    },
+    "K2-23": {
+      "coverage": "partly",
+      "component": "number_line_compare",
+      "completes_with": "measurement_tools"
+    },
+    "K2-24": {
+      "coverage": "new",
+      "completes_with": "measurement_tools"
+    },
+    "K2-25": {
+      "coverage": "new",
+      "completes_with": "measurement_tools"
+    },
+    "K2-26": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames"
+    },
+    "K2-27": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "K2-28": {
+      "coverage": "new",
+      "completes_with": "place_value"
+    },
+    "K2-29": {
+      "coverage": "new",
+      "completes_with": "place_value"
+    },
+    "K2-30": {
+      "coverage": "new",
+      "completes_with": "place_value"
+    },
+    "G35-01": {
+      "coverage": "partly",
+      "component": "board",
+      "completes_with": "written_method",
+      "note": "a formula can align the columns, but not show regrouping step by step"
+    },
+    "G35-02": {
+      "coverage": "new",
+      "completes_with": "balance"
+    },
+    "G35-03": {
+      "coverage": "fully",
+      "component": "rectangle_unit_square_array",
+      "note": "the card teaches area and perimeter"
+    },
+    "G35-04": {
+      "coverage": "partly",
+      "component": "number_line",
+      "completes_with": "number_line_ext",
+      "note": "one hop; not repeated jumps of 25 to 200"
+    },
+    "G35-05": {
+      "coverage": "new",
+      "completes_with": "data_charts"
+    },
+    "G35-06": {
+      "coverage": "new",
+      "completes_with": "data_charts"
+    },
+    "G35-07": {
+      "coverage": "new",
+      "completes_with": "fraction_area_model"
+    },
+    "G35-08": {
+      "coverage": "partly",
+      "component": "number_line_compare",
+      "completes_with": "fraction_area_model",
+      "note": "4/4 and 3/1 as points at 1 and 3; no bars"
+    },
+    "G35-09": {
+      "coverage": "partly",
+      "component": "number_line_compare",
+      "completes_with": "fraction_area_model",
+      "note": "both fractions land on one point; no bars"
+    },
+    "G35-10": {
+      "coverage": "partly",
+      "component": "number_line",
+      "completes_with": "fraction_area_model",
+      "note": "counting fifths up to 4 on a number line; no bars"
+    },
+    "G35-11": {
+      "coverage": "new",
+      "completes_with": "tape_diagram_ratio_table"
+    },
+    "G35-12": {
+      "coverage": "new",
+      "completes_with": "fraction_area_model",
+      "note": "a 10-by-10 grid exceeds the unit-square array's 8"
+    },
+    "G35-13": {
+      "coverage": "new",
+      "completes_with": "fraction_area_model"
+    },
+    "G35-14": {
+      "coverage": "extend",
+      "completes_with": "geometry_symmetry_transformations",
+      "note": "polygons and lines of symmetry"
+    },
+    "G35-15": {
+      "coverage": "partly",
+      "component": "geometric_rearrangement",
+      "completes_with": "rearrangement_ext",
+      "note": "triangle pieces only; no half-circles"
+    },
+    "G35-16": {
+      "coverage": "extend",
+      "completes_with": "solids_3d_ext"
+    },
+    "G35-17": {
+      "coverage": "partly",
+      "component": "circle_and_arc",
+      "completes_with": "geometry_angles"
+    },
+    "G35-18": {
+      "coverage": "extend",
+      "completes_with": "geometry_polygon_figure"
+    },
+    "G35-19": {
+      "coverage": "extend",
+      "completes_with": "geometry_constructions",
+      "note": "triangle construction"
+    },
+    "G35-20": {
+      "coverage": "partly",
+      "component": "number_line",
+      "completes_with": "fraction_area_model"
+    },
+    "G35-21": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G35-22": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames"
+    },
+    "G35-23": {
+      "coverage": "partly",
+      "component": "circle_and_arc",
+      "completes_with": "circle_and_arc_ext"
+    },
+    "G35-24": {
+      "coverage": "new",
+      "completes_with": "clocks_money"
+    },
+    "G35-25": {
+      "coverage": "extend",
+      "completes_with": "geometry_polygon_figure"
+    },
+    "G35-26": {
+      "coverage": "partly",
+      "component": "rectangle_unit_square_array",
+      "completes_with": "unit_square_array_ext",
+      "note": "rectangles only; no irregular grid shape"
+    },
+    "G35-27": {
+      "coverage": "fully",
+      "component": "rectangle_unit_square_array"
+    },
+    "G35-28": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G35-29": {
+      "coverage": "extend",
+      "completes_with": "solids_3d_ext",
+      "note": "composite boxes"
+    },
+    "G35-30": {
+      "coverage": "fully",
+      "component": "rectangle_unit_square_array"
+    },
+    "G35-31": {
+      "coverage": "new",
+      "completes_with": "tape_diagram_ratio_table"
+    },
+    "G35-32": {
+      "coverage": "extend",
+      "completes_with": "unit_square_array_ext",
+      "note": "17 columns exceeds the limit of 8"
+    },
+    "G35-33": {
+      "coverage": "new",
+      "completes_with": "place_value"
+    },
+    "G35-34": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G35-35": {
+      "coverage": "extend",
+      "completes_with": "unit_square_array_ext"
+    },
+    "G35-36": {
+      "coverage": "new",
+      "completes_with": "place_value"
+    },
+    "G35-37": {
+      "coverage": "new",
+      "completes_with": "place_value"
+    },
+    "G35-38": {
+      "coverage": "new",
+      "completes_with": "place_value"
+    },
+    "G35-39": {
+      "coverage": "new",
+      "completes_with": "probability"
+    },
+    "G35-40": {
+      "coverage": "new",
+      "completes_with": "fraction_area_model"
+    },
+    "G68-01": {
+      "coverage": "extend",
+      "completes_with": "number_line_ext",
+      "note": "1,245 is beyond the line's 58-unit window, and the picture makes three moves"
+    },
+    "G68-02": {
+      "coverage": "new",
+      "completes_with": "counters_ten_frames"
+    },
+    "G68-03": {
+      "coverage": "new",
+      "completes_with": "data_charts"
+    },
+    "G68-04": {
+      "coverage": "fully",
+      "component": "number_line_compare"
+    },
+    "G68-05": {
+      "coverage": "extend",
+      "completes_with": "coordinate_plane_ext"
+    },
+    "G68-06": {
+      "coverage": "extend",
+      "completes_with": "geometry_polygon_figure"
+    },
+    "G68-07": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G68-08": {
+      "coverage": "new",
+      "completes_with": "tape_diagram_ratio_table"
+    },
+    "G68-09": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G68-10": {
+      "coverage": "fully",
+      "component": "number_line",
+      "note": "−7 moving 19; horizontal rather than a thermometer"
+    },
+    "G68-11": {
+      "coverage": "partly",
+      "component": "number_line_compare",
+      "completes_with": "number_line_ext",
+      "note": "a point on 0 to 1, without the impossible-to-certain words"
+    },
+    "G68-12": {
+      "coverage": "new",
+      "completes_with": "tape_diagram_ratio_table"
+    },
+    "G68-13": {
+      "coverage": "fully",
+      "component": "number_line_compare"
+    },
+    "G68-14": {
+      "coverage": "fully",
+      "component": "number_line_solution"
+    },
+    "G68-15": {
+      "coverage": "new",
+      "completes_with": "illustration"
+    },
+    "G68-16": {
+      "coverage": "new",
+      "completes_with": "data_charts"
+    },
+    "G68-17": {
+      "coverage": "new",
+      "completes_with": "data_charts"
+    },
+    "G68-18": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G68-19": {
+      "coverage": "extend",
+      "completes_with": "geometry_polygon_figure"
+    },
+    "G68-20": {
+      "coverage": "extend",
+      "completes_with": "solids_3d_ext"
+    },
+    "G68-21": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G68-22": {
+      "coverage": "partly",
+      "component": "rectangle_unit_square_array",
+      "completes_with": "solids_3d_ext",
+      "note": "square numbers as arrays; no cubes"
+    },
+    "G68-23": {
+      "coverage": "new",
+      "completes_with": "probability"
+    },
+    "G68-24": {
+      "coverage": "extend",
+      "completes_with": "number_line_ext",
+      "note": "double number line"
+    },
+    "G68-25": {
+      "coverage": "extend",
+      "completes_with": "geometry_polygon_figure"
+    },
+    "G68-26": {
+      "coverage": "partly",
+      "component": "function_plot",
+      "completes_with": "function_plot_ext",
+      "note": "line and points; no rise-over-run triangle"
+    },
+    "G68-27": {
+      "coverage": "fully",
+      "component": "board",
+      "note": "a table"
+    },
+    "G68-28": {
+      "coverage": "partly",
+      "component": "function_plot",
+      "completes_with": "function_plot_ext",
+      "note": "sliders for m and c; no slope triangle or intercept mark"
+    },
+    "G68-29": {
+      "coverage": "fully",
+      "component": "function_plot"
+    },
+    "G68-30": {
+      "coverage": "new",
+      "completes_with": "data_charts"
+    },
+    "G68-31": {
+      "coverage": "new",
+      "completes_with": "data_charts"
+    },
+    "G68-32": {
+      "coverage": "extend",
+      "completes_with": "geometry_angles"
+    },
+    "G68-33": {
+      "coverage": "extend",
+      "completes_with": "geometry_polygon_figure"
+    },
+    "G68-34": {
+      "coverage": "extend",
+      "completes_with": "geometry_symmetry_transformations"
+    },
+    "G68-35": {
+      "coverage": "extend",
+      "completes_with": "geometry_constructions"
+    },
+    "G68-36": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G68-37": {
+      "coverage": "new",
+      "completes_with": "probability"
+    },
+    "G68-38": {
+      "coverage": "new",
+      "completes_with": "tape_diagram_ratio_table"
+    },
+    "G68-39": {
+      "coverage": "fully",
+      "component": "function_plot"
+    },
+    "G68-40": {
+      "coverage": "fully",
+      "component": "geometric_rearrangement"
+    },
+    "G912-01": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G912-02": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G912-03": {
+      "coverage": "extend",
+      "completes_with": "coordinate_plane_ext"
+    },
+    "G912-04": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G912-05": {
+      "coverage": "extend",
+      "completes_with": "coordinate_plane_ext",
+      "note": "arrows"
+    },
+    "G912-06": {
+      "coverage": "new",
+      "completes_with": "fraction_area_model",
+      "note": "the area model for multiplication"
+    },
+    "G912-07": {
+      "coverage": "partly",
+      "component": "geometric_rearrangement",
+      "completes_with": "fraction_area_model"
+    },
+    "G912-08": {
+      "coverage": "fully",
+      "component": "number_line_solution"
+    },
+    "G912-09": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G912-10": {
+      "coverage": "fully",
+      "component": "function_plot"
+    },
+    "G912-11": {
+      "coverage": "fully",
+      "component": "board"
+    },
+    "G912-12": {
+      "coverage": "fully",
+      "component": "geometric_rearrangement",
+      "note": "square_area_identity"
+    },
+    "G912-13": {
+      "coverage": "fully",
+      "component": "function_plot",
+      "note": "tables on the board"
+    },
+    "G912-14": {
+      "coverage": "partly",
+      "component": "board",
+      "completes_with": "written_method",
+      "note": "no long-division layout"
+    },
+    "G912-15": {
+      "coverage": "partly",
+      "component": "function_plot",
+      "completes_with": "coordinate_plane_ext",
+      "note": "a function's graph; no mapping diagram or non-function curve"
+    },
+    "G912-16": {
+      "coverage": "partly",
+      "component": "function_plot",
+      "completes_with": "function_plot_ext",
+      "note": "the graph, without domain and range marked on the axes"
+    },
+    "G912-17": {
+      "coverage": "fully",
+      "component": "function_plot"
+    },
+    "G912-18": {
+      "coverage": "fully",
+      "component": "function_plot"
+    },
+    "G912-19": {
+      "coverage": "fully",
+      "component": "function_plot"
+    },
+    "G912-20": {
+      "coverage": "extend",
+      "completes_with": "function_plot_ext"
+    },
+    "G912-21": {
+      "coverage": "fully",
+      "component": "function_plot"
+    },
+    "G912-22": {
+      "coverage": "partly",
+      "component": "function_plot",
+      "completes_with": "function_plot_ext"
+    },
+    "G912-23": {
+      "coverage": "partly",
+      "component": "function_plot",
+      "completes_with": "function_plot_ext",
+      "note": "no vertical axis-of-symmetry line"
+    },
+    "G912-24": {
+      "coverage": "extend",
+      "completes_with": "geometry_angles"
+    },
+    "G912-25": {
+      "coverage": "extend",
+      "completes_with": "geometry_polygon_figure"
+    },
+    "G912-26": {
+      "coverage": "partly",
+      "component": "circle_and_arc",
+      "completes_with": "circle_and_arc_ext"
+    },
+    "G912-27": {
+      "coverage": "extend",
+      "completes_with": "coordinate_plane_ext"
+    },
+    "G912-28": {
+      "coverage": "extend",
+      "completes_with": "coordinate_plane_ext"
+    },
+    "G912-29": {
+      "coverage": "extend",
+      "completes_with": "geometry_polygon_figure"
+    },
+    "G912-30": {
+      "coverage": "extend",
+      "completes_with": "solids_3d_ext"
+    },
+    "G912-31": {
+      "coverage": "fully",
+      "component": "coordinate_circle"
+    },
+    "G912-32": {
+      "coverage": "new",
+      "completes_with": "data_charts"
+    },
+    "G912-33": {
+      "coverage": "partly",
+      "component": "function_plot",
+      "completes_with": "data_charts",
+      "note": "the bell curve, no shaded regions"
+    },
+    "G912-34": {
+      "coverage": "new",
+      "completes_with": "probability"
+    },
+    "G912-35": {
+      "coverage": "new",
+      "completes_with": "data_charts"
+    },
+    "G912-36": {
+      "coverage": "new",
+      "completes_with": "probability"
+    },
+    "G912-37": {
+      "coverage": "fully",
+      "component": "board",
+      "note": "a table"
+    },
+    "G912-38": {
+      "coverage": "extend",
+      "completes_with": "function_plot_ext",
+      "note": "a hole in the curve"
+    },
+    "G912-39": {
+      "coverage": "extend",
+      "completes_with": "function_plot_ext"
+    },
+    "G912-40": {
+      "coverage": "partly",
+      "component": "circle_and_arc",
+      "completes_with": "circle_and_arc_ext",
+      "note": "arc and radius, without the arc marked equal to the radius"
+    },
+    "G912-41": {
+      "coverage": "fully",
+      "component": "function_plot"
+    },
+    "G912-42": {
+      "coverage": "fully",
+      "component": "function_plot"
+    },
+    "G912-43": {
+      "coverage": "fully",
+      "component": "unit_circle_projection"
+    },
+    "G912-44": {
+      "coverage": "fully",
+      "component": "circle_and_arc"
+    },
+    "G912-45": {
+      "coverage": "fully",
+      "component": "board",
+      "note": "a table"
+    },
+    "G912-46": {
+      "coverage": "extend",
+      "completes_with": "rearrangement_ext",
+      "note": "staircase pieces"
+    },
+    "G912-47": {
+      "coverage": "fully",
+      "component": "function_plot",
+      "note": "the secant's slope as a slider"
+    },
+    "G912-48": {
+      "coverage": "new",
+      "completes_with": "probability",
+      "note": "outcomes grouped, with a chart"
+    },
+    "G912-49": {
+      "coverage": "fully",
+      "component": "function_surface_with_section"
+    },
+    "G912-50": {
+      "coverage": "fully",
+      "component": "implicit_surface_with_section"
+    }
+  }
+}
