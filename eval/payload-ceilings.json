@@ -128,14 +128,14 @@
     "note": "Provider usage promptTokenCount (Gemini API, gemini-3.6-flash, text composer request): unpadded 2,468-2,544, padded +8,368 B 3,799-3,875. Images not included. Checked in live runs, not offline."
   },
   "plugin_budgets": {
-    "note": "Bytes each plugin may add to a broad request: its recipes' model guidance and model parameter names, its prompt rules and its schema fragments (scripts/lesson-payload.mjs pluginFootprint). Budget = footprint on 2026-11-11 + its share of the tested 8,368 B headroom (proposed allocation; adjust by plan change). Math raised 5559 -> 5800 on 2026-11-12 for decision 0016's number-line recipes (owner, 0016 question 4).",
+    "note": "Bytes each plugin may add to a broad request: its recipes' model guidance and model parameter names, its prompt rules and its schema fragments (scripts/lesson-payload.mjs pluginFootprint). Budget = footprint on 2026-11-11 + its share of the tested 8,368 B headroom (proposed allocation; adjust by plan change). Math raised 5559 -> 5800 on 2026-11-12 for decision 0016's number-line recipes (owner, 0016 question 4). Reallocated 2026-11-12 (math expressiveness plan, Q1, owner-approved): other subjects are paused, so their unspent budget moves to math (math 5800 -> 9900; physics 2086 -> 600; chemistry, biology, earth_space 1000 -> 100). The budgets total 13065 B, below the 13151 B before, so no ceiling is raised.",
     "budgets": {
-      "math": 5800,
-      "physics": 2086,
+      "math": 9900,
+      "physics": 600,
       "shared": 2265,
-      "chemistry": 1000,
-      "biology": 1000,
-      "earth_space": 1000
+      "chemistry": 100,
+      "biology": 100,
+      "earth_space": 100
     }
   }
 }

@@ -447,9 +447,11 @@ export function firstCallThoughts(raw) {
  * The speed rule (owner, 2026-11-12): requests the new recipe fits and requests it does not are judged on
  * their own, each by its paired median (candidate minus baseline) at most +0.5 s. One median over both
  * hid a loss on the requests that do not use the recipe behind a gain on those that do (runs 9 and 9b).
- * A group with no pairs (an other-only run) is not judged.
+ * A group the run leaves out (an other-only run) is not judged; a run with no speed pairs at all (a
+ * quality-only run) gives no speed verdict, so it can never read as speed evidence (review of #73).
  */
 export function speedVerdict(groups, planned = ["fitting", "other"], limitMs = 500) {
+  if (!planned.length) return { result: "not judged", reason: "no speed pairs: a quality-only run" };
   const named = { fitting: groups.motion, other: groups.other };
   // A group the run planned but could not measure (every pair missing an arm, say a candidate that hit
   // the call cap) makes the verdict incomplete; only a group the run left out is skipped (review of #73).
