@@ -434,3 +434,30 @@ test("a lesson that moves a past b is refused as a section fault, never redrawn 
   }, { turn_id: "cross", learner_request: "x between 1 and 5", input_modality: "text", request_source: "self_contained" }, { on_rejected_part: (event) => rejected.push(event.error.message) }), /stop/);
   assert.ok(rejected.some((message) => /must stay smaller than every value/.test(message)), rejected.join());
 });
+test("a < x < b with a animated to 4 in section 2: the later section keeps 4 and the ranges stay apart in every part (review of #68)", async () => {
+  const reply = solutionReply("a<x<b", [1, 5]);
+  const outline = reply.course.outline;
+  outline.course_visuals[0].use_sections = [1, 2];
+  outline.sections.push({ purpose: "Move a closer to b and watch the interval shrink", reusable_items: [] });
+  outline.request_coverage = [{ treatment: "teach", sections: [1, 2] }];
+  const second = {
+    moments: [
+      { narration: "Now move a up to 4: the solutions are the numbers between 4 and 5.", delivery: "neutral", animations: [{ timing: "during_speech", number: 1, end_value: { mantissa: 4, scale: 0 }, duration_intent: "normal" }] },
+      { narration: "The interval is now 4 < x < 5.", delivery: "neutral" },
+    ],
+    reflection_activities: [], answer_activities: [], number_activities: [],
+  };
+  const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+  const parts = [];
+  await generateLessonPlanWithModel(async (request) => JSON.stringify(request.label === "lesson-plan-section" ? second : reply),
+    { turn_id: "later", learner_request: "Graph 1 < x < 5 on a number line", input_modality: "text", request_source: "self_contained" },
+    { on_playable_prefix: ({ compiled }) => parts.push(numberLineLesson(compiled.lesson)) });
+  assert.equal(parts.length, 2);
+  for (const line of parts) {
+    const [a, b] = line.variables;
+    assert.ok(a.min < a.max && b.min < b.max && a.max < b.min, JSON.stringify([a, b]));
+  }
+  const [a, b] = parts[1].variables;
+  assert.deepEqual(parts[1].animations.filter(([variable]) => variable === a.as).map(([, value]) => value), [4]);
+  assert.ok(a.max >= 4 && b.min <= 5, JSON.stringify([a, b]));
+});
