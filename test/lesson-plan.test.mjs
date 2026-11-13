@@ -4909,14 +4909,15 @@ test("a count the unit-square array cannot draw is refused, never clamped under 
   assert.equal(animateError?.code, "LESSON_PLAN_NUMBER_NOT_DRAWABLE");
   assert.match(animateError.message, /number 1 would reach 10/);
 
-  // A practice target of 9 would have been moved to 8, with its prompt rewritten.
+  // A practice target of 9 keeps its earlier rule: moved to 8, with the task prompt rewritten to match.
   const asks = arrayPlan();
   asks.sections[0].student_activities = [{
     kind: "number_target", prompt: "Make 9 columns.", number_controls: [{ number: 1, controls: ["slider"] }],
     value: 9, tolerance: 0.1, hints: ["Move the slider."],
   }];
-  assert.equal(refusedFor(asks)?.code, "LESSON_PLAN_NUMBER_NOT_DRAWABLE");
-  assert.match(refusedFor(asks).message, /number 1 would reach 9/);
+  const task = compileAndValidateLessonPlan(asks).lesson.lesson.tasks.find((entry) => entry.completion?.expression);
+  assert.equal(task.completion.value, 8);
+  assert.match(task.prompt, /8/);
 
   // Fractions of a square round to whole squares; that is not a change of count.
   const rounds = arrayPlan();
@@ -4935,7 +4936,14 @@ test("a count shared with a visual of another range is refused when the shared r
     delivery: "patient",
     actions: [{ ...structuredClone(cube), content: { ...structuredClone(cube.content), numbers: [1] }, placement: { relation: "new_region" }, reusable_item: 2 }],
   });
-  // The section that shares it can fix it, so it is the section's fault, not the outline's.
+  // The section that shares it can fix it, so it is the section's fault, at the visual that shares it.
   assert.throws(() => compileAndValidateLessonPlan(plan), (error) => error.code === "LESSON_PLAN_SHARED_NUMBER"
-    && error.capability === undefined && /number 1 is 3/.test(error.message) && /cube_with_section/.test(error.message));
+    && error.capability === undefined && /number 1 is 3/.test(error.message) && /drive the cube_with_section visual/.test(error.message)
+    && /moments\[1\]/.test(error.path));
+
+  // A count beyond its own recipe's limit is the outline's fault even when the number is also shared.
+  Object.assign(plan.numbers[0], { initial: 12, min: 10, max: 14 });
+  plan.sections[0].moments[0].actions.find((action) => action.action === "animate").end_value = 13;
+  assert.throws(() => compileAndValidateLessonPlan(plan), (error) => error.code === "LESSON_PLAN_OUTLINE_VISUAL"
+    && error.capability === "rectangle_unit_square_array" && /number 1 is 12/.test(error.message));
 });

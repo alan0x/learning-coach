@@ -16777,7 +16777,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
         }
         const fit = RECIPE_HOOKS[content.capability]?.fit_numbers;
         if (fit && action.action === "create") {
-          const shared = new Set([...visualsUsing].filter(([number, count]) => count > 1 && content.numbers?.includes(number)).map(([number]) => number));
+          const shared = new Set([...visualsUsing].filter(([number, count2]) => count2 > 1 && content.numbers?.includes(number)).map(([number]) => number));
           for (const [number, step] of fit(content, plan, shared)) {
             constrained.add(number);
             if (step > 0) tickSteps.set(number, step);
@@ -16791,9 +16791,12 @@ function normalizeProgramOwnedNumberRanges(plan) {
           if (RECIPE_HOOKS[content.capability]?.free_number?.(content, inputIndex)) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
           const prior = publishedPlotNumbers.has(numberIndex) ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step } : void 0;
-          if (policy.kind !== "unbounded") rangeOwners.set(numberIndex, /* @__PURE__ */ new Set([...rangeOwners.get(numberIndex) ?? [], content.capability]));
+          if (policy.kind !== "unbounded" && !rangeOwners.get(numberIndex)?.some((owner) => owner.capability === content.capability)) {
+            rangeOwners.set(numberIndex, [...rangeOwners.get(numberIndex) ?? [], { capability: content.capability, path }]);
+          }
           if ((policy.kind === "side_count" || policy.kind === "positive_integer") && !hardRanges.has(numberIndex)) {
-            hardRanges.set(numberIndex, { capability: content.capability, path });
+            const [min, max] = policy.kind === "side_count" ? [3, 384] : [1, policy.max];
+            hardRanges.set(numberIndex, { capability: content.capability, path, min, max });
           }
           if (policy.kind === "side_count") {
             integerSides.add(numberIndex);
@@ -16836,54 +16839,44 @@ function normalizeProgramOwnedNumberRanges(plan) {
     for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
   if (constrained.size === 0) return;
-  const outside = (number, value2) => {
+  const count = (value2) => Math.round(value2);
+  const check = (number, value2, path, sectionOwned) => {
+    const own = hardRanges.get(number);
     const definition = plan.numbers[number - 1];
-    const slack = Math.max((definition.max - definition.min) / 1e3, 1e-9);
-    const shown = integerSides.has(number) || Number.isInteger(definition.min) && definition.student_control?.step === 1 ? Math.round(value2) : value2;
-    return shown < definition.min - slack || shown > definition.max + slack;
-  };
-  const refuse = (number, value2, path, sectionOwned = false) => {
-    const definition = plan.numbers[number - 1];
-    const { capability: capability2 } = hardRanges.get(number);
-    const owners = [...rangeOwners.get(number) ?? []];
-    if (owners.length > 1) {
+    if (count(value2) < own.min || count(value2) > own.max) {
+      if (sectionOwned) {
+        fail2(
+          "LESSON_PLAN_NUMBER_NOT_DRAWABLE",
+          path,
+          `number ${number} would reach ${value2}, but the ${own.capability} visual can draw only ${own.min} to ${own.max}; use a value in that range`
+        );
+      }
+      throw new LessonPlanError(
+        "LESSON_PLAN_OUTLINE_VISUAL",
+        path,
+        `number ${number} is ${value2}, but the ${own.capability} visual can draw only ${own.min} to ${own.max}; choose another visual, or none`,
+        own.capability
+      );
+    }
+    if (count(value2) < definition.min || count(value2) > definition.max) {
+      const other = rangeOwners.get(number)?.find((owner) => owner.capability !== own.capability);
       fail2(
         "LESSON_PLAN_SHARED_NUMBER",
-        path,
-        `number ${number} is ${value2}, but it is shared by ${owners.join(" and ")}, which together allow only ${definition.min} to ${definition.max}; give each visual its own number`
+        other?.path ?? path,
+        `number ${number} is ${value2}, a count the ${own.capability} visual shows, but the ${other?.capability ?? "other"} visual sharing it allows only ${definition.min} to ${definition.max}; drive the ${other?.capability ?? "other"} visual with a different lesson number, or with none`
       );
     }
-    if (sectionOwned) {
-      fail2(
-        "LESSON_PLAN_NUMBER_NOT_DRAWABLE",
-        path,
-        `number ${number} would reach ${value2}, but the ${capability2} visual can draw only ${definition.min} to ${definition.max}; use a value in that range`
-      );
-    }
-    throw new LessonPlanError(
-      "LESSON_PLAN_OUTLINE_VISUAL",
-      path,
-      `number ${number} is ${value2}, but the ${capability2} visual can draw only ${definition.min} to ${definition.max}; choose another visual, or none`,
-      capability2
-    );
   };
   for (const [number, { path }] of hardRanges) {
     const value2 = written.get(number);
-    if (value2 !== void 0 && outside(number, value2)) refuse(number, value2, path);
+    if (value2 !== void 0) check(number, value2, path, false);
   }
   for (const [sectionIndex, section] of plan.sections.entries()) {
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
-        if (action.action === "animate" && hardRanges.has(action.number) && outside(action.number, action.end_value)) {
-          refuse(action.number, action.end_value, `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`, true);
+        if (action.action === "animate" && hardRanges.has(action.number)) {
+          check(action.number, action.end_value, `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`, true);
         }
-      }
-    }
-    for (const [activityIndex, activity] of (section.student_activities ?? []).entries()) {
-      if (activity.kind !== "number_target" || activity.expression) continue;
-      const number = activity.number_controls[0]?.number;
-      if (number && hardRanges.has(number) && outside(number, activity.value)) {
-        refuse(number, activity.value, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}].value`, true);
       }
     }
   }

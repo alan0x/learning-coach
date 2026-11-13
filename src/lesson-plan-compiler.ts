@@ -175,11 +175,11 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
   // shows and its narration states: a lesson titled "12 cookies" must not draw 8 squares (M2/M3
   // baseline, Coach #77). Such a count fails, and the model repairs the plan. Positions in a recipe's
   // own frame (a cube's section from −1 to 1) are still fitted: the model cannot know that frame.
-  const hardRanges = new Map<number, { capability: string; path: string }>();
+  const hardRanges = new Map<number, { capability: string; path: string; min: number; max: number }>();
   const written = new Map((plan.numbers ?? []).map((definition, index) => [index + 1, definition.initial]));
   // Every recipe whose own range applies to a number: a count shared with another recipe's range can be
   // narrowed by it (a 3 by 3 square drawn 1 by 3 beside a cube section running from −1 to 1).
-  const rangeOwners = new Map<number, Set<string>>();
+  const rangeOwners = new Map<number, Array<{ capability: string; path: string }>>();
   const publishedPlotNumbers = new Set<number>();
   for (const [sectionIndex, section] of plan.sections.entries()) {
     const newPlotNumbers = new Set<number>();
@@ -212,9 +212,12 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
           const prior = publishedPlotNumbers.has(numberIndex)
             ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step }
             : undefined;
-          if (policy.kind !== "unbounded") rangeOwners.set(numberIndex, new Set([...(rangeOwners.get(numberIndex) ?? []), content.capability]));
+          if (policy.kind !== "unbounded" && !rangeOwners.get(numberIndex)?.some((owner) => owner.capability === content.capability)) {
+            rangeOwners.set(numberIndex, [...(rangeOwners.get(numberIndex) ?? []), { capability: content.capability, path }]);
+          }
           if ((policy.kind === "side_count" || policy.kind === "positive_integer") && !hardRanges.has(numberIndex)) {
-            hardRanges.set(numberIndex, { capability: content.capability, path });
+            const [min, max] = policy.kind === "side_count" ? [3, 384] : [1, policy.max];
+            hardRanges.set(numberIndex, { capability: content.capability, path, min, max });
           }
           if (policy.kind === "side_count") {
             integerSides.add(numberIndex);
@@ -252,52 +255,46 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
     for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
   if (constrained.size === 0) return;
-  const outside = (number: number, value: number) => {
+  // Counts are whole numbers: 3.4 squares draws as 3, which is a rounding, not a change.
+  const count = (value: number) => Math.round(value);
+  const check = (number: number, value: number, path: string, sectionOwned: boolean) => {
+    const own = hardRanges.get(number)!;
     const definition = plan.numbers![number - 1]!;
-    const slack = Math.max((definition.max - definition.min) / 1_000, 1e-9);
-    // Counts and side counts are whole numbers: 3.4 squares draws as 3, which is a rounding, not a change.
-    const shown = integerSides.has(number) || Number.isInteger(definition.min) && definition.student_control?.step === 1 ? Math.round(value) : value;
-    return shown < definition.min - slack || shown > definition.max + slack;
-  };
-  const refuse = (number: number, value: number, path: string, sectionOwned = false) => {
-    const definition = plan.numbers![number - 1]!;
-    const { capability } = hardRanges.get(number)!;
-    const owners = [...(rangeOwners.get(number) ?? [])];
-    // Shared with a visual of another range: the section that shares it can give each visual its own number.
-    if (owners.length > 1) {
-      fail("LESSON_PLAN_SHARED_NUMBER", path,
-        `number ${number} is ${value}, but it is shared by ${owners.join(" and ")}, which together allow only ${definition.min} to ${definition.max}; give each visual its own number`);
+    // First the count's own recipe: a count it cannot draw is never anyone else's fault.
+    if (count(value) < own.min || count(value) > own.max) {
+      // An animation target is the section's: it can move to a count the visual draws.
+      if (sectionOwned) {
+        fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path,
+          `number ${number} would reach ${value}, but the ${own.capability} visual can draw only ${own.min} to ${own.max}; use a value in that range`);
+      }
+      // The outline chose both the visual and the count, so only a new outline can fix it: the lesson is
+      // asked again without this recipe (decision 0013's outline-owned fault, as for the number line).
+      throw new LessonPlanError("LESSON_PLAN_OUTLINE_VISUAL", path,
+        `number ${number} is ${value}, but the ${own.capability} visual can draw only ${own.min} to ${own.max}; choose another visual, or none`, own.capability);
     }
-    // An animation or practice target is the section's: it can move to a count the visual draws.
-    if (sectionOwned) {
-      fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path,
-        `number ${number} would reach ${value}, but the ${capability} visual can draw only ${definition.min} to ${definition.max}; use a value in that range`);
+    // Then a recipe sharing the number, whose range narrowed it: the section that shares it can drive that
+    // visual with another lesson number (each draft chooses its visuals' numbers), or with none.
+    if (count(value) < definition.min || count(value) > definition.max) {
+      const other = rangeOwners.get(number)?.find((owner) => owner.capability !== own.capability);
+      fail("LESSON_PLAN_SHARED_NUMBER", other?.path ?? path,
+        `number ${number} is ${value}, a count the ${own.capability} visual shows, but the ${other?.capability ?? "other"} visual sharing it allows only ${definition.min} to ${definition.max}; drive the ${other?.capability ?? "other"} visual with a different lesson number, or with none`);
     }
-    // The outline chose both the visual and the count, so only a new outline can fix it: the lesson is
-    // asked again without this recipe (decision 0013's outline-owned fault, as for the number line).
-    throw new LessonPlanError("LESSON_PLAN_OUTLINE_VISUAL", path,
-      `number ${number} is ${value}, but the ${capability} visual can draw only ${definition.min} to ${definition.max}; choose another visual, or none`, capability);
   };
   for (const [number, { path }] of hardRanges) {
     const value = written.get(number);
-    if (value !== undefined && outside(number, value)) refuse(number, value, path);
+    if (value !== undefined) check(number, value, path, false);
   }
   for (const [sectionIndex, section] of plan.sections.entries()) {
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
-        if (action.action === "animate" && hardRanges.has(action.number) && outside(action.number, action.end_value)) {
-          refuse(action.number, action.end_value, `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`, true);
+        if (action.action === "animate" && hardRanges.has(action.number)) {
+          check(action.number, action.end_value, `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`, true);
         }
       }
     }
-    for (const [activityIndex, activity] of (section.student_activities ?? []).entries()) {
-      if (activity.kind !== "number_target" || activity.expression) continue;
-      const number = activity.number_controls[0]?.number;
-      if (number && hardRanges.has(number) && outside(number, activity.value)) {
-        refuse(number, activity.value, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}].value`, true);
-      }
-    }
   }
+  // Practice targets keep their earlier rule: one beyond the visual's range is moved to its edge and the task
+  // prompt is rewritten to match (probe 3), so the task never asks for what the visual cannot reach.
   // Side counts are whole numbers; a fitted number line's numbers sit on its ticks.
   const roundToProgramGrid = (number: number, value: number) => {
     if (integerSides.has(number)) return Math.round(value);
