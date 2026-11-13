@@ -36,6 +36,13 @@ export const RECIPE_CATALOG_ORDER = [
   "geometric_rearrangement",
   "circle_area_rearrangement",
   "process_diagram",
+  // Number line (OLL decision 0013) and its question types (0016): adopted 2026-11-12 after the gate on
+  // the rewritten cards passed (Coach docs/TRIAL_RECIPE_SPEED_NUMBER_LINE_2026-11-11.md, runs 11 and 11b).
+  // They stay last, where the gate measured them.
+  "number_line",
+  "number_line_compare",
+  "number_line_solution",
+  "number_line_rounding",
 ] as const satisfies readonly (keyof AllRecipes)[];
 
 /**
@@ -45,7 +52,7 @@ export const RECIPE_CATALOG_ORDER = [
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-export const TRIAL_RECIPES = ["constant_speed_motion", "number_line", "number_line_compare", "number_line_solution", "number_line_rounding"] as const satisfies readonly (keyof AllRecipes)[];
+export const TRIAL_RECIPES = ["constant_speed_motion"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {

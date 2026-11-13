@@ -258,3 +258,46 @@ test("a run offering several recipes runs every recipe's quality cases (run 9 ra
   assert.equal(new Set(ids).size, ids.length);
   assert.deepEqual(qualityCasesFor("constant_speed_motion"), []);
 });
+
+test("speed is judged separately for requests the recipe fits and requests it does not (owner, 2026-11-12)", async () => {
+  const { summarize, speedVerdict, firstCallThoughts } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  const row = (pair, kind, arm, ms, thoughts) => ({ pair, kind, arm, case: "x", outcome: "first_playable", first_playable_ms: ms, prompt_tokens: 1, first_call_thoughts: thoughts });
+  // Fitting requests 3 s faster, other requests 2 s slower: one median over both would pass at -0.5 s.
+  const rows = [
+    row(0, "motion", "baseline", 10000, 0), row(0, "motion", "candidate", 7000, 0),
+    row(1, "other", "baseline", 8000, 0), row(1, "other", "candidate", 10000, 500),
+  ];
+  const summary = summarize(rows);
+  assert.equal(summary.speed.result, "fail");
+  assert.match(summary.speed.reason, /other requests \+2000 ms/);
+  assert.deepEqual(summary.other.thinking_turns, { baseline: "0/1", candidate: "1/1" });
+  // A group the run leaves out is not judged; a planned group with no complete pairs makes it incomplete.
+  assert.equal(speedVerdict({ motion: summary.motion, other: { complete_pairs: 0 } }, ["fitting"]).result, "pass");
+  assert.equal(speedVerdict({ motion: summary.motion, other: { complete_pairs: 0 } }).result, "incomplete");
+  // A quality-only run (no speed pairs, like run 11b) gives no speed verdict, never a pass.
+  assert.equal(summarize([]).speed.result, "not judged");
+  assert.equal(summarize([{ pair: 0, kind: "solution", arm: "candidate", case: "SOL-01", outcome: "first_playable", first_playable_ms: 1, quality: { hard: [], soft: [] } }]).speed.result, "not judged");
+  // A third arm is summarised against the same baseline.
+  const three = summarize([...rows, { ...row(1, "other", "previous", 12000, 900) }]);
+  assert.equal(three.previous.other.paired_difference_ms.median, 4000);
+  assert.equal(firstCallThoughts('x "label":"lesson-plan-bootstrap" "usageMetadata":{"thoughtsTokenCount":12}\nx "label":"lesson-plan-bootstrap" "usageMetadata":{"thoughtsTokenCount":690}\n'), 690);
+});
+
+test("a planned group whose candidate runs failed makes the speed verdict incomplete, never a pass (review of #73)", async () => {
+  const { summarize } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  const ok = (pair, kind, arm, ms) => ({ pair, kind, arm, case: "x", outcome: "first_playable", first_playable_ms: ms, prompt_tokens: 1 });
+  const summary = summarize([
+    ok(0, "motion", "baseline", 10000), ok(0, "motion", "candidate", 7000),
+    ok(1, "other", "baseline", 8000), { pair: 1, kind: "other", arm: "candidate", case: "x", outcome: "call_cap", first_playable_ms: null },
+  ]);
+  assert.deepEqual(summary.speed, { result: "incomplete", reason: "no complete other pairs" });
+  // An other-only run plans only the other group.
+  assert.equal(summarize([ok(0, "other", "baseline", 8000), ok(0, "other", "candidate", 8200)]).speed.result, "pass");
+});
+
+test("other-only runs skip the quality cases unless asked (review of #73)", async () => {
+  const { qualityRepeats } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  assert.equal(qualityRepeats(undefined, true), 0);
+  assert.equal(qualityRepeats(undefined, false), 1);
+  assert.equal(qualityRepeats("2", true), 2);
+});

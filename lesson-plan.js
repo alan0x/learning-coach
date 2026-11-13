@@ -12002,7 +12002,7 @@ var MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line"],
-    model_guidance: "\u6570\u8F74\uFF1A\u8D77\u70B9\u52A0\u4E00\u6B21\u79FB\u52A8\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF09\u3002a + b\uFF1A\u8D77\u70B9 a\uFF0C\u79FB\u52A8 b\uFF1B\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u8D77\u70B9\u662F\u8F83\u5C0F\u7684\u6570\uFF0C\u79FB\u52A8\u662F\u5DEE\uFF1B\u95EE\u4E00\u4E2A\u6570\u7684\u4F4D\u7F6E\uFF1A\u8D77\u70B9 0\uFF1B\u6309\u5206\u6570\u6570\u6570\uFF1A\u79FB\u52A8\u5199\u4E00\u6B65\uFF080.25\uFF09\u3002\u9898\u76EE\u5199\u5C0F\u6570\u65F6 label_style \u7528 decimal\u3002\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5F0F\u3001\u7EDD\u5BF9\u503C\u3001\u56DB\u820D\u4E94\u5165\u6216\u51FD\u6570\u56FE\u50CF"
+    model_guidance: "\u6570\u8F74\u52A0\u51CF\uFF1Aa + b \u8D77\u70B9 a\u3001\u79FB\u52A8 b\uFF0C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF083/4 \u5199 0.75\uFF09\uFF1B\u95EE\u4F4D\u7F6E\u65F6\u8D77\u70B9 0\uFF1B\u6309\u5206\u6570\u6570\u6570\u65F6\u79FB\u52A8\u5199\u4E00\u6B65\uFF080.25\uFF09\uFF1B\u9898\u76EE\u5199\u5C0F\u6570\u65F6 label_style \u7528 decimal"
   },
   // Decision 0016: comparing two numbers. Each is a point; the ticks hold both (their common
   // denominator, up to 24 parts per unit). The shared rules (actual size, label_style) are on the
@@ -12018,7 +12018,7 @@ var MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line", "number_comparison"],
-    model_guidance: "\u6570\u8F74\u6BD4\u8F83\uFF1A\u4E24\u4E2A\u6570\u503C\u662F\u8981\u6BD4\u8F83\u7684\u4E24\u4E2A\u6570\uFF0C\u5404\u753B\u4E00\u70B9\uFF082/3 \u548C 3/5 \u4E5F\u80FD\u753B\uFF09"
+    model_guidance: "\u6570\u8F74\u6BD4\u8F83\u4E24\u4E2A\u6570\uFF1A\u4E24\u4E2A\u6570\u503C\u5404\u753B\u4E00\u70B9\uFF082/3 \u548C 3/5 \u4E5F\u80FD\u753B\uFF09"
   },
   // Decision 0016: a solution set. The model names the relation and gives the boundaries (solved first);
   // the program draws open or filled ends and the rays or interval.
@@ -12033,7 +12033,7 @@ var MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line", "solution_set"],
-    model_guidance: "\u6570\u8F74\u89E3\u96C6\uFF1A\u5148\u89E3\u51FA\u8FB9\u754C\uFF1Brelation \u5199\u89E3\u96C6\u5F62\u5F0F\uFF0C\u6570\u503C\u4F9D\u6B21\u662F a\u3001b\uFF08|x\u22123|<2 \u5199 a<x<b\uFF0Ca=1\uFF0Cb=5\uFF09"
+    model_guidance: "\u6570\u8F74\u753B\u4E0D\u7B49\u5F0F\u89E3\u96C6\uFF1A\u5148\u89E3\u51FA\u8FB9\u754C\uFF1Brelation \u5199\u89E3\u96C6\u5F62\u5F0F\uFF0C\u6570\u503C\u4F9D\u6B21\u662F a\u3001b\uFF08|x\u22123|<2 \u5199 a<x<b\uFF0Ca=1\uFF0Cb=5\uFF09"
   },
   // Decision 0016: rounding. The model gives the number and the place; the program draws the two
   // neighbours, the halfway point and the jump to the result.
@@ -12048,7 +12048,7 @@ var MATH_RECIPES = {
     output_kinds: ["number_line"],
     student_controls: ["slider"],
     required_features: ["number_line", "rounding"],
-    model_guidance: "\u6570\u8F74\u53D6\u6574\uFF1A\u6570\u503C\u662F\u8981\u53D6\u6574\u7684\u6570\uFF0Cplace \u5199\u53D6\u5230\u54EA\u4E00\u4F4D\uFF1B\u4E24\u4FA7\u7684\u6570\u548C\u7ED3\u679C\u7531\u7A0B\u5E8F\u7B97"
+    model_guidance: "\u6570\u8F74\u56DB\u820D\u4E94\u5165\uFF1A\u6570\u503C\u662F\u8981\u53D6\u6574\u7684\u6570\uFF0Cplace \u5199\u54EA\u4E00\u4F4D\uFF1B\u4E24\u4FA7\u7684\u6570\u548C\u7ED3\u679C\u7531\u7A0B\u5E8F\u7B97"
   }
 };
 var text2 = { type: "string" };
@@ -12453,9 +12453,16 @@ var RECIPE_CATALOG_ORDER = [
   "rectangle_unit_square_array",
   "geometric_rearrangement",
   "circle_area_rearrangement",
-  "process_diagram"
+  "process_diagram",
+  // Number line (OLL decision 0013) and its question types (0016): adopted 2026-11-12 after the gate on
+  // the rewritten cards passed (Coach docs/TRIAL_RECIPE_SPEED_NUMBER_LINE_2026-11-11.md, runs 11 and 11b).
+  // They stay last, where the gate measured them.
+  "number_line",
+  "number_line_compare",
+  "number_line_solution",
+  "number_line_rounding"
 ];
-var TRIAL_RECIPES = ["constant_speed_motion", "number_line", "number_line_compare", "number_line_solution", "number_line_rounding"];
+var TRIAL_RECIPES = ["constant_speed_motion"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));

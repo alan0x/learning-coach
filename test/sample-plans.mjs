@@ -44,9 +44,11 @@ export function makeSamplePlanModelCompatible(plan) {
 export function samplePlan(capability) {
   const numberCount = capability === "process_diagram"
     ? 0
-    : capability === "rectangle_unit_square_array"
+    : capability === "rectangle_unit_square_array" || capability === "number_line_compare"
       ? 2
       : 1;
+  // The number line's question types (decisions 0013 and 0016): the parameters each one needs.
+  const numberLineParameters = { number_line_solution: { relation: "x>a" }, number_line_rounding: { place: "tens" } }[capability];
   const hasNumber = numberCount > 0;
   const is3d = capability === "cube_with_section"
     || capability === "function_surface_with_section"
@@ -62,7 +64,7 @@ export function samplePlan(capability) {
           ? { expression: "x^2", sample_x_numbers: [1] }
           : capability === "implicit_surface_with_section"
             ? { expression: "x^2+y^2+z^2", level: 1, section_axis: "z" }
-            : {},
+            : numberLineParameters ?? {},
         ...(hasNumber ? { numbers: Array.from({ length: numberCount }, (_unused, index) => index + 1) } : {}),
       },
       placement: { relation: "new_region" },
@@ -79,7 +81,7 @@ export function samplePlan(capability) {
     firstMomentActions.push({
       action: "animate",
       number: 1,
-      end_value: capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : 0.75,
+      end_value: capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -93,6 +95,10 @@ export function samplePlan(capability) {
     ...(hasNumber ? {
       numbers: Array.from({ length: numberCount }, (_unused, index) => capability === "circle_polygon_bounds"
         ? { initial: 6, min: 6, max: 96, label: "多边形边数", unit: "边", student_control: {kind:"slider",step:1} }
+        : capability === "number_line_rounding"
+        ? { initial: 47, min: 40, max: 50, label: "要取整的数", student_control: { kind: "slider", step: 1 } }
+        : capability === "number_line_compare"
+        ? { initial: index === 0 ? 0.5 : 0.25, min: 0, max: 1, label: index === 0 ? "first" : "second", student_control: { kind: "slider", step: 0.05 } }
         : capability === "rectangle_unit_square_array"
         ? {
             initial: index === 0 ? 5 : 3,
@@ -141,7 +147,7 @@ export function samplePlan(capability) {
             kind: "number_target",
             prompt: "Move the main value to one half.",
             number_controls: [{ number: 1, controls: ["slider"] }],
-            value: capability === "circle_polygon_bounds" ? 96 : 0.5,
+            value: capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : 0.5,
             tolerance: 0.02,
             hints: ["Watch the numeric value."],
           }],
