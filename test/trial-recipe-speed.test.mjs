@@ -250,3 +250,11 @@ test("the recipes a part used tell a comparison from a start plus a move (decisi
   assert.deepEqual(recipesInPart(part(["lower", "middle", "upper", "number"])), ["number_line_rounding"]);
 });
 
+
+test("a run offering several recipes runs every recipe's quality cases (run 9 ran only the first recipe's)", async () => {
+  const { qualityCasesFor } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  const ids = qualityCasesFor("number_line, number_line_compare,number_line_solution,number_line_rounding").map((item) => item.id);
+  for (const prefix of ["NL-", "NM-", "CMP-", "SOL-", "RND-"]) assert.ok(ids.some((id) => id.startsWith(prefix)), prefix);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.deepEqual(qualityCasesFor("constant_speed_motion"), []);
+});

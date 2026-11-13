@@ -513,3 +513,19 @@ A DOM probe settled run 6's puzzling screenshot: the board does redraw a point a
   - NM-01..04 also run on the baseline arm, read by hand against today.
   - A lesson whose number line appears only in a later section is read by hand.
 - **Budget:** `--pairs 20 --quality-repeats 2 --max-calls 190`, about $1.25 expected (at most about $1.40). Three repeats would cost about $1.65, above the approved figure.
+
+## Run 9 (2026-11-12): incomplete — the comparing, solution-set and rounding cases did not run
+
+Owner-approved; 110 calls (about $0.80); `eval/trial-recipe-speed-number-line-2026-11-12-run9.json`.
+
+**A harness defect, found after the run.** The harness took the quality cases of the first recipe named only, so CMP-01..05, SOL-01..06 and RND-01..05 never ran, although the rules above list them. The run is therefore incomplete, not passed. Fixed: `qualityCasesFor` takes every named recipe's cases, with a test.
+
+**What did run:**
+- **Quality: 38 of 38 pass every hard check** (NL-11..20 twice, NM-01..04 twice, and the 10 NL speed pairs that used the recipe). One soft miss: NL-08 without hops.
+- **NM-01..04, re-judged for free with the full checks** (the comparing, solution-set and rounding expectations, through `scripts/replay-trial-recipe.mjs`): **8 of 8 pass**. In runs 6–8 these requests misled 4–5 times in 6. Read by hand: each final picture agrees with its narration (open circle and ray from −2; the open interval 1 to 5; 40, 45, 47, 50 and the jump to 50; 3/5 left of 2/3). Each line starts at the reset value for the learner's task and animates to the taught value while the lesson speaks (option a).
+- **Speed: inconclusive under option (a).** Paired median +1.09 s against +0.5 s, 95% interval [−3.3, +4.1] s, which includes zero. The rule allows one repeat of the 20 speed pairs.
+
+**A speed signal across runs.** Pooling the speed pairs of runs 5–9 (50 per group):
+- requests that use the number line: −3.7 s (95% interval −6.7 to −0.4 s);
+- the other held-out requests, which the candidate's larger prompt (+107 to +252 tokens) reaches without the recipe being used: **+1.7 s (95% interval +0.7 to +2.8 s)**, slower in 72% of pairs.
+- Part of this is retries: 5 of 50 candidate turns made extra calls against 1 of 50 baseline turns. None involved the number line (for example, a unit circle drawn for an Earth-science request). The cause is not established. Eight of the ten held-out requests are science, which is now paused.
