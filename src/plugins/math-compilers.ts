@@ -686,6 +686,14 @@ function compileNumberLineSolution(
   if (bounds.length === 2 && !(bounds[0]!.definition.initial < bounds[1]!.definition.initial)) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "the first boundary (a) must be smaller than the second (b)");
   }
+  // Every value the lesson moves a to stays below every value it moves b to; the fit keeps the two
+  // sliders' ranges apart between them, and never changes a value to make them fit (review of #68).
+  if (bounds.length === 2) {
+    const [first, second] = bounds.map(({ number, definition }) => [definition.initial, ...lessonValues(plan, number)]);
+    if (!(Math.max(...first!) < Math.min(...second!))) {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "every value the lesson gives the first boundary (a) must stay smaller than every value it gives the second (b)");
+    }
+  }
   const values = bounds.flatMap(({ definition }) => [definition.min, definition.max, definition.initial]);
   const steps = bounds.map(({ definition }) => definition.student_control?.step).filter((step): step is number => typeof step === "number" && step > 0);
   const shown = bounds.flatMap(({ number, definition }) => [definition.initial, ...lessonValues(plan, number)]);
