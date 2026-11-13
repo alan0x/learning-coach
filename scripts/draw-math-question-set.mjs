@@ -18,6 +18,9 @@ export const SEED = 20261113;
 export const DRAWN_BANDS = { "K-2": 30, "3-5": 40, "6-8": 38 };
 export const CHINESE_PER_BAND = { "K-2": 6, "3-5": 7, "6-8": 5 };
 export const KIND_SHARES = [["question", 0.45], ["detailed", 0.3], ["topic", 0.25]];
+// Version 2 (owner, 2026-11-13): the catalog's 6–8 topics are mostly grade 6, so 6–8 is drawn evenly by
+// grade from its own seed stream. The other bands keep version 1's draw unchanged.
+export const GRADES_6_8 = { 6: 12, 7: 13, 8: 13 };
 // 9–12 is not in the star map: its domains are the plan's six, with counts fixed here before writing.
 // Ten more 9–12 questions come from the natural-input set (one per topic); two of its topics are grade 8.
 export const WRITTEN_9_12 = {
@@ -95,7 +98,31 @@ export function drawTopics(catalog) {
   const written = Object.entries(WRITTEN_9_12).flatMap(([domain, n]) => Array(n).fill(domain));
   const kinds = shuffled(counts(written.length, KIND_SHARES), next);
   written.forEach((domain, i) => slots.push({ band: "9-12", domain, topic: null, language: "en-US", kind: kinds[i] }));
-  return slots;
+  return [...slots.filter((s) => s.band !== "6-8"), ...drawSixToEightByGrade(math)].sort((a, b) => BAND_ORDER.indexOf(a.band) - BAND_ORDER.indexOf(b.band));
+}
+
+const BAND_ORDER = ["K-2", "3-5", "6-8", "9-12"];
+
+export function grade(topic) {
+  const g = (topic.ageRangeStart + topic.ageRangeEnd) / 2 - 5.5;
+  return g < 6.5 ? 6 : g < 7.5 ? 7 : 8;
+}
+
+function drawSixToEightByGrade(math) {
+  const next = random(SEED + 68);
+  const slots = [];
+  for (const [g, total] of Object.entries(GRADES_6_8)) {
+    const inGrade = math.filter((t) => band(t) === "6-8" && grade(t) === Number(g));
+    const byDomain = {};
+    for (const t of inGrade) (byDomain[t.domain] ??= []).push(t);
+    const plan = allocate(Object.fromEntries(Object.entries(byDomain).map(([d, ts]) => [d, ts.length])), total);
+    for (const d of Object.keys(plan).sort()) {
+      for (const t of shuffled(byDomain[d], next).slice(0, plan[d])) slots.push({ band: "6-8", grade: Number(g), domain: d, topic: t });
+    }
+  }
+  const languages = shuffled([...Array(CHINESE_PER_BAND["6-8"]).fill("zh-CN"), ...Array(slots.length - CHINESE_PER_BAND["6-8"]).fill("en-US")], next);
+  const kinds = shuffled(counts(slots.length, KIND_SHARES), next);
+  return slots.map((slot, i) => ({ ...slot, language: languages[i], kind: kinds[i] }));
 }
 
 /** A quarter of each band, rounded, drawn from questions that may be held out (not the natural-input set). */
