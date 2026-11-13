@@ -1,0 +1,321 @@
+{
+  "suite": "M2/M3 regression sample for the math expressiveness question set",
+  "plan": "octos-learn docs/MATH_EXPRESSIVENESS_PLAN.md §4: chosen once and kept",
+  "drawn_by": "scripts/draw-math-regression-sample.mjs",
+  "seed": 20261114,
+  "per_band": {
+    "served": 4,
+    "near_miss": 5,
+    "not_served": 4,
+    "board": 2
+  },
+  "strata": {
+    "served": "fully drawn by a component (M1)",
+    "board": "fully covered by the board",
+    "near_miss": "partly, or an extension away",
+    "not_served": "needs a new component"
+  },
+  "note": "Held-out questions may be in the sample; their results are reported separately.",
+  "questions": [
+    {
+      "id": "K2-15",
+      "band": "K-2",
+      "stratum": "served"
+    },
+    {
+      "id": "K2-18",
+      "band": "K-2",
+      "stratum": "board"
+    },
+    {
+      "id": "K2-27",
+      "band": "K-2",
+      "stratum": "board"
+    },
+    {
+      "id": "K2-22",
+      "band": "K-2",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "K2-11",
+      "band": "K-2",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "K2-23",
+      "band": "K-2",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "K2-14",
+      "band": "K-2",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "K2-07",
+      "band": "K-2",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "K2-26",
+      "band": "K-2",
+      "stratum": "not_served"
+    },
+    {
+      "id": "K2-30",
+      "band": "K-2",
+      "stratum": "not_served"
+    },
+    {
+      "id": "K2-13",
+      "band": "K-2",
+      "stratum": "not_served"
+    },
+    {
+      "id": "K2-25",
+      "band": "K-2",
+      "stratum": "not_served"
+    },
+    {
+      "id": "K2-05",
+      "band": "K-2",
+      "stratum": "not_served"
+    },
+    {
+      "id": "K2-28",
+      "band": "K-2",
+      "stratum": "not_served"
+    },
+    {
+      "id": "K2-21",
+      "band": "K-2",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G35-27",
+      "band": "3-5",
+      "stratum": "served"
+    },
+    {
+      "id": "G35-30",
+      "band": "3-5",
+      "stratum": "served"
+    },
+    {
+      "id": "G35-03",
+      "band": "3-5",
+      "stratum": "served"
+    },
+    {
+      "id": "G35-34",
+      "band": "3-5",
+      "stratum": "board"
+    },
+    {
+      "id": "G35-21",
+      "band": "3-5",
+      "stratum": "board"
+    },
+    {
+      "id": "G35-25",
+      "band": "3-5",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G35-32",
+      "band": "3-5",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G35-08",
+      "band": "3-5",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G35-10",
+      "band": "3-5",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G35-17",
+      "band": "3-5",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G35-40",
+      "band": "3-5",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G35-05",
+      "band": "3-5",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G35-13",
+      "band": "3-5",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G35-33",
+      "band": "3-5",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G35-24",
+      "band": "3-5",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G68-39",
+      "band": "6-8",
+      "stratum": "served"
+    },
+    {
+      "id": "G68-04",
+      "band": "6-8",
+      "stratum": "served"
+    },
+    {
+      "id": "G68-13",
+      "band": "6-8",
+      "stratum": "served"
+    },
+    {
+      "id": "G68-10",
+      "band": "6-8",
+      "stratum": "served"
+    },
+    {
+      "id": "G68-09",
+      "band": "6-8",
+      "stratum": "board"
+    },
+    {
+      "id": "G68-27",
+      "band": "6-8",
+      "stratum": "board"
+    },
+    {
+      "id": "G68-11",
+      "band": "6-8",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G68-33",
+      "band": "6-8",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G68-32",
+      "band": "6-8",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G68-20",
+      "band": "6-8",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G68-22",
+      "band": "6-8",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G68-31",
+      "band": "6-8",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G68-38",
+      "band": "6-8",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G68-15",
+      "band": "6-8",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G68-08",
+      "band": "6-8",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G912-08",
+      "band": "9-12",
+      "stratum": "served"
+    },
+    {
+      "id": "G912-49",
+      "band": "9-12",
+      "stratum": "served"
+    },
+    {
+      "id": "G912-19",
+      "band": "9-12",
+      "stratum": "served"
+    },
+    {
+      "id": "G912-17",
+      "band": "9-12",
+      "stratum": "served"
+    },
+    {
+      "id": "G912-11",
+      "band": "9-12",
+      "stratum": "board"
+    },
+    {
+      "id": "G912-09",
+      "band": "9-12",
+      "stratum": "board"
+    },
+    {
+      "id": "G912-20",
+      "band": "9-12",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G912-40",
+      "band": "9-12",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G912-28",
+      "band": "9-12",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G912-26",
+      "band": "9-12",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G912-24",
+      "band": "9-12",
+      "stratum": "near_miss"
+    },
+    {
+      "id": "G912-06",
+      "band": "9-12",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G912-34",
+      "band": "9-12",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G912-35",
+      "band": "9-12",
+      "stratum": "not_served"
+    },
+    {
+      "id": "G912-32",
+      "band": "9-12",
+      "stratum": "not_served"
+    }
+  ]
+}

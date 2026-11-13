@@ -1,0 +1,1317 @@
+{
+  "suite": "M2/M3 baseline over the regression sample",
+  "sample": "testsuite/math-expressiveness-regression-sample.json",
+  "run": {
+    "date": "2026-11-14",
+    "build": "Coach 0.29.0 (main b2f1ec9)",
+    "provider": "google",
+    "model": "gemini-3.6-flash",
+    "harness": "scripts/eval-math-expressiveness.mjs (whole lessons, no Jev)",
+    "model_calls": 136,
+    "tokens": {
+      "prompt": 264277,
+      "output": 131537,
+      "thinking": 31528
+    }
+  },
+  "rubric": {
+    "m2_chosen": "For questions an existing component serves (M1 fully or partly): 'expected' if the lesson used that component (or its family), 'other' if another component, 'none' if no visual.",
+    "m2_correct": "correct; minor (the picture is right but incomplete, or starts wrong and is animated right); wrong (the picture or its narration states something false).",
+    "m3": "helpful; none (no visual); irrelevant (accurate but beside the question); misleading (the picture, or what the narration says it shows, is false for the question).",
+    "fixed_before_reading": true
+  },
+  "summary": {
+    "served": {
+      "n": 12,
+      "m3": {
+        "helpful": 12
+      },
+      "m2_with_a_fitting_component": {
+        "n": 12,
+        "chosen": {
+          "expected": 12
+        },
+        "correct": {
+          "minor": 1,
+          "correct": 11
+        }
+      }
+    },
+    "near_miss": {
+      "n": 20,
+      "m3": {
+        "helpful": 14,
+        "misleading": 4,
+        "irrelevant": 2
+      },
+      "m2_with_a_fitting_component": {
+        "n": 12,
+        "chosen": {
+          "expected": 10,
+          "other": 2
+        },
+        "correct": {
+          "correct": 5,
+          "wrong": 3,
+          "minor": 4
+        }
+      }
+    },
+    "not_served": {
+      "n": 20,
+      "m3": {
+        "misleading": 5,
+        "irrelevant": 4,
+        "helpful": 11
+      }
+    },
+    "board": {
+      "n": 8,
+      "m3": {
+        "none": 2,
+        "helpful": 6
+      }
+    },
+    "by_band": {
+      "K-2": {
+        "helpful": 8,
+        "none": 1,
+        "misleading": 4,
+        "irrelevant": 2
+      },
+      "3-5": {
+        "helpful": 12,
+        "none": 1,
+        "irrelevant": 2
+      },
+      "6-8": {
+        "helpful": 13,
+        "misleading": 2
+      },
+      "9-12": {
+        "helpful": 10,
+        "misleading": 3,
+        "irrelevant": 2
+      }
+    },
+    "held_out": {
+      "helpful": 15,
+      "irrelevant": 4,
+      "misleading": 2
+    },
+    "open": {
+      "none": 2,
+      "helpful": 28,
+      "misleading": 7,
+      "irrelevant": 2
+    },
+    "lessons": 58,
+    "no_visual": 0
+  },
+  "readings": [
+    {
+      "id": "K2-15",
+      "band": "K-2",
+      "stratum": "served",
+      "held_out": true,
+      "m1": "fully",
+      "expected_component": "cube_with_section",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "cube_with_section"
+      ],
+      "drawn": [
+        "scene3d"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "minor",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "K2-18",
+      "band": "K-2",
+      "stratum": "board",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "board",
+      "outcome": "no lesson: clarify",
+      "calls": 1,
+      "recipes": [],
+      "drawn": [],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "none",
+      "note": "asked to clarify instead of teaching"
+    },
+    {
+      "id": "K2-27",
+      "band": "K-2",
+      "stratum": "board",
+      "held_out": true,
+      "m1": "fully",
+      "expected_component": "board",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "K2-22",
+      "band": "K-2",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "partly",
+      "expected_component": "number_line",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "K2-11",
+      "band": "K-2",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "partly",
+      "expected_component": "number_line_compare",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "circle_and_arc"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": "other",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": "circle_and_arc: a sector of 180°, 90°, 45° for halves, fourths, eighths"
+    },
+    {
+      "id": "K2-23",
+      "band": "K-2",
+      "stratum": "near_miss",
+      "held_out": true,
+      "m1": "partly",
+      "expected_component": "number_line_compare",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "K2-14",
+      "band": "K-2",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "partly",
+      "expected_component": "cube_with_section",
+      "outcome": "lesson",
+      "calls": 5,
+      "recipes": [
+        "cube_with_section",
+        "process_diagram"
+      ],
+      "drawn": [
+        "scene3d"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "wrong",
+      "m3": "misleading",
+      "note": "only a cube is drawn; the narration points at a square, a sphere, and a slider that 'adds thickness'"
+    },
+    {
+      "id": "K2-07",
+      "band": "K-2",
+      "stratum": "near_miss",
+      "held_out": true,
+      "m1": "partly",
+      "expected_component": "number_line",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "minor",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "K2-26",
+      "band": "K-2",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "misleading",
+      "note": "unit-square array of 8 by 3 (24) titled '12 cookies shared among 3 friends'"
+    },
+    {
+      "id": "K2-30",
+      "band": "K-2",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "misleading",
+      "note": "unit-square array of 8 by 4 (32) titled '4 tens = 40 units'"
+    },
+    {
+      "id": "K2-13",
+      "band": "K-2",
+      "stratum": "not_served",
+      "held_out": true,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "irrelevant",
+      "note": ""
+    },
+    {
+      "id": "K2-25",
+      "band": "K-2",
+      "stratum": "not_served",
+      "held_out": true,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "coordinate_circle"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "irrelevant",
+      "note": ""
+    },
+    {
+      "id": "K2-05",
+      "band": "K-2",
+      "stratum": "not_served",
+      "held_out": true,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "K2-28",
+      "band": "K-2",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "misleading",
+      "note": "unit-square array of 8 by 1 titled 'ten units as one group'"
+    },
+    {
+      "id": "K2-21",
+      "band": "K-2",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 3,
+      "recipes": [
+        "number_line_compare"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "two lengths as points 7 and 5; the line starts at 3, not 0"
+    },
+    {
+      "id": "G35-27",
+      "band": "3-5",
+      "stratum": "served",
+      "held_out": true,
+      "m1": "fully",
+      "expected_component": "rectangle_unit_square_array",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G35-30",
+      "band": "3-5",
+      "stratum": "served",
+      "held_out": true,
+      "m1": "fully",
+      "expected_component": "rectangle_unit_square_array",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G35-03",
+      "band": "3-5",
+      "stratum": "served",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "rectangle_unit_square_array",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G35-34",
+      "band": "3-5",
+      "stratum": "board",
+      "held_out": true,
+      "m1": "fully",
+      "expected_component": "board",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G35-21",
+      "band": "3-5",
+      "stratum": "board",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "board",
+      "outcome": "failed",
+      "calls": 4,
+      "recipes": [
+        "number_line_compare",
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "none",
+      "note": "generation failed: no lesson"
+    },
+    {
+      "id": "G35-25",
+      "band": "3-5",
+      "stratum": "near_miss",
+      "held_out": true,
+      "m1": "extend",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "irrelevant",
+      "note": ""
+    },
+    {
+      "id": "G35-32",
+      "band": "3-5",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "extend",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a flowchart of divisibility checks"
+    },
+    {
+      "id": "G35-08",
+      "band": "3-5",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "partly",
+      "expected_component": "number_line_compare",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": "other",
+      "m2_correct": "minor",
+      "m3": "helpful",
+      "note": "unit-square array: 4 squares as one whole; 3/1 not drawn"
+    },
+    {
+      "id": "G35-10",
+      "band": "3-5",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "partly",
+      "expected_component": "number_line",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "minor",
+      "m3": "helpful",
+      "note": "hops of 1/5; the 20 pieces are not all shown"
+    },
+    {
+      "id": "G35-17",
+      "band": "3-5",
+      "stratum": "near_miss",
+      "held_out": true,
+      "m1": "partly",
+      "expected_component": "circle_and_arc",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "circle_and_arc"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G35-40",
+      "band": "3-5",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a flowchart of the sharing"
+    },
+    {
+      "id": "G35-05",
+      "band": "3-5",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "irrelevant",
+      "note": "asked for three charts; a flowchart naming them"
+    },
+    {
+      "id": "G35-13",
+      "band": "3-5",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a flowchart of the cuts"
+    },
+    {
+      "id": "G35-33",
+      "band": "3-5",
+      "stratum": "not_served",
+      "held_out": true,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G35-24",
+      "band": "3-5",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a flowchart of reading steps; no clock"
+    },
+    {
+      "id": "G68-39",
+      "band": "6-8",
+      "stratum": "served",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "function_plot",
+      "outcome": "lesson",
+      "calls": 3,
+      "recipes": [
+        "function_plot"
+      ],
+      "drawn": [
+        "plot"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G68-04",
+      "band": "6-8",
+      "stratum": "served",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "number_line_compare",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line_compare"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G68-13",
+      "band": "6-8",
+      "stratum": "served",
+      "held_out": true,
+      "m1": "fully",
+      "expected_component": "number_line_compare",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line_compare"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G68-10",
+      "band": "6-8",
+      "stratum": "served",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "number_line",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G68-09",
+      "band": "6-8",
+      "stratum": "board",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "board",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a 2 by 7 array for 2 × (3 + 4)"
+    },
+    {
+      "id": "G68-27",
+      "band": "6-8",
+      "stratum": "board",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "board",
+      "outcome": "lesson",
+      "calls": 5,
+      "recipes": [
+        "number_line"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "number line hops of 3 from 5 (after an animation from 1)"
+    },
+    {
+      "id": "G68-11",
+      "band": "6-8",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "partly",
+      "expected_component": "number_line_compare",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "minor",
+      "m3": "helpful",
+      "note": "number_line rather than compare; animates to 0.8; the line runs from −1 to 2"
+    },
+    {
+      "id": "G68-33",
+      "band": "6-8",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "extend",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 3,
+      "recipes": [
+        "function_plot",
+        "geometric_rearrangement"
+      ],
+      "drawn": [
+        "geometry",
+        "plot"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "the Pythagoras rearrangement, then the line through the two points"
+    },
+    {
+      "id": "G68-32",
+      "band": "6-8",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "extend",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "function_plot",
+        "process_diagram"
+      ],
+      "drawn": [
+        "plot"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "two parallel lines and a transversal as plotted lines; no angles marked"
+    },
+    {
+      "id": "G68-20",
+      "band": "6-8",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "extend",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a flowchart of the counts; no prism"
+    },
+    {
+      "id": "G68-22",
+      "band": "6-8",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "partly",
+      "expected_component": "rectangle_unit_square_array",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "cube_with_section",
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry",
+        "scene3d"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "wrong",
+      "m3": "misleading",
+      "note": "unit-square array of 1 column (1 by 4, 1 by 2) presented as square numbers"
+    },
+    {
+      "id": "G68-31",
+      "band": "6-8",
+      "stratum": "not_served",
+      "held_out": true,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line_compare"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G68-38",
+      "band": "6-8",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "rectangle_unit_square_array"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "misleading",
+      "note": "ratio 3 : 2 drawn as a 3 by 2 (then 6 by 2) area grid"
+    },
+    {
+      "id": "G68-15",
+      "band": "6-8",
+      "stratum": "not_served",
+      "held_out": true,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G68-08",
+      "band": "6-8",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a flowchart of the two steps"
+    },
+    {
+      "id": "G912-08",
+      "band": "9-12",
+      "stratum": "served",
+      "held_out": true,
+      "m1": "fully",
+      "expected_component": "number_line_solution",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "number_line_compare",
+        "number_line_solution"
+      ],
+      "drawn": [
+        "number_line"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G912-49",
+      "band": "9-12",
+      "stratum": "served",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "function_surface_with_section",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "function_surface_with_section"
+      ],
+      "drawn": [
+        "scene3d"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G912-19",
+      "band": "9-12",
+      "stratum": "served",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "function_plot",
+      "outcome": "lesson",
+      "calls": 3,
+      "recipes": [
+        "function_plot"
+      ],
+      "drawn": [
+        "plot"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G912-17",
+      "band": "9-12",
+      "stratum": "served",
+      "held_out": true,
+      "m1": "fully",
+      "expected_component": "function_plot",
+      "outcome": "lesson",
+      "calls": 3,
+      "recipes": [
+        "function_plot"
+      ],
+      "drawn": [
+        "plot"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G912-11",
+      "band": "9-12",
+      "stratum": "board",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "board",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "function_plot"
+      ],
+      "drawn": [
+        "plot"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "y = x² and y = 3x crossing at 0 and 3"
+    },
+    {
+      "id": "G912-09",
+      "band": "9-12",
+      "stratum": "board",
+      "held_out": false,
+      "m1": "fully",
+      "expected_component": "board",
+      "outcome": "lesson",
+      "calls": 5,
+      "recipes": [
+        "function_plot"
+      ],
+      "drawn": [
+        "plot"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a parabola; two of its sliders do nothing"
+    },
+    {
+      "id": "G912-20",
+      "band": "9-12",
+      "stratum": "near_miss",
+      "held_out": true,
+      "m1": "extend",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "function_plot"
+      ],
+      "drawn": [
+        "plot"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "misleading",
+      "note": ""
+    },
+    {
+      "id": "G912-40",
+      "band": "9-12",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "partly",
+      "expected_component": "circle_and_arc",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "circle_and_arc"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "correct",
+      "m3": "helpful",
+      "note": ""
+    },
+    {
+      "id": "G912-28",
+      "band": "9-12",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "extend",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "geometric_rearrangement"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "irrelevant",
+      "note": "two triangles rearranged into a rectangle, not the asked transformations"
+    },
+    {
+      "id": "G912-26",
+      "band": "9-12",
+      "stratum": "near_miss",
+      "held_out": true,
+      "m1": "partly",
+      "expected_component": "circle_and_arc",
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "circle_and_arc"
+      ],
+      "drawn": [
+        "geometry"
+      ],
+      "m2_chosen": "expected",
+      "m2_correct": "wrong",
+      "m3": "misleading",
+      "note": ""
+    },
+    {
+      "id": "G912-24",
+      "band": "9-12",
+      "stratum": "near_miss",
+      "held_out": false,
+      "m1": "extend",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a flowchart of the proof; no triangle"
+    },
+    {
+      "id": "G912-06",
+      "band": "9-12",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a flowchart of the factoring steps"
+    },
+    {
+      "id": "G912-34",
+      "band": "9-12",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "process_diagram"
+      ],
+      "drawn": [
+        "diagram"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "helpful",
+      "note": "a flowchart of conditioning"
+    },
+    {
+      "id": "G912-35",
+      "band": "9-12",
+      "stratum": "not_served",
+      "held_out": true,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 3,
+      "recipes": [
+        "function_plot"
+      ],
+      "drawn": [
+        "plot"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "irrelevant",
+      "note": ""
+    },
+    {
+      "id": "G912-32",
+      "band": "9-12",
+      "stratum": "not_served",
+      "held_out": false,
+      "m1": "new",
+      "expected_component": null,
+      "outcome": "lesson",
+      "calls": 2,
+      "recipes": [
+        "function_plot"
+      ],
+      "drawn": [
+        "plot"
+      ],
+      "m2_chosen": null,
+      "m2_correct": null,
+      "m3": "misleading",
+      "note": "a downward parabola presented as the spread of data"
+    }
+  ]
+}
