@@ -132,6 +132,13 @@ export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, num
 
 /** The requests each trial recipe fits. */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
+/**
+ * The quality cases of every recipe a run offers, in the order named (run 9 took only the first recipe's,
+ * so its comparing, solution-set and rounding cases never ran).
+ */
+export function qualityCasesFor(recipes) {
+  return recipes.split(",").map((name) => name.trim()).filter(Boolean).flatMap((name) => TRIAL_QUALITY_CASES[name] ?? []);
+}
 
 /** Held-out requests the recipe does not fit (subject-routing-heldout.json). */
 export const OTHER_CASE_IDS = ["HO-MA-01", "HO-PH-02", "HO-CH-01", "HO-BI-01", "HO-ES-01", "HO-MA-04", "HO-PH-04", "HO-CH-04", "HO-BI-04", "HO-ES-04"];
@@ -478,7 +485,7 @@ async function main() {
     const item = allCases.find((entry) => entry.id === id);
     if (!item) throw new Error(`no case '${id}'`);
     return item;
-  }) : TRIAL_QUALITY_CASES[recipes.split(",")[0].trim()] ?? []).map((item) => ({ ...item, kind: item.nearMiss ? "near_miss" : "quality" }));
+  }) : qualityCasesFor(recipes)).map((item) => ({ ...item, kind: item.nearMiss ? "near_miss" : "quality" }));
   const workDir = await mkdtemp(join(tmpdir(), "coach-trial-"));
   // Coach logs each raw model reply, which the harness keeps beside the run's compiled parts, so a
   // later fit can be replayed against what the model actually wrote at no cost.

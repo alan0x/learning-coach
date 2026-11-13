@@ -503,3 +503,57 @@ A DOM probe settled run 6's puzzling screenshot: the board does redraw a point a
 
 
 **Review fixes (#68, #69).** Solution sets: the split between the two boundaries' slider ranges now falls between every value the lesson gives them (an animation to a = 4 in 1 < x < 5 stays 4), each boundary keeps a usable range when the boundaries are adjacent ticks (1 < x < 2), and a lesson that moves a past b is refused as a section fault instead of being redrawn with changed values. Rounding: the judge requires a jump from the rounded number itself to the result (a 40 → 50 jump beside 47 fails). Replaying the recorded probes under these checks gives the same results: rounding 10/10, solution sets 10/11 (SOL-06 shows its line in section 2, as before).
+
+### Run 9 rules: the gate on frozen code (owner-approved 2026-11-12, set before the run)
+
+- **Frozen code:** Coach main 3242238 (#68 and #69 merged, with their review fixes). All four number-line recipes offered: `number_line`, `number_line_compare`, `number_line_solution`, `number_line_rounding`.
+- **Speed:** 20 pairs on NL-01..10, speed option (a): the paired median must stay within +0.5 s, with one repeat if inconclusive.
+- **Quality:** every quality case twice (NL-11..20, CMP-01..05, SOL-01..06, RND-01..05, NM-01..04): 60 candidate lessons.
+  - In scope (NL, CMP, SOL, RND, and NM-01..04, which decision 0016 now covers as compare, solution and rounding requests): **never mislead**, by the hard checks, with the one-slip rule (option B: at most one model slip, never twice on the same request).
+  - NM-01..04 also run on the baseline arm, read by hand against today.
+  - A lesson whose number line appears only in a later section is read by hand.
+- **Budget:** `--pairs 20 --quality-repeats 2 --max-calls 190`, about $1.25 expected (at most about $1.40). Three repeats would cost about $1.65, above the approved figure.
+
+## Run 9 (2026-11-12): incomplete — the comparing, solution-set and rounding cases did not run
+
+Owner-approved; 110 calls (about $0.80); `eval/trial-recipe-speed-number-line-2026-11-12-run9.json`.
+
+**A harness defect, found after the run.** The harness took the quality cases of the first recipe named only, so CMP-01..05, SOL-01..06 and RND-01..05 never ran, although the rules above list them. The run is therefore incomplete, not passed. Fixed: `qualityCasesFor` takes every named recipe's cases, with a test.
+
+**What did run:**
+- **Quality: 38 of 38 pass every hard check** (NL-11..20 twice, NM-01..04 twice, and the 10 NL speed pairs that used the recipe). One soft miss: NL-08 without hops.
+- **NM-01..04, re-judged for free with the full checks** (the comparing, solution-set and rounding expectations, through `scripts/replay-trial-recipe.mjs`): **8 of 8 pass**. In runs 6–8 these requests misled 4–5 times in 6. Read by hand: each final picture agrees with its narration (open circle and ray from −2; the open interval 1 to 5; 40, 45, 47, 50 and the jump to 50; 3/5 left of 2/3). Each line starts at the reset value for the learner's task and animates to the taught value while the lesson speaks (option a).
+- **Speed: inconclusive under option (a).** Paired median +1.09 s against +0.5 s, 95% interval [−3.3, +4.1] s, which includes zero. The rule allows one repeat of the 20 speed pairs.
+
+**A speed signal across runs.** Pooling the speed pairs of runs 5–9 (50 per group):
+- requests that use the number line: −3.7 s (95% interval −6.7 to −0.4 s);
+- the other held-out requests, which the candidate's larger prompt (+107 to +252 tokens) reaches without the recipe being used: **+1.7 s (95% interval +0.7 to +2.8 s)**, slower in 72% of pairs.
+- Part of this is retries: 5 of 50 candidate turns made extra calls against 1 of 50 baseline turns. None involved the number line (for example, a unit circle drawn for an Earth-science request). The cause is not established. Eight of the ten held-out requests are science, which is now paused.
+
+### Run 9b rules: completing run 9 (owner-approved 2026-11-12, set before the run)
+
+- **Same frozen product code** as run 9 (Coach main 3242238); only the harness fix differs. All four number-line recipes offered.
+- **Quality:** the cases run 9 missed, twice each: CMP-01..05, SOL-01..06, RND-01..05 (32 lessons). In scope: never mislead, by the hard checks. The slip rule (option B) applies to runs 9 and 9b together.
+- **Speed (option a, its one allowed repeat):** 20 more speed pairs on NL-01..10. Speed is judged on all 40 pairs of runs 9 and 9b: the paired median must be at most +0.5 s. No further repeats.
+- **Budget:** `--pairs 20 --cases <the 16 cases> --quality-repeats 2 --max-calls 120`, about $0.75.
+
+## Run 9b (2026-11-12): quality passes; speed fails, so the number line stays a trial
+
+Owner-approved; 109 calls (about $0.80); `eval/trial-recipe-speed-number-line-2026-11-12-run9b.json`. Every planned run ran.
+
+**Quality: no misleading first section across runs 9 and 9b.**
+- Run 9b: 41 of 42 pass every hard check (CMP, SOL and RND twice each, and the 10 speed pairs that used the recipe).
+- The one miss, SOL-06 (2x + 1 > 7), solves the inequality step by step in section 1, and its outline puts the solution-set number line (boundary 3) in section 2. The harness stops after section 1, so that line was never generated or judged; the first section is sound, as in the solution-set probe.
+
+**Speed: fails under the rule set before the run.** On all pairs of runs 9 and 9b, the paired median is **+0.77 s** against +0.5 s (39 complete pairs; +0.76 s counting the pair whose baseline hit the call cap as a candidate win). This was the one allowed repeat. By the rules, the number line stays a trial; the switch-on change is not made.
+
+**The split behind the median.** The mixed median hides two opposite effects (runs 9 and 9b):
+- requests that use the number line: −3.0 s;
+- the other held-out requests: **+2.8 s** (95% interval +1.4 to +5.0 s). Pooled over runs 5–9b the same pattern holds.
+- Of the other requests, only two are math: HO-MA-04 was slower in 5 of 6 pairs (median +2.3 s); HO-MA-01 was mixed. Eight of ten are science, now paused. The sample is thin.
+
+**Probable cause: more thinking, not size** (free analysis of the providers' usage records):
+- On the other requests, the first call thinks in 35 of 60 candidate turns against 24 of 60 baseline turns (runs 5–9b), and a turn that thinks takes about 3–6 s longer. Number-line requests think slightly less with the recipe (16 of 60 against 19 of 59).
+- In single-call pairs only (17 of 20 in runs 9 and 9b), the other requests are still +2.7 s, so retries are not the cause.
+- Size alone does not explain it: the 2026-11-11 payload experiment added +1,331 prompt tokens of cards marked unavailable with no measurable cost, and the physics pilot's other requests were 1.5 s faster. The number-line additions are about +250 tokens.
+- The likely mechanism is that the number-line guidance gives the model more to weigh on requests it does not fit. Not established: thought text is not recorded.
