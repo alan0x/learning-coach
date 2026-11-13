@@ -536,3 +536,24 @@ Owner-approved; 110 calls (about $0.80); `eval/trial-recipe-speed-number-line-20
 - **Quality:** the cases run 9 missed, twice each: CMP-01..05, SOL-01..06, RND-01..05 (32 lessons). In scope: never mislead, by the hard checks. The slip rule (option B) applies to runs 9 and 9b together.
 - **Speed (option a, its one allowed repeat):** 20 more speed pairs on NL-01..10. Speed is judged on all 40 pairs of runs 9 and 9b: the paired median must be at most +0.5 s. No further repeats.
 - **Budget:** `--pairs 20 --cases <the 16 cases> --quality-repeats 2 --max-calls 120`, about $0.75.
+
+## Run 9b (2026-11-12): quality passes; speed fails, so the number line stays a trial
+
+Owner-approved; 109 calls (about $0.80); `eval/trial-recipe-speed-number-line-2026-11-12-run9b.json`. Every planned run ran.
+
+**Quality: no misleading first section across runs 9 and 9b.**
+- Run 9b: 41 of 42 pass every hard check (CMP, SOL and RND twice each, and the 10 speed pairs that used the recipe).
+- The one miss, SOL-06 (2x + 1 > 7), solves the inequality step by step in section 1, and its outline puts the solution-set number line (boundary 3) in section 2. The harness stops after section 1, so that line was never generated or judged; the first section is sound, as in the solution-set probe.
+
+**Speed: fails under the rule set before the run.** On all pairs of runs 9 and 9b, the paired median is **+0.77 s** against +0.5 s (39 complete pairs; +0.76 s counting the pair whose baseline hit the call cap as a candidate win). This was the one allowed repeat. By the rules, the number line stays a trial; the switch-on change is not made.
+
+**The split behind the median.** The mixed median hides two opposite effects (runs 9 and 9b):
+- requests that use the number line: −3.0 s;
+- the other held-out requests: **+2.8 s** (95% interval +1.4 to +5.0 s). Pooled over runs 5–9b the same pattern holds.
+- Of the other requests, only two are math: HO-MA-04 was slower in 5 of 6 pairs (median +2.3 s); HO-MA-01 was mixed. Eight of ten are science, now paused. The sample is thin.
+
+**Probable cause: more thinking, not size** (free analysis of the providers' usage records):
+- On the other requests, the first call thinks in 35 of 60 candidate turns against 24 of 60 baseline turns (runs 5–9b), and a turn that thinks takes about 3–6 s longer. Number-line requests think slightly less with the recipe (16 of 60 against 19 of 59).
+- In single-call pairs only (17 of 20 in runs 9 and 9b), the other requests are still +2.7 s, so retries are not the cause.
+- Size alone does not explain it: the 2026-11-11 payload experiment added +1,331 prompt tokens of cards marked unavailable with no measurable cost, and the physics pilot's other requests were 1.5 s faster. The number-line additions are about +250 tokens.
+- The likely mechanism is that the number-line guidance gives the model more to weigh on requests it does not fit. Not established: thought text is not recorded.
