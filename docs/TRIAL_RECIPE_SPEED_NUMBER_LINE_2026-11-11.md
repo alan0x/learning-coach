@@ -616,3 +616,27 @@ Owner-approved diagnostic; 64 calls (about $0.47); `eval/trial-recipe-speed-numb
 - **Speed (owner's rule of 2026-11-12):** 40 pairs, alternating 20 fitting (NL-01..10) and 20 other (the held-out cases). Each group's paired median must be at most +0.5 s. An incomplete group is not a pass. No repeat.
 - **Quality:** NL-11..20, NM-01..04, CMP-01..05, SOL-01..06 and RND-01..05, twice each (60 lessons). Never mislead, by the hard checks, with the slip rule (option B). Near misses also run on the baseline arm. A lesson whose line is planned for a later section is read by hand.
 - **Budget:** `--pairs 40 --quality-repeats 2 --max-calls 200`, about $1.30 expected (at most about $1.45).
+
+## Run 11 (2026-11-12): the gate on the frozen rewrite — speed and quality pass; 3 planned lessons did not run
+
+Owner-approved; frozen code `4c5687b`; 201 calls (about $1.45); `eval/trial-recipe-speed-number-line-2026-11-12-run11.json`.
+
+**Speed (owner's rule): passes.**
+
+| Group | Paired median | 95% interval (mean) | Complete pairs | Thinking turns (baseline / candidate) |
+|---|---|---|---|---|
+| Requests the number line fits | **−3.8 s** | −7.0 to −1.9 s | 18 of 20 (2 baselines hit the call cap) | 3/18 / 10/20 |
+| Requests it does not fit | **+0.15 s** | −1.3 to +1.5 s | 20 of 20 | 12/20 / 9/20 |
+
+The candidate used the number line on all 20 fitting requests and on none of the others.
+
+**Quality: no hard miss in the 77 lessons that ran.** The 77 are the 20 fitting speed pairs plus 57 quality lessons. One soft miss: NL-08 without hops, twice.
+- **NM-01..04, re-judged for free with the full checks:** 8 of 8 pass.
+- **Read by hand:** each final picture agrees with its narration.
+  - NM-01: 3/5 left of 2/3, in fifteenths.
+  - NM-02: an open circle and a ray from −2.
+  - NM-03: 40, 45, 47 and 50, with the jump to 50.
+  - NM-04: the open interval from 1 to 5.
+- Two of the NM lines first show the reset value for the learner's task, then animate to the taught value (option a).
+
+**Incomplete:** the call budget (200) ran out before the second runs of RND-03, RND-04 and RND-05. Their first runs passed, as they did in run 9b and the rounding probe. By the rule set before the run, a planned case that did not run makes the gate incomplete, not passed. Completing it costs 3 lessons, about $0.05, and needs the owner's approval.
