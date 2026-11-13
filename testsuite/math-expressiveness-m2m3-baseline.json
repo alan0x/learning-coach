@@ -12,13 +12,16 @@
       "prompt": 264277,
       "output": 131537,
       "thinking": 31528
-    }
+    },
+    "pilot_calls_not_in_report": 9,
+    "cost": "Reported as tokens; not priced."
   },
   "rubric": {
     "m2_chosen": "For questions an existing component serves (M1 fully or partly): 'expected' if the lesson used that component (or its family), 'other' if another component, 'none' if no visual.",
     "m2_correct": "correct; minor (the picture is right but incomplete, or starts wrong and is animated right); wrong (the picture or its narration states something false).",
-    "m3": "helpful; none (no visual); irrelevant (accurate but beside the question); misleading (the picture, or what the narration says it shows, is false for the question).",
-    "fixed_before_reading": true
+    "m3": "helpful (a picture that helps); text_flowchart (only a process_diagram of text steps, nothing false claimed); none (no lesson visual: a clarification); failed (no lesson); irrelevant (accurate but beside the question); misleading (the picture, or what the narration says it shows, is false for the question).",
+    "fixed_before_reading": true,
+    "note": "Fixed before reading. After the first pass, two categories were split out mechanically (text_flowchart: drawn is only 'diagram'; failed), and the narration of every lesson was re-read for claims about the picture."
   },
   "summary": {
     "served": {
@@ -32,17 +35,18 @@
           "expected": 12
         },
         "correct": {
-          "minor": 1,
-          "correct": 11
+          "minor": 3,
+          "correct": 9
         }
       }
     },
     "near_miss": {
       "n": 20,
       "m3": {
-        "helpful": 14,
-        "misleading": 4,
-        "irrelevant": 2
+        "helpful": 11,
+        "misleading": 5,
+        "text_flowchart": 3,
+        "irrelevant": 1
       },
       "m2_with_a_fitting_component": {
         "n": 12,
@@ -60,53 +64,69 @@
     "not_served": {
       "n": 20,
       "m3": {
-        "misleading": 5,
-        "irrelevant": 4,
-        "helpful": 11
+        "misleading": 8,
+        "irrelevant": 2,
+        "helpful": 3,
+        "text_flowchart": 7
       }
     },
     "board": {
       "n": 8,
       "m3": {
-        "none": 2,
-        "helpful": 6
+        "none": 1,
+        "text_flowchart": 1,
+        "helpful": 5,
+        "failed": 1
       }
     },
     "by_band": {
       "K-2": {
-        "helpful": 8,
+        "helpful": 6,
         "none": 1,
-        "misleading": 4,
+        "text_flowchart": 1,
+        "misleading": 5,
         "irrelevant": 2
       },
       "3-5": {
-        "helpful": 12,
-        "none": 1,
-        "irrelevant": 2
+        "helpful": 8,
+        "failed": 1,
+        "misleading": 2,
+        "text_flowchart": 4
       },
       "6-8": {
-        "helpful": 13,
+        "helpful": 10,
+        "text_flowchart": 3,
         "misleading": 2
       },
       "9-12": {
-        "helpful": 10,
-        "misleading": 3,
-        "irrelevant": 2
+        "helpful": 7,
+        "misleading": 4,
+        "irrelevant": 1,
+        "text_flowchart": 3
       }
     },
-    "held_out": {
-      "helpful": 15,
-      "irrelevant": 4,
-      "misleading": 2
-    },
     "open": {
-      "none": 2,
-      "helpful": 28,
-      "misleading": 7,
-      "irrelevant": 2
+      "none": 1,
+      "helpful": 18,
+      "misleading": 9,
+      "failed": 1,
+      "text_flowchart": 9,
+      "irrelevant": 1
+    },
+    "held_out": {
+      "helpful": 13,
+      "text_flowchart": 2,
+      "irrelevant": 2,
+      "misleading": 4
+    },
+    "mechanisms": {
+      "narration": 5,
+      "clamp": 3,
+      "shared_number": 1,
+      "misused_recipe": 4
     },
     "lessons": 58,
-    "no_visual": 0
+    "lessons_without_a_visual": 0
   },
   "readings": [
     {
@@ -162,7 +182,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": ""
     },
     {
@@ -244,7 +264,8 @@
       "m2_chosen": "expected",
       "m2_correct": "wrong",
       "m3": "misleading",
-      "note": "only a cube is drawn; the narration points at a square, a sphere, and a slider that 'adds thickness'"
+      "note": "only a cube is drawn; the narration points at a square, a sphere, and a slider that 'adds thickness'",
+      "mechanism": "narration"
     },
     {
       "id": "K2-07",
@@ -284,7 +305,8 @@
       "m2_chosen": null,
       "m2_correct": null,
       "m3": "misleading",
-      "note": "unit-square array of 8 by 3 (24) titled '12 cookies shared among 3 friends'"
+      "note": "unit-square array of 8 by 3 (24) titled '12 cookies shared among 3 friends'",
+      "mechanism": "clamp"
     },
     {
       "id": "K2-30",
@@ -304,7 +326,8 @@
       "m2_chosen": null,
       "m2_correct": null,
       "m3": "misleading",
-      "note": "unit-square array of 8 by 4 (32) titled '4 tens = 40 units'"
+      "note": "unit-square array of 8 by 4 (32) titled '4 tens = 40 units'",
+      "mechanism": "clamp"
     },
     {
       "id": "K2-13",
@@ -384,7 +407,8 @@
       "m2_chosen": null,
       "m2_correct": null,
       "m3": "misleading",
-      "note": "unit-square array of 8 by 1 titled 'ten units as one group'"
+      "note": "unit-square array of 8 by 1 titled 'ten units as one group'",
+      "mechanism": "clamp"
     },
     {
       "id": "K2-21",
@@ -403,8 +427,9 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
-      "note": "two lengths as points 7 and 5; the line starts at 3, not 0"
+      "m3": "misleading",
+      "note": "the narration says both lengths start at zero and moves one start, but the line starts at 3 and shows two points",
+      "mechanism": "narration"
     },
     {
       "id": "G35-27",
@@ -504,7 +529,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "none",
+      "m3": "failed",
       "note": "generation failed: no lesson"
     },
     {
@@ -524,8 +549,9 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "irrelevant",
-      "note": ""
+      "m3": "misleading",
+      "note": "",
+      "mechanism": "narration"
     },
     {
       "id": "G35-32",
@@ -544,7 +570,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": "a flowchart of divisibility checks"
     },
     {
@@ -624,7 +650,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": "a flowchart of the sharing"
     },
     {
@@ -644,8 +670,9 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "irrelevant",
-      "note": "asked for three charts; a flowchart naming them"
+      "m3": "misleading",
+      "note": "a flowchart naming three charts; the narration says the charts have been built and compares them",
+      "mechanism": "narration"
     },
     {
       "id": "G35-13",
@@ -664,7 +691,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": "a flowchart of the cuts"
     },
     {
@@ -704,7 +731,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": "a flowchart of reading steps; no clock"
     },
     {
@@ -783,9 +810,9 @@
         "number_line"
       ],
       "m2_chosen": "expected",
-      "m2_correct": "correct",
+      "m2_correct": "minor",
       "m3": "helpful",
-      "note": ""
+      "note": "horizontal line, though the narration calls it vertical like a thermometer"
     },
     {
       "id": "G68-09",
@@ -907,7 +934,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": "a flowchart of the counts; no prism"
     },
     {
@@ -930,7 +957,8 @@
       "m2_chosen": "expected",
       "m2_correct": "wrong",
       "m3": "misleading",
-      "note": "unit-square array of 1 column (1 by 4, 1 by 2) presented as square numbers"
+      "note": "unit-square array of 1 column (1 by 4, 1 by 2) presented as square numbers",
+      "mechanism": "shared_number"
     },
     {
       "id": "G68-31",
@@ -970,7 +998,8 @@
       "m2_chosen": null,
       "m2_correct": null,
       "m3": "misleading",
-      "note": "ratio 3 : 2 drawn as a 3 by 2 (then 6 by 2) area grid"
+      "note": "ratio 3 : 2 drawn as a 3 by 2 (then 6 by 2) area grid",
+      "mechanism": "misused_recipe"
     },
     {
       "id": "G68-15",
@@ -989,7 +1018,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": ""
     },
     {
@@ -1009,7 +1038,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": "a flowchart of the two steps"
     },
     {
@@ -1029,7 +1058,7 @@
         "number_line"
       ],
       "m2_chosen": "expected",
-      "m2_correct": "correct",
+      "m2_correct": "minor",
       "m3": "helpful",
       "note": ""
     },
@@ -1151,7 +1180,8 @@
       "m2_chosen": null,
       "m2_correct": null,
       "m3": "misleading",
-      "note": ""
+      "note": "",
+      "mechanism": "misused_recipe"
     },
     {
       "id": "G912-40",
@@ -1211,7 +1241,8 @@
       "m2_chosen": "expected",
       "m2_correct": "wrong",
       "m3": "misleading",
-      "note": ""
+      "note": "",
+      "mechanism": "narration"
     },
     {
       "id": "G912-24",
@@ -1230,7 +1261,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": "a flowchart of the proof; no triangle"
     },
     {
@@ -1250,7 +1281,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": "a flowchart of the factoring steps"
     },
     {
@@ -1270,7 +1301,7 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "helpful",
+      "m3": "text_flowchart",
       "note": "a flowchart of conditioning"
     },
     {
@@ -1290,8 +1321,9 @@
       ],
       "m2_chosen": null,
       "m2_correct": null,
-      "m3": "irrelevant",
-      "note": ""
+      "m3": "misleading",
+      "note": "",
+      "mechanism": "misused_recipe"
     },
     {
       "id": "G912-32",
@@ -1311,7 +1343,14 @@
       "m2_chosen": null,
       "m2_correct": null,
       "m3": "misleading",
-      "note": "a downward parabola presented as the spread of data"
+      "note": "a downward parabola presented as the spread of data",
+      "mechanism": "misused_recipe"
     }
-  ]
+  ],
+  "mechanisms": {
+    "clamp": "the model wrote 10 or 12; the unit-square array clamped it to 8 without failing, under the model's title",
+    "shared_number": "one number fed two recipes, and the program narrowed it to both ranges (3 became 1)",
+    "narration": "the narration describes parts the recipe does not draw",
+    "misused_recipe": "a recipe drawn for a concept it cannot show (an area grid for a ratio, full curves for a piecewise function, a parabola for spread, a line for correlation)"
+  }
 }

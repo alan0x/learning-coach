@@ -20,7 +20,6 @@ import { mkdir, writeFile, copyFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { profileRouteEnvironment } from "./eval-payload-padding.mjs";
-import { drawSample } from "./draw-math-regression-sample.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -141,7 +140,8 @@ async function main() {
   const set = read("math-expressiveness-question-set.json");
   const m1 = read("math-expressiveness-m1-baseline.json");
   const byId = new Map(set.questions.map((q) => [q.id, q]));
-  const sample = drawSample(set.questions, m1.tags);
+  // The stored sample is the source of truth: it was chosen once and is kept (plan §4).
+  const sample = read("math-expressiveness-regression-sample.json").questions;
   const ids = option("--ids")?.split(",").map((id) => id.trim()) ?? sample.map((entry) => entry.id);
   const features = recipeFeatures();
   const strata = new Map(sample.map((entry) => [entry.id, entry.stratum]));
