@@ -416,12 +416,15 @@ export interface ResolvedLessonPlan {
 export class LessonPlanError extends Error {
   readonly code: string;
   readonly path: string;
+  /** The recipe that cannot show what the plan asks of it, when the fault is that recipe's. */
+  readonly capability?: string;
 
-  constructor(code: string, path: string, message: string) {
+  constructor(code: string, path: string, message: string, capability?: string) {
     super(`${path}: ${message}`);
     this.name = "LessonPlanError";
     this.code = code;
     this.path = path;
+    if (capability) this.capability = capability;
   }
 }
 

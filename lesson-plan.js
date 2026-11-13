@@ -14121,11 +14121,14 @@ function matchLessonPlanCapability(features) {
 var LessonPlanError = class extends Error {
   code;
   path;
-  constructor(code, path, message) {
+  /** The recipe that cannot show what the plan asks of it, when the fault is that recipe's. */
+  capability;
+  constructor(code, path, message, capability2) {
     super(`${path}: ${message}`);
     this.name = "LessonPlanError";
     this.code = code;
     this.path = path;
+    if (capability2) this.capability = capability2;
   }
 };
 var FORBIDDEN_PARAMETER_KEYS = /* @__PURE__ */ new Set([
@@ -16756,6 +16759,9 @@ function normalizeProgramOwnedNumberRanges(plan) {
     const numbers = bound?.length ? bound : bound ? [] : content.numbers ?? [];
     for (const number of new Set(numbers)) visualsUsing.set(number, (visualsUsing.get(number) ?? 0) + 1);
   }
+  const hardRanges = /* @__PURE__ */ new Map();
+  const written = new Map((plan.numbers ?? []).map((definition, index) => [index + 1, definition.initial]));
+  const rangeOwners = /* @__PURE__ */ new Map();
   const publishedPlotNumbers = /* @__PURE__ */ new Set();
   for (const [sectionIndex, section] of plan.sections.entries()) {
     const newPlotNumbers = /* @__PURE__ */ new Set();
@@ -16785,6 +16791,10 @@ function normalizeProgramOwnedNumberRanges(plan) {
           if (RECIPE_HOOKS[content.capability]?.free_number?.(content, inputIndex)) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
           const prior = publishedPlotNumbers.has(numberIndex) ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step } : void 0;
+          if (policy.kind !== "unbounded") rangeOwners.set(numberIndex, /* @__PURE__ */ new Set([...rangeOwners.get(numberIndex) ?? [], content.capability]));
+          if ((policy.kind === "side_count" || policy.kind === "positive_integer") && !hardRanges.has(numberIndex)) {
+            hardRanges.set(numberIndex, { capability: content.capability, path });
+          }
           if (policy.kind === "side_count") {
             integerSides.add(numberIndex);
             intersectProgramRange(definition, 3, 384);
@@ -16826,6 +16836,57 @@ function normalizeProgramOwnedNumberRanges(plan) {
     for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
   if (constrained.size === 0) return;
+  const outside = (number, value2) => {
+    const definition = plan.numbers[number - 1];
+    const slack = Math.max((definition.max - definition.min) / 1e3, 1e-9);
+    const shown = integerSides.has(number) || Number.isInteger(definition.min) && definition.student_control?.step === 1 ? Math.round(value2) : value2;
+    return shown < definition.min - slack || shown > definition.max + slack;
+  };
+  const refuse = (number, value2, path, sectionOwned = false) => {
+    const definition = plan.numbers[number - 1];
+    const { capability: capability2 } = hardRanges.get(number);
+    const owners = [...rangeOwners.get(number) ?? []];
+    if (owners.length > 1) {
+      fail2(
+        "LESSON_PLAN_SHARED_NUMBER",
+        path,
+        `number ${number} is ${value2}, but it is shared by ${owners.join(" and ")}, which together allow only ${definition.min} to ${definition.max}; give each visual its own number`
+      );
+    }
+    if (sectionOwned) {
+      fail2(
+        "LESSON_PLAN_NUMBER_NOT_DRAWABLE",
+        path,
+        `number ${number} would reach ${value2}, but the ${capability2} visual can draw only ${definition.min} to ${definition.max}; use a value in that range`
+      );
+    }
+    throw new LessonPlanError(
+      "LESSON_PLAN_OUTLINE_VISUAL",
+      path,
+      `number ${number} is ${value2}, but the ${capability2} visual can draw only ${definition.min} to ${definition.max}; choose another visual, or none`,
+      capability2
+    );
+  };
+  for (const [number, { path }] of hardRanges) {
+    const value2 = written.get(number);
+    if (value2 !== void 0 && outside(number, value2)) refuse(number, value2, path);
+  }
+  for (const [sectionIndex, section] of plan.sections.entries()) {
+    for (const [momentIndex, moment] of section.moments.entries()) {
+      for (const [actionIndex, action] of moment.actions.entries()) {
+        if (action.action === "animate" && hardRanges.has(action.number) && outside(action.number, action.end_value)) {
+          refuse(action.number, action.end_value, `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`, true);
+        }
+      }
+    }
+    for (const [activityIndex, activity] of (section.student_activities ?? []).entries()) {
+      if (activity.kind !== "number_target" || activity.expression) continue;
+      const number = activity.number_controls[0]?.number;
+      if (number && hardRanges.has(number) && outside(number, activity.value)) {
+        refuse(number, activity.value, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}].value`, true);
+      }
+    }
+  }
   const roundToProgramGrid = (number, value2) => {
     if (integerSides.has(number)) return Math.round(value2);
     const step = tickSteps.get(number);
@@ -20015,6 +20076,11 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     if (![...outlineCapabilities(from)].some((capability2) => isNumberLineCapability(capability2))) return;
     for (const capability2 of LESSON_PLAN_CAPABILITY_NAMES) if (isNumberLineCapability(capability2)) excludedCapabilities.add(capability2);
   };
+  const excludeFaulting = (from, fault) => {
+    const capability2 = fault instanceof LessonPlanError ? fault.capability : void 0;
+    if (capability2 && outlineCapabilities(from).has(capability2)) excludedCapabilities.add(capability2);
+    else excludeNumberLines(from);
+  };
   let outlineError;
   let stableCameraObservation;
   const sectionErrors = /* @__PURE__ */ new Map();
@@ -20151,7 +20217,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       }
     }
     if (outlineFault) {
-      if (outline) excludeNumberLines(outline);
+      if (outline) excludeFaulting(outline, outlineFault);
       outline = void 0;
       bootstrappedFirstSection = void 0;
       sectionErrors.delete(1);
@@ -20440,7 +20506,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
       outlineRestarted = true;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
-      if (outline) excludeNumberLines(outline);
+      if (outline) excludeFaulting(outline, error);
       outlineError = error;
       outline = void 0;
       bootstrappedFirstSection = void 0;

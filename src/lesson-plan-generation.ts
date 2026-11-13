@@ -2521,6 +2521,13 @@ export async function generateLessonPlanWithModel(
     if (![...outlineCapabilities(from)].some((capability) => isNumberLineCapability(capability))) return;
     for (const capability of LESSON_PLAN_CAPABILITY_NAMES) if (isNumberLineCapability(capability)) excludedCapabilities.add(capability);
   };
+  // A recipe that cannot draw the outline's values (a count beyond the unit-square array) names itself in
+  // the fault; the outline is asked again without that recipe. Other outline faults are the number line's.
+  const excludeFaulting = (from: LessonPlanOutline, fault: unknown) => {
+    const capability = fault instanceof LessonPlanError ? fault.capability : undefined;
+    if (capability && outlineCapabilities(from).has(capability as never)) excludedCapabilities.add(capability);
+    else excludeNumberLines(from);
+  };
   let outlineError: unknown;
   let stableCameraObservation: CameraLessonObservation | undefined;
   const sectionErrors = new Map<number, unknown>();
@@ -2681,7 +2688,7 @@ export async function generateLessonPlanWithModel(
       }
     }
     if (outlineFault) {
-      if (outline) excludeNumberLines(outline);
+      if (outline) excludeFaulting(outline, outlineFault);
       outline = undefined;
       bootstrappedFirstSection = undefined;
       sectionErrors.delete(1);
@@ -3030,7 +3037,7 @@ export async function generateLessonPlanWithModel(
       if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
       outlineRestarted = true;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
-      if (outline) excludeNumberLines(outline);
+      if (outline) excludeFaulting(outline, error);
       outlineError = error;
       outline = undefined;
       bootstrappedFirstSection = undefined;

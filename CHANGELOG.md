@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **A count a lesson states is never moved** (M2/M3 baseline, Coach #77). The unit-square array draws at most 8 squares a row, and the program used to clamp larger counts to 8 under the model's own words: 24 squares under "12 cookies", 8 under "ten ones". Counts (the unit-square array's rows and columns, a polygon's sides) are now checked after fitting. Slider ranges are still narrowed to what a recipe draws, and positions in a recipe's own frame (a cube's section) are still fitted.
+  - **A starting count the recipe cannot draw** is an outline-owned fault. The outline is asked again without that recipe (the number line's route, now naming the faulting recipe).
+  - **An animation or practice target** beyond the recipe's range is the section's to fix. Before, the target was moved and the task prompt rewritten.
+  - **A count shared with another recipe's range** (a 3-by-3 square beside a cube section running from −1 to 1, which became 1 by 3) is refused for the section to give each visual its own number.
+  - **Replay of the baseline's 58 recorded lessons:** 52 compile exactly as before; 6 are refused. Four of the six are refused before first playable (one or two more model calls), so the median first-playable time is unchanged.
+
 ## 0.29.0 - 2026-11-12
 
 - **The number line is offered in AI lessons** (OLL decisions 0013 and 0016). `number_line`, `number_line_compare`, `number_line_solution` and `number_line_rounding` move from the trial list to the end of the catalog, where the gate measured them. The live first request is byte-identical to the gate's candidate request.

@@ -4877,3 +4877,65 @@ test("a rounding question accepts the unrounded value whichever way the model wr
     for (const typed of wrong) assert.equal(checkNumericAnswer(graded, typed).succeeded, false, `${typed} for ${answer}`);
   }
 });
+
+test("a count the unit-square array cannot draw is refused, never clamped under the model's words (M2/M3 baseline)", () => {
+  const arrayPlan = () => {
+    const plan = samplePlan("rectangle_unit_square_array");
+    plan.sections[0].student_activities = [];
+    return plan;
+  };
+  const refusedFor = (plan) => {
+    try { compileAndValidateLessonPlan(plan); } catch (error) { return error; }
+    return undefined;
+  };
+  // Within the array's 8 a row it compiles as before (the slider range above 8 is still narrowed).
+  const fits = arrayPlan();
+  const compiled = compileAndValidateLessonPlan(fits).lesson.lesson.variables[0];
+  assert.deepEqual([compiled.min, compiled.max, compiled.initial], [1, 8, 5]);
+
+  // A starting count of 12 ("12 cookies") drew 8 squares before; now the outline owns the fault.
+  const starts = arrayPlan();
+  Object.assign(starts.numbers[0], { initial: 12, min: 10, max: 14 });
+  starts.sections[0].moments[0].actions.find((action) => action.action === "animate").end_value = 13;
+  const startError = refusedFor(starts);
+  assert.equal(startError?.code, "LESSON_PLAN_OUTLINE_VISUAL");
+  assert.equal(startError.capability, "rectangle_unit_square_array");
+  assert.match(startError.message, /number 1 is 12/);
+
+  // An animation to 10 squares would have stopped at 8. The section owns it, so the section is repaired.
+  const animates = arrayPlan();
+  animates.sections[0].moments[0].actions.find((action) => action.action === "animate").end_value = 10;
+  const animateError = refusedFor(animates);
+  assert.equal(animateError?.code, "LESSON_PLAN_NUMBER_NOT_DRAWABLE");
+  assert.match(animateError.message, /number 1 would reach 10/);
+
+  // A practice target of 9 would have been moved to 8, with its prompt rewritten.
+  const asks = arrayPlan();
+  asks.sections[0].student_activities = [{
+    kind: "number_target", prompt: "Make 9 columns.", number_controls: [{ number: 1, controls: ["slider"] }],
+    value: 9, tolerance: 0.1, hints: ["Move the slider."],
+  }];
+  assert.equal(refusedFor(asks)?.code, "LESSON_PLAN_NUMBER_NOT_DRAWABLE");
+  assert.match(refusedFor(asks).message, /number 1 would reach 9/);
+
+  // Fractions of a square round to whole squares; that is not a change of count.
+  const rounds = arrayPlan();
+  rounds.numbers[0].initial = 5.4;
+  assert.equal(compileAndValidateLessonPlan(rounds).lesson.lesson.variables[0].initial, 5);
+});
+
+test("a count shared with a visual of another range is refused when the shared range cannot hold it (M2/M3 baseline: a 3 by 3 square drawn 1 by 3)", () => {
+  const plan = samplePlan("rectangle_unit_square_array");
+  plan.sections[0].student_activities = [];
+  Object.assign(plan.numbers[0], { initial: 3, min: 1, max: 6 });
+  const cube = samplePlan("cube_with_section").sections[0].moments[0].actions.find((action) => action.action === "create" && action.kind === "visual");
+  plan.sections[0].reusable_items.push({ kind: "board_item", board_kind: "visual", capability: "cube_with_section" });
+  plan.sections[0].moments.push({
+    narration: "Now the same count as a cube.",
+    delivery: "patient",
+    actions: [{ ...structuredClone(cube), content: { ...structuredClone(cube.content), numbers: [1] }, placement: { relation: "new_region" }, reusable_item: 2 }],
+  });
+  // The section that shares it can fix it, so it is the section's fault, not the outline's.
+  assert.throws(() => compileAndValidateLessonPlan(plan), (error) => error.code === "LESSON_PLAN_SHARED_NUMBER"
+    && error.capability === undefined && /number 1 is 3/.test(error.message) && /cube_with_section/.test(error.message));
+});

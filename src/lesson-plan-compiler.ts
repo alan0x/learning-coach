@@ -1,7 +1,7 @@
 import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
-import { LESSON_PLAN_CAPABILITY_REGISTRY, isNumberLineCapability, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, isNumberLineCapability, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
 import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen } from "./recipe-kit.js";
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
@@ -170,6 +170,16 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
     const numbers = bound?.length ? bound : bound ? [] : content.numbers ?? [];
     for (const number of new Set(numbers)) visualsUsing.set(number, (visualsUsing.get(number) ?? 0) + 1);
   }
+  // Counts a recipe draws (squares in a row, sides of a polygon), with the model's own starting values,
+  // checked after fitting. The program may narrow a slider's range, but never moves a count the lesson
+  // shows and its narration states: a lesson titled "12 cookies" must not draw 8 squares (M2/M3
+  // baseline, Coach #77). Such a count fails, and the model repairs the plan. Positions in a recipe's
+  // own frame (a cube's section from −1 to 1) are still fitted: the model cannot know that frame.
+  const hardRanges = new Map<number, { capability: string; path: string }>();
+  const written = new Map((plan.numbers ?? []).map((definition, index) => [index + 1, definition.initial]));
+  // Every recipe whose own range applies to a number: a count shared with another recipe's range can be
+  // narrowed by it (a 3 by 3 square drawn 1 by 3 beside a cube section running from −1 to 1).
+  const rangeOwners = new Map<number, Set<string>>();
   const publishedPlotNumbers = new Set<number>();
   for (const [sectionIndex, section] of plan.sections.entries()) {
     const newPlotNumbers = new Set<number>();
@@ -202,6 +212,10 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
           const prior = publishedPlotNumbers.has(numberIndex)
             ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step }
             : undefined;
+          if (policy.kind !== "unbounded") rangeOwners.set(numberIndex, new Set([...(rangeOwners.get(numberIndex) ?? []), content.capability]));
+          if ((policy.kind === "side_count" || policy.kind === "positive_integer") && !hardRanges.has(numberIndex)) {
+            hardRanges.set(numberIndex, { capability: content.capability, path });
+          }
           if (policy.kind === "side_count") {
             integerSides.add(numberIndex);
             intersectProgramRange(definition, 3, 384);
@@ -238,6 +252,52 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
     for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
   if (constrained.size === 0) return;
+  const outside = (number: number, value: number) => {
+    const definition = plan.numbers![number - 1]!;
+    const slack = Math.max((definition.max - definition.min) / 1_000, 1e-9);
+    // Counts and side counts are whole numbers: 3.4 squares draws as 3, which is a rounding, not a change.
+    const shown = integerSides.has(number) || Number.isInteger(definition.min) && definition.student_control?.step === 1 ? Math.round(value) : value;
+    return shown < definition.min - slack || shown > definition.max + slack;
+  };
+  const refuse = (number: number, value: number, path: string, sectionOwned = false) => {
+    const definition = plan.numbers![number - 1]!;
+    const { capability } = hardRanges.get(number)!;
+    const owners = [...(rangeOwners.get(number) ?? [])];
+    // Shared with a visual of another range: the section that shares it can give each visual its own number.
+    if (owners.length > 1) {
+      fail("LESSON_PLAN_SHARED_NUMBER", path,
+        `number ${number} is ${value}, but it is shared by ${owners.join(" and ")}, which together allow only ${definition.min} to ${definition.max}; give each visual its own number`);
+    }
+    // An animation or practice target is the section's: it can move to a count the visual draws.
+    if (sectionOwned) {
+      fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path,
+        `number ${number} would reach ${value}, but the ${capability} visual can draw only ${definition.min} to ${definition.max}; use a value in that range`);
+    }
+    // The outline chose both the visual and the count, so only a new outline can fix it: the lesson is
+    // asked again without this recipe (decision 0013's outline-owned fault, as for the number line).
+    throw new LessonPlanError("LESSON_PLAN_OUTLINE_VISUAL", path,
+      `number ${number} is ${value}, but the ${capability} visual can draw only ${definition.min} to ${definition.max}; choose another visual, or none`, capability);
+  };
+  for (const [number, { path }] of hardRanges) {
+    const value = written.get(number);
+    if (value !== undefined && outside(number, value)) refuse(number, value, path);
+  }
+  for (const [sectionIndex, section] of plan.sections.entries()) {
+    for (const [momentIndex, moment] of section.moments.entries()) {
+      for (const [actionIndex, action] of moment.actions.entries()) {
+        if (action.action === "animate" && hardRanges.has(action.number) && outside(action.number, action.end_value)) {
+          refuse(action.number, action.end_value, `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`, true);
+        }
+      }
+    }
+    for (const [activityIndex, activity] of (section.student_activities ?? []).entries()) {
+      if (activity.kind !== "number_target" || activity.expression) continue;
+      const number = activity.number_controls[0]?.number;
+      if (number && hardRanges.has(number) && outside(number, activity.value)) {
+        refuse(number, activity.value, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}].value`, true);
+      }
+    }
+  }
   // Side counts are whole numbers; a fitted number line's numbers sit on its ticks.
   const roundToProgramGrid = (number: number, value: number) => {
     if (integerSides.has(number)) return Math.round(value);
