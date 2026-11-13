@@ -122,11 +122,11 @@ export const NUMBER_LINE_SOLUTION_CASES = [
  * ends (halves round up, as taught in grade 3). RND-04 needs hundredths; RND-05 is the halfway case.
  */
 export const NUMBER_LINE_ROUNDING_CASES = [
-  { id: "RND-01", prompt: "用数轴说明 47 四舍五入到十位是多少。", expect: { values: [40, 47, 50], rounding: { result: 50 } } },
-  { id: "RND-02", prompt: "Round 362 to the nearest hundred using a number line.", expect: { values: [300, 362, 400], rounding: { result: 400 } } },
-  { id: "RND-03", prompt: "把 3.6 四舍五入到个位，用数轴表示。", expect: { values: [3, 3.6, 4], rounding: { result: 4 } } },
-  { id: "RND-04", prompt: "Round 1.24 to the nearest tenth on a number line.", expect: { values: [1.2, 1.24, 1.3], rounding: { result: 1.2 } } },
-  { id: "RND-05", prompt: "Use a number line to round 85 to the nearest ten.", expect: { values: [80, 85, 90], rounding: { result: 90 } } },
+  { id: "RND-01", prompt: "用数轴说明 47 四舍五入到十位是多少。", expect: { values: [40, 47, 50], rounding: { number: 47, result: 50 } } },
+  { id: "RND-02", prompt: "Round 362 to the nearest hundred using a number line.", expect: { values: [300, 362, 400], rounding: { number: 362, result: 400 } } },
+  { id: "RND-03", prompt: "把 3.6 四舍五入到个位，用数轴表示。", expect: { values: [3, 3.6, 4], rounding: { number: 3.6, result: 4 } } },
+  { id: "RND-04", prompt: "Round 1.24 to the nearest tenth on a number line.", expect: { values: [1.2, 1.24, 1.3], rounding: { number: 1.24, result: 1.2 } } },
+  { id: "RND-05", prompt: "Use a number line to round 85 to the nearest ten.", expect: { values: [80, 85, 90], rounding: { number: 85, result: 90 } } },
 ];
 export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES };
 
@@ -336,18 +336,23 @@ export function judgeNumberLine(item, lesson) {
       for (const point of filled) if (openEnds.some((value) => state[point.as] !== undefined && close(state[point.as], value))) hard.push(`a filled point sits on the open end ${state[point.as]}`);
     }
   }
-  // Rounding (decision 0016): some state the lesson shows jumps from the number to the expected result.
+  // Rounding (decision 0016): some state the lesson shows jumps from the number being rounded to the
+  // expected result. Both ends count: a jump from 40 to 50 beside a point at 47 rounds nothing (review of #69).
   if (expect.rounding) {
-    const ends = variableStates(lesson).flatMap((values) => {
+    const jumps = variableStates(lesson).flatMap((values) => {
       const points = numberLineStates({ content, variables: Object.entries(values).map(([as, initial]) => ({ as, initial })), tasks: [], animations: [] })[0];
       return (content.jumps ?? []).map((jump) => {
         const bound = (side) => (content.bindings ?? []).find((entry) => entry.target === `${jump.as}.${side}`);
         const from = typeof jump.from === "string" && jump.from in points ? points[jump.from] : bound("from") ? evaluateExpression(bound("from").expression, values) : Number(jump.from);
         const by = bound("by") ? evaluateExpression(bound("by").expression, values) : Number(jump.by);
-        return from + by;
+        return { from, to: from + by };
       });
     });
-    if (!ends.some((end) => close(end, expect.rounding.result))) hard.push(`wrong rounding: no jump ends at ${expect.rounding.result} (ends: ${[...new Set(ends.map((end) => Number(end.toFixed(6))))].join(", ") || "none"})`);
+    const { number, result } = expect.rounding;
+    if (!jumps.some((jump) => close(jump.from, number) && close(jump.to, result))) {
+      const drawn = [...new Set(jumps.map((jump) => `${Number(jump.from.toFixed(6))} → ${Number(jump.to.toFixed(6))}`))].join(", ") || "none";
+      hard.push(`wrong rounding: no jump from ${number} to ${result} (jumps: ${drawn})`);
+    }
   }
   const labelled = planNumberLineTicks(content).filter((tick) => tick.label).map((tick) => tick.value);
   const visible = new Set((content.points ?? []).filter((point) => point.shown !== "when_emphasized").map((point) => point.as));

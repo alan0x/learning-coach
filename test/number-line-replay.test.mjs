@@ -390,6 +390,47 @@ test("the rounding check catches a jump to the wrong neighbour", async () => {
   const line = structuredClone(numberLineLesson(await compileCompare(roundingReply(47, "tens"), caseById.get("RND-01").prompt)));
   // As if the jump went down to 40.
   line.content.bindings = line.content.bindings.map((binding) => (binding.target === "move.by" ? { ...binding, expression: "40 - number_01" } : binding));
-  assert.match(judgeNumberLine(caseById.get("RND-01"), line).hard.join(), /wrong rounding: no jump ends at 50/);
+  assert.match(judgeNumberLine(caseById.get("RND-01"), line).hard.join(), /wrong rounding: no jump from 47 to 50/);
 });
 
+test("the rounding check catches a jump from the wrong number: 40 → 50 beside a point at 47 (review of #69)", async () => {
+  const line = structuredClone(numberLineLesson(await compileCompare(roundingReply(47, "tens"), caseById.get("RND-01").prompt)));
+  // The jump now starts at the lower neighbour; 40, 47 and 50 are all still shown.
+  line.content.jumps = line.content.jumps.map((jump) => (jump.as === "move" ? { ...jump, from: "lower", by: 10 } : jump));
+  line.content.bindings = line.content.bindings.filter((binding) => !binding.target.startsWith("move."));
+  assert.match(judgeNumberLine(caseById.get("RND-01"), line).hard.join(), /wrong rounding: no jump from 47 to 50 \(jumps: 40 → 50\)/);
+});
+
+
+// Review of #68: the split between the two boundaries' ranges keeps every value the lesson gives them,
+// and each boundary keeps a usable range even when the boundaries are adjacent ticks.
+const withAnimation = (reply, number, value) => {
+  reply.course.first_section.moments[0].animations = [{ timing: "during_speech", number, end_value: { mantissa: value, scale: 0 }, duration_intent: "normal" }];
+  return reply;
+};
+test("a < x < b with a animated to 4 (between 1 and 5): the animation stays 4 and the ranges stay apart (review of #68)", async () => {
+  const line = numberLineLesson(await compileCompare(withAnimation(solutionReply("a<x<b", [1, 5]), 1, 4), caseById.get("SOL-04").prompt));
+  const [a, b] = line.variables;
+  assert.deepEqual(line.animations.filter(([variable]) => variable === a.as).map(([, value]) => value), [4]);
+  assert.ok(a.max < b.min && a.max >= 4 && b.min <= 5, JSON.stringify([a, b]));
+  assert.deepEqual(judgeNumberLine(caseById.get("SOL-04"), line).hard, []);
+});
+for (const [low, high] of [[1, 2], [0, 1]]) {
+  test(`${low} < x < ${high} (adjacent whole-number boundaries): both sliders keep a usable range (review of #68)`, async () => {
+    const line = numberLineLesson(await compileCompare(solutionReply("a<x<b", [low, high]), `Graph ${low} < x < ${high} on a number line.`));
+    const [a, b] = line.variables;
+    assert.ok(a.min < a.max && b.min < b.max && a.max < b.min, JSON.stringify([a, b]));
+    assert.deepEqual([a.initial, b.initial], [low, high]);
+    const expect = { values: [low, high], solution: [{ from: low, to: high, fromClosed: false, toClosed: false }] };
+    assert.deepEqual(judgeNumberLine({ expect }, line).hard, []);
+  });
+}
+test("a lesson that moves a past b is refused as a section fault, never redrawn with changed values (review of #68)", async () => {
+  const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+  const rejected = [];
+  await assert.rejects(generateLessonPlanWithModel(async (request) => {
+    if (request.label === "lesson-plan-bootstrap") return JSON.stringify(withAnimation(solutionReply("a<x<b", [1, 5]), 1, 6));
+    throw new Error("stop");
+  }, { turn_id: "cross", learner_request: "x between 1 and 5", input_modality: "text", request_source: "self_contained" }, { on_rejected_part: (event) => rejected.push(event.error.message) }), /stop/);
+  assert.ok(rejected.some((message) => /must stay smaller than every value/.test(message)), rejected.join());
+});

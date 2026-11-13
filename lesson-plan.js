@@ -13085,23 +13085,30 @@ function fitComparedNumbers(content, plan, sharedNumbers) {
   return fitted;
 }
 function fitSolutionNumbers(content, plan, sharedNumbers) {
-  const fitted = fitComparedNumbers(content, plan, sharedNumbers);
   const [lowIndex, highIndex] = content.numbers ?? [];
+  const model = [lowIndex, highIndex].map((index) => index ? structuredClone(plan.numbers?.[index - 1]) : void 0);
+  const fitted = fitComparedNumbers(content, plan, sharedNumbers);
   const low = lowIndex ? plan.numbers?.[lowIndex - 1] : void 0;
   const high = highIndex ? plan.numbers?.[highIndex - 1] : void 0;
-  if (!low || !high || !(low.initial < high.initial) || sharedNumbers.has(lowIndex) || sharedNumbers.has(highIndex)) return fitted;
-  if (low.max < high.min) return fitted;
+  if (!low || !high || sharedNumbers.has(lowIndex) || sharedNumbers.has(highIndex)) return fitted;
   const grid = fitted.get(lowIndex) || void 0;
-  const middle = (low.initial + high.initial) / 2;
-  let lowMax = grid ? floorTo(middle - 1e-9, grid) : middle;
-  let highMin = grid ? ceilTo(middle, grid) : middle;
-  if (grid && lowMax > middle) lowMax -= grid;
-  if (grid && highMin < middle) highMin += grid;
-  if (lowMax >= highMin) lowMax = grid ? Number((highMin - grid).toPrecision(12)) : highMin - Math.max(1e-6, (high.initial - low.initial) / 1e3);
-  if (lowMax < low.initial || highMin > high.initial) return fitted;
-  low.max = Math.min(low.max, lowMax);
-  high.min = Math.max(high.min, highMin);
-  if (low.min >= low.max || high.min >= high.max) return fitted;
+  const lowTop = Math.max(low.initial, ...lessonValues(plan, lowIndex).map((value2) => grid ? snap(value2, grid) : value2));
+  const highBottom = Math.min(high.initial, ...lessonValues(plan, highIndex).map((value2) => grid ? snap(value2, grid) : value2));
+  if (!(lowTop < highBottom)) return fitted;
+  const middle = (lowTop + highBottom) / 2;
+  const lowMax = grid ? Number((Math.ceil(middle / grid - 1e-9) * grid - grid).toPrecision(12)) : lowTop + (highBottom - lowTop) / 3;
+  const highMin = grid ? Number((lowMax + grid).toPrecision(12)) : highBottom - (highBottom - lowTop) / 3;
+  const lowRange = [
+    low.min < lowMax ? low.min : model[0].min < lowMax ? Math.max(model[0].min, lowMax - 1) : lowMax - 1,
+    Math.min(low.max, lowMax)
+  ];
+  const highRange = [
+    Math.max(high.min, highMin),
+    high.max > highMin ? high.max : model[1].max > highMin ? Math.min(model[1].max, highMin + 1) : highMin + 1
+  ];
+  if (!(lowRange[0] < lowRange[1] && highRange[0] < highRange[1])) return fitted;
+  [low.min, low.max] = lowRange;
+  [high.min, high.max] = highRange;
   return fitted;
 }
 var ROUNDING_UNITS = { hundreds: 100, tens: 10, ones: 1, tenths: 0.1, hundredths: 0.01 };
@@ -16353,6 +16360,12 @@ function compileNumberLineSolution(base, content, role, placement, plan, path) {
   const bounds = numbers.slice(0, relation.bounds).map((number, index) => ({ number, definition: numberDefinition(plan, number, `${path}.numbers[${index}]`) }));
   if (bounds.length === 2 && !(bounds[0].definition.initial < bounds[1].definition.initial)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "the first boundary (a) must be smaller than the second (b)");
+  }
+  if (bounds.length === 2) {
+    const [first, second] = bounds.map(({ number, definition }) => [definition.initial, ...lessonValues(plan, number)]);
+    if (!(Math.max(...first) < Math.min(...second))) {
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "every value the lesson gives the first boundary (a) must stay smaller than every value it gives the second (b)");
+    }
   }
   const values = bounds.flatMap(({ definition }) => [definition.min, definition.max, definition.initial]);
   const steps = bounds.map(({ definition }) => definition.student_control?.step).filter((step) => typeof step === "number" && step > 0);

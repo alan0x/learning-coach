@@ -501,3 +501,5 @@ A DOM probe settled run 6's puzzling screenshot: the board does redraw a point a
 
 **All three types are now built and probed.** Pooled first probes: compare 12/12, solution sets 11/11 by hand (10 by the judge, plus one with its number line in section 2), rounding 10/10. The remaining step is the gate run on frozen code (the owner's approval needed), with near misses outside the new scope judged "no worse than today".
 
+
+**Review fixes (#68, #69).** Solution sets: the split between the two boundaries' slider ranges now falls between every value the lesson gives them (an animation to a = 4 in 1 < x < 5 stays 4), each boundary keeps a usable range when the boundaries are adjacent ticks (1 < x < 2), and a lesson that moves a past b is refused as a section fault instead of being redrawn with changed values. Rounding: the judge requires a jump from the rounded number itself to the result (a 40 → 50 jump beside 47 fails). Replaying the recorded probes under these checks gives the same results: rounding 10/10, solution sets 10/11 (SOL-06 shows its line in section 2, as before).
