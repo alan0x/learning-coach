@@ -557,3 +557,90 @@ Owner-approved; 109 calls (about $0.80); `eval/trial-recipe-speed-number-line-20
 - In single-call pairs only (17 of 20 in runs 9 and 9b), the other requests are still +2.7 s, so retries are not the cause.
 - Size alone does not explain it: the 2026-11-11 payload experiment added +1,331 prompt tokens of cards marked unavailable with no measurable cost, and the physics pilot's other requests were 1.5 s faster. The number-line additions are about +250 tokens.
 - The likely mechanism is that the number-line guidance gives the model more to weigh on requests it does not fit. Not established: thought text is not recorded.
+
+## After run 9b: rewriting the number-line instructions (2026-11-12)
+
+**Owner decisions (2026-11-12).**
+- Rewrite the number-line instructions.
+- **Speed rule from now on:** requests the new recipe fits and requests it does not are judged separately, each by its paired median at most +0.5 s. The harness reports this as `speed` (`speedVerdict`), and records each turn's thinking tokens.
+
+**Where the extra thinking appeared.** On the held-out requests, runs 5–8 (the base card only) thought in 19 of 40 candidate turns against 15 of 40 baseline turns. Runs 9 and 9b, which added the three new types, thought in 16 of 20 against 9 of 20. What came with the new types:
+- three new cards;
+- the feature names `number_comparison`, `solution_set` and `rounding`;
+- the `relation` (12 forms) and `place` (5 places) options in the response schema.
+
+The base card also kept "not for inequalities, absolute value, rounding" while two new cards said to use a number line for exactly those.
+
+**The rewrite (deleting, not adding):**
+- **Contradiction:** the base card's stale "not for…" clause is gone.
+- **Compare path:** the base card no longer teaches comparing two numbers, which now has its own card.
+- **Scope:** each card states its use in its opening words (数轴加减, 数轴比较两个数, 数轴画不等式解集, 数轴四舍五入), as the physics card does.
+- **Kept:** the clauses that fixed real failures (actual values such as 0.75, decimal labels, the |x−3|<2 example).
+- **Size:** the four cards fall from 1,203 to 524 bytes; math's footprint falls from 5,760 to 5,602. The payload test passes with the four types on (with #72's ceilings).
+- **Not changed:** feature names and schema options, so a result can be traced to the wording.
+
+Free replays cannot test this change: they reuse replies written under the old wording.
+
+### Run 10 rules: does the rewrite remove the slowdown? (diagnostic; set before the run, needs the owner's approval)
+
+- **Arms, interleaved in all six orders:**
+  - *off:* no number line;
+  - *current:* the four types with the wording of main `3242238`, built separately;
+  - *rewrite:* the four types with the new wording.
+- **Requests:** only requests the number line does not fit, chosen now. The 10 held-out cases (`OTHER_CASE_IDS`, 2 math, 8 science) and 10 high-school math questions from the natural set: `M01-linear-system-question` to `M10-binomial-probability-question`. One trio each, 20 trios.
+- **Primary:** rewrite against off, paired median at most +0.5 s.
+- **Secondary:** thinking rate per arm, and rewrite against current.
+- **Diagnostic only:** this run does not switch anything on. The rewrite is new model-facing text, so switching on still needs a gate run on the frozen rewrite: quality on every number-line case, and speed under the new rule. That is a separate approval, about $1.30.
+- **No repeat.** At 20 trios, a change with no real cost exceeds +0.5 s about 1 time in 8; the result is read with that in mind.
+- **Budget:** `--other-cases … --previous-build <main build> --pairs 20 --quality-repeats 0 --max-calls 80`, about $0.50. (Run 10 was started with `--quality-repeats 0`; the review of #73 found that without it the harness would have run the quality cases after the trios. Other-only mode now defaults to none.)
+- **Verdict:** if every pair of a planned group is missing an arm, the verdict is incomplete, not a pass (review of #73).
+
+## Run 10 (2026-11-12): with the rewrite, requests the number line does not fit are no slower
+
+Owner-approved diagnostic; 64 calls (about $0.47); `eval/trial-recipe-speed-number-line-2026-11-12-run10.json`. All 60 runs (20 trios) completed; no arm chose a number line for any of these requests.
+
+| Against "off", requests the number line does not fit | Paired median | 95% interval (mean) | Thinking turns |
+|---|---|---|---|
+| Off | — | — | 7 of 20 |
+| Current wording | +0.40 s | −0.2 to +2.3 s | 9 of 20 |
+| **Rewrite** | **+0.13 s** | −1.4 to +2.2 s | **5 of 20** |
+
+- **Primary rule: passes.** Rewrite against off is +0.13 s, within +0.5 s (verdict recomputed with the fixed harness of #73: pass).
+- **Rewrite against current wording:** −1.2 s (paired median).
+- **By group:** held-out cases +0.18 s (current +0.32 s); natural math questions +0.13 s (current +0.68 s).
+- **Read with care:** the current wording cost +0.40 s here, against +2.8 s in runs 9 and 9b, so this run reproduced only part of the original slowdown. The thinking rates point the same way as the timings (rewrite 5, off 7, current 9 of 20), but 20 trios is a small sample. The evidence supports "the rewrite is not slower than off", and more weakly "the rewrite removed the slowdown".
+
+### Gate on the frozen rewrite (proposed rules; needs the owner's approval)
+
+- **Frozen code:** #73's head after review, all four number-line recipes offered.
+- **Speed (owner's rule of 2026-11-12):** 40 pairs, alternating 20 fitting (NL-01..10) and 20 other (the held-out cases). Each group's paired median must be at most +0.5 s. An incomplete group is not a pass. No repeat.
+- **Quality:** NL-11..20, NM-01..04, CMP-01..05, SOL-01..06 and RND-01..05, twice each (60 lessons). Never mislead, by the hard checks, with the slip rule (option B). Near misses also run on the baseline arm. A lesson whose line is planned for a later section is read by hand.
+- **Budget:** `--pairs 40 --quality-repeats 2 --max-calls 200`, about $1.30 expected (at most about $1.45).
+
+## Run 11 (2026-11-12): the gate on the frozen rewrite — speed and quality pass; 3 planned lessons did not run
+
+Owner-approved; frozen code `4c5687b`; 201 calls (about $1.45); `eval/trial-recipe-speed-number-line-2026-11-12-run11.json`.
+
+**Speed (owner's rule): passes.**
+
+| Group | Paired median | 95% interval (mean) | Complete pairs | Thinking turns (baseline / candidate) |
+|---|---|---|---|---|
+| Requests the number line fits | **−3.8 s** | −7.0 to −1.9 s | 18 of 20 (2 baselines hit the call cap) | 3/18 / 10/20 |
+| Requests it does not fit | **+0.15 s** | −1.3 to +1.5 s | 20 of 20 | 12/20 / 9/20 |
+
+The candidate used the number line on all 20 fitting requests and on none of the others.
+
+**Quality: no hard miss in the 77 lessons that ran.** The 77 are the 20 fitting speed pairs plus 57 quality lessons. One soft miss: NL-08 without hops, twice.
+- **NM-01..04, re-judged for free with the full checks:** 8 of 8 pass.
+- **Read by hand:** each final picture agrees with its narration.
+  - NM-01: 3/5 left of 2/3, in fifteenths.
+  - NM-02: an open circle and a ray from −2.
+  - NM-03: 40, 45, 47 and 50, with the jump to 50.
+  - NM-04: the open interval from 1 to 5.
+- Two of the NM lines first show the reset value for the learner's task, then animate to the taught value (option a).
+
+**Incomplete:** the call budget (200) ran out before the second runs of RND-03, RND-04 and RND-05. Their first runs passed, as they did in run 9b and the rounding probe. By the rule set before the run, a planned case that did not run makes the gate incomplete, not passed. Completing it costs 3 lessons, about $0.05, and needs the owner's approval.
+
+**Completed (run 11b, owner-approved):** the three missing lessons (RND-03, RND-04 and RND-05) ran on the same frozen code. All 3 pass every hard check, using 5 calls (about $0.04); `eval/trial-recipe-speed-number-line-2026-11-12-run11b.json`.
+
+**Gate result: passed.** Every planned lesson ran: 80 lessons, with no hard miss and no misleading lesson. Speed passes for both groups under the owner's rule. The number line can be switched on, in a separate change. Then it gets a phone-width check in Learn and one real lesson in the app.
