@@ -12,10 +12,16 @@
   "method": [
     "Counts per band are the plan's: K–2 30, 3–5 40, 6–8 40, 9–12 50.",
     "K–8: star-map catalog topics (octos-learn services/learning-history/taxonomy/catalog.json), banded by the US grade of the topic's middle age (age − 5.5). Each band's count is split over its domains in proportion to the catalog, at least one per domain; topics, language and phrasing kind are drawn by seed in scripts/draw-math-question-set.mjs (seed 20261113). The question is then written for the drawn topic.",
+    "Catalog used: octos-learn commit f6ccb640 (the catalog's last change; file SHA-256 prefix 2c4803c89d060197). A changed catalog draws different topics.",
     "9–12: the plan's six domains with counts fixed before writing (Number & Quantity 5, Algebra 9, Functions 9, Geometry 8, Statistics & Probability 6, Precalculus & Calculus 3); phrasing kind drawn by seed; topics chosen by hand within each domain.",
     "Natural-input set: one case per topic from math-natural-course-cases.json, variants rotating detailed/question/topic, copied verbatim (source natural-set). Its 12 topics were used in earlier quality work, so they are never held out and M1 is reported with and without them. Two (linear systems, Pythagoras) are grade-8 topics in the US and sit in 6–8.",
     "Held-out: after writing, a quarter of each band (rounded) is drawn by seed from the questions that are not natural-set.",
     "Standard codes are not cited: none have been looked up."
+  ],
+  "departures": [
+    "K2-16, K2-18: the drawn topics (choosing a strategy, justifying reasoning) describe work above K–2; the questions are written at K–2 level.",
+    "G35-23: the drawn topic is precise vocabulary across many areas; the question asks about one pair of terms (radius and diameter).",
+    "G35-40: the drawn topic is unequal sharing and grouping with fractions; the question is an equal-sharing problem whose answer is a fraction."
   ],
   "kinds": {
     "question": "a short question as a learner asks it",
@@ -1920,7 +1926,7 @@
       "domain": "Statistics & Probability",
       "language": "en-US",
       "kind": "detailed",
-      "prompt": "Teach me how to read a two-way table. 200 students were asked whether they play a sport and whether they play an instrument; build the table, then find P(instrument | sport) and decide whether the two are independent.",
+      "prompt": "Teach me how to read a two-way table. Of 200 students, 120 play a sport, 50 play an instrument, and 30 do both; build the table, then find P(instrument | sport) and decide whether the two are independent.",
       "teacher_picture": "The two-way table with row and column totals, the sport row highlighted.",
       "picture_kind": "table",
       "source": "written",
