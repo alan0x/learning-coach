@@ -427,6 +427,15 @@ export function slipVerdict(judged) {
   return { result: "pass", reason: "no hard misses" };
 }
 
+/**
+ * How many times the quality cases run: as given, else once, except in other-only mode (--other-cases),
+ * which measures speed on requests the recipes do not fit and runs no quality cases unless asked
+ * (review of #73: run 10's documented command would otherwise have spent its budget on them).
+ */
+export function qualityRepeats(given, otherOnly) {
+  return given !== undefined ? Number(given) : otherOnly ? 0 : 1;
+}
+
 /** Thinking tokens of a turn's first model call (the bootstrap), from the last usage record the provider streamed. */
 export function firstCallThoughts(raw) {
   const usage = raw.split("\n").filter((line) => line.includes("lesson-plan-bootstrap") && line.includes("usageMetadata")).at(-1);
@@ -440,10 +449,14 @@ export function firstCallThoughts(raw) {
  * hid a loss on the requests that do not use the recipe behind a gain on those that do (runs 9 and 9b).
  * A group with no pairs (an other-only run) is not judged.
  */
-export function speedVerdict(groups, limitMs = 500) {
-  const judged = Object.entries({ fitting: groups.motion, other: groups.other }).filter(([, group]) => group?.complete_pairs);
+export function speedVerdict(groups, planned = ["fitting", "other"], limitMs = 500) {
+  const named = { fitting: groups.motion, other: groups.other };
+  // A group the run planned but could not measure (every pair missing an arm, say a candidate that hit
+  // the call cap) makes the verdict incomplete; only a group the run left out is skipped (review of #73).
+  const unmeasured = planned.filter((name) => !named[name]?.complete_pairs);
+  if (unmeasured.length) return { result: "incomplete", reason: unmeasured.map((name) => `no complete ${name} pairs`).join("; ") };
+  const judged = planned.map((name) => [name, named[name]]);
   const over = judged.filter(([, group]) => group.paired_difference_ms.median > limitMs);
-  if (!judged.length) return { result: "not judged", reason: "no complete pairs" };
   return over.length
     ? { result: "fail", reason: over.map(([name, group]) => `${name} requests +${Math.round(group.paired_difference_ms.median)} ms over +${limitMs} ms`).join("; ") }
     : { result: "pass", reason: judged.map(([name, group]) => `${name} requests ${Math.round(group.paired_difference_ms.median)} ms`).join("; ") };
@@ -485,7 +498,9 @@ export function summarize(rows) {
   const groups = { all: group((row) => row.kind === "motion" || row.kind === "other"), motion: group((row) => row.kind === "motion"), other: group((row) => row.kind === "other") };
   // A third arm (--previous-build): the same recipes from an earlier build, against the same baseline.
   const previous = rows.some((row) => row.arm === "previous") ? { previous: { motion: group((row) => row.kind === "motion", "previous"), other: group((row) => row.kind === "other", "previous") } } : {};
-  return { ...groups, ...previous, speed: speedVerdict(groups), ...(quality ? { quality } : {}) };
+  // The groups a run planned are the kinds its speed pairs carry, whatever their outcome.
+  const planned = [["motion", "fitting"], ["other", "other"]].filter(([kind]) => rows.some((row) => row.kind === kind)).map(([, name]) => name);
+  return { ...groups, ...previous, speed: speedVerdict(groups, planned), ...(quality ? { quality } : {}) };
 }
 
 async function main() {
@@ -586,7 +601,7 @@ async function main() {
       await runOne(pair, item, arm, order);
     }
   }
-  const repeats = Number(option("--quality-repeats", "1"));
+  const repeats = qualityRepeats(option("--quality-repeats"), Boolean(otherIds));
   const queue = Array.from({ length: repeats }, () => qualityCases).flat();
   for (const [index, item] of queue.entries()) {
     if (budget.remaining <= 0) break;

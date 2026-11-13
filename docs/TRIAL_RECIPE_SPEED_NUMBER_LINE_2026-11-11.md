@@ -592,4 +592,5 @@ Free replays cannot test this change: they reuse replies written under the old w
 - **Secondary:** thinking rate per arm, and rewrite against current.
 - **Diagnostic only:** this run does not switch anything on. The rewrite is new model-facing text, so switching on still needs a gate run on the frozen rewrite: quality on every number-line case, and speed under the new rule. That is a separate approval, about $1.30.
 - **No repeat.** At 20 trios, a change with no real cost exceeds +0.5 s about 1 time in 8; the result is read with that in mind.
-- **Budget:** `--other-cases … --previous-build <main build> --pairs 20 --max-calls 80`, about $0.50.
+- **Budget:** `--other-cases … --previous-build <main build> --pairs 20 --quality-repeats 0 --max-calls 80`, about $0.50. (Run 10 was started with `--quality-repeats 0`; the review of #73 found that without it the harness would have run the quality cases after the trios. Other-only mode now defaults to none.)
+- **Verdict:** if every pair of a planned group is missing an arm, the verdict is incomplete, not a pass (review of #73).
