@@ -640,3 +640,7 @@ The candidate used the number line on all 20 fitting requests and on none of the
 - Two of the NM lines first show the reset value for the learner's task, then animate to the taught value (option a).
 
 **Incomplete:** the call budget (200) ran out before the second runs of RND-03, RND-04 and RND-05. Their first runs passed, as they did in run 9b and the rounding probe. By the rule set before the run, a planned case that did not run makes the gate incomplete, not passed. Completing it costs 3 lessons, about $0.05, and needs the owner's approval.
+
+**Completed (run 11b, owner-approved):** the three missing lessons (RND-03, RND-04 and RND-05) ran on the same frozen code. All 3 pass every hard check, using 5 calls (about $0.04); `eval/trial-recipe-speed-number-line-2026-11-12-run11b.json`.
+
+**Gate result: passed.** Every planned lesson ran: 80 lessons, with no hard miss and no misleading lesson. Speed passes for both groups under the owner's rule. The number line can be switched on, in a separate change. Then it gets a phone-width check in Learn and one real lesson in the app.
