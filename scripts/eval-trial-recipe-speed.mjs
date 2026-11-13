@@ -427,21 +427,47 @@ export function slipVerdict(judged) {
   return { result: "pass", reason: "no hard misses" };
 }
 
+/** Thinking tokens of a turn's first model call (the bootstrap), from the last usage record the provider streamed. */
+export function firstCallThoughts(raw) {
+  const usage = raw.split("\n").filter((line) => line.includes("lesson-plan-bootstrap") && line.includes("usageMetadata")).at(-1);
+  if (!usage) return undefined;
+  return Number(usage.match(/"thoughtsTokenCount":(\d+)/u)?.[1] ?? 0);
+}
+
+/**
+ * The speed rule (owner, 2026-11-12): requests the new recipe fits and requests it does not are judged on
+ * their own, each by its paired median (candidate minus baseline) at most +0.5 s. One median over both
+ * hid a loss on the requests that do not use the recipe behind a gain on those that do (runs 9 and 9b).
+ * A group with no pairs (an other-only run) is not judged.
+ */
+export function speedVerdict(groups, limitMs = 500) {
+  const judged = Object.entries({ fitting: groups.motion, other: groups.other }).filter(([, group]) => group?.complete_pairs);
+  const over = judged.filter(([, group]) => group.paired_difference_ms.median > limitMs);
+  if (!judged.length) return { result: "not judged", reason: "no complete pairs" };
+  return over.length
+    ? { result: "fail", reason: over.map(([name, group]) => `${name} requests +${Math.round(group.paired_difference_ms.median)} ms over +${limitMs} ms`).join("; ") }
+    : { result: "pass", reason: judged.map(([name, group]) => `${name} requests ${Math.round(group.paired_difference_ms.median)} ms`).join("; ") };
+}
+
 export function summarize(rows) {
-  const group = (filter) => {
+  const group = (filter, candidate = "candidate") => {
     const ok = (arm) => rows.filter((row) => filter(row) && row.arm === arm && row.outcome === "first_playable");
     const pairs = new Map();
     for (const row of rows.filter((entry) => filter(entry) && entry.outcome === "first_playable")) pairs.set(row.pair, { ...pairs.get(row.pair), [row.arm]: row.first_playable_ms });
-    const differences = [...pairs.values()].filter((pair) => pair.baseline !== undefined && pair.candidate !== undefined).map((pair) => pair.candidate - pair.baseline);
+    const differences = [...pairs.values()].filter((pair) => pair.baseline !== undefined && pair[candidate] !== undefined).map((pair) => pair[candidate] - pair.baseline);
     const mean = differences.length ? differences.reduce((sum, value) => sum + value, 0) / differences.length : null;
     const sd = differences.length > 1 ? Math.sqrt(differences.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (differences.length - 1)) : null;
     const se = sd !== null ? sd / Math.sqrt(differences.length) : null;
     return {
       complete_pairs: differences.length,
-      p50_first_playable_ms: { baseline: median(ok("baseline").map((row) => row.first_playable_ms)), candidate: median(ok("candidate").map((row) => row.first_playable_ms)) },
-      p50_prompt_tokens: { baseline: median(ok("baseline").map((row) => row.prompt_tokens)), candidate: median(ok("candidate").map((row) => row.prompt_tokens)) },
+      p50_first_playable_ms: { baseline: median(ok("baseline").map((row) => row.first_playable_ms)), candidate: median(ok(candidate).map((row) => row.first_playable_ms)) },
+      p50_prompt_tokens: { baseline: median(ok("baseline").map((row) => row.prompt_tokens)), candidate: median(ok(candidate).map((row) => row.prompt_tokens)) },
       paired_difference_ms: { median: median(differences), mean, ci95: se !== null ? [mean - 1.96 * se, mean + 1.96 * se] : null },
-      candidate_used_trial_recipe: ok("candidate").filter((row) => row.recipes?.length).length,
+      candidate_used_trial_recipe: ok(candidate).filter((row) => row.recipes?.length).length,
+      thinking_turns: Object.fromEntries(["baseline", candidate].map((arm) => {
+        const counted = ok(arm).filter((row) => row.first_call_thoughts !== undefined);
+        return [arm, `${counted.filter((row) => row.first_call_thoughts > 0).length}/${counted.length}`];
+      })),
       errors: rows.filter((row) => filter(row) && row.outcome !== "first_playable").length,
     };
   };
@@ -456,7 +482,10 @@ export function summarize(rows) {
     verdict: slipVerdict(judged),
   } : undefined;
   // Speed is measured on the pairs only; quality cases run on one arm and would skew the medians.
-  return { all: group((row) => row.kind === "motion" || row.kind === "other"), motion: group((row) => row.kind === "motion"), other: group((row) => row.kind === "other"), ...(quality ? { quality } : {}) };
+  const groups = { all: group((row) => row.kind === "motion" || row.kind === "other"), motion: group((row) => row.kind === "motion"), other: group((row) => row.kind === "other") };
+  // A third arm (--previous-build): the same recipes from an earlier build, against the same baseline.
+  const previous = rows.some((row) => row.arm === "previous") ? { previous: { motion: group((row) => row.kind === "motion", "previous"), other: group((row) => row.kind === "other", "previous") } } : {};
+  return { ...groups, ...previous, speed: speedVerdict(groups), ...(quality ? { quality } : {}) };
 }
 
 async function main() {
@@ -474,7 +503,20 @@ async function main() {
   const fitting = TRIAL_CASES[recipes.split(",")[0].trim()];
   if (!fitting) throw new Error(`no fitting requests for trial recipe '${recipes}'`);
   // "motion" marks requests the trial recipe fits, whichever recipe that is.
-  const cases = fitting.flatMap((fit, index) => [{ ...fit, kind: "motion" }, { ...heldOut.get(OTHER_CASE_IDS[index]), kind: "other" }]);
+  // --other-cases HO-MA-01,M01-linear-system-question,…: speed pairs on requests the recipes do not fit only
+  // (held-out routing cases or natural math cases), to measure what offering the recipes costs them.
+  const naturalMath = new Map(JSON.parse(await readFile(join(root, "testsuite/math-natural-course-cases.json"), "utf8")).cases.map((item) => [item.id, item]));
+  const otherIds = option("--other-cases")?.split(",").map((id) => id.trim()).filter(Boolean);
+  const cases = otherIds
+    ? otherIds.map((id) => {
+      const item = heldOut.get(id) ?? naturalMath.get(id);
+      if (!item) throw new Error(`no held-out or natural math case '${id}'`);
+      return { ...item, kind: "other" };
+    })
+    : fitting.flatMap((fit, index) => [{ ...fit, kind: "motion" }, { ...heldOut.get(OTHER_CASE_IDS[index]), kind: "other" }]);
+  // --previous-build <dir>: a third arm, the same recipes from an earlier build (for example the wording
+  // before a rewrite), interleaved with the other two so the three share the same time window.
+  const previousBuild = option("--previous-build") ? resolve(option("--previous-build")) : undefined;
   // Quality cases run once each, candidate arm only, after the speed pairs.
   // A probe (--cases NL-03,NM-01) runs only the named cases, on the candidate arm, with no speed pairs:
   // a cheap first look at how the model meets a change, before any gate run.
@@ -506,7 +548,7 @@ async function main() {
   const runOne = async (pair, item, arm, order) => {
     const input = { turn_id: `trial-${pair}-${arm}-${Date.now()}`, learner_request: item.prompt, request_source: "self_contained", language: caseLanguage(item), input_modality: "text" };
     const tool = await runTool({
-      build, input, env: arm === "candidate" ? { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes } : env,
+      build: arm === "previous" ? previousBuild : build, input, env: arm === "baseline" ? env : { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes },
       maxCalls: Math.min(3, budget.remaining), onCall: () => { budget.remaining -= 1; },
       onRaw: (line) => appendFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), `${line}\n`),
       onFirstPart: (path) => {
@@ -520,6 +562,9 @@ async function main() {
     });
     const { first_part_path: _path, ...kept } = tool;
     const row = { pair, case: item.id, kind: item.kind, arm, order: order.indexOf(arm), ...kept };
+    // The first call's thinking tokens, from its last usage record (runs 9 and 9b: offering the recipes
+    // made the model think more often on requests they do not fit).
+    try { row.first_call_thoughts = firstCallThoughts(readFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), "utf8")); } catch { /* no reply kept */ }
     // A case with expectations that produced no judged part is a hard miss, never a silent gap.
     if (arm === "candidate" && item.expect && !row.quality) row.quality = { hard: [`not judged: ${row.outcome}`], soft: [] };
     // The run stops at the first playable part, so the judge sees only the first section; when the
@@ -532,7 +577,10 @@ async function main() {
   };
   for (let pair = 0; pair < pairs && budget.remaining > 0; pair += 1) {
     const item = cases[pair % cases.length];
-    const order = Math.floor(pair / 2) % 2 === 0 ? ["baseline", "candidate"] : ["candidate", "baseline"];
+    // Two arms alternate which goes first; three cycle through all six orders.
+    const order = previousBuild
+      ? [["baseline", "candidate", "previous"], ["candidate", "previous", "baseline"], ["previous", "baseline", "candidate"], ["baseline", "previous", "candidate"], ["previous", "candidate", "baseline"], ["candidate", "baseline", "previous"]][pair % 6]
+      : Math.floor(pair / 2) % 2 === 0 ? ["baseline", "candidate"] : ["candidate", "baseline"];
     for (const arm of order) {
       if (budget.remaining <= 0) break;
       await runOne(pair, item, arm, order);

@@ -557,3 +557,39 @@ Owner-approved; 109 calls (about $0.80); `eval/trial-recipe-speed-number-line-20
 - In single-call pairs only (17 of 20 in runs 9 and 9b), the other requests are still +2.7 s, so retries are not the cause.
 - Size alone does not explain it: the 2026-11-11 payload experiment added +1,331 prompt tokens of cards marked unavailable with no measurable cost, and the physics pilot's other requests were 1.5 s faster. The number-line additions are about +250 tokens.
 - The likely mechanism is that the number-line guidance gives the model more to weigh on requests it does not fit. Not established: thought text is not recorded.
+
+## After run 9b: rewriting the number-line instructions (2026-11-12)
+
+**Owner decisions (2026-11-12).**
+- Rewrite the number-line instructions.
+- **Speed rule from now on:** requests the new recipe fits and requests it does not are judged separately, each by its paired median at most +0.5 s. The harness reports this as `speed` (`speedVerdict`), and records each turn's thinking tokens.
+
+**Where the extra thinking appeared.** On the held-out requests, runs 5–8 (the base card only) thought in 19 of 40 candidate turns against 15 of 40 baseline turns. Runs 9 and 9b, which added the three new types, thought in 16 of 20 against 9 of 20. What came with the new types:
+- three new cards;
+- the feature names `number_comparison`, `solution_set` and `rounding`;
+- the `relation` (12 forms) and `place` (5 places) options in the response schema.
+
+The base card also kept "not for inequalities, absolute value, rounding" while two new cards said to use a number line for exactly those.
+
+**The rewrite (deleting, not adding):**
+- **Contradiction:** the base card's stale "not for…" clause is gone.
+- **Compare path:** the base card no longer teaches comparing two numbers, which now has its own card.
+- **Scope:** each card states its use in its opening words (数轴加减, 数轴比较两个数, 数轴画不等式解集, 数轴四舍五入), as the physics card does.
+- **Kept:** the clauses that fixed real failures (actual values such as 0.75, decimal labels, the |x−3|<2 example).
+- **Size:** the four cards fall from 1,203 to 524 bytes; math's footprint falls from 5,760 to 5,602. The payload test passes with the four types on (with #72's ceilings).
+- **Not changed:** feature names and schema options, so a result can be traced to the wording.
+
+Free replays cannot test this change: they reuse replies written under the old wording.
+
+### Run 10 rules: does the rewrite remove the slowdown? (diagnostic; set before the run, needs the owner's approval)
+
+- **Arms, interleaved in all six orders:**
+  - *off:* no number line;
+  - *current:* the four types with the wording of main `3242238`, built separately;
+  - *rewrite:* the four types with the new wording.
+- **Requests:** only requests the number line does not fit, chosen now. The 10 held-out cases (`OTHER_CASE_IDS`, 2 math, 8 science) and 10 high-school math questions from the natural set: `M01-linear-system-question` to `M10-binomial-probability-question`. One trio each, 20 trios.
+- **Primary:** rewrite against off, paired median at most +0.5 s.
+- **Secondary:** thinking rate per arm, and rewrite against current.
+- **Diagnostic only:** this run does not switch anything on. The rewrite is new model-facing text, so switching on still needs a gate run on the frozen rewrite: quality on every number-line case, and speed under the new rule. That is a separate approval, about $1.30.
+- **No repeat.** At 20 trios, a change with no real cost exceeds +0.5 s about 1 time in 8; the result is read with that in mind.
+- **Budget:** `--other-cases … --previous-build <main build> --pairs 20 --max-calls 80`, about $0.50.

@@ -258,3 +258,22 @@ test("a run offering several recipes runs every recipe's quality cases (run 9 ra
   assert.equal(new Set(ids).size, ids.length);
   assert.deepEqual(qualityCasesFor("constant_speed_motion"), []);
 });
+
+test("speed is judged separately for requests the recipe fits and requests it does not (owner, 2026-11-12)", async () => {
+  const { summarize, speedVerdict, firstCallThoughts } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  const row = (pair, kind, arm, ms, thoughts) => ({ pair, kind, arm, case: "x", outcome: "first_playable", first_playable_ms: ms, prompt_tokens: 1, first_call_thoughts: thoughts });
+  // Fitting requests 3 s faster, other requests 2 s slower: one median over both would pass at -0.5 s.
+  const rows = [
+    row(0, "motion", "baseline", 10000, 0), row(0, "motion", "candidate", 7000, 0),
+    row(1, "other", "baseline", 8000, 0), row(1, "other", "candidate", 10000, 500),
+  ];
+  const summary = summarize(rows);
+  assert.equal(summary.speed.result, "fail");
+  assert.match(summary.speed.reason, /other requests \+2000 ms/);
+  assert.deepEqual(summary.other.thinking_turns, { baseline: "0/1", candidate: "1/1" });
+  assert.equal(speedVerdict({ motion: summary.motion, other: { complete_pairs: 0 } }).result, "pass");
+  // A third arm is summarised against the same baseline.
+  const three = summarize([...rows, { ...row(1, "other", "previous", 12000, 900) }]);
+  assert.equal(three.previous.other.paired_difference_ms.median, 4000);
+  assert.equal(firstCallThoughts('x "label":"lesson-plan-bootstrap" "usageMetadata":{"thoughtsTokenCount":12}\nx "label":"lesson-plan-bootstrap" "usageMetadata":{"thoughtsTokenCount":690}\n'), 690);
+});
