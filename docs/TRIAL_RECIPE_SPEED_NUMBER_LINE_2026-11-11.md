@@ -594,3 +594,25 @@ Free replays cannot test this change: they reuse replies written under the old w
 - **No repeat.** At 20 trios, a change with no real cost exceeds +0.5 s about 1 time in 8; the result is read with that in mind.
 - **Budget:** `--other-cases … --previous-build <main build> --pairs 20 --quality-repeats 0 --max-calls 80`, about $0.50. (Run 10 was started with `--quality-repeats 0`; the review of #73 found that without it the harness would have run the quality cases after the trios. Other-only mode now defaults to none.)
 - **Verdict:** if every pair of a planned group is missing an arm, the verdict is incomplete, not a pass (review of #73).
+
+## Run 10 (2026-11-12): with the rewrite, requests the number line does not fit are no slower
+
+Owner-approved diagnostic; 64 calls (about $0.47); `eval/trial-recipe-speed-number-line-2026-11-12-run10.json`. All 60 runs (20 trios) completed; no arm chose a number line for any of these requests.
+
+| Against "off", requests the number line does not fit | Paired median | 95% interval (mean) | Thinking turns |
+|---|---|---|---|
+| Off | — | — | 7 of 20 |
+| Current wording | +0.40 s | −0.2 to +2.3 s | 9 of 20 |
+| **Rewrite** | **+0.13 s** | −1.4 to +2.2 s | **5 of 20** |
+
+- **Primary rule: passes.** Rewrite against off is +0.13 s, within +0.5 s (verdict recomputed with the fixed harness of #73: pass).
+- **Rewrite against current wording:** −1.2 s (paired median).
+- **By group:** held-out cases +0.18 s (current +0.32 s); natural math questions +0.13 s (current +0.68 s).
+- **Read with care:** the current wording cost +0.40 s here, against +2.8 s in runs 9 and 9b, so this run reproduced only part of the original slowdown. The thinking rates point the same way as the timings (rewrite 5, off 7, current 9 of 20), but 20 trios is a small sample. The evidence supports "the rewrite is not slower than off", and more weakly "the rewrite removed the slowdown".
+
+### Gate on the frozen rewrite (proposed rules; needs the owner's approval)
+
+- **Frozen code:** #73's head after review, all four number-line recipes offered.
+- **Speed (owner's rule of 2026-11-12):** 40 pairs, alternating 20 fitting (NL-01..10) and 20 other (the held-out cases). Each group's paired median must be at most +0.5 s. An incomplete group is not a pass. No repeat.
+- **Quality:** NL-11..20, NM-01..04, CMP-01..05, SOL-01..06 and RND-01..05, twice each (60 lessons). Never mislead, by the hard checks, with the slip rule (option B). Near misses also run on the baseline arm. A lesson whose line is planned for a later section is read by hand.
+- **Budget:** `--pairs 40 --quality-repeats 2 --max-calls 200`, about $1.30 expected (at most about $1.45).
