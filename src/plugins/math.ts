@@ -200,6 +200,21 @@ export const MATH_RECIPES = {
     required_features: ["number_line", "solution_set"],
     model_guidance: "数轴解集：先解出边界；relation 写解集形式，数值依次是 a、b（|x−3|<2 写 a<x<b，a=1，b=5）",
   },
+  // Decision 0016: rounding. The model gives the number and the place; the program draws the two
+  // neighbours, the halfway point and the jump to the result.
+  number_line_rounding: {
+    parts: ["whole", "number", "lower", "upper", "middle", "move", "primary_control"],
+    number_inputs: ["number"],
+    number_input_policies: [{ kind: "unbounded" }],
+    parameter_names: ["title", "place"],
+    model_parameter_names: ["title", "place"],
+    required_model_schema_parameters: ["place"],
+    semantic_parameters: ["place"],
+    output_kinds: ["number_line"],
+    student_controls: ["slider"],
+    required_features: ["number_line", "rounding"],
+    model_guidance: "数轴取整：数值是要取整的数，place 写取到哪一位；两侧的数和结果由程序算",
+  },
 } as const;
 
 // Provider-schema properties each recipe adds to a visual's parameters.
@@ -237,6 +252,7 @@ const MATH_SCHEMA_PROPERTIES = {
     label_style: { enum: ["decimal", "fraction"] },
     relation: { enum: ["x>a", "x>=a", "x<a", "x<=a", "a<x<b", "a<=x<=b", "a<x<=b", "a<=x<b", "x<a|x>b", "x<=a|x>=b", "x<a|x>=b", "x<=a|x>b"] },
   },
+  number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } },
 };
 
 export const MATH_PLUGIN = {

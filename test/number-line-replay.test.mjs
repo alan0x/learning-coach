@@ -1,7 +1,7 @@
 // Number line lessons through the real path, from the model's reply to the lesson. The trial recipe
 // is offered only when LEARNING_COACH_TRIAL_RECIPES names it, which Coach reads as it loads; this file
 // sets it first (the recipe tests check the default in their own process).
-process.env.LEARNING_COACH_TRIAL_RECIPES = "number_line,number_line_compare,number_line_solution";
+process.env.LEARNING_COACH_TRIAL_RECIPES = "number_line,number_line_compare,number_line_solution,number_line_rounding";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
@@ -10,9 +10,9 @@ import test from "node:test";
 // (span / 200). These tests go through the real path, from the model's reply to the lesson, with the
 // replies recorded in speed check run 5 (2026-11-11), so they see what a live lesson sees.
 const { replayTurn } = await import(new URL("../scripts/replay-trial-recipe.mjs", import.meta.url));
-const { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, NUMBER_LINE_COMPARE_CASES, NUMBER_LINE_SOLUTION_CASES, judgeNumberLine, numberLineLesson } = await import(new URL("../scripts/eval-trial-recipe-speed.mjs", import.meta.url));
+const { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, NUMBER_LINE_COMPARE_CASES, NUMBER_LINE_SOLUTION_CASES, NUMBER_LINE_ROUNDING_CASES, judgeNumberLine, numberLineLesson } = await import(new URL("../scripts/eval-trial-recipe-speed.mjs", import.meta.url));
 const run5 = JSON.parse(await readFile(new URL("./fixtures/number-line-run5-replies.json", import.meta.url), "utf8"));
-const caseById = new Map([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES, ...NUMBER_LINE_COMPARE_CASES, ...NUMBER_LINE_SOLUTION_CASES].map((item) => [item.id, item]));
+const caseById = new Map([...NUMBER_LINE_CASES, ...NUMBER_LINE_QUALITY_CASES, ...NUMBER_LINE_COMPARE_CASES, ...NUMBER_LINE_SOLUTION_CASES, ...NUMBER_LINE_ROUNDING_CASES].map((item) => [item.id, item]));
 const replay = (turn) => replayTurn(turn.replies.map((reply) => JSON.stringify(reply)), caseById.get(turn.case).prompt);
 
 // Run 5's turns, judged as the live run judged them. 29 of 40 passed live; every unreadable line was the
@@ -366,6 +366,39 @@ test("the solution-set check catches a wrong end, a filled point on an open end,
     throw new Error("stop");
   }, { turn_id: "order", learner_request: "x between 1 and 5", input_modality: "text", request_source: "self_contained" }, { on_rejected_part: (event) => rejected.push(event.error.message) }), /stop/);
   assert.ok(rejected.some((message) => /smaller than the second/.test(message)), rejected.join());
+});
+
+// Decision 0016: rounding (number_line_rounding). The outline asks for rounding; its number is the one
+// rounded, and the visual names the place.
+const roundingReply = (value, place, range = [0, 1000]) => {
+  const reply = compareReply([value, String(value)], [value, String(value)], { activities: [] });
+  reply.course.outline.numbers = reply.course.outline.numbers.slice(0, 1).map((number) => ({ ...number, label: String(value), min: { mantissa: range[0], scale: 0 }, max: { mantissa: range[1], scale: 0 } }));
+  reply.course.outline.course_visuals[0].required_features = ["number_line", "rounding"];
+  reply.course.first_section.moments[0].visual_creates[0].content = { parameters: { place }, numbers: [1] };
+  return reply;
+};
+for (const [id, value, place] of [["RND-01", 47, "tens"], ["RND-02", 362, "hundreds"], ["RND-03", 3.6, "ones"], ["RND-04", 1.24, "tenths"], ["RND-05", 85, "tens"]]) {
+  test(`${id}: ${value} rounded to ${place} shows both neighbours, the halfway point and the jump to the result`, async () => {
+    const line = numberLineLesson(await compileCompare(roundingReply(value, place), caseById.get(id).prompt));
+    assert.deepEqual(judgeNumberLine(caseById.get(id), line).hard, []);
+    // The number itself is never moved.
+    assert.ok(Math.abs(line.variables[0].initial - value) < 1e-12, String(line.variables[0].initial));
+  });
+}
+
+test("the rounding check catches a jump to the wrong neighbour", async () => {
+  const line = structuredClone(numberLineLesson(await compileCompare(roundingReply(47, "tens"), caseById.get("RND-01").prompt)));
+  // As if the jump went down to 40.
+  line.content.bindings = line.content.bindings.map((binding) => (binding.target === "move.by" ? { ...binding, expression: "40 - number_01" } : binding));
+  assert.match(judgeNumberLine(caseById.get("RND-01"), line).hard.join(), /wrong rounding: no jump from 47 to 50/);
+});
+
+test("the rounding check catches a jump from the wrong number: 40 → 50 beside a point at 47 (review of #69)", async () => {
+  const line = structuredClone(numberLineLesson(await compileCompare(roundingReply(47, "tens"), caseById.get("RND-01").prompt)));
+  // The jump now starts at the lower neighbour; 40, 47 and 50 are all still shown.
+  line.content.jumps = line.content.jumps.map((jump) => (jump.as === "move" ? { ...jump, from: "lower", by: 10 } : jump));
+  line.content.bindings = line.content.bindings.filter((binding) => !binding.target.startsWith("move."));
+  assert.match(judgeNumberLine(caseById.get("RND-01"), line).hard.join(), /wrong rounding: no jump from 47 to 50 \(jumps: 40 → 50\)/);
 });
 
 

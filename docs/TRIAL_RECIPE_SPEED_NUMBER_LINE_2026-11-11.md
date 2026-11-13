@@ -484,3 +484,22 @@ A DOM probe settled run 6's puzzling screenshot: the board does redraw a point a
 
 **Probe 1** (offering all three number-line recipes; 11 lessons, 17 counted calls, about $0.15): **10 of 11 drew the solution set and pass every hard check, including the exact ends and rays.** That includes NM-02 (x > −2) and NM-04 (|x − 3| < 2), which misled in every earlier gate run. The 11th (SOL-06, "solve 2x + 1 > 7") solves the inequality in section 1 and plans the number line with `solution_set` for section 2. The harness flagged it for hand review, and it is correct as a lesson. Renders checked: x > −2; 1 < x ≤ 4; x < −1 or x ≥ 2.
 
+## Decision 0016, type 3 of 3: rounding
+
+**Recipe:** `number_line_rounding` (trial). The outline asks for `number_line` plus `rounding`; the model gives the number and the place (hundreds to hundredths).
+- **Drawing:** the program draws the two neighbours, the halfway point (open), and a jump from the number to the result, with halves rounding up. All of these are OLL `floor` expressions of the number's variable, so a slider moves them together.
+- **Ticks:** a tenth of the place, split to a hundredth only when the number needs it (362 to hundreds is drawn in ones).
+- **The number is never moved,** and a name that only repeats its value is left off.
+
+**Judge:** a new hard rounding check. A jump from the number must end at the expected result in some state the lesson shows. One shared expression evaluator now handles `floor`, `round`, `ceil` and `abs`.
+
+**Cases written before the recipe:** RND-01 to RND-05 (47 to tens; 362 to hundreds; 3.6 to ones; 1.24 to tenths; 85 to tens, the halfway case).
+
+**Renders.** The first renders were correct but left a large gap under the line. A moving card reserved a label row for each of its four points and its jump. OLL #54 caps the reserve at two rows. A name that only repeated the number's value ("362") is now left off.
+
+**Probe 1** (offering all four number-line recipes; 10 lessons, 20 counted calls, about $0.20): **the model chose the rounding recipe 10 of 10 times, and all 10 pass every hard check**, including 85 → 90 and 1.24 → 1.2. NM-03 ("round 47"), which misled in earlier gate runs, now draws 40, 45, 47 and 50 with the jump to 50.
+
+**All three types are now built and probed.** Pooled first probes: compare 12/12, solution sets 11/11 by hand (10 by the judge, plus one with its number line in section 2), rounding 10/10. The remaining step is the gate run on frozen code (the owner's approval needed), with near misses outside the new scope judged "no worse than today".
+
+
+**Review fixes (#68, #69).** Solution sets: the split between the two boundaries' slider ranges now falls between every value the lesson gives them (an animation to a = 4 in 1 < x < 5 stays 4), each boundary keeps a usable range when the boundaries are adjacent ticks (1 < x < 2), and a lesson that moves a past b is refused as a section fault instead of being redrawn with changed values. Rounding: the judge requires a jump from the rounded number itself to the result (a 40 → 50 jump beside 47 fails). Replaying the recorded probes under these checks gives the same results: rounding 10/10, solution sets 10/11 (SOL-06 shows its line in section 2, as before).

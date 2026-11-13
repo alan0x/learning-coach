@@ -116,7 +116,19 @@ export const NUMBER_LINE_SOLUTION_CASES = [
   { id: "SOL-05", prompt: "Graph the solution of x < -1 or x ≥ 2 on a number line.", expect: { values: [-1, 2], solution: [{ from: null, to: -1, toClosed: false }, { from: 2, to: null, fromClosed: true }] } },
   { id: "SOL-06", prompt: "解不等式 2x + 1 > 7，并在数轴上表示解集。", expect: { values: [3], solution: [{ from: 3, to: null, fromClosed: false }] } },
 ];
-export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES };
+/**
+ * Rounding (decision 0016, number_line_rounding), written before the recipe or any probe: the number and
+ * the two neighbours it falls between are shown, and `rounding.result` is where a jump from the number
+ * ends (halves round up, as taught in grade 3). RND-04 needs hundredths; RND-05 is the halfway case.
+ */
+export const NUMBER_LINE_ROUNDING_CASES = [
+  { id: "RND-01", prompt: "用数轴说明 47 四舍五入到十位是多少。", expect: { values: [40, 47, 50], rounding: { number: 47, result: 50 } } },
+  { id: "RND-02", prompt: "Round 362 to the nearest hundred using a number line.", expect: { values: [300, 362, 400], rounding: { number: 362, result: 400 } } },
+  { id: "RND-03", prompt: "把 3.6 四舍五入到个位，用数轴表示。", expect: { values: [3, 3.6, 4], rounding: { number: 3.6, result: 4 } } },
+  { id: "RND-04", prompt: "Round 1.24 to the nearest tenth on a number line.", expect: { values: [1.2, 1.24, 1.3], rounding: { number: 1.24, result: 1.2 } } },
+  { id: "RND-05", prompt: "Use a number line to round 85 to the nearest ten.", expect: { values: [80, 85, 90], rounding: { number: 85, result: 90 } } },
+];
+export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES };
 
 /** The requests each trial recipe fits. */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
@@ -174,6 +186,13 @@ export function numberLineLesson(part) {
 
 const close = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a));
 
+/** A binding's value at given variable values: arithmetic and OLL's floor, round, ceil and abs. */
+export function evaluateExpression(expression, values) {
+  const text = String(expression)
+    .replace(/[a-z][a-z0-9_]*/gu, (name) => (["floor", "round", "ceil", "abs"].includes(name) ? `Math.${name}` : name in values ? `(${values[name]})` : "NaN"));
+  return /^(?:[-+*/().\d\seNa,]|Math\.(?:floor|round|ceil|abs))+$/u.test(text) ? Number(Function(`"use strict"; return (${text});`)()) : Number.NaN;
+}
+
 /**
  * The states a lesson puts its number line in: every combination of each variable's starting
  * value, animation targets and practice targets, with each point's value in that state.
@@ -187,10 +206,7 @@ export function numberLineStates({ content, variables, tasks, animations }) {
   }
   let states = [{}];
   for (const [name, list] of values) states = states.flatMap((state) => [...new Set(list)].map((value) => ({ ...state, [name]: value })));
-  const evaluate = (expression, state) => {
-    const text = String(expression).replace(/[a-z][a-z0-9_]*/gu, (name) => (name in state ? `(${state[name]})` : "NaN"));
-    return /^[-+*/().\d\seNa]+$/u.test(text) ? Number(Function(`"use strict"; return (${text});`)()) : Number.NaN;
-  };
+  const evaluate = (expression, state) => evaluateExpression(expression, state);
   const fraction = (value) => (typeof value === "string" && value.includes("/") ? value.trim().split(/\s+/u).reduce((sum, piece) => {
     const [top, bottom] = piece.split("/").map(Number);
     return bottom ? sum + Math.sign(sum || top) * Math.abs(top) / bottom : sum + Number(piece);
@@ -215,10 +231,7 @@ function variableStates({ variables, animations, sequence: steps }) {
 
 /** A line's solution-set pieces at one state: each interval's ends (null: a ray runs on) and which ends are included. */
 export function solutionPieces(content, values) {
-  const evaluate = (expression) => {
-    const text = String(expression).replace(/[a-z][a-z0-9_]*/gu, (name) => (name in values ? `(${values[name]})` : "NaN"));
-    return /^[-+*/().\d\seNa]+$/u.test(text) ? Number(Function(`"use strict"; return (${text});`)()) : Number.NaN;
-  };
+  const evaluate = (expression) => evaluateExpression(expression, values);
   const fraction = (value) => (typeof value === "string" && value.includes("/") ? value.trim().split("/").map(Number).reduce((a, b) => a / b) : Number(value));
   const end = (interval, side) => {
     if (interval[side] === null || interval[side] === undefined) return null;
@@ -323,6 +336,24 @@ export function judgeNumberLine(item, lesson) {
       for (const point of filled) if (openEnds.some((value) => state[point.as] !== undefined && close(state[point.as], value))) hard.push(`a filled point sits on the open end ${state[point.as]}`);
     }
   }
+  // Rounding (decision 0016): some state the lesson shows jumps from the number being rounded to the
+  // expected result. Both ends count: a jump from 40 to 50 beside a point at 47 rounds nothing (review of #69).
+  if (expect.rounding) {
+    const jumps = variableStates(lesson).flatMap((values) => {
+      const points = numberLineStates({ content, variables: Object.entries(values).map(([as, initial]) => ({ as, initial })), tasks: [], animations: [] })[0];
+      return (content.jumps ?? []).map((jump) => {
+        const bound = (side) => (content.bindings ?? []).find((entry) => entry.target === `${jump.as}.${side}`);
+        const from = typeof jump.from === "string" && jump.from in points ? points[jump.from] : bound("from") ? evaluateExpression(bound("from").expression, values) : Number(jump.from);
+        const by = bound("by") ? evaluateExpression(bound("by").expression, values) : Number(jump.by);
+        return { from, to: from + by };
+      });
+    });
+    const { number, result } = expect.rounding;
+    if (!jumps.some((jump) => close(jump.from, number) && close(jump.to, result))) {
+      const drawn = [...new Set(jumps.map((jump) => `${Number(jump.from.toFixed(6))} → ${Number(jump.to.toFixed(6))}`))].join(", ") || "none";
+      hard.push(`wrong rounding: no jump from ${number} to ${result} (jumps: ${drawn})`);
+    }
+  }
   const labelled = planNumberLineTicks(content).filter((tick) => tick.label).map((tick) => tick.value);
   const visible = new Set((content.points ?? []).filter((point) => point.shown !== "when_emphasized").map((point) => point.as));
   const unreadable = new Set();
@@ -360,7 +391,8 @@ export function recipesInPart(part) {
   for (const write of writes.filter((action) => action.kind === "number_line")) {
     const points = new Set((write.content?.points ?? []).map((point) => point.as));
     found.push((write.content?.intervals ?? []).length ? "number_line_solution"
-      : points.has("first") && points.has("second") ? "number_line_compare" : "number_line");
+      : points.has("first") && points.has("second") ? "number_line_compare"
+        : points.has("lower") && points.has("upper") ? "number_line_rounding" : "number_line");
   }
   return found;
 }

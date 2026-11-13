@@ -327,3 +327,37 @@ export function fitSolutionNumbers(content: LessonPlanVisualContent, plan: Lesso
   [high.min, high.max] = highRange;
   return fitted;
 }
+
+const ROUNDING_UNITS: Record<string, number> = { hundreds: 100, tens: 10, ones: 1, tenths: 0.1, hundredths: 0.01 };
+
+/**
+ * Fits a rounding line's number (decision 0016) in place. The number is the question and is never moved;
+ * only its slider changes: its step is the finest tick the number needs (a tenth of the place, or a
+ * hundredth), and when every value the lesson sets it to lies between the same two neighbours, its range
+ * narrows to them, so the neighbours stay put as the learner moves it.
+ */
+export function fitRoundingNumbers(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>): Map<number, number> {
+  const fitted = new Map<number, number>();
+  const [index] = content.numbers ?? [];
+  const unit = ROUNDING_UNITS[String((content.parameters as { place?: unknown } | undefined)?.place)];
+  const definition = index ? plan.numbers?.[index - 1] : undefined;
+  if (!index || !unit || !definition || sharedNumbers.has(index)) return fitted;
+  const values = [definition.initial, ...lessonValues(plan, index)];
+  const on = (value: number, step: number) => { const count = value / step; return Math.abs(count - Math.round(count)) <= 1e-9 * Math.max(1, Math.abs(count)); };
+  const minor = [unit / 10, unit / 100].map((step) => Number(step.toPrecision(12))).find((step) => values.every((value) => on(value, step)));
+  if (!minor) return fitted;
+  if (definition.student_control) definition.student_control.step = minor;
+  const decade = (value: number) => Math.floor(value / unit + 1e-9);
+  if (values.every((value) => decade(value) === decade(values[0]!))) {
+    const lower = Number((decade(values[0]!) * unit).toPrecision(12));
+    const upper = Number((lower + unit - minor).toPrecision(12));
+    if (lower < upper) {
+      definition.min = Math.max(definition.min, lower) <= definition.initial ? Math.max(definition.min, lower) : lower;
+      definition.max = Math.min(definition.max, upper) >= definition.initial ? Math.min(definition.max, upper) : upper;
+      if (!(definition.min < definition.max)) { definition.min = lower; definition.max = upper; }
+    }
+  }
+  fitted.set(index, 0);
+  return fitted;
+}
+
