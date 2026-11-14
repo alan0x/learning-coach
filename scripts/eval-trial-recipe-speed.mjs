@@ -20,6 +20,8 @@
 //     --octos-profile ~/.octos/profiles/<id>.json [--recipes constant_speed_motion] [--pairs 20] [--max-calls 60]
 //     [--quality-repeats 1] [--out <report.json>]
 //   A probe: --pairs 0 --cases NL-03,NM-01 --quality-repeats 5 (candidate arm only, no speed pairs).
+//   Two builds: --baseline-build <dir> --build <dir> --recipes number_line (both arms the same environment;
+//   --recipes picks the fitting requests only).
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -512,6 +514,11 @@ async function main() {
   const maxCalls = Number(option("--max-calls", "60"));
   const recipes = option("--recipes", "constant_speed_motion");
   const build = resolve(option("--build", root));
+  // --baseline-build <dir>: two builds instead of one build with a trial recipe on and off. Both arms
+  // run with the same environment and no trial recipes; --recipes then only names whose fitting
+  // requests to pair (number_line: requests the number line fits), for changes to recipes already on
+  // or to the whole request (card text, prompt rules).
+  const baselineBuild = option("--baseline-build") ? resolve(option("--baseline-build")) : undefined;
   const profilePath = option("--octos-profile");
   const out = option("--out");
   if (!profilePath) throw new Error("--octos-profile is required");
@@ -558,14 +565,15 @@ async function main() {
     if (!out) return;
     await mkdir(dirname(resolve(out)), { recursive: true });
     // The compiled first parts stay in work_dir after the run, as evidence of what each lesson drew.
-    await writeFile(resolve(out), `${JSON.stringify({ measured_at: new Date().toISOString(), ...route, trial_recipes: recipes, pairs, max_calls: maxCalls, work_dir: workDir, summary: { ...summarize(rows), ...(notRun.length ? { not_run: notRun } : {}) }, rows }, null, 1)}\n`);
+    await writeFile(resolve(out), `${JSON.stringify({ measured_at: new Date().toISOString(), ...route, trial_recipes: baselineBuild ? null : recipes, ...(baselineBuild ? { baseline_build: baselineBuild, candidate_build: build } : {}), pairs, max_calls: maxCalls, work_dir: workDir, summary: { ...summarize(rows), ...(notRun.length ? { not_run: notRun } : {}) }, rows }, null, 1)}\n`);
   };
-  console.error(JSON.stringify({ stage: "trial-recipe-speed", ...route, trial_recipes: recipes, pairs, max_calls: maxCalls }));
+  console.error(JSON.stringify({ stage: "trial-recipe-speed", ...route, trial_recipes: baselineBuild ? null : recipes, ...(baselineBuild ? { baseline_build: baselineBuild, candidate_build: build, fitting_cases: recipes } : {}), pairs, max_calls: maxCalls }));
   const { appendFileSync, readFileSync } = await import("node:fs");
   const runOne = async (pair, item, arm, order) => {
     const input = { turn_id: `trial-${pair}-${arm}-${Date.now()}`, learner_request: item.prompt, request_source: "self_contained", language: caseLanguage(item), input_modality: "text" };
     const tool = await runTool({
-      build: arm === "previous" ? previousBuild : build, input, env: arm === "baseline" ? env : { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes },
+      build: arm === "previous" ? previousBuild : arm === "baseline" && baselineBuild ? baselineBuild : build,
+      input, env: baselineBuild || arm === "baseline" ? env : { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes },
       maxCalls: Math.min(3, budget.remaining), onCall: () => { budget.remaining -= 1; },
       onRaw: (line) => appendFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), `${line}\n`),
       onFirstPart: (path) => {
