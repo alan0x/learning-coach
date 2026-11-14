@@ -11840,6 +11840,8 @@ function buildFunctionPlot(input) {
 var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
 
 // src/plugins/math.ts
+var SIDE_COUNT = { min: 3, max: 384 };
+var UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 };
 var MATH_RECIPES = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
@@ -11870,7 +11872,7 @@ var MATH_RECIPES = {
   circle_polygon_bounds: {
     parts: ["whole", "circle", "inscribed_polygon", "circumscribed_polygon", "primary_control"],
     number_inputs: ["side_count"],
-    number_input_policies: [{ kind: "side_count" }],
+    number_input_policies: [{ kind: "side_count", ...SIDE_COUNT }],
     parameter_names: ["title", "radius"],
     model_parameter_names: ["title", "radius"],
     required_model_schema_parameters: [],
@@ -11878,7 +11880,7 @@ var MATH_RECIPES = {
     output_kinds: ["geometry"],
     student_controls: ["slider"],
     required_features: ["inscribed_regular_polygon", "circumscribed_regular_polygon", "perimeter_bounds"],
-    model_guidance: "\u5706\u5468\u7387/\u5272\u5706\u672F\uFF1A\u56FA\u5B9A\u5706\u4E0E\u5185\u63A5\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\uFF0C\u6574\u6570\u8FB9\u65703..384\uFF0C\u5468\u957F\u4E0E\u5468\u957F\xF7\u76F4\u5F84\u4E0A\u4E0B\u754C\u5B9E\u65F6\u8BA1\u7B97\uFF1B\u8FB9\u6570\u4E0D\u662F\u89D2\u5EA6\u3002\u9002\u5408\u5706\u5468\u7387\u6570\u503C\u8BA1\u7B97\u3001\u5272\u5706\u6CD5\u548C\u4E0A\u4E0B\u754C\u903C\u8FD1\uFF0C\u4F8B\u5982\u2018\u5706\u5468\u7387\u662F\u4EC0\u4E48\uFF0C\u5B83\u662F\u5982\u4F55\u8BA1\u7B97\u7684\u2019\uFF1B\u540C\u4E00\u753B\u9762\u4E2D\u7684\u56FA\u5B9A\u5706\u53EF\u4F9B\u5B9A\u4E49\u90E8\u5206\u8BB2\u89E3\u590D\u7528\uFF0C\u914D\u5408\u5468\u957F\u4E0E\u76F4\u5F84\u6BD4\u503C\u516C\u5F0F\uFF0C\u518D\u901A\u8FC7\u589E\u52A0\u591A\u8FB9\u5F62\u8FB9\u6570\u89E3\u91CA\u8BA1\u7B97\u8FC7\u7A0B"
+    model_guidance: `\u5706\u5468\u7387/\u5272\u5706\u672F\uFF1A\u56FA\u5B9A\u5706\u4E0E\u5185\u63A5\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\uFF0C\u6574\u6570\u8FB9\u6570${SIDE_COUNT.min}..${SIDE_COUNT.max}\uFF0C\u5468\u957F\u4E0E\u5468\u957F\xF7\u76F4\u5F84\u4E0A\u4E0B\u754C\u5B9E\u65F6\u8BA1\u7B97\uFF1B\u8FB9\u6570\u4E0D\u662F\u89D2\u5EA6\u3002\u9002\u5408\u5706\u5468\u7387\u6570\u503C\u8BA1\u7B97\u3001\u5272\u5706\u6CD5\u548C\u4E0A\u4E0B\u754C\u903C\u8FD1\uFF0C\u4F8B\u5982\u2018\u5706\u5468\u7387\u662F\u4EC0\u4E48\uFF0C\u5B83\u662F\u5982\u4F55\u8BA1\u7B97\u7684\u2019\uFF1B\u540C\u4E00\u753B\u9762\u4E2D\u7684\u56FA\u5B9A\u5706\u53EF\u4F9B\u5B9A\u4E49\u90E8\u5206\u8BB2\u89E3\u590D\u7528\uFF0C\u914D\u5408\u5468\u957F\u4E0E\u76F4\u5F84\u6BD4\u503C\u516C\u5F0F\uFF0C\u518D\u901A\u8FC7\u589E\u52A0\u591A\u8FB9\u5F62\u8FB9\u6570\u89E3\u91CA\u8BA1\u7B97\u8FC7\u7A0B`
   },
   circle_and_arc: {
     parts: ["whole", "circle", "arc", "radius", "primary_control"],
@@ -11948,7 +11950,8 @@ var MATH_RECIPES = {
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
-    number_input_policies: [{ kind: "positive_integer", max: 8 }, { kind: "positive_integer", max: 8 }],
+    // Both numbers are required: the builder draws no rectangle without its columns and rows.
+    number_input_policies: [{ kind: "positive_integer", ...UNIT_SQUARES_PER_SIDE, required: true }, { kind: "positive_integer", ...UNIT_SQUARES_PER_SIDE, required: true }],
     parameter_names: ["title"],
     model_parameter_names: ["title"],
     required_model_schema_parameters: [],
@@ -14080,6 +14083,10 @@ var LESSON_PLAN_CAPABILITY_NUMBER_INPUTS = Object.fromEntries(
 var LESSON_PLAN_CAPABILITY_NUMBER_LIMITS = Object.fromEntries(
   LESSON_PLAN_CAPABILITY_NAMES.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].number_inputs.length])
 );
+function countRange(policy) {
+  if (policy.kind !== "side_count" && policy.kind !== "positive_integer" || policy.min === void 0 || policy.max === void 0) return void 0;
+  return { min: policy.min, max: policy.max, required: policy.required === true };
+}
 function matchLessonPlanCapability(features) {
   const requested = [...new Set(features)];
   if (requested.length === 0) {
@@ -16734,8 +16741,8 @@ function positiveProgramRange(definition) {
   }
 }
 function positiveIntegerProgramRange(definition, maximum) {
-  const min = Math.max(1, Math.ceil(definition.min));
-  const max = Math.min(maximum, Math.floor(definition.max));
+  const min = Math.max(1, Math.round(definition.min));
+  const max = Math.min(maximum, Math.round(definition.max));
   if (min <= max) {
     definition.min = min;
     definition.max = max;
@@ -16759,9 +16766,9 @@ function normalizeProgramOwnedNumberRanges(plan) {
     const numbers = bound?.length ? bound : bound ? [] : content.numbers ?? [];
     for (const number of new Set(numbers)) visualsUsing.set(number, (visualsUsing.get(number) ?? 0) + 1);
   }
-  const hardRanges = /* @__PURE__ */ new Map();
+  const counts = /* @__PURE__ */ new Map();
   const written = new Map((plan.numbers ?? []).map((definition, index) => [index + 1, definition.initial]));
-  const rangeOwners = /* @__PURE__ */ new Map();
+  const fits = /* @__PURE__ */ new Map();
   const publishedPlotNumbers = /* @__PURE__ */ new Set();
   for (const [sectionIndex, section] of plan.sections.entries()) {
     const newPlotNumbers = /* @__PURE__ */ new Set();
@@ -16791,21 +16798,19 @@ function normalizeProgramOwnedNumberRanges(plan) {
           if (RECIPE_HOOKS[content.capability]?.free_number?.(content, inputIndex)) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
           const prior = publishedPlotNumbers.has(numberIndex) ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step } : void 0;
-          if (policy.kind !== "unbounded" && !rangeOwners.get(numberIndex)?.some((owner) => owner.capability === content.capability)) {
-            rangeOwners.set(numberIndex, [...rangeOwners.get(numberIndex) ?? [], { capability: content.capability, path }]);
+          const range = countRange(policy);
+          if (range && !counts.get(numberIndex)?.some((owner) => owner.capability === content.capability)) {
+            counts.set(numberIndex, [...counts.get(numberIndex) ?? [], { capability: content.capability, path, section: sectionIndex, ...range }]);
           }
-          if ((policy.kind === "side_count" || policy.kind === "positive_integer") && !hardRanges.has(numberIndex)) {
-            const [min, max] = policy.kind === "side_count" ? [3, 384] : [1, policy.max];
-            hardRanges.set(numberIndex, { capability: content.capability, path, min, max });
-          }
+          const before = [definition.min, definition.max];
           if (policy.kind === "side_count") {
             integerSides.add(numberIndex);
-            intersectProgramRange(definition, 3, 384);
-            definition.min = Math.ceil(definition.min);
-            definition.max = Math.floor(definition.max);
+            intersectProgramRange(definition, range.min, range.max);
+            definition.min = Math.round(definition.min);
+            definition.max = Math.round(definition.max);
             if (definition.min >= definition.max) {
-              definition.min = 3;
-              definition.max = 384;
+              definition.min = range.min;
+              definition.max = range.max;
             }
             definition.initial = Math.min(definition.max, Math.max(definition.min, Math.round(definition.initial)));
             if (definition.student_control) definition.student_control.step = 1;
@@ -16817,7 +16822,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
             positiveProgramRange(definition);
             constrained.add(numberIndex);
           } else if (policy.kind === "positive_integer") {
-            positiveIntegerProgramRange(definition, policy.max);
+            positiveIntegerProgramRange(definition, range.max);
             constrained.add(numberIndex);
           } else if (policy.kind === "surface_section") {
             const allowed = RECIPE_HOOKS[content.capability]?.section_range?.(content, path);
@@ -16825,6 +16830,9 @@ function normalizeProgramOwnedNumberRanges(plan) {
               intersectProgramRange(definition, allowed.min, allowed.max);
               constrained.add(numberIndex);
             }
+          }
+          if (definition.min !== before[0] || definition.max !== before[1]) {
+            fits.set(numberIndex, [...fits.get(numberIndex) ?? [], { capability: content.capability, path, before, after: [definition.min, definition.max] }]);
           }
           if (prior && (definition.min !== prior.min || definition.max !== prior.max || definition.initial !== prior.initial || definition.student_control?.step !== prior.step)) {
             fail2(
@@ -16840,55 +16848,52 @@ function normalizeProgramOwnedNumberRanges(plan) {
   }
   if (constrained.size === 0) return;
   const count = (value2) => Math.round(value2);
-  const check = (number, value2, path, sectionOwned) => {
-    const own = hardRanges.get(number);
-    const definition = plan.numbers[number - 1];
-    if (count(value2) < own.min || count(value2) > own.max) {
-      if (sectionOwned) {
-        fail2(
-          "LESSON_PLAN_NUMBER_NOT_DRAWABLE",
-          path,
-          `number ${number} would reach ${value2}, but the ${own.capability} visual can draw only ${own.min} to ${own.max}; use a value in that range`
+  const check = (number, value2, path, kind) => {
+    const drawn = count(value2);
+    for (const own of counts.get(number)) {
+      if (drawn >= own.min && drawn <= own.max) continue;
+      const range = `the ${own.capability} visual can draw only ${own.min} to ${own.max}`;
+      if (kind === "start" && own.section === 0) {
+        throw new LessonPlanError(
+          "LESSON_PLAN_OUTLINE_VISUAL",
+          `$lessonPlan.numbers[${number - 1}].initial`,
+          `number ${number} is ${value2}, but ${range}; choose another visual, or none`,
+          own.capability
         );
       }
-      throw new LessonPlanError(
-        "LESSON_PLAN_OUTLINE_VISUAL",
-        path,
-        `number ${number} is ${value2}, but the ${own.capability} visual can draw only ${own.min} to ${own.max}; choose another visual, or none`,
-        own.capability
-      );
+      if (kind === "start") {
+        fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", own.path, `number ${number} is ${value2}, but ${range}; drive this visual with a lesson number in that range`);
+      }
+      fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path, `number ${number} would reach ${value2}, but ${range}; use a value in that range`);
     }
-    if (count(value2) < definition.min || count(value2) > definition.max) {
-      const other = rangeOwners.get(number)?.find((owner) => owner.capability !== own.capability);
+    const definition = plan.numbers[number - 1];
+    if (drawn >= definition.min && drawn <= definition.max) return;
+    const pushed = fits.get(number)?.find(({ before, after }) => drawn >= before[0] && drawn <= before[1] && (drawn < after[0] || drawn > after[1]));
+    if (pushed) {
       fail2(
         "LESSON_PLAN_SHARED_NUMBER",
-        other?.path ?? path,
-        `number ${number} is ${value2}, a count the ${own.capability} visual shows, but the ${other?.capability ?? "other"} visual sharing it allows only ${definition.min} to ${definition.max}; drive the ${other?.capability ?? "other"} visual with a different lesson number, or with none`
+        pushed.path,
+        `number ${number} is ${value2}, a count the ${counts.get(number)[0].capability} visual shows, but the ${pushed.capability} visual sharing it allows only ${definition.min} to ${definition.max}; drive the ${pushed.capability} visual with a different lesson number, or with none`
       );
     }
+    fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path, `number ${number} would reach ${value2}, outside its range ${definition.min} to ${definition.max}; use a value in that range`);
   };
-  for (const [number, { path }] of hardRanges) {
+  for (const number of counts.keys()) {
     const value2 = written.get(number);
-    if (value2 !== void 0) check(number, value2, path, false);
-  }
-  for (const [sectionIndex, section] of plan.sections.entries()) {
-    for (const [momentIndex, moment] of section.moments.entries()) {
-      for (const [actionIndex, action] of moment.actions.entries()) {
-        if (action.action === "animate" && hardRanges.has(action.number)) {
-          check(action.number, action.end_value, `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`, true);
-        }
-      }
-    }
+    if (value2 !== void 0) check(number, value2, `$lessonPlan.numbers[${number - 1}].initial`, "start");
   }
   const roundToProgramGrid = (number, value2) => {
     if (integerSides.has(number)) return Math.round(value2);
     const step = tickSteps.get(number);
     return step ? Number((Math.round(value2 / step) * step).toPrecision(12)) : value2;
   };
-  for (const section of plan.sections) {
-    for (const moment of section.moments) {
-      for (const action of moment.actions) {
+  for (const [sectionIndex, section] of plan.sections.entries()) {
+    for (const [momentIndex, moment] of section.moments.entries()) {
+      for (const [actionIndex, action] of moment.actions.entries()) {
         if (action.action !== "animate" || !constrained.has(action.number)) continue;
+        if (counts.has(action.number)) {
+          check(action.number, action.end_value, `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`, "animation");
+        }
         const definition = plan.numbers[action.number - 1];
         action.end_value = Math.min(definition.max, Math.max(definition.min, roundToProgramGrid(action.number, action.end_value)));
       }
@@ -20005,7 +20010,18 @@ function checkOutlineVisuals(outline, excluded) {
   const used = outlineCapabilities(outline);
   for (const capability2 of excluded) {
     if (used.has(capability2)) {
-      throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability2} visual cannot show this request; choose another visual`);
+      throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability2} visual cannot show this request; choose another visual`, capability2);
+    }
+  }
+  for (const [index, visual] of (outline.course_visuals ?? []).entries()) {
+    for (const range of LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].number_input_policies.map((policy) => countRange(policy))) {
+      if (!range?.required || (outline.numbers ?? []).some((number) => Math.round(number.initial) >= range.min && Math.round(number.initial) <= range.max)) continue;
+      throw new LessonPlanError(
+        OUTLINE_OWNED_FAULT,
+        `$lessonPlanOutline.course_visuals[${index}]`,
+        `no lesson number is a count the ${visual.capability} visual can draw (${range.min} to ${range.max}); choose another visual, or none`,
+        visual.capability
+      );
     }
   }
   if ([...used].some((capability2) => isNumberLineCapability(capability2)) && !outline.numbers?.length) {
@@ -20071,7 +20087,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   };
   const excludeFaulting = (from, fault) => {
     const capability2 = fault instanceof LessonPlanError ? fault.capability : void 0;
-    if (capability2 && outlineCapabilities(from).has(capability2)) excludedCapabilities.add(capability2);
+    if (capability2) excludedCapabilities.add(capability2);
     else excludeNumberLines(from);
   };
   let outlineError;
@@ -20176,7 +20192,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     try {
       checkOutlineVisuals(outline, excludedCapabilities);
     } catch (error) {
-      excludeNumberLines(outline);
+      excludeFaulting(outline, error);
       outline = void 0;
       throw error;
     }
@@ -20300,7 +20316,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         try {
           checkOutlineVisuals(candidateOutline, excludedCapabilities);
         } catch (error) {
-          excludeNumberLines(candidateOutline);
+          excludeFaulting(candidateOutline, error);
           throw error;
         }
         outline = candidateOutline;
@@ -20698,6 +20714,7 @@ export {
   coerceLessonPlanSectionModelNumbers,
   compileAndValidateLessonPlan,
   compileLessonPlan,
+  countRange,
   deriveLessonRequestParts,
   enabledTrialRecipes,
   frameRawReply,

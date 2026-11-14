@@ -4,6 +4,7 @@ import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
+  countRange,
   LESSON_PLAN_CAPABILITIES,
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VERSION,
@@ -2437,13 +2438,24 @@ const outlineCapabilities = (outline: LessonPlanOutline) => new Set((outline.cou
  * Faults the outline owns, found before it is accepted (runs 5–7: they surfaced in section 1, where
  * retries can only rewrite the section, and the lesson failed three times):
  * - a number line in an outline that declares no numbers;
- * - an outline using a capability already found unable to show this request.
+ * - an outline using a capability already found unable to show this request;
+ * - a visual whose required counts no lesson number can give (the unit-square array draws 1 to 8 a side,
+ *   and every number is above 8). Compile would refuse it in whichever section creates it, and after
+ *   first playable no section can fix the outline's numbers (Coach #78 review).
  */
 function checkOutlineVisuals(outline: LessonPlanOutline, excluded: ReadonlySet<string>): void {
   const used = outlineCapabilities(outline);
   for (const capability of excluded) {
     if (used.has(capability as never)) {
-      throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability} visual cannot show this request; choose another visual`);
+      throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability} visual cannot show this request; choose another visual`, capability);
+    }
+  }
+  for (const [index, visual] of (outline.course_visuals ?? []).entries()) {
+    for (const range of LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].number_input_policies.map((policy) => countRange(policy))) {
+      // One number may drive several inputs (a 5 by 5 square), so one that fits is enough.
+      if (!range?.required || (outline.numbers ?? []).some((number) => Math.round(number.initial) >= range.min && Math.round(number.initial) <= range.max)) continue;
+      throw new LessonPlanError(OUTLINE_OWNED_FAULT, `$lessonPlanOutline.course_visuals[${index}]`,
+        `no lesson number is a count the ${visual.capability} visual can draw (${range.min} to ${range.max}); choose another visual, or none`, visual.capability);
     }
   }
   if ([...used].some((capability) => isNumberLineCapability(capability)) && !(outline.numbers?.length)) {
@@ -2523,9 +2535,10 @@ export async function generateLessonPlanWithModel(
   };
   // A recipe that cannot draw the outline's values (a count beyond the unit-square array) names itself in
   // the fault; the outline is asked again without that recipe. Other outline faults are the number line's.
+  // A fault that names no recipe is the number line's (a line in an outline with no numbers).
   const excludeFaulting = (from: LessonPlanOutline, fault: unknown) => {
     const capability = fault instanceof LessonPlanError ? fault.capability : undefined;
-    if (capability && outlineCapabilities(from).has(capability as never)) excludedCapabilities.add(capability);
+    if (capability) excludedCapabilities.add(capability);
     else excludeNumberLines(from);
   };
   let outlineError: unknown;
@@ -2651,7 +2664,7 @@ export async function generateLessonPlanWithModel(
     try {
       checkOutlineVisuals(outline, excludedCapabilities);
     } catch (error) {
-      excludeNumberLines(outline);
+      excludeFaulting(outline, error);
       outline = undefined;
       throw error;
     }
@@ -2799,7 +2812,7 @@ export async function generateLessonPlanWithModel(
       try {
         checkOutlineVisuals(candidateOutline, excludedCapabilities);
       } catch (error) {
-        excludeNumberLines(candidateOutline);
+        excludeFaulting(candidateOutline, error);
         throw error;
       }
       outline = candidateOutline;

@@ -41,6 +41,16 @@ export const LESSON_PLAN_CAPABILITY_NUMBER_LIMITS = Object.fromEntries(
   LESSON_PLAN_CAPABILITY_NAMES.map((name) => [name, LESSON_PLAN_CAPABILITY_REGISTRY[name].number_inputs.length]),
 ) as Record<LessonPlanCapability, number>;
 
+/**
+ * The counts a number input draws (squares in a row, a polygon's sides): whole numbers from min to max,
+ * as its recipe declares them. `required` is set when the recipe draws nothing without the number.
+ */
+export function countRange(policy: { readonly kind: string; readonly min?: number; readonly max?: number; readonly required?: boolean }):
+  { min: number; max: number; required: boolean } | undefined {
+  if ((policy.kind !== "side_count" && policy.kind !== "positive_integer") || policy.min === undefined || policy.max === undefined) return undefined;
+  return { min: policy.min, max: policy.max, required: policy.required === true };
+}
+
 export function matchLessonPlanCapability(features: readonly LessonPlanVisualFeature[]): LessonPlanCapability {
   const requested = [...new Set(features)];
   if (requested.length === 0) {

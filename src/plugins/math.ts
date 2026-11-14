@@ -5,6 +5,11 @@ import { REARRANGEMENT_MODEL_GUIDANCE } from "../rearrangement.js";
 import { MATH_PLUGIN_MANIFEST, MATH_SUBJECT_DESCRIPTION } from "octos-lesson-language/plugin-math";
 import type { CoachSubjectPlugin } from "./types.js";
 
+// Counts a recipe draws, as whole numbers from min to max. The compiler fits slider ranges to them and
+// refuses a stated count outside them (Coach #78); the card text quotes the same numbers.
+const SIDE_COUNT = { min: 3, max: 384 } as const;
+const UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 } as const;
+
 export const MATH_RECIPES = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
@@ -35,7 +40,7 @@ export const MATH_RECIPES = {
   circle_polygon_bounds: {
     parts: ["whole", "circle", "inscribed_polygon", "circumscribed_polygon", "primary_control"],
     number_inputs: ["side_count"],
-    number_input_policies: [{ kind: "side_count" }],
+    number_input_policies: [{ kind: "side_count", ...SIDE_COUNT }],
     parameter_names: ["title", "radius"],
     model_parameter_names: ["title", "radius"],
     required_model_schema_parameters: [],
@@ -43,7 +48,7 @@ export const MATH_RECIPES = {
     output_kinds: ["geometry"],
     student_controls: ["slider"],
     required_features: ["inscribed_regular_polygon", "circumscribed_regular_polygon", "perimeter_bounds"],
-    model_guidance: "圆周率/割圆术：固定圆与内接、外切正多边形，整数边数3..384，周长与周长÷直径上下界实时计算；边数不是角度。适合圆周率数值计算、割圆法和上下界逼近，例如‘圆周率是什么，它是如何计算的’；同一画面中的固定圆可供定义部分讲解复用，配合周长与直径比值公式，再通过增加多边形边数解释计算过程",
+    model_guidance: `圆周率/割圆术：固定圆与内接、外切正多边形，整数边数${SIDE_COUNT.min}..${SIDE_COUNT.max}，周长与周长÷直径上下界实时计算；边数不是角度。适合圆周率数值计算、割圆法和上下界逼近，例如‘圆周率是什么，它是如何计算的’；同一画面中的固定圆可供定义部分讲解复用，配合周长与直径比值公式，再通过增加多边形边数解释计算过程`,
   },
   circle_and_arc: {
     parts: ["whole", "circle", "arc", "radius", "primary_control"],
@@ -113,7 +118,8 @@ export const MATH_RECIPES = {
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
-    number_input_policies: [{ kind: "positive_integer", max: 8 }, { kind: "positive_integer", max: 8 }],
+    // Both numbers are required: the builder draws no rectangle without its columns and rows.
+    number_input_policies: [{ kind: "positive_integer", ...UNIT_SQUARES_PER_SIDE, required: true }, { kind: "positive_integer", ...UNIT_SQUARES_PER_SIDE, required: true }],
     parameter_names: ["title"],
     model_parameter_names: ["title"],
     required_model_schema_parameters: [],

@@ -7,6 +7,14 @@
   - **An animation beyond its recipe** is the section's to fix.
   - **A count narrowed by another recipe sharing its number** (a 3-by-3 square beside a cube section running from −1 to 1, which became 1 by 3) is refused at the visual that shares it, for the section to drive it with another number or none.
   - **Replay of the baseline's 58 recorded lessons:** 54 compile exactly as before; the 4 misleading ones are refused (3 before first playable).
+  - **After code review** (each finding reproduced first, then a test that fails on the earlier build):
+    - A count is checked against every recipe that draws it, so the verdict no longer depends on which visual comes first.
+    - A shared-number fault names the visual whose fit pushed the count out, not the first visual sharing it.
+    - Range edges round like the counts they bound, so 1.4 squares (drawn as 1) is not refused against a range rounded up to 2.
+    - The outline is refused before first playable when no lesson number is a count a required visual can draw (the array with every number above 8). Otherwise a count fault in section 2 or later went to sections that could not fix it, and the lesson failed after it had started; now that section is asked to drive the visual with a number it can draw.
+    - Excluding a recipe never excludes the number line beside it; an outline fault points at the outline's number.
+    - Drawable count ranges live on the recipe's number policy, read by the fit, the check and the card text.
+    - Replay of the 58 recorded lessons: identical to the reviewed build (55 unchanged, the same 4 refused, the same 1 failure). Request digests unchanged.
 
 ## 0.29.0 - 2026-11-12
 
