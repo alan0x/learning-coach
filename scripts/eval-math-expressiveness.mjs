@@ -142,7 +142,15 @@ async function main() {
   const byId = new Map(set.questions.map((q) => [q.id, q]));
   // The stored sample is the source of truth: it was chosen once and is kept (plan §4).
   const sample = read("math-expressiveness-regression-sample.json").questions;
-  const ids = option("--ids")?.split(",").map((id) => id.trim()) ?? sample.map((entry) => entry.id);
+  // --cases-file <json>: probe cases written for a change, never from the question set (plan §5).
+  // { "cases": [{ "id": "PA-01", "prompt": "…", "language": "en", "expected_component": "…" | null }] }
+  const casesFile = option("--cases-file");
+  const probeCases = casesFile ? JSON.parse(readFileSync(resolve(casesFile), "utf8")).cases : null;
+  if (probeCases) for (const item of probeCases) {
+    if (byId.has(item.id)) throw new Error(`probe case '${item.id}' reuses a question-set id`);
+    byId.set(item.id, { id: item.id, prompt: item.prompt, language: item.language, band: item.band ?? null, held_out: false, probe: true, expected_component: item.expected_component ?? null });
+  }
+  const ids = option("--ids")?.split(",").map((id) => id.trim()) ?? (probeCases ? probeCases.map((item) => item.id) : sample.map((entry) => entry.id));
   const features = recipeFeatures();
   const strata = new Map(sample.map((entry) => [entry.id, entry.stratum]));
   const routeEnv = await profileRouteEnvironment(profilePath);
@@ -176,8 +184,8 @@ async function main() {
     if (lesson) await copyFile(join(oll, lesson), join(dir, "lesson.json"));
     const { parts, ...kept } = run;
     const row = {
-      id, band: q.band, stratum: strata.get(id) ?? null, held_out: q.held_out, m1: m1.tags[id].coverage,
-      expected_component: m1.tags[id].component ?? null, ...kept, parts: parts.length,
+      id, band: q.band, stratum: strata.get(id) ?? (q.probe ? "probe" : null), held_out: q.held_out, m1: q.probe ? null : m1.tags[id].coverage,
+      expected_component: q.probe ? q.expected_component : m1.tags[id].component ?? null, ...kept, parts: parts.length,
       requested_features: requestedFeatures(raw), recipes: recipesFor(requestedFeatures(raw), features),
       drawn: lesson ? drawnKinds(JSON.parse(readFileSync(join(oll, lesson), "utf8"))) : [], review: "pending",
     };

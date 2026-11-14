@@ -1,0 +1,53 @@
+{
+  "note": "Probe cases for the program-written practice invitation (Coach #81), written for the probe and never taken from the math expressiveness question set. Pass rules: learning-coach docs/PRACTICE_INVITATION_2026-11-14.md.",
+  "cases": [
+    {
+      "id": "PI-01",
+      "language": "en",
+      "expected_component": "function_plot",
+      "prompt": "On a graph of y = mx + 1, what happens to the line when the slope m changes from 1 to 3?"
+    },
+    {
+      "id": "PI-02",
+      "language": "zh-CN",
+      "expected_component": "function_plot",
+      "prompt": "斜率为负数时，直线 y = kx 是什么样子？"
+    },
+    {
+      "id": "PI-03",
+      "language": "en",
+      "expected_component": "number_line",
+      "prompt": "Count on from 9 by hopping 4 steps along a number line."
+    },
+    {
+      "id": "PI-04",
+      "language": "zh-CN",
+      "expected_component": "number_line",
+      "prompt": "在数轴上演示 -3 + 6 等于多少。"
+    },
+    {
+      "id": "PI-05",
+      "language": "en",
+      "expected_component": "rectangle_unit_square_array",
+      "prompt": "A garden bed is 4 squares wide and 6 squares long. How many squares cover it?"
+    },
+    {
+      "id": "PI-06",
+      "language": "en",
+      "expected_component": "circle_polygon_bounds",
+      "prompt": "How does adding more sides to a regular polygon inside a circle get closer to pi?"
+    },
+    {
+      "id": "PI-07",
+      "language": "en",
+      "expected_component": "coordinate_circle",
+      "prompt": "If a circle's radius doubles, what happens to its circumference?"
+    },
+    {
+      "id": "PI-08",
+      "language": "zh-CN",
+      "expected_component": "function_plot",
+      "prompt": "函数 y = a·x² 中，a 变大时开口怎样变化？"
+    }
+  ]
+}
