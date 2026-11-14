@@ -150,6 +150,10 @@ const OUTLINE_SYSTEM_PROMPT = [
   `只返回符合响应 Schema 的 JSON。`,
 ].filter(Boolean).join("\n");
 
+// M3 step 2b: speech claims only what is drawn. The baseline's narration misleads (a sphere
+// beside a lone cube, charts "built" from a text flowchart) were all in section 1, which the
+// bootstrap writes from the cards; its rule points there. A section retry gets the short form.
+const NARRATION_DRAWN_RULE = `- 旁白只说画面确实画出的内容。`;
 const SECTION_SYSTEM_PROMPT = [
   `只编写课程目录指定的一节，不生成 OLL、执行 ID、变量名、对象名或对象引用。`,
   `- 必须落实目录分配的 request_parts。旁白与对应板书和动作放在同一 moment；可见文字直接对学习者说话，不能写“让学生……”。`,
@@ -165,6 +169,7 @@ const SECTION_SYSTEM_PROMPT = [
   promptSlot("section.bounds"),
   promptSlot("section.linked_numbers", "联动图引用同一 numbers；"),
   promptSlot("section.constructions"),
+  NARRATION_DRAWN_RULE,
   `只返回符合响应 Schema 的 JSON。`,
 ].filter(Boolean).join("\n");
 
@@ -184,6 +189,7 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = [
   promptSlot("section.bounds"),
   promptSlot("section.linked_numbers", "联动图引用同一 numbers；"),
   promptSlot("section.constructions"),
+  `- 旁白只说所选画面确实会画出的内容（见 visual_recipes 的 purpose）；没画出的物体、图表、起点或动作不说成在画面上。`,
 ].filter(Boolean).join("\n");
 
 // Appended only when the host sends these fields, so every other request,
