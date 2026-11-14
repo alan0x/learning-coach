@@ -329,6 +329,9 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
       if (!number || !constrained.has(number)) continue;
       if (counts.has(number) && !activity.expression) {
         check(number, activity.value, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}].value`, "task");
+        // A count's target is a whole number, whichever section asked for it: a section that does not
+        // create the visual still has its target snapped to the slider's step (6 became 5.995).
+        activity.value = count(activity.value);
       }
       const definition = plan.numbers![number - 1]!;
       const original = activity.value;

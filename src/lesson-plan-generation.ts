@@ -1312,7 +1312,8 @@ function lowerModelActivityNumbers(
   outline: LessonPlanOutline,
   expectedSection: number,
   language?: string,
-  /** Numbers a number line shows: their targets stay as written, and a met target is resolved at compile. */
+  /** Numbers a number line or a count recipe shows: their targets stay as written, and a met target is
+   * resolved at compile, which knows the range the visual draws. */
   exactNumbers: ReadonlySet<number> = new Set(),
 ): Record<string, unknown> {
   const lowered = { ...activity };
@@ -1913,11 +1914,17 @@ function lowerModelSectionDraft(
       );
     }
   }
-  // Numbers this section's number line shows (its visual is created here; one created in an earlier
-  // section is not seen, and its targets are rounded as for any slider).
+  // Numbers this section's number line shows, and counts its visuals draw (squares in a row). Their
+  // targets stay as written: snapping a count to the slider's step turned 9 squares into 8.975, and moving
+  // a met target to the end of the model's range (10) went past what the array draws, so compile refused
+  // the program's own value (Coach #78 review). A visual created in an earlier section is not seen here,
+  // and its targets are rounded as for any slider.
   const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
     const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
-    return entry.action === "create" && entry.kind === "visual" && isNumberLineCapability(entry.content?.capability) ? entry.content.numbers ?? [] : [];
+    if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
+    if (isNumberLineCapability(entry.content.capability)) return entry.content.numbers ?? [];
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY]?.number_input_policies ?? [];
+    return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
   }));
   const activities: Array<{ order: number; activity: Record<string, unknown> }> = [];
   const collectActivities = (values: unknown[], kind: "number_target" | "scene3d_view", path: string): void => {

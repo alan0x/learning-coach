@@ -16904,6 +16904,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
       if (!number || !constrained.has(number)) continue;
       if (counts.has(number) && !activity.expression) {
         check(number, activity.value, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}].value`, "task");
+        activity.value = count(activity.value);
       }
       const definition = plan.numbers[number - 1];
       const original = activity.value;
@@ -19593,7 +19594,10 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
   }
   const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
     const entry = action;
-    return entry.action === "create" && entry.kind === "visual" && isNumberLineCapability(entry.content?.capability) ? entry.content.numbers ?? [] : [];
+    if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
+    if (isNumberLineCapability(entry.content.capability)) return entry.content.numbers ?? [];
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability]?.number_input_policies ?? [];
+    return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]));
   }));
   const activities = [];
   const collectActivities = (values, kind, path) => {

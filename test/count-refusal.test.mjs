@@ -161,3 +161,23 @@ test("a practice target beyond a count's visual is refused, never moved to the f
   assert.match(error.path, /^\$lessonPlan\.sections\[0\]\.student_activities\[0\]\.value$/);
   assert.match(error.message, /number 1 would reach 12/);
 });
+
+test("a count's practice target stays as the model wrote it, so the program never refuses its own move (review finding 10)", async () => {
+  // The model's slider runs 1 to 10 and its target equals the start. Moving a met target to the end of
+  // that range (10) went past the array's 8, and compile then refused the program's own value. Snapping
+  // to the slider's step also turned whole targets into 5.995. Now the target is kept as written and a met
+  // target moves within the range the array draws.
+  const plan = arrayPlan({ initial: 5, min: 1, max: 10 });
+  plan.sections = [plan.sections[0]];
+  plan.sections[0].student_activities = [{ kind: "number_target", prompt: "Make 5 columns.", number_controls: [{ number: 1, controls: ["slider"] }], value: 5, tolerance: 0.1, hints: ["Move the slider."] }];
+  plan.sections[0].moments.at(-1).narration += " Now try it yourself.";
+  const { drafts, outline } = scripted(plan);
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    if (request.label === "lesson-plan-bootstrap") return H.bootstrapModelResponse(request, outline, drafts[0]);
+    if (request.label === "lesson-plan-practice") return JSON.stringify({ answer_activities: [] });
+    return H.sectionModelResponse(request, drafts);
+  }, { turn_id: "count-met-target", learner_request: "five columns of squares", input_modality: "text", request_source: "self_contained" });
+  const task = generated.lesson.lesson.tasks.find((entry) => entry.completion?.expression === generated.lesson.lesson.variables[0].as);
+  assert.ok(Number.isInteger(task.completion.value), `whole count, got ${task.completion.value}`);
+  assert.ok(task.completion.value >= 1 && task.completion.value <= 8 && task.completion.value !== 5, `moved within 1..8, got ${task.completion.value}`);
+});
