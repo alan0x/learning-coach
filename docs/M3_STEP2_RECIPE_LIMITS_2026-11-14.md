@@ -128,4 +128,54 @@ Compared with what was tested live: first requests carried +8,368 bytes without 
 4. **Rejected:** a model judge call per section. It adds one call per section to every lesson, a direct M4 cost.
 
 ## Status
-- **(a) and the section-1 rule:** on `feat/recipe-card-limits`, stacked on #78, one commit each. The probe ran on this build (results below once read). The gate has not run.
+- **(a) and the section-1 rule:** on `feat/recipe-card-limits`, stacked on #78, one commit each. The probe ran on this build and did not meet its rules (below). No gate has run.
+
+## Probe result (2026-11-14, owner-approved)
+**Run:** the build at this branch's two commits (card limits plus the section-1 rule), google `gemini-3.6-flash`.
+- 13 cases, 30 model calls (cap 45).
+- Tokens: 53,537 prompt, 22,902 output, 7,366 thinking.
+- Every lesson was read in full against #77's rubric. Run data is kept outside the repository (handoff `runs/m3-step2-probe/`).
+
+| Case | Recipe drawn | Reading | Against the rule set before the run |
+|---|---|---|---|
+| PA-01 make a ten | number line | one jump 8 → 13; the 8 → 10 → 13 split is only in words | not misleading (minor) |
+| PA-02 ratio 4:3 | **unit-square array** | 4 columns of "cats" by 3 rows of "dogs", scaled to 8 by 6, as the ratio | **misleading: misused recipe** |
+| PA-03 piecewise | function plot chosen | the second formula `2` was refused ("must depend on x"); after three repairs, no lesson | no lesson (not misleading, but the card did not steer the choice) |
+| PA-04 standard deviation | text flowchart | accurate | pass |
+| PA-05 ball vs box | text flowchart | accurate; the cube is not used | pass |
+| PA-06 dot plot (zh) | number line | "we mark the data: 2 once, 3 twice, 5 three times" on a line from 0 to 4 with one point at 2 | **misleading: misused recipe (an addition line for a data display) and narration** |
+| PA-07 rug 5 by 7 | unit-square array | 7 by 5, 35 | pass |
+| PA-08 y = x² − 2x | function plot | vertex (1, −1) | pass |
+| PA-09 正方体 | cube | faces, edges, vertices | pass |
+| PA-10 3 × 7 | unit-square array | 3 rows of 7 | pass |
+| PA-11 garden 10 by 3 | unit-square array, 8 by 3 | says the grid shows at most 8, draws 8 by 3, computes 10 × 3 in a formula | pass; 2 calls, no #78 re-ask |
+| PA-12 GCF | text flowchart | accurate; no factor tree claimed | pass |
+| PA-13 长方形 12 by 5 (zh) | unit-square array, 8 by 5 | grid labelled 长 8 cm, then computes 12 × 5 without saying the grid is not the question's rectangle | **misleading** (read strictly: the learner sees 8 by 5 beside 12 × 5 = 60, unexplained); 2 calls, no re-ask |
+
+**Reading:**
+- **Card limits (a): not met.** Two negatives of six misused a recipe: PA-02 and PA-06. The plot was still chosen for a piecewise function (PA-03), which ended in no lesson.
+- **Positive controls:** 4 of 4.
+- **`各≤8`:** observed in 2 of 2 (no #78 re-ask). There is no control arm, so this can't be credited to the clause.
+- **Narration target: not met.** PA-06 and PA-13 are misleading.
+- **Overall:** 3 of 13 lessons mislead, and 1 fails.
+
+### What the probe shows (free checks after the run)
+- **The model ignored explicit clauses.** PA-02's outline chose the array's features for a ratio, against "非比例图". PA-03 chose the plot, against "不能分区间定义". PA-06's narration claims data points the line doesn't show, against the new rule. The one safe outcome came from a program check: PA-03's refusals.
+- **A lesson may have no visual, but nothing asks for that.** `course_visuals` has no minimum. Yet no outline prompt says to leave the picture out when nothing fits. Every probe lesson drew something, and so did all 58 baseline lessons.
+- **The outline prompt invites stand-ins.** Its substitution rule: when a requested picture can't be drawn but the math "can be taught correctly with an existing picture", write `teach`, substitute, and say so in one sentence. PA-11 is this rule working honestly. PA-02, PA-06 and PA-13 are the same move without the honesty. Card limits pull against this rule.
+- **PA-02's rejection was #78 working:** an animation to 12 was refused and repaired to 8 by 6. The repaired lesson still teaches a ratio as an area.
+- **PA-03 is a program finding of its own:**
+  - A constant piece (`2`) is refused outright ("must depend on x").
+  - Repairs alternated between that error and a `sample_x_numbers` error until the lesson failed.
+  - It is like the handoff's follow-up 2 (a repair message that doesn't help).
+- **Tuning risk in the section-1 rule:** its list (物体、图表、起点或动作) mirrors the three open baseline cases one for one. Step 3 re-measures on those questions, so a revision should state the rule generally.
+
+### Recommendation (for the owner)
+More card text is the lever that just failed, and it needs a ceiling raise. Instead:
+1. **Control arm first:** the same 13 cases on #78's build, about 30 calls (needs approval). Without it, neither "the clauses failed" nor "the ≤8 note worked" can be claimed.
+2. **Change the rule that invites stand-ins**, net of bytes:
+   - Rewrite the substitution rule so that a stand-in is allowed only when it is the same concept (a smaller rectangle for area, said aloud).
+   - Say that no visual is the right answer when no recipe shows the concept.
+   - This is outline text, so it also counts against the fallback outline's 28 bytes, and the rewrite has to replace text rather than add it.
+3. **Program checks where the model won't follow text:** the no-op-animation check, and a stand-in check (a count the lesson states that differs from the drawn count, with no disclosure) along the lines of #78.
+4. **Keep the card limits?** They cost 130 bytes for no measured effect. Hold them on this branch until the control arm says whether they help.

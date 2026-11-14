@@ -7,8 +7,8 @@
   - **An animation beyond its recipe** is the section's to fix.
   - **A count narrowed by another recipe sharing its number** (a 3-by-3 square beside a cube section running from −1 to 1, which became 1 by 3) is refused at the visual that shares it, for the section to drive it with another number or none.
   - **Replay of the baseline's 58 recorded lessons:** 54 compile exactly as before; the 4 misleading ones are refused (3 before first playable).
-- **Narration claims only what is drawn** (M3 step 2b, candidate; probe and gate pending). The baseline's narration misleads were all in section 1, which the bootstrap writes from the cards: its first-section prompt now says speech names only what the chosen recipes draw, and the section prompt carries a short form for a retried section. +159 bytes on the first request and +45 on section requests, within every ceiling; every produced lesson is byte-identical (request digests re-recorded).
-- **Recipe cards state what their recipe cannot show** (M3 step 2a, candidate; probe and gate not yet run, `docs/M3_STEP2_RECIPE_LIMITS_2026-11-14.md`).
+- **Narration claims only what is drawn** (M3 step 2b, candidate; the probe did not meet its rules: 3 of 13 lessons mislead). The baseline's narration misleads were all in section 1, which the bootstrap writes from the cards: its first-section prompt now says speech names only what the chosen recipes draw, and the section prompt carries a short form for a retried section. +159 bytes on the first request and +45 on section requests, within every ceiling; every produced lesson is byte-identical (request digests re-recorded).
+- **Recipe cards state what their recipe cannot show** (M3 step 2a, candidate; the probe did not meet its rules, `docs/M3_STEP2_RECIPE_LIMITS_2026-11-14.md`).
   - The unit-square array draws at most 8 per side and is not a counting, place-value or ratio picture.
   - The function plot cannot be defined by intervals or show a distribution.
   - The cube recipe draws only its one cube.
