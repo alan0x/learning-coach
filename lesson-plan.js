@@ -11852,7 +11852,7 @@ var MATH_RECIPES = {
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
-    model_guidance: "\u51FD\u6570\u56FE\uFF1A\u516C\u5F0F\u5F15\u7528\u6ED1\u5757\u6539\u66F2\u7EBF\uFF1B\u91C7\u6837\u70B9\u53E6\u58F0\u660E"
+    model_guidance: "\u51FD\u6570\u56FE\uFF1A\u516C\u5F0F\u5F15\u7528\u6ED1\u5757\u6539\u66F2\u7EBF\uFF1B\u91C7\u6837\u70B9\u53E6\u58F0\u660E\uFF1B\u4E0D\u80FD\u5206\u533A\u95F4\u5B9A\u4E49\u6216\u753B\u6570\u636E\u5206\u5E03"
   },
   unit_circle_projection: {
     parts: ["whole", "unit_circle", "moving_point", "radius", "projection_line", "primary_curve", "primary_control"],
@@ -11904,7 +11904,7 @@ var MATH_RECIPES = {
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["solid_3d", "section_plane"],
-    model_guidance: "\u53EF\u65CB\u8F6C\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u53EF\u53D8\u6C34\u5E73\u622A\u9762"
+    model_guidance: "\u53EF\u65CB\u8F6C\u6B63\u65B9\u4F53\u3001\u9876\u70B9\u3001\u68F1\u3001\u9762\u548C\u53EF\u53D8\u6C34\u5E73\u622A\u9762\uFF1B\u4EC5\u6B64\u4E00\u4E2A\u6B63\u65B9\u4F53"
   },
   function_surface_with_section: {
     parts: ["whole", "surface", "section", "intersection", "primary_control"],
@@ -11956,7 +11956,7 @@ var MATH_RECIPES = {
     output_kinds: ["geometry"],
     student_controls: ["slider"],
     required_features: ["unit_square_array", "row_column_count", "area_boundary_comparison"],
-    model_guidance: "\u5355\u4F4D\u6B63\u65B9\u5F62\u6309\u884C\u5217\u94FA\u6EE1\u957F\u65B9\u5F62\uFF1B\u4E24\u4E2A\u6574\u6570\u4F9D\u6B21\u63A7\u5236\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09\u548C\u884C\u6570\uFF08\u5BBD\uFF09\uFF0C\u7528\u4E8E\u9762\u79EF\u3001\u5468\u957F\u4E0E\u5E73\u65B9\u5355\u4F4D\u6559\u5B66"
+    model_guidance: "\u5355\u4F4D\u6B63\u65B9\u5F62\u6309\u884C\u5217\u94FA\u6EE1\u957F\u65B9\u5F62\uFF1B\u4E24\u4E2A\u6574\u6570\uFF08\u5404\u22648\uFF09\u4F9D\u6B21\u63A7\u5236\u6BCF\u884C\u65B9\u683C\u6570\uFF08\u957F\uFF09\u548C\u884C\u6570\uFF08\u5BBD\uFF09\uFF0C\u7528\u4E8E\u9762\u79EF\u3001\u5468\u957F\u4E0E\u5E73\u65B9\u5355\u4F4D\u6559\u5B66\uFF1B\u975E\u8BA1\u6570\u3001\u4F4D\u503C\u6216\u6BD4\u4F8B\u56FE"
   },
   geometric_rearrangement: {
     parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "leg_a", "leg_b", "hypotenuse", "primary_control"],
@@ -12343,7 +12343,7 @@ var SHARED_RECIPES = {
     output_kinds: ["diagram"],
     student_controls: [],
     required_features: ["ordered_process_steps"],
-    model_guidance: "\u6982\u5FF5\u6216\u6B65\u9AA4\u6D41\u7A0B\u56FE\uFF1B\u6CA1\u6709\u51E0\u4F55\u79FB\u52A8\uFF0C\u4E5F\u4E0D\u63A5\u53D7\u6570\u503C\u8F93\u5165"
+    model_guidance: "\u6982\u5FF5\u6216\u6B65\u9AA4\u6D41\u7A0B\u56FE\uFF0C\u53EA\u6709\u6587\u5B57\u6846\uFF1B\u6CA1\u6709\u51E0\u4F55\u79FB\u52A8\uFF0C\u4E5F\u4E0D\u63A5\u53D7\u6570\u503C\u8F93\u5165"
   }
 };
 var SHARED_PLUGIN = {

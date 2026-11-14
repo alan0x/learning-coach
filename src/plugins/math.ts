@@ -17,7 +17,7 @@ export const MATH_RECIPES = {
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
-    model_guidance: "函数图：公式引用滑块改曲线；采样点另声明",
+    model_guidance: "函数图：公式引用滑块改曲线；采样点另声明；不能分区间定义或画数据分布",
   },
   unit_circle_projection: {
     parts: ["whole", "unit_circle", "moving_point", "radius", "projection_line", "primary_curve", "primary_control"],
@@ -69,7 +69,7 @@ export const MATH_RECIPES = {
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["solid_3d", "section_plane"],
-    model_guidance: "可旋转正方体、顶点、棱、面和可变水平截面",
+    model_guidance: "可旋转正方体、顶点、棱、面和可变水平截面；仅此一个正方体",
   },
   function_surface_with_section: {
     parts: ["whole", "surface", "section", "intersection", "primary_control"],
@@ -121,7 +121,7 @@ export const MATH_RECIPES = {
     output_kinds: ["geometry"],
     student_controls: ["slider"],
     required_features: ["unit_square_array", "row_column_count", "area_boundary_comparison"],
-    model_guidance: "单位正方形按行列铺满长方形；两个整数依次控制每行方格数（长）和行数（宽），用于面积、周长与平方单位教学",
+    model_guidance: "单位正方形按行列铺满长方形；两个整数（各≤8）依次控制每行方格数（长）和行数（宽），用于面积、周长与平方单位教学；非计数、位值或比例图",
   },
   geometric_rearrangement: {
     parts: ["whole", "target_shape", "outer_square", "piece_1", "piece_2", "piece_3", "piece_4", "central_area", "leg_a", "leg_b", "hypotenuse", "primary_control"],

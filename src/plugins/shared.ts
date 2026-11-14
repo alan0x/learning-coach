@@ -24,7 +24,7 @@ export const SHARED_RECIPES = {
     output_kinds: ["diagram"],
     student_controls: [],
     required_features: ["ordered_process_steps"],
-    model_guidance: "概念或步骤流程图；没有几何移动，也不接受数值输入",
+    model_guidance: "概念或步骤流程图，只有文字框；没有几何移动，也不接受数值输入",
   },
 } as const;
 
