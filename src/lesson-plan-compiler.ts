@@ -409,12 +409,16 @@ function compilePlainContent(
  * Other visuals' targets are moved to the end of the range when the model's reply is lowered, as before.
  * The plan is the compiler's own copy, so each compile of a growing lesson does this once.
  */
-/** Moves a practice target its number already starts at to the far end of its range, on its slider. */
+/**
+ * Moves a practice target its number already meets (where it starts, or where the lesson leaves it) to an end
+ * of its range, on its slider, met by neither. The task opens after the lesson, so the move is never seen.
+ */
 function moveMetTarget(
   plan: LessonPlan,
   activity: Extract<NonNullable<LessonPlan["sections"][number]["student_activities"]>[number], { kind: "number_target" }>,
   definition: NonNullable<LessonPlan["numbers"]>[number],
   path: string,
+  atEnd: number = definition.initial,
 ): void {
   const step = definition.student_control?.step;
   const onSlider = (value: number) => {
@@ -424,11 +428,16 @@ function moveMetTarget(
     }
     return Number(reachable.toPrecision(12));
   };
-  const alternative = [definition.min, definition.max]
-    .sort((a, b) => Math.abs(b - definition.initial) - Math.abs(a - definition.initial))
+  const distinct = (value: number) => [definition.initial, atEnd].every((met) => Math.abs(value - met) > activity.tolerance * (1 + 1e-9));
+  // The ends first; the middle when the lesson runs from one end to the other.
+  const alternative = [...[definition.min, definition.max].sort((a, b) => Math.abs(b - atEnd) - Math.abs(a - atEnd)), (definition.min + definition.max) / 2]
     .map(onSlider)
-    .find((value) => Math.abs(value - definition.initial) > activity.tolerance * (1 + 1e-9));
-  if (alternative === undefined) fail("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
+    .find(distinct);
+  if (alternative === undefined) {
+    // A task met only where the lesson ends keeps its target rather than fail the lesson.
+    if (Math.abs(activity.value - definition.initial) > activity.tolerance * (1 + 1e-9)) return;
+    fail("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
+  }
   activity.value = alternative;
   const label = definition.label?.trim() || compileText(plan, "数值");
   const unit = definition.unit?.trim();
@@ -473,7 +482,10 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
         // visual's own range can clamp both afterwards to the same limit (a unit-square array of 15,
         // target 20, both capped): move the target to the end of the range farthest from the start,
         // as lowering does, and name it in the task's words.
-        if (met(definition.initial)) moveMetTarget(plan, activity, definition, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`);
+        // Met where the lesson leaves the number too: practice opens after the lesson, so a target the last
+        // animation already reached has nothing to do (the ratio lesson's repaired 6 and 4; owner, 2026-11-14).
+        const end = valueAtEnd(number);
+        if (met(definition.initial) || met(end)) moveMetTarget(plan, activity, definition, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`, end);
         continue;
       }
       const metAtStart = met(definition.initial);

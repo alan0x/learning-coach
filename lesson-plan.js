@@ -16955,7 +16955,7 @@ function compilePlainContent(kind, content, options, path) {
   }
   fail2("LESSON_PLAN_COMPILER", path, `unsupported plain board kind '${kind}'`);
 }
-function moveMetTarget(plan, activity, definition, path) {
+function moveMetTarget(plan, activity, definition, path, atEnd = definition.initial) {
   const step = definition.student_control?.step;
   const onSlider = (value2) => {
     let reachable = Math.min(definition.max, Math.max(definition.min, value2));
@@ -16964,8 +16964,12 @@ function moveMetTarget(plan, activity, definition, path) {
     }
     return Number(reachable.toPrecision(12));
   };
-  const alternative = [definition.min, definition.max].sort((a, b) => Math.abs(b - definition.initial) - Math.abs(a - definition.initial)).map(onSlider).find((value2) => Math.abs(value2 - definition.initial) > activity.tolerance * (1 + 1e-9));
-  if (alternative === void 0) fail2("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
+  const distinct = (value2) => [definition.initial, atEnd].every((met) => Math.abs(value2 - met) > activity.tolerance * (1 + 1e-9));
+  const alternative = [...[definition.min, definition.max].sort((a, b) => Math.abs(b - atEnd) - Math.abs(a - atEnd)), (definition.min + definition.max) / 2].map(onSlider).find(distinct);
+  if (alternative === void 0) {
+    if (Math.abs(activity.value - definition.initial) > activity.tolerance * (1 + 1e-9)) return;
+    fail2("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
+  }
   activity.value = alternative;
   const label = definition.label?.trim() || compileText(plan, "\u6570\u503C");
   const unit = definition.unit?.trim();
@@ -17002,7 +17006,8 @@ function resolveMetNumberTargets(plan) {
       if (!definition || !lastMoment) continue;
       const met = (value2) => Math.abs(activity.value - value2) <= activity.tolerance * (1 + 1e-9);
       if (!lineNumbers.has(number)) {
-        if (met(definition.initial)) moveMetTarget(plan, activity, definition, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`);
+        const end = valueAtEnd(number);
+        if (met(definition.initial) || met(end)) moveMetTarget(plan, activity, definition, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`, end);
         continue;
       }
       const metAtStart = met(definition.initial);
