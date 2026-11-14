@@ -4,6 +4,7 @@ import {
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
+  countRange,
   LESSON_PLAN_CAPABILITIES,
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VERSION,
@@ -1311,7 +1312,8 @@ function lowerModelActivityNumbers(
   outline: LessonPlanOutline,
   expectedSection: number,
   language?: string,
-  /** Numbers a number line shows: their targets stay as written, and a met target is resolved at compile. */
+  /** Numbers a number line or a count recipe shows: their targets stay as written, and a met target is
+   * resolved at compile, which knows the range the visual draws. */
   exactNumbers: ReadonlySet<number> = new Set(),
 ): Record<string, unknown> {
   const lowered = { ...activity };
@@ -1912,11 +1914,17 @@ function lowerModelSectionDraft(
       );
     }
   }
-  // Numbers this section's number line shows (its visual is created here; one created in an earlier
-  // section is not seen, and its targets are rounded as for any slider).
+  // Numbers this section's number line shows, and counts its visuals draw (squares in a row). Their
+  // targets stay as written: snapping a count to the slider's step turned 9 squares into 8.975, and moving
+  // a met target to the end of the model's range (10) went past what the array draws, so compile refused
+  // the program's own value (Coach #78 review). A visual created in an earlier section is not seen here,
+  // and its targets are rounded as for any slider.
   const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
     const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
-    return entry.action === "create" && entry.kind === "visual" && isNumberLineCapability(entry.content?.capability) ? entry.content.numbers ?? [] : [];
+    if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
+    if (isNumberLineCapability(entry.content.capability)) return entry.content.numbers ?? [];
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY]?.number_input_policies ?? [];
+    return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
   }));
   const activities: Array<{ order: number; activity: Record<string, unknown> }> = [];
   const collectActivities = (values: unknown[], kind: "number_target" | "scene3d_view", path: string): void => {
@@ -2437,13 +2445,24 @@ const outlineCapabilities = (outline: LessonPlanOutline) => new Set((outline.cou
  * Faults the outline owns, found before it is accepted (runs 5–7: they surfaced in section 1, where
  * retries can only rewrite the section, and the lesson failed three times):
  * - a number line in an outline that declares no numbers;
- * - an outline using a capability already found unable to show this request.
+ * - an outline using a capability already found unable to show this request;
+ * - a visual whose required counts no lesson number can give (the unit-square array draws 1 to 8 a side,
+ *   and every number is above 8). Compile would refuse it in whichever section creates it, and after
+ *   first playable no section can fix the outline's numbers (Coach #78 review).
  */
 function checkOutlineVisuals(outline: LessonPlanOutline, excluded: ReadonlySet<string>): void {
   const used = outlineCapabilities(outline);
   for (const capability of excluded) {
     if (used.has(capability as never)) {
-      throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability} visual cannot show this request; choose another visual`);
+      throw new LessonPlanError(OUTLINE_OWNED_FAULT, "$lessonPlanOutline.course_visuals", `the ${capability} visual cannot show this request; choose another visual`, capability);
+    }
+  }
+  for (const [index, visual] of (outline.course_visuals ?? []).entries()) {
+    for (const range of LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].number_input_policies.map((policy) => countRange(policy))) {
+      // One number may drive several inputs (a 5 by 5 square), so one that fits is enough.
+      if (!range?.required || (outline.numbers ?? []).some((number) => Math.round(number.initial) >= range.min && Math.round(number.initial) <= range.max)) continue;
+      throw new LessonPlanError(OUTLINE_OWNED_FAULT, `$lessonPlanOutline.course_visuals[${index}]`,
+        `no lesson number is a count the ${visual.capability} visual can draw (${range.min} to ${range.max}); choose another visual, or none`, visual.capability);
     }
   }
   if ([...used].some((capability) => isNumberLineCapability(capability)) && !(outline.numbers?.length)) {
@@ -2520,6 +2539,14 @@ export async function generateLessonPlanWithModel(
   const excludeNumberLines = (from: LessonPlanOutline) => {
     if (![...outlineCapabilities(from)].some((capability) => isNumberLineCapability(capability))) return;
     for (const capability of LESSON_PLAN_CAPABILITY_NAMES) if (isNumberLineCapability(capability)) excludedCapabilities.add(capability);
+  };
+  // A recipe that cannot draw the outline's values (a count beyond the unit-square array) names itself in
+  // the fault; the outline is asked again without that recipe. Other outline faults are the number line's.
+  // A fault that names no recipe is the number line's (a line in an outline with no numbers).
+  const excludeFaulting = (from: LessonPlanOutline, fault: unknown) => {
+    const capability = fault instanceof LessonPlanError ? fault.capability : undefined;
+    if (capability) excludedCapabilities.add(capability);
+    else excludeNumberLines(from);
   };
   let outlineError: unknown;
   let stableCameraObservation: CameraLessonObservation | undefined;
@@ -2644,7 +2671,7 @@ export async function generateLessonPlanWithModel(
     try {
       checkOutlineVisuals(outline, excludedCapabilities);
     } catch (error) {
-      excludeNumberLines(outline);
+      excludeFaulting(outline, error);
       outline = undefined;
       throw error;
     }
@@ -2681,7 +2708,7 @@ export async function generateLessonPlanWithModel(
       }
     }
     if (outlineFault) {
-      if (outline) excludeNumberLines(outline);
+      if (outline) excludeFaulting(outline, outlineFault);
       outline = undefined;
       bootstrappedFirstSection = undefined;
       sectionErrors.delete(1);
@@ -2792,7 +2819,7 @@ export async function generateLessonPlanWithModel(
       try {
         checkOutlineVisuals(candidateOutline, excludedCapabilities);
       } catch (error) {
-        excludeNumberLines(candidateOutline);
+        excludeFaulting(candidateOutline, error);
         throw error;
       }
       outline = candidateOutline;
@@ -3030,7 +3057,7 @@ export async function generateLessonPlanWithModel(
       if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
       outlineRestarted = true;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
-      if (outline) excludeNumberLines(outline);
+      if (outline) excludeFaulting(outline, error);
       outlineError = error;
       outline = undefined;
       bootstrappedFirstSection = undefined;

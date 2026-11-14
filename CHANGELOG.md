@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+- **A count a lesson states is never moved** (M2/M3 baseline, Coach #77). The unit-square array draws at most 8 squares a row, and the program used to clamp larger counts to 8 under the model's own words: 24 squares under "12 cookies", 8 under "ten ones". Counts (the unit-square array's rows and columns, a polygon's sides) are now checked after fitting. Slider ranges are still narrowed to what a recipe draws; positions in a recipe's own frame (a cube's section) are still fitted. A practice target on a count is checked like an animation (below); other practice targets keep their earlier rule (moved to the edge, prompt rewritten).
+  - **A starting count beyond its recipe** is an outline-owned fault: the outline is asked again without that recipe (the number line's route, now naming the faulting recipe).
+  - **An animation beyond its recipe** is the section's to fix.
+  - **A count narrowed by another recipe sharing its number** (a 3-by-3 square beside a cube section running from −1 to 1, which became 1 by 3) is refused at the visual that shares it, for the section to drive it with another number or none.
+  - **Replay of the baseline's 58 recorded lessons:** 54 compile exactly as before; the 4 misleading ones are refused (3 before first playable).
+  - **After code review** (each finding reproduced first, then a test that fails on the earlier build):
+    - A count is checked against every recipe that draws it, so the verdict no longer depends on which visual comes first.
+    - A shared-number fault names the visual whose fit pushed the count out, not the first visual sharing it.
+    - Range edges round like the counts they bound, so 1.4 squares (drawn as 1) is not refused against a range rounded up to 2.
+    - The outline is refused before first playable when no lesson number is a count a required visual can draw (the array with every number above 8). Otherwise a count fault in section 2 or later went to sections that could not fix it, and the lesson failed after it had started; now that section is asked to drive the visual with a number it can draw.
+    - Excluding a recipe never excludes the number line beside it; an outline fault points at the outline's number.
+    - Drawable count ranges live on the recipe's number policy, read by the fit, the check and the card text.
+    - Replay of the 58 recorded baseline lessons: identical to the reviewed build (54 unchanged, the same 4 refused; the clarification and the failed generation also behave as before). Every recorded outline restart that recovered (the #78 live rerun, the control arm) replays exactly as recorded. Request digests unchanged.
+    - Count refusals quote the whole count: a target the program snapped to a slider step (9 became 8.975) is reported as the 9 the model wrote.
+    - **A practice target on a count is refused, not moved** (owner, 2026-11-14). Moving 12 onto an array starting at 8 met the task, so the program moved the target to 1 and rewrote the prompt to "set it to 1" while the narration said 12. A count's target is kept as the model wrote it until compile, which knows the range the visual draws: snapping it to the slider's step turned 9 squares into 8.975 and 6 into 5.995, and moving a met target to the end of the model's range (10) went past the array's 8, so compile refused the program's own value. Targets are whole counts, and a met target moves within the drawable range.
+      - Replay of the 58 recorded baseline lessons against the reviewed build: one more lesson is refused, the baseline's misleading ratio lesson, whose model-written target of 9 squares the array cannot draw (one section repair call, after first playable). Seven lessons change only in their practice tasks: targets become whole counts (5.995 → 6), and one task keeps the model's own wording instead of the program's rewrite. No held-out lesson is refused.
+
 ## 0.29.0 - 2026-11-12
 
 - **The number line is offered in AI lessons** (OLL decisions 0013 and 0016). `number_line`, `number_line_compare`, `number_line_solution` and `number_line_rounding` move from the trial list to the end of the catalog, where the gate measured them. The live first request is byte-identical to the gate's candidate request.

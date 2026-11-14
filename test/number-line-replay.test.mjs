@@ -178,22 +178,31 @@ for (const turn of run7.turns) {
   });
 }
 
-test("a visual whose own range clamps a task onto its starting value moves the task's target (probe 3: unit squares 15 → 20, both capped)", async () => {
-  // The fallback outline chose a unit-square array: 15 squares, task "set it to 20". The array caps its
-  // count, so both became the same and OLL rejected the task as already met, three times over.
+test("a count the unit-square array cannot draw asks for a new outline without the array, never a clamped picture (probe 3: 15 squares; M2/M3 baseline)", async () => {
+  // The fallback outline chose a unit-square array of 15 squares; the array draws at most 8 a row. The
+  // program used to clamp it to 8 under the model's "15" (and in the M2/M3 baseline drew 24 squares
+  // under "12 cookies"). A count the lesson states is never moved: the outline is asked again without it.
   const recorded = JSON.parse(await readFile(new URL("./fixtures/clamped-met-target-replies.json", import.meta.url), "utf8"));
   const fixture = { ...recorded, replies: tooFine(recorded.replies) };
   const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
-  let next = 0;
-  let lesson;
-  await assert.rejects(generateLessonPlanWithModel(async () => JSON.stringify(fixture.replies[next++]), { turn_id: "clamped", learner_request: fixture.request, input_modality: "text", request_source: "self_contained" }, {
-    on_playable_prefix: ({ compiled }) => { lesson = compiled.lesson; throw new Error("first playable"); },
-  }), /first playable/);
-  const count = lesson.lesson.variables[0];
-  const task = lesson.lesson.tasks.find((entry) => entry.completion.expression === count.as);
-  assert.ok(Math.abs(task.completion.value - count.initial) > task.completion.tolerance, `${task.completion.value} vs ${count.initial}`);
-  assert.ok(task.completion.value >= count.min && task.completion.value <= count.max);
-  assert.match(task.prompt, new RegExp(String(task.completion.value)));
+  const requests = [];
+  const rejected = [];
+  await assert.rejects(generateLessonPlanWithModel(async (request) => {
+    requests.push(request);
+    if (requests.length > fixture.replies.length) throw new Error(`stop: ${request.label}`);
+    return JSON.stringify(fixture.replies[requests.length - 1]);
+  }, { turn_id: "clamped", learner_request: fixture.request, input_modality: "text", request_source: "self_contained" }, {
+    on_playable_prefix: () => { throw new Error("a lesson was published with the clamped array"); },
+    on_rejected_part: (part) => { rejected.push(part); },
+  }), /stop: lesson-plan-outline/);
+  const refusal = rejected.find((part) => /rectangle_unit_square_array/.test(part.error.message));
+  assert.equal(refusal?.error.code, "LESSON_PLAN_OUTLINE_VISUAL");
+  assert.match(refusal.error.message, /number 1 is 15/);
+  const last = requests.at(-1);
+  assert.equal(last.label, "lesson-plan-outline");
+  const prompt = JSON.parse(last.prompt);
+  assert.ok(!prompt.visual_recipes.some(([features]) => features.includes("unit_square_array")), "the new outline is asked without the array");
+  assert.match(prompt.previous_validation_error ?? "", /rectangle_unit_square_array/);
 });
 
 test("a replacement outline goes through the same acceptance: one that marks the request unsupported ends the lesson there (review of #63)", async () => {
