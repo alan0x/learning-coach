@@ -1,0 +1,18 @@
+{
+  "note": "Probe cases for M3 step 2a (recipe limits on the cards), written for the probe and never taken from the math expressiveness question set. Pass rules: learning-coach docs/M3_STEP2_RECIPE_LIMITS_2026-11-14.md.",
+  "cases": [
+    { "id": "PA-01", "language": "en", "expected_component": null, "prompt": "Make a ten: show how 8 + 5 = 13 by moving 2 over to the 8." },
+    { "id": "PA-02", "language": "en", "expected_component": null, "prompt": "The ratio of cats to dogs at a shelter is 4:3. If there are 12 cats, how many dogs are there?" },
+    { "id": "PA-03", "language": "en", "expected_component": null, "prompt": "Graph f(x) = x + 1 for x < 0 and f(x) = 2 for x ≥ 0." },
+    { "id": "PA-04", "language": "en", "expected_component": null, "prompt": "How do I find the standard deviation of 2, 4, 4, 4, 5, 5, 7, 9?" },
+    { "id": "PA-05", "language": "en", "expected_component": null, "prompt": "Why does a soccer ball roll away but a box stays put?" },
+    { "id": "PA-06", "language": "zh-CN", "expected_component": null, "prompt": "用点状图表示数据 2, 3, 3, 5, 5, 5 并找出众数。" },
+    { "id": "PA-07", "language": "en", "expected_component": "rectangle_unit_square_array", "prompt": "A rug is 5 feet by 7 feet. How many square feet does it cover?" },
+    { "id": "PA-08", "language": "en", "expected_component": "function_plot", "prompt": "Graph y = x² − 2x and find its vertex." },
+    { "id": "PA-09", "language": "zh-CN", "expected_component": "cube_with_section", "prompt": "一个正方体有几个面、几条棱、几个顶点？" },
+    { "id": "PA-10", "language": "en", "expected_component": "rectangle_unit_square_array", "prompt": "Show 3 × 7 as rows and columns." },
+    { "id": "PA-11", "language": "en", "expected_component": null, "prompt": "A garden is 10 m long and 3 m wide. What is its area?" },
+    { "id": "PA-12", "language": "en", "expected_component": null, "prompt": "Walk me through finding the greatest common factor of 36 and 48." },
+    { "id": "PA-13", "language": "zh-CN", "expected_component": null, "prompt": "一个长方形长 12 厘米、宽 5 厘米，面积是多少？" }
+  ]
+}
