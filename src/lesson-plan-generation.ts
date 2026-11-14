@@ -1185,6 +1185,29 @@ function normalizeExecutableNumberInteractions(
     }
     for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
+  // A practice target on a count is explicit intent too: a 1-to-6 slider and "make 7 columns" become a
+  // 1-to-7 slider, instead of a task that says 7 and checks 6. The count recipe's own range still applies
+  // at compile, which refuses a count the visual cannot draw.
+  const countNumbers = new Set(drafts.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).flatMap((action) => {
+    if ((action.action !== "create" && action.action !== "revise") || action.kind !== "visual") return [];
+    const visual = action.content as LessonPlanVisualContent;
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].number_input_policies;
+    return (visual.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
+  }));
+  for (const section of drafts) {
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target" || activity.expression || activity.number_controls.length !== 1) continue;
+      const number = activity.number_controls[0]!.number;
+      const definition = outline.numbers?.[number - 1];
+      if (!definition || !countNumbers.has(number) || !Number.isFinite(activity.value)) continue;
+      const nextMin = Math.min(definition.min, activity.value);
+      const nextMax = Math.max(definition.max, activity.value);
+      if (nextMin === definition.min && nextMax === definition.max) continue;
+      definition.min = nextMin;
+      definition.max = nextMax;
+      if (definition.student_control) definition.student_control.step = deriveSliderStep(nextMin, nextMax);
+    }
+  }
   outline.numbers?.forEach((number, index) => {
     if (!visuallyBound.has(index + 1)) delete number.student_control;
   });
@@ -1315,6 +1338,8 @@ function lowerModelActivityNumbers(
   /** Numbers a number line or a count recipe shows: their targets stay as written, and a met target is
    * resolved at compile, which knows the range the visual draws. */
   exactNumbers: ReadonlySet<number> = new Set(),
+  /** Counts among them: a target outside the model's slider is kept, and the draft stage widens the slider. */
+  countNumbers: ReadonlySet<number> = new Set(),
 ): Record<string, unknown> {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
@@ -1362,7 +1387,8 @@ function lowerModelActivityNumbers(
       // derived step (span / 200, anchored at the minimum) would hide them (0.76; 50.05 in run 5). Half
       // a step of tolerance keeps the target reachable; the margin absorbs floating-point error. A
       // target the number already starts at is resolved at compile (resolveMetNumberTargets).
-      lowered.value = Math.round(Math.min(maximum, Math.max(minimum, requestedValue)) * 10 ** 12) / 10 ** 12;
+      const kept = countNumbers.has(numberIndex) ? requestedValue : Math.min(maximum, Math.max(minimum, requestedValue));
+      lowered.value = Math.round(kept * 10 ** 12) / 10 ** 12;
       lowered.tolerance = Math.max(
         typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
         range / 1000,
@@ -1919,13 +1945,18 @@ function lowerModelSectionDraft(
   // a met target to the end of the model's range (10) went past what the array draws, so compile refused
   // the program's own value (Coach #78 review). A visual created in an earlier section is not seen here,
   // and its targets are rounded as for any slider.
-  const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
+  const createdVisuals = moments.flatMap((moment) => moment.actions).flatMap((action) => {
     const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
-    if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
-    if (isNumberLineCapability(entry.content.capability)) return entry.content.numbers ?? [];
-    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY]?.number_input_policies ?? [];
-    return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
+    return entry.action === "create" && entry.kind === "visual" && entry.content?.capability ? [entry.content as { capability: string; numbers?: number[] }] : [];
+  });
+  const sectionCountNumbers = new Set(createdVisuals.flatMap((visual) => {
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY]?.number_input_policies ?? [];
+    return (visual.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
   }));
+  const numberLineNumbers = new Set([
+    ...createdVisuals.flatMap((visual) => isNumberLineCapability(visual.capability) ? visual.numbers ?? [] : []),
+    ...sectionCountNumbers,
+  ]);
   const activities: Array<{ order: number; activity: Record<string, unknown> }> = [];
   const collectActivities = (values: unknown[], kind: "number_target" | "scene3d_view", path: string): void => {
     values.forEach((activity, index) => {
@@ -1938,7 +1969,7 @@ function lowerModelSectionDraft(
       if (kind === "number_target" && lowered.reference !== undefined) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers, sectionCountNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };

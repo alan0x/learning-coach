@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A drawable practice target beyond the model's slider widens the slider** (counts only). "Make 7 columns" on a 1-to-6 slider was checked at 6 under the model's words; it now runs to 7, as an animation endpoint already widens a slider. The count recipe's own range still applies at compile. Replay of all 99 recorded lessons: no change. Request digests unchanged.
 - **A count a lesson states is never moved** (M2/M3 baseline, Coach #77). The unit-square array draws at most 8 squares a row, and the program used to clamp larger counts to 8 under the model's own words: 24 squares under "12 cookies", 8 under "ten ones". Counts (the unit-square array's rows and columns, a polygon's sides) are now checked after fitting. Slider ranges are still narrowed to what a recipe draws; positions in a recipe's own frame (a cube's section) are still fitted. A practice target on a count is checked like an animation (below); other practice targets keep their earlier rule (moved to the edge, prompt rewritten).
   - **A starting count beyond its recipe** is an outline-owned fault: the outline is asked again without that recipe (the number line's route, now naming the faulting recipe).
   - **An animation beyond its recipe** is the section's to fix.

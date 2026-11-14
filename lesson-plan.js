@@ -18993,6 +18993,26 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
     }
     for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
+  const countNumbers = new Set(drafts.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).flatMap((action) => {
+    if (action.action !== "create" && action.action !== "revise" || action.kind !== "visual") return [];
+    const visual = action.content;
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].number_input_policies;
+    return (visual.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]));
+  }));
+  for (const section of drafts) {
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target" || activity.expression || activity.number_controls.length !== 1) continue;
+      const number = activity.number_controls[0].number;
+      const definition = outline.numbers?.[number - 1];
+      if (!definition || !countNumbers.has(number) || !Number.isFinite(activity.value)) continue;
+      const nextMin = Math.min(definition.min, activity.value);
+      const nextMax = Math.max(definition.max, activity.value);
+      if (nextMin === definition.min && nextMax === definition.max) continue;
+      definition.min = nextMin;
+      definition.max = nextMax;
+      if (definition.student_control) definition.student_control.step = deriveSliderStep(nextMin, nextMax);
+    }
+  }
   outline.numbers?.forEach((number, index) => {
     if (!visuallyBound.has(index + 1)) delete number.student_control;
   });
@@ -19093,7 +19113,7 @@ function lowerIntegerDecimal(record3, prefix, path) {
   delete record3[`${prefix}_scale`];
   return Number(mantissa) / 10 ** Number(scale);
 }
-function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set()) {
+function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set(), countNumbers = /* @__PURE__ */ new Set()) {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
   lowered.hint_after_attempts = PROGRAM_HINT_AFTER_ATTEMPTS;
@@ -19127,7 +19147,8 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
       return reachable;
     };
     if (exactNumbers.has(numberIndex)) {
-      lowered.value = Math.round(Math.min(maximum, Math.max(minimum, requestedValue)) * 10 ** 12) / 10 ** 12;
+      const kept = countNumbers.has(numberIndex) ? requestedValue : Math.min(maximum, Math.max(minimum, requestedValue));
+      lowered.value = Math.round(kept * 10 ** 12) / 10 ** 12;
       lowered.tolerance = Math.max(
         typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
         range / 1e3,
@@ -19592,13 +19613,18 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
       );
     }
   }
-  const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
+  const createdVisuals = moments.flatMap((moment) => moment.actions).flatMap((action) => {
     const entry = action;
-    if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
-    if (isNumberLineCapability(entry.content.capability)) return entry.content.numbers ?? [];
-    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability]?.number_input_policies ?? [];
-    return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]));
+    return entry.action === "create" && entry.kind === "visual" && entry.content?.capability ? [entry.content] : [];
+  });
+  const sectionCountNumbers = new Set(createdVisuals.flatMap((visual) => {
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability]?.number_input_policies ?? [];
+    return (visual.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]));
   }));
+  const numberLineNumbers = /* @__PURE__ */ new Set([
+    ...createdVisuals.flatMap((visual) => isNumberLineCapability(visual.capability) ? visual.numbers ?? [] : []),
+    ...sectionCountNumbers
+  ]);
   const activities = [];
   const collectActivities = (values, kind, path) => {
     values.forEach((activity, index) => {
@@ -19611,7 +19637,7 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
       if (kind === "number_target" && lowered.reference !== void 0) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers, sectionCountNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
