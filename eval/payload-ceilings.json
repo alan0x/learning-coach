@@ -1,126 +1,126 @@
 {
-  "note": "Hard payload ceilings per input route and request path (subject plugin plan, decisions S6 and S14). Bytes of system prompt + prompt + response schema, excluding images. First-request ceilings are the P0 maxima plus the headroom tested in the 2026-11-11 payload experiment (+8,368 B, of which +2,956 B schema; docs/PAYLOAD_EXPERIMENT_2026-11-11.md). Other paths keep their P0 maxima. Raising a ceiling requires a plan change and a fresh live speed comparison. Raised 2026-11-12 by 15-30 B schema on the paths the model-number scale fix (0-12) grows: a one-off exception to S6 granted by the owner (no live comparison), because the change only lengthens an enum. Fallback-outline ceilings raised 2026-11-12 to the measured maxima with the four number-line recipes adopted (+917 to +925 B total, +60 B schema), owner-approved under S6: the fallback outline stays far below the first-request sizes tested live at +8,368 B.",
+  "note": "Hard payload ceilings per input route and request path (subject plugin plan, decisions S6 and S14). Bytes of system prompt + prompt + response schema, excluding images. First-request ceilings are the P0 maxima plus the headroom tested in the 2026-11-11 payload experiment (+8,368 B, of which +2,956 B schema; docs/PAYLOAD_EXPERIMENT_2026-11-11.md). Other paths keep their P0 maxima. Raising a ceiling requires a plan change and a fresh live speed comparison. Raised 2026-11-12 by 15-30 B schema on the paths the model-number scale fix (0-12) grows: a one-off exception to S6 granted by the owner (no live comparison), because the change only lengthens an enum. Fallback-outline ceilings raised 2026-11-12 to the measured maxima with the four number-line recipes adopted (+917 to +925 B total, +60 B schema), owner-approved under S6: the fallback outline stays far below the first-request sizes tested live at +8,368 B. Raised 2026-11-14 by +2,000 B (total and schema) on the fallback-outline, later-section, section-repair and first-section-retry paths, owner-approved under S6 (math expressiveness plan Q5): these ceilings sat at their measured maxima with no room for the next components (the number-line and function-plot extensions add about 1 to 1.2 KB), and the raised requests stay far below the first-request sizes tested live at +8,368 B. First-request and practice ceilings are unchanged. The live speed comparison is folded into the next gate, which covers the practice invitation (#81) and the two extensions.",
   "recorded_from": "learning-coach main baseline (P0); first_request headroom from the 2026-11-11 experiment",
   "entry_points": {
     "camera/fallback_outline": {
-      "total_bytes": 9991,
-      "schema_bytes": 2753
+      "total_bytes": 11991,
+      "schema_bytes": 4753
     },
     "camera/first_request": {
       "total_bytes": 26565,
       "schema_bytes": 10363
     },
     "camera/first_section_retry": {
-      "total_bytes": 9030,
-      "schema_bytes": 4190
+      "total_bytes": 11030,
+      "schema_bytes": 6190
     },
     "camera/later_section": {
-      "total_bytes": 8505,
-      "schema_bytes": 3426
+      "total_bytes": 10505,
+      "schema_bytes": 5426
     },
     "camera/practice": {
       "total_bytes": 2016,
       "schema_bytes": 482
     },
     "camera/section_repair": {
-      "total_bytes": 8599,
-      "schema_bytes": 3426
+      "total_bytes": 10599,
+      "schema_bytes": 5426
     },
     "selection/fallback_outline": {
-      "total_bytes": 9991,
-      "schema_bytes": 2753
+      "total_bytes": 11991,
+      "schema_bytes": 4753
     },
     "selection/first_request": {
       "total_bytes": 27049,
       "schema_bytes": 10363
     },
     "selection/first_section_retry": {
-      "total_bytes": 9030,
-      "schema_bytes": 4190
+      "total_bytes": 11030,
+      "schema_bytes": 6190
     },
     "selection/later_section": {
-      "total_bytes": 8505,
-      "schema_bytes": 3426
+      "total_bytes": 10505,
+      "schema_bytes": 5426
     },
     "selection/practice": {
       "total_bytes": 2016,
       "schema_bytes": 482
     },
     "selection/section_repair": {
-      "total_bytes": 8599,
-      "schema_bytes": 3426
+      "total_bytes": 10599,
+      "schema_bytes": 5426
     },
     "self_contained/fallback_outline": {
-      "total_bytes": 8594,
-      "schema_bytes": 2512
+      "total_bytes": 10594,
+      "schema_bytes": 4512
     },
     "self_contained/first_request": {
       "total_bytes": 24220,
       "schema_bytes": 9792
     },
     "self_contained/first_section_retry": {
-      "total_bytes": 8911,
-      "schema_bytes": 4190
+      "total_bytes": 10911,
+      "schema_bytes": 6190
     },
     "self_contained/later_section": {
-      "total_bytes": 8386,
-      "schema_bytes": 3426
+      "total_bytes": 10386,
+      "schema_bytes": 5426
     },
     "self_contained/practice": {
       "total_bytes": 1897,
       "schema_bytes": 482
     },
     "self_contained/section_repair": {
-      "total_bytes": 8480,
-      "schema_bytes": 3426
+      "total_bytes": 10480,
+      "schema_bytes": 5426
     },
     "text/fallback_outline": {
-      "total_bytes": 9872,
-      "schema_bytes": 2753
+      "total_bytes": 11872,
+      "schema_bytes": 4753
     },
     "text/first_request": {
       "total_bytes": 25467,
       "schema_bytes": 10033
     },
     "text/first_section_retry": {
-      "total_bytes": 8911,
-      "schema_bytes": 4190
+      "total_bytes": 10911,
+      "schema_bytes": 6190
     },
     "text/later_section": {
-      "total_bytes": 8386,
-      "schema_bytes": 3426
+      "total_bytes": 10386,
+      "schema_bytes": 5426
     },
     "text/practice": {
       "total_bytes": 1897,
       "schema_bytes": 482
     },
     "text/section_repair": {
-      "total_bytes": 8480,
-      "schema_bytes": 3426
+      "total_bytes": 10480,
+      "schema_bytes": 5426
     },
     "voice/fallback_outline": {
-      "total_bytes": 9872,
-      "schema_bytes": 2753
+      "total_bytes": 11872,
+      "schema_bytes": 4753
     },
     "voice/first_request": {
       "total_bytes": 25467,
       "schema_bytes": 10033
     },
     "voice/first_section_retry": {
-      "total_bytes": 8911,
-      "schema_bytes": 4190
+      "total_bytes": 10911,
+      "schema_bytes": 6190
     },
     "voice/later_section": {
-      "total_bytes": 8386,
-      "schema_bytes": 3426
+      "total_bytes": 10386,
+      "schema_bytes": 5426
     },
     "voice/practice": {
       "total_bytes": 1897,
       "schema_bytes": 482
     },
     "voice/section_repair": {
-      "total_bytes": 8480,
-      "schema_bytes": 3426
+      "total_bytes": 10480,
+      "schema_bytes": 5426
     }
   },
   "first_request_prompt_tokens": {
