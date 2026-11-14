@@ -82,9 +82,22 @@ The model follows the rule well. Most mismatches come from the program changing 
 | Rule (set before the run) | Control | Candidate | Verdict |
 |---|---|---|---|
 | 1. Model invitations left in a section's closing | 20 of 23 sections; 15 name a number | **0 of 22** | pass |
-| 2. Something spoken names a target other than its task's | 5 of 23 sections (e.g. "set the slope to 4" while the task checks 3.985; "调回 2" while it checks 2.011) | **0**: closings mention numbers only as the lesson's own demonstration | pass |
-| 3. Regressions | 16 of 16 lessons; 36 calls | 16 of 16 lessons; 39 calls | pass |
+| 2. Something spoken names a target other than its task's | **0 real** after reading. A word matcher flagged 5: snapped values whose stated number completes the task (4 for 3.985, 2 for 2.011), a decimal split at its point ("2." of 2.5, "3." of 3.14), "负 5" for −5, and a rectangle's other side | **0**: closings mention numbers only as the lesson's own demonstration | pass |
+| 3. Regressions | 16 of 16 lessons; 36 calls; 4 refusals (3 plot formula, 1 teaching mismatch) | 16 of 16 lessons; 39 calls; 7 refusals (6 plot formula, 1 phase start) | pass (formula refusals are outside this change; likely run noise, not tested) |
 | 4. Closing reduced to the stock line | — | none: every closing keeps its summary or thinking question, with the program's sentence added once (16 of 16 lessons) | pass |
+
+**What the probe does and does not show.** It shows the model stops inviting and nothing breaks. It does not show a spoken disagreement in the control: there was none in this run. The case for the change rests on the scripted checks (practice opens after the lesson; a section's task can change after it has played) and on the recorded lessons, in 4 of 129 sections.
+
+**A cost the rules did not cover: tasks that repeat the lesson.**
+- **What changes.** The removed clause ("不同于课程结束时滑杆所在的值") was the only instruction against a target the lesson itself reaches. Without it, read from the raw replies:
+  - targets equal to where the lesson's animations leave the number: 8 of 23 candidate tasks, against 2 of 24 control tasks;
+  - targets equal to the starting value: 7 against 2.
+- **What the program does with them.**
+  - Number-line tasks reset and stay usable, but repeat the demonstration.
+  - Two others became the program's generic wording ("Set Slope (m) to -5.", "Set Columns (Length) to 8 squares.") under item 3.
+- **The fix is a task-side clause.** Its form must be one a section can follow: the target differs from where this section's own animations leave the number (a section cannot know later sections). That changes the candidate, so it needs one more small probe before any gate.
+
+**Unverified.** "Practice opens after the lesson" was read from `availability: after_lesson`. Whether a learner who finishes a part before the next one arrives can open practice early has not been checked.
 
 **Observed, predates this change:** non-count sliders still snap a target to the slider's step (2 → 2.005 under a prompt saying 2). In all 42 tasks naming a number, the stated value lies within the task's tolerance, so it completes the task. Cosmetic; a candidate follow-up.
 
