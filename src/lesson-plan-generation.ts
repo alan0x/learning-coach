@@ -160,7 +160,7 @@ const SECTION_SYSTEM_PROMPT = [
   `- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。`,
   promptSlot("section.formulas"),
   `- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。`,
-  `- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
+  `- 课中教师演示并配动画，旁白不邀请学生操作（不写“请你调到 4”“请你拖动”“试试看”）；学生操作写进课后 number_activities，邀请由程序在课末补上。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
   `- 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。`,
   `- 本节讲了能算出确定数值的内容（计算、换算、读数、代入求值）时，写 1 道 answer_activities 让学生课后填数：用课中没算过的新数，课中不说答案。${ANSWER_ACTIVITY_RULE}`,
   promptSlot("section.bounds"),
@@ -181,7 +181,7 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = [
   `- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。`,
   promptSlot("section.formulas"),
   `- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。`,
-  `- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
+  `- 课中教师演示并配动画，旁白不邀请学生操作（不写“请你调到 4”“请你拖动”“试试看”）；学生操作写进课后 number_activities，邀请由程序在课末补上。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
   promptSlot("section.bounds"),
   promptSlot("section.linked_numbers", "联动图引用同一 numbers；"),
   promptSlot("section.constructions"),
@@ -2426,6 +2426,19 @@ function sectionIndexFromError(error: unknown, sectionCount: number): number | u
   return Number.isInteger(offset) && offset >= 0 && offset < sectionCount ? offset + 1 : undefined;
 }
 
+// The spoken invitation to practice is the program's, once, at the end of the lesson. Practice opens only
+// after the lesson, and a task's target can still change while later sections arrive (a later animation
+// widens the slider a met target moves to), so it names no number (owner, 2026-11-14).
+const PRACTICE_INVITATION = "现在试试课后练习吧。";
+function inviteToPractice(drafts: LessonPlanSectionDraft[], language?: string): void {
+  if (!drafts.some((draft) => (draft.student_activities ?? []).some((activity) => activity.kind === "number_target" || activity.kind === "scene3d_view"))) return;
+  const last = drafts.at(-1)?.moments.at(-1);
+  if (!last) return;
+  const sentence = lessonText(language, PRACTICE_INVITATION);
+  const said = last.narration?.trim() ?? "";
+  last.narration = !said ? sentence : /^en(?:-|$)/i.test(language ?? "") ? `${said} ${sentence}` : `${said}${sentence}`;
+}
+
 function compilePrefix(
   outline: LessonPlanOutline,
   drafts: LessonPlanSectionDraft[],
@@ -2461,6 +2474,8 @@ function compilePrefix(
     close: { summary: lessonText(options?.language, "课程内容仍在继续生成。"), focus: [focus] },
   };
   const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
+  // Only the part that holds the outline's last section ends the lesson.
+  if (sectionCount === outline.sections.length) inviteToPractice(normalized.drafts, options?.language);
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
@@ -3183,6 +3198,7 @@ export async function generateLessonPlanWithModel(
   for (let attempt = 1; attempt <= outline.sections.length * maxAttempts; attempt += 1) {
     try {
       const normalized = normalizeExecutableNumberInteractions(outline, drafts);
+      inviteToPractice(normalized.drafts, options.compile?.language);
       const plan = assembleLessonPlan(normalized.outline, normalized.drafts, options.compile);
       compiled = compileAndValidateLessonPlan(plan, { ...options.compile, construction_rules: "explicit-v1" });
       compiledOutline = normalized.outline;

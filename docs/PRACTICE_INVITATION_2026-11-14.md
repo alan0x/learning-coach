@@ -47,7 +47,7 @@ The model follows the rule well. Most mismatches come from the program changing 
 4. **Case d stays refused** (owner-approved today). Dropping an undrawable task becomes safe once the model no longer names targets, so it is offered after this probe, with the live rerun's 3-call cost as the reason.
 
 ## Probe (pass rules set before any run; needs the owner's approval and call count)
-**Arms.** This branch at 066e7d3 (control) and with items 1–3 (candidate), so the arms differ only in this change. Same cases, 2 repeats each.
+**Arms.** This branch at 264ce20 (control: item 3 and everything before it) and the next commit (candidate: items 1–2), so the arms differ only in the invitation change. Same cases, 2 repeats each.
 
 **Cases.** Fresh, scored for overlap against all 160 questions by a script that prints only IDs and scores. They must produce number tasks:
 - slope and intercept on a function plot (the history behind the rule: two slope lessons);

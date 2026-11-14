@@ -201,3 +201,29 @@ test("a drawable practice target beyond the model's slider widens the slider ins
   assert.equal(variable.max, 7);
   assert.match(task.prompt, /7/);
 });
+
+test("the program speaks one practice invitation, at the lesson's end and never in an earlier part", async () => {
+  // Practice opens after the lesson, and a target can still change while later sections arrive, so the
+  // invitation is the program's, names no number, and is added only when the last section is compiled.
+  const plan = arrayPlan({ initial: 3, min: 1, max: 6 });
+  plan.sections[0].moments[0].actions.find((action) => action.action === "animate").end_value = 4;
+  plan.sections[0].student_activities = [{ kind: "number_target", prompt: "Make 6 columns.", number_controls: [{ number: 1, controls: ["slider"] }], value: 6, tolerance: 0.1, hints: ["Move the slider."] }];
+  plan.sections = [plan.sections[0], { purpose: "Write it down", reusable_items: [{ kind: "board_item", board_kind: "math" }], moments: [{ narration: "Area is columns times rows.", delivery: "patient", actions: [
+    { action: "create", kind: "math", role: "derivation", content: { latex: "A = c \\times r" }, placement: { relation: "new_region" }, reusable_item: 1 },
+  ] }] }];
+  plan.close = { summary: "Review.", focus: [reusable(2, 1)] };
+  const { drafts, outline } = scripted(plan);
+  const parts = [];
+  const lastSay = (lesson) => lesson.steps.at(-1).beats.at(-1).say;
+  const generated = await generateLessonPlanWithModel(async (request) => {
+    if (request.label === "lesson-plan-bootstrap") return H.bootstrapModelResponse(request, outline, drafts[0]);
+    return H.sectionModelResponse(request, drafts);
+  }, { turn_id: "invitation", learner_request: "columns and rows", input_modality: "text", request_source: "self_contained", language: "en" }, {
+    on_playable_prefix: ({ completed_sections, compiled }) => parts.push({ completed_sections, said: lastSay(compiled.lesson) }),
+  });
+  assert.equal(parts[0].completed_sections, 1);
+  assert.doesNotMatch(parts[0].said, /practice task/, "section 1's part does not end the lesson");
+  assert.match(lastSay(generated.lesson), /^Area is columns times rows\. Now try the practice task\.$/);
+  const spoken = generated.lesson.steps.flatMap((step) => step.beats.map((beat) => beat.say)).join(" ");
+  assert.equal(spoken.match(/Now try the practice task/g).length, 1);
+});
