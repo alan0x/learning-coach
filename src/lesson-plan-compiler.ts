@@ -266,6 +266,8 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
   // A count the lesson states is never moved: it is drawn as stated, or refused for the part of the plan
   // that can change it. `kind` says what states it: the outline's starting value, an animation, or a task.
   const check = (number: number, value: number, path: string, kind: "start" | "animation" | "task") => {
+    // Messages quote the whole count: a target the program snapped to a slider step (9 became 8.975) is
+    // reported as the 9 the model wrote, never as a number it did not write.
     const drawn = count(value);
     // First every recipe that draws the count: a count one of them cannot draw is never another's fault.
     for (const own of counts.get(number)!) {
@@ -275,14 +277,14 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
         // Before first playable, only a new outline can fix it: the outline chose both the visual and the
         // count, and is asked again without this recipe (decision 0013's outline-owned fault).
         throw new LessonPlanError("LESSON_PLAN_OUTLINE_VISUAL", `$lessonPlan.numbers[${number - 1}].initial`,
-          `number ${number} is ${value}, but ${range}; choose another visual, or none`, own.capability);
+          `number ${number} is ${drawn}, but ${range}; choose another visual, or none`, own.capability);
       }
       // After first playable the outline cannot change. The outline check guarantees a lesson number the
       // visual can draw (checkOutlineVisuals), so the section that creates it can drive it with that one.
       if (kind === "start") {
-        fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", own.path, `number ${number} is ${value}, but ${range}; drive this visual with a lesson number in that range`);
+        fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", own.path, `number ${number} is ${drawn}, but ${range}; drive this visual with a lesson number in that range`);
       }
-      fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path, `number ${number} would reach ${value}, but ${range}; use a value in that range`);
+      fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path, `number ${number} would reach ${drawn}, but ${range}; use a value in that range`);
     }
     // Then the range the fits left: the fit that pushed the count out is the visual to change.
     const definition = plan.numbers![number - 1]!;
@@ -290,10 +292,10 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
     const pushed = fits.get(number)?.find(({ before, after }) => drawn >= before[0] && drawn <= before[1] && (drawn < after[0] || drawn > after[1]));
     if (pushed) {
       fail("LESSON_PLAN_SHARED_NUMBER", pushed.path,
-        `number ${number} is ${value}, a count the ${counts.get(number)![0]!.capability} visual shows, but the ${pushed.capability} visual sharing it allows only ${definition.min} to ${definition.max}; drive the ${pushed.capability} visual with a different lesson number, or with none`);
+        `number ${number} is ${drawn}, a count the ${counts.get(number)![0]!.capability} visual shows, but the ${pushed.capability} visual sharing it allows only ${definition.min} to ${definition.max}; drive the ${pushed.capability} visual with a different lesson number, or with none`);
     }
     // No fit excluded it: the plan's own range for the number does (an animation past the slider's end).
-    fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path, `number ${number} would reach ${value}, outside its range ${definition.min} to ${definition.max}; use a value in that range`);
+    fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path, `number ${number} would reach ${drawn}, outside its range ${definition.min} to ${definition.max}; use a value in that range`);
   };
   for (const number of counts.keys()) {
     const value = written.get(number);

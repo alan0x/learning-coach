@@ -16857,14 +16857,14 @@ function normalizeProgramOwnedNumberRanges(plan) {
         throw new LessonPlanError(
           "LESSON_PLAN_OUTLINE_VISUAL",
           `$lessonPlan.numbers[${number - 1}].initial`,
-          `number ${number} is ${value2}, but ${range}; choose another visual, or none`,
+          `number ${number} is ${drawn}, but ${range}; choose another visual, or none`,
           own.capability
         );
       }
       if (kind === "start") {
-        fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", own.path, `number ${number} is ${value2}, but ${range}; drive this visual with a lesson number in that range`);
+        fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", own.path, `number ${number} is ${drawn}, but ${range}; drive this visual with a lesson number in that range`);
       }
-      fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path, `number ${number} would reach ${value2}, but ${range}; use a value in that range`);
+      fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path, `number ${number} would reach ${drawn}, but ${range}; use a value in that range`);
     }
     const definition = plan.numbers[number - 1];
     if (drawn >= definition.min && drawn <= definition.max) return;
@@ -16873,10 +16873,10 @@ function normalizeProgramOwnedNumberRanges(plan) {
       fail2(
         "LESSON_PLAN_SHARED_NUMBER",
         pushed.path,
-        `number ${number} is ${value2}, a count the ${counts.get(number)[0].capability} visual shows, but the ${pushed.capability} visual sharing it allows only ${definition.min} to ${definition.max}; drive the ${pushed.capability} visual with a different lesson number, or with none`
+        `number ${number} is ${drawn}, a count the ${counts.get(number)[0].capability} visual shows, but the ${pushed.capability} visual sharing it allows only ${definition.min} to ${definition.max}; drive the ${pushed.capability} visual with a different lesson number, or with none`
       );
     }
-    fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path, `number ${number} would reach ${value2}, outside its range ${definition.min} to ${definition.max}; use a value in that range`);
+    fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", path, `number ${number} would reach ${drawn}, outside its range ${definition.min} to ${definition.max}; use a value in that range`);
   };
   for (const number of counts.keys()) {
     const value2 = written.get(number);

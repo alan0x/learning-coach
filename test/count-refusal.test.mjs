@@ -120,7 +120,9 @@ test("an outline whose numbers the array can never draw is refused before anythi
   assert.equal(rejected[0].path, "$lessonPlanOutline.course_visuals[0]");
 });
 
-test("excluding the array never excludes a number line beside it (review findings 4 and 6)", async () => {
+// Finding 6 (a fault naming a recipe outside the outline) did not reproduce: a section visual must match its
+// outline position. The exclusion now trusts the named recipe anyway, which this test also exercises.
+test("excluding the array never excludes a number line beside it (review finding 4)", async () => {
   // An array of 12 beside a number line. The array is excluded; the model's next outline uses it again.
   const plan = arrayPlan({ initial: 12, min: 10, max: 14 });
   plan.sections = [plan.sections[0]];

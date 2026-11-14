@@ -14,8 +14,9 @@
     - The outline is refused before first playable when no lesson number is a count a required visual can draw (the array with every number above 8). Otherwise a count fault in section 2 or later went to sections that could not fix it, and the lesson failed after it had started; now that section is asked to drive the visual with a number it can draw.
     - Excluding a recipe never excludes the number line beside it; an outline fault points at the outline's number.
     - Drawable count ranges live on the recipe's number policy, read by the fit, the check and the card text.
-    - Replay of the 58 recorded lessons: identical to the reviewed build (55 unchanged, the same 4 refused, the same 1 failure). Request digests unchanged.
-    - **A practice target on a count is refused, not moved** (owner, 2026-11-14). Moving 12 onto an array starting at 8 met the task, so the program moved the target to 1 and rewrote the prompt to "set it to 1" while the narration said 12. Replay: 2 of the 58 recorded lessons are newly refused, each costing one section repair call live: the baseline's misleading ratio lesson (a target of 8.975 squares, after first playable) and one held-out lesson read as helpful (before first playable).
+    - Replay of the 58 recorded baseline lessons: identical to the reviewed build (54 unchanged, the same 4 refused; the clarification and the failed generation also behave as before). Every recorded outline restart that recovered (the #78 live rerun, the control arm) replays exactly as recorded. Request digests unchanged.
+    - Count refusals quote the whole count: a target the program snapped to a slider step (9 became 8.975) is reported as the 9 the model wrote.
+    - **A practice target on a count is refused, not moved** (owner, 2026-11-14). Moving 12 onto an array starting at 8 met the task, so the program moved the target to 1 and rewrote the prompt to "set it to 1" while the narration said 12. Replay: 2 of the 58 recorded baseline lessons are newly refused (52 unchanged, 6 refused in all), each costing one section repair call live; both are the array's visual limit, not a slider range: the baseline's misleading ratio lesson (a target of 8.975 squares, after first playable) and one held-out lesson read as helpful (before first playable).
 
 ## 0.29.0 - 2026-11-12
 
