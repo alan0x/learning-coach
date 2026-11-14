@@ -56,7 +56,7 @@ Cases for the other two clauses:
 - **PA-01–06:** none is *misleading* through a misused recipe. A text flowchart, no visual, or an *irrelevant* picture passes for (a).
 - **PA-07–10:** the expected recipe is chosen.
 - **PA-11–13:** as stated above.
-- **Narration:** misleads are recorded separately as evidence for (b) and do not fail (a). A miss is recorded with the recipe and narration. If a negative case still misuses a recipe, the wording is revised once and probed once more before the gate.
+- **Narration (step 2b's rule):** recorded separately, and does not fail (a). Target, set before the run: no lesson of the 13 is misleading through narration (it claims something drawn that is not, or a control doing what it does not). Any such lesson is quoted in the report. A miss is recorded with the recipe and narration. If a negative case still misuses a recipe, the wording is revised once and probed once more before the gate.
 
 ### Gate (a), pass rules (set before the run)
 - **Arms:** #78's build (baseline) against this branch (candidate). The two differ only in card text.
@@ -90,14 +90,42 @@ Spoken text is free text, in English and Chinese, and a matcher over it would be
   - Recommended as a **program fix, not a fault**: the compiler drops a no-op animation, or makes it animate from the starting value when the narration replays a change. Either way, no lesson says "watch it change" over a still picture.
   - This needs its own design: restart semantics first, then offline replay.
 
+### How serious the errors are (open cases, read in full)
+In all three, the spoken math is right. What is false is the claim about what is on the screen. All three are in K–5, and all three start in section 1, the first thing the learner sees.
+
+| Case | What is drawn | What the narration says | Severity |
+|---|---|---|---|
+| K2-14, flat vs solid shapes | one cube with a horizontal section plane | "look at this square", "right next to it a cube", a circle and a sphere; the slider "adds thickness" and "turns a flat surface into a solid" | **High.** Three of the four named shapes are absent, and the slider is described as doing something it doesn't do (it moves a section plane). This teaches a wrong idea of the picture. |
+| K2-21, comparing two lengths | two points on a number line from 3 to 10 | "both start together right at zero"; section 2 "moves the crayon's start" to show a misleading comparison, but its animation goes to the value already held | **High.** The lesson's key idea (line up the ends) is demonstrated over a picture that shows neither a zero nor a moved start. |
+| G35-05, three data displays | a text flowchart of three steps | "now that we have built our tally chart, picture graph and bar graph", then compares how each looks | **Medium.** The comparison is correct in words, but the requested pictures never appear while the narration says they do. |
+
+Two held-out lessons are also counted in this category. Under the held-out rule they are not described here.
+
+### How much the request limits would grow (measured on a prototype)
+The prototype adds the rule to the section and bootstrap prompts and a program-written `draws` line per visual. Sizes were measured with the payload fixtures against the 2a build:
+- **Section rule:** 115 bytes.
+- **`draws` line:** 35–68 bytes per visual in the section.
+- **First request:** +145 bytes, about 7.2 KB under its ceiling. No raise needed.
+- **Later section, first-section retry, section repair:** +162 bytes on the fixtures, **64 bytes over** the current ceilings, which are the P0 maxima.
+  - The minimum raise is +64 bytes (0.8%).
+  - A section with three visuals adds up to 319 bytes. Allowing for that means about **+250 bytes** on these three paths (about 3%; 8,505 → 8,755 on camera).
+- **Fallback outline and practice:** no change.
+
+Compared with what was tested live: first requests carried +8,368 bytes without a measured slowdown. Plan Q1 also found that what a card says moved speed more than its length. A +250-byte ceiling raise is small, but S6 still asks for a live comparison.
+
+### What each part would fix
+- **The three open cases are all in section 1**, which the bootstrap request writes. `draws` in later sections reaches none of them, and covers only K2-21's second half.
+- **What reaches section 1:** the cards (part (a) already says "仅此一个正方体" and "只有文字框", which target K2-14 and G35-05) and the bootstrap rule (+145 bytes, no raise).
+- **K2-21's "zero"** would need the drawn range in the request. The program chooses the range after generation, so the model can't know it from the card. This case is better caught by the no-op-animation check and by having the number line always show 0 when the lesson compares lengths, which is a builder question.
+
 ### Recommendation
-1. **Cards (section 1 and every outline):** each card states what its recipe draws, in the form part (a) uses. The fallback outline has 28 bytes left, so further card text needs the fallback-outline ceilings raised: a plan change and a live comparison under S6.
-2. **Later sections:** add a program-written `draws` line per visual to `visuals_for_section`, and one rule: speech names only what `draws` lists. Later-section and section-repair requests are 98 bytes under their ceilings (the P0 maxima). The cost is not measured yet; it is likely over, so this needs the same approval.
-3. **No-op animations:** the program fix above.
-4. **Rejected:** a model judge call per section. It adds one call per section to every lesson, a direct M4 cost, and is reconsidered only if 1–3 fail their gate.
+1. **Adopt the bootstrap rule now**, with part (a). It reaches the section where every observed error was, and it goes through the same probe and gate as (a). **Accepted by the owner, 2026-11-14.**
+   - **As built:** the full rule is in the bootstrap's first-section prompt, and a short form ("旁白只说画面确实画出的内容。") is in the section prompt, so a retried section 1 gets it too.
+   - **Cost:** +159 bytes on the first request, about 7.2 KB under its ceiling. +45 bytes on later-section, first-section-retry and section-repair requests, which keep 53 bytes. **No ceiling is raised.**
+   - **Offline:** all request digests change; every produced lesson is byte-identical. 443 tests pass.
+2. **Later-section `draws` only if the gate shows narration errors in later sections.** That needs a +250-byte raise on three paths and a live comparison.
+3. **No-op animations:** a compiler check. The prompt already says "目标已是当前值则无需动画", and the model broke it in 14 of 57 animations in the open recorded lessons.
+4. **Rejected:** a model judge call per section. It adds one call per section to every lesson, a direct M4 cost.
 
 ## Status
-- **(a):** on `feat/recipe-card-limits`, stacked on #78, not pushed. Probe and gate not run.
-- **Blocked on this machine:**
-  - there is no Octos model profile, so no paid run can start here even with approval;
-  - `gh` has no valid login, so nothing can be pushed or opened as a PR.
+- **(a) and the section-1 rule:** on `feat/recipe-card-limits`, stacked on #78, one commit each. The probe ran on this build (results below once read). The gate has not run.
