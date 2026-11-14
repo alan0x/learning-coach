@@ -128,7 +128,7 @@ Compared with what was tested live: first requests carried +8,368 bytes without 
 4. **Rejected:** a model judge call per section. It adds one call per section to every lesson, a direct M4 cost.
 
 ## Status
-- **(a) and the section-1 rule:** on `feat/recipe-card-limits`, stacked on #78, one commit each. The probe did not meet its rules, and the control arm on #78's build misled less (1 of 13 against 3 of 13). Recommendation: don't adopt (see the end of this document).
+- **(a) and the section-1 rule:** on `feat/recipe-card-limits`, stacked on #78, one commit each. The probe did not meet its rules. The control arm on #78's build misled in 1 of 13 against 3 of 13: within chance at one run per case, so there is no evidence of benefit for 289 bytes. Recommendation: don't adopt (see the end of this document).
 
 ## Probe result (2026-11-14, owner-approved)
 **Run:** the build at this branch's two commits (card limits plus the section-1 rule), google `gemini-3.6-flash`.
@@ -202,7 +202,8 @@ More card text is the lever that just failed, and it needs a ceiling raise. Inst
 **Speed:** the paired median first-playable time is 1.3 s faster on the candidate (11 pairs). Most of that comes from PA-11 and PA-13 avoiding #78's re-ask.
 
 **Reading:**
-- **The card limits did not reduce misleading lessons**: 3 against 1, on single runs.
+- **No evidence that the card limits reduce misleading lessons:** 3 against 1 on single runs, within chance.
+- **One effect is solid:** told about the 8 limit, the model shrank the count itself (2 of 2), so #78 never fired. The model should state the true number and the program should refuse it.
 - **`各≤8` trades M3 for M4.** It saves #78's re-ask (2 calls and 6–15 s), but it turns a safe refusal (an accurate flowchart) into a stand-in, and one of the two stand-ins hid the swap.
 - **The narration rule shows no measurable effect.** Each arm has one narration mislead (PA-01 on #78, PA-06 here).
 - **Positive controls:** 4 of 4 in both arms.
