@@ -128,7 +128,7 @@ Compared with what was tested live: first requests carried +8,368 bytes without 
 4. **Rejected:** a model judge call per section. It adds one call per section to every lesson, a direct M4 cost.
 
 ## Status
-- **(a) and the section-1 rule:** on `feat/recipe-card-limits`, stacked on #78, one commit each. The probe ran on this build and did not meet its rules (below). No gate has run.
+- **(a) and the section-1 rule:** on `feat/recipe-card-limits`, stacked on #78, one commit each. The probe did not meet its rules, and the control arm on #78's build misled less (1 of 13 against 3 of 13). Recommendation: don't adopt (see the end of this document).
 
 ## Probe result (2026-11-14, owner-approved)
 **Run:** the build at this branch's two commits (card limits plus the section-1 rule), google `gemini-3.6-flash`.
@@ -179,3 +179,42 @@ More card text is the lever that just failed, and it needs a ceiling raise. Inst
    - This is outline text, so it also counts against the fallback outline's 28 bytes, and the rewrite has to replace text rather than add it.
 3. **Program checks where the model won't follow text:** the no-op-animation check, and a stand-in check (a count the lesson states that differs from the drawn count, with no disclosure) along the lines of #78.
 4. **Keep the card limits?** They cost 130 bytes for no measured effect. Hold them on this branch until the control arm says whether they help.
+
+## Control arm (2026-11-14, owner-approved): the same 13 cases on #78's build
+- 31 calls. Tokens: 56,252 prompt, 25,537 output, 7,639 thinking.
+- Read in full with the same rubric.
+- Each case ran once per arm, so a single case can differ by chance. Read the pattern, not one row.
+
+| Case | #78 (control) | This branch (candidate) |
+|---|---|---|
+| PA-01 make a ten | **misleading**: "moving 3 more brings us to 13" on a line ending at 12, nothing animated | minor: one jump 8 → 13 |
+| PA-02 ratio | text flowchart, accurate | **misleading**: ratio as an area grid |
+| PA-03 piecewise | failed (plot chosen, constant piece refused) | failed (same) |
+| PA-04 standard deviation | flowchart, accurate | flowchart, accurate |
+| PA-05 ball vs box | asked to clarify (no lesson) | flowchart, accurate |
+| PA-06 dot plot | two-point line, said aloud to be a stand-in, counts in a note | **misleading**: points claimed but not drawn |
+| PA-07, PA-08, PA-09, PA-10 | expected recipe, correct | expected recipe, correct |
+| PA-11 garden 10 by 3 | array refused by #78 (10 > 8), outline re-asked: flowchart, accurate; 4 calls, first playable 15.4 s | 8-by-3 stand-in, said aloud; 2 calls, 9.5 s |
+| PA-12 GCF | flowchart, accurate | flowchart, accurate |
+| PA-13 长方形 12 by 5 | refused, re-asked: flowchart, accurate; 4 calls, 23.1 s | **misleading**: 8-by-5 stand-in, not said; 2 calls, 8.3 s |
+| **Misleading** | **1 of 13** | **3 of 13** |
+
+**Speed:** the paired median first-playable time is 1.3 s faster on the candidate (11 pairs). Most of that comes from PA-11 and PA-13 avoiding #78's re-ask.
+
+**Reading:**
+- **The card limits did not reduce misleading lessons**: 3 against 1, on single runs.
+- **`各≤8` trades M3 for M4.** It saves #78's re-ask (2 calls and 6–15 s), but it turns a safe refusal (an accurate flowchart) into a stand-in, and one of the two stand-ins hid the swap.
+- **The narration rule shows no measurable effect.** Each arm has one narration mislead (PA-01 on #78, PA-06 here).
+- **Positive controls:** 4 of 4 in both arms.
+
+### Recommendation (replaces the one above)
+1. **Don't adopt the card limits or the narration rule.** Close #79 unmerged, or keep it only for this record. Their 289 bytes buy nothing measurable, and `各≤8` makes stand-ins more likely.
+2. **Next, in this order, each through §5:**
+   - **Rewrite the outline's substitution rule, net of bytes:**
+     - a stand-in only for the same concept, and always said aloud;
+     - no visual when no recipe shows the concept.
+   - **Add a program check for undisclosed stand-ins:**
+     - a count the lesson states (12) that differs from the drawn count (8), with no disclosure in the narration;
+     - on #78's model, refused for repair.
+   - **Add the no-op-animation check.**
+3. **PA-03 (a constant piece refused, repairs alternating):** a separate program fix, with the handoff's follow-up 2.
