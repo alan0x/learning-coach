@@ -317,12 +317,17 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
         action.end_value = Math.min(definition.max, Math.max(definition.min, roundToProgramGrid(action.number, action.end_value)));
       }
     }
-    // Practice targets keep their earlier rule: one beyond the visual's range is moved to its edge and the task
-    // prompt is rewritten to match (probe 3), so the task never asks for what the visual cannot reach.
-    for (const activity of section.student_activities ?? []) {
+    // A practice target on a count is checked like an animation: moving it to the visual's edge could land
+    // on the starting value, and the task would then ask for a count the lesson never named (a target of 12
+    // on an array starting at 8 became "set it to 1"; Coach #78 review). Other numbers keep the earlier rule:
+    // a target beyond the visual's range moves to its edge, with the task prompt rewritten to match (probe 3).
+    for (const [activityIndex, activity] of (section.student_activities ?? []).entries()) {
       if (activity.kind !== "number_target") continue;
       const number = activity.number_controls[0]?.number;
       if (!number || !constrained.has(number)) continue;
+      if (counts.has(number) && !activity.expression) {
+        check(number, activity.value, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}].value`, "task");
+      }
       const definition = plan.numbers![number - 1]!;
       const original = activity.value;
       activity.value = Math.min(definition.max, Math.max(definition.min, activity.expression ? activity.value : roundToProgramGrid(number, activity.value)));

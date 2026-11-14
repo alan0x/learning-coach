@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **A count a lesson states is never moved** (M2/M3 baseline, Coach #77). The unit-square array draws at most 8 squares a row, and the program used to clamp larger counts to 8 under the model's own words: 24 squares under "12 cookies", 8 under "ten ones". Counts (the unit-square array's rows and columns, a polygon's sides) are now checked after fitting. Slider ranges are still narrowed to what a recipe draws; positions in a recipe's own frame (a cube's section) are still fitted; practice targets keep their earlier rule (moved to the edge, prompt rewritten).
+- **A count a lesson states is never moved** (M2/M3 baseline, Coach #77). The unit-square array draws at most 8 squares a row, and the program used to clamp larger counts to 8 under the model's own words: 24 squares under "12 cookies", 8 under "ten ones". Counts (the unit-square array's rows and columns, a polygon's sides) are now checked after fitting. Slider ranges are still narrowed to what a recipe draws; positions in a recipe's own frame (a cube's section) are still fitted. A practice target on a count is checked like an animation (below); other practice targets keep their earlier rule (moved to the edge, prompt rewritten).
   - **A starting count beyond its recipe** is an outline-owned fault: the outline is asked again without that recipe (the number line's route, now naming the faulting recipe).
   - **An animation beyond its recipe** is the section's to fix.
   - **A count narrowed by another recipe sharing its number** (a 3-by-3 square beside a cube section running from −1 to 1, which became 1 by 3) is refused at the visual that shares it, for the section to drive it with another number or none.
@@ -15,6 +15,7 @@
     - Excluding a recipe never excludes the number line beside it; an outline fault points at the outline's number.
     - Drawable count ranges live on the recipe's number policy, read by the fit, the check and the card text.
     - Replay of the 58 recorded lessons: identical to the reviewed build (55 unchanged, the same 4 refused, the same 1 failure). Request digests unchanged.
+    - **A practice target on a count is refused, not moved** (owner, 2026-11-14). Moving 12 onto an array starting at 8 met the task, so the program moved the target to 1 and rewrote the prompt to "set it to 1" while the narration said 12. Replay: 2 of the 58 recorded lessons are newly refused, each costing one section repair call live: the baseline's misleading ratio lesson (a target of 8.975 squares, after first playable) and one held-out lesson read as helpful (before first playable).
 
 ## 0.29.0 - 2026-11-12
 

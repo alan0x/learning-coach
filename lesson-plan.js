@@ -16898,10 +16898,13 @@ function normalizeProgramOwnedNumberRanges(plan) {
         action.end_value = Math.min(definition.max, Math.max(definition.min, roundToProgramGrid(action.number, action.end_value)));
       }
     }
-    for (const activity of section.student_activities ?? []) {
+    for (const [activityIndex, activity] of (section.student_activities ?? []).entries()) {
       if (activity.kind !== "number_target") continue;
       const number = activity.number_controls[0]?.number;
       if (!number || !constrained.has(number)) continue;
+      if (counts.has(number) && !activity.expression) {
+        check(number, activity.value, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}].value`, "task");
+      }
       const definition = plan.numbers[number - 1];
       const original = activity.value;
       activity.value = Math.min(definition.max, Math.max(definition.min, activity.expression ? activity.value : roundToProgramGrid(number, activity.value)));

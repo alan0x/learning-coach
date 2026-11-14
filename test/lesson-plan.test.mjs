@@ -4909,15 +4909,18 @@ test("a count the unit-square array cannot draw is refused, never clamped under 
   assert.equal(animateError?.code, "LESSON_PLAN_NUMBER_NOT_DRAWABLE");
   assert.match(animateError.message, /number 1 would reach 10/);
 
-  // A practice target of 9 keeps its earlier rule: moved to 8, with the task prompt rewritten to match.
+  // A practice target of 9 squares is refused like an animation: the section sets a target the array draws.
   const asks = arrayPlan();
   asks.sections[0].student_activities = [{
     kind: "number_target", prompt: "Make 9 columns.", number_controls: [{ number: 1, controls: ["slider"] }],
     value: 9, tolerance: 0.1, hints: ["Move the slider."],
   }];
-  const task = compileAndValidateLessonPlan(asks).lesson.lesson.tasks.find((entry) => entry.completion?.expression);
-  assert.equal(task.completion.value, 8);
-  assert.match(task.prompt, /8/);
+  const taskError = refusedFor(asks);
+  assert.equal(taskError?.code, "LESSON_PLAN_NUMBER_NOT_DRAWABLE");
+  assert.match(taskError.path, /student_activities\[0\]\.value$/);
+  // A target the array draws is kept as written.
+  asks.sections[0].student_activities[0].value = 7;
+  assert.equal(compileAndValidateLessonPlan(asks).lesson.lesson.tasks.find((entry) => entry.completion?.expression).completion.value, 7);
 
   // Fractions of a square round to whole squares; that is not a change of count.
   const rounds = arrayPlan();

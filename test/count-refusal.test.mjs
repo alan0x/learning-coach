@@ -147,3 +147,15 @@ test("excluding the array never excludes a number line beside it (review finding
     assert.ok(recipes.includes("number_line"), "the number line was never at fault");
   }
 });
+
+test("a practice target beyond a count's visual is refused, never moved to the far edge (review finding 10)", () => {
+  // Clamping 12 onto an array starting at 8 met the task already, so the program moved it to 1 and
+  // rewrote the prompt to "set it to 1" while the narration still said 12.
+  const plan = arrayPlan({ initial: 8, min: 1, max: 14 });
+  plan.sections[0].moments[0].actions.find((action) => action.action === "animate").end_value = 6;
+  plan.sections[0].student_activities = [{ kind: "number_target", prompt: "Make 12 columns.", number_controls: [{ number: 1, controls: ["slider"] }], value: 12, tolerance: 0.1, hints: ["Move the slider."] }];
+  const error = refusal(plan);
+  assert.equal(error?.code, "LESSON_PLAN_NUMBER_NOT_DRAWABLE");
+  assert.match(error.path, /^\$lessonPlan\.sections\[0\]\.student_activities\[0\]\.value$/);
+  assert.match(error.message, /number 1 would reach 12/);
+});
