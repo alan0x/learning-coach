@@ -70,3 +70,22 @@ The model follows the rule well. Most mismatches come from the program changing 
 **Fallback.** If rule 1 or 2 fails, items 1–2 are not adopted. Item 3 (moving end-met targets) stands on its own and ships either way, with its own replay evidence.
 
 **Gate (after the probe).** A paired speed comparison needs the two-build mode in `eval-trial-recipe-speed.mjs`, which does not exist yet.
+
+## Probe result (2026-11-14, owner-approved)
+**Run:**
+- 8 fresh cases × 2 repeats × 2 arms, interleaved: 32 lessons, 75 calls (cap 100).
+- Tokens: 134,961 prompt, 69,648 output, 10,962 thinking.
+- Arms: control 264ce20, candidate 9e7f0d6.
+- Overlap: every case scores at most 0.25 against open questions and below 0.25 against held-out ones. One draft was replaced for its held-out score, unread, and one (a parabola translation) for being near an open question.
+- Run data: handoff `runs/practice-invitation/`.
+
+| Rule (set before the run) | Control | Candidate | Verdict |
+|---|---|---|---|
+| 1. Model invitations left in a section's closing | 20 of 23 sections; 15 name a number | **0 of 22** | pass |
+| 2. Something spoken names a target other than its task's | 5 of 23 sections (e.g. "set the slope to 4" while the task checks 3.985; "调回 2" while it checks 2.011) | **0**: closings mention numbers only as the lesson's own demonstration | pass |
+| 3. Regressions | 16 of 16 lessons; 36 calls | 16 of 16 lessons; 39 calls | pass |
+| 4. Closing reduced to the stock line | — | none: every closing keeps its summary or thinking question, with the program's sentence added once (16 of 16 lessons) | pass |
+
+**Observed, predates this change:** non-count sliders still snap a target to the slider's step (2 → 2.005 under a prompt saying 2). In all 42 tasks naming a number, the stated value lies within the task's tolerance, so it completes the task. Cosmetic; a candidate follow-up.
+
+**Next:** the speed gate (M4) on frozen code. It needs the two-build mode in the speed harness, and the owner's approval with its call count.
