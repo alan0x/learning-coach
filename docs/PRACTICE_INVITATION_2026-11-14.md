@@ -102,3 +102,16 @@ The model follows the rule well. Most mismatches come from the program changing 
 **Observed, predates this change:** non-count sliders still snap a target to the slider's step (2 → 2.005 under a prompt saying 2). In all 42 tasks naming a number, the stated value lies within the task's tolerance, so it completes the task. Cosmetic; a candidate follow-up.
 
 **Next:** the speed gate (M4) on frozen code. It needs the two-build mode in the speed harness, and the owner's approval with its call count.
+
+## Re-probe with the task-side guard (b20316a, owner-approved)
+**Setup:** the same 8 cases, candidate only, one run. 18 calls; tokens 32,145 prompt, 15,375 output, 916 thinking. Run data: `runs/practice-invitation/cand2-r1`.
+
+| | Control (264ce20, 2 runs) | Candidate without the guard (9e7f0d6, 2 runs) | **Candidate with the guard (b20316a, 1 run)** |
+|---|---|---|---|
+| Slider tasks | 24 | 23 | 11 |
+| Target equals where the lesson leaves the number | 2 | 8 | **0** |
+| Target equals its starting value | 2 | 7 | **0** |
+| Task worded by the program | 0 | 2 | **0** |
+| Sections with a model invitation left | 20 of 23 | 0 of 22 | **0 of 11** |
+
+All 8 lessons generated, and each speaks the program's sentence once, after its teaching content. b20316a is the frozen candidate for the speed gate.
