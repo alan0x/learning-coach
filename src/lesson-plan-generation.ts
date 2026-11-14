@@ -160,7 +160,7 @@ const SECTION_SYSTEM_PROMPT = [
   `- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。`,
   promptSlot("section.formulas"),
   `- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。`,
-  `- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
+  `- 课中教师演示并配动画，旁白不邀请学生操作（不写“请你调到 4”“请你拖动”“试试看”）；学生操作写进课后 number_activities，邀请由程序在课末补上；目标值不同于本节动画结束时该数值所在的值，也不同于它的初值。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
   `- 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。`,
   `- 本节讲了能算出确定数值的内容（计算、换算、读数、代入求值）时，写 1 道 answer_activities 让学生课后填数：用课中没算过的新数，课中不说答案。${ANSWER_ACTIVITY_RULE}`,
   promptSlot("section.bounds"),
@@ -181,7 +181,7 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = [
   `- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。`,
   promptSlot("section.formulas"),
   `- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。`,
-  `- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
+  `- 课中教师演示并配动画，旁白不邀请学生操作（不写“请你调到 4”“请你拖动”“试试看”）；学生操作写进课后 number_activities，邀请由程序在课末补上；目标值不同于本节动画结束时该数值所在的值，也不同于它的初值。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
   promptSlot("section.bounds"),
   promptSlot("section.linked_numbers", "联动图引用同一 numbers；"),
   promptSlot("section.constructions"),
@@ -1185,6 +1185,29 @@ function normalizeExecutableNumberInteractions(
     }
     for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
+  // A practice target on a count is explicit intent too: a 1-to-6 slider and "make 7 columns" become a
+  // 1-to-7 slider, instead of a task that says 7 and checks 6. The count recipe's own range still applies
+  // at compile, which refuses a count the visual cannot draw.
+  const countNumbers = new Set(drafts.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).flatMap((action) => {
+    if ((action.action !== "create" && action.action !== "revise") || action.kind !== "visual") return [];
+    const visual = action.content as LessonPlanVisualContent;
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].number_input_policies;
+    return (visual.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
+  }));
+  for (const section of drafts) {
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target" || activity.expression || activity.number_controls.length !== 1) continue;
+      const number = activity.number_controls[0]!.number;
+      const definition = outline.numbers?.[number - 1];
+      if (!definition || !countNumbers.has(number) || !Number.isFinite(activity.value)) continue;
+      const nextMin = Math.min(definition.min, activity.value);
+      const nextMax = Math.max(definition.max, activity.value);
+      if (nextMin === definition.min && nextMax === definition.max) continue;
+      definition.min = nextMin;
+      definition.max = nextMax;
+      if (definition.student_control) definition.student_control.step = deriveSliderStep(nextMin, nextMax);
+    }
+  }
   outline.numbers?.forEach((number, index) => {
     if (!visuallyBound.has(index + 1)) delete number.student_control;
   });
@@ -1315,6 +1338,8 @@ function lowerModelActivityNumbers(
   /** Numbers a number line or a count recipe shows: their targets stay as written, and a met target is
    * resolved at compile, which knows the range the visual draws. */
   exactNumbers: ReadonlySet<number> = new Set(),
+  /** Counts among them: a target outside the model's slider is kept, and the draft stage widens the slider. */
+  countNumbers: ReadonlySet<number> = new Set(),
 ): Record<string, unknown> {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
@@ -1362,7 +1387,8 @@ function lowerModelActivityNumbers(
       // derived step (span / 200, anchored at the minimum) would hide them (0.76; 50.05 in run 5). Half
       // a step of tolerance keeps the target reachable; the margin absorbs floating-point error. A
       // target the number already starts at is resolved at compile (resolveMetNumberTargets).
-      lowered.value = Math.round(Math.min(maximum, Math.max(minimum, requestedValue)) * 10 ** 12) / 10 ** 12;
+      const kept = countNumbers.has(numberIndex) ? requestedValue : Math.min(maximum, Math.max(minimum, requestedValue));
+      lowered.value = Math.round(kept * 10 ** 12) / 10 ** 12;
       lowered.tolerance = Math.max(
         typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
         range / 1000,
@@ -1919,13 +1945,18 @@ function lowerModelSectionDraft(
   // a met target to the end of the model's range (10) went past what the array draws, so compile refused
   // the program's own value (Coach #78 review). A visual created in an earlier section is not seen here,
   // and its targets are rounded as for any slider.
-  const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
+  const createdVisuals = moments.flatMap((moment) => moment.actions).flatMap((action) => {
     const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
-    if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
-    if (isNumberLineCapability(entry.content.capability)) return entry.content.numbers ?? [];
-    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY]?.number_input_policies ?? [];
-    return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
+    return entry.action === "create" && entry.kind === "visual" && entry.content?.capability ? [entry.content as { capability: string; numbers?: number[] }] : [];
+  });
+  const sectionCountNumbers = new Set(createdVisuals.flatMap((visual) => {
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY]?.number_input_policies ?? [];
+    return (visual.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
   }));
+  const numberLineNumbers = new Set([
+    ...createdVisuals.flatMap((visual) => isNumberLineCapability(visual.capability) ? visual.numbers ?? [] : []),
+    ...sectionCountNumbers,
+  ]);
   const activities: Array<{ order: number; activity: Record<string, unknown> }> = [];
   const collectActivities = (values: unknown[], kind: "number_target" | "scene3d_view", path: string): void => {
     values.forEach((activity, index) => {
@@ -1938,7 +1969,7 @@ function lowerModelSectionDraft(
       if (kind === "number_target" && lowered.reference !== undefined) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers, sectionCountNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -2395,6 +2426,19 @@ function sectionIndexFromError(error: unknown, sectionCount: number): number | u
   return Number.isInteger(offset) && offset >= 0 && offset < sectionCount ? offset + 1 : undefined;
 }
 
+// The spoken invitation to practice is the program's, once, at the end of the lesson. Practice opens only
+// after the lesson, and a task's target can still change while later sections arrive (a later animation
+// widens the slider a met target moves to), so it names no number (owner, 2026-11-14).
+const PRACTICE_INVITATION = "现在试试课后练习吧。";
+function inviteToPractice(drafts: LessonPlanSectionDraft[], language?: string): void {
+  if (!drafts.some((draft) => (draft.student_activities ?? []).some((activity) => activity.kind === "number_target" || activity.kind === "scene3d_view"))) return;
+  const last = drafts.at(-1)?.moments.at(-1);
+  if (!last) return;
+  const sentence = lessonText(language, PRACTICE_INVITATION);
+  const said = last.narration?.trim() ?? "";
+  last.narration = !said ? sentence : /^en(?:-|$)/i.test(language ?? "") ? `${said} ${sentence}` : `${said}${sentence}`;
+}
+
 function compilePrefix(
   outline: LessonPlanOutline,
   drafts: LessonPlanSectionDraft[],
@@ -2430,6 +2474,8 @@ function compilePrefix(
     close: { summary: lessonText(options?.language, "课程内容仍在继续生成。"), focus: [focus] },
   };
   const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
+  // Only the part that holds the outline's last section ends the lesson.
+  if (sectionCount === outline.sections.length) inviteToPractice(normalized.drafts, options?.language);
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
@@ -3152,6 +3198,7 @@ export async function generateLessonPlanWithModel(
   for (let attempt = 1; attempt <= outline.sections.length * maxAttempts; attempt += 1) {
     try {
       const normalized = normalizeExecutableNumberInteractions(outline, drafts);
+      inviteToPractice(normalized.drafts, options.compile?.language);
       const plan = assembleLessonPlan(normalized.outline, normalized.drafts, options.compile);
       compiled = compileAndValidateLessonPlan(plan, { ...options.compile, construction_rules: "explicit-v1" });
       compiledOutline = normalized.outline;

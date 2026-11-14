@@ -47,12 +47,14 @@ function quadraticTranslationCourse() {
     explanationTitle: "两个数值怎样改变曲线",
     explanationItems: ["h 增大时向右移动", "k 增大时向上移动", "开口和宽窄保持不变"],
     animationEnd: 2,
+    // Practice asks for a vertex the lesson does not already reach (it animates to (2,-1)):
+    // practice opens after the lesson, where a target already met would have nothing to do.
     activity: numberTarget({
       number: 1,
-      value: 2,
+      value: -3,
       tolerance: 0.1,
-      prompt: "先把 h 调到 2。",
-      success_message: "横向位置正确，顶点横坐标现在是 2。",
+      prompt: "先把 h 调到 -3。",
+      success_message: "横向位置正确，顶点横坐标现在是 -3。",
     }),
   });
   plan.numbers = [
@@ -72,10 +74,10 @@ function quadraticTranslationCourse() {
     plan.sections[2].student_activities[0],
     numberTarget({
       number: 2,
-      value: -1,
+      value: 4,
       tolerance: 0.1,
-      prompt: "再把 k 调到 -1，让顶点到达 (2,-1)。",
-      success_message: "完成，顶点现在位于 (2,-1)。",
+      prompt: "再把 k 调到 4，让顶点到达 (-3,4)。",
+      success_message: "完成，顶点现在位于 (-3,4)。",
     }),
   ];
   return plan;

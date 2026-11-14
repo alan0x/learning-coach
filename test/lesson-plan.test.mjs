@@ -836,7 +836,7 @@ test("quadratic translation uses h and k to move the entire compiled curve", () 
   );
   assert.deepEqual(
     compiled.lesson.tasks.map((task) => task.completion.value),
-    [2, -1],
+    [-3, 4],
   );
 });
 
@@ -1023,7 +1023,8 @@ test("the compiler expands a plot axis to keep a moving point visible", () => {
   plan.sections[0].moments[0].actions.find(
     (action) => action.action === "animate",
   ).end_value = 2;
-  plan.sections[0].student_activities[0].value = 2;
+  // A target the lesson does not already reach (practice opens after the lesson).
+  plan.sections[0].student_activities[0].value = 3;
   const plot = compileAndValidateLessonPlan(plan).lesson.steps[0].beats[0].actions.find(
     (action) => action.do === "write" && action.kind === "plot",
   ).content;

@@ -12581,6 +12581,7 @@ var EN = {
   "\u8FC7\u7A0B\u56FE": "Process diagram",
   "\u6570\u503C": "the value",
   "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002": "Set {{v0}} to {{v1}}{{v2}}.",
+  "\u73B0\u5728\u8BD5\u8BD5\u8BFE\u540E\u7EC3\u4E60\u5427\u3002": "Now try the practice task.",
   "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002": "Done: {{v0}} is now {{v1}}{{v2}}.",
   "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762": "Continue observing the same existing visual",
   "\u7EE7\u7EED\u89C2\u5BDF\u5F53\u524D\u753B\u9762": "Continue observing the current visual",
@@ -16955,7 +16956,7 @@ function compilePlainContent(kind, content, options, path) {
   }
   fail2("LESSON_PLAN_COMPILER", path, `unsupported plain board kind '${kind}'`);
 }
-function moveMetTarget(plan, activity, definition, path) {
+function moveMetTarget(plan, activity, definition, path, atEnd = definition.initial) {
   const step = definition.student_control?.step;
   const onSlider = (value2) => {
     let reachable = Math.min(definition.max, Math.max(definition.min, value2));
@@ -16964,8 +16965,12 @@ function moveMetTarget(plan, activity, definition, path) {
     }
     return Number(reachable.toPrecision(12));
   };
-  const alternative = [definition.min, definition.max].sort((a, b) => Math.abs(b - definition.initial) - Math.abs(a - definition.initial)).map(onSlider).find((value2) => Math.abs(value2 - definition.initial) > activity.tolerance * (1 + 1e-9));
-  if (alternative === void 0) fail2("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
+  const distinct = (value2) => [definition.initial, atEnd].every((met) => Math.abs(value2 - met) > activity.tolerance * (1 + 1e-9));
+  const alternative = [...[definition.min, definition.max].sort((a, b) => Math.abs(b - atEnd) - Math.abs(a - atEnd)), (definition.min + definition.max) / 2].map(onSlider).find(distinct);
+  if (alternative === void 0) {
+    if (Math.abs(activity.value - definition.initial) > activity.tolerance * (1 + 1e-9)) return;
+    fail2("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
+  }
   activity.value = alternative;
   const label = definition.label?.trim() || compileText(plan, "\u6570\u503C");
   const unit = definition.unit?.trim();
@@ -17002,7 +17007,8 @@ function resolveMetNumberTargets(plan) {
       if (!definition || !lastMoment) continue;
       const met = (value2) => Math.abs(activity.value - value2) <= activity.tolerance * (1 + 1e-9);
       if (!lineNumbers.has(number)) {
-        if (met(definition.initial)) moveMetTarget(plan, activity, definition, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`);
+        const end = valueAtEnd(number);
+        if (met(definition.initial) || met(end)) moveMetTarget(plan, activity, definition, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`, end);
         continue;
       }
       const metAtStart = met(definition.initial);
@@ -18189,7 +18195,7 @@ var SECTION_SYSTEM_PROMPT = [
   `- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002`,
   promptSlot("section.formulas"),
   `- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002`,
-  `- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u6ED1\u6746\u6240\u5728\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002`,
+  `- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u65C1\u767D\u4E0D\u9080\u8BF7\u5B66\u751F\u64CD\u4F5C\uFF08\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\u201C\u8BD5\u8BD5\u770B\u201D\uFF09\uFF1B\u5B66\u751F\u64CD\u4F5C\u5199\u8FDB\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u7531\u7A0B\u5E8F\u5728\u8BFE\u672B\u8865\u4E0A\uFF1B\u76EE\u6807\u503C\u4E0D\u540C\u4E8E\u672C\u8282\u52A8\u753B\u7ED3\u675F\u65F6\u8BE5\u6570\u503C\u6240\u5728\u7684\u503C\uFF0C\u4E5F\u4E0D\u540C\u4E8E\u5B83\u7684\u521D\u503C\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002`,
   `- \u601D\u8003\u9898\u8BFE\u4E2D\u53EA\u95EE\u4E0D\u7B54\uFF1B\u9898\u4E0E\u53C2\u8003\u7B54\u6848\u5199\u5165 reflection_activities\uFF0C\u8BFE\u540E\u4EE5\u6536\u8D77\u7684\u7B54\u6848\u5361\u7247\u51FA\u73B0\u3002`,
   `- \u672C\u8282\u8BB2\u4E86\u80FD\u7B97\u51FA\u786E\u5B9A\u6570\u503C\u7684\u5185\u5BB9\uFF08\u8BA1\u7B97\u3001\u6362\u7B97\u3001\u8BFB\u6570\u3001\u4EE3\u5165\u6C42\u503C\uFF09\u65F6\uFF0C\u5199 1 \u9053 answer_activities \u8BA9\u5B66\u751F\u8BFE\u540E\u586B\u6570\uFF1A\u7528\u8BFE\u4E2D\u6CA1\u7B97\u8FC7\u7684\u65B0\u6570\uFF0C\u8BFE\u4E2D\u4E0D\u8BF4\u7B54\u6848\u3002${ANSWER_ACTIVITY_RULE}`,
   promptSlot("section.bounds"),
@@ -18209,7 +18215,7 @@ var BOOTSTRAP_FIRST_SECTION_PROMPT = [
   `- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002`,
   promptSlot("section.formulas"),
   `- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002`,
-  `- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u6ED1\u6746\u6240\u5728\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002`,
+  `- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u65C1\u767D\u4E0D\u9080\u8BF7\u5B66\u751F\u64CD\u4F5C\uFF08\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\u201C\u8BD5\u8BD5\u770B\u201D\uFF09\uFF1B\u5B66\u751F\u64CD\u4F5C\u5199\u8FDB\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u7531\u7A0B\u5E8F\u5728\u8BFE\u672B\u8865\u4E0A\uFF1B\u76EE\u6807\u503C\u4E0D\u540C\u4E8E\u672C\u8282\u52A8\u753B\u7ED3\u675F\u65F6\u8BE5\u6570\u503C\u6240\u5728\u7684\u503C\uFF0C\u4E5F\u4E0D\u540C\u4E8E\u5B83\u7684\u521D\u503C\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002`,
   promptSlot("section.bounds"),
   promptSlot("section.linked_numbers", "\u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B"),
   promptSlot("section.constructions")
@@ -18993,6 +18999,26 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
     }
     for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
   }
+  const countNumbers = new Set(drafts.flatMap((section) => section.moments.flatMap((moment) => moment.actions)).flatMap((action) => {
+    if (action.action !== "create" && action.action !== "revise" || action.kind !== "visual") return [];
+    const visual = action.content;
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].number_input_policies;
+    return (visual.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]));
+  }));
+  for (const section of drafts) {
+    for (const activity of section.student_activities ?? []) {
+      if (activity.kind !== "number_target" || activity.expression || activity.number_controls.length !== 1) continue;
+      const number = activity.number_controls[0].number;
+      const definition = outline.numbers?.[number - 1];
+      if (!definition || !countNumbers.has(number) || !Number.isFinite(activity.value)) continue;
+      const nextMin = Math.min(definition.min, activity.value);
+      const nextMax = Math.max(definition.max, activity.value);
+      if (nextMin === definition.min && nextMax === definition.max) continue;
+      definition.min = nextMin;
+      definition.max = nextMax;
+      if (definition.student_control) definition.student_control.step = deriveSliderStep(nextMin, nextMax);
+    }
+  }
   outline.numbers?.forEach((number, index) => {
     if (!visuallyBound.has(index + 1)) delete number.student_control;
   });
@@ -19093,7 +19119,7 @@ function lowerIntegerDecimal(record3, prefix, path) {
   delete record3[`${prefix}_scale`];
   return Number(mantissa) / 10 ** Number(scale);
 }
-function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set()) {
+function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set(), countNumbers = /* @__PURE__ */ new Set()) {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
   lowered.hint_after_attempts = PROGRAM_HINT_AFTER_ATTEMPTS;
@@ -19127,7 +19153,8 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
       return reachable;
     };
     if (exactNumbers.has(numberIndex)) {
-      lowered.value = Math.round(Math.min(maximum, Math.max(minimum, requestedValue)) * 10 ** 12) / 10 ** 12;
+      const kept = countNumbers.has(numberIndex) ? requestedValue : Math.min(maximum, Math.max(minimum, requestedValue));
+      lowered.value = Math.round(kept * 10 ** 12) / 10 ** 12;
       lowered.tolerance = Math.max(
         typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
         range / 1e3,
@@ -19592,13 +19619,18 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
       );
     }
   }
-  const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
+  const createdVisuals = moments.flatMap((moment) => moment.actions).flatMap((action) => {
     const entry = action;
-    if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
-    if (isNumberLineCapability(entry.content.capability)) return entry.content.numbers ?? [];
-    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability]?.number_input_policies ?? [];
-    return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]));
+    return entry.action === "create" && entry.kind === "visual" && entry.content?.capability ? [entry.content] : [];
+  });
+  const sectionCountNumbers = new Set(createdVisuals.flatMap((visual) => {
+    const policies = LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability]?.number_input_policies ?? [];
+    return (visual.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]));
   }));
+  const numberLineNumbers = /* @__PURE__ */ new Set([
+    ...createdVisuals.flatMap((visual) => isNumberLineCapability(visual.capability) ? visual.numbers ?? [] : []),
+    ...sectionCountNumbers
+  ]);
   const activities = [];
   const collectActivities = (values, kind, path) => {
     values.forEach((activity, index) => {
@@ -19611,7 +19643,7 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
       if (kind === "number_target" && lowered.reference !== void 0) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers, sectionCountNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -19983,6 +20015,15 @@ function sectionIndexFromError(error, sectionCount) {
   const offset = Number(draftMatch?.[1] ?? planMatch?.[1]);
   return Number.isInteger(offset) && offset >= 0 && offset < sectionCount ? offset + 1 : void 0;
 }
+var PRACTICE_INVITATION = "\u73B0\u5728\u8BD5\u8BD5\u8BFE\u540E\u7EC3\u4E60\u5427\u3002";
+function inviteToPractice(drafts, language) {
+  if (!drafts.some((draft) => (draft.student_activities ?? []).some((activity) => activity.kind === "number_target" || activity.kind === "scene3d_view"))) return;
+  const last = drafts.at(-1)?.moments.at(-1);
+  if (!last) return;
+  const sentence = lessonText(language, PRACTICE_INVITATION);
+  const said = last.narration?.trim() ?? "";
+  last.narration = !said ? sentence : /^en(?:-|$)/i.test(language ?? "") ? `${said} ${sentence}` : `${said}${sentence}`;
+}
 function compilePrefix(outline, drafts, options) {
   const sectionCount = drafts.length;
   let focus;
@@ -20007,6 +20048,7 @@ function compilePrefix(outline, drafts, options) {
     close: { summary: lessonText(options?.language, "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002"), focus: [focus] }
   };
   const normalized = normalizeExecutableNumberInteractions(prefixOutline, drafts);
+  if (sectionCount === outline.sections.length) inviteToPractice(normalized.drafts, options?.language);
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
@@ -20614,6 +20656,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
   for (let attempt = 1; attempt <= outline.sections.length * maxAttempts; attempt += 1) {
     try {
       const normalized = normalizeExecutableNumberInteractions(outline, drafts);
+      inviteToPractice(normalized.drafts, options.compile?.language);
       const plan = assembleLessonPlan(normalized.outline, normalized.drafts, options.compile);
       compiled = compileAndValidateLessonPlan(plan, { ...options.compile, construction_rules: "explicit-v1" });
       compiledOutline = normalized.outline;

@@ -15,7 +15,7 @@ const EN: Readonly<Record<string, string>> = {
   "{{v0}} 等分圆的面积重排": "Rearranging a circle divided into {{v0}} sectors",
   "半径 r={{v0}}；每块均为真实扇形，重排面积不变。有限等分的边缘仍弯曲；等分越细，底趋近 πr，高趋近 r，面积为 πr²。": "Radius r={{v0}}. Each piece is a true sector, and rearranging preserves area. With finitely many sectors the edges remain curved. As the sectors become finer, the base approaches πr and the height approaches r; the area is πr².",
   "开始": "Start", "观察变化": "Observe the change", "得到结论": "Draw a conclusion", "下一步": "Next step", "过程图": "Process diagram", "数值": "the value",
-  "请把{{v0}}调到 {{v1}}{{v2}}。": "Set {{v0}} to {{v1}}{{v2}}.", "完成，{{v0}}已经调到 {{v1}}{{v2}}。": "Done: {{v0}} is now {{v1}}{{v2}}.",
+  "请把{{v0}}调到 {{v1}}{{v2}}。": "Set {{v0}} to {{v1}}{{v2}}.", "现在试试课后练习吧。": "Now try the practice task.", "完成，{{v0}}已经调到 {{v1}}{{v2}}。": "Done: {{v0}} is now {{v1}}{{v2}}.",
   "继续观察已有的同一画面": "Continue observing the same existing visual", "继续观察当前画面": "Continue observing the current visual",
   "拖动左下角的滑杆，观察数值和画面同步变化。": "Drag the slider at the bottom left and watch the value and visual change together.",
   "目前还不能完整生成这节课，因为其中包含尚未支持的画面或互动。": "This lesson cannot be generated in full yet because it includes visuals or interactions that are not supported.",

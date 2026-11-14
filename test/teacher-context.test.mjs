@@ -119,11 +119,16 @@ test("all three complete-lesson actions declare the host fields; the agent-facin
   }
 });
 
-test("a practice invitation names the practice's own target, not one already reached", async () => {
-  // The compiler swaps a target equal to the slider's resting value for a
-  // reachable one; the narration must not have promised the original value.
+test("the model writes no practice invitation; the program adds one at the lesson's end", async () => {
+  // A task's target can change after its section is spoken (the compiler moves a met target, and a later
+  // section can widen its slider), and practice opens after the lesson, so the invitation is the program's
+  // and names no number.
   const plain = await firstRequest({});
-  assert.match(plain.system_prompt, /邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值/u);
+  assert.match(plain.system_prompt, /旁白不邀请学生操作/u);
+  assert.match(plain.system_prompt, /邀请由程序在课末补上/u);
+  assert.doesNotMatch(plain.system_prompt, /邀请里说的目标值/u);
+  // The task side keeps its guard, in a form a section can follow: it knows its own animations, not later sections'.
+  assert.match(plain.system_prompt, /目标值不同于本节动画结束时该数值所在的值，也不同于它的初值/u);
 });
 
 test("practice wording follows what happened in the lesson, and a missing interaction is replaced rather than refused", async () => {
