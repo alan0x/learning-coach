@@ -135,3 +135,9 @@ test("an uppercase reference and a name glued to a digit are left as the parser 
   const bound = await generate(plotReply({ formula: "x^2", numbers: [[2, 1, 5, "max x value"]], moments: [{ say: "看。" }, { say: "改变。", animations: [[1, 3]] }] }));
   assert.equal(bound.lesson, undefined);
 });
+
+test("a name before a spaced digit is left as the parser reads it, never read as n12 (review)", async () => {
+  const numbers = Array.from({ length: 12 }, (_, index) => [1, 0, 5, index === 0 ? "a" : `数 ${index + 1}`]);
+  const spaced = await generate(plotReply({ formula: "a 2*x", numbers, visualNumbers: [1], moments: [{ say: "看。" }] }));
+  assert.ok(!(spaced.lesson && JSON.stringify(plotContent(spaced.lesson).curves).includes("number_12")), spaced.rejected.join(" | "));
+});
