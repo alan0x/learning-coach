@@ -16192,10 +16192,13 @@ function markParts(tokens, marks, labels, check, path) {
   };
   if (!polynomial2) return refuse(marks[0], "needs a line or a quadratic (marks are derived exactly)");
   const [c, b, a] = [0, 1, 2].map((power) => coefficient(polynomial2, power));
+  if (polynomialText([c, b, a]).length > 240) refuse(marks[0], "is too long an expression for this formula");
   crossCheck(tokens, [c, b, a], check, path);
   const linear = isZero(a);
   const parts = [];
+  const owners = /* @__PURE__ */ new Map();
   for (const mark of marks) {
+    const before = parts.length;
     if (mark === "intercepts") {
       parts.push({ kind: "point", as: "mark-y-intercept", label: labels("y \u622A\u8DDD"), x: "0", y: c.text });
       if (linear) {
@@ -16212,16 +16215,18 @@ function markParts(tokens, marks, labels, check, path) {
       if (mark === "vertex") parts.push({ kind: "point", as: "mark-vertex", label: labels("\u9876\u70B9"), x: axis, y: `${wrap(c)}-${wrap(b)}^2/(4*${wrap(a)})` });
       else parts.push({ kind: "guide", as: "mark-axis", label: labels("\u5BF9\u79F0\u8F74"), value: axis });
     }
+    for (const part of parts.slice(before)) owners.set(part, mark);
   }
   for (const part of parts) for (const text3 of [part.x, part.y, part.value]) {
-    if (text3 !== void 0 && text3.length > 240) refuse(marks[0], "is too long an expression for this formula");
+    if (text3 !== void 0 && text3.length > 240) refuse(owners.get(part), "is too long an expression for this formula");
   }
   return parts;
 }
+var polynomialText = ([c, b, a]) => `${wrap(a)}*x^2+${wrap(b)}*x+${wrap(c)}`;
 function crossCheck(tokens, [c, b, a], { variables, samples }, path) {
   const names = ["x", ...variables];
   const formula = compileMathExpression(mathExpressionToOll(tokens), names);
-  const polynomial2 = compileMathExpression(`${wrap(a)}*x^2+${wrap(b)}*x+${wrap(c)}`, names);
+  const polynomial2 = compileMathExpression(polynomialText([c, b, a]), names);
   for (const values of samples) for (const x of [-2.5, -1, 0, 0.5, 3]) {
     const expected = formula({ ...values, x }), actual = polynomial2({ ...values, x });
     if (!Number.isFinite(expected) && !Number.isFinite(actual)) continue;
@@ -16621,7 +16626,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       }
     });
     const pairs = markList.length ? [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]] : [[0, 1]];
-    const reached = markList.length ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))] : [initialState, ...demonstrations];
+    const reached = markList.length ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))] : [initialState];
     const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2));
     if (xs) {
       references = referencePoints(initialState, xs);

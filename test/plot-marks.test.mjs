@@ -229,3 +229,44 @@ test("the card's own form -(x-n1)^2+n2 with intercepts, vertex and range", async
   const content = plotContent(lesson);
   assert.ok([...content.bindings].every((binding) => binding.expression.length <= 240));
 });
+
+test("coefficients too long for one binding refuse the marks in the section, naming the mark (review)", async () => {
+  const numbers = [[1, 0, 5, "p"], [2, 0, 5, "q"], [3, 0, 5, "r"], [1, 0, 5, "s"]];
+  const formula = "(x+n1*n2+n3*n4+n1*n3)*(x-(n1*n2+n3*n4+n1*n3))+n1";
+  const plain = await generate(plotReply({ formula, marks: undefined, numbers, moments: [{ say: "看图像。" }] }));
+  assert.ok(plain.lesson, plain.rejected.join(" | "));
+  for (const mark of ["vertex", "intercepts", "symmetry_axis"]) {
+    const { lesson, rejected, requests } = await generate(plotReply({ formula, marks: [mark], numbers, moments: [{ say: "看图像。" }] }));
+    assert.equal(lesson, undefined);
+    assert.ok(rejected.some((miss) => new RegExp(`LESSON_PLAN_CAPABILITY_PARAMETER .*marks.*the ${mark} mark is too long`, "u").test(miss)), rejected.join(" | "));
+    assert.ok(!rejected.some((miss) => /Expression is too long/u.test(miss)), rejected.join(" | "));
+    assert.match(requests[1]?.label ?? "", /section/u);
+  }
+});
+
+// Review: without marks, a slope lesson's automatic A and B are found as on main, at the start only, so a
+// lesson without marks compiles (or is refused) exactly as before the option.
+test("without marks, the automatic A and B are placed as before the option", async () => {
+  const reply = JSON.parse(plotReply({ formula: "sqrt(x+n1)", marks: undefined, numbers: [[1, -1, 1, "h"]], moments: [{ say: "看斜率。" }, { say: "移动曲线。", animations: [[1, -1]] }] }));
+  reply.course.outline.title = "曲线上两点的斜率";
+  const { lesson, rejected } = await generate(JSON.stringify(reply));
+  assert.equal(lesson, undefined);
+  assert.ok(rejected.some((miss) => /LESSON_PLAN_OLL_SEMANTIC .*not finite/u.test(miss)), rejected.join(" | "));
+});
+
+// Review: every piece refusal has a test, each refused in the section with its own reason.
+test("one piece or five, an end not above its start, and an unknown ends code are refused in the section", async () => {
+  const refused = async (pieces, reason) => {
+    const { lesson, rejected, requests } = await generate(plotReply({ pieces, moments: [{ say: "分段函数。" }] }));
+    assert.equal(lesson, undefined);
+    assert.ok(rejected.some((miss) => reason.test(miss)), rejected.join(" | "));
+    assert.match(requests[1]?.label ?? "", /section/u);
+  };
+  await refused([["x", null, null, "()"]], /two to four pieces/u);
+  await refused([["x", null, 1, "()"], ["1", 1, 2, "[)"], ["2", 2, 3, "[)"], ["3", 3, 4, "[)"], ["4", 4, null, "[)"]], /two to four pieces/u);
+  await refused([["x", 3, 1, "[]"], ["1", 3, null, "()"]], /x_from is below its x_to/u);
+  await refused([["x", 1, 1, "[]"], ["1", 1, null, "()"]], /x_from is below its x_to/u);
+  await refused([["x", null, 1, "(>"], ["1", 1, null, "[)"]], /ends is one of/u);
+  const four = await generate(plotReply({ pieces: [["x", null, 1, "()"], ["1", 1, 2, "[)"], ["2", 2, 3, "[)"], ["3", 3, null, "[)"]], moments: [{ say: "四段。" }] }));
+  assert.ok(four.lesson, four.rejected.join(" | "));
+});

@@ -221,11 +221,12 @@ function compileFunctionPlot(
       }
     });
     const pairs: ReadonlyArray<readonly [number, number]> = markList.length ? [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]] : [[0, 1]];
-    // At the start, at every demonstrated state and, with marks, at each curve slider's ends, where a learner
-    // can drag the curve away from a point whose y is not hidden (review).
+    // With marks: at the start, at every demonstrated state and at each curve slider's ends, where a learner
+    // can drag the curve away from a point whose y is not hidden (review). Without marks the points are found
+    // as before the option, at the start only, so a lesson without marks compiles exactly as it did (review).
     const reached = markList.length
       ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))]
-      : [initialState, ...demonstrations];
+      : [initialState];
     const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2));
     if (xs) {
       references = referencePoints(initialState, xs);
