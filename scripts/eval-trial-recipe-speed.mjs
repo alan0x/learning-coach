@@ -667,7 +667,7 @@ async function main() {
     // The run stops at the first playable part, so the judge sees only the first section; when the
     // outline has more, a later section may show what the first lacks, and the miss is read by hand.
     if (row.quality?.hard.length && row.sections > 1) row.quality.review = "later sections not judged: read by hand";
-    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).some((name) => name.startsWith("number_line") || name.startsWith("plot_"))) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew a number line: read by hand" };
+    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).some((name) => name.startsWith("number_line") || name.startsWith("plot_"))) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew the trial's visual: read by hand" };
     rows.push(row);
     console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null, ...(row.quality ? { hard: row.quality.hard } : {}) }));
     await persist();

@@ -189,7 +189,7 @@ test("the harness runs pairs and quality cases, keeps raw replies, judges each c
   // Near misses run on both arms; a candidate one that draws a number line is checked and read by hand.
   const nearMisses = full.rows.filter((row) => row.kind === "near_miss");
   assert.equal(nearMisses.filter((row) => row.arm === "baseline").length, 4);
-  assert.ok(nearMisses.filter((row) => row.arm === "candidate").every((row) => row.quality?.review === "near miss drew a number line: read by hand"));
+  assert.ok(nearMisses.filter((row) => row.arm === "candidate").every((row) => row.quality?.review === "near miss drew the trial's visual: read by hand"));
   // A probe: only the named cases, candidate arm only, no speed pairs.
   await new Promise((done, fail) => execFile(process.execPath, [script, "--build", dir, "--recipes", "number_line", "--octos-profile", join(dir, "profile.json"), "--pairs", "0", "--cases", "NL-03,NM-01", "--quality-repeats", "2", "--max-calls", "20", "--out", join(dir, "probe.json")],
     { timeout: 60000 }, (error) => (error ? fail(error) : done())));
