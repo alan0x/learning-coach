@@ -132,3 +132,14 @@ test("the slope triangle finds two points where the curve exists, and is refused
   const nowhere = await generate(plotReply({ formula: "sqrt(x-50)", marks: ["slope_triangle"], moments: [{ say: "看两点。" }] }));
   assert.ok(nowhere.rejected.some((miss) => /slope_triangle mark found no two points/u.test(miss)), nowhere.rejected.join(" | "));
 });
+
+// Review: a curve slider can take the curve away from A or B (√(x − h) with h up to 5): the pair must exist
+// at the slider's ends too, or the lesson fails where the learner drags.
+test("the slope triangle's points exist at every slider end, not only where the lesson stops", async () => {
+  const { lesson, rejected } = await generate(plotReply({
+    formula: "sqrt(x-n1)", marks: ["slope_triangle"], numbers: [[0, 0, 5, "h"]], moments: [{ say: "看两点之间的斜率。" }],
+  }));
+  assert.ok(lesson, rejected.join(" | "));
+  assert.deepEqual(plotContent(lesson).points.map((point) => point.x), [6, 8]);
+  assert.deepEqual(judgePlot({ id: "slider", expect: {} }, lesson).hard, []);
+});
