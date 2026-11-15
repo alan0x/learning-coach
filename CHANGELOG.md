@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **OLL pinned to main 8e85fe1** (OLL #60–#62: decisions 0017 and 0018 and their render work). Player 0.11.0 with `plot:curve-intervals`, `plot:axis-intervals`, `plot:guide-hide-undefined` and `plot:secant-first-two`, and math plugin 0.3.0 with `plugin:math/number-line-jump-lanes@1`. No recipe emits them yet. Lessons are recorded as built with math plugin 0.3.0. A lesson's declared requirements come from the features it uses, so today's lessons need the same player and plugin as before. Authoring schema unchanged (same digest); all tests pass unchanged except the recorded plugin version.
+
 - **A count a lesson states is never moved** (M2/M3 baseline, Coach #77). The unit-square array draws at most 8 squares a row, and the program used to clamp larger counts to 8 under the model's own words: 24 squares under "12 cookies", 8 under "ten ones". Counts (the unit-square array's rows and columns, a polygon's sides) are now checked after fitting. Slider ranges are still narrowed to what a recipe draws; positions in a recipe's own frame (a cube's section) are still fitted. A practice target on a count is checked like an animation (below); other practice targets keep their earlier rule (moved to the edge, prompt rewritten).
   - **A starting count beyond its recipe** is an outline-owned fault: the outline is asked again without that recipe (the number line's route, now naming the faulting recipe).
   - **An animation beyond its recipe** is the section's to fix.
