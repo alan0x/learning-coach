@@ -190,3 +190,14 @@ test("a piecewise function's domain joins its intervals, and its range joins the
   const lesson = await passes("PJ-07", plotReply({ pieces: [["x+2", null, 1, "()"], ["4", 1, null, "[)"]], moments: [{ say: "看定义域和值域。" }] }).replace('"pieces":', '"marks":["domain","range"],"pieces":'));
   assert.deepEqual(barsOf(lesson), ["x:(-∞,∞)", "y:(-∞,3)", "y:[4,4]"]);
 });
+
+// Review: a curve slider can take the curve away from A or B (√(x − h) with h up to 5): the pair must exist
+// at the slider's ends too, or the lesson fails where the learner drags.
+test("the slope triangle's points exist at every slider end, not only where the lesson stops", async () => {
+  const { lesson, rejected } = await generate(plotReply({
+    formula: "sqrt(x-n1)", marks: ["slope_triangle"], numbers: [[0, 0, 5, "h"]], moments: [{ say: "看两点之间的斜率。" }],
+  }));
+  assert.ok(lesson, rejected.join(" | "));
+  assert.deepEqual(plotContent(lesson).points.map((point) => point.x), [6, 8]);
+  assert.deepEqual(judgePlot({ id: "slider", expect: {} }, lesson).hard, []);
+});
