@@ -7,7 +7,7 @@ import { implicitSurfaceDomain } from "../scene3d-surfaces.js";
 import type { PluginHooks, RecipeHooks } from "./hooks.js";
 import { fitComparedNumbers, fitNumberLineNumbers, fitRoundingNumbers, fitSolutionNumbers, fitStepsNumbers } from "./number-line-fit.js";
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./math-teaching-contracts.js";
-import { formulaError, parseModelFormula } from "./math-formulas.js";
+import { formulaError, formulaFunctions, parseModelFormula } from "./math-formulas.js";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
 /**
@@ -122,7 +122,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     },
   },
   function_plot: {
-    lower_model_parameters(parameters, { numberCount }) {
+    lower_model_parameters(parameters, { numberCount, numberLabels = [], visualNumbers = [] }) {
       if (parameters.pieces !== undefined) return lowerPieces(parameters, numberCount);
       const rawFormulas = parameters.formulas !== undefined
         ? parameters.formulas
@@ -149,10 +149,11 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       delete parameters.expressions;
       delete parameters.expression_tokens;
       const parsed = rawFormulas.map((formula, index) => parseModelFormula(
-        formula,
+        namesToNumbers(formula, numberLabels, visualNumbers),
         numberCount,
         `$lessonPlanSection.visual.parameters.formulas[${index}]`,
       ));
+      movingPointFromUnusedX(parameters, parsed, numberLabels, visualNumbers);
       if (parsed.length === 1) {
         parameters.expression_tokens = parsed[0];
         return;
@@ -253,6 +254,41 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     free_number: (content) => content.parameters?.radius_expression !== undefined,
   },
 };
+
+/**
+ * A formula that names a lesson number by its symbol reads that number: "a*(x-2)^2+1" where the visual's
+ * one number is labelled "a", "k*x+1" for "斜率 k" (the trial: 3 of 48 lessons, and 5 of the 139 recorded
+ * ones, were refused for it and asked again). A name is replaced only when it is no function or constant,
+ * and exactly one of the visual's numbers shows it as its symbol (the label's trailing letter, as plot text
+ * shows it); anything else is left to the parser, which refuses it as before.
+ */
+function namesToNumbers(formula: unknown, labels: readonly string[], visualNumbers: readonly number[]): unknown {
+  if (typeof formula !== "string") return formula;
+  const symbol = (label: string) => /([A-Za-z\u03b1-\u03c9])$/u.exec(label.trim())?.[1];
+  return formula.replace(/[A-Za-z_][A-Za-z0-9_]*/gu, (name, offset: number, whole: string) => {
+    if (name === "x" || name === "pi" || name === "e" || /^n\d+$/u.test(name) || formulaFunctions.has(name)) return name;
+    // Part of a number ("2e3") is not a name.
+    if (/[0-9.]/u.test(whole[offset - 1] ?? "")) return name;
+    const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
+    return matches.length === 1 ? `n${matches[0]}` : name;
+  });
+}
+
+/**
+ * A visual number that a single fixed formula never reads, labelled as an x position ("x", "探针 x 坐标",
+ * "x-coordinate"), is the point moving along the curve, which the model left out of `sample_x_numbers`
+ * (the trial: 2 lessons refused for it). Only on one fixed curve, when the model gave no sample numbers and
+ * every one of the visual's numbers (one or two) is labelled that way. Where a formula reads a lesson
+ * number, an unread one may be a parameter the model forgot to write in (the vertex's 横坐标 h), and
+ * several fixed curves may list a number they do not move: both are left to the existing checks.
+ */
+function movingPointFromUnusedX(parameters: Record<string, unknown>, parsed: LessonPlanMathToken[][], labels: readonly string[], visualNumbers: readonly number[]): void {
+  if (Array.isArray(parameters.sample_x_numbers) && parameters.sample_x_numbers.length) return;
+  if (parsed.length !== 1 || parsed.flat().some((token) => token.kind === "number")) return;
+  const unread = [...new Set(visualNumbers)];
+  const namesX = (label: string) => /(^|[^A-Za-z])x($|[^A-Za-z])/u.test(label);
+  if (unread.length >= 1 && unread.length <= 2 && unread.every((number) => namesX(labels[number - 1] ?? ""))) parameters.sample_x_numbers = unread;
+}
 
 /**
  * A piecewise function (OLL decision 0018 §2): each piece is a formula on an interval with its ends open or
