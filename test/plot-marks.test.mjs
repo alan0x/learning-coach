@@ -97,13 +97,28 @@ test("PJ-06: a line through k = 0: the x-intercept hides while it does not exist
   }));
 });
 
-test("a mark the formula cannot give is refused in the section, and the section is asked again", async () => {
-  const { lesson, rejected, requests } = await generate(plotReply({ formula: "x^3-x", marks: ["vertex"], moments: [{ say: "看顶点。" }] }));
-  assert.equal(lesson, undefined);
-  assert.ok(rejected.some((miss) => /LESSON_PLAN_CAPABILITY_PARAMETER .*marks.*vertex mark/u.test(miss)), rejected.join(" | "));
-  assert.match(requests[1]?.label ?? "", /section/u);
-  const line = await generate(plotReply({ formula: "2x+1", marks: ["symmetry_axis"], moments: [{ say: "看对称轴。" }] }));
-  assert.ok(line.rejected.some((miss) => /symmetry_axis mark needs a quadratic/u.test(miss)), line.rejected.join(" | "));
+// Decision 0018 as amended after the trial: a mark the program cannot draw for this plot is left out and
+// the rest is drawn, in the same call (refusing it cost a whole section again, about 9 s, and the model
+// asked for the same or another undrawable mark). The lesson must still pass the plot judge's checks.
+const leftOut = async (reply) => {
+  const { lesson, rejected, requests } = await generate(reply);
+  assert.ok(lesson, rejected.join(" | "));
+  assert.deepEqual(rejected, []);
+  assert.equal(requests.length, 1);
+  assert.deepEqual(judgePlot({ id: "left-out", expect: {} }, lesson).hard, []);
+  const content = plotContent(lesson);
+  return { lesson, content, markNames: [...(content.points ?? []), ...(content.guides ?? [])].map((part) => part.as).filter((as) => as.startsWith("mark-")), bars: (content.intervals ?? []).map((bar) => bar.axis) };
+};
+
+test("a mark the formula cannot give is left out, the others are drawn, with no second call", async () => {
+  // Marks are derived for lines and quadratics only, so a cubic's are all left out.
+  const cubic = await leftOut(plotReply({ formula: "x^3-x", marks: ["vertex", "intercepts"], moments: [{ say: "看图像。" }] }));
+  assert.deepEqual(cubic.markNames, []);
+  const line = await leftOut(plotReply({ formula: "2x+1", marks: ["symmetry_axis", "intercepts"], moments: [{ say: "看图像。" }] }));
+  assert.deepEqual(line.markNames, ["mark-y-intercept", "mark-x-intercept"]);
+  // Empty lists are none (the model writes them beside a plain formula).
+  const empty = await leftOut(plotReply({ formula: "2x+1", marks: [], moments: [{ say: "看图像。" }] }).replace('"marks":[]', '"marks":[],"pieces":[]'));
+  assert.deepEqual([empty.markNames, empty.bars], [[], []]);
 });
 
 test("marks need OLL 0.11's hidden guide and secant features only when drawn; English lessons get English labels", async () => {
@@ -128,12 +143,13 @@ test("the slope triangle beside the intercepts: A is not on the y-intercept, whi
   assert.deepEqual(plotContent(lesson).points.map((point) => [point.label, point.x, point.y]), [["A", 1, 2], ["B", 3, -2], ["y 截距", 0, 4], ["x 截距", 2, 0]]);
 });
 
-test("the slope triangle finds two points where the curve exists, and is refused where it cannot", async () => {
+test("the slope triangle finds two points where the curve exists, and is left out where it cannot", async () => {
   const root = await generate(plotReply({ formula: "sqrt(x-5)", marks: ["slope_triangle"], moments: [{ say: "看两点。" }] }));
   assert.ok(root.lesson, root.rejected.join(" | "));
   assert.deepEqual(plotContent(root.lesson).points.map((point) => point.x), [6, 8]);
-  const nowhere = await generate(plotReply({ formula: "sqrt(x-50)", marks: ["slope_triangle"], moments: [{ say: "看两点。" }] }));
-  assert.ok(nowhere.rejected.some((miss) => /slope_triangle mark found no two points/u.test(miss)), nowhere.rejected.join(" | "));
+  const nowhere = await leftOut(plotReply({ formula: "sqrt(x-50)", marks: ["slope_triangle"], moments: [{ say: "看两点。" }] }));
+  assert.equal(nowhere.content.measurement, undefined);
+  assert.deepEqual(nowhere.content.points ?? [], []);
 });
 
 // Pieces (0018 §2, third step): one formula per interval, ends open or closed as written.
@@ -178,11 +194,10 @@ test("PJ-12: a quadratic's range, and the right side shown as a slider turns a f
   assert.deepEqual(plotContent(flipping).bindings.filter((binding) => /^range-/u.test(binding.target)).map((binding) => binding.hide_when_undefined), [true, true]);
 });
 
-test("domain and range are refused where the program has no exact formula, or where a range collapses at a slider stop", async () => {
-  for (const [formula, numbers] of [["x^3-3x", []], ["sin(x)", []], ["n1x+1", [[1, -2, 2, "k"]]]]) {
-    const { lesson, rejected } = await generate(plotReply({ formula, marks: ["range"], numbers, moments: [{ say: "看值域。" }] }));
-    assert.equal(lesson, undefined, formula);
-    assert.ok(rejected.some((miss) => /the range mark/u.test(miss)), `${formula}: ${rejected.join(" | ")}`);
+test("a range the program has no exact formula for, or one that collapses at a slider stop, is left out; the domain is still drawn", async () => {
+  for (const [formula, numbers] of [["tan(x)", []], ["n1x+1", [[1, -2, 2, "k"]]]]) {
+    const { bars } = await leftOut(plotReply({ formula, marks: ["domain", "range"], numbers, moments: [{ say: "看定义域和值域。" }] }));
+    assert.deepEqual(bars, formula === "tan(x)" ? [] : ["x"], formula);
   }
 });
 
@@ -203,19 +218,17 @@ test("the slope triangle's points exist at every slider end, not only where the 
 });
 
 // Review of the domain and range step.
-test("a range is refused where x's coefficient can reach 0 and the curve turns constant", async () => {
+test("a range is left out where x's coefficient can reach 0 and the curve turns constant", async () => {
   for (const formula of ["2^(n1x)-3", "sqrt(n1x+4)", "1/(n1x+1)"]) {
-    const { lesson, rejected } = await generate(plotReply({ formula, marks: ["range"], numbers: [[1, -1, 2, "p"]], moments: [{ say: "看值域。" }] }));
-    assert.equal(lesson, undefined, formula);
-    assert.ok(rejected.some((miss) => /the range mark .*coefficient/u.test(miss)), `${formula}: ${rejected.join(" | ")}`);
+    const { bars } = await leftOut(plotReply({ formula, marks: ["range"], numbers: [[1, -1, 2, "p"]], moments: [{ say: "看值域。" }] }));
+    assert.deepEqual(bars, [], formula);
   }
 });
 
-test("a piecewise domain is drawn only when every piece is defined on its whole interval", async () => {
+test("a piecewise domain is drawn only when every piece is defined on its whole interval, and left out otherwise", async () => {
   const reply = plotReply({ pieces: [["1/x", -1, 1, "[]"], ["2", 1, null, "()"]], moments: [{ say: "看定义域。" }] }).replace('"pieces":', '"marks":["domain"],"pieces":');
-  const { lesson, rejected } = await generate(reply);
-  assert.equal(lesson, undefined);
-  assert.ok(rejected.some((miss) => /the domain mark of a piecewise function/u.test(miss)), rejected.join(" | "));
+  const { bars } = await leftOut(reply);
+  assert.deepEqual(bars, []);
 });
 
 test("the card's own form -(x-n1)^2+n2 with intercepts, vertex and range", async () => {
@@ -230,17 +243,12 @@ test("the card's own form -(x-n1)^2+n2 with intercepts, vertex and range", async
   assert.ok([...content.bindings].every((binding) => binding.expression.length <= 240));
 });
 
-test("coefficients too long for one binding refuse the marks in the section, naming the mark (review)", async () => {
+test("coefficients too long for one binding leave the marks out, never OLL's own length error (review)", async () => {
   const numbers = [[1, 0, 5, "p"], [2, 0, 5, "q"], [3, 0, 5, "r"], [1, 0, 5, "s"]];
   const formula = "(x+n1*n2+n3*n4+n1*n3)*(x-(n1*n2+n3*n4+n1*n3))+n1";
-  const plain = await generate(plotReply({ formula, marks: undefined, numbers, moments: [{ say: "看图像。" }] }));
-  assert.ok(plain.lesson, plain.rejected.join(" | "));
   for (const mark of ["vertex", "intercepts", "symmetry_axis"]) {
-    const { lesson, rejected, requests } = await generate(plotReply({ formula, marks: [mark], numbers, moments: [{ say: "看图像。" }] }));
-    assert.equal(lesson, undefined);
-    assert.ok(rejected.some((miss) => new RegExp(`LESSON_PLAN_CAPABILITY_PARAMETER .*marks.*the ${mark} mark is too long`, "u").test(miss)), rejected.join(" | "));
-    assert.ok(!rejected.some((miss) => /Expression is too long/u.test(miss)), rejected.join(" | "));
-    assert.match(requests[1]?.label ?? "", /section/u);
+    const { markNames } = await leftOut(plotReply({ formula, marks: [mark], numbers, moments: [{ say: "看图像。" }] }));
+    assert.deepEqual(markNames, [], mark);
   }
 });
 
@@ -301,26 +309,56 @@ test("a range bar opens to the side its sign proves, and to either side, guarded
   assert.equal(proved.content.intervals.filter((interval) => interval.axis === "y").length, 1);
 });
 
-test("a line's range, or a log's, is refused where its coefficient can reach 0 anywhere on the sliders (review)", async () => {
+test("a line's range, or a log's, is left out where its coefficient can reach 0 anywhere on the sliders (review)", async () => {
   for (const [formula, numbers] of [["(n1-n2)x+1", [[4, 2, 5, "p"], [1, 0, 3, "q"]]], ["(n1^2-1)x", [[2, -3, 3, "a"]]]]) {
-    const { lesson, rejected } = await rangeContent(formula, numbers);
-    assert.equal(lesson, undefined, formula);
-    assert.ok(rejected.some((miss) => /the range mark collapses to one value/u.test(miss)), `${formula}: ${rejected.join(" | ")}`);
+    const { lesson, rejected, content } = await rangeContent(formula, numbers);
+    assert.ok(lesson, rejected.join(" | "));
+    assert.deepEqual(content.intervals ?? [], [], formula);
   }
   const steep = await rangeContent("(n1^2+1)x", [[2, -3, 3, "a"]]);
-  assert.ok(steep.lesson, steep.rejected.join(" | "));
+  assert.equal(steep.content.intervals.length, 1);
 });
 
-test("an exponential's domain needs a base above 0 wherever the numbers go, also in a piece (review)", async () => {
-  const sliding = await rangeContent("n1^x", [[2, -1, 3, "b"]], ["domain"]);
-  assert.equal(sliding.lesson, undefined);
-  assert.ok(sliding.rejected.some((miss) => /the domain mark needs a base above 0/u.test(miss)), sliding.rejected.join(" | "));
-  const negative = await rangeContent("(-2)^x", [], ["domain"]);
-  assert.ok(negative.rejected.some((miss) => /the domain mark needs a base above 0/u.test(miss)), negative.rejected.join(" | "));
+test("an exponential's domain needs a base above 0 wherever the numbers go, also in a piece; otherwise it is left out (review)", async () => {
+  for (const [formula, numbers] of [["n1^x", [[2, -1, 3, "b"]]], ["(-2)^x", []]]) {
+    const { lesson, rejected, content } = await rangeContent(formula, numbers, ["domain"]);
+    assert.ok(lesson, rejected.join(" | "));
+    assert.deepEqual(content.intervals ?? [], [], formula);
+  }
   const positive = await rangeContent("n1^x", [[2, 0.5, 3, "b"]], ["domain"]);
-  assert.ok(positive.lesson, positive.rejected.join(" | "));
+  assert.equal(positive.content.intervals.length, 1);
   const piece = await generate(withSliders(plotReply({ pieces: [["(-2)^x", null, 0, "()"], ["1", 0, null, "[)"]], moments: [{ say: "两段。" }] }), ["domain"]));
-  assert.ok(piece.rejected.some((miss) => /domain mark of a piecewise function/u.test(miss)), piece.rejected.join(" | "));
+  assert.deepEqual(plotContent(piece.lesson).intervals ?? [], []);
   const fine = await generate(withSliders(plotReply({ pieces: [["2^x", null, 0, "()"], ["1", 0, null, "[)"]], moments: [{ say: "两段。" }] }), ["domain"]));
-  assert.ok(fine.lesson, fine.rejected.join(" | "));
+  assert.equal(plotContent(fine.lesson).intervals.length, 1);
+});
+
+// Run B (#93 record): the model gave one moving point at x = 1 and asked for the slope triangle, narrating the
+// rise and run to x = 3. The triangle now runs from that point (A) to B two units right, moving with it.
+test("a slope triangle on one model point runs to B two units right, moving with it, and is left out where B leaves the curve", async () => {
+  const onePoint = (formula, number) => {
+    const reply = JSON.parse(plotReply({ formula, marks: ["slope_triangle"], numbers: [number], moments: [{ say: "看 A 到 B 的上升和前进。" }] }));
+    reply.course.outline.numbers[0].student_control = { kind: "slider" };
+    reply.course.first_section.moments[0].visual_creates[0].content.parameters.sample_x_numbers = [1];
+    return JSON.stringify(reply);
+  };
+  const { lesson, rejected, requests } = await generate(onePoint("3x-2", [1, -3, 3, "x-coordinate"]));
+  assert.ok(lesson, rejected.join(" | "));
+  assert.equal(requests.length, 1);
+  const content = plotContent(lesson);
+  assert.equal(content.measurement, "secant");
+  assert.deepEqual(content.points.map((point) => [point.label, point.x, point.y]), [["A", 1, 1], ["B", 3, 7]]);
+  assert.ok(content.bindings.some((binding) => binding.target === "second-point.x" && binding.expression === "(number_01)+2"));
+  assert.deepEqual(judgePlot(cases["PJ-01"], lesson).hard, []);
+  // Review: stops must not overshoot the max by a rounding error (−5 + 7·1 gave 2.000000000000001, where
+  // B = 4.000000000000001 is off √(4 − x)); A from −5 to 2 keeps B on the curve.
+  const edge = await generate(onePoint("sqrt(4-x)", [0, -5, 2, "x-coordinate"]));
+  assert.equal(plotContent(edge.lesson).measurement, "secant");
+  // Review: a curve too long for B's binding (OLL's limit is 256 characters) leaves the triangle out, no refusal.
+  const long = await leftOut(onePoint(`${"x^2+".repeat(10)}x`, [1, -3, 3, "x-coordinate"]));
+  assert.equal(long.content.measurement, undefined);
+  // √(4 − x) with A up to 3: B at 5 is off the curve, so the triangle is left out and A stays a plain point.
+  const off = await leftOut(onePoint("sqrt(4-x)", [1, 0, 3, "x-coordinate"]));
+  assert.equal(off.content.measurement, undefined);
+  assert.deepEqual(off.content.points.map((point) => point.label), ["P(x, y)"]);
 });

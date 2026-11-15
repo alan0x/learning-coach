@@ -123,6 +123,10 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
   },
   function_plot: {
     lower_model_parameters(parameters, { numberCount }) {
+      // An empty list is none: the model writes `pieces: []` beside a plain formula (6 of 48 trial lessons
+      // were refused for it, one call each), and `marks: []` the same way.
+      if (Array.isArray(parameters.pieces) && parameters.pieces.length === 0) delete parameters.pieces;
+      if (Array.isArray(parameters.marks) && parameters.marks.length === 0) delete parameters.marks;
       if (parameters.pieces !== undefined) return lowerPieces(parameters, numberCount);
       const rawFormulas = parameters.formulas !== undefined
         ? parameters.formulas
