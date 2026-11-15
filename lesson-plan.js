@@ -12011,7 +12011,7 @@ function buildFunctionPlot(input) {
 var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
 
 // src/plugins/plot-mark-names.ts
-var PLOT_MARKS = ["intercepts", "vertex", "symmetry_axis"];
+var PLOT_MARKS = ["intercepts", "vertex", "symmetry_axis", "slope_triangle"];
 
 // src/plugins/trials.ts
 var processEnvironment = globalThis.process?.env;
@@ -12296,7 +12296,7 @@ var MATH_PLUGIN = {
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
-    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002" + (PLOT_EXTENSIONS ? "marks \u9009\u8981\u753B\u7684\u6807\u8BB0\uFF08\u53EA\u7528\u4E8E\u4E00\u6B21\u6216\u4E8C\u6B21\u51FD\u6570\uFF09\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u5E76\u968F\u6ED1\u5757\u79FB\u52A8\u3002" : ""),
+    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002" + (PLOT_EXTENSIONS ? "marks \u9009\u8981\u753B\u7684\u6807\u8BB0\uFF08\u53EA\u7528\u4E8E\u4E00\u6B21\u6216\u4E8C\u6B21\u51FD\u6570\uFF09\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF1Bslope_triangle \u4E24\u70B9\u7684 \u0394x\u3001\u0394y\uFF08\u4EFB\u610F\u5355\u5F0F\uFF09\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u5E76\u968F\u6ED1\u5757\u79FB\u52A8\u3002" : ""),
     "section.bounds": "\u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002",
     "section.linked_numbers": "\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002",
     "section.constructions": "geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002"
@@ -16314,10 +16314,19 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ));
     }
   }
+  const markList = input.marks === void 0 ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
+  for (const mark of markList) {
+    if (!PLOT_MARKS.includes(mark)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
+  }
+  if (markList.length && expressions.length !== 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks need one formula; leave marks out of a comparison of several curves");
+  const slopeTriangle = markList.includes("slope_triangle");
+  if (slopeTriangle && sampleNumbers.length === 1) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark measures two points: give sample_x_numbers two numbers (A and B), or none and the program places them");
+  }
   let references;
-  if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
+  if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
-    const referencePoints = (values) => [0, 1].flatMap((x, index) => {
+    const referencePoints = (values, xs2) => xs2.flatMap((x, index) => {
       try {
         const y = evaluateCurve({ ...values, x });
         return Number.isFinite(y) ? [{ x, y, label: index ? "B" : "A" }] : [];
@@ -16325,23 +16334,22 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
         return [];
       }
     });
-    const initialReferences = referencePoints(initialState);
-    if (initialReferences.length === 2) {
-      references = initialReferences;
-      teachingPoints.push(...references, ...demonstrations.flatMap(referencePoints));
+    const pairs = markList.length ? [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]] : [[0, 1]];
+    const xs = pairs.find((pair) => [initialState, ...demonstrations].every((values) => referencePoints(values, pair).length === 2));
+    if (xs) {
+      references = referencePoints(initialState, xs);
+      teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));
+    } else if (slopeTriangle) {
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark found no two points two units apart where the curve exists; leave it out");
     }
   }
-  const markList = input.marks === void 0 ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
-  for (const mark of markList) {
-    if (!PLOT_MARKS.includes(mark)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
-  }
+  const derivedMarks = markList.filter((mark) => mark !== "slope_triangle");
   let marks = [];
-  if (markList.length) {
-    if (expressions.length !== 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks need one formula; leave marks out of a comparison of several curves");
+  if (derivedMarks.length) {
     const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`);
     const variables = curveParameters.map((parameter) => parameter.name);
     const samples2 = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))];
-    marks = markParts(tokens, markList, (source) => compileText(plan, source), { variables, samples: samples2 }, path).map((part) => {
+    marks = markParts(tokens, derivedMarks, (source) => compileText(plan, source), { variables, samples: samples2 }, path).map((part) => {
       const compiled = ["x", "y", "value"].flatMap((key) => part[key] === void 0 ? [] : [[key, compileMathExpression(part[key], variables)]]);
       return { ...part, at: (values) => Object.fromEntries(compiled.map(([key, f]) => {
         let result = Number.NaN;

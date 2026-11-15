@@ -111,3 +111,24 @@ test("marks need OLL 0.11's hidden guide and secant features only when drawn; En
   assert.equal(requirements.minimumPlayerVersion, "0.11.0");
   assert.deepEqual(plotContent(lesson).guides.map((guide) => guide.label), ["Axis of symmetry"]);
 });
+
+// The slope triangle (0018 §1, second step): the program places A and B two units apart, off x = 0.
+test("PJ-01: the slope triangle of a line, between x = 1 and x = 3", async () => {
+  const lesson = await passes("PJ-01", plotReply({ formula: "3x-2", marks: ["slope_triangle"], moments: [{ say: "看斜率三角形：前进多少，上升多少。" }] }));
+  const content = plotContent(lesson);
+  assert.equal(content.measurement, "secant");
+  assert.deepEqual(content.points.map((point) => [point.label, point.x]), [["A", 1], ["B", 3]]);
+});
+
+test("the slope triangle beside the intercepts: A is not on the y-intercept, which keeps its own mark", async () => {
+  const lesson = await passes("PJ-02", plotReply({ formula: "-2x+4", marks: ["intercepts", "slope_triangle"], moments: [{ say: "看截距和斜率。" }] }));
+  assert.deepEqual(plotContent(lesson).points.map((point) => [point.label, point.x, point.y]), [["A", 1, 2], ["B", 3, -2], ["y 截距", 0, 4], ["x 截距", 2, 0]]);
+});
+
+test("the slope triangle finds two points where the curve exists, and is refused where it cannot", async () => {
+  const root = await generate(plotReply({ formula: "sqrt(x-5)", marks: ["slope_triangle"], moments: [{ say: "看两点。" }] }));
+  assert.ok(root.lesson, root.rejected.join(" | "));
+  assert.deepEqual(plotContent(root.lesson).points.map((point) => point.x), [6, 8]);
+  const nowhere = await generate(plotReply({ formula: "sqrt(x-50)", marks: ["slope_triangle"], moments: [{ say: "看两点。" }] }));
+  assert.ok(nowhere.rejected.some((miss) => /slope_triangle mark found no two points/u.test(miss)), nowhere.rejected.join(" | "));
+});
