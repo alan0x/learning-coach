@@ -4,8 +4,9 @@
 // - vertex and symmetry_axis: a quadratic's vertex and the vertical line through it.
 // The formula's coefficients in x are read from its tokens, as short expressions in the lesson numbers
 // (OLL caps a binding at 256 characters, so f cannot be substituted into itself). A mark the formula
-// cannot give (a vertex of a line, intercepts of a cubic) is refused in the section, so the section is
-// written again without it (0018 question 2: narration about a mark that is not drawn misleads most).
+// cannot give (a vertex of a line, intercepts of a cubic) throws a capability fault; the compiler leaves
+// that mark out and draws the rest (0018 as amended after the trial: refusing the section cost a whole
+// call, and the model asked again for marks it cannot have).
 import { compileMathExpression } from "octos-lesson-language";
 import { LessonPlanError, type LessonPlanMathExpression } from "../lesson-plan.js";
 import { mathExpressionToOll, variableAlias } from "../recipe-kit.js";

@@ -14141,6 +14141,8 @@ var MATH_HOOKS = {
   },
   function_plot: {
     lower_model_parameters(parameters3, { numberCount }) {
+      if (Array.isArray(parameters3.pieces) && parameters3.pieces.length === 0) delete parameters3.pieces;
+      if (Array.isArray(parameters3.marks) && parameters3.marks.length === 0) delete parameters3.marks;
       if (parameters3.pieces !== void 0) return lowerPieces(parameters3, numberCount);
       const rawFormulas = parameters3.formulas !== void 0 ? parameters3.formulas : typeof parameters3.expression === "string" ? [parameters3.expression] : Array.isArray(parameters3.expressions) ? parameters3.expressions : void 0;
       if (rawFormulas === void 0) return;
@@ -16722,17 +16724,13 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ));
     }
   }
-  const markList = input.marks === void 0 ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
-  for (const mark of markList) {
-    if (!PLOT_MARKS.includes(mark)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
-  }
+  const requestedMarks = input.marks === void 0 || Array.isArray(input.marks) && input.marks.length === 0 ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
+  let markList = requestedMarks.filter((mark) => PLOT_MARKS.includes(mark));
+  if (expressions.length !== 1) markList = markList.filter((mark) => mark === "domain" || mark === "range");
+  if (expressions.length !== 1 && input.pieces === void 0) markList = [];
+  if (sampleNumbers.length === 1) markList = markList.filter((mark) => mark !== "slope_triangle");
   const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
-  if (markList.length > barMarks.length && expressions.length !== 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks other than domain and range need one formula; leave them out of a piecewise function or a comparison of several curves");
-  if (barMarks.length && expressions.length !== 1 && input.pieces === void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "domain and range need one formula or one piecewise function; leave them out of a comparison of several curves");
   const slopeTriangle = markList.includes("slope_triangle");
-  if (slopeTriangle && sampleNumbers.length === 1) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark measures two points: give sample_x_numbers two numbers (A and B), or none and the program places them");
-  }
   let references;
   if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
@@ -16750,8 +16748,6 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     if (xs) {
       references = referencePoints(initialState, xs);
       teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));
-    } else if (slopeTriangle) {
-      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark found no two points two units apart where the curve exists; leave it out");
     }
   }
   const derivedMarks = markList.filter((mark) => mark !== "slope_triangle" && mark !== "domain" && mark !== "range");
@@ -16760,7 +16756,8 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`);
     const variables = curveParameters.map((parameter) => parameter.name);
     const samples2 = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))];
-    marks = markParts(tokens, derivedMarks, (source) => compileText(plan, source), { variables, samples: samples2 }, path).map((part) => {
+    const drawable = derivedMarks.filter((mark) => leftOutWhenRefused(() => markParts(tokens, [mark], (source) => source, { variables, samples: samples2 }, path)));
+    marks = (drawable.length ? markParts(tokens, drawable, (source) => compileText(plan, source), { variables, samples: samples2 }, path) : []).map((part) => {
       const compiled = ["x", "y", "value"].flatMap((key) => part[key] === void 0 ? [] : [[key, compileMathExpression(part[key], variables)]]);
       return { ...part, at: (values) => Object.fromEntries(compiled.map(([key, f]) => {
         let result = Number.NaN;
@@ -16806,7 +16803,10 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       }
       return proved;
     };
-    bars = pieces ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), want, path) : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), want, { sign }, path);
+    const barsFor = (one) => pieces ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), one, path) : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), one, { sign }, path);
+    for (const axis of ["domain", "range"]) {
+      if (want[axis]) leftOutWhenRefused(() => bars.push(...barsFor({ domain: axis === "domain", range: axis === "range" })));
+    }
   }
   let view;
   try {
@@ -16852,6 +16852,15 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ...dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] : []
     ])
   };
+}
+function leftOutWhenRefused(derive) {
+  try {
+    derive();
+    return true;
+  } catch (error) {
+    if (error instanceof LessonPlanError && error.code === "LESSON_PLAN_CAPABILITY_PARAMETER") return false;
+    throw error;
+  }
 }
 function appendBars(action, bars, initial, labels) {
   const content = action.content;

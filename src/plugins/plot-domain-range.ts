@@ -1,7 +1,8 @@
 // Domain and range bars on a function plot (OLL decision 0018 §3): intervals on the axes, from exact
 // formulas only. Sampling cannot tell "reaches 0" from "comes close to 0", and drawing an end it never
-// reaches as filled is exactly what misleads, so the program writes intervals only for the families below
-// and refuses the rest in the section (0018 question 2):
+// reaches as filled is exactly what misleads, so the program writes intervals only for the families below.
+// For the rest it throws a capability fault, and the compiler leaves that bar out (never estimated; 0018
+// as amended after the trial):
 //
 // | family                 | domain          | range                                   |
 // | line mx + c            | all             | all; m = 0: only c                      |
