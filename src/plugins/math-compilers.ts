@@ -26,7 +26,7 @@ function compileFunctionPlot(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"], path);
   const dynamicTokens = input.expression_tokens as LessonPlanMathExpression | undefined;
   if (dynamicTokens !== undefined
     && !dynamicTokens.some((token) => token.kind === "input")) {
@@ -135,13 +135,30 @@ function compileFunctionPlot(
       return `y = ${item}`;
     }
   };
+  const pieces = plotPieces(input.pieces, expressions.length, path);
+  const teachingPointsFromPieces: Array<{ x: number; y: number }> = [];
   const curves = expressions.map((item, index) => ({
     expression: item,
     label: curveLabels[index]
       ?? (index === 0 && input.curve_label !== undefined
         ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan)
         : defaultCurveLabel(rawExpressions[index] ?? item)),
+    // A piece of one function (decision 0018 §2): drawn only on its interval, its ends open or closed;
+    // the pieces share a series, so the legend, colour and line style treat them as one function.
+    ...(pieces ? {
+      ...(pieces[index]!.from !== null ? { from: pieces[index]!.from, from_closed: pieces[index]!.from_closed } : {}),
+      ...(pieces[index]!.to !== null ? { to: pieces[index]!.to, to_closed: pieces[index]!.to_closed } : {}),
+      series: "f",
+    } : {}),
   }));
+  // A piece's finite ends, with its value there, must be in view.
+  for (const [index, piece] of (pieces ?? []).entries()) {
+    for (const x of [piece.from, piece.to]) {
+      if (x === null) continue;
+      const y = compileMathExpression(expressions[index]!, ["x"])({ x });
+      if (Number.isFinite(y)) teachingPointsFromPieces.push({ x, y });
+    }
+  }
 
   // Points on a fixed curve: the initial positions and the creation section's
   // animation endpoints must be visible; the slider ends may join the view.
@@ -152,7 +169,7 @@ function compileFunctionPlot(
     return { ...sampleAt(d.initial, `${path}.expression`),
       label: sampleNumbers.length === 2 ? (index === 0 ? "A" : "B") : "P(x, y)", x_expression: variableAlias(sampleNumber) };
   });
-  const teachingPoints: Array<{ x: number; y: number }> = samples.map(({ x, y }) => ({ x, y }));
+  const teachingPoints: Array<{ x: number; y: number }> = [...samples.map(({ x, y }) => ({ x, y })), ...teachingPointsFromPieces];
   const optionalPoints: Array<{ x: number; y: number }> = [];
   for (const sampleNumber of sampleNumbers) {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
@@ -275,6 +292,17 @@ function compileFunctionPlot(
       ...(dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] as Array<[string, string]> : []),
     ]),
   };
+}
+
+/** The lowered pieces of a piecewise function, one per expression, or undefined when the plot has none. */
+function plotPieces(value: unknown, expressionCount: number, path: string): Array<{ from: number | null; to: number | null; from_closed: boolean; to_closed: boolean }> | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length !== expressionCount) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.pieces`, "each piece needs its own formula");
+  return value.map((entry, index) => {
+    const piece = (entry ?? {}) as Record<string, unknown>;
+    const end = (key: string) => (piece[key] === null || piece[key] === undefined ? null : optionalNumber(piece[key] as never, 0, `${path}.pieces[${index}].${key}`));
+    return { from: end("from"), to: end("to"), from_closed: piece.from_closed !== false, to_closed: piece.to_closed !== false };
+  });
 }
 
 /**

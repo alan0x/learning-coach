@@ -12028,11 +12028,11 @@ var MATH_RECIPES = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", ...PLOT_EXTENSIONS ? ["marks"] : []],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", ...PLOT_EXTENSIONS ? ["marks", "pieces"] : []],
     required_model_schema_parameters: ["formulas"],
     // Marks change what the plot draws, so two plots differing only in marks are different visuals.
-    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks"],
+    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
@@ -12260,7 +12260,10 @@ var MATH_SCHEMA_PROPERTIES = {
     y_label: text2,
     formulas: { type: "array", minItems: 1, maxItems: 8, items: text2 },
     sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } },
-    ...PLOT_EXTENSIONS ? { marks: { type: "array", maxItems: PLOT_MARKS.length, items: { enum: [...PLOT_MARKS] } } } : {}
+    ...PLOT_EXTENSIONS ? {
+      marks: { type: "array", maxItems: PLOT_MARKS.length, items: { enum: [...PLOT_MARKS] } },
+      pieces: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["formula", "ends"], properties: { formula: text2, x_from: { type: "number" }, x_to: { type: "number" }, ends: { enum: ["[]", "[)", "(]", "()"] } } } }
+    } : {}
   },
   unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
   circle_polygon_bounds: { radius: { type: "number", minimum: 0 } },
@@ -12296,7 +12299,7 @@ var MATH_PLUGIN = {
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
-    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002" + (PLOT_EXTENSIONS ? "marks \u9009\u8981\u753B\u7684\u6807\u8BB0\uFF08\u53EA\u7528\u4E8E\u4E00\u6B21\u6216\u4E8C\u6B21\u51FD\u6570\uFF09\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF1Bslope_triangle \u4E24\u70B9\u7684 \u0394x\u3001\u0394y\uFF08\u4EFB\u610F\u5355\u5F0F\uFF09\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u5E76\u968F\u6ED1\u5757\u79FB\u52A8\u3002" : ""),
+    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002" + (PLOT_EXTENSIONS ? "marks \u9009\u8981\u753B\u7684\u6807\u8BB0\uFF08\u53EA\u7528\u4E8E\u4E00\u6B21\u6216\u4E8C\u6B21\u51FD\u6570\uFF09\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF1Bslope_triangle \u4E24\u70B9\u7684 \u0394x\u3001\u0394y\uFF08\u4EFB\u610F\u5355\u5F0F\uFF09\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u5E76\u968F\u6ED1\u5757\u79FB\u52A8\u3002\u5206\u6BB5\u51FD\u6570\u5199 pieces\uFF08formulas \u7167\u5199\u5404\u6BB5\u516C\u5F0F\uFF09\uFF1A\u6BCF\u6BB5 formula\u3001x_from\u3001x_to\uFF08\u65E0\u754C\u4E00\u4FA7\u4E0D\u5199\uFF09\u3001ends \u7AEF\u70B9\u5F00\u95ED\u5982 [)\uFF0C\u53EF\u6709\u5E38\u6570\u6BB5\u3002" : ""),
     "section.bounds": "\u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002",
     "section.linked_numbers": "\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002",
     "section.constructions": "geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002"
@@ -13497,7 +13500,7 @@ function formulaLexemes(rawFormula, path) {
   }
   return withImplicitMultiplication;
 }
-function parseModelFormula(rawFormula, numberCount, path) {
+function parseModelFormula(rawFormula, numberCount, path, { allowConstant = false } = {}) {
   const lexemes = formulaLexemes(rawFormula, path);
   let position = 0;
   const peek = () => lexemes[position];
@@ -13574,7 +13577,7 @@ function parseModelFormula(rawFormula, numberCount, path) {
   };
   const result = parseExpression();
   if (position !== lexemes.length) formulaError(path, "formula contains an unexpected trailing token");
-  if (!result.some((token) => token.kind === "input")) {
+  if (!allowConstant && !result.some((token) => token.kind === "input")) {
     formulaError(path, "a function plot formula must depend on x");
   }
   return result;
@@ -14136,6 +14139,7 @@ var MATH_HOOKS = {
   },
   function_plot: {
     lower_model_parameters(parameters3, { numberCount }) {
+      if (parameters3.pieces !== void 0) return lowerPieces(parameters3, numberCount);
       const rawFormulas = parameters3.formulas !== void 0 ? parameters3.formulas : typeof parameters3.expression === "string" ? [parameters3.expression] : Array.isArray(parameters3.expressions) ? parameters3.expressions : void 0;
       if (rawFormulas === void 0) return;
       if (!Array.isArray(rawFormulas) || rawFormulas.length < 1 || rawFormulas.length > 8) {
@@ -14235,6 +14239,42 @@ var MATH_HOOKS = {
     free_number: (content) => content.parameters?.radius_expression !== void 0
   }
 };
+var PIECE_ENDS = { "[]": [true, true], "[)": [true, false], "(]": [false, true], "()": [false, false] };
+function lowerPieces(parameters3, numberCount) {
+  const path = "$lessonPlanSection.visual.parameters.pieces";
+  const raw = parameters3.pieces;
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 4) formulaError(path, "a piecewise function has two to four pieces");
+  const decimal = (value2, where) => {
+    if (value2 === void 0 || value2 === null) return null;
+    const number = typeof value2 === "number" ? value2 : value2 && typeof value2 === "object" && "mantissa" in value2 ? Number(value2.mantissa) / 10 ** Number(value2.scale ?? 0) : Number.NaN;
+    if (!Number.isFinite(number)) formulaError(where, "a piece's end is a finite number, or left out when that side is unbounded");
+    return number;
+  };
+  const pieces = raw.map((entry, index) => {
+    const where = `${path}[${index}]`;
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) formulaError(where, "each piece is an object with formula, x_from, x_to and ends");
+    const piece = entry;
+    const tokens = parseModelFormula(piece.formula, numberCount, `${where}.formula`, { allowConstant: true });
+    if (tokens.some((token) => token.kind === "number")) formulaError(`${where}.formula`, "pieces are fixed formulas; use one formula when lesson numbers change the curve");
+    const ends = PIECE_ENDS[String(piece.ends)];
+    if (!ends) formulaError(`${where}.ends`, "ends is one of [] [) (] ()");
+    const from = decimal(piece.x_from, `${where}.x_from`), to = decimal(piece.x_to, `${where}.x_to`);
+    if (from !== null && to !== null && !(from < to)) formulaError(where, "a piece's x_from is below its x_to");
+    return { expression: mathExpressionToOll(tokens), from, to, from_closed: ends[0], to_closed: ends[1] };
+  });
+  const ordered = [...pieces].sort((a, b) => (a.from ?? -Infinity) - (b.from ?? -Infinity));
+  for (let index = 1; index < ordered.length; index += 1) {
+    const before = ordered[index - 1], piece = ordered[index];
+    const meets = before.to !== null && piece.from !== null && before.to === piece.from;
+    if (before.to === null || piece.from === null || before.to > piece.from || meets && before.to_closed && piece.from_closed) {
+      formulaError(path, "the pieces overlap: each x belongs to at most one piece, and where two meet only one includes the end");
+    }
+  }
+  for (const key of ["formulas", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "sample_x_numbers"]) delete parameters3[key];
+  parameters3.expressions = ordered.map((piece) => piece.expression);
+  parameters3.pieces = ordered;
+  return { no_numbers: true };
+}
 function requestsTwoIndependentPoints(request) {
   return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
 }
@@ -16197,7 +16237,7 @@ function crossCheck(tokens, [c, b, a], { variables, samples }, path) {
 // src/plugins/math-compilers.ts
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"], path);
   const dynamicTokens = input.expression_tokens;
   if (dynamicTokens !== void 0 && !dynamicTokens.some((token) => token.kind === "input")) {
     fail2(
@@ -16282,10 +16322,26 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       return `y = ${item}`;
     }
   };
+  const pieces = plotPieces(input.pieces, expressions.length, path);
+  const teachingPointsFromPieces = [];
   const curves = expressions.map((item, index) => ({
     expression: item,
-    label: curveLabels[index] ?? (index === 0 && input.curve_label !== void 0 ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan) : defaultCurveLabel(rawExpressions[index] ?? item))
+    label: curveLabels[index] ?? (index === 0 && input.curve_label !== void 0 ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan) : defaultCurveLabel(rawExpressions[index] ?? item)),
+    // A piece of one function (decision 0018 §2): drawn only on its interval, its ends open or closed;
+    // the pieces share a series, so the legend, colour and line style treat them as one function.
+    ...pieces ? {
+      ...pieces[index].from !== null ? { from: pieces[index].from, from_closed: pieces[index].from_closed } : {},
+      ...pieces[index].to !== null ? { to: pieces[index].to, to_closed: pieces[index].to_closed } : {},
+      series: "f"
+    } : {}
   }));
+  for (const [index, piece] of (pieces ?? []).entries()) {
+    for (const x of [piece.from, piece.to]) {
+      if (x === null) continue;
+      const y = compileMathExpression(expressions[index], ["x"])({ x });
+      if (Number.isFinite(y)) teachingPointsFromPieces.push({ x, y });
+    }
+  }
   const sampleAt = (x, where) => ({ x, y: evaluate(expression, ["x"], { x }, where) });
   const samples = sampleNumbers.map((sampleNumber, index) => {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
@@ -16296,7 +16352,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       x_expression: variableAlias(sampleNumber)
     };
   });
-  const teachingPoints = samples.map(({ x, y }) => ({ x, y }));
+  const teachingPoints = [...samples.map(({ x, y }) => ({ x, y })), ...teachingPointsFromPieces];
   const optionalPoints = [];
   for (const sampleNumber of sampleNumbers) {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
@@ -16416,6 +16472,15 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ...dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] : []
     ])
   };
+}
+function plotPieces(value2, expressionCount, path) {
+  if (value2 === void 0) return void 0;
+  if (!Array.isArray(value2) || value2.length !== expressionCount) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.pieces`, "each piece needs its own formula");
+  return value2.map((entry, index) => {
+    const piece = entry ?? {};
+    const end = (key) => piece[key] === null || piece[key] === void 0 ? null : optionalNumber(piece[key], 0, `${path}.pieces[${index}].${key}`);
+    return { from: end("from"), to: end("to"), from_closed: piece.from_closed !== false, to_closed: piece.to_closed !== false };
+  });
 }
 function appendMarks(action, marks, initial) {
   const content = action.content;
