@@ -364,12 +364,18 @@ function secondSampleTwoRight(plan: LessonPlan, sampleNumber: number, expression
   const curve = compileMathExpression(expression, ["x"]);
   const at = (x: number) => { try { const y = curve({ x }); return Number.isFinite(y) ? y : undefined; } catch { return undefined; } };
   const step = d.student_control?.step && d.student_control.step > 0 ? d.student_control.step : (d.max - d.min) / 200;
-  const stops = d.max > d.min ? Array.from({ length: Math.min(2001, Math.floor((d.max - d.min) / step + 1e-9) + 1) }, (_, index) => d.min + index * step) : [];
+  // Stops are clamped to the max: d.min + index·step can overshoot it by a rounding error (review: −5 + 7·1
+  // gave 2.000000000000001, where √(4 − x) at B does not exist).
+  const stops = d.max > d.min ? Array.from({ length: Math.min(2001, Math.floor((d.max - d.min) / step + 1e-9) + 1) }, (_, index) => Math.min(d.max, Number((d.min + index * step).toPrecision(12)))) : [];
   const animated = creationMoments.flatMap((moment) => moment.actions).flatMap((action) => (action.action === "animate" && action.number === sampleNumber ? [action.end_value] : []));
   for (const x of [d.min, d.max, d.initial, ...stops, ...animated]) if (at(x + 2) === undefined) return undefined;
+  // B's y binding is the curve at A + 2; OLL caps a binding at 256 characters (review), so a longer one leaves
+  // the triangle out, as a mark's does.
+  const xB = `(${variableAlias(sampleNumber)})+2`;
+  if (expression.replace(/\bx\b/gu, `(${xB})`).length > 240) return undefined;
   const point = (x: number) => ({ x: x + 2, y: at(x + 2)! });
   return {
-    sample: { ...point(d.initial), label: "B", x_expression: `(${variableAlias(sampleNumber)})+2` },
+    sample: { ...point(d.initial), label: "B", x_expression: xB },
     shown: animated.map(point),
     ends: [d.min, d.max].map(point),
   };

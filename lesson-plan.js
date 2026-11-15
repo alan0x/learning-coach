@@ -16873,12 +16873,14 @@ function secondSampleTwoRight(plan, sampleNumber, expression, creationMoments, p
     }
   };
   const step = d.student_control?.step && d.student_control.step > 0 ? d.student_control.step : (d.max - d.min) / 200;
-  const stops = d.max > d.min ? Array.from({ length: Math.min(2001, Math.floor((d.max - d.min) / step + 1e-9) + 1) }, (_, index) => d.min + index * step) : [];
+  const stops = d.max > d.min ? Array.from({ length: Math.min(2001, Math.floor((d.max - d.min) / step + 1e-9) + 1) }, (_, index) => Math.min(d.max, Number((d.min + index * step).toPrecision(12)))) : [];
   const animated = creationMoments.flatMap((moment) => moment.actions).flatMap((action) => action.action === "animate" && action.number === sampleNumber ? [action.end_value] : []);
   for (const x of [d.min, d.max, d.initial, ...stops, ...animated]) if (at2(x + 2) === void 0) return void 0;
+  const xB = `(${variableAlias(sampleNumber)})+2`;
+  if (expression.replace(/\bx\b/gu, `(${xB})`).length > 240) return void 0;
   const point = (x) => ({ x: x + 2, y: at2(x + 2) });
   return {
-    sample: { ...point(d.initial), label: "B", x_expression: `(${variableAlias(sampleNumber)})+2` },
+    sample: { ...point(d.initial), label: "B", x_expression: xB },
     shown: animated.map(point),
     ends: [d.min, d.max].map(point)
   };
