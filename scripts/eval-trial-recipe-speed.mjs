@@ -130,7 +130,23 @@ export const NUMBER_LINE_ROUNDING_CASES = [
   { id: "RND-04", prompt: "Round 1.24 to the nearest tenth on a number line.", expect: { values: [1.2, 1.24, 1.3], rounding: { number: 1.24, result: 1.2 } } },
   { id: "RND-05", prompt: "Use a number line to round 85 to the nearest ten.", expect: { values: [80, 85, 90], rounding: { number: 85, result: 90 } } },
 ];
-export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES };
+/**
+ * Several moves on one line (decision 0017, number_line_steps: 2 to 3 moves), written before the recipe or
+ * any probe and overlap-scored against the question set (at most 0.20 open, 0.22 held-out; one draft
+ * rephrased). `steps` is the exact moves in order; `values` may be shown by points or landing numbers.
+ * ST-03 and ST-05 turn back over an earlier move (a raised lane in OLL 0.11); ST-06 has four moves, which
+ * the recipe leaves out: a lesson that avoids steps passes, one that draws them is judged as usual.
+ */
+export const NUMBER_LINE_STEPS_CASES = [
+  { id: "ST-01", prompt: "用数轴演示凑十法：8 加 5，先跳到 10，再跳到 13。", expect: { values: [8, 10, 13], steps: [[8, 10], [10, 13]] } },
+  { id: "ST-02", prompt: "Add 27 + 25 on a number line by jumping tens first, then ones.", expect: { values: [27, 37, 47, 52], steps: [[27, 37], [37, 47], [47, 52]] } },
+  { id: "ST-03", prompt: "从 5 度开始，气温先上升 4 度，再下降 6 度，用数轴表示最后是多少度。", expect: { values: [5, 9, 3], steps: [[5, 9], [9, 3]] } },
+  { id: "ST-04", prompt: "Count back from 32 on a number line, subtracting 15 as a jump of 10 and a jump of 5.", expect: { values: [32, 22, 17], steps: [[32, 22], [22, 17]] } },
+  { id: "ST-05", prompt: "On a number line, start at -3, move right 7, then move left 2. Where do you end up?", expect: { values: [-3, 4, 2], steps: [[-3, 4], [4, 2]] } },
+  { id: "ST-06", nearMiss: true, prompt: "Use a number line to add 6 + 7 + 8 + 9 one number at a time.", expect: { values: [6, 30] } },
+  { id: "ST-07", prompt: "在数轴上算 46 + 38：先加 40，再减去 2。", expect: { values: [46, 86, 84], steps: [[46, 86], [86, 84]] } },
+];
+export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
 
 /** The requests each trial recipe fits. */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
@@ -253,6 +269,17 @@ export function solutionPieces(content, values) {
   }));
 }
 
+/** The jumps a line draws at given variable values, in order: each one's start and end. */
+export function drawnJumps(content, values) {
+  const points = numberLineStates({ content, variables: Object.entries(values).map(([as, initial]) => ({ as, initial })), tasks: [], animations: [] })[0];
+  return (content.jumps ?? []).map((jump) => {
+    const bound = (side) => (content.bindings ?? []).find((entry) => entry.target === `${jump.as}.${side}`);
+    const from = typeof jump.from === "string" && jump.from in points ? points[jump.from] : bound("from") ? evaluateExpression(bound("from").expression, values) : Number(jump.from);
+    const by = bound("by") ? evaluateExpression(bound("by").expression, values) : Number(jump.by);
+    return { from, to: from + by };
+  });
+}
+
 /** The points' values in each state the lesson shows: the starting values, then after each animation. */
 export function lessonShownStates({ content, variables, animations, sequence: steps }) {
   // Review of #63: a point shown only when emphasized counts only once something reveals it, so an
@@ -300,8 +327,11 @@ export function judgeNumberLine(item, lesson) {
   // A solution set's interval and ray ends are values the lesson shows too (decision 0016).
   const endStates = variableStates(lesson).map((values) => Object.fromEntries(solutionPieces(content, values)
     .flatMap((piece, index) => [[`set${index}.from`, piece.from], [`set${index}.to`, piece.to]]).filter(([, end]) => end !== null)));
+  // On a steps line (decision 0017) a landing number is shown by its jump: OLL pins its label on its tick.
+  const stepStates = expect.steps ? variableStates(lesson).map((values) => Object.fromEntries(drawnJumps(content, values)
+    .filter((jump) => !close(jump.from, jump.to)).flatMap((jump, index) => [[`jump${index}.from`, jump.from], [`jump${index}.to`, jump.to]]))) : [];
   for (const value of expect.values ?? []) {
-    if (![...shownStates, ...endStates].some((state) => Object.values(state).some((shown) => close(shown, value)))) {
+    if (![...shownStates, ...endStates, ...stepStates].some((state) => Object.values(state).some((shown) => close(shown, value)))) {
       hard.push(`wrong value: ${Number(value.toFixed(4))} is never shown (points: ${[...new Set(shownStates.flatMap((state) => Object.values(state)).map((shown) => Number(shown.toFixed(4))))].join(", ")})`);
     }
   }
@@ -345,18 +375,18 @@ export function judgeNumberLine(item, lesson) {
       for (const point of filled) if (openEnds.some((value) => state[point.as] !== undefined && close(state[point.as], value))) hard.push(`a filled point sits on the open end ${state[point.as]}`);
     }
   }
+  // Steps (decision 0017, number_line_steps): some state the lesson shows draws exactly the expected
+  // moves in order (a jump of length 0 is not drawn), and every landing number sits on a labelled tick.
+  if (expect.steps) {
+    const describeSteps = (jumps) => jumps.map(([from, to]) => `${Number(from.toFixed(4))} → ${Number(to.toFixed(4))}`).join(", ") || "none";
+    const drawn = variableStates(lesson).map((values) => drawnJumps(content, values).filter((jump) => !close(jump.from, jump.to)).map((jump) => [jump.from, jump.to]));
+    const matches = (jumps) => jumps.length === expect.steps.length && expect.steps.every(([from, to], index) => close(jumps[index][0], from) && close(jumps[index][1], to));
+    if (!drawn.some(matches)) hard.push(`wrong steps: expected ${describeSteps(expect.steps)}, drawn ${describeSteps(drawn.at(-1) ?? [])}`);
+  }
   // Rounding (decision 0016): some state the lesson shows jumps from the number being rounded to the
   // expected result. Both ends count: a jump from 40 to 50 beside a point at 47 rounds nothing (review of #69).
   if (expect.rounding) {
-    const jumps = variableStates(lesson).flatMap((values) => {
-      const points = numberLineStates({ content, variables: Object.entries(values).map(([as, initial]) => ({ as, initial })), tasks: [], animations: [] })[0];
-      return (content.jumps ?? []).map((jump) => {
-        const bound = (side) => (content.bindings ?? []).find((entry) => entry.target === `${jump.as}.${side}`);
-        const from = typeof jump.from === "string" && jump.from in points ? points[jump.from] : bound("from") ? evaluateExpression(bound("from").expression, values) : Number(jump.from);
-        const by = bound("by") ? evaluateExpression(bound("by").expression, values) : Number(jump.by);
-        return { from, to: from + by };
-      });
-    });
+    const jumps = variableStates(lesson).flatMap((values) => drawnJumps(content, values));
     const { number, result } = expect.rounding;
     if (!jumps.some((jump) => close(jump.from, number) && close(jump.to, result))) {
       const drawn = [...new Set(jumps.map((jump) => `${Number(jump.from.toFixed(6))} → ${Number(jump.to.toFixed(6))}`))].join(", ") || "none";
@@ -370,6 +400,9 @@ export function judgeNumberLine(item, lesson) {
     if (visible.has(as) && !labelled.some((tick) => close(tick, value))) unreadable.add(`${as} at ${Number(value.toFixed(4))}`);
   }
   for (const state of endStates) for (const [end, value] of Object.entries(state)) {
+    if (!labelled.some((tick) => close(tick, value))) unreadable.add(`${end} at ${Number(value.toFixed(4))}`);
+  }
+  for (const state of stepStates) for (const [end, value] of Object.entries(state)) {
     if (!labelled.some((tick) => close(tick, value))) unreadable.add(`${end} at ${Number(value.toFixed(4))}`);
   }
   if (unreadable.size) hard.push(`unreadable: ${[...unreadable].join(", ")} on no labelled tick`);
