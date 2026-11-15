@@ -126,10 +126,16 @@ export function markParts(tokens: LessonPlanMathExpression, marks: readonly Plot
   };
   if (!polynomial) return refuse(marks[0]!, "needs a line or a quadratic (marks are derived exactly)");
   const [c, b, a] = [0, 1, 2].map((power) => coefficient(polynomial, power)) as [Scalar, Scalar, Scalar];
+  // Every mark is written from the coefficients, so coefficients too long for one binding refuse the marks
+  // here, as a section fault naming them, before the cross-check compiles them (review: OLL's own length
+  // error escaped with no path).
+  if (polynomialText([c, b, a]).length > 240) refuse(marks[0]!, "is too long an expression for this formula");
   crossCheck(tokens, [c, b, a], check, path);
   const linear = isZero(a);
   const parts: MarkPart[] = [];
+  const owners = new Map<MarkPart, PlotMark>();
   for (const mark of marks) {
+    const before = parts.length;
     if (mark === "intercepts") {
       parts.push({ kind: "point", as: "mark-y-intercept", label: labels("y 截距"), x: "0", y: c.text });
       if (linear) {
@@ -146,18 +152,22 @@ export function markParts(tokens: LessonPlanMathExpression, marks: readonly Plot
       if (mark === "vertex") parts.push({ kind: "point", as: "mark-vertex", label: labels("顶点"), x: axis, y: `${wrap(c)}-${wrap(b)}^2/(4*${wrap(a)})` });
       else parts.push({ kind: "guide", as: "mark-axis", label: labels("对称轴"), value: axis });
     }
+    for (const part of parts.slice(before)) owners.set(part, mark);
   }
   for (const part of parts) for (const text of [part.x, part.y, part.value]) {
-    if (text !== undefined && text.length > 240) refuse(marks[0]!, "is too long an expression for this formula");
+    if (text !== undefined && text.length > 240) refuse(owners.get(part)!, "is too long an expression for this formula");
   }
   return parts;
 }
+
+/** The polynomial written from its coefficients, as the cross-check compiles it. */
+const polynomialText = ([c, b, a]: Scalar[]) => `${wrap(a!)}*x^2+${wrap(b!)}*x+${wrap(c!)}`;
 
 /** The coefficients must give back the formula at sampled values: a guard on the algebra above. */
 function crossCheck(tokens: LessonPlanMathExpression, [c, b, a]: Scalar[], { variables, samples }: { variables: string[]; samples: Array<Record<string, number>> }, path: string): void {
   const names = ["x", ...variables];
   const formula = compileMathExpression(mathExpressionToOll(tokens), names);
-  const polynomial = compileMathExpression(`${wrap(a!)}*x^2+${wrap(b!)}*x+${wrap(c!)}`, names);
+  const polynomial = compileMathExpression(polynomialText([c!, b!, a!]), names);
   for (const values of samples) for (const x of [-2.5, -1, 0, 0.5, 3]) {
     const expected = formula({ ...values, x }), actual = polynomial({ ...values, x });
     if (!Number.isFinite(expected) && !Number.isFinite(actual)) continue;
