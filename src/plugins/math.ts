@@ -4,6 +4,12 @@
 import { REARRANGEMENT_MODEL_GUIDANCE } from "../rearrangement.js";
 import { MATH_PLUGIN_MANIFEST, MATH_SUBJECT_DESCRIPTION } from "octos-lesson-language/plugin-math";
 import type { CoachSubjectPlugin } from "./types.js";
+import { PLOT_MARKS } from "./plot-mark-names.js";
+import { trialOptionEnabled } from "./trials.js";
+
+// The function plot's extensions (OLL decision 0018) are offered only when the trial names them; the
+// compiler accepts them either way, so a recorded lesson replays the same.
+const PLOT_EXTENSIONS = trialOptionEnabled("function_plot_extensions");
 
 // Counts a recipe draws, as whole numbers from min to max. The compiler fits slider ranges to them and
 // refuses a stated count outside them (Coach #78); the card text quotes the same numbers.
@@ -15,10 +21,11 @@ export const MATH_RECIPES = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label"],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", ...(PLOT_EXTENSIONS ? ["marks", "pieces"] as const : [])],
     required_model_schema_parameters: ["formulas"],
-    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers"],
+    // Marks change what the plot draws, so two plots differing only in marks are different visuals.
+    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
@@ -250,6 +257,10 @@ const MATH_SCHEMA_PROPERTIES = {
     y_label: text,
     formulas: { type: "array", minItems: 1, maxItems: 8, items: text },
     sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } },
+    ...(PLOT_EXTENSIONS ? {
+      marks: { type: "array", maxItems: PLOT_MARKS.length, items: { enum: [...PLOT_MARKS] } },
+      pieces: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["formula", "ends"], properties: { formula: text, x_from: { type: "number" }, x_to: { type: "number" }, ends: { enum: ["[]", "[)", "(]", "()"] } } } },
+    } : {}),
   },
   unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
   circle_polygon_bounds: { radius: { type: "number", minimum: 0 } },
@@ -286,7 +297,7 @@ export const MATH_PLUGIN = {
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "多边形重排选 polygon_pieces、rigid_rearrangement、area_relation；圆面积选 circle_area_rearrangement。",
-    "section.formulas": "function_plot：formulas 写右侧公式，横轴 x。平移曲线写 -(x-n1)^2+n2，不代入初值。固定曲线上移动点用 sample_x_numbers=[1,2]（A/B 横坐标，单点只写一个）；不用 content.numbers。多式仅静态比较。固定直线两点斜率不变；重合是0/0。陡峭看斜率绝对值。",
+    "section.formulas": "function_plot：formulas 写右侧公式，横轴 x。平移曲线写 -(x-n1)^2+n2，不代入初值。固定曲线上移动点用 sample_x_numbers=[1,2]（A/B 横坐标，单点只写一个）；不用 content.numbers。多式仅静态比较。固定直线两点斜率不变；重合是0/0。陡峭看斜率绝对值。" + (PLOT_EXTENSIONS ? "marks：intercepts 截距、vertex 顶点、symmetry_axis 对称轴（一次或二次）、slope_triangle 两点 Δx Δy、domain 定义域、range 值域；位置由程序算。分段写 pieces（formulas 照写各段）：每段 formula、x_from、x_to（无界不写）、ends 开闭如 [)，可为常数。" : ""),
     "section.bounds": "圆周率割圆/正多边形逼近选内接正多边形、外切正多边形和周长上下界特征；边数用整数，不可用圆弧角度替代。上下界由图形计算，讲解用 n sin(π/n) < π < n tan(π/n)。",
     "section.linked_numbers": "半径与共享量有函数关系时，coordinate_circle 写 radius_expression（如 sqrt(n1)），不写固定 radius=2 代替联动，也不要把高度直接当半径。",
     "section.constructions": "geometric_rearrangement 按构造事实讲解；a、b固定，控件只改变重排进度。复用依 visuals_for_section 的构造与当前状态，先前动画终值不会自动归零；重演需显式 restart_numbers，否则观察当前布局。圆面积用 circle_area_rearrangement。数值为重排进度；有限扇形非矩形，等分趋细时底→πr、高→r。",

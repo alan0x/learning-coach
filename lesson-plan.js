@@ -761,9 +761,9 @@ var require_codegen = __commonJS({
       scopeCode() {
         return this._extScope.scopeCode(this._values);
       }
-      _def(varKind, nameOrPrefix, rhs, constant) {
+      _def(varKind, nameOrPrefix, rhs, constant2) {
         const name = this._scope.toName(nameOrPrefix);
-        if (rhs !== void 0 && constant)
+        if (rhs !== void 0 && constant2)
           this._constants[name.str] = rhs;
         this._leafNode(new Def(varKind, name, rhs));
         return name;
@@ -8437,8 +8437,8 @@ function planTickStep(content) {
     return content.ticks.step;
   const span2 = content.range.max - content.range.min;
   const raw = span2 / 10;
-  const power = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 5, 10].map((factor) => factor * power).find((candidate) => candidate >= raw * (1 - 1e-9)) ?? 10 * power;
+  const power2 = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 5, 10].map((factor) => factor * power2).find((candidate) => candidate >= raw * (1 - 1e-9)) ?? 10 * power2;
   return Number(step.toPrecision(12));
 }
 var near = (a, b, scale = 1) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(scale));
@@ -8483,8 +8483,8 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
   for (const [index, point] of list(content.points, `${path}/points`, NUMBER_LINE_LIMITS.points, fail4).entries()) {
     const pointPath = `${path}/points/${index}`;
     only(point, ["as", "value", "label", "style", "shown", "interaction"], pointPath, fail4);
-    const at = value(point.value, `${pointPath}/value`, fail4);
-    if (at < min - 1e-9 || at > max + 1e-9)
+    const at2 = value(point.value, `${pointPath}/value`, fail4);
+    if (at2 < min - 1e-9 || at2 > max + 1e-9)
       fail4(`${pointPath}/value`, "A point lies inside the line's range");
     text(point.label, `${pointPath}/label`, fail4, 64);
     if (point.style !== void 0 && point.style !== "closed" && point.style !== "open")
@@ -9329,14 +9329,14 @@ function splitBindingTarget(value2, path) {
 }
 function bindableTargets(action) {
   const targets = /* @__PURE__ */ new Map();
-  const add = (field, properties) => {
+  const add2 = (field, properties) => {
     for (const item of Array.isArray(action.content[field]) ? action.content[field] : []) {
       if (typeof item?.as === "string")
         targets.set(item.as, new Set(properties));
     }
   };
   for (const [field, properties] of Object.entries(bindingCapabilitiesForNodeKind(action.kind))) {
-    add(field, properties);
+    add2(field, properties);
   }
   return targets;
 }
@@ -12010,7 +12010,17 @@ function buildFunctionPlot(input) {
 // src/rearrangement.ts
 var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
 
+// src/plugins/plot-mark-names.ts
+var PLOT_MARKS = ["intercepts", "vertex", "symmetry_axis", "slope_triangle", "domain", "range"];
+
+// src/plugins/trials.ts
+var processEnvironment = globalThis.process?.env;
+function trialOptionEnabled(name, list2 = processEnvironment?.LEARNING_COACH_TRIAL_RECIPES) {
+  return (list2 ?? "").split(",").map((item) => item.trim()).includes(name);
+}
+
 // src/plugins/math.ts
+var PLOT_EXTENSIONS = trialOptionEnabled("function_plot_extensions");
 var SIDE_COUNT = { min: 3, max: 384 };
 var UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 };
 var MATH_RECIPES = {
@@ -12018,10 +12028,11 @@ var MATH_RECIPES = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label"],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", ...PLOT_EXTENSIONS ? ["marks", "pieces"] : []],
     required_model_schema_parameters: ["formulas"],
-    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers"],
+    // Marks change what the plot draws, so two plots differing only in marks are different visuals.
+    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
@@ -12248,7 +12259,11 @@ var MATH_SCHEMA_PROPERTIES = {
     x_label: text2,
     y_label: text2,
     formulas: { type: "array", minItems: 1, maxItems: 8, items: text2 },
-    sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } }
+    sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } },
+    ...PLOT_EXTENSIONS ? {
+      marks: { type: "array", maxItems: PLOT_MARKS.length, items: { enum: [...PLOT_MARKS] } },
+      pieces: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["formula", "ends"], properties: { formula: text2, x_from: { type: "number" }, x_to: { type: "number" }, ends: { enum: ["[]", "[)", "(]", "()"] } } } }
+    } : {}
   },
   unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
   circle_polygon_bounds: { radius: { type: "number", minimum: 0 } },
@@ -12284,7 +12299,7 @@ var MATH_PLUGIN = {
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
-    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002",
+    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002" + (PLOT_EXTENSIONS ? "marks\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF08\u4E00\u6B21\u6216\u4E8C\u6B21\uFF09\u3001slope_triangle \u4E24\u70B9 \u0394x \u0394y\u3001domain \u5B9A\u4E49\u57DF\u3001range \u503C\u57DF\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u3002\u5206\u6BB5\u5199 pieces\uFF08formulas \u7167\u5199\u5404\u6BB5\uFF09\uFF1A\u6BCF\u6BB5 formula\u3001x_from\u3001x_to\uFF08\u65E0\u754C\u4E0D\u5199\uFF09\u3001ends \u5F00\u95ED\u5982 [)\uFF0C\u53EF\u4E3A\u5E38\u6570\u3002" : ""),
     "section.bounds": "\u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002",
     "section.linked_numbers": "\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002",
     "section.constructions": "geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002"
@@ -12363,9 +12378,9 @@ function buildSpringAndMass(input) {
 function niceAxisMax(value2) {
   if (!(value2 > 0) || !Number.isFinite(value2))
     return 1;
-  const power = 10 ** Math.floor(Math.log10(value2));
-  const step = [1, 2, 2.5, 5, 10].find((candidate) => candidate * power >= value2 * (1 - 1e-9)) ?? 10;
-  return Number((step * power).toPrecision(12));
+  const power2 = 10 ** Math.floor(Math.log10(value2));
+  const step = [1, 2, 2.5, 5, 10].find((candidate) => candidate * power2 >= value2 * (1 - 1e-9)) ?? 10;
+  return Number((step * power2).toPrecision(12));
 }
 function quantityValue(quantity) {
   return quantity.expression ? `(${quantity.expression})` : String(quantity.initial);
@@ -12658,10 +12673,10 @@ function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
 }
-var processEnvironment = globalThis.process?.env;
+var processEnvironment2 = globalThis.process?.env;
 var OFFERED_RECIPES = [
   ...RECIPE_CATALOG_ORDER,
-  ...enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES)
+  ...enabledTrialRecipes(processEnvironment2?.LEARNING_COACH_TRIAL_RECIPES)
 ];
 var PLUGIN_RECIPE_REGISTRY = Object.fromEntries(
   OFFERED_RECIPES.map((name) => [name, ALL_RECIPES[name]])
@@ -12777,6 +12792,11 @@ var EN = {
   "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5728\u540C\u4E00\u5F20\u51FD\u6570\u56FE\u4E2D\u540C\u65F6\u5C55\u793A\u9759\u6001\u66F2\u7EBF\u548C\u7531\u63A7\u4EF6\u6539\u53D8\u7684\u53E6\u4E00\u6761\u66F2\u7EBF\u3002": "A static curve and another curve changed by a control cannot yet be shown together in the same graph.",
   "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002": "The rest of the lesson is still being generated.",
   "\u5F53\u524D\u767D\u677F\u53EA\u80FD\u6267\u884C\u4E8C\u7EF4\u56FE\u5F62\u548C\u4E09\u7EF4\u573A\u666F\uFF0C\u4E0D\u80FD\u7CBE\u786E\u6A21\u62DF\u56DB\u7EF4\u8D85\u7ACB\u65B9\u4F53\u7684\u56DB\u7EF4\u65CB\u8F6C\u3002\u4F60\u53EF\u4EE5\u6539\u95EE\u5B83\u7684\u4E09\u7EF4\u6295\u5F71\u539F\u7406\u6216\u57FA\u672C\u7ED3\u6784\u3002": "The board supports 2D diagrams and 3D scenes, but cannot accurately simulate a 4D hypercube rotating in four dimensions. You can ask about its 3D projections or basic structure instead.",
+  "y \u622A\u8DDD": "y-intercept",
+  "x \u622A\u8DDD": "x-intercept",
+  "\u5BF9\u79F0\u8F74": "Axis of symmetry",
+  "\u5B9A\u4E49\u57DF": "Domain",
+  "\u503C\u57DF": "Range",
   "A\u70B9\u7684x\u5750\u6807": "x-coordinate of point A",
   "B\u70B9\u7684x\u5750\u6807": "x-coordinate of point B",
   "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",
@@ -13063,14 +13083,14 @@ function formatMathExpressionDisplay(expression, symbol) {
       const rightText = rightNeedsParens ? parenthesize(right) : right.text;
       const symbolLike = SIMPLE_IDENTIFIER.test(right.text) || right.symbolBase === true;
       const negativeCoefficient = left.minus !== void 0 && /^[0-9.]+$/u.test(left.minus);
-      const coefficient = left.literal !== void 0 || negativeCoefficient;
+      const coefficient2 = left.literal !== void 0 || negativeCoefficient;
       const rightGroup = right.level === DISPLAY_LEVEL_ADD && right.minus === void 0;
       const leftGroup = left.minus === void 0 && (left.level === DISPLAY_LEVEL_ADD || left.text.endsWith(")"));
       if (token.operator === "multiply" && rightGroup && (leftGroup || left.literal !== void 0)) {
         stack.push({ text: `${left.level === DISPLAY_LEVEL_ADD ? parenthesize(left) : left.text}${parenthesize(right)}`, level: DISPLAY_LEVEL_MUL });
         continue;
       }
-      const juxtapose = token.operator === "multiply" && (coefficient && (symbolLike || right.call === true) || SIMPLE_IDENTIFIER.test(left.text) && symbolLike);
+      const juxtapose = token.operator === "multiply" && (coefficient2 && (symbolLike || right.call === true) || SIMPLE_IDENTIFIER.test(left.text) && symbolLike);
       if (juxtapose && negativeCoefficient) {
         stack.push({ text: `\u2212${left.minus}${rightText}`, level: DISPLAY_LEVEL_UNARY, minus: `${left.minus}${rightText}` });
         continue;
@@ -13482,7 +13502,7 @@ function formulaLexemes(rawFormula, path) {
   }
   return withImplicitMultiplication;
 }
-function parseModelFormula(rawFormula, numberCount, path) {
+function parseModelFormula(rawFormula, numberCount, path, { allowConstant = false } = {}) {
   const lexemes = formulaLexemes(rawFormula, path);
   let position = 0;
   const peek = () => lexemes[position];
@@ -13559,7 +13579,7 @@ function parseModelFormula(rawFormula, numberCount, path) {
   };
   const result = parseExpression();
   if (position !== lexemes.length) formulaError(path, "formula contains an unexpected trailing token");
-  if (!result.some((token) => token.kind === "input")) {
+  if (!allowConstant && !result.some((token) => token.kind === "input")) {
     formulaError(path, "a function plot formula must depend on x");
   }
   return result;
@@ -14121,6 +14141,7 @@ var MATH_HOOKS = {
   },
   function_plot: {
     lower_model_parameters(parameters3, { numberCount }) {
+      if (parameters3.pieces !== void 0) return lowerPieces(parameters3, numberCount);
       const rawFormulas = parameters3.formulas !== void 0 ? parameters3.formulas : typeof parameters3.expression === "string" ? [parameters3.expression] : Array.isArray(parameters3.expressions) ? parameters3.expressions : void 0;
       if (rawFormulas === void 0) return;
       if (!Array.isArray(rawFormulas) || rawFormulas.length < 1 || rawFormulas.length > 8) {
@@ -14220,6 +14241,42 @@ var MATH_HOOKS = {
     free_number: (content) => content.parameters?.radius_expression !== void 0
   }
 };
+var PIECE_ENDS = { "[]": [true, true], "[)": [true, false], "(]": [false, true], "()": [false, false] };
+function lowerPieces(parameters3, numberCount) {
+  const path = "$lessonPlanSection.visual.parameters.pieces";
+  const raw = parameters3.pieces;
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 4) formulaError(path, "a piecewise function has two to four pieces");
+  const decimal = (value2, where) => {
+    if (value2 === void 0 || value2 === null) return null;
+    const number = typeof value2 === "number" ? value2 : value2 && typeof value2 === "object" && "mantissa" in value2 ? Number(value2.mantissa) / 10 ** Number(value2.scale ?? 0) : Number.NaN;
+    if (!Number.isFinite(number)) formulaError(where, "a piece's end is a finite number, or left out when that side is unbounded");
+    return number;
+  };
+  const pieces = raw.map((entry, index) => {
+    const where = `${path}[${index}]`;
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) formulaError(where, "each piece is an object with formula, x_from, x_to and ends");
+    const piece = entry;
+    const tokens = parseModelFormula(piece.formula, numberCount, `${where}.formula`, { allowConstant: true });
+    if (tokens.some((token) => token.kind === "number")) formulaError(`${where}.formula`, "pieces are fixed formulas; use one formula when lesson numbers change the curve");
+    const ends = PIECE_ENDS[String(piece.ends)];
+    if (!ends) formulaError(`${where}.ends`, "ends is one of [] [) (] ()");
+    const from = decimal(piece.x_from, `${where}.x_from`), to = decimal(piece.x_to, `${where}.x_to`);
+    if (from !== null && to !== null && !(from < to)) formulaError(where, "a piece's x_from is below its x_to");
+    return { expression: mathExpressionToOll(tokens), from, to, from_closed: ends[0], to_closed: ends[1] };
+  });
+  const ordered = [...pieces].sort((a, b) => (a.from ?? -Infinity) - (b.from ?? -Infinity));
+  for (let index = 1; index < ordered.length; index += 1) {
+    const before = ordered[index - 1], piece = ordered[index];
+    const meets = before.to !== null && piece.from !== null && before.to === piece.from;
+    if (before.to === null || piece.from === null || before.to > piece.from || meets && before.to_closed && piece.from_closed) {
+      formulaError(path, "the pieces overlap: each x belongs to at most one piece, and where two meet only one includes the end");
+    }
+  }
+  for (const key of ["formulas", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "sample_x_numbers"]) delete parameters3[key];
+  parameters3.expressions = ordered.map((piece) => piece.expression);
+  parameters3.pieces = ordered;
+  return { no_numbers: true };
+}
 function requestsTwoIndependentPoints(request) {
   return /(?:两个|两)\s*(?:个)?(?:可以|可)?(?:分别|独立|各自).{0,8}(?:移动|调整).{0,4}点|(?:分别|独立|各自).{0,8}(?:移动|调整).{0,8}(?:两个点|两点)|two.{0,12}(?:independent|separate).{0,12}(?:point|sample)/i.test(request);
 }
@@ -15568,9 +15625,9 @@ function union(a, b) {
 }
 function niceStep(raw) {
   if (!(raw > 0) || !Number.isFinite(raw)) return 1;
-  const power = 10 ** Math.floor(Math.log10(raw));
-  const normalized = raw / power;
-  return ([1, 2, 2.5, 5, 10].find((value2) => normalized <= value2 + 1e-9) ?? 10) * power;
+  const power2 = 10 ** Math.floor(Math.log10(raw));
+  const normalized = raw / power2;
+  return ([1, 2, 2.5, 5, 10].find((value2) => normalized <= value2 + 1e-9) ?? 10) * power2;
 }
 function snap2(range, unit = 1) {
   const step = unit === 1 ? niceStep(span(range) / 20) : unit * Math.max(1, Math.round(span(range) / unit / 8));
@@ -15707,10 +15764,10 @@ function analyse(curve, scan) {
     if (finite(left) && finite(right) && Math.abs(left - right) < 1e-4 * Math.max(1, Math.abs(left))) return { x: x0, y: (left + right) / 2 };
   };
   for (let x = Math.ceil(scan.min * 2) / 2; x <= scan.max; x += 0.5) {
-    const at = Number(x.toFixed(6));
-    const hole = holeAt(at);
+    const at2 = Number(x.toFixed(6));
+    const hole = holeAt(at2);
     if (hole) features.push({ kind: "hole", ...hole });
-    else if (!finite(curve(at)) && finite(curve(at - 0.01)) && finite(curve(at + 0.01)) && poleAt(at)) features.push({ kind: "pole", x: at });
+    else if (!finite(curve(at2)) && finite(curve(at2 - 0.01)) && finite(curve(at2 + 0.01)) && poleAt(at2)) features.push({ kind: "pole", x: at2 });
   }
   for (let index = 1; index < xs.length; index += 1) {
     const [x0, x1, y0, y1] = [xs[index - 1], xs[index], ys[index - 1], ys[index]];
@@ -15791,8 +15848,8 @@ function intersections(curves, scan) {
               fa = fm;
             } else b = mid;
           }
-          const at = (a + b) / 2, y = curves[i](at);
-          if (finite(y) && Math.abs(difference(at)) < 1e-6 * Math.max(1, Math.abs(y))) found.push({ kind: "intersection", x: at, y });
+          const at2 = (a + b) / 2, y = curves[i](at2);
+          if (finite(y) && Math.abs(difference(at2)) < 1e-6 * Math.max(1, Math.abs(y))) found.push({ kind: "intersection", x: at2, y });
         }
         previous = current;
       }
@@ -16047,10 +16104,487 @@ function planPlotView(input) {
   return { x: finalX, y: finalY, equalScale, piTicks, holes, adjustments };
 }
 
+// src/plugins/plot-marks.ts
+var constant = (value2) => ({ text: formatNumber(value2), value: value2 });
+var formatNumber = (value2) => Object.is(value2, -0) ? "0" : String(Number(value2.toPrecision(12)));
+var isZero = (scalar) => scalar.value === 0;
+var wrap = (scalar) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(scalar.text) ? scalar.text : `(${scalar.text})`;
+function add(a, b) {
+  if (a.value !== void 0 && b.value !== void 0) return constant(a.value + b.value);
+  if (isZero(a)) return b;
+  if (isZero(b)) return a;
+  return { text: `${a.text}+${wrap(b)}` };
+}
+function negate(a) {
+  return a.value !== void 0 ? constant(-a.value) : { text: `-${wrap(a)}` };
+}
+function multiply2(a, b) {
+  if (a.value !== void 0 && b.value !== void 0) return constant(a.value * b.value);
+  if (isZero(a) || isZero(b)) return constant(0);
+  if (a.value === 1) return b;
+  if (b.value === 1) return a;
+  if (a.value === -1) return negate(b);
+  if (b.value === -1) return negate(a);
+  return { text: `${wrap(a)}*${wrap(b)}` };
+}
+function divide(a, b) {
+  if (a.value !== void 0 && b.value !== void 0 && b.value !== 0) return constant(a.value / b.value);
+  if (isZero(a)) return constant(0);
+  if (b.value === 1) return a;
+  return { text: `${wrap(a)}/${wrap(b)}` };
+}
+var degree = (p) => p.reduce((highest, scalar, power2) => isZero(scalar) ? highest : power2, 0);
+var coefficient = (p, power2) => p[power2] ?? constant(0);
+function polynomialOf(tokens) {
+  const stack = [];
+  for (const token of tokens) {
+    if (token.kind === "input") stack.push([constant(0), constant(1)]);
+    else if (token.kind === "number") stack.push([{ text: variableAlias(token.number) }]);
+    else if (token.kind === "literal") stack.push([constant(Number(token.value))]);
+    else if (token.kind === "constant") stack.push([{ text: token.name, value: token.name === "pi" ? Math.PI : Math.E }]);
+    else if (token.kind === "negate") {
+      const p = stack.pop();
+      if (!p) return void 0;
+      stack.push(p.map(negate));
+    } else if (token.kind === "function") {
+      const p = stack.pop();
+      if (!p || degree(p) > 0) return void 0;
+      stack.push([{ text: `${token.name}(${coefficient(p, 0).text})` }]);
+    } else {
+      const right = stack.pop(), left = stack.pop();
+      if (!left || !right) return void 0;
+      let result;
+      if (token.operator === "add" || token.operator === "subtract") {
+        result = [0, 1, 2].map((power2) => add(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
+      } else if (token.operator === "multiply") {
+        result = times(left, right);
+      } else if (token.operator === "divide") {
+        if (degree(right) > 0) return void 0;
+        result = left.map((scalar) => divide(scalar, coefficient(right, 0)));
+      } else {
+        const exponent = coefficient(right, 0);
+        if (degree(right) > 0) return void 0;
+        if (degree(left) === 0) result = [{ text: `${wrap(coefficient(left, 0))}^${wrap(exponent)}` }];
+        else if (exponent.value === 0) result = [constant(1)];
+        else if (exponent.value === 1) result = left;
+        else if (exponent.value === 2) result = times(left, left);
+        else return void 0;
+      }
+      if (!result) return void 0;
+      stack.push(result);
+    }
+  }
+  return stack.length === 1 ? stack[0] : void 0;
+}
+function times(left, right) {
+  const result = [constant(0), constant(0), constant(0)];
+  for (const [i, a] of left.entries()) for (const [j, b] of right.entries()) {
+    if (isZero(a) || isZero(b)) continue;
+    if (i + j > 2) return void 0;
+    result[i + j] = add(result[i + j], multiply2(a, b));
+  }
+  return result;
+}
+function markParts(tokens, marks, labels, check, path) {
+  const polynomial2 = polynomialOf(tokens);
+  const refuse = (mark, why) => {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `the ${mark} mark ${why}; leave it out of marks and do not narrate it`);
+  };
+  if (!polynomial2) return refuse(marks[0], "needs a line or a quadratic (marks are derived exactly)");
+  const [c, b, a] = [0, 1, 2].map((power2) => coefficient(polynomial2, power2));
+  if (polynomialText([c, b, a]).length > 240) refuse(marks[0], "is too long an expression for this formula");
+  crossCheck(tokens, [c, b, a], check, path);
+  const linear = isZero(a);
+  const parts = [];
+  const owners = /* @__PURE__ */ new Map();
+  for (const mark of marks) {
+    const before = parts.length;
+    if (mark === "intercepts") {
+      parts.push({ kind: "point", as: "mark-y-intercept", label: labels("y \u622A\u8DDD"), x: "0", y: c.text });
+      if (linear) {
+        if (!isZero(b)) parts.push({ kind: "point", as: "mark-x-intercept", label: labels("x \u622A\u8DDD"), x: negate(divide(c, b)).text, y: "0" });
+      } else {
+        const root = `sqrt(${wrap(b)}^2-4*${wrap(a)}*${wrap(c)})`;
+        for (const [index, sign] of ["-", "+"].entries()) {
+          parts.push({ kind: "point", as: `mark-x-intercept-${index + 1}`, label: labels("x \u622A\u8DDD"), x: `(${negate(b).text}${sign}${root})/(2*${wrap(a)})`, y: "0" });
+        }
+      }
+    } else {
+      if (linear) refuse(mark, "needs a quadratic");
+      const axis = `${negate(b).text === "0" ? "0" : `(${negate(b).text})`}/(2*${wrap(a)})`;
+      if (mark === "vertex") parts.push({ kind: "point", as: "mark-vertex", label: labels("\u9876\u70B9"), x: axis, y: `${wrap(c)}-${wrap(b)}^2/(4*${wrap(a)})` });
+      else parts.push({ kind: "guide", as: "mark-axis", label: labels("\u5BF9\u79F0\u8F74"), value: axis });
+    }
+    for (const part of parts.slice(before)) owners.set(part, mark);
+  }
+  for (const part of parts) for (const text3 of [part.x, part.y, part.value]) {
+    if (text3 !== void 0 && text3.length > 240) refuse(owners.get(part), "is too long an expression for this formula");
+  }
+  return parts;
+}
+var polynomialText = ([c, b, a]) => `${wrap(a)}*x^2+${wrap(b)}*x+${wrap(c)}`;
+function crossCheck(tokens, [c, b, a], { variables, samples }, path) {
+  const names = ["x", ...variables];
+  const formula = compileMathExpression(mathExpressionToOll(tokens), names);
+  const polynomial2 = compileMathExpression(polynomialText([c, b, a]), names);
+  for (const values of samples) for (const x of [-2.5, -1, 0, 0.5, 3]) {
+    const expected = formula({ ...values, x }), actual = polynomial2({ ...values, x });
+    if (!Number.isFinite(expected) && !Number.isFinite(actual)) continue;
+    if (!(Math.abs(expected - actual) <= 1e-6 * Math.max(1, Math.abs(expected)))) {
+      throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the marks could not be derived for this formula; leave marks out");
+    }
+  }
+}
+
+// src/plugins/plot-domain-range.ts
+function treeOf(tokens) {
+  const stack = [];
+  tokens.forEach((token, index) => {
+    const arity = token.kind === "negate" || token.kind === "function" ? 1 : token.kind === "operator" ? 2 : 0;
+    const args = stack.splice(stack.length - arity, arity);
+    stack.push({ start: arity ? args[0].start : index, end: index + 1, token, args });
+  });
+  return stack.length === 1 ? stack[0] : void 0;
+}
+var polyOf = (tokens, node) => polynomialOf(tokens.slice(node.start, node.end));
+var degreeOf = (p) => p.reduce((highest, scalar, power2) => scalar.value === 0 ? highest : power2, 0);
+var at = (p, power2) => p[power2] ?? { text: "0", value: 0 };
+var wrap2 = (text3) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(text3) ? text3 : `(${text3})`;
+function shapeOf(tokens, root) {
+  const terms = [];
+  const split = (node2, sign) => {
+    if (node2.token.kind === "operator" && (node2.token.operator === "add" || node2.token.operator === "subtract")) {
+      split(node2.args[0], sign);
+      split(node2.args[1], node2.token.operator === "add" ? sign : -sign);
+    } else if (node2.token.kind === "negate") split(node2.args[0], -sign);
+    else terms.push({ node: node2, sign });
+  };
+  split(root, 1);
+  const constantTerm = (node2) => {
+    const p = polyOf(tokens, node2);
+    return p && degreeOf(p) === 0 ? at(p, 0).text : void 0;
+  };
+  const kParts = [];
+  const cores = terms.filter(({ node: node2, sign }) => {
+    const text3 = constantTerm(node2);
+    if (text3 === void 0) return true;
+    kParts.push(sign === 1 ? wrap2(text3) : `-${wrap2(text3)}`);
+    return false;
+  });
+  if (cores.length !== 1) return void 0;
+  const k = kParts.length ? kParts.join("+").replace(/\+-/gu, "-") : "0";
+  let node = cores[0].node;
+  const factors = cores[0].sign === -1 ? ["-1"] : [];
+  for (; ; ) {
+    const token2 = node.token;
+    if (token2.kind === "negate") {
+      factors.push("-1");
+      node = node.args[0];
+      continue;
+    }
+    if (token2.kind === "operator" && token2.operator === "multiply") {
+      const [left, right] = node.args;
+      const l = constantTerm(left), r = constantTerm(right);
+      if (l !== void 0) {
+        factors.push(wrap2(l));
+        node = right;
+        continue;
+      }
+      if (r !== void 0) {
+        factors.push(wrap2(r));
+        node = left;
+        continue;
+      }
+      return void 0;
+    }
+    if (token2.kind === "operator" && token2.operator === "divide") {
+      const [top, bottom] = node.args;
+      const b = constantTerm(bottom), t = constantTerm(top);
+      if (b !== void 0) {
+        factors.push(`1/${wrap2(b)}`);
+        node = top;
+        continue;
+      }
+      const inner = polyOf(tokens, bottom);
+      if (t !== void 0 && inner && degreeOf(inner) === 1) {
+        factors.push(wrap2(t));
+        return { family: "reciprocal", a: factors.join("*"), k, p: at(inner, 1), q: at(inner, 0) };
+      }
+      return void 0;
+    }
+    break;
+  }
+  const a = factors.length ? factors.join("*") : "1";
+  const linearArg = (arg) => {
+    const p = polyOf(tokens, arg);
+    return p && degreeOf(p) === 1 ? p : void 0;
+  };
+  const token = node.token;
+  if (token.kind === "function") {
+    const inner = linearArg(node.args[0]);
+    if (!inner) return void 0;
+    const family = token.name === "sqrt" ? "sqrt" : token.name === "exp" ? "exponential" : /^(ln|log|log10|log2|lg)$/u.test(token.name) ? "log" : void 0;
+    return family ? { family, a, k, p: at(inner, 1), q: at(inner, 0) } : void 0;
+  }
+  if (token.kind === "operator" && token.operator === "power") {
+    const base = polyOf(tokens, node.args[0]), exponent = linearArg(node.args[1]);
+    if (!base || degreeOf(base) !== 0 || !exponent) return void 0;
+    return { family: "exponential", a, k, p: at(exponent, 1), q: at(exponent, 0), base: at(base, 0) };
+  }
+  return void 0;
+}
+function formulaBars(tokens, want, check, path) {
+  const refuse = (what, why) => {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `the ${what} mark ${why}; leave it out of marks and do not narrate it`);
+  };
+  const first = want.domain ? "domain" : "range";
+  const root = treeOf(tokens);
+  if (!root) return refuse(first, "could not be derived");
+  const all = (axis) => ({ axis, from: null, to: null, from_closed: false, to_closed: false });
+  const proved = (text3) => check.sign(text3) !== "unknown";
+  const bySign = (sign, end, up, axis) => {
+    const s = check.sign(sign);
+    const upBar = (guarded2) => ({ axis, from: guarded2, to: null, from_closed: up.from_closed, to_closed: false });
+    const downBar = (guarded2) => ({ axis, from: null, to: guarded2, from_closed: false, to_closed: up.from_closed });
+    if (s === "positive") return [upBar(end)];
+    if (s === "negative") return [downBar(end)];
+    return [upBar(`${wrap2(end)}+0*log(${wrap2(sign)})`), { ...downBar(`${wrap2(end)}+0*log(-${wrap2(sign)})`), alternative: true }];
+  };
+  const bars = [];
+  const polynomial2 = polynomialOf(tokens);
+  if (polynomial2) {
+    const [c, b, a] = [0, 1, 2].map((power2) => at(polynomial2, power2));
+    if (want.domain) bars.push(all("x"));
+    if (want.range) {
+      if (a.value === 0) {
+        if (b.value === 0) bars.push({ axis: "y", from: c.text, to: c.text, from_closed: true, to_closed: true });
+        else if (!proved(b.text)) refuse("range", "collapses to one value where the slope is 0");
+        else bars.push(all("y"));
+      } else {
+        const vertexY = `${wrap2(c.text)}-${wrap2(b.text)}^2/(4*${wrap2(a.text)})`;
+        bars.push(...bySign(a.text, vertexY, { from_closed: true }, "y"));
+      }
+    }
+    return guarded(bars, first, refuse);
+  }
+  const shape = shapeOf(tokens, root);
+  if (!shape) return refuse(first, "is derived only for lines, quadratics, roots, reciprocals, exponentials and logarithms");
+  const pSign = shape.p.value;
+  const edge = `-${wrap2(shape.q.text)}/${wrap2(shape.p.text)}`;
+  if (want.range) {
+    if (pSign === 0 || !proved(shape.p.text)) refuse("range", "collapses to one value where x's coefficient is 0");
+  }
+  if (want.domain) {
+    if (shape.family === "exponential") {
+      if (shape.base && check.sign(shape.base.text) !== "positive") refuse("domain", "needs a base above 0");
+      bars.push(all("x"));
+    } else if (shape.family === "reciprocal") {
+      bars.push({ axis: "x", from: null, to: edge, from_closed: false, to_closed: false }, { axis: "x", from: edge, to: null, from_closed: false, to_closed: false });
+    } else {
+      if (pSign === void 0) refuse("domain", "needs x with a fixed coefficient inside the root or logarithm");
+      const closed = shape.family === "sqrt";
+      bars.push(pSign > 0 ? { axis: "x", from: edge, to: null, from_closed: closed, to_closed: false } : { axis: "x", from: null, to: edge, from_closed: false, to_closed: closed });
+    }
+  }
+  if (want.range) {
+    if (shape.family === "log") {
+      if (!proved(shape.a)) refuse("range", "collapses to one value where the coefficient is 0");
+      bars.push(all("y"));
+    } else if (shape.family === "reciprocal") {
+      const guard = proved(shape.a) ? shape.k : `${wrap2(shape.k)}+0*log((${shape.a})^2)`;
+      bars.push({ axis: "y", from: null, to: guard, from_closed: false, to_closed: false }, { axis: "y", from: guard, to: null, from_closed: false, to_closed: false });
+    } else if (shape.family === "exponential") {
+      if (shape.base && !(shape.base.value !== void 0 && shape.base.value > 0 && shape.base.value !== 1)) refuse("range", "needs a fixed base above 0 and not 1");
+      bars.push(...bySign(shape.a, shape.k, { from_closed: false }, "y"));
+    } else {
+      bars.push(...bySign(shape.a, shape.k, { from_closed: true }, "y"));
+    }
+  }
+  return guarded(bars, first, refuse);
+}
+function guarded(bars, first, refuse) {
+  for (const bar of bars) for (const text3 of [bar.from, bar.to]) {
+    if (text3 !== null && text3.length > 240) refuse(first, "is too long an expression for this formula");
+  }
+  return bars;
+}
+function pieceBars(pieces, want, path) {
+  const bars = [];
+  if (want.domain) {
+    for (const piece of pieces) {
+      const tree = treeOf(piece.tokens);
+      const shape = tree === void 0 ? void 0 : shapeOf(piece.tokens, tree);
+      const definedEverywhere = polynomialOf(piece.tokens) !== void 0 || shape?.family === "exponential" && (shape.base === void 0 || shape.base.value !== void 0 && shape.base.value > 0);
+      if (!definedEverywhere) {
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a constant, a line, a quadratic or an exponential with a base above 0; leave it out of marks and do not narrate it");
+      }
+    }
+    bars.push(...join(pieces).map((span2) => toBar("x", span2)));
+  }
+  if (want.range) {
+    const images = pieces.map((piece) => {
+      const p = polynomialOf(piece.tokens);
+      if (!p || degreeOf(p) > 1 || p.some((scalar) => scalar.value === void 0)) {
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the range mark of a piecewise function is derived only when every piece is a line or a constant; leave it out of marks and do not narrate it");
+      }
+      const [c, m] = [at(p, 0).value, at(p, 1).value];
+      if (m === 0) return { from: c, to: c, from_closed: true, to_closed: true };
+      const ends = [{ x: piece.from, closed: piece.from_closed }, { x: piece.to, closed: piece.to_closed }].map(({ x, closed }) => ({ y: x === null ? null : m * x + c, closed: x !== null && closed }));
+      const [left, right] = ends;
+      return m > 0 ? { from: left.y, to: right.y, from_closed: left.closed, to_closed: right.closed } : { from: right.y, to: left.y, from_closed: right.closed, to_closed: left.closed };
+    });
+    bars.push(...join(images).map((span2) => toBar("y", span2)));
+  }
+  return bars;
+  function toBar(axis, span2) {
+    const text3 = (value2) => value2 === null ? null : String(Number(value2.toPrecision(12)));
+    return { axis, from: text3(span2.from), to: text3(span2.to), from_closed: span2.from !== null && span2.from_closed, to_closed: span2.to !== null && span2.to_closed };
+  }
+  function join(spans) {
+    const low = (span2) => span2.from ?? -Infinity, high = (span2) => span2.to ?? Infinity;
+    const sorted = [...spans].sort((a, b) => low(a) - low(b) || Number(b.from_closed) - Number(a.from_closed));
+    const joined = [];
+    for (const span2 of sorted) {
+      const last = joined.at(-1);
+      if (last && (high(last) > low(span2) || high(last) === low(span2) && (last.to_closed || span2.from_closed))) {
+        if (high(span2) > high(last)) {
+          last.to = span2.to;
+          last.to_closed = span2.to_closed;
+        } else if (high(span2) === high(last)) last.to_closed = last.to_closed || span2.to_closed;
+        continue;
+      }
+      joined.push({ ...span2 });
+    }
+    return joined;
+  }
+}
+
+// src/plugins/interval.ts
+var ALL = [-Infinity, Infinity];
+var finite2 = ([lo, hi]) => Number.isFinite(lo) && Number.isFinite(hi);
+function times2(a, b) {
+  if (!finite2(a) || !finite2(b)) return ALL;
+  const products = [a[0] * b[0], a[0] * b[1], a[1] * b[0], a[1] * b[1]];
+  return [Math.min(...products), Math.max(...products)];
+}
+function reciprocal([lo, hi]) {
+  if (lo <= 0 && hi >= 0) return ALL;
+  return [1 / hi, 1 / lo];
+}
+function power(base, exponent) {
+  if (exponent[0] !== exponent[1]) {
+    if (base[0] !== base[1] || !(base[0] > 0) || !finite2(exponent)) return ALL;
+    const ends2 = [base[0] ** exponent[0], base[0] ** exponent[1]];
+    return [Math.min(...ends2), Math.max(...ends2)];
+  }
+  const n = exponent[0];
+  if (Number.isInteger(n)) {
+    if (n === 0) return [1, 1];
+    if (n < 0) return reciprocal(power(base, [-n, -n]));
+    if (!finite2(base)) return ALL;
+    const [lo, hi] = base;
+    if (n % 2 === 1) return [lo ** n, hi ** n];
+    if (lo >= 0) return [lo ** n, hi ** n];
+    if (hi <= 0) return [hi ** n, lo ** n];
+    return [0, Math.max(lo ** n, hi ** n)];
+  }
+  if (!(base[0] > 0) || !finite2(base)) return ALL;
+  const ends = [base[0] ** n, base[1] ** n];
+  return [Math.min(...ends), Math.max(...ends)];
+}
+var FUNCTIONS2 = {
+  sqrt: ([lo, hi]) => lo >= 0 && Number.isFinite(hi) ? [Math.sqrt(lo), Math.sqrt(hi)] : ALL,
+  exp: ([lo, hi]) => [Math.exp(lo), Math.exp(hi)],
+  abs: ([lo, hi]) => lo >= 0 ? [lo, hi] : hi <= 0 ? [-hi, -lo] : [0, Math.max(-lo, hi)]
+};
+function intervalOf(text3, bounds) {
+  const tokens = text3.match(/\d+(?:\.\d+)?(?:[eE][-+]?\d+)?|[A-Za-z_][A-Za-z0-9_]*|[-+*/^(),]|\S/gu) ?? [];
+  let position = 0;
+  const peek = () => tokens[position];
+  const fail4 = () => {
+    throw new Error("unread");
+  };
+  const expect = (token) => {
+    if (tokens[position] !== token) fail4();
+    position += 1;
+  };
+  const sum = () => {
+    let value2 = product();
+    while (peek() === "+" || peek() === "-") {
+      const operator = tokens[position++];
+      const right = product();
+      value2 = operator === "+" ? [value2[0] + right[0], value2[1] + right[1]] : [value2[0] - right[1], value2[1] - right[0]];
+    }
+    return value2;
+  };
+  const product = () => {
+    let value2 = unary();
+    while (peek() === "*" || peek() === "/") {
+      const operator = tokens[position++];
+      const right = unary();
+      value2 = operator === "*" ? times2(value2, right) : times2(value2, reciprocal(right));
+    }
+    return value2;
+  };
+  const unary = () => {
+    if (peek() === "-") {
+      position += 1;
+      const [lo, hi] = unary();
+      return [-hi, -lo];
+    }
+    if (peek() === "+") {
+      position += 1;
+      return unary();
+    }
+    const base = atom();
+    if (peek() === "^") {
+      position += 1;
+      return power(base, unary());
+    }
+    return base;
+  };
+  const atom = () => {
+    const token = tokens[position++];
+    if (token === void 0) return fail4();
+    if (token === "(") {
+      const value2 = sum();
+      expect(")");
+      return value2;
+    }
+    if (/^\d/u.test(token)) {
+      const value2 = Number(token);
+      return [value2, value2];
+    }
+    if (/^[A-Za-z_]/u.test(token)) {
+      if (peek() === "(") {
+        position += 1;
+        const argument = sum();
+        expect(")");
+        const f = FUNCTIONS2[token];
+        return f ? f(argument) : ALL;
+      }
+      if (token === "pi") return [Math.PI, Math.PI];
+      if (token === "e") return [Math.E, Math.E];
+      return bounds[token] ?? fail4();
+    }
+    return fail4();
+  };
+  try {
+    const value2 = sum();
+    if (position !== tokens.length) return ALL;
+    return Number.isNaN(value2[0]) || Number.isNaN(value2[1]) ? ALL : value2;
+  } catch {
+    return ALL;
+  }
+}
+function signOf([lo, hi]) {
+  return lo > 0 ? "positive" : hi < 0 ? "negative" : "unknown";
+}
+
 // src/plugins/math-compilers.ts
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"], path);
   const dynamicTokens = input.expression_tokens;
   if (dynamicTokens !== void 0 && !dynamicTokens.some((token) => token.kind === "input")) {
     fail2(
@@ -16135,10 +16669,26 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       return `y = ${item}`;
     }
   };
+  const pieces = plotPieces(input.pieces, expressions.length, path);
+  const teachingPointsFromPieces = [];
   const curves = expressions.map((item, index) => ({
     expression: item,
-    label: curveLabels[index] ?? (index === 0 && input.curve_label !== void 0 ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan) : defaultCurveLabel(rawExpressions[index] ?? item))
+    label: curveLabels[index] ?? (index === 0 && input.curve_label !== void 0 ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan) : defaultCurveLabel(rawExpressions[index] ?? item)),
+    // A piece of one function (decision 0018 §2): drawn only on its interval, its ends open or closed;
+    // the pieces share a series, so the legend, colour and line style treat them as one function.
+    ...pieces ? {
+      ...pieces[index].from !== null ? { from: pieces[index].from, from_closed: pieces[index].from_closed } : {},
+      ...pieces[index].to !== null ? { to: pieces[index].to, to_closed: pieces[index].to_closed } : {},
+      series: "f"
+    } : {}
   }));
+  for (const [index, piece] of (pieces ?? []).entries()) {
+    for (const x of [piece.from, piece.to]) {
+      if (x === null) continue;
+      const y = compileMathExpression(expressions[index], ["x"])({ x });
+      if (Number.isFinite(y)) teachingPointsFromPieces.push({ x, y });
+    }
+  }
   const sampleAt = (x, where) => ({ x, y: evaluate(expression, ["x"], { x }, where) });
   const samples = sampleNumbers.map((sampleNumber, index) => {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
@@ -16149,7 +16699,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       x_expression: variableAlias(sampleNumber)
     };
   });
-  const teachingPoints = samples.map(({ x, y }) => ({ x, y }));
+  const teachingPoints = [...samples.map(({ x, y }) => ({ x, y })), ...teachingPointsFromPieces];
   const optionalPoints = [];
   for (const sampleNumber of sampleNumbers) {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
@@ -16172,10 +16722,21 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ));
     }
   }
+  const markList = input.marks === void 0 ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
+  for (const mark of markList) {
+    if (!PLOT_MARKS.includes(mark)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
+  }
+  const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
+  if (markList.length > barMarks.length && expressions.length !== 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks other than domain and range need one formula; leave them out of a piecewise function or a comparison of several curves");
+  if (barMarks.length && expressions.length !== 1 && input.pieces === void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "domain and range need one formula or one piecewise function; leave them out of a comparison of several curves");
+  const slopeTriangle = markList.includes("slope_triangle");
+  if (slopeTriangle && sampleNumbers.length === 1) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark measures two points: give sample_x_numbers two numbers (A and B), or none and the program places them");
+  }
   let references;
-  if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
+  if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
-    const referencePoints = (values) => [0, 1].flatMap((x, index) => {
+    const referencePoints = (values, xs2) => xs2.flatMap((x, index) => {
       try {
         const y = evaluateCurve({ ...values, x });
         return Number.isFinite(y) ? [{ x, y, label: index ? "B" : "A" }] : [];
@@ -16183,11 +16744,69 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
         return [];
       }
     });
-    const initialReferences = referencePoints(initialState);
-    if (initialReferences.length === 2) {
-      references = initialReferences;
-      teachingPoints.push(...references, ...demonstrations.flatMap(referencePoints));
+    const pairs = markList.length ? [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]] : [[0, 1]];
+    const reached = markList.length ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))] : [initialState];
+    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2));
+    if (xs) {
+      references = referencePoints(initialState, xs);
+      teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));
+    } else if (slopeTriangle) {
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark found no two points two units apart where the curve exists; leave it out");
     }
+  }
+  const derivedMarks = markList.filter((mark) => mark !== "slope_triangle" && mark !== "domain" && mark !== "range");
+  let marks = [];
+  if (derivedMarks.length) {
+    const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`);
+    const variables = curveParameters.map((parameter) => parameter.name);
+    const samples2 = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))];
+    marks = markParts(tokens, derivedMarks, (source) => compileText(plan, source), { variables, samples: samples2 }, path).map((part) => {
+      const compiled = ["x", "y", "value"].flatMap((key) => part[key] === void 0 ? [] : [[key, compileMathExpression(part[key], variables)]]);
+      return { ...part, at: (values) => Object.fromEntries(compiled.map(([key, f]) => {
+        let result = Number.NaN;
+        try {
+          result = f(values);
+        } catch {
+        }
+        return [key, result];
+      })) };
+    });
+    for (const values of [initialState, ...demonstrations]) {
+      for (const mark of marks) {
+        const where = mark.at(values);
+        if (mark.kind === "point" && Number.isFinite(where.x) && Number.isFinite(where.y)) teachingPoints.push({ x: where.x, y: where.y });
+      }
+    }
+  }
+  let bars = [];
+  if (barMarks.length) {
+    const want = { domain: barMarks.includes("domain"), range: barMarks.includes("range") };
+    const variables = curveParameters.map((parameter) => parameter.name);
+    const bounds = Object.fromEntries(curveParameters.map((parameter) => {
+      const reached = [parameter.min, parameter.max, parameter.initial, ...demonstrations.map((state) => state[parameter.name])];
+      return [parameter.name, [Math.min(...reached), Math.max(...reached)]];
+    }));
+    const sign = (text3) => {
+      const interval = intervalOf(text3, bounds);
+      const proved = signOf(interval);
+      if (proved === "unknown") return proved;
+      const f = compileMathExpression(text3, variables);
+      const corners = variables.reduce((states, name) => states.flatMap((state) => bounds[name].map((value2) => ({ ...state, [name]: value2 }))), [{}]);
+      const inside = Array.from({ length: 32 }, (_, index) => Object.fromEntries(variables.map((name, position) => {
+        const [lo, hi] = bounds[name];
+        return [name, lo + (hi - lo) * ((index + 1) * (position + 2) * 0.6180339887 % 1)];
+      })));
+      for (const state of [...corners.slice(0, 64), ...inside]) {
+        let value2 = Number.NaN;
+        try {
+          value2 = f(state);
+        } catch {
+        }
+        if (!(value2 >= interval[0] - 1e-9 * Math.max(1, Math.abs(interval[0])) && value2 <= interval[1] + 1e-9 * Math.max(1, Math.abs(interval[1])))) return "unknown";
+      }
+      return proved;
+    };
+    bars = pieces ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), want, path) : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), want, { sign }, path);
   }
   let view;
   try {
@@ -16220,6 +16839,8 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     curves: plottedCurves,
     ...samples.length ? { samples } : references ? { references } : {}
   });
+  if (marks.length) appendMarks(built.actions[0], marks, initialState);
+  if (bars.length) appendBars(built.actions[0], bars, initialState, (source) => compileText(plan, source));
   return {
     actions: built.actions,
     ...view.adjustments.length ? { adjustments: view.adjustments } : {},
@@ -16231,6 +16852,71 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ...dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] : []
     ])
   };
+}
+function appendBars(action, bars, initial, labels) {
+  const content = action.content;
+  const intervals = [];
+  const bindings = [...content.bindings ?? []];
+  const variables = Object.keys(initial);
+  const reads = (text3) => /\bnumber_\d+\b/u.test(text3);
+  const labelled = /* @__PURE__ */ new Set();
+  bars.forEach((bar, index) => {
+    const as = `${bar.axis === "x" ? "domain" : "range"}-${index + 1}`;
+    const end = (text3) => {
+      if (text3 === null) return null;
+      let value2 = Number.NaN;
+      try {
+        value2 = compileMathExpression(text3, variables)(initial);
+      } catch {
+      }
+      return Number.isFinite(value2) ? Number(value2.toPrecision(12)) : 0;
+    };
+    const from = end(bar.from), to = end(bar.to);
+    intervals.push({
+      as,
+      axis: bar.axis,
+      from,
+      to,
+      ...bar.from !== null ? { from_closed: bar.from_closed } : {},
+      ...bar.to !== null ? { to_closed: bar.to_closed } : {},
+      ...!labelled.has(bar.axis) || bar.alternative ? { label: labels(bar.axis === "x" ? "\u5B9A\u4E49\u57DF" : "\u503C\u57DF") } : {}
+    });
+    labelled.add(bar.axis);
+    for (const [key, text3] of [["from", bar.from], ["to", bar.to]]) {
+      if (text3 !== null && reads(text3)) bindings.push({ target: `${as}.${key}`, expression: text3, hide_when_undefined: true });
+    }
+  });
+  content.intervals = intervals;
+  if (bindings.length) content.bindings = bindings;
+}
+function plotPieces(value2, expressionCount, path) {
+  if (value2 === void 0) return void 0;
+  if (!Array.isArray(value2) || value2.length !== expressionCount) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.pieces`, "each piece needs its own formula");
+  return value2.map((entry, index) => {
+    const piece = entry ?? {};
+    const end = (key) => piece[key] === null || piece[key] === void 0 ? null : optionalNumber(piece[key], 0, `${path}.pieces[${index}].${key}`);
+    return { from: end("from"), to: end("to"), from_closed: piece.from_closed !== false, to_closed: piece.to_closed !== false };
+  });
+}
+function appendMarks(action, marks, initial) {
+  const content = action.content;
+  const points = [...content.points ?? []];
+  const guides = [...content.guides ?? []];
+  const bindings = [...content.bindings ?? []];
+  const reads = (text3) => text3 !== void 0 && /\bnumber_\d+\b/u.test(text3);
+  for (const mark of marks) {
+    const where = mark.at(initial);
+    const keys = mark.kind === "point" ? ["x", "y"] : ["value"];
+    const bound = keys.filter((key) => reads(mark[key]));
+    if (!bound.length && keys.some((key) => !Number.isFinite(where[key]))) continue;
+    const start = (key) => Number.isFinite(where[key]) ? Number(where[key].toPrecision(12)) : 0;
+    if (mark.kind === "point") points.push({ as: mark.as, x: start("x"), y: start("y"), label: mark.label });
+    else guides.push({ as: mark.as, kind: "vertical_line", value: start("value"), label: mark.label });
+    for (const key of bound) bindings.push({ target: `${mark.as}.${key}`, expression: mark[key], hide_when_undefined: true });
+  }
+  if (points.length) content.points = points;
+  if (guides.length) content.guides = guides;
+  if (bindings.length) content.bindings = bindings;
 }
 var translator = (plan) => (source, values) => compileText(plan, source, values);
 function builtVisual(built) {
@@ -16616,7 +17302,7 @@ function compileNumberLineSolution(base, content, role, placement, plan, path) {
   const steps = bounds.map(({ definition }) => definition.student_control?.step).filter((step) => typeof step === "number" && step > 0);
   const shown = bounds.flatMap(({ number, definition }) => [definition.initial, ...lessonValues(plan, number)]);
   const frame = numberLineFrame([...values, Math.min(...values) - 2, Math.max(...values) + 2], [...values, ...steps], shown, labelStyle, path, "tight");
-  const at = (name) => {
+  const at2 = (name) => {
     if (name === null) return null;
     const bound = bounds[name === "a" ? 0 : 1];
     return { expression: variableAlias(bound.number), initial: bound.definition.initial };
@@ -16630,8 +17316,8 @@ function compileNumberLineSolution(base, content, role, placement, plan, path) {
     ticks: frame.ticks,
     intervals: relation.pieces.map((piece, index) => ({
       as: index === 0 ? "set" : "set2",
-      from: at(piece.from),
-      to: at(piece.to),
+      from: at2(piece.from),
+      to: at2(piece.to),
       ...piece.from !== null ? { from_closed: Boolean(piece.fromClosed) } : {},
       ...piece.to !== null ? { to_closed: Boolean(piece.toClosed) } : {}
     }))
@@ -16668,7 +17354,7 @@ function compileNumberLineRounding(base, content, role, placement, plan, path) {
   const major = ticks[0].major;
   const scale = unit < 1 ? Math.round(1 / unit) : 1;
   const steps = (variable2) => unit < 1 ? `floor(${variable2} * ${scale} + 0.000000001)` : `floor(${variable2} / ${unit} + 0.000000001)`;
-  const at = (expression) => unit < 1 ? `(${expression}) / ${scale}` : `(${expression}) * ${unit}`;
+  const at2 = (expression) => unit < 1 ? `(${expression}) / ${scale}` : `(${expression}) * ${unit}`;
   const stepsOf = (value2) => Math.floor(unit < 1 ? value2 * scale + 1e-9 : value2 / unit + 1e-9);
   const valueAt = (count) => Number((unit < 1 ? count / scale : count * unit).toPrecision(12));
   const variable = variableAlias(numberIndex);
@@ -16694,13 +17380,13 @@ function compileNumberLineRounding(base, content, role, placement, plan, path) {
       ...Number.isInteger(major) ? {} : { format: "decimal" }
     },
     points: [
-      { as: "lower", value: { expression: at(steps(variable)), initial: lower } },
-      { as: "middle", value: { expression: at(`${steps(variable)} + 0.5`), initial: middle }, style: "open" },
-      { as: "upper", value: { expression: at(`${steps(variable)} + 1`), initial: upper } },
+      { as: "lower", value: { expression: at2(steps(variable)), initial: lower } },
+      { as: "middle", value: { expression: at2(`${steps(variable)} + 0.5`), initial: middle }, style: "open" },
+      { as: "upper", value: { expression: at2(`${steps(variable)} + 1`), initial: upper } },
       // Its tick already shows the number; a name that only repeats it ("362") is left off.
       { as: "number", value: { expression: variable, initial: definition.initial }, ...nameOf(definition, definition.initial) ? { label: nameOf(definition, definition.initial) } : {} }
     ],
-    jumps: [{ as: "move", from: "number", by: { expression: `${at(unit < 1 ? `floor(${variable} * ${scale} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }]
+    jumps: [{ as: "move", from: "number", by: { expression: `${at2(unit < 1 ? `floor(${variable} * ${scale} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }]
   });
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.move })) };
 }
@@ -16994,14 +17680,14 @@ function mergeEquivalentVisualInputs(plan) {
 function lessonPlanPlugins(plan) {
   const installed = new Map(INSTALLED_PLUGINS.map((plugin) => [plugin.manifest.id, plugin.manifest]));
   const used = /* @__PURE__ */ new Set();
-  const add = (id) => {
+  const add2 = (id) => {
     if (used.has(id)) return;
     used.add(id);
-    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add(dependency);
+    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add2(dependency);
   };
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
-    add(RECIPE_PLUGIN[action.content.capability]);
+    add2(RECIPE_PLUGIN[action.content.capability]);
   }
   return Object.fromEntries([...used].sort().map((id) => [id, installed.get(id).version]));
 }

@@ -14,6 +14,9 @@ import { compileMathExpression, type AuthoringAction } from "octos-lesson-langua
 import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
 import { COARSE_UNITS, lessonValues, moveLandings } from "./number-line-fit.js";
+import { PLOT_MARKS, markParts, type MarkPart, type PlotMark } from "./plot-marks.js";
+import { formulaBars, pieceBars, type AxisBar } from "./plot-domain-range.js";
+import { intervalOf, signOf, type Interval } from "./interval.js";
 import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
@@ -25,7 +28,7 @@ function compileFunctionPlot(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"], path);
   const dynamicTokens = input.expression_tokens as LessonPlanMathExpression | undefined;
   if (dynamicTokens !== undefined
     && !dynamicTokens.some((token) => token.kind === "input")) {
@@ -134,13 +137,30 @@ function compileFunctionPlot(
       return `y = ${item}`;
     }
   };
+  const pieces = plotPieces(input.pieces, expressions.length, path);
+  const teachingPointsFromPieces: Array<{ x: number; y: number }> = [];
   const curves = expressions.map((item, index) => ({
     expression: item,
     label: curveLabels[index]
       ?? (index === 0 && input.curve_label !== undefined
         ? namedNumbers(optionalText(input.curve_label, "", `${path}.curve_label`), plan)
         : defaultCurveLabel(rawExpressions[index] ?? item)),
+    // A piece of one function (decision 0018 §2): drawn only on its interval, its ends open or closed;
+    // the pieces share a series, so the legend, colour and line style treat them as one function.
+    ...(pieces ? {
+      ...(pieces[index]!.from !== null ? { from: pieces[index]!.from, from_closed: pieces[index]!.from_closed } : {}),
+      ...(pieces[index]!.to !== null ? { to: pieces[index]!.to, to_closed: pieces[index]!.to_closed } : {}),
+      series: "f",
+    } : {}),
   }));
+  // A piece's finite ends, with its value there, must be in view.
+  for (const [index, piece] of (pieces ?? []).entries()) {
+    for (const x of [piece.from, piece.to]) {
+      if (x === null) continue;
+      const y = compileMathExpression(expressions[index]!, ["x"])({ x });
+      if (Number.isFinite(y)) teachingPointsFromPieces.push({ x, y });
+    }
+  }
 
   // Points on a fixed curve: the initial positions and the creation section's
   // animation endpoints must be visible; the slider ends may join the view.
@@ -151,7 +171,7 @@ function compileFunctionPlot(
     return { ...sampleAt(d.initial, `${path}.expression`),
       label: sampleNumbers.length === 2 ? (index === 0 ? "A" : "B") : "P(x, y)", x_expression: variableAlias(sampleNumber) };
   });
-  const teachingPoints: Array<{ x: number; y: number }> = samples.map(({ x, y }) => ({ x, y }));
+  const teachingPoints: Array<{ x: number; y: number }> = [...samples.map(({ x, y }) => ({ x, y })), ...teachingPointsFromPieces];
   const optionalPoints: Array<{ x: number; y: number }> = [];
   for (const sampleNumber of sampleNumbers) {
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
@@ -172,12 +192,28 @@ function compileFunctionPlot(
         `$lessonPlan.sections[${creationIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`));
     }
   }
+  // Marks (decision 0018 §1) are named by the model; the slope triangle is drawn by the points below.
+  const markList = input.marks === undefined ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
+  for (const mark of markList) {
+    if (!(PLOT_MARKS as readonly string[]).includes(mark)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
+  }
+  // A piecewise function takes only domain and range; other marks need one formula.
+  const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
+  if (markList.length > barMarks.length && expressions.length !== 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks other than domain and range need one formula; leave them out of a piecewise function or a comparison of several curves");
+  if (barMarks.length && expressions.length !== 1 && input.pieces === undefined) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "domain and range need one formula or one piecewise function; leave them out of a comparison of several curves");
+  const slopeTriangle = markList.includes("slope_triangle");
+  if (slopeTriangle && sampleNumbers.length === 1) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark measures two points: give sample_x_numbers two numbers (A and B), or none and the program places them");
+  }
+
   // Slope lessons with curve parameters still need visible reference points.
   // Their x positions are fixed; the parameter sliders change the curve.
+  // With marks (decision 0018) the points stand two units apart, off x = 0, where the y-intercept mark
+  // sits: the first pair where the curve exists at the start and at every demonstrated state.
   let references: Array<{ x: number; y: number; label: string }> | undefined;
-  if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
+  if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
-    const referencePoints = (values: Record<string, number>) => [0, 1].flatMap((x, index) => {
+    const referencePoints = (values: Record<string, number>, xs: readonly number[]) => xs.flatMap((x, index) => {
       try {
         const y = evaluateCurve({ ...values, x });
         return Number.isFinite(y) ? [{ x, y, label: index ? "B" : "A" }] : [];
@@ -185,11 +221,79 @@ function compileFunctionPlot(
         return [];
       }
     });
-    const initialReferences = referencePoints(initialState);
-    if (initialReferences.length === 2) {
-      references = initialReferences;
-      teachingPoints.push(...references, ...demonstrations.flatMap(referencePoints));
+    const pairs: ReadonlyArray<readonly [number, number]> = markList.length ? [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]] : [[0, 1]];
+    // With marks: at the start, at every demonstrated state and at each curve slider's ends, where a learner
+    // can drag the curve away from a point whose y is not hidden (review). Without marks the points are found
+    // as before the option, at the start only, so a lesson without marks compiles exactly as it did (review).
+    const reached = markList.length
+      ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))]
+      : [initialState];
+    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2));
+    if (xs) {
+      references = referencePoints(initialState, xs);
+      teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));
+    } else if (slopeTriangle) {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark found no two points two units apart where the curve exists; leave it out");
     }
+  }
+
+  // Marks (decision 0018 §1): derived from the one formula, bound to its lesson numbers, hidden while they
+  // do not exist. Where they are at the start and at each demonstrated state must be in view.
+  const derivedMarks = markList.filter((mark) => mark !== "slope_triangle" && mark !== "domain" && mark !== "range");
+  let marks: Array<MarkPart & { at: (values: Record<string, number>) => { x?: number; y?: number; value?: number } }> = [];
+  if (derivedMarks.length) {
+    const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`);
+    const variables = curveParameters.map((parameter) => parameter.name);
+    const samples = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))];
+    marks = markParts(tokens, derivedMarks as PlotMark[], (source) => compileText(plan, source), { variables, samples }, path).map((part) => {
+      const compiled = (["x", "y", "value"] as const).flatMap((key) => (part[key] === undefined ? [] : [[key, compileMathExpression(part[key]!, variables)] as const]));
+      return { ...part, at: (values: Record<string, number>) => Object.fromEntries(compiled.map(([key, f]) => {
+        let result = Number.NaN;
+        try { result = f(values); } catch { /* not defined here */ }
+        return [key, result];
+      })) };
+    });
+    for (const values of [initialState, ...demonstrations]) {
+      for (const mark of marks) {
+        const where = mark.at(values);
+        if (mark.kind === "point" && Number.isFinite(where.x) && Number.isFinite(where.y)) teachingPoints.push({ x: where.x!, y: where.y! });
+      }
+    }
+  }
+
+  // Domain and range bars (decision 0018 §3), from exact formulas only.
+  let bars: AxisBar[] = [];
+  if (barMarks.length) {
+    const want = { domain: barMarks.includes("domain"), range: barMarks.includes("range") };
+    const variables = curveParameters.map((parameter) => parameter.name);
+    // Every value a lesson number can take: its min to max (a slider, or an animation in any section),
+    // widened to the values this section shows it at.
+    const bounds: Record<string, Interval> = Object.fromEntries(curveParameters.map((parameter) => {
+      const reached = [parameter.min, parameter.max, parameter.initial, ...demonstrations.map((state) => state[parameter.name]!)];
+      return [parameter.name, [Math.min(...reached), Math.max(...reached)] as const];
+    }));
+    const sign = (text: string) => {
+      const interval = intervalOf(text, bounds);
+      const proved = signOf(interval);
+      if (proved === "unknown") return proved;
+      // A guard on the interval reading: OLL's own evaluation at the corners and inside the bounds must
+      // fall in the interval, or the sign is not trusted.
+      const f = compileMathExpression(text, variables);
+      const corners = variables.reduce<Array<Record<string, number>>>((states, name) => states.flatMap((state) => bounds[name]!.map((value) => ({ ...state, [name]: value }))), [{}]);
+      const inside = Array.from({ length: 32 }, (_, index) => Object.fromEntries(variables.map((name, position) => {
+        const [lo, hi] = bounds[name]!;
+        return [name, lo + (hi - lo) * (((index + 1) * (position + 2) * 0.6180339887) % 1)];
+      })));
+      for (const state of [...corners.slice(0, 64), ...inside]) {
+        let value = Number.NaN;
+        try { value = f(state); } catch { /* not defined here */ }
+        if (!(value >= interval[0] - 1e-9 * Math.max(1, Math.abs(interval[0])) && value <= interval[1] + 1e-9 * Math.max(1, Math.abs(interval[1])))) return "unknown";
+      }
+      return proved;
+    };
+    bars = pieces
+      ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index]!, 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), want, path)
+      : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`), want, { sign }, path);
   }
 
   let view: PlotView;
@@ -216,6 +320,8 @@ function compileFunctionPlot(
     curves: plottedCurves,
     ...(samples.length ? { samples } : references ? { references } : {}),
   });
+  if (marks.length) appendMarks(built.actions[0] as unknown as { content: Record<string, unknown> }, marks, initialState);
+  if (bars.length) appendBars(built.actions[0] as unknown as { content: Record<string, unknown> }, bars, initialState, (source) => compileText(plan, source));
   return {
     actions: built.actions,
     ...(view.adjustments.length ? { adjustments: view.adjustments } : {}),
@@ -227,6 +333,79 @@ function compileFunctionPlot(
       ...(dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] as Array<[string, string]> : []),
     ]),
   };
+}
+
+/**
+ * Adds domain and range bars to a built plot. An end that reads lesson numbers is bound to them and hidden
+ * while it has no value (the bar of the other sign); the first bar on each axis carries the label, and so
+ * does a bar shown instead of the one before it (the other sign), which is then the only one shown.
+ */
+function appendBars(action: { content: Record<string, unknown> }, bars: AxisBar[], initial: Record<string, number>, labels: (source: string) => string): void {
+  const content = action.content;
+  const intervals: unknown[] = [];
+  const bindings = [...((content.bindings as unknown[] | undefined) ?? [])];
+  const variables = Object.keys(initial);
+  const reads = (text: string) => /\bnumber_\d+\b/u.test(text);
+  const labelled = new Set<string>();
+  bars.forEach((bar, index) => {
+    const as = `${bar.axis === "x" ? "domain" : "range"}-${index + 1}`;
+    const end = (text: string | null) => {
+      if (text === null) return null;
+      let value = Number.NaN;
+      try { value = compileMathExpression(text, variables)(initial); } catch { /* bound and hidden */ }
+      return Number.isFinite(value) ? Number(value.toPrecision(12)) : 0;
+    };
+    const from = end(bar.from), to = end(bar.to);
+    intervals.push({
+      as, axis: bar.axis, from, to,
+      ...(bar.from !== null ? { from_closed: bar.from_closed } : {}),
+      ...(bar.to !== null ? { to_closed: bar.to_closed } : {}),
+      ...(!labelled.has(bar.axis) || bar.alternative ? { label: labels(bar.axis === "x" ? "定义域" : "值域") } : {}),
+    });
+    labelled.add(bar.axis);
+    for (const [key, text] of [["from", bar.from], ["to", bar.to]] as const) {
+      if (text !== null && reads(text)) bindings.push({ target: `${as}.${key}`, expression: text, hide_when_undefined: true });
+    }
+  });
+  content.intervals = intervals;
+  if (bindings.length) content.bindings = bindings;
+}
+
+/** The lowered pieces of a piecewise function, one per expression, or undefined when the plot has none. */
+function plotPieces(value: unknown, expressionCount: number, path: string): Array<{ from: number | null; to: number | null; from_closed: boolean; to_closed: boolean }> | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length !== expressionCount) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.pieces`, "each piece needs its own formula");
+  return value.map((entry, index) => {
+    const piece = (entry ?? {}) as Record<string, unknown>;
+    const end = (key: string) => (piece[key] === null || piece[key] === undefined ? null : optionalNumber(piece[key] as never, 0, `${path}.pieces[${index}].${key}`));
+    return { from: end("from"), to: end("to"), from_closed: piece.from_closed !== false, to_closed: piece.to_closed !== false };
+  });
+}
+
+/**
+ * Adds marks to a built plot, after its samples or references (the secant measures the first two points).
+ * A mark that reads lesson numbers is bound to them and hidden while its value does not exist; a fixed
+ * mark that does not exist (a parabola that never meets the x-axis) is left out.
+ */
+function appendMarks(action: { content: Record<string, unknown> }, marks: Array<MarkPart & { at: (values: Record<string, number>) => { x?: number; y?: number; value?: number } }>, initial: Record<string, number>): void {
+  const content = action.content;
+  const points = [...((content.points as unknown[] | undefined) ?? [])];
+  const guides = [...((content.guides as unknown[] | undefined) ?? [])];
+  const bindings = [...((content.bindings as unknown[] | undefined) ?? [])];
+  const reads = (text: string | undefined) => text !== undefined && /\bnumber_\d+\b/u.test(text);
+  for (const mark of marks) {
+    const where = mark.at(initial);
+    const keys = mark.kind === "point" ? (["x", "y"] as const) : (["value"] as const);
+    const bound = keys.filter((key) => reads(mark[key]));
+    if (!bound.length && keys.some((key) => !Number.isFinite(where[key]))) continue;
+    const start = (key: "x" | "y" | "value") => (Number.isFinite(where[key]) ? Number(where[key]!.toPrecision(12)) : 0);
+    if (mark.kind === "point") points.push({ as: mark.as, x: start("x"), y: start("y"), label: mark.label });
+    else guides.push({ as: mark.as, kind: "vertical_line", value: start("value"), label: mark.label });
+    for (const key of bound) bindings.push({ target: `${mark.as}.${key}`, expression: mark[key], hide_when_undefined: true });
+  }
+  if (points.length) content.points = points;
+  if (guides.length) content.guides = guides;
+  if (bindings.length) content.bindings = bindings;
 }
 
 // Built by the math plugin's shared layer (octos-lesson-language/plugin-math),
