@@ -20,7 +20,7 @@
 //     --octos-profile ~/.octos/profiles/<id>.json [--recipes constant_speed_motion] [--pairs 20] [--max-calls 60]
 //     [--quality-repeats 1] [--out <report.json>]
 //   A probe: --pairs 0 --cases NL-03,NM-01 --quality-repeats 5 (candidate arm only, no speed pairs).
-//   A quality run: --pairs 0 --recipes number_line_steps,function_plot_extensions --quality-repeats 2
+//   A quality run: --pairs 0 --recipes number_line_steps,function_plot_extensions --quality-repeats 2 [--lesson-calls 4]
 //   (every case of the named recipes on the candidate arm; near misses on both arms).
 //   Two builds: --baseline-build <dir> --build <dir> --recipes number_line (both arms the same environment;
 //   --recipes picks the fitting requests only).
@@ -567,6 +567,10 @@ async function main() {
   const option = (name, fallback) => { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : fallback; };
   const pairs = Number(option("--pairs", "20"));
   const maxCalls = Number(option("--max-calls", "60"));
+  // Calls one lesson may start before it is stopped (default 3, as every earlier run). Coach itself gives
+  // the first section the bootstrap plus three attempts, so --lesson-calls 4 lets a lesson run as it would
+  // for a learner (the plot trial stopped six lessons as they started a 4th call).
+  const lessonCalls = Number(option("--lesson-calls", "3"));
   const recipes = option("--recipes", "constant_speed_motion");
   const build = resolve(option("--build", root));
   // --baseline-build <dir>: two builds instead of one build with a trial recipe on and off. Both arms
@@ -630,7 +634,7 @@ async function main() {
     const tool = await runTool({
       build: arm === "previous" ? previousBuild : arm === "baseline" && baselineBuild ? baselineBuild : build,
       input, env: baselineBuild || arm === "baseline" ? env : { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes },
-      maxCalls: Math.min(3, budget.remaining), onCall: () => { budget.remaining -= 1; },
+      maxCalls: Math.min(lessonCalls, budget.remaining), onCall: () => { budget.remaining -= 1; },
       onRaw: (line) => appendFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), `${line}\n`),
       onFirstPart: (path) => {
         try {

@@ -331,3 +331,28 @@ test("the function-plot options: plot cases are judged by the plot judge, and th
   assert.equal(summary.quality.judged, 1);
   assert.deepEqual(summary.quality.near_miss_baseline, [{ case: "PJ-15", recipes: [], hard: ["no plot"] }]);
 });
+
+test("the harness keeps each rejected part's reason and stops a lesson at the calls it is given", async () => {
+  const { mkdtemp, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { runTool } = await import("../scripts/eval-shadow-speed.mjs");
+  const build = await mkdtemp(join(tmpdir(), "fake-coach-"));
+  // A fake Coach: two calls, one rejection between them, then a published prefix (or a third call).
+  const line = (entry) => `process.stderr.write(${JSON.stringify(`learning-coach: ${JSON.stringify(entry)}\n`)});`;
+  const script = (calls) => [
+    ...Array.from({ length: calls }, (_, index) => [
+      line({ stage: "model-call", status: "started" }),
+      ...(index === 0 ? [line({ stage: "lesson-plan-local-rejection", label: "lesson-plan-section", error: { code: "LESSON_PLAN_EXPRESSION", message: "unsupported formula name 'a'" } })] : []),
+    ]).flat(),
+    line({ stage: "lesson-prefix-published" }),
+    "process.stdin.resume(); setTimeout(() => process.exit(0), 50);",
+  ].join("\n");
+  await writeFile(join(build, "main"), script(2));
+  const two = await runTool({ build, input: {}, env: process.env, maxCalls: 3 });
+  assert.equal(two.outcome, "first_playable");
+  assert.deepEqual(two.rejections, ["lesson-plan-section: LESSON_PLAN_EXPRESSION unsupported formula name 'a'"]);
+  await writeFile(join(build, "main"), script(4));
+  assert.equal((await runTool({ build, input: {}, env: process.env, maxCalls: 3 })).outcome, "call_cap");
+  assert.equal((await runTool({ build, input: {}, env: process.env, maxCalls: 4 })).outcome, "first_playable");
+});
