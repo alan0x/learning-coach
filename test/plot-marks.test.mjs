@@ -112,6 +112,38 @@ test("marks need OLL 0.11's hidden guide and secant features only when drawn; En
   assert.deepEqual(plotContent(lesson).guides.map((guide) => guide.label), ["Axis of symmetry"]);
 });
 
+// The slope triangle (0018 §1, second step): the program places A and B two units apart, off x = 0.
+test("PJ-01: the slope triangle of a line, between x = 1 and x = 3", async () => {
+  const lesson = await passes("PJ-01", plotReply({ formula: "3x-2", marks: ["slope_triangle"], moments: [{ say: "看斜率三角形：前进多少，上升多少。" }] }));
+  const content = plotContent(lesson);
+  assert.equal(content.measurement, "secant");
+  assert.deepEqual(content.points.map((point) => [point.label, point.x]), [["A", 1], ["B", 3]]);
+});
+
+test("the slope triangle beside the intercepts: A is not on the y-intercept, which keeps its own mark", async () => {
+  const lesson = await passes("PJ-02", plotReply({ formula: "-2x+4", marks: ["intercepts", "slope_triangle"], moments: [{ say: "看截距和斜率。" }] }));
+  assert.deepEqual(plotContent(lesson).points.map((point) => [point.label, point.x, point.y]), [["A", 1, 2], ["B", 3, -2], ["y 截距", 0, 4], ["x 截距", 2, 0]]);
+});
+
+test("the slope triangle finds two points where the curve exists, and is refused where it cannot", async () => {
+  const root = await generate(plotReply({ formula: "sqrt(x-5)", marks: ["slope_triangle"], moments: [{ say: "看两点。" }] }));
+  assert.ok(root.lesson, root.rejected.join(" | "));
+  assert.deepEqual(plotContent(root.lesson).points.map((point) => point.x), [6, 8]);
+  const nowhere = await generate(plotReply({ formula: "sqrt(x-50)", marks: ["slope_triangle"], moments: [{ say: "看两点。" }] }));
+  assert.ok(nowhere.rejected.some((miss) => /slope_triangle mark found no two points/u.test(miss)), nowhere.rejected.join(" | "));
+});
+
+// Review: a curve slider can take the curve away from A or B (√(x − h) with h up to 5): the pair must exist
+// at the slider's ends too, or the lesson fails where the learner drags.
+test("the slope triangle's points exist at every slider end, not only where the lesson stops", async () => {
+  const { lesson, rejected } = await generate(plotReply({
+    formula: "sqrt(x-n1)", marks: ["slope_triangle"], numbers: [[0, 0, 5, "h"]], moments: [{ say: "看两点之间的斜率。" }],
+  }));
+  assert.ok(lesson, rejected.join(" | "));
+  assert.deepEqual(plotContent(lesson).points.map((point) => point.x), [6, 8]);
+  assert.deepEqual(judgePlot({ id: "slider", expect: {} }, lesson).hard, []);
+});
+
 test("coefficients too long for one binding refuse the marks in the section, naming the mark (review)", async () => {
   const numbers = [[1, 0, 5, "p"], [2, 0, 5, "q"], [3, 0, 5, "r"], [1, 0, 5, "s"]];
   const formula = "(x+n1*n2+n3*n4+n1*n3)*(x-(n1*n2+n3*n4+n1*n3))+n1";
@@ -124,4 +156,14 @@ test("coefficients too long for one binding refuse the marks in the section, nam
     assert.ok(!rejected.some((miss) => /Expression is too long/u.test(miss)), rejected.join(" | "));
     assert.match(requests[1]?.label ?? "", /section/u);
   }
+});
+
+// Review: without marks, a slope lesson's automatic A and B are found as on main, at the start only, so a
+// lesson without marks compiles (or is refused) exactly as before the option.
+test("without marks, the automatic A and B are placed as before the option", async () => {
+  const reply = JSON.parse(plotReply({ formula: "sqrt(x+n1)", marks: undefined, numbers: [[1, -1, 1, "h"]], moments: [{ say: "看斜率。" }, { say: "移动曲线。", animations: [[1, -1]] }] }));
+  reply.course.outline.title = "曲线上两点的斜率";
+  const { lesson, rejected } = await generate(JSON.stringify(reply));
+  assert.equal(lesson, undefined);
+  assert.ok(rejected.some((miss) => /LESSON_PLAN_OLL_SEMANTIC .*not finite/u.test(miss)), rejected.join(" | "));
 });

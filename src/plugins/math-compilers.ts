@@ -173,12 +173,25 @@ function compileFunctionPlot(
         `$lessonPlan.sections[${creationIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`));
     }
   }
+  // Marks (decision 0018 §1) are named by the model; the slope triangle is drawn by the points below.
+  const markList = input.marks === undefined ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
+  for (const mark of markList) {
+    if (!(PLOT_MARKS as readonly string[]).includes(mark)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
+  }
+  if (markList.length && expressions.length !== 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks need one formula; leave marks out of a comparison of several curves");
+  const slopeTriangle = markList.includes("slope_triangle");
+  if (slopeTriangle && sampleNumbers.length === 1) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark measures two points: give sample_x_numbers two numbers (A and B), or none and the program places them");
+  }
+
   // Slope lessons with curve parameters still need visible reference points.
   // Their x positions are fixed; the parameter sliders change the curve.
+  // With marks (decision 0018) the points stand two units apart, off x = 0, where the y-intercept mark
+  // sits: the first pair where the curve exists at the start and at every demonstrated state.
   let references: Array<{ x: number; y: number; label: string }> | undefined;
-  if (expressions.length === 1 && !sampleNumbers.length && /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" "))) {
+  if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
-    const referencePoints = (values: Record<string, number>) => [0, 1].flatMap((x, index) => {
+    const referencePoints = (values: Record<string, number>, xs: readonly number[]) => xs.flatMap((x, index) => {
       try {
         const y = evaluateCurve({ ...values, x });
         return Number.isFinite(y) ? [{ x, y, label: index ? "B" : "A" }] : [];
@@ -186,26 +199,31 @@ function compileFunctionPlot(
         return [];
       }
     });
-    const initialReferences = referencePoints(initialState);
-    if (initialReferences.length === 2) {
-      references = initialReferences;
-      teachingPoints.push(...references, ...demonstrations.flatMap(referencePoints));
+    const pairs: ReadonlyArray<readonly [number, number]> = markList.length ? [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]] : [[0, 1]];
+    // With marks: at the start, at every demonstrated state and at each curve slider's ends, where a learner
+    // can drag the curve away from a point whose y is not hidden (review). Without marks the points are found
+    // as before the option, at the start only, so a lesson without marks compiles exactly as it did (review).
+    const reached = markList.length
+      ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))]
+      : [initialState];
+    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2));
+    if (xs) {
+      references = referencePoints(initialState, xs);
+      teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));
+    } else if (slopeTriangle) {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark found no two points two units apart where the curve exists; leave it out");
     }
   }
 
   // Marks (decision 0018 §1): derived from the one formula, bound to its lesson numbers, hidden while they
   // do not exist. Where they are at the start and at each demonstrated state must be in view.
-  const markList = input.marks === undefined ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
-  for (const mark of markList) {
-    if (!(PLOT_MARKS as readonly string[]).includes(mark)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
-  }
+  const derivedMarks = markList.filter((mark) => mark !== "slope_triangle");
   let marks: Array<MarkPart & { at: (values: Record<string, number>) => { x?: number; y?: number; value?: number } }> = [];
-  if (markList.length) {
-    if (expressions.length !== 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks need one formula; leave marks out of a comparison of several curves");
+  if (derivedMarks.length) {
     const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`);
     const variables = curveParameters.map((parameter) => parameter.name);
     const samples = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))];
-    marks = markParts(tokens, markList as PlotMark[], (source) => compileText(plan, source), { variables, samples }, path).map((part) => {
+    marks = markParts(tokens, derivedMarks as PlotMark[], (source) => compileText(plan, source), { variables, samples }, path).map((part) => {
       const compiled = (["x", "y", "value"] as const).flatMap((key) => (part[key] === undefined ? [] : [[key, compileMathExpression(part[key]!, variables)] as const]));
       return { ...part, at: (values: Record<string, number>) => Object.fromEntries(compiled.map(([key, f]) => {
         let result = Number.NaN;
