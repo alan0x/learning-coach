@@ -8354,6 +8354,15 @@ function solidFaceTarget(objectId, face) {
 var NUMBER_LINE_KIND = "number_line";
 var NUMBER_LINE_FEATURE = "plugin:math/number-line@1";
 var NUMBER_LINE_PLUGIN_VERSION = "0.2.0";
+var NUMBER_LINE_JUMP_LANES_FEATURE = "plugin:math/number-line-jump-lanes@1";
+var NUMBER_LINE_JUMP_LANES_VERSION = "0.3.0";
+function usesJumpLanes(content) {
+  const jumps = content.jumps ?? [];
+  if (jumps.length < 2)
+    return false;
+  const moving = (content.bindings ?? []).length > 0 || (content.points ?? []).some((point) => point.interaction);
+  return moving || planJumpLanes(content, jumps).some((lane) => lane > 0);
+}
 var NUMBER_LINE_BINDINGS = {
   points: ["value"],
   jumps: ["from", "by"],
@@ -8591,6 +8600,26 @@ function planNumberLineTicks(content) {
   }
   return ticks;
 }
+function jumpEnds(content, jump) {
+  const start = typeof jump.from === "string" && numberLineValue(jump.from) === void 0 ? numberLineValue(content.points?.find((point) => point.as === jump.from || point.id === jump.from)?.value) : numberLineValue(jump.from);
+  const by = numberLineValue(jump.by);
+  if (start === void 0 || by === void 0)
+    return void 0;
+  return { from: start, to: start + by };
+}
+function planJumpLanes(content, jumps) {
+  const placed = [];
+  return jumps.map((jump) => {
+    const ends = jumpEnds(content, jump);
+    if (!ends || ends.from === ends.to)
+      return 0;
+    const low = Math.min(ends.from, ends.to), high = Math.max(ends.from, ends.to);
+    const overlapped = placed.filter((other) => low < other.high - 1e-9 && other.low < high - 1e-9);
+    const tier = overlapped.length ? Math.max(...overlapped.map((other) => other.tier)) + 1 : 0;
+    placed.push({ low, high, tier });
+    return tier;
+  });
+}
 
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_NODE_KINDS = [
@@ -8628,7 +8657,8 @@ var OLL_BINDING_CAPABILITIES = {
   },
   plot: {
     points: ["x", "y"],
-    guides: ["value"]
+    guides: ["value"],
+    intervals: ["from", "to"]
   },
   scene3d: {
     sections: ["value"],
@@ -8662,11 +8692,55 @@ function collectBindingCapabilities() {
 }
 var OLL_CANONICAL_BINDING_CAPABILITIES = collectBindingCapabilities();
 
+// node_modules/octos-lesson-language/dist/packages/core/src/spoken-math.js
+var GREEK_EN = {
+  alpha: "alpha",
+  beta: "beta",
+  gamma: "gamma",
+  delta: "delta",
+  theta: "theta",
+  lambda: "lambda",
+  mu: "mu",
+  pi: "pi",
+  sigma: "sigma",
+  phi: "phi",
+  omega: "omega",
+  Delta: "delta",
+  varphi: "phi",
+  epsilon: "epsilon"
+};
+var ZH = {
+  plus: "\u52A0",
+  minus: "\u51CF",
+  negative: "\u8D1F",
+  times: "\u4E58",
+  divided: "\u9664\u4EE5",
+  equals: "\u7B49\u4E8E",
+  notEqual: "\u4E0D\u7B49\u4E8E",
+  approx: "\u7EA6\u7B49\u4E8E",
+  less: "\u5C0F\u4E8E",
+  greater: "\u5927\u4E8E",
+  lessEq: "\u5C0F\u4E8E\u7B49\u4E8E",
+  greaterEq: "\u5927\u4E8E\u7B49\u4E8E",
+  plusMinus: "\u6B63\u8D1F",
+  degree: "\u5EA6",
+  percent: "\u767E\u5206\u4E4B",
+  prime: "\u6487",
+  fraction: (n, d) => n.compound || d.compound ? `\u5206\u5B50 ${n.text}\uFF0C\u5206\u6BCD ${d.text}` : `${d.text} \u5206\u4E4B ${n.text}`,
+  power: (base, exponent) => {
+    const of = base.grouped ? `${base.text} \u6574\u4F53\u7684` : `${base.text} \u7684`;
+    return exponent === "2" ? `${of}\u5E73\u65B9` : exponent === "3" ? `${of}\u7ACB\u65B9` : `${of} ${exponent} \u6B21\u65B9`;
+  },
+  root: (radicand, index) => index && index !== "2" ? `${index} \u6B21\u6839\u53F7 ${radicand}` : `\u6839\u53F7 ${radicand}`,
+  subscript: (base, index) => `${base}${index}`,
+  greek: { ...GREEK_EN, pi: "\u6D3E" }
+};
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/manifest.js
 var MATH_PLUGIN_MANIFEST = {
   id: "math",
-  // 0.2.0: the number line (decision 0013).
-  version: "0.2.0",
+  // 0.2.0: the number line (decision 0013). 0.3.0: jump lanes for several jumps on one line (decision 0017).
+  version: "0.3.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -8715,16 +8789,25 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "ink:drawn-size": "0.9.0",
   "scene3d:more-solids": "0.9.0",
   "scene3d:unfold": "0.9.0",
-  "scene3d:face-targets": "0.10.0"
+  "scene3d:face-targets": "0.10.0",
+  // Decision 0018. An older player would draw a piece as the whole curve, or a guide at a stale value.
+  "plot:curve-intervals": "0.11.0",
+  "plot:axis-intervals": "0.11.0",
+  "plot:guide-hide-undefined": "0.11.0",
+  // A secant over the first two of more points (marks after A and B); an older player drew no triangle then.
+  "plot:secant-first-two": "0.11.0"
 });
 var looksLikeNumberLine = (content) => typeof content.range === "object" && content.range !== null && ["points", "jumps", "intervals", "ticks"].some((field) => field in content);
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION },
     detect(content, kind, use) {
-      if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content))
+      if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
+        if (usesJumpLanes(content))
+          use(NUMBER_LINE_JUMP_LANES_FEATURE);
+      }
     }
   }
 ]);
@@ -9278,8 +9361,9 @@ function validateValueBindings(action, path, variables) {
     if (!targets.get(alias)?.has(property)) {
       fail("OLL_REFERENCE_NOT_FOUND", `${bindingPath}/target`, `Binding target '${binding.target}' is not a supported numeric field`);
     }
-    if (binding.hide_when_undefined !== void 0 && (binding.hide_when_undefined !== true || action.kind !== "plot" && action.kind !== "geometry" || !["x", "y"].includes(property))) {
-      fail("OLL_INVALID_BINDING", `${bindingPath}/hide_when_undefined`, "hide_when_undefined is only valid on point x/y bindings and must be true");
+    const hideable = action.kind === "geometry" ? ["x", "y"] : action.kind === "plot" ? ["x", "y", "value", "from", "to"] : [];
+    if (binding.hide_when_undefined !== void 0 && (binding.hide_when_undefined !== true || !hideable.includes(property))) {
+      fail("OLL_INVALID_BINDING", `${bindingPath}/hide_when_undefined`, "hide_when_undefined is only valid on point x/y, plot guide value and plot interval from/to bindings, and must be true");
     }
     if (binding.allow_zero !== void 0 && (binding.allow_zero !== true || property !== "radius")) {
       fail("OLL_INVALID_BINDING", `${bindingPath}/allow_zero`, "allow_zero is only valid on radius bindings and must be true");
@@ -9301,7 +9385,7 @@ function validateValueBindings(action, path, variables) {
     try {
       const evaluate2 = compileMathExpression(binding.expression, variables.keys());
       const result = evaluate2(Object.fromEntries(variables));
-      if (!Number.isFinite(result))
+      if (!Number.isFinite(result) && binding.hide_when_undefined !== true)
         throw new Error("result is not finite");
     } catch (error) {
       const message = error instanceof Error ? error.message : "invalid expression";
@@ -9781,6 +9865,90 @@ function validateScene3dContent(action, path, variables) {
     });
   }
 }
+function validateCurveInterval(curve, curvePath) {
+  const interval = ["from", "to", "from_closed", "to_closed"].some((field) => curve[field] !== void 0);
+  if (curve.series !== void 0 && (typeof curve.series !== "string" || !/^[a-z][a-z0-9-]{0,31}$/u.test(curve.series))) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/series`, "A curve series is a name of 1 to 32 lowercase letters, digits or hyphens");
+  }
+  if (!interval)
+    return;
+  if (curve.kind === "implicit")
+    fail("OLL_INVALID_OPERATION_PAYLOAD", curvePath, "Only y = f(x) curves can be drawn on an interval");
+  for (const end of ["from", "to"]) {
+    if (curve[end] !== void 0)
+      requireFiniteNumber(curve[end], `${curvePath}/${end}`);
+    const closed = curve[`${end}_closed`];
+    if (closed !== void 0 && typeof closed !== "boolean")
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/${end}_closed`, "An end is closed (true) or open (false)");
+    if (closed !== void 0 && curve[end] === void 0)
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/${end}_closed`, `An unbounded side has no ${end}_closed`);
+  }
+  if (curve.from !== void 0 && curve.to !== void 0 && Number(curve.from) >= Number(curve.to)) {
+    fail("OLL_INVALID_OPERATION_PAYLOAD", curvePath, "A curve interval needs from < to");
+  }
+}
+function validateSeriesPieces(curves, path) {
+  const bySeries = /* @__PURE__ */ new Map();
+  curves.forEach((raw, index) => {
+    if (typeof raw !== "object" || raw === null)
+      return;
+    const curve = raw;
+    if (typeof curve.series !== "string")
+      return;
+    const from = curve.from === void 0 ? -Infinity : curve.from, to = curve.to === void 0 ? Infinity : curve.to;
+    if (typeof from !== "number" || typeof to !== "number")
+      return;
+    const pieces = bySeries.get(curve.series) ?? [];
+    pieces.push({ index, from, to, fromClosed: curve.from_closed !== false, toClosed: curve.to_closed !== false });
+    bySeries.set(curve.series, pieces);
+  });
+  for (const pieces of bySeries.values()) {
+    pieces.sort((a, b) => a.from - b.from);
+    for (let i = 1; i < pieces.length; i += 1) {
+      const before = pieces[i - 1], piece = pieces[i];
+      if (piece.from < before.to || piece.from === before.to && piece.fromClosed && before.toClosed && Number.isFinite(piece.from)) {
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/curves/${piece.index}`, `Pieces of one function overlap: curves ${before.index} and ${piece.index} both cover x = ${Number.isFinite(piece.from) ? piece.from : before.to}`);
+      }
+    }
+  }
+}
+function validatePlotIntervals(content, path) {
+  if (content.intervals === void 0)
+    return;
+  requireArray(content.intervals, `${path}/content/intervals`);
+  if (content.intervals.length > 8)
+    fail("OLL_INVALID_OPERATION_PAYLOAD", `${path}/content/intervals`, "A plot marks at most 8 intervals");
+  content.intervals.forEach((interval, index) => {
+    const intervalPath = `${path}/content/intervals/${index}`;
+    requireObject(interval, intervalPath);
+    for (const field of Object.keys(interval)) {
+      if (!["as", "id", "axis", "from", "to", "from_closed", "to_closed", "label"].includes(field))
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${intervalPath}/${field}`, `Unknown interval field '${field}'`);
+    }
+    if (interval.axis !== "x" && interval.axis !== "y")
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${intervalPath}/axis`, "An interval lies on the x or the y axis");
+    if (!("from" in interval) || !("to" in interval))
+      fail("OLL_INVALID_OPERATION_PAYLOAD", intervalPath, "An interval has from and to (null for an unbounded end)");
+    for (const end of ["from", "to"]) {
+      if (interval[end] !== null)
+        requireFiniteNumber(interval[end], `${intervalPath}/${end}`);
+      const closed = interval[`${end}_closed`];
+      if (closed !== void 0 && typeof closed !== "boolean")
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${intervalPath}/${end}_closed`, "An end is closed (true) or open (false)");
+      if (closed !== void 0 && interval[end] === null)
+        fail("OLL_INVALID_OPERATION_PAYLOAD", `${intervalPath}/${end}_closed`, `An unbounded end has no ${end}_closed`);
+    }
+    if (interval.from !== null && interval.to !== null) {
+      const from = Number(interval.from), to = Number(interval.to);
+      if (from > to)
+        fail("OLL_INVALID_OPERATION_PAYLOAD", intervalPath, "An interval needs from <= to");
+      if (from === to && (interval.from_closed === false || interval.to_closed === false))
+        fail("OLL_INVALID_OPERATION_PAYLOAD", intervalPath, "A single value is closed at both ends");
+    }
+    if (interval.label !== void 0 && (typeof interval.label !== "string" || interval.label.length > 64))
+      fail("OLL_INVALID_OPERATION_PAYLOAD", `${intervalPath}/label`, "An interval label is text up to 64 characters");
+  });
+}
 function validatePlotContent(action, path, variables) {
   if (action.kind !== "plot" || !Array.isArray(action.content.curves))
     return;
@@ -9818,11 +9986,14 @@ function validatePlotContent(action, path, variables) {
   };
   const xRange = plotRange(axes.x, `${path}/content/axes/x`, { min: -5, max: 5 });
   const yRange = plotRange(axes.y, `${path}/content/axes/y`, { min: -5, max: 5 });
+  validatePlotIntervals(action.content, path);
+  validateSeriesPieces(action.content.curves, path);
   action.content.curves.forEach((rawCurve, index) => {
     const curvePath = `${path}/content/curves/${index}`;
     requireObject(rawCurve, curvePath);
     const curve = rawCurve;
     requireString(curve.expression, `${curvePath}/expression`);
+    validateCurveInterval(curve, curvePath);
     if (curve.kind !== "implicit") {
       const expression = curve.expression.trim().replace(/^y\s*=/iu, "").trim();
       try {
