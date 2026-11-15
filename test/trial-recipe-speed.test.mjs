@@ -356,3 +356,11 @@ test("the harness keeps each rejected part's reason and stops a lesson at the ca
   assert.equal((await runTool({ build, input: {}, env: process.env, maxCalls: 3 })).outcome, "call_cap");
   assert.equal((await runTool({ build, input: {}, env: process.env, maxCalls: 4 })).outcome, "first_playable");
 });
+
+test("a both-arms run reports lessons, judge passes, calls and seconds per arm", async () => {
+  const { summarize } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  const row = (arm, calls, ms, hard, rejections) => ({ pair: 0, case: "PJ-01", kind: "quality", arm, outcome: "first_playable", calls, first_playable_ms: ms, recipes: [], quality: { hard, soft: [] }, ...(rejections ? { rejections } : {}) });
+  const { arms } = summarize([row("candidate", 2, 8000, []), row("baseline", 3, 15000, ["no plot"], ["section: X y"]), row("candidate", 1, 6000, [])]).quality;
+  assert.deepEqual(arms.candidate, { lessons: 2, playable: 2, judge_pass: 2, calls: 3, with_rejections: 0, median_first_playable_ms: 7000 });
+  assert.deepEqual(arms.baseline, { lessons: 1, playable: 1, judge_pass: 0, calls: 3, with_rejections: 1, median_first_playable_ms: 15000 });
+});

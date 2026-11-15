@@ -21,7 +21,7 @@
 //     [--quality-repeats 1] [--out <report.json>]
 //   A probe: --pairs 0 --cases NL-03,NM-01 --quality-repeats 5 (candidate arm only, no speed pairs).
 //   A quality run: --pairs 0 --recipes number_line_steps,function_plot_extensions --quality-repeats 2 [--lesson-calls 4]
-//   (every case of the named recipes on the candidate arm; near misses on both arms).
+//   (every case of the named recipes on the candidate arm; near misses on both arms; --both-arms: every case).
 //   Two builds: --baseline-build <dir> --build <dir> --recipes number_line (both arms the same environment;
 //   --recipes picks the fitting requests only).
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
@@ -551,6 +551,12 @@ export function summarize(rows) {
     near_misses_for_review: rows.filter((row) => row.kind === "near_miss" && row.arm === "candidate").map((row) => ({ case: row.case, recipes: row.recipes ?? null })),
     // The same near misses without the trial: the "no worse than without it" comparison, read by hand.
     near_miss_baseline: rows.filter((row) => row.kind === "near_miss" && row.arm === "baseline").map((row) => ({ case: row.case, recipes: row.recipes ?? null, hard: row.quality?.hard ?? null })),
+    // Per arm (a --both-arms run): lessons, judge passes, calls and the median seconds to first playable.
+    arms: Object.fromEntries(["candidate", "baseline"].map((arm) => {
+      const own = rows.filter((row) => row.arm === arm && row.kind !== "motion" && row.kind !== "other");
+      const played = own.filter((row) => row.outcome === "first_playable");
+      return [arm, { lessons: own.length, playable: played.length, judge_pass: own.filter((row) => row.quality && !row.quality.hard.length).length, calls: own.reduce((sum, row) => sum + (row.calls ?? 0), 0), with_rejections: own.filter((row) => row.rejections?.length).length, median_first_playable_ms: median(played.map((row) => row.first_playable_ms)) }];
+    })),
     verdict: slipVerdict(judged),
   } : undefined;
   // Speed is measured on the pairs only; quality cases run on one arm and would skew the medians.
@@ -571,6 +577,9 @@ async function main() {
   // the first section the bootstrap plus three attempts, so --lesson-calls 4 lets a lesson run as it would
   // for a learner (the plot trial stopped six lessons as they started a 4th call).
   const lessonCalls = Number(option("--lesson-calls", "3"));
+  // --both-arms: every quality case also runs without the trial, alternating which goes first, and both are
+  // judged: calls, seconds and judge results side by side (only the candidate counts toward the verdict).
+  const bothArms = args.includes("--both-arms");
   const recipes = option("--recipes", "constant_speed_motion");
   const build = resolve(option("--build", root));
   // --baseline-build <dir>: two builds instead of one build with a trial recipe on and off. Both arms
@@ -643,7 +652,7 @@ async function main() {
           // Near misses are judged on both arms, so "no worse than without the option" can be read
           // from the report; only the candidate's judgement counts toward the verdict.
           const judge = item.judge === "plot" ? () => judgePlot(item, part) : () => judgeNumberLine(item, numberLineLesson(part));
-          const judged = item.expect && (arm === "candidate" || item.nearMiss) ? { quality: judge() } : {};
+          const judged = item.expect && (arm === "candidate" || item.nearMiss || bothArms) ? { quality: judge() } : {};
           return { recipes: recipesInPart(part), ...(line ? { number_line: line } : {}), ...judged };
         } catch { return { recipes: null }; }
       },
@@ -680,7 +689,7 @@ async function main() {
     if (budget.remaining <= 0) break;
     // Near misses run on both arms, alternating which goes first, so a lesson can be read against
     // what the same request gets without the recipe.
-    const arms = item.nearMiss && !probeIds ? (index % 2 ? ["candidate", "baseline"] : ["baseline", "candidate"]) : ["candidate"];
+    const arms = (item.nearMiss || bothArms) && !probeIds ? (index % 2 ? ["candidate", "baseline"] : ["baseline", "candidate"]) : ["candidate"];
     for (const arm of arms) if (budget.remaining > 0) await runOne(pairs + index, item, arm, arms);
   }
   // Every planned case must have run: a budget that ran out is reported, not passed over.
