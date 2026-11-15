@@ -146,6 +146,51 @@ test("whole numbers far apart are counted in the smallest of 2, 5 or 10 that fit
   assert.equal(result.content.ticks.step, 2);
   assert.deepEqual(judgeNumberLine({ expect: { values: [0, 100], change: 100 } }, result).hard, []);
 });
+// OLL decision 0017 §1: the coarse units go on to 20, 25, 50, 100, 250, 500 and 1000, still the smallest that
+// every value is a multiple of and that fits the window.
+test("coarse units past 10: 0 + 325 counts in 25s with a hop per 25, and 0 + 7250 counts in 250s", () => {
+  const quarter = compile([
+    { initial: 0, min: 0, max: 10, label: "起点" },
+    { initial: 325, min: 0, max: 400, label: "加上", student_control: { kind: "slider", step: 1 } },
+  ]);
+  assert.equal(quarter.error, undefined, quarter.error);
+  // 325 is odd and not a multiple of 10 or 20, and 0 to 325 in fives is wider than the window.
+  assert.equal(quarter.content.ticks.step, 25);
+  assert.equal(quarter.variables[1].control.step, 25);
+  assert.equal(quarter.content.jumps[0].hops, true);
+  assert.deepEqual(judgeNumberLine({ expect: { values: [0, 325], change: 325 } }, quarter).hard, []);
+
+  const large = compile([
+    { initial: 0, min: 0, max: 10, label: "起点" },
+    { initial: 7250, min: 0, max: 10000, label: "加上", student_control: { kind: "slider", step: 10 } },
+  ]);
+  assert.equal(large.error, undefined, large.error);
+  // 7250 is not a multiple of 100, and 0 to 7250 in 50s is wider than the window.
+  assert.equal(large.content.ticks.step, 250);
+  assert.equal(large.variables[1].control.step, 250);
+  assert.deepEqual(judgeNumberLine({ expect: { values: [0, 7250], change: 7250 } }, large).hard, []);
+});
+test("a coarse unit takes only exact multiples: 1005 is not counted in 1000s", () => {
+  const result = compile([
+    { initial: 0, min: 0, max: 10, label: "起点" },
+    { initial: 1005, min: 0, max: 2000, label: "加上", student_control: { kind: "slider", step: 5 } },
+  ]);
+  // Counted in 1000s, 1005 would snap to 1000 and be drawn there. No ticks of 1, 5 or a coarse unit hold
+  // 1005 in 60 steps, so it is refused and the outline is asked again.
+  assert.match(result.error ?? "", /choose another visual/u);
+});
+// The compiler's ticks are shared by the family, so a comparison gets the new units too. The comparison fit
+// narrows the line to its two values: 250 and 1750 span 1500, which no step of 1, 2, 5 or 10 holds in 60
+// ticks, so they were refused; they now count in 25s.
+test("coarse units reach the family: comparing 250 and 1750 counts in 25s", () => {
+  const result = compile([
+    { initial: 250, min: 0, max: 2000, label: "甲" },
+    { initial: 1750, min: 0, max: 2000, label: "乙" },
+  ], {}, { capability: "number_line_compare" });
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.content.ticks.step, 25);
+  assert.ok(result.content.range.min <= 250 && result.content.range.max >= 1750, JSON.stringify(result.content.range));
+});
 test("whole numbers close together still count in ones, even when they share a factor", () => {
   // −6 + 6: multiples of 2 and 6, but the line is short, so a learner can still try 5.
   const result = compile([

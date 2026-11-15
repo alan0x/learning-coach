@@ -13091,6 +13091,7 @@ function scaledAngleExpression(variable, scale) {
 // src/plugins/number-line-fit.ts
 var fractionTolerance = (denominator) => Math.min(0.011, 0.25 / (denominator * denominator));
 var MAX_WINDOW = 58;
+var COARSE_UNITS = [2, 5, 10, 20, 25, 50, 100, 250, 500, 1e3];
 var near2 = (value2, grid) => Math.abs(value2 - Math.round(value2 / grid) * grid) <= fractionTolerance(Math.round(1 / grid));
 var snap = (value2, grid) => Number((Math.round(value2 / grid) * grid).toPrecision(12));
 var floorTo = (value2, grid) => Number((Math.ceil(value2 / grid - 1e-9) * grid).toPrecision(12));
@@ -13178,7 +13179,7 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
   let windowFits = high - low <= MAX_WINDOW;
   let unit = 1;
   if (denominator === 1 && !windowFits) {
-    const coarse = [2, 5, 10].find((count) => values.every((value2) => near2(value2 / count, 1)) && Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2 <= MAX_WINDOW);
+    const coarse = COARSE_UNITS.find((count) => values.every((value2) => near2(value2, 1) && Math.round(value2) % count === 0) && Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2 <= MAX_WINDOW);
     if (coarse) {
       unit = coarse;
       grid = coarse;
@@ -16470,7 +16471,7 @@ function numberLineFrame(values, grid, shown, labelStyle, path, fit = "margin") 
   const span2 = max - min;
   const holdAll = (count, of) => of.every((value2) => onGrid(value2 / count, 1));
   const ticksFor = (of) => {
-    const whole = [1, 2, 5, 10].find((count) => span2 / count <= 60 && holdAll(count, of));
+    const whole = [1, ...COARSE_UNITS].find((count) => span2 / count <= 60 && holdAll(count, of));
     if (whole) return { step: whole, subdivisions: 1 };
     const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value2) => onGrid(value2, count)) && span2 * count <= NUMBER_LINE_LIMITS.ticks);
     return parts ? { step: 1, subdivisions: parts } : void 0;
