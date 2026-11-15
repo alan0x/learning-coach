@@ -22,7 +22,7 @@ const EN: Readonly<Record<string, string>> = {
   "目前还不能在同一张函数图中同时展示静态曲线和由控件改变的另一条曲线。": "A static curve and another curve changed by a control cannot yet be shown together in the same graph.",
   "课程内容仍在继续生成。": "The rest of the lesson is still being generated.",
   "当前白板只能执行二维图形和三维场景，不能精确模拟四维超立方体的四维旋转。你可以改问它的三维投影原理或基本结构。": "The board supports 2D diagrams and 3D scenes, but cannot accurately simulate a 4D hypercube rotating in four dimensions. You can ask about its 3D projections or basic structure instead.",
-  "y 截距": "y-intercept", "x 截距": "x-intercept", "对称轴": "Axis of symmetry",
+  "y 截距": "y-intercept", "x 截距": "x-intercept", "对称轴": "Axis of symmetry", "定义域": "Domain", "值域": "Range",
   "A点的x坐标": "x-coordinate of point A", "B点的x坐标": "x-coordinate of point B",
   "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",
   "我没能稳定读取这次摄像头画面，请把题目或物体放到画面中央后再试一次。": "I could not read this camera image reliably. Place the question or object in the centre and try again.",

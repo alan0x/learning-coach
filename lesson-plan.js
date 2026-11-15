@@ -8483,8 +8483,8 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
   for (const [index, point] of list(content.points, `${path}/points`, NUMBER_LINE_LIMITS.points, fail4).entries()) {
     const pointPath = `${path}/points/${index}`;
     only(point, ["as", "value", "label", "style", "shown", "interaction"], pointPath, fail4);
-    const at = value(point.value, `${pointPath}/value`, fail4);
-    if (at < min - 1e-9 || at > max + 1e-9)
+    const at2 = value(point.value, `${pointPath}/value`, fail4);
+    if (at2 < min - 1e-9 || at2 > max + 1e-9)
       fail4(`${pointPath}/value`, "A point lies inside the line's range");
     text(point.label, `${pointPath}/label`, fail4, 64);
     if (point.style !== void 0 && point.style !== "closed" && point.style !== "open")
@@ -12011,7 +12011,7 @@ function buildFunctionPlot(input) {
 var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
 
 // src/plugins/plot-mark-names.ts
-var PLOT_MARKS = ["intercepts", "vertex", "symmetry_axis", "slope_triangle"];
+var PLOT_MARKS = ["intercepts", "vertex", "symmetry_axis", "slope_triangle", "domain", "range"];
 
 // src/plugins/trials.ts
 var processEnvironment = globalThis.process?.env;
@@ -12299,7 +12299,7 @@ var MATH_PLUGIN = {
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
-    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002" + (PLOT_EXTENSIONS ? "marks \u9009\u8981\u753B\u7684\u6807\u8BB0\uFF08\u53EA\u7528\u4E8E\u4E00\u6B21\u6216\u4E8C\u6B21\u51FD\u6570\uFF09\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF1Bslope_triangle \u4E24\u70B9\u7684 \u0394x\u3001\u0394y\uFF08\u4EFB\u610F\u5355\u5F0F\uFF09\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u5E76\u968F\u6ED1\u5757\u79FB\u52A8\u3002\u5206\u6BB5\u51FD\u6570\u5199 pieces\uFF08formulas \u7167\u5199\u5404\u6BB5\u516C\u5F0F\uFF09\uFF1A\u6BCF\u6BB5 formula\u3001x_from\u3001x_to\uFF08\u65E0\u754C\u4E00\u4FA7\u4E0D\u5199\uFF09\u3001ends \u7AEF\u70B9\u5F00\u95ED\u5982 [)\uFF0C\u53EF\u6709\u5E38\u6570\u6BB5\u3002" : ""),
+    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002" + (PLOT_EXTENSIONS ? "marks\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF08\u4E00\u6B21\u6216\u4E8C\u6B21\uFF09\u3001slope_triangle \u4E24\u70B9 \u0394x \u0394y\u3001domain \u5B9A\u4E49\u57DF\u3001range \u503C\u57DF\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u3002\u5206\u6BB5\u5199 pieces\uFF08formulas \u7167\u5199\u5404\u6BB5\uFF09\uFF1A\u6BCF\u6BB5 formula\u3001x_from\u3001x_to\uFF08\u65E0\u754C\u4E0D\u5199\uFF09\u3001ends \u5F00\u95ED\u5982 [)\uFF0C\u53EF\u4E3A\u5E38\u6570\u3002" : ""),
     "section.bounds": "\u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002",
     "section.linked_numbers": "\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002",
     "section.constructions": "geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002"
@@ -12795,6 +12795,8 @@ var EN = {
   "y \u622A\u8DDD": "y-intercept",
   "x \u622A\u8DDD": "x-intercept",
   "\u5BF9\u79F0\u8F74": "Axis of symmetry",
+  "\u5B9A\u4E49\u57DF": "Domain",
+  "\u503C\u57DF": "Range",
   "A\u70B9\u7684x\u5750\u6807": "x-coordinate of point A",
   "B\u70B9\u7684x\u5750\u6807": "x-coordinate of point B",
   "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",
@@ -15762,10 +15764,10 @@ function analyse(curve, scan) {
     if (finite(left) && finite(right) && Math.abs(left - right) < 1e-4 * Math.max(1, Math.abs(left))) return { x: x0, y: (left + right) / 2 };
   };
   for (let x = Math.ceil(scan.min * 2) / 2; x <= scan.max; x += 0.5) {
-    const at = Number(x.toFixed(6));
-    const hole = holeAt(at);
+    const at2 = Number(x.toFixed(6));
+    const hole = holeAt(at2);
     if (hole) features.push({ kind: "hole", ...hole });
-    else if (!finite(curve(at)) && finite(curve(at - 0.01)) && finite(curve(at + 0.01)) && poleAt(at)) features.push({ kind: "pole", x: at });
+    else if (!finite(curve(at2)) && finite(curve(at2 - 0.01)) && finite(curve(at2 + 0.01)) && poleAt(at2)) features.push({ kind: "pole", x: at2 });
   }
   for (let index = 1; index < xs.length; index += 1) {
     const [x0, x1, y0, y1] = [xs[index - 1], xs[index], ys[index - 1], ys[index]];
@@ -15846,8 +15848,8 @@ function intersections(curves, scan) {
               fa = fm;
             } else b = mid;
           }
-          const at = (a + b) / 2, y = curves[i](at);
-          if (finite(y) && Math.abs(difference(at)) < 1e-6 * Math.max(1, Math.abs(y))) found.push({ kind: "intersection", x: at, y });
+          const at2 = (a + b) / 2, y = curves[i](at2);
+          if (finite(y) && Math.abs(difference(at2)) < 1e-6 * Math.max(1, Math.abs(y))) found.push({ kind: "intersection", x: at2, y });
         }
         previous = current;
       }
@@ -16229,6 +16231,213 @@ function crossCheck(tokens, [c, b, a], { variables, samples }, path) {
   }
 }
 
+// src/plugins/plot-domain-range.ts
+function treeOf(tokens) {
+  const stack = [];
+  tokens.forEach((token, index) => {
+    const arity = token.kind === "negate" || token.kind === "function" ? 1 : token.kind === "operator" ? 2 : 0;
+    const args = stack.splice(stack.length - arity, arity);
+    stack.push({ start: arity ? args[0].start : index, end: index + 1, token, args });
+  });
+  return stack.length === 1 ? stack[0] : void 0;
+}
+var polyOf = (tokens, node) => polynomialOf(tokens.slice(node.start, node.end));
+var degreeOf = (p) => p.reduce((highest, scalar, power) => scalar.value === 0 ? highest : power, 0);
+var at = (p, power) => p[power] ?? { text: "0", value: 0 };
+var wrap2 = (text3) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(text3) ? text3 : `(${text3})`;
+function shapeOf(tokens, root) {
+  const terms = [];
+  const split = (node2, sign) => {
+    if (node2.token.kind === "operator" && (node2.token.operator === "add" || node2.token.operator === "subtract")) {
+      split(node2.args[0], sign);
+      split(node2.args[1], node2.token.operator === "add" ? sign : -sign);
+    } else if (node2.token.kind === "negate") split(node2.args[0], -sign);
+    else terms.push({ node: node2, sign });
+  };
+  split(root, 1);
+  const constantTerm = (node2) => {
+    const p = polyOf(tokens, node2);
+    return p && degreeOf(p) === 0 ? at(p, 0).text : void 0;
+  };
+  const kParts = [];
+  const cores = terms.filter(({ node: node2, sign }) => {
+    const text3 = constantTerm(node2);
+    if (text3 === void 0) return true;
+    kParts.push(sign === 1 ? wrap2(text3) : `-${wrap2(text3)}`);
+    return false;
+  });
+  if (cores.length !== 1) return void 0;
+  const k = kParts.length ? kParts.join("+").replace(/\+-/gu, "-") : "0";
+  let node = cores[0].node;
+  const factors = cores[0].sign === -1 ? ["-1"] : [];
+  for (; ; ) {
+    const token2 = node.token;
+    if (token2.kind === "negate") {
+      factors.push("-1");
+      node = node.args[0];
+      continue;
+    }
+    if (token2.kind === "operator" && token2.operator === "multiply") {
+      const [left, right] = node.args;
+      const l = constantTerm(left), r = constantTerm(right);
+      if (l !== void 0) {
+        factors.push(wrap2(l));
+        node = right;
+        continue;
+      }
+      if (r !== void 0) {
+        factors.push(wrap2(r));
+        node = left;
+        continue;
+      }
+      return void 0;
+    }
+    if (token2.kind === "operator" && token2.operator === "divide") {
+      const [top, bottom] = node.args;
+      const b = constantTerm(bottom), t = constantTerm(top);
+      if (b !== void 0) {
+        factors.push(`1/${wrap2(b)}`);
+        node = top;
+        continue;
+      }
+      const inner = polyOf(tokens, bottom);
+      if (t !== void 0 && inner && degreeOf(inner) === 1) {
+        factors.push(wrap2(t));
+        return { family: "reciprocal", a: factors.join("*"), k, p: at(inner, 1), q: at(inner, 0) };
+      }
+      return void 0;
+    }
+    break;
+  }
+  const a = factors.length ? factors.join("*") : "1";
+  const linearArg = (arg) => {
+    const p = polyOf(tokens, arg);
+    return p && degreeOf(p) === 1 ? p : void 0;
+  };
+  const token = node.token;
+  if (token.kind === "function") {
+    const inner = linearArg(node.args[0]);
+    if (!inner) return void 0;
+    const family = token.name === "sqrt" ? "sqrt" : token.name === "exp" ? "exponential" : /^(ln|log|log10|log2|lg)$/u.test(token.name) ? "log" : void 0;
+    return family ? { family, a, k, p: at(inner, 1), q: at(inner, 0) } : void 0;
+  }
+  if (token.kind === "operator" && token.operator === "power") {
+    const base = polyOf(tokens, node.args[0]), exponent = linearArg(node.args[1]);
+    if (!base || degreeOf(base) !== 0 || !exponent) return void 0;
+    return { family: "exponential", a, k, p: at(exponent, 1), q: at(exponent, 0), base: at(base, 0) };
+  }
+  return void 0;
+}
+function formulaBars(tokens, want, check, path) {
+  const refuse = (what, why) => {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `the ${what} mark ${why}; leave it out of marks and do not narrate it`);
+  };
+  const first = want.domain ? "domain" : "range";
+  const root = treeOf(tokens);
+  if (!root) return refuse(first, "could not be derived");
+  const all = (axis) => ({ axis, from: null, to: null, from_closed: false, to_closed: false });
+  const signs = (text3) => {
+    const values = check.values(text3);
+    return { positive: values.every((value2) => value2 > 0), negative: values.every((value2) => value2 < 0), zero: values.some((value2) => value2 === 0 || !Number.isFinite(value2)) };
+  };
+  const bySign = (sign, end, up, axis) => {
+    const s = signs(sign);
+    const upBar = (guarded) => ({ axis, from: guarded, to: null, from_closed: up.from_closed, to_closed: false });
+    const downBar = (guarded) => ({ axis, from: null, to: guarded, from_closed: false, to_closed: up.from_closed });
+    if (s.positive) return [upBar(end)];
+    if (s.negative) return [downBar(end)];
+    return [upBar(`${wrap2(end)}+0*log(${wrap2(sign)})`), downBar(`${wrap2(end)}+0*log(-${wrap2(sign)})`)];
+  };
+  const bars = [];
+  const polynomial2 = polynomialOf(tokens);
+  if (polynomial2) {
+    const [c, b, a] = [0, 1, 2].map((power) => at(polynomial2, power));
+    if (want.domain) bars.push(all("x"));
+    if (want.range) {
+      if (a.value === 0) {
+        if (b.value === 0) bars.push({ axis: "y", from: c.text, to: c.text, from_closed: true, to_closed: true });
+        else if (signs(b.text).zero || !signs(b.text).positive && !signs(b.text).negative) refuse("range", "collapses to one value where the slope is 0");
+        else bars.push(all("y"));
+      } else {
+        const vertexY = `${wrap2(c.text)}-${wrap2(b.text)}^2/(4*${wrap2(a.text)})`;
+        bars.push(...bySign(a.text, vertexY, { from_closed: true }, "y"));
+      }
+    }
+    return bars;
+  }
+  const shape = shapeOf(tokens, root);
+  if (!shape) return refuse(first, "is derived only for lines, quadratics, roots, reciprocals, exponentials and logarithms");
+  const pSign = shape.p.value;
+  const edge = `-${wrap2(shape.q.text)}/${wrap2(shape.p.text)}`;
+  if (want.domain) {
+    if (shape.family === "exponential") bars.push(all("x"));
+    else if (shape.family === "reciprocal") {
+      bars.push({ axis: "x", from: null, to: edge, from_closed: false, to_closed: false }, { axis: "x", from: edge, to: null, from_closed: false, to_closed: false });
+    } else {
+      if (pSign === void 0) refuse("domain", "needs x with a fixed coefficient inside the root or logarithm");
+      const closed = shape.family === "sqrt";
+      bars.push(pSign > 0 ? { axis: "x", from: edge, to: null, from_closed: closed, to_closed: false } : { axis: "x", from: null, to: edge, from_closed: false, to_closed: closed });
+    }
+  }
+  if (want.range) {
+    if (shape.family === "log") {
+      const s = signs(shape.a);
+      if (!s.positive && !s.negative) refuse("range", "collapses to one value where the coefficient is 0");
+      bars.push(all("y"));
+    } else if (shape.family === "reciprocal") {
+      const s = signs(shape.a);
+      const guard = s.positive || s.negative ? shape.k : `${wrap2(shape.k)}+0*log((${shape.a})^2)`;
+      bars.push({ axis: "y", from: null, to: guard, from_closed: false, to_closed: false }, { axis: "y", from: guard, to: null, from_closed: false, to_closed: false });
+    } else if (shape.family === "exponential") {
+      if (shape.base && !(shape.base.value !== void 0 && shape.base.value > 0 && shape.base.value !== 1)) refuse("range", "needs a fixed base above 0 and not 1");
+      bars.push(...bySign(shape.a, shape.k, { from_closed: false }, "y"));
+    } else {
+      bars.push(...bySign(shape.a, shape.k, { from_closed: true }, "y"));
+    }
+  }
+  return bars;
+}
+function pieceBars(pieces, want, path) {
+  const bars = [];
+  if (want.domain) bars.push(...join(pieces).map((span2) => toBar("x", span2)));
+  if (want.range) {
+    const images = pieces.map((piece) => {
+      const p = polynomialOf(piece.tokens);
+      if (!p || degreeOf(p) > 1 || p.some((scalar) => scalar.value === void 0)) {
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the range mark of a piecewise function is derived only when every piece is a line or a constant; leave it out of marks and do not narrate it");
+      }
+      const [c, m] = [at(p, 0).value, at(p, 1).value];
+      if (m === 0) return { from: c, to: c, from_closed: true, to_closed: true };
+      const ends = [{ x: piece.from, closed: piece.from_closed }, { x: piece.to, closed: piece.to_closed }].map(({ x, closed }) => ({ y: x === null ? null : m * x + c, closed: x !== null && closed }));
+      const [left, right] = ends;
+      return m > 0 ? { from: left.y, to: right.y, from_closed: left.closed, to_closed: right.closed } : { from: right.y, to: left.y, from_closed: right.closed, to_closed: left.closed };
+    });
+    bars.push(...join(images).map((span2) => toBar("y", span2)));
+  }
+  return bars;
+  function toBar(axis, span2) {
+    const text3 = (value2) => value2 === null ? null : String(Number(value2.toPrecision(12)));
+    return { axis, from: text3(span2.from), to: text3(span2.to), from_closed: span2.from !== null && span2.from_closed, to_closed: span2.to !== null && span2.to_closed };
+  }
+  function join(spans) {
+    const low = (span2) => span2.from ?? -Infinity, high = (span2) => span2.to ?? Infinity;
+    const sorted = [...spans].sort((a, b) => low(a) - low(b) || Number(b.from_closed) - Number(a.from_closed));
+    const joined = [];
+    for (const span2 of sorted) {
+      const last = joined.at(-1);
+      if (last && (high(last) > low(span2) || high(last) === low(span2) && (last.to_closed || span2.from_closed))) {
+        if (high(span2) > high(last)) {
+          last.to = span2.to;
+          last.to_closed = span2.to_closed;
+        } else if (high(span2) === high(last)) last.to_closed = last.to_closed || span2.to_closed;
+        continue;
+      }
+      joined.push({ ...span2 });
+    }
+    return joined;
+  }
+}
+
 // src/plugins/math-compilers.ts
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -16374,7 +16583,9 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   for (const mark of markList) {
     if (!PLOT_MARKS.includes(mark)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
   }
-  if (markList.length && expressions.length !== 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks need one formula; leave marks out of a comparison of several curves");
+  const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
+  if (markList.length > barMarks.length && expressions.length !== 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks other than domain and range need one formula; leave them out of a piecewise function or a comparison of several curves");
+  if (barMarks.length && expressions.length !== 1 && input.pieces === void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "domain and range need one formula or one piecewise function; leave them out of a comparison of several curves");
   const slopeTriangle = markList.includes("slope_triangle");
   if (slopeTriangle && sampleNumbers.length === 1) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark measures two points: give sample_x_numbers two numbers (A and B), or none and the program places them");
@@ -16399,7 +16610,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark found no two points two units apart where the curve exists; leave it out");
     }
   }
-  const derivedMarks = markList.filter((mark) => mark !== "slope_triangle");
+  const derivedMarks = markList.filter((mark) => mark !== "slope_triangle" && mark !== "domain" && mark !== "range");
   let marks = [];
   if (derivedMarks.length) {
     const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`);
@@ -16422,6 +16633,23 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
         if (mark.kind === "point" && Number.isFinite(where.x) && Number.isFinite(where.y)) teachingPoints.push({ x: where.x, y: where.y });
       }
     }
+  }
+  let bars = [];
+  if (barMarks.length) {
+    const want = { domain: barMarks.includes("domain"), range: barMarks.includes("range") };
+    const variables = curveParameters.map((parameter) => parameter.name);
+    const states = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))];
+    const values = (text3) => {
+      const f = compileMathExpression(text3, variables);
+      return states.map((state) => {
+        try {
+          return f(state);
+        } catch {
+          return Number.NaN;
+        }
+      });
+    };
+    bars = pieces ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), want, path) : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), want, { values }, path);
   }
   let view;
   try {
@@ -16455,6 +16683,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     ...samples.length ? { samples } : references ? { references } : {}
   });
   if (marks.length) appendMarks(built.actions[0], marks, initialState);
+  if (bars.length) appendBars(built.actions[0], bars, initialState, (source) => compileText(plan, source));
   return {
     actions: built.actions,
     ...view.adjustments.length ? { adjustments: view.adjustments } : {},
@@ -16466,6 +16695,42 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ...dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] : []
     ])
   };
+}
+function appendBars(action, bars, initial, labels) {
+  const content = action.content;
+  const intervals = [];
+  const bindings = [...content.bindings ?? []];
+  const variables = Object.keys(initial);
+  const reads = (text3) => /\bnumber_\d+\b/u.test(text3);
+  const labelled = /* @__PURE__ */ new Set();
+  bars.forEach((bar, index) => {
+    const as = `${bar.axis === "x" ? "domain" : "range"}-${index + 1}`;
+    const end = (text3) => {
+      if (text3 === null) return null;
+      let value2 = Number.NaN;
+      try {
+        value2 = compileMathExpression(text3, variables)(initial);
+      } catch {
+      }
+      return Number.isFinite(value2) ? Number(value2.toPrecision(12)) : 0;
+    };
+    const from = end(bar.from), to = end(bar.to);
+    intervals.push({
+      as,
+      axis: bar.axis,
+      from,
+      to,
+      ...bar.from !== null ? { from_closed: bar.from_closed } : {},
+      ...bar.to !== null ? { to_closed: bar.to_closed } : {},
+      ...!labelled.has(bar.axis) ? { label: labels(bar.axis === "x" ? "\u5B9A\u4E49\u57DF" : "\u503C\u57DF") } : {}
+    });
+    labelled.add(bar.axis);
+    for (const [key, text3] of [["from", bar.from], ["to", bar.to]]) {
+      if (text3 !== null && reads(text3)) bindings.push({ target: `${as}.${key}`, expression: text3, hide_when_undefined: true });
+    }
+  });
+  content.intervals = intervals;
+  if (bindings.length) content.bindings = bindings;
 }
 function plotPieces(value2, expressionCount, path) {
   if (value2 === void 0) return void 0;
@@ -16880,7 +17145,7 @@ function compileNumberLineSolution(base, content, role, placement, plan, path) {
   const steps = bounds.map(({ definition }) => definition.student_control?.step).filter((step) => typeof step === "number" && step > 0);
   const shown = bounds.flatMap(({ number, definition }) => [definition.initial, ...lessonValues(plan, number)]);
   const frame = numberLineFrame([...values, Math.min(...values) - 2, Math.max(...values) + 2], [...values, ...steps], shown, labelStyle, path, "tight");
-  const at = (name) => {
+  const at2 = (name) => {
     if (name === null) return null;
     const bound = bounds[name === "a" ? 0 : 1];
     return { expression: variableAlias(bound.number), initial: bound.definition.initial };
@@ -16894,8 +17159,8 @@ function compileNumberLineSolution(base, content, role, placement, plan, path) {
     ticks: frame.ticks,
     intervals: relation.pieces.map((piece, index) => ({
       as: index === 0 ? "set" : "set2",
-      from: at(piece.from),
-      to: at(piece.to),
+      from: at2(piece.from),
+      to: at2(piece.to),
       ...piece.from !== null ? { from_closed: Boolean(piece.fromClosed) } : {},
       ...piece.to !== null ? { to_closed: Boolean(piece.toClosed) } : {}
     }))
@@ -16932,7 +17197,7 @@ function compileNumberLineRounding(base, content, role, placement, plan, path) {
   const major = ticks[0].major;
   const scale = unit < 1 ? Math.round(1 / unit) : 1;
   const steps = (variable2) => unit < 1 ? `floor(${variable2} * ${scale} + 0.000000001)` : `floor(${variable2} / ${unit} + 0.000000001)`;
-  const at = (expression) => unit < 1 ? `(${expression}) / ${scale}` : `(${expression}) * ${unit}`;
+  const at2 = (expression) => unit < 1 ? `(${expression}) / ${scale}` : `(${expression}) * ${unit}`;
   const stepsOf = (value2) => Math.floor(unit < 1 ? value2 * scale + 1e-9 : value2 / unit + 1e-9);
   const valueAt = (count) => Number((unit < 1 ? count / scale : count * unit).toPrecision(12));
   const variable = variableAlias(numberIndex);
@@ -16958,13 +17223,13 @@ function compileNumberLineRounding(base, content, role, placement, plan, path) {
       ...Number.isInteger(major) ? {} : { format: "decimal" }
     },
     points: [
-      { as: "lower", value: { expression: at(steps(variable)), initial: lower } },
-      { as: "middle", value: { expression: at(`${steps(variable)} + 0.5`), initial: middle }, style: "open" },
-      { as: "upper", value: { expression: at(`${steps(variable)} + 1`), initial: upper } },
+      { as: "lower", value: { expression: at2(steps(variable)), initial: lower } },
+      { as: "middle", value: { expression: at2(`${steps(variable)} + 0.5`), initial: middle }, style: "open" },
+      { as: "upper", value: { expression: at2(`${steps(variable)} + 1`), initial: upper } },
       // Its tick already shows the number; a name that only repeats it ("362") is left off.
       { as: "number", value: { expression: variable, initial: definition.initial }, ...nameOf(definition, definition.initial) ? { label: nameOf(definition, definition.initial) } : {} }
     ],
-    jumps: [{ as: "move", from: "number", by: { expression: `${at(unit < 1 ? `floor(${variable} * ${scale} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }]
+    jumps: [{ as: "move", from: "number", by: { expression: `${at2(unit < 1 ? `floor(${variable} * ${scale} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }]
   });
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.move })) };
 }
