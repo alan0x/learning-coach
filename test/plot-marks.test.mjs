@@ -379,6 +379,13 @@ test("a slope triangle on one model point runs to B two units right, moving with
   assert.deepEqual(content.points.map((point) => [point.label, point.x, point.y]), [["A", 1, 1], ["B", 3, 7]]);
   assert.ok(content.bindings.some((binding) => binding.target === "second-point.x" && binding.expression === "(number_01)+2"));
   assert.deepEqual(judgePlot(cases["PJ-01"], lesson).hard, []);
+  // Review: stops must not overshoot the max by a rounding error (−5 + 7·1 gave 2.000000000000001, where
+  // B = 4.000000000000001 is off √(4 − x)); A from −5 to 2 keeps B on the curve.
+  const edge = await generate(onePoint("sqrt(4-x)", [0, -5, 2, "x-coordinate"]));
+  assert.equal(plotContent(edge.lesson).measurement, "secant");
+  // Review: a curve too long for B's binding (OLL's limit is 256 characters) leaves the triangle out, no refusal.
+  const long = await leftOut(onePoint(`${"x^2+".repeat(10)}x`, [1, -3, 3, "x-coordinate"]));
+  assert.equal(long.content.measurement, undefined);
   // √(4 − x) with A up to 3: B at 5 is off the curve, so the triangle is left out and A stays a plain point.
   const off = await leftOut(onePoint("sqrt(4-x)", [1, 0, 3, "x-coordinate"]));
   assert.equal(off.content.measurement, undefined);
