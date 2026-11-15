@@ -20,6 +20,8 @@
 //     --octos-profile ~/.octos/profiles/<id>.json [--recipes constant_speed_motion] [--pairs 20] [--max-calls 60]
 //     [--quality-repeats 1] [--out <report.json>]
 //   A probe: --pairs 0 --cases NL-03,NM-01 --quality-repeats 5 (candidate arm only, no speed pairs).
+//   A quality run: --pairs 0 --recipes number_line_steps,function_plot_extensions --quality-repeats 2 [--lesson-calls 4]
+//   (every case of the named recipes on the candidate arm; near misses on both arms; --both-arms: every case).
 //   Two builds: --baseline-build <dir> --build <dir> --recipes number_line (both arms the same environment;
 //   --recipes picks the fitting requests only).
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
@@ -29,6 +31,7 @@ import { fileURLToPath } from "node:url";
 import { profileRouteEnvironment } from "./eval-payload-padding.mjs";
 import { runTool, caseLanguage } from "./eval-shadow-speed.mjs";
 import { planNumberLineTicks } from "octos-lesson-language/plugin-math";
+import { judgePlot } from "./plot-judge.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -146,7 +149,14 @@ export const NUMBER_LINE_STEPS_CASES = [
   { id: "ST-06", nearMiss: true, prompt: "Use a number line to add 6 + 7 + 8 + 9 one number at a time.", expect: { values: [6, 30] } },
   { id: "ST-07", prompt: "在数轴上算 46 + 38：先加 40，再减去 2。", expect: { values: [46, 86, 84], steps: [[46, 86], [86, 84]] } },
 ];
-export const TRIAL_QUALITY_CASES = { number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
+/**
+ * The function-plot options (decision 0018, trial option function_plot_extensions): the plot judge's cases
+ * PJ-01–17 (testsuite/plot-judge-cases.json), judged with scripts/plot-judge.mjs instead of the number-line
+ * judge. PJ-15 and PJ-16 are near misses (families 0018 leaves out); PJ-17 is a plain plot.
+ */
+export const PLOT_CASES = JSON.parse(await readFile(join(root, "testsuite/plot-judge-cases.json"), "utf8")).cases
+  .map(({ id, language, prompt, nearMiss, expect }) => ({ id, language, prompt, judge: "plot", ...(nearMiss ? { nearMiss } : {}), expect }));
+export const TRIAL_QUALITY_CASES = { function_plot_extensions: PLOT_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
 
 /** The requests each trial recipe fits. */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
@@ -437,6 +447,15 @@ export function recipesInPart(part) {
         : points.has("lower") && points.has("upper") ? "number_line_rounding"
           : (write.content?.jumps ?? []).length >= 2 ? "number_line_steps" : "number_line");
   }
+  // The function-plot options (decision 0018), by the parts the compiler names: marks are points or
+  // guides named mark-*, domain and range are intervals named domain-N and range-N, pieces are curves
+  // sharing a series. (The slope triangle uses the plot's reference points, as before the option.)
+  for (const write of writes.filter((action) => action.kind === "plot")) {
+    const content = write.content ?? {};
+    if ([...(content.points ?? []), ...(content.guides ?? [])].some((part) => String(part.as).startsWith("mark-"))) found.push("plot_marks");
+    if ((content.curves ?? []).some((curve) => curve.series)) found.push("plot_pieces");
+    if ((content.intervals ?? []).some((interval) => /^(domain|range)-/u.test(String(interval.as)))) found.push("plot_domain_range");
+  }
   return found;
 }
 
@@ -530,6 +549,14 @@ export function summarize(rows) {
     hard_misses: judged.filter((row) => row.quality.hard.length).map((row) => ({ case: row.case, hard: row.quality.hard, ...(row.quality.review ? { review: row.quality.review } : {}) })),
     soft_misses: judged.filter((row) => row.quality.soft.length).map((row) => ({ case: row.case, soft: row.quality.soft })),
     near_misses_for_review: rows.filter((row) => row.kind === "near_miss" && row.arm === "candidate").map((row) => ({ case: row.case, recipes: row.recipes ?? null })),
+    // The same near misses without the trial: the "no worse than without it" comparison, read by hand.
+    near_miss_baseline: rows.filter((row) => row.kind === "near_miss" && row.arm === "baseline").map((row) => ({ case: row.case, recipes: row.recipes ?? null, hard: row.quality?.hard ?? null })),
+    // Per arm (a --both-arms run): lessons, judge passes, calls and the median seconds to first playable.
+    arms: Object.fromEntries(["candidate", "baseline"].map((arm) => {
+      const own = rows.filter((row) => row.arm === arm && row.kind !== "motion" && row.kind !== "other");
+      const played = own.filter((row) => row.outcome === "first_playable");
+      return [arm, { lessons: own.length, playable: played.length, judge_pass: own.filter((row) => row.quality && !row.quality.hard.length).length, calls: own.reduce((sum, row) => sum + (row.calls ?? 0), 0), with_rejections: own.filter((row) => row.rejections?.length).length, median_first_playable_ms: median(played.map((row) => row.first_playable_ms)) }];
+    })),
     verdict: slipVerdict(judged),
   } : undefined;
   // Speed is measured on the pairs only; quality cases run on one arm and would skew the medians.
@@ -546,6 +573,13 @@ async function main() {
   const option = (name, fallback) => { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : fallback; };
   const pairs = Number(option("--pairs", "20"));
   const maxCalls = Number(option("--max-calls", "60"));
+  // Calls one lesson may start before it is stopped (default 3, as every earlier run). Coach itself gives
+  // the first section the bootstrap plus three attempts, so --lesson-calls 4 lets a lesson run as it would
+  // for a learner (the plot trial stopped six lessons as they started a 4th call).
+  const lessonCalls = Number(option("--lesson-calls", "3"));
+  // --both-arms: every quality case also runs without the trial, alternating which goes first, and both are
+  // judged: calls, seconds and judge results side by side (only the candidate counts toward the verdict).
+  const bothArms = args.includes("--both-arms");
   const recipes = option("--recipes", "constant_speed_motion");
   const build = resolve(option("--build", root));
   // --baseline-build <dir>: two builds instead of one build with a trial recipe on and off. Both arms
@@ -558,8 +592,9 @@ async function main() {
   if (!profilePath) throw new Error("--octos-profile is required");
   const routeEnv = await profileRouteEnvironment(profilePath);
   const heldOut = new Map(JSON.parse(await readFile(join(root, "eval/subject-routing-heldout.json"), "utf8")).cases.map((item) => [item.id, item]));
-  const fitting = TRIAL_CASES[recipes.split(",")[0].trim()];
-  if (!fitting) throw new Error(`no fitting requests for trial recipe '${recipes}'`);
+  // Speed pairs need requests the first recipe fits; a quality-only run (--pairs 0) needs none.
+  const fitting = TRIAL_CASES[recipes.split(",")[0].trim()] ?? [];
+  if (!fitting.length && pairs > 0 && !option("--other-cases")) throw new Error(`no fitting requests for trial recipe '${recipes}'`);
   // "motion" marks requests the trial recipe fits, whichever recipe that is.
   // --other-cases HO-MA-01,M01-linear-system-question,…: speed pairs on requests the recipes do not fit only
   // (held-out routing cases or natural math cases), to measure what offering the recipes costs them.
@@ -608,13 +643,16 @@ async function main() {
     const tool = await runTool({
       build: arm === "previous" ? previousBuild : arm === "baseline" && baselineBuild ? baselineBuild : build,
       input, env: baselineBuild || arm === "baseline" ? env : { ...env, LEARNING_COACH_TRIAL_RECIPES: recipes },
-      maxCalls: Math.min(3, budget.remaining), onCall: () => { budget.remaining -= 1; },
+      maxCalls: Math.min(lessonCalls, budget.remaining), onCall: () => { budget.remaining -= 1; },
       onRaw: (line) => appendFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), `${line}\n`),
       onFirstPart: (path) => {
         try {
           const part = JSON.parse(readFileSync(path, "utf8"));
           const line = numberLineInPart(part);
-          const judged = arm === "candidate" && item.expect ? { quality: judgeNumberLine(item, numberLineLesson(part)) } : {};
+          // Near misses are judged on both arms, so "no worse than without the option" can be read
+          // from the report; only the candidate's judgement counts toward the verdict.
+          const judge = item.judge === "plot" ? () => judgePlot(item, part) : () => judgeNumberLine(item, numberLineLesson(part));
+          const judged = item.expect && (arm === "candidate" || item.nearMiss || bothArms) ? { quality: judge() } : {};
           return { recipes: recipesInPart(part), ...(line ? { number_line: line } : {}), ...judged };
         } catch { return { recipes: null }; }
       },
@@ -629,7 +667,7 @@ async function main() {
     // The run stops at the first playable part, so the judge sees only the first section; when the
     // outline has more, a later section may show what the first lacks, and the miss is read by hand.
     if (row.quality?.hard.length && row.sections > 1) row.quality.review = "later sections not judged: read by hand";
-    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).includes("number_line")) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew a number line: read by hand" };
+    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).some((name) => name.startsWith("number_line") || name.startsWith("plot_"))) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew the trial's visual: read by hand" };
     rows.push(row);
     console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null, ...(row.quality ? { hard: row.quality.hard } : {}) }));
     await persist();
@@ -651,7 +689,7 @@ async function main() {
     if (budget.remaining <= 0) break;
     // Near misses run on both arms, alternating which goes first, so a lesson can be read against
     // what the same request gets without the recipe.
-    const arms = item.nearMiss && !probeIds ? (index % 2 ? ["candidate", "baseline"] : ["baseline", "candidate"]) : ["candidate"];
+    const arms = (item.nearMiss || bothArms) && !probeIds ? (index % 2 ? ["candidate", "baseline"] : ["baseline", "candidate"]) : ["candidate"];
     for (const arm of arms) if (budget.remaining > 0) await runOne(pairs + index, item, arm, arms);
   }
   // Every planned case must have run: a budget that ran out is reported, not passed over.
