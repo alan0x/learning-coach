@@ -332,3 +332,26 @@ test("an exponential's domain needs a base above 0 wherever the numbers go, also
   const fine = await generate(withSliders(plotReply({ pieces: [["2^x", null, 0, "()"], ["1", 0, null, "[)"]], moments: [{ say: "两段。" }] }), ["domain"]));
   assert.equal(plotContent(fine.lesson).intervals.length, 1);
 });
+
+// Run B (#93 record): the model gave one moving point at x = 1 and asked for the slope triangle, narrating the
+// rise and run to x = 3. The triangle now runs from that point (A) to B two units right, moving with it.
+test("a slope triangle on one model point runs to B two units right, moving with it, and is left out where B leaves the curve", async () => {
+  const onePoint = (formula, number) => {
+    const reply = JSON.parse(plotReply({ formula, marks: ["slope_triangle"], numbers: [number], moments: [{ say: "看 A 到 B 的上升和前进。" }] }));
+    reply.course.outline.numbers[0].student_control = { kind: "slider" };
+    reply.course.first_section.moments[0].visual_creates[0].content.parameters.sample_x_numbers = [1];
+    return JSON.stringify(reply);
+  };
+  const { lesson, rejected, requests } = await generate(onePoint("3x-2", [1, -3, 3, "x-coordinate"]));
+  assert.ok(lesson, rejected.join(" | "));
+  assert.equal(requests.length, 1);
+  const content = plotContent(lesson);
+  assert.equal(content.measurement, "secant");
+  assert.deepEqual(content.points.map((point) => [point.label, point.x, point.y]), [["A", 1, 1], ["B", 3, 7]]);
+  assert.ok(content.bindings.some((binding) => binding.target === "second-point.x" && binding.expression === "(number_01)+2"));
+  assert.deepEqual(judgePlot(cases["PJ-01"], lesson).hard, []);
+  // √(4 − x) with A up to 3: B at 5 is off the curve, so the triangle is left out and A stays a plain point.
+  const off = await leftOut(onePoint("sqrt(4-x)", [1, 0, 3, "x-coordinate"]));
+  assert.equal(off.content.measurement, undefined);
+  assert.deepEqual(off.content.points.map((point) => point.label), ["P(x, y)"]);
+});

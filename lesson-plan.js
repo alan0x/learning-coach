@@ -16728,7 +16728,15 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   let markList = requestedMarks.filter((mark) => PLOT_MARKS.includes(mark));
   if (expressions.length !== 1) markList = markList.filter((mark) => mark === "domain" || mark === "range");
   if (expressions.length !== 1 && input.pieces === void 0) markList = [];
-  if (sampleNumbers.length === 1) markList = markList.filter((mark) => mark !== "slope_triangle");
+  if (sampleNumbers.length === 1 && markList.includes("slope_triangle")) {
+    const second = secondSampleTwoRight(plan, sampleNumbers[0], expression, creationMoments, path);
+    if (second) {
+      samples[0].label = "A";
+      samples.push(second.sample);
+      teachingPoints.push({ x: second.sample.x, y: second.sample.y }, ...second.shown);
+      optionalPoints.push(...second.ends);
+    } else markList = markList.filter((mark) => mark !== "slope_triangle");
+  }
   const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
   const slopeTriangle = markList.includes("slope_triangle");
   let references;
@@ -16851,6 +16859,28 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ...number ? [["moving_point", `${base}#moving-point`], ["primary_control", `${base}#moving-point`]] : [],
       ...dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] : []
     ])
+  };
+}
+function secondSampleTwoRight(plan, sampleNumber, expression, creationMoments, path) {
+  const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+  const curve = compileMathExpression(expression, ["x"]);
+  const at2 = (x) => {
+    try {
+      const y = curve({ x });
+      return Number.isFinite(y) ? y : void 0;
+    } catch {
+      return void 0;
+    }
+  };
+  const step = d.student_control?.step && d.student_control.step > 0 ? d.student_control.step : (d.max - d.min) / 200;
+  const stops = d.max > d.min ? Array.from({ length: Math.min(2001, Math.floor((d.max - d.min) / step + 1e-9) + 1) }, (_, index) => d.min + index * step) : [];
+  const animated = creationMoments.flatMap((moment) => moment.actions).flatMap((action) => action.action === "animate" && action.number === sampleNumber ? [action.end_value] : []);
+  for (const x of [d.min, d.max, d.initial, ...stops, ...animated]) if (at2(x + 2) === void 0) return void 0;
+  const point = (x) => ({ x: x + 2, y: at2(x + 2) });
+  return {
+    sample: { ...point(d.initial), label: "B", x_expression: `(${variableAlias(sampleNumber)})+2` },
+    shown: animated.map(point),
+    ends: [d.min, d.max].map(point)
   };
 }
 function leftOutWhenRefused(derive) {

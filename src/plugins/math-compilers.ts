@@ -202,8 +202,20 @@ function compileFunctionPlot(
   // several curves takes none.
   if (expressions.length !== 1) markList = markList.filter((mark) => mark === "domain" || mark === "range");
   if (expressions.length !== 1 && input.pieces === undefined) markList = [];
-  // The triangle measures two points: the model's two, or the program's; one of the model's is not enough.
-  if (sampleNumbers.length === 1) markList = markList.filter((mark) => mark !== "slope_triangle");
+  // The triangle measures two points: the model's two, or the program's. With one point of the model's, the
+  // triangle runs from it (A) to B two units to its right, which moves with it (run B: the model gave the
+  // point at x = 1 and narrated the rise and run to x = 3; leaving the triangle out left that undrawn). B must
+  // stay on the curve wherever A can be: every slider stop and value the lesson gives it; otherwise the
+  // triangle is left out.
+  if (sampleNumbers.length === 1 && markList.includes("slope_triangle")) {
+    const second = secondSampleTwoRight(plan, sampleNumbers[0]!, expression, creationMoments, path);
+    if (second) {
+      samples[0]!.label = "A";
+      samples.push(second.sample);
+      teachingPoints.push({ x: second.sample.x, y: second.sample.y }, ...second.shown);
+      optionalPoints.push(...second.ends);
+    } else markList = markList.filter((mark) => mark !== "slope_triangle");
+  }
   const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
   const slopeTriangle = markList.includes("slope_triangle");
 
@@ -339,6 +351,27 @@ function compileFunctionPlot(
       ...(number ? [["moving_point", `${base}#moving-point`], ["primary_control", `${base}#moving-point`]] as Array<[string, string]> : []),
       ...(dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] as Array<[string, string]> : []),
     ]),
+  };
+}
+
+/**
+ * B for a slope triangle on one model point A: x = A + 2, bound to A's number, on the curve wherever A can
+ * be (each slider stop between its min and max, and each value the creation section animates it to).
+ * Undefined when the curve does not exist at some A + 2.
+ */
+function secondSampleTwoRight(plan: LessonPlan, sampleNumber: number, expression: string, creationMoments: LessonPlan["sections"][number]["moments"], path: string): { sample: { x: number; y: number; label: string; x_expression: string }; shown: Array<{ x: number; y: number }>; ends: Array<{ x: number; y: number }> } | undefined {
+  const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+  const curve = compileMathExpression(expression, ["x"]);
+  const at = (x: number) => { try { const y = curve({ x }); return Number.isFinite(y) ? y : undefined; } catch { return undefined; } };
+  const step = d.student_control?.step && d.student_control.step > 0 ? d.student_control.step : (d.max - d.min) / 200;
+  const stops = d.max > d.min ? Array.from({ length: Math.min(2001, Math.floor((d.max - d.min) / step + 1e-9) + 1) }, (_, index) => d.min + index * step) : [];
+  const animated = creationMoments.flatMap((moment) => moment.actions).flatMap((action) => (action.action === "animate" && action.number === sampleNumber ? [action.end_value] : []));
+  for (const x of [d.min, d.max, d.initial, ...stops, ...animated]) if (at(x + 2) === undefined) return undefined;
+  const point = (x: number) => ({ x: x + 2, y: at(x + 2)! });
+  return {
+    sample: { ...point(d.initial), label: "B", x_expression: `(${variableAlias(sampleNumber)})+2` },
+    shown: animated.map(point),
+    ends: [d.min, d.max].map(point),
   };
 }
 
