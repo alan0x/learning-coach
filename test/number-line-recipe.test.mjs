@@ -179,6 +179,18 @@ test("a coarse unit takes only exact multiples: 1005 is not counted in 1000s", (
   // 1005 in 60 steps, so it is refused and the outline is asked again.
   assert.match(result.error ?? "", /choose another visual/u);
 });
+// The compiler's ticks are shared by the family, so a comparison gets the new units too. The comparison fit
+// narrows the line to its two values: 250 and 1750 span 1500, which no step of 1, 2, 5 or 10 holds in 60
+// ticks, so they were refused; they now count in 25s.
+test("coarse units reach the family: comparing 250 and 1750 counts in 25s", () => {
+  const result = compile([
+    { initial: 250, min: 0, max: 2000, label: "甲" },
+    { initial: 1750, min: 0, max: 2000, label: "乙" },
+  ], {}, { capability: "number_line_compare" });
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.content.ticks.step, 25);
+  assert.ok(result.content.range.min <= 250 && result.content.range.max >= 1750, JSON.stringify(result.content.range));
+});
 test("whole numbers close together still count in ones, even when they share a factor", () => {
   // −6 + 6: multiples of 2 and 6, but the line is short, so a learner can still try 5.
   const result = compile([
