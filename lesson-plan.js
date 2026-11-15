@@ -16137,7 +16137,8 @@ function divide(a, b) {
 }
 var degree = (p) => p.reduce((highest, scalar, power2) => isZero(scalar) ? highest : power2, 0);
 var coefficient = (p, power2) => p[power2] ?? constant(0);
-function polynomialOf(tokens) {
+function polynomialOf(tokens, maxDegree = 2) {
+  const powers = Array.from({ length: maxDegree + 1 }, (_, power2) => power2);
   const stack = [];
   for (const token of tokens) {
     if (token.kind === "input") stack.push([constant(0), constant(1)]);
@@ -16157,9 +16158,9 @@ function polynomialOf(tokens) {
       if (!left || !right) return void 0;
       let result;
       if (token.operator === "add" || token.operator === "subtract") {
-        result = [0, 1, 2].map((power2) => add(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
+        result = powers.map((power2) => add(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
       } else if (token.operator === "multiply") {
-        result = times(left, right);
+        result = times(left, right, maxDegree);
       } else if (token.operator === "divide") {
         if (degree(right) > 0) return void 0;
         result = left.map((scalar) => divide(scalar, coefficient(right, 0)));
@@ -16169,8 +16170,11 @@ function polynomialOf(tokens) {
         if (degree(left) === 0) result = [{ text: `${wrap(coefficient(left, 0))}^${wrap(exponent)}` }];
         else if (exponent.value === 0) result = [constant(1)];
         else if (exponent.value === 1) result = left;
-        else if (exponent.value === 2) result = times(left, left);
-        else return void 0;
+        else if (exponent.value !== void 0 && Number.isInteger(exponent.value) && exponent.value >= 2 && exponent.value <= maxDegree) {
+          let product = left;
+          for (let step = 1; step < exponent.value && product; step += 1) product = times(product, left, maxDegree);
+          result = product;
+        } else return void 0;
       }
       if (!result) return void 0;
       stack.push(result);
@@ -16178,11 +16182,11 @@ function polynomialOf(tokens) {
   }
   return stack.length === 1 ? stack[0] : void 0;
 }
-function times(left, right) {
-  const result = [constant(0), constant(0), constant(0)];
+function times(left, right, maxDegree = 2) {
+  const result = Array.from({ length: maxDegree + 1 }, () => constant(0));
   for (const [i, a] of left.entries()) for (const [j, b] of right.entries()) {
     if (isZero(a) || isZero(b)) continue;
-    if (i + j > 2) return void 0;
+    if (i + j > maxDegree) return void 0;
     result[i + j] = add(result[i + j], multiply2(a, b));
   }
   return result;
@@ -16325,7 +16329,7 @@ function shapeOf(tokens, root) {
   if (token.kind === "function") {
     const inner = linearArg(node.args[0]);
     if (!inner) return void 0;
-    const family = token.name === "sqrt" ? "sqrt" : token.name === "exp" ? "exponential" : /^(ln|log|log10|log2|lg)$/u.test(token.name) ? "log" : void 0;
+    const family = token.name === "sqrt" ? "sqrt" : token.name === "exp" ? "exponential" : /^(ln|log|log10|log2|lg)$/u.test(token.name) ? "log" : token.name === "sin" || token.name === "cos" ? "sinusoid" : void 0;
     return family ? { family, a, k, p: at(inner, 1), q: at(inner, 0) } : void 0;
   }
   if (token.kind === "operator" && token.operator === "power") {
@@ -16369,15 +16373,27 @@ function formulaBars(tokens, want, check, path) {
     }
     return guarded(bars, first, refuse);
   }
+  const higher = polynomialOf(tokens, 9);
+  if (higher) {
+    const top = degreeOf(higher);
+    if (want.domain) bars.push(all("x"));
+    if (want.range) {
+      if (top % 2 === 0) refuse("range", "is derived for polynomials of odd degree, lines and quadratics only");
+      if (!proved(at(higher, top).text)) refuse("range", "collapses where the leading coefficient is 0");
+      bars.push(all("y"));
+    }
+    return guarded(bars, first, refuse);
+  }
   const shape = shapeOf(tokens, root);
-  if (!shape) return refuse(first, "is derived only for lines, quadratics, roots, reciprocals, exponentials and logarithms");
+  if (!shape) return refuse(first, "is derived only for polynomials, roots, reciprocals, exponentials, logarithms, sines and cosines");
   const pSign = shape.p.value;
   const edge = `-${wrap2(shape.q.text)}/${wrap2(shape.p.text)}`;
   if (want.range) {
     if (pSign === 0 || !proved(shape.p.text)) refuse("range", "collapses to one value where x's coefficient is 0");
   }
   if (want.domain) {
-    if (shape.family === "exponential") {
+    if (shape.family === "sinusoid") bars.push(all("x"));
+    else if (shape.family === "exponential") {
       if (shape.base && check.sign(shape.base.text) !== "positive") refuse("domain", "needs a base above 0");
       bars.push(all("x"));
     } else if (shape.family === "reciprocal") {
@@ -16389,7 +16405,10 @@ function formulaBars(tokens, want, check, path) {
     }
   }
   if (want.range) {
-    if (shape.family === "log") {
+    if (shape.family === "sinusoid") {
+      const amplitude = `abs(${shape.a})`;
+      bars.push({ axis: "y", from: `${wrap2(shape.k)}-${amplitude}`, to: `${wrap2(shape.k)}+${amplitude}`, from_closed: true, to_closed: true });
+    } else if (shape.family === "log") {
       if (!proved(shape.a)) refuse("range", "collapses to one value where the coefficient is 0");
       bars.push(all("y"));
     } else if (shape.family === "reciprocal") {
@@ -16416,9 +16435,9 @@ function pieceBars(pieces, want, path) {
     for (const piece of pieces) {
       const tree = treeOf(piece.tokens);
       const shape = tree === void 0 ? void 0 : shapeOf(piece.tokens, tree);
-      const definedEverywhere = polynomialOf(piece.tokens) !== void 0 || shape?.family === "exponential" && (shape.base === void 0 || shape.base.value !== void 0 && shape.base.value > 0);
+      const definedEverywhere = polynomialOf(piece.tokens, 9) !== void 0 || shape?.family === "sinusoid" || shape?.family === "exponential" && (shape.base === void 0 || shape.base.value !== void 0 && shape.base.value > 0);
       if (!definedEverywhere) {
-        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a constant, a line, a quadratic or an exponential with a base above 0; leave it out of marks and do not narrate it");
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a polynomial, a sine or cosine, or an exponential with a base above 0; leave it out of marks and do not narrate it");
       }
     }
     bars.push(...join(pieces).map((span2) => toBar("x", span2)));

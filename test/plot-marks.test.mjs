@@ -195,7 +195,7 @@ test("PJ-12: a quadratic's range, and the right side shown as a slider turns a f
 });
 
 test("a range the program has no exact formula for, or one that collapses at a slider stop, is left out; the domain is still drawn", async () => {
-  for (const [formula, numbers] of [["tan(x)", []], ["n1x+1", [[1, -2, 2, "k"]]]]) {
+  for (const [formula, numbers] of [["x^4-2x^2", []], ["tan(x)", []], ["n1x+1", [[1, -2, 2, "k"]]]]) {
     const { bars } = await leftOut(plotReply({ formula, marks: ["domain", "range"], numbers, moments: [{ say: "看定义域和值域。" }] }));
     assert.deepEqual(bars, formula === "tan(x)" ? [] : ["x"], formula);
   }
@@ -331,4 +331,33 @@ test("an exponential's domain needs a base above 0 wherever the numbers go, also
   assert.deepEqual(plotContent(piece.lesson).intervals ?? [], []);
   const fine = await generate(withSliders(plotReply({ pieces: [["2^x", null, 0, "()"], ["1", 0, null, "[)"]], moments: [{ say: "两段。" }] }), ["domain"]));
   assert.equal(plotContent(fine.lesson).intervals.length, 1);
+});
+
+// Decision 0018 as extended (owner, 2026-11-15): odd-degree polynomials and sines and cosines get exact
+// ranges; every polynomial gets its domain.
+test("an odd-degree polynomial takes every value; an even higher degree's range is not read", async () => {
+  const cubic = await rangeContent("x^3-3x", [], ["domain", "range"]);
+  assert.ok(cubic.lesson, cubic.rejected.join(" | "));
+  assert.deepEqual(cubic.content.intervals.map((bar) => [bar.axis, bar.from, bar.to]), [["x", null, null], ["y", null, null]]);
+  assert.deepEqual(judgePlot({ id: "cubic", expect: { range: [{ from: null, to: null }] } }, cubic.lesson).hard, []);
+  // Repair in place: a range the program cannot derive is left out, and the plot is drawn without it.
+  const quartic = await rangeContent("x^4-2x^2", [], ["range"]);
+  assert.ok(quartic.lesson, quartic.rejected.join(" | "));
+  assert.equal((quartic.content.intervals ?? []).length, 0);
+  const quarticDomain = await rangeContent("x^4-2x^2", [], ["domain"]);
+  assert.ok(quarticDomain.lesson, quarticDomain.rejected.join(" | "));
+  const vanishing = await rangeContent("n1x^3+x^2", [[1, -1, 2, "a"]], ["range"]);
+  assert.equal((vanishing.content.intervals ?? []).length, 0);
+});
+
+test("a sine or cosine's range runs from k − |a| to k + |a|, ends included, also while a slides through 0", async () => {
+  for (const [formula, numbers, expected] of [["sin(x)", [], [-1, 1]], ["2cos(3x)+1", [], [-1, 3]], ["n1 sin(x)", [[2, -2, 2, "a"]], [-2, 2]]]) {
+    const { lesson, rejected, content } = await rangeContent(formula, numbers, ["domain", "range"]);
+    assert.ok(lesson, `${formula}: ${rejected.join(" | ")}`);
+    const range = content.intervals.find((bar) => bar.axis === "y");
+    assert.deepEqual([range.from, range.to, range.from_closed, range.to_closed], [...expected, true, true], formula);
+    assert.deepEqual(judgePlot({ id: formula, expect: { range: [{ from: expected[0], fromClosed: true, to: expected[1], toClosed: true }] } }, lesson).hard, [], formula);
+  }
+  const flat = await rangeContent("sin(n1 x)", [[1, -1, 2, "p"]], ["range"]);
+  assert.equal((flat.content.intervals ?? []).length, 0);
 });

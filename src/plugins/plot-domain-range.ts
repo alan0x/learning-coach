@@ -11,6 +11,9 @@
 // | a/(px + q) + k         | x ≠ −q/p        | y ≠ k                                   |
 // | a·b^(px + q) + k, exp  | all             | a > 0: (k, ∞); a < 0: (−∞, k)           |
 // | a·log(px + q) + k      | px + q > 0      | all                                     |
+// | odd degree 3–9         | all             | all (leading coefficient never 0)       |
+// | even degree 4–8        | all             | refused                                 |
+// | a·sin/cos(px + q) + k  | all             | [k − |a|, k + |a|]                      |
 // | pieces                 | the pieces' intervals | lines and constants only          |
 //
 // Ends that read lesson numbers are bound to them. Where a sign decides the side (a in a·√…), two bars
@@ -56,7 +59,7 @@ const degreeOf = (p: Scalar[]) => p.reduce((highest, scalar, power) => (scalar.v
 const at = (p: Scalar[], power: number): Scalar => p[power] ?? { text: "0", value: 0 };
 const wrap = (text: string) => (/^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(text) ? text : `(${text})`);
 
-interface Shape { family: "sqrt" | "reciprocal" | "exponential" | "log"; a: string; k: string; p: Scalar; q: Scalar; base?: Scalar }
+interface Shape { family: "sqrt" | "reciprocal" | "exponential" | "log" | "sinusoid"; a: string; k: string; p: Scalar; q: Scalar; base?: Scalar }
 
 /** Recognizes a·core(px + q) + k; undefined when the formula is not one of the families. */
 function shapeOf(tokens: LessonPlanMathExpression, root: Node): Shape | undefined {
@@ -112,7 +115,7 @@ function shapeOf(tokens: LessonPlanMathExpression, root: Node): Shape | undefine
   if (token.kind === "function") {
     const inner = linearArg(node.args[0]!);
     if (!inner) return undefined;
-    const family = token.name === "sqrt" ? "sqrt" : token.name === "exp" ? "exponential" : /^(ln|log|log10|log2|lg)$/u.test(token.name) ? "log" : undefined;
+    const family = token.name === "sqrt" ? "sqrt" : token.name === "exp" ? "exponential" : /^(ln|log|log10|log2|lg)$/u.test(token.name) ? "log" : token.name === "sin" || token.name === "cos" ? "sinusoid" : undefined;
     return family ? { family, a, k, p: at(inner, 1), q: at(inner, 0) } : undefined;
   }
   if (token.kind === "operator" && token.operator === "power") {
@@ -167,8 +170,21 @@ export function formulaBars(tokens: LessonPlanMathExpression, want: { domain: bo
     }
     return guarded(bars, first, refuse);
   }
+  // Higher degrees (decision 0018 as extended): defined everywhere; an odd degree whose leading
+  // coefficient never reaches 0 takes every value. An even degree's range needs its minimum, not read.
+  const higher = polynomialOf(tokens, 9) as Scalar[] | undefined;
+  if (higher) {
+    const top = degreeOf(higher);
+    if (want.domain) bars.push(all("x"));
+    if (want.range) {
+      if (top % 2 === 0) refuse("range", "is derived for polynomials of odd degree, lines and quadratics only");
+      if (!proved(at(higher, top).text)) refuse("range", "collapses where the leading coefficient is 0");
+      bars.push(all("y"));
+    }
+    return guarded(bars, first, refuse);
+  }
   const shape = shapeOf(tokens, root);
-  if (!shape) return refuse(first, "is derived only for lines, quadratics, roots, reciprocals, exponentials and logarithms");
+  if (!shape) return refuse(first, "is derived only for polynomials, roots, reciprocals, exponentials, logarithms, sines and cosines");
   const pSign = shape.p.value;
   const edge = `-${wrap(shape.q.text)}/${wrap(shape.p.text)}`;
   // Where x's coefficient reaches 0 the curve is a constant, whose range is one value: the bars below
@@ -177,7 +193,8 @@ export function formulaBars(tokens: LessonPlanMathExpression, want: { domain: bo
     if (pSign === 0 || !proved(shape.p.text)) refuse("range", "collapses to one value where x's coefficient is 0");
   }
   if (want.domain) {
-    if (shape.family === "exponential") {
+    if (shape.family === "sinusoid") bars.push(all("x"));
+    else if (shape.family === "exponential") {
       // b^x is defined for every x only for a base above 0, wherever the lesson numbers go (review).
       if (shape.base && check.sign(shape.base.text) !== "positive") refuse("domain", "needs a base above 0");
       bars.push(all("x"));
@@ -191,7 +208,11 @@ export function formulaBars(tokens: LessonPlanMathExpression, want: { domain: bo
     }
   }
   if (want.range) {
-    if (shape.family === "log") {
+    if (shape.family === "sinusoid") {
+      // Between k − |a| and k + |a|, both reached (p is never 0, checked above); at a = 0 both ends are k.
+      const amplitude = `abs(${shape.a})`;
+      bars.push({ axis: "y", from: `${wrap(shape.k)}-${amplitude}`, to: `${wrap(shape.k)}+${amplitude}`, from_closed: true, to_closed: true });
+    } else if (shape.family === "log") {
       if (!proved(shape.a)) refuse("range", "collapses to one value where the coefficient is 0");
       bars.push(all("y"));
     } else if (shape.family === "reciprocal") {
@@ -230,10 +251,10 @@ export function pieceBars(pieces: ReadonlyArray<{ tokens: LessonPlanMathExpressi
     for (const piece of pieces) {
       const tree = treeOf(piece.tokens);
       const shape = tree === undefined ? undefined : shapeOf(piece.tokens, tree);
-      const definedEverywhere = polynomialOf(piece.tokens) !== undefined
+      const definedEverywhere = polynomialOf(piece.tokens, 9) !== undefined || shape?.family === "sinusoid"
         || (shape?.family === "exponential" && (shape.base === undefined || (shape.base.value !== undefined && shape.base.value > 0)));
       if (!definedEverywhere) {
-        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a constant, a line, a quadratic or an exponential with a base above 0; leave it out of marks and do not narrate it");
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a polynomial, a sine or cosine, or an exponential with a base above 0; leave it out of marks and do not narrate it");
       }
     }
     bars.push(...join(pieces).map((span) => toBar("x", span)));
