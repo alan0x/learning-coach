@@ -310,3 +310,24 @@ test("other-only runs skip the quality cases unless asked (review of #73)", asyn
   assert.equal(qualityRepeats(undefined, false), 1);
   assert.equal(qualityRepeats("2", true), 2);
 });
+
+test("the function-plot options: plot cases are judged by the plot judge, and the options used are reported", async () => {
+  const { PLOT_CASES, TRIAL_QUALITY_CASES, qualityCasesFor, recipesInPart, summarize } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  assert.equal(TRIAL_QUALITY_CASES.function_plot_extensions, PLOT_CASES);
+  assert.deepEqual(PLOT_CASES.map((item) => item.id), Array.from({ length: 17 }, (_, index) => `PJ-${String(index + 1).padStart(2, "0")}`));
+  assert.ok(PLOT_CASES.every((item) => item.judge === "plot" && item.prompt && item.expect));
+  assert.deepEqual(PLOT_CASES.filter((item) => item.nearMiss).map((item) => item.id), ["PJ-15", "PJ-16"]);
+  const ids = qualityCasesFor("number_line_steps,function_plot_extensions").map((item) => item.id);
+  assert.equal(ids.length, 24);
+  assert.deepEqual([ids[0], ids[6], ids[7], ids[23]], ["ST-01", "ST-07", "PJ-01", "PJ-17"]);
+  const plot = (content) => ({ steps: [{ beats: [{ actions: [{ do: "write", as: "v1", kind: "plot", content }] }] }] });
+  assert.deepEqual(recipesInPart(plot({ points: [{ as: "mark-vertex" }], guides: [{ as: "mark-axis" }] })), ["plot_marks"]);
+  assert.deepEqual(recipesInPart(plot({ curves: [{ as: "piece-1", series: "f" }, { as: "piece-2", series: "f" }] })), ["plot_pieces"]);
+  assert.deepEqual(recipesInPart(plot({ intervals: [{ as: "domain-1", axis: "x" }, { as: "range-1", axis: "y" }] })), ["plot_domain_range"]);
+  assert.deepEqual(recipesInPart(plot({ points: [{ as: "A" }], curves: [{ as: "f" }] })), []);
+  // Near misses judged on the baseline arm are reported beside the candidate's, never counted in the verdict.
+  const row = (arm, hard) => ({ pair: 0, case: "PJ-15", kind: "near_miss", arm, outcome: "first_playable", recipes: [], quality: { hard, soft: [] } });
+  const summary = summarize([row("baseline", ["no plot"]), row("candidate", [])]);
+  assert.equal(summary.quality.judged, 1);
+  assert.deepEqual(summary.quality.near_miss_baseline, [{ case: "PJ-15", recipes: [], hard: ["no plot"] }]);
+});
