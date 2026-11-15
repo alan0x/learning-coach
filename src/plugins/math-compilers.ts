@@ -14,6 +14,7 @@ import { compileMathExpression, type AuthoringAction } from "octos-lesson-langua
 import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
 import { COARSE_UNITS, lessonValues, moveLandings } from "./number-line-fit.js";
+import { PLOT_MARKS, markParts, type MarkPart, type PlotMark } from "./plot-marks.js";
 import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
@@ -25,7 +26,7 @@ function compileFunctionPlot(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks"], path);
   const dynamicTokens = input.expression_tokens as LessonPlanMathExpression | undefined;
   if (dynamicTokens !== undefined
     && !dynamicTokens.some((token) => token.kind === "input")) {
@@ -192,6 +193,34 @@ function compileFunctionPlot(
     }
   }
 
+  // Marks (decision 0018 §1): derived from the one formula, bound to its lesson numbers, hidden while they
+  // do not exist. Where they are at the start and at each demonstrated state must be in view.
+  const markList = input.marks === undefined ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
+  for (const mark of markList) {
+    if (!(PLOT_MARKS as readonly string[]).includes(mark)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
+  }
+  let marks: Array<MarkPart & { at: (values: Record<string, number>) => { x?: number; y?: number; value?: number } }> = [];
+  if (markList.length) {
+    if (expressions.length !== 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks need one formula; leave marks out of a comparison of several curves");
+    const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`);
+    const variables = curveParameters.map((parameter) => parameter.name);
+    const samples = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))];
+    marks = markParts(tokens, markList as PlotMark[], (source) => compileText(plan, source), { variables, samples }, path).map((part) => {
+      const compiled = (["x", "y", "value"] as const).flatMap((key) => (part[key] === undefined ? [] : [[key, compileMathExpression(part[key]!, variables)] as const]));
+      return { ...part, at: (values: Record<string, number>) => Object.fromEntries(compiled.map(([key, f]) => {
+        let result = Number.NaN;
+        try { result = f(values); } catch { /* not defined here */ }
+        return [key, result];
+      })) };
+    });
+    for (const values of [initialState, ...demonstrations]) {
+      for (const mark of marks) {
+        const where = mark.at(values);
+        if (mark.kind === "point" && Number.isFinite(where.x) && Number.isFinite(where.y)) teachingPoints.push({ x: where.x!, y: where.y! });
+      }
+    }
+  }
+
   let view: PlotView;
   try {
     view = planPlotView({
@@ -216,6 +245,7 @@ function compileFunctionPlot(
     curves: plottedCurves,
     ...(samples.length ? { samples } : references ? { references } : {}),
   });
+  if (marks.length) appendMarks(built.actions[0] as unknown as { content: Record<string, unknown> }, marks, initialState);
   return {
     actions: built.actions,
     ...(view.adjustments.length ? { adjustments: view.adjustments } : {}),
@@ -227,6 +257,32 @@ function compileFunctionPlot(
       ...(dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] as Array<[string, string]> : []),
     ]),
   };
+}
+
+/**
+ * Adds marks to a built plot, after its samples or references (the secant measures the first two points).
+ * A mark that reads lesson numbers is bound to them and hidden while its value does not exist; a fixed
+ * mark that does not exist (a parabola that never meets the x-axis) is left out.
+ */
+function appendMarks(action: { content: Record<string, unknown> }, marks: Array<MarkPart & { at: (values: Record<string, number>) => { x?: number; y?: number; value?: number } }>, initial: Record<string, number>): void {
+  const content = action.content;
+  const points = [...((content.points as unknown[] | undefined) ?? [])];
+  const guides = [...((content.guides as unknown[] | undefined) ?? [])];
+  const bindings = [...((content.bindings as unknown[] | undefined) ?? [])];
+  const reads = (text: string | undefined) => text !== undefined && /\bnumber_\d+\b/u.test(text);
+  for (const mark of marks) {
+    const where = mark.at(initial);
+    const keys = mark.kind === "point" ? (["x", "y"] as const) : (["value"] as const);
+    const bound = keys.filter((key) => reads(mark[key]));
+    if (!bound.length && keys.some((key) => !Number.isFinite(where[key]))) continue;
+    const start = (key: "x" | "y" | "value") => (Number.isFinite(where[key]) ? Number(where[key]!.toPrecision(12)) : 0);
+    if (mark.kind === "point") points.push({ as: mark.as, x: start("x"), y: start("y"), label: mark.label });
+    else guides.push({ as: mark.as, kind: "vertical_line", value: start("value"), label: mark.label });
+    for (const key of bound) bindings.push({ target: `${mark.as}.${key}`, expression: mark[key], hide_when_undefined: true });
+  }
+  if (points.length) content.points = points;
+  if (guides.length) content.guides = guides;
+  if (bindings.length) content.bindings = bindings;
 }
 
 // Built by the math plugin's shared layer (octos-lesson-language/plugin-math),

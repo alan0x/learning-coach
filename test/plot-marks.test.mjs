@@ -1,0 +1,127 @@
+// Marks on a function plot (OLL decision 0018 §1) through the real path, from the model's reply to the
+// lesson, judged by the plot judge (testsuite/plot-judge-cases.json). The marks are a trial option,
+// offered only when LEARNING_COACH_TRIAL_RECIPES names function_plot_extensions, which Coach reads as it
+// loads; this file sets it first. Replies are run 5's reply (number-line-run5-replies.json, pair 42)
+// rewritten in the model's format for a function plot: no reply with marks is recorded yet.
+process.env.LEARNING_COACH_TRIAL_RECIPES = "function_plot_extensions";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import { deriveExecutionRequirements, normalizeAuthoringLesson } from "octos-lesson-language";
+
+const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+const { judgePlot } = await import(new URL("../scripts/plot-judge.mjs", import.meta.url));
+const run5 = JSON.parse(await readFile(new URL("./fixtures/number-line-run5-replies.json", import.meta.url), "utf8"));
+const cases = Object.fromEntries(JSON.parse(await readFile(new URL("../testsuite/plot-judge-cases.json", import.meta.url), "utf8")).cases.map((item) => [item.id, item]));
+const decimal = (value) => ({ mantissa: Math.round(value * 10), scale: 1 });
+
+/** Run 5's reply, rewritten: a function plot of `formula` with `marks`, and these numbers and moments. */
+const plotReply = ({ formula, marks, numbers = [], moments, language }) => {
+  const reply = structuredClone(run5.turns.find((turn) => turn.pair === 42).replies[0]);
+  const outline = reply.course.outline;
+  outline.numbers = numbers.map(([initial, min, max, label]) => ({ initial: decimal(initial), min: decimal(min), max: decimal(max), label, unit: "" }));
+  outline.course_visuals = [{ required_features: ["cartesian_function_curve"], use_sections: [1], relation: "primary" }];
+  reply.course.first_section = {
+    moments: moments.map((moment, index) => ({
+      narration: moment.say, delivery: "patient",
+      ...(index === 0 ? {
+        visual_creates: [{ course_visual: 1, content: { parameters: { formulas: [formula], marks }, numbers: numbers.map((_number, position) => position + 1) } }],
+        math_creates: [{ reusable_item: 1, content: { latex: `y = ${formula}` } }],
+      } : {}),
+      ...(moment.animations ? { animations: moment.animations.map(([number, value]) => ({ number, end_value: decimal(value), duration_intent: "normal" })) } : {}),
+    })),
+    number_activities: [],
+  };
+  return JSON.stringify(reply);
+};
+
+const generate = async (reply, prompt = "画出函数图像并标出关键点。", language = "zh-CN") => {
+  const requests = [];
+  const rejected = [];
+  let lesson;
+  class Stop extends Error {}
+  try {
+    await generateLessonPlanWithModel(async (request) => {
+      requests.push(request);
+      if (requests.length > 1) throw new Stop();
+      return reply;
+    }, { turn_id: "marks", learner_request: prompt, language, input_modality: "text", request_source: "self_contained" }, {
+      on_playable_prefix: ({ compiled }) => { lesson ??= compiled.lesson; throw new Stop(); },
+      on_rejected_part: (part) => rejected.push(`${part.error.code} ${part.error.message}`),
+    });
+  } catch (caught) {
+    if (!(caught instanceof Stop)) rejected.push(caught.message);
+  }
+  return { lesson, rejected, requests };
+};
+const plotContent = (lesson) => lesson.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions).find((action) => action.do === "write" && action.kind === "plot").content;
+const passes = async (id, reply) => {
+  const { lesson, rejected } = await generate(reply);
+  assert.ok(lesson, rejected.join(" | "));
+  const verdict = judgePlot(cases[id], lesson);
+  assert.deepEqual(verdict.hard, [], `${id}: ${verdict.hard.join(" | ")}`);
+  return lesson;
+};
+
+test("PJ-02: a line's two intercepts", async () => {
+  const lesson = await passes("PJ-02", plotReply({ formula: "-2x+4", marks: ["intercepts"], moments: [{ say: "看这条直线和两条坐标轴的交点。" }] }));
+  assert.deepEqual(plotContent(lesson).points.map((point) => [point.label, point.x, point.y]), [["y 截距", 0, 4], ["x 截距", 2, 0]]);
+});
+
+test("PJ-03: a parabola's vertex, axis and x-intercepts", async () => {
+  const lesson = await passes("PJ-03", plotReply({ formula: "(x-1)^2-4", marks: ["vertex", "symmetry_axis", "intercepts"], moments: [{ say: "看顶点、对称轴和交点。" }] }));
+  assert.deepEqual(plotContent(lesson).guides.map((guide) => [guide.label, guide.kind, guide.value]), [["对称轴", "vertical_line", 1]]);
+});
+
+test("PJ-04: a vertex with no x-intercept: the missing intercepts are left out, not drawn", async () => {
+  const lesson = await passes("PJ-04", plotReply({ formula: "(x+1)^2+2", marks: ["vertex", "intercepts"], moments: [{ say: "看顶点。" }] }));
+  assert.deepEqual(plotContent(lesson).points.map((point) => point.label), ["顶点", "y 截距"]);
+});
+
+test("PJ-05: the vertex and axis follow a slider through 0, hidden at 0", async () => {
+  const lesson = await passes("PJ-05", plotReply({
+    formula: "n1(x-2)^2+1", marks: ["vertex", "symmetry_axis"], numbers: [[1, -2, 2, "开口系数 a"]],
+    moments: [{ say: "看顶点。" }, { say: "把 a 变成负数，开口向下。", animations: [[1, -1]] }],
+  }));
+  const content = plotContent(lesson);
+  assert.ok(content.bindings.filter((binding) => binding.target.startsWith("mark-")).every((binding) => binding.hide_when_undefined === true));
+});
+
+test("PJ-06: a line through k = 0: the x-intercept hides while it does not exist", async () => {
+  await passes("PJ-06", plotReply({
+    formula: "n1x+1", marks: ["intercepts"], numbers: [[1, -2, 2, "斜率 k"]],
+    moments: [{ say: "看两个截距。" }, { say: "把 k 调大。", animations: [[1, 2]] }],
+  }));
+});
+
+test("a mark the formula cannot give is refused in the section, and the section is asked again", async () => {
+  const { lesson, rejected, requests } = await generate(plotReply({ formula: "x^3-x", marks: ["vertex"], moments: [{ say: "看顶点。" }] }));
+  assert.equal(lesson, undefined);
+  assert.ok(rejected.some((miss) => /LESSON_PLAN_CAPABILITY_PARAMETER .*marks.*vertex mark/u.test(miss)), rejected.join(" | "));
+  assert.match(requests[1]?.label ?? "", /section/u);
+  const line = await generate(plotReply({ formula: "2x+1", marks: ["symmetry_axis"], moments: [{ say: "看对称轴。" }] }));
+  assert.ok(line.rejected.some((miss) => /symmetry_axis mark needs a quadratic/u.test(miss)), line.rejected.join(" | "));
+});
+
+test("marks need OLL 0.11's hidden guide and secant features only when drawn; English lessons get English labels", async () => {
+  const { lesson } = await generate(plotReply({
+    formula: "n1(x-2)^2+1", marks: ["symmetry_axis"], numbers: [[1, -2, 2, "a"]], moments: [{ say: "Watch the axis." }],
+  }), "Graph it.", "en");
+  const requirements = deriveExecutionRequirements(normalizeAuthoringLesson(lesson, { lessonId: "m", boardId: "b", baseRevision: 0, regionIntent: "new_topic" }));
+  assert.equal(requirements.minimumPlayerVersion, "0.11.0");
+  assert.deepEqual(plotContent(lesson).guides.map((guide) => guide.label), ["Axis of symmetry"]);
+});
+
+test("coefficients too long for one binding refuse the marks in the section, naming the mark (review)", async () => {
+  const numbers = [[1, 0, 5, "p"], [2, 0, 5, "q"], [3, 0, 5, "r"], [1, 0, 5, "s"]];
+  const formula = "(x+n1*n2+n3*n4+n1*n3)*(x-(n1*n2+n3*n4+n1*n3))+n1";
+  const plain = await generate(plotReply({ formula, marks: undefined, numbers, moments: [{ say: "看图像。" }] }));
+  assert.ok(plain.lesson, plain.rejected.join(" | "));
+  for (const mark of ["vertex", "intercepts", "symmetry_axis"]) {
+    const { lesson, rejected, requests } = await generate(plotReply({ formula, marks: [mark], numbers, moments: [{ say: "看图像。" }] }));
+    assert.equal(lesson, undefined);
+    assert.ok(rejected.some((miss) => new RegExp(`LESSON_PLAN_CAPABILITY_PARAMETER .*marks.*the ${mark} mark is too long`, "u").test(miss)), rejected.join(" | "));
+    assert.ok(!rejected.some((miss) => /Expression is too long/u.test(miss)), rejected.join(" | "));
+    assert.match(requests[1]?.label ?? "", /section/u);
+  }
+});
