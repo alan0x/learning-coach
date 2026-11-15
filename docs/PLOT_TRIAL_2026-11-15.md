@@ -74,3 +74,31 @@ pieces, domain and range: Coach #89–#92) and the trial recipe `number_line_ste
 - Fix `pieces: []` and `marks: []` to mean none.
 - Keep each lesson's refusal reasons in the harness report, and let a lesson make Coach's real number of calls.
 - Then a small re-trial of the failing cases with a control arm (needs the owner's approval and a call count).
+
+## Confirming run B (2026-11-15, owner-approved, cap 100 calls)
+
+- **Setup:** after the fixes (Coach #94–#96, main plus #93–#96 merged locally), the 17 plot cases ran once each, with the options on and off in the same build.
+  - Flags: `--both-arms --lesson-calls 4`.
+  - Coach #94–#96 change no request-building code, so the trial's 48 first replies stayed valid and were replayed offline; one repeat confirms them live.
+- **Calls:** 73.
+- **Tokens, over 43 recorded replies:** prompt 108,433; output 54,431; thinking 7,457.
+- **Data:** `handoff-math-expressiveness/runs/plot-rerun-b/` (the raw replies are copied into `raw/`).
+
+| | Options on | Options off |
+|---|---|---|
+| Reached a playable section | 17 of 17 | 15 of 17 (PJ-07 and PJ-09, piecewise, failed after 4 calls) |
+| Judge passes | 13 | 4 |
+| Calls | 35 | 38 |
+| Lessons with a rejection | 2 | 3 |
+| Median seconds to first playable | 6.8 | 8.1 |
+
+**Against the agreed rules:**
+- **PJ-03:** a known miss, recorded before the run. The vertex and x-intercepts were drawn; the axis was not asked for.
+- **Near misses PJ-15 (cubic) and PJ-16 (sine):** both draw a plain plot and pass in both arms. With the options on they draw the range, in fewer calls.
+- **PJ-17 (plain plot):** passes in both arms.
+- **In scope:** 10 of 13 pass. The misses:
+  - **PJ-01, misleading, caused by the program (#94).** The model gave one moving point (`sample_x_numbers: [1]`) and asked for the slope triangle. #94 leaves a triangle with one model point out, but the narration explains the rise and run from x = 1 to x = 3. Before #94 this was refused and retried.
+  - **PJ-13, the model's choice.** It asked only for `intercepts` on an exponential (left out) and never for `range`. The narration states the range in words and does not point at a drawn mark.
+  - **PJ-14, the model's choice.** The allowed x values are drawn on a number line (`number_line_solution`) in both arms. Under the agreed rule this is a miss, reported separately.
+
+**Left-out marks:** checked by reading the reply beside the drawn parts. Only PJ-01's narration describes a left-out mark.
