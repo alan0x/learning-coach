@@ -12223,6 +12223,22 @@ var MATH_RECIPES = {
     student_controls: ["slider"],
     required_features: ["number_line", "rounding"],
     model_guidance: "\u6570\u8F74\u56DB\u820D\u4E94\u5165\uFF1A\u6570\u503C\u662F\u8981\u53D6\u6574\u7684\u6570\uFF0Cplace \u5199\u54EA\u4E00\u4F4D\uFF1B\u4E24\u4FA7\u7684\u6570\u548C\u7ED3\u679C\u7531\u7A0B\u5E8F\u7B97"
+  },
+  // Decision 0017: two or three moves, each its own jump (make ten, tens then ones, up then down). The model
+  // gives the start and each move; the program computes where each lands and the end. Its card states the
+  // split from the one-move card itself; the one-move card is unchanged while this is a trial recipe.
+  number_line_steps: {
+    parts: ["whole", "start", "end", "move", "move2", "move3", "primary_control"],
+    number_inputs: ["start", "change_1", "change_2", "change_3"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: ["title", "label_style"],
+    model_parameter_names: ["title", "label_style"],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["number_line"],
+    student_controls: ["slider"],
+    required_features: ["number_line", "number_steps"],
+    model_guidance: "\u6570\u8F74\u5206\u6B65\uFF1A\u4E24\u5230\u4E09\u6B65\u7684\u52A0\u51CF\uFF08\u6570\u8F74\u52A0\u51CF\u662F\u4E00\u6B65\uFF09\uFF0C\u5982\u51D1\u5341\u3001\u5148\u6574\u5341\u518D\u4E2A\u4F4D\u3001\u4E0A\u4E0B\u79FB\u52A8\uFF1B\u6570\u503C\u4F9D\u6B21\u662F\u8D77\u70B9\u548C\u5404\u6B65\u79FB\u52A8\u91CF\uFF08\u4E24\u6B65\u5199\u4E24\u4E2A\uFF09\uFF0C\u843D\u70B9\u548C\u7EC8\u70B9\u7531\u7A0B\u5E8F\u7B97\uFF1B\u5F80\u56DE\u8D70\u7684\u4E00\u6B65\u4E0D\u8BB2\u4E00\u683C\u4E00\u683C"
   }
 };
 var text2 = { type: "string" };
@@ -12257,7 +12273,8 @@ var MATH_SCHEMA_PROPERTIES = {
     label_style: { enum: ["decimal", "fraction"] },
     relation: { enum: ["x>a", "x>=a", "x<a", "x<=a", "a<x<b", "a<=x<=b", "a<x<=b", "a<=x<b", "x<a|x>b", "x<=a|x>=b", "x<a|x>=b", "x<=a|x>b"] }
   },
-  number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } }
+  number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } },
+  number_line_steps: { label_style: { enum: ["decimal", "fraction"] } }
 };
 var MATH_PLUGIN = {
   // The manifest and the Jev subject line are the OLL shared layer's.
@@ -12636,7 +12653,7 @@ var RECIPE_CATALOG_ORDER = [
   "number_line_solution",
   "number_line_rounding"
 ];
-var TRIAL_RECIPES = ["constant_speed_motion"];
+var TRIAL_RECIPES = ["constant_speed_motion", "number_line_steps"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -13154,22 +13171,56 @@ function lessonValues(plan, number) {
   }
   return values;
 }
+function valueAtEnd(plan, number) {
+  let value2 = plan.numbers[number - 1].initial;
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action === "animate" && action.number === number) value2 = action.end_value;
+  }
+  return value2;
+}
+function moveLandings(plan, numbers) {
+  const [startIndex, ...moves] = numbers;
+  if (!startIndex || !plan.numbers?.[startIndex - 1]) return [];
+  const landings = [];
+  let from = plan.numbers[startIndex - 1].initial;
+  for (const move of moves) {
+    const definition = plan.numbers[move - 1];
+    if (!definition) break;
+    for (const value2 of [definition.initial, ...lessonValues(plan, move)]) landings.push(Number((from + value2).toPrecision(12)));
+    from += valueAtEnd(plan, move);
+  }
+  return landings;
+}
 function fitNumberLineNumbers(content, plan, sharedNumbers) {
+  return fitMoves(content, plan, sharedNumbers, (content.numbers ?? []).slice(0, 2));
+}
+function fitStepsNumbers(content, plan, sharedNumbers) {
+  const numbers = content.numbers ?? [];
+  if (numbers.length < 3 || numbers.length > 4) return /* @__PURE__ */ new Map();
+  return fitMoves(content, plan, sharedNumbers, numbers);
+}
+function fitMoves(content, plan, sharedNumbers, numbers) {
   const fitted = /* @__PURE__ */ new Map();
-  const [startIndex, changeIndex] = content.numbers ?? [];
+  const [startIndex, ...moveIndexes] = numbers;
   if (!startIndex || !plan.numbers) return fitted;
-  if (sharedNumbers.has(startIndex) || changeIndex && sharedNumbers.has(changeIndex)) return fitted;
-  const ours = new Set([startIndex, changeIndex].filter((index) => index !== void 0));
+  if (numbers.some((index) => sharedNumbers.has(index))) return fitted;
+  const ours = new Set(numbers);
   const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) => activity.kind === "number_target" && activity.expression !== void 0 && (activity.number_controls.some((control) => ours.has(control.number)) || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
   if (expressionTask) return fitted;
   const start = plan.numbers[startIndex - 1];
-  const change = changeIndex ? plan.numbers[changeIndex - 1] : void 0;
   if (!start) return fitted;
-  const original = [start, change].map((definition) => definition && structuredClone(definition));
+  const moves = [];
+  for (const index of moveIndexes) {
+    const definition = plan.numbers[index - 1];
+    if (!definition) break;
+    moves.push(definition);
+  }
+  const definitions = [start, ...moves];
+  const original = definitions.map((definition) => structuredClone(definition));
   const startValues = [start.initial, ...lessonValues(plan, startIndex)];
-  const changeValues = change ? [change.initial, ...lessonValues(plan, changeIndex)] : [];
-  const shown = [...startValues, ...changeValues.map((value2) => start.initial + value2)];
-  const values = [...startValues, ...changeValues];
+  const moveValues = moves.map((move, position) => [move.initial, ...lessonValues(plan, moveIndexes[position])]);
+  const shown = [...startValues, ...moveLandings(plan, [startIndex, ...moveIndexes.slice(0, moves.length)])];
+  const values = [...startValues, ...moveValues.flat()];
   const denominator = valuesGrid(values, content);
   let grid = denominator ? 1 / denominator : void 0;
   const withZero = [0, ...shown];
@@ -13194,9 +13245,9 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
       if (definition.student_control) definition.student_control.step = grid;
     }
     if (range) {
-      const lowest = Math.min(definition.initial, ...values2), highest = Math.max(definition.initial, ...values2);
-      definition.min = Math.max(definition.min, Math.min(range[0], lowest));
-      definition.max = Math.min(definition.max, Math.max(range[1], highest));
+      const lowest2 = Math.min(definition.initial, ...values2), highest2 = Math.max(definition.initial, ...values2);
+      definition.min = Math.max(definition.min, Math.min(range[0], lowest2));
+      definition.max = Math.min(definition.max, Math.max(range[1], highest2));
     }
     if (grid) {
       definition.min = floorTo(definition.min, grid);
@@ -13210,14 +13261,18 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
     if (definition.student_control && carriesAnswer) return window;
     return [definition.initial - unit, definition.initial + unit];
   };
-  fit(start, startValues.map((value2) => grid ? snap(value2, grid) : value2), rangeFor(start, startValues, [low, high], false));
-  if (change) {
-    fit(change, changeValues.map((value2) => grid ? snap(value2, grid) : value2), rangeFor(change, changeValues, [low - start.min, high - start.max], true));
-  }
-  const valid = [start, change].every((definition) => !definition || definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max);
+  const snapped = (values2) => values2.map((value2) => grid ? snap(value2, grid) : value2);
+  fit(start, snapped(startValues), rangeFor(start, startValues, [low, high], false));
+  let lowest = start.min, highest = start.max;
+  moves.forEach((move, position) => {
+    fit(move, snapped(moveValues[position]), rangeFor(move, moveValues[position], [low - lowest, high - highest], true));
+    lowest += move.min;
+    highest += move.max;
+  });
+  const valid = definitions.every((definition) => definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max);
   if (!valid) {
-    for (const [definition, before] of [[start, original[0]], [change, original[1]]]) {
-      if (!definition || !before) continue;
+    definitions.forEach((definition, position) => {
+      const before = original[position];
       definition.min = grid ? floorTo(before.min, grid) : before.min;
       definition.max = grid ? ceilTo(before.max, grid) : before.max;
       if (!(definition.min < definition.max)) {
@@ -13225,11 +13280,11 @@ function fitNumberLineNumbers(content, plan, sharedNumbers) {
         definition.max = before.max;
       }
       definition.initial = Math.min(definition.max, Math.max(definition.min, definition.initial));
-    }
+    });
   }
   const step = grid ?? 0;
   fitted.set(startIndex, step);
-  if (changeIndex && change) fitted.set(changeIndex, step);
+  moves.forEach((_move, position) => fitted.set(moveIndexes[position], step));
   return fitted;
 }
 function fitComparedNumbers(content, plan, sharedNumbers) {
@@ -14040,6 +14095,7 @@ var MATH_HOOKS = {
   number_line_compare: { fit_numbers: fitComparedNumbers },
   number_line_solution: { fit_numbers: fitSolutionNumbers },
   number_line_rounding: { fit_numbers: fitRoundingNumbers },
+  number_line_steps: { fit_numbers: fitStepsNumbers },
   implicit_surface_with_section: {
     section_range: surfaceSectionRange,
     lower_model_parameters(parameters3) {
@@ -16693,11 +16749,75 @@ function compileNumberLine(base, content, role, placement, plan, path) {
   });
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, ...built.parts.move ? { primary_control: built.parts.move } : {} })) };
 }
+function compileNumberLineSteps(base, content, role, placement, plan, path) {
+  const { title, labelStyle } = numberLineLabelStyle(content, path);
+  const [startNumber, ...moveNumbers] = content.numbers ?? [];
+  if (!startNumber || moveNumbers.length < 2 || moveNumbers.length > 3) {
+    throw new LessonPlanError(
+      "LESSON_PLAN_OUTLINE_VISUAL",
+      `${path}.numbers`,
+      "a number line in steps needs a start and two or three moves; one move is drawn by number_line",
+      "number_line_steps"
+    );
+  }
+  const start = numberDefinition(plan, startNumber, `${path}.numbers[0]`);
+  const moves = moveNumbers.map((number, position) => numberDefinition(plan, number, `${path}.numbers[${position + 1}]`));
+  const values = [start.min, start.max, start.initial];
+  let lowest = start.min, highest = start.max, initial = start.initial;
+  for (const move of moves) {
+    lowest += move.min;
+    highest += move.max;
+    initial += move.initial;
+    values.push(lowest, highest, initial);
+  }
+  const grid = [
+    ...values,
+    ...moves.flatMap((move) => [move.min, move.max, move.initial]),
+    ...[start, ...moves].map((definition) => definition.student_control?.step).filter((step) => typeof step === "number" && step > 0)
+  ];
+  const shown = [
+    start.initial,
+    ...lessonValues(plan, startNumber),
+    ...moves.flatMap((move, position) => [move.initial, ...lessonValues(plan, moveNumbers[position])]),
+    ...moveLandings(plan, [startNumber, ...moveNumbers])
+  ];
+  const frame = numberLineFrame(values, grid, shown, labelStyle, path);
+  const unit = frame.step / frame.subdivisions;
+  const whole = (value2) => onGrid(value2 / unit, 1);
+  const takes = moves.map((move, position) => move.student_control ? [move.min, move.max, move.initial] : [move.initial, ...lessonValues(plan, moveNumbers[position])]);
+  const oneWay = takes.every((values2) => values2.every((value2) => value2 >= 0)) || takes.every((values2) => values2.every((value2) => value2 <= 0));
+  const hops = oneWay && moves.every((move, position) => takes[position].every(whole) && (move.student_control?.step === void 0 || whole(move.student_control.step)) && Math.ceil(Math.max(...takes[position].map(Math.abs)) / unit - 1e-9) <= NUMBER_LINE_LIMITS.hops);
+  const startVariable = variableAlias(startNumber);
+  const moveVariables = moveNumbers.map((number) => variableAlias(number));
+  const sum = (count) => [startVariable, ...moveVariables.slice(0, count)].map((name) => `(${name})`).join("+");
+  const sumInitial = (count) => Number([start, ...moves.slice(0, count)].reduce((total, definition) => total + definition.initial, 0).toPrecision(12));
+  const jumpNames = ["move", "move2", "move3"];
+  const built = buildNumberLine({
+    as: base,
+    role,
+    place: placement,
+    title: optionalText(title, compileText(plan, "\u6570\u8F74"), `${path}.title`),
+    range: frame.range,
+    ticks: frame.ticks,
+    points: [
+      { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "\u8D77\u70B9") },
+      { as: "end", value: { expression: sum(moves.length), initial: sumInitial(moves.length) }, label: compileText(plan, "\u7EC8\u70B9") }
+    ],
+    jumps: moves.map((move, position) => ({
+      as: jumpNames[position],
+      from: position === 0 ? "start" : { expression: sum(position), initial: sumInitial(position) },
+      by: { expression: moveVariables[position], initial: move.initial },
+      hops
+    }))
+  });
+  return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, ...built.parts.move ? { primary_control: built.parts.move } : {} })) };
+}
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
   number_line_solution: compileNumberLineSolution,
   number_line_rounding: compileNumberLineRounding,
+  number_line_steps: compileNumberLineSteps,
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_polygon_bounds: compileCirclePolygonBounds,
@@ -17159,7 +17279,7 @@ function resolveMetNumberTargets(plan) {
   }
   const lastMoment = plan.sections.at(-1)?.moments.at(-1);
   const resetNumbers = /* @__PURE__ */ new Set();
-  const valueAtEnd = (number) => {
+  const valueAtEnd2 = (number) => {
     let value2 = plan.numbers[number - 1].initial;
     for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
       if (action.action === "animate" && action.number === number) value2 = action.end_value;
@@ -17178,7 +17298,7 @@ function resolveMetNumberTargets(plan) {
         continue;
       }
       const metAtStart = met(definition.initial);
-      if (!metAtStart && !met(valueAtEnd(number))) continue;
+      if (!metAtStart && !met(valueAtEnd2(number))) continue;
       const path = `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`;
       const step = definition.student_control?.step;
       const onSlider = (value2) => {
@@ -17205,7 +17325,7 @@ function resolveMetNumberTargets(plan) {
           });
         }
       }
-      if (met(valueAtEnd(number)) && !resetNumbers.has(number)) {
+      if (met(valueAtEnd2(number)) && !resetNumbers.has(number)) {
         resetNumbers.add(number);
         lastMoment.actions.push({ action: "animate", number, end_value: reset, easing: "ease_in_out", duration_intent: "brief", timing: "after_speech" });
       }

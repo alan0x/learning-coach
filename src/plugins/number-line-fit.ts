@@ -124,6 +124,35 @@ export function lessonValues(plan: LessonPlan, number: number): number[] {
   return values;
 }
 
+/** A number's value when the lesson ends: its starting value, then each animation in order. */
+function valueAtEnd(plan: LessonPlan, number: number): number {
+  let value = plan.numbers![number - 1]!.initial;
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action === "animate" && action.number === number) value = action.end_value;
+  }
+  return value;
+}
+
+/**
+ * Where a line's moves land (decisions 0013 and 0017): each move starts from the start's value plus the
+ * earlier moves as the lesson leaves them, and lands at every value the move takes. A card that animates
+ * each move from 0 in turn (27, then +10, +10, +5) lands at 27, 37, 47 and 52. With one move these are
+ * the end's values.
+ */
+export function moveLandings(plan: LessonPlan, numbers: readonly number[]): number[] {
+  const [startIndex, ...moves] = numbers;
+  if (!startIndex || !plan.numbers?.[startIndex - 1]) return [];
+  const landings: number[] = [];
+  let from = plan.numbers[startIndex - 1]!.initial;
+  for (const move of moves) {
+    const definition = plan.numbers[move - 1];
+    if (!definition) break;
+    for (const value of [definition.initial, ...lessonValues(plan, move)]) landings.push(Number((from + value).toPrecision(12)));
+    from += valueAtEnd(plan, move);
+  }
+  return landings;
+}
+
 /**
  * Fits the start and change numbers of one number line visual in place.
  * Returns each fitted number with its tick step, so the caller snaps the
@@ -131,32 +160,54 @@ export function lessonValues(plan: LessonPlan, number: number): number[] {
  * numbers are left as they are.
  */
 export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>): Map<number, number> {
+  return fitMoves(content, plan, sharedNumbers, (content.numbers ?? []).slice(0, 2));
+}
+
+/**
+ * Fits a number line in steps (decision 0017): a start and two or three moves, by the same rules as one
+ * move. Each move narrows to what the window leaves after the moves before it, but never below the values
+ * the lesson gives it. Any other count is left as written, for the compiler to refuse.
+ */
+export function fitStepsNumbers(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>): Map<number, number> {
+  const numbers = content.numbers ?? [];
+  if (numbers.length < 3 || numbers.length > 4) return new Map();
+  return fitMoves(content, plan, sharedNumbers, numbers);
+}
+
+/** A start and its moves, in place: one move for the number line, two or three for steps. */
+function fitMoves(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>, numbers: readonly number[]): Map<number, number> {
   const fitted = new Map<number, number>();
-  const [startIndex, changeIndex] = content.numbers ?? [];
+  const [startIndex, ...moveIndexes] = numbers;
   if (!startIndex || !plan.numbers) return fitted;
   // A number another visual shows is that visual's too: changing it here would change it there.
-  if (sharedNumbers.has(startIndex) || (changeIndex && sharedNumbers.has(changeIndex))) return fitted;
+  if (numbers.some((index) => sharedNumbers.has(index))) return fitted;
   // A practice task judged by an expression ("start + change = 5") depends on the numbers' exact
   // ranges and steps in ways a refit could break; leave its numbers as the model wrote them.
-  const ours = new Set([startIndex, changeIndex].filter((index): index is number => index !== undefined));
+  const ours = new Set(numbers);
   const expressionTask = plan.sections.some((section) => (section.student_activities ?? []).some((activity) =>
     activity.kind === "number_target" && activity.expression !== undefined
     && (activity.number_controls.some((control) => ours.has(control.number))
       || JSON.stringify(activity.expression).match(/"number":(\d+)/gu)?.some((match) => ours.has(Number(match.split(":")[1]))))));
   if (expressionTask) return fitted;
   const start = plan.numbers[startIndex - 1];
-  const change = changeIndex ? plan.numbers[changeIndex - 1] : undefined;
   if (!start) return fitted;
-  const original = [start, change].map((definition) => definition && structuredClone(definition));
+  const moves: LessonPlanNumber[] = [];
+  for (const index of moveIndexes) {
+    const definition = plan.numbers[index - 1];
+    if (!definition) break;
+    moves.push(definition);
+  }
+  const definitions = [start, ...moves];
+  const original = definitions.map((definition) => structuredClone(definition));
 
   const startValues = [start.initial, ...lessonValues(plan, startIndex)];
-  const changeValues = change ? [change.initial, ...lessonValues(plan, changeIndex!)] : [];
-  // Points the line shows: the start's values, and the end for each value of the change.
-  const shown = [...startValues, ...changeValues.map((value) => start.initial + value)];
+  const moveValues = moves.map((move, position) => [move.initial, ...lessonValues(plan, moveIndexes[position]!)]);
+  // Points the line shows: the start's values, and where each move lands for each of its values.
+  const shown = [...startValues, ...moveLandings(plan, [startIndex, ...moveIndexes.slice(0, moves.length)])];
   // The values alone decide what the lesson counts in: 0.33 and 0.67 are thirds. A slider step is never
   // evidence: the model does not write one, and the step it arrives with is derived from the range
   // (span / 200), so 0.5 on a 0–100 range says nothing about halves (run 5).
-  const values = [...startValues, ...changeValues];
+  const values = [...startValues, ...moveValues.flat()];
   const denominator = valuesGrid(values, content);
   let grid = denominator ? 1 / denominator : undefined;
 
@@ -217,29 +268,34 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
     if (definition.student_control && carriesAnswer) return window;
     return [definition.initial - unit, definition.initial + unit];
   };
-  fit(start, startValues.map((value) => (grid ? snap(value, grid) : value)), rangeFor(start, startValues, [low, high], false));
-  if (change) {
-    // Every start and change together stays in the window: change in [low − start.min, high − start.max].
-    fit(change, changeValues.map((value) => (grid ? snap(value, grid) : value)), rangeFor(change, changeValues, [low - start.min, high - start.max], true));
-  }
+  const snapped = (values: readonly number[]) => values.map((value) => (grid ? snap(value, grid) : value));
+  fit(start, snapped(startValues), rangeFor(start, startValues, [low, high], false));
+  // A move starting anywhere from `lowest` to `highest` (the start and the earlier moves together) lands
+  // in the window when it is in [low − lowest, high − highest]. As for one move, the values the lesson
+  // gives it are kept even past that; the compiler's line covers every value the sliders reach.
+  let lowest = start.min, highest = start.max;
+  moves.forEach((move, position) => {
+    fit(move, snapped(moveValues[position]!), rangeFor(move, moveValues[position]!, [low - lowest, high - highest], true));
+    lowest += move.min;
+    highest += move.max;
+  });
 
-  const valid = [start, change].every((definition) => !definition
-    || (definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max));
+  const valid = definitions.every((definition) => definition.min < definition.max && definition.initial >= definition.min && definition.initial <= definition.max);
   if (!valid) {
     // A window the numbers do not fit: keep the model's ranges, but still put the values and the
     // sliders on the lesson's ticks, so the line stays readable. (A target the number already starts
     // at is resolved when the lesson compiles: the line goes back before the learner tries.)
-    for (const [definition, before] of [[start, original[0]], [change, original[1]]] as const) {
-      if (!definition || !before) continue;
+    definitions.forEach((definition, position) => {
+      const before = original[position]!;
       definition.min = grid ? floorTo(before.min, grid) : before.min;
       definition.max = grid ? ceilTo(before.max, grid) : before.max;
       if (!(definition.min < definition.max)) { definition.min = before.min; definition.max = before.max; }
       definition.initial = Math.min(definition.max, Math.max(definition.min, definition.initial));
-    }
+    });
   }
   const step = grid ?? 0;
   fitted.set(startIndex, step);
-  if (changeIndex && change) fitted.set(changeIndex, step);
+  moves.forEach((_move, position) => fitted.set(moveIndexes[position]!, step));
   return fitted;
 }
 

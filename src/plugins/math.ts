@@ -221,6 +221,22 @@ export const MATH_RECIPES = {
     required_features: ["number_line", "rounding"],
     model_guidance: "数轴四舍五入：数值是要取整的数，place 写哪一位；两侧的数和结果由程序算",
   },
+  // Decision 0017: two or three moves, each its own jump (make ten, tens then ones, up then down). The model
+  // gives the start and each move; the program computes where each lands and the end. Its card states the
+  // split from the one-move card itself; the one-move card is unchanged while this is a trial recipe.
+  number_line_steps: {
+    parts: ["whole", "start", "end", "move", "move2", "move3", "primary_control"],
+    number_inputs: ["start", "change_1", "change_2", "change_3"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: ["title", "label_style"],
+    model_parameter_names: ["title", "label_style"],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
+    output_kinds: ["number_line"],
+    student_controls: ["slider"],
+    required_features: ["number_line", "number_steps"],
+    model_guidance: "数轴分步：两到三步的加减（数轴加减是一步），如凑十、先整十再个位、上下移动；数值依次是起点和各步移动量（两步写两个），落点和终点由程序算；往回走的一步不讲一格一格",
+  },
 } as const;
 
 // Provider-schema properties each recipe adds to a visual's parameters.
@@ -259,6 +275,7 @@ const MATH_SCHEMA_PROPERTIES = {
     relation: { enum: ["x>a", "x>=a", "x<a", "x<=a", "a<x<b", "a<=x<=b", "a<x<=b", "a<=x<b", "x<a|x>b", "x<=a|x>=b", "x<a|x>=b", "x<=a|x>b"] },
   },
   number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } },
+  number_line_steps: { label_style: { enum: ["decimal", "fraction"] } },
 };
 
 export const MATH_PLUGIN = {

@@ -428,13 +428,14 @@ export function recipesInPart(part) {
   const motion = writes.some((action) => action.kind === "geometry" && String(action.as).endsWith("-track")
     && (action.content?.points ?? []).some((point) => point.as === "object"));
   if (motion) found.push("constant_speed_motion");
-  // The number-line family (decision 0016): a comparison draws points "first" and "second"; the
-  // start-plus-move line draws "start" (and "end").
+  // The number-line family (decisions 0016 and 0017): a comparison draws points "first" and "second"; the
+  // start-plus-move line draws "start" (and "end"), with one jump, or two or more in steps.
   for (const write of writes.filter((action) => action.kind === "number_line")) {
     const points = new Set((write.content?.points ?? []).map((point) => point.as));
     found.push((write.content?.intervals ?? []).length ? "number_line_solution"
       : points.has("first") && points.has("second") ? "number_line_compare"
-        : points.has("lower") && points.has("upper") ? "number_line_rounding" : "number_line");
+        : points.has("lower") && points.has("upper") ? "number_line_rounding"
+          : (write.content?.jumps ?? []).length >= 2 ? "number_line_steps" : "number_line");
   }
   return found;
 }

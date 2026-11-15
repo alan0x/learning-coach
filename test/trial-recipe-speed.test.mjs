@@ -248,6 +248,15 @@ test("the recipes a part used tell a comparison from a start plus a move (decisi
   solution.steps[0].beats[0].actions[0].content.intervals = [{ as: "set", from: -2, to: null }];
   assert.deepEqual(recipesInPart(solution), ["number_line_solution"]);
   assert.deepEqual(recipesInPart(part(["lower", "middle", "upper", "number"])), ["number_line_rounding"]);
+  // Decision 0017: a start and end with two or more jumps is the line in steps; one jump is the number line.
+  const withJumps = (count) => {
+    const line = part(["start", "end"]);
+    line.steps[0].beats[0].actions[0].content.jumps = ["move", "move2", "move3"].slice(0, count).map((as) => ({ as, from: 0, by: 1 }));
+    return line;
+  };
+  assert.deepEqual(recipesInPart(withJumps(1)), ["number_line"]);
+  assert.deepEqual(recipesInPart(withJumps(2)), ["number_line_steps"]);
+  assert.deepEqual(recipesInPart(withJumps(3)), ["number_line_steps"]);
 });
 
 
