@@ -125,7 +125,11 @@ function formulaLexemes(rawFormula: unknown, path: string): FormulaLexeme[] {
   return withImplicitMultiplication;
 }
 
-export function parseModelFormula(rawFormula: unknown, numberCount: number, path: string): LessonPlanMathExpression {
+/**
+ * Parses a model-written formula into tokens. A plot's formula must depend on x; a piece of a piecewise
+ * function may be a constant (`allowConstant`, OLL decision 0018 §2), drawn only on its interval.
+ */
+export function parseModelFormula(rawFormula: unknown, numberCount: number, path: string, { allowConstant = false }: { allowConstant?: boolean } = {}): LessonPlanMathExpression {
   const lexemes = formulaLexemes(rawFormula, path);
   let position = 0;
   const peek = (): FormulaLexeme | undefined => lexemes[position];
@@ -207,7 +211,7 @@ export function parseModelFormula(rawFormula: unknown, numberCount: number, path
   };
   const result = parseExpression();
   if (position !== lexemes.length) formulaError(path, "formula contains an unexpected trailing token");
-  if (!result.some((token) => token.kind === "input")) {
+  if (!allowConstant && !result.some((token) => token.kind === "input")) {
     formulaError(path, "a function plot formula must depend on x");
   }
   return result;

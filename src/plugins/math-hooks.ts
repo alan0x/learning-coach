@@ -123,6 +123,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
   },
   function_plot: {
     lower_model_parameters(parameters, { numberCount }) {
+      if (parameters.pieces !== undefined) return lowerPieces(parameters, numberCount);
       const rawFormulas = parameters.formulas !== undefined
         ? parameters.formulas
         : typeof parameters.expression === "string"
@@ -252,6 +253,51 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     free_number: (content) => content.parameters?.radius_expression !== undefined,
   },
 };
+
+/**
+ * A piecewise function (OLL decision 0018 §2): each piece is a formula on an interval with its ends open or
+ * closed, as the model writes them. The pieces replace the formulas: each becomes one static curve (a
+ * piece may be a constant), and their intervals may meet only at an end at most one of them includes.
+ */
+const PIECE_ENDS = { "[]": [true, true], "[)": [true, false], "(]": [false, true], "()": [false, false] } as const;
+function lowerPieces(parameters: Record<string, unknown>, numberCount: number): { no_numbers: true } {
+  const path = "$lessonPlanSection.visual.parameters.pieces";
+  const raw = parameters.pieces;
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 4) formulaError(path, "a piecewise function has two to four pieces");
+  const decimal = (value: unknown, where: string): number | null => {
+    if (value === undefined || value === null) return null;
+    const number = typeof value === "number" ? value
+      : value && typeof value === "object" && "mantissa" in value ? Number((value as { mantissa: number }).mantissa) / 10 ** Number((value as { scale?: number }).scale ?? 0) : Number.NaN;
+    if (!Number.isFinite(number)) formulaError(where, "a piece's end is a finite number, or left out when that side is unbounded");
+    return number;
+  };
+  const pieces = (raw as unknown[]).map((entry, index) => {
+    const where = `${path}[${index}]`;
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) formulaError(where, "each piece is an object with formula, x_from, x_to and ends");
+    const piece = entry as Record<string, unknown>;
+    const tokens = parseModelFormula(piece.formula, numberCount, `${where}.formula`, { allowConstant: true });
+    if (tokens.some((token) => token.kind === "number")) formulaError(`${where}.formula`, "pieces are fixed formulas; use one formula when lesson numbers change the curve");
+    const ends = PIECE_ENDS[String(piece.ends) as keyof typeof PIECE_ENDS];
+    if (!ends) formulaError(`${where}.ends`, "ends is one of [] [) (] ()");
+    const from = decimal(piece.x_from, `${where}.x_from`), to = decimal(piece.x_to, `${where}.x_to`);
+    if (from !== null && to !== null && !(from < to)) formulaError(where, "a piece's x_from is below its x_to");
+    return { expression: mathExpressionToOll(tokens), from, to, from_closed: ends[0], to_closed: ends[1] };
+  });
+  // Each x at most once: in order, a piece starts at or after the one before ends, and where they meet at
+  // most one includes the shared end.
+  const ordered = [...pieces].sort((a, b) => (a.from ?? -Infinity) - (b.from ?? -Infinity));
+  for (let index = 1; index < ordered.length; index += 1) {
+    const before = ordered[index - 1]!, piece = ordered[index]!;
+    const meets = before.to !== null && piece.from !== null && before.to === piece.from;
+    if (before.to === null || piece.from === null || before.to > piece.from || (meets && before.to_closed && piece.from_closed)) {
+      formulaError(path, "the pieces overlap: each x belongs to at most one piece, and where two meet only one includes the end");
+    }
+  }
+  for (const key of ["formulas", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "sample_x_numbers"]) delete parameters[key];
+  parameters.expressions = ordered.map((piece) => piece.expression);
+  parameters.pieces = ordered;
+  return { no_numbers: true };
+}
 
 // A request for two independently movable points on a curve: the outline
 // gets A/B x-coordinate numbers and function plots use them as sample points.

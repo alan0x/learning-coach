@@ -16,7 +16,7 @@ const cases = Object.fromEntries(JSON.parse(await readFile(new URL("../testsuite
 const decimal = (value) => ({ mantissa: Math.round(value * 10), scale: 1 });
 
 /** Run 5's reply, rewritten: a function plot of `formula` with `marks`, and these numbers and moments. */
-const plotReply = ({ formula, marks, numbers = [], moments, language }) => {
+const plotReply = ({ formula, marks, pieces, numbers = [], moments, language }) => {
   const reply = structuredClone(run5.turns.find((turn) => turn.pair === 42).replies[0]);
   const outline = reply.course.outline;
   outline.numbers = numbers.map(([initial, min, max, label]) => ({ initial: decimal(initial), min: decimal(min), max: decimal(max), label, unit: "" }));
@@ -25,8 +25,11 @@ const plotReply = ({ formula, marks, numbers = [], moments, language }) => {
     moments: moments.map((moment, index) => ({
       narration: moment.say, delivery: "patient",
       ...(index === 0 ? {
-        visual_creates: [{ course_visual: 1, content: { parameters: { formulas: [formula], marks }, numbers: numbers.map((_number, position) => position + 1) } }],
-        math_creates: [{ reusable_item: 1, content: { latex: `y = ${formula}` } }],
+        visual_creates: [{ course_visual: 1, content: { parameters: pieces
+          // Pieces as the model writes them: formulas repeats each piece's formula, an unbounded side is left out.
+          ? { formulas: pieces.map(([piece]) => piece), pieces: pieces.map(([piece, from, to, ends]) => ({ formula: piece, ...(from === null ? {} : { x_from: decimal(from) }), ...(to === null ? {} : { x_to: decimal(to) }), ends })) }
+          : { formulas: [formula], marks }, numbers: numbers.map((_number, position) => position + 1) } }],
+        math_creates: [{ reusable_item: 1, content: { latex: `y = ${formula ?? pieces.map(([piece]) => piece).join("; ")}` } }],
       } : {}),
       ...(moment.animations ? { animations: moment.animations.map(([number, value]) => ({ number, end_value: decimal(value), duration_intent: "normal" })) } : {}),
     })),
@@ -131,4 +134,27 @@ test("the slope triangle finds two points where the curve exists, and is refused
   assert.deepEqual(plotContent(root.lesson).points.map((point) => point.x), [6, 8]);
   const nowhere = await generate(plotReply({ formula: "sqrt(x-50)", marks: ["slope_triangle"], moments: [{ say: "看两点。" }] }));
   assert.ok(nowhere.rejected.some((miss) => /slope_triangle mark found no two points/u.test(miss)), nowhere.rejected.join(" | "));
+});
+
+// Pieces (0018 §2, third step): one formula per interval, ends open or closed as written.
+test("PJ-07: two pieces, the constant one closed at 1", async () => {
+  const lesson = await passes("PJ-07", plotReply({ pieces: [["x+2", null, 1, "()"], ["4", 1, null, "[)"]], moments: [{ say: "x 小于 1 时是 x+2，从 1 起是 4。" }] }));
+  const curves = plotContent(lesson).curves;
+  assert.deepEqual(curves.map((curve) => [curve.from ?? null, curve.from_closed ?? null, curve.to ?? null, curve.to_closed ?? null, curve.series]), [[null, null, 1, false, "f"], [1, true, null, null, "f"]]);
+});
+
+test("PJ-08 and PJ-09: a curved piece, and three constant steps", async () => {
+  await passes("PJ-08", plotReply({ pieces: [["-x", null, 0, "(]"], ["x^2", 0, null, "()"]], moments: [{ say: "左边一段直线，右边一段抛物线。" }] }));
+  await passes("PJ-09", plotReply({ pieces: [["1", null, 2, "()"], ["3", 2, 4, "[)"], ["5", 4, null, "[)"]], moments: [{ say: "三段台阶。" }] }));
+});
+
+test("overlapping pieces, and pieces with lesson numbers, are refused in the section", async () => {
+  const overlap = await generate(plotReply({ pieces: [["x", null, 2, "(]"], ["2", 1, null, "[)"]], moments: [{ say: "两段。" }] }));
+  assert.ok(overlap.rejected.some((miss) => /pieces overlap/u.test(miss)), overlap.rejected.join(" | "));
+  const shared = await generate(plotReply({ pieces: [["x", null, 1, "()"], ["1", 1, null, "[)"]], moments: [{ say: "在 1 处相接。" }] }));
+  assert.ok(shared.lesson, shared.rejected.join(" | "));
+  const bothClosed = await generate(plotReply({ pieces: [["x", null, 1, "(]"], ["1", 1, null, "[)"]], moments: [{ say: "两段都含 1。" }] }));
+  assert.ok(bothClosed.rejected.some((miss) => /pieces overlap/u.test(miss)), bothClosed.rejected.join(" | "));
+  const moving = await generate(plotReply({ pieces: [["n1x", null, 1, "()"], ["1", 1, null, "[)"]], numbers: [[1, 0, 2, "k"]], moments: [{ say: "两段。" }] }));
+  assert.ok(moving.rejected.some((miss) => /pieces are fixed formulas/u.test(miss)), moving.rejected.join(" | "));
 });
