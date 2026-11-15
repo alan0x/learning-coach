@@ -23,13 +23,15 @@ Parts are matched by coordinates and intervals, never by name, so a recipe's nam
 An expectation is met when some state the lesson shows draws it: the starting values, then each animation in order. Which ends are included comes only from the case, because sampling can't tell "reaches 0" from "comes close to 0" (0018 §3).
 - A marked point is a labelled point other than the slope triangle's two. Reference point A at x = 0 doesn't count as the y-intercept mark.
 
-**Checks that need no expectation.** These run at every state the lesson shows and at every stop of every slider. Both review bugs in OLL #62 appeared only mid-slider or at a = 0, and practice invites dragging. Each one is a hard miss:
+**Checks that need no expectation.** These run at every state the lesson shows and at every stop of every slider. A number with no slider is swept only over the values its animations pass through, so a state no lesson reaches is never a miss (review). Both review bugs in OLL #62 appeared only mid-slider or at a = 0, and practice invites dragging. Each one is a hard miss:
 - a visible point off every drawn curve (skipped when the plot has an implicit curve);
 - a number in the label of a part that moves;
 - the function undefined somewhere inside the domain bars, or defined outside them, sampled on a grid, at whole numbers and at every bar end;
 - a value outside the range bars;
 - domain or range bars beside more than one function, where it's ambiguous which function they describe;
 - the lesson failing at some stop (a mark without `hide_when_undefined` where its value stops existing).
+
+**Bar ends** are compared with a relative tolerance of 1e-12: enough for rounding, while an asymptote's approach (e^−21 above an open end) still counts as inside (review).
 
 **Not judged:** narration. What a lesson says is read by hand under the probe's pass rules.
 

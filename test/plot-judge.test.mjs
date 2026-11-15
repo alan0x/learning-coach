@@ -90,6 +90,26 @@ test("PJ-06: an intercept that stops existing is hidden, not failed", () => {
   fails("PJ-06", line({ target: "xi.x", expression: "-1/k" }), /plot graph fails when k = 0/u);
 });
 
+// Review of #85: a number with no slider is checked only where the lesson takes it. The same unguarded
+// intercept passes when k is fixed at 1 to 2 (its range −2 to 2 is never reached), and fails when an
+// animation carries k from 1 to −1, through 0.
+const fixedLine = (animations) => lesson({
+  curves: [{ as: "f", expression: "k*x + 1" }],
+  points: [{ as: "yi", x: 0, y: 1, label: "y-intercept" }, { as: "xi", x: -1, y: 0, label: "x-intercept" }],
+  bindings: [{ target: "xi.x", expression: "-1/k" }],
+}, { variables: [{ as: "k", initial: 1, min: -2, max: 2, label: "k" }], animations });
+test("a number with no slider is swept only over the values its animations pass through", () => {
+  passes("PJ-06", fixedLine([["k", 2]]));
+  fails("PJ-06", fixedLine([["k", -1]]), /plot graph fails when k = 0/u);
+});
+
+// Review of #85: an asymptote's approach is inside an open bar however close it comes on screen.
+test("a value approaching an open range end far out is still inside the bar", () => {
+  const decay = lesson({ curves: [{ as: "f", expression: "2^(-x) - 3" }], intervals: [{ as: "r", axis: "y", from: -3, from_closed: false, to: null }] });
+  decay.steps[0].beats[0].actions[0].content.axes = { x: { min: -2, max: 31 }, y: { min: -4, max: 2 } };
+  assert.deepEqual(judgePlot({ id: "asymptote", expect: {} }, decay).hard, []);
+});
+
 // PJ-07: x + 2 for x < 1, 4 for x ≥ 1.
 const pieces = (left, right) => lesson({ curves: [
   { as: "left", expression: "x + 2", to: 1, to_closed: false, series: "f", ...left },
