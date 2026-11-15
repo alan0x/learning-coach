@@ -193,3 +193,20 @@ test("without marks, the automatic A and B are placed as before the option", asy
   assert.equal(lesson, undefined);
   assert.ok(rejected.some((miss) => /LESSON_PLAN_OLL_SEMANTIC .*not finite/u.test(miss)), rejected.join(" | "));
 });
+
+// Review: every piece refusal has a test, each refused in the section with its own reason.
+test("one piece or five, an end not above its start, and an unknown ends code are refused in the section", async () => {
+  const refused = async (pieces, reason) => {
+    const { lesson, rejected, requests } = await generate(plotReply({ pieces, moments: [{ say: "分段函数。" }] }));
+    assert.equal(lesson, undefined);
+    assert.ok(rejected.some((miss) => reason.test(miss)), rejected.join(" | "));
+    assert.match(requests[1]?.label ?? "", /section/u);
+  };
+  await refused([["x", null, null, "()"]], /two to four pieces/u);
+  await refused([["x", null, 1, "()"], ["1", 1, 2, "[)"], ["2", 2, 3, "[)"], ["3", 3, 4, "[)"], ["4", 4, null, "[)"]], /two to four pieces/u);
+  await refused([["x", 3, 1, "[]"], ["1", 3, null, "()"]], /x_from is below its x_to/u);
+  await refused([["x", 1, 1, "[]"], ["1", 1, null, "()"]], /x_from is below its x_to/u);
+  await refused([["x", null, 1, "(>"], ["1", 1, null, "[)"]], /ends is one of/u);
+  const four = await generate(plotReply({ pieces: [["x", null, 1, "()"], ["1", 1, 2, "[)"], ["2", 2, 3, "[)"], ["3", 3, null, "[)"]], moments: [{ say: "四段。" }] }));
+  assert.ok(four.lesson, four.rejected.join(" | "));
+});
