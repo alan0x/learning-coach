@@ -272,8 +272,11 @@ function namesToNumbers(formula: unknown, labels: readonly string[], visualNumbe
     const lower = name.toLowerCase();
     return lower === "x" || lower === "pi" || lower === "e" || /^n\d+$/u.test(lower) || formulaFunctions.has(lower);
   };
-  return left + right.replace(/n\d+|[A-Za-z_]+/gu, (name, offset: number, whole: string) => {
+  // Case-insensitive like the lexer, so "N1" stays one reference (review).
+  return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset: number, whole: string) => {
     if (known(name)) return name;
+    // A name glued to a digit ("a2") would become a different reference ("n12"): left to the parser.
+    if (/\d/u.test(whole[offset + name.length] ?? "")) return name;
     // Part of a number ("2e3") is not a name.
     if (/[0-9.]/u.test(whole[offset - 1] ?? "") && /^e/iu.test(name)) return name;
     const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);

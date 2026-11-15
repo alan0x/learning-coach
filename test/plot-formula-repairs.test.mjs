@@ -121,3 +121,17 @@ test("an x number becomes a moving point only where the section moves it, its la
   const coefficient = await generate(plotReply({ formula: "2*x+1", numbers: [[2, -3, 3, "x 的系数"]], moments: [{ say: "看。" }, { say: "改变。", animations: [[1, 3]] }] }));
   assert.ok(coefficient.rejected.some((miss) => /LESSON_PLAN_INTERACTION_MISMATCH/u.test(miss)), coefficient.rejected.join(" | "));
 });
+
+test("an uppercase reference and a name glued to a digit are left as the parser reads them (review)", async () => {
+  // "N1" is the parser's n1: unchanged, as on main, although the label ends in N.
+  const upper = await generate(plotReply({ formula: "N1*x", numbers: [[2, 1, 5, "个数 N"]], moments: [{ say: "看。" }, { say: "改变。", animations: [[1, 3]] }] }));
+  assert.ok(upper.lesson, upper.rejected.join(" | "));
+  assert.ok(JSON.stringify(plotContent(upper.lesson).curves).includes("number_01"));
+  // "a2" is refused as on main, never read as n12.
+  const glued = await generate(plotReply({ formula: "a2*x", numbers: [[2, 1, 5, "a"]], moments: [{ say: "看。" }] }));
+  assert.equal(glued.lesson, undefined);
+  assert.ok(!glued.rejected.some((miss) => /n12/u.test(miss)), glued.rejected.join(" | "));
+  // A bound of x is no x position: refused as on main.
+  const bound = await generate(plotReply({ formula: "x^2", numbers: [[2, 1, 5, "max x value"]], moments: [{ say: "看。" }, { say: "改变。", animations: [[1, 3]] }] }));
+  assert.equal(bound.lesson, undefined);
+});

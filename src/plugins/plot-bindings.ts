@@ -100,6 +100,8 @@ function sectionText(draft: LessonPlanSectionDraft): string[] {
 
 /** A label naming an x position: "x" alone, or x followed by 坐标 / 的值 / coordinate / value. Not "x 的系数". */
 function xPositionLabel(label: string): boolean {
+  // A bound of x ("max x value", "x 的最大值") is no position (review).
+  if (/\b(max|min)\b|最大|最小/iu.test(label)) return false;
   return /^\s*x\s*$/iu.test(label) || /(^|[^A-Za-z])x\s*[-_ ]?\s*的?\s*(坐标|座标|值|coordinate|value)/iu.test(label);
 }
 

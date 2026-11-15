@@ -13659,6 +13659,7 @@ function sectionText(draft) {
   ];
 }
 function xPositionLabel(label) {
+  if (/\b(max|min)\b|最大|最小/iu.test(label)) return false;
   return /^\s*x\s*$/iu.test(label) || /(^|[^A-Za-z])x\s*[-_ ]?\s*的?\s*(坐标|座标|值|coordinate|value)/iu.test(label);
 }
 function curveExistsAt(visual, xs) {
@@ -14269,8 +14270,9 @@ function namesToNumbers(formula, labels, visualNumbers) {
     const lower = name.toLowerCase();
     return lower === "x" || lower === "pi" || lower === "e" || /^n\d+$/u.test(lower) || formulaFunctions.has(lower);
   };
-  return left + right.replace(/n\d+|[A-Za-z_]+/gu, (name, offset, whole) => {
+  return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset, whole) => {
     if (known(name)) return name;
+    if (/\d/u.test(whole[offset + name.length] ?? "")) return name;
     if (/[0-9.]/u.test(whole[offset - 1] ?? "") && /^e/iu.test(name)) return name;
     const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
     return matches.length === 1 ? `n${matches[0]}` : name;
