@@ -189,7 +189,7 @@ test("the harness runs pairs and quality cases, keeps raw replies, judges each c
   // Near misses run on both arms; a candidate one that draws a number line is checked and read by hand.
   const nearMisses = full.rows.filter((row) => row.kind === "near_miss");
   assert.equal(nearMisses.filter((row) => row.arm === "baseline").length, 4);
-  assert.ok(nearMisses.filter((row) => row.arm === "candidate").every((row) => row.quality?.review === "near miss drew a number line: read by hand"));
+  assert.ok(nearMisses.filter((row) => row.arm === "candidate").every((row) => row.quality?.review === "near miss drew the trial's visual: read by hand"));
   // A probe: only the named cases, candidate arm only, no speed pairs.
   await new Promise((done, fail) => execFile(process.execPath, [script, "--build", dir, "--recipes", "number_line", "--octos-profile", join(dir, "profile.json"), "--pairs", "0", "--cases", "NL-03,NM-01", "--quality-repeats", "2", "--max-calls", "20", "--out", join(dir, "probe.json")],
     { timeout: 60000 }, (error) => (error ? fail(error) : done())));
@@ -309,4 +309,58 @@ test("other-only runs skip the quality cases unless asked (review of #73)", asyn
   assert.equal(qualityRepeats(undefined, true), 0);
   assert.equal(qualityRepeats(undefined, false), 1);
   assert.equal(qualityRepeats("2", true), 2);
+});
+
+test("the function-plot options: plot cases are judged by the plot judge, and the options used are reported", async () => {
+  const { PLOT_CASES, TRIAL_QUALITY_CASES, qualityCasesFor, recipesInPart, summarize } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  assert.equal(TRIAL_QUALITY_CASES.function_plot_extensions, PLOT_CASES);
+  assert.deepEqual(PLOT_CASES.map((item) => item.id), Array.from({ length: 17 }, (_, index) => `PJ-${String(index + 1).padStart(2, "0")}`));
+  assert.ok(PLOT_CASES.every((item) => item.judge === "plot" && item.prompt && item.expect));
+  assert.deepEqual(PLOT_CASES.filter((item) => item.nearMiss).map((item) => item.id), ["PJ-15", "PJ-16"]);
+  const ids = qualityCasesFor("number_line_steps,function_plot_extensions").map((item) => item.id);
+  assert.equal(ids.length, 24);
+  assert.deepEqual([ids[0], ids[6], ids[7], ids[23]], ["ST-01", "ST-07", "PJ-01", "PJ-17"]);
+  const plot = (content) => ({ steps: [{ beats: [{ actions: [{ do: "write", as: "v1", kind: "plot", content }] }] }] });
+  assert.deepEqual(recipesInPart(plot({ points: [{ as: "mark-vertex" }], guides: [{ as: "mark-axis" }] })), ["plot_marks"]);
+  assert.deepEqual(recipesInPart(plot({ curves: [{ as: "piece-1", series: "f" }, { as: "piece-2", series: "f" }] })), ["plot_pieces"]);
+  assert.deepEqual(recipesInPart(plot({ intervals: [{ as: "domain-1", axis: "x" }, { as: "range-1", axis: "y" }] })), ["plot_domain_range"]);
+  assert.deepEqual(recipesInPart(plot({ points: [{ as: "A" }], curves: [{ as: "f" }] })), []);
+  // Near misses judged on the baseline arm are reported beside the candidate's, never counted in the verdict.
+  const row = (arm, hard) => ({ pair: 0, case: "PJ-15", kind: "near_miss", arm, outcome: "first_playable", recipes: [], quality: { hard, soft: [] } });
+  const summary = summarize([row("baseline", ["no plot"]), row("candidate", [])]);
+  assert.equal(summary.quality.judged, 1);
+  assert.deepEqual(summary.quality.near_miss_baseline, [{ case: "PJ-15", recipes: [], hard: ["no plot"] }]);
+});
+
+test("the harness keeps each rejected part's reason and stops a lesson at the calls it is given", async () => {
+  const { mkdtemp, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { runTool } = await import("../scripts/eval-shadow-speed.mjs");
+  const build = await mkdtemp(join(tmpdir(), "fake-coach-"));
+  // A fake Coach: two calls, one rejection between them, then a published prefix (or a third call).
+  const line = (entry) => `process.stderr.write(${JSON.stringify(`learning-coach: ${JSON.stringify(entry)}\n`)});`;
+  const script = (calls) => [
+    ...Array.from({ length: calls }, (_, index) => [
+      line({ stage: "model-call", status: "started" }),
+      ...(index === 0 ? [line({ stage: "lesson-plan-local-rejection", label: "lesson-plan-section", error: { code: "LESSON_PLAN_EXPRESSION", message: "unsupported formula name 'a'" } })] : []),
+    ]).flat(),
+    line({ stage: "lesson-prefix-published" }),
+    "process.stdin.resume(); setTimeout(() => process.exit(0), 50);",
+  ].join("\n");
+  await writeFile(join(build, "main"), script(2));
+  const two = await runTool({ build, input: {}, env: process.env, maxCalls: 3 });
+  assert.equal(two.outcome, "first_playable");
+  assert.deepEqual(two.rejections, ["lesson-plan-section: LESSON_PLAN_EXPRESSION unsupported formula name 'a'"]);
+  await writeFile(join(build, "main"), script(4));
+  assert.equal((await runTool({ build, input: {}, env: process.env, maxCalls: 3 })).outcome, "call_cap");
+  assert.equal((await runTool({ build, input: {}, env: process.env, maxCalls: 4 })).outcome, "first_playable");
+});
+
+test("a both-arms run reports lessons, judge passes, calls and seconds per arm", async () => {
+  const { summarize } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  const row = (arm, calls, ms, hard, rejections) => ({ pair: 0, case: "PJ-01", kind: "quality", arm, outcome: "first_playable", calls, first_playable_ms: ms, recipes: [], quality: { hard, soft: [] }, ...(rejections ? { rejections } : {}) });
+  const { arms } = summarize([row("candidate", 2, 8000, []), row("baseline", 3, 15000, ["no plot"], ["section: X y"]), row("candidate", 1, 6000, [])]).quality;
+  assert.deepEqual(arms.candidate, { lessons: 2, playable: 2, judge_pass: 2, calls: 3, with_rejections: 0, median_first_playable_ms: 7000 });
+  assert.deepEqual(arms.baseline, { lessons: 1, playable: 1, judge_pass: 0, calls: 3, with_rejections: 1, median_first_playable_ms: 15000 });
 });
