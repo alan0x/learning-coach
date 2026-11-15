@@ -5,7 +5,7 @@
 // - each unit is split into the lesson's denominator (the smallest 1–12 its
 //   values use, else a coarse slider step such as 0.25), and the numbers'
 //   starting values, ranges and slider steps are snapped onto those ticks;
-//   whole numbers too far apart to count in ones are counted in 2s, 5s or 10s;
+//   whole numbers too far apart to count in ones are counted in a coarse unit (COARSE_UNITS);
 // - the numbers' ranges shrink to a window around the values the lesson uses
 //   (0, the start, the end, animation targets and practice targets), so the
 //   line is readable and hops fit.
@@ -24,6 +24,11 @@ const fractionTolerance = (denominator: number) => Math.min(0.011, 0.25 / (denom
  * reachable value. With the compiler's padding a window this wide still draws a tick per unit (60).
  */
 const MAX_WINDOW = 58;
+/**
+ * Units whole numbers too far apart to count in ones are counted in (OLL decision 0017 §1): one move
+ * of 250 on a line to 2000 hops in 250s. The compiler's ticks offer the same units.
+ */
+export const COARSE_UNITS = [2, 5, 10, 20, 25, 50, 100, 250, 500, 1000] as const;
 
 const near = (value: number, grid: number) => Math.abs(value - Math.round(value / grid) * grid) <= fractionTolerance(Math.round(1 / grid));
 const snap = (value: number, grid: number) => Number((Math.round(value / grid) * grid).toPrecision(12));
@@ -162,11 +167,12 @@ export function fitNumberLineNumbers(content: LessonPlanVisualContent, plan: Les
   let high = Math.ceil(Math.max(...used)) + 1;
   let windowFits = high - low <= MAX_WINDOW;
   // Whole numbers too far apart to count in ones (35 and 75 on a line from 0) are counted in the
-  // smallest of 2, 5 or 10 that every value is a multiple of, as a fraction lesson counts in its parts:
+  // smallest coarse unit that every value is a multiple of, as a fraction lesson counts in its parts:
   // the values, slider steps and window snap to it, so each value sits on a tick the line can label.
+  // A multiple exactly: near(value / count, 1) would take 1005 for a multiple of 1000.
   let unit = 1;
   if (denominator === 1 && !windowFits) {
-    const coarse = [2, 5, 10].find((count) => values.every((value) => near(value / count, 1))
+    const coarse = COARSE_UNITS.find((count) => values.every((value) => near(value, 1) && Math.round(value) % count === 0)
       && (Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2) <= MAX_WINDOW);
     if (coarse) {
       unit = coarse;
