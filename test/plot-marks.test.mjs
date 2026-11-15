@@ -159,6 +159,38 @@ test("overlapping pieces, and pieces with lesson numbers, are refused in the sec
   assert.ok(moving.rejected.some((miss) => /pieces are fixed formulas/u.test(miss)), moving.rejected.join(" | "));
 });
 
+// Domain and range (0018 §3, fourth step): bars on the axes from exact formulas only.
+const barsOf = (lesson) => (plotContent(lesson).intervals ?? []).map((bar) => `${bar.axis}:${bar.from === null ? "(-∞" : `${bar.from_closed ? "[" : "("}${bar.from}`},${bar.to === null ? "∞)" : `${bar.to}${bar.to_closed ? "]" : ")"}`}`);
+test("PJ-10, PJ-11, PJ-13, PJ-14: a root, a reciprocal, an exponential and a logarithm", async () => {
+  assert.deepEqual(barsOf(await passes("PJ-10", plotReply({ formula: "sqrt(x-3)+1", marks: ["domain", "range"], moments: [{ say: "看定义域和值域。" }] }))), ["x:[3,∞)", "y:[1,∞)"]);
+  assert.deepEqual(barsOf(await passes("PJ-11", plotReply({ formula: "2/(x+1)", marks: ["domain", "range"], moments: [{ say: "看定义域和值域。" }] }))), ["x:(-∞,-1)", "x:(-1,∞)", "y:(-∞,0)", "y:(0,∞)"]);
+  assert.deepEqual(barsOf(await passes("PJ-13", plotReply({ formula: "2^x-3", marks: ["range"], moments: [{ say: "看值域。" }] }))), ["y:(-3,∞)"]);
+  assert.deepEqual(barsOf(await passes("PJ-14", plotReply({ formula: "ln(x-1)", marks: ["domain"], moments: [{ say: "看定义域。" }] }))), ["x:(1,∞)"]);
+});
+
+test("PJ-12: a quadratic's range, and the right side shown as a slider turns a from negative to positive", async () => {
+  assert.deepEqual(barsOf(await passes("PJ-12", plotReply({ formula: "-(x+2)^2+5", marks: ["range"], moments: [{ say: "看值域。" }] }))), ["y:(-∞,5]"]);
+  const flipping = await passes("PJ-12", plotReply({
+    formula: "n1(x+2)^2+5", marks: ["range"], numbers: [[-1, -2, 2, "a"]],
+    moments: [{ say: "开口向下时的值域。" }, { say: "把 a 变成正数。", animations: [[1, 1]] }],
+  }));
+  // Two bars, each with an end defined only for one sign of a; both hide at a = 0.
+  assert.deepEqual(plotContent(flipping).bindings.filter((binding) => /^range-/u.test(binding.target)).map((binding) => binding.hide_when_undefined), [true, true]);
+});
+
+test("domain and range are refused where the program has no exact formula, or where a range collapses at a slider stop", async () => {
+  for (const [formula, numbers] of [["x^3-3x", []], ["sin(x)", []], ["n1x+1", [[1, -2, 2, "k"]]]]) {
+    const { lesson, rejected } = await generate(plotReply({ formula, marks: ["range"], numbers, moments: [{ say: "看值域。" }] }));
+    assert.equal(lesson, undefined, formula);
+    assert.ok(rejected.some((miss) => /the range mark/u.test(miss)), `${formula}: ${rejected.join(" | ")}`);
+  }
+});
+
+test("a piecewise function's domain joins its intervals, and its range joins the pieces' values", async () => {
+  const lesson = await passes("PJ-07", plotReply({ pieces: [["x+2", null, 1, "()"], ["4", 1, null, "[)"]], moments: [{ say: "看定义域和值域。" }] }).replace('"pieces":', '"marks":["domain","range"],"pieces":'));
+  assert.deepEqual(barsOf(lesson), ["x:(-∞,∞)", "y:(-∞,3)", "y:[4,4]"]);
+});
+
 // Review: a curve slider can take the curve away from A or B (√(x − h) with h up to 5): the pair must exist
 // at the slider's ends too, or the lesson fails where the learner drags.
 test("the slope triangle's points exist at every slider end, not only where the lesson stops", async () => {
@@ -168,6 +200,34 @@ test("the slope triangle's points exist at every slider end, not only where the 
   assert.ok(lesson, rejected.join(" | "));
   assert.deepEqual(plotContent(lesson).points.map((point) => point.x), [6, 8]);
   assert.deepEqual(judgePlot({ id: "slider", expect: {} }, lesson).hard, []);
+});
+
+// Review of the domain and range step.
+test("a range is refused where x's coefficient can reach 0 and the curve turns constant", async () => {
+  for (const formula of ["2^(n1x)-3", "sqrt(n1x+4)", "1/(n1x+1)"]) {
+    const { lesson, rejected } = await generate(plotReply({ formula, marks: ["range"], numbers: [[1, -1, 2, "p"]], moments: [{ say: "看值域。" }] }));
+    assert.equal(lesson, undefined, formula);
+    assert.ok(rejected.some((miss) => /the range mark .*coefficient/u.test(miss)), `${formula}: ${rejected.join(" | ")}`);
+  }
+});
+
+test("a piecewise domain is drawn only when every piece is defined on its whole interval", async () => {
+  const reply = plotReply({ pieces: [["1/x", -1, 1, "[]"], ["2", 1, null, "()"]], moments: [{ say: "看定义域。" }] }).replace('"pieces":', '"marks":["domain"],"pieces":');
+  const { lesson, rejected } = await generate(reply);
+  assert.equal(lesson, undefined);
+  assert.ok(rejected.some((miss) => /the domain mark of a piecewise function/u.test(miss)), rejected.join(" | "));
+});
+
+test("the card's own form -(x-n1)^2+n2 with intercepts, vertex and range", async () => {
+  const { lesson, rejected } = await generate(plotReply({
+    formula: "-(x-n1)^2+n2", marks: ["intercepts", "vertex", "range"], numbers: [[1, -3, 3, "h"], [2, -2, 4, "k"]],
+    moments: [{ say: "看顶点和值域。" }, { say: "把顶点向上移。", animations: [[2, 3]] }],
+  }));
+  assert.ok(lesson, rejected.join(" | "));
+  const verdict = judgePlot({ id: "card-form", expect: { points: [[1, 2]], range: [{ from: null, to: 2, toClosed: true }] } }, lesson);
+  assert.deepEqual(verdict.hard, []);
+  const content = plotContent(lesson);
+  assert.ok([...content.bindings].every((binding) => binding.expression.length <= 240));
 });
 
 test("coefficients too long for one binding refuse the marks in the section, naming the mark (review)", async () => {
@@ -209,4 +269,58 @@ test("one piece or five, an end not above its start, and an unknown ends code ar
   await refused([["x", null, 1, "(>"], ["1", 1, null, "[)"]], /ends is one of/u);
   const four = await generate(plotReply({ pieces: [["x", null, 1, "()"], ["1", 1, 2, "[)"], ["2", 2, 3, "[)"], ["3", 3, null, "[)"]], moments: [{ say: "四段。" }] }));
   assert.ok(four.lesson, four.rejected.join(" | "));
+});
+
+// Review of #92: a sign read from sampled states (the start, demonstrated states, each slider's ends one at
+// a time) misses a change between them. Signs are now proved over the numbers' whole ranges.
+const withSliders = (reply, marks) => {
+  const parsed = JSON.parse(reply);
+  for (const number of parsed.course.outline.numbers) number.student_control = { kind: "slider" };
+  if (marks) parsed.course.first_section.moments[0].visual_creates[0].content.parameters.marks = marks;
+  return JSON.stringify(parsed);
+};
+const rangeContent = async (formula, numbers, marks = ["range"]) => {
+  const { lesson, rejected } = await generate(withSliders(plotReply({ formula, marks, numbers, moments: [{ say: "看值域。" }] })));
+  return { lesson, rejected, content: lesson && plotContent(lesson) };
+};
+
+test("a range bar opens to the side its sign proves, and to either side, guarded, where the sign can change (review)", async () => {
+  const one = [[2, -3, 3, "a"]], two = [[4, 2, 5, "p"], [1, 0, 3, "q"]];
+  for (const [formula, numbers] of [["(n1^2-1)x^2", one], ["(n1^2-1)sqrt(x)", one], ["(n1-n2)x^2", two]]) {
+    const { lesson, rejected, content } = await rangeContent(formula, numbers);
+    assert.ok(lesson, `${formula}: ${rejected.join(" | ")}`);
+    const bars = content.intervals.filter((interval) => interval.axis === "y");
+    assert.equal(bars.length, 2, formula);
+    // Both ends bound and hidden while undefined; only one bar is ever shown, so each is labelled.
+    assert.deepEqual(bars.map((bar) => content.bindings.some((binding) => binding.target === `${bar.as}.${bar.from === null ? "to" : "from"}` && binding.hide_when_undefined)), [true, true], formula);
+    assert.ok(bars.every((bar) => bar.label), formula);
+    assert.deepEqual(judgePlot({ id: formula, expect: {} }, lesson).hard, [], formula);
+  }
+  // A sign proved over the whole slider: one bar.
+  const proved = await rangeContent("n1x^2", [[2, 1, 3, "a"]]);
+  assert.equal(proved.content.intervals.filter((interval) => interval.axis === "y").length, 1);
+});
+
+test("a line's range, or a log's, is refused where its coefficient can reach 0 anywhere on the sliders (review)", async () => {
+  for (const [formula, numbers] of [["(n1-n2)x+1", [[4, 2, 5, "p"], [1, 0, 3, "q"]]], ["(n1^2-1)x", [[2, -3, 3, "a"]]]]) {
+    const { lesson, rejected } = await rangeContent(formula, numbers);
+    assert.equal(lesson, undefined, formula);
+    assert.ok(rejected.some((miss) => /the range mark collapses to one value/u.test(miss)), `${formula}: ${rejected.join(" | ")}`);
+  }
+  const steep = await rangeContent("(n1^2+1)x", [[2, -3, 3, "a"]]);
+  assert.ok(steep.lesson, steep.rejected.join(" | "));
+});
+
+test("an exponential's domain needs a base above 0 wherever the numbers go, also in a piece (review)", async () => {
+  const sliding = await rangeContent("n1^x", [[2, -1, 3, "b"]], ["domain"]);
+  assert.equal(sliding.lesson, undefined);
+  assert.ok(sliding.rejected.some((miss) => /the domain mark needs a base above 0/u.test(miss)), sliding.rejected.join(" | "));
+  const negative = await rangeContent("(-2)^x", [], ["domain"]);
+  assert.ok(negative.rejected.some((miss) => /the domain mark needs a base above 0/u.test(miss)), negative.rejected.join(" | "));
+  const positive = await rangeContent("n1^x", [[2, 0.5, 3, "b"]], ["domain"]);
+  assert.ok(positive.lesson, positive.rejected.join(" | "));
+  const piece = await generate(withSliders(plotReply({ pieces: [["(-2)^x", null, 0, "()"], ["1", 0, null, "[)"]], moments: [{ say: "两段。" }] }), ["domain"]));
+  assert.ok(piece.rejected.some((miss) => /domain mark of a piecewise function/u.test(miss)), piece.rejected.join(" | "));
+  const fine = await generate(withSliders(plotReply({ pieces: [["2^x", null, 0, "()"], ["1", 0, null, "[)"]], moments: [{ say: "两段。" }] }), ["domain"]));
+  assert.ok(fine.lesson, fine.rejected.join(" | "));
 });

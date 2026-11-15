@@ -15,6 +15,8 @@ import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan,
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
 import { COARSE_UNITS, lessonValues, moveLandings } from "./number-line-fit.js";
 import { PLOT_MARKS, markParts, type MarkPart, type PlotMark } from "./plot-marks.js";
+import { formulaBars, pieceBars, type AxisBar } from "./plot-domain-range.js";
+import { intervalOf, signOf, type Interval } from "./interval.js";
 import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
@@ -195,7 +197,10 @@ function compileFunctionPlot(
   for (const mark of markList) {
     if (!(PLOT_MARKS as readonly string[]).includes(mark)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
   }
-  if (markList.length && expressions.length !== 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks need one formula; leave marks out of a comparison of several curves");
+  // A piecewise function takes only domain and range; other marks need one formula.
+  const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
+  if (markList.length > barMarks.length && expressions.length !== 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks other than domain and range need one formula; leave them out of a piecewise function or a comparison of several curves");
+  if (barMarks.length && expressions.length !== 1 && input.pieces === undefined) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "domain and range need one formula or one piecewise function; leave them out of a comparison of several curves");
   const slopeTriangle = markList.includes("slope_triangle");
   if (slopeTriangle && sampleNumbers.length === 1) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark measures two points: give sample_x_numbers two numbers (A and B), or none and the program places them");
@@ -234,7 +239,7 @@ function compileFunctionPlot(
 
   // Marks (decision 0018 §1): derived from the one formula, bound to its lesson numbers, hidden while they
   // do not exist. Where they are at the start and at each demonstrated state must be in view.
-  const derivedMarks = markList.filter((mark) => mark !== "slope_triangle");
+  const derivedMarks = markList.filter((mark) => mark !== "slope_triangle" && mark !== "domain" && mark !== "range");
   let marks: Array<MarkPart & { at: (values: Record<string, number>) => { x?: number; y?: number; value?: number } }> = [];
   if (derivedMarks.length) {
     const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`);
@@ -254,6 +259,41 @@ function compileFunctionPlot(
         if (mark.kind === "point" && Number.isFinite(where.x) && Number.isFinite(where.y)) teachingPoints.push({ x: where.x!, y: where.y! });
       }
     }
+  }
+
+  // Domain and range bars (decision 0018 §3), from exact formulas only.
+  let bars: AxisBar[] = [];
+  if (barMarks.length) {
+    const want = { domain: barMarks.includes("domain"), range: barMarks.includes("range") };
+    const variables = curveParameters.map((parameter) => parameter.name);
+    // Every value a lesson number can take: its min to max (a slider, or an animation in any section),
+    // widened to the values this section shows it at.
+    const bounds: Record<string, Interval> = Object.fromEntries(curveParameters.map((parameter) => {
+      const reached = [parameter.min, parameter.max, parameter.initial, ...demonstrations.map((state) => state[parameter.name]!)];
+      return [parameter.name, [Math.min(...reached), Math.max(...reached)] as const];
+    }));
+    const sign = (text: string) => {
+      const interval = intervalOf(text, bounds);
+      const proved = signOf(interval);
+      if (proved === "unknown") return proved;
+      // A guard on the interval reading: OLL's own evaluation at the corners and inside the bounds must
+      // fall in the interval, or the sign is not trusted.
+      const f = compileMathExpression(text, variables);
+      const corners = variables.reduce<Array<Record<string, number>>>((states, name) => states.flatMap((state) => bounds[name]!.map((value) => ({ ...state, [name]: value }))), [{}]);
+      const inside = Array.from({ length: 32 }, (_, index) => Object.fromEntries(variables.map((name, position) => {
+        const [lo, hi] = bounds[name]!;
+        return [name, lo + (hi - lo) * (((index + 1) * (position + 2) * 0.6180339887) % 1)];
+      })));
+      for (const state of [...corners.slice(0, 64), ...inside]) {
+        let value = Number.NaN;
+        try { value = f(state); } catch { /* not defined here */ }
+        if (!(value >= interval[0] - 1e-9 * Math.max(1, Math.abs(interval[0])) && value <= interval[1] + 1e-9 * Math.max(1, Math.abs(interval[1])))) return "unknown";
+      }
+      return proved;
+    };
+    bars = pieces
+      ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index]!, 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), want, path)
+      : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`), want, { sign }, path);
   }
 
   let view: PlotView;
@@ -281,6 +321,7 @@ function compileFunctionPlot(
     ...(samples.length ? { samples } : references ? { references } : {}),
   });
   if (marks.length) appendMarks(built.actions[0] as unknown as { content: Record<string, unknown> }, marks, initialState);
+  if (bars.length) appendBars(built.actions[0] as unknown as { content: Record<string, unknown> }, bars, initialState, (source) => compileText(plan, source));
   return {
     actions: built.actions,
     ...(view.adjustments.length ? { adjustments: view.adjustments } : {}),
@@ -292,6 +333,42 @@ function compileFunctionPlot(
       ...(dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] as Array<[string, string]> : []),
     ]),
   };
+}
+
+/**
+ * Adds domain and range bars to a built plot. An end that reads lesson numbers is bound to them and hidden
+ * while it has no value (the bar of the other sign); the first bar on each axis carries the label, and so
+ * does a bar shown instead of the one before it (the other sign), which is then the only one shown.
+ */
+function appendBars(action: { content: Record<string, unknown> }, bars: AxisBar[], initial: Record<string, number>, labels: (source: string) => string): void {
+  const content = action.content;
+  const intervals: unknown[] = [];
+  const bindings = [...((content.bindings as unknown[] | undefined) ?? [])];
+  const variables = Object.keys(initial);
+  const reads = (text: string) => /\bnumber_\d+\b/u.test(text);
+  const labelled = new Set<string>();
+  bars.forEach((bar, index) => {
+    const as = `${bar.axis === "x" ? "domain" : "range"}-${index + 1}`;
+    const end = (text: string | null) => {
+      if (text === null) return null;
+      let value = Number.NaN;
+      try { value = compileMathExpression(text, variables)(initial); } catch { /* bound and hidden */ }
+      return Number.isFinite(value) ? Number(value.toPrecision(12)) : 0;
+    };
+    const from = end(bar.from), to = end(bar.to);
+    intervals.push({
+      as, axis: bar.axis, from, to,
+      ...(bar.from !== null ? { from_closed: bar.from_closed } : {}),
+      ...(bar.to !== null ? { to_closed: bar.to_closed } : {}),
+      ...(!labelled.has(bar.axis) || bar.alternative ? { label: labels(bar.axis === "x" ? "定义域" : "值域") } : {}),
+    });
+    labelled.add(bar.axis);
+    for (const [key, text] of [["from", bar.from], ["to", bar.to]] as const) {
+      if (text !== null && reads(text)) bindings.push({ target: `${as}.${key}`, expression: text, hide_when_undefined: true });
+    }
+  });
+  content.intervals = intervals;
+  if (bindings.length) content.bindings = bindings;
 }
 
 /** The lowered pieces of a piecewise function, one per expression, or undefined when the plot has none. */
