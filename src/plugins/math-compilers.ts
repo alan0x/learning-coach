@@ -193,18 +193,31 @@ function compileFunctionPlot(
     }
   }
   // Marks (decision 0018 §1) are named by the model; the slope triangle is drawn by the points below.
-  const markList = input.marks === undefined ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
-  for (const mark of markList) {
-    if (!(PLOT_MARKS as readonly string[]).includes(mark)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
+  // A mark the program cannot draw for this plot is left out and the rest is drawn (0018, as amended after
+  // the trial): refusing it asked for the whole section again, about 9 s, and the model asked for the same
+  // or another mark it cannot have. An empty list is no marks.
+  const requestedMarks = input.marks === undefined || (Array.isArray(input.marks) && input.marks.length === 0) ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
+  let markList = requestedMarks.filter((mark) => (PLOT_MARKS as readonly string[]).includes(mark));
+  // A piecewise function takes only domain and range; other marks need one formula, and a comparison of
+  // several curves takes none.
+  if (expressions.length !== 1) markList = markList.filter((mark) => mark === "domain" || mark === "range");
+  if (expressions.length !== 1 && input.pieces === undefined) markList = [];
+  // The triangle measures two points: the model's two, or the program's. With one point of the model's, the
+  // triangle runs from it (A) to B two units to its right, which moves with it (run B: the model gave the
+  // point at x = 1 and narrated the rise and run to x = 3; leaving the triangle out left that undrawn). B must
+  // stay on the curve wherever A can be: every slider stop and value the lesson gives it; otherwise the
+  // triangle is left out.
+  if (sampleNumbers.length === 1 && markList.includes("slope_triangle")) {
+    const second = secondSampleTwoRight(plan, sampleNumbers[0]!, expression, creationMoments, path);
+    if (second) {
+      samples[0]!.label = "A";
+      samples.push(second.sample);
+      teachingPoints.push({ x: second.sample.x, y: second.sample.y }, ...second.shown);
+      optionalPoints.push(...second.ends);
+    } else markList = markList.filter((mark) => mark !== "slope_triangle");
   }
-  // A piecewise function takes only domain and range; other marks need one formula.
   const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
-  if (markList.length > barMarks.length && expressions.length !== 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks other than domain and range need one formula; leave them out of a piecewise function or a comparison of several curves");
-  if (barMarks.length && expressions.length !== 1 && input.pieces === undefined) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "domain and range need one formula or one piecewise function; leave them out of a comparison of several curves");
   const slopeTriangle = markList.includes("slope_triangle");
-  if (slopeTriangle && sampleNumbers.length === 1) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark measures two points: give sample_x_numbers two numbers (A and B), or none and the program places them");
-  }
 
   // Slope lessons with curve parameters still need visible reference points.
   // Their x positions are fixed; the parameter sliders change the curve.
@@ -232,9 +245,8 @@ function compileFunctionPlot(
     if (xs) {
       references = referencePoints(initialState, xs);
       teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));
-    } else if (slopeTriangle) {
-      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark found no two points two units apart where the curve exists; leave it out");
     }
+    // No pair fits (√(x − 50) in this window): the triangle is left out.
   }
 
   // Marks (decision 0018 §1): derived from the one formula, bound to its lesson numbers, hidden while they
@@ -245,7 +257,10 @@ function compileFunctionPlot(
     const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`);
     const variables = curveParameters.map((parameter) => parameter.name);
     const samples = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))];
-    marks = markParts(tokens, derivedMarks as PlotMark[], (source) => compileText(plan, source), { variables, samples }, path).map((part) => {
+    // Each mark alone: one the formula cannot give (a vertex of a line, intercepts of a cubic, coefficients
+    // too long for a binding) is left out, the others are drawn.
+    const drawable = derivedMarks.filter((mark) => leftOutWhenRefused(() => markParts(tokens, [mark as PlotMark], (source) => source, { variables, samples }, path)));
+    marks = (drawable.length ? markParts(tokens, drawable as PlotMark[], (source) => compileText(plan, source), { variables, samples }, path) : []).map((part) => {
       const compiled = (["x", "y", "value"] as const).flatMap((key) => (part[key] === undefined ? [] : [[key, compileMathExpression(part[key]!, variables)] as const]));
       return { ...part, at: (values: Record<string, number>) => Object.fromEntries(compiled.map(([key, f]) => {
         let result = Number.NaN;
@@ -291,9 +306,13 @@ function compileFunctionPlot(
       }
       return proved;
     };
-    bars = pieces
-      ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index]!, 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), want, path)
-      : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`), want, { sign }, path);
+    const barsFor = (one: { domain: boolean; range: boolean }) => (pieces
+      ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index]!, 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), one, path)
+      : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`), one, { sign }, path));
+    // Domain and range each alone: one the program cannot derive exactly is left out (never estimated).
+    for (const axis of ["domain", "range"] as const) {
+      if (want[axis]) leftOutWhenRefused(() => bars.push(...barsFor({ domain: axis === "domain", range: axis === "range" })));
+    }
   }
 
   let view: PlotView;
@@ -333,6 +352,48 @@ function compileFunctionPlot(
       ...(dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] as Array<[string, string]> : []),
     ]),
   };
+}
+
+/**
+ * B for a slope triangle on one model point A: x = A + 2, bound to A's number, on the curve wherever A can
+ * be (each slider stop between its min and max, and each value the creation section animates it to).
+ * Undefined when the curve does not exist at some A + 2.
+ */
+function secondSampleTwoRight(plan: LessonPlan, sampleNumber: number, expression: string, creationMoments: LessonPlan["sections"][number]["moments"], path: string): { sample: { x: number; y: number; label: string; x_expression: string }; shown: Array<{ x: number; y: number }>; ends: Array<{ x: number; y: number }> } | undefined {
+  const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+  const curve = compileMathExpression(expression, ["x"]);
+  const at = (x: number) => { try { const y = curve({ x }); return Number.isFinite(y) ? y : undefined; } catch { return undefined; } };
+  const step = d.student_control?.step && d.student_control.step > 0 ? d.student_control.step : (d.max - d.min) / 200;
+  // Stops are clamped to the max: d.min + index·step can overshoot it by a rounding error (review: −5 + 7·1
+  // gave 2.000000000000001, where √(4 − x) at B does not exist).
+  const stops = d.max > d.min ? Array.from({ length: Math.min(2001, Math.floor((d.max - d.min) / step + 1e-9) + 1) }, (_, index) => Math.min(d.max, Number((d.min + index * step).toPrecision(12)))) : [];
+  const animated = creationMoments.flatMap((moment) => moment.actions).flatMap((action) => (action.action === "animate" && action.number === sampleNumber ? [action.end_value] : []));
+  for (const x of [d.min, d.max, d.initial, ...stops, ...animated]) if (at(x + 2) === undefined) return undefined;
+  // B's y binding is the curve at A + 2; OLL caps a binding at 256 characters (review), so a longer one leaves
+  // the triangle out, as a mark's does.
+  const xB = `(${variableAlias(sampleNumber)})+2`;
+  if (expression.replace(/\bx\b/gu, `(${xB})`).length > 240) return undefined;
+  const point = (x: number) => ({ x: x + 2, y: at(x + 2)! });
+  return {
+    sample: { ...point(d.initial), label: "B", x_expression: xB },
+    shown: animated.map(point),
+    ends: [d.min, d.max].map(point),
+  };
+}
+
+/**
+ * Runs one mark's derivation: true when it can be drawn, false when the program refuses it for this plot
+ * (a section-owned capability fault from plot-marks or plot-domain-range). Any other fault is not a mark's
+ * and still fails the section.
+ */
+function leftOutWhenRefused(derive: () => unknown): boolean {
+  try {
+    derive();
+    return true;
+  } catch (error) {
+    if (error instanceof LessonPlanError && error.code === "LESSON_PLAN_CAPABILITY_PARAMETER") return false;
+    throw error;
+  }
 }
 
 /**

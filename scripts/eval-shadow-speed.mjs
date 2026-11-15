@@ -137,6 +137,11 @@ export function runTool({ build, input, env, maxCalls, onCall = () => {}, onFirs
         if (entry.stage === "lesson-plan-generation" && entry.status === "started") row.plugin_signal = entry.plugin_signal ?? null;
         // The run stops at the first playable part; the outline says how many sections the whole lesson has.
         if (entry.stage === "lesson-plan-outline-ready" && typeof entry.sections === "number") row.sections = entry.sections;
+        // Each rejected part's reason, so a run reports why a lesson took more calls (the plot trial had to
+        // replay its saved replies to recover them).
+        if (entry.stage === "lesson-plan-local-rejection") {
+          (row.rejections ??= []).push(`${entry.label ?? "part"}: ${entry.error?.code ?? ""} ${String(entry.error?.message ?? "").slice(0, 200)}`.trim());
+        }
         if (entry.stage === "model-call" && entry.status === "started") {
           row.calls += 1;
           onCall();

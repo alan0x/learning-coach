@@ -14160,6 +14160,8 @@ var MATH_HOOKS = {
   },
   function_plot: {
     lower_model_parameters(parameters3, { numberCount, numberLabels = [], visualNumbers = [] }) {
+      if (Array.isArray(parameters3.pieces) && parameters3.pieces.length === 0) delete parameters3.pieces;
+      if (Array.isArray(parameters3.marks) && parameters3.marks.length === 0) delete parameters3.marks;
       if (parameters3.pieces !== void 0) return lowerPieces(parameters3, numberCount);
       const rawFormulas = parameters3.formulas !== void 0 ? parameters3.formulas : typeof parameters3.expression === "string" ? [parameters3.expression] : Array.isArray(parameters3.expressions) ? parameters3.expressions : void 0;
       if (rawFormulas === void 0) return;
@@ -16172,7 +16174,8 @@ function divide(a, b) {
 }
 var degree = (p) => p.reduce((highest, scalar, power2) => isZero(scalar) ? highest : power2, 0);
 var coefficient = (p, power2) => p[power2] ?? constant(0);
-function polynomialOf(tokens) {
+function polynomialOf(tokens, maxDegree = 2) {
+  const powers = Array.from({ length: maxDegree + 1 }, (_, power2) => power2);
   const stack = [];
   for (const token of tokens) {
     if (token.kind === "input") stack.push([constant(0), constant(1)]);
@@ -16192,9 +16195,9 @@ function polynomialOf(tokens) {
       if (!left || !right) return void 0;
       let result;
       if (token.operator === "add" || token.operator === "subtract") {
-        result = [0, 1, 2].map((power2) => add(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
+        result = powers.map((power2) => add(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
       } else if (token.operator === "multiply") {
-        result = times(left, right);
+        result = times(left, right, maxDegree);
       } else if (token.operator === "divide") {
         if (degree(right) > 0) return void 0;
         result = left.map((scalar) => divide(scalar, coefficient(right, 0)));
@@ -16204,8 +16207,11 @@ function polynomialOf(tokens) {
         if (degree(left) === 0) result = [{ text: `${wrap(coefficient(left, 0))}^${wrap(exponent)}` }];
         else if (exponent.value === 0) result = [constant(1)];
         else if (exponent.value === 1) result = left;
-        else if (exponent.value === 2) result = times(left, left);
-        else return void 0;
+        else if (exponent.value !== void 0 && Number.isInteger(exponent.value) && exponent.value >= 2 && exponent.value <= maxDegree) {
+          let product = left;
+          for (let step = 1; step < exponent.value && product; step += 1) product = times(product, left, maxDegree);
+          result = product;
+        } else return void 0;
       }
       if (!result) return void 0;
       stack.push(result);
@@ -16213,11 +16219,11 @@ function polynomialOf(tokens) {
   }
   return stack.length === 1 ? stack[0] : void 0;
 }
-function times(left, right) {
-  const result = [constant(0), constant(0), constant(0)];
+function times(left, right, maxDegree = 2) {
+  const result = Array.from({ length: maxDegree + 1 }, () => constant(0));
   for (const [i, a] of left.entries()) for (const [j, b] of right.entries()) {
     if (isZero(a) || isZero(b)) continue;
-    if (i + j > 2) return void 0;
+    if (i + j > maxDegree) return void 0;
     result[i + j] = add(result[i + j], multiply2(a, b));
   }
   return result;
@@ -16360,7 +16366,7 @@ function shapeOf(tokens, root) {
   if (token.kind === "function") {
     const inner = linearArg(node.args[0]);
     if (!inner) return void 0;
-    const family = token.name === "sqrt" ? "sqrt" : token.name === "exp" ? "exponential" : /^(ln|log|log10|log2|lg)$/u.test(token.name) ? "log" : void 0;
+    const family = token.name === "sqrt" ? "sqrt" : token.name === "exp" ? "exponential" : /^(ln|log|log10|log2|lg)$/u.test(token.name) ? "log" : token.name === "sin" || token.name === "cos" ? "sinusoid" : void 0;
     return family ? { family, a, k, p: at(inner, 1), q: at(inner, 0) } : void 0;
   }
   if (token.kind === "operator" && token.operator === "power") {
@@ -16404,15 +16410,27 @@ function formulaBars(tokens, want, check, path) {
     }
     return guarded(bars, first, refuse);
   }
+  const higher = polynomialOf(tokens, 9);
+  if (higher) {
+    const top = degreeOf(higher);
+    if (want.domain) bars.push(all("x"));
+    if (want.range) {
+      if (top % 2 === 0) refuse("range", "is derived for polynomials of odd degree, lines and quadratics only");
+      if (!proved(at(higher, top).text)) refuse("range", "collapses where the leading coefficient is 0");
+      bars.push(all("y"));
+    }
+    return guarded(bars, first, refuse);
+  }
   const shape = shapeOf(tokens, root);
-  if (!shape) return refuse(first, "is derived only for lines, quadratics, roots, reciprocals, exponentials and logarithms");
+  if (!shape) return refuse(first, "is derived only for polynomials, roots, reciprocals, exponentials, logarithms, sines and cosines");
   const pSign = shape.p.value;
   const edge = `-${wrap2(shape.q.text)}/${wrap2(shape.p.text)}`;
   if (want.range) {
     if (pSign === 0 || !proved(shape.p.text)) refuse("range", "collapses to one value where x's coefficient is 0");
   }
   if (want.domain) {
-    if (shape.family === "exponential") {
+    if (shape.family === "sinusoid") bars.push(all("x"));
+    else if (shape.family === "exponential") {
       if (shape.base && check.sign(shape.base.text) !== "positive") refuse("domain", "needs a base above 0");
       bars.push(all("x"));
     } else if (shape.family === "reciprocal") {
@@ -16424,7 +16442,10 @@ function formulaBars(tokens, want, check, path) {
     }
   }
   if (want.range) {
-    if (shape.family === "log") {
+    if (shape.family === "sinusoid") {
+      const amplitude = `abs(${shape.a})`;
+      bars.push({ axis: "y", from: `${wrap2(shape.k)}-${amplitude}`, to: `${wrap2(shape.k)}+${amplitude}`, from_closed: true, to_closed: true });
+    } else if (shape.family === "log") {
       if (!proved(shape.a)) refuse("range", "collapses to one value where the coefficient is 0");
       bars.push(all("y"));
     } else if (shape.family === "reciprocal") {
@@ -16451,9 +16472,9 @@ function pieceBars(pieces, want, path) {
     for (const piece of pieces) {
       const tree = treeOf(piece.tokens);
       const shape = tree === void 0 ? void 0 : shapeOf(piece.tokens, tree);
-      const definedEverywhere = polynomialOf(piece.tokens) !== void 0 || shape?.family === "exponential" && (shape.base === void 0 || shape.base.value !== void 0 && shape.base.value > 0);
+      const definedEverywhere = polynomialOf(piece.tokens, 9) !== void 0 || shape?.family === "sinusoid" || shape?.family === "exponential" && (shape.base === void 0 || shape.base.value !== void 0 && shape.base.value > 0);
       if (!definedEverywhere) {
-        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a constant, a line, a quadratic or an exponential with a base above 0; leave it out of marks and do not narrate it");
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a polynomial, a sine or cosine, or an exponential with a base above 0; leave it out of marks and do not narrate it");
       }
     }
     bars.push(...join(pieces).map((span2) => toBar("x", span2)));
@@ -16759,17 +16780,21 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ));
     }
   }
-  const markList = input.marks === void 0 ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
-  for (const mark of markList) {
-    if (!PLOT_MARKS.includes(mark)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
+  const requestedMarks = input.marks === void 0 || Array.isArray(input.marks) && input.marks.length === 0 ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
+  let markList = requestedMarks.filter((mark) => PLOT_MARKS.includes(mark));
+  if (expressions.length !== 1) markList = markList.filter((mark) => mark === "domain" || mark === "range");
+  if (expressions.length !== 1 && input.pieces === void 0) markList = [];
+  if (sampleNumbers.length === 1 && markList.includes("slope_triangle")) {
+    const second = secondSampleTwoRight(plan, sampleNumbers[0], expression, creationMoments, path);
+    if (second) {
+      samples[0].label = "A";
+      samples.push(second.sample);
+      teachingPoints.push({ x: second.sample.x, y: second.sample.y }, ...second.shown);
+      optionalPoints.push(...second.ends);
+    } else markList = markList.filter((mark) => mark !== "slope_triangle");
   }
   const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
-  if (markList.length > barMarks.length && expressions.length !== 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks other than domain and range need one formula; leave them out of a piecewise function or a comparison of several curves");
-  if (barMarks.length && expressions.length !== 1 && input.pieces === void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "domain and range need one formula or one piecewise function; leave them out of a comparison of several curves");
   const slopeTriangle = markList.includes("slope_triangle");
-  if (slopeTriangle && sampleNumbers.length === 1) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark measures two points: give sample_x_numbers two numbers (A and B), or none and the program places them");
-  }
   let references;
   if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
@@ -16787,8 +16812,6 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     if (xs) {
       references = referencePoints(initialState, xs);
       teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));
-    } else if (slopeTriangle) {
-      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the slope_triangle mark found no two points two units apart where the curve exists; leave it out");
     }
   }
   const derivedMarks = markList.filter((mark) => mark !== "slope_triangle" && mark !== "domain" && mark !== "range");
@@ -16797,7 +16820,8 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`);
     const variables = curveParameters.map((parameter) => parameter.name);
     const samples2 = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))];
-    marks = markParts(tokens, derivedMarks, (source) => compileText(plan, source), { variables, samples: samples2 }, path).map((part) => {
+    const drawable = derivedMarks.filter((mark) => leftOutWhenRefused(() => markParts(tokens, [mark], (source) => source, { variables, samples: samples2 }, path)));
+    marks = (drawable.length ? markParts(tokens, drawable, (source) => compileText(plan, source), { variables, samples: samples2 }, path) : []).map((part) => {
       const compiled = ["x", "y", "value"].flatMap((key) => part[key] === void 0 ? [] : [[key, compileMathExpression(part[key], variables)]]);
       return { ...part, at: (values) => Object.fromEntries(compiled.map(([key, f]) => {
         let result = Number.NaN;
@@ -16843,7 +16867,10 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       }
       return proved;
     };
-    bars = pieces ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), want, path) : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), want, { sign }, path);
+    const barsFor = (one) => pieces ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), one, path) : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), one, { sign }, path);
+    for (const axis of ["domain", "range"]) {
+      if (want[axis]) leftOutWhenRefused(() => bars.push(...barsFor({ domain: axis === "domain", range: axis === "range" })));
+    }
   }
   let view;
   try {
@@ -16889,6 +16916,39 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ...dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] : []
     ])
   };
+}
+function secondSampleTwoRight(plan, sampleNumber, expression, creationMoments, path) {
+  const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
+  const curve = compileMathExpression(expression, ["x"]);
+  const at2 = (x) => {
+    try {
+      const y = curve({ x });
+      return Number.isFinite(y) ? y : void 0;
+    } catch {
+      return void 0;
+    }
+  };
+  const step = d.student_control?.step && d.student_control.step > 0 ? d.student_control.step : (d.max - d.min) / 200;
+  const stops = d.max > d.min ? Array.from({ length: Math.min(2001, Math.floor((d.max - d.min) / step + 1e-9) + 1) }, (_, index) => Math.min(d.max, Number((d.min + index * step).toPrecision(12)))) : [];
+  const animated = creationMoments.flatMap((moment) => moment.actions).flatMap((action) => action.action === "animate" && action.number === sampleNumber ? [action.end_value] : []);
+  for (const x of [d.min, d.max, d.initial, ...stops, ...animated]) if (at2(x + 2) === void 0) return void 0;
+  const xB = `(${variableAlias(sampleNumber)})+2`;
+  if (expression.replace(/\bx\b/gu, `(${xB})`).length > 240) return void 0;
+  const point = (x) => ({ x: x + 2, y: at2(x + 2) });
+  return {
+    sample: { ...point(d.initial), label: "B", x_expression: xB },
+    shown: animated.map(point),
+    ends: [d.min, d.max].map(point)
+  };
+}
+function leftOutWhenRefused(derive) {
+  try {
+    derive();
+    return true;
+  } catch (error) {
+    if (error instanceof LessonPlanError && error.code === "LESSON_PLAN_CAPABILITY_PARAMETER") return false;
+    throw error;
+  }
 }
 function appendBars(action, bars, initial, labels) {
   const content = action.content;

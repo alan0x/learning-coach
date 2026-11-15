@@ -4,8 +4,9 @@
 // - vertex and symmetry_axis: a quadratic's vertex and the vertical line through it.
 // The formula's coefficients in x are read from its tokens, as short expressions in the lesson numbers
 // (OLL caps a binding at 256 characters, so f cannot be substituted into itself). A mark the formula
-// cannot give (a vertex of a line, intercepts of a cubic) is refused in the section, so the section is
-// written again without it (0018 question 2: narration about a mark that is not drawn misleads most).
+// cannot give (a vertex of a line, intercepts of a cubic) throws a capability fault; the compiler leaves
+// that mark out and draws the rest (0018 as amended after the trial: refusing the section cost a whole
+// call, and the model asked again for marks it cannot have).
 import { compileMathExpression } from "octos-lesson-language";
 import { LessonPlanError, type LessonPlanMathExpression } from "../lesson-plan.js";
 import { mathExpressionToOll, variableAlias } from "../recipe-kit.js";
@@ -51,8 +52,12 @@ function divide(a: Scalar, b: Scalar): Scalar {
 const degree = (p: Polynomial) => p.reduce((highest, scalar, power) => (isZero(scalar) ? highest : power), 0);
 const coefficient = (p: Polynomial, power: number) => p[power] ?? constant(0);
 
-/** Reads a formula as a polynomial in x of degree at most 2; undefined when it is not one. */
-export function polynomialOf(tokens: LessonPlanMathExpression): Polynomial | undefined {
+/**
+ * Reads a formula as a polynomial in x of degree at most `maxDegree` (2 for the marks; domain and range
+ * read higher degrees, decision 0018 as extended); undefined when it is not one.
+ */
+export function polynomialOf(tokens: LessonPlanMathExpression, maxDegree = 2): Polynomial | undefined {
+  const powers = Array.from({ length: maxDegree + 1 }, (_, power) => power);
   const stack: Polynomial[] = [];
   for (const token of tokens) {
     if (token.kind === "input") stack.push([constant(0), constant(1)]);
@@ -73,9 +78,9 @@ export function polynomialOf(tokens: LessonPlanMathExpression): Polynomial | und
       if (!left || !right) return undefined;
       let result: Polynomial | undefined;
       if (token.operator === "add" || token.operator === "subtract") {
-        result = [0, 1, 2].map((power) => add(coefficient(left, power), token.operator === "add" ? coefficient(right, power) : negate(coefficient(right, power))));
+        result = powers.map((power) => add(coefficient(left, power), token.operator === "add" ? coefficient(right, power) : negate(coefficient(right, power))));
       } else if (token.operator === "multiply") {
-        result = times(left, right);
+        result = times(left, right, maxDegree);
       } else if (token.operator === "divide") {
         if (degree(right) > 0) return undefined;
         result = left.map((scalar) => divide(scalar, coefficient(right, 0)));
@@ -86,7 +91,11 @@ export function polynomialOf(tokens: LessonPlanMathExpression): Polynomial | und
         if (degree(left) === 0) result = [{ text: `${wrap(coefficient(left, 0))}^${wrap(exponent)}` }];
         else if (exponent.value === 0) result = [constant(1)];
         else if (exponent.value === 1) result = left;
-        else if (exponent.value === 2) result = times(left, left);
+        else if (exponent.value !== undefined && Number.isInteger(exponent.value) && exponent.value >= 2 && exponent.value <= maxDegree) {
+          let product: Polynomial | undefined = left;
+          for (let step = 1; step < exponent.value && product; step += 1) product = times(product, left, maxDegree);
+          result = product;
+        }
         else return undefined;
       }
       if (!result) return undefined;
@@ -96,11 +105,11 @@ export function polynomialOf(tokens: LessonPlanMathExpression): Polynomial | und
   return stack.length === 1 ? stack[0] : undefined;
 }
 
-function times(left: Polynomial, right: Polynomial): Polynomial | undefined {
-  const result: Scalar[] = [constant(0), constant(0), constant(0)];
+function times(left: Polynomial, right: Polynomial, maxDegree = 2): Polynomial | undefined {
+  const result: Scalar[] = Array.from({ length: maxDegree + 1 }, () => constant(0));
   for (const [i, a] of left.entries()) for (const [j, b] of right.entries()) {
     if (isZero(a) || isZero(b)) continue;
-    if (i + j > 2) return undefined;
+    if (i + j > maxDegree) return undefined;
     result[i + j] = add(result[i + j]!, multiply(a, b));
   }
   return result;
