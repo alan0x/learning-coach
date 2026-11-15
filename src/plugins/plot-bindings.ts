@@ -1,6 +1,7 @@
 // Formula references bind the curve. Only explicit sample inputs bind points.
 import type { LessonPlanMathExpression, LessonPlanMathToken, LessonPlanSectionDraft, LessonPlanVisualContent } from "../lesson-plan.js";
-import { fail } from "../recipe-kit.js";
+import { compileMathExpression } from "octos-lesson-language";
+import { fail, mathExpressionToOll } from "../recipe-kit.js";
 import type { DraftSpecializationContext } from "./hooks.js";
 import { parseModelFormula } from "./math-formulas.js";
 
@@ -95,6 +96,25 @@ function sectionText(draft: LessonPlanSectionDraft): string[] {
     ...draft.moments.flatMap(moment => clauses(moment.narration)),
     ...(draft.student_activities ?? []).flatMap(activity => clauses(activity.prompt)),
   ];
+}
+
+/** A label naming an x position: "x" alone, or x followed by 坐标 / 的值 / coordinate / value. Not "x 的系数". */
+function xPositionLabel(label: string): boolean {
+  // A bound of x ("max x value", "x 的最大值") is no position (review).
+  if (/\b(max|min)\b|最大|最小/iu.test(label)) return false;
+  return /^\s*x\s*$/iu.test(label) || /(^|[^A-Za-z])x\s*[-_ ]?\s*的?\s*(坐标|座标|值|coordinate|value)/iu.test(label);
+}
+
+/** True when the plot's one formula has a finite value at each x given. */
+function curveExistsAt(visual: LessonPlanVisualContent, xs: unknown[]): boolean {
+  const tokens = visual.parameters?.expression_tokens;
+  if (!Array.isArray(tokens)) return false;
+  try {
+    const curve = compileMathExpression(mathExpressionToOll(tokens as LessonPlanMathExpression), ["x"]);
+    return xs.every(x => typeof x === "number" && Number.isFinite(curve({ x })));
+  } catch {
+    return false;
+  }
 }
 
 function structuralUse(draft: LessonPlanSectionDraft, number: number): boolean {
@@ -230,7 +250,20 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
     // If it omitted the old list, only full role labels can identify candidates.
     const vertexCandidates = declared.length ? candidates : (outline.numbers ?? []).flatMap((number, index) =>
       number.student_control && unused(index + 1) && vertexRole(number.label ?? "") ? [index + 1] : []);
-    if (fixed && wantsVertex && !hasSampleIntent && recoverVertex(visual, vertexCandidates, outline)) {
+    // An x position declared as a plain number: on one fixed curve, one or two numbers the formula does not
+    // read, which the section moves or names, each labelled as an x position ("x", "探针 x 坐标",
+    // "x-coordinate"), are the points moving along the curve (the trial: refused below and asked again).
+    // Only where the checks below would refuse the section, so a lesson that compiles is never changed, and
+    // only where the curve exists at each number's min, max and initial value.
+    const movingPoints = fixed && singleFormula && !wantsVertex && candidates.length >= 1 && candidates.length <= 2
+      && candidates.some(number => structuralUse(draft, number) || controlsNamed(number))
+      && candidates.every(number => xPositionLabel(outline.numbers?.[number - 1]?.label ?? "")
+        && curveExistsAt(visual, [outline.numbers?.[number - 1]?.min, outline.numbers?.[number - 1]?.max, outline.numbers?.[number - 1]?.initial]));
+    if (movingPoints) {
+      visual.parameters!.sample_x_numbers = [...candidates];
+      samples = [...candidates];
+      adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "x_position_numbers_as_moving_points" });
+    } else if (fixed && wantsVertex && !hasSampleIntent && recoverVertex(visual, vertexCandidates, outline)) {
       curve = plotCurveNumbers(visual.parameters);
       adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "quadratic_vertex_from_confirmed_roles" });
     } else {

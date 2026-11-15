@@ -8,7 +8,7 @@ type FormulaLexeme =
   | { kind: "operator"; value: "+" | "-" | "*" | "/" | "^" }
   | { kind: "left" | "right" };
 
-const formulaFunctions = new Set([
+export const formulaFunctions = new Set([
   "abs", "acos", "asin", "atan", "ceil", "cos", "exp", "floor",
   "ln", "log", "round", "sin", "sqrt", "tan",
 ]);

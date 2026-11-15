@@ -631,7 +631,7 @@ const boardContentKeys: Record<string, readonly string[]> = {
   image: ["resource", "alt"],
 };
 
-function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: number): unknown {
+function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: number, numberLabels: readonly string[] = []): unknown {
   if (typeof kind !== "string" || !value || typeof value !== "object" || Array.isArray(value)) return value;
   const content = value as Record<string, unknown>;
   if (kind !== "visual") {
@@ -654,7 +654,8 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
     ? { ...(content.parameters as Record<string, unknown>) }
     : {};
   const hooks = typeof capability === "string" ? RECIPE_HOOKS[capability] : undefined;
-  const forceNoNumbers = hooks?.lower_model_parameters?.(parameters, { numberCount })?.no_numbers === true;
+  const visualNumbers = Array.isArray(content.numbers) ? content.numbers.filter((number): number is number => Number.isInteger(number)) : [];
+  const forceNoNumbers = hooks?.lower_model_parameters?.(parameters, { numberCount, numberLabels, visualNumbers })?.no_numbers === true;
   if (typeof content.title === "string" && parameters.title === undefined) parameters.title = content.title;
   if (typeof capability === "string" && capability in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
     const allowedParameters = new Set(
@@ -1253,10 +1254,11 @@ function lowerModelActionReferences(
   action: Record<string, unknown>,
   currentMoment: number,
   numberCount: number,
+  numberLabels: readonly string[] = [],
 ): Record<string, unknown> {
   const lowered = { ...action };
   if (actionName === "create" || actionName === "revise") {
-    lowered.content = lowerModelBoardContent(lowered.kind, lowered.content, numberCount);
+    lowered.content = lowerModelBoardContent(lowered.kind, lowered.content, numberCount, numberLabels);
   }
   if (actionName === "create" && lowered.placement && typeof lowered.placement === "object"
     && !Array.isArray(lowered.placement)) {
@@ -1889,6 +1891,7 @@ function lowerModelSectionDraft(
               action,
               momentIndex + 1,
               outline.numbers?.length ?? 0,
+              (outline.numbers ?? []).map((number) => number.label ?? ""),
             ),
           },
         });

@@ -7,7 +7,7 @@ import { implicitSurfaceDomain } from "../scene3d-surfaces.js";
 import type { PluginHooks, RecipeHooks } from "./hooks.js";
 import { fitComparedNumbers, fitNumberLineNumbers, fitRoundingNumbers, fitSolutionNumbers, fitStepsNumbers } from "./number-line-fit.js";
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./math-teaching-contracts.js";
-import { formulaError, parseModelFormula } from "./math-formulas.js";
+import { formulaError, formulaFunctions, parseModelFormula } from "./math-formulas.js";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
 /**
@@ -122,7 +122,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     },
   },
   function_plot: {
-    lower_model_parameters(parameters, { numberCount }) {
+    lower_model_parameters(parameters, { numberCount, numberLabels = [], visualNumbers = [] }) {
       // An empty list is none: the model writes `pieces: []` beside a plain formula (6 of 48 trial lessons
       // were refused for it, one call each), and `marks: []` the same way.
       if (Array.isArray(parameters.pieces) && parameters.pieces.length === 0) delete parameters.pieces;
@@ -153,7 +153,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       delete parameters.expressions;
       delete parameters.expression_tokens;
       const parsed = rawFormulas.map((formula, index) => parseModelFormula(
-        formula,
+        namesToNumbers(formula, numberLabels, visualNumbers),
         numberCount,
         `$lessonPlanSection.visual.parameters.formulas[${index}]`,
       ));
@@ -257,6 +257,36 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     free_number: (content) => content.parameters?.radius_expression !== undefined,
   },
 };
+
+/**
+ * A formula that names a lesson number by its symbol reads that number: "a*(x-2)^2+1" where the visual's
+ * one number is labelled "a", "k*x+1" for "斜率 k" (the trial: 3 of 48 lessons, and 5 of the 139 recorded
+ * ones, were refused for it and asked again). Only names the parser would refuse are replaced: the right
+ * side of an "=" only (the parser takes "y =" and "f(x) =" itself), read as its lexer reads them (letters
+ * only; compared lowercased, so "E", "X" and "Sin" stay e, x and sin), and only when exactly one of the
+ * visual's numbers shows that name as its symbol (the label's trailing letter, as plot text shows it).
+ */
+function namesToNumbers(formula: unknown, labels: readonly string[], visualNumbers: readonly number[]): unknown {
+  if (typeof formula !== "string") return formula;
+  const equals = formula.indexOf("=");
+  const left = equals >= 0 ? formula.slice(0, equals + 1) : "";
+  const right = equals >= 0 ? formula.slice(equals + 1) : formula;
+  const symbol = (label: string) => /([A-Za-z\u03b1-\u03c9])$/u.exec(label.trim())?.[1];
+  const known = (name: string) => {
+    const lower = name.toLowerCase();
+    return lower === "x" || lower === "pi" || lower === "e" || /^n\d+$/u.test(lower) || formulaFunctions.has(lower);
+  };
+  // Case-insensitive like the lexer, so "N1" stays one reference (review).
+  return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset: number, whole: string) => {
+    if (known(name)) return name;
+    // A name glued to a digit ("a2") would become a different reference ("n12"): left to the parser.
+    if (/\d/u.test(whole[offset + name.length] ?? "")) return name;
+    // Part of a number ("2e3") is not a name.
+    if (/[0-9.]/u.test(whole[offset - 1] ?? "") && /^e/iu.test(name)) return name;
+    const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
+    return matches.length === 1 ? `n${matches[0]}` : name;
+  });
+}
 
 /**
  * A piecewise function (OLL decision 0018 §2): each piece is a formula on an interval with its ends open or

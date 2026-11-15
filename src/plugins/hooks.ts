@@ -20,7 +20,7 @@ export interface RecipeValidationContext {
  */
 export interface RecipeHooks {
   /** Rewrites the model's parameters in place, before keys the recipe does not accept are dropped. */
-  lower_model_parameters?(parameters: Record<string, unknown>, context: { numberCount: number }): { no_numbers?: boolean } | void;
+  lower_model_parameters?(parameters: Record<string, unknown>, context: { numberCount: number; numberLabels?: readonly string[]; visualNumbers?: readonly number[] }): { no_numbers?: boolean } | void;
   /** Lesson numbers the lowered parameters bind; a non-empty list replaces the model's own list. */
   numbers_from_parameters?(parameters: Record<string, unknown>, context: { numberCount: number; limit: number }): number[];
   /** Why the program removes this visual from the lesson, or undefined to keep it. */

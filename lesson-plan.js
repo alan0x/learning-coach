@@ -13658,6 +13658,20 @@ function sectionText(draft) {
     ...(draft.student_activities ?? []).flatMap((activity) => clauses(activity.prompt))
   ];
 }
+function xPositionLabel(label) {
+  if (/\b(max|min)\b|最大|最小/iu.test(label)) return false;
+  return /^\s*x\s*$/iu.test(label) || /(^|[^A-Za-z])x\s*[-_ ]?\s*的?\s*(坐标|座标|值|coordinate|value)/iu.test(label);
+}
+function curveExistsAt(visual, xs) {
+  const tokens = visual.parameters?.expression_tokens;
+  if (!Array.isArray(tokens)) return false;
+  try {
+    const curve = compileMathExpression(mathExpressionToOll(tokens), ["x"]);
+    return xs.every((x) => typeof x === "number" && Number.isFinite(curve({ x })));
+  } catch {
+    return false;
+  }
+}
 function structuralUse(draft, number) {
   return draft.moments.some((moment) => moment.actions.some((action) => action.action === "animate" && action.number === number)) || (draft.student_activities ?? []).some((activity) => activity.kind === "number_target" && (activity.number_controls.some((control) => control.number === number) || activity.expression?.some((token) => token.kind === "number" && token.number === number)));
 }
@@ -13754,7 +13768,12 @@ function normalizePlotDraftBindings(draft, context) {
     const singleFormula = Array.isArray(visual.parameters?.expression_tokens);
     const formulasPath = path.replace(/sample_x_numbers$/, "formulas");
     const vertexCandidates = declared.length ? candidates : (outline.numbers ?? []).flatMap((number, index) => number.student_control && unused(index + 1) && vertexRole(number.label ?? "") ? [index + 1] : []);
-    if (fixed && wantsVertex && !hasSampleIntent && recoverVertex(visual, vertexCandidates, outline)) {
+    const movingPoints = fixed && singleFormula && !wantsVertex && candidates.length >= 1 && candidates.length <= 2 && candidates.some((number) => structuralUse(draft, number) || controlsNamed(number)) && candidates.every((number) => xPositionLabel(outline.numbers?.[number - 1]?.label ?? "") && curveExistsAt(visual, [outline.numbers?.[number - 1]?.min, outline.numbers?.[number - 1]?.max, outline.numbers?.[number - 1]?.initial]));
+    if (movingPoints) {
+      visual.parameters.sample_x_numbers = [...candidates];
+      samples = [...candidates];
+      adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "x_position_numbers_as_moving_points" });
+    } else if (fixed && wantsVertex && !hasSampleIntent && recoverVertex(visual, vertexCandidates, outline)) {
       curve = plotCurveNumbers(visual.parameters);
       adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "quadratic_vertex_from_confirmed_roles" });
     } else {
@@ -14140,7 +14159,7 @@ var MATH_HOOKS = {
     }
   },
   function_plot: {
-    lower_model_parameters(parameters3, { numberCount }) {
+    lower_model_parameters(parameters3, { numberCount, numberLabels = [], visualNumbers = [] }) {
       if (Array.isArray(parameters3.pieces) && parameters3.pieces.length === 0) delete parameters3.pieces;
       if (Array.isArray(parameters3.marks) && parameters3.marks.length === 0) delete parameters3.marks;
       if (parameters3.pieces !== void 0) return lowerPieces(parameters3, numberCount);
@@ -14157,7 +14176,7 @@ var MATH_HOOKS = {
       delete parameters3.expressions;
       delete parameters3.expression_tokens;
       const parsed = rawFormulas.map((formula, index) => parseModelFormula(
-        formula,
+        namesToNumbers(formula, numberLabels, visualNumbers),
         numberCount,
         `$lessonPlanSection.visual.parameters.formulas[${index}]`
       ));
@@ -14243,6 +14262,24 @@ var MATH_HOOKS = {
     free_number: (content) => content.parameters?.radius_expression !== void 0
   }
 };
+function namesToNumbers(formula, labels, visualNumbers) {
+  if (typeof formula !== "string") return formula;
+  const equals = formula.indexOf("=");
+  const left = equals >= 0 ? formula.slice(0, equals + 1) : "";
+  const right = equals >= 0 ? formula.slice(equals + 1) : formula;
+  const symbol = (label) => /([A-Za-z\u03b1-\u03c9])$/u.exec(label.trim())?.[1];
+  const known = (name) => {
+    const lower = name.toLowerCase();
+    return lower === "x" || lower === "pi" || lower === "e" || /^n\d+$/u.test(lower) || formulaFunctions.has(lower);
+  };
+  return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset, whole) => {
+    if (known(name)) return name;
+    if (/\d/u.test(whole[offset + name.length] ?? "")) return name;
+    if (/[0-9.]/u.test(whole[offset - 1] ?? "") && /^e/iu.test(name)) return name;
+    const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
+    return matches.length === 1 ? `n${matches[0]}` : name;
+  });
+}
 var PIECE_ENDS = { "[]": [true, true], "[)": [true, false], "(]": [false, true], "()": [false, false] };
 function lowerPieces(parameters3, numberCount) {
   const path = "$lessonPlanSection.visual.parameters.pieces";
@@ -19606,7 +19643,7 @@ var boardContentKeys = {
   table: ["columns", "rows"],
   image: ["resource", "alt"]
 };
-function lowerModelBoardContent(kind, value2, numberCount) {
+function lowerModelBoardContent(kind, value2, numberCount, numberLabels = []) {
   if (typeof kind !== "string" || !value2 || typeof value2 !== "object" || Array.isArray(value2)) return value2;
   const content = value2;
   if (kind !== "visual") {
@@ -19623,7 +19660,8 @@ function lowerModelBoardContent(kind, value2, numberCount) {
   const capability2 = content.capability;
   const parameters3 = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? { ...content.parameters } : {};
   const hooks = typeof capability2 === "string" ? RECIPE_HOOKS[capability2] : void 0;
-  const forceNoNumbers = hooks?.lower_model_parameters?.(parameters3, { numberCount })?.no_numbers === true;
+  const visualNumbers = Array.isArray(content.numbers) ? content.numbers.filter((number) => Number.isInteger(number)) : [];
+  const forceNoNumbers = hooks?.lower_model_parameters?.(parameters3, { numberCount, numberLabels, visualNumbers })?.no_numbers === true;
   if (typeof content.title === "string" && parameters3.title === void 0) parameters3.title = content.title;
   if (typeof capability2 === "string" && capability2 in LESSON_PLAN_VISUAL_PARAMETER_NAMES) {
     const allowedParameters = new Set(
@@ -20086,10 +20124,10 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
   }
   return { outline, drafts, adjustments: sanitized.adjustments };
 }
-function lowerModelActionReferences(actionName, action, currentMoment, numberCount) {
+function lowerModelActionReferences(actionName, action, currentMoment, numberCount, numberLabels = []) {
   const lowered = { ...action };
   if (actionName === "create" || actionName === "revise") {
-    lowered.content = lowerModelBoardContent(lowered.kind, lowered.content, numberCount);
+    lowered.content = lowerModelBoardContent(lowered.kind, lowered.content, numberCount, numberLabels);
   }
   if (actionName === "create" && lowered.placement && typeof lowered.placement === "object" && !Array.isArray(lowered.placement)) {
     const placement = { ...lowered.placement };
@@ -20604,7 +20642,8 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
               descriptor.action,
               action,
               momentIndex + 1,
-              outline.numbers?.length ?? 0
+              outline.numbers?.length ?? 0,
+              (outline.numbers ?? []).map((number) => number.label ?? "")
             )
           }
         });
