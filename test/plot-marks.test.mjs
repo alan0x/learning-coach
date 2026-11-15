@@ -143,3 +143,17 @@ test("the slope triangle's points exist at every slider end, not only where the 
   assert.deepEqual(plotContent(lesson).points.map((point) => point.x), [6, 8]);
   assert.deepEqual(judgePlot({ id: "slider", expect: {} }, lesson).hard, []);
 });
+
+test("coefficients too long for one binding refuse the marks in the section, naming the mark (review)", async () => {
+  const numbers = [[1, 0, 5, "p"], [2, 0, 5, "q"], [3, 0, 5, "r"], [1, 0, 5, "s"]];
+  const formula = "(x+n1*n2+n3*n4+n1*n3)*(x-(n1*n2+n3*n4+n1*n3))+n1";
+  const plain = await generate(plotReply({ formula, marks: undefined, numbers, moments: [{ say: "看图像。" }] }));
+  assert.ok(plain.lesson, plain.rejected.join(" | "));
+  for (const mark of ["vertex", "intercepts", "symmetry_axis"]) {
+    const { lesson, rejected, requests } = await generate(plotReply({ formula, marks: [mark], numbers, moments: [{ say: "看图像。" }] }));
+    assert.equal(lesson, undefined);
+    assert.ok(rejected.some((miss) => new RegExp(`LESSON_PLAN_CAPABILITY_PARAMETER .*marks.*the ${mark} mark is too long`, "u").test(miss)), rejected.join(" | "));
+    assert.ok(!rejected.some((miss) => /Expression is too long/u.test(miss)), rejected.join(" | "));
+    assert.match(requests[1]?.label ?? "", /section/u);
+  }
+});
