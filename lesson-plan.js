@@ -761,9 +761,9 @@ var require_codegen = __commonJS({
       scopeCode() {
         return this._extScope.scopeCode(this._values);
       }
-      _def(varKind, nameOrPrefix, rhs, constant) {
+      _def(varKind, nameOrPrefix, rhs, constant2) {
         const name = this._scope.toName(nameOrPrefix);
-        if (rhs !== void 0 && constant)
+        if (rhs !== void 0 && constant2)
           this._constants[name.str] = rhs;
         this._leafNode(new Def(varKind, name, rhs));
         return name;
@@ -9329,14 +9329,14 @@ function splitBindingTarget(value2, path) {
 }
 function bindableTargets(action) {
   const targets = /* @__PURE__ */ new Map();
-  const add = (field, properties) => {
+  const add2 = (field, properties) => {
     for (const item of Array.isArray(action.content[field]) ? action.content[field] : []) {
       if (typeof item?.as === "string")
         targets.set(item.as, new Set(properties));
     }
   };
   for (const [field, properties] of Object.entries(bindingCapabilitiesForNodeKind(action.kind))) {
-    add(field, properties);
+    add2(field, properties);
   }
   return targets;
 }
@@ -12010,7 +12010,17 @@ function buildFunctionPlot(input) {
 // src/rearrangement.ts
 var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
 
+// src/plugins/plot-mark-names.ts
+var PLOT_MARKS = ["intercepts", "vertex", "symmetry_axis"];
+
+// src/plugins/trials.ts
+var processEnvironment = globalThis.process?.env;
+function trialOptionEnabled(name, list2 = processEnvironment?.LEARNING_COACH_TRIAL_RECIPES) {
+  return (list2 ?? "").split(",").map((item) => item.trim()).includes(name);
+}
+
 // src/plugins/math.ts
+var PLOT_EXTENSIONS = trialOptionEnabled("function_plot_extensions");
 var SIDE_COUNT = { min: 3, max: 384 };
 var UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 };
 var MATH_RECIPES = {
@@ -12018,10 +12028,11 @@ var MATH_RECIPES = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label"],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", ...PLOT_EXTENSIONS ? ["marks"] : []],
     required_model_schema_parameters: ["formulas"],
-    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers"],
+    // Marks change what the plot draws, so two plots differing only in marks are different visuals.
+    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
@@ -12248,7 +12259,8 @@ var MATH_SCHEMA_PROPERTIES = {
     x_label: text2,
     y_label: text2,
     formulas: { type: "array", minItems: 1, maxItems: 8, items: text2 },
-    sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } }
+    sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } },
+    ...PLOT_EXTENSIONS ? { marks: { type: "array", maxItems: PLOT_MARKS.length, items: { enum: [...PLOT_MARKS] } } } : {}
   },
   unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
   circle_polygon_bounds: { radius: { type: "number", minimum: 0 } },
@@ -12284,7 +12296,7 @@ var MATH_PLUGIN = {
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
-    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002",
+    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002" + (PLOT_EXTENSIONS ? "marks \u9009\u8981\u753B\u7684\u6807\u8BB0\uFF08\u53EA\u7528\u4E8E\u4E00\u6B21\u6216\u4E8C\u6B21\u51FD\u6570\uFF09\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u5E76\u968F\u6ED1\u5757\u79FB\u52A8\u3002" : ""),
     "section.bounds": "\u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002",
     "section.linked_numbers": "\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002",
     "section.constructions": "geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002"
@@ -12658,10 +12670,10 @@ function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
 }
-var processEnvironment = globalThis.process?.env;
+var processEnvironment2 = globalThis.process?.env;
 var OFFERED_RECIPES = [
   ...RECIPE_CATALOG_ORDER,
-  ...enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES)
+  ...enabledTrialRecipes(processEnvironment2?.LEARNING_COACH_TRIAL_RECIPES)
 ];
 var PLUGIN_RECIPE_REGISTRY = Object.fromEntries(
   OFFERED_RECIPES.map((name) => [name, ALL_RECIPES[name]])
@@ -12777,6 +12789,9 @@ var EN = {
   "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5728\u540C\u4E00\u5F20\u51FD\u6570\u56FE\u4E2D\u540C\u65F6\u5C55\u793A\u9759\u6001\u66F2\u7EBF\u548C\u7531\u63A7\u4EF6\u6539\u53D8\u7684\u53E6\u4E00\u6761\u66F2\u7EBF\u3002": "A static curve and another curve changed by a control cannot yet be shown together in the same graph.",
   "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002": "The rest of the lesson is still being generated.",
   "\u5F53\u524D\u767D\u677F\u53EA\u80FD\u6267\u884C\u4E8C\u7EF4\u56FE\u5F62\u548C\u4E09\u7EF4\u573A\u666F\uFF0C\u4E0D\u80FD\u7CBE\u786E\u6A21\u62DF\u56DB\u7EF4\u8D85\u7ACB\u65B9\u4F53\u7684\u56DB\u7EF4\u65CB\u8F6C\u3002\u4F60\u53EF\u4EE5\u6539\u95EE\u5B83\u7684\u4E09\u7EF4\u6295\u5F71\u539F\u7406\u6216\u57FA\u672C\u7ED3\u6784\u3002": "The board supports 2D diagrams and 3D scenes, but cannot accurately simulate a 4D hypercube rotating in four dimensions. You can ask about its 3D projections or basic structure instead.",
+  "y \u622A\u8DDD": "y-intercept",
+  "x \u622A\u8DDD": "x-intercept",
+  "\u5BF9\u79F0\u8F74": "Axis of symmetry",
   "A\u70B9\u7684x\u5750\u6807": "x-coordinate of point A",
   "B\u70B9\u7684x\u5750\u6807": "x-coordinate of point B",
   "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",
@@ -13063,14 +13078,14 @@ function formatMathExpressionDisplay(expression, symbol) {
       const rightText = rightNeedsParens ? parenthesize(right) : right.text;
       const symbolLike = SIMPLE_IDENTIFIER.test(right.text) || right.symbolBase === true;
       const negativeCoefficient = left.minus !== void 0 && /^[0-9.]+$/u.test(left.minus);
-      const coefficient = left.literal !== void 0 || negativeCoefficient;
+      const coefficient2 = left.literal !== void 0 || negativeCoefficient;
       const rightGroup = right.level === DISPLAY_LEVEL_ADD && right.minus === void 0;
       const leftGroup = left.minus === void 0 && (left.level === DISPLAY_LEVEL_ADD || left.text.endsWith(")"));
       if (token.operator === "multiply" && rightGroup && (leftGroup || left.literal !== void 0)) {
         stack.push({ text: `${left.level === DISPLAY_LEVEL_ADD ? parenthesize(left) : left.text}${parenthesize(right)}`, level: DISPLAY_LEVEL_MUL });
         continue;
       }
-      const juxtapose = token.operator === "multiply" && (coefficient && (symbolLike || right.call === true) || SIMPLE_IDENTIFIER.test(left.text) && symbolLike);
+      const juxtapose = token.operator === "multiply" && (coefficient2 && (symbolLike || right.call === true) || SIMPLE_IDENTIFIER.test(left.text) && symbolLike);
       if (juxtapose && negativeCoefficient) {
         stack.push({ text: `\u2212${left.minus}${rightText}`, level: DISPLAY_LEVEL_UNARY, minus: `${left.minus}${rightText}` });
         continue;
@@ -16047,10 +16062,137 @@ function planPlotView(input) {
   return { x: finalX, y: finalY, equalScale, piTicks, holes, adjustments };
 }
 
+// src/plugins/plot-marks.ts
+var constant = (value2) => ({ text: formatNumber(value2), value: value2 });
+var formatNumber = (value2) => Object.is(value2, -0) ? "0" : String(Number(value2.toPrecision(12)));
+var isZero = (scalar) => scalar.value === 0;
+var wrap = (scalar) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(scalar.text) ? scalar.text : `(${scalar.text})`;
+function add(a, b) {
+  if (a.value !== void 0 && b.value !== void 0) return constant(a.value + b.value);
+  if (isZero(a)) return b;
+  if (isZero(b)) return a;
+  return { text: `${a.text}+${wrap(b)}` };
+}
+function negate(a) {
+  return a.value !== void 0 ? constant(-a.value) : { text: `-${wrap(a)}` };
+}
+function multiply2(a, b) {
+  if (a.value !== void 0 && b.value !== void 0) return constant(a.value * b.value);
+  if (isZero(a) || isZero(b)) return constant(0);
+  if (a.value === 1) return b;
+  if (b.value === 1) return a;
+  if (a.value === -1) return negate(b);
+  if (b.value === -1) return negate(a);
+  return { text: `${wrap(a)}*${wrap(b)}` };
+}
+function divide(a, b) {
+  if (a.value !== void 0 && b.value !== void 0 && b.value !== 0) return constant(a.value / b.value);
+  if (isZero(a)) return constant(0);
+  if (b.value === 1) return a;
+  return { text: `${wrap(a)}/${wrap(b)}` };
+}
+var degree = (p) => p.reduce((highest, scalar, power) => isZero(scalar) ? highest : power, 0);
+var coefficient = (p, power) => p[power] ?? constant(0);
+function polynomialOf(tokens) {
+  const stack = [];
+  for (const token of tokens) {
+    if (token.kind === "input") stack.push([constant(0), constant(1)]);
+    else if (token.kind === "number") stack.push([{ text: variableAlias(token.number) }]);
+    else if (token.kind === "literal") stack.push([constant(Number(token.value))]);
+    else if (token.kind === "constant") stack.push([{ text: token.name, value: token.name === "pi" ? Math.PI : Math.E }]);
+    else if (token.kind === "negate") {
+      const p = stack.pop();
+      if (!p) return void 0;
+      stack.push(p.map(negate));
+    } else if (token.kind === "function") {
+      const p = stack.pop();
+      if (!p || degree(p) > 0) return void 0;
+      stack.push([{ text: `${token.name}(${coefficient(p, 0).text})` }]);
+    } else {
+      const right = stack.pop(), left = stack.pop();
+      if (!left || !right) return void 0;
+      let result;
+      if (token.operator === "add" || token.operator === "subtract") {
+        result = [0, 1, 2].map((power) => add(coefficient(left, power), token.operator === "add" ? coefficient(right, power) : negate(coefficient(right, power))));
+      } else if (token.operator === "multiply") {
+        result = times(left, right);
+      } else if (token.operator === "divide") {
+        if (degree(right) > 0) return void 0;
+        result = left.map((scalar) => divide(scalar, coefficient(right, 0)));
+      } else {
+        const exponent = coefficient(right, 0);
+        if (degree(right) > 0) return void 0;
+        if (degree(left) === 0) result = [{ text: `${wrap(coefficient(left, 0))}^${wrap(exponent)}` }];
+        else if (exponent.value === 0) result = [constant(1)];
+        else if (exponent.value === 1) result = left;
+        else if (exponent.value === 2) result = times(left, left);
+        else return void 0;
+      }
+      if (!result) return void 0;
+      stack.push(result);
+    }
+  }
+  return stack.length === 1 ? stack[0] : void 0;
+}
+function times(left, right) {
+  const result = [constant(0), constant(0), constant(0)];
+  for (const [i, a] of left.entries()) for (const [j, b] of right.entries()) {
+    if (isZero(a) || isZero(b)) continue;
+    if (i + j > 2) return void 0;
+    result[i + j] = add(result[i + j], multiply2(a, b));
+  }
+  return result;
+}
+function markParts(tokens, marks, labels, check, path) {
+  const polynomial2 = polynomialOf(tokens);
+  const refuse = (mark, why) => {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `the ${mark} mark ${why}; leave it out of marks and do not narrate it`);
+  };
+  if (!polynomial2) return refuse(marks[0], "needs a line or a quadratic (marks are derived exactly)");
+  const [c, b, a] = [0, 1, 2].map((power) => coefficient(polynomial2, power));
+  crossCheck(tokens, [c, b, a], check, path);
+  const linear = isZero(a);
+  const parts = [];
+  for (const mark of marks) {
+    if (mark === "intercepts") {
+      parts.push({ kind: "point", as: "mark-y-intercept", label: labels("y \u622A\u8DDD"), x: "0", y: c.text });
+      if (linear) {
+        if (!isZero(b)) parts.push({ kind: "point", as: "mark-x-intercept", label: labels("x \u622A\u8DDD"), x: negate(divide(c, b)).text, y: "0" });
+      } else {
+        const root = `sqrt(${wrap(b)}^2-4*${wrap(a)}*${wrap(c)})`;
+        for (const [index, sign] of ["-", "+"].entries()) {
+          parts.push({ kind: "point", as: `mark-x-intercept-${index + 1}`, label: labels("x \u622A\u8DDD"), x: `(${negate(b).text}${sign}${root})/(2*${wrap(a)})`, y: "0" });
+        }
+      }
+    } else {
+      if (linear) refuse(mark, "needs a quadratic");
+      const axis = `${negate(b).text === "0" ? "0" : `(${negate(b).text})`}/(2*${wrap(a)})`;
+      if (mark === "vertex") parts.push({ kind: "point", as: "mark-vertex", label: labels("\u9876\u70B9"), x: axis, y: `${wrap(c)}-${wrap(b)}^2/(4*${wrap(a)})` });
+      else parts.push({ kind: "guide", as: "mark-axis", label: labels("\u5BF9\u79F0\u8F74"), value: axis });
+    }
+  }
+  for (const part of parts) for (const text3 of [part.x, part.y, part.value]) {
+    if (text3 !== void 0 && text3.length > 240) refuse(marks[0], "is too long an expression for this formula");
+  }
+  return parts;
+}
+function crossCheck(tokens, [c, b, a], { variables, samples }, path) {
+  const names = ["x", ...variables];
+  const formula = compileMathExpression(mathExpressionToOll(tokens), names);
+  const polynomial2 = compileMathExpression(`${wrap(a)}*x^2+${wrap(b)}*x+${wrap(c)}`, names);
+  for (const values of samples) for (const x of [-2.5, -1, 0, 0.5, 3]) {
+    const expected = formula({ ...values, x }), actual = polynomial2({ ...values, x });
+    if (!Number.isFinite(expected) && !Number.isFinite(actual)) continue;
+    if (!(Math.abs(expected - actual) <= 1e-6 * Math.max(1, Math.abs(expected)))) {
+      throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the marks could not be derived for this formula; leave marks out");
+    }
+  }
+}
+
 // src/plugins/math-compilers.ts
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks"], path);
   const dynamicTokens = input.expression_tokens;
   if (dynamicTokens !== void 0 && !dynamicTokens.some((token) => token.kind === "input")) {
     fail2(
@@ -16189,6 +16331,34 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       teachingPoints.push(...references, ...demonstrations.flatMap(referencePoints));
     }
   }
+  const markList = input.marks === void 0 ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
+  for (const mark of markList) {
+    if (!PLOT_MARKS.includes(mark)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `marks are ${PLOT_MARKS.join(", ")}`);
+  }
+  let marks = [];
+  if (markList.length) {
+    if (expressions.length !== 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "marks need one formula; leave marks out of a comparison of several curves");
+    const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`);
+    const variables = curveParameters.map((parameter) => parameter.name);
+    const samples2 = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))];
+    marks = markParts(tokens, markList, (source) => compileText(plan, source), { variables, samples: samples2 }, path).map((part) => {
+      const compiled = ["x", "y", "value"].flatMap((key) => part[key] === void 0 ? [] : [[key, compileMathExpression(part[key], variables)]]);
+      return { ...part, at: (values) => Object.fromEntries(compiled.map(([key, f]) => {
+        let result = Number.NaN;
+        try {
+          result = f(values);
+        } catch {
+        }
+        return [key, result];
+      })) };
+    });
+    for (const values of [initialState, ...demonstrations]) {
+      for (const mark of marks) {
+        const where = mark.at(values);
+        if (mark.kind === "point" && Number.isFinite(where.x) && Number.isFinite(where.y)) teachingPoints.push({ x: where.x, y: where.y });
+      }
+    }
+  }
   let view;
   try {
     view = planPlotView({
@@ -16220,6 +16390,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     curves: plottedCurves,
     ...samples.length ? { samples } : references ? { references } : {}
   });
+  if (marks.length) appendMarks(built.actions[0], marks, initialState);
   return {
     actions: built.actions,
     ...view.adjustments.length ? { adjustments: view.adjustments } : {},
@@ -16231,6 +16402,26 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       ...dynamicNumbers.length ? [["primary_control", `${base}#primary-curve`]] : []
     ])
   };
+}
+function appendMarks(action, marks, initial) {
+  const content = action.content;
+  const points = [...content.points ?? []];
+  const guides = [...content.guides ?? []];
+  const bindings = [...content.bindings ?? []];
+  const reads = (text3) => text3 !== void 0 && /\bnumber_\d+\b/u.test(text3);
+  for (const mark of marks) {
+    const where = mark.at(initial);
+    const keys = mark.kind === "point" ? ["x", "y"] : ["value"];
+    const bound = keys.filter((key) => reads(mark[key]));
+    if (!bound.length && keys.some((key) => !Number.isFinite(where[key]))) continue;
+    const start = (key) => Number.isFinite(where[key]) ? Number(where[key].toPrecision(12)) : 0;
+    if (mark.kind === "point") points.push({ as: mark.as, x: start("x"), y: start("y"), label: mark.label });
+    else guides.push({ as: mark.as, kind: "vertical_line", value: start("value"), label: mark.label });
+    for (const key of bound) bindings.push({ target: `${mark.as}.${key}`, expression: mark[key], hide_when_undefined: true });
+  }
+  if (points.length) content.points = points;
+  if (guides.length) content.guides = guides;
+  if (bindings.length) content.bindings = bindings;
 }
 var translator = (plan) => (source, values) => compileText(plan, source, values);
 function builtVisual(built) {
@@ -16994,14 +17185,14 @@ function mergeEquivalentVisualInputs(plan) {
 function lessonPlanPlugins(plan) {
   const installed = new Map(INSTALLED_PLUGINS.map((plugin) => [plugin.manifest.id, plugin.manifest]));
   const used = /* @__PURE__ */ new Set();
-  const add = (id) => {
+  const add2 = (id) => {
     if (used.has(id)) return;
     used.add(id);
-    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add(dependency);
+    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add2(dependency);
   };
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
-    add(RECIPE_PLUGIN[action.content.capability]);
+    add2(RECIPE_PLUGIN[action.content.capability]);
   }
   return Object.fromEntries([...used].sort().map((id) => [id, installed.get(id).version]));
 }
