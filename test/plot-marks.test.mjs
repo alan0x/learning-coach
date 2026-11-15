@@ -157,3 +157,13 @@ test("coefficients too long for one binding refuse the marks in the section, nam
     assert.match(requests[1]?.label ?? "", /section/u);
   }
 });
+
+// Review: without marks, a slope lesson's automatic A and B are found as on main, at the start only, so a
+// lesson without marks compiles (or is refused) exactly as before the option.
+test("without marks, the automatic A and B are placed as before the option", async () => {
+  const reply = JSON.parse(plotReply({ formula: "sqrt(x+n1)", marks: undefined, numbers: [[1, -1, 1, "h"]], moments: [{ say: "看斜率。" }, { say: "移动曲线。", animations: [[1, -1]] }] }));
+  reply.course.outline.title = "曲线上两点的斜率";
+  const { lesson, rejected } = await generate(JSON.stringify(reply));
+  assert.equal(lesson, undefined);
+  assert.ok(rejected.some((miss) => /LESSON_PLAN_OLL_SEMANTIC .*not finite/u.test(miss)), rejected.join(" | "));
+});
