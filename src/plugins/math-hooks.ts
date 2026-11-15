@@ -153,7 +153,6 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
         numberCount,
         `$lessonPlanSection.visual.parameters.formulas[${index}]`,
       ));
-      movingPointFromUnusedX(parameters, parsed, numberLabels, visualNumbers);
       if (parsed.length === 1) {
         parameters.expression_tokens = parsed[0];
         return;
@@ -258,36 +257,28 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
 /**
  * A formula that names a lesson number by its symbol reads that number: "a*(x-2)^2+1" where the visual's
  * one number is labelled "a", "k*x+1" for "斜率 k" (the trial: 3 of 48 lessons, and 5 of the 139 recorded
- * ones, were refused for it and asked again). A name is replaced only when it is no function or constant,
- * and exactly one of the visual's numbers shows it as its symbol (the label's trailing letter, as plot text
- * shows it); anything else is left to the parser, which refuses it as before.
+ * ones, were refused for it and asked again). Only names the parser would refuse are replaced: the right
+ * side of an "=" only (the parser takes "y =" and "f(x) =" itself), read as its lexer reads them (letters
+ * only; compared lowercased, so "E", "X" and "Sin" stay e, x and sin), and only when exactly one of the
+ * visual's numbers shows that name as its symbol (the label's trailing letter, as plot text shows it).
  */
 function namesToNumbers(formula: unknown, labels: readonly string[], visualNumbers: readonly number[]): unknown {
   if (typeof formula !== "string") return formula;
+  const equals = formula.indexOf("=");
+  const left = equals >= 0 ? formula.slice(0, equals + 1) : "";
+  const right = equals >= 0 ? formula.slice(equals + 1) : formula;
   const symbol = (label: string) => /([A-Za-z\u03b1-\u03c9])$/u.exec(label.trim())?.[1];
-  return formula.replace(/[A-Za-z_][A-Za-z0-9_]*/gu, (name, offset: number, whole: string) => {
-    if (name === "x" || name === "pi" || name === "e" || /^n\d+$/u.test(name) || formulaFunctions.has(name)) return name;
+  const known = (name: string) => {
+    const lower = name.toLowerCase();
+    return lower === "x" || lower === "pi" || lower === "e" || /^n\d+$/u.test(lower) || formulaFunctions.has(lower);
+  };
+  return left + right.replace(/n\d+|[A-Za-z_]+/gu, (name, offset: number, whole: string) => {
+    if (known(name)) return name;
     // Part of a number ("2e3") is not a name.
-    if (/[0-9.]/u.test(whole[offset - 1] ?? "")) return name;
+    if (/[0-9.]/u.test(whole[offset - 1] ?? "") && /^e/iu.test(name)) return name;
     const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
     return matches.length === 1 ? `n${matches[0]}` : name;
   });
-}
-
-/**
- * A visual number that a single fixed formula never reads, labelled as an x position ("x", "探针 x 坐标",
- * "x-coordinate"), is the point moving along the curve, which the model left out of `sample_x_numbers`
- * (the trial: 2 lessons refused for it). Only on one fixed curve, when the model gave no sample numbers and
- * every one of the visual's numbers (one or two) is labelled that way. Where a formula reads a lesson
- * number, an unread one may be a parameter the model forgot to write in (the vertex's 横坐标 h), and
- * several fixed curves may list a number they do not move: both are left to the existing checks.
- */
-function movingPointFromUnusedX(parameters: Record<string, unknown>, parsed: LessonPlanMathToken[][], labels: readonly string[], visualNumbers: readonly number[]): void {
-  if (Array.isArray(parameters.sample_x_numbers) && parameters.sample_x_numbers.length) return;
-  if (parsed.length !== 1 || parsed.flat().some((token) => token.kind === "number")) return;
-  const unread = [...new Set(visualNumbers)];
-  const namesX = (label: string) => /(^|[^A-Za-z])x($|[^A-Za-z])/u.test(label);
-  if (unread.length >= 1 && unread.length <= 2 && unread.every((number) => namesX(labels[number - 1] ?? ""))) parameters.sample_x_numbers = unread;
 }
 
 /**

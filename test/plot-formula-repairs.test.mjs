@@ -11,7 +11,7 @@ const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js"
 const run5 = JSON.parse(await readFile(new URL("./fixtures/number-line-run5-replies.json", import.meta.url), "utf8"));
 const decimal = (value) => ({ mantissa: Math.round(value * 10), scale: 1 });
 
-const plotReply = ({ formula, numbers, visualNumbers = numbers.map((_number, position) => position + 1), moments }) => {
+const plotReply = ({ formula, numbers, visualNumbers = numbers.map((_number, position) => position + 1), moments, samples }) => {
   const reply = structuredClone(run5.turns.find((turn) => turn.pair === 42).replies[0]);
   const outline = reply.course.outline;
   outline.numbers = numbers.map(([initial, min, max, label]) => ({ initial: decimal(initial), min: decimal(min), max: decimal(max), label, unit: "" }));
@@ -20,7 +20,7 @@ const plotReply = ({ formula, numbers, visualNumbers = numbers.map((_number, pos
     moments: moments.map((moment, index) => ({
       narration: moment.say, delivery: "patient",
       ...(index === 0 ? {
-        visual_creates: [{ course_visual: 1, content: { parameters: { formulas: [formula] }, numbers: visualNumbers } }],
+        visual_creates: [{ course_visual: 1, content: { parameters: { formulas: [formula], ...(samples ? { sample_x_numbers: samples } : {}) }, numbers: visualNumbers } }],
         math_creates: [{ reusable_item: 1, content: { latex: `y = ${formula}` } }],
       } : {}),
       ...(moment.animations ? { animations: moment.animations.map(([number, value]) => ({ number, end_value: decimal(value), duration_intent: "normal" })) } : {}),
@@ -90,4 +90,34 @@ test("an unread number is not taken as a moving point where the label names no x
     const points = repaired.lesson ? plotContent(repaired.lesson).points ?? [] : [];
     assert.ok(!points.some((point) => point.as === "moving-point"), label);
   }
+});
+
+// Review of #96 (default path): inputs that compile on main must compile the same way.
+test("names the parser already reads are never replaced: e, x in any case, and the y = / f(x) = left side", async () => {
+  const curveOf = (lesson) => JSON.stringify(plotContent(lesson).curves);
+  const capitalE = await generate(plotReply({ formula: "E^x", numbers: [[1, -2, 2, "点 E"]], samples: [1], moments: [{ say: "看曲线上的点。" }] }));
+  assert.ok(capitalE.lesson, capitalE.rejected.join(" | "));
+  assert.ok(!curveOf(capitalE.lesson).includes("number_01"), curveOf(capitalE.lesson));
+  assert.ok(plotContent(capitalE.lesson).points.some((point) => point.as === "moving-point"));
+  for (const [formula, label] of [["f(x) = sin(n1*x)", "频率 f"], ["y = n1*x", "斜率 y"]]) {
+    const { lesson, rejected } = await generate(plotReply({ formula, numbers: [[1, 1, 3, label]], moments: [{ say: "看图像。" }] }));
+    assert.ok(lesson, `${formula}: ${rejected.join(" | ")}`);
+  }
+  const capitalX = await generate(plotReply({ formula: "X^2", numbers: [[1, -2, 2, "X"]], samples: [1], moments: [{ say: "看曲线上的点。" }] }));
+  assert.ok(capitalX.lesson, capitalX.rejected.join(" | "));
+});
+
+test("an x number becomes a moving point only where the section moves it, its label names an x position, and the curve exists at its ends", async () => {
+  // Never moved: compiles as a fixed curve, as on main (the unread number is dropped).
+  for (const formula of ["x^2", "sqrt(x)"]) {
+    const still = await generate(plotReply({ formula, numbers: [[1, -5, 5, "x"]], moments: [{ say: "看图像。" }] }));
+    assert.ok(still.lesson, `${formula}: ${still.rejected.join(" | ")}`);
+    assert.ok(!(plotContent(still.lesson).points ?? []).some((point) => point.as === "moving-point"), formula);
+  }
+  // Moved, but the curve does not exist at the slider's minimum (√x at −5): refused as on main.
+  const outside = await generate(plotReply({ formula: "sqrt(x)", numbers: [[1, -5, 5, "x"]], moments: [{ say: "看。" }, { say: "移动。", animations: [[1, 4]] }] }));
+  assert.ok(outside.rejected.some((miss) => /LESSON_PLAN_INTERACTION_MISMATCH/u.test(miss)), outside.rejected.join(" | "));
+  // "x 的系数" (the coefficient of x) names no x position: refused as on main.
+  const coefficient = await generate(plotReply({ formula: "2*x+1", numbers: [[2, -3, 3, "x 的系数"]], moments: [{ say: "看。" }, { say: "改变。", animations: [[1, 3]] }] }));
+  assert.ok(coefficient.rejected.some((miss) => /LESSON_PLAN_INTERACTION_MISMATCH/u.test(miss)), coefficient.rejected.join(" | "));
 });

@@ -13658,6 +13658,19 @@ function sectionText(draft) {
     ...(draft.student_activities ?? []).flatMap((activity) => clauses(activity.prompt))
   ];
 }
+function xPositionLabel(label) {
+  return /^\s*x\s*$/iu.test(label) || /(^|[^A-Za-z])x\s*[-_ ]?\s*的?\s*(坐标|座标|值|coordinate|value)/iu.test(label);
+}
+function curveExistsAt(visual, xs) {
+  const tokens = visual.parameters?.expression_tokens;
+  if (!Array.isArray(tokens)) return false;
+  try {
+    const curve = compileMathExpression(mathExpressionToOll(tokens), ["x"]);
+    return xs.every((x) => typeof x === "number" && Number.isFinite(curve({ x })));
+  } catch {
+    return false;
+  }
+}
 function structuralUse(draft, number) {
   return draft.moments.some((moment) => moment.actions.some((action) => action.action === "animate" && action.number === number)) || (draft.student_activities ?? []).some((activity) => activity.kind === "number_target" && (activity.number_controls.some((control) => control.number === number) || activity.expression?.some((token) => token.kind === "number" && token.number === number)));
 }
@@ -13754,7 +13767,12 @@ function normalizePlotDraftBindings(draft, context) {
     const singleFormula = Array.isArray(visual.parameters?.expression_tokens);
     const formulasPath = path.replace(/sample_x_numbers$/, "formulas");
     const vertexCandidates = declared.length ? candidates : (outline.numbers ?? []).flatMap((number, index) => number.student_control && unused(index + 1) && vertexRole(number.label ?? "") ? [index + 1] : []);
-    if (fixed && wantsVertex && !hasSampleIntent && recoverVertex(visual, vertexCandidates, outline)) {
+    const movingPoints = fixed && singleFormula && !wantsVertex && candidates.length >= 1 && candidates.length <= 2 && candidates.some((number) => structuralUse(draft, number) || controlsNamed(number)) && candidates.every((number) => xPositionLabel(outline.numbers?.[number - 1]?.label ?? "") && curveExistsAt(visual, [outline.numbers?.[number - 1]?.min, outline.numbers?.[number - 1]?.max, outline.numbers?.[number - 1]?.initial]));
+    if (movingPoints) {
+      visual.parameters.sample_x_numbers = [...candidates];
+      samples = [...candidates];
+      adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "x_position_numbers_as_moving_points" });
+    } else if (fixed && wantsVertex && !hasSampleIntent && recoverVertex(visual, vertexCandidates, outline)) {
       curve = plotCurveNumbers(visual.parameters);
       adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "quadratic_vertex_from_confirmed_roles" });
     } else {
@@ -14159,7 +14177,6 @@ var MATH_HOOKS = {
         numberCount,
         `$lessonPlanSection.visual.parameters.formulas[${index}]`
       ));
-      movingPointFromUnusedX(parameters3, parsed, numberLabels, visualNumbers);
       if (parsed.length === 1) {
         parameters3.expression_tokens = parsed[0];
         return;
@@ -14244,20 +14261,20 @@ var MATH_HOOKS = {
 };
 function namesToNumbers(formula, labels, visualNumbers) {
   if (typeof formula !== "string") return formula;
+  const equals = formula.indexOf("=");
+  const left = equals >= 0 ? formula.slice(0, equals + 1) : "";
+  const right = equals >= 0 ? formula.slice(equals + 1) : formula;
   const symbol = (label) => /([A-Za-z\u03b1-\u03c9])$/u.exec(label.trim())?.[1];
-  return formula.replace(/[A-Za-z_][A-Za-z0-9_]*/gu, (name, offset, whole) => {
-    if (name === "x" || name === "pi" || name === "e" || /^n\d+$/u.test(name) || formulaFunctions.has(name)) return name;
-    if (/[0-9.]/u.test(whole[offset - 1] ?? "")) return name;
+  const known = (name) => {
+    const lower = name.toLowerCase();
+    return lower === "x" || lower === "pi" || lower === "e" || /^n\d+$/u.test(lower) || formulaFunctions.has(lower);
+  };
+  return left + right.replace(/n\d+|[A-Za-z_]+/gu, (name, offset, whole) => {
+    if (known(name)) return name;
+    if (/[0-9.]/u.test(whole[offset - 1] ?? "") && /^e/iu.test(name)) return name;
     const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
     return matches.length === 1 ? `n${matches[0]}` : name;
   });
-}
-function movingPointFromUnusedX(parameters3, parsed, labels, visualNumbers) {
-  if (Array.isArray(parameters3.sample_x_numbers) && parameters3.sample_x_numbers.length) return;
-  if (parsed.length !== 1 || parsed.flat().some((token) => token.kind === "number")) return;
-  const unread = [...new Set(visualNumbers)];
-  const namesX = (label) => /(^|[^A-Za-z])x($|[^A-Za-z])/u.test(label);
-  if (unread.length >= 1 && unread.length <= 2 && unread.every((number) => namesX(labels[number - 1] ?? ""))) parameters3.sample_x_numbers = unread;
 }
 var PIECE_ENDS = { "[]": [true, true], "[)": [true, false], "(]": [false, true], "()": [false, false] };
 function lowerPieces(parameters3, numberCount) {
