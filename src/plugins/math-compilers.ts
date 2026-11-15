@@ -13,7 +13,7 @@ import { parseModelFormula } from "./math-formulas.js";
 import { compileMathExpression, type AuthoringAction } from "octos-lesson-language";
 import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
-import { COARSE_UNITS, lessonValues } from "./number-line-fit.js";
+import { COARSE_UNITS, lessonValues, moveLandings } from "./number-line-fit.js";
 import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
@@ -871,11 +871,95 @@ function compileNumberLine(
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, ...(built.parts.move ? { primary_control: built.parts.move } : {}) })) };
 }
 
+/**
+ * A number line in steps (decision 0017): a start and two or three moves, each its own jump from where
+ * the one before landed, and the end. The landings are jump ends, so the player keeps their tick labels.
+ * - One move is the number line's (`number_line`), and more than three is out of scope: both are refused
+ *   as a fault the outline owns, naming this recipe, so the outline is asked again without it and may
+ *   still choose the one-move line. One jump under narration of two steps is the defect the probe found
+ *   (Coach #79).
+ * - Hops only when every move goes the same way. A move with a slider is judged on its whole range (the
+ *   learner can turn it back); a fixed one on the values the lesson gives it, since the model writes wide
+ *   ranges it never uses (5 in 0 to 10). A move that turns back over an earlier one is drawn raised, as
+ *   one arc even with hops (OLL #61), so its narration must not count hops; drawing none keeps the line
+ *   and the card in step.
+ */
+function compileNumberLineSteps(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const { title, labelStyle } = numberLineLabelStyle(content, path);
+  const [startNumber, ...moveNumbers] = content.numbers ?? [];
+  if (!startNumber || moveNumbers.length < 2 || moveNumbers.length > 3) {
+    throw new LessonPlanError("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`,
+      "a number line in steps needs a start and two or three moves; one move is drawn by number_line", "number_line_steps");
+  }
+  const start = numberDefinition(plan, startNumber, `${path}.numbers[0]`);
+  const moves = moveNumbers.map((number, position) => numberDefinition(plan, number, `${path}.numbers[${position + 1}]`));
+  // Every value a slider can reach: the start's, and each landing's lowest, highest and starting value.
+  const values = [start.min, start.max, start.initial];
+  let lowest = start.min, highest = start.max, initial = start.initial;
+  for (const move of moves) {
+    lowest += move.min;
+    highest += move.max;
+    initial += move.initial;
+    values.push(lowest, highest, initial);
+  }
+  const grid = [
+    ...values,
+    ...moves.flatMap((move) => [move.min, move.max, move.initial]),
+    ...[start, ...moves].map((definition) => definition.student_control?.step).filter((step): step is number => typeof step === "number" && step > 0),
+  ];
+  const shown = [
+    start.initial, ...lessonValues(plan, startNumber),
+    ...moves.flatMap((move, position) => [move.initial, ...lessonValues(plan, moveNumbers[position]!)]),
+    ...moveLandings(plan, [startNumber, ...moveNumbers]),
+  ];
+  const frame = numberLineFrame(values, grid, shown, labelStyle, path);
+  const unit = frame.step / frame.subdivisions;
+  const whole = (value: number) => onGrid(value / unit, 1);
+  // The values each move can take: its whole range with a slider, else the values the lesson gives it.
+  const takes = moves.map((move, position) => (move.student_control
+    ? [move.min, move.max, move.initial]
+    : [move.initial, ...lessonValues(plan, moveNumbers[position]!)]));
+  const oneWay = takes.every((values) => values.every((value) => value >= 0)) || takes.every((values) => values.every((value) => value <= 0));
+  const hops = oneWay && moves.every((move, position) => takes[position]!.every(whole)
+    && (move.student_control?.step === undefined || whole(move.student_control.step))
+    && Math.ceil(Math.max(...takes[position]!.map(Math.abs)) / unit - 1e-9) <= NUMBER_LINE_LIMITS.hops);
+  const startVariable = variableAlias(startNumber);
+  const moveVariables = moveNumbers.map((number) => variableAlias(number));
+  const sum = (count: number) => [startVariable, ...moveVariables.slice(0, count)].map((name) => `(${name})`).join("+");
+  const sumInitial = (count: number) => Number([start, ...moves.slice(0, count)].reduce((total, definition) => total + definition.initial, 0).toPrecision(12));
+  const jumpNames = ["move", "move2", "move3"];
+  const built = buildNumberLine({
+    as: base, role, place: placement,
+    title: optionalText(title, compileText(plan, "数轴"), `${path}.title`),
+    range: frame.range,
+    ticks: frame.ticks,
+    points: [
+      { as: "start", value: { expression: startVariable, initial: start.initial }, label: compileText(plan, "起点") },
+      { as: "end", value: { expression: sum(moves.length), initial: sumInitial(moves.length) }, label: compileText(plan, "终点") },
+    ],
+    jumps: moves.map((move, position) => ({
+      as: jumpNames[position]!,
+      from: position === 0 ? "start" : { expression: sum(position), initial: sumInitial(position) },
+      by: { expression: moveVariables[position]!, initial: move.initial },
+      hops,
+    })),
+  });
+  return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, ...(built.parts.move ? { primary_control: built.parts.move } : {}) })) };
+}
+
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
   number_line_solution: compileNumberLineSolution,
   number_line_rounding: compileNumberLineRounding,
+  number_line_steps: compileNumberLineSteps,
   function_plot: compileFunctionPlot,
   unit_circle_projection: compileUnitCircleProjection,
   circle_polygon_bounds: compileCirclePolygonBounds,
