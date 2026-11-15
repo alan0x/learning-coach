@@ -270,3 +270,57 @@ test("one piece or five, an end not above its start, and an unknown ends code ar
   const four = await generate(plotReply({ pieces: [["x", null, 1, "()"], ["1", 1, 2, "[)"], ["2", 2, 3, "[)"], ["3", 3, null, "[)"]], moments: [{ say: "四段。" }] }));
   assert.ok(four.lesson, four.rejected.join(" | "));
 });
+
+// Review of #92: a sign read from sampled states (the start, demonstrated states, each slider's ends one at
+// a time) misses a change between them. Signs are now proved over the numbers' whole ranges.
+const withSliders = (reply, marks) => {
+  const parsed = JSON.parse(reply);
+  for (const number of parsed.course.outline.numbers) number.student_control = { kind: "slider" };
+  if (marks) parsed.course.first_section.moments[0].visual_creates[0].content.parameters.marks = marks;
+  return JSON.stringify(parsed);
+};
+const rangeContent = async (formula, numbers, marks = ["range"]) => {
+  const { lesson, rejected } = await generate(withSliders(plotReply({ formula, marks, numbers, moments: [{ say: "看值域。" }] })));
+  return { lesson, rejected, content: lesson && plotContent(lesson) };
+};
+
+test("a range bar opens to the side its sign proves, and to either side, guarded, where the sign can change (review)", async () => {
+  const one = [[2, -3, 3, "a"]], two = [[4, 2, 5, "p"], [1, 0, 3, "q"]];
+  for (const [formula, numbers] of [["(n1^2-1)x^2", one], ["(n1^2-1)sqrt(x)", one], ["(n1-n2)x^2", two]]) {
+    const { lesson, rejected, content } = await rangeContent(formula, numbers);
+    assert.ok(lesson, `${formula}: ${rejected.join(" | ")}`);
+    const bars = content.intervals.filter((interval) => interval.axis === "y");
+    assert.equal(bars.length, 2, formula);
+    // Both ends bound and hidden while undefined; only one bar is ever shown, so each is labelled.
+    assert.deepEqual(bars.map((bar) => content.bindings.some((binding) => binding.target === `${bar.as}.${bar.from === null ? "to" : "from"}` && binding.hide_when_undefined)), [true, true], formula);
+    assert.ok(bars.every((bar) => bar.label), formula);
+    assert.deepEqual(judgePlot({ id: formula, expect: {} }, lesson).hard, [], formula);
+  }
+  // A sign proved over the whole slider: one bar.
+  const proved = await rangeContent("n1x^2", [[2, 1, 3, "a"]]);
+  assert.equal(proved.content.intervals.filter((interval) => interval.axis === "y").length, 1);
+});
+
+test("a line's range, or a log's, is refused where its coefficient can reach 0 anywhere on the sliders (review)", async () => {
+  for (const [formula, numbers] of [["(n1-n2)x+1", [[4, 2, 5, "p"], [1, 0, 3, "q"]]], ["(n1^2-1)x", [[2, -3, 3, "a"]]]]) {
+    const { lesson, rejected } = await rangeContent(formula, numbers);
+    assert.equal(lesson, undefined, formula);
+    assert.ok(rejected.some((miss) => /the range mark collapses to one value/u.test(miss)), `${formula}: ${rejected.join(" | ")}`);
+  }
+  const steep = await rangeContent("(n1^2+1)x", [[2, -3, 3, "a"]]);
+  assert.ok(steep.lesson, steep.rejected.join(" | "));
+});
+
+test("an exponential's domain needs a base above 0 wherever the numbers go, also in a piece (review)", async () => {
+  const sliding = await rangeContent("n1^x", [[2, -1, 3, "b"]], ["domain"]);
+  assert.equal(sliding.lesson, undefined);
+  assert.ok(sliding.rejected.some((miss) => /the domain mark needs a base above 0/u.test(miss)), sliding.rejected.join(" | "));
+  const negative = await rangeContent("(-2)^x", [], ["domain"]);
+  assert.ok(negative.rejected.some((miss) => /the domain mark needs a base above 0/u.test(miss)), negative.rejected.join(" | "));
+  const positive = await rangeContent("n1^x", [[2, 0.5, 3, "b"]], ["domain"]);
+  assert.ok(positive.lesson, positive.rejected.join(" | "));
+  const piece = await generate(withSliders(plotReply({ pieces: [["(-2)^x", null, 0, "()"], ["1", 0, null, "[)"]], moments: [{ say: "两段。" }] }), ["domain"]));
+  assert.ok(piece.rejected.some((miss) => /domain mark of a piecewise function/u.test(miss)), piece.rejected.join(" | "));
+  const fine = await generate(withSliders(plotReply({ pieces: [["2^x", null, 0, "()"], ["1", 0, null, "[)"]], moments: [{ say: "两段。" }] }), ["domain"]));
+  assert.ok(fine.lesson, fine.rejected.join(" | "));
+});

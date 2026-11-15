@@ -15,8 +15,12 @@
 // Ends that read lesson numbers are bound to them. Where a sign decides the side (a in a·√…), two bars
 // are written, each with an end defined only for one sign ("k + 0·log(a)"), so the player shows the
 // right one and hides both at a = 0 (0018 §6: drawing less there, never drawing wrong). A sign that
-// decides the domain's side (p in √(px + q)) must be a constant. A range that collapses to one value at
-// a slider stop (m = 0 in mx + c, a = 0 in a·log…) is refused: an unbounded bar cannot be hidden.
+// decides the domain's side (p in √(px + q)) must be a constant. A range that can collapse to one value
+// (m = 0 in mx + c, a = 0 in a·log…) is refused: an unbounded bar cannot be hidden.
+//
+// Signs are proved over every value the lesson numbers can take (interval arithmetic over each number's
+// min to max), never read from sampled states: samples miss a sign change between them (review). One bar
+// is written only for a proved sign; otherwise the guarded pair, or the refusal.
 import { LessonPlanError, type LessonPlanMathExpression } from "../lesson-plan.js";
 import { polynomialOf } from "./plot-marks.js";
 
@@ -27,6 +31,8 @@ export interface AxisBar {
   to: string | null;
   from_closed: boolean;
   to_closed: boolean;
+  /** Shown instead of the bar before it (the other sign of a guarded pair), so it carries the label too. */
+  alternative?: true;
 }
 
 interface Node { start: number; end: number; token: LessonPlanMathExpression[number]; args: Node[] }
@@ -117,8 +123,8 @@ function shapeOf(tokens: LessonPlanMathExpression, root: Node): Shape | undefine
 }
 
 export interface SignCheck {
-  /** The values of an expression in the lesson numbers at every state the lesson and its sliders reach. */
-  values: (text: string) => number[];
+  /** The sign an expression in the lesson numbers has wherever they can go: proved, or "unknown". */
+  sign: (text: string) => "positive" | "negative" | "unknown";
 }
 
 /**
@@ -132,18 +138,16 @@ export function formulaBars(tokens: LessonPlanMathExpression, want: { domain: bo
   const root = treeOf(tokens);
   if (!root) return refuse(first, "could not be derived");
   const all = (axis: "x" | "y"): AxisBar => ({ axis, from: null, to: null, from_closed: false, to_closed: false });
-  const signs = (text: string) => {
-    const values = check.values(text);
-    return { positive: values.every((value) => value > 0), negative: values.every((value) => value < 0), zero: values.some((value) => value === 0 || !Number.isFinite(value)) };
-  };
-  // Both sides of a sign: one bar for each, its end defined only for that sign; one bar when it never changes.
+  const proved = (text: string) => check.sign(text) !== "unknown";
+  // Both sides of a sign: one bar for each, its end defined only for that sign; one bar when the sign is proved.
   const bySign = (sign: string, end: string, up: { from_closed: boolean }, axis: "x" | "y"): AxisBar[] => {
-    const s = signs(sign);
+    const s = check.sign(sign);
     const upBar = (guarded: string): AxisBar => ({ axis, from: guarded, to: null, from_closed: up.from_closed, to_closed: false });
     const downBar = (guarded: string): AxisBar => ({ axis, from: null, to: guarded, from_closed: false, to_closed: up.from_closed });
-    if (s.positive) return [upBar(end)];
-    if (s.negative) return [downBar(end)];
-    return [upBar(`${wrap(end)}+0*log(${wrap(sign)})`), downBar(`${wrap(end)}+0*log(-${wrap(sign)})`)];
+    if (s === "positive") return [upBar(end)];
+    if (s === "negative") return [downBar(end)];
+    // Only one of the two is ever shown, so each carries the label.
+    return [upBar(`${wrap(end)}+0*log(${wrap(sign)})`), { ...downBar(`${wrap(end)}+0*log(-${wrap(sign)})`), alternative: true }];
   };
   const bars: AxisBar[] = [];
   const polynomial = polynomialOf(tokens) as Scalar[] | undefined;
@@ -153,7 +157,7 @@ export function formulaBars(tokens: LessonPlanMathExpression, want: { domain: bo
     if (want.range) {
       if (a!.value === 0) {
         if (b!.value === 0) bars.push({ axis: "y", from: c!.text, to: c!.text, from_closed: true, to_closed: true });
-        else if (signs(b!.text).zero || (!signs(b!.text).positive && !signs(b!.text).negative)) refuse("range", "collapses to one value where the slope is 0");
+        else if (!proved(b!.text)) refuse("range", "collapses to one value where the slope is 0");
         else bars.push(all("y"));
       } else {
         const vertexY = `${wrap(c!.text)}-${wrap(b!.text)}^2/(4*${wrap(a!.text)})`;
@@ -169,11 +173,14 @@ export function formulaBars(tokens: LessonPlanMathExpression, want: { domain: bo
   // Where x's coefficient reaches 0 the curve is a constant, whose range is one value: the bars below
   // would claim more, and an unbounded bar cannot be hidden (review).
   if (want.range) {
-    const p = signs(shape.p.text);
-    if (pSign === 0 || (pSign === undefined && !p.positive && !p.negative)) refuse("range", "collapses to one value where x's coefficient is 0");
+    if (pSign === 0 || !proved(shape.p.text)) refuse("range", "collapses to one value where x's coefficient is 0");
   }
   if (want.domain) {
-    if (shape.family === "exponential") bars.push(all("x"));
+    if (shape.family === "exponential") {
+      // b^x is defined for every x only for a base above 0, wherever the lesson numbers go (review).
+      if (shape.base && check.sign(shape.base.text) !== "positive") refuse("domain", "needs a base above 0");
+      bars.push(all("x"));
+    }
     else if (shape.family === "reciprocal") {
       bars.push({ axis: "x", from: null, to: edge, from_closed: false, to_closed: false }, { axis: "x", from: edge, to: null, from_closed: false, to_closed: false });
     } else {
@@ -184,13 +191,11 @@ export function formulaBars(tokens: LessonPlanMathExpression, want: { domain: bo
   }
   if (want.range) {
     if (shape.family === "log") {
-      const s = signs(shape.a);
-      if (!s.positive && !s.negative) refuse("range", "collapses to one value where the coefficient is 0");
+      if (!proved(shape.a)) refuse("range", "collapses to one value where the coefficient is 0");
       bars.push(all("y"));
     } else if (shape.family === "reciprocal") {
-      const s = signs(shape.a);
       // At a = 0 the curve is the line y = k: both bars hide.
-      const guard = s.positive || s.negative ? shape.k : `${wrap(shape.k)}+0*log((${shape.a})^2)`;
+      const guard = proved(shape.a) ? shape.k : `${wrap(shape.k)}+0*log((${shape.a})^2)`;
       bars.push({ axis: "y", from: null, to: guard, from_closed: false, to_closed: false }, { axis: "y", from: guard, to: null, from_closed: false, to_closed: false });
     } else if (shape.family === "exponential") {
       if (shape.base && !(shape.base.value !== undefined && shape.base.value > 0 && shape.base.value !== 1)) refuse("range", "needs a fixed base above 0 and not 1");
@@ -217,14 +222,17 @@ function guarded(bars: AxisBar[], first: string, refuse: (what: string, why: str
 export function pieceBars(pieces: ReadonlyArray<{ tokens: LessonPlanMathExpression; from: number | null; to: number | null; from_closed: boolean; to_closed: boolean }>, want: { domain: boolean; range: boolean }, path: string): AxisBar[] {
   type Span = { from: number | null; to: number | null; from_closed: boolean; to_closed: boolean };
   const bars: AxisBar[] = [];
-  // A piece's interval is its domain only where its formula is defined throughout: a polynomial or an
-  // exponential is; a root, reciprocal or logarithm piece could hide a gap (1/x on [−1, 1]), so refused.
+  // A piece's interval is its domain only where its formula is defined throughout: a constant, line or
+  // quadratic is, and an exponential with a base above 0 (review: (−2)^x is not); a root, reciprocal or
+  // logarithm piece could hide a gap (1/x on [−1, 1]), so refused, as is a higher power, which is not read.
   if (want.domain) {
     for (const piece of pieces) {
       const tree = treeOf(piece.tokens);
-      const definedEverywhere = polynomialOf(piece.tokens) !== undefined || (tree !== undefined && shapeOf(piece.tokens, tree)?.family === "exponential");
+      const shape = tree === undefined ? undefined : shapeOf(piece.tokens, tree);
+      const definedEverywhere = polynomialOf(piece.tokens) !== undefined
+        || (shape?.family === "exponential" && (shape.base === undefined || (shape.base.value !== undefined && shape.base.value > 0)));
       if (!definedEverywhere) {
-        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a polynomial or an exponential; leave it out of marks and do not narrate it");
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a constant, a line, a quadratic or an exponential with a base above 0; leave it out of marks and do not narrate it");
       }
     }
     bars.push(...join(pieces).map((span) => toBar("x", span)));

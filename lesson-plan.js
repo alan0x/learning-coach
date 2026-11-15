@@ -8437,8 +8437,8 @@ function planTickStep(content) {
     return content.ticks.step;
   const span2 = content.range.max - content.range.min;
   const raw = span2 / 10;
-  const power = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 5, 10].map((factor) => factor * power).find((candidate) => candidate >= raw * (1 - 1e-9)) ?? 10 * power;
+  const power2 = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 5, 10].map((factor) => factor * power2).find((candidate) => candidate >= raw * (1 - 1e-9)) ?? 10 * power2;
   return Number(step.toPrecision(12));
 }
 var near = (a, b, scale = 1) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(scale));
@@ -12378,9 +12378,9 @@ function buildSpringAndMass(input) {
 function niceAxisMax(value2) {
   if (!(value2 > 0) || !Number.isFinite(value2))
     return 1;
-  const power = 10 ** Math.floor(Math.log10(value2));
-  const step = [1, 2, 2.5, 5, 10].find((candidate) => candidate * power >= value2 * (1 - 1e-9)) ?? 10;
-  return Number((step * power).toPrecision(12));
+  const power2 = 10 ** Math.floor(Math.log10(value2));
+  const step = [1, 2, 2.5, 5, 10].find((candidate) => candidate * power2 >= value2 * (1 - 1e-9)) ?? 10;
+  return Number((step * power2).toPrecision(12));
 }
 function quantityValue(quantity) {
   return quantity.expression ? `(${quantity.expression})` : String(quantity.initial);
@@ -15625,9 +15625,9 @@ function union(a, b) {
 }
 function niceStep(raw) {
   if (!(raw > 0) || !Number.isFinite(raw)) return 1;
-  const power = 10 ** Math.floor(Math.log10(raw));
-  const normalized = raw / power;
-  return ([1, 2, 2.5, 5, 10].find((value2) => normalized <= value2 + 1e-9) ?? 10) * power;
+  const power2 = 10 ** Math.floor(Math.log10(raw));
+  const normalized = raw / power2;
+  return ([1, 2, 2.5, 5, 10].find((value2) => normalized <= value2 + 1e-9) ?? 10) * power2;
 }
 function snap2(range, unit = 1) {
   const step = unit === 1 ? niceStep(span(range) / 20) : unit * Math.max(1, Math.round(span(range) / unit / 8));
@@ -16133,8 +16133,8 @@ function divide(a, b) {
   if (b.value === 1) return a;
   return { text: `${wrap(a)}/${wrap(b)}` };
 }
-var degree = (p) => p.reduce((highest, scalar, power) => isZero(scalar) ? highest : power, 0);
-var coefficient = (p, power) => p[power] ?? constant(0);
+var degree = (p) => p.reduce((highest, scalar, power2) => isZero(scalar) ? highest : power2, 0);
+var coefficient = (p, power2) => p[power2] ?? constant(0);
 function polynomialOf(tokens) {
   const stack = [];
   for (const token of tokens) {
@@ -16155,7 +16155,7 @@ function polynomialOf(tokens) {
       if (!left || !right) return void 0;
       let result;
       if (token.operator === "add" || token.operator === "subtract") {
-        result = [0, 1, 2].map((power) => add(coefficient(left, power), token.operator === "add" ? coefficient(right, power) : negate(coefficient(right, power))));
+        result = [0, 1, 2].map((power2) => add(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
       } else if (token.operator === "multiply") {
         result = times(left, right);
       } else if (token.operator === "divide") {
@@ -16191,7 +16191,7 @@ function markParts(tokens, marks, labels, check, path) {
     throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `the ${mark} mark ${why}; leave it out of marks and do not narrate it`);
   };
   if (!polynomial2) return refuse(marks[0], "needs a line or a quadratic (marks are derived exactly)");
-  const [c, b, a] = [0, 1, 2].map((power) => coefficient(polynomial2, power));
+  const [c, b, a] = [0, 1, 2].map((power2) => coefficient(polynomial2, power2));
   if (polynomialText([c, b, a]).length > 240) refuse(marks[0], "is too long an expression for this formula");
   crossCheck(tokens, [c, b, a], check, path);
   const linear = isZero(a);
@@ -16247,8 +16247,8 @@ function treeOf(tokens) {
   return stack.length === 1 ? stack[0] : void 0;
 }
 var polyOf = (tokens, node) => polynomialOf(tokens.slice(node.start, node.end));
-var degreeOf = (p) => p.reduce((highest, scalar, power) => scalar.value === 0 ? highest : power, 0);
-var at = (p, power) => p[power] ?? { text: "0", value: 0 };
+var degreeOf = (p) => p.reduce((highest, scalar, power2) => scalar.value === 0 ? highest : power2, 0);
+var at = (p, power2) => p[power2] ?? { text: "0", value: 0 };
 var wrap2 = (text3) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(text3) ? text3 : `(${text3})`;
 function shapeOf(tokens, root) {
   const terms = [];
@@ -16341,27 +16341,24 @@ function formulaBars(tokens, want, check, path) {
   const root = treeOf(tokens);
   if (!root) return refuse(first, "could not be derived");
   const all = (axis) => ({ axis, from: null, to: null, from_closed: false, to_closed: false });
-  const signs = (text3) => {
-    const values = check.values(text3);
-    return { positive: values.every((value2) => value2 > 0), negative: values.every((value2) => value2 < 0), zero: values.some((value2) => value2 === 0 || !Number.isFinite(value2)) };
-  };
+  const proved = (text3) => check.sign(text3) !== "unknown";
   const bySign = (sign, end, up, axis) => {
-    const s = signs(sign);
+    const s = check.sign(sign);
     const upBar = (guarded2) => ({ axis, from: guarded2, to: null, from_closed: up.from_closed, to_closed: false });
     const downBar = (guarded2) => ({ axis, from: null, to: guarded2, from_closed: false, to_closed: up.from_closed });
-    if (s.positive) return [upBar(end)];
-    if (s.negative) return [downBar(end)];
-    return [upBar(`${wrap2(end)}+0*log(${wrap2(sign)})`), downBar(`${wrap2(end)}+0*log(-${wrap2(sign)})`)];
+    if (s === "positive") return [upBar(end)];
+    if (s === "negative") return [downBar(end)];
+    return [upBar(`${wrap2(end)}+0*log(${wrap2(sign)})`), { ...downBar(`${wrap2(end)}+0*log(-${wrap2(sign)})`), alternative: true }];
   };
   const bars = [];
   const polynomial2 = polynomialOf(tokens);
   if (polynomial2) {
-    const [c, b, a] = [0, 1, 2].map((power) => at(polynomial2, power));
+    const [c, b, a] = [0, 1, 2].map((power2) => at(polynomial2, power2));
     if (want.domain) bars.push(all("x"));
     if (want.range) {
       if (a.value === 0) {
         if (b.value === 0) bars.push({ axis: "y", from: c.text, to: c.text, from_closed: true, to_closed: true });
-        else if (signs(b.text).zero || !signs(b.text).positive && !signs(b.text).negative) refuse("range", "collapses to one value where the slope is 0");
+        else if (!proved(b.text)) refuse("range", "collapses to one value where the slope is 0");
         else bars.push(all("y"));
       } else {
         const vertexY = `${wrap2(c.text)}-${wrap2(b.text)}^2/(4*${wrap2(a.text)})`;
@@ -16375,12 +16372,13 @@ function formulaBars(tokens, want, check, path) {
   const pSign = shape.p.value;
   const edge = `-${wrap2(shape.q.text)}/${wrap2(shape.p.text)}`;
   if (want.range) {
-    const p = signs(shape.p.text);
-    if (pSign === 0 || pSign === void 0 && !p.positive && !p.negative) refuse("range", "collapses to one value where x's coefficient is 0");
+    if (pSign === 0 || !proved(shape.p.text)) refuse("range", "collapses to one value where x's coefficient is 0");
   }
   if (want.domain) {
-    if (shape.family === "exponential") bars.push(all("x"));
-    else if (shape.family === "reciprocal") {
+    if (shape.family === "exponential") {
+      if (shape.base && check.sign(shape.base.text) !== "positive") refuse("domain", "needs a base above 0");
+      bars.push(all("x"));
+    } else if (shape.family === "reciprocal") {
       bars.push({ axis: "x", from: null, to: edge, from_closed: false, to_closed: false }, { axis: "x", from: edge, to: null, from_closed: false, to_closed: false });
     } else {
       if (pSign === void 0) refuse("domain", "needs x with a fixed coefficient inside the root or logarithm");
@@ -16390,12 +16388,10 @@ function formulaBars(tokens, want, check, path) {
   }
   if (want.range) {
     if (shape.family === "log") {
-      const s = signs(shape.a);
-      if (!s.positive && !s.negative) refuse("range", "collapses to one value where the coefficient is 0");
+      if (!proved(shape.a)) refuse("range", "collapses to one value where the coefficient is 0");
       bars.push(all("y"));
     } else if (shape.family === "reciprocal") {
-      const s = signs(shape.a);
-      const guard = s.positive || s.negative ? shape.k : `${wrap2(shape.k)}+0*log((${shape.a})^2)`;
+      const guard = proved(shape.a) ? shape.k : `${wrap2(shape.k)}+0*log((${shape.a})^2)`;
       bars.push({ axis: "y", from: null, to: guard, from_closed: false, to_closed: false }, { axis: "y", from: guard, to: null, from_closed: false, to_closed: false });
     } else if (shape.family === "exponential") {
       if (shape.base && !(shape.base.value !== void 0 && shape.base.value > 0 && shape.base.value !== 1)) refuse("range", "needs a fixed base above 0 and not 1");
@@ -16417,9 +16413,10 @@ function pieceBars(pieces, want, path) {
   if (want.domain) {
     for (const piece of pieces) {
       const tree = treeOf(piece.tokens);
-      const definedEverywhere = polynomialOf(piece.tokens) !== void 0 || tree !== void 0 && shapeOf(piece.tokens, tree)?.family === "exponential";
+      const shape = tree === void 0 ? void 0 : shapeOf(piece.tokens, tree);
+      const definedEverywhere = polynomialOf(piece.tokens) !== void 0 || shape?.family === "exponential" && (shape.base === void 0 || shape.base.value !== void 0 && shape.base.value > 0);
       if (!definedEverywhere) {
-        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a polynomial or an exponential; leave it out of marks and do not narrate it");
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a constant, a line, a quadratic or an exponential with a base above 0; leave it out of marks and do not narrate it");
       }
     }
     bars.push(...join(pieces).map((span2) => toBar("x", span2)));
@@ -16460,6 +16457,128 @@ function pieceBars(pieces, want, path) {
     }
     return joined;
   }
+}
+
+// src/plugins/interval.ts
+var ALL = [-Infinity, Infinity];
+var finite2 = ([lo, hi]) => Number.isFinite(lo) && Number.isFinite(hi);
+function times2(a, b) {
+  if (!finite2(a) || !finite2(b)) return ALL;
+  const products = [a[0] * b[0], a[0] * b[1], a[1] * b[0], a[1] * b[1]];
+  return [Math.min(...products), Math.max(...products)];
+}
+function reciprocal([lo, hi]) {
+  if (lo <= 0 && hi >= 0) return ALL;
+  return [1 / hi, 1 / lo];
+}
+function power(base, exponent) {
+  if (exponent[0] !== exponent[1]) {
+    if (base[0] !== base[1] || !(base[0] > 0) || !finite2(exponent)) return ALL;
+    const ends2 = [base[0] ** exponent[0], base[0] ** exponent[1]];
+    return [Math.min(...ends2), Math.max(...ends2)];
+  }
+  const n = exponent[0];
+  if (Number.isInteger(n)) {
+    if (n === 0) return [1, 1];
+    if (n < 0) return reciprocal(power(base, [-n, -n]));
+    if (!finite2(base)) return ALL;
+    const [lo, hi] = base;
+    if (n % 2 === 1) return [lo ** n, hi ** n];
+    if (lo >= 0) return [lo ** n, hi ** n];
+    if (hi <= 0) return [hi ** n, lo ** n];
+    return [0, Math.max(lo ** n, hi ** n)];
+  }
+  if (!(base[0] > 0) || !finite2(base)) return ALL;
+  const ends = [base[0] ** n, base[1] ** n];
+  return [Math.min(...ends), Math.max(...ends)];
+}
+var FUNCTIONS2 = {
+  sqrt: ([lo, hi]) => lo >= 0 && Number.isFinite(hi) ? [Math.sqrt(lo), Math.sqrt(hi)] : ALL,
+  exp: ([lo, hi]) => [Math.exp(lo), Math.exp(hi)],
+  abs: ([lo, hi]) => lo >= 0 ? [lo, hi] : hi <= 0 ? [-hi, -lo] : [0, Math.max(-lo, hi)]
+};
+function intervalOf(text3, bounds) {
+  const tokens = text3.match(/\d+(?:\.\d+)?(?:[eE][-+]?\d+)?|[A-Za-z_][A-Za-z0-9_]*|[-+*/^(),]|\S/gu) ?? [];
+  let position = 0;
+  const peek = () => tokens[position];
+  const fail4 = () => {
+    throw new Error("unread");
+  };
+  const expect = (token) => {
+    if (tokens[position] !== token) fail4();
+    position += 1;
+  };
+  const sum = () => {
+    let value2 = product();
+    while (peek() === "+" || peek() === "-") {
+      const operator = tokens[position++];
+      const right = product();
+      value2 = operator === "+" ? [value2[0] + right[0], value2[1] + right[1]] : [value2[0] - right[1], value2[1] - right[0]];
+    }
+    return value2;
+  };
+  const product = () => {
+    let value2 = unary();
+    while (peek() === "*" || peek() === "/") {
+      const operator = tokens[position++];
+      const right = unary();
+      value2 = operator === "*" ? times2(value2, right) : times2(value2, reciprocal(right));
+    }
+    return value2;
+  };
+  const unary = () => {
+    if (peek() === "-") {
+      position += 1;
+      const [lo, hi] = unary();
+      return [-hi, -lo];
+    }
+    if (peek() === "+") {
+      position += 1;
+      return unary();
+    }
+    const base = atom();
+    if (peek() === "^") {
+      position += 1;
+      return power(base, unary());
+    }
+    return base;
+  };
+  const atom = () => {
+    const token = tokens[position++];
+    if (token === void 0) return fail4();
+    if (token === "(") {
+      const value2 = sum();
+      expect(")");
+      return value2;
+    }
+    if (/^\d/u.test(token)) {
+      const value2 = Number(token);
+      return [value2, value2];
+    }
+    if (/^[A-Za-z_]/u.test(token)) {
+      if (peek() === "(") {
+        position += 1;
+        const argument = sum();
+        expect(")");
+        const f = FUNCTIONS2[token];
+        return f ? f(argument) : ALL;
+      }
+      if (token === "pi") return [Math.PI, Math.PI];
+      if (token === "e") return [Math.E, Math.E];
+      return bounds[token] ?? fail4();
+    }
+    return fail4();
+  };
+  try {
+    const value2 = sum();
+    if (position !== tokens.length) return ALL;
+    return Number.isNaN(value2[0]) || Number.isNaN(value2[1]) ? ALL : value2;
+  } catch {
+    return ALL;
+  }
+}
+function signOf([lo, hi]) {
+  return lo > 0 ? "positive" : hi < 0 ? "negative" : "unknown";
 }
 
 // src/plugins/math-compilers.ts
@@ -16663,18 +16782,31 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   if (barMarks.length) {
     const want = { domain: barMarks.includes("domain"), range: barMarks.includes("range") };
     const variables = curveParameters.map((parameter) => parameter.name);
-    const states = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))];
-    const values = (text3) => {
+    const bounds = Object.fromEntries(curveParameters.map((parameter) => {
+      const reached = [parameter.min, parameter.max, parameter.initial, ...demonstrations.map((state) => state[parameter.name])];
+      return [parameter.name, [Math.min(...reached), Math.max(...reached)]];
+    }));
+    const sign = (text3) => {
+      const interval = intervalOf(text3, bounds);
+      const proved = signOf(interval);
+      if (proved === "unknown") return proved;
       const f = compileMathExpression(text3, variables);
-      return states.map((state) => {
+      const corners = variables.reduce((states, name) => states.flatMap((state) => bounds[name].map((value2) => ({ ...state, [name]: value2 }))), [{}]);
+      const inside = Array.from({ length: 32 }, (_, index) => Object.fromEntries(variables.map((name, position) => {
+        const [lo, hi] = bounds[name];
+        return [name, lo + (hi - lo) * ((index + 1) * (position + 2) * 0.6180339887 % 1)];
+      })));
+      for (const state of [...corners.slice(0, 64), ...inside]) {
+        let value2 = Number.NaN;
         try {
-          return f(state);
+          value2 = f(state);
         } catch {
-          return Number.NaN;
         }
-      });
+        if (!(value2 >= interval[0] - 1e-9 * Math.max(1, Math.abs(interval[0])) && value2 <= interval[1] + 1e-9 * Math.max(1, Math.abs(interval[1])))) return "unknown";
+      }
+      return proved;
     };
-    bars = pieces ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), want, path) : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), want, { values }, path);
+    bars = pieces ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), want, path) : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), want, { sign }, path);
   }
   let view;
   try {
@@ -16747,7 +16879,7 @@ function appendBars(action, bars, initial, labels) {
       to,
       ...bar.from !== null ? { from_closed: bar.from_closed } : {},
       ...bar.to !== null ? { to_closed: bar.to_closed } : {},
-      ...!labelled.has(bar.axis) ? { label: labels(bar.axis === "x" ? "\u5B9A\u4E49\u57DF" : "\u503C\u57DF") } : {}
+      ...!labelled.has(bar.axis) || bar.alternative ? { label: labels(bar.axis === "x" ? "\u5B9A\u4E49\u57DF" : "\u503C\u57DF") } : {}
     });
     labelled.add(bar.axis);
     for (const [key, text3] of [["from", bar.from], ["to", bar.to]]) {

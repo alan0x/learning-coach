@@ -16,6 +16,7 @@ import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
 import { COARSE_UNITS, lessonValues, moveLandings } from "./number-line-fit.js";
 import { PLOT_MARKS, markParts, type MarkPart, type PlotMark } from "./plot-marks.js";
 import { formulaBars, pieceBars, type AxisBar } from "./plot-domain-range.js";
+import { intervalOf, signOf, type Interval } from "./interval.js";
 import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
@@ -265,14 +266,34 @@ function compileFunctionPlot(
   if (barMarks.length) {
     const want = { domain: barMarks.includes("domain"), range: barMarks.includes("range") };
     const variables = curveParameters.map((parameter) => parameter.name);
-    const states = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))];
-    const values = (text: string) => {
+    // Every value a lesson number can take: its min to max (a slider, or an animation in any section),
+    // widened to the values this section shows it at.
+    const bounds: Record<string, Interval> = Object.fromEntries(curveParameters.map((parameter) => {
+      const reached = [parameter.min, parameter.max, parameter.initial, ...demonstrations.map((state) => state[parameter.name]!)];
+      return [parameter.name, [Math.min(...reached), Math.max(...reached)] as const];
+    }));
+    const sign = (text: string) => {
+      const interval = intervalOf(text, bounds);
+      const proved = signOf(interval);
+      if (proved === "unknown") return proved;
+      // A guard on the interval reading: OLL's own evaluation at the corners and inside the bounds must
+      // fall in the interval, or the sign is not trusted.
       const f = compileMathExpression(text, variables);
-      return states.map((state) => { try { return f(state); } catch { return Number.NaN; } });
+      const corners = variables.reduce<Array<Record<string, number>>>((states, name) => states.flatMap((state) => bounds[name]!.map((value) => ({ ...state, [name]: value }))), [{}]);
+      const inside = Array.from({ length: 32 }, (_, index) => Object.fromEntries(variables.map((name, position) => {
+        const [lo, hi] = bounds[name]!;
+        return [name, lo + (hi - lo) * (((index + 1) * (position + 2) * 0.6180339887) % 1)];
+      })));
+      for (const state of [...corners.slice(0, 64), ...inside]) {
+        let value = Number.NaN;
+        try { value = f(state); } catch { /* not defined here */ }
+        if (!(value >= interval[0] - 1e-9 * Math.max(1, Math.abs(interval[0])) && value <= interval[1] + 1e-9 * Math.max(1, Math.abs(interval[1])))) return "unknown";
+      }
+      return proved;
     };
     bars = pieces
       ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index]!, 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), want, path)
-      : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`), want, { values }, path);
+      : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0]!, 0, `${path}.expression`), want, { sign }, path);
   }
 
   let view: PlotView;
@@ -316,7 +337,8 @@ function compileFunctionPlot(
 
 /**
  * Adds domain and range bars to a built plot. An end that reads lesson numbers is bound to them and hidden
- * while it has no value (the bar of the other sign); the first bar on each axis carries the label.
+ * while it has no value (the bar of the other sign); the first bar on each axis carries the label, and so
+ * does a bar shown instead of the one before it (the other sign), which is then the only one shown.
  */
 function appendBars(action: { content: Record<string, unknown> }, bars: AxisBar[], initial: Record<string, number>, labels: (source: string) => string): void {
   const content = action.content;
@@ -338,7 +360,7 @@ function appendBars(action: { content: Record<string, unknown> }, bars: AxisBar[
       as, axis: bar.axis, from, to,
       ...(bar.from !== null ? { from_closed: bar.from_closed } : {}),
       ...(bar.to !== null ? { to_closed: bar.to_closed } : {}),
-      ...(!labelled.has(bar.axis) ? { label: labels(bar.axis === "x" ? "定义域" : "值域") } : {}),
+      ...(!labelled.has(bar.axis) || bar.alternative ? { label: labels(bar.axis === "x" ? "定义域" : "值域") } : {}),
     });
     labelled.add(bar.axis);
     for (const [key, text] of [["from", bar.from], ["to", bar.to]] as const) {
