@@ -13,7 +13,7 @@ import { parseModelFormula } from "./math-formulas.js";
 import { compileMathExpression, type AuthoringAction } from "octos-lesson-language";
 import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
-import { lessonValues } from "./number-line-fit.js";
+import { COARSE_UNITS, lessonValues } from "./number-line-fit.js";
 import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
@@ -571,7 +571,7 @@ function numberLineLabelStyle(content: LessonPlanVisualContent, path: string): {
  * The range and ticks of a number line in the family (decisions 0013 and 0016):
  * - the range covers every value a slider can reach (`values`), with 0 and a unit of margin;
  * - the ticks hold every value in `grid` (ranges, starting values, slider steps), or failing that the
- *   values the lesson itself shows (`shown`): the finest whole step of 1, 2, 5 or 10 with at most 60
+ *   values the lesson itself shows (`shown`): the finest whole step of 1 or a coarse unit (2 … 1000) with at most 60
  *   ticks, else one-unit ticks split into the fewest parts (up to 24) within OLL's tick limit;
  * - values no ticks can hold are refused as a fault the outline owns (they and the visual were chosen
  *   there), so the outline is asked again without the number line.
@@ -590,7 +590,7 @@ function numberLineFrame(values: readonly number[], grid: readonly number[], sho
   const span = max - min;
   const holdAll = (count: number, of: readonly number[]) => of.every((value) => onGrid(value / count, 1));
   const ticksFor = (of: readonly number[]) => {
-    const whole = [1, 2, 5, 10].find((count) => span / count <= 60 && holdAll(count, of));
+    const whole = [1, ...COARSE_UNITS].find((count) => span / count <= 60 && holdAll(count, of));
     if (whole) return { step: whole, subdivisions: 1 };
     const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value) => onGrid(value, count)) && span * count <= NUMBER_LINE_LIMITS.ticks);
     return parts ? { step: 1, subdivisions: parts } : undefined;

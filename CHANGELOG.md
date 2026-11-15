@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Coarse number-line units go past 10** (OLL decision 0017 §1). Whole numbers too far apart to count in ones were counted in 2s, 5s or 10s; the units now go on to 20, 25, 50, 100, 250, 500 and 1000, in the fit and in the compiler's ticks. The rule is unchanged: the smallest unit that every value is a multiple of and whose window fits. One move is still one jump, a hop per unit, so a move of 325 is 13 hops of 25. The request is unchanged.
+  - A unit takes only exact multiples. The old tolerance (±0.011 of a unit) would have counted 1005 in 1000s and drawn it at 1000; 1005 is refused as before.
+  - **Replay of 139 recorded lessons** (the baseline, the step-2 probe and control, the #78 reviews and reruns, and the practice-invitation probe): all identical. None of them uses numbers this far apart.
+  - The ticks are the family's, so comparison and solution lines get the new units too: comparing 250 and 1750 was refused and now counts in 25s.
+  - OLL thins tick labels so none overlap, and keeps the labels of the lesson's numbers.
+
 - **OLL pinned to main 8e85fe1** (OLL #60–#62: decisions 0017 and 0018 and their render work). Player 0.11.0 with `plot:curve-intervals`, `plot:axis-intervals`, `plot:guide-hide-undefined` and `plot:secant-first-two`, and math plugin 0.3.0 with `plugin:math/number-line-jump-lanes@1`. No recipe emits them yet. Lessons are recorded as built with math plugin 0.3.0. A lesson's declared requirements come from the features it uses, so today's lessons need the same player and plugin as before. Authoring schema unchanged (same digest); all tests pass unchanged except the recorded plugin version.
 
 - **A count a lesson states is never moved** (M2/M3 baseline, Coach #77). The unit-square array draws at most 8 squares a row, and the program used to clamp larger counts to 8 under the model's own words: 24 squares under "12 cookies", 8 under "ten ones". Counts (the unit-square array's rows and columns, a polygon's sides) are now checked after fitting. Slider ranges are still narrowed to what a recipe draws; positions in a recipe's own frame (a cube's section) are still fitted. A practice target on a count is checked like an animation (below); other practice targets keep their earlier rule (moved to the edge, prompt rewritten).
