@@ -65,10 +65,19 @@ function shownValues({ variables, animations }) {
  * Every stop of every slider: a variable's steps from its minimum (up to 200 stops, else 200 even
  * steps), with the other variables at each shown state's values. Two variables are swept together on a
  * coarser grid, so a mark that depends on both is checked where they meet.
+ * A number with no slider is swept only over the values its animations pass through (the lowest to the
+ * highest it is shown at): the model writes wide ranges for fixed numbers, and a state no lesson reaches
+ * is not a miss.
  */
 function sweepValues(plot) {
   const shown = shownValues(plot);
   const stopsOf = (variable, limit) => {
+    if (!variable.control) {
+      const seen = shown.map((state) => state[variable.as]).filter(Number.isFinite);
+      if (!seen.length) return [];
+      const low = Math.min(...seen), high = Math.max(...seen);
+      return high > low ? Array.from({ length: limit + 1 }, (_, index) => low + (high - low) * index / limit) : [low];
+    }
     const step = variable.control?.step;
     const count = step > 0 ? Math.floor((variable.max - variable.min) / step + 1e-9) + 1 : Infinity;
     if (count <= limit) return Array.from({ length: count }, (_, index) => variable.min + index * step);
@@ -159,7 +168,9 @@ function sampleXs(drawn, extra = []) {
 }
 
 // Bar ends are compared tightly: a value near an open end (an asymptote) is inside, one on it is not.
-const atEnd = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
+// 1e-12 absorbs rounding (an end computed by a binding) but not an asymptote's approach: e^−21 − 3 is
+// 7.6e−10 above −3, inside the open bar.
+const atEnd = (a, b) => Math.abs(a - b) <= 1e-12 * Math.max(1, Math.abs(a), Math.abs(b));
 const inBars = (bars, value) => bars.some((bar) =>
   (bar.from === null || (atEnd(value, bar.from) ? bar.fromClosed : value > bar.from))
   && (bar.to === null || (atEnd(value, bar.to) ? bar.toClosed : value < bar.to)));
