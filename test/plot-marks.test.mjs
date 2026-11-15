@@ -158,3 +158,14 @@ test("overlapping pieces, and pieces with lesson numbers, are refused in the sec
   const moving = await generate(plotReply({ pieces: [["n1x", null, 1, "()"], ["1", 1, null, "[)"]], numbers: [[1, 0, 2, "k"]], moments: [{ say: "两段。" }] }));
   assert.ok(moving.rejected.some((miss) => /pieces are fixed formulas/u.test(miss)), moving.rejected.join(" | "));
 });
+
+// Review: a curve slider can take the curve away from A or B (√(x − h) with h up to 5): the pair must exist
+// at the slider's ends too, or the lesson fails where the learner drags.
+test("the slope triangle's points exist at every slider end, not only where the lesson stops", async () => {
+  const { lesson, rejected } = await generate(plotReply({
+    formula: "sqrt(x-n1)", marks: ["slope_triangle"], numbers: [[0, 0, 5, "h"]], moments: [{ say: "看两点之间的斜率。" }],
+  }));
+  assert.ok(lesson, rejected.join(" | "));
+  assert.deepEqual(plotContent(lesson).points.map((point) => point.x), [6, 8]);
+  assert.deepEqual(judgePlot({ id: "slider", expect: {} }, lesson).hard, []);
+});

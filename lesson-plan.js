@@ -16391,7 +16391,8 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       }
     });
     const pairs = markList.length ? [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]] : [[0, 1]];
-    const xs = pairs.find((pair) => [initialState, ...demonstrations].every((values) => referencePoints(values, pair).length === 2));
+    const reached = markList.length ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))] : [initialState, ...demonstrations];
+    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2));
     if (xs) {
       references = referencePoints(initialState, xs);
       teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));
