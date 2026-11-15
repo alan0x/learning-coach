@@ -160,12 +160,18 @@ export function formulaBars(tokens: LessonPlanMathExpression, want: { domain: bo
         bars.push(...bySign(a!.text, vertexY, { from_closed: true }, "y"));
       }
     }
-    return bars;
+    return guarded(bars, first, refuse);
   }
   const shape = shapeOf(tokens, root);
   if (!shape) return refuse(first, "is derived only for lines, quadratics, roots, reciprocals, exponentials and logarithms");
   const pSign = shape.p.value;
   const edge = `-${wrap(shape.q.text)}/${wrap(shape.p.text)}`;
+  // Where x's coefficient reaches 0 the curve is a constant, whose range is one value: the bars below
+  // would claim more, and an unbounded bar cannot be hidden (review).
+  if (want.range) {
+    const p = signs(shape.p.text);
+    if (pSign === 0 || (pSign === undefined && !p.positive && !p.negative)) refuse("range", "collapses to one value where x's coefficient is 0");
+  }
   if (want.domain) {
     if (shape.family === "exponential") bars.push(all("x"));
     else if (shape.family === "reciprocal") {
@@ -193,6 +199,14 @@ export function formulaBars(tokens: LessonPlanMathExpression, want: { domain: bo
       bars.push(...bySign(shape.a, shape.k, { from_closed: true }, "y"));
     }
   }
+  return guarded(bars, first, refuse);
+}
+
+/** OLL caps a binding at 256 characters: a bar whose end is longer is refused, as a mark's is. */
+function guarded(bars: AxisBar[], first: string, refuse: (what: string, why: string) => never): AxisBar[] {
+  for (const bar of bars) for (const text of [bar.from, bar.to]) {
+    if (text !== null && text.length > 240) refuse(first, "is too long an expression for this formula");
+  }
   return bars;
 }
 
@@ -203,7 +217,18 @@ export function formulaBars(tokens: LessonPlanMathExpression, want: { domain: bo
 export function pieceBars(pieces: ReadonlyArray<{ tokens: LessonPlanMathExpression; from: number | null; to: number | null; from_closed: boolean; to_closed: boolean }>, want: { domain: boolean; range: boolean }, path: string): AxisBar[] {
   type Span = { from: number | null; to: number | null; from_closed: boolean; to_closed: boolean };
   const bars: AxisBar[] = [];
-  if (want.domain) bars.push(...join(pieces).map((span) => toBar("x", span)));
+  // A piece's interval is its domain only where its formula is defined throughout: a polynomial or an
+  // exponential is; a root, reciprocal or logarithm piece could hide a gap (1/x on [−1, 1]), so refused.
+  if (want.domain) {
+    for (const piece of pieces) {
+      const tree = treeOf(piece.tokens);
+      const definedEverywhere = polynomialOf(piece.tokens) !== undefined || (tree !== undefined && shapeOf(piece.tokens, tree)?.family === "exponential");
+      if (!definedEverywhere) {
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a polynomial or an exponential; leave it out of marks and do not narrate it");
+      }
+    }
+    bars.push(...join(pieces).map((span) => toBar("x", span)));
+  }
   if (want.range) {
     const images: Span[] = pieces.map((piece) => {
       const p = polynomialOf(piece.tokens) as Scalar[] | undefined;

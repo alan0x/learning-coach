@@ -16342,8 +16342,8 @@ function formulaBars(tokens, want, check, path) {
   };
   const bySign = (sign, end, up, axis) => {
     const s = signs(sign);
-    const upBar = (guarded) => ({ axis, from: guarded, to: null, from_closed: up.from_closed, to_closed: false });
-    const downBar = (guarded) => ({ axis, from: null, to: guarded, from_closed: false, to_closed: up.from_closed });
+    const upBar = (guarded2) => ({ axis, from: guarded2, to: null, from_closed: up.from_closed, to_closed: false });
+    const downBar = (guarded2) => ({ axis, from: null, to: guarded2, from_closed: false, to_closed: up.from_closed });
     if (s.positive) return [upBar(end)];
     if (s.negative) return [downBar(end)];
     return [upBar(`${wrap2(end)}+0*log(${wrap2(sign)})`), downBar(`${wrap2(end)}+0*log(-${wrap2(sign)})`)];
@@ -16363,12 +16363,16 @@ function formulaBars(tokens, want, check, path) {
         bars.push(...bySign(a.text, vertexY, { from_closed: true }, "y"));
       }
     }
-    return bars;
+    return guarded(bars, first, refuse);
   }
   const shape = shapeOf(tokens, root);
   if (!shape) return refuse(first, "is derived only for lines, quadratics, roots, reciprocals, exponentials and logarithms");
   const pSign = shape.p.value;
   const edge = `-${wrap2(shape.q.text)}/${wrap2(shape.p.text)}`;
+  if (want.range) {
+    const p = signs(shape.p.text);
+    if (pSign === 0 || pSign === void 0 && !p.positive && !p.negative) refuse("range", "collapses to one value where x's coefficient is 0");
+  }
   if (want.domain) {
     if (shape.family === "exponential") bars.push(all("x"));
     else if (shape.family === "reciprocal") {
@@ -16395,11 +16399,26 @@ function formulaBars(tokens, want, check, path) {
       bars.push(...bySign(shape.a, shape.k, { from_closed: true }, "y"));
     }
   }
+  return guarded(bars, first, refuse);
+}
+function guarded(bars, first, refuse) {
+  for (const bar of bars) for (const text3 of [bar.from, bar.to]) {
+    if (text3 !== null && text3.length > 240) refuse(first, "is too long an expression for this formula");
+  }
   return bars;
 }
 function pieceBars(pieces, want, path) {
   const bars = [];
-  if (want.domain) bars.push(...join(pieces).map((span2) => toBar("x", span2)));
+  if (want.domain) {
+    for (const piece of pieces) {
+      const tree = treeOf(piece.tokens);
+      const definedEverywhere = polynomialOf(piece.tokens) !== void 0 || tree !== void 0 && shapeOf(piece.tokens, tree)?.family === "exponential";
+      if (!definedEverywhere) {
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a polynomial or an exponential; leave it out of marks and do not narrate it");
+      }
+    }
+    bars.push(...join(pieces).map((span2) => toBar("x", span2)));
+  }
   if (want.range) {
     const images = pieces.map((piece) => {
       const p = polynomialOf(piece.tokens);

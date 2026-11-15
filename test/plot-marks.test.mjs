@@ -201,3 +201,31 @@ test("the slope triangle's points exist at every slider end, not only where the 
   assert.deepEqual(plotContent(lesson).points.map((point) => point.x), [6, 8]);
   assert.deepEqual(judgePlot({ id: "slider", expect: {} }, lesson).hard, []);
 });
+
+// Review of the domain and range step.
+test("a range is refused where x's coefficient can reach 0 and the curve turns constant", async () => {
+  for (const formula of ["2^(n1x)-3", "sqrt(n1x+4)", "1/(n1x+1)"]) {
+    const { lesson, rejected } = await generate(plotReply({ formula, marks: ["range"], numbers: [[1, -1, 2, "p"]], moments: [{ say: "看值域。" }] }));
+    assert.equal(lesson, undefined, formula);
+    assert.ok(rejected.some((miss) => /the range mark .*coefficient/u.test(miss)), `${formula}: ${rejected.join(" | ")}`);
+  }
+});
+
+test("a piecewise domain is drawn only when every piece is defined on its whole interval", async () => {
+  const reply = plotReply({ pieces: [["1/x", -1, 1, "[]"], ["2", 1, null, "()"]], moments: [{ say: "看定义域。" }] }).replace('"pieces":', '"marks":["domain"],"pieces":');
+  const { lesson, rejected } = await generate(reply);
+  assert.equal(lesson, undefined);
+  assert.ok(rejected.some((miss) => /the domain mark of a piecewise function/u.test(miss)), rejected.join(" | "));
+});
+
+test("the card's own form -(x-n1)^2+n2 with intercepts, vertex and range", async () => {
+  const { lesson, rejected } = await generate(plotReply({
+    formula: "-(x-n1)^2+n2", marks: ["intercepts", "vertex", "range"], numbers: [[1, -3, 3, "h"], [2, -2, 4, "k"]],
+    moments: [{ say: "看顶点和值域。" }, { say: "把顶点向上移。", animations: [[2, 3]] }],
+  }));
+  assert.ok(lesson, rejected.join(" | "));
+  const verdict = judgePlot({ id: "card-form", expect: { points: [[1, 2]], range: [{ from: null, to: 2, toClosed: true }] } }, lesson);
+  assert.deepEqual(verdict.hard, []);
+  const content = plotContent(lesson);
+  assert.ok([...content.bindings].every((binding) => binding.expression.length <= 240));
+});
