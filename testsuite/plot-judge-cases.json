@@ -1,0 +1,453 @@
+{
+ "note": "Function-plot judge cases (OLL decision 0018), written for the judge and never taken from the math expressiveness question set. Overlap-scored against all 160 questions (content-word and Chinese-bigram Jaccard): every case at most 0.20 against open questions and 0.15 against held-out ones; three drafts too close to an open question were rephrased. Expectations were written before any recipe code. Judge: scripts/plot-judge.mjs. Near misses are families 0018 leaves out: no plot passes, and a plot passes only the checks needing no expectation plus its curve.",
+ "cases": [
+  {
+   "id": "PJ-01",
+   "language": "en",
+   "prompt": "Draw y = 3x - 2 and show the rise and run between the points at x = 1 and x = 3.",
+   "covers": "slope_triangle",
+   "expect": {
+    "curve": [
+     [
+      1,
+      1
+     ],
+     [
+      3,
+      7
+     ]
+    ],
+    "slope": {
+     "dx": 2,
+     "dy": 6
+    }
+   }
+  },
+  {
+   "id": "PJ-02",
+   "language": "zh-CN",
+   "prompt": "画出直线 y = -2x + 4，标出它与两条坐标轴的交点。",
+   "covers": "intercepts",
+   "expect": {
+    "curve": [
+     [
+      0,
+      4
+     ],
+     [
+      2,
+      0
+     ]
+    ],
+    "points": [
+     [
+      0,
+      4
+     ],
+     [
+      2,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "id": "PJ-03",
+   "language": "en",
+   "prompt": "Where is the vertex of y = (x - 1)^2 - 4, and where does the curve cross the x-axis?",
+   "covers": "vertex, symmetry_axis, intercepts",
+   "expect": {
+    "curve": [
+     [
+      1,
+      -4
+     ]
+    ],
+    "points": [
+     [
+      1,
+      -4
+     ],
+     [
+      -1,
+      0
+     ],
+     [
+      3,
+      0
+     ]
+    ],
+    "guides": [
+     {
+      "kind": "vertical_line",
+      "value": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "PJ-04",
+   "language": "zh-CN",
+   "prompt": "抛物线 y = x² + 2x + 3 和 x 轴有交点吗？画图看看它的顶点在哪里。",
+   "covers": "vertex (no x-intercept exists)",
+   "expect": {
+    "curve": [
+     [
+      -1,
+      2
+     ],
+     [
+      0,
+      3
+     ]
+    ],
+    "points": [
+     [
+      -1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "id": "PJ-05",
+   "language": "en",
+   "prompt": "For y = a(x - 2)^2 + 1, let me change a and watch the axis of symmetry and the vertex.",
+   "covers": "vertex, symmetry_axis (a crosses 0)",
+   "expect": {
+    "curve": [
+     [
+      2,
+      1
+     ]
+    ],
+    "points": [
+     [
+      2,
+      1
+     ]
+    ],
+    "guides": [
+     {
+      "kind": "vertical_line",
+      "value": 2
+     }
+    ]
+   }
+  },
+  {
+   "id": "PJ-06",
+   "language": "zh-CN",
+   "prompt": "直线 y = kx + 1 中 k 变化时，它和 x 轴的交点怎样移动？",
+   "covers": "intercepts (k crosses 0)",
+   "expect": {
+    "curve": [
+     [
+      0,
+      1
+     ]
+    ],
+    "points": [
+     [
+      0,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "id": "PJ-07",
+   "language": "en",
+   "prompt": "Graph f(x) = x + 2 for x < 1 and f(x) = 4 for x >= 1.",
+   "covers": "pieces (constant piece)",
+   "expect": {
+    "pieces": [
+     {
+      "from": null,
+      "to": 1,
+      "toClosed": false,
+      "through": [
+       [
+        0,
+        2
+       ]
+      ]
+     },
+     {
+      "from": 1,
+      "fromClosed": true,
+      "to": null,
+      "through": [
+       [
+        2,
+        4
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "PJ-08",
+   "language": "zh-CN",
+   "prompt": "分段函数：x ≤ 0 时 y = -x，x > 0 时 y = x²，请画出它的图像。",
+   "covers": "pieces",
+   "expect": {
+    "pieces": [
+     {
+      "from": null,
+      "to": 0,
+      "toClosed": true,
+      "through": [
+       [
+        -1,
+        1
+       ]
+      ]
+     },
+     {
+      "from": 0,
+      "fromClosed": false,
+      "to": null,
+      "through": [
+       [
+        2,
+        4
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "PJ-09",
+   "language": "en",
+   "prompt": "Sketch the step function that is 1 when x < 2, 3 when 2 <= x < 4, and 5 when x >= 4.",
+   "covers": "pieces (three constant pieces)",
+   "expect": {
+    "pieces": [
+     {
+      "from": null,
+      "to": 2,
+      "toClosed": false,
+      "through": [
+       [
+        0,
+        1
+       ]
+      ]
+     },
+     {
+      "from": 2,
+      "fromClosed": true,
+      "to": 4,
+      "toClosed": false,
+      "through": [
+       [
+        3,
+        3
+       ]
+      ]
+     },
+     {
+      "from": 4,
+      "fromClosed": true,
+      "to": null,
+      "through": [
+       [
+        5,
+        5
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "PJ-10",
+   "language": "en",
+   "prompt": "Which inputs and outputs are possible for y = sqrt(x - 3) + 1? Mark both sets on the axes.",
+   "covers": "domain, range",
+   "expect": {
+    "curve": [
+     [
+      4,
+      2
+     ],
+     [
+      7,
+      3
+     ]
+    ],
+    "domain": [
+     {
+      "from": 3,
+      "fromClosed": true,
+      "to": null
+     }
+    ],
+    "range": [
+     {
+      "from": 1,
+      "fromClosed": true,
+      "to": null
+     }
+    ]
+   }
+  },
+  {
+   "id": "PJ-11",
+   "language": "zh-CN",
+   "prompt": "函数 y = 2/(x + 1) 的定义域和值域分别是什么？在图上标出来。",
+   "covers": "domain, range (x ≠ −1, y ≠ 0)",
+   "expect": {
+    "curve": [
+     [
+      1,
+      1
+     ]
+    ],
+    "domain": [
+     {
+      "from": null,
+      "to": -1,
+      "toClosed": false
+     },
+     {
+      "from": -1,
+      "fromClosed": false,
+      "to": null
+     }
+    ],
+    "range": [
+     {
+      "from": null,
+      "to": 0,
+      "toClosed": false
+     },
+     {
+      "from": 0,
+      "fromClosed": false,
+      "to": null
+     }
+    ]
+   }
+  },
+  {
+   "id": "PJ-12",
+   "language": "en",
+   "prompt": "Which y values does y = -(x + 2)^2 + 5 reach? Mark them along the y-axis.",
+   "covers": "range",
+   "expect": {
+    "curve": [
+     [
+      -2,
+      5
+     ]
+    ],
+    "range": [
+     {
+      "from": null,
+      "to": 5,
+      "toClosed": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "PJ-13",
+   "language": "zh-CN",
+   "prompt": "y = 2^x - 3 的值域是什么？用图像说明。",
+   "covers": "range (open end)",
+   "expect": {
+    "curve": [
+     [
+      0,
+      -2
+     ]
+    ],
+    "range": [
+     {
+      "from": -3,
+      "fromClosed": false,
+      "to": null
+     }
+    ]
+   }
+  },
+  {
+   "id": "PJ-14",
+   "language": "en",
+   "prompt": "Which x values can go into y = log(x - 1)? Show the allowed values on the x-axis.",
+   "covers": "domain (open end)",
+   "expect": {
+    "curve": [
+     [
+      2,
+      0
+     ]
+    ],
+    "domain": [
+     {
+      "from": 1,
+      "fromClosed": false,
+      "to": null
+     }
+    ]
+   }
+  },
+  {
+   "id": "PJ-15",
+   "language": "en",
+   "prompt": "Which output values does y = x^3 - 3x take? Mark them along the y-axis.",
+   "covers": "out of scope: cubic range",
+   "nearMiss": true,
+   "expect": {
+    "curve": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      -2
+     ]
+    ]
+   }
+  },
+  {
+   "id": "PJ-16",
+   "language": "zh-CN",
+   "prompt": "y = sin x 的值域是多少？在图上标出来。",
+   "covers": "out of scope: sine range",
+   "nearMiss": true,
+   "expect": {
+    "curve": [
+     [
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "id": "PJ-17",
+   "language": "en",
+   "prompt": "Plot y = x^2 - 1 for me.",
+   "covers": "control: plain plot",
+   "control": true,
+   "expect": {
+    "curve": [
+     [
+      0,
+      -1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   }
+  }
+ ]
+}
