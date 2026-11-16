@@ -28,6 +28,11 @@ export function isNumberLineCapability(capability: string | undefined): boolean 
   const recipe = capability === undefined ? undefined : (LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { output_kinds: readonly string[] } | undefined>)[capability];
   return Boolean(recipe?.output_kinds.includes("number_line"));
 }
+/** A recipe's declared flag (`numbers_from_parameters`, `ranges_fixed_once_shown`); false when absent. */
+export function recipeDeclares(capability: string | undefined, flag: "numbers_from_parameters" | "ranges_fixed_once_shown"): boolean {
+  const recipe = capability === undefined ? undefined : (LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, Record<string, unknown> | undefined>)[capability];
+  return recipe?.[flag] === true;
+}
 export const LESSON_PLAN_VISUAL_FEATURES = [...new Set(
   LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features]),
 )] as LessonPlanVisualFeature[];

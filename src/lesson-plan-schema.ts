@@ -4,6 +4,7 @@ import {
   LESSON_PLAN_CAPABILITY_REGISTRY,
   LESSON_PLAN_VISUAL_FEATURES,
   LessonPlanError,
+  recipeDeclares,
   type LessonPlanCapability,
   type LessonPlanOutline,
 } from "./lesson-plan.js";
@@ -293,7 +294,7 @@ function courseVisualCreatesSchema(
       timing: { enum: timingNames },
       content: object({
         parameters: visualParametersSchema([capability]),
-        ...(numberCount > 0 && numberLimit > 0 && capability !== "function_plot" ? {
+        ...(numberCount > 0 && numberLimit > 0 && !recipeDeclares(capability, "numbers_from_parameters") ? {
           numbers: {
             type: "array",
             maxItems: numberLimit,

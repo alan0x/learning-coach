@@ -139,3 +139,18 @@ test("a compiled lesson records the plugins that built its visuals", () => {
   assert.deepEqual(lessonPlanPlugins(plan("unit_circle_projection")), { math: "0.3.0", shared: "0.1.0" });
   assert.equal(typeof compileLessonPlan, "function");
 });
+
+// Plan §2.3 / §7 step 3.4 (Goal 1): Coach's core knows no recipe by name; what a recipe needs it declares
+// (numbers_from_parameters, ranges_fixed_once_shown, a plugin's output_expressions). A name that is also an
+// OLL node kind (number_line) may appear as that kind.
+test("Coach's core files name no recipe", async () => {
+  const { readFileSync } = await import("node:fs");
+  const recipes = [...RECIPE_CATALOG_ORDER, ...api.TRIAL_RECIPES];
+  const kinds = new Set(Object.values(api.LESSON_PLAN_CAPABILITY_REGISTRY).flatMap((recipe) => recipe.output_kinds));
+  for (const file of ["lesson-plan.ts", "lesson-plan-compiler.ts", "lesson-plan-schema.ts", "lesson-plan-generation.ts"]) {
+    const text = readFileSync(new URL(`../src/${file}`, import.meta.url), "utf8");
+    for (const name of recipes.filter((recipe) => !kinds.has(recipe))) {
+      assert.equal(new RegExp(`["'\`]${name}["'\`]`, "u").test(text), false, `${file} names ${name}`);
+    }
+  }
+});

@@ -12027,6 +12027,12 @@ var MATH_RECIPES = {
     // Marks change what the plot draws, so two plots differing only in marks are different visuals.
     semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
     output_kinds: ["plot"],
+    // Its lesson numbers are read from its parameters (formula references and sample_x_numbers): the
+    // model writes no number list, and none is assumed for it.
+    numbers_from_parameters: true,
+    // The view is framed to the numbers it binds, so their ranges stay as they are once its section has
+    // been published; a later animation may not widen them.
+    ranges_fixed_once_shown: true,
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
     model_guidance: "\u51FD\u6570\u56FE\uFF1A\u516C\u5F0F\u5F15\u7528\u6ED1\u5757\u6539\u66F2\u7EBF\uFF1B\u91C7\u6837\u70B9\u53E6\u58F0\u660E"
@@ -12288,6 +12294,11 @@ var MATH_PLUGIN = {
   subject: { description: MATH_SUBJECT_DESCRIPTION },
   recipes: MATH_RECIPES,
   schema_properties: MATH_SCHEMA_PROPERTIES,
+  // Expressions a compiled plot evaluates besides its bindings: each curve's formula. A numeric control
+  // that appears in one has an effect.
+  output_expressions: {
+    plot: (content) => (Array.isArray(content.curves) ? content.curves : []).flatMap((curve) => curve && typeof curve === "object" && !Array.isArray(curve) ? [curve.expression] : [])
+  },
   prompt_rules: {
     "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
     "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002marks\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF08\u4E00\u6B21\u6216\u4E8C\u6B21\uFF09\u3001slope_triangle \u4E24\u70B9 \u0394x \u0394y\u3001domain \u5B9A\u4E49\u57DF\u3001range \u503C\u57DF\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u3002\u5206\u6BB5\u5199 pieces\uFF08formulas \u7167\u5199\u5404\u6BB5\uFF09\uFF1A\u6BCF\u6BB5 formula\u3001x_from\u3001x_to\uFF08\u65E0\u754C\u4E0D\u5199\uFF09\u3001ends \u5F00\u95ED\u5982 [)\uFF0C\u53EF\u4E3A\u5E38\u6570\u3002",
@@ -14390,6 +14401,10 @@ var LESSON_PLAN_CAPABILITY_NAMES = Object.keys(LESSON_PLAN_CAPABILITY_REGISTRY);
 function isNumberLineCapability(capability2) {
   const recipe = capability2 === void 0 ? void 0 : LESSON_PLAN_CAPABILITY_REGISTRY[capability2];
   return Boolean(recipe?.output_kinds.includes("number_line"));
+}
+function recipeDeclares(capability2, flag) {
+  const recipe = capability2 === void 0 ? void 0 : LESSON_PLAN_CAPABILITY_REGISTRY[capability2];
+  return recipe?.[flag] === true;
 }
 var LESSON_PLAN_VISUAL_FEATURES = [...new Set(
   LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features])
@@ -17730,6 +17745,10 @@ var VISUAL_COMPILERS = {
 };
 
 // src/lesson-plan-compiler.ts
+var NUMBER_DRIVEN_KINDS = new Set(INSTALLED_PLUGINS.flatMap((plugin) => Object.values(plugin.recipes).flatMap((recipe) => {
+  const entry = recipe;
+  return entry.number_inputs.length ? entry.output_kinds : [];
+})));
 function normalizedVisualIdentity(content, includeNumbers = true) {
   const sourceParameters = content.parameters ?? {};
   const parameters3 = Object.fromEntries(
@@ -17850,7 +17869,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
         const bound = RECIPE_HOOKS[content.capability]?.bound_numbers?.(content);
         if (bound?.length) content.numbers = bound;
         else if (bound) delete content.numbers;
-        if (content.capability === "function_plot") {
+        if (recipeDeclares(content.capability, "ranges_fixed_once_shown")) {
           for (const number of bound ?? []) newPlotNumbers.add(number);
         }
         const fit = RECIPE_HOOKS[content.capability]?.fit_numbers;
@@ -18474,7 +18493,7 @@ function validateCompiledVisualEffects(lesson) {
   if (required.size === 0) return;
   const visualExpressions = [];
   lesson.steps.forEach((step) => step.beats.forEach((beat) => beat.actions.forEach((action) => {
-    if (action.do !== "write" || !["geometry", "plot", "scene3d", "number_line"].includes(action.kind)) return;
+    if (action.do !== "write" || !NUMBER_DRIVEN_KINDS.has(action.kind)) return;
     const content = action.content;
     const bindings = Array.isArray(content.bindings) ? content.bindings : [];
     bindings.forEach((binding) => {
@@ -18482,14 +18501,7 @@ function validateCompiledVisualEffects(lesson) {
         visualExpressions.push(binding.expression);
       }
     });
-    if (action.kind === "plot") {
-      const curves = Array.isArray(content.curves) ? content.curves : [];
-      curves.forEach((curve) => {
-        if (curve && typeof curve === "object" && !Array.isArray(curve)) {
-          visualExpressions.push(curve.expression);
-        }
-      });
-    }
+    for (const plugin of INSTALLED_PLUGINS) visualExpressions.push(...plugin.output_expressions?.[action.kind]?.(content) ?? []);
   })));
   for (const [variable, path] of required) {
     const matchingExpressions = visualExpressions.filter((expression) => expressionReferencesVariable(expression, variable));
@@ -18765,7 +18777,7 @@ function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes) 
       timing: { enum: timingNames },
       content: object({
         parameters: visualParametersSchema([capability2]),
-        ...numberCount > 0 && numberLimit > 0 && capability2 !== "function_plot" ? {
+        ...numberCount > 0 && numberLimit > 0 && !recipeDeclares(capability2, "numbers_from_parameters") ? {
           numbers: {
             type: "array",
             maxItems: numberLimit,
@@ -19672,7 +19684,7 @@ function lowerModelBoardContent(kind, value2, numberCount, numberLabels = []) {
   if (forceNoNumbers) validNumbers = [];
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters3, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
-  if (!forceNoNumbers && capability2 !== "function_plot" && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
+  if (!forceNoNumbers && !recipeDeclares(typeof capability2 === "string" ? capability2 : void 0, "numbers_from_parameters") && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
     validNumbers = [1];
   }
   return {
@@ -20038,7 +20050,7 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
           const visual = action.content;
           const bound = RECIPE_HOOKS[visual.capability]?.bound_numbers?.(visual);
           for (const number of bound ?? visual.numbers ?? []) visuallyBound.add(number);
-          if (visual.capability === "function_plot") {
+          if (recipeDeclares(visual.capability, "ranges_fixed_once_shown")) {
             for (const number of bound ?? []) newPlotNumbers.add(number);
           }
         }
@@ -21807,6 +21819,7 @@ export {
   modelTextFromRawReply,
   numericAnswerTolerance,
   promptSlot,
+  recipeDeclares,
   resolveLessonPlan,
   roundingPlaces,
   roundingTolerance,

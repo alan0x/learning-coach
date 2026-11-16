@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Coach's core names no recipe** (plan §2.3, §7 step 3.4, Goal 1; no lesson or request changes). The four `function_plot` special cases in the compiler, schema and generation, and the compiler's hard-coded list of drawable kinds, are replaced by what the math plugin declares:
+  - `numbers_from_parameters` on the recipe: its lesson numbers come from its parameters, so the schema gives it no number list and generation assumes none;
+  - `ranges_fixed_once_shown` on the recipe: a number it binds keeps its range once its section is published;
+  - the plugin's `output_expressions`: a plot's curve formulas count as expressions a numeric control can affect;
+  - the drawable kinds are every output kind of an installed recipe with number inputs (the same four).
+  - A test fails if the core files name a recipe again. Requests are byte-identical (request-hash test); replays of the 139 recorded lessons, the trial, run B and the gate are identical.
+
 - **The number line in steps is offered by default** (`number_line_steps`, OLL decision 0017 §2; owner's decision, 2026-11-15). It moves from `TRIAL_RECIPES` to the end of the catalog, where the trial offered it.
   - **Evidence:** the reduced trial (`docs/PLOT_TRIAL_2026-11-15.md`). 4 of 6 in-scope cases passed both repeats. The misses were a split of 25 as 20 then 5 where tens first was asked, and an outline fault with no number line. The four-addition near miss drew correct steps on a hand read. No lesson misled. Steps were not in run B, so there is no comparison with them off and no timing.
   - **Requests:** every request changes, and each is byte-identical to main with `LEARNING_COACH_TRIAL_RECIPES=number_line_steps` (+337 B on the first request and the fallback outline, as measured in #88); no ceiling exceeded. The combined speed gate with #81 compares against the build before #98 (`--baseline-build` at 75578ab), so it covers this change too.

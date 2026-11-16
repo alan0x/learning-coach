@@ -1,6 +1,7 @@
 import { lessonText } from "./lesson-text.js";
 import {
   isNumberLineCapability,
+  recipeDeclares,
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
@@ -679,7 +680,7 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
   if (!forceNoNumbers
-    && capability !== "function_plot"
+    && !recipeDeclares(typeof capability === "string" ? capability : undefined, "numbers_from_parameters")
     && validNumbers.length === 0
     && numberCount === 1
     && typeof capability === "string"
@@ -1159,7 +1160,7 @@ function normalizeExecutableNumberInteractions(
           const visual = action.content as LessonPlanVisualContent;
           const bound = RECIPE_HOOKS[visual.capability]?.bound_numbers?.(visual);
           for (const number of bound ?? visual.numbers ?? []) visuallyBound.add(number);
-          if (visual.capability === "function_plot") {
+          if (recipeDeclares(visual.capability, "ranges_fixed_once_shown")) {
             for (const number of bound ?? []) newPlotNumbers.add(number);
           }
         }

@@ -1,7 +1,7 @@
 import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
-import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, recipeDeclares, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
 import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen } from "./recipe-kit.js";
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
@@ -28,6 +28,13 @@ export interface CompiledLessonPlan {
   /** Visual decisions the program made for this lesson, by section (1-based). */
   view_adjustments: Array<{ section: number; reason: string; detail: string }>;
 }
+
+/** Compiled kinds a lesson number can drive: every output kind of an installed recipe with number inputs. */
+const NUMBER_DRIVEN_KINDS: ReadonlySet<string> = new Set(INSTALLED_PLUGINS.flatMap((plugin) => Object.values(plugin.recipes)
+  .flatMap((recipe) => {
+    const entry = recipe as { number_inputs: readonly string[]; output_kinds: readonly string[] };
+    return entry.number_inputs.length ? entry.output_kinds : [];
+  })));
 
 function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbers = true): string {
   const sourceParameters = content.parameters ?? {};
@@ -196,7 +203,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
         const bound = RECIPE_HOOKS[content.capability]?.bound_numbers?.(content);
         if (bound?.length) content.numbers = bound;
         else if (bound) delete content.numbers;
-        if (content.capability === "function_plot") {
+        if (recipeDeclares(content.capability, "ranges_fixed_once_shown")) {
           for (const number of bound ?? []) newPlotNumbers.add(number);
         }
         const fit = RECIPE_HOOKS[content.capability]?.fit_numbers;
@@ -880,7 +887,7 @@ function validateCompiledVisualEffects(lesson: AuthoringLesson): void {
 
   const visualExpressions: unknown[] = [];
   lesson.steps.forEach((step) => step.beats.forEach((beat) => beat.actions.forEach((action) => {
-    if (action.do !== "write" || !["geometry", "plot", "scene3d", "number_line"].includes(action.kind)) return;
+    if (action.do !== "write" || !NUMBER_DRIVEN_KINDS.has(action.kind)) return;
     const content = action.content as Record<string, unknown>;
     const bindings = Array.isArray(content.bindings) ? content.bindings : [];
     bindings.forEach((binding) => {
@@ -888,14 +895,7 @@ function validateCompiledVisualEffects(lesson: AuthoringLesson): void {
         visualExpressions.push((binding as Record<string, unknown>).expression);
       }
     });
-    if (action.kind === "plot") {
-      const curves = Array.isArray(content.curves) ? content.curves : [];
-      curves.forEach((curve) => {
-        if (curve && typeof curve === "object" && !Array.isArray(curve)) {
-          visualExpressions.push((curve as Record<string, unknown>).expression);
-        }
-      });
-    }
+    for (const plugin of INSTALLED_PLUGINS) visualExpressions.push(...(plugin.output_expressions?.[action.kind]?.(content) ?? []));
   })));
 
   for (const [variable, path] of required) {
