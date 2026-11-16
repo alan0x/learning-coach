@@ -379,3 +379,9 @@ test("the retry-narrowing check runs nine plot cases, slips and clean ones (plan
   assert.deepEqual(RETRY_NARROWING_CASES.map((item) => item.id), ["PJ-01", "PJ-02", "PJ-04", "PJ-07", "PJ-15", "PJ-05", "PJ-08", "PJ-11", "PJ-17"]);
   assert.equal(qualityCasesFor("retry_narrowing").length, 9);
 });
+
+test("the plot points probe runs seven judge cases and two dragged-point cases (decision 0020)", async () => {
+  const { POINTS_PROBE_CASES, qualityCasesFor } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  assert.deepEqual(POINTS_PROBE_CASES.map((item) => item.id), ["PJ-01", "PJ-02", "PJ-04", "PJ-07", "PJ-10", "PJ-05", "PJ-17", "DP-01", "DP-02"]);
+  assert.equal(qualityCasesFor("plot_points").length, 9);
+});

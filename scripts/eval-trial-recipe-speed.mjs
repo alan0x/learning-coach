@@ -167,7 +167,20 @@ export const PLOT_CASES = JSON.parse(await readFile(join(root, "testsuite/plot-j
  */
 export const RETRY_NARROWING_CASES = ["PJ-01", "PJ-02", "PJ-04", "PJ-07", "PJ-15", "PJ-05", "PJ-08", "PJ-11", "PJ-17"]
   .map((id) => PLOT_CASES.find((item) => item.id === id));
-export const TRIAL_QUALITY_CASES = { function_plot_extensions: PLOT_CASES, retry_narrowing: RETRY_NARROWING_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
+/**
+ * The paired probe of plot `points` (decision 0020, Coach #113; owner-approved 2026-11-16, cap 120 calls,
+ * the one-call schema check included). Plot judge cases where the old sample_x_numbers slip happened
+ * (PJ-01, -02, -04), a piecewise case (PJ-07), a domain case (PJ-10), two clean ones (PJ-05, -17), and two
+ * new cases where the learner really drags a point (DP-01, DP-02, written for this probe; no expected values,
+ * read by hand). HO-PH-04 runs as --other-cases pairs. Every candidate lesson is read by hand: narrated
+ * points must be drawn.
+ */
+export const POINTS_PROBE_CASES = [
+  ...["PJ-01", "PJ-02", "PJ-04", "PJ-07", "PJ-10", "PJ-05", "PJ-17"].map((id) => PLOT_CASES.find((item) => item.id === id)),
+  { id: "DP-01", language: "zh-CN", prompt: "拖动抛物线 y = x² 上的点 P，看它的纵坐标怎样随横坐标变化。", judge: "plot" },
+  { id: "DP-02", language: "en", prompt: "Drag a point along y = sqrt(x) and watch how its height changes.", judge: "plot" },
+];
+export const TRIAL_QUALITY_CASES = { function_plot_extensions: PLOT_CASES, retry_narrowing: RETRY_NARROWING_CASES, plot_points: POINTS_PROBE_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
 
 /**
  * The speed gate for the two switch-ons of 2026-11-15 (plan §7 step 3.2: number-line steps, Coach #99, and
