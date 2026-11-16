@@ -24,6 +24,8 @@
 //   (every case of the named recipes on the candidate arm; near misses on both arms; --both-arms: every case).
 //   Two builds: --baseline-build <dir> --build <dir> --recipes number_line (both arms the same environment;
 //   --recipes picks the fitting requests only).
+//   The gate for the 2026-11-15 switch-ons: --baseline-build <75578ab> --build <main> --recipes extensions_switch_on
+//   --pairs 40 --lesson-calls 4.
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -159,8 +161,20 @@ export const PLOT_CASES = JSON.parse(await readFile(join(root, "testsuite/plot-j
   .map(({ id, language, prompt, nearMiss, expect }) => ({ id, language, prompt, judge: "plot", ...(nearMiss ? { nearMiss } : {}), expect }));
 export const TRIAL_QUALITY_CASES = { function_plot_extensions: PLOT_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
 
-/** The requests each trial recipe fits. */
-export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES };
+/**
+ * The speed gate for the two switch-ons of 2026-11-15 (plan §7 step 3.2: number-line steps, Coach #99, and
+ * the plot options, #98), run with --baseline-build against the build before both. Requests that use the
+ * new parts, chosen by a rule fixed before the run: the first five in-scope steps cases, and the first plot
+ * case of each option family (slope triangle, intercepts, vertex, pieces, domain and range), PJ-03 left
+ * out as a pre-registered miss. Ten, one per other case, as in the earlier gates.
+ */
+export const EXTENSIONS_SWITCH_ON_CASES = [
+  ...["ST-01", "ST-02", "ST-03", "ST-04", "ST-05"].map((id) => NUMBER_LINE_STEPS_CASES.find((item) => item.id === id)),
+  ...["PJ-01", "PJ-02", "PJ-04", "PJ-07", "PJ-10"].map((id) => PLOT_CASES.find((item) => item.id === id)),
+];
+
+/** The requests each trial recipe fits (or each switch-on, for a two-build gate). */
+export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES, extensions_switch_on: EXTENSIONS_SWITCH_ON_CASES };
 /**
  * The quality cases of every recipe a run offers, in the order named (run 9 took only the first recipe's,
  * so its comparing, solution-set and rounding cases never ran).
