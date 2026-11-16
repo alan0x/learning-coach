@@ -205,7 +205,7 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
     const others = new Set(allVisuals.filter(item => item.visual !== visual).flatMap(item => bound(item.visual)));
     const otherSamplePlots = activeSamplePlots.filter(item => item.visual !== visual);
     const sampleIntentUnmet = wantsSamples && !otherSamplePlots.length;
-    const path = `$lessonPlanSection[${draft.section}].moments[${moment}].content.parameters.sample_x_numbers`;
+    const path = `$lessonPlanSection[${draft.section}].moments[${moment}].content.parameters.points`;
     const declared = visual.numbers ?? [];
     let curve = plotCurveNumbers(visual.parameters);
     const rawSamples = visual.parameters?.sample_x_numbers;
@@ -245,7 +245,7 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
     const candidates = declared.filter(unused);
     const fixed = !curve.length && !samples.length;
     const singleFormula = Array.isArray(visual.parameters?.expression_tokens);
-    const formulasPath = path.replace(/sample_x_numbers$/, "formulas");
+    const formulasPath = path.replace(/points$/, "formulas");
     // The exact provider schema no longer asks plots to duplicate their bindings.
     // If it omitted the old list, only full role labels can identify candidates.
     const vertexCandidates = declared.length ? candidates : (outline.numbers ?? []).flatMap((number, index) =>
@@ -255,7 +255,8 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
     // "x-coordinate"), are the points moving along the curve (the trial: refused below and asked again).
     // Only where the checks below would refuse the section, so a lesson that compiles is never changed, and
     // only where the curve exists at each number's min, max and initial value.
-    const movingPoints = fixed && singleFormula && !wantsVertex && candidates.length >= 1 && candidates.length <= 2
+    // Not where the model wrote fixed points: adding dragged ones would contradict them (review of #113).
+    const movingPoints = fixed && singleFormula && !wantsVertex && visual.parameters?.points === undefined && candidates.length >= 1 && candidates.length <= 2
       && candidates.some(number => structuralUse(draft, number) || controlsNamed(number))
       && candidates.every(number => xPositionLabel(outline.numbers?.[number - 1]?.label ?? "")
         && curveExistsAt(visual, [outline.numbers?.[number - 1]?.min, outline.numbers?.[number - 1]?.max, outline.numbers?.[number - 1]?.initial]));

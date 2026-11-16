@@ -37,11 +37,14 @@ async function generate(text) {
 const plot = (lesson) => lesson.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions).find((action) => action.do === "write" && action.kind === "plot").content;
 const refused = ({ rejected }, pattern) => assert.ok(rejected.some((miss) => miss.startsWith("LESSON_PLAN_POINT") && pattern.test(miss)), rejected.join(" | "));
 
-test("two fixed points are A and B on the curve, left to right, with the slope between them", async () => {
+test("two fixed points are A and B on the curve, in the model's order and with its labels, with the slope between them", async () => {
   const { lesson, rejected } = await generate(reply({ formula: "3*x - 2", points: [{ x: 3, y: 7 }, { x: 1, y: 1 }] }));
   assert.ok(lesson, rejected.join(" | "));
   const content = plot(lesson);
-  assert.deepEqual(content.points.slice(0, 2).map((point) => [point.label, point.x, point.y]), [["A", 1, 1], ["B", 3, 7]]);
+  assert.deepEqual(content.points.slice(0, 2).map((point) => [point.label, point.x, point.y]), [["A", 3, 7], ["B", 1, 1]]);
+  // A label the model wrote on one point is kept, and the other takes the letter left.
+  const labelled = await generate(reply({ formula: "x^2", points: [{ x: 1, y: 1, label: "B" }, { x: 3, y: 9 }] }));
+  assert.deepEqual(plot(labelled.lesson).points.slice(0, 2).map((point) => point.label), ["B", "A"]);
   assert.equal(content.measurement, "secant");
 });
 
@@ -60,12 +63,24 @@ test("y is checked against the curve: a stand-in formula is refused with the fac
   assert.ok((await generate(reply({ formula: "1/x", points: [{ x: 3, y: 0.33 }] }))).lesson);
   assert.ok((await generate(reply({ formula: "1/x", points: [{ x: 3, y: 0.3 }] }))).lesson);
   refused(await generate(reply({ formula: "0.4*x", points: [{ x: 4, y: 2 }] })), /gives y = 1.6/u);
+  // Half a unit of the last digit (1.45 written 1.5 is right), and a whole number is exact (0 is not 0.04).
+  assert.ok((await generate(reply({ formula: "x + 0.45", points: [{ x: 1, y: 1.5 }] }))).lesson);
+  refused(await generate(reply({ formula: "0.01*x", points: [{ x: 4, y: 0 }] })), /gives y = 0.04/u);
 });
 
 test("a dragged point names its slider, and moves along the curve", async () => {
   const { lesson, rejected } = await generate(reply({ formula: "x^2", points: [{ slider: "n1" }], numbers: [[1, -3, 3, "x"]], animations: [[1, 2]] }));
   assert.ok(lesson, rejected.join(" | "));
   assert.ok(plot(lesson).bindings.some((binding) => binding.target.endsWith(".x") && binding.expression.includes("number_01")));
+});
+
+test("a dragged point keeps its label, and is refused on a curve the sliders change or on several curves (review of #113)", async () => {
+  const labelled = await generate(reply({ formula: "x^2", points: [{ slider: "n1", label: "M" }], numbers: [[1, -3, 3, "x"]], animations: [[1, 2]] }));
+  assert.ok(labelled.lesson, labelled.rejected.join(" | "));
+  assert.ok(plot(labelled.lesson).points.some((point) => point.label === "M"));
+  const moving = await generate(reply({ formula: "n1*x^2", points: [{ slider: "n2" }], numbers: [[1, -3, 3, "a"], [1, -3, 3, "x"]] }));
+  assert.ok(moving.rejected.some((miss) => /moves along a fixed curve/u.test(miss)), moving.rejected.join(" | "));
+  refused(await generate(reply({ formula: "x^2", points: [{ x: 1, y: 1 }, { x: 1, y: 1 }] })), /two different x/u);
 });
 
 test("points the program cannot draw are refused, never dropped", async () => {

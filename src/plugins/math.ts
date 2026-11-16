@@ -20,11 +20,11 @@ export const MATH_RECIPES = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces", "points"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "points", "curve_label", "curve_labels", "x_label", "y_label", "marks", "pieces"],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces", "points", "sample_labels"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "sample_labels", "points", "curve_label", "curve_labels", "x_label", "y_label", "marks", "pieces"],
     required_model_schema_parameters: ["formulas"],
     // Marks change what the plot draws, so two plots differing only in marks are different visuals.
-    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "points", "marks", "pieces"],
+    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "sample_labels", "points", "marks", "pieces"],
     output_kinds: ["plot"],
     // Its lesson numbers are read from its parameters (formula references and sample_x_numbers): the
     // model writes no number list, and none is assumed for it.

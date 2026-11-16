@@ -4,7 +4,7 @@
 
 - **Points on a function plot as the model means them** (OLL decision 0018 as amended, decision 0020, accepted by the owner 2026-11-16). `points` replaces `sample_x_numbers` in the model's schema. A point is either `{x, y}`, a fixed point on the curve, or `{slider: "n1"}`, a point the learner drags by that lesson number; an optional `label` names it.
   - **Why:** the old field asked for an index into the outline's numbers, and the model often wrote x positions there (`[1, 3]` for x = 1 and 3): 42 recorded slips, and lessons lost when a retry repeated it. Retry tweaks could not fix it (#109, #110): the x positions the model meant had nowhere to go.
-  - **Fixed points** are checked against the curve at the lesson's starting values and drawn at the curve's value. A y counts as right when the curve's value, rounded to the digits written, equals it (1/3 as 0.33 or 0.3). A whole number must be within 0.05, so 2 for the curve's 1.6 is refused. A mismatch is refused with the fact ("the curve gives y = 1 at x = 1, not 2"), which also catches a stand-in formula without reading text. Two fixed points are the plot's A and B, left to right, with the slope between them; one is drawn with its label and no slope readout.
+  - **Fixed points** are checked against the curve at the lesson's starting values and drawn at the curve's value. A y counts as right within half a unit of its last digit (1/3 as 0.33 or 0.3), and a whole number must be exact, so 2 for the curve's 1.6, or 0 for 0.04, is refused. A mismatch is refused with the fact ("the curve gives y = 1 at x = 1, not 2"), which also catches a stand-in formula without reading text. Two fixed points are the plot's A and B, in the model's order and with its labels, with the slope between them; one is drawn with its label and no slope readout.
   - **Dragged points** lower to the internal `sample_x_numbers`, so every existing check of moving points applies.
   - **Refused, never dropped** (the narration talks about them):
     - a point the curve has no value at, for some slider value;
@@ -12,6 +12,14 @@
     - an unknown slider, or any slider in a lesson with no lesson numbers;
     - points on several formulas or a piecewise function;
     - one fixed point with a slope triangle (the program does not pick the second x, which the narration may state).
+  - **Review of #113:**
+    - A dragged point on a curve the sliders change, or on several curves, is refused, not dropped.
+    - The program no longer adds dragged points beside fixed ones, which caused a refusal the model could not fix.
+    - Labels are kept in the model's order, and a dragged point keeps its label.
+    - The y check allows half a unit of the last digit written; a whole number must be exact.
+    - Fixed points stay in view at demonstrated states.
+    - Two fixed points at one x are refused.
+    - Refusal paths name `points`.
   - **Old replies still compile:** `sample_x_numbers` stays readable but is no longer offered. Every message that told the model to write it now names `points`.
   - **Requests:** every request changes (2,080 of 2,080 digests): first request +226 B (158 B schema), section requests +68 B; no ceiling exceeded. Lessons are unchanged (2,080 of 2,080).
   - **Replays:** the 139 recorded lessons, the trial, run B and the gate give the same outcomes; only refusal wording differs.

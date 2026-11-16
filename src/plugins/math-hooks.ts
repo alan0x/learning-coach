@@ -127,7 +127,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       // were refused for it, one call each), and `marks: []` the same way.
       if (Array.isArray(parameters.pieces) && parameters.pieces.length === 0) delete parameters.pieces;
       if (Array.isArray(parameters.marks) && parameters.marks.length === 0) delete parameters.marks;
-      lowerPoints(parameters, numberCount);
+      const dragged = lowerPoints(parameters, numberCount);
       if (parameters.pieces !== undefined) return lowerPieces(parameters, numberCount);
       const rawFormulas = parameters.formulas !== undefined
         ? parameters.formulas
@@ -158,6 +158,12 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
         numberCount,
         `$lessonPlanSection.visual.parameters.formulas[${index}]`,
       ));
+      if (dragged && parsed.length !== 1) formulaError("$lessonPlanSection.visual.parameters.points", "points sit on one formula; a comparison of several curves takes none");
+      // A dragged point moves along a fixed curve: on a curve the sliders change it would be dropped later, so
+      // it is refused here, where the model can still fix it (review of #113).
+      if (dragged && parsed[0]!.some((token) => token.kind === "number")) {
+        formulaError("$lessonPlanSection.visual.parameters.points", "a dragged point (points {slider}) moves along a fixed curve; use a separate fixed curve for it, or fixed points {x, y} on this one");
+      }
       if (parsed.length === 1) {
         parameters.expression_tokens = parsed[0];
         return;
@@ -215,7 +221,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
           "a function plot requires exactly one explicit mathematical expression",
         );
       }
-      const pathToSamples = `${path}.parameters.sample_x_numbers`;
+      const pathToSamples = `${path}.parameters.points`;
       const samples = validatePlotSampleNumbers(visualParameters.sample_x_numbers, numberCount, pathToSamples);
       if (samples.length && plotCurveNumbers(visualParameters).length) {
         fail("LESSON_PLAN_INTERACTION_MISMATCH", pathToSamples, "a dragged point (points {slider}) needs a fixed curve; use formula references for curve controls");
@@ -300,13 +306,13 @@ function namesToNumbers(formula: unknown, labels: readonly string[], visualNumbe
  * lessons lost when a retry repeated it. A point the program cannot draw is refused, never dropped: the
  * narration talks about it.
  */
-function lowerPoints(parameters: Record<string, unknown>, numberCount: number): void {
+function lowerPoints(parameters: Record<string, unknown>, numberCount: number): boolean {
   const raw = parameters.points;
-  if (raw === undefined) return;
+  if (raw === undefined) return false;
   const path = "$lessonPlanSection.visual.parameters.points";
   if (Array.isArray(raw) && raw.length === 0) {
     delete parameters.points;
-    return;
+    return false;
   }
   if (!Array.isArray(raw) || raw.length > 2) fail("LESSON_PLAN_POINT", path, "points holds one or two points");
   if (parameters.pieces !== undefined) fail("LESSON_PLAN_POINT", path, "points sit on one formula; a piecewise function takes no points");
@@ -325,7 +331,7 @@ function lowerPoints(parameters: Record<string, unknown>, numberCount: number): 
         ? `the slider of a dragged point is one of the lesson numbers n1 to n${numberCount}`
         : "this lesson has no lesson numbers, so no point can be dragged: write the point as {x, y}");
     }
-    return { kind: "moving" as const, number };
+    return { kind: "moving" as const, number, ...(label ? { label } : {}) };
   });
   if (items.some((item) => item.kind === "fixed") && items.some((item) => item.kind === "moving")) {
     fail("LESSON_PLAN_POINT", path, "the points of one plot are all fixed ({x, y}) or all dragged ({slider}), not both");
@@ -335,9 +341,15 @@ function lowerPoints(parameters: Record<string, unknown>, numberCount: number): 
     if (new Set(numbers).size !== numbers.length) fail("LESSON_PLAN_POINT", path, "two dragged points need two different lesson numbers");
     delete parameters.points;
     parameters.sample_x_numbers = numbers;
-    return;
+    // The model's names for its dragged points, drawn as written (review of #113).
+    const labels = items.map((item) => (item as { label?: string }).label);
+    if (labels.some((label) => label !== undefined)) parameters.sample_labels = labels.map((label, index) => label ?? (items.length === 2 ? (index ? "B" : "A") : "P"));
+    return true;
   }
+  const xs = items.map((item) => (item as { x: number }).x);
+  if (new Set(xs).size !== xs.length) fail("LESSON_PLAN_POINT", path, "two fixed points need two different x");
   parameters.points = items.map(({ kind: _kind, ...point }) => point);
+  return false;
 }
 
 /**
@@ -420,7 +432,7 @@ function specializeTwoPointDraft(
     if (action.action !== "create" || action.kind !== "visual") continue;
     const content = action.content as LessonPlanVisualContent;
     if (content.capability !== "function_plot" || content.parameters?.sample_x_numbers !== undefined
-      || Array.isArray(content.parameters?.expressions)) continue;
+      || content.parameters?.points !== undefined || Array.isArray(content.parameters?.expressions)) continue;
     const tokens = content.parameters?.expression_tokens;
     if (Array.isArray(tokens)) {
       content.parameters!.expression_tokens = (tokens as LessonPlanMathToken[]).map((token) => (
