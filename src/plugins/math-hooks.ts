@@ -141,9 +141,6 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
         if (dragged && Array.isArray(parameters.expressions) && parameters.expressions.length !== 1) {
           formulaError("$lessonPlanSection.visual.parameters.points", "points sit on one formula; a comparison of several curves takes none");
         }
-        if (dragged && Array.isArray(parameters.expression_tokens) && (parameters.expression_tokens as LessonPlanMathToken[]).some((token) => token.kind === "number")) {
-          formulaError("$lessonPlanSection.visual.parameters.points", "a dragged point (points {slider}) moves along a fixed curve; use a separate fixed curve for it, or fixed points {x, y} on this one");
-        }
         return;
       }
       if (!Array.isArray(rawFormulas)
@@ -168,11 +165,10 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
         `$lessonPlanSection.visual.parameters.formulas[${index}]`,
       ));
       if (dragged && parsed.length !== 1) formulaError("$lessonPlanSection.visual.parameters.points", "points sit on one formula; a comparison of several curves takes none");
-      // A dragged point moves along a fixed curve: on a curve the sliders change it would be dropped later, so
-      // it is refused here, where the model can still fix it (review of #113).
-      if (dragged && parsed[0]!.some((token) => token.kind === "number")) {
-        formulaError("$lessonPlanSection.visual.parameters.points", "a dragged point (points {slider}) moves along a fixed curve; use a separate fixed curve for it, or fixed points {x, y} on this one");
-      }
+      // A dragged point on a curve the sliders change is handled as main handles samples there (plot-bindings):
+      // refused where the point needs its own number, otherwise left to the curve. Refusing it outright lost a
+      // lesson in the paired probe that main published (PJ-04: a point on the vertex slider of (x − n1)² + 2,
+      // which the vertex mark already shows; the model alternated between two refused replies).
       if (parsed.length === 1) {
         parameters.expression_tokens = parsed[0];
         return;
@@ -333,7 +329,9 @@ function lowerPoints(parameters: Record<string, unknown>, numberCount: number): 
     const fixed = point && typeof point.x === "number" && Number.isFinite(point.x) && typeof point.y === "number" && Number.isFinite(point.y) && point.slider === undefined;
     const moving = point && typeof point.slider === "string" && point.x === undefined && point.y === undefined;
     if (!fixed && !moving) fail("LESSON_PLAN_POINT", where, "a point is either {x, y}, a fixed point on the curve, or {slider: \"n1\"}, a point the learner drags by that lesson number");
-    const label = typeof point!.label === "string" && point!.label.trim() ? point!.label.trim().slice(0, 8) : undefined;
+    // A label up to 16 characters is drawn whole; a longer one is left to the program's letter, never cut
+    // mid-text ("P(x, sqr" in the paired probe).
+    const label = typeof point!.label === "string" && point!.label.trim() && point!.label.trim().length <= 16 ? point!.label.trim() : undefined;
     if (fixed) return { kind: "fixed" as const, x: point!.x as number, y: point!.y as number, ...(label ? { label } : {}) };
     const match = /^\s*n(\d+)\s*$/iu.exec(point!.slider as string);
     const number = match ? Number(match[1]) : Number.NaN;

@@ -14814,9 +14814,6 @@ var MATH_HOOKS = {
         if (dragged && Array.isArray(parameters3.expressions) && parameters3.expressions.length !== 1) {
           formulaError("$lessonPlanSection.visual.parameters.points", "points sit on one formula; a comparison of several curves takes none");
         }
-        if (dragged && Array.isArray(parameters3.expression_tokens) && parameters3.expression_tokens.some((token) => token.kind === "number")) {
-          formulaError("$lessonPlanSection.visual.parameters.points", "a dragged point (points {slider}) moves along a fixed curve; use a separate fixed curve for it, or fixed points {x, y} on this one");
-        }
         return;
       }
       if (!Array.isArray(rawFormulas) || rawFormulas.length < 1 || rawFormulas.length > 8) {
@@ -14835,9 +14832,6 @@ var MATH_HOOKS = {
         `$lessonPlanSection.visual.parameters.formulas[${index}]`
       ));
       if (dragged && parsed.length !== 1) formulaError("$lessonPlanSection.visual.parameters.points", "points sit on one formula; a comparison of several curves takes none");
-      if (dragged && parsed[0].some((token) => token.kind === "number")) {
-        formulaError("$lessonPlanSection.visual.parameters.points", "a dragged point (points {slider}) moves along a fixed curve; use a separate fixed curve for it, or fixed points {x, y} on this one");
-      }
       if (parsed.length === 1) {
         parameters3.expression_tokens = parsed[0];
         return;
@@ -14955,7 +14949,7 @@ function lowerPoints(parameters3, numberCount) {
     const fixed = point && typeof point.x === "number" && Number.isFinite(point.x) && typeof point.y === "number" && Number.isFinite(point.y) && point.slider === void 0;
     const moving = point && typeof point.slider === "string" && point.x === void 0 && point.y === void 0;
     if (!fixed && !moving) fail2("LESSON_PLAN_POINT", where, 'a point is either {x, y}, a fixed point on the curve, or {slider: "n1"}, a point the learner drags by that lesson number');
-    const label = typeof point.label === "string" && point.label.trim() ? point.label.trim().slice(0, 8) : void 0;
+    const label = typeof point.label === "string" && point.label.trim() && point.label.trim().length <= 16 ? point.label.trim() : void 0;
     if (fixed) return { kind: "fixed", x: point.x, y: point.y, ...label ? { label } : {} };
     const match = /^\s*n(\d+)\s*$/iu.exec(point.slider);
     const number = match ? Number(match[1]) : Number.NaN;

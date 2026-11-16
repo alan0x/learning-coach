@@ -79,8 +79,10 @@ test("a dragged point keeps its label, and is refused on a curve the sliders cha
   const labelled = await generate(reply({ formula: "x^2", points: [{ slider: "n1", label: "M" }], numbers: [[1, -3, 3, "x"]], animations: [[1, 2]] }));
   assert.ok(labelled.lesson, labelled.rejected.join(" | "));
   assert.ok(plot(labelled.lesson).points.some((point) => point.label === "M"));
-  const moving = await generate(reply({ formula: "n1*x^2", points: [{ slider: "n2" }], numbers: [[1, -3, 3, "a"], [1, -3, 3, "x"]] }));
-  assert.ok(moving.rejected.some((miss) => /moves along a fixed curve/u.test(miss)), moving.rejected.join(" | "));
+  // A dragged point on the vertex slider of a moving parabola: handled as main handles it, never refused outright
+  // (the paired probe lost PJ-04 to that refusal); the vertex mark shows the vertex.
+  const vertex = await generate(reply({ formula: "(x - n1)^2 + 2", points: [{ slider: "n1", label: "顶点" }], numbers: [[-1, -3, 3, "顶点横坐标"]], marks: ["vertex"], animations: [[1, 1]] }));
+  assert.ok(vertex.lesson, vertex.rejected.join(" | "));
   refused(await generate(reply({ formula: "x^2", points: [{ x: 1, y: 1 }, { x: 1, y: 1 }] })), /two different x/u);
   // A dragged point keeps its label beside a slope triangle, and two dragged points never share a letter.
   const triangle = await generate(reply({ formula: "x^2", points: [{ slider: "n1", label: "M" }], numbers: [[1, -3, 3, "x"]], marks: ["slope_triangle"], animations: [[1, 2]] }));
