@@ -14,9 +14,7 @@ import { compileMathExpression, type AuthoringAction } from "octos-lesson-langua
 import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
 import { COARSE_UNITS, lessonValues, moveLandings } from "./number-line-fit.js";
-import { PLOT_MARKS, markParts, type MarkPart, type PlotMark } from "./plot-marks.js";
-import { formulaBars, pieceBars, type AxisBar } from "./plot-domain-range.js";
-import { intervalOf, signOf, type Interval } from "./interval.js";
+import { PLOT_MARKS, formulaBars, intervalOf, markParts, pieceBars, signOf, type AxisBar, type Interval, type MarkPart, type PlotMark } from "./plot-marks.js";
 import { fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(

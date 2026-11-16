@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Function-plot derivations come from OLL's math plugin** (plan §7 step 3.5, slice 2; no lesson or request changes). Marks, domain and range bars and the interval sign proofs moved to `octos-lesson-language/plugin-math`, so Studio can draw what AI lessons draw. `src/plugins/plot-marks.ts` is now an adapter: it hands the plugin Coach's formula tokens, with each lesson number by its binding name, and reports a refusal as the same section fault as before. `plot-domain-range.ts` and `interval.ts` are gone. OLL pin `33f2b85` (OLL feature branch; only the new plugin modules differ from `8e85fe1`). The request-hash test is unchanged; replays of the 139 recorded lessons, the trial, run B and the gate are identical.
+
 - **Coach's core names no recipe** (plan §2.3, §7 step 3.4, Goal 1; no lesson or request changes). Recipe knowledge in core becomes declarations on the recipes:
   - `numbers_in_parameters` (the plot): its lesson numbers come from its parameters, so the schema gives it no number list and generation assumes none;
   - `ranges_fixed_once_shown` (the plot): a number it shows keeps its range once its section is published (from `bound_numbers`, else the visual's numbers);
