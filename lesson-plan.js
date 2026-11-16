@@ -14245,7 +14245,7 @@ function plotSampleNumbers(parameters3) {
 function validatePlotSampleNumbers(value2, numberCount, path) {
   if (value2 === void 0) return [];
   if (!Array.isArray(value2) || !value2.length || value2.length > 2 || new Set(value2).size !== value2.length || value2.some((number) => !Number.isInteger(number) || number < 1 || number > numberCount)) {
-    fail2("LESSON_PLAN_NUMBER_REFERENCE", path, "use one or two distinct lesson number indexes for the sample x-coordinates");
+    fail2("LESSON_PLAN_NUMBER_REFERENCE", path, 'write each point in parameters.points as {x, y} (fixed) or {slider: "nK"} (dragged), one or two points');
   }
   return value2;
 }
@@ -14395,6 +14395,7 @@ function normalizePlotDraftBindings(draft, context) {
         fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, "a dragged point (points {slider}) moves on a fixed curve; keep formula references for changing the curve, or use a separate fixed curve for dragged points");
       }
       delete visual.parameters.sample_x_numbers;
+      delete visual.parameters.sample_labels;
       candidates2.filter(onlySampleControl).forEach((number) => dropped.add(number));
       if (slot !== void 0) droppedSampleSlots.add(slot);
       adjust({
@@ -14428,15 +14429,12 @@ function normalizePlotDraftBindings(draft, context) {
         const indexes = candidates.slice(0, 2);
         fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length ? `Use parameters.points with ${indexes.map((index) => `{slider: "n${index}"}`).join(" and ")} for the points the learner drags; one entry for one point` : `Use parameters.points with {slider: "nK"}, naming the lesson number that is each dragged point's x`);
       }
+      const fixedHere = visual.parameters?.points !== void 0;
       if (wantsVertex && !curve.length && !hasSampleIntent || candidates.some((number) => structuralUse(draft, number) || controlsNamed(number))) {
-        fail2("LESSON_PLAN_INTERACTION_MISMATCH", formulasPath, "Use the lesson number references in the curve formula when sliders change the curve");
+        fail2("LESSON_PLAN_INTERACTION_MISMATCH", formulasPath, fixedHere ? "A lesson number the section moves is not on this plot: its points are fixed {x, y}. Reference the number in the formula to change the curve, or write all of the plot's points as dragged {slider}" : "Use the lesson number references in the curve formula when sliders change the curve");
       }
       if (fixed && singleFormula && plots.length === 1 && (outline.numbers ?? []).some((_, index) => unused(index + 1) && structuralUse(draft, index + 1))) {
-        fail2(
-          "LESSON_PLAN_INTERACTION_MISMATCH",
-          formulasPath,
-          "The demonstration uses an unbound number; reference it in the formula for a curve control, or name it in parameters.points as {slider} for a dragged point"
-        );
+        fail2("LESSON_PLAN_INTERACTION_MISMATCH", formulasPath, fixedHere ? "The demonstration uses an unbound number; reference it in the formula for a curve control, or write all of the plot's points as dragged {slider}" : "The demonstration uses an unbound number; reference it in the formula for a curve control, or name it in parameters.points as {slider} for a dragged point");
       }
       if (candidates.length) {
         candidates.forEach((number) => dropped.add(number));
@@ -14812,7 +14810,15 @@ var MATH_HOOKS = {
       const dragged = lowerPoints(parameters3, numberCount);
       if (parameters3.pieces !== void 0) return lowerPieces(parameters3, numberCount);
       const rawFormulas = parameters3.formulas !== void 0 ? parameters3.formulas : typeof parameters3.expression === "string" ? [parameters3.expression] : Array.isArray(parameters3.expressions) ? parameters3.expressions : void 0;
-      if (rawFormulas === void 0) return;
+      if (rawFormulas === void 0) {
+        if (dragged && Array.isArray(parameters3.expressions) && parameters3.expressions.length !== 1) {
+          formulaError("$lessonPlanSection.visual.parameters.points", "points sit on one formula; a comparison of several curves takes none");
+        }
+        if (dragged && Array.isArray(parameters3.expression_tokens) && parameters3.expression_tokens.some((token) => token.kind === "number")) {
+          formulaError("$lessonPlanSection.visual.parameters.points", "a dragged point (points {slider}) moves along a fixed curve; use a separate fixed curve for it, or fixed points {x, y} on this one");
+        }
+        return;
+      }
       if (!Array.isArray(rawFormulas) || rawFormulas.length < 1 || rawFormulas.length > 8) {
         formulaError(
           "$lessonPlanSection.visual.parameters.formulas",
@@ -14933,6 +14939,7 @@ function namesToNumbers(formula, labels, visualNumbers) {
   });
 }
 function lowerPoints(parameters3, numberCount) {
+  delete parameters3.sample_labels;
   const raw = parameters3.points;
   if (raw === void 0) return false;
   const path = "$lessonPlanSection.visual.parameters.points";
@@ -14966,7 +14973,8 @@ function lowerPoints(parameters3, numberCount) {
     delete parameters3.points;
     parameters3.sample_x_numbers = numbers;
     const labels = items.map((item) => item.label);
-    if (labels.some((label) => label !== void 0)) parameters3.sample_labels = labels.map((label, index) => label ?? (items.length === 2 ? index ? "B" : "A" : "P"));
+    const free = ["A", "B"].filter((name) => !labels.includes(name));
+    if (labels.some((label) => label !== void 0)) parameters3.sample_labels = labels.map((label) => label ?? (items.length === 2 ? free.shift() : "P"));
     return true;
   }
   const xs = items.map((item) => item.x);
@@ -15005,7 +15013,7 @@ function lowerPieces(parameters3, numberCount) {
       formulaError(path, "the pieces overlap: each x belongs to at most one piece, and where two meet only one includes the end");
     }
   }
-  for (const key of ["formulas", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "sample_x_numbers"]) delete parameters3[key];
+  for (const key of ["formulas", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "sample_x_numbers", "sample_labels"]) delete parameters3[key];
   parameters3.expressions = ordered.map((piece) => piece.expression);
   parameters3.pieces = ordered;
   return { no_numbers: true };
@@ -17019,7 +17027,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   if (sampleNumbers.length === 1 && markList.includes("slope_triangle")) {
     const second = secondSampleTwoRight(plan, sampleNumbers[0], expression, creationMoments, path);
     if (second) {
-      samples[0].label = "A";
+      if (!(Array.isArray(input.sample_labels) && typeof input.sample_labels[0] === "string")) samples[0].label = "A";
       samples.push(second.sample);
       teachingPoints.push({ x: second.sample.x, y: second.sample.y }, ...second.shown);
       optionalPoints.push(...second.ends);
@@ -17071,7 +17079,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
         return Number.NaN;
       }
     };
-    references = fixedPoints.map((point, index) => ({ x: point.x, y: at2(initialState, point.x), label: pointLabels[index] }));
+    references = fixedPoints.map((point, index) => ({ x: point.x, y: at2(initialState, point.x), label: pointLabels[index] })).sort((a, b) => a.x - b.x);
     teachingPoints.push(...references, ...demonstrations.flatMap((values) => fixedPoints.map((point) => ({ x: point.x, y: at2(values, point.x) }))).filter((spot) => Number.isFinite(spot.y)));
   } else if (expressions.length === 1 && !sampleNumbers.length && !fixedPoints?.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
@@ -17276,7 +17284,9 @@ function plotPieces(value2, expressionCount, path) {
 function pointYMatches(curve, written) {
   if (!Number.isFinite(curve)) return false;
   const text3 = String(written);
-  const digits = /e/iu.test(text3) ? 12 : text3.split(".")[1]?.length ?? 0;
+  const exponent = /e-(\d+)$/iu.exec(text3);
+  const mantissaDigits = text3.replace(/e.*$/iu, "").split(".")[1]?.length ?? 0;
+  const digits = exponent ? mantissaDigits + Number(exponent[1]) : mantissaDigits;
   const tolerance = digits > 0 ? 0.5 * 10 ** -digits : 0;
   return Math.abs(curve - written) <= tolerance + 1e-9 * Math.max(1, Math.abs(written));
 }

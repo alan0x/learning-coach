@@ -41,10 +41,11 @@ test("two fixed points are A and B on the curve, in the model's order and with i
   const { lesson, rejected } = await generate(reply({ formula: "3*x - 2", points: [{ x: 3, y: 7 }, { x: 1, y: 1 }] }));
   assert.ok(lesson, rejected.join(" | "));
   const content = plot(lesson);
-  assert.deepEqual(content.points.slice(0, 2).map((point) => [point.label, point.x, point.y]), [["A", 3, 7], ["B", 1, 1]]);
+  // Each keeps its own label; drawn left to right, so the run and rise are positive.
+  assert.deepEqual(content.points.slice(0, 2).map((point) => [point.label, point.x, point.y]), [["B", 1, 1], ["A", 3, 7]]);
   // A label the model wrote on one point is kept, and the other takes the letter left.
   const labelled = await generate(reply({ formula: "x^2", points: [{ x: 1, y: 1, label: "B" }, { x: 3, y: 9 }] }));
-  assert.deepEqual(plot(labelled.lesson).points.slice(0, 2).map((point) => point.label), ["B", "A"]);
+  assert.deepEqual(plot(labelled.lesson).points.slice(0, 2).map((point) => [point.label, point.x]), [["B", 1], ["A", 3]]);
   assert.equal(content.measurement, "secant");
 });
 
@@ -81,6 +82,13 @@ test("a dragged point keeps its label, and is refused on a curve the sliders cha
   const moving = await generate(reply({ formula: "n1*x^2", points: [{ slider: "n2" }], numbers: [[1, -3, 3, "a"], [1, -3, 3, "x"]] }));
   assert.ok(moving.rejected.some((miss) => /moves along a fixed curve/u.test(miss)), moving.rejected.join(" | "));
   refused(await generate(reply({ formula: "x^2", points: [{ x: 1, y: 1 }, { x: 1, y: 1 }] })), /two different x/u);
+  // A dragged point keeps its label beside a slope triangle, and two dragged points never share a letter.
+  const triangle = await generate(reply({ formula: "x^2", points: [{ slider: "n1", label: "M" }], numbers: [[1, -3, 3, "x"]], marks: ["slope_triangle"], animations: [[1, 2]] }));
+  assert.ok(triangle.lesson, triangle.rejected.join(" | "));
+  assert.equal(plot(triangle.lesson).points[0].label, "M");
+  const two = await generate(reply({ formula: "x^2", points: [{ slider: "n1" }, { slider: "n2", label: "A" }], numbers: [[1, -3, 3, "x1"], [2, -3, 3, "x2"]], animations: [[1, 2]] }));
+  assert.ok(two.lesson, two.rejected.join(" | "));
+  assert.deepEqual(plot(two.lesson).points.slice(0, 2).map((point) => point.label), ["B", "A"]);
 });
 
 test("points the program cannot draw are refused, never dropped", async () => {

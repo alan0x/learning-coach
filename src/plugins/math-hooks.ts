@@ -136,7 +136,16 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
           : Array.isArray(parameters.expressions)
             ? parameters.expressions
             : undefined;
-      if (rawFormulas === undefined) return;
+      if (rawFormulas === undefined) {
+        // A reply with expression_tokens instead of formulas gets the same dragged-point checks (review of #113).
+        if (dragged && Array.isArray(parameters.expressions) && parameters.expressions.length !== 1) {
+          formulaError("$lessonPlanSection.visual.parameters.points", "points sit on one formula; a comparison of several curves takes none");
+        }
+        if (dragged && Array.isArray(parameters.expression_tokens) && (parameters.expression_tokens as LessonPlanMathToken[]).some((token) => token.kind === "number")) {
+          formulaError("$lessonPlanSection.visual.parameters.points", "a dragged point (points {slider}) moves along a fixed curve; use a separate fixed curve for it, or fixed points {x, y} on this one");
+        }
+        return;
+      }
       if (!Array.isArray(rawFormulas)
         || rawFormulas.length < 1
         || rawFormulas.length > 8) {
@@ -307,6 +316,8 @@ function namesToNumbers(formula: unknown, labels: readonly string[], visualNumbe
  * narration talks about it.
  */
 function lowerPoints(parameters: Record<string, unknown>, numberCount: number): boolean {
+  // sample_labels is the program's, written only here from the model's point labels.
+  delete parameters.sample_labels;
   const raw = parameters.points;
   if (raw === undefined) return false;
   const path = "$lessonPlanSection.visual.parameters.points";
@@ -343,7 +354,8 @@ function lowerPoints(parameters: Record<string, unknown>, numberCount: number): 
     parameters.sample_x_numbers = numbers;
     // The model's names for its dragged points, drawn as written (review of #113).
     const labels = items.map((item) => (item as { label?: string }).label);
-    if (labels.some((label) => label !== undefined)) parameters.sample_labels = labels.map((label, index) => label ?? (items.length === 2 ? (index ? "B" : "A") : "P"));
+    const free = ["A", "B"].filter((name) => !labels.includes(name));
+    if (labels.some((label) => label !== undefined)) parameters.sample_labels = labels.map((label) => label ?? (items.length === 2 ? free.shift()! : "P"));
     return true;
   }
   const xs = items.map((item) => (item as { x: number }).x);
@@ -391,7 +403,7 @@ function lowerPieces(parameters: Record<string, unknown>, numberCount: number): 
       formulaError(path, "the pieces overlap: each x belongs to at most one piece, and where two meet only one includes the end");
     }
   }
-  for (const key of ["formulas", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "sample_x_numbers"]) delete parameters[key];
+  for (const key of ["formulas", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "sample_x_numbers", "sample_labels"]) delete parameters[key];
   parameters.expressions = ordered.map((piece) => piece.expression);
   parameters.pieces = ordered;
   return { no_numbers: true };

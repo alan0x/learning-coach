@@ -209,7 +209,7 @@ function compileFunctionPlot(
   if (sampleNumbers.length === 1 && markList.includes("slope_triangle")) {
     const second = secondSampleTwoRight(plan, sampleNumbers[0]!, expression, creationMoments, path);
     if (second) {
-      samples[0]!.label = "A";
+      if (!(Array.isArray(input.sample_labels) && typeof input.sample_labels[0] === "string")) samples[0]!.label = "A";
       samples.push(second.sample);
       teachingPoints.push({ x: second.sample.x, y: second.sample.y }, ...second.shown);
       optionalPoints.push(...second.ends);
@@ -261,7 +261,8 @@ function compileFunctionPlot(
     // Two fixed points are the plot's reference points, in the model's order and with its labels.
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
     const at = (values: Record<string, number>, x: number) => { try { return evaluateCurve({ ...values, x }); } catch { return Number.NaN; } };
-    references = fixedPoints.map((point, index) => ({ x: point.x, y: at(initialState, point.x), label: pointLabels![index]! }));
+    // Each keeps its own label; left to right, so the triangle's run and rise are positive (review of #113).
+    references = fixedPoints.map((point, index) => ({ x: point.x, y: at(initialState, point.x), label: pointLabels![index]! })).sort((a, b) => a.x - b.x);
     teachingPoints.push(...references, ...demonstrations.flatMap((values) => fixedPoints.map((point) => ({ x: point.x, y: at(values, point.x) }))).filter((spot) => Number.isFinite(spot.y)));
   } else if (expressions.length === 1 && !sampleNumbers.length && !fixedPoints?.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
@@ -490,7 +491,10 @@ function plotPieces(value: unknown, expressionCount: number, path: string): Arra
 function pointYMatches(curve: number, written: number): boolean {
   if (!Number.isFinite(curve)) return false;
   const text = String(written);
-  const digits = /e/iu.test(text) ? 12 : (text.split(".")[1]?.length ?? 0);
+  // Digits after the point as written; a small number prints in exponent form (1e-7 has 7, 2.5e-7 has 8).
+  const exponent = /e-(\d+)$/iu.exec(text);
+  const mantissaDigits = text.replace(/e.*$/iu, "").split(".")[1]?.length ?? 0;
+  const digits = exponent ? mantissaDigits + Number(exponent[1]) : mantissaDigits;
   // Half a unit of the last digit written (1.5 for 1.45, 0.66 or 0.67 for 2/3 is not: 0.66 is 0.0067 off);
   // a whole number must be the curve's value, so 0 is not 0.04 and 2 is not 1.6 (review of #113).
   const tolerance = digits > 0 ? 0.5 * 10 ** -digits : 0;
