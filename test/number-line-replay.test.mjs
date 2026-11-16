@@ -367,13 +367,16 @@ test("the solution-set check catches a wrong end, a filled point on an open end,
   const withPoint = structuredClone(numberLineLesson(await compileCompare(solutionReply("x>a", [-2]), caseById.get("SOL-01").prompt)));
   withPoint.content.points = [{ as: "dot", value: -2 }];
   assert.match(judgeNumberLine(caseById.get("SOL-01"), withPoint).hard.join(), /filled point sits on the open end -2/);
-  // a must be below b: refused as a parameter fault of the section.
+  // Boundaries larger first: read in their one valid order where both ends are alike (owner's principles,
+  // 2026-11-16); refused where the ends differ, since the closed end could belong to either number.
+  const swapped = numberLineLesson(await compileCompare(solutionReply("a<x<b", [5, 1]), caseById.get("SOL-04").prompt));
+  assert.deepEqual(judgeNumberLine(caseById.get("SOL-04"), swapped).hard, []);
   const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
   const rejected = [];
   await assert.rejects(generateLessonPlanWithModel(async (request) => {
-    if (request.label === "lesson-plan-bootstrap") return JSON.stringify(solutionReply("a<x<b", [5, 1]));
+    if (request.label === "lesson-plan-bootstrap") return JSON.stringify(solutionReply("a<x<=b", [4, 1]));
     throw new Error("stop");
-  }, { turn_id: "order", learner_request: "x between 1 and 5", input_modality: "text", request_source: "self_contained" }, { on_rejected_part: (event) => rejected.push(event.error.message) }), /stop/);
+  }, { turn_id: "order", learner_request: "x above 1, up to 4", input_modality: "text", request_source: "self_contained" }, { on_rejected_part: (event) => rejected.push(event.error.message) }), /stop/);
   assert.ok(rejected.some((message) => /smaller than the second/.test(message)), rejected.join());
 });
 

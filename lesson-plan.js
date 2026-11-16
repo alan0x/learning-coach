@@ -13342,7 +13342,13 @@ function fitComparedNumbers(content, plan, sharedNumbers) {
   for (const index of indexes) fitted.set(index, grid);
   return fitted;
 }
+var SYMMETRIC_RELATIONS = /* @__PURE__ */ new Set(["a<x<b", "a<=x<=b", "x<a|x>b", "x<=a|x>=b"]);
 function fitSolutionNumbers(content, plan, sharedNumbers) {
+  const listed = content.numbers ?? [];
+  const [first, second] = listed.map((index) => plan.numbers?.[index - 1]?.initial);
+  if (listed.length >= 2 && first !== void 0 && second !== void 0 && first > second && SYMMETRIC_RELATIONS.has(String(content.parameters?.relation))) {
+    content.numbers = [listed[1], listed[0], ...listed.slice(2)];
+  }
   const [lowIndex, highIndex] = content.numbers ?? [];
   const model = [lowIndex, highIndex].map((index) => index ? structuredClone(plan.numbers?.[index - 1]) : void 0);
   const fitted = fitComparedNumbers(content, plan, sharedNumbers);
@@ -15557,6 +15563,22 @@ function assembleLessonPlan(outlineValue, draftValues, options = {}) {
   return resolveLessonPlan(assembled, options).plan;
 }
 
+// src/arithmetic-claims.ts
+var NUMBER = String.raw`(\d+(?:\.\d+)?)`;
+var OPERATOR = String.raw`[+＋\-−–×xX*÷/^=＝]`;
+var CLAIM = new RegExp(String.raw`(?<![\d.)\]]\s*|${OPERATOR}\s*)([-−]?)${NUMBER}\s*([+＋\-−–×xX*÷/])\s*${NUMBER}\s*[=＝]\s*([-−]?)${NUMBER}(?![\d.])(?!\s*${OPERATOR})`, "gu");
+function hasFalseArithmetic(text3) {
+  for (const match of text3.matchAll(CLAIM)) {
+    const [, leftSign, left, operator, right, sign, result] = match;
+    const a = Number(`${leftSign ? "-" : ""}${left}`), b = Number(right), c = Number(`${sign ? "-" : ""}${result}`);
+    const value2 = "+\uFF0B".includes(operator) ? a + b : "-\u2212\u2013".includes(operator) ? a - b : "\xD7xX*".includes(operator) ? a * b : b === 0 ? Number.NaN : a / b;
+    if (!Number.isFinite(value2)) return true;
+    const places = result.includes(".") ? result.split(".")[1].length : 0;
+    if (Math.abs(value2 - c) > 0.5 * 10 ** -places + 1e-9) return true;
+  }
+  return false;
+}
+
 // src/compiled-visual-reuse.ts
 function cardIdentity(kind, content) {
   const fragments = /* @__PURE__ */ new Map();
@@ -16689,9 +16711,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   const expression = expressions[0];
   if (!expression) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expressions`, "at least one function expression is required");
   const curveLabels = input.curve_labels === void 0 ? [] : optionalStringArray(input.curve_labels, [], `${path}.curve_labels`).map((label) => namedNumbers(label, plan));
-  if (curveLabels.length > 0 && curveLabels.length !== expressions.length) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.curve_labels`, "curve label count must equal expression count");
-  }
+  if (curveLabels.length > 0 && curveLabels.length !== expressions.length) curveLabels.length = 0;
   const sampleNumbers = plotSampleNumbers(input);
   const number = sampleNumbers[0];
   const hint = (value2, key) => value2 === void 0 ? void 0 : optionalNumber(value2, 0, `${path}.${key}`);
@@ -18350,7 +18370,8 @@ function compileLessonPlan(value2, options = {}) {
         availability: { kind: "after_lesson" },
         hints: activity.hints.map((hint) => namedNumbers(hint, plan)),
         ...activity.hint_after_attempts ? { hint_after_attempts: activity.hint_after_attempts } : {},
-        ...activity.success_message ? { success_message: namedNumbers(activity.success_message, plan) } : {}
+        // A message stating false arithmetic is dropped, and the player's own message shows (plan §7 step 3.6).
+        ...activity.success_message && !hasFalseArithmetic(activity.success_message) ? { success_message: namedNumbers(activity.success_message, plan) } : {}
       };
       if (activity.kind === "number_target") {
         const firstNumber = activity.number_controls[0]?.number;
@@ -21817,6 +21838,7 @@ export {
   enabledTrialRecipes,
   frameRawReply,
   generateLessonPlanWithModel,
+  hasFalseArithmetic,
   includeWrittenCardsInFocus,
   isNumberLineCapability,
   lessonPlanPlugins,

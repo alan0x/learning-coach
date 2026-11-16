@@ -358,7 +358,19 @@ export function fitComparedNumbers(content: LessonPlanVisualContent, plan: Lesso
  * span below or above the split: in 1 < x < 2 the lower boundary runs [0, 1] and the upper [2, 3], within
  * the model's ranges where they allow it. Values that cross are left alone: the compiler refuses them.
  */
+/** Two-boundary relations whose two ends are drawn alike, so swapping the boundaries changes nothing else. */
+const SYMMETRIC_RELATIONS = new Set(["a<x<b", "a<=x<=b", "x<a|x>b", "x<=a|x>=b"]);
+
 export function fitSolutionNumbers(content: LessonPlanVisualContent, plan: LessonPlan, sharedNumbers: ReadonlySet<number>): Map<number, number> {
+  // Two boundaries given larger first: where both ends are alike (a<x<b, x<=a|x>=b, ...), only one order is
+  // valid, so they are read in it, before anything is fitted. Where the ends differ (a<x<=b), the model may
+  // have tied the closed end to either number, so the compiler still refuses it (owner's principles,
+  // 2026-11-16: accept what has exactly one reading).
+  const listed = content.numbers ?? [];
+  const [first, second] = listed.map((index) => plan.numbers?.[index - 1]?.initial);
+  if (listed.length >= 2 && first !== undefined && second !== undefined && first > second && SYMMETRIC_RELATIONS.has(String(content.parameters?.relation))) {
+    content.numbers = [listed[1]!, listed[0]!, ...listed.slice(2)];
+  }
   const [lowIndex, highIndex] = content.numbers ?? [];
   const model = [lowIndex, highIndex].map((index) => (index ? structuredClone(plan.numbers?.[index - 1]) : undefined));
   const fitted = fitComparedNumbers(content, plan, sharedNumbers);
