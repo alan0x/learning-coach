@@ -2,23 +2,18 @@
 
 ## Unreleased
 
-- **Section requests limit `sample_x_numbers` to the lesson-number indexes** (plan §7 step 3.6a; candidate, measured by a paired probe before merging). The speed gate of 2026-11-15 lost two lessons to x positions written there (`[1, 3]` for x = 1 and 3), repeated on every retry; repair in place (#102) was closed on review.
-  - The plot recipe declares `number_index_parameters: ["sample_x_numbers"]`. A section request, whose outline is known, gives those items the section's indexes as an enum, as `numbers` already has, and leaves the field out when there are none. The bootstrap, which writes the outline in the same reply, is unchanged.
-  - **Census of recorded slips:** 22 of 35 were on section calls with out-of-range values, which are now unwritable. Values that happen to be valid indexes, such as `[1, 2]` meant as x = 1 and 2 with four lesson numbers, still bind those numbers, as on main. Duplicates and extra items (`[2, 2]`) are still writable (the provider schema keeps no uniqueItems or maxItems) and refused as before. The provider kept every one of 370 recorded `numbers` lists within their enum.
-  - The refusal now says what the field holds: lesson-number indexes from 1 to N, not x values, left out when no point moves. This is for the bootstrap's slips.
-  - **Requests:** 80 of 2,080 recorded digests change. Digests are per run, and all 80 are the fallback-outline runs of the four plot fixtures: the first request fails, an outline request follows, and the first-section request after it creates the plot. That section request is the one that changes. No first request changes, and neither do the normal, repair or practice runs, whose plots come from the first request. Lessons unchanged; no ceiling exceeded.
-  - **Review of #105:**
-    - With no lesson numbers, the section schema has no `sample_x_numbers`, so the refusal that asked for a moving point now asks for the fixed curve instead.
-    - The index refusal says "distinct" again.
-    - The declaration is read through `recipeNumberIndexParameters`, which fails on a malformed list. It applies to one recipe at a time, and fails if it names a parameter that is not an array.
-    - Tests cover both refusals.
-    - **Tried and reverted (third review):** reading only the section's own words when there are no lesson numbers. It let narration promising a point that cannot move be published over a fixed curve.
+- **With no lesson numbers, section requests leave `sample_x_numbers` out** (plan §7 step 3.6a). The speed gate of 2026-11-15 lost two lessons to x positions written there (`[1, 3]` for x = 1 and 3), repeated on every retry. Both lessons had no lesson numbers. Repair in place (#102) was closed on review.
+  - The plot recipe declares `number_index_parameters: ["sample_x_numbers"]`. A section request, whose outline is known, leaves such a parameter out when the lesson has no numbers, so the slip cannot be written there. The bootstrap, which writes the outline in the same reply, is unchanged.
+  - **With lesson numbers, the schema is unchanged.** An earlier version limited the items to the valid indexes. Review four showed that an enum turns an x value the model means into a valid but wrong index (`[1, 2]` for x = 1 and 3), binding a point to an unrelated slider where main refuses visibly. Slips in lessons with numbers stay open (plan §7 step 3.6a).
+  - **Census of recorded slips** (counting a missing `numbers` key as none): 42. Of these, 15 were on section calls without lesson numbers, which are now unwritable; 12 on section calls with numbers, unchanged; and 15 on bootstrap calls, unchanged.
+  - **Refusals with no lesson numbers:** the index refusal says the field holds indexes, not x values, and to leave it out. The moving-point refusal asks for the fixed curve instead of a field the schema no longer has. With lesson numbers, both texts are main's.
+  - **Requests:** no recorded digest changes (every plot fixture has lesson numbers). The schema unit test covers both cases. Lessons are unchanged.
+  - **Probe** (`docs/PROBE_SAMPLE_INDEX_2026-11-16.md`): every request this build sends matches one probe arm (the candidate with no numbers, the control otherwise). The no-numbers refusal texts were never exercised.
   - **Found on main, left to a plan item:**
     - Refusals keyed on the learner's request or the outline's purpose cannot be met by a retry, so the lesson can be lost. This applies to the moving-point and vertex refusals here and to the purpose checks in `math-teaching-contracts.ts`.
     - The moving-point wording check misses phrasings without a point label, titles, and plots with several formulas.
     - The plot guidance still names `sample_x_numbers=[1,2]` where a section may have fewer numbers.
-  - **Left as a follow-up:** a minimum of 1 on the bootstrap's `sample_x_numbers` would block slips such as `[0, 2]` without knowing the outline. It changes every first request, so it needs its own decision.
-  - **Not exercised:** the sharper refusal never fired in the probe, on either arm. The one probe slip reached it, but an earlier refusal (a missing board item) came first. Refusal texts go back to the model in the retry request, so these retries send text the probe did not measure. It is no longer load-bearing, because the retry after a first-request slip is a section request, which cannot repeat the slip.
+    - Constraining `sample_x_numbers` with lesson numbers needs a different approach than an enum.
 
 - **Coach's core names no recipe** (plan §2.3, §7 step 3.4, Goal 1; no lesson or request changes). Recipe knowledge in core becomes declarations on the recipes:
   - `numbers_in_parameters` (the plot): its lesson numbers come from its parameters, so the schema gives it no number list and generation assumes none;

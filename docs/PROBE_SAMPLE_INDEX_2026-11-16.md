@@ -1,5 +1,10 @@
 # Probe: sample_x_numbers limited to the lesson-number indexes (2026-11-16)
 
+> **Scope after review (2026-11-16):** #105 merged only the no-numbers half (the field left out when a lesson
+> has no numbers). The enum for lessons with numbers was dropped: it can turn an x value into a valid but wrong
+> index. Every request the merged build sends matches one arm below: the candidate with no numbers, the control
+> otherwise. The census was corrected to 42 slips (15 section calls without numbers, 12 with, 15 bootstrap).
+
 Plan §7 step 3.6a, approved by the owner with a cap of 100 calls. Candidate: #105 at `410c351`. Control: main
 `fc6adc2`.
 
@@ -42,8 +47,8 @@ request, so those retries carry text this probe did not measure.
 
 **What this shows, and what it does not.** The slip is rare (2 of 40 gate lessons; 1 of 36 here), so 36 lessons
 cannot show a lower rate. The probe shows that the provider accepts the limited schema and that nothing regresses.
-The fix itself is structural: the schema makes an out-of-range index unwritable, and the provider has kept every
-recorded enum of this kind (370 in the earlier census, 41 here).
+The merged fix is structural only for lessons with no numbers: there the field is absent. For lessons with numbers,
+an enum would make an out-of-range index unwritable but could turn it into a valid, wrong one, so it was not merged.
 
 ## Tokens and cost
 

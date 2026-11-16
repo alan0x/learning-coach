@@ -162,9 +162,12 @@ function modelReusableBoardSchema(): LessonPlanJsonSchema {
 }
 
 /**
- * A visual's parameter properties. With `numberIndexes` (a section request, whose outline is known), each
- * parameter a recipe declares in `number_index_parameters` takes only those indexes, or is left out when
- * there are none. Without it (the bootstrap, which writes the outline in the same reply), as declared.
+ * A visual's parameter properties. With `numberIndexes` (a section request, whose outline is known) and no
+ * index at all, each parameter a recipe declares in `number_index_parameters` is left out: with no lesson
+ * numbers there is nothing it could hold. With some, the parameter stays as declared: an enum there would
+ * turn an x value the model means into a valid but wrong index (review of #105), where the program now
+ * refuses it visibly. Without `numberIndexes` (the bootstrap, which writes the outline in the same reply),
+ * as declared.
  */
 function visualParametersSchema(allowedCapabilities: LessonPlanCapability[], numberIndexes?: readonly number[]): LessonPlanJsonSchema {
   const modelParameters = new Set(allowedCapabilities.flatMap(
@@ -184,7 +187,6 @@ function visualParametersSchema(allowedCapabilities: LessonPlanCapability[], num
         throw new LessonPlanError("LESSON_PLAN_CAPABILITY", `$recipes.${allowedCapabilities[0]}.number_index_parameters`, `${name} is not an array parameter of the recipe's schema`);
       }
       if (numberIndexes.length === 0) delete declared[name];
-      else declared[name] = { ...property, items: { enum: [...numberIndexes] } };
     }
   }
   const order: readonly string[] = SCHEMA_PROPERTY_ORDER;

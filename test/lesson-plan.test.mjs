@@ -4955,7 +4955,7 @@ test("a count shared with a visual of another range is refused when the shared r
 
 // Plan §7 step 3.6a: x positions written as sample_x_numbers ([1, 3] for x = 1 and 3) were refused on every
 // retry in the speed gate of 2026-11-15. A section request limits them to the section's lesson-number indexes.
-test("a section request limits sample_x_numbers to the lesson-number indexes, and leaves it out with none", () => {
+test("a section request leaves sample_x_numbers out when the lesson has no numbers, and as declared otherwise", () => {
   const outlineWith = (numbers) => ({
     version: "0.1", title: "Plot", goals: ["Read the graph"], numbers,
     course_visuals: [{ capability: "function_plot", create_section: 1, use_sections: [1], relation: "primary", reusable_item: 1 }],
@@ -4975,7 +4975,8 @@ test("a section request limits sample_x_numbers to the lesson-number indexes, an
   const number = (label) => ({ initial: 1, min: 0, max: 5, label });
   const two = sampleSchema(buildLessonPlanSectionDraftJsonSchema(outlineWith([number("x"), number("x2")]), 1));
   assert.ok(two.length > 0);
-  assert.ok(two.every((schema) => JSON.stringify(schema.items) === JSON.stringify({ enum: [1, 2] })), JSON.stringify(two));
+  // With lesson numbers it stays as declared: an enum would turn an x value into a valid but wrong index.
+  assert.ok(two.every((schema) => schema.items.type === "integer" && schema.items.enum === undefined), JSON.stringify(two));
   assert.deepEqual(sampleSchema(buildLessonPlanSectionDraftJsonSchema(outlineWith([]), 1)), []);
   // Every declared index parameter is an array parameter of its recipe's schema (a typo would switch the limit off).
   for (const name of LESSON_PLAN_CAPABILITY_NAMES) {

@@ -12028,9 +12028,9 @@ var MATH_RECIPES = {
     // Marks change what the plot draws, so two plots differing only in marks are different visuals.
     semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
     output_kinds: ["plot"],
-    // Parameters that hold lesson-number indexes: a section request limits their items to the indexes the
-    // section may use, as it limits `numbers`, and leaves them out when it may use none. The speed gate of
-    // 2026-11-15 lost two lessons to x positions written here ([1, 3] for x = 1 and 3), repeated on every retry.
+    // Parameters that hold lesson-number indexes: a section request leaves them out when the lesson has no
+    // numbers. The speed gate of 2026-11-15 lost two lessons, both without lesson numbers, to x positions
+    // written here ([1, 3] for x = 1 and 3), repeated on every retry.
     number_index_parameters: ["sample_x_numbers"],
     // Its lesson numbers are read from its parameters (formula references and sample_x_numbers): the
     // model writes no number list, and none is assumed for it.
@@ -13603,7 +13603,7 @@ function plotSampleNumbers(parameters3) {
 function validatePlotSampleNumbers(value2, numberCount, path) {
   if (value2 === void 0) return [];
   if (!Array.isArray(value2) || !value2.length || value2.length > 2 || new Set(value2).size !== value2.length || value2.some((number) => !Number.isInteger(number) || number < 1 || number > numberCount)) {
-    fail2("LESSON_PLAN_NUMBER_REFERENCE", path, numberCount === 0 ? "sample_x_numbers holds lesson number indexes, not x values, and this lesson has no numbers: leave sample_x_numbers out" : `sample_x_numbers holds one or two distinct lesson number indexes (1 to ${numberCount}), not x values; leave it out when no point moves along the curve`);
+    fail2("LESSON_PLAN_NUMBER_REFERENCE", path, numberCount === 0 ? "sample_x_numbers holds lesson number indexes, not x values, and this lesson has no numbers: leave sample_x_numbers out" : "use one or two distinct lesson number indexes for the sample x-coordinates");
   }
   return value2;
 }
@@ -18727,7 +18727,6 @@ function visualParametersSchema(allowedCapabilities, numberIndexes) {
         throw new LessonPlanError("LESSON_PLAN_CAPABILITY", `$recipes.${allowedCapabilities[0]}.number_index_parameters`, `${name} is not an array parameter of the recipe's schema`);
       }
       if (numberIndexes.length === 0) delete declared[name];
-      else declared[name] = { ...property, items: { enum: [...numberIndexes] } };
     }
   }
   const order = SCHEMA_PROPERTY_ORDER;
