@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **A formula name before a spaced digit is left to the parser** (review of #96). The parser's lexer drops spaces, so `a 2*x` with a number labelled "a" was rewritten to `n1 2*x`, read as `n12`. With twelve or more lesson numbers, that silently read number 12. A name followed by a digit, spaced or not, is never replaced.
+
 - **Two function-plot slips are corrected in place, not refused** (default path; found in the trial of the plot options, `docs/PLOT_TRIAL_2026-11-15.md` on #93). Each was refused and the section asked again: a median 16.9 s to the first playable section, against 7.7 s with no retry.
   - **A formula naming a lesson number by its symbol** reads that number: `a*(x-2)^2+1` when the visual's number is labelled "a", or `k*x+1` for "斜率 k". A name is replaced only when it is no function or constant and exactly one of the visual's numbers shows it as its symbol (the label's trailing letter, as plot text already shows it). Anything else is refused as before.
   - **A moving point declared as a plain number:** on one fixed curve, one or two numbers the formula does not read become the points moving along it (`sample_x_numbers`), only where the section moves or names them and the program would otherwise refuse it. Each must be labelled as an x position ("x", "探针 x 坐标", "x-coordinate"; not "x 的系数" or a bound such as "max x value"), with the curve existing at its min, max and initial value. A lesson that compiles on main is never changed (review: the first version also changed fixed curves listing an unmoved x number, and could refuse one).

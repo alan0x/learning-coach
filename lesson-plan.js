@@ -14274,7 +14274,7 @@ function namesToNumbers(formula, labels, visualNumbers) {
   };
   return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset, whole) => {
     if (known(name)) return name;
-    if (/\d/u.test(whole[offset + name.length] ?? "")) return name;
+    if (/^\s*\d/u.test(whole.slice(offset + name.length))) return name;
     if (/[0-9.]/u.test(whole[offset - 1] ?? "") && /^e/iu.test(name)) return name;
     const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
     return matches.length === 1 ? `n${matches[0]}` : name;
