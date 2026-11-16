@@ -49,9 +49,11 @@ key): 42 replies across this gate, the trial, run B and the 139 recorded lessons
 - 12 are on section calls in lessons with numbers.
 - 15 are on bootstrap calls, which write the outline in the same reply.
 
-**Fix (#105, narrowed after review):** with no lesson numbers, section requests leave `sample_x_numbers` out,
-so those 15 cannot be written. With numbers the schema is unchanged: an enum would turn an x value into a valid
-but wrong index. Slips in lessons with numbers, and on bootstrap calls, stay open.
+**Fix: not merged (#105 closed after five reviews).** Its last form left `sample_x_numbers` out of section
+requests in lessons with no lesson numbers. Replayed on the recorded slips, it rescued three lost lessons, but it
+let a fourth (PJ-07) publish a piecewise request drawn as two full lines. A check main lacks (does a piecewise
+request draw pieces?) comes first. With numbers, an enum would turn an x value into a valid but wrong index. The
+defect stays open (plan §7 step 3.6a).
 
 ## Tokens and cost
 
