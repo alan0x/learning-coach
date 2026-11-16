@@ -12021,11 +12021,11 @@ var MATH_RECIPES = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces", "reference_x"],
     model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "marks", "pieces"],
     required_model_schema_parameters: ["formulas"],
     // Marks change what the plot draws, so two plots differing only in marks are different visuals.
-    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
+    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces", "reference_x"],
     output_kinds: ["plot"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
@@ -13598,6 +13598,16 @@ function validatePlotSampleNumbers(value2, numberCount, path) {
   }
   return value2;
 }
+function namesOtherPoints(visual, xs, text3) {
+  const tokens = visual.parameters?.expression_tokens;
+  if (!Array.isArray(tokens)) return true;
+  const curve = compileMathExpression(mathExpressionToOll(tokens), ["x"]);
+  const pairs = text3.flatMap((line) => [...line.matchAll(/[(（]\s*(-?\d+(?:\.\d+)?)\s*[,，]\s*(-?\d+(?:\.\d+)?)\s*[)）]/gu)].map((match) => [Number(match[1]), Number(match[2])]));
+  return pairs.some(([x, y]) => xs.some((given) => Math.abs(given - x) < 1e-9) && !(Math.abs(curve({ x }) - y) < 1e-6 * Math.max(1, Math.abs(y))));
+}
+function xValuesNotNumbers(value2, numberCount) {
+  return Array.isArray(value2) && value2.length >= 1 && value2.length <= 2 && new Set(value2).size === value2.length && value2.every((entry) => typeof entry === "number" && Number.isFinite(entry)) && value2.some((entry) => !Number.isInteger(entry) || entry < 1 || entry > numberCount);
+}
 function candidateSampleNumbers(value2, count) {
   const values = Array.isArray(value2) ? value2 : [value2];
   return values.flatMap((entry) => {
@@ -13755,6 +13765,22 @@ function normalizePlotDraftBindings(draft, context) {
       });
     } else if (Array.isArray(rawSamples) && !rawSamples.length) {
       delete visual.parameters.sample_x_numbers;
+    } else if (!curve.length && xValuesNotNumbers(rawSamples, count) && curveExistsAt(visual, rawSamples) && !namesOtherPoints(visual, rawSamples, [
+      ...draft.moments.map((item) => item.narration),
+      ...(draft.student_activities ?? []).map((activity) => activity.prompt),
+      outline.sections[draft.section - 1]?.purpose ?? "",
+      request,
+      String(visual.parameters?.title ?? "")
+    ])) {
+      visual.parameters.reference_x = [...rawSamples];
+      delete visual.parameters.sample_x_numbers;
+      adjust({
+        kind: "plot_binding_rebuilt",
+        section: draft.section,
+        moment,
+        reason: "sample_x_values_as_fixed_points",
+        detail: `sample_x_numbers=${JSON.stringify(rawSamples)}`
+      });
     } else {
       samples = validatePlotSampleNumbers(rawSamples, count, path);
     }
@@ -16638,7 +16664,7 @@ function signOf([lo, hi]) {
 // src/plugins/math-compilers.ts
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces", "reference_x"], path);
   const dynamicTokens = input.expression_tokens;
   if (dynamicTokens !== void 0 && !dynamicTokens.some((token) => token.kind === "input")) {
     fail2(
@@ -16792,7 +16818,9 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
   const slopeTriangle = markList.includes("slope_triangle");
   let references;
-  if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
+  const rawReferenceX = Array.isArray(input.reference_x) && input.reference_x.every((x) => typeof x === "number" && Number.isFinite(x)) ? input.reference_x : [];
+  const givenReferenceX = rawReferenceX.length === 2 ? rawReferenceX : rawReferenceX.length === 1 && markList.includes("slope_triangle") ? [rawReferenceX[0], rawReferenceX[0] + 2] : void 0;
+  if (expressions.length === 1 && !sampleNumbers.length && (givenReferenceX || slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
     const referencePoints = (values, xs2) => xs2.flatMap((x, index) => {
       try {
@@ -16802,9 +16830,11 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
         return [];
       }
     });
-    const pairs = markList.length ? [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]] : [[0, 1]];
+    const given = givenReferenceX ? [givenReferenceX] : [];
+    const markPairs = [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]];
+    const pairs = given.length ? [...given, ...slopeTriangle ? markPairs : []] : markList.length ? markPairs : [[0, 1]];
     const reached = markList.length ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))] : [initialState];
-    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2));
+    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === pair.length));
     if (xs) {
       references = referencePoints(initialState, xs);
       teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));

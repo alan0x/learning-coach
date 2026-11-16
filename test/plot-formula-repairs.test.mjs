@@ -140,3 +140,29 @@ test("a name before a spaced digit is left as the parser reads it, never read as
   const spaced = await generate(plotReply({ formula: "a 2*x", numbers, visualNumbers: [1], moments: [{ say: "看。" }] }));
   assert.ok(!(spaced.lesson && JSON.stringify(plotContent(spaced.lesson).curves).includes("number_12")), spaced.rejected.join(" | "));
 });
+
+// The gate of 2026-11-15 (plan §7 step 3.2) lost two lessons to sample_x_numbers holding x positions, not
+// lesson-number indexes ([1, 3] for the points at x = 1 and 3): refused until the section ran out of attempts.
+test("x positions written as sample_x_numbers on a fixed curve become fixed points A and B, in one call", async () => {
+  const { lesson, rejected, requests } = await generate(plotReply({ formula: "3*x - 2", numbers: [], visualNumbers: [], samples: [1, 3], moments: [{ say: "看 x = 1 和 x = 3 两点之间的上升和水平距离。" }] }));
+  assert.ok(lesson, rejected.join(" | "));
+  assert.deepEqual(rejected, []);
+  assert.equal(requests.length, 1);
+  const content = plotContent(lesson);
+  assert.deepEqual(content.points.map((point) => [point.label, point.x, point.y]), [["A", 1, 1], ["B", 3, 7]]);
+  assert.equal(content.measurement, "secant");
+});
+
+test("one x position without a slope triangle draws no point (a lone fixed point would pair with a mark)", async () => {
+  const { lesson, rejected } = await generate(plotReply({ formula: "x^2 + 2*x + 3", numbers: [], visualNumbers: [], samples: [-1], moments: [{ say: "看顶点。" }] }));
+  assert.ok(lesson, rejected.join(" | "));
+  assert.deepEqual(plotContent(lesson).points ?? [], []);
+});
+
+test("x positions are not repaired where the text names a point there off the curve, or the curve is missing there", async () => {
+  // "x" written for the line through (1, 2) and (7, 10) (a recorded lesson): the points would sit at (1, 1), (7, 7).
+  const offCurve = await generate(plotReply({ formula: "x", numbers: [], visualNumbers: [], samples: [1, 7], moments: [{ say: "求点 (1, 2) 和 (7, 10) 之间的距离。" }] }));
+  assert.ok(offCurve.rejected.some((miss) => /LESSON_PLAN_NUMBER_REFERENCE/u.test(miss)), offCurve.rejected.join(" | "));
+  const missing = await generate(plotReply({ formula: "sqrt(x)", numbers: [], visualNumbers: [], samples: [-4, 4], moments: [{ say: "看两点。" }] }));
+  assert.ok(missing.rejected.some((miss) => /LESSON_PLAN_NUMBER_REFERENCE/u.test(miss)), missing.rejected.join(" | "));
+});

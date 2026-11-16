@@ -28,7 +28,7 @@ function compileFunctionPlot(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces", "reference_x"], path);
   const dynamicTokens = input.expression_tokens as LessonPlanMathExpression | undefined;
   if (dynamicTokens !== undefined
     && !dynamicTokens.some((token) => token.kind === "input")) {
@@ -224,7 +224,15 @@ function compileFunctionPlot(
   // With marks (decision 0018) the points stand two units apart, off x = 0, where the y-intercept mark
   // sits: the first pair where the curve exists at the start and at every demonstrated state.
   let references: Array<{ x: number; y: number; label: string }> | undefined;
-  if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
+  // Fixed x positions the program took from sample_x_numbers holding x values, not lesson numbers
+  // (plot-bindings: the gate of 2026-11-15 lost two lessons to that refusal). One position with a slope
+  // triangle pairs with the point two units to its right. One position without one is left out: OLL measures
+  // a secant through any fixed points, so a lone point would pair with the first mark (a vertex) as a triangle.
+  const rawReferenceX = Array.isArray(input.reference_x) && input.reference_x.every((x) => typeof x === "number" && Number.isFinite(x))
+    ? input.reference_x as number[] : [];
+  const givenReferenceX = rawReferenceX.length === 2 ? rawReferenceX
+    : rawReferenceX.length === 1 && markList.includes("slope_triangle") ? [rawReferenceX[0]!, rawReferenceX[0]! + 2] : undefined;
+  if (expressions.length === 1 && !sampleNumbers.length && (givenReferenceX || slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
     const referencePoints = (values: Record<string, number>, xs: readonly number[]) => xs.flatMap((x, index) => {
       try {
@@ -234,14 +242,17 @@ function compileFunctionPlot(
         return [];
       }
     });
-    const pairs: ReadonlyArray<readonly [number, number]> = markList.length ? [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]] : [[0, 1]];
+    const given: ReadonlyArray<readonly number[]> = givenReferenceX ? [givenReferenceX] : [];
+    const markPairs: ReadonlyArray<readonly number[]> = [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]];
+    // Given positions first; where the curve is missing there, a slope triangle still takes the usual pairs.
+    const pairs: ReadonlyArray<readonly number[]> = given.length ? [...given, ...(slopeTriangle ? markPairs : [])] : markList.length ? markPairs : [[0, 1]];
     // With marks: at the start, at every demonstrated state and at each curve slider's ends, where a learner
     // can drag the curve away from a point whose y is not hidden (review). Without marks the points are found
     // as before the option, at the start only, so a lesson without marks compiles exactly as it did (review).
     const reached = markList.length
       ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))]
       : [initialState];
-    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2));
+    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === pair.length));
     if (xs) {
       references = referencePoints(initialState, xs);
       teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));

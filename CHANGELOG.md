@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **x positions written as `sample_x_numbers` become fixed points, not a refusal** (default path; found in the speed gate of 2026-11-15, plan §7 step 3.2). The model sometimes writes the points' x positions where lesson-number indexes belong: `[1, 3]` for the points at x = 1 and 3, with fewer lesson numbers than that. Each such section was refused and asked again; in the gate two lessons ran out of attempts and produced nothing (2 of 38 with the new parts on, 0 of 40 without).
+  - On a fixed curve, one or two such values become fixed points at those x (the plot's reference points A and B, program-owned `reference_x`). One value pairs with the point two units right where a slope triangle is asked; otherwise a lone value draws no point, since OLL measures a secant through fixed points and would pair it with the first mark.
+  - **Not repaired:** where the curve is missing at a value, or where the section's narration, task, purpose, title or the request names a point at one of those x off the curve. A recorded lesson wrote `x` for the line through (1, 2) and (7, 10); repaired, its points would sit at (1, 1) and (7, 7). Refused, the model wrote the right line, as on main.
+  - Only where validation would refuse, so a lesson that compiles is never changed. Requests are unchanged (request-hash test).
+  - **Replays:**
+    - Gate replies: the two lost lessons now publish in 1 and 2 calls, PJ-02 and PJ-04 take 1 call instead of 2 and 3, and all judged lessons pass.
+    - Run B: one baseline-arm lesson takes 1 call instead of 2.
+    - The trial and the 139 recorded lessons are identical.
+
 - **The number line in steps is offered by default** (`number_line_steps`, OLL decision 0017 §2; owner's decision, 2026-11-15). It moves from `TRIAL_RECIPES` to the end of the catalog, where the trial offered it.
   - **Evidence:** the reduced trial (`docs/PLOT_TRIAL_2026-11-15.md`). 4 of 6 in-scope cases passed both repeats. The misses were a split of 25 as 20 then 5 where tens first was asked, and an outline fault with no number line. The four-addition near miss drew correct steps on a hand read. No lesson misled. Steps were not in run B, so there is no comparison with them off and no timing.
   - **Requests:** every request changes, and each is byte-identical to main with `LEARNING_COACH_TRIAL_RECIPES=number_line_steps` (+337 B on the first request and the fallback outline, as measured in #88); no ceiling exceeded. The combined speed gate with #81 compares against the build before #98 (`--baseline-build` at 75578ab), so it covers this change too.

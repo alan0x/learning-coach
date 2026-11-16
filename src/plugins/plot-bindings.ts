@@ -26,6 +26,23 @@ export function validatePlotSampleNumbers(value: unknown, numberCount: number, p
   return value;
 }
 
+/** Whether the text names a point (x, y) at one of these x whose y is off the curve. */
+function namesOtherPoints(visual: LessonPlanVisualContent, xs: number[], text: string[]): boolean {
+  const tokens = visual.parameters?.expression_tokens;
+  if (!Array.isArray(tokens)) return true;
+  const curve = compileMathExpression(mathExpressionToOll(tokens as LessonPlanMathExpression), ["x"]);
+  const pairs = text.flatMap(line => [...line.matchAll(/[(（]\s*(-?\d+(?:\.\d+)?)\s*[,，]\s*(-?\d+(?:\.\d+)?)\s*[)）]/gu)]
+    .map(match => [Number(match[1]), Number(match[2])] as const));
+  return pairs.some(([x, y]) => xs.some(given => Math.abs(given - x) < 1e-9) && !(Math.abs(curve({ x }) - y) < 1e-6 * Math.max(1, Math.abs(y))));
+}
+
+/** One or two distinct finite numbers that are not all usable as lesson-number indexes: x positions. */
+function xValuesNotNumbers(value: unknown, numberCount: number): boolean {
+  return Array.isArray(value) && value.length >= 1 && value.length <= 2 && new Set(value).size === value.length
+    && value.every((entry) => typeof entry === "number" && Number.isFinite(entry))
+    && value.some((entry) => !Number.isInteger(entry) || entry < 1 || entry > numberCount);
+}
+
 // These references are evidence of possible intent. They never become bindings
 // unless the strict sample contract is met.
 function candidateSampleNumbers(value: unknown, count: number): number[] {
@@ -237,6 +254,21 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
         detail: `sample_x_numbers=${JSON.stringify(rawSamples)?.slice(0, 120)}` });
     } else if (Array.isArray(rawSamples) && !rawSamples.length) {
       delete visual.parameters!.sample_x_numbers;
+    } else if (!curve.length && xValuesNotNumbers(rawSamples, count) && curveExistsAt(visual, rawSamples as number[])
+      && !namesOtherPoints(visual, rawSamples as number[], [...draft.moments.map(item => item.narration),
+        ...(draft.student_activities ?? []).map(activity => activity.prompt), outline.sections[draft.section - 1]?.purpose ?? "",
+        request, String(visual.parameters?.title ?? "")])) {
+      // x positions written where lesson-number indexes belong ([1, 3] for the points at x = 1 and 3, with
+      // fewer lesson numbers than that): fixed points at those x (the compiler's reference points), not a
+      // refusal. Not where the curve is missing there, nor where the section's text, title or request names a
+      // point at one of those x off the curve: "x" written for the line through (1, 2) and (7, 10) would put
+      // the points at (1, 1) and (7, 7) (a recorded lesson); refused, the model wrote the line. The gate of 2026-11-15 lost two lessons to this refusal, each asked again until the
+      // section ran out of attempts. Only where validation would refuse, so a lesson that compiles is
+      // never changed.
+      visual.parameters!.reference_x = [...rawSamples as number[]];
+      delete visual.parameters!.sample_x_numbers;
+      adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "sample_x_values_as_fixed_points",
+        detail: `sample_x_numbers=${JSON.stringify(rawSamples)}` });
     } else {
       samples = validatePlotSampleNumbers(rawSamples, count, path);
     }
