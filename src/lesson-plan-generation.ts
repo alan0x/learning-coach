@@ -40,6 +40,7 @@ import {
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanPracticeJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
+  type ParameterNarrowing,
   coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
@@ -2496,6 +2497,29 @@ function locallyUnsupportedLessonRequest(request: string, language?: string): st
   return undefined;
 }
 
+/**
+ * A retry asks differently, so the slip just refused cannot be written again (the owner's principles,
+ * 2026-11-16). Before, a retry was the same request plus the error, and the speed gate lost two lessons that
+ * repeated `sample_x_numbers: [1, 3]` (x positions where lesson-number indexes belong) on every attempt.
+ * Only one case so far: `sample_x_numbers` refused in a lesson with no lesson numbers. The retry leaves the
+ * field out, since no number exists for it to hold. The field is a structured fact, so this is not prose
+ * choosing what is drawn. Other refusals retry as before; a first attempt's request is untouched.
+ */
+export function retryNarrowing(error: unknown, outline: LessonPlanOutline): ParameterNarrowing | undefined {
+  if (!(error instanceof LessonPlanError)) return undefined;
+  if (error.code === "LESSON_PLAN_NUMBER_REFERENCE" && error.path.endsWith(".sample_x_numbers") && !(outline.numbers?.length)) {
+    return { omit: ["sample_x_numbers"] };
+  }
+  return undefined;
+}
+
+/** Two narrowings as one: everything either leaves out or requires. */
+function mergeNarrowing(kept: ParameterNarrowing | undefined, next: ParameterNarrowing | undefined): ParameterNarrowing | undefined {
+  if (!kept) return next;
+  if (!next) return kept;
+  return { omit: [...new Set([...(kept.omit ?? []), ...(next.omit ?? [])])], require: [...new Set([...(kept.require ?? []), ...(next.require ?? [])])] };
+}
+
 export async function generateLessonPlanWithModel(
   model: LessonPlanModelCall,
   input: LessonPlanGenerationInput,
@@ -2554,6 +2578,9 @@ export async function generateLessonPlanWithModel(
   let stableCameraObservation: CameraLessonObservation | undefined;
   const sectionErrors = new Map<number, unknown>();
   const sectionAttempts = new Map<number, number>();
+  // What each section's retries leave out, kept across its attempts: a narrowed retry that fails for
+  // another reason must not let the refused slip back in (review of #109).
+  const sectionNarrowings = new Map<number, ParameterNarrowing>();
 
   const admissionCourse = (
     parsed: unknown,
@@ -2928,6 +2955,8 @@ export async function generateLessonPlanWithModel(
     let raw: string;
     const allowedNumberIndexes = executableNumberIndexesForSection(outline, drafts, section);
     const currentNumbers = currentNumbersBefore(section);
+    const narrowing = mergeNarrowing(sectionNarrowings.get(section), retryNarrowing(sectionErrors.get(section), outline));
+    if (narrowing) sectionNarrowings.set(section, narrowing);
     try {
       raw = await model({
         label: "lesson-plan-section",
@@ -2947,7 +2976,7 @@ export async function generateLessonPlanWithModel(
             ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) }
             : {}),
         }),
-        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes),
+        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes, narrowing),
       });
       modelCalls += 1;
     } catch (error) {

@@ -18865,7 +18865,7 @@ function modelReusableBoardSchema() {
     board_kind: { enum: ["math", "note"] }
   }, ["kind", "board_kind"]);
 }
-function visualParametersSchema(allowedCapabilities) {
+function visualParametersSchema(allowedCapabilities, narrowing) {
   const modelParameters = new Set(allowedCapabilities.flatMap(
     (capability2) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_parameter_names]
   ));
@@ -18877,7 +18877,12 @@ function visualParametersSchema(allowedCapabilities) {
     ...order.filter((name) => name in declared),
     ...Object.keys(declared).filter((name) => !order.includes(name))
   ].map((name) => [name, declared[name]]));
-  const required = allowedCapabilities.length === 1 ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters] : [];
+  let required = allowedCapabilities.length === 1 ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters] : [];
+  for (const name of narrowing?.omit ?? []) {
+    delete properties[name];
+    required = required.filter((item) => item !== name);
+  }
+  for (const name of narrowing?.require ?? []) if (name in properties && !required.includes(name)) required.push(name);
   return object(properties, required);
 }
 function modelAction(properties, required) {
@@ -18940,7 +18945,7 @@ function actionCollectionSchemas(allowedCapabilities, reusableCount, numberCount
     } : {}
   };
 }
-function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes) {
+function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes, narrowing) {
   const numberCount = outline.numbers?.length ?? 0;
   const entries = (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex);
   if (entries.length === 0) return void 0;
@@ -18951,7 +18956,7 @@ function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes) 
       moment: integer(1, 12),
       timing: { enum: timingNames },
       content: object({
-        parameters: visualParametersSchema([capability2]),
+        parameters: visualParametersSchema([capability2], narrowing),
         ...numberCount > 0 && numberLimit > 0 && !recipeDeclares(capability2, "numbers_in_parameters") ? {
           numbers: {
             type: "array",
@@ -19209,15 +19214,16 @@ function answerActivitiesSchema() {
 function buildLessonPlanPracticeJsonSchema() {
   return object({ answer_activities: answerActivitiesSchema() }, ["answer_activities"]);
 }
-function buildLessonPlanSectionDraftJsonSchema(outlineValue, sectionIndex, allowedNumberIndexes) {
+function buildLessonPlanSectionDraftJsonSchema(outlineValue, sectionIndex, allowedNumberIndexes, narrowing) {
   return vertexCompatible(lessonPlanSectionDraftShapeJsonSchema(
     outlineValue,
     sectionIndex,
     false,
-    allowedNumberIndexes
+    allowedNumberIndexes,
+    narrowing
   ));
 }
-function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, bootstrapPermissive = false, suppliedNumberIndexes) {
+function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, bootstrapPermissive = false, suppliedNumberIndexes, narrowing) {
   const outline = outlineShape(outlineValue);
   if (!Number.isInteger(sectionIndex) || sectionIndex < 1 || sectionIndex > outline.sections.length) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$section", "section is outside the outline");
@@ -19237,7 +19243,7 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
       "allowed number indexes must reference outline numbers"
     );
   }
-  const courseVisualCreates = bootstrapPermissive ? void 0 : courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes);
+  const courseVisualCreates = bootstrapPermissive ? void 0 : courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes, narrowing);
   const reusableBoardCreates = bootstrapPermissive ? void 0 : reusableBoardCreatesSchema(outline, sectionIndex);
   const actionCollections = actionCollectionSchemas(
     allowedCapabilities,
@@ -21313,6 +21319,18 @@ function locallyUnsupportedLessonRequest(request, language) {
   }
   return void 0;
 }
+function retryNarrowing(error, outline) {
+  if (!(error instanceof LessonPlanError)) return void 0;
+  if (error.code === "LESSON_PLAN_NUMBER_REFERENCE" && error.path.endsWith(".sample_x_numbers") && !outline.numbers?.length) {
+    return { omit: ["sample_x_numbers"] };
+  }
+  return void 0;
+}
+function mergeNarrowing(kept, next) {
+  if (!kept) return next;
+  if (!next) return kept;
+  return { omit: [.../* @__PURE__ */ new Set([...kept.omit ?? [], ...next.omit ?? []])], require: [.../* @__PURE__ */ new Set([...kept.require ?? [], ...next.require ?? []])] };
+}
 async function generateLessonPlanWithModel(model, input, options = {}) {
   options = { ...options, compile: { ...options.compile, language: input.language ?? options.compile?.language } };
   const unsupportedResponse = locallyUnsupportedLessonRequest(input.learner_request, input.language);
@@ -21360,6 +21378,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   let stableCameraObservation;
   const sectionErrors = /* @__PURE__ */ new Map();
   const sectionAttempts = /* @__PURE__ */ new Map();
+  const sectionNarrowings = /* @__PURE__ */ new Map();
   const admissionCourse = (parsed, observeCamera) => {
     if (!admissionInput) return { course: parsed };
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -21670,6 +21689,8 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
     let raw;
     const allowedNumberIndexes = executableNumberIndexesForSection(outline, drafts, section);
     const currentNumbers = currentNumbersBefore(section);
+    const narrowing = mergeNarrowing(sectionNarrowings.get(section), retryNarrowing(sectionErrors.get(section), outline));
+    if (narrowing) sectionNarrowings.set(section, narrowing);
     try {
       raw = await model({
         label: "lesson-plan-section",
@@ -21687,7 +21708,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
           assigned_request_parts: assignedRequestParts(section),
           ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
         }),
-        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes)
+        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes, narrowing)
       });
       modelCalls += 1;
     } catch (error) {
@@ -21995,6 +22016,7 @@ export {
   recipeDeclares,
   recipeInitialCamera,
   resolveLessonPlan,
+  retryNarrowing,
   roundingPlaces,
   roundingTolerance,
   validateLessonPlan,

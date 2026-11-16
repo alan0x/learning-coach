@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **A refused `sample_x_numbers` in a lesson with no lesson numbers is not offered again on the retry** (the owner's two principles, 2026-11-16; step 2 of the accommodation order, split from #109). A section retry used to be the same request plus the error; in the speed gate the model repeated `sample_x_numbers: [1, 3]` (x positions) on every attempt and two lessons were lost.
+  - `retryNarrowing` leaves the field out of that section's later requests. No number exists for it to hold, so this is a structured fact, not prose choosing what is drawn. The narrowing stays for all of the section's later attempts, even when a narrowed retry fails for another reason (review of #109).
+  - First attempts are untouched (request-hash test unchanged); other refusals retry as before.
+  - **Evidence:**
+    - The paired check (`docs/RETRY_NARROWING_CHECK_2026-11-16.md`, 89 calls): 20 of 20 lessons playable against 18 of 20, and 42 calls against 47. The piecewise half of #109 never fired there, so this result belongs to this change.
+    - #105 closed because removing the field let a piecewise request drawn as whole lines (PJ-07) publish. All such misdraws in the recordings were written to requests that did not offer `pieces`. Under the current request, all 25 recorded piecewise lessons drew pieces.
+  - Replays of the 139 recorded lessons, the trial, run B and the gate are identical to main.
+
 - **Function-plot derivations come from OLL's math plugin** (plan §7 step 3.5, slice 2; no lesson or request changes). Marks, domain and range bars and the interval sign proofs moved to `octos-lesson-language/plugin-math`, so Studio can draw what AI lessons draw. `src/plugins/plot-marks.ts` is now an adapter: it hands the plugin Coach's formula tokens, with each lesson number by its binding name, and reports a refusal as the same section fault as before. `plot-domain-range.ts` and `interval.ts` are gone. OLL pin `ab13d5b` (OLL main with #68 and #69). The request-hash test is unchanged; replays of the 139 recorded lessons, the trial, run B and the gate are identical.
 
 - **Curve labels that do not match the curves one to one are left out, not refused** (the owner's two principles, 2026-11-16: the model writes meaning, the program accepts what has exactly one safe reading; step 1 of the accommodation order, free, no request changes). The compiler derives a legend from each formula, so nothing narrated depends on the dropped labels. Only lessons main refused change.
