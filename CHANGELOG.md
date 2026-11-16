@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Function-plot derivations come from OLL's math plugin** (plan §7 step 3.5, slice 2; no lesson or request changes). Marks, domain and range bars and the interval sign proofs moved to `octos-lesson-language/plugin-math`, so Studio can draw what AI lessons draw. `src/plugins/plot-marks.ts` is now an adapter: it hands the plugin Coach's formula tokens, with each lesson number by its binding name, and reports a refusal as the same section fault as before. `plot-domain-range.ts` and `interval.ts` are gone. OLL pin `ab13d5b` (OLL main with #68 and #69). The request-hash test is unchanged; replays of the 139 recorded lessons, the trial, run B and the gate are identical.
+
 - **Curve labels that do not match the curves one to one are left out, not refused** (the owner's two principles, 2026-11-16: the model writes meaning, the program accepts what has exactly one safe reading; step 1 of the accommodation order, free, no request changes). The compiler derives a legend from each formula, so nothing narrated depends on the dropped labels. Only lessons main refused change.
   - **Review of #108, taken out:**
     - Sorting solution-set boundaries given larger first: reversed boundaries can also mean the model picked the wrong relation, and the swap would then draw the complement of the set it narrates. That is a reading of meaning, so it stays refused.

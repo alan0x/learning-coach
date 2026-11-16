@@ -11834,6 +11834,649 @@ function buildNumberLine(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
+var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/plot-tokens.js
+var PlotDerivationRefusal = class extends Error {
+  path;
+  constructor(path, message) {
+    super(message);
+    this.path = path;
+    this.name = "PlotDerivationRefusal";
+  }
+};
+var OPERATORS = { add: "+", subtract: "-", multiply: "*", divide: "/", power: "^" };
+function plotFormulaText(tokens) {
+  const stack = [];
+  for (const token of tokens) {
+    if (token.kind === "input")
+      stack.push("x");
+    else if (token.kind === "variable")
+      stack.push(token.name);
+    else if (token.kind === "literal")
+      stack.push(String(token.value));
+    else if (token.kind === "constant")
+      stack.push(token.name);
+    else if (token.kind === "negate" || token.kind === "function") {
+      const value2 = stack.pop();
+      if (value2 === void 0)
+        throw new Error(`${token.kind} is missing an operand`);
+      stack.push(token.kind === "negate" ? `-(${value2})` : `${token.name}(${value2})`);
+    } else {
+      const right = stack.pop(), left = stack.pop();
+      if (left === void 0 || right === void 0)
+        throw new Error("operator is missing operands");
+      stack.push(`(${left})${OPERATORS[token.operator]}(${right})`);
+    }
+  }
+  if (stack.length !== 1)
+    throw new Error("expression does not produce one result");
+  return stack[0];
+}
+function checkPlotFormula(tokens, path) {
+  try {
+    plotFormulaText(tokens);
+    if (tokens.some((token) => token.kind === "literal" && !Number.isFinite(token.value)))
+      throw new Error("non-finite literal");
+  } catch (error) {
+    throw new PlotDerivationRefusal(path, `the formula is not well formed (${error.message})`);
+  }
+}
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/plot-marks.js
+var constant = (value2) => ({ text: formatNumber(value2), value: value2 });
+var formatNumber = (value2) => Object.is(value2, -0) ? "0" : String(Number(value2.toPrecision(12)));
+var isZero = (scalar) => scalar.value === 0;
+var wrap = (scalar) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(scalar.text) ? scalar.text : `(${scalar.text})`;
+function add(a, b) {
+  if (a.value !== void 0 && b.value !== void 0)
+    return constant(a.value + b.value);
+  if (isZero(a))
+    return b;
+  if (isZero(b))
+    return a;
+  return { text: `${a.text}+${wrap(b)}` };
+}
+function negate(a) {
+  return a.value !== void 0 ? constant(-a.value) : { text: `-${wrap(a)}` };
+}
+function multiply(a, b) {
+  if (a.value !== void 0 && b.value !== void 0)
+    return constant(a.value * b.value);
+  if (isZero(a) || isZero(b))
+    return constant(0);
+  if (a.value === 1)
+    return b;
+  if (b.value === 1)
+    return a;
+  if (a.value === -1)
+    return negate(b);
+  if (b.value === -1)
+    return negate(a);
+  return { text: `${wrap(a)}*${wrap(b)}` };
+}
+function divide(a, b) {
+  if (a.value !== void 0 && b.value !== void 0 && b.value !== 0)
+    return constant(a.value / b.value);
+  if (isZero(a))
+    return constant(0);
+  if (b.value === 1)
+    return a;
+  return { text: `${wrap(a)}/${wrap(b)}` };
+}
+var degree = (p) => p.reduce((highest, scalar, power2) => isZero(scalar) ? highest : power2, 0);
+var coefficient = (p, power2) => p[power2] ?? constant(0);
+function polynomialOf(tokens, maxDegree = 2) {
+  const powers = Array.from({ length: maxDegree + 1 }, (_, power2) => power2);
+  const stack = [];
+  for (const token of tokens) {
+    if (token.kind === "input")
+      stack.push([constant(0), constant(1)]);
+    else if (token.kind === "variable")
+      stack.push([{ text: token.name }]);
+    else if (token.kind === "literal")
+      stack.push([constant(Number(token.value))]);
+    else if (token.kind === "constant")
+      stack.push([{ text: token.name, value: token.name === "pi" ? Math.PI : Math.E }]);
+    else if (token.kind === "negate") {
+      const p = stack.pop();
+      if (!p)
+        return void 0;
+      stack.push(p.map(negate));
+    } else if (token.kind === "function") {
+      const p = stack.pop();
+      if (!p || degree(p) > 0)
+        return void 0;
+      stack.push([{ text: `${token.name}(${coefficient(p, 0).text})` }]);
+    } else {
+      const right = stack.pop(), left = stack.pop();
+      if (!left || !right)
+        return void 0;
+      let result;
+      if (token.operator === "add" || token.operator === "subtract") {
+        result = powers.map((power2) => add(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
+      } else if (token.operator === "multiply") {
+        result = times(left, right, maxDegree);
+      } else if (token.operator === "divide") {
+        if (degree(right) > 0)
+          return void 0;
+        result = left.map((scalar) => divide(scalar, coefficient(right, 0)));
+      } else {
+        const exponent = coefficient(right, 0);
+        if (degree(right) > 0)
+          return void 0;
+        if (degree(left) === 0) {
+          const base = coefficient(left, 0);
+          result = base.value !== void 0 && exponent.value !== void 0 && Number.isFinite(base.value ** exponent.value) ? [constant(base.value ** exponent.value)] : [{ text: `${wrap(base)}^${wrap(exponent)}` }];
+        } else if (exponent.value === 0)
+          result = [constant(1)];
+        else if (exponent.value === 1)
+          result = left;
+        else if (exponent.value !== void 0 && Number.isInteger(exponent.value) && exponent.value >= 2 && exponent.value <= maxDegree) {
+          let product = left;
+          for (let step = 1; step < exponent.value && product; step += 1)
+            product = times(product, left, maxDegree);
+          result = product;
+        } else
+          return void 0;
+      }
+      if (!result)
+        return void 0;
+      stack.push(result);
+    }
+  }
+  return stack.length === 1 ? stack[0] : void 0;
+}
+function times(left, right, maxDegree = 2) {
+  const result = Array.from({ length: maxDegree + 1 }, () => constant(0));
+  for (const [i, a] of left.entries())
+    for (const [j, b] of right.entries()) {
+      if (isZero(a) || isZero(b))
+        continue;
+      if (i + j > maxDegree)
+        return void 0;
+      result[i + j] = add(result[i + j], multiply(a, b));
+    }
+  return result;
+}
+function markParts(tokens, requested, labels, check, path) {
+  const marks = requested.filter((mark) => mark === "intercepts" || mark === "vertex" || mark === "symmetry_axis");
+  if (!marks.length)
+    return [];
+  checkPlotFormula(tokens, `${path}.marks`);
+  const polynomial2 = polynomialOf(tokens);
+  const refuse = (mark, why) => {
+    throw new PlotDerivationRefusal(`${path}.marks`, `the ${mark} mark ${why}; leave it out of marks and do not narrate it`);
+  };
+  if (!polynomial2)
+    return refuse(marks[0], "needs a line or a quadratic (marks are derived exactly)");
+  const [c, b, a] = [0, 1, 2].map((power2) => coefficient(polynomial2, power2));
+  if (polynomialText([c, b, a]).length > 240)
+    refuse(marks[0], "is too long an expression for this formula");
+  crossCheck(tokens, [c, b, a], check, path);
+  const linear = isZero(a);
+  const parts = [];
+  const owners = /* @__PURE__ */ new Map();
+  for (const mark of marks) {
+    const before = parts.length;
+    if (mark === "intercepts") {
+      parts.push({ kind: "point", as: "mark-y-intercept", label: labels("y \u622A\u8DDD"), x: "0", y: c.text });
+      if (linear) {
+        if (!isZero(b))
+          parts.push({ kind: "point", as: "mark-x-intercept", label: labels("x \u622A\u8DDD"), x: negate(divide(c, b)).text, y: "0" });
+      } else {
+        const root = `sqrt(${wrap(b)}^2-4*${wrap(a)}*${wrap(c)})`;
+        for (const [index, sign] of ["-", "+"].entries()) {
+          parts.push({ kind: "point", as: `mark-x-intercept-${index + 1}`, label: labels("x \u622A\u8DDD"), x: `(${negate(b).text}${sign}${root})/(2*${wrap(a)})`, y: "0" });
+        }
+      }
+    } else {
+      if (linear)
+        refuse(mark, "needs a quadratic");
+      const axis = `${negate(b).text === "0" ? "0" : `(${negate(b).text})`}/(2*${wrap(a)})`;
+      if (mark === "vertex")
+        parts.push({ kind: "point", as: "mark-vertex", label: labels("\u9876\u70B9"), x: axis, y: `${wrap(c)}-${wrap(b)}^2/(4*${wrap(a)})` });
+      else
+        parts.push({ kind: "guide", as: "mark-axis", label: labels("\u5BF9\u79F0\u8F74"), value: axis });
+    }
+    for (const part of parts.slice(before))
+      owners.set(part, mark);
+  }
+  for (const part of parts)
+    for (const text3 of [part.x, part.y, part.value]) {
+      if (text3 !== void 0 && text3.length > 240)
+        refuse(owners.get(part), "is too long an expression for this formula");
+    }
+  return parts;
+}
+var polynomialText = ([c, b, a]) => `${wrap(a)}*x^2+${wrap(b)}*x+${wrap(c)}`;
+function crossCheck(tokens, [c, b, a], { variables, samples }, path) {
+  const names = ["x", ...variables];
+  let formula, polynomial2;
+  try {
+    formula = compileMathExpression(plotFormulaText(tokens), names);
+    polynomial2 = compileMathExpression(polynomialText([c, b, a]), names);
+  } catch {
+    throw new PlotDerivationRefusal(`${path}.marks`, "the marks could not be derived for this formula; leave marks out");
+  }
+  const lowered = samples.map((values) => Object.fromEntries(Object.entries(values).map(([name, value2]) => [name.toLowerCase(), value2])));
+  for (const values of lowered)
+    for (const x of [-2.5, -1, 0, 0.5, 3]) {
+      const expected = formula({ ...values, x }), actual = polynomial2({ ...values, x });
+      if (!Number.isFinite(expected) && !Number.isFinite(actual))
+        continue;
+      if (!(Math.abs(expected - actual) <= 1e-6 * Math.max(1, Math.abs(expected)))) {
+        throw new PlotDerivationRefusal(`${path}.marks`, "the marks could not be derived for this formula; leave marks out");
+      }
+    }
+}
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/plot-domain-range.js
+function treeOf(tokens) {
+  const stack = [];
+  tokens.forEach((token, index) => {
+    const arity = token.kind === "negate" || token.kind === "function" ? 1 : token.kind === "operator" ? 2 : 0;
+    const args = stack.splice(stack.length - arity, arity);
+    stack.push({ start: arity ? args[0].start : index, end: index + 1, token, args });
+  });
+  return stack.length === 1 ? stack[0] : void 0;
+}
+var polyOf = (tokens, node) => polynomialOf(tokens.slice(node.start, node.end));
+var degreeOf = (p) => p.reduce((highest, scalar, power2) => scalar.value === 0 ? highest : power2, 0);
+var at = (p, power2) => p[power2] ?? { text: "0", value: 0 };
+var wrap2 = (text3) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(text3) ? text3 : `(${text3})`;
+function shapeOf(tokens, root) {
+  const terms = [];
+  const split = (node2, sign) => {
+    if (node2.token.kind === "operator" && (node2.token.operator === "add" || node2.token.operator === "subtract")) {
+      split(node2.args[0], sign);
+      split(node2.args[1], node2.token.operator === "add" ? sign : -sign);
+    } else if (node2.token.kind === "negate")
+      split(node2.args[0], -sign);
+    else
+      terms.push({ node: node2, sign });
+  };
+  split(root, 1);
+  const constantTerm = (node2) => {
+    const p = polyOf(tokens, node2);
+    return p && degreeOf(p) === 0 ? at(p, 0).text : void 0;
+  };
+  const kParts = [];
+  const cores = terms.filter(({ node: node2, sign }) => {
+    const text3 = constantTerm(node2);
+    if (text3 === void 0)
+      return true;
+    kParts.push(sign === 1 ? wrap2(text3) : `-${wrap2(text3)}`);
+    return false;
+  });
+  if (cores.length !== 1)
+    return void 0;
+  const k = kParts.length ? kParts.join("+").replace(/\+-/gu, "-") : "0";
+  let node = cores[0].node;
+  const factors = cores[0].sign === -1 ? ["-1"] : [];
+  for (; ; ) {
+    const token2 = node.token;
+    if (token2.kind === "negate") {
+      factors.push("-1");
+      node = node.args[0];
+      continue;
+    }
+    if (token2.kind === "operator" && token2.operator === "multiply") {
+      const [left, right] = node.args;
+      const l = constantTerm(left), r = constantTerm(right);
+      if (l !== void 0) {
+        factors.push(wrap2(l));
+        node = right;
+        continue;
+      }
+      if (r !== void 0) {
+        factors.push(wrap2(r));
+        node = left;
+        continue;
+      }
+      return void 0;
+    }
+    if (token2.kind === "operator" && token2.operator === "divide") {
+      const [top, bottom] = node.args;
+      const b = constantTerm(bottom), t = constantTerm(top);
+      if (b !== void 0) {
+        factors.push(`1/${wrap2(b)}`);
+        node = top;
+        continue;
+      }
+      const inner = polyOf(tokens, bottom);
+      if (t !== void 0 && inner && degreeOf(inner) === 1) {
+        factors.push(wrap2(t));
+        return { family: "reciprocal", a: factors.join("*"), k, p: at(inner, 1), q: at(inner, 0) };
+      }
+      return void 0;
+    }
+    break;
+  }
+  const a = factors.length ? factors.join("*") : "1";
+  const linearArg = (arg) => {
+    const p = polyOf(tokens, arg);
+    return p && degreeOf(p) === 1 ? p : void 0;
+  };
+  const token = node.token;
+  if (token.kind === "function") {
+    const inner = linearArg(node.args[0]);
+    if (!inner)
+      return void 0;
+    const family = token.name === "sqrt" ? "sqrt" : token.name === "exp" ? "exponential" : /^(ln|log|log10|log2|lg)$/u.test(token.name) ? "log" : token.name === "sin" || token.name === "cos" ? "sinusoid" : void 0;
+    return family ? { family, a, k, p: at(inner, 1), q: at(inner, 0) } : void 0;
+  }
+  if (token.kind === "operator" && token.operator === "power") {
+    const base = polyOf(tokens, node.args[0]), exponent = linearArg(node.args[1]);
+    if (!base || degreeOf(base) !== 0 || !exponent)
+      return void 0;
+    return { family: "exponential", a, k, p: at(exponent, 1), q: at(exponent, 0), base: at(base, 0) };
+  }
+  return void 0;
+}
+function formulaBars(tokens, want, check, path) {
+  checkPlotFormula(tokens, `${path}.marks`);
+  const refuse = (what, why) => {
+    throw new PlotDerivationRefusal(`${path}.marks`, `the ${what} mark ${why}; leave it out of marks and do not narrate it`);
+  };
+  const first = want.domain ? "domain" : "range";
+  const root = treeOf(tokens);
+  if (!root)
+    return refuse(first, "could not be derived");
+  const all = (axis) => ({ axis, from: null, to: null, from_closed: false, to_closed: false });
+  const proved = (text3) => check.sign(text3) !== "unknown";
+  const bySign = (sign, end, up, axis) => {
+    const s = check.sign(sign);
+    const upBar = (guarded2) => ({ axis, from: guarded2, to: null, from_closed: up.from_closed, to_closed: false });
+    const downBar = (guarded2) => ({ axis, from: null, to: guarded2, from_closed: false, to_closed: up.from_closed });
+    if (s === "positive")
+      return [upBar(end)];
+    if (s === "negative")
+      return [downBar(end)];
+    return [upBar(`${wrap2(end)}+0*log(${wrap2(sign)})`), { ...downBar(`${wrap2(end)}+0*log(-${wrap2(sign)})`), alternative: true }];
+  };
+  const bars = [];
+  const polynomial2 = polynomialOf(tokens);
+  if (polynomial2) {
+    const [c, b, a] = [0, 1, 2].map((power2) => at(polynomial2, power2));
+    if (want.domain)
+      bars.push(all("x"));
+    if (want.range) {
+      if (a.value === 0) {
+        if (b.value === 0)
+          bars.push({ axis: "y", from: c.text, to: c.text, from_closed: true, to_closed: true });
+        else if (!proved(b.text))
+          refuse("range", "collapses to one value where the slope is 0");
+        else
+          bars.push(all("y"));
+      } else {
+        const vertexY = `${wrap2(c.text)}-${wrap2(b.text)}^2/(4*${wrap2(a.text)})`;
+        bars.push(...bySign(a.text, vertexY, { from_closed: true }, "y"));
+      }
+    }
+    return guarded(bars, first, refuse);
+  }
+  const higher = polynomialOf(tokens, 9);
+  if (higher) {
+    const top = degreeOf(higher);
+    if (want.domain)
+      bars.push(all("x"));
+    if (want.range) {
+      if (top % 2 === 0)
+        refuse("range", "is derived for polynomials of odd degree, lines and quadratics only");
+      if (!proved(at(higher, top).text))
+        refuse("range", "collapses where the leading coefficient is 0");
+      bars.push(all("y"));
+    }
+    return guarded(bars, first, refuse);
+  }
+  const shape = shapeOf(tokens, root);
+  if (!shape)
+    return refuse(first, "is derived only for polynomials, roots, reciprocals, exponentials, logarithms, sines and cosines");
+  const pSign = shape.p.value;
+  const edge = `-${wrap2(shape.q.text)}/${wrap2(shape.p.text)}`;
+  if (want.range) {
+    if (pSign === 0 || !proved(shape.p.text))
+      refuse("range", "collapses to one value where x's coefficient is 0");
+  }
+  if (want.domain) {
+    if (shape.family === "sinusoid")
+      bars.push(all("x"));
+    else if (shape.family === "exponential") {
+      if (shape.base && check.sign(shape.base.text) !== "positive")
+        refuse("domain", "needs a base above 0");
+      bars.push(all("x"));
+    } else if (shape.family === "reciprocal") {
+      bars.push({ axis: "x", from: null, to: edge, from_closed: false, to_closed: false }, { axis: "x", from: edge, to: null, from_closed: false, to_closed: false });
+    } else {
+      if (pSign === void 0)
+        refuse("domain", "needs x with a fixed coefficient inside the root or logarithm");
+      const closed = shape.family === "sqrt";
+      bars.push(pSign > 0 ? { axis: "x", from: edge, to: null, from_closed: closed, to_closed: false } : { axis: "x", from: null, to: edge, from_closed: false, to_closed: closed });
+    }
+  }
+  if (want.range) {
+    if (shape.family === "sinusoid") {
+      const amplitude = `abs(${shape.a})`;
+      bars.push({ axis: "y", from: `${wrap2(shape.k)}-${amplitude}`, to: `${wrap2(shape.k)}+${amplitude}`, from_closed: true, to_closed: true });
+    } else if (shape.family === "log") {
+      if (!proved(shape.a))
+        refuse("range", "collapses to one value where the coefficient is 0");
+      bars.push(all("y"));
+    } else if (shape.family === "reciprocal") {
+      const guard = proved(shape.a) ? shape.k : `${wrap2(shape.k)}+0*log((${shape.a})^2)`;
+      bars.push({ axis: "y", from: null, to: guard, from_closed: false, to_closed: false }, { axis: "y", from: guard, to: null, from_closed: false, to_closed: false });
+    } else if (shape.family === "exponential") {
+      if (shape.base && !(shape.base.value !== void 0 && shape.base.value > 0 && shape.base.value !== 1))
+        refuse("range", "needs a fixed base above 0 and not 1");
+      bars.push(...bySign(shape.a, shape.k, { from_closed: false }, "y"));
+    } else {
+      bars.push(...bySign(shape.a, shape.k, { from_closed: true }, "y"));
+    }
+  }
+  return guarded(bars, first, refuse);
+}
+function guarded(bars, first, refuse) {
+  for (const bar of bars)
+    for (const text3 of [bar.from, bar.to]) {
+      if (text3 !== null && text3.length > 240)
+        refuse(first, "is too long an expression for this formula");
+    }
+  return bars;
+}
+function pieceBars(pieces, want, path) {
+  for (const piece of pieces)
+    checkPlotFormula(piece.tokens, `${path}.marks`);
+  const bars = [];
+  if (want.domain) {
+    for (const piece of pieces) {
+      const tree = treeOf(piece.tokens);
+      const shape = tree === void 0 ? void 0 : shapeOf(piece.tokens, tree);
+      const definedEverywhere = polynomialOf(piece.tokens, 9) !== void 0 || shape?.family === "sinusoid" || shape?.family === "exponential" && (shape.base === void 0 || shape.base.value !== void 0 && shape.base.value > 0);
+      if (!definedEverywhere) {
+        throw new PlotDerivationRefusal(`${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a polynomial, a sine or cosine, or an exponential with a base above 0; leave it out of marks and do not narrate it");
+      }
+    }
+    bars.push(...join(pieces).map((span2) => toBar("x", span2)));
+  }
+  if (want.range) {
+    const images = pieces.map((piece) => {
+      const p = polynomialOf(piece.tokens);
+      if (!p || degreeOf(p) > 1 || p.some((scalar) => scalar.value === void 0)) {
+        throw new PlotDerivationRefusal(`${path}.marks`, "the range mark of a piecewise function is derived only when every piece is a line or a constant; leave it out of marks and do not narrate it");
+      }
+      const [c, m] = [at(p, 0).value, at(p, 1).value];
+      if (m === 0)
+        return { from: c, to: c, from_closed: true, to_closed: true };
+      const ends = [{ x: piece.from, closed: piece.from_closed }, { x: piece.to, closed: piece.to_closed }].map(({ x, closed }) => ({ y: x === null ? null : m * x + c, closed: x !== null && closed }));
+      const [left, right] = ends;
+      return m > 0 ? { from: left.y, to: right.y, from_closed: left.closed, to_closed: right.closed } : { from: right.y, to: left.y, from_closed: right.closed, to_closed: left.closed };
+    });
+    bars.push(...join(images).map((span2) => toBar("y", span2)));
+  }
+  return bars;
+  function toBar(axis, span2) {
+    const text3 = (value2) => value2 === null ? null : String(Number(value2.toPrecision(12)));
+    return { axis, from: text3(span2.from), to: text3(span2.to), from_closed: span2.from !== null && span2.from_closed, to_closed: span2.to !== null && span2.to_closed };
+  }
+  function join(spans) {
+    const low = (span2) => span2.from ?? -Infinity, high = (span2) => span2.to ?? Infinity;
+    const sorted = [...spans].sort((a, b) => low(a) - low(b) || Number(b.from_closed) - Number(a.from_closed));
+    const joined = [];
+    for (const span2 of sorted) {
+      const last = joined.at(-1);
+      if (last && (high(last) > low(span2) || high(last) === low(span2) && (last.to_closed || span2.from_closed))) {
+        if (high(span2) > high(last)) {
+          last.to = span2.to;
+          last.to_closed = span2.to_closed;
+        } else if (high(span2) === high(last))
+          last.to_closed = last.to_closed || span2.to_closed;
+        continue;
+      }
+      joined.push({ ...span2 });
+    }
+    return joined;
+  }
+}
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/interval.js
+var ALL = [-Infinity, Infinity];
+var finite = ([lo, hi]) => Number.isFinite(lo) && Number.isFinite(hi);
+function times2(a, b) {
+  if (!finite(a) || !finite(b))
+    return ALL;
+  const products = [a[0] * b[0], a[0] * b[1], a[1] * b[0], a[1] * b[1]];
+  return [Math.min(...products), Math.max(...products)];
+}
+function reciprocal([lo, hi]) {
+  if (lo <= 0 && hi >= 0)
+    return ALL;
+  return [1 / hi, 1 / lo];
+}
+function power(base, exponent) {
+  if (exponent[0] !== exponent[1]) {
+    if (base[0] !== base[1] || !(base[0] > 0) || !finite(exponent))
+      return ALL;
+    const ends2 = [base[0] ** exponent[0], base[0] ** exponent[1]];
+    return [Math.min(...ends2), Math.max(...ends2)];
+  }
+  const n = exponent[0];
+  if (Number.isInteger(n)) {
+    if (n === 0)
+      return [1, 1];
+    if (n < 0)
+      return reciprocal(power(base, [-n, -n]));
+    if (!finite(base))
+      return ALL;
+    const [lo, hi] = base;
+    if (n % 2 === 1)
+      return [lo ** n, hi ** n];
+    if (lo >= 0)
+      return [lo ** n, hi ** n];
+    if (hi <= 0)
+      return [hi ** n, lo ** n];
+    return [0, Math.max(lo ** n, hi ** n)];
+  }
+  if (!(base[0] > 0) || !finite(base))
+    return ALL;
+  const ends = [base[0] ** n, base[1] ** n];
+  return [Math.min(...ends), Math.max(...ends)];
+}
+var FUNCTIONS2 = {
+  sqrt: ([lo, hi]) => lo >= 0 && Number.isFinite(hi) ? [Math.sqrt(lo), Math.sqrt(hi)] : ALL,
+  exp: ([lo, hi]) => [Math.exp(lo), Math.exp(hi)],
+  abs: ([lo, hi]) => lo >= 0 ? [lo, hi] : hi <= 0 ? [-hi, -lo] : [0, Math.max(-lo, hi)]
+};
+function intervalOf(text3, bounds) {
+  const tokens = text3.match(/\d+(?:\.\d+)?(?:[eE][-+]?\d+)?|[A-Za-z_][A-Za-z0-9_]*|[-+*/^(),]|\S/gu) ?? [];
+  let position = 0;
+  const peek = () => tokens[position];
+  const fail4 = () => {
+    throw new Error("unread");
+  };
+  const expect = (token) => {
+    if (tokens[position] !== token)
+      fail4();
+    position += 1;
+  };
+  const sum = () => {
+    let value2 = product();
+    while (peek() === "+" || peek() === "-") {
+      const operator = tokens[position++];
+      const right = product();
+      value2 = operator === "+" ? [value2[0] + right[0], value2[1] + right[1]] : [value2[0] - right[1], value2[1] - right[0]];
+    }
+    return value2;
+  };
+  const product = () => {
+    let value2 = unary();
+    while (peek() === "*" || peek() === "/") {
+      const operator = tokens[position++];
+      const right = unary();
+      value2 = operator === "*" ? times2(value2, right) : times2(value2, reciprocal(right));
+    }
+    return value2;
+  };
+  const unary = () => {
+    if (peek() === "-") {
+      position += 1;
+      const [lo, hi] = unary();
+      return [-hi, -lo];
+    }
+    if (peek() === "+") {
+      position += 1;
+      return unary();
+    }
+    const base = atom();
+    if (peek() === "^") {
+      position += 1;
+      return power(base, unary());
+    }
+    return base;
+  };
+  const atom = () => {
+    const token = tokens[position++];
+    if (token === void 0)
+      return fail4();
+    if (token === "(") {
+      const value2 = sum();
+      expect(")");
+      return value2;
+    }
+    if (/^\d/u.test(token)) {
+      const value2 = Number(token);
+      return [value2, value2];
+    }
+    if (/^[A-Za-z_]/u.test(token)) {
+      if (peek() === "(") {
+        position += 1;
+        const argument = sum();
+        expect(")");
+        const f = FUNCTIONS2[token];
+        return f ? f(argument) : ALL;
+      }
+      if (token === "pi")
+        return [Math.PI, Math.PI];
+      if (token === "e")
+        return [Math.E, Math.E];
+      return bounds[token] ?? fail4();
+    }
+    return fail4();
+  };
+  try {
+    const value2 = sum();
+    if (position !== tokens.length)
+      return ALL;
+    return Number.isNaN(value2[0]) || Number.isNaN(value2[1]) ? ALL : value2;
+  } catch {
+    return ALL;
+  }
+}
+function signOf([lo, hi]) {
+  return lo > 0 ? "positive" : hi < 0 ? "negative" : "unknown";
+}
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/index.js
 var MATH_SUBJECT_DESCRIPTION = {
   "zh-CN": "\u6570\u5B66\uFF1A\u6570\u4E0E\u8FD0\u7B97\u3001\u4EE3\u6570\u3001\u51FD\u6570\u4E0E\u56FE\u50CF\u3001\u51E0\u4F55\u3001\u7EDF\u8BA1\u4E0E\u6982\u7387",
@@ -12011,7 +12654,7 @@ function buildFunctionPlot(input) {
 var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u8FB9\u957F\uFF1B" + Object.entries(REARRANGEMENT_CONSTRUCTIONS).map(([name, facts]) => `${name}\uFF1A${facts.catalog}`).join("\uFF1B") + "\u3002\u9762\u79EF\u53EA\u6BD4\u8F83\u7AEF\u70B9\u3002";
 
 // src/plugins/plot-mark-names.ts
-var PLOT_MARKS = ["intercepts", "vertex", "symmetry_axis", "slope_triangle", "domain", "range"];
+var PLOT_MARKS2 = ["intercepts", "vertex", "symmetry_axis", "slope_triangle", "domain", "range"];
 
 // src/plugins/math.ts
 var SIDE_COUNT = { min: 3, max: 384 };
@@ -12263,7 +12906,7 @@ var MATH_SCHEMA_PROPERTIES = {
     y_label: text2,
     formulas: { type: "array", minItems: 1, maxItems: 8, items: text2 },
     sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } },
-    marks: { type: "array", maxItems: PLOT_MARKS.length, items: { enum: [...PLOT_MARKS] } },
+    marks: { type: "array", maxItems: PLOT_MARKS2.length, items: { enum: [...PLOT_MARKS2] } },
     pieces: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["formula", "ends"], properties: { formula: text2, x_from: { type: "number" }, x_to: { type: "number" }, ends: { enum: ["[]", "[)", "(]", "()"] } } } }
   },
   unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
@@ -13611,7 +14254,7 @@ function candidateSampleNumbers(value2, count) {
     return typeof number === "number" && Number.isInteger(number) && number >= 1 && number <= count ? [number] : [];
   });
 }
-function multiply(a, b) {
+function multiply2(a, b) {
   if (a[2] * b[2] !== 0 || a[1] * b[2] + a[2] * b[1] !== 0) return;
   return [a[0] * b[0], a[0] * b[1] + a[1] * b[0], a[0] * b[2] + a[1] * b[1] + a[2] * b[0]];
 }
@@ -13631,7 +14274,7 @@ function polynomial(tokens) {
         const sign = token.operator === "add" ? 1 : -1;
         stack.push([a[0] + sign * b[0], a[1] + sign * b[1], a[2] + sign * b[2]]);
       } else if (token.operator === "multiply" || token.operator === "power" && b[0] === 2 && b[1] === 0 && b[2] === 0) {
-        const product = multiply(a, token.operator === "power" ? a : b);
+        const product = multiply2(a, token.operator === "power" ? a : b);
         if (!product) return;
         stack.push(product);
       } else return;
@@ -15662,7 +16305,7 @@ var FEATURE_Y_MARGIN = 0.5;
 var EDGE_INSET = 0.08;
 var EXTREME_ALLOWANCE = 1.5;
 var EQUAL_ASPECT = { min: 0.5, max: 2 };
-function finite(value2) {
+function finite2(value2) {
   return Number.isFinite(value2) && Math.abs(value2) < 1e12;
 }
 function span(range) {
@@ -15772,7 +16415,7 @@ function linearSlopeOf(curve) {
   return slope;
 }
 function isCircularArc(curve, scan) {
-  const xs = Array.from({ length: 41 }, (_, index) => scan.min + span(scan) * index / 40).filter((x) => finite(curve(x)));
+  const xs = Array.from({ length: 41 }, (_, index) => scan.min + span(scan) * index / 40).filter((x) => finite2(curve(x)));
   if (xs.length < 6) return false;
   const points = xs.map((x) => ({ x, y: curve(x) }));
   const [p, q, r] = [points[0], points[Math.floor(points.length / 2)], points.at(-1)];
@@ -15798,7 +16441,7 @@ function analyse(curve, scan) {
   const xs = Array.from({ length: count + 1 }, (_, index) => scan.min + span(scan) * index / count);
   const ys = xs.map(curve);
   const features = [];
-  const magnitudes = ys.filter(finite).map(Math.abs).sort((a, b) => a - b);
+  const magnitudes = ys.filter(finite2).map(Math.abs).sort((a, b) => a - b);
   const typical = Math.max(1, magnitudes[Math.floor(magnitudes.length / 2)] ?? 1);
   const known = (x) => features.some((feature) => Math.abs(feature.x - x) < SCAN_STEP);
   const poleAt = (x0) => {
@@ -15813,33 +16456,33 @@ function analyse(curve, scan) {
     return growing >= 3 && previous > 1e3 * typical;
   };
   const holeAt = (x0) => {
-    if (finite(curve(x0))) return;
+    if (finite2(curve(x0))) return;
     const left = curve(x0 - 1e-7), right = curve(x0 + 1e-7);
-    if (finite(left) && finite(right) && Math.abs(left - right) < 1e-4 * Math.max(1, Math.abs(left))) return { x: x0, y: (left + right) / 2 };
+    if (finite2(left) && finite2(right) && Math.abs(left - right) < 1e-4 * Math.max(1, Math.abs(left))) return { x: x0, y: (left + right) / 2 };
   };
   for (let x = Math.ceil(scan.min * 2) / 2; x <= scan.max; x += 0.5) {
     const at2 = Number(x.toFixed(6));
     const hole = holeAt(at2);
     if (hole) features.push({ kind: "hole", ...hole });
-    else if (!finite(curve(at2)) && finite(curve(at2 - 0.01)) && finite(curve(at2 + 0.01)) && poleAt(at2)) features.push({ kind: "pole", x: at2 });
+    else if (!finite2(curve(at2)) && finite2(curve(at2 - 0.01)) && finite2(curve(at2 + 0.01)) && poleAt(at2)) features.push({ kind: "pole", x: at2 });
   }
   for (let index = 1; index < xs.length; index += 1) {
     const [x0, x1, y0, y1] = [xs[index - 1], xs[index], ys[index - 1], ys[index]];
-    if (finite(y0) !== finite(y1)) {
+    if (finite2(y0) !== finite2(y1)) {
       const before = ys.slice(Math.max(0, index - 4), index), after = ys.slice(index, index + 4);
-      if (before.every((v) => finite(v) === finite(y0)) && after.every((v) => finite(v) === finite(y1))) {
-        const inside = finite(y0) ? x0 : x1, outside = finite(y0) ? x1 : x0;
-        const edge = bisect((x) => finite(curve(x)), inside, outside);
+      if (before.every((v) => finite2(v) === finite2(y0)) && after.every((v) => finite2(v) === finite2(y1))) {
+        const inside = finite2(y0) ? x0 : x1, outside = finite2(y0) ? x1 : x0;
+        const edge = bisect((x) => finite2(curve(x)), inside, outside);
         if (!known(edge)) {
           const direction = inside > outside ? 1 : -1;
           const near3 = curve(edge + direction * 1e-9), farther = curve(edge + direction * 1e-6);
-          const bounded = finite(near3) && finite(farther) && Math.abs(near3 - farther) <= 0.05 * Math.max(1, Math.abs(farther));
+          const bounded = finite2(near3) && finite2(farther) && Math.abs(near3 - farther) <= 0.05 * Math.max(1, Math.abs(farther));
           features.push({ kind: "edge", x: edge, ...bounded ? { y: near3 } : {} });
         }
       }
       continue;
     }
-    if (!finite(y0) || !finite(y1)) continue;
+    if (!finite2(y0) || !finite2(y1)) continue;
     if (y0 === 0) {
       if (!known(x0)) features.push({ kind: "root", x: x0, y: 0 });
     } else if (Math.sign(y0) * Math.sign(y1) < 0) {
@@ -15860,7 +16503,7 @@ function analyse(curve, scan) {
     }
     if (index >= 2) {
       const yPrev = ys[index - 2];
-      if (finite(yPrev) && (y0 - yPrev) * (y1 - y0) < 0) {
+      if (finite2(yPrev) && (y0 - yPrev) * (y1 - y0) < 0) {
         const maximum = y0 > yPrev;
         let a = xs[index - 2], b = x1;
         const ratio = (Math.sqrt(5) - 1) / 2;
@@ -15871,14 +16514,14 @@ function analyse(curve, scan) {
         }
         const x = (a + b) / 2, y = curve(x);
         if (!known(x)) {
-          if (finite(y) && !poleAt(x)) features.push({ kind: "extremum", x, y });
+          if (finite2(y) && !poleAt(x)) features.push({ kind: "extremum", x, y });
           else features.push({ kind: "pole", x });
         }
       }
     }
   }
   const intercept = curve(0);
-  if (finite(intercept) && scan.min <= 0 && scan.max >= 0 && !features.some((f) => f.kind === "hole" && f.x === 0)) {
+  if (finite2(intercept) && scan.min <= 0 && scan.max >= 0 && !features.some((f) => f.kind === "hole" && f.x === 0)) {
     features.push({ kind: "intercept", x: 0, y: intercept });
   }
   return features;
@@ -15893,7 +16536,7 @@ function intersections(curves, scan) {
       for (let index = 1; index <= count; index += 1) {
         const x = scan.min + span(scan) * index / count;
         const current = difference(x);
-        if (finite(previous) && finite(current) && Math.sign(previous) * Math.sign(current) < 0) {
+        if (finite2(previous) && finite2(current) && Math.sign(previous) * Math.sign(current) < 0) {
           let a = x - span(scan) / count, b = x, fa = previous;
           for (let step = 0; step < 60; step += 1) {
             const mid = (a + b) / 2, fm = difference(mid);
@@ -15903,7 +16546,7 @@ function intersections(curves, scan) {
             } else b = mid;
           }
           const at2 = (a + b) / 2, y = curves[i](at2);
-          if (finite(y) && Math.abs(difference(at2)) < 1e-6 * Math.max(1, Math.abs(y))) found.push({ kind: "intersection", x: at2, y });
+          if (finite2(y) && Math.abs(difference(at2)) < 1e-6 * Math.max(1, Math.abs(y))) found.push({ kind: "intersection", x: at2, y });
         }
         previous = current;
       }
@@ -15942,7 +16585,7 @@ function planPlotView(input) {
       return Number.NaN;
     }
   };
-  const naturalStart = quantityX && compiled.every((_, index) => finite(curveAt(index, initial)(1e-9))) && teaching.every((point) => point.x >= 0) && !(input.requested?.x?.min !== void 0 && input.requested.x.min < 0);
+  const naturalStart = quantityX && compiled.every((_, index) => finite2(curveAt(index, initial)(1e-9))) && teaching.every((point) => point.x >= 0) && !(input.requested?.x?.min !== void 0 && input.requested.x.min < 0);
   const scan = naturalStart ? { min: 0, max: 2 * SCAN_HALF_WIDTH } : { min: -SCAN_HALF_WIDTH, max: SCAN_HALF_WIDTH };
   const focus = teaching.length ? teaching.reduce((sum, point) => sum + point.x, 0) / teaching.length : naturalStart ? 0 : 0;
   const describe = (state) => {
@@ -15992,13 +16635,13 @@ function planPlotView(input) {
     for (const end of candidates) {
       if (items.every((item) => {
         const start = item.curve(0), value2 = item.curve(end);
-        if (!finite(start) || !finite(value2)) return false;
+        if (!finite2(start) || !finite2(value2)) return false;
         return Math.abs(start) > 1e-9 ? Math.abs(value2 - start) >= 2 * Math.abs(start) : end >= MIN_SPAN;
       })) return end;
     }
     return MIN_SPAN;
   };
-  const undefinedBeyond = (items, edge, direction) => items.every((item) => [0.01, 0.1, 1].every((step) => !finite(item.curve(edge + direction * step))));
+  const undefinedBeyond = (items, edge, direction) => items.every((item) => [0.01, 0.1, 1].every((step) => !finite2(item.curve(edge + direction * step))));
   const xWindow = (items, features) => {
     const selected = items.map((item) => item.features.filter(features));
     let range = hull([
@@ -16043,7 +16686,7 @@ function planPlotView(input) {
         const t = range.min + span(range) * i / 400;
         if (avoid.some((x2) => Math.abs(t - x2) < guard)) continue;
         const value2 = item.curve(t);
-        if (finite(value2)) values.push(value2);
+        if (finite2(value2)) values.push(value2);
       }
     };
     for (const item of items) {
@@ -16093,7 +16736,7 @@ function planPlotView(input) {
   let acceptedX = false;
   if (requestedX && (requestedX.min !== void 0 || requestedX.max !== void 0)) {
     const proposal = { min: requestedX.min ?? x.min, max: requestedX.max ?? x.max };
-    const curveFinite = proposal.max > proposal.min && base.some((item) => Array.from({ length: 41 }, (_, i) => item.curve(proposal.min + span(proposal) * i / 40)).filter(finite).length >= 10);
+    const curveFinite = proposal.max > proposal.min && base.some((item) => Array.from({ length: 41 }, (_, i) => item.curve(proposal.min + span(proposal) * i / 40)).filter(finite2).length >= 10);
     const keepsTeaching = teaching.every((point) => point.x >= proposal.min && point.x <= proposal.max);
     const tooWide = span(proposal) > 4 * Math.max(span(x), MIN_SPAN);
     if (curveFinite && keepsTeaching && !tooWide) {
@@ -16113,7 +16756,7 @@ function planPlotView(input) {
       ...kept.filter((feature) => feature.y !== void 0 && feature.x >= x.min && feature.x <= x.max && feature.kind !== "intercept").map((feature) => feature.y),
       ...teaching.map((point) => point.y)
     ]);
-    const samples = base.flatMap((item) => Array.from({ length: 81 }, (_, i) => item.curve(x.min + span(x) * i / 80))).filter(finite);
+    const samples = base.flatMap((item) => Array.from({ length: 81 }, (_, i) => item.curve(x.min + span(x) * i / 80))).filter(finite2);
     const inside = samples.filter((value2) => value2 >= proposal.min && value2 <= proposal.max).length;
     const keeps = !mustY || mustY.min >= proposal.min && mustY.max <= proposal.max;
     if (proposal.max > proposal.min && keeps && inside >= samples.length * 0.3) {
@@ -16159,499 +16802,25 @@ function planPlotView(input) {
 }
 
 // src/plugins/plot-marks.ts
-var constant = (value2) => ({ text: formatNumber(value2), value: value2 });
-var formatNumber = (value2) => Object.is(value2, -0) ? "0" : String(Number(value2.toPrecision(12)));
-var isZero = (scalar) => scalar.value === 0;
-var wrap = (scalar) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(scalar.text) ? scalar.text : `(${scalar.text})`;
-function add(a, b) {
-  if (a.value !== void 0 && b.value !== void 0) return constant(a.value + b.value);
-  if (isZero(a)) return b;
-  if (isZero(b)) return a;
-  return { text: `${a.text}+${wrap(b)}` };
+function pluginTokens(tokens) {
+  return tokens.map((token) => token.kind === "number" ? { kind: "variable", name: variableAlias(token.number) } : token);
 }
-function negate(a) {
-  return a.value !== void 0 ? constant(-a.value) : { text: `-${wrap(a)}` };
-}
-function multiply2(a, b) {
-  if (a.value !== void 0 && b.value !== void 0) return constant(a.value * b.value);
-  if (isZero(a) || isZero(b)) return constant(0);
-  if (a.value === 1) return b;
-  if (b.value === 1) return a;
-  if (a.value === -1) return negate(b);
-  if (b.value === -1) return negate(a);
-  return { text: `${wrap(a)}*${wrap(b)}` };
-}
-function divide(a, b) {
-  if (a.value !== void 0 && b.value !== void 0 && b.value !== 0) return constant(a.value / b.value);
-  if (isZero(a)) return constant(0);
-  if (b.value === 1) return a;
-  return { text: `${wrap(a)}/${wrap(b)}` };
-}
-var degree = (p) => p.reduce((highest, scalar, power2) => isZero(scalar) ? highest : power2, 0);
-var coefficient = (p, power2) => p[power2] ?? constant(0);
-function polynomialOf(tokens, maxDegree = 2) {
-  const powers = Array.from({ length: maxDegree + 1 }, (_, power2) => power2);
-  const stack = [];
-  for (const token of tokens) {
-    if (token.kind === "input") stack.push([constant(0), constant(1)]);
-    else if (token.kind === "number") stack.push([{ text: variableAlias(token.number) }]);
-    else if (token.kind === "literal") stack.push([constant(Number(token.value))]);
-    else if (token.kind === "constant") stack.push([{ text: token.name, value: token.name === "pi" ? Math.PI : Math.E }]);
-    else if (token.kind === "negate") {
-      const p = stack.pop();
-      if (!p) return void 0;
-      stack.push(p.map(negate));
-    } else if (token.kind === "function") {
-      const p = stack.pop();
-      if (!p || degree(p) > 0) return void 0;
-      stack.push([{ text: `${token.name}(${coefficient(p, 0).text})` }]);
-    } else {
-      const right = stack.pop(), left = stack.pop();
-      if (!left || !right) return void 0;
-      let result;
-      if (token.operator === "add" || token.operator === "subtract") {
-        result = powers.map((power2) => add(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
-      } else if (token.operator === "multiply") {
-        result = times(left, right, maxDegree);
-      } else if (token.operator === "divide") {
-        if (degree(right) > 0) return void 0;
-        result = left.map((scalar) => divide(scalar, coefficient(right, 0)));
-      } else {
-        const exponent = coefficient(right, 0);
-        if (degree(right) > 0) return void 0;
-        if (degree(left) === 0) result = [{ text: `${wrap(coefficient(left, 0))}^${wrap(exponent)}` }];
-        else if (exponent.value === 0) result = [constant(1)];
-        else if (exponent.value === 1) result = left;
-        else if (exponent.value !== void 0 && Number.isInteger(exponent.value) && exponent.value >= 2 && exponent.value <= maxDegree) {
-          let product = left;
-          for (let step = 1; step < exponent.value && product; step += 1) product = times(product, left, maxDegree);
-          result = product;
-        } else return void 0;
-      }
-      if (!result) return void 0;
-      stack.push(result);
-    }
-  }
-  return stack.length === 1 ? stack[0] : void 0;
-}
-function times(left, right, maxDegree = 2) {
-  const result = Array.from({ length: maxDegree + 1 }, () => constant(0));
-  for (const [i, a] of left.entries()) for (const [j, b] of right.entries()) {
-    if (isZero(a) || isZero(b)) continue;
-    if (i + j > maxDegree) return void 0;
-    result[i + j] = add(result[i + j], multiply2(a, b));
-  }
-  return result;
-}
-function markParts(tokens, marks, labels, check, path) {
-  const polynomial2 = polynomialOf(tokens);
-  const refuse = (mark, why) => {
-    throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `the ${mark} mark ${why}; leave it out of marks and do not narrate it`);
-  };
-  if (!polynomial2) return refuse(marks[0], "needs a line or a quadratic (marks are derived exactly)");
-  const [c, b, a] = [0, 1, 2].map((power2) => coefficient(polynomial2, power2));
-  if (polynomialText([c, b, a]).length > 240) refuse(marks[0], "is too long an expression for this formula");
-  crossCheck(tokens, [c, b, a], check, path);
-  const linear = isZero(a);
-  const parts = [];
-  const owners = /* @__PURE__ */ new Map();
-  for (const mark of marks) {
-    const before = parts.length;
-    if (mark === "intercepts") {
-      parts.push({ kind: "point", as: "mark-y-intercept", label: labels("y \u622A\u8DDD"), x: "0", y: c.text });
-      if (linear) {
-        if (!isZero(b)) parts.push({ kind: "point", as: "mark-x-intercept", label: labels("x \u622A\u8DDD"), x: negate(divide(c, b)).text, y: "0" });
-      } else {
-        const root = `sqrt(${wrap(b)}^2-4*${wrap(a)}*${wrap(c)})`;
-        for (const [index, sign] of ["-", "+"].entries()) {
-          parts.push({ kind: "point", as: `mark-x-intercept-${index + 1}`, label: labels("x \u622A\u8DDD"), x: `(${negate(b).text}${sign}${root})/(2*${wrap(a)})`, y: "0" });
-        }
-      }
-    } else {
-      if (linear) refuse(mark, "needs a quadratic");
-      const axis = `${negate(b).text === "0" ? "0" : `(${negate(b).text})`}/(2*${wrap(a)})`;
-      if (mark === "vertex") parts.push({ kind: "point", as: "mark-vertex", label: labels("\u9876\u70B9"), x: axis, y: `${wrap(c)}-${wrap(b)}^2/(4*${wrap(a)})` });
-      else parts.push({ kind: "guide", as: "mark-axis", label: labels("\u5BF9\u79F0\u8F74"), value: axis });
-    }
-    for (const part of parts.slice(before)) owners.set(part, mark);
-  }
-  for (const part of parts) for (const text3 of [part.x, part.y, part.value]) {
-    if (text3 !== void 0 && text3.length > 240) refuse(owners.get(part), "is too long an expression for this formula");
-  }
-  return parts;
-}
-var polynomialText = ([c, b, a]) => `${wrap(a)}*x^2+${wrap(b)}*x+${wrap(c)}`;
-function crossCheck(tokens, [c, b, a], { variables, samples }, path) {
-  const names = ["x", ...variables];
-  const formula = compileMathExpression(mathExpressionToOll(tokens), names);
-  const polynomial2 = compileMathExpression(polynomialText([c, b, a]), names);
-  for (const values of samples) for (const x of [-2.5, -1, 0, 0.5, 3]) {
-    const expected = formula({ ...values, x }), actual = polynomial2({ ...values, x });
-    if (!Number.isFinite(expected) && !Number.isFinite(actual)) continue;
-    if (!(Math.abs(expected - actual) <= 1e-6 * Math.max(1, Math.abs(expected)))) {
-      throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the marks could not be derived for this formula; leave marks out");
-    }
-  }
-}
-
-// src/plugins/plot-domain-range.ts
-function treeOf(tokens) {
-  const stack = [];
-  tokens.forEach((token, index) => {
-    const arity = token.kind === "negate" || token.kind === "function" ? 1 : token.kind === "operator" ? 2 : 0;
-    const args = stack.splice(stack.length - arity, arity);
-    stack.push({ start: arity ? args[0].start : index, end: index + 1, token, args });
-  });
-  return stack.length === 1 ? stack[0] : void 0;
-}
-var polyOf = (tokens, node) => polynomialOf(tokens.slice(node.start, node.end));
-var degreeOf = (p) => p.reduce((highest, scalar, power2) => scalar.value === 0 ? highest : power2, 0);
-var at = (p, power2) => p[power2] ?? { text: "0", value: 0 };
-var wrap2 = (text3) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(text3) ? text3 : `(${text3})`;
-function shapeOf(tokens, root) {
-  const terms = [];
-  const split = (node2, sign) => {
-    if (node2.token.kind === "operator" && (node2.token.operator === "add" || node2.token.operator === "subtract")) {
-      split(node2.args[0], sign);
-      split(node2.args[1], node2.token.operator === "add" ? sign : -sign);
-    } else if (node2.token.kind === "negate") split(node2.args[0], -sign);
-    else terms.push({ node: node2, sign });
-  };
-  split(root, 1);
-  const constantTerm = (node2) => {
-    const p = polyOf(tokens, node2);
-    return p && degreeOf(p) === 0 ? at(p, 0).text : void 0;
-  };
-  const kParts = [];
-  const cores = terms.filter(({ node: node2, sign }) => {
-    const text3 = constantTerm(node2);
-    if (text3 === void 0) return true;
-    kParts.push(sign === 1 ? wrap2(text3) : `-${wrap2(text3)}`);
-    return false;
-  });
-  if (cores.length !== 1) return void 0;
-  const k = kParts.length ? kParts.join("+").replace(/\+-/gu, "-") : "0";
-  let node = cores[0].node;
-  const factors = cores[0].sign === -1 ? ["-1"] : [];
-  for (; ; ) {
-    const token2 = node.token;
-    if (token2.kind === "negate") {
-      factors.push("-1");
-      node = node.args[0];
-      continue;
-    }
-    if (token2.kind === "operator" && token2.operator === "multiply") {
-      const [left, right] = node.args;
-      const l = constantTerm(left), r = constantTerm(right);
-      if (l !== void 0) {
-        factors.push(wrap2(l));
-        node = right;
-        continue;
-      }
-      if (r !== void 0) {
-        factors.push(wrap2(r));
-        node = left;
-        continue;
-      }
-      return void 0;
-    }
-    if (token2.kind === "operator" && token2.operator === "divide") {
-      const [top, bottom] = node.args;
-      const b = constantTerm(bottom), t = constantTerm(top);
-      if (b !== void 0) {
-        factors.push(`1/${wrap2(b)}`);
-        node = top;
-        continue;
-      }
-      const inner = polyOf(tokens, bottom);
-      if (t !== void 0 && inner && degreeOf(inner) === 1) {
-        factors.push(wrap2(t));
-        return { family: "reciprocal", a: factors.join("*"), k, p: at(inner, 1), q: at(inner, 0) };
-      }
-      return void 0;
-    }
-    break;
-  }
-  const a = factors.length ? factors.join("*") : "1";
-  const linearArg = (arg) => {
-    const p = polyOf(tokens, arg);
-    return p && degreeOf(p) === 1 ? p : void 0;
-  };
-  const token = node.token;
-  if (token.kind === "function") {
-    const inner = linearArg(node.args[0]);
-    if (!inner) return void 0;
-    const family = token.name === "sqrt" ? "sqrt" : token.name === "exp" ? "exponential" : /^(ln|log|log10|log2|lg)$/u.test(token.name) ? "log" : token.name === "sin" || token.name === "cos" ? "sinusoid" : void 0;
-    return family ? { family, a, k, p: at(inner, 1), q: at(inner, 0) } : void 0;
-  }
-  if (token.kind === "operator" && token.operator === "power") {
-    const base = polyOf(tokens, node.args[0]), exponent = linearArg(node.args[1]);
-    if (!base || degreeOf(base) !== 0 || !exponent) return void 0;
-    return { family: "exponential", a, k, p: at(exponent, 1), q: at(exponent, 0), base: at(base, 0) };
-  }
-  return void 0;
-}
-function formulaBars(tokens, want, check, path) {
-  const refuse = (what, why) => {
-    throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, `the ${what} mark ${why}; leave it out of marks and do not narrate it`);
-  };
-  const first = want.domain ? "domain" : "range";
-  const root = treeOf(tokens);
-  if (!root) return refuse(first, "could not be derived");
-  const all = (axis) => ({ axis, from: null, to: null, from_closed: false, to_closed: false });
-  const proved = (text3) => check.sign(text3) !== "unknown";
-  const bySign = (sign, end, up, axis) => {
-    const s = check.sign(sign);
-    const upBar = (guarded2) => ({ axis, from: guarded2, to: null, from_closed: up.from_closed, to_closed: false });
-    const downBar = (guarded2) => ({ axis, from: null, to: guarded2, from_closed: false, to_closed: up.from_closed });
-    if (s === "positive") return [upBar(end)];
-    if (s === "negative") return [downBar(end)];
-    return [upBar(`${wrap2(end)}+0*log(${wrap2(sign)})`), { ...downBar(`${wrap2(end)}+0*log(-${wrap2(sign)})`), alternative: true }];
-  };
-  const bars = [];
-  const polynomial2 = polynomialOf(tokens);
-  if (polynomial2) {
-    const [c, b, a] = [0, 1, 2].map((power2) => at(polynomial2, power2));
-    if (want.domain) bars.push(all("x"));
-    if (want.range) {
-      if (a.value === 0) {
-        if (b.value === 0) bars.push({ axis: "y", from: c.text, to: c.text, from_closed: true, to_closed: true });
-        else if (!proved(b.text)) refuse("range", "collapses to one value where the slope is 0");
-        else bars.push(all("y"));
-      } else {
-        const vertexY = `${wrap2(c.text)}-${wrap2(b.text)}^2/(4*${wrap2(a.text)})`;
-        bars.push(...bySign(a.text, vertexY, { from_closed: true }, "y"));
-      }
-    }
-    return guarded(bars, first, refuse);
-  }
-  const higher = polynomialOf(tokens, 9);
-  if (higher) {
-    const top = degreeOf(higher);
-    if (want.domain) bars.push(all("x"));
-    if (want.range) {
-      if (top % 2 === 0) refuse("range", "is derived for polynomials of odd degree, lines and quadratics only");
-      if (!proved(at(higher, top).text)) refuse("range", "collapses where the leading coefficient is 0");
-      bars.push(all("y"));
-    }
-    return guarded(bars, first, refuse);
-  }
-  const shape = shapeOf(tokens, root);
-  if (!shape) return refuse(first, "is derived only for polynomials, roots, reciprocals, exponentials, logarithms, sines and cosines");
-  const pSign = shape.p.value;
-  const edge = `-${wrap2(shape.q.text)}/${wrap2(shape.p.text)}`;
-  if (want.range) {
-    if (pSign === 0 || !proved(shape.p.text)) refuse("range", "collapses to one value where x's coefficient is 0");
-  }
-  if (want.domain) {
-    if (shape.family === "sinusoid") bars.push(all("x"));
-    else if (shape.family === "exponential") {
-      if (shape.base && check.sign(shape.base.text) !== "positive") refuse("domain", "needs a base above 0");
-      bars.push(all("x"));
-    } else if (shape.family === "reciprocal") {
-      bars.push({ axis: "x", from: null, to: edge, from_closed: false, to_closed: false }, { axis: "x", from: edge, to: null, from_closed: false, to_closed: false });
-    } else {
-      if (pSign === void 0) refuse("domain", "needs x with a fixed coefficient inside the root or logarithm");
-      const closed = shape.family === "sqrt";
-      bars.push(pSign > 0 ? { axis: "x", from: edge, to: null, from_closed: closed, to_closed: false } : { axis: "x", from: null, to: edge, from_closed: false, to_closed: closed });
-    }
-  }
-  if (want.range) {
-    if (shape.family === "sinusoid") {
-      const amplitude = `abs(${shape.a})`;
-      bars.push({ axis: "y", from: `${wrap2(shape.k)}-${amplitude}`, to: `${wrap2(shape.k)}+${amplitude}`, from_closed: true, to_closed: true });
-    } else if (shape.family === "log") {
-      if (!proved(shape.a)) refuse("range", "collapses to one value where the coefficient is 0");
-      bars.push(all("y"));
-    } else if (shape.family === "reciprocal") {
-      const guard = proved(shape.a) ? shape.k : `${wrap2(shape.k)}+0*log((${shape.a})^2)`;
-      bars.push({ axis: "y", from: null, to: guard, from_closed: false, to_closed: false }, { axis: "y", from: guard, to: null, from_closed: false, to_closed: false });
-    } else if (shape.family === "exponential") {
-      if (shape.base && !(shape.base.value !== void 0 && shape.base.value > 0 && shape.base.value !== 1)) refuse("range", "needs a fixed base above 0 and not 1");
-      bars.push(...bySign(shape.a, shape.k, { from_closed: false }, "y"));
-    } else {
-      bars.push(...bySign(shape.a, shape.k, { from_closed: true }, "y"));
-    }
-  }
-  return guarded(bars, first, refuse);
-}
-function guarded(bars, first, refuse) {
-  for (const bar of bars) for (const text3 of [bar.from, bar.to]) {
-    if (text3 !== null && text3.length > 240) refuse(first, "is too long an expression for this formula");
-  }
-  return bars;
-}
-function pieceBars(pieces, want, path) {
-  const bars = [];
-  if (want.domain) {
-    for (const piece of pieces) {
-      const tree = treeOf(piece.tokens);
-      const shape = tree === void 0 ? void 0 : shapeOf(piece.tokens, tree);
-      const definedEverywhere = polynomialOf(piece.tokens, 9) !== void 0 || shape?.family === "sinusoid" || shape?.family === "exponential" && (shape.base === void 0 || shape.base.value !== void 0 && shape.base.value > 0);
-      if (!definedEverywhere) {
-        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the domain mark of a piecewise function is derived only when every piece is a polynomial, a sine or cosine, or an exponential with a base above 0; leave it out of marks and do not narrate it");
-      }
-    }
-    bars.push(...join(pieces).map((span2) => toBar("x", span2)));
-  }
-  if (want.range) {
-    const images = pieces.map((piece) => {
-      const p = polynomialOf(piece.tokens);
-      if (!p || degreeOf(p) > 1 || p.some((scalar) => scalar.value === void 0)) {
-        throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.marks`, "the range mark of a piecewise function is derived only when every piece is a line or a constant; leave it out of marks and do not narrate it");
-      }
-      const [c, m] = [at(p, 0).value, at(p, 1).value];
-      if (m === 0) return { from: c, to: c, from_closed: true, to_closed: true };
-      const ends = [{ x: piece.from, closed: piece.from_closed }, { x: piece.to, closed: piece.to_closed }].map(({ x, closed }) => ({ y: x === null ? null : m * x + c, closed: x !== null && closed }));
-      const [left, right] = ends;
-      return m > 0 ? { from: left.y, to: right.y, from_closed: left.closed, to_closed: right.closed } : { from: right.y, to: left.y, from_closed: right.closed, to_closed: left.closed };
-    });
-    bars.push(...join(images).map((span2) => toBar("y", span2)));
-  }
-  return bars;
-  function toBar(axis, span2) {
-    const text3 = (value2) => value2 === null ? null : String(Number(value2.toPrecision(12)));
-    return { axis, from: text3(span2.from), to: text3(span2.to), from_closed: span2.from !== null && span2.from_closed, to_closed: span2.to !== null && span2.to_closed };
-  }
-  function join(spans) {
-    const low = (span2) => span2.from ?? -Infinity, high = (span2) => span2.to ?? Infinity;
-    const sorted = [...spans].sort((a, b) => low(a) - low(b) || Number(b.from_closed) - Number(a.from_closed));
-    const joined = [];
-    for (const span2 of sorted) {
-      const last = joined.at(-1);
-      if (last && (high(last) > low(span2) || high(last) === low(span2) && (last.to_closed || span2.from_closed))) {
-        if (high(span2) > high(last)) {
-          last.to = span2.to;
-          last.to_closed = span2.to_closed;
-        } else if (high(span2) === high(last)) last.to_closed = last.to_closed || span2.to_closed;
-        continue;
-      }
-      joined.push({ ...span2 });
-    }
-    return joined;
-  }
-}
-
-// src/plugins/interval.ts
-var ALL = [-Infinity, Infinity];
-var finite2 = ([lo, hi]) => Number.isFinite(lo) && Number.isFinite(hi);
-function times2(a, b) {
-  if (!finite2(a) || !finite2(b)) return ALL;
-  const products = [a[0] * b[0], a[0] * b[1], a[1] * b[0], a[1] * b[1]];
-  return [Math.min(...products), Math.max(...products)];
-}
-function reciprocal([lo, hi]) {
-  if (lo <= 0 && hi >= 0) return ALL;
-  return [1 / hi, 1 / lo];
-}
-function power(base, exponent) {
-  if (exponent[0] !== exponent[1]) {
-    if (base[0] !== base[1] || !(base[0] > 0) || !finite2(exponent)) return ALL;
-    const ends2 = [base[0] ** exponent[0], base[0] ** exponent[1]];
-    return [Math.min(...ends2), Math.max(...ends2)];
-  }
-  const n = exponent[0];
-  if (Number.isInteger(n)) {
-    if (n === 0) return [1, 1];
-    if (n < 0) return reciprocal(power(base, [-n, -n]));
-    if (!finite2(base)) return ALL;
-    const [lo, hi] = base;
-    if (n % 2 === 1) return [lo ** n, hi ** n];
-    if (lo >= 0) return [lo ** n, hi ** n];
-    if (hi <= 0) return [hi ** n, lo ** n];
-    return [0, Math.max(lo ** n, hi ** n)];
-  }
-  if (!(base[0] > 0) || !finite2(base)) return ALL;
-  const ends = [base[0] ** n, base[1] ** n];
-  return [Math.min(...ends), Math.max(...ends)];
-}
-var FUNCTIONS2 = {
-  sqrt: ([lo, hi]) => lo >= 0 && Number.isFinite(hi) ? [Math.sqrt(lo), Math.sqrt(hi)] : ALL,
-  exp: ([lo, hi]) => [Math.exp(lo), Math.exp(hi)],
-  abs: ([lo, hi]) => lo >= 0 ? [lo, hi] : hi <= 0 ? [-hi, -lo] : [0, Math.max(-lo, hi)]
-};
-function intervalOf(text3, bounds) {
-  const tokens = text3.match(/\d+(?:\.\d+)?(?:[eE][-+]?\d+)?|[A-Za-z_][A-Za-z0-9_]*|[-+*/^(),]|\S/gu) ?? [];
-  let position = 0;
-  const peek = () => tokens[position];
-  const fail4 = () => {
-    throw new Error("unread");
-  };
-  const expect = (token) => {
-    if (tokens[position] !== token) fail4();
-    position += 1;
-  };
-  const sum = () => {
-    let value2 = product();
-    while (peek() === "+" || peek() === "-") {
-      const operator = tokens[position++];
-      const right = product();
-      value2 = operator === "+" ? [value2[0] + right[0], value2[1] + right[1]] : [value2[0] - right[1], value2[1] - right[0]];
-    }
-    return value2;
-  };
-  const product = () => {
-    let value2 = unary();
-    while (peek() === "*" || peek() === "/") {
-      const operator = tokens[position++];
-      const right = unary();
-      value2 = operator === "*" ? times2(value2, right) : times2(value2, reciprocal(right));
-    }
-    return value2;
-  };
-  const unary = () => {
-    if (peek() === "-") {
-      position += 1;
-      const [lo, hi] = unary();
-      return [-hi, -lo];
-    }
-    if (peek() === "+") {
-      position += 1;
-      return unary();
-    }
-    const base = atom();
-    if (peek() === "^") {
-      position += 1;
-      return power(base, unary());
-    }
-    return base;
-  };
-  const atom = () => {
-    const token = tokens[position++];
-    if (token === void 0) return fail4();
-    if (token === "(") {
-      const value2 = sum();
-      expect(")");
-      return value2;
-    }
-    if (/^\d/u.test(token)) {
-      const value2 = Number(token);
-      return [value2, value2];
-    }
-    if (/^[A-Za-z_]/u.test(token)) {
-      if (peek() === "(") {
-        position += 1;
-        const argument = sum();
-        expect(")");
-        const f = FUNCTIONS2[token];
-        return f ? f(argument) : ALL;
-      }
-      if (token === "pi") return [Math.PI, Math.PI];
-      if (token === "e") return [Math.E, Math.E];
-      return bounds[token] ?? fail4();
-    }
-    return fail4();
-  };
+function reported(derive) {
   try {
-    const value2 = sum();
-    if (position !== tokens.length) return ALL;
-    return Number.isNaN(value2[0]) || Number.isNaN(value2[1]) ? ALL : value2;
-  } catch {
-    return ALL;
+    return derive();
+  } catch (error) {
+    if (error instanceof PlotDerivationRefusal) throw new LessonPlanError("LESSON_PLAN_CAPABILITY_PARAMETER", error.path, error.message);
+    throw error;
   }
 }
-function signOf([lo, hi]) {
-  return lo > 0 ? "positive" : hi < 0 ? "negative" : "unknown";
+function markParts2(tokens, marks, labels, check, path) {
+  return reported(() => markParts(pluginTokens(tokens), marks, labels, check, path));
+}
+function formulaBars2(tokens, want, check, path) {
+  return reported(() => formulaBars(pluginTokens(tokens), want, check, path));
+}
+function pieceBars2(pieces, want, path) {
+  return reported(() => pieceBars(pieces.map((piece) => ({ ...piece, tokens: pluginTokens(piece.tokens) })), want, path));
 }
 
 // src/plugins/math-compilers.ts
@@ -16794,7 +16963,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     }
   }
   const requestedMarks = input.marks === void 0 || Array.isArray(input.marks) && input.marks.length === 0 ? [] : [...new Set(optionalStringArray(input.marks, [], `${path}.marks`))];
-  let markList = requestedMarks.filter((mark) => PLOT_MARKS.includes(mark));
+  let markList = requestedMarks.filter((mark) => PLOT_MARKS2.includes(mark));
   if (expressions.length !== 1) markList = markList.filter((mark) => mark === "domain" || mark === "range");
   if (expressions.length !== 1 && input.pieces === void 0) markList = [];
   if (sampleNumbers.length === 1 && markList.includes("slope_triangle")) {
@@ -16833,8 +17002,8 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     const tokens = dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`);
     const variables = curveParameters.map((parameter) => parameter.name);
     const samples2 = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))];
-    const drawable = derivedMarks.filter((mark) => leftOutWhenRefused(() => markParts(tokens, [mark], (source) => source, { variables, samples: samples2 }, path)));
-    marks = (drawable.length ? markParts(tokens, drawable, (source) => compileText(plan, source), { variables, samples: samples2 }, path) : []).map((part) => {
+    const drawable = derivedMarks.filter((mark) => leftOutWhenRefused(() => markParts2(tokens, [mark], (source) => source, { variables, samples: samples2 }, path)));
+    marks = (drawable.length ? markParts2(tokens, drawable, (source) => compileText(plan, source), { variables, samples: samples2 }, path) : []).map((part) => {
       const compiled = ["x", "y", "value"].flatMap((key) => part[key] === void 0 ? [] : [[key, compileMathExpression(part[key], variables)]]);
       return { ...part, at: (values) => Object.fromEntries(compiled.map(([key, f]) => {
         let result = Number.NaN;
@@ -16880,7 +17049,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
       }
       return proved;
     };
-    const barsFor = (one) => pieces ? pieceBars(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), one, path) : formulaBars(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), one, { sign }, path);
+    const barsFor = (one) => pieces ? pieceBars2(pieces.map((piece, index) => ({ ...piece, tokens: parseModelFormula(expressions[index], 0, `${path}.pieces[${index}]`, { allowConstant: true }) })), one, path) : formulaBars2(dynamicTokens ?? parseModelFormula(rawExpressions[0], 0, `${path}.expression`), one, { sign }, path);
     for (const axis of ["domain", "range"]) {
       if (want[axis]) leftOutWhenRefused(() => bars.push(...barsFor({ domain: axis === "domain", range: axis === "range" })));
     }
