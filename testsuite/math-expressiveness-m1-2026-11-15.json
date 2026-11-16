@@ -36,7 +36,7 @@
       "split": "extend",
       "cost_estimate": "small",
       "plan": "§6 Number line",
-      "draws": "what is left: ticks for values the coarse units do not divide, two rows of repeated jumps",
+      "draws": "what is left: repeated jumps of a chosen size (counting by 25s), ticks for values the coarse units do not divide, two rows of repeated jumps",
       "status": "partly done 2026-11-15: coarse units up to 1000 and two-to-three moves are on (Coach #87, #99)"
     },
     "function_plot_ext": {
@@ -186,9 +186,9 @@
       },
       "3-5": {
         "n": 40,
-        "fully_by_component": 4,
+        "fully_by_component": 3,
         "fully_by_board": 3,
-        "partly": 9,
+        "partly": 10,
         "extend": 8,
         "new": 16
       },
@@ -210,9 +210,9 @@
       },
       "all": {
         "n": 160,
-        "fully_by_component": 34,
+        "fully_by_component": 33,
         "fully_by_board": 19,
-        "partly": 23,
+        "partly": 24,
         "extend": 29,
         "new": 55
       }
@@ -228,9 +228,9 @@
       },
       "3-5": {
         "n": 37,
-        "fully_by_component": 4,
+        "fully_by_component": 3,
         "fully_by_board": 0,
-        "partly": 9,
+        "partly": 10,
         "extend": 8,
         "new": 16
       },
@@ -252,9 +252,9 @@
       },
       "all": {
         "n": 145,
-        "fully_by_component": 34,
+        "fully_by_component": 33,
         "fully_by_board": 4,
-        "partly": 23,
+        "partly": 24,
         "extend": 29,
         "new": 55
       }
@@ -270,9 +270,9 @@
       },
       "3-5": {
         "n": 40,
-        "fully_by_component": 4,
+        "fully_by_component": 3,
         "fully_by_board": 3,
-        "partly": 9,
+        "partly": 10,
         "extend": 8,
         "new": 16
       },
@@ -294,9 +294,9 @@
       },
       "all": {
         "n": 148,
-        "fully_by_component": 25,
+        "fully_by_component": 24,
         "fully_by_board": 18,
-        "partly": 23,
+        "partly": 24,
         "extend": 28,
         "new": 54
       }
@@ -312,9 +312,9 @@
       },
       "3-5": {
         "n": 30,
-        "fully_by_component": 2,
+        "fully_by_component": 1,
         "fully_by_board": 2,
-        "partly": 6,
+        "partly": 7,
         "extend": 6,
         "new": 14
       },
@@ -336,9 +336,9 @@
       },
       "all": {
         "n": 119,
-        "fully_by_component": 24,
+        "fully_by_component": 23,
         "fully_by_board": 14,
-        "partly": 15,
+        "partly": 16,
         "extend": 23,
         "new": 43
       }
@@ -556,6 +556,19 @@
         "held_out": 0
       },
       {
+        "candidate": "number_line_ext",
+        "open": {
+          "total": 2,
+          "from_not": 1,
+          "from_partly": 1,
+          "K-2": 0,
+          "3-5": 1,
+          "6-8": 1,
+          "9-12": 0
+        },
+        "held_out": 1
+      },
+      {
         "candidate": "rearrangement_ext",
         "open": {
           "total": 2,
@@ -629,19 +642,6 @@
           "K-2": 0,
           "3-5": 1,
           "6-8": 0,
-          "9-12": 0
-        },
-        "held_out": 1
-      },
-      {
-        "candidate": "number_line_ext",
-        "open": {
-          "total": 1,
-          "from_not": 1,
-          "from_partly": 0,
-          "K-2": 0,
-          "3-5": 0,
-          "6-8": 1,
           "9-12": 0
         },
         "held_out": 1
@@ -808,9 +808,10 @@
       "note": "the card teaches area and perimeter"
     },
     "G35-04": {
-      "coverage": "fully",
+      "coverage": "partly",
       "component": "number_line",
-      "note": "one jump of 200 counted in 25s with coarse units (re-tag 2026-11-15)"
+      "completes_with": "number_line_ext",
+      "note": "one jump of 200; the fit takes the smallest unit that fits (5), so no jumps of 25 are drawn, whatever ranges the model writes (checked on 267261c; 0017 had counted it covered)"
     },
     "G35-05": {
       "coverage": "new",

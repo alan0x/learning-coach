@@ -3,9 +3,9 @@
 ## Unreleased
 
 - **M1 re-tagged after the switch-ons** (`testsuite/math-expressiveness-m1-2026-11-15.json`, plan §7 step 3.1; free, no lessons generated). Every question tagged with a number-line or function-plot component or candidate was re-read against main 267261c. Other tags are the 2026-11-13 baseline's, which stays as it was.
-  - **Questions that need a picture, fully drawn by a component:** 27 → 34 of 145 (19% → 23%); open 18 → 24, held out 9 → 10.
-  - **Now fully drawn (open):** two jumps through 50; counting by 25s; a slope triangle from two points; m and c with slope and intercept marks; domain and range; the symmetry axis.
-  - **Still not drawn:** the hiker's three moves (1,245, −380, +615). The moves are drawable, but the values share only 5, which needs 296 ticks, so it is refused. Decision 0017 had counted it as partly covered.
+  - **Questions that need a picture, fully drawn by a component:** 27 → 33 of 145 (19% → 23%); open 18 → 23, held out 9 → 10.
+  - **Now fully drawn (open):** two jumps through 50; a slope triangle from two points; m and c with slope and intercept marks; domain and range; the symmetry axis.
+  - **Still not drawn:** the hiker's three moves (1,245, −380, +615). The moves are drawable, but the values share only 5, which needs 296 ticks, so it is refused. Decision 0017 had counted it as partly covered. Counting by 25s to 200 is not drawn either: the fit takes the smallest unit that fits (5), so one jump of 200 has no jumps of 25, whatever ranges the model writes; 0017 had counted it covered.
   - **Cut features given a home:**
     - the double number line goes to `tape_diagram_ratio_table`, which makes that question "new";
     - probability words on 0 to 1 go to `probability`;
