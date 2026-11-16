@@ -1,7 +1,6 @@
 // Two model slips in a function plot that the program now corrects in place, with no second call (the
 // trial of the plot options, docs/PLOT_TRIAL_2026-11-15.md on #93: each was refused and the section asked
-// again, a median 16.9 s to the first playable section against 7.7 s). Both are on the default path:
-// trial options stay off in this file. Replies are run 5's reply (number-line-run5-replies.json, pair 42)
+// again, a median 16.9 s to the first playable section against 7.7 s). Both are on the default path. Replies are run 5's reply (number-line-run5-replies.json, pair 42)
 // rewritten in the model's format for a function plot.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";

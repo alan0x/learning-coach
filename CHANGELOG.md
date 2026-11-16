@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **The function-plot options are offered by default** (owner's decision, 2026-11-15): marks (intercepts, vertex, symmetry axis, slope triangle, domain, range) and piecewise functions, OLL decision 0018. The trial option `function_plot_extensions` and `src/plugins/trials.ts` are removed; naming it in `LEARNING_COACH_TRIAL_RECIPES` now only picks the plot cases in the trial harness.
+  - **Why now, before the combined speed gate with #81:** run B (`docs/PLOT_TRIAL_2026-11-15.md`, 73 calls, the same build both arms) measured the options on against off: 17 vs 15 lessons playable, 13 vs 4 judge passes, median 6.8 vs 8.1 s to the first playable section. The offline replay of run B on main gives 17 of 17 playable and 14 passes. Run B ran plot requests only, so the cost to requests that never draw a plot (+698 B first request, +310 B sections) is unmeasured. The combined gate with #81 must therefore compare against the build before this change (`--baseline-build` at 75578ab), as plan §8 Q5 says the gate covers the extensions.
+  - **Requests:** every request changes (2,000 of 2,000 recorded digests), and each is byte-identical to the request main sent with the trial option on, so run B's measurements apply to this build unchanged. First request +698 B, section requests +310 B; no ceiling exceeded. `marks` and `pieces` take fixed places at the end of the schema property order, where the trial put them.
+  - **Lessons:** all 2,000 produced lessons are unchanged (the compiler already accepted the options either way).
+
 - **A formula name before a spaced digit is left to the parser** (review of #96). The parser's lexer drops spaces, so `a 2*x` with a number labelled "a" was rewritten to `n1 2*x`, read as `n12`. With twelve or more lesson numbers, that silently read number 12. A name followed by a digit, spaced or not, is never replaced.
 
 - **Two function-plot slips are corrected in place, not refused** (default path; found in the trial of the plot options, `docs/PLOT_TRIAL_2026-11-15.md` on #93). Each was refused and the section asked again: a median 16.9 s to the first playable section, against 7.7 s with no retry.

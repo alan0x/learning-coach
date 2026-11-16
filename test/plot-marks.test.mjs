@@ -1,9 +1,7 @@
 // Marks on a function plot (OLL decision 0018 §1) through the real path, from the model's reply to the
-// lesson, judged by the plot judge (testsuite/plot-judge-cases.json). The marks are a trial option,
-// offered only when LEARNING_COACH_TRIAL_RECIPES names function_plot_extensions, which Coach reads as it
-// loads; this file sets it first. Replies are run 5's reply (number-line-run5-replies.json, pair 42)
-// rewritten in the model's format for a function plot: no reply with marks is recorded yet.
-process.env.LEARNING_COACH_TRIAL_RECIPES = "function_plot_extensions";
+// lesson, judged by the plot judge (testsuite/plot-judge-cases.json). The plot options are offered on the
+// default path (a trial option, function_plot_extensions, until 2026-11-15). Replies are run 5's reply
+// (number-line-run5-replies.json, pair 42) rewritten in the model's format for a function plot: no reply with marks is recorded yet.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
