@@ -43,12 +43,17 @@ with the new parts on produced nothing. **It is still open on main** (see the la
 
 **Repair in place was tried and closed (#102).** It turned x positions written as `sample_x_numbers` into fixed points. Two code reviews (20 findings) showed that every version which reads the lesson's text to judge whether the formula is the real curve can publish a wrong picture. A stand-in formula is the case: `x` written for the line through (1, 2) and (7, 10). A refusal costs a call; a wrong picture breaks the standard.
 
-**Census of the recorded slips:** 35 replies across this gate, the trial, run B and the 139 recorded lessons.
-- 22 are on section calls, where the outline's lesson numbers are known. A schema limit to the valid indexes would make them unwritable; with no lesson numbers, the field would be left out.
-- 13 are on bootstrap calls, which write the outline in the same reply, so they cannot be limited. They cost a retry, not the lesson; both lost lessons died on section retries.
-- The provider kept every one of the 370 recorded `numbers` lists, which are already limited this way, within its limit.
+**Census of the recorded slips** (corrected 2026-11-16: the first count skipped outlines with no `numbers`
+key): 42 replies across this gate, the trial, run B and the 139 recorded lessons.
+- 15 are on section calls in lessons with no lesson numbers. Both lessons this gate lost are of this kind.
+- 12 are on section calls in lessons with numbers.
+- 15 are on bootstrap calls, which write the outline in the same reply.
 
-**Next:** that schema limit, perhaps with a sharper refusal message, measured in a small paired probe with a control arm. It changes every plot section request; the call count goes to the owner first.
+**Fix: not merged (#105 closed after five reviews).** Its last form left `sample_x_numbers` out of section
+requests in lessons with no lesson numbers. Replayed on the recorded slips, it rescued three lost lessons, but it
+let a fourth (PJ-07) publish a piecewise request drawn as two full lines. A check main lacks (does a piecewise
+request draw pieces?) comes first. With numbers, an enum would turn an x value into a valid but wrong index. The
+defect stays open (plan §7 step 3.6a).
 
 ## Tokens and cost
 
