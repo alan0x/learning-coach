@@ -43,12 +43,15 @@ with the new parts on produced nothing. **It is still open on main** (see the la
 
 **Repair in place was tried and closed (#102).** It turned x positions written as `sample_x_numbers` into fixed points. Two code reviews (20 findings) showed that every version which reads the lesson's text to judge whether the formula is the real curve can publish a wrong picture. A stand-in formula is the case: `x` written for the line through (1, 2) and (7, 10). A refusal costs a call; a wrong picture breaks the standard.
 
-**Census of the recorded slips:** 35 replies across this gate, the trial, run B and the 139 recorded lessons.
-- 22 are on section calls, where the outline's lesson numbers are known. A schema limit to the valid indexes would make them unwritable; with no lesson numbers, the field would be left out.
-- 13 are on bootstrap calls, which write the outline in the same reply, so they cannot be limited. They cost a retry, not the lesson; both lost lessons died on section retries.
-- The provider kept every one of the 370 recorded `numbers` lists, which are already limited this way, within its limit.
+**Census of the recorded slips** (corrected 2026-11-16: the first count skipped outlines with no `numbers`
+key): 42 replies across this gate, the trial, run B and the 139 recorded lessons.
+- 15 are on section calls in lessons with no lesson numbers. Both lessons this gate lost are of this kind.
+- 12 are on section calls in lessons with numbers.
+- 15 are on bootstrap calls, which write the outline in the same reply.
 
-**Next:** that schema limit, perhaps with a sharper refusal message, measured in a small paired probe with a control arm. It changes every plot section request; the call count goes to the owner first.
+**Fix (#105, narrowed after review):** with no lesson numbers, section requests leave `sample_x_numbers` out,
+so those 15 cannot be written. With numbers the schema is unchanged: an enum would turn an x value into a valid
+but wrong index. Slips in lessons with numbers, and on bootstrap calls, stay open.
 
 ## Tokens and cost
 
