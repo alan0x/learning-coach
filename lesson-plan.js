@@ -16689,9 +16689,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   const expression = expressions[0];
   if (!expression) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expressions`, "at least one function expression is required");
   const curveLabels = input.curve_labels === void 0 ? [] : optionalStringArray(input.curve_labels, [], `${path}.curve_labels`).map((label) => namedNumbers(label, plan));
-  if (curveLabels.length > 0 && curveLabels.length !== expressions.length) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.curve_labels`, "curve label count must equal expression count");
-  }
+  if (curveLabels.length > 0 && curveLabels.length !== expressions.length) curveLabels.length = 0;
   const sampleNumbers = plotSampleNumbers(input);
   const number = sampleNumbers[0];
   const hint = (value2, key) => value2 === void 0 ? void 0 : optionalNumber(value2, 0, `${path}.${key}`);

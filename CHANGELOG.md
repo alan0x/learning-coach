@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Curve labels that do not match the curves one to one are left out, not refused** (the owner's two principles, 2026-11-16: the model writes meaning, the program accepts what has exactly one safe reading; step 1 of the accommodation order, free, no request changes). The compiler derives a legend from each formula, so nothing narrated depends on the dropped labels. Only lessons main refused change.
+  - **Review of #108, taken out:**
+    - Sorting solution-set boundaries given larger first: reversed boundaries can also mean the model picked the wrong relation, and the swap would then draw the complement of the set it narrates. That is a reading of meaning, so it stays refused.
+    - Dropping success messages with false arithmetic: the pattern dropped right messages (percentages, division with a remainder, thousands separators, a message correcting a wrong sum) and missed false ones ending in a period. It goes to plan step 3.6 as its own change, checked against recorded messages.
+  - **Counts (free):** in 307 replayed lessons, the wording refusals about dragging plot points never fired. Practice targets were already counted in #81's record (15 of 85 slider tasks already met); #81's program-written invitation is the fix there.
+  - Requests are byte-identical (request-hash test); replays of the 139 recorded lessons, the trial, run B and the gate are identical.
+
 - **Coach's core names no recipe** (plan §2.3, §7 step 3.4, Goal 1; no lesson or request changes). Recipe knowledge in core becomes declarations on the recipes:
   - `numbers_in_parameters` (the plot): its lesson numbers come from its parameters, so the schema gives it no number list and generation assumes none;
   - `ranges_fixed_once_shown` (the plot): a number it shows keeps its range once its section is published (from `bound_numbers`, else the visual's numbers);

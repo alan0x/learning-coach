@@ -70,9 +70,9 @@ function compileFunctionPlot(
   if (!expression) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.expressions`, "at least one function expression is required");
   const curveLabels = input.curve_labels === undefined
     ? [] : optionalStringArray(input.curve_labels, [], `${path}.curve_labels`).map(label => namedNumbers(label, plan));
-  if (curveLabels.length > 0 && curveLabels.length !== expressions.length) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.curve_labels`, "curve label count must equal expression count");
-  }
+  // Labels that do not match the curves one to one are left out: the compiler derives a legend from each
+  // formula anyway (owner's principles, 2026-11-16: accept what has one safe reading, refuse only meaning).
+  if (curveLabels.length > 0 && curveLabels.length !== expressions.length) curveLabels.length = 0;
   const sampleNumbers = plotSampleNumbers(input);
   const number = sampleNumbers[0];
   // Model ranges are hints for the view planner, not commands.
