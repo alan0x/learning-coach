@@ -24,7 +24,7 @@ export function validatePlotSampleNumbers(value: unknown, numberCount: number, p
     // The usual slip is x positions written here ([1, 3] for x = 1 and 3): say what the field holds.
     fail("LESSON_PLAN_NUMBER_REFERENCE", path, numberCount === 0
       ? "sample_x_numbers holds lesson number indexes, not x values, and this lesson has no numbers: leave sample_x_numbers out"
-      : `sample_x_numbers holds one or two lesson number indexes (1 to ${numberCount}), not x values; leave it out when no point moves along the curve`);
+      : `sample_x_numbers holds one or two distinct lesson number indexes (1 to ${numberCount}), not x values; leave it out when no point moves along the curve`);
   }
   return value;
 }
@@ -274,7 +274,11 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
         const indexes = candidates.slice(0, 2);
         fail("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length
           ? `Use parameters.sample_x_numbers: [${indexes.join(",")}] for the sample x-coordinate controls; use one index for one point`
-          : "Use parameters.sample_x_numbers with the lesson number index of each sample's x-coordinate");
+          : count === 0
+            // With no lesson numbers the section schema has no sample_x_numbers at all (step 3.6a), so asking
+            // for it could never be met (review of #105): ask for the fixed curve instead.
+            ? "This lesson has no lesson number for a moving point: draw the fixed curve and do not ask the learner to move a point along it"
+            : "Use parameters.sample_x_numbers with the lesson number index of each sample's x-coordinate");
       }
       if ((wantsVertex && !curve.length && !hasSampleIntent)
         || candidates.some(number => structuralUse(draft, number) || controlsNamed(number))) {

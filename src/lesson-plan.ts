@@ -43,6 +43,19 @@ export function recipeInitialCamera(capability: string | undefined): { yaw: numb
   return camera as { yaw: number; pitch: number; zoom: number };
 }
 
+/**
+ * The parameters a recipe declares as holding lesson-number indexes (`number_index_parameters`): each must be
+ * an array parameter of the recipe's schema. A declaration that is not a list of names fails.
+ */
+export function recipeNumberIndexParameters(capability: string | undefined): readonly string[] {
+  const declared = recipeEntry(capability)?.number_index_parameters;
+  if (declared === undefined) return [];
+  if (!Array.isArray(declared) || !declared.every((name) => typeof name === "string")) {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY", `$recipes.${capability}.number_index_parameters`, "number_index_parameters must be a list of parameter names");
+  }
+  return declared;
+}
+
 /** A recipe's declared flag (`numbers_in_parameters`, `ranges_fixed_once_shown`); false when absent. */
 export function recipeDeclares(capability: string | undefined, flag: "numbers_in_parameters" | "ranges_fixed_once_shown"): boolean {
   return recipeEntry(capability)?.[flag] === true;

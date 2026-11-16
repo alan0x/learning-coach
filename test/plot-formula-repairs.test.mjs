@@ -140,3 +140,11 @@ test("a name before a spaced digit is left as the parser reads it, never read as
   const spaced = await generate(plotReply({ formula: "a 2*x", numbers, visualNumbers: [1], moments: [{ say: "看。" }] }));
   assert.ok(!(spaced.lesson && JSON.stringify(plotContent(spaced.lesson).curves).includes("number_12")), spaced.rejected.join(" | "));
 });
+
+// Step 3.6a's refusals say what the retry can do (review of #105).
+test("sample_x_numbers refusals say what a retry can do: distinct indexes, or the fixed curve when no number exists", async () => {
+  const duplicate = await generate(plotReply({ formula: "x^2", numbers: [[1, -3, 3, "x"], [2, -3, 3, "x2"]], samples: [2, 2], moments: [{ say: "看两点。" }] }));
+  assert.ok(duplicate.rejected.some((miss) => /distinct lesson number indexes \(1 to 2\)/u.test(miss)), duplicate.rejected.join(" | "));
+  const none = await generate(plotReply({ formula: "x^2", numbers: [], visualNumbers: [], moments: [{ say: "拖动曲线上的点 A，看它怎样移动。" }] }));
+  assert.ok(none.rejected.some((miss) => /no lesson number for a moving point/u.test(miss)), none.rejected.join(" | "));
+});

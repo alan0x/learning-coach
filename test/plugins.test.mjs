@@ -141,7 +141,7 @@ test("a compiled lesson records the plugins that built its visuals", () => {
 });
 
 // Plan §2.3 / §7 step 3.4 (Goal 1): Coach's core knows no recipe by name; what a recipe needs it declares
-// (numbers_in_parameters, ranges_fixed_once_shown, initial_camera). Every source file outside src/plugins,
+// (numbers_in_parameters, ranges_fixed_once_shown, initial_camera, number_index_parameters). Every source file outside src/plugins,
 // at any depth, is core. A recipe name that is also an OLL node kind (number_line) may appear as that kind,
 // never compared with or looked up as a recipe.
 test("Coach's core files name no recipe", async () => {

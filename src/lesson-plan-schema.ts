@@ -5,6 +5,7 @@ import {
   LESSON_PLAN_VISUAL_FEATURES,
   LessonPlanError,
   recipeDeclares,
+  recipeNumberIndexParameters,
   type LessonPlanCapability,
   type LessonPlanOutline,
 } from "./lesson-plan.js";
@@ -172,14 +173,15 @@ function visualParametersSchema(allowedCapabilities: LessonPlanCapability[], num
   const declared: Record<string, unknown> = {};
   if (modelParameters.has("title")) declared.title = string(240);
   for (const capability of allowedCapabilities) Object.assign(declared, RECIPE_SCHEMA_PROPERTIES[capability]);
-  if (numberIndexes !== undefined) {
-    for (const capability of allowedCapabilities) {
-      const indexParameters = (LESSON_PLAN_CAPABILITY_REGISTRY[capability] as { number_index_parameters?: readonly string[] }).number_index_parameters ?? [];
-      for (const name of indexParameters) {
-        if (!(name in declared)) continue;
-        if (numberIndexes.length === 0) delete declared[name];
-        else declared[name] = { ...(declared[name] as Record<string, unknown>), items: { enum: [...numberIndexes] } };
+  // Only for one recipe (a course visual), so one recipe's limit never lands on another's parameter.
+  if (numberIndexes !== undefined && allowedCapabilities.length === 1) {
+    for (const name of recipeNumberIndexParameters(allowedCapabilities[0])) {
+      const property = declared[name] as Record<string, unknown> | undefined;
+      if (property?.type !== "array") {
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY", `$recipes.${allowedCapabilities[0]}.number_index_parameters`, `${name} is not an array parameter of the recipe's schema`);
       }
+      if (numberIndexes.length === 0) delete declared[name];
+      else declared[name] = { ...property, items: { enum: [...numberIndexes] } };
     }
   }
   const order: readonly string[] = SCHEMA_PROPERTY_ORDER;

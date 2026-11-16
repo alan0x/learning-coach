@@ -1,7 +1,10 @@
 # Probe: sample_x_numbers limited to the lesson-number indexes (2026-11-16)
 
-Plan §7 step 3.6a, approved by the owner with a cap of 100 calls. Candidate: this branch (#105). Control:
-main `fc6adc2`.
+Plan §7 step 3.6a, approved by the owner with a cap of 100 calls. Candidate: #105 at `410c351`. Control: main
+`fc6adc2`.
+
+The branch later took in #103 (merge `0923002`) and review fixes. Neither changes a request: the request-hash test
+is unchanged, and the review fixes touch only refusal texts and declaration checks.
 
 **Pass rule** (stated before the run): no section slip on the candidate, and no regression against the control.
 **Result: pass.**

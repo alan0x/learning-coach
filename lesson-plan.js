@@ -13603,7 +13603,7 @@ function plotSampleNumbers(parameters3) {
 function validatePlotSampleNumbers(value2, numberCount, path) {
   if (value2 === void 0) return [];
   if (!Array.isArray(value2) || !value2.length || value2.length > 2 || new Set(value2).size !== value2.length || value2.some((number) => !Number.isInteger(number) || number < 1 || number > numberCount)) {
-    fail2("LESSON_PLAN_NUMBER_REFERENCE", path, numberCount === 0 ? "sample_x_numbers holds lesson number indexes, not x values, and this lesson has no numbers: leave sample_x_numbers out" : `sample_x_numbers holds one or two lesson number indexes (1 to ${numberCount}), not x values; leave it out when no point moves along the curve`);
+    fail2("LESSON_PLAN_NUMBER_REFERENCE", path, numberCount === 0 ? "sample_x_numbers holds lesson number indexes, not x values, and this lesson has no numbers: leave sample_x_numbers out" : `sample_x_numbers holds one or two distinct lesson number indexes (1 to ${numberCount}), not x values; leave it out when no point moves along the curve`);
   }
   return value2;
 }
@@ -13784,7 +13784,7 @@ function normalizePlotDraftBindings(draft, context) {
     } else {
       if (fixed && singleFormula && sampleIntentUnmet && (plots.length === 1 || candidates.length)) {
         const indexes = candidates.slice(0, 2);
-        fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length ? `Use parameters.sample_x_numbers: [${indexes.join(",")}] for the sample x-coordinate controls; use one index for one point` : "Use parameters.sample_x_numbers with the lesson number index of each sample's x-coordinate");
+        fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length ? `Use parameters.sample_x_numbers: [${indexes.join(",")}] for the sample x-coordinate controls; use one index for one point` : count === 0 ? "This lesson has no lesson number for a moving point: draw the fixed curve and do not ask the learner to move a point along it" : "Use parameters.sample_x_numbers with the lesson number index of each sample's x-coordinate");
       }
       if (wantsVertex && !curve.length && !hasSampleIntent || candidates.some((number) => structuralUse(draft, number) || controlsNamed(number))) {
         fail2("LESSON_PLAN_INTERACTION_MISMATCH", formulasPath, "Use the lesson number references in the curve formula when sliders change the curve");
@@ -14410,6 +14410,14 @@ function recipeInitialCamera(capability2) {
     throw new LessonPlanError("LESSON_PLAN_CAPABILITY", `$recipes.${capability2}.initial_camera`, "a recipe's initial_camera needs finite yaw, pitch and zoom");
   }
   return camera;
+}
+function recipeNumberIndexParameters(capability2) {
+  const declared = recipeEntry(capability2)?.number_index_parameters;
+  if (declared === void 0) return [];
+  if (!Array.isArray(declared) || !declared.every((name) => typeof name === "string")) {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY", `$recipes.${capability2}.number_index_parameters`, "number_index_parameters must be a list of parameter names");
+  }
+  return declared;
 }
 function recipeDeclares(capability2, flag) {
   return recipeEntry(capability2)?.[flag] === true;
@@ -18709,14 +18717,14 @@ function visualParametersSchema(allowedCapabilities, numberIndexes) {
   const declared = {};
   if (modelParameters.has("title")) declared.title = string(240);
   for (const capability2 of allowedCapabilities) Object.assign(declared, RECIPE_SCHEMA_PROPERTIES[capability2]);
-  if (numberIndexes !== void 0) {
-    for (const capability2 of allowedCapabilities) {
-      const indexParameters = LESSON_PLAN_CAPABILITY_REGISTRY[capability2].number_index_parameters ?? [];
-      for (const name of indexParameters) {
-        if (!(name in declared)) continue;
-        if (numberIndexes.length === 0) delete declared[name];
-        else declared[name] = { ...declared[name], items: { enum: [...numberIndexes] } };
+  if (numberIndexes !== void 0 && allowedCapabilities.length === 1) {
+    for (const name of recipeNumberIndexParameters(allowedCapabilities[0])) {
+      const property = declared[name];
+      if (property?.type !== "array") {
+        throw new LessonPlanError("LESSON_PLAN_CAPABILITY", `$recipes.${allowedCapabilities[0]}.number_index_parameters`, `${name} is not an array parameter of the recipe's schema`);
       }
+      if (numberIndexes.length === 0) delete declared[name];
+      else declared[name] = { ...property, items: { enum: [...numberIndexes] } };
     }
   }
   const order = SCHEMA_PROPERTY_ORDER;
@@ -21841,6 +21849,7 @@ export {
   promptSlot,
   recipeDeclares,
   recipeInitialCamera,
+  recipeNumberIndexParameters,
   resolveLessonPlan,
   roundingPlaces,
   roundingTolerance,
