@@ -13714,7 +13714,7 @@ function normalizePlotDraftBindings(draft, context) {
   const plotText = [...text3, ...clauses(outline.sections[draft.section - 1]?.purpose ?? ""), ...clauses(request)];
   const wantsVertex = plots.length === 1 && text3.some((line) => positiveInstruction(line, vertexInstruction) && (visuals.length === 1 || /抛物线|\bparabola\b/iu.test(line)));
   const asksForSamples = (line) => positiveInstruction(line, sampleIntent) && interactionVerb.test(line);
-  const wantsSamples = plotText.some(asksForSamples);
+  const wantsSamples = (outline.numbers?.length ?? 0) === 0 ? text3.some(asksForSamples) : plotText.some(asksForSamples);
   const hasSampleIntent = plotText.some((line) => positiveInstruction(line, sampleIntent));
   const count = outline.numbers?.length ?? 0;
   const validSamples = (visual) => {
@@ -18717,7 +18717,10 @@ function visualParametersSchema(allowedCapabilities, numberIndexes) {
   const declared = {};
   if (modelParameters.has("title")) declared.title = string(240);
   for (const capability2 of allowedCapabilities) Object.assign(declared, RECIPE_SCHEMA_PROPERTIES[capability2]);
-  if (numberIndexes !== void 0 && allowedCapabilities.length === 1) {
+  if (numberIndexes !== void 0 && allowedCapabilities.length !== 1) {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY", "$visualParameters", "number indexes limit the parameters of exactly one recipe");
+  }
+  if (numberIndexes !== void 0) {
     for (const name of recipeNumberIndexParameters(allowedCapabilities[0])) {
       const property = declared[name];
       if (property?.type !== "array") {

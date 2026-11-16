@@ -174,7 +174,11 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
   const wantsVertex = plots.length === 1 && text.some(line => positiveInstruction(line, vertexInstruction)
     && (visuals.length === 1 || /抛物线|\bparabola\b/iu.test(line)));
   const asksForSamples = (line: string) => positiveInstruction(line, sampleIntent) && interactionVerb.test(line);
-  const wantsSamples = plotText.some(asksForSamples);
+  // With no lesson numbers no point can move, and the section schema has no sample_x_numbers (step 3.6a).
+  // Only the section's own words can then be refused (a retry can change them); a request or purpose
+  // asking to drag a point is answered by the fixed curve, which promises nothing (review of #105: a
+  // refusal based on them could never be met, and the lesson was lost).
+  const wantsSamples = (outline.numbers?.length ?? 0) === 0 ? text.some(asksForSamples) : plotText.some(asksForSamples);
   const hasSampleIntent = plotText.some(line => positiveInstruction(line, sampleIntent));
   const count = outline.numbers?.length ?? 0;
   const validSamples = (visual: LessonPlanVisualContent): number[] => {

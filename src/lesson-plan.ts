@@ -44,8 +44,9 @@ export function recipeInitialCamera(capability: string | undefined): { yaw: numb
 }
 
 /**
- * The parameters a recipe declares as holding lesson-number indexes (`number_index_parameters`): each must be
- * an array parameter of the recipe's schema. A declaration that is not a list of names fails.
+ * The parameters a recipe declares as holding lesson-number indexes (`number_index_parameters`). A declaration
+ * that is not a list of names fails here; one that names no array parameter fails where a section schema is
+ * built, and a test checks every installed recipe's declaration.
  */
 export function recipeNumberIndexParameters(capability: string | undefined): readonly string[] {
   const declared = recipeEntry(capability)?.number_index_parameters;

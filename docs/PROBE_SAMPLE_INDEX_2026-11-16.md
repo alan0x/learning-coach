@@ -3,8 +3,10 @@
 Plan §7 step 3.6a, approved by the owner with a cap of 100 calls. Candidate: #105 at `410c351`. Control: main
 `fc6adc2`.
 
-The branch later took in #103 (merge `0923002`) and review fixes. Neither changes a request: the request-hash test
-is unchanged, and the review fixes touch only refusal texts and declaration checks.
+The branch later took in #103 (merge `0923002`) and review fixes. Neither changes a first or section request (the
+request-hash test is unchanged). The review fixes do change refusal texts, which go back to the model in a retry
+request, so those retries carry text this probe did not measure. With no lesson numbers, a request to drag a point
+is now answered by the fixed curve instead of a refusal that could never be met.
 
 **Pass rule** (stated before the run): no section slip on the candidate, and no regression against the control.
 **Result: pass.**
@@ -34,7 +36,8 @@ is unchanged, and the review fixes touch only refusal texts and declaration chec
   - control only: PJ-10 (no range bar).
 - **Refusals:** control 5 (4 formula errors, 1 interaction mismatch); candidate 2 (a missing board item, 1
   interaction mismatch). No `LESSON_PLAN_NUMBER_REFERENCE` on either arm.
-- **The sharper refusal message was not exercised:** it never fired on either arm.
+- **The sharper refusal message was not exercised:** it never fired on either arm. The one slip below reached it, but
+  a refusal for a missing board item (`LESSON_PLAN_REUSABLE`) came first.
 - **Slips:** one in all 43 recorded replies, on a candidate bootstrap call (`[0, 2]` with two lesson numbers), which
   the limit cannot reach. The provider kept all 41 recorded `numbers` lists within their enum.
 

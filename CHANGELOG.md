@@ -4,16 +4,17 @@
 
 - **Section requests limit `sample_x_numbers` to the lesson-number indexes** (plan §7 step 3.6a; candidate, measured by a paired probe before merging). The speed gate of 2026-11-15 lost two lessons to x positions written there (`[1, 3]` for x = 1 and 3), repeated on every retry; repair in place (#102) was closed on review.
   - The plot recipe declares `number_index_parameters: ["sample_x_numbers"]`. A section request, whose outline is known, gives those items the section's indexes as an enum, as `numbers` already has, and leaves the field out when there are none. The bootstrap, which writes the outline in the same reply, is unchanged.
-  - **Census of recorded slips:** 22 of 35 were on section calls with out-of-range values, which are now unwritable. Values that happen to be valid indexes, such as `[1, 2]` meant as x = 1 and 2 with four lesson numbers, still bind those numbers, as on main. The provider kept every one of 370 recorded `numbers` lists within their enum.
+  - **Census of recorded slips:** 22 of 35 were on section calls with out-of-range values, which are now unwritable. Values that happen to be valid indexes, such as `[1, 2]` meant as x = 1 and 2 with four lesson numbers, still bind those numbers, as on main. Duplicates and extra items (`[2, 2]`) are still writable (the provider schema keeps no uniqueItems or maxItems) and refused as before. The provider kept every one of 370 recorded `numbers` lists within their enum.
   - The refusal now says what the field holds: lesson-number indexes from 1 to N, not x values, left out when no point moves. This is for the bootstrap's slips.
   - **Requests:** 80 of 2,080 recorded digests change. Digests are per run, and all 80 are the fallback-outline runs of the four plot fixtures: the first request fails, an outline request follows, and the first-section request after it creates the plot. That section request is the one that changes. No first request changes, and neither do the normal, repair or practice runs, whose plots come from the first request. Lessons unchanged; no ceiling exceeded.
   - **Review of #105:**
-    - With no lesson numbers, the section schema has no `sample_x_numbers`, so the refusal that asked for a moving point now asks for the fixed curve instead. A retry could never have met the old request.
+    - With no lesson numbers, the section schema has no `sample_x_numbers`, so the refusal that asked for a moving point now asks for the fixed curve instead.
+    - With no lesson numbers, that refusal also reads only the section's own words, not the learner's request or the outline's purpose, which a retry cannot change. A request to drag a point is answered by the fixed curve, and the narration promises no moving point. Before, such a lesson was refused on every attempt and lost, on main too.
     - The index refusal says "distinct" again.
     - The declaration is read through `recipeNumberIndexParameters`, which fails on a malformed list. It applies to one recipe at a time, and fails if it names a parameter that is not an array.
-    - Tests now cover a section's own subset of indexes and both refusals.
+    - Tests cover both refusals, and the fixed curve answering a request with no lesson numbers.
   - **Left as a follow-up:** a minimum of 1 on the bootstrap's `sample_x_numbers` would block slips such as `[0, 2]` without knowing the outline. It changes every first request, so it needs its own decision.
-  - **Not exercised:** the sharper refusal never fired in the probe, on either arm. It is no longer load-bearing, because the retry after a first-request slip is a section request, which cannot repeat the slip.
+  - **Not exercised:** the sharper refusal never fired in the probe, on either arm. The one probe slip reached it, but an earlier refusal (a missing board item) came first. Refusal texts go back to the model in the retry request, so these retries send text the probe did not measure. It is no longer load-bearing, because the retry after a first-request slip is a section request, which cannot repeat the slip.
 
 - **Coach's core names no recipe** (plan §2.3, §7 step 3.4, Goal 1; no lesson or request changes). Recipe knowledge in core becomes declarations on the recipes:
   - `numbers_in_parameters` (the plot): its lesson numbers come from its parameters, so the schema gives it no number list and generation assumes none;

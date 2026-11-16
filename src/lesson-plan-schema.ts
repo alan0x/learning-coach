@@ -174,7 +174,10 @@ function visualParametersSchema(allowedCapabilities: LessonPlanCapability[], num
   if (modelParameters.has("title")) declared.title = string(240);
   for (const capability of allowedCapabilities) Object.assign(declared, RECIPE_SCHEMA_PROPERTIES[capability]);
   // Only for one recipe (a course visual), so one recipe's limit never lands on another's parameter.
-  if (numberIndexes !== undefined && allowedCapabilities.length === 1) {
+  if (numberIndexes !== undefined && allowedCapabilities.length !== 1) {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY", "$visualParameters", "number indexes limit the parameters of exactly one recipe");
+  }
+  if (numberIndexes !== undefined) {
     for (const name of recipeNumberIndexParameters(allowedCapabilities[0])) {
       const property = declared[name] as Record<string, unknown> | undefined;
       if (property?.type !== "array") {

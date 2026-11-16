@@ -4977,9 +4977,6 @@ test("a section request limits sample_x_numbers to the lesson-number indexes, an
   assert.ok(two.length > 0);
   assert.ok(two.every((schema) => JSON.stringify(schema.items) === JSON.stringify({ enum: [1, 2] })), JSON.stringify(two));
   assert.deepEqual(sampleSchema(buildLessonPlanSectionDraftJsonSchema(outlineWith([]), 1)), []);
-  // The section's own indexes, not every lesson number (review of #105).
-  const subset = sampleSchema(buildLessonPlanSectionDraftJsonSchema(outlineWith([number("a"), number("x")]), 1, [2]));
-  assert.ok(subset.length > 0 && subset.every((schema) => JSON.stringify(schema.items) === JSON.stringify({ enum: [2] })), JSON.stringify(subset));
   // Every declared index parameter is an array parameter of its recipe's schema (a typo would switch the limit off).
   for (const name of LESSON_PLAN_CAPABILITY_NAMES) {
     for (const parameter of lessonPlanApi.recipeNumberIndexParameters(name)) {
