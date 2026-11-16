@@ -2,12 +2,17 @@
 
 ## Unreleased
 
-- **x positions written as `sample_x_numbers` become fixed points, not a refusal** (default path; found in the speed gate of 2026-11-15, plan §7 step 3.2). The model sometimes writes the points' x positions where lesson-number indexes belong: `[1, 3]` for the points at x = 1 and 3, with fewer lesson numbers than that. Each such section was refused and asked again; in the gate two lessons ran out of attempts and produced nothing (2 of 38 with the new parts on, 0 of 40 without).
-  - On a fixed curve, one or two such values become fixed points at those x (the plot's reference points A and B, program-owned `reference_x`). One value pairs with the point two units right where a slope triangle is asked; otherwise a lone value draws no point, since OLL measures a secant through fixed points and would pair it with the first mark.
-  - **Not repaired:** where the curve is missing at a value, or where the section's narration, task, purpose, title or the request names a point at one of those x off the curve. A recorded lesson wrote `x` for the line through (1, 2) and (7, 10); repaired, its points would sit at (1, 1) and (7, 7). Refused, the model wrote the right line, as on main.
+- **x positions written as `sample_x_numbers` become fixed points, not a refusal, on a curve the lesson states** (default path; found in the speed gate of 2026-11-15, plan §7 step 3.2). The model sometimes writes the points' x positions where lesson-number indexes belong: `[1, 3]` for the points at x = 1 and 3, with fewer lesson numbers than that. Each such section was refused and asked again; in the gate two lessons ran out of attempts and produced nothing (2 of 38 with the new parts on, 0 of 40 without).
+  - **Repaired only where the points are certain:**
+    - two values, or one where a slope triangle is asked (paired with x + 2);
+    - the curve exists at each point;
+    - the lesson's own words (narration, task, board, purpose, title or request) state the curve as an equation, `y = …` or `f(x) = …`, with the plot's values.
+    - The points become the plot's reference points A and B, left to right (program-owned `reference_x`).
+  - **Refused as before otherwise.** A stand-in formula is never confirmed: a recorded lesson wrote `x` for the line through (1, 2) and (7, 10), and repairing it would draw (1, 1) and (7, 7). A lone point without a triangle would be drawn as nothing.
+  - **Review of #102:** the first version checked for contradicting points in the text instead of confirming the curve. It missed points on the board, "−" and "x = 1 时 y = 2", and it also moved a lone point and drew points the model never named.
   - Only where validation would refuse, so a lesson that compiles is never changed. Requests are unchanged (request-hash test).
   - **Replays:**
-    - Gate replies: the two lost lessons now publish in 1 and 2 calls, PJ-02 and PJ-04 take 1 call instead of 2 and 3, and all judged lessons pass.
+    - Gate replies: PJ-01 publishes in 1 call (it produced no lesson) and passes the judge; PJ-02 takes 1 call instead of 2. HO-PH-04 never states its curve and stays refused, as on main.
     - Run B: one baseline-arm lesson takes 1 call instead of 2.
     - The trial and the 139 recorded lessons are identical.
 

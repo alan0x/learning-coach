@@ -26,18 +26,82 @@ export function validatePlotSampleNumbers(value: unknown, numberCount: number, p
   return value;
 }
 
-/** Whether the text names a point (x, y) at one of these x whose y is off the curve. */
-function namesOtherPoints(visual: LessonPlanVisualContent, xs: number[], text: string[]): boolean {
+/** The curve's values, or undefined when its formula does not compile. */
+function curveEvaluator(visual: LessonPlanVisualContent): ((x: number) => number) | undefined {
   const tokens = visual.parameters?.expression_tokens;
-  if (!Array.isArray(tokens)) return true;
-  const curve = compileMathExpression(mathExpressionToOll(tokens as LessonPlanMathExpression), ["x"]);
-  const pairs = text.flatMap(line => [...line.matchAll(/[(（]\s*(-?\d+(?:\.\d+)?)\s*[,，]\s*(-?\d+(?:\.\d+)?)\s*[)）]/gu)]
-    .map(match => [Number(match[1]), Number(match[2])] as const));
-  return pairs.some(([x, y]) => xs.some(given => Math.abs(given - x) < 1e-9) && !(Math.abs(curve({ x }) - y) < 1e-6 * Math.max(1, Math.abs(y))));
+  if (!Array.isArray(tokens)) return undefined;
+  try {
+    const curve = compileMathExpression(mathExpressionToOll(tokens as LessonPlanMathExpression), ["x"]);
+    return (x) => { try { return curve({ x }); } catch { return Number.NaN; } };
+  } catch {
+    return undefined;
+  }
 }
 
-/** One or two distinct finite numbers that are not all usable as lesson-number indexes: x positions. */
-function xValuesNotNumbers(value: unknown, numberCount: number): boolean {
+/** Board LaTeX and text as plain formula text: \frac{a}{b} as (a)/(b), \cdot as *, braces dropped. */
+function plainFormulaText(text: string): string {
+  let plain = text.replace(/\\(?:left|right|,|;|!|\s)/gu, "").replace(/\\cdot|\\times/gu, "*").replace(/[−–]/gu, "-");
+  for (let pass = 0; pass < 4; pass += 1) plain = plain.replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/gu, "($1)/($2)");
+  return plain.replace(/\\sqrt\s*\{([^{}]*)\}/gu, "sqrt($1)").replace(/[{}]/gu, "");
+}
+
+/**
+ * Whether the lesson's own words state the curve as an equation, "y = …" or "f(x) = …", with the same values
+ * as the plot's formula. Only then are x positions written as sample_x_numbers points on the curve the
+ * lesson teaches; a stand-in formula ("x" for the line through (1, 2) and (7, 10)) is never confirmed.
+ */
+function curveNamedInText(curve: (x: number) => number, text: readonly string[]): boolean {
+  const probes = [-3.7, -1.3, 0.4, 1.9, 2.6, 5.1, 7.3];
+  for (const line of text.map(plainFormulaText)) {
+    for (const match of line.matchAll(/(?:^|[^A-Za-z])(?:y|f\s*\(\s*x\s*\))\s*=\s*([^=，。；;,\n]+)/gu)) {
+      const words = match[1]!.trim().split(/\s+/u);
+      // The longest leading run of words that reads as a formula: "3x - 2 and show the rise" reads "3x - 2".
+      for (let count = words.length; count > 0; count -= 1) {
+        let stated: (x: number) => number;
+        try {
+          const tokens = parseModelFormula(words.slice(0, count).join(" "), 0, "$text");
+          const compiled = compileMathExpression(mathExpressionToOll(tokens), ["x"]);
+          stated = (x) => { try { return compiled({ x }); } catch { return Number.NaN; } };
+        } catch {
+          continue;
+        }
+        const agree = probes.filter((x) => Number.isFinite(curve(x)) && Number.isFinite(stated(x)));
+        if (agree.length >= 3 && agree.every((x) => Math.abs(curve(x) - stated(x)) <= 1e-9 * Math.max(1, Math.abs(stated(x))))) return true;
+        break;
+      }
+    }
+  }
+  return false;
+}
+
+/** Every string a section writes or says: narration, task prompts and board cards (formulas, text, notes). */
+function sectionWords(draft: LessonPlanSectionDraft): string[] {
+  const strings = (value: unknown): string[] => typeof value === "string" ? [value]
+    : Array.isArray(value) ? value.flatMap(strings)
+    : value && typeof value === "object" ? Object.values(value).flatMap(strings) : [];
+  return [
+    ...draft.moments.map((moment) => moment.narration),
+    ...(draft.student_activities ?? []).map((activity) => activity.prompt),
+    ...draft.moments.flatMap((moment) => moment.actions.flatMap((action) =>
+      action.action === "create" && action.kind !== "visual" ? strings((action as { content?: unknown }).content) : [])),
+  ];
+}
+
+/**
+ * Whether x positions written as sample_x_numbers can become fixed points: two of them, or one where a slope
+ * triangle is asked (it pairs with x + 2); the curve exists at each point; and the lesson's own words state
+ * the curve as an equation with the same values (curveNamedInText), so the points are on the curve the lesson
+ * teaches. A lone point without a triangle is refused as before: the compiler would draw nothing for it.
+ */
+function repairableXValues(visual: LessonPlanVisualContent, values: number[], text: readonly string[]): boolean {
+  const triangle = Array.isArray(visual.parameters?.marks) && visual.parameters.marks.includes("slope_triangle");
+  const xs = values.length === 2 ? values : triangle ? [values[0]!, values[0]! + 2] : undefined;
+  const curve = curveEvaluator(visual);
+  return Boolean(xs && curve && xs.every((x) => Number.isFinite(curve(x))) && curveNamedInText(curve, text));
+}
+
+/** Two distinct finite numbers, or one, that are not all usable as lesson-number indexes: x positions. */
+function xValuesNotNumbers(value: unknown, numberCount: number): value is number[] {
   return Array.isArray(value) && value.length >= 1 && value.length <= 2 && new Set(value).size === value.length
     && value.every((entry) => typeof entry === "number" && Number.isFinite(entry))
     && value.some((entry) => !Number.isInteger(entry) || entry < 1 || entry > numberCount);
@@ -254,18 +318,15 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
         detail: `sample_x_numbers=${JSON.stringify(rawSamples)?.slice(0, 120)}` });
     } else if (Array.isArray(rawSamples) && !rawSamples.length) {
       delete visual.parameters!.sample_x_numbers;
-    } else if (!curve.length && xValuesNotNumbers(rawSamples, count) && curveExistsAt(visual, rawSamples as number[])
-      && !namesOtherPoints(visual, rawSamples as number[], [...draft.moments.map(item => item.narration),
-        ...(draft.student_activities ?? []).map(activity => activity.prompt), outline.sections[draft.section - 1]?.purpose ?? "",
-        request, String(visual.parameters?.title ?? "")])) {
+    } else if (!curve.length && xValuesNotNumbers(rawSamples, count) && repairableXValues(visual, rawSamples, [
+      ...sectionWords(draft), outline.sections[draft.section - 1]?.purpose ?? "", request, String(visual.parameters?.title ?? ""),
+    ])) {
       // x positions written where lesson-number indexes belong ([1, 3] for the points at x = 1 and 3, with
-      // fewer lesson numbers than that): fixed points at those x (the compiler's reference points), not a
-      // refusal. Not where the curve is missing there, nor where the section's text, title or request names a
-      // point at one of those x off the curve: "x" written for the line through (1, 2) and (7, 10) would put
-      // the points at (1, 1) and (7, 7) (a recorded lesson); refused, the model wrote the line. The gate of 2026-11-15 lost two lessons to this refusal, each asked again until the
-      // section ran out of attempts. Only where validation would refuse, so a lesson that compiles is
-      // never changed.
-      visual.parameters!.reference_x = [...rawSamples as number[]];
+      // fewer lesson numbers than that): fixed points at those x, left to right (the compiler's reference
+      // points A and B), not a refusal. The gate of 2026-11-15 lost two lessons to this refusal, each asked
+      // again until the section ran out of attempts. Only where validation would refuse, so a lesson that
+      // compiles is never changed, and only where the points are certain (repairableXValues).
+      visual.parameters!.reference_x = rawSamples.length === 2 ? [...rawSamples].sort((a, b) => a - b) : [rawSamples[0]!, rawSamples[0]! + 2];
       delete visual.parameters!.sample_x_numbers;
       adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "sample_x_values_as_fixed_points",
         detail: `sample_x_numbers=${JSON.stringify(rawSamples)}` });

@@ -225,13 +225,10 @@ function compileFunctionPlot(
   // sits: the first pair where the curve exists at the start and at every demonstrated state.
   let references: Array<{ x: number; y: number; label: string }> | undefined;
   // Fixed x positions the program took from sample_x_numbers holding x values, not lesson numbers
-  // (plot-bindings: the gate of 2026-11-15 lost two lessons to that refusal). One position with a slope
-  // triangle pairs with the point two units to its right. One position without one is left out: OLL measures
-  // a secant through any fixed points, so a lone point would pair with the first mark (a vertex) as a triangle.
-  const rawReferenceX = Array.isArray(input.reference_x) && input.reference_x.every((x) => typeof x === "number" && Number.isFinite(x))
-    ? input.reference_x as number[] : [];
-  const givenReferenceX = rawReferenceX.length === 2 ? rawReferenceX
-    : rawReferenceX.length === 1 && markList.includes("slope_triangle") ? [rawReferenceX[0]!, rawReferenceX[0]! + 2] : undefined;
+  // (plot-bindings: two points, left to right, on a curve the lesson states as an equation; one value with a
+  // slope triangle is already paired with x + 2 there).
+  const givenReferenceX = Array.isArray(input.reference_x) && input.reference_x.length === 2
+    && input.reference_x.every((x) => typeof x === "number" && Number.isFinite(x)) ? input.reference_x as number[] : undefined;
   if (expressions.length === 1 && !sampleNumbers.length && (givenReferenceX || slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
     const referencePoints = (values: Record<string, number>, xs: readonly number[]) => xs.flatMap((x, index) => {
@@ -244,8 +241,8 @@ function compileFunctionPlot(
     });
     const given: ReadonlyArray<readonly number[]> = givenReferenceX ? [givenReferenceX] : [];
     const markPairs: ReadonlyArray<readonly number[]> = [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]];
-    // Given positions first; where the curve is missing there, a slope triangle still takes the usual pairs.
-    const pairs: ReadonlyArray<readonly number[]> = given.length ? [...given, ...(slopeTriangle ? markPairs : [])] : markList.length ? markPairs : [[0, 1]];
+    // Given positions only: the program never moves points the model named.
+    const pairs: ReadonlyArray<readonly number[]> = given.length ? given : markList.length ? markPairs : [[0, 1]];
     // With marks: at the start, at every demonstrated state and at each curve slider's ends, where a learner
     // can drag the curve away from a point whose y is not hidden (review). Without marks the points are found
     // as before the option, at the start only, so a lesson without marks compiles exactly as it did (review).

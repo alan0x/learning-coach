@@ -143,26 +143,47 @@ test("a name before a spaced digit is left as the parser reads it, never read as
 
 // The gate of 2026-11-15 (plan §7 step 3.2) lost two lessons to sample_x_numbers holding x positions, not
 // lesson-number indexes ([1, 3] for the points at x = 1 and 3): refused until the section ran out of attempts.
-test("x positions written as sample_x_numbers on a fixed curve become fixed points A and B, in one call", async () => {
-  const { lesson, rejected, requests } = await generate(plotReply({ formula: "3*x - 2", numbers: [], visualNumbers: [], samples: [1, 3], moments: [{ say: "看 x = 1 和 x = 3 两点之间的上升和水平距离。" }] }));
-  assert.ok(lesson, rejected.join(" | "));
-  assert.deepEqual(rejected, []);
-  assert.equal(requests.length, 1);
-  const content = plotContent(lesson);
-  assert.deepEqual(content.points.map((point) => [point.label, point.x, point.y]), [["A", 1, 1], ["B", 3, 7]]);
-  assert.equal(content.measurement, "secant");
+// The repair needs the lesson's own words to state the curve as an equation with the plot's values, so a
+// stand-in formula never gets points (review of #102). plotReply writes "y = <formula>" on the board.
+const edit = (reply, change) => { const parsed = JSON.parse(reply); change(parsed.course.first_section); return JSON.stringify(parsed); };
+const firstVisual = (section) => section.moments[0].visual_creates[0].content.parameters;
+const noBoard = (section) => { section.moments[0].math_creates[0].content.latex = "A,\\ B"; };
+
+test("x positions written as sample_x_numbers on a stated curve become fixed points A and B, left to right, in one call", async () => {
+  for (const samples of [[1, 3], [3, 1]]) {
+    const { lesson, rejected, requests } = await generate(plotReply({ formula: "3*x - 2", numbers: [], visualNumbers: [], samples, moments: [{ say: "看 x = 1 和 x = 3 两点之间的上升和水平距离。" }] }));
+    assert.ok(lesson, rejected.join(" | "));
+    assert.deepEqual(rejected, []);
+    assert.equal(requests.length, 1);
+    assert.deepEqual(plotContent(lesson).points.map((point) => [point.label, point.x, point.y]), [["A", 1, 1], ["B", 3, 7]], JSON.stringify(samples));
+  }
+  // The equation may be in the narration or the request instead of the board, in LaTeX or with "−".
+  const spoken = await generate(edit(plotReply({ formula: "60/x", numbers: [], visualNumbers: [], samples: [1, 3], moments: [{ say: "反比例函数 y = \\frac{60}{x}，看两点。" }] }), noBoard));
+  assert.ok(spoken.lesson, spoken.rejected.join(" | "));
+  assert.deepEqual(plotContent(spoken.lesson).points.map((point) => [point.x, point.y]), [[1, 60], [3, 20]]);
 });
 
-test("one x position without a slope triangle draws no point (a lone fixed point would pair with a mark)", async () => {
-  const { lesson, rejected } = await generate(plotReply({ formula: "x^2 + 2*x + 3", numbers: [], visualNumbers: [], samples: [-1], moments: [{ say: "看顶点。" }] }));
-  assert.ok(lesson, rejected.join(" | "));
-  assert.deepEqual(plotContent(lesson).points ?? [], []);
+test("one x position pairs with x + 2 only where a slope triangle is asked and the curve exists there", async () => {
+  const triangle = await generate(edit(plotReply({ formula: "3*x - 2", numbers: [], visualNumbers: [], samples: [1], moments: [{ say: "看斜率三角形。" }] }), (section) => { firstVisual(section).marks = ["slope_triangle"]; }));
+  assert.ok(triangle.lesson, triangle.rejected.join(" | "));
+  assert.deepEqual(plotContent(triangle.lesson).points.slice(0, 2).map((point) => [point.label, point.x]), [["A", 1], ["B", 3]]);
+  // √(6 − x) at 5: B at 7 is off the curve; refused as before, never moved to other points (review).
+  const offEnd = await generate(edit(plotReply({ formula: "sqrt(6 - x)", numbers: [], visualNumbers: [], samples: [5], moments: [{ say: "看 x = 5 处的斜率三角形。" }] }), (section) => { firstVisual(section).marks = ["slope_triangle"]; }));
+  assert.ok(offEnd.rejected.some((miss) => /LESSON_PLAN_NUMBER_REFERENCE/u.test(miss)), offEnd.rejected.join(" | "));
+  // A lone point without a triangle would be drawn as nothing: refused as before (review).
+  const lone = await generate(plotReply({ formula: "x^2", numbers: [], visualNumbers: [], samples: [2], moments: [{ say: "看 x = 2 处的点。" }] }));
+  assert.ok(lone.rejected.some((miss) => /LESSON_PLAN_NUMBER_REFERENCE/u.test(miss)), lone.rejected.join(" | "));
 });
 
-test("x positions are not repaired where the text names a point there off the curve, or the curve is missing there", async () => {
-  // "x" written for the line through (1, 2) and (7, 10) (a recorded lesson): the points would sit at (1, 1), (7, 7).
-  const offCurve = await generate(plotReply({ formula: "x", numbers: [], visualNumbers: [], samples: [1, 7], moments: [{ say: "求点 (1, 2) 和 (7, 10) 之间的距离。" }] }));
-  assert.ok(offCurve.rejected.some((miss) => /LESSON_PLAN_NUMBER_REFERENCE/u.test(miss)), offCurve.rejected.join(" | "));
+test("x positions are not repaired unless the lesson states the curve, nor where the curve is missing there", async () => {
+  // "x" written for the line through (1, 2) and (7, 10) (a recorded lesson), however the points are written.
+  for (const say of ["求点 (1, 2) 和 (7, 10) 之间的距离。", "求过点 (−1, 2) 和 (−3, 4) 的直线。", "当 x = 1 时 y = 2，当 x = 7 时 y = 10。"]) {
+    const standIn = await generate(edit(plotReply({ formula: "x", numbers: [], visualNumbers: [], samples: [1, 7], moments: [{ say }] }), noBoard));
+    assert.ok(standIn.rejected.some((miss) => /LESSON_PLAN_NUMBER_REFERENCE/u.test(miss)), `${say}: ${standIn.rejected.join(" | ")}`);
+  }
+  // Points written on the board, and a board equation of another line (review).
+  const board = await generate(edit(plotReply({ formula: "x", numbers: [], visualNumbers: [], samples: [1, 7], moments: [{ say: "看黑板上的两点。" }] }), (section) => { section.moments[0].math_creates[0].content.latex = "A(1, 2),\\ B(7, 10),\\ y = \\frac{4}{3}x + \\frac{2}{3}"; }));
+  assert.ok(board.rejected.some((miss) => /LESSON_PLAN_NUMBER_REFERENCE/u.test(miss)), board.rejected.join(" | "));
   const missing = await generate(plotReply({ formula: "sqrt(x)", numbers: [], visualNumbers: [], samples: [-4, 4], moments: [{ say: "看两点。" }] }));
   assert.ok(missing.rejected.some((miss) => /LESSON_PLAN_NUMBER_REFERENCE/u.test(miss)), missing.rejected.join(" | "));
 });

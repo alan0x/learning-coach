@@ -13598,12 +13598,68 @@ function validatePlotSampleNumbers(value2, numberCount, path) {
   }
   return value2;
 }
-function namesOtherPoints(visual, xs, text3) {
+function curveEvaluator(visual) {
   const tokens = visual.parameters?.expression_tokens;
-  if (!Array.isArray(tokens)) return true;
-  const curve = compileMathExpression(mathExpressionToOll(tokens), ["x"]);
-  const pairs = text3.flatMap((line) => [...line.matchAll(/[(（]\s*(-?\d+(?:\.\d+)?)\s*[,，]\s*(-?\d+(?:\.\d+)?)\s*[)）]/gu)].map((match) => [Number(match[1]), Number(match[2])]));
-  return pairs.some(([x, y]) => xs.some((given) => Math.abs(given - x) < 1e-9) && !(Math.abs(curve({ x }) - y) < 1e-6 * Math.max(1, Math.abs(y))));
+  if (!Array.isArray(tokens)) return void 0;
+  try {
+    const curve = compileMathExpression(mathExpressionToOll(tokens), ["x"]);
+    return (x) => {
+      try {
+        return curve({ x });
+      } catch {
+        return Number.NaN;
+      }
+    };
+  } catch {
+    return void 0;
+  }
+}
+function plainFormulaText(text3) {
+  let plain = text3.replace(/\\(?:left|right|,|;|!|\s)/gu, "").replace(/\\cdot|\\times/gu, "*").replace(/[−–]/gu, "-");
+  for (let pass = 0; pass < 4; pass += 1) plain = plain.replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/gu, "($1)/($2)");
+  return plain.replace(/\\sqrt\s*\{([^{}]*)\}/gu, "sqrt($1)").replace(/[{}]/gu, "");
+}
+function curveNamedInText(curve, text3) {
+  const probes = [-3.7, -1.3, 0.4, 1.9, 2.6, 5.1, 7.3];
+  for (const line of text3.map(plainFormulaText)) {
+    for (const match of line.matchAll(/(?:^|[^A-Za-z])(?:y|f\s*\(\s*x\s*\))\s*=\s*([^=，。；;,\n]+)/gu)) {
+      const words = match[1].trim().split(/\s+/u);
+      for (let count = words.length; count > 0; count -= 1) {
+        let stated;
+        try {
+          const tokens = parseModelFormula(words.slice(0, count).join(" "), 0, "$text");
+          const compiled = compileMathExpression(mathExpressionToOll(tokens), ["x"]);
+          stated = (x) => {
+            try {
+              return compiled({ x });
+            } catch {
+              return Number.NaN;
+            }
+          };
+        } catch {
+          continue;
+        }
+        const agree = probes.filter((x) => Number.isFinite(curve(x)) && Number.isFinite(stated(x)));
+        if (agree.length >= 3 && agree.every((x) => Math.abs(curve(x) - stated(x)) <= 1e-9 * Math.max(1, Math.abs(stated(x))))) return true;
+        break;
+      }
+    }
+  }
+  return false;
+}
+function sectionWords(draft) {
+  const strings = (value2) => typeof value2 === "string" ? [value2] : Array.isArray(value2) ? value2.flatMap(strings) : value2 && typeof value2 === "object" ? Object.values(value2).flatMap(strings) : [];
+  return [
+    ...draft.moments.map((moment) => moment.narration),
+    ...(draft.student_activities ?? []).map((activity) => activity.prompt),
+    ...draft.moments.flatMap((moment) => moment.actions.flatMap((action) => action.action === "create" && action.kind !== "visual" ? strings(action.content) : []))
+  ];
+}
+function repairableXValues(visual, values, text3) {
+  const triangle = Array.isArray(visual.parameters?.marks) && visual.parameters.marks.includes("slope_triangle");
+  const xs = values.length === 2 ? values : triangle ? [values[0], values[0] + 2] : void 0;
+  const curve = curveEvaluator(visual);
+  return Boolean(xs && curve && xs.every((x) => Number.isFinite(curve(x))) && curveNamedInText(curve, text3));
 }
 function xValuesNotNumbers(value2, numberCount) {
   return Array.isArray(value2) && value2.length >= 1 && value2.length <= 2 && new Set(value2).size === value2.length && value2.every((entry) => typeof entry === "number" && Number.isFinite(entry)) && value2.some((entry) => !Number.isInteger(entry) || entry < 1 || entry > numberCount);
@@ -13765,14 +13821,13 @@ function normalizePlotDraftBindings(draft, context) {
       });
     } else if (Array.isArray(rawSamples) && !rawSamples.length) {
       delete visual.parameters.sample_x_numbers;
-    } else if (!curve.length && xValuesNotNumbers(rawSamples, count) && curveExistsAt(visual, rawSamples) && !namesOtherPoints(visual, rawSamples, [
-      ...draft.moments.map((item) => item.narration),
-      ...(draft.student_activities ?? []).map((activity) => activity.prompt),
+    } else if (!curve.length && xValuesNotNumbers(rawSamples, count) && repairableXValues(visual, rawSamples, [
+      ...sectionWords(draft),
       outline.sections[draft.section - 1]?.purpose ?? "",
       request,
       String(visual.parameters?.title ?? "")
     ])) {
-      visual.parameters.reference_x = [...rawSamples];
+      visual.parameters.reference_x = rawSamples.length === 2 ? [...rawSamples].sort((a, b) => a - b) : [rawSamples[0], rawSamples[0] + 2];
       delete visual.parameters.sample_x_numbers;
       adjust({
         kind: "plot_binding_rebuilt",
@@ -16818,8 +16873,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
   const slopeTriangle = markList.includes("slope_triangle");
   let references;
-  const rawReferenceX = Array.isArray(input.reference_x) && input.reference_x.every((x) => typeof x === "number" && Number.isFinite(x)) ? input.reference_x : [];
-  const givenReferenceX = rawReferenceX.length === 2 ? rawReferenceX : rawReferenceX.length === 1 && markList.includes("slope_triangle") ? [rawReferenceX[0], rawReferenceX[0] + 2] : void 0;
+  const givenReferenceX = Array.isArray(input.reference_x) && input.reference_x.length === 2 && input.reference_x.every((x) => typeof x === "number" && Number.isFinite(x)) ? input.reference_x : void 0;
   if (expressions.length === 1 && !sampleNumbers.length && (givenReferenceX || slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
     const referencePoints = (values, xs2) => xs2.flatMap((x, index) => {
@@ -16832,7 +16886,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     });
     const given = givenReferenceX ? [givenReferenceX] : [];
     const markPairs = [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]];
-    const pairs = given.length ? [...given, ...slopeTriangle ? markPairs : []] : markList.length ? markPairs : [[0, 1]];
+    const pairs = given.length ? given : markList.length ? markPairs : [[0, 1]];
     const reached = markList.length ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))] : [initialState];
     const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === pair.length));
     if (xs) {
