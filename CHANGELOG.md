@@ -6,7 +6,8 @@
   - The plot recipe declares `number_index_parameters: ["sample_x_numbers"]`. A section request, whose outline is known, gives those items the section's indexes as an enum, as `numbers` already has, and leaves the field out when there are none. The bootstrap, which writes the outline in the same reply, is unchanged.
   - Census of recorded slips: 22 of 35 were on section calls and are now unwritable. The provider kept every one of 370 recorded `numbers` lists within their enum.
   - The refusal now says what the field holds: lesson-number indexes from 1 to N, not x values, left out when no point moves. This is for the bootstrap's slips.
-  - Requests: 80 of 2,080 recorded digests change (plot sections); lessons unchanged; no ceiling exceeded.
+  - **Requests:** 80 of 2,080 recorded digests change. Digests are per run, and all 80 are the fallback-outline runs of the four plot fixtures: the first request fails, an outline request follows, and the first-section request after it creates the plot. That section request is the one that changes. No first request changes, and neither do the normal, repair or practice runs, whose plots come from the first request. Lessons unchanged; no ceiling exceeded.
+  - **Not exercised:** the sharper refusal never fired in the probe, on either arm. It is no longer load-bearing, because the retry after a first-request slip is a section request, which cannot repeat the slip.
 
 - **Coach's core names no recipe** (plan §2.3, §7 step 3.4, Goal 1; no lesson or request changes). Recipe knowledge in core becomes declarations on the recipes:
   - `numbers_in_parameters` (the plot): its lesson numbers come from its parameters, so the schema gives it no number list and generation assumes none;

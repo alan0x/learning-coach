@@ -31,6 +31,7 @@ main `fc6adc2`.
   - control only: PJ-10 (no range bar).
 - **Refusals:** control 5 (4 formula errors, 1 interaction mismatch); candidate 2 (a missing board item, 1
   interaction mismatch). No `LESSON_PLAN_NUMBER_REFERENCE` on either arm.
+- **The sharper refusal message was not exercised:** it never fired on either arm.
 - **Slips:** one in all 43 recorded replies, on a candidate bootstrap call (`[0, 2]` with two lesson numbers), which
   the limit cannot reach. The provider kept all 41 recorded `numbers` lists within their enum.
 
