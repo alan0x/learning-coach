@@ -25,8 +25,27 @@ export const LESSON_PLAN_CAPABILITY_NAMES = Object.keys(LESSON_PLAN_CAPABILITY_R
  * at the start, faults only the outline can fix, and the exclusion that follows them.
  */
 export function isNumberLineCapability(capability: string | undefined): boolean {
-  const recipe = capability === undefined ? undefined : (LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { output_kinds: readonly string[] } | undefined>)[capability];
-  return Boolean(recipe?.output_kinds.includes("number_line"));
+  const kinds = recipeEntry(capability)?.output_kinds;
+  return Array.isArray(kinds) && kinds.includes("number_line");
+}
+/** A registered recipe's entry, read as plain data, or undefined. */
+function recipeEntry(capability: string | undefined): Record<string, unknown> | undefined {
+  return capability === undefined ? undefined : (LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, Record<string, unknown> | undefined>)[capability];
+}
+
+/** A 3D recipe's declared first camera (`initial_camera`), or undefined; a declaration that is not three finite numbers fails. */
+export function recipeInitialCamera(capability: string | undefined): { yaw: number; pitch: number; zoom: number } | undefined {
+  const camera = recipeEntry(capability)?.initial_camera as { yaw?: unknown; pitch?: unknown; zoom?: unknown } | undefined;
+  if (camera === undefined) return undefined;
+  if (![camera.yaw, camera.pitch, camera.zoom].every((value) => typeof value === "number" && Number.isFinite(value))) {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY", `$recipes.${capability}.initial_camera`, "a recipe's initial_camera needs finite yaw, pitch and zoom");
+  }
+  return camera as { yaw: number; pitch: number; zoom: number };
+}
+
+/** A recipe's declared flag (`numbers_in_parameters`, `ranges_fixed_once_shown`); false when absent. */
+export function recipeDeclares(capability: string | undefined, flag: "numbers_in_parameters" | "ranges_fixed_once_shown"): boolean {
+  return recipeEntry(capability)?.[flag] === true;
 }
 export const LESSON_PLAN_VISUAL_FEATURES = [...new Set(
   LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features]),

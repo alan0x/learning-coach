@@ -1,14 +1,14 @@
 import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
-import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, recipeDeclares, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
 import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen } from "./recipe-kit.js";
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
 import { PLUGIN_HOOKS, RECIPE_HOOKS } from "./plugins/hooks.js";
 export { PLUGIN_COMPILERS };
 
-export { LESSON_PLAN_SCENE_INITIAL_CAMERAS, includeWrittenCardsInFocus, mathExpressionToOll } from "./recipe-kit.js";
+export { includeWrittenCardsInFocus, mathExpressionToOll } from "./recipe-kit.js";
 
 export interface CompileLessonPlanOptions extends ResolveLessonPlanOptions {
   construction_rules?: "legacy" | "explicit-v1";
@@ -28,6 +28,10 @@ export interface CompiledLessonPlan {
   /** Visual decisions the program made for this lesson, by section (1-based). */
   view_adjustments: Array<{ section: number; reason: string; detail: string }>;
 }
+
+/** Compiled kinds a lesson number can drive: every output kind of a registered recipe with number inputs. */
+const NUMBER_DRIVEN_KINDS: ReadonlySet<string> = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { number_inputs?: readonly string[]; output_kinds?: readonly string[] }>)
+  .flatMap((recipe) => (recipe.number_inputs?.length ? recipe.output_kinds ?? [] : [])));
 
 function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbers = true): string {
   const sourceParameters = content.parameters ?? {};
@@ -185,9 +189,9 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
   // blamed on the fit that pushed it out (a 3 by 3 square drawn 1 by 3 beside a cube section from −1 to 1),
   // not on the first visual that happens to share the number.
   const fits = new Map<number, Array<{ capability: string; path: string; before: [number, number]; after: [number, number] }>>();
-  const publishedPlotNumbers = new Set<number>();
+  const publishedFixedRangeNumbers = new Set<number>();
   for (const [sectionIndex, section] of plan.sections.entries()) {
-    const newPlotNumbers = new Set<number>();
+    const newFixedRangeNumbers = new Set<number>();
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
         if ((action.action !== "create" && action.action !== "revise")
@@ -196,8 +200,8 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
         const bound = RECIPE_HOOKS[content.capability]?.bound_numbers?.(content);
         if (bound?.length) content.numbers = bound;
         else if (bound) delete content.numbers;
-        if (content.capability === "function_plot") {
-          for (const number of bound ?? []) newPlotNumbers.add(number);
+        if (recipeDeclares(content.capability, "ranges_fixed_once_shown")) {
+          for (const number of bound ?? content.numbers ?? []) newFixedRangeNumbers.add(number);
         }
         const fit = RECIPE_HOOKS[content.capability]?.fit_numbers;
         if (fit && action.action === "create") {
@@ -214,7 +218,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
           if (!definition || !policy) continue;
           if (RECIPE_HOOKS[content.capability]?.free_number?.(content, inputIndex)) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
-          const prior = publishedPlotNumbers.has(numberIndex)
+          const prior = publishedFixedRangeNumbers.has(numberIndex)
             ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step }
             : undefined;
           const range = countRange(policy);
@@ -258,7 +262,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
         }
       }
     }
-    for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
+    for (const number of newFixedRangeNumbers) publishedFixedRangeNumbers.add(number);
   }
   if (constrained.size === 0) return;
   // Counts are whole numbers: 3.4 squares draws as 3, which is a rounding, not a change.
@@ -880,7 +884,7 @@ function validateCompiledVisualEffects(lesson: AuthoringLesson): void {
 
   const visualExpressions: unknown[] = [];
   lesson.steps.forEach((step) => step.beats.forEach((beat) => beat.actions.forEach((action) => {
-    if (action.do !== "write" || !["geometry", "plot", "scene3d", "number_line"].includes(action.kind)) return;
+    if (action.do !== "write" || !NUMBER_DRIVEN_KINDS.has(action.kind)) return;
     const content = action.content as Record<string, unknown>;
     const bindings = Array.isArray(content.bindings) ? content.bindings : [];
     bindings.forEach((binding) => {
@@ -888,6 +892,7 @@ function validateCompiledVisualEffects(lesson: AuthoringLesson): void {
         visualExpressions.push((binding as Record<string, unknown>).expression);
       }
     });
+    // An OLL plot also evaluates each curve's formula (an OLL field, whichever plugin built the plot).
     if (action.kind === "plot") {
       const curves = Array.isArray(content.curves) ? content.curves : [];
       curves.forEach((curve) => {

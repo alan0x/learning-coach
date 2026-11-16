@@ -8,6 +8,23 @@
   - The refusal now says what the field holds: lesson-number indexes from 1 to N, not x values, left out when no point moves. This is for the bootstrap's slips.
   - Requests: 80 of 2,080 recorded digests change (plot sections); lessons unchanged; no ceiling exceeded.
 
+- **Coach's core names no recipe** (plan §2.3, §7 step 3.4, Goal 1; no lesson or request changes). Recipe knowledge in core becomes declarations on the recipes:
+  - `numbers_in_parameters` (the plot): its lesson numbers come from its parameters, so the schema gives it no number list and generation assumes none;
+  - `ranges_fixed_once_shown` (the plot): a number it shows keeps its range once its section is published (from `bound_numbers`, else the visual's numbers);
+  - `initial_camera` (the three 3D recipes): replaces the camera table keyed by recipe names in `recipe-kit.ts`.
+  - The drawable kinds are every output kind of a registered recipe with number inputs, the same four.
+  - A plot's curve formulas stay in core, as an OLL plot field that every plugin's plots share.
+  - **Test:** every file outside `src/plugins` is scanned. It fails on a recipe name quoted, used as a property or as a key, or compared with a capability; a name that is also an OLL node kind may appear only as that kind.
+  - **Review:** the first version gave the plot curves to the math plugin, although physics plots use them too, and it left the camera table in place. Its test read four files and quoted names only.
+  - **Second review:** no correctness bug. Test gaps closed:
+    - a test now requires every 3D recipe to declare a finite first camera, which a "turn to this view" task is judged against; removing one passed every test before;
+    - the name test reads `src` at any depth and also catches `case "…"`, `"…" ===` and `RECIPE_*.…`, including for `number_line`;
+    - a malformed camera declaration fails instead of giving a NaN tolerance;
+    - the three cameras share one constant.
+  - `LESSON_PLAN_SCENE_INITIAL_CAMERAS` is no longer exported (no users found in any repository); use `recipeInitialCamera`.
+  - **Left as follow-ups:** the repair message about the "published graph" (rewording changes repair requests), and deriving the drawable kinds from compiled output rather than declarations.
+  - Requests are byte-identical (request-hash test); replays of the 139 recorded lessons, the trial, run B and the gate are identical.
+
 - **M1 re-tagged after the switch-ons** (`testsuite/math-expressiveness-m1-2026-11-15.json`, plan §7 step 3.1; free, no lessons generated). Every question tagged with a number-line or function-plot component or candidate was re-read against main 267261c. Other tags are the 2026-11-13 baseline's, which stays as it was.
   - **Questions that need a picture, fully drawn by a component:** 27 → 33 of 145 (19% → 23%); open 18 → 23, held out 9 → 10.
   - **Now fully drawn (open):** two jumps through 50; a slope triangle from two points; m and c with slope and intercept marks; domain and range; the symmetry axis.
