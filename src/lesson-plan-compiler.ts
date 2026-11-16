@@ -1,5 +1,4 @@
 import { compileText, setLessonTextLanguage } from "./lesson-text.js";
-import { hasFalseArithmetic } from "./arithmetic-claims.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
 import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, recipeDeclares, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
@@ -736,8 +735,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         availability: { kind: "after_lesson" as const },
         hints: activity.hints.map(hint => namedNumbers(hint, plan)),
         ...(activity.hint_after_attempts ? { hint_after_attempts: activity.hint_after_attempts } : {}),
-        // A message stating false arithmetic is dropped, and the player's own message shows (plan §7 step 3.6).
-        ...(activity.success_message && !hasFalseArithmetic(activity.success_message) ? { success_message: namedNumbers(activity.success_message, plan) } : {}),
+        ...(activity.success_message ? { success_message: namedNumbers(activity.success_message, plan) } : {}),
       };
       if (activity.kind === "number_target") {
         const firstNumber = activity.number_controls[0]?.number;

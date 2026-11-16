@@ -6,4 +6,3 @@ export { INSTALLED_PLUGINS, RECIPE_CATALOG_ORDER, TRIAL_RECIPES, OFFERED_RECIPES
 export { RECIPE_HOOKS } from "./plugins/hooks.js";
 export { SECTION_FACTS } from "./plugins/section-facts.js";
 export { frameRawReply, modelTextFromRawReply, RAW_REPLY_PREFIX, type RawReplyRecord } from "./raw-reply.js";
-export { hasFalseArithmetic } from "./arithmetic-claims.js";

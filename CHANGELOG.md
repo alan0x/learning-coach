@@ -2,11 +2,11 @@
 
 ## Unreleased
 
-- **Accept what has one safe reading; refuse only meaning** (the owner's two principles, 2026-11-16: the model writes meaning, the program accommodates its variability; step 1 of the accommodation order, free, no request changes):
-  - **Solution-set boundaries given larger first** are read in their one valid order where both ends are drawn alike (`a<x<b`, `a<=x<=b`, `x<a|x>b`, `x<=a|x>=b`), before the fit. Where the ends differ (`a<x<=b`), the closed end could belong to either number, so it stays refused.
-  - **Curve labels that do not match the curves one to one** are left out instead of refusing the section; the compiler derives a legend from each formula.
-  - **A success message stating false arithmetic** (`3 × 4 = 13`) is dropped, and the player shows its own message. Only a claim that stands alone is checked: chains (`4 ÷ 1/10 = 4 × 10 = 40`) and negative first numbers (`-3 + 4 = 1`) are read correctly, and a result rounded to the digits written is right (`1/3 = 0.3`). Two recorded right messages caught by a first version are now tests.
-  - **Counts (free):** in 307 replayed lessons, the wording refusals about dragging plot points never fired. The practice-target count already exists in #81's record: 15 of 85 slider tasks had a target the lesson already reached. #81's program-written invitation is the fix there.
+- **Curve labels that do not match the curves one to one are left out, not refused** (the owner's two principles, 2026-11-16: the model writes meaning, the program accepts what has exactly one safe reading; step 1 of the accommodation order, free, no request changes). The compiler derives a legend from each formula, so nothing narrated depends on the dropped labels. Only lessons main refused change.
+  - **Review of #108, taken out:**
+    - Sorting solution-set boundaries given larger first: reversed boundaries can also mean the model picked the wrong relation, and the swap would then draw the complement of the set it narrates. That is a reading of meaning, so it stays refused.
+    - Dropping success messages with false arithmetic: the pattern dropped right messages (percentages, division with a remainder, thousands separators, a message correcting a wrong sum) and missed false ones ending in a period. It goes to plan step 3.6 as its own change, checked against recorded messages.
+  - **Counts (free):** in 307 replayed lessons, the wording refusals about dragging plot points never fired. Practice targets were already counted in #81's record (15 of 85 slider tasks already met); #81's program-written invitation is the fix there.
   - Requests are byte-identical (request-hash test); replays of the 139 recorded lessons, the trial, run B and the gate are identical.
 
 - **Coach's core names no recipe** (plan §2.3, §7 step 3.4, Goal 1; no lesson or request changes). Recipe knowledge in core becomes declarations on the recipes:

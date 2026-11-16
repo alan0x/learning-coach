@@ -8,17 +8,6 @@ import test from "node:test";
 const api = await import(new URL("../lesson-plan.js", import.meta.url));
 const run5 = JSON.parse(await readFile(new URL("./fixtures/number-line-run5-replies.json", import.meta.url), "utf8"));
 
-test("false arithmetic in a message is found; true arithmetic, rounding and equations are not", () => {
-  for (const text of ["对了！3 × 4 = 12。", "Correct: 7 - 9 = -2", "0.5 + 0.25 = 0.75", "1/3 = 0.33", "12 ÷ 4 = 3", "解方程 2x + 3 = 7，得 x = 2", "第 3 题",
-    // Recorded messages that are right: a chain, and a negative first number.
-    "太棒了！4 ÷ 1/10 = 4 × 10 = 40，说明 4 里面有 40 个 1/10！", "从 -3 向右移动 4 个单位到达了 1，即 -3 + 4 = 1。", "5 - 3 + 4 = 6"]) {
-    assert.equal(api.hasFalseArithmetic(text), false, text);
-  }
-  for (const text of ["对了！3 × 4 = 13。", "Correct: 7 - 9 = 2", "2/3 = 0.6", "5 ÷ 0 = 0", "8 + 5 = 12", "即 -3 + 4 = 7。"]) {
-    assert.equal(api.hasFalseArithmetic(text), true, text);
-  }
-});
-
 test("curve labels that do not match the curves one to one are left out, and the plot compiles", async () => {
   const reply = structuredClone(run5.turns.find((turn) => turn.pair === 42).replies[0]);
   reply.course.outline.numbers = [];
