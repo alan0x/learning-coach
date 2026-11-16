@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Section requests limit `sample_x_numbers` to the lesson-number indexes** (plan §7 step 3.6a; candidate, measured by a paired probe before merging). The speed gate of 2026-11-15 lost two lessons to x positions written there (`[1, 3]` for x = 1 and 3), repeated on every retry; repair in place (#102) was closed on review.
+  - The plot recipe declares `number_index_parameters: ["sample_x_numbers"]`. A section request, whose outline is known, gives those items the section's indexes as an enum, as `numbers` already has, and leaves the field out when there are none. The bootstrap, which writes the outline in the same reply, is unchanged.
+  - Census of recorded slips: 22 of 35 were on section calls and are now unwritable. The provider kept every one of 370 recorded `numbers` lists within their enum.
+  - The refusal now says what the field holds: lesson-number indexes from 1 to N, not x values, left out when no point moves. This is for the bootstrap's slips.
+  - Requests: 80 of 2,080 recorded digests change (plot sections); lessons unchanged; no ceiling exceeded.
+
 - **M1 re-tagged after the switch-ons** (`testsuite/math-expressiveness-m1-2026-11-15.json`, plan §7 step 3.1; free, no lessons generated). Every question tagged with a number-line or function-plot component or candidate was re-read against main 267261c. Other tags are the 2026-11-13 baseline's, which stays as it was.
   - **Questions that need a picture, fully drawn by a component:** 27 → 33 of 145 (19% → 23%); open 18 → 23, held out 9 → 10.
   - **Now fully drawn (open):** two jumps through 50; a slope triangle from two points; m and c with slope and intercept marks; domain and range; the symmetry axis.

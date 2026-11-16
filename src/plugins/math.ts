@@ -22,6 +22,10 @@ export const MATH_RECIPES = {
     // Marks change what the plot draws, so two plots differing only in marks are different visuals.
     semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
     output_kinds: ["plot"],
+    // Parameters that hold lesson-number indexes: a section request limits their items to the indexes the
+    // section may use, as it limits `numbers`, and leaves them out when it may use none. The speed gate of
+    // 2026-11-15 lost two lessons to x positions written here ([1, 3] for x = 1 and 3), repeated on every retry.
+    number_index_parameters: ["sample_x_numbers"],
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
     model_guidance: "函数图：公式引用滑块改曲线；采样点另声明",

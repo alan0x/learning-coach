@@ -21,7 +21,10 @@ export function validatePlotSampleNumbers(value: unknown, numberCount: number, p
   if (value === undefined) return [];
   if (!Array.isArray(value) || !value.length || value.length > 2 || new Set(value).size !== value.length
     || value.some(number => !Number.isInteger(number) || number < 1 || number > numberCount)) {
-    fail("LESSON_PLAN_NUMBER_REFERENCE", path, "use one or two distinct lesson number indexes for the sample x-coordinates");
+    // The usual slip is x positions written here ([1, 3] for x = 1 and 3): say what the field holds.
+    fail("LESSON_PLAN_NUMBER_REFERENCE", path, numberCount === 0
+      ? "sample_x_numbers holds lesson number indexes, not x values, and this lesson has no numbers: leave sample_x_numbers out"
+      : `sample_x_numbers holds one or two lesson number indexes (1 to ${numberCount}), not x values; leave it out when no point moves along the curve`);
   }
   return value;
 }

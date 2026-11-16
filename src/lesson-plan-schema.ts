@@ -159,13 +159,28 @@ function modelReusableBoardSchema(): LessonPlanJsonSchema {
   }, ["kind", "board_kind"]);
 }
 
-function visualParametersSchema(allowedCapabilities: LessonPlanCapability[]): LessonPlanJsonSchema {
+/**
+ * A visual's parameter properties. With `numberIndexes` (a section request, whose outline is known), each
+ * parameter a recipe declares in `number_index_parameters` takes only those indexes, or is left out when
+ * there are none. Without it (the bootstrap, which writes the outline in the same reply), as declared.
+ */
+function visualParametersSchema(allowedCapabilities: LessonPlanCapability[], numberIndexes?: readonly number[]): LessonPlanJsonSchema {
   const modelParameters = new Set(allowedCapabilities.flatMap(
     (capability) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_parameter_names],
   ));
   const declared: Record<string, unknown> = {};
   if (modelParameters.has("title")) declared.title = string(240);
   for (const capability of allowedCapabilities) Object.assign(declared, RECIPE_SCHEMA_PROPERTIES[capability]);
+  if (numberIndexes !== undefined) {
+    for (const capability of allowedCapabilities) {
+      const indexParameters = (LESSON_PLAN_CAPABILITY_REGISTRY[capability] as { number_index_parameters?: readonly string[] }).number_index_parameters ?? [];
+      for (const name of indexParameters) {
+        if (!(name in declared)) continue;
+        if (numberIndexes.length === 0) delete declared[name];
+        else declared[name] = { ...(declared[name] as Record<string, unknown>), items: { enum: [...numberIndexes] } };
+      }
+    }
+  }
   const order: readonly string[] = SCHEMA_PROPERTY_ORDER;
   const properties = Object.fromEntries([
     ...order.filter((name) => name in declared),
@@ -292,7 +307,7 @@ function courseVisualCreatesSchema(
       moment: integer(1, 12),
       timing: { enum: timingNames },
       content: object({
-        parameters: visualParametersSchema([capability]),
+        parameters: visualParametersSchema([capability], allowedNumberIndexes),
         ...(numberCount > 0 && numberLimit > 0 && capability !== "function_plot" ? {
           numbers: {
             type: "array",

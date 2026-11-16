@@ -30,6 +30,7 @@ const {
   buildLessonPlanAdmissionOutlineJsonSchema,
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
+  buildLessonPlanBootstrapJsonSchema,
   compileAndValidateLessonPlan,
   compileLessonPlan,
   deriveLessonRequestParts,
@@ -4950,4 +4951,33 @@ test("a count shared with a visual of another range is refused when the shared r
   plan.sections[0].moments[0].actions.find((action) => action.action === "animate").end_value = 13;
   assert.throws(() => compileAndValidateLessonPlan(plan), (error) => error.code === "LESSON_PLAN_OUTLINE_VISUAL"
     && error.capability === "rectangle_unit_square_array" && /number 1 is 12/.test(error.message));
+});
+
+// Plan §7 step 3.6a: x positions written as sample_x_numbers ([1, 3] for x = 1 and 3) were refused on every
+// retry in the speed gate of 2026-11-15. A section request limits them to the section's lesson-number indexes.
+test("a section request limits sample_x_numbers to the lesson-number indexes, and leaves it out with none", () => {
+  const outlineWith = (numbers) => ({
+    version: "0.1", title: "Plot", goals: ["Read the graph"], numbers,
+    course_visuals: [{ capability: "function_plot", create_section: 1, use_sections: [1], relation: "primary", reusable_item: 1 }],
+    sections: [{ purpose: "Draw the curve", allowed_capabilities: ["function_plot"], reusable_items: [{ kind: "visual", purpose: "the curve" }] }],
+    close: { summary: "Done" },
+  });
+  const sampleSchema = (schema) => {
+    const found = [];
+    const walk = (node) => {
+      if (!node || typeof node !== "object") return;
+      if (node.properties?.sample_x_numbers) found.push(node.properties.sample_x_numbers);
+      Object.values(node).forEach(walk);
+    };
+    walk(schema);
+    return found;
+  };
+  const number = (label) => ({ initial: 1, min: 0, max: 5, label });
+  const two = sampleSchema(buildLessonPlanSectionDraftJsonSchema(outlineWith([number("x"), number("x2")]), 1));
+  assert.ok(two.length > 0);
+  assert.ok(two.every((schema) => JSON.stringify(schema.items) === JSON.stringify({ enum: [1, 2] })), JSON.stringify(two));
+  assert.deepEqual(sampleSchema(buildLessonPlanSectionDraftJsonSchema(outlineWith([]), 1)), []);
+  // The bootstrap writes the outline in the same reply, so its schema keeps any integer.
+  const bootstrap = sampleSchema(buildLessonPlanBootstrapJsonSchema(1));
+  assert.ok(bootstrap.length > 0 && bootstrap.every((schema) => schema.items.type === "integer"));
 });
