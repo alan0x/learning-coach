@@ -20,6 +20,4 @@ export interface CoachSubjectPlugin {
   /** Provider-schema properties each recipe adds to a visual's parameters. */
   schema_properties: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   prompt_rules: Readonly<Partial<Record<PromptSlot, string>>>;
-  /** Per compiled kind, the expressions it evaluates besides its bindings (a plot's curves). */
-  output_expressions?: Readonly<Record<string, (content: Record<string, unknown>) => unknown[]>>;
 }

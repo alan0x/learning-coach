@@ -8,7 +8,7 @@ import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
 import { PLUGIN_HOOKS, RECIPE_HOOKS } from "./plugins/hooks.js";
 export { PLUGIN_COMPILERS };
 
-export { LESSON_PLAN_SCENE_INITIAL_CAMERAS, includeWrittenCardsInFocus, mathExpressionToOll } from "./recipe-kit.js";
+export { includeWrittenCardsInFocus, mathExpressionToOll } from "./recipe-kit.js";
 
 export interface CompileLessonPlanOptions extends ResolveLessonPlanOptions {
   construction_rules?: "legacy" | "explicit-v1";
@@ -29,12 +29,9 @@ export interface CompiledLessonPlan {
   view_adjustments: Array<{ section: number; reason: string; detail: string }>;
 }
 
-/** Compiled kinds a lesson number can drive: every output kind of an installed recipe with number inputs. */
-const NUMBER_DRIVEN_KINDS: ReadonlySet<string> = new Set(INSTALLED_PLUGINS.flatMap((plugin) => Object.values(plugin.recipes)
-  .flatMap((recipe) => {
-    const entry = recipe as { number_inputs: readonly string[]; output_kinds: readonly string[] };
-    return entry.number_inputs.length ? entry.output_kinds : [];
-  })));
+/** Compiled kinds a lesson number can drive: every output kind of a registered recipe with number inputs. */
+const NUMBER_DRIVEN_KINDS: ReadonlySet<string> = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { number_inputs?: readonly string[]; output_kinds?: readonly string[] }>)
+  .flatMap((recipe) => (recipe.number_inputs?.length ? recipe.output_kinds ?? [] : [])));
 
 function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbers = true): string {
   const sourceParameters = content.parameters ?? {};
@@ -192,9 +189,9 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
   // blamed on the fit that pushed it out (a 3 by 3 square drawn 1 by 3 beside a cube section from −1 to 1),
   // not on the first visual that happens to share the number.
   const fits = new Map<number, Array<{ capability: string; path: string; before: [number, number]; after: [number, number] }>>();
-  const publishedPlotNumbers = new Set<number>();
+  const publishedFixedRangeNumbers = new Set<number>();
   for (const [sectionIndex, section] of plan.sections.entries()) {
-    const newPlotNumbers = new Set<number>();
+    const newFixedRangeNumbers = new Set<number>();
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
         if ((action.action !== "create" && action.action !== "revise")
@@ -204,7 +201,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
         if (bound?.length) content.numbers = bound;
         else if (bound) delete content.numbers;
         if (recipeDeclares(content.capability, "ranges_fixed_once_shown")) {
-          for (const number of bound ?? []) newPlotNumbers.add(number);
+          for (const number of bound ?? content.numbers ?? []) newFixedRangeNumbers.add(number);
         }
         const fit = RECIPE_HOOKS[content.capability]?.fit_numbers;
         if (fit && action.action === "create") {
@@ -221,7 +218,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
           if (!definition || !policy) continue;
           if (RECIPE_HOOKS[content.capability]?.free_number?.(content, inputIndex)) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
-          const prior = publishedPlotNumbers.has(numberIndex)
+          const prior = publishedFixedRangeNumbers.has(numberIndex)
             ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step }
             : undefined;
           const range = countRange(policy);
@@ -265,7 +262,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
         }
       }
     }
-    for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
+    for (const number of newFixedRangeNumbers) publishedFixedRangeNumbers.add(number);
   }
   if (constrained.size === 0) return;
   // Counts are whole numbers: 3.4 squares draws as 3, which is a rounding, not a change.
@@ -895,7 +892,15 @@ function validateCompiledVisualEffects(lesson: AuthoringLesson): void {
         visualExpressions.push((binding as Record<string, unknown>).expression);
       }
     });
-    for (const plugin of INSTALLED_PLUGINS) visualExpressions.push(...(plugin.output_expressions?.[action.kind]?.(content) ?? []));
+    // An OLL plot also evaluates each curve's formula (an OLL field, whichever plugin built the plot).
+    if (action.kind === "plot") {
+      const curves = Array.isArray(content.curves) ? content.curves : [];
+      curves.forEach((curve) => {
+        if (curve && typeof curve === "object" && !Array.isArray(curve)) {
+          visualExpressions.push((curve as Record<string, unknown>).expression);
+        }
+      });
+    }
   })));
 
   for (const [variable, path] of required) {

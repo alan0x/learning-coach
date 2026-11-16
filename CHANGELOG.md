@@ -2,12 +2,15 @@
 
 ## Unreleased
 
-- **Coach's core names no recipe** (plan §2.3, §7 step 3.4, Goal 1; no lesson or request changes). The four `function_plot` special cases in the compiler, schema and generation, and the compiler's hard-coded list of drawable kinds, are replaced by what the math plugin declares:
-  - `numbers_from_parameters` on the recipe: its lesson numbers come from its parameters, so the schema gives it no number list and generation assumes none;
-  - `ranges_fixed_once_shown` on the recipe: a number it binds keeps its range once its section is published;
-  - the plugin's `output_expressions`: a plot's curve formulas count as expressions a numeric control can affect;
-  - the drawable kinds are every output kind of an installed recipe with number inputs (the same four).
-  - A test fails if the core files name a recipe again. Requests are byte-identical (request-hash test); replays of the 139 recorded lessons, the trial, run B and the gate are identical.
+- **Coach's core names no recipe** (plan §2.3, §7 step 3.4, Goal 1; no lesson or request changes). Recipe knowledge in core becomes declarations on the recipes:
+  - `numbers_in_parameters` (the plot): its lesson numbers come from its parameters, so the schema gives it no number list and generation assumes none;
+  - `ranges_fixed_once_shown` (the plot): a number it shows keeps its range once its section is published (from `bound_numbers`, else the visual's numbers);
+  - `initial_camera` (the three 3D recipes): replaces the camera table keyed by recipe names in `recipe-kit.ts`.
+  - The drawable kinds are every output kind of a registered recipe with number inputs, the same four.
+  - A plot's curve formulas stay in core, as an OLL plot field that every plugin's plots share.
+  - **Test:** every file outside `src/plugins` is scanned. It fails on a recipe name quoted, used as a property or as a key, or compared with a capability; a name that is also an OLL node kind may appear only as that kind.
+  - **Review:** the first version gave the plot curves to the math plugin, although physics plots use them too, and it left the camera table in place. Its test read four files and quoted names only.
+  - Requests are byte-identical (request-hash test); replays of the 139 recorded lessons, the trial, run B and the gate are identical.
 
 - **M1 re-tagged after the switch-ons** (`testsuite/math-expressiveness-m1-2026-11-15.json`, plan §7 step 3.1; free, no lessons generated). Every question tagged with a number-line or function-plot component or candidate was re-read against main 267261c. Other tags are the 2026-11-13 baseline's, which stays as it was.
   - **Questions that need a picture, fully drawn by a component:** 27 → 33 of 145 (19% → 23%); open 18 → 23, held out 9 → 10.

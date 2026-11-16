@@ -141,16 +141,23 @@ test("a compiled lesson records the plugins that built its visuals", () => {
 });
 
 // Plan §2.3 / §7 step 3.4 (Goal 1): Coach's core knows no recipe by name; what a recipe needs it declares
-// (numbers_from_parameters, ranges_fixed_once_shown, a plugin's output_expressions). A name that is also an
-// OLL node kind (number_line) may appear as that kind.
+// (numbers_in_parameters, ranges_fixed_once_shown, initial_camera). Every file outside src/plugins is core.
+// A recipe name that is also an OLL node kind (number_line) may appear as that kind, never compared with a
+// capability.
 test("Coach's core files name no recipe", async () => {
-  const { readFileSync } = await import("node:fs");
+  const { readFileSync, readdirSync } = await import("node:fs");
   const recipes = [...RECIPE_CATALOG_ORDER, ...api.TRIAL_RECIPES];
   const kinds = new Set(Object.values(api.LESSON_PLAN_CAPABILITY_REGISTRY).flatMap((recipe) => recipe.output_kinds));
-  for (const file of ["lesson-plan.ts", "lesson-plan-compiler.ts", "lesson-plan-schema.ts", "lesson-plan-generation.ts"]) {
+  const files = readdirSync(new URL("../src/", import.meta.url)).filter((name) => name.endsWith(".ts"));
+  assert.ok(files.length > 10);
+  for (const file of files) {
     const text = readFileSync(new URL(`../src/${file}`, import.meta.url), "utf8");
-    for (const name of recipes.filter((recipe) => !kinds.has(recipe))) {
-      assert.equal(new RegExp(`["'\`]${name}["'\`]`, "u").test(text), false, `${file} names ${name}`);
+    for (const name of recipes) {
+      assert.equal(new RegExp(`capability\\w*\\s*[!=]==?\\s*["'\`]${name}["'\`]`, "u").test(text), false, `${file} compares a capability with ${name}`);
+      if (kinds.has(name)) continue;
+      for (const pattern of [`["'\`]${name}["'\`]`, `\\.${name}\\b`, `(^|[\\s{,])${name}\\s*:`]) {
+        assert.equal(new RegExp(pattern, "mu").test(text), false, `${file} names ${name} (${pattern})`);
+      }
     }
   }
 });

@@ -24,7 +24,7 @@ export const MATH_RECIPES = {
     output_kinds: ["plot"],
     // Its lesson numbers are read from its parameters (formula references and sample_x_numbers): the
     // model writes no number list, and none is assumed for it.
-    numbers_from_parameters: true,
+    numbers_in_parameters: true,
     // The view is framed to the numbers it binds, so their ranges stay as they are once its section has
     // been published; a later animation may not widen them.
     ranges_fixed_once_shown: true,
@@ -79,6 +79,8 @@ export const MATH_RECIPES = {
     model_parameter_names: ["title"],
     required_model_schema_parameters: [],
     semantic_parameters: [],
+    // The scene's first camera; a "turn to this view" task must start elsewhere.
+    initial_camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["solid_3d", "section_plane"],
@@ -92,6 +94,8 @@ export const MATH_RECIPES = {
     model_parameter_names: ["title", "expression", "section_axis", "section_value"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
+    // The scene's first camera; a "turn to this view" task must start elsewhere.
+    initial_camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["function_surface_3d", "section_plane"],
@@ -105,6 +109,8 @@ export const MATH_RECIPES = {
     model_parameter_names: ["title", "expression", "level", "section_axis"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "level", "section_axis"],
+    // The scene's first camera; a "turn to this view" task must start elsewhere.
+    initial_camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["implicit_surface_3d", "section_plane"],
@@ -294,12 +300,6 @@ export const MATH_PLUGIN = {
   subject: { description: MATH_SUBJECT_DESCRIPTION },
   recipes: MATH_RECIPES,
   schema_properties: MATH_SCHEMA_PROPERTIES,
-  // Expressions a compiled plot evaluates besides its bindings: each curve's formula. A numeric control
-  // that appears in one has an effect.
-  output_expressions: {
-    plot: (content: Record<string, unknown>) => (Array.isArray(content.curves) ? content.curves : [])
-      .flatMap((curve) => (curve && typeof curve === "object" && !Array.isArray(curve) ? [(curve as Record<string, unknown>).expression] : [])),
-  },
   prompt_rules: {
     "outline.visual_choice": "多边形重排选 polygon_pieces、rigid_rearrangement、area_relation；圆面积选 circle_area_rearrangement。",
     "section.formulas": "function_plot：formulas 写右侧公式，横轴 x。平移曲线写 -(x-n1)^2+n2，不代入初值。固定曲线上移动点用 sample_x_numbers=[1,2]（A/B 横坐标，单点只写一个）；不用 content.numbers。多式仅静态比较。固定直线两点斜率不变；重合是0/0。陡峭看斜率绝对值。marks：intercepts 截距、vertex 顶点、symmetry_axis 对称轴（一次或二次）、slope_triangle 两点 Δx Δy、domain 定义域、range 值域；位置由程序算。分段写 pieces（formulas 照写各段）：每段 formula、x_from、x_to（无界不写）、ends 开闭如 [)，可为常数。",
