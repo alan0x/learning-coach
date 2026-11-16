@@ -11834,6 +11834,9 @@ function buildNumberLine(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
+var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/plot-tokens.js
 var PlotDerivationRefusal = class extends Error {
   path;
@@ -11870,6 +11873,15 @@ function plotFormulaText(tokens) {
   if (stack.length !== 1)
     throw new Error("expression does not produce one result");
   return stack[0];
+}
+function checkPlotFormula(tokens, path) {
+  try {
+    plotFormulaText(tokens);
+    if (tokens.some((token) => token.kind === "literal" && !Number.isFinite(token.value)))
+      throw new Error("non-finite literal");
+  } catch (error) {
+    throw new PlotDerivationRefusal(path, `the formula is not well formed (${error.message})`);
+  }
 }
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/plot-marks.js
@@ -11954,9 +11966,10 @@ function polynomialOf(tokens, maxDegree = 2) {
         const exponent = coefficient(right, 0);
         if (degree(right) > 0)
           return void 0;
-        if (degree(left) === 0)
-          result = [{ text: `${wrap(coefficient(left, 0))}^${wrap(exponent)}` }];
-        else if (exponent.value === 0)
+        if (degree(left) === 0) {
+          const base = coefficient(left, 0);
+          result = base.value !== void 0 && exponent.value !== void 0 && Number.isFinite(base.value ** exponent.value) ? [constant(base.value ** exponent.value)] : [{ text: `${wrap(base)}^${wrap(exponent)}` }];
+        } else if (exponent.value === 0)
           result = [constant(1)];
         else if (exponent.value === 1)
           result = left;
@@ -11987,7 +12000,11 @@ function times(left, right, maxDegree = 2) {
     }
   return result;
 }
-function markParts(tokens, marks, labels, check, path) {
+function markParts(tokens, requested, labels, check, path) {
+  const marks = requested.filter((mark) => mark === "intercepts" || mark === "vertex" || mark === "symmetry_axis");
+  if (!marks.length)
+    return [];
+  checkPlotFormula(tokens, `${path}.marks`);
   const polynomial2 = polynomialOf(tokens);
   const refuse = (mark, why) => {
     throw new PlotDerivationRefusal(`${path}.marks`, `the ${mark} mark ${why}; leave it out of marks and do not narrate it`);
@@ -12036,9 +12053,15 @@ function markParts(tokens, marks, labels, check, path) {
 var polynomialText = ([c, b, a]) => `${wrap(a)}*x^2+${wrap(b)}*x+${wrap(c)}`;
 function crossCheck(tokens, [c, b, a], { variables, samples }, path) {
   const names = ["x", ...variables];
-  const formula = compileMathExpression(plotFormulaText(tokens), names);
-  const polynomial2 = compileMathExpression(polynomialText([c, b, a]), names);
-  for (const values of samples)
+  let formula, polynomial2;
+  try {
+    formula = compileMathExpression(plotFormulaText(tokens), names);
+    polynomial2 = compileMathExpression(polynomialText([c, b, a]), names);
+  } catch {
+    throw new PlotDerivationRefusal(`${path}.marks`, "the marks could not be derived for this formula; leave marks out");
+  }
+  const lowered = samples.map((values) => Object.fromEntries(Object.entries(values).map(([name, value2]) => [name.toLowerCase(), value2])));
+  for (const values of lowered)
     for (const x of [-2.5, -1, 0, 0.5, 3]) {
       const expected = formula({ ...values, x }), actual = polynomial2({ ...values, x });
       if (!Number.isFinite(expected) && !Number.isFinite(actual))
@@ -12153,6 +12176,7 @@ function shapeOf(tokens, root) {
   return void 0;
 }
 function formulaBars(tokens, want, check, path) {
+  checkPlotFormula(tokens, `${path}.marks`);
   const refuse = (what, why) => {
     throw new PlotDerivationRefusal(`${path}.marks`, `the ${what} mark ${why}; leave it out of marks and do not narrate it`);
   };
@@ -12262,6 +12286,8 @@ function guarded(bars, first, refuse) {
   return bars;
 }
 function pieceBars(pieces, want, path) {
+  for (const piece of pieces)
+    checkPlotFormula(piece.tokens, `${path}.marks`);
   const bars = [];
   if (want.domain) {
     for (const piece of pieces) {
