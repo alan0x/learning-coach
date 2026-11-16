@@ -127,6 +127,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       // were refused for it, one call each), and `marks: []` the same way.
       if (Array.isArray(parameters.pieces) && parameters.pieces.length === 0) delete parameters.pieces;
       if (Array.isArray(parameters.marks) && parameters.marks.length === 0) delete parameters.marks;
+      lowerPoints(parameters, numberCount);
       if (parameters.pieces !== undefined) return lowerPieces(parameters, numberCount);
       const rawFormulas = parameters.formulas !== undefined
         ? parameters.formulas
@@ -217,7 +218,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       const pathToSamples = `${path}.parameters.sample_x_numbers`;
       const samples = validatePlotSampleNumbers(visualParameters.sample_x_numbers, numberCount, pathToSamples);
       if (samples.length && plotCurveNumbers(visualParameters).length) {
-        fail("LESSON_PLAN_INTERACTION_MISMATCH", pathToSamples, "sample_x_numbers requires a fixed curve; use formula references for curve controls");
+        fail("LESSON_PLAN_INTERACTION_MISMATCH", pathToSamples, "a dragged point (points {slider}) needs a fixed curve; use formula references for curve controls");
       }
       if (visualParameters.expression_tokens !== undefined) {
         const expressionTokens = array(
@@ -287,6 +288,56 @@ function namesToNumbers(formula: unknown, labels: readonly string[], visualNumbe
     const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
     return matches.length === 1 ? `n${matches[0]}` : name;
   });
+}
+
+/**
+ * Points on a plot (OLL decision 0018 as amended, decision 0020): the model writes what each point is, never
+ * an index into another list. A fixed point is its x and y, both values the narration says; the compiler
+ * checks y against the curve (a stand-in formula is caught without reading text) and draws it. A point the
+ * learner drags names the slider that moves it, as the formula does (`n1`); it lowers to the internal
+ * `sample_x_numbers`, so every check of moving points still applies. Before, the model wrote
+ * `sample_x_numbers` itself and often put x positions there ([1, 3] for x = 1 and 3): 42 recorded slips, and
+ * lessons lost when a retry repeated it. A point the program cannot draw is refused, never dropped: the
+ * narration talks about it.
+ */
+function lowerPoints(parameters: Record<string, unknown>, numberCount: number): void {
+  const raw = parameters.points;
+  if (raw === undefined) return;
+  const path = "$lessonPlanSection.visual.parameters.points";
+  if (Array.isArray(raw) && raw.length === 0) {
+    delete parameters.points;
+    return;
+  }
+  if (!Array.isArray(raw) || raw.length > 2) fail("LESSON_PLAN_POINT", path, "points holds one or two points");
+  if (parameters.pieces !== undefined) fail("LESSON_PLAN_POINT", path, "points sit on one formula; a piecewise function takes no points");
+  const items = (raw as unknown[]).map((entry, index) => {
+    const where = `${path}[${index}]`;
+    const point = entry && typeof entry === "object" && !Array.isArray(entry) ? entry as Record<string, unknown> : undefined;
+    const fixed = point && typeof point.x === "number" && Number.isFinite(point.x) && typeof point.y === "number" && Number.isFinite(point.y) && point.slider === undefined;
+    const moving = point && typeof point.slider === "string" && point.x === undefined && point.y === undefined;
+    if (!fixed && !moving) fail("LESSON_PLAN_POINT", where, "a point is either {x, y}, a fixed point on the curve, or {slider: \"n1\"}, a point the learner drags by that lesson number");
+    const label = typeof point!.label === "string" && point!.label.trim() ? point!.label.trim().slice(0, 8) : undefined;
+    if (fixed) return { kind: "fixed" as const, x: point!.x as number, y: point!.y as number, ...(label ? { label } : {}) };
+    const match = /^\s*n(\d+)\s*$/iu.exec(point!.slider as string);
+    const number = match ? Number(match[1]) : Number.NaN;
+    if (!(number >= 1 && number <= numberCount)) {
+      fail("LESSON_PLAN_POINT", `${where}.slider`, numberCount
+        ? `the slider of a dragged point is one of the lesson numbers n1 to n${numberCount}`
+        : "this lesson has no lesson numbers, so no point can be dragged: write the point as {x, y}");
+    }
+    return { kind: "moving" as const, number };
+  });
+  if (items.some((item) => item.kind === "fixed") && items.some((item) => item.kind === "moving")) {
+    fail("LESSON_PLAN_POINT", path, "the points of one plot are all fixed ({x, y}) or all dragged ({slider}), not both");
+  }
+  if (items[0]!.kind === "moving") {
+    const numbers = items.map((item) => (item as { number: number }).number);
+    if (new Set(numbers).size !== numbers.length) fail("LESSON_PLAN_POINT", path, "two dragged points need two different lesson numbers");
+    delete parameters.points;
+    parameters.sample_x_numbers = numbers;
+    return;
+  }
+  parameters.points = items.map(({ kind: _kind, ...point }) => point);
 }
 
 /**

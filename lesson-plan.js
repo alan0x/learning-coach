@@ -12665,11 +12665,11 @@ var MATH_RECIPES = {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
-    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "marks", "pieces"],
+    parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces", "points"],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "points", "curve_label", "curve_labels", "x_label", "y_label", "marks", "pieces"],
     required_model_schema_parameters: ["formulas"],
     // Marks change what the plot draws, so two plots differing only in marks are different visuals.
-    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
+    semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "points", "marks", "pieces"],
     output_kinds: ["plot"],
     // Its lesson numbers are read from its parameters (formula references and sample_x_numbers): the
     // model writes no number list, and none is assumed for it.
@@ -12905,7 +12905,9 @@ var MATH_SCHEMA_PROPERTIES = {
     x_label: text2,
     y_label: text2,
     formulas: { type: "array", minItems: 1, maxItems: 8, items: text2 },
-    sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } },
+    // A point is what the model means: a fixed point {x, y} on the curve, or a dragged point {slider: "n1"}
+    // (decision 0020; replaces sample_x_numbers, which asked for an index into the outline's numbers).
+    points: { type: "array", maxItems: 2, items: { type: "object", additionalProperties: false, properties: { x: { type: "number" }, y: { type: "number" }, slider: text2, label: text2 } } },
     marks: { type: "array", maxItems: PLOT_MARKS2.length, items: { enum: [...PLOT_MARKS2] } },
     pieces: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["formula", "ends"], properties: { formula: text2, x_from: { type: "number" }, x_to: { type: "number" }, ends: { enum: ["[]", "[)", "(]", "()"] } } } }
   },
@@ -12943,7 +12945,7 @@ var MATH_PLUGIN = {
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
-    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002marks\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF08\u4E00\u6B21\u6216\u4E8C\u6B21\uFF09\u3001slope_triangle \u4E24\u70B9 \u0394x \u0394y\u3001domain \u5B9A\u4E49\u57DF\u3001range \u503C\u57DF\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u3002\u5206\u6BB5\u5199 pieces\uFF08formulas \u7167\u5199\u5404\u6BB5\uFF09\uFF1A\u6BCF\u6BB5 formula\u3001x_from\u3001x_to\uFF08\u65E0\u754C\u4E0D\u5199\uFF09\u3001ends \u5F00\u95ED\u5982 [)\uFF0C\u53EF\u4E3A\u5E38\u6570\u3002",
+    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u70B9\u5199 points\uFF08\u81F3\u591A 2 \u4E2A\uFF09\uFF1A\u56FA\u5B9A\u70B9\u5199 x\u3001y\uFF08\u66F2\u7EBF\u4E0A\u7684\u503C\uFF09\uFF1B\u5B66\u751F\u62D6\u7684\u70B9\u5199 slider\uFF08\u5982 n1\uFF0C\u8BE5\u6570\u662F\u70B9\u7684\u6A2A\u5750\u6807\uFF09\uFF0C\u66F2\u7EBF\u987B\u56FA\u5B9A\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002marks\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF08\u4E00\u6B21\u6216\u4E8C\u6B21\uFF09\u3001slope_triangle \u4E24\u70B9 \u0394x \u0394y\u3001domain \u5B9A\u4E49\u57DF\u3001range \u503C\u57DF\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u3002\u5206\u6BB5\u5199 pieces\uFF08formulas \u7167\u5199\u5404\u6BB5\uFF09\uFF1A\u6BCF\u6BB5 formula\u3001x_from\u3001x_to\uFF08\u65E0\u754C\u4E0D\u5199\uFF09\u3001ends \u5F00\u95ED\u5982 [)\uFF0C\u53EF\u4E3A\u5E38\u6570\u3002",
     "section.bounds": "\u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002",
     "section.linked_numbers": "\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002",
     "section.constructions": "geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002"
@@ -13342,6 +13344,7 @@ var SCHEMA_PROPERTY_ORDER = [
   "y_label",
   "formulas",
   "sample_x_numbers",
+  "points",
   "expression",
   "section_axis",
   "section_value",
@@ -14389,7 +14392,7 @@ function normalizePlotDraftBindings(draft, context) {
       const unresolvedUse = (outline.numbers ?? []).some((_, index) => onlySampleControl(index + 1) && structuralUse(draft, index + 1));
       const explicitlyHere = otherSamplePlots.length > 0 && !visuals.some((item) => item.visual !== visual && item.moment === moment && item.visual.capability === "function_plot" && validSamples(item.visual).length) && clauses(draft.moments[moment - 1].narration).some(asksForSamples) && !/另一[张幅]|另一.*图|other (?:plot|graph)/iu.test(draft.moments[moment - 1].narration);
       if (sampleIntentUnmet || explicitlyHere || needed || unresolvedUse) {
-        fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, "sample_x_numbers moves points on a fixed curve; keep formula references for changing the curve, or use a separate fixed curve for moving points");
+        fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, "a dragged point (points {slider}) moves on a fixed curve; keep formula references for changing the curve, or use a separate fixed curve for dragged points");
       }
       delete visual.parameters.sample_x_numbers;
       candidates2.filter(onlySampleControl).forEach((number) => dropped.add(number));
@@ -14423,7 +14426,7 @@ function normalizePlotDraftBindings(draft, context) {
     } else {
       if (fixed && singleFormula && sampleIntentUnmet && (plots.length === 1 || candidates.length)) {
         const indexes = candidates.slice(0, 2);
-        fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length ? `Use parameters.sample_x_numbers: [${indexes.join(",")}] for the sample x-coordinate controls; use one index for one point` : "Use parameters.sample_x_numbers with the lesson number index of each sample's x-coordinate");
+        fail2("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length ? `Use parameters.points with ${indexes.map((index) => `{slider: "n${index}"}`).join(" and ")} for the points the learner drags; one entry for one point` : `Use parameters.points with {slider: "nK"}, naming the lesson number that is each dragged point's x`);
       }
       if (wantsVertex && !curve.length && !hasSampleIntent || candidates.some((number) => structuralUse(draft, number) || controlsNamed(number))) {
         fail2("LESSON_PLAN_INTERACTION_MISMATCH", formulasPath, "Use the lesson number references in the curve formula when sliders change the curve");
@@ -14432,7 +14435,7 @@ function normalizePlotDraftBindings(draft, context) {
         fail2(
           "LESSON_PLAN_INTERACTION_MISMATCH",
           formulasPath,
-          "The demonstration uses an unbound number; reference it in the formula for a curve control, or use parameters.sample_x_numbers for a point"
+          "The demonstration uses an unbound number; reference it in the formula for a curve control, or name it in parameters.points as {slider} for a dragged point"
         );
       }
       if (candidates.length) {
@@ -14454,7 +14457,7 @@ function normalizePlotDraftBindings(draft, context) {
     fail2(
       "LESSON_PLAN_INTERACTION_MISMATCH",
       `$lessonPlanSection[${draft.section}].moments`,
-      "The published graph has no moving sample point; add a fixed curve with sample_x_numbers in this section or revise the instruction"
+      "The published graph has no dragged point; add a fixed curve with points {slider} in this section or revise the instruction"
     );
   }
   const knownBindings = new Set(allVisuals.flatMap((item) => bound(item.visual)));
@@ -14695,7 +14698,7 @@ function validateTeachingClaims(plan) {
           throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "moving the whole curve requires formula number references; static sample inputs only move points");
         }
         if (/两个点|两点|two points/i.test(text3) && /分别.{0,8}(移动|调整|拖)|移动.{0,6}(两个点|两点)|独立.{0,8}(点|控制)|move.{0,12}(both|two)/i.test(text3) && count !== 2) {
-          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and parameters.sample_x_numbers=[1,2]; received ${count} sample inputs, dynamic=${dynamic}`);
+          throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, `two independently moving points require a formula without n1/n2 and parameters.points [{slider: "n1"}, {slider: "n2"}]; received ${count} sample inputs, dynamic=${dynamic}`);
         }
         if (/拖(?:动|拽).{0,10}(图上|图中|曲线上).{0,8}点/.test(text3)) {
           throw new LessonPlanError("LESSON_PLAN_INTERACTION_MISMATCH", path, "plot points use sliders; direct point dragging is unavailable");
@@ -14806,6 +14809,7 @@ var MATH_HOOKS = {
     lower_model_parameters(parameters3, { numberCount, numberLabels = [], visualNumbers = [] }) {
       if (Array.isArray(parameters3.pieces) && parameters3.pieces.length === 0) delete parameters3.pieces;
       if (Array.isArray(parameters3.marks) && parameters3.marks.length === 0) delete parameters3.marks;
+      lowerPoints(parameters3, numberCount);
       if (parameters3.pieces !== void 0) return lowerPieces(parameters3, numberCount);
       const rawFormulas = parameters3.formulas !== void 0 ? parameters3.formulas : typeof parameters3.expression === "string" ? [parameters3.expression] : Array.isArray(parameters3.expressions) ? parameters3.expressions : void 0;
       if (rawFormulas === void 0) return;
@@ -14871,7 +14875,7 @@ var MATH_HOOKS = {
       const pathToSamples = `${path}.parameters.sample_x_numbers`;
       const samples = validatePlotSampleNumbers(visualParameters.sample_x_numbers, numberCount, pathToSamples);
       if (samples.length && plotCurveNumbers(visualParameters).length) {
-        fail4("LESSON_PLAN_INTERACTION_MISMATCH", pathToSamples, "sample_x_numbers requires a fixed curve; use formula references for curve controls");
+        fail4("LESSON_PLAN_INTERACTION_MISMATCH", pathToSamples, "a dragged point (points {slider}) needs a fixed curve; use formula references for curve controls");
       }
       if (visualParameters.expression_tokens !== void 0) {
         const expressionTokens = array2(
@@ -14923,6 +14927,43 @@ function namesToNumbers(formula, labels, visualNumbers) {
     const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
     return matches.length === 1 ? `n${matches[0]}` : name;
   });
+}
+function lowerPoints(parameters3, numberCount) {
+  const raw = parameters3.points;
+  if (raw === void 0) return;
+  const path = "$lessonPlanSection.visual.parameters.points";
+  if (Array.isArray(raw) && raw.length === 0) {
+    delete parameters3.points;
+    return;
+  }
+  if (!Array.isArray(raw) || raw.length > 2) fail2("LESSON_PLAN_POINT", path, "points holds one or two points");
+  if (parameters3.pieces !== void 0) fail2("LESSON_PLAN_POINT", path, "points sit on one formula; a piecewise function takes no points");
+  const items = raw.map((entry, index) => {
+    const where = `${path}[${index}]`;
+    const point = entry && typeof entry === "object" && !Array.isArray(entry) ? entry : void 0;
+    const fixed = point && typeof point.x === "number" && Number.isFinite(point.x) && typeof point.y === "number" && Number.isFinite(point.y) && point.slider === void 0;
+    const moving = point && typeof point.slider === "string" && point.x === void 0 && point.y === void 0;
+    if (!fixed && !moving) fail2("LESSON_PLAN_POINT", where, 'a point is either {x, y}, a fixed point on the curve, or {slider: "n1"}, a point the learner drags by that lesson number');
+    const label = typeof point.label === "string" && point.label.trim() ? point.label.trim().slice(0, 8) : void 0;
+    if (fixed) return { kind: "fixed", x: point.x, y: point.y, ...label ? { label } : {} };
+    const match = /^\s*n(\d+)\s*$/iu.exec(point.slider);
+    const number = match ? Number(match[1]) : Number.NaN;
+    if (!(number >= 1 && number <= numberCount)) {
+      fail2("LESSON_PLAN_POINT", `${where}.slider`, numberCount ? `the slider of a dragged point is one of the lesson numbers n1 to n${numberCount}` : "this lesson has no lesson numbers, so no point can be dragged: write the point as {x, y}");
+    }
+    return { kind: "moving", number };
+  });
+  if (items.some((item) => item.kind === "fixed") && items.some((item) => item.kind === "moving")) {
+    fail2("LESSON_PLAN_POINT", path, "the points of one plot are all fixed ({x, y}) or all dragged ({slider}), not both");
+  }
+  if (items[0].kind === "moving") {
+    const numbers = items.map((item) => item.number);
+    if (new Set(numbers).size !== numbers.length) fail2("LESSON_PLAN_POINT", path, "two dragged points need two different lesson numbers");
+    delete parameters3.points;
+    parameters3.sample_x_numbers = numbers;
+    return;
+  }
+  parameters3.points = items.map(({ kind: _kind, ...point }) => point);
 }
 var PIECE_ENDS = { "[]": [true, true], "[)": [true, false], "(]": [false, true], "()": [false, false] };
 function lowerPieces(parameters3, numberCount) {
@@ -16826,7 +16867,7 @@ function pieceBars2(pieces, want, path) {
 // src/plugins/math-compilers.ts
 function compileFunctionPlot(base, content, role, placement, plan, path) {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces", "points"], path);
   const dynamicTokens = input.expression_tokens;
   if (dynamicTokens !== void 0 && !dynamicTokens.some((token) => token.kind === "input")) {
     fail2(
@@ -16977,8 +17018,44 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
   }
   const barMarks = markList.filter((mark) => mark === "domain" || mark === "range");
   const slopeTriangle = markList.includes("slope_triangle");
+  const fixedPoints = Array.isArray(input.points) ? input.points : void 0;
+  const extraPoints = [];
+  if (fixedPoints?.length) {
+    const where = `${path}.points`;
+    if (expressions.length !== 1) fail2("LESSON_PLAN_POINT", where, "points sit on one formula; a comparison of several curves takes none");
+    if (sampleNumbers.length) fail2("LESSON_PLAN_POINT", where, "the points of one plot are all fixed ({x, y}) or all dragged ({slider}), not both");
+    if (fixedPoints.length === 1 && slopeTriangle) fail2("LESSON_PLAN_POINT", where, "a slope triangle needs two points: write the second point as {x, y}");
+    const evaluateCurve = compileMathExpression(expression, expressionVariables);
+    const valueAt = (values, x) => {
+      try {
+        return evaluateCurve({ ...values, x });
+      } catch {
+        return Number.NaN;
+      }
+    };
+    const reachedAll = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))];
+    for (const [index, point] of fixedPoints.entries()) {
+      if (!reachedAll.every((values) => Number.isFinite(valueAt(values, point.x)))) {
+        fail2("LESSON_PLAN_POINT", `${where}[${index}].x`, `the curve has no value at x = ${point.x}${curveParameters.length ? " for some slider value" : ""}; choose another x`);
+      }
+      const y = valueAt(initialState, point.x);
+      if (!pointYMatches(y, point.y)) {
+        fail2("LESSON_PLAN_POINT", `${where}[${index}].y`, `the curve gives y = ${Number(y.toPrecision(6))} at x = ${point.x}, not ${point.y}: write the curve's value, or check the formula`);
+      }
+    }
+    if (fixedPoints.length === 1) {
+      const point = fixedPoints[0];
+      const yText = replaceIdentifier(expression, "x", `(${point.x})`);
+      extraPoints.push({ kind: "point", as: "fixed-point", label: point.label ?? "P", x: String(point.x), y: yText, at: (values) => ({ x: point.x, y: valueAt(values, point.x) }) });
+      teachingPoints.push({ x: point.x, y: valueAt(initialState, point.x) });
+    }
+  }
   let references;
-  if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
+  if (fixedPoints?.length === 2) {
+    const evaluateCurve = compileMathExpression(expression, expressionVariables);
+    references = [...fixedPoints].sort((a, b) => a.x - b.x).map((point, index) => ({ x: point.x, y: evaluateCurve({ ...initialState, x: point.x }), label: point.label ?? (index ? "B" : "A") }));
+    teachingPoints.push(...references);
+  } else if (expressions.length === 1 && !sampleNumbers.length && !fixedPoints?.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
     const referencePoints = (values, xs2) => xs2.flatMap((x, index) => {
       try {
@@ -17085,6 +17162,7 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     curves: plottedCurves,
     ...samples.length ? { samples } : references ? { references } : {}
   });
+  if (extraPoints.length) appendMarks(built.actions[0], extraPoints, initialState);
   if (marks.length) appendMarks(built.actions[0], marks, initialState);
   if (bars.length) appendBars(built.actions[0], bars, initialState, (source) => compileText(plan, source));
   return {
@@ -17176,6 +17254,14 @@ function plotPieces(value2, expressionCount, path) {
     const end = (key) => piece[key] === null || piece[key] === void 0 ? null : optionalNumber(piece[key], 0, `${path}.pieces[${index}].${key}`);
     return { from: end("from"), to: end("to"), from_closed: piece.from_closed !== false, to_closed: piece.to_closed !== false };
   });
+}
+function pointYMatches(curve, written) {
+  if (!Number.isFinite(curve)) return false;
+  const text3 = String(written);
+  const digits = /e/iu.test(text3) ? 12 : text3.split(".")[1]?.length ?? 0;
+  const rounded = Number(curve.toFixed(Math.min(digits, 12)));
+  if (Math.abs(rounded - written) > 1e-9 * Math.max(1, Math.abs(written))) return false;
+  return digits > 0 || Math.abs(curve - written) <= 0.05;
 }
 function appendMarks(action, marks, initial) {
   const content = action.content;

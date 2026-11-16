@@ -26,7 +26,7 @@ function compileFunctionPlot(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces", "points"], path);
   const dynamicTokens = input.expression_tokens as LessonPlanMathExpression | undefined;
   if (dynamicTokens !== undefined
     && !dynamicTokens.some((token) => token.kind === "input")) {
@@ -221,8 +221,42 @@ function compileFunctionPlot(
   // Their x positions are fixed; the parameter sliders change the curve.
   // With marks (decision 0018) the points stand two units apart, off x = 0, where the y-intercept mark
   // sits: the first pair where the curve exists at the start and at every demonstrated state.
+  // Fixed points the model wrote as {x, y} (decision 0020; the hook lowered dragged points to samples). Each
+  // is checked against the curve and drawn at the curve's value; one the program cannot draw is refused,
+  // never dropped, since the narration talks about it.
+  const fixedPoints = Array.isArray(input.points) ? input.points as Array<{ x: number; y: number; label?: string }> : undefined;
+  const extraPoints: Array<MarkPart & { at: (values: Record<string, number>) => { x?: number; y?: number } }> = [];
+  if (fixedPoints?.length) {
+    const where = `${path}.points`;
+    if (expressions.length !== 1) fail("LESSON_PLAN_POINT", where, "points sit on one formula; a comparison of several curves takes none");
+    if (sampleNumbers.length) fail("LESSON_PLAN_POINT", where, "the points of one plot are all fixed ({x, y}) or all dragged ({slider}), not both");
+    if (fixedPoints.length === 1 && slopeTriangle) fail("LESSON_PLAN_POINT", where, "a slope triangle needs two points: write the second point as {x, y}");
+    const evaluateCurve = compileMathExpression(expression, expressionVariables);
+    const valueAt = (values: Record<string, number>, x: number) => { try { return evaluateCurve({ ...values, x }); } catch { return Number.NaN; } };
+    const reachedAll = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))];
+    for (const [index, point] of fixedPoints.entries()) {
+      if (!reachedAll.every((values) => Number.isFinite(valueAt(values, point.x)))) {
+        fail("LESSON_PLAN_POINT", `${where}[${index}].x`, `the curve has no value at x = ${point.x}${curveParameters.length ? " for some slider value" : ""}; choose another x`);
+      }
+      const y = valueAt(initialState, point.x);
+      if (!pointYMatches(y, point.y)) {
+        fail("LESSON_PLAN_POINT", `${where}[${index}].y`, `the curve gives y = ${Number(y.toPrecision(6))} at x = ${point.x}, not ${point.y}: write the curve's value, or check the formula`);
+      }
+    }
+    if (fixedPoints.length === 1) {
+      const point = fixedPoints[0]!;
+      const yText = replaceIdentifier(expression, "x", `(${point.x})`);
+      extraPoints.push({ kind: "point", as: "fixed-point", label: point.label ?? "P", x: String(point.x), y: yText, at: (values) => ({ x: point.x, y: valueAt(values, point.x) }) });
+      teachingPoints.push({ x: point.x, y: valueAt(initialState, point.x) });
+    }
+  }
   let references: Array<{ x: number; y: number; label: string }> | undefined;
-  if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
+  if (fixedPoints?.length === 2) {
+    // Two fixed points are the plot's reference points A and B, left to right, as written by the model.
+    const evaluateCurve = compileMathExpression(expression, expressionVariables);
+    references = [...fixedPoints].sort((a, b) => a.x - b.x).map((point, index) => ({ x: point.x, y: evaluateCurve({ ...initialState, x: point.x }), label: point.label ?? (index ? "B" : "A") }));
+    teachingPoints.push(...references);
+  } else if (expressions.length === 1 && !sampleNumbers.length && !fixedPoints?.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
     const referencePoints = (values: Record<string, number>, xs: readonly number[]) => xs.flatMap((x, index) => {
       try {
@@ -337,6 +371,7 @@ function compileFunctionPlot(
     curves: plottedCurves,
     ...(samples.length ? { samples } : references ? { references } : {}),
   });
+  if (extraPoints.length) appendMarks(built.actions[0] as unknown as { content: Record<string, unknown> }, extraPoints, initialState);
   if (marks.length) appendMarks(built.actions[0] as unknown as { content: Record<string, unknown> }, marks, initialState);
   if (bars.length) appendBars(built.actions[0] as unknown as { content: Record<string, unknown> }, bars, initialState, (source) => compileText(plan, source));
   return {
@@ -439,6 +474,19 @@ function plotPieces(value: unknown, expressionCount: number, path: string): Arra
     const end = (key: string) => (piece[key] === null || piece[key] === undefined ? null : optionalNumber(piece[key] as never, 0, `${path}.pieces[${index}].${key}`));
     return { from: end("from"), to: end("to"), from_closed: piece.from_closed !== false, to_closed: piece.to_closed !== false };
   });
+}
+
+/**
+ * Whether a y the model wrote is the curve's value: the curve's value rounded to the digits written equals
+ * it (1/3 written 0.33 or 0.3), and a whole number means a whole number (2 is not the curve's 1.6).
+ */
+function pointYMatches(curve: number, written: number): boolean {
+  if (!Number.isFinite(curve)) return false;
+  const text = String(written);
+  const digits = /e/iu.test(text) ? 12 : (text.split(".")[1]?.length ?? 0);
+  const rounded = Number(curve.toFixed(Math.min(digits, 12)));
+  if (Math.abs(rounded - written) > 1e-9 * Math.max(1, Math.abs(written))) return false;
+  return digits > 0 || Math.abs(curve - written) <= 0.05;
 }
 
 /**

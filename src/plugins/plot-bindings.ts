@@ -227,7 +227,7 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
         && clauses(draft.moments[moment - 1].narration).some(asksForSamples)
         && !/另一[张幅]|另一.*图|other (?:plot|graph)/iu.test(draft.moments[moment - 1].narration);
       if (sampleIntentUnmet || explicitlyHere || needed || unresolvedUse) {
-        fail("LESSON_PLAN_INTERACTION_MISMATCH", path, "sample_x_numbers moves points on a fixed curve; keep formula references for changing the curve, or use a separate fixed curve for moving points");
+        fail("LESSON_PLAN_INTERACTION_MISMATCH", path, "a dragged point (points {slider}) moves on a fixed curve; keep formula references for changing the curve, or use a separate fixed curve for dragged points");
       }
       delete visual.parameters!.sample_x_numbers;
       candidates.filter(onlySampleControl).forEach(number => dropped.add(number));
@@ -270,8 +270,8 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
       if (fixed && singleFormula && sampleIntentUnmet && (plots.length === 1 || candidates.length)) {
         const indexes = candidates.slice(0, 2);
         fail("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length
-          ? `Use parameters.sample_x_numbers: [${indexes.join(",")}] for the sample x-coordinate controls; use one index for one point`
-          : "Use parameters.sample_x_numbers with the lesson number index of each sample's x-coordinate");
+          ? `Use parameters.points with ${indexes.map((index) => `{slider: "n${index}"}`).join(" and ")} for the points the learner drags; one entry for one point`
+          : "Use parameters.points with {slider: \"nK\"}, naming the lesson number that is each dragged point's x");
       }
       if ((wantsVertex && !curve.length && !hasSampleIntent)
         || candidates.some(number => structuralUse(draft, number) || controlsNamed(number))) {
@@ -280,7 +280,7 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
       if (fixed && singleFormula && plots.length === 1 && (outline.numbers ?? []).some((_, index) =>
         unused(index + 1) && structuralUse(draft, index + 1))) {
         fail("LESSON_PLAN_INTERACTION_MISMATCH", formulasPath,
-          "The demonstration uses an unbound number; reference it in the formula for a curve control, or use parameters.sample_x_numbers for a point");
+          "The demonstration uses an unbound number; reference it in the formula for a curve control, or name it in parameters.points as {slider} for a dragged point");
       }
       if (candidates.length) {
         candidates.forEach(number => dropped.add(number));
@@ -297,7 +297,7 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
     .some(slot => inUse(earlier.section, slot)));
   if (previousDroppedPlotInUse && text.some(asksForSamples) && !activeSamplePlots.length) {
     fail("LESSON_PLAN_INTERACTION_MISMATCH", `$lessonPlanSection[${draft.section}].moments`,
-      "The published graph has no moving sample point; add a fixed curve with sample_x_numbers in this section or revise the instruction");
+      "The published graph has no dragged point; add a fixed curve with points {slider} in this section or revise the instruction");
   }
 
   const knownBindings = new Set(allVisuals.flatMap(item => bound(item.visual)));

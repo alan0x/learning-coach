@@ -369,7 +369,7 @@ test("a later instruction for an omitted sample point repairs only that section"
     },
   });
   assert.deepEqual(calls.slice(1).map(call => call.section), [2, 2, 3]);
-  assert.match(rejections[0].error.message, /no moving sample point/u);
+  assert.match(rejections[0].error.message, /no dragged point/u);
   assert.deepEqual(prefixes[0].plot, plot);
 });
 
