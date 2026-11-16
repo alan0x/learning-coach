@@ -91,6 +91,7 @@ export const SCHEMA_PROPERTY_ORDER = [
   "title", "projection", "x_label", "y_label", "formulas", "sample_x_numbers",
   "expression", "section_axis", "section_value", "level", "radius", "angle",
   "radius_expression", "center_x", "center_y", "construction", "leg_a", "leg_b", "steps", "speed", "label_style", "relation", "place",
+  "marks", "pieces",
 ] as const;
 
 /** One prompt bullet: its core text and the installed plugins' sentences, or "" when empty. */

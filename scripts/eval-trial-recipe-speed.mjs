@@ -150,7 +150,8 @@ export const NUMBER_LINE_STEPS_CASES = [
   { id: "ST-07", prompt: "在数轴上算 46 + 38：先加 40，再减去 2。", expect: { values: [46, 86, 84], steps: [[46, 86], [86, 84]] } },
 ];
 /**
- * The function-plot options (decision 0018, trial option function_plot_extensions): the plot judge's cases
+ * The function-plot options (decision 0018; offered by default since 2026-11-15, so naming
+ * function_plot_extensions now only picks these cases, and both arms differ only with --baseline-build): the plot judge's cases
  * PJ-01–17 (testsuite/plot-judge-cases.json), judged with scripts/plot-judge.mjs instead of the number-line
  * judge. PJ-15 and PJ-16 are near misses (families 0018 leaves out); PJ-17 is a plain plot.
  */

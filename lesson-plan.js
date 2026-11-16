@@ -12013,14 +12013,7 @@ var REARRANGEMENT_MODEL_GUIDANCE = "\u91CD\u6392\u8FDB\u5EA6\uFF0C\u4E0D\u6539\u
 // src/plugins/plot-mark-names.ts
 var PLOT_MARKS = ["intercepts", "vertex", "symmetry_axis", "slope_triangle", "domain", "range"];
 
-// src/plugins/trials.ts
-var processEnvironment = globalThis.process?.env;
-function trialOptionEnabled(name, list2 = processEnvironment?.LEARNING_COACH_TRIAL_RECIPES) {
-  return (list2 ?? "").split(",").map((item) => item.trim()).includes(name);
-}
-
 // src/plugins/math.ts
-var PLOT_EXTENSIONS = trialOptionEnabled("function_plot_extensions");
 var SIDE_COUNT = { min: 3, max: 384 };
 var UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 };
 var MATH_RECIPES = {
@@ -12029,7 +12022,7 @@ var MATH_RECIPES = {
     number_inputs: ["curve_parameter_1", "curve_parameter_2", "curve_parameter_3", "curve_parameter_4"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
     parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"],
-    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", ...PLOT_EXTENSIONS ? ["marks", "pieces"] : []],
+    model_parameter_names: ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "marks", "pieces"],
     required_model_schema_parameters: ["formulas"],
     // Marks change what the plot draws, so two plots differing only in marks are different visuals.
     semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
@@ -12260,10 +12253,8 @@ var MATH_SCHEMA_PROPERTIES = {
     y_label: text2,
     formulas: { type: "array", minItems: 1, maxItems: 8, items: text2 },
     sample_x_numbers: { type: "array", maxItems: 2, items: { type: "integer" } },
-    ...PLOT_EXTENSIONS ? {
-      marks: { type: "array", maxItems: PLOT_MARKS.length, items: { enum: [...PLOT_MARKS] } },
-      pieces: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["formula", "ends"], properties: { formula: text2, x_from: { type: "number" }, x_to: { type: "number" }, ends: { enum: ["[]", "[)", "(]", "()"] } } } }
-    } : {}
+    marks: { type: "array", maxItems: PLOT_MARKS.length, items: { enum: [...PLOT_MARKS] } },
+    pieces: { type: "array", maxItems: 4, items: { type: "object", additionalProperties: false, required: ["formula", "ends"], properties: { formula: text2, x_from: { type: "number" }, x_to: { type: "number" }, ends: { enum: ["[]", "[)", "(]", "()"] } } } }
   },
   unit_circle_projection: { projection: { enum: ["sin", "cos"] } },
   circle_polygon_bounds: { radius: { type: "number", minimum: 0 } },
@@ -12299,7 +12290,7 @@ var MATH_PLUGIN = {
   schema_properties: MATH_SCHEMA_PROPERTIES,
   prompt_rules: {
     "outline.visual_choice": "\u591A\u8FB9\u5F62\u91CD\u6392\u9009 polygon_pieces\u3001rigid_rearrangement\u3001area_relation\uFF1B\u5706\u9762\u79EF\u9009 circle_area_rearrangement\u3002",
-    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002" + (PLOT_EXTENSIONS ? "marks\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF08\u4E00\u6B21\u6216\u4E8C\u6B21\uFF09\u3001slope_triangle \u4E24\u70B9 \u0394x \u0394y\u3001domain \u5B9A\u4E49\u57DF\u3001range \u503C\u57DF\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u3002\u5206\u6BB5\u5199 pieces\uFF08formulas \u7167\u5199\u5404\u6BB5\uFF09\uFF1A\u6BCF\u6BB5 formula\u3001x_from\u3001x_to\uFF08\u65E0\u754C\u4E0D\u5199\uFF09\u3001ends \u5F00\u95ED\u5982 [)\uFF0C\u53EF\u4E3A\u5E38\u6570\u3002" : ""),
+    "section.formulas": "function_plot\uFF1Aformulas \u5199\u53F3\u4FA7\u516C\u5F0F\uFF0C\u6A2A\u8F74 x\u3002\u5E73\u79FB\u66F2\u7EBF\u5199 -(x-n1)^2+n2\uFF0C\u4E0D\u4EE3\u5165\u521D\u503C\u3002\u56FA\u5B9A\u66F2\u7EBF\u4E0A\u79FB\u52A8\u70B9\u7528 sample_x_numbers=[1,2]\uFF08A/B \u6A2A\u5750\u6807\uFF0C\u5355\u70B9\u53EA\u5199\u4E00\u4E2A\uFF09\uFF1B\u4E0D\u7528 content.numbers\u3002\u591A\u5F0F\u4EC5\u9759\u6001\u6BD4\u8F83\u3002\u56FA\u5B9A\u76F4\u7EBF\u4E24\u70B9\u659C\u7387\u4E0D\u53D8\uFF1B\u91CD\u5408\u662F0/0\u3002\u9661\u5CED\u770B\u659C\u7387\u7EDD\u5BF9\u503C\u3002marks\uFF1Aintercepts \u622A\u8DDD\u3001vertex \u9876\u70B9\u3001symmetry_axis \u5BF9\u79F0\u8F74\uFF08\u4E00\u6B21\u6216\u4E8C\u6B21\uFF09\u3001slope_triangle \u4E24\u70B9 \u0394x \u0394y\u3001domain \u5B9A\u4E49\u57DF\u3001range \u503C\u57DF\uFF1B\u4F4D\u7F6E\u7531\u7A0B\u5E8F\u7B97\u3002\u5206\u6BB5\u5199 pieces\uFF08formulas \u7167\u5199\u5404\u6BB5\uFF09\uFF1A\u6BCF\u6BB5 formula\u3001x_from\u3001x_to\uFF08\u65E0\u754C\u4E0D\u5199\uFF09\u3001ends \u5F00\u95ED\u5982 [)\uFF0C\u53EF\u4E3A\u5E38\u6570\u3002",
     "section.bounds": "\u5706\u5468\u7387\u5272\u5706/\u6B63\u591A\u8FB9\u5F62\u903C\u8FD1\u9009\u5185\u63A5\u6B63\u591A\u8FB9\u5F62\u3001\u5916\u5207\u6B63\u591A\u8FB9\u5F62\u548C\u5468\u957F\u4E0A\u4E0B\u754C\u7279\u5F81\uFF1B\u8FB9\u6570\u7528\u6574\u6570\uFF0C\u4E0D\u53EF\u7528\u5706\u5F27\u89D2\u5EA6\u66FF\u4EE3\u3002\u4E0A\u4E0B\u754C\u7531\u56FE\u5F62\u8BA1\u7B97\uFF0C\u8BB2\u89E3\u7528 n sin(\u03C0/n) < \u03C0 < n tan(\u03C0/n)\u3002",
     "section.linked_numbers": "\u534A\u5F84\u4E0E\u5171\u4EAB\u91CF\u6709\u51FD\u6570\u5173\u7CFB\u65F6\uFF0Ccoordinate_circle \u5199 radius_expression\uFF08\u5982 sqrt(n1)\uFF09\uFF0C\u4E0D\u5199\u56FA\u5B9A radius=2 \u4EE3\u66FF\u8054\u52A8\uFF0C\u4E5F\u4E0D\u8981\u628A\u9AD8\u5EA6\u76F4\u63A5\u5F53\u534A\u5F84\u3002",
     "section.constructions": "geometric_rearrangement \u6309\u6784\u9020\u4E8B\u5B9E\u8BB2\u89E3\uFF1Ba\u3001b\u56FA\u5B9A\uFF0C\u63A7\u4EF6\u53EA\u6539\u53D8\u91CD\u6392\u8FDB\u5EA6\u3002\u590D\u7528\u4F9D visuals_for_section \u7684\u6784\u9020\u4E0E\u5F53\u524D\u72B6\u6001\uFF0C\u5148\u524D\u52A8\u753B\u7EC8\u503C\u4E0D\u4F1A\u81EA\u52A8\u5F52\u96F6\uFF1B\u91CD\u6F14\u9700\u663E\u5F0F restart_numbers\uFF0C\u5426\u5219\u89C2\u5BDF\u5F53\u524D\u5E03\u5C40\u3002\u5706\u9762\u79EF\u7528 circle_area_rearrangement\u3002\u6570\u503C\u4E3A\u91CD\u6392\u8FDB\u5EA6\uFF1B\u6709\u9650\u6247\u5F62\u975E\u77E9\u5F62\uFF0C\u7B49\u5206\u8D8B\u7EC6\u65F6\u5E95\u2192\u03C0r\u3001\u9AD8\u2192r\u3002"
@@ -12673,10 +12664,10 @@ function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
 }
-var processEnvironment2 = globalThis.process?.env;
+var processEnvironment = globalThis.process?.env;
 var OFFERED_RECIPES = [
   ...RECIPE_CATALOG_ORDER,
-  ...enabledTrialRecipes(processEnvironment2?.LEARNING_COACH_TRIAL_RECIPES)
+  ...enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES)
 ];
 var PLUGIN_RECIPE_REGISTRY = Object.fromEntries(
   OFFERED_RECIPES.map((name) => [name, ALL_RECIPES[name]])
@@ -12711,7 +12702,9 @@ var SCHEMA_PROPERTY_ORDER = [
   "speed",
   "label_style",
   "relation",
-  "place"
+  "place",
+  "marks",
+  "pieces"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text3 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
