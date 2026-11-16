@@ -5,7 +5,7 @@ any gate: number-line steps (Coach #99) and the function-plot options (#98).
 
 **Verdict: speed passes.** Requests that use the new parts start 0.67 s sooner, and other requests start 0.21 s
 sooner (paired medians; the M4 rule allows up to +0.5 s for each group). The run found one defect: two lessons
-with the new parts on produced nothing. #102 repairs it.
+with the new parts on produced nothing. **It is still open on main** (see the last section).
 
 ## Setup
 
@@ -39,19 +39,16 @@ with the new parts on produced nothing. #102 repairs it.
   - ST-02 missed twice: 27 + 25 was split as 20 then 5, not tens then ones, as in the trial.
   - PJ-01 missed once: no lesson.
 
-## The defect and its repair (#102)
+## The defect: still open
 
-On a fixed curve, x positions written as `sample_x_numbers` become fixed points A and B instead of a refusal,
-except where the curve is missing there or the text names a point at that x off the curve.
+**Repair in place was tried and closed (#102).** It turned x positions written as `sample_x_numbers` into fixed points. Two code reviews (20 findings) showed that every version which reads the lesson's text to judge whether the formula is the real curve can publish a wrong picture. A stand-in formula is the case: `x` written for the line through (1, 2) and (7, 10). A refusal costs a call; a wrong picture breaks the standard.
 
-Replayed on the gate's saved replies (offline; replay counts recorded replies only, so they differ from the live
-call counts):
+**Census of the recorded slips:** 35 replies across this gate, the trial, run B and the 139 recorded lessons.
+- 22 are on section calls, where the outline's lesson numbers are known. A schema limit to the valid indexes would make them unwritable; with no lesson numbers, the field would be left out.
+- 13 are on bootstrap calls, which write the outline in the same reply, so they cannot be limited. They cost a retry, not the lesson; both lost lessons died on section retries.
+- The provider kept every one of the 370 recorded `numbers` lists, which are already limited this way, within its limit.
 
-| | Calls | Published | Lessons with more than one call |
-|---|---|---|---|
-| Baseline | 51 | 40 | 7 |
-| Candidate on main | 55 | 38 | 9 |
-| Candidate with #102 | 47 | 40 | 6 |
+**Next:** that schema limit, perhaps with a sharper refusal message, measured in a small paired probe with a control arm. It changes every plot section request; the call count goes to the owner first.
 
 ## Tokens and cost
 
