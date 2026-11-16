@@ -159,7 +159,15 @@ export const NUMBER_LINE_STEPS_CASES = [
  */
 export const PLOT_CASES = JSON.parse(await readFile(join(root, "testsuite/plot-judge-cases.json"), "utf8")).cases
   .map(({ id, language, prompt, nearMiss, expect }) => ({ id, language, prompt, judge: "plot", ...(nearMiss ? { nearMiss } : {}), expect }));
-export const TRIAL_QUALITY_CASES = { function_plot_extensions: PLOT_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
+/**
+ * The paired check of retry narrowing (plan §7 step 3, accommodation steps 2–3; owner-approved 2026-11-16,
+ * cap 120 calls): the plot cases where recorded lessons slipped or misled (PJ-01, -02, -04 sample slips;
+ * PJ-07 a piecewise request drawn as whole lines; PJ-15 a near miss), and four clean ones to catch a
+ * regression (PJ-05, -08, -11, -17). HO-PH-04, the routing case the gate lost, runs as --other-cases pairs.
+ */
+export const RETRY_NARROWING_CASES = ["PJ-01", "PJ-02", "PJ-04", "PJ-07", "PJ-15", "PJ-05", "PJ-08", "PJ-11", "PJ-17"]
+  .map((id) => PLOT_CASES.find((item) => item.id === id));
+export const TRIAL_QUALITY_CASES = { function_plot_extensions: PLOT_CASES, retry_narrowing: RETRY_NARROWING_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
 
 /**
  * The speed gate for the two switch-ons of 2026-11-15 (plan §7 step 3.2: number-line steps, Coach #99, and

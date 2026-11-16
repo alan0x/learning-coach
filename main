@@ -8694,6 +8694,9 @@ function buildImplicitSurfaceObject(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
+var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
+
 // src/selection-plot-routing.ts
 var MATH_FUNCTION_NAMES = /* @__PURE__ */ new Set([
   "abs",
