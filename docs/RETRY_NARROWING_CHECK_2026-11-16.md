@@ -2,7 +2,11 @@
 
 Plan §7 step 3, steps 2–3 of the accommodation order. Approved by the owner, with a cap of 120 calls.
 
-- **Candidate:** #109.
+- **Candidate:** #109, which held two changes: the retry leaves a refused `sample_x_numbers` out in lessons
+  with no lesson numbers, and a piecewise check whose retry required `pieces`. The piecewise check never fired
+  in this run, so the result belongs to the first change alone. After review, #109 was split: the first
+  change is #110, and the piecewise check was dropped (a wording-triggered refusal paired with a retry that
+  requires a field lets the wording decide what is drawn).
 - **Control:** main `00797d8`.
 
 **Result: no lesson lost on the candidate (20 of 20), against 2 of 20 on the control, with fewer calls.** The
