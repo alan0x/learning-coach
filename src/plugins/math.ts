@@ -11,6 +11,10 @@ import { PLOT_MARKS } from "./plot-mark-names.js";
 const SIDE_COUNT = { min: 3, max: 384 } as const;
 const UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 } as const;
 
+// The first camera of a math 3D scene (OLL's solids builder starts here too). A "turn to this view" task is
+// judged against it: a view already this close counts as reached before the learner moves.
+const SCENE_FIRST_CAMERA = { yaw: 0.72, pitch: 0.55, zoom: 1 } as const;
+
 export const MATH_RECIPES = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
@@ -79,8 +83,7 @@ export const MATH_RECIPES = {
     model_parameter_names: ["title"],
     required_model_schema_parameters: [],
     semantic_parameters: [],
-    // The scene's first camera; a "turn to this view" task must start elsewhere.
-    initial_camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["solid_3d", "section_plane"],
@@ -94,8 +97,7 @@ export const MATH_RECIPES = {
     model_parameter_names: ["title", "expression", "section_axis", "section_value"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
-    // The scene's first camera; a "turn to this view" task must start elsewhere.
-    initial_camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["function_surface_3d", "section_plane"],
@@ -109,8 +111,7 @@ export const MATH_RECIPES = {
     model_parameter_names: ["title", "expression", "level", "section_axis"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "level", "section_axis"],
-    // The scene's first camera; a "turn to this view" task must start elsewhere.
-    initial_camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["implicit_surface_3d", "section_plane"],

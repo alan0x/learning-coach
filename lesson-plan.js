@@ -12016,6 +12016,7 @@ var PLOT_MARKS = ["intercepts", "vertex", "symmetry_axis", "slope_triangle", "do
 // src/plugins/math.ts
 var SIDE_COUNT = { min: 3, max: 384 };
 var UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 };
+var SCENE_FIRST_CAMERA = { yaw: 0.72, pitch: 0.55, zoom: 1 };
 var MATH_RECIPES = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
@@ -12084,8 +12085,7 @@ var MATH_RECIPES = {
     model_parameter_names: ["title"],
     required_model_schema_parameters: [],
     semantic_parameters: [],
-    // The scene's first camera; a "turn to this view" task must start elsewhere.
-    initial_camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["solid_3d", "section_plane"],
@@ -12099,8 +12099,7 @@ var MATH_RECIPES = {
     model_parameter_names: ["title", "expression", "section_axis", "section_value"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
-    // The scene's first camera; a "turn to this view" task must start elsewhere.
-    initial_camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["function_surface_3d", "section_plane"],
@@ -12114,8 +12113,7 @@ var MATH_RECIPES = {
     model_parameter_names: ["title", "expression", "level", "section_axis"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "level", "section_axis"],
-    // The scene's first camera; a "turn to this view" task must start elsewhere.
-    initial_camera: { yaw: 0.72, pitch: 0.55, zoom: 1 },
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["implicit_surface_3d", "section_plane"],
@@ -14395,16 +14393,22 @@ var LESSON_PLAN_VERSION = "0.1";
 var LESSON_PLAN_CAPABILITY_REGISTRY = PLUGIN_RECIPE_REGISTRY;
 var LESSON_PLAN_CAPABILITY_NAMES = Object.keys(LESSON_PLAN_CAPABILITY_REGISTRY);
 function isNumberLineCapability(capability2) {
-  const recipe = capability2 === void 0 ? void 0 : LESSON_PLAN_CAPABILITY_REGISTRY[capability2];
-  return Boolean(recipe?.output_kinds.includes("number_line"));
+  const kinds = recipeEntry(capability2)?.output_kinds;
+  return Array.isArray(kinds) && kinds.includes("number_line");
+}
+function recipeEntry(capability2) {
+  return capability2 === void 0 ? void 0 : LESSON_PLAN_CAPABILITY_REGISTRY[capability2];
 }
 function recipeInitialCamera(capability2) {
-  const recipe = capability2 === void 0 ? void 0 : LESSON_PLAN_CAPABILITY_REGISTRY[capability2];
-  return recipe?.initial_camera;
+  const camera = recipeEntry(capability2)?.initial_camera;
+  if (camera === void 0) return void 0;
+  if (![camera.yaw, camera.pitch, camera.zoom].every((value2) => typeof value2 === "number" && Number.isFinite(value2))) {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY", `$recipes.${capability2}.initial_camera`, "a recipe's initial_camera needs finite yaw, pitch and zoom");
+  }
+  return camera;
 }
 function recipeDeclares(capability2, flag) {
-  const recipe = capability2 === void 0 ? void 0 : LESSON_PLAN_CAPABILITY_REGISTRY[capability2];
-  return recipe?.[flag] === true;
+  return recipeEntry(capability2)?.[flag] === true;
 }
 var LESSON_PLAN_VISUAL_FEATURES = [...new Set(
   LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features])
@@ -20267,11 +20271,10 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
     delete lowered.angular_tolerance_degrees;
     delete lowered.zoom_tolerance_percent;
     let angularTolerance = PROGRAM_SCENE_ANGULAR_TOLERANCE_DEGREES;
-    const sceneCapability = outline.sections.slice(0, expectedSection).flatMap((section) => [
+    const initial = outline.sections.slice(0, expectedSection).flatMap((section) => [
       ...section.allowed_capabilities,
       ...(section.reusable_items ?? []).flatMap((item) => item.capability ? [item.capability] : [])
-    ]).reverse().find((capability2) => recipeInitialCamera(capability2) !== void 0);
-    const initial = recipeInitialCamera(sceneCapability);
+    ]).reverse().map((capability2) => recipeInitialCamera(capability2)).find((camera) => camera !== void 0);
     if (initial && preset) {
       const separationDegrees = Math.max(
         Math.abs(preset.yaw - initial.yaw),

@@ -141,23 +141,39 @@ test("a compiled lesson records the plugins that built its visuals", () => {
 });
 
 // Plan §2.3 / §7 step 3.4 (Goal 1): Coach's core knows no recipe by name; what a recipe needs it declares
-// (numbers_in_parameters, ranges_fixed_once_shown, initial_camera). Every file outside src/plugins is core.
-// A recipe name that is also an OLL node kind (number_line) may appear as that kind, never compared with a
-// capability.
+// (numbers_in_parameters, ranges_fixed_once_shown, initial_camera). Every source file outside src/plugins,
+// at any depth, is core. A recipe name that is also an OLL node kind (number_line) may appear as that kind,
+// never compared with or looked up as a recipe.
 test("Coach's core files name no recipe", async () => {
   const { readFileSync, readdirSync } = await import("node:fs");
   const recipes = [...RECIPE_CATALOG_ORDER, ...api.TRIAL_RECIPES];
   const kinds = new Set(Object.values(api.LESSON_PLAN_CAPABILITY_REGISTRY).flatMap((recipe) => recipe.output_kinds));
-  const files = readdirSync(new URL("../src/", import.meta.url)).filter((name) => name.endsWith(".ts"));
+  const src = new URL("../src/", import.meta.url);
+  const files = readdirSync(src, { recursive: true }).map(String)
+    .filter((name) => /\.(?:ts|mts|js|mjs)$/u.test(name) && !name.startsWith("plugins"));
   assert.ok(files.length > 10);
   for (const file of files) {
-    const text = readFileSync(new URL(`../src/${file}`, import.meta.url), "utf8");
+    const text = readFileSync(new URL(file, src), "utf8");
     for (const name of recipes) {
-      assert.equal(new RegExp(`capability\\w*\\s*[!=]==?\\s*["'\`]${name}["'\`]`, "u").test(text), false, `${file} compares a capability with ${name}`);
+      const q = `["'\`]${name}["'\`]`;
+      for (const pattern of [`[!=]==?\\s*${q}`, `${q}\\s*[!=]==?`, `case\\s+${q}`, `RECIPE_\\w+\\.${name}\\b`, `\\[\\s*${q}[^\\]]*\\]\\s*\\.includes`]) {
+        assert.equal(new RegExp(pattern, "u").test(text), false, `${file} compares or looks up ${name} (${pattern})`);
+      }
       if (kinds.has(name)) continue;
-      for (const pattern of [`["'\`]${name}["'\`]`, `\\.${name}\\b`, `(^|[\\s{,])${name}\\s*:`]) {
+      for (const pattern of [q, `\\.${name}\\b`, `(^|[\\s{,])${name}\\s*:`]) {
         assert.equal(new RegExp(pattern, "mu").test(text), false, `${file} names ${name} (${pattern})`);
       }
     }
   }
+});
+
+test("every 3D recipe declares its first camera as three finite numbers (a view task is judged against it)", () => {
+  const scene = Object.entries(api.LESSON_PLAN_CAPABILITY_REGISTRY).filter(([, recipe]) => recipe.output_kinds.includes("scene3d"));
+  assert.ok(scene.length >= 3);
+  for (const [name] of scene) {
+    const camera = api.recipeInitialCamera(name);
+    assert.ok(camera && [camera.yaw, camera.pitch, camera.zoom].every(Number.isFinite), name);
+  }
+  assert.equal(api.recipeInitialCamera("function_plot"), undefined);
+  assert.equal(api.recipeInitialCamera(undefined), undefined);
 });

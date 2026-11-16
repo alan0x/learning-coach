@@ -1422,11 +1422,10 @@ function lowerModelActivityNumbers(
     delete lowered.angular_tolerance_degrees;
     delete lowered.zoom_tolerance_percent;
     let angularTolerance = PROGRAM_SCENE_ANGULAR_TOLERANCE_DEGREES;
-    const sceneCapability = outline.sections.slice(0, expectedSection).flatMap((section) => [
+    const initial = outline.sections.slice(0, expectedSection).flatMap((section) => [
       ...section.allowed_capabilities,
       ...(section.reusable_items ?? []).flatMap((item) => item.capability ? [item.capability] : []),
-    ]).reverse().find((capability) => recipeInitialCamera(capability) !== undefined);
-    const initial = recipeInitialCamera(sceneCapability);
+    ]).reverse().map((capability) => recipeInitialCamera(capability)).find((camera) => camera !== undefined);
     if (initial && preset) {
       const separationDegrees = Math.max(
         Math.abs(preset.yaw - initial.yaw),
