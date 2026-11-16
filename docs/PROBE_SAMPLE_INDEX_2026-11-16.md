@@ -5,8 +5,7 @@ Plan §7 step 3.6a, approved by the owner with a cap of 100 calls. Candidate: #1
 
 The branch later took in #103 (merge `0923002`) and review fixes. Neither changes a first or section request (the
 request-hash test is unchanged). The review fixes do change refusal texts, which go back to the model in a retry
-request, so those retries carry text this probe did not measure. With no lesson numbers, a request to drag a point
-is now answered by the fixed curve instead of a refusal that could never be met.
+request, so those retries carry text this probe did not measure.
 
 **Pass rule** (stated before the run): no section slip on the candidate, and no regression against the control.
 **Result: pass.**

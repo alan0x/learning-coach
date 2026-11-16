@@ -13714,7 +13714,7 @@ function normalizePlotDraftBindings(draft, context) {
   const plotText = [...text3, ...clauses(outline.sections[draft.section - 1]?.purpose ?? ""), ...clauses(request)];
   const wantsVertex = plots.length === 1 && text3.some((line) => positiveInstruction(line, vertexInstruction) && (visuals.length === 1 || /抛物线|\bparabola\b/iu.test(line)));
   const asksForSamples = (line) => positiveInstruction(line, sampleIntent) && interactionVerb.test(line);
-  const wantsSamples = (outline.numbers?.length ?? 0) === 0 ? text3.some(asksForSamples) : plotText.some(asksForSamples);
+  const wantsSamples = plotText.some(asksForSamples);
   const hasSampleIntent = plotText.some((line) => positiveInstruction(line, sampleIntent));
   const count = outline.numbers?.length ?? 0;
   const validSamples = (visual) => {

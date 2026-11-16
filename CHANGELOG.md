@@ -9,10 +9,14 @@
   - **Requests:** 80 of 2,080 recorded digests change. Digests are per run, and all 80 are the fallback-outline runs of the four plot fixtures: the first request fails, an outline request follows, and the first-section request after it creates the plot. That section request is the one that changes. No first request changes, and neither do the normal, repair or practice runs, whose plots come from the first request. Lessons unchanged; no ceiling exceeded.
   - **Review of #105:**
     - With no lesson numbers, the section schema has no `sample_x_numbers`, so the refusal that asked for a moving point now asks for the fixed curve instead.
-    - With no lesson numbers, that refusal also reads only the section's own words, not the learner's request or the outline's purpose, which a retry cannot change. A request to drag a point is answered by the fixed curve, and the narration promises no moving point. Before, such a lesson was refused on every attempt and lost, on main too.
     - The index refusal says "distinct" again.
     - The declaration is read through `recipeNumberIndexParameters`, which fails on a malformed list. It applies to one recipe at a time, and fails if it names a parameter that is not an array.
-    - Tests cover both refusals, and the fixed curve answering a request with no lesson numbers.
+    - Tests cover both refusals.
+    - **Tried and reverted (third review):** reading only the section's own words when there are no lesson numbers. It let narration promising a point that cannot move be published over a fixed curve.
+  - **Found on main, left to a plan item:**
+    - Refusals keyed on the learner's request or the outline's purpose cannot be met by a retry, so the lesson can be lost. This applies to the moving-point and vertex refusals here and to the purpose checks in `math-teaching-contracts.ts`.
+    - The moving-point wording check misses phrasings without a point label, titles, and plots with several formulas.
+    - The plot guidance still names `sample_x_numbers=[1,2]` where a section may have fewer numbers.
   - **Left as a follow-up:** a minimum of 1 on the bootstrap's `sample_x_numbers` would block slips such as `[0, 2]` without knowing the outline. It changes every first request, so it needs its own decision.
   - **Not exercised:** the sharper refusal never fired in the probe, on either arm. The one probe slip reached it, but an earlier refusal (a missing board item) came first. Refusal texts go back to the model in the retry request, so these retries send text the probe did not measure. It is no longer load-bearing, because the retry after a first-request slip is a section request, which cannot repeat the slip.
 

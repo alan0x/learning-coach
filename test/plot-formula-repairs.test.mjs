@@ -149,27 +149,3 @@ test("sample_x_numbers refusals say what a retry can do: distinct indexes, or th
   const none = await generate(plotReply({ formula: "x^2", numbers: [], visualNumbers: [], moments: [{ say: "拖动曲线上的点 A，看它怎样移动。" }] }));
   assert.ok(none.rejected.some((miss) => /no lesson number for a moving point/u.test(miss)), none.rejected.join(" | "));
 });
-
-test("with no lesson numbers, a request to drag a point is answered by the fixed curve, not refused (review of #105)", async () => {
-  // The learner asks to drag a point; the section draws the curve and promises no moving point. A refusal
-  // based on the request could never be met, and the lesson was lost on every attempt.
-  const requests = [];
-  const rejected = [];
-  let lesson;
-  class Stop extends Error {}
-  try {
-    await generateLessonPlanWithModel(async (request) => {
-      requests.push(request);
-      if (requests.length > 1) throw new Stop();
-      return plotReply({ formula: "x^2", numbers: [], visualNumbers: [], moments: [{ say: "看这条抛物线的形状。" }] });
-    }, { turn_id: "no-numbers", learner_request: "拖动曲线上的点 A，看它怎样移动。", language: "zh-CN", input_modality: "text", request_source: "self_contained" }, {
-      on_playable_prefix: ({ compiled }) => { lesson ??= compiled.lesson; throw new Stop(); },
-      on_rejected_part: (part) => rejected.push(`${part.error.code} ${part.error.message}`),
-    });
-  } catch (caught) {
-    if (!(caught instanceof Stop)) rejected.push(caught.message);
-  }
-  assert.ok(lesson, rejected.join(" | "));
-  assert.deepEqual(rejected, []);
-  assert.deepEqual(plotContent(lesson).points ?? [], []);
-});
