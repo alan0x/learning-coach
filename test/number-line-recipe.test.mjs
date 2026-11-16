@@ -8,14 +8,15 @@ import { NUMBER_LINE_CASES, NUMBER_LINE_QUALITY_CASES, judgeNumberLine } from ".
 
 const api = await import(new URL("../lesson-plan.js", import.meta.url));
 
-test("the number line and its three question types are offered by default, last in the catalog, where the gate measured them", () => {
+test("the number line and its three question types are offered by default, last in the catalog before the line in steps, where the gate measured them", () => {
   const types = ["number_line", "number_line_compare", "number_line_solution", "number_line_rounding"];
   for (const name of types) {
     assert.equal(api.TRIAL_RECIPES.includes(name), false, name);
     assert.ok(api.LESSON_PLAN_CAPABILITY_NAMES.includes(name), name);
     assert.equal(api.RECIPE_PLUGIN[name], "math");
   }
-  assert.deepEqual(api.RECIPE_CATALOG_ORDER.slice(-4), types);
+  assert.deepEqual(api.RECIPE_CATALOG_ORDER.slice(-5, -1), types);
+  assert.equal(api.RECIPE_CATALOG_ORDER.at(-1), "number_line_steps");
 });
 
 const compile = (numbers, parameters = {}, extra = {}) => {

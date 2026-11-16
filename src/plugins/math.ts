@@ -225,7 +225,7 @@ export const MATH_RECIPES = {
   },
   // Decision 0017: two or three moves, each its own jump (make ten, tens then ones, up then down). The model
   // gives the start and each move; the program computes where each lands and the end. Its card states the
-  // split from the one-move card itself; the one-move card is unchanged while this is a trial recipe.
+  // split from the one-move card itself, so the one-move card is unchanged.
   number_line_steps: {
     parts: ["whole", "start", "end", "move", "move2", "move3", "primary_control"],
     number_inputs: ["start", "change_1", "change_2", "change_3"],

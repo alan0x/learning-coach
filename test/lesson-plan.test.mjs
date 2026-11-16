@@ -111,7 +111,7 @@ test("the capability registry separates model teaching choices from program exec
 
 
 test("every registered visual capability has a fixed valid Lesson Plan sample", () => {
-  assert.equal(capabilities.length, 17);
+  assert.equal(capabilities.length, 18);
   assert.deepEqual([...LESSON_PLAN_CAPABILITY_NAMES].sort(), [...capabilities].sort());
   for (const capability of capabilities) {
     assert.deepEqual(
@@ -159,6 +159,7 @@ test("all fixed capability samples compile through the complete OLL validation p
     number_line_compare: ["number_line"],
     number_line_solution: ["number_line"],
     number_line_rounding: ["number_line"],
+    number_line_steps: ["number_line"],
   };
   for (const capability of capabilities) {
     const compiled = compileAndValidateLessonPlan(samplePlan(capability));

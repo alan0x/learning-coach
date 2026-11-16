@@ -46,7 +46,9 @@ export function samplePlan(capability) {
     ? 0
     : capability === "rectangle_unit_square_array" || capability === "number_line_compare"
       ? 2
-      : 1;
+      : capability === "number_line_steps"
+        ? 3
+        : 1;
   // The number line's question types (decisions 0013 and 0016): the parameters each one needs.
   const numberLineParameters = { number_line_solution: { relation: "x>a" }, number_line_rounding: { place: "tens" } }[capability];
   const hasNumber = numberCount > 0;
@@ -81,7 +83,7 @@ export function samplePlan(capability) {
     firstMomentActions.push({
       action: "animate",
       number: 1,
-      end_value: capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : 0.75,
+      end_value: capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -97,6 +99,12 @@ export function samplePlan(capability) {
         ? { initial: 6, min: 6, max: 96, label: "多边形边数", unit: "边", student_control: {kind:"slider",step:1} }
         : capability === "number_line_rounding"
         ? { initial: 47, min: 40, max: 50, label: "要取整的数", student_control: { kind: "slider", step: 1 } }
+        : capability === "number_line_steps"
+        ? [
+            { initial: 8, min: 5, max: 9, label: "start", student_control: { kind: "slider", step: 1 } },
+            { initial: 2, min: 1, max: 3, label: "first move" },
+            { initial: 3, min: 1, max: 4, label: "second move" },
+          ][index]
         : capability === "number_line_compare"
         ? { initial: index === 0 ? 0.5 : 0.25, min: 0, max: 1, label: index === 0 ? "first" : "second", student_control: { kind: "slider", step: 0.05 } }
         : capability === "rectangle_unit_square_array"
@@ -147,7 +155,7 @@ export function samplePlan(capability) {
             kind: "number_target",
             prompt: "Move the main value to one half.",
             number_controls: [{ number: 1, controls: ["slider"] }],
-            value: capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : 0.5,
+            value: capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
             tolerance: 0.02,
             hints: ["Watch the numeric value."],
           }],
