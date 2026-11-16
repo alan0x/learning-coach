@@ -160,7 +160,14 @@ function modelReusableBoardSchema(): LessonPlanJsonSchema {
   }, ["kind", "board_kind"]);
 }
 
-function visualParametersSchema(allowedCapabilities: LessonPlanCapability[]): LessonPlanJsonSchema {
+/**
+ * How a retry narrows a visual's parameters after the attempt before it was refused (lesson-plan-generation):
+ * parameters to leave out, so the slip cannot be written again, and parameters to require. Only parameters
+ * the recipe declares are touched.
+ */
+export interface ParameterNarrowing { omit?: readonly string[]; require?: readonly string[] }
+
+function visualParametersSchema(allowedCapabilities: LessonPlanCapability[], narrowing?: ParameterNarrowing): LessonPlanJsonSchema {
   const modelParameters = new Set(allowedCapabilities.flatMap(
     (capability) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability].model_parameter_names],
   ));
@@ -172,9 +179,14 @@ function visualParametersSchema(allowedCapabilities: LessonPlanCapability[]): Le
     ...order.filter((name) => name in declared),
     ...Object.keys(declared).filter((name) => !order.includes(name)),
   ].map((name) => [name, declared[name]]));
-  const required = allowedCapabilities.length === 1
+  let required: string[] = allowedCapabilities.length === 1
     ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters]
     : [];
+  for (const name of narrowing?.omit ?? []) {
+    delete properties[name];
+    required = required.filter((item) => item !== name);
+  }
+  for (const name of narrowing?.require ?? []) if (name in properties && !required.includes(name)) required.push(name);
   return object(properties, required);
 }
 
@@ -280,6 +292,7 @@ function courseVisualCreatesSchema(
   outline: LessonPlanOutline,
   sectionIndex: number,
   allowedNumberIndexes: number[],
+  narrowing?: ParameterNarrowing,
 ): LessonPlanJsonSchema | undefined {
   const numberCount = outline.numbers?.length ?? 0;
   const entries = (outline.course_visuals ?? [])
@@ -293,7 +306,7 @@ function courseVisualCreatesSchema(
       moment: integer(1, 12),
       timing: { enum: timingNames },
       content: object({
-        parameters: visualParametersSchema([capability]),
+        parameters: visualParametersSchema([capability], narrowing),
         ...(numberCount > 0 && numberLimit > 0 && !recipeDeclares(capability, "numbers_in_parameters") ? {
           numbers: {
             type: "array",
@@ -591,12 +604,14 @@ export function buildLessonPlanSectionDraftJsonSchema(
   outlineValue: unknown,
   sectionIndex: number,
   allowedNumberIndexes?: number[],
+  narrowing?: ParameterNarrowing,
 ): LessonPlanJsonSchema {
   return vertexCompatible(lessonPlanSectionDraftShapeJsonSchema(
     outlineValue,
     sectionIndex,
     false,
     allowedNumberIndexes,
+    narrowing,
   ));
 }
 
@@ -605,6 +620,7 @@ function lessonPlanSectionDraftShapeJsonSchema(
   sectionIndex: number,
   bootstrapPermissive = false,
   suppliedNumberIndexes?: number[],
+  narrowing?: ParameterNarrowing,
 ): LessonPlanJsonSchema {
   const outline = outlineShape(outlineValue);
   if (!Number.isInteger(sectionIndex) || sectionIndex < 1 || sectionIndex > outline.sections.length) {
@@ -629,7 +645,7 @@ function lessonPlanSectionDraftShapeJsonSchema(
   }
   const courseVisualCreates = bootstrapPermissive
     ? undefined
-    : courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes);
+    : courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes, narrowing);
   const reusableBoardCreates = bootstrapPermissive
     ? undefined
     : reusableBoardCreatesSchema(outline, sectionIndex);

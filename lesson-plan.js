@@ -14344,11 +14344,30 @@ function recoverVertex(visual, candidates, outline) {
 }
 var omittedControls = /* @__PURE__ */ new WeakMap();
 var omittedSamplePlots = /* @__PURE__ */ new WeakMap();
+var PIECEWISE_WORDS = /分段|piecewise/iu;
+var X_CONDITION = /(?:for|when|if|where)\s+x\s*(?:<=|>=|<|>|≤|≥)|当\s*x\s*(?:<=|>=|<|>|≤|≥)|x\s*(?:<=|>=|<|>|≤|≥)\s*-?\d+(?:\.\d+)?\s*时/giu;
+function refuseMissingPieces(plots, text3, section) {
+  for (const { visual, moment } of plots) {
+    const parameters3 = visual.parameters ?? {};
+    if (parameters3.pieces !== void 0) continue;
+    const formulas = Array.isArray(parameters3.expressions) ? parameters3.expressions.length : 1;
+    const words = text3.some((line) => PIECEWISE_WORDS.test(line));
+    const conditions = text3.reduce((total, line) => total + [...line.matchAll(X_CONDITION)].length, 0);
+    if (words || conditions >= 2 && formulas >= 2) {
+      fail2(
+        "LESSON_PLAN_PIECES_REQUIRED",
+        `$lessonPlanSection[${section}].moments[${moment}].content.parameters.pieces`,
+        "a piecewise function is drawn with pieces: write each piece's formula, x_from, x_to and ends in parameters.pieces"
+      );
+    }
+  }
+}
 function normalizePlotDraftBindings(draft, context) {
   const { outline, request, accepted, adjust } = context;
   const visuals = sectionVisuals(draft);
   const previousVisuals = accepted.flatMap(sectionVisuals);
   const plots = visuals.filter(({ visual }) => visual.capability === "function_plot");
+  refuseMissingPieces(plots, [request, outline.sections[draft.section - 1]?.purpose ?? "", ...draft.moments.map((moment) => moment.narration)], draft.section);
   const text3 = sectionText(draft);
   const plotText = [...text3, ...clauses(outline.sections[draft.section - 1]?.purpose ?? ""), ...clauses(request)];
   const wantsVertex = plots.length === 1 && text3.some((line) => positiveInstruction(line, vertexInstruction) && (visuals.length === 1 || /抛物线|\bparabola\b/iu.test(line)));
@@ -18865,7 +18884,7 @@ function modelReusableBoardSchema() {
     board_kind: { enum: ["math", "note"] }
   }, ["kind", "board_kind"]);
 }
-function visualParametersSchema(allowedCapabilities) {
+function visualParametersSchema(allowedCapabilities, narrowing) {
   const modelParameters = new Set(allowedCapabilities.flatMap(
     (capability2) => [...LESSON_PLAN_CAPABILITY_REGISTRY[capability2].model_parameter_names]
   ));
@@ -18877,7 +18896,12 @@ function visualParametersSchema(allowedCapabilities) {
     ...order.filter((name) => name in declared),
     ...Object.keys(declared).filter((name) => !order.includes(name))
   ].map((name) => [name, declared[name]]));
-  const required = allowedCapabilities.length === 1 ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters] : [];
+  let required = allowedCapabilities.length === 1 ? [...LESSON_PLAN_CAPABILITY_REGISTRY[allowedCapabilities[0]].required_model_schema_parameters] : [];
+  for (const name of narrowing?.omit ?? []) {
+    delete properties[name];
+    required = required.filter((item) => item !== name);
+  }
+  for (const name of narrowing?.require ?? []) if (name in properties && !required.includes(name)) required.push(name);
   return object(properties, required);
 }
 function modelAction(properties, required) {
@@ -18940,7 +18964,7 @@ function actionCollectionSchemas(allowedCapabilities, reusableCount, numberCount
     } : {}
   };
 }
-function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes) {
+function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes, narrowing) {
   const numberCount = outline.numbers?.length ?? 0;
   const entries = (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === sectionIndex);
   if (entries.length === 0) return void 0;
@@ -18951,7 +18975,7 @@ function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes) 
       moment: integer(1, 12),
       timing: { enum: timingNames },
       content: object({
-        parameters: visualParametersSchema([capability2]),
+        parameters: visualParametersSchema([capability2], narrowing),
         ...numberCount > 0 && numberLimit > 0 && !recipeDeclares(capability2, "numbers_in_parameters") ? {
           numbers: {
             type: "array",
@@ -19209,15 +19233,16 @@ function answerActivitiesSchema() {
 function buildLessonPlanPracticeJsonSchema() {
   return object({ answer_activities: answerActivitiesSchema() }, ["answer_activities"]);
 }
-function buildLessonPlanSectionDraftJsonSchema(outlineValue, sectionIndex, allowedNumberIndexes) {
+function buildLessonPlanSectionDraftJsonSchema(outlineValue, sectionIndex, allowedNumberIndexes, narrowing) {
   return vertexCompatible(lessonPlanSectionDraftShapeJsonSchema(
     outlineValue,
     sectionIndex,
     false,
-    allowedNumberIndexes
+    allowedNumberIndexes,
+    narrowing
   ));
 }
-function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, bootstrapPermissive = false, suppliedNumberIndexes) {
+function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, bootstrapPermissive = false, suppliedNumberIndexes, narrowing) {
   const outline = outlineShape(outlineValue);
   if (!Number.isInteger(sectionIndex) || sectionIndex < 1 || sectionIndex > outline.sections.length) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$section", "section is outside the outline");
@@ -19237,7 +19262,7 @@ function lessonPlanSectionDraftShapeJsonSchema(outlineValue, sectionIndex, boots
       "allowed number indexes must reference outline numbers"
     );
   }
-  const courseVisualCreates = bootstrapPermissive ? void 0 : courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes);
+  const courseVisualCreates = bootstrapPermissive ? void 0 : courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes, narrowing);
   const reusableBoardCreates = bootstrapPermissive ? void 0 : reusableBoardCreatesSchema(outline, sectionIndex);
   const actionCollections = actionCollectionSchemas(
     allowedCapabilities,
@@ -21313,6 +21338,14 @@ function locallyUnsupportedLessonRequest(request, language) {
   }
   return void 0;
 }
+function retryNarrowing(error, outline) {
+  if (!(error instanceof LessonPlanError)) return void 0;
+  if (error.code === "LESSON_PLAN_PIECES_REQUIRED") return { require: ["pieces"], omit: ["formulas"] };
+  if (error.code === "LESSON_PLAN_NUMBER_REFERENCE" && error.path.endsWith(".sample_x_numbers") && !outline.numbers?.length) {
+    return { omit: ["sample_x_numbers"] };
+  }
+  return void 0;
+}
 async function generateLessonPlanWithModel(model, input, options = {}) {
   options = { ...options, compile: { ...options.compile, language: input.language ?? options.compile?.language } };
   const unsupportedResponse = locallyUnsupportedLessonRequest(input.learner_request, input.language);
@@ -21687,7 +21720,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
           assigned_request_parts: assignedRequestParts(section),
           ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
         }),
-        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes)
+        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes, retryNarrowing(sectionErrors.get(section), outline))
       });
       modelCalls += 1;
     } catch (error) {
@@ -21995,6 +22028,7 @@ export {
   recipeDeclares,
   recipeInitialCamera,
   resolveLessonPlan,
+  retryNarrowing,
   roundingPlaces,
   roundingTolerance,
   validateLessonPlan,

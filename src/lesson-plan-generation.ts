@@ -40,6 +40,7 @@ import {
   buildLessonPlanOutlineJsonSchema,
   buildLessonPlanPracticeJsonSchema,
   buildLessonPlanSectionDraftJsonSchema,
+  type ParameterNarrowing,
   coerceLessonPlanBootstrapSectionModelNumbers,
   coerceLessonPlanOutlineModelNumbers,
   coerceLessonPlanSectionModelNumbers,
@@ -2496,6 +2497,24 @@ function locallyUnsupportedLessonRequest(request: string, language?: string): st
   return undefined;
 }
 
+/**
+ * A retry asks differently, so the slip just refused cannot be written again (the owner's principles,
+ * 2026-11-16; before, a retry was the same request plus the error, and the gate lost lessons that repeated
+ * a slip on every attempt):
+ * - a piecewise function drawn as whole curves: `pieces` is required and `formulas` left out;
+ * - `sample_x_numbers` refused in a lesson with no lesson numbers (x positions written there, `[1, 3]`):
+ *   the field is left out, since no number exists for it to hold.
+ * Other refusals retry as before. Only retries change; a first attempt's request is untouched.
+ */
+export function retryNarrowing(error: unknown, outline: LessonPlanOutline): ParameterNarrowing | undefined {
+  if (!(error instanceof LessonPlanError)) return undefined;
+  if (error.code === "LESSON_PLAN_PIECES_REQUIRED") return { require: ["pieces"], omit: ["formulas"] };
+  if (error.code === "LESSON_PLAN_NUMBER_REFERENCE" && error.path.endsWith(".sample_x_numbers") && !(outline.numbers?.length)) {
+    return { omit: ["sample_x_numbers"] };
+  }
+  return undefined;
+}
+
 export async function generateLessonPlanWithModel(
   model: LessonPlanModelCall,
   input: LessonPlanGenerationInput,
@@ -2947,7 +2966,7 @@ export async function generateLessonPlanWithModel(
             ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) }
             : {}),
         }),
-        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes),
+        response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes, retryNarrowing(sectionErrors.get(section), outline)),
       });
       modelCalls += 1;
     } catch (error) {

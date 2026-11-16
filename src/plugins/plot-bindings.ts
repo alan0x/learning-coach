@@ -161,11 +161,39 @@ function recoverVertex(
 const omittedControls = new WeakMap<LessonPlanSectionDraft, Set<number>>();
 const omittedSamplePlots = new WeakMap<LessonPlanSectionDraft, Set<number>>();
 
+/** "piecewise", "分段", or one condition on x ("for x < 1", "当 x ≥ 1", "x < 1 时"). */
+const PIECEWISE_WORDS = /分段|piecewise/iu;
+const X_CONDITION = /(?:for|when|if|where)\s+x\s*(?:<=|>=|<|>|≤|≥)|当\s*x\s*(?:<=|>=|<|>|≤|≥)|x\s*(?:<=|>=|<|>|≤|≥)\s*-?\d+(?:\.\d+)?\s*时/giu;
+
+/**
+ * A piecewise function asked for but drawn as whole curves: refused, so the retry can require `pieces`
+ * (lesson-plan-generation's retry narrowing). The owner's principles (2026-11-16): prose may trigger a
+ * refusal, never choose a drawn value. The breakpoints live only in the words, so the program never builds
+ * pieces itself. Two whole lines drawn for "f(x) = x + 2 for x < 1 and 4 for x >= 1" (PJ-07) misled.
+ * Asked for: the word "piecewise"/"分段" in the request, the section's purpose or its narration, or two or
+ * more conditions on x there together with two or more formulas on the plot (a single condition, such as
+ * √x for x ≥ 0, is no piecewise function, and a retry could not write two pieces for it).
+ */
+function refuseMissingPieces(plots: Array<{ visual: LessonPlanVisualContent; moment: number }>, text: string[], section: number): void {
+  for (const { visual, moment } of plots) {
+    const parameters = visual.parameters ?? {};
+    if (parameters.pieces !== undefined) continue;
+    const formulas = Array.isArray(parameters.expressions) ? parameters.expressions.length : 1;
+    const words = text.some((line) => PIECEWISE_WORDS.test(line));
+    const conditions = text.reduce((total, line) => total + [...line.matchAll(X_CONDITION)].length, 0);
+    if (words || (conditions >= 2 && formulas >= 2)) {
+      fail("LESSON_PLAN_PIECES_REQUIRED", `$lessonPlanSection[${section}].moments[${moment}].content.parameters.pieces`,
+        "a piecewise function is drawn with pieces: write each piece's formula, x_from, x_to and ends in parameters.pieces");
+    }
+  }
+}
+
 export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, context: DraftSpecializationContext): void {
   const { outline, request, accepted, adjust } = context;
   const visuals = sectionVisuals(draft);
   const previousVisuals = accepted.flatMap(sectionVisuals);
   const plots = visuals.filter(({ visual }) => visual.capability === "function_plot");
+  refuseMissingPieces(plots, [request, outline.sections[draft.section - 1]?.purpose ?? "", ...draft.moments.map((moment) => moment.narration)], draft.section);
   const text = sectionText(draft);
   const plotText = [...text, ...clauses(outline.sections[draft.section - 1]?.purpose ?? ""), ...clauses(request)];
   const wantsVertex = plots.length === 1 && text.some(line => positiveInstruction(line, vertexInstruction)

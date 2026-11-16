@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Retries ask differently, so a refused slip cannot be repeated** (the owner's two principles, 2026-11-16; steps 2–3 of the accommodation order). A section retry used to be the same request plus the error; in the speed gate the model repeated `sample_x_numbers: [1, 3]` on every attempt and two lessons were lost. Now `retryNarrowing` narrows the retry's schema for the refusal just made; first attempts are untouched (request-hash test unchanged).
+  - **A piecewise function drawn as whole curves** is refused (`LESSON_PLAN_PIECES_REQUIRED`), and the retry requires `pieces` and leaves `formulas` out. It counts as asked for when the request, the section's purpose or its narration says "piecewise"/"分段", or states two or more conditions on x while the plot has two or more formulas. A single condition (√x for x ≥ 0) is not. The breakpoints exist only in words, so the program never builds pieces itself: prose may trigger a refusal, never choose a drawn value. Before, "f(x) = x + 2 for x < 1 and 4 for x ≥ 1" could publish as two whole lines (PJ-07).
+  - **`sample_x_numbers` refused in a lesson with no lesson numbers**: the retry leaves the field out, since no number exists for it to hold. With the piecewise check in place, PJ-07 can no longer slip through when the field goes (review of #105).
+  - **Other refusals retry as before.**
+  - **Replays** (the replays hold no reply to a narrowed retry, so a newly refused lesson stops there):
+    - Old misleading lessons now refused: PJ-07 twice in the gate's control arm, and PJ-08 once in run B's control arm (both drew a piecewise request as whole curves).
+    - One recorded question-set lesson that compiled before is now refused by the piecewise check. It was not inspected here.
+    - The trial is identical.
+  - Tests: the refusal and the narrowed retry through generation, a single condition left alone, the sample field left out on retry, other refusals unchanged.
+
 - **Function-plot derivations come from OLL's math plugin** (plan §7 step 3.5, slice 2; no lesson or request changes). Marks, domain and range bars and the interval sign proofs moved to `octos-lesson-language/plugin-math`, so Studio can draw what AI lessons draw. `src/plugins/plot-marks.ts` is now an adapter: it hands the plugin Coach's formula tokens, with each lesson number by its binding name, and reports a refusal as the same section fault as before. `plot-domain-range.ts` and `interval.ts` are gone. OLL pin `ab13d5b` (OLL main with #68 and #69). The request-hash test is unchanged; replays of the 139 recorded lessons, the trial, run B and the gate are identical.
 
 - **Curve labels that do not match the curves one to one are left out, not refused** (the owner's two principles, 2026-11-16: the model writes meaning, the program accepts what has exactly one safe reading; step 1 of the accommodation order, free, no request changes). The compiler derives a legend from each formula, so nothing narrated depends on the dropped labels. Only lessons main refused change.
