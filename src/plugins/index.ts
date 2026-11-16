@@ -43,6 +43,9 @@ export const RECIPE_CATALOG_ORDER = [
   "number_line_compare",
   "number_line_solution",
   "number_line_rounding",
+  // Number line in steps (OLL decision 0017 §2): adopted by the owner on 2026-11-15 after the reduced trial
+  // (Coach docs/PLOT_TRIAL_2026-11-15.md), ahead of the combined speed gate. Last, where the trial put it.
+  "number_line_steps",
 ] as const satisfies readonly (keyof AllRecipes)[];
 
 /**
@@ -52,7 +55,7 @@ export const RECIPE_CATALOG_ORDER = [
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-export const TRIAL_RECIPES = ["constant_speed_motion", "number_line_steps"] as const satisfies readonly (keyof AllRecipes)[];
+export const TRIAL_RECIPES = ["constant_speed_motion"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {

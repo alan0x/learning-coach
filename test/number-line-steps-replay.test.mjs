@@ -1,8 +1,6 @@
 // The number line in steps through the real path, from the model's reply to the lesson (OLL decision 0017).
-// The trial recipe is offered only when LEARNING_COACH_TRIAL_RECIPES names it, which Coach reads as it
-// loads, so this file sets it first. The replies are run 5's reply for 23 + 48 (number-line-run5-replies.json,
+// Offered by default since 2026-11-15 (a trial recipe until then). The replies are run 5's reply for 23 + 48 (number-line-run5-replies.json,
 // pair 42), rewritten in the model's format for a line in steps: no reply for this recipe is recorded yet.
-process.env.LEARNING_COACH_TRIAL_RECIPES = "number_line_steps";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";

@@ -1,6 +1,5 @@
-// The number line in steps (OLL decision 0017): a start and two or three moves, each its own jump. A trial
-// recipe: offered only when LEARNING_COACH_TRIAL_RECIPES names it, so default requests stay byte-identical
-// (test/request-hashes.test.mjs). Each case here is compiled from lesson numbers through the real path and
+// The number line in steps (OLL decision 0017): a start and two or three moves, each its own jump. Offered
+// by default since 2026-11-15 (a trial recipe until then). Each case here is compiled from lesson numbers through the real path and
 // judged by the steps judge (test/number-line-steps-judge.test.mjs judges hand-written lines).
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -36,7 +35,6 @@ const compile = (numbers, extra = {}) => {
     }
   `;
   return JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", script], {
-    env: { ...process.env, LEARNING_COACH_TRIAL_RECIPES: "number_line_steps" },
     cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8",
   }));
 };
@@ -48,15 +46,10 @@ const passes = (id, result) => {
   assert.deepEqual(judgeNumberLine(cases[id], result).hard, [], `${id}: ${JSON.stringify(result.content)}`);
 };
 
-test("the line in steps is installed as a trial recipe, offered only when named", () => {
-  assert.ok(api.TRIAL_RECIPES.includes("number_line_steps"));
-  assert.equal(api.LESSON_PLAN_CAPABILITY_NAMES.includes("number_line_steps"), false);
+test("the line in steps is offered by default, last in the catalog, where the trial put it (owner, 2026-11-15)", () => {
+  assert.equal(api.TRIAL_RECIPES.includes("number_line_steps"), false);
+  assert.deepEqual(api.LESSON_PLAN_CAPABILITY_NAMES.slice(-2), ["number_line_rounding", "number_line_steps"]);
   assert.equal(api.RECIPE_PLUGIN.number_line_steps, "math");
-  const offered = JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", `
-    const api = await import(${JSON.stringify(new URL("../lesson-plan.js", import.meta.url).href)});
-    console.log(JSON.stringify(api.LESSON_PLAN_CAPABILITY_NAMES.slice(-2)));
-  `], { env: { ...process.env, LEARNING_COACH_TRIAL_RECIPES: "number_line_steps" }, encoding: "utf8" }));
-  assert.deepEqual(offered, ["number_line_rounding", "number_line_steps"]);
 });
 
 test("ST-01, make ten: 8 → 10 → 13, a jump per move, hops when both moves go the same way", () => {
