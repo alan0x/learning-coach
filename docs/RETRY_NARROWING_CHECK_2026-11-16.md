@@ -41,9 +41,17 @@ defects on main, recorded below.
 - **Judge misses, candidate only: PJ-11, both repeats.** They are not caused by #109.
   - Neither lesson went through a narrowed retry. One had no refusal; the other had an outline fault and an unbound-number refusal.
   - Replaying both lessons' replies on main gives the same lessons and the same misses.
-  - The model chose sliders for a/(px + q) on this arm, which exposes two defects on main:
-    1. **The plot cannot be evaluated at one slider state** ("fails when number_01 = -1: Expression result is not finite"). This may be the plot judge's known false positive for slider-moved poles; not yet confirmed.
-    2. **The domain bar contradicts the curve when p can reach 0** ("the function is defined at x = 4.8, outside the domain bars, when … number_03 = 0"). The range was already refused where p can be 0 (#92), but the domain was not. This can draw a wrong picture. It goes into the plan as an urgent fix.
+  - Read from the replies (corrected 2026-11-16):
+    1. **A moving point reaches a pole: a real defect on main.** The model put a point P, dragged by a slider
+       from −5 to 5, on y = 2/(x + 1). At x = −1 the curve has no value, so the plot cannot be evaluated there
+       ("fails when number_01 = -1: Expression result is not finite"). Coach checks a sample slider's two ends,
+       never a pole between them. A fix (bind the point with `hide_when_undefined`, so it hides at the pole)
+       changes every plot with moving points, so it goes into the plan.
+    2. **The domain-bar miss is the plot judge's known false positive for slider-moved poles.** The formula is
+       n1/(n4·x + n2) + n3. At the flagged state the denominator is 1·x − 4.8, so the function is not defined at
+       x = 4.8; slider stepping leaves a rounding error, and the judge finds a value next to the pole. At
+       n4 = 0 the bars' ends (−n2/n4) are not finite, and `hide_when_undefined` hides them: nothing wrong is
+       drawn. An OLL change refusing that domain (OLL #71) was closed for this reason.
 
 ## Tokens and cost
 
