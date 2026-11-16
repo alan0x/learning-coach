@@ -26,7 +26,7 @@ test("the summary splits motion and other requests", () => {
 
 test("the number line trial has its own fitting requests, and its card is recognised", () => {
   assert.equal(NUMBER_LINE_CASES.length, OTHER_CASE_IDS.length);
-  assert.deepEqual(Object.keys(TRIAL_CASES), ["constant_speed_motion", "number_line"]);
+  assert.deepEqual(Object.keys(TRIAL_CASES), ["constant_speed_motion", "number_line", "extensions_switch_on"]);
   assert.deepEqual(MOTION_CASES, TRIAL_CASES.constant_speed_motion);
   const part = { steps: [{ beats: [{ actions: [{ do: "write", as: "v1", kind: "number_line", content: { range: { min: 0, max: 1 } } }] }] }] };
   assert.deepEqual(recipesInPart(part), ["number_line"]);
@@ -363,4 +363,13 @@ test("a both-arms run reports lessons, judge passes, calls and seconds per arm",
   const { arms } = summarize([row("candidate", 2, 8000, []), row("baseline", 3, 15000, ["no plot"], ["section: X y"]), row("candidate", 1, 6000, [])]).quality;
   assert.deepEqual(arms.candidate, { lessons: 2, playable: 2, judge_pass: 2, calls: 3, with_rejections: 0, median_first_playable_ms: 7000 });
   assert.deepEqual(arms.baseline, { lessons: 1, playable: 1, judge_pass: 0, calls: 3, with_rejections: 1, median_first_playable_ms: 15000 });
+});
+
+test("the switch-on gate pairs ten requests that use the new parts with the ten other cases (plan §7 step 3.2)", async () => {
+  const { EXTENSIONS_SWITCH_ON_CASES, TRIAL_CASES: cases, OTHER_CASE_IDS: others, qualityCasesFor } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  assert.deepEqual(EXTENSIONS_SWITCH_ON_CASES.map((item) => item.id), ["ST-01", "ST-02", "ST-03", "ST-04", "ST-05", "PJ-01", "PJ-02", "PJ-04", "PJ-07", "PJ-10"]);
+  assert.equal(cases.extensions_switch_on, EXTENSIONS_SWITCH_ON_CASES);
+  assert.equal(EXTENSIONS_SWITCH_ON_CASES.length, others.length);
+  assert.ok(EXTENSIONS_SWITCH_ON_CASES.every((item) => item.prompt && item.expect && !item.nearMiss));
+  assert.deepEqual(qualityCasesFor("extensions_switch_on"), [], "a speed gate: no quality cases");
 });

@@ -9,6 +9,17 @@
   - the drawable kinds are every output kind of an installed recipe with number inputs (the same four).
   - A test fails if the core files name a recipe again. Requests are byte-identical (request-hash test); replays of the 139 recorded lessons, the trial, run B and the gate are identical.
 
+- **M1 re-tagged after the switch-ons** (`testsuite/math-expressiveness-m1-2026-11-15.json`, plan §7 step 3.1; free, no lessons generated). Every question tagged with a number-line or function-plot component or candidate was re-read against main 267261c. Other tags are the 2026-11-13 baseline's, which stays as it was.
+  - **Questions that need a picture, fully drawn by a component:** 27 → 33 of 145 (19% → 23%); open 18 → 23, held out 9 → 10.
+  - **Now fully drawn (open):** two jumps through 50; a slope triangle from two points; m and c with slope and intercept marks; domain and range; the symmetry axis.
+  - **Still not drawn:** the hiker's three moves (1,245, −380, +615). The moves are drawable, but the values share only 5, which needs 296 ticks, so it is refused. Decision 0017 had counted it as partly covered. Counting by 25s to 200 is not drawn either: the fit takes the smallest unit that fits (5), so one jump of 200 has no jumps of 25, whatever ranges the model writes; 0017 had counted it covered.
+  - **Cut features given a home:**
+    - the double number line goes to `tape_diagram_ratio_table`, which makes that question "new";
+    - probability words on 0 to 1 go to `probability`;
+    - a new candidate `function_plot_calculus_ext` takes the area under a curve, tangents, intersections, a cubic's turning points and a hole.
+  - **Open-question gains after the re-tag:** fractions 10, counters and ten frames 9, data charts 8, polygon figures 7, place value 6, probability 6, 3D solids 6, tape diagrams and ratio tables 5.
+  - The M1 test checks every M1 file by the same rules (`test/math-expressiveness-m1.test.mjs`).
+
 - **The number line in steps is offered by default** (`number_line_steps`, OLL decision 0017 §2; owner's decision, 2026-11-15). It moves from `TRIAL_RECIPES` to the end of the catalog, where the trial offered it.
   - **Evidence:** the reduced trial (`docs/PLOT_TRIAL_2026-11-15.md`). 4 of 6 in-scope cases passed both repeats. The misses were a split of 25 as 20 then 5 where tens first was asked, and an outline fault with no number line. The four-addition near miss drew correct steps on a hand read. No lesson misled. Steps were not in run B, so there is no comparison with them off and no timing.
   - **Requests:** every request changes, and each is byte-identical to main with `LEARNING_COACH_TRIAL_RECIPES=number_line_steps` (+337 B on the first request and the fallback outline, as measured in #88); no ceiling exceeded. The combined speed gate with #81 compares against the build before #98 (`--baseline-build` at 75578ab), so it covers this change too.
