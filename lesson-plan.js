@@ -12016,6 +12016,7 @@ var PLOT_MARKS = ["intercepts", "vertex", "symmetry_axis", "slope_triangle", "do
 // src/plugins/math.ts
 var SIDE_COUNT = { min: 3, max: 384 };
 var UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 };
+var SCENE_FIRST_CAMERA = { yaw: 0.72, pitch: 0.55, zoom: 1 };
 var MATH_RECIPES = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
@@ -12027,6 +12028,12 @@ var MATH_RECIPES = {
     // Marks change what the plot draws, so two plots differing only in marks are different visuals.
     semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
     output_kinds: ["plot"],
+    // Its lesson numbers are read from its parameters (formula references and sample_x_numbers): the
+    // model writes no number list, and none is assumed for it.
+    numbers_in_parameters: true,
+    // The view is framed to the numbers it binds, so their ranges stay as they are once its section has
+    // been published; a later animation may not widen them.
+    ranges_fixed_once_shown: true,
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
     model_guidance: "\u51FD\u6570\u56FE\uFF1A\u516C\u5F0F\u5F15\u7528\u6ED1\u5757\u6539\u66F2\u7EBF\uFF1B\u91C7\u6837\u70B9\u53E6\u58F0\u660E"
@@ -12078,6 +12085,7 @@ var MATH_RECIPES = {
     model_parameter_names: ["title"],
     required_model_schema_parameters: [],
     semantic_parameters: [],
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["solid_3d", "section_plane"],
@@ -12091,6 +12099,7 @@ var MATH_RECIPES = {
     model_parameter_names: ["title", "expression", "section_axis", "section_value"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["function_surface_3d", "section_plane"],
@@ -12104,6 +12113,7 @@ var MATH_RECIPES = {
     model_parameter_names: ["title", "expression", "level", "section_axis"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "level", "section_axis"],
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["implicit_surface_3d", "section_plane"],
@@ -12812,11 +12822,6 @@ function compileText(plan, source, values) {
 }
 
 // src/recipe-kit.ts
-var LESSON_PLAN_SCENE_INITIAL_CAMERAS = {
-  cube_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
-  function_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
-  implicit_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 }
-};
 function fail2(code, path, message) {
   throw new LessonPlanError(code, path, message);
 }
@@ -14388,8 +14393,22 @@ var LESSON_PLAN_VERSION = "0.1";
 var LESSON_PLAN_CAPABILITY_REGISTRY = PLUGIN_RECIPE_REGISTRY;
 var LESSON_PLAN_CAPABILITY_NAMES = Object.keys(LESSON_PLAN_CAPABILITY_REGISTRY);
 function isNumberLineCapability(capability2) {
-  const recipe = capability2 === void 0 ? void 0 : LESSON_PLAN_CAPABILITY_REGISTRY[capability2];
-  return Boolean(recipe?.output_kinds.includes("number_line"));
+  const kinds = recipeEntry(capability2)?.output_kinds;
+  return Array.isArray(kinds) && kinds.includes("number_line");
+}
+function recipeEntry(capability2) {
+  return capability2 === void 0 ? void 0 : LESSON_PLAN_CAPABILITY_REGISTRY[capability2];
+}
+function recipeInitialCamera(capability2) {
+  const camera = recipeEntry(capability2)?.initial_camera;
+  if (camera === void 0) return void 0;
+  if (![camera.yaw, camera.pitch, camera.zoom].every((value2) => typeof value2 === "number" && Number.isFinite(value2))) {
+    throw new LessonPlanError("LESSON_PLAN_CAPABILITY", `$recipes.${capability2}.initial_camera`, "a recipe's initial_camera needs finite yaw, pitch and zoom");
+  }
+  return camera;
+}
+function recipeDeclares(capability2, flag) {
+  return recipeEntry(capability2)?.[flag] === true;
 }
 var LESSON_PLAN_VISUAL_FEATURES = [...new Set(
   LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features])
@@ -17730,6 +17749,7 @@ var VISUAL_COMPILERS = {
 };
 
 // src/lesson-plan-compiler.ts
+var NUMBER_DRIVEN_KINDS = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY).flatMap((recipe) => recipe.number_inputs?.length ? recipe.output_kinds ?? [] : []));
 function normalizedVisualIdentity(content, includeNumbers = true) {
   const sourceParameters = content.parameters ?? {};
   const parameters3 = Object.fromEntries(
@@ -17840,9 +17860,9 @@ function normalizeProgramOwnedNumberRanges(plan) {
   const counts = /* @__PURE__ */ new Map();
   const written = new Map((plan.numbers ?? []).map((definition, index) => [index + 1, definition.initial]));
   const fits = /* @__PURE__ */ new Map();
-  const publishedPlotNumbers = /* @__PURE__ */ new Set();
+  const publishedFixedRangeNumbers = /* @__PURE__ */ new Set();
   for (const [sectionIndex, section] of plan.sections.entries()) {
-    const newPlotNumbers = /* @__PURE__ */ new Set();
+    const newFixedRangeNumbers = /* @__PURE__ */ new Set();
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
         if (action.action !== "create" && action.action !== "revise" || action.kind !== "visual") continue;
@@ -17850,8 +17870,8 @@ function normalizeProgramOwnedNumberRanges(plan) {
         const bound = RECIPE_HOOKS[content.capability]?.bound_numbers?.(content);
         if (bound?.length) content.numbers = bound;
         else if (bound) delete content.numbers;
-        if (content.capability === "function_plot") {
-          for (const number of bound ?? []) newPlotNumbers.add(number);
+        if (recipeDeclares(content.capability, "ranges_fixed_once_shown")) {
+          for (const number of bound ?? content.numbers ?? []) newFixedRangeNumbers.add(number);
         }
         const fit = RECIPE_HOOKS[content.capability]?.fit_numbers;
         if (fit && action.action === "create") {
@@ -17868,7 +17888,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
           if (!definition || !policy) continue;
           if (RECIPE_HOOKS[content.capability]?.free_number?.(content, inputIndex)) continue;
           const path = `$lessonPlan.sections[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].content.parameters`;
-          const prior = publishedPlotNumbers.has(numberIndex) ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step } : void 0;
+          const prior = publishedFixedRangeNumbers.has(numberIndex) ? { min: definition.min, max: definition.max, initial: definition.initial, step: definition.student_control?.step } : void 0;
           const range = countRange(policy);
           if (range && !counts.get(numberIndex)?.some((owner) => owner.capability === content.capability)) {
             counts.set(numberIndex, [...counts.get(numberIndex) ?? [], { capability: content.capability, path, section: sectionIndex, ...range }]);
@@ -17915,7 +17935,7 @@ function normalizeProgramOwnedNumberRanges(plan) {
         }
       }
     }
-    for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
+    for (const number of newFixedRangeNumbers) publishedFixedRangeNumbers.add(number);
   }
   if (constrained.size === 0) return;
   const count = (value2) => Math.round(value2);
@@ -18474,7 +18494,7 @@ function validateCompiledVisualEffects(lesson) {
   if (required.size === 0) return;
   const visualExpressions = [];
   lesson.steps.forEach((step) => step.beats.forEach((beat) => beat.actions.forEach((action) => {
-    if (action.do !== "write" || !["geometry", "plot", "scene3d", "number_line"].includes(action.kind)) return;
+    if (action.do !== "write" || !NUMBER_DRIVEN_KINDS.has(action.kind)) return;
     const content = action.content;
     const bindings = Array.isArray(content.bindings) ? content.bindings : [];
     bindings.forEach((binding) => {
@@ -18765,7 +18785,7 @@ function courseVisualCreatesSchema(outline, sectionIndex, allowedNumberIndexes) 
       timing: { enum: timingNames },
       content: object({
         parameters: visualParametersSchema([capability2]),
-        ...numberCount > 0 && numberLimit > 0 && capability2 !== "function_plot" ? {
+        ...numberCount > 0 && numberLimit > 0 && !recipeDeclares(capability2, "numbers_in_parameters") ? {
           numbers: {
             type: "array",
             maxItems: numberLimit,
@@ -19672,7 +19692,7 @@ function lowerModelBoardContent(kind, value2, numberCount, numberLabels = []) {
   if (forceNoNumbers) validNumbers = [];
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters3, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
-  if (!forceNoNumbers && capability2 !== "function_plot" && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
+  if (!forceNoNumbers && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && !recipeDeclares(capability2, "numbers_in_parameters") && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
     validNumbers = [1];
   }
   return {
@@ -20029,17 +20049,17 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
   const outline = sanitized.outline;
   const drafts = sanitized.drafts;
   const visuallyBound = /* @__PURE__ */ new Set();
-  const publishedPlotNumbers = /* @__PURE__ */ new Set();
+  const publishedFixedRangeNumbers = /* @__PURE__ */ new Set();
   for (const [sectionIndex, section] of drafts.entries()) {
-    const newPlotNumbers = /* @__PURE__ */ new Set();
+    const newFixedRangeNumbers = /* @__PURE__ */ new Set();
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
         if ((action.action === "create" || action.action === "revise") && action.kind === "visual") {
           const visual = action.content;
           const bound = RECIPE_HOOKS[visual.capability]?.bound_numbers?.(visual);
           for (const number of bound ?? visual.numbers ?? []) visuallyBound.add(number);
-          if (visual.capability === "function_plot") {
-            for (const number of bound ?? []) newPlotNumbers.add(number);
+          if (recipeDeclares(visual.capability, "ranges_fixed_once_shown")) {
+            for (const number of bound ?? visual.numbers ?? []) newFixedRangeNumbers.add(number);
           }
         }
         if (action.action !== "animate") continue;
@@ -20048,7 +20068,7 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
         const nextMin = Math.min(definition.min, action.end_value);
         const nextMax = Math.max(definition.max, action.end_value);
         if (nextMin === definition.min && nextMax === definition.max) continue;
-        if (publishedPlotNumbers.has(action.number)) {
+        if (publishedFixedRangeNumbers.has(action.number)) {
           throw new LessonPlanError(
             "LESSON_PLAN_INTERACTION_MISMATCH",
             `$lessonPlanSectionDrafts[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`,
@@ -20063,7 +20083,7 @@ function normalizeExecutableNumberInteractions(outlineValue, draftValues) {
         }
       }
     }
-    for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
+    for (const number of newFixedRangeNumbers) publishedFixedRangeNumbers.add(number);
   }
   outline.numbers?.forEach((number, index) => {
     if (!visuallyBound.has(index + 1)) delete number.student_control;
@@ -20251,11 +20271,10 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
     delete lowered.angular_tolerance_degrees;
     delete lowered.zoom_tolerance_percent;
     let angularTolerance = PROGRAM_SCENE_ANGULAR_TOLERANCE_DEGREES;
-    const sceneCapability = outline.sections.slice(0, expectedSection).flatMap((section) => [
+    const initial = outline.sections.slice(0, expectedSection).flatMap((section) => [
       ...section.allowed_capabilities,
       ...(section.reusable_items ?? []).flatMap((item) => item.capability ? [item.capability] : [])
-    ]).reverse().find((capability2) => capability2 in LESSON_PLAN_SCENE_INITIAL_CAMERAS);
-    const initial = sceneCapability ? LESSON_PLAN_SCENE_INITIAL_CAMERAS[sceneCapability] : void 0;
+    ]).reverse().map((capability2) => recipeInitialCamera(capability2)).find((camera) => camera !== void 0);
     if (initial && preset) {
       const separationDegrees = Math.max(
         Math.abs(preset.yaw - initial.yaw),
@@ -21764,7 +21783,6 @@ export {
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
   LESSON_PLAN_MODEL_VISUAL_PARAMETER_NAMES,
-  LESSON_PLAN_SCENE_INITIAL_CAMERAS,
   LESSON_PLAN_VERSION,
   LESSON_PLAN_VISUAL_FEATURES,
   LESSON_PLAN_VISUAL_PARAMETER_NAMES,
@@ -21807,6 +21825,8 @@ export {
   modelTextFromRawReply,
   numericAnswerTolerance,
   promptSlot,
+  recipeDeclares,
+  recipeInitialCamera,
   resolveLessonPlan,
   roundingPlaces,
   roundingTolerance,

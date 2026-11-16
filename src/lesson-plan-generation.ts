@@ -1,6 +1,8 @@
 import { lessonText } from "./lesson-text.js";
 import {
   isNumberLineCapability,
+  recipeDeclares,
+  recipeInitialCamera,
   LESSON_PLAN_CAPABILITY_NAMES,
   LESSON_PLAN_CAPABILITY_NUMBER_LIMITS,
   LESSON_PLAN_CAPABILITY_REGISTRY,
@@ -25,7 +27,6 @@ import {
 } from "./lesson-plan.js";
 import {
   compileAndValidateLessonPlan,
-  LESSON_PLAN_SCENE_INITIAL_CAMERAS,
   mathExpressionToOll,
   type CompileLessonPlanOptions,
   type CompiledLessonPlan,
@@ -679,10 +680,10 @@ function lowerModelBoardContent(kind: unknown, value: unknown, numberCount: numb
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
   if (!forceNoNumbers
-    && capability !== "function_plot"
     && validNumbers.length === 0
     && numberCount === 1
     && typeof capability === "string"
+    && !recipeDeclares(capability, "numbers_in_parameters")
     && capability in LESSON_PLAN_CAPABILITIES
     && LESSON_PLAN_CAPABILITIES[capability as keyof typeof LESSON_PLAN_CAPABILITIES]
       .includes("primary_control" as never)) {
@@ -1150,17 +1151,17 @@ function normalizeExecutableNumberInteractions(
   // then let installed capability policies apply any physical/rendering limit
   // during compilation.
   const visuallyBound = new Set<number>();
-  const publishedPlotNumbers = new Set<number>();
+  const publishedFixedRangeNumbers = new Set<number>();
   for (const [sectionIndex, section] of drafts.entries()) {
-    const newPlotNumbers = new Set<number>();
+    const newFixedRangeNumbers = new Set<number>();
     for (const [momentIndex, moment] of section.moments.entries()) {
       for (const [actionIndex, action] of moment.actions.entries()) {
         if ((action.action === "create" || action.action === "revise") && action.kind === "visual") {
           const visual = action.content as LessonPlanVisualContent;
           const bound = RECIPE_HOOKS[visual.capability]?.bound_numbers?.(visual);
           for (const number of bound ?? visual.numbers ?? []) visuallyBound.add(number);
-          if (visual.capability === "function_plot") {
-            for (const number of bound ?? []) newPlotNumbers.add(number);
+          if (recipeDeclares(visual.capability, "ranges_fixed_once_shown")) {
+            for (const number of bound ?? visual.numbers ?? []) newFixedRangeNumbers.add(number);
           }
         }
         if (action.action !== "animate") continue;
@@ -1169,7 +1170,7 @@ function normalizeExecutableNumberInteractions(
         const nextMin = Math.min(definition.min, action.end_value);
         const nextMax = Math.max(definition.max, action.end_value);
         if (nextMin === definition.min && nextMax === definition.max) continue;
-        if (publishedPlotNumbers.has(action.number)) {
+        if (publishedFixedRangeNumbers.has(action.number)) {
           throw new LessonPlanError(
             "LESSON_PLAN_INTERACTION_MISMATCH",
             `$lessonPlanSectionDrafts[${sectionIndex}].moments[${momentIndex}].actions[${actionIndex}].end_value`,
@@ -1184,7 +1185,7 @@ function normalizeExecutableNumberInteractions(
         }
       }
     }
-    for (const number of newPlotNumbers) publishedPlotNumbers.add(number);
+    for (const number of newFixedRangeNumbers) publishedFixedRangeNumbers.add(number);
   }
   outline.numbers?.forEach((number, index) => {
     if (!visuallyBound.has(index + 1)) delete number.student_control;
@@ -1421,12 +1422,10 @@ function lowerModelActivityNumbers(
     delete lowered.angular_tolerance_degrees;
     delete lowered.zoom_tolerance_percent;
     let angularTolerance = PROGRAM_SCENE_ANGULAR_TOLERANCE_DEGREES;
-    const sceneCapability = outline.sections.slice(0, expectedSection).flatMap((section) => [
+    const initial = outline.sections.slice(0, expectedSection).flatMap((section) => [
       ...section.allowed_capabilities,
       ...(section.reusable_items ?? []).flatMap((item) => item.capability ? [item.capability] : []),
-    ]).reverse().find((capability) => capability in LESSON_PLAN_SCENE_INITIAL_CAMERAS) as
-      keyof typeof LESSON_PLAN_SCENE_INITIAL_CAMERAS | undefined;
-    const initial = sceneCapability ? LESSON_PLAN_SCENE_INITIAL_CAMERAS[sceneCapability] : undefined;
+    ]).reverse().map((capability) => recipeInitialCamera(capability)).find((camera) => camera !== undefined);
     if (initial && preset) {
       const separationDegrees = Math.max(
         Math.abs(preset.yaw - initial.yaw),

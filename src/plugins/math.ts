@@ -11,6 +11,10 @@ import { PLOT_MARKS } from "./plot-mark-names.js";
 const SIDE_COUNT = { min: 3, max: 384 } as const;
 const UNIT_SQUARES_PER_SIDE = { min: 1, max: 8 } as const;
 
+// The first camera of a math 3D scene (OLL's solids builder starts here too). A "turn to this view" task is
+// judged against it: a view already this close counts as reached before the learner moves.
+const SCENE_FIRST_CAMERA = { yaw: 0.72, pitch: 0.55, zoom: 1 } as const;
+
 export const MATH_RECIPES = {
   function_plot: {
     parts: ["whole", "primary_curve", "moving_point", "primary_control"],
@@ -22,6 +26,12 @@ export const MATH_RECIPES = {
     // Marks change what the plot draws, so two plots differing only in marks are different visuals.
     semantic_parameters: ["expression", "expressions", "expression_tokens", "sample_x_numbers", "marks", "pieces"],
     output_kinds: ["plot"],
+    // Its lesson numbers are read from its parameters (formula references and sample_x_numbers): the
+    // model writes no number list, and none is assumed for it.
+    numbers_in_parameters: true,
+    // The view is framed to the numbers it binds, so their ranges stay as they are once its section has
+    // been published; a later animation may not widen them.
+    ranges_fixed_once_shown: true,
     student_controls: ["slider"],
     required_features: ["cartesian_function_curve"],
     model_guidance: "函数图：公式引用滑块改曲线；采样点另声明",
@@ -73,6 +83,7 @@ export const MATH_RECIPES = {
     model_parameter_names: ["title"],
     required_model_schema_parameters: [],
     semantic_parameters: [],
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["solid_3d", "section_plane"],
@@ -86,6 +97,7 @@ export const MATH_RECIPES = {
     model_parameter_names: ["title", "expression", "section_axis", "section_value"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "section_axis"],
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["function_surface_3d", "section_plane"],
@@ -99,6 +111,7 @@ export const MATH_RECIPES = {
     model_parameter_names: ["title", "expression", "level", "section_axis"],
     required_model_schema_parameters: ["expression", "section_axis"],
     semantic_parameters: ["expression", "level", "section_axis"],
+    initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
     required_features: ["implicit_surface_3d", "section_plane"],

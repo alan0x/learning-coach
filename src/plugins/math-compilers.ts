@@ -17,7 +17,7 @@ import { COARSE_UNITS, lessonValues, moveLandings } from "./number-line-fit.js";
 import { PLOT_MARKS, markParts, type MarkPart, type PlotMark } from "./plot-marks.js";
 import { formulaBars, pieceBars, type AxisBar } from "./plot-domain-range.js";
 import { intervalOf, signOf, type Interval } from "./interval.js";
-import { LESSON_PLAN_SCENE_INITIAL_CAMERAS, fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
+import { fail, pad, variableAlias, parameters, allowParameterKeys, optionalText, optionalNumber, optionalInteger, optionalStringArray, assertRange, replaceIdentifier, safeFunctionExpression, evaluate, mathExpressionToOll, place, numberDefinition, namedNumbers, displayNumberSymbols, formatMathExpressionDisplay, angleScaleForUnit, scaledAngleExpression, type VisualCompiler } from "../recipe-kit.js";
 
 function compileFunctionPlot(
   base: string,

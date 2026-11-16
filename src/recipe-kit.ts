@@ -3,12 +3,6 @@ import { type CompiledVisual } from "./compiled-visual-reuse.js";
 import { compileMathExpression, type AuthoringAction, type Placement } from "octos-lesson-language";
 import { LessonPlanError, type JsonValue, type LessonPlan, type LessonPlanMathExpression, type LessonPlanPlacement, type LessonPlanVisualContent } from "./lesson-plan.js";
 
-export const LESSON_PLAN_SCENE_INITIAL_CAMERAS = {
-  cube_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
-  function_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
-  implicit_surface_with_section: { yaw: 0.72, pitch: 0.55, zoom: 1 },
-} as const;
-
 export type Parameters = Record<string, JsonValue>;
 
 export function fail(code: string, path: string, message: string): never {
