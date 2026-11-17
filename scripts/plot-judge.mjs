@@ -207,7 +207,7 @@ function stateMisses(drawn, values, moving) {
   const ends = xBars.flatMap((bar) => [bar.from, bar.to]).filter((end) => end !== null);
   const pieceEnds = new Set(drawn.curves.flatMap((curve) => [curve.from, curve.to]).filter((end) => typeof end === "number"));
   const nearEnd = (x) => ends.find((end) => atEnd(x, end));
-  const skipped = (x) => { const end = nearEnd(x); return end !== undefined && x !== end && !pieceEnds.has(x); };
+  const skipped = (x) => nearEnd(x) !== undefined && !ends.includes(x) && !pieceEnds.has(x);  // never an end itself
   const poleAt = (x) => {
     const y = valueAt(pieces, x);
     if (y === undefined || y === 0) return false;

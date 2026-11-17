@@ -270,4 +270,12 @@ test("the pole rule at a bar end hides no real domain or range miss", () => {
     intervals: [{ as: "d", axis: "x", from: 0.3, to: null, from_closed: true }], bindings: [{ target: "d.from", expression: "0.1*k" }] },
   { variables: [slider("k", 3, 1, 5, 1)] });
   assert.ok(judgePlot({ id: "piece-end" }, piece).hard.some((miss) => /undefined at x = 0.3, inside the domain bars/u.test(miss)));
+  // Two bindings of one pole that round differently (n1·(1/3) and n1/3): the second end, exactly on the
+  // pole and wrongly closed, is sampled even though the first lies within rounding of it (second review).
+  const split = (fromClosed) => lesson({ curves: [{ as: "f", expression: "1/(3*x - n1)" }],
+    intervals: [{ as: "d1", axis: "x", from: null, to: 0, to_closed: false }, { as: "d2", axis: "x", from: 0, from_closed: fromClosed, to: null }],
+    bindings: [{ target: "d1.to", expression: "n1*(1/3)" }, { target: "d2.from", expression: "n1/3" }] },
+  { variables: [{ as: "n1", initial: -6 + 4 * 0.05, min: -6, max: 6, label: "n1" }] });
+  assert.ok(judgePlot({ id: "split" }, split(true)).hard.some((miss) => /undefined at x = .*inside the domain bars/u.test(miss)), "a wrong closed end on the pole");
+  assert.deepEqual(judgePlot({ id: "split" }, split(false)).hard, [], "both ends open is right");
 });
