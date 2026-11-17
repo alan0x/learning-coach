@@ -51,6 +51,9 @@ function cardIdentity(kind: string, content: Record<string, unknown>) {
           if (path === "curves" && name === "holes") return false;
           if ((path === "curves" || path === "points") && ["label", "color"].includes(name)) return false;
         }
+        // Hiding a value while it is undefined changes only where the earlier card, already on the board, has
+        // no value either (a sample point at a pole); a composite's own moving point does not set it (plan 6e).
+        if (path === "bindings" && name === "hide_when_undefined") return false;
         return true;
       })
       .sort(([a], [b]) => a.localeCompare(b))
