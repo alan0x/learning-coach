@@ -48,3 +48,53 @@ check included, and asked for this probe before any speed gate.
 - thinking 12,700.
 
 **Cost estimate:** about $0.37 for the recorded replies, and about $0.55 scaled to the run's 78 calls; with the schema check, about $0.57. Prices are gemini-3.6-flash's standard ones (Google's pricing page, read 2026-11-15).
+
+## Speed gate (owner-approved 2026-11-16, cap 160 calls)
+
+The owner accepted the offline check of the post-probe fix and approved the gate.
+
+### Setup
+
+- **Builds:** candidate `f5a83ba`; control main `90c2377`. Both run in the same environment (`--baseline-build`).
+- **Command:** `--recipes extensions_switch_on --pairs 40 --lesson-calls 4 --max-calls 160`. This is the request set of the 2026-11-15 gate, unchanged, so the two gates can be compared:
+  - ST-01 to ST-05;
+  - PJ-01, -02, -04, -07 and -10;
+  - the ten routing cases.
+- **Data:** `handoff-math-expressiveness/runs/plot-points-gate/`.
+
+### Result: pass
+
+| | Control | Candidate |
+|---|---|---|
+| Median time to first playable | 8.8 s | 9.2 s |
+| Playable | 39 of 40 | 40 of 40 |
+| Refusals | 9 (6 of them the old sample slip) | 2 |
+
+- **Paired difference (candidate minus control):** median +107 ms, 95% interval −1.8 s to +1.3 s, over 39 complete pairs.
+- **The gate's verdict:**
+  - requests that fit the new parts: −185 ms;
+  - other requests: +348 ms;
+  - no slowdown beyond the gate's limits.
+- **The lesson the control lost:** PJ-01 in one repeat, to the old slip on every attempt.
+- **Request size:** median prompt 2,929 tokens, against 2,900 on the control.
+
+### Calls
+
+- **Started calls:** 111 in all (control 50, candidate 61).
+- **The extra candidate calls are not refusals.** On a lesson with no refusal, the candidate arm often counts a second call that was started but never completed: the next section's request begins before the harness stops at the first playable part.
+- **This is a harness effect, not #113:**
+  - the 2026-11-15 gate showed the same pattern in its candidate arm (14 of 31 clean lessons, against 2 of 33 on its control);
+  - this gate shows 18 of 39, against 1 of 34;
+  - only 91 replies were recorded.
+- **Follow-up:** count completed calls in the harness, or stop before the next request starts.
+
+### Tokens and cost
+
+**Tokens,** over 91 recorded replies:
+- prompt 250,703 (97,915 of them cached);
+- output 107,494;
+- thinking 36,996.
+
+**Cost estimate:** about $0.66. Prices are gemini-3.6-flash's standard ones (Google's pricing page, read 2026-11-15).
+- The 20 calls that were started but stopped may also bill their input: at most about $0.05 more.
+- The day's three runs (schema check, probe, gate) cost about $1.25 in all.
