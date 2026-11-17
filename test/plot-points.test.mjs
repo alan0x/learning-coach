@@ -75,7 +75,7 @@ test("a dragged point names its slider, and moves along the curve", async () => 
   assert.ok(plot(lesson).bindings.some((binding) => binding.target.endsWith(".x") && binding.expression.includes("number_01")));
 });
 
-test("a dragged point keeps its label, and is refused on a curve the sliders change or on several curves (review of #113)", async () => {
+test("a dragged point keeps its label, is refused on several curves, and on a curve the sliders change is handled as main handles it (review of #113, paired probe)", async () => {
   const labelled = await generate(reply({ formula: "x^2", points: [{ slider: "n1", label: "M" }], numbers: [[1, -3, 3, "x"]], animations: [[1, 2]] }));
   assert.ok(labelled.lesson, labelled.rejected.join(" | "));
   assert.ok(plot(labelled.lesson).points.some((point) => point.label === "M"));

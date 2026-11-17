@@ -13,7 +13,7 @@
     - points on several formulas or a piecewise function;
     - one fixed point with a slope triangle (the program does not pick the second x, which the narration may state).
   - **Review of #113:**
-    - A dragged point on a curve the sliders change, or on several curves, is refused, not dropped.
+    - A dragged point on several curves is refused. On a curve the sliders change, it is handled as before #113: a refusal there lost a lesson in the paired probe (PJ-04).
     - The program no longer adds dragged points beside fixed ones, which caused a refusal the model could not fix.
     - Labels are kept in the model's order, and a dragged point keeps its label.
     - The y check allows half a unit of the last digit written; a whole number must be exact.
