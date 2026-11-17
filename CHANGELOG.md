@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **A dragged point across a pole hides instead of failing the lesson** (plan item 6e; OLL bafc476, player 0.12.0). A point whose slider passes where the curve has no value (A on y = 2/(x + 1) at x = −1, or (1 + 1/n)^n at n = 0) used to fail the lesson at that slider value. OLL's function plot now binds each sample point's y with `hide_when_undefined`: the point hides there and comes back, and while a secant point is hidden the player shows no secant and says why. Coach still refuses a point the curve has no value at its starting value, slider ends or animation ends.
+- **A dragged point across a pole hides instead of failing the lesson** (plan item 6e; OLL 8547092, player 0.12.0). A point whose slider passes where the curve has no value (A on y = 2/(x + 1) at x = −1, or (1 + 1/n)^n at n = 0) used to fail the lesson at that slider value. OLL's function plot now binds each sample point's y with `hide_when_undefined`: the point hides there and comes back, and while a secant point is hidden the player shows no secant and says why. Coach still refuses a point the curve has no value at its starting value, slider ends or animation ends.
   - **Card reuse** leaves `hide_when_undefined` out of a card's identity, so a standalone plot of cos(x) still reuses a unit circle's or a spring's plot. The flag changes only where the earlier card, already on the board, has no value either.
   - **No model request changed** (`eval/request-hashes.json` hashes are the same); 240 recorded lesson digests changed by the flag alone. Replaying all 139 recorded lessons gives the same outcomes and the same lessons once the flag is set aside; 6 of them carry it.
 
