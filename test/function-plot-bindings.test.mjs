@@ -161,7 +161,7 @@ test("a necessary sample binding receives field-specific feedback for the first 
     assert.equal(prefixes[0].calls, 2);
     assert.deepEqual(calls.slice(1).map(call => call.section), [1, 2, 3]);
     assert.equal(rejections.length, 1);
-    assert.match(calls[1].feedback, /sample_x_numbers/u);
+    assert.match(calls[1].feedback, /parameters\.points/u);
     assert.equal(plot.points.length, numbers.length);
   }
 });
@@ -196,7 +196,7 @@ test("a changing curve drops unused samples locally but repairs a required mixed
   });
   assert.equal(required.prefixes[0].calls, 2);
   assert.equal(required.rejections.length, 1);
-  assert.match(required.rejections[0].error.path, /\.sample_x_numbers$/u);
+  assert.match(required.rejections[0].error.path, /\.points$/u);
   assert.equal(required.plot.measurement, "secant");
 });
 
@@ -316,8 +316,8 @@ test("a malformed sample field that is still needed gets field-specific repair f
       },
     });
     assert.equal(rejections.length, 1, mode);
-    assert.match(rejections[0].error.path, /\.sample_x_numbers$/u, mode);
-    assert.match(calls[1].feedback, /sample_x_numbers/u, mode);
+    assert.match(rejections[0].error.path, /\.points$/u, mode);
+    assert.match(calls[1].feedback, /points|sample x-coordinates/u, mode);
     assert.equal(plot.points.length, 1, mode);
   }
 });
@@ -335,7 +335,7 @@ test("mistyped sample references cannot silently discard a real animation and pr
       },
     });
     assert.equal(prefixes[0].calls, 2);
-    assert.match(rejections[0].error.path, /sample_x_numbers$/u);
+    assert.match(rejections[0].error.path, /points$/u);
     assert.equal(lesson.lesson.tasks[0].prompt, "请把 t 调到 2，观察对应的高度。");
     assert.equal(plot.points.length, 1);
   }
@@ -369,7 +369,7 @@ test("a later instruction for an omitted sample point repairs only that section"
     },
   });
   assert.deepEqual(calls.slice(1).map(call => call.section), [2, 2, 3]);
-  assert.match(rejections[0].error.message, /no moving sample point/u);
+  assert.match(rejections[0].error.message, /no dragged point/u);
   assert.deepEqual(prefixes[0].plot, plot);
 });
 
@@ -381,7 +381,7 @@ test("a curve parameter with the same number cannot substitute for a requested m
     },
   });
   assert.equal(prefixes[0].calls, 2);
-  assert.match(rejections[0].error.path, /sample_x_numbers$/u);
+  assert.match(rejections[0].error.path, /points$/u);
   assert.equal(plot.points.length, 1);
 });
 

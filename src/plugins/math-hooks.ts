@@ -127,6 +127,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       // were refused for it, one call each), and `marks: []` the same way.
       if (Array.isArray(parameters.pieces) && parameters.pieces.length === 0) delete parameters.pieces;
       if (Array.isArray(parameters.marks) && parameters.marks.length === 0) delete parameters.marks;
+      const dragged = lowerPoints(parameters, numberCount);
       if (parameters.pieces !== undefined) return lowerPieces(parameters, numberCount);
       const rawFormulas = parameters.formulas !== undefined
         ? parameters.formulas
@@ -135,7 +136,13 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
           : Array.isArray(parameters.expressions)
             ? parameters.expressions
             : undefined;
-      if (rawFormulas === undefined) return;
+      if (rawFormulas === undefined) {
+        // A reply with expression_tokens instead of formulas gets the same dragged-point checks (review of #113).
+        if (dragged && Array.isArray(parameters.expressions) && parameters.expressions.length !== 1) {
+          formulaError("$lessonPlanSection.visual.parameters.points", "points sit on one formula; a comparison of several curves takes none");
+        }
+        return;
+      }
       if (!Array.isArray(rawFormulas)
         || rawFormulas.length < 1
         || rawFormulas.length > 8) {
@@ -157,6 +164,11 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
         numberCount,
         `$lessonPlanSection.visual.parameters.formulas[${index}]`,
       ));
+      if (dragged && parsed.length !== 1) formulaError("$lessonPlanSection.visual.parameters.points", "points sit on one formula; a comparison of several curves takes none");
+      // A dragged point on a curve the sliders change is handled as main handles samples there (plot-bindings):
+      // refused where the point needs its own number, otherwise left to the curve. Refusing it outright lost a
+      // lesson in the paired probe that main published (PJ-04: a point on the vertex slider of (x − n1)² + 2,
+      // which the vertex mark already shows; the model alternated between two refused replies).
       if (parsed.length === 1) {
         parameters.expression_tokens = parsed[0];
         return;
@@ -214,10 +226,10 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
           "a function plot requires exactly one explicit mathematical expression",
         );
       }
-      const pathToSamples = `${path}.parameters.sample_x_numbers`;
+      const pathToSamples = `${path}.parameters.points`;
       const samples = validatePlotSampleNumbers(visualParameters.sample_x_numbers, numberCount, pathToSamples);
       if (samples.length && plotCurveNumbers(visualParameters).length) {
-        fail("LESSON_PLAN_INTERACTION_MISMATCH", pathToSamples, "sample_x_numbers requires a fixed curve; use formula references for curve controls");
+        fail("LESSON_PLAN_INTERACTION_MISMATCH", pathToSamples, "a dragged point (points {slider}) needs a fixed curve; use formula references for curve controls");
       }
       if (visualParameters.expression_tokens !== undefined) {
         const expressionTokens = array(
@@ -290,6 +302,67 @@ function namesToNumbers(formula: unknown, labels: readonly string[], visualNumbe
 }
 
 /**
+ * Points on a plot (OLL decision 0018 as amended, decision 0020): the model writes what each point is, never
+ * an index into another list. A fixed point is its x and y, both values the narration says; the compiler
+ * checks y against the curve (a stand-in formula is caught without reading text) and draws it. A point the
+ * learner drags names the slider that moves it, as the formula does (`n1`); it lowers to the internal
+ * `sample_x_numbers`, so every check of moving points still applies. Before, the model wrote
+ * `sample_x_numbers` itself and often put x positions there ([1, 3] for x = 1 and 3): 42 recorded slips, and
+ * lessons lost when a retry repeated it. A point the program cannot draw is refused, never dropped: the
+ * narration talks about it.
+ */
+function lowerPoints(parameters: Record<string, unknown>, numberCount: number): boolean {
+  // sample_labels is the program's, written only here from the model's point labels.
+  delete parameters.sample_labels;
+  const raw = parameters.points;
+  if (raw === undefined) return false;
+  const path = "$lessonPlanSection.visual.parameters.points";
+  if (Array.isArray(raw) && raw.length === 0) {
+    delete parameters.points;
+    return false;
+  }
+  if (!Array.isArray(raw) || raw.length > 2) fail("LESSON_PLAN_POINT", path, "points holds one or two points");
+  if (parameters.pieces !== undefined) fail("LESSON_PLAN_POINT", path, "points sit on one formula; a piecewise function takes no points");
+  const items = (raw as unknown[]).map((entry, index) => {
+    const where = `${path}[${index}]`;
+    const point = entry && typeof entry === "object" && !Array.isArray(entry) ? entry as Record<string, unknown> : undefined;
+    const fixed = point && typeof point.x === "number" && Number.isFinite(point.x) && typeof point.y === "number" && Number.isFinite(point.y) && point.slider === undefined;
+    const moving = point && typeof point.slider === "string" && point.x === undefined && point.y === undefined;
+    if (!fixed && !moving) fail("LESSON_PLAN_POINT", where, "a point is either {x, y}, a fixed point on the curve, or {slider: \"n1\"}, a point the learner drags by that lesson number");
+    // A label up to 16 characters is drawn whole; a longer one is left to the program's letter, never cut
+    // mid-text ("P(x, sqr" in the paired probe).
+    const label = typeof point!.label === "string" && point!.label.trim() && point!.label.trim().length <= 16 ? point!.label.trim() : undefined;
+    if (fixed) return { kind: "fixed" as const, x: point!.x as number, y: point!.y as number, ...(label ? { label } : {}) };
+    const match = /^\s*n(\d+)\s*$/iu.exec(point!.slider as string);
+    const number = match ? Number(match[1]) : Number.NaN;
+    if (!(number >= 1 && number <= numberCount)) {
+      fail("LESSON_PLAN_POINT", `${where}.slider`, numberCount
+        ? `the slider of a dragged point is one of the lesson numbers n1 to n${numberCount}`
+        : "this lesson has no lesson numbers, so no point can be dragged: write the point as {x, y}");
+    }
+    return { kind: "moving" as const, number, ...(label ? { label } : {}) };
+  });
+  if (items.some((item) => item.kind === "fixed") && items.some((item) => item.kind === "moving")) {
+    fail("LESSON_PLAN_POINT", path, "the points of one plot are all fixed ({x, y}) or all dragged ({slider}), not both");
+  }
+  if (items[0]!.kind === "moving") {
+    const numbers = items.map((item) => (item as { number: number }).number);
+    if (new Set(numbers).size !== numbers.length) fail("LESSON_PLAN_POINT", path, "two dragged points need two different lesson numbers");
+    delete parameters.points;
+    parameters.sample_x_numbers = numbers;
+    // The model's names for its dragged points, drawn as written (review of #113).
+    const labels = items.map((item) => (item as { label?: string }).label);
+    const free = ["A", "B"].filter((name) => !labels.includes(name));
+    if (labels.some((label) => label !== undefined)) parameters.sample_labels = labels.map((label) => label ?? (items.length === 2 ? free.shift()! : "P"));
+    return true;
+  }
+  const xs = items.map((item) => (item as { x: number }).x);
+  if (new Set(xs).size !== xs.length) fail("LESSON_PLAN_POINT", path, "two fixed points need two different x");
+  parameters.points = items.map(({ kind: _kind, ...point }) => point);
+  return false;
+}
+
+/**
  * A piecewise function (OLL decision 0018 §2): each piece is a formula on an interval with its ends open or
  * closed, as the model writes them. The pieces replace the formulas: each becomes one static curve (a
  * piece may be a constant), and their intervals may meet only at an end at most one of them includes.
@@ -328,7 +401,7 @@ function lowerPieces(parameters: Record<string, unknown>, numberCount: number): 
       formulaError(path, "the pieces overlap: each x belongs to at most one piece, and where two meet only one includes the end");
     }
   }
-  for (const key of ["formulas", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "sample_x_numbers"]) delete parameters[key];
+  for (const key of ["formulas", "expression", "expressions", "expression_tokens", "curve_label", "curve_labels", "sample_x_numbers", "sample_labels"]) delete parameters[key];
   parameters.expressions = ordered.map((piece) => piece.expression);
   parameters.pieces = ordered;
   return { no_numbers: true };
@@ -369,7 +442,7 @@ function specializeTwoPointDraft(
     if (action.action !== "create" || action.kind !== "visual") continue;
     const content = action.content as LessonPlanVisualContent;
     if (content.capability !== "function_plot" || content.parameters?.sample_x_numbers !== undefined
-      || Array.isArray(content.parameters?.expressions)) continue;
+      || content.parameters?.points !== undefined || Array.isArray(content.parameters?.expressions)) continue;
     const tokens = content.parameters?.expression_tokens;
     if (Array.isArray(tokens)) {
       content.parameters!.expression_tokens = (tokens as LessonPlanMathToken[]).map((token) => (

@@ -26,7 +26,7 @@ function compileFunctionPlot(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces"], path);
+  allowParameterKeys(input, ["title", "expression", "expressions", "expression_tokens", "sample_x_numbers", "curve_label", "curve_labels", "x_label", "y_label", "x_min", "x_max", "y_min", "y_max", "marks", "pieces", "points", "sample_labels"], path);
   const dynamicTokens = input.expression_tokens as LessonPlanMathExpression | undefined;
   if (dynamicTokens !== undefined
     && !dynamicTokens.some((token) => token.kind === "input")) {
@@ -167,7 +167,8 @@ function compileFunctionPlot(
     const d = numberDefinition(plan, sampleNumber, `${path}.numbers`);
     for (const x of [d.min, d.max]) evaluate(expression, ["x"], { x }, `${path}.expression`);
     return { ...sampleAt(d.initial, `${path}.expression`),
-      label: sampleNumbers.length === 2 ? (index === 0 ? "A" : "B") : "P(x, y)", x_expression: variableAlias(sampleNumber) };
+      label: (Array.isArray(input.sample_labels) && typeof input.sample_labels[index] === "string" ? input.sample_labels[index] as string : undefined)
+        ?? (sampleNumbers.length === 2 ? (index === 0 ? "A" : "B") : "P(x, y)"), x_expression: variableAlias(sampleNumber) };
   });
   const teachingPoints: Array<{ x: number; y: number }> = [...samples.map(({ x, y }) => ({ x, y })), ...teachingPointsFromPieces];
   const optionalPoints: Array<{ x: number; y: number }> = [];
@@ -208,7 +209,7 @@ function compileFunctionPlot(
   if (sampleNumbers.length === 1 && markList.includes("slope_triangle")) {
     const second = secondSampleTwoRight(plan, sampleNumbers[0]!, expression, creationMoments, path);
     if (second) {
-      samples[0]!.label = "A";
+      if (!(Array.isArray(input.sample_labels) && typeof input.sample_labels[0] === "string")) samples[0]!.label = "A";
       samples.push(second.sample);
       teachingPoints.push({ x: second.sample.x, y: second.sample.y }, ...second.shown);
       optionalPoints.push(...second.ends);
@@ -221,8 +222,49 @@ function compileFunctionPlot(
   // Their x positions are fixed; the parameter sliders change the curve.
   // With marks (decision 0018) the points stand two units apart, off x = 0, where the y-intercept mark
   // sits: the first pair where the curve exists at the start and at every demonstrated state.
+  // Fixed points the model wrote as {x, y} (decision 0020; the hook lowered dragged points to samples). Each
+  // is checked against the curve and drawn at the curve's value; one the program cannot draw is refused,
+  // never dropped, since the narration talks about it.
+  const fixedPoints = input.points === undefined ? undefined : validFixedPoints(input.points, `${path}.points`);
+  // Labels as the model wrote them, in its order; a missing one takes A or B, whichever the other did not.
+  const freeLabels = ["A", "B"].filter((name) => !fixedPoints?.some((point) => point.label === name));
+  const pointLabels = fixedPoints?.map((point, index) => point.label
+    ?? (fixedPoints.length === 1 ? "P" : freeLabels.shift() ?? (index ? "B" : "A")));
+  const extraPoints: Array<MarkPart & { at: (values: Record<string, number>) => { x?: number; y?: number } }> = [];
+  if (fixedPoints?.length) {
+    const where = `${path}.points`;
+    if (expressions.length !== 1) fail("LESSON_PLAN_POINT", where, "points sit on one formula; a comparison of several curves takes none");
+    if (sampleNumbers.length) fail("LESSON_PLAN_POINT", where, "the points of one plot are all fixed ({x, y}) or all dragged ({slider}), not both");
+    if (fixedPoints.length === 1 && slopeTriangle) fail("LESSON_PLAN_POINT", where, "a slope triangle needs two points: write the second point as {x, y}");
+    const evaluateCurve = compileMathExpression(expression, expressionVariables);
+    const valueAt = (values: Record<string, number>, x: number) => { try { return evaluateCurve({ ...values, x }); } catch { return Number.NaN; } };
+    const reachedAll = [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))];
+    for (const [index, point] of fixedPoints.entries()) {
+      if (!reachedAll.every((values) => Number.isFinite(valueAt(values, point.x)))) {
+        fail("LESSON_PLAN_POINT", `${where}[${index}].x`, `the curve has no value at x = ${point.x}${curveParameters.length ? " for some slider value" : ""}; choose another x`);
+      }
+      const y = valueAt(initialState, point.x);
+      if (!pointYMatches(y, point.y)) {
+        fail("LESSON_PLAN_POINT", `${where}[${index}].y`, `the curve gives y = ${Number(y.toPrecision(6))} at x = ${point.x}, not ${point.y}: write the curve's value, or check the formula`);
+      }
+    }
+    if (fixedPoints.length === 1) {
+      const point = fixedPoints[0]!;
+      const yText = replaceIdentifier(expression, "x", `(${point.x})`);
+      extraPoints.push({ kind: "point", as: "fixed-point", label: pointLabels![0]!, x: String(point.x), y: yText, at: (values) => ({ x: point.x, y: valueAt(values, point.x) }) });
+      // In view at the start and at every demonstrated state, as reference points are (review of #113).
+      teachingPoints.push(...[initialState, ...demonstrations].map((values) => ({ x: point.x, y: valueAt(values, point.x) })).filter((spot) => Number.isFinite(spot.y)));
+    }
+  }
   let references: Array<{ x: number; y: number; label: string }> | undefined;
-  if (expressions.length === 1 && !sampleNumbers.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
+  if (fixedPoints?.length === 2) {
+    // Two fixed points are the plot's reference points, in the model's order and with its labels.
+    const evaluateCurve = compileMathExpression(expression, expressionVariables);
+    const at = (values: Record<string, number>, x: number) => { try { return evaluateCurve({ ...values, x }); } catch { return Number.NaN; } };
+    // Each keeps its own label; left to right, so the triangle's run and rise are positive (review of #113).
+    references = fixedPoints.map((point, index) => ({ x: point.x, y: at(initialState, point.x), label: pointLabels![index]! })).sort((a, b) => a.x - b.x);
+    teachingPoints.push(...references, ...demonstrations.flatMap((values) => fixedPoints.map((point) => ({ x: point.x, y: at(values, point.x) }))).filter((spot) => Number.isFinite(spot.y)));
+  } else if (expressions.length === 1 && !sampleNumbers.length && !fixedPoints?.length && (slopeTriangle || /斜率|割线|slope|secant/i.test([plan.title, ...plan.goals].join(" ")))) {
     const evaluateCurve = compileMathExpression(expression, expressionVariables);
     const referencePoints = (values: Record<string, number>, xs: readonly number[]) => xs.flatMap((x, index) => {
       try {
@@ -337,6 +379,7 @@ function compileFunctionPlot(
     curves: plottedCurves,
     ...(samples.length ? { samples } : references ? { references } : {}),
   });
+  if (extraPoints.length) appendMarks(built.actions[0] as unknown as { content: Record<string, unknown> }, extraPoints, initialState);
   if (marks.length) appendMarks(built.actions[0] as unknown as { content: Record<string, unknown> }, marks, initialState);
   if (bars.length) appendBars(built.actions[0] as unknown as { content: Record<string, unknown> }, bars, initialState, (source) => compileText(plan, source));
   return {
@@ -439,6 +482,33 @@ function plotPieces(value: unknown, expressionCount: number, path: string): Arra
     const end = (key: string) => (piece[key] === null || piece[key] === undefined ? null : optionalNumber(piece[key] as never, 0, `${path}.pieces[${index}].${key}`));
     return { from: end("from"), to: end("to"), from_closed: piece.from_closed !== false, to_closed: piece.to_closed !== false };
   });
+}
+
+/**
+ * Whether a y the model wrote is the curve's value: the curve's value rounded to the digits written equals
+ * it (1/3 written 0.33 or 0.3), and a whole number means a whole number (2 is not the curve's 1.6).
+ */
+function pointYMatches(curve: number, written: number): boolean {
+  if (!Number.isFinite(curve)) return false;
+  const text = String(written);
+  // Digits after the point as written; a small number prints in exponent form (1e-7 has 7, 2.5e-7 has 8).
+  const exponent = /e-(\d+)$/iu.exec(text);
+  const mantissaDigits = text.replace(/e.*$/iu, "").split(".")[1]?.length ?? 0;
+  const digits = exponent ? mantissaDigits + Number(exponent[1]) : mantissaDigits;
+  // Half a unit of the last digit written (1.5 for 1.45, 0.66 or 0.67 for 2/3 is not: 0.66 is 0.0067 off);
+  // a whole number must be the curve's value, so 0 is not 0.04 and 2 is not 1.6 (review of #113).
+  const tolerance = digits > 0 ? 0.5 * 10 ** -digits : 0;
+  return Math.abs(curve - written) <= tolerance + 1e-9 * Math.max(1, Math.abs(written));
+}
+
+/** The fixed points of a plot, as lower_model_parameters leaves them: one or two {x, y}, each x different. */
+function validFixedPoints(value: unknown, path: string): Array<{ x: number; y: number; label?: string }> {
+  const ok = Array.isArray(value) && value.length >= 1 && value.length <= 2 && value.every((point) => point && typeof point === "object"
+    && Number.isFinite((point as { x?: unknown }).x) && Number.isFinite((point as { y?: unknown }).y) && (point as { slider?: unknown }).slider === undefined);
+  if (!ok) fail("LESSON_PLAN_POINT", path, "points holds one or two fixed points {x, y}");
+  const points = value as Array<{ x: number; y: number; label?: string }>;
+  if (points.length === 2 && points[0]!.x === points[1]!.x) fail("LESSON_PLAN_POINT", path, "two fixed points need two different x");
+  return points;
 }
 
 /**
