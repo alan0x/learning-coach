@@ -1,0 +1,372 @@
+{
+  "note": "3D solids judge cases (OLL decision 0019 §5 step 2), written for the judge and never taken from the math expressiveness question set. Overlap is scored against all 160 questions by scripts/case-overlap.mjs (content-word and Chinese-bigram Jaccard; it prints only IDs and scores). Expectations were written before any recipe code. Judge: scripts/solids-judge.mjs. Solids are matched by kind and size, never by name; a box matches in any orientation. Each solid's expected measures are the values the line under the scene must show (a number, or {pi: k} for k·π). `interaction` is the slider the lesson must offer; `forbid` lists what must not appear (a cut, a net, a measure). Near misses are families 0019 leaves out: no scene passes, and a scene passes on the checks needing no expectation plus its `forbid` list (no worse than today, nothing wrong drawn).",
+  "cases": [
+    {
+      "id": "SD-01",
+      "language": "en",
+      "prompt": "A storage crate measures 30 by 20 by 12 inches. Picture it and give its capacity plus the area of all six sides.",
+      "covers": "box: volume and surface area",
+      "expect": {
+        "solids": [
+          {
+            "kind": "box",
+            "size": [
+              30,
+              20,
+              12
+            ],
+            "volume": 7200,
+            "surface_area": 2400
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-02",
+      "language": "en",
+      "prompt": "A soup can has a radius of 4 cm and a height of 10 cm. Draw the can and find its volume.",
+      "covers": "cylinder: volume in π",
+      "expect": {
+        "solids": [
+          {
+            "kind": "cylinder",
+            "radius": 4,
+            "height": 10,
+            "volume": {
+              "pi": 160
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-03",
+      "language": "en",
+      "prompt": "Stand a cone and a cylinder next to each other, both with radius 3 and height 5. Compare their volumes.",
+      "covers": "beside: cone and cylinder, same base and height",
+      "expect": {
+        "solids": [
+          {
+            "kind": "cone",
+            "radius": 3,
+            "height": 5,
+            "volume": {
+              "pi": 15
+            }
+          },
+          {
+            "kind": "cylinder",
+            "radius": 3,
+            "height": 5,
+            "volume": {
+              "pi": 45
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-04",
+      "language": "en",
+      "prompt": "Picture a ball with a 6-inch radius. What are its volume and its surface area?",
+      "covers": "sphere: volume and surface area in π",
+      "expect": {
+        "solids": [
+          {
+            "kind": "sphere",
+            "radius": 6,
+            "volume": {
+              "pi": 288
+            },
+            "surface_area": {
+              "pi": 144
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-05",
+      "language": "en",
+      "prompt": "Let me spin a prism whose two ends are triangles, then tally its flat sides, straight edges and corner points.",
+      "covers": "counts: triangular prism (any size)",
+      "expect": {
+        "solids": [
+          {
+            "kind": "prism",
+            "sides": 3,
+            "counts": [
+              5,
+              9,
+              6
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-06",
+      "language": "en",
+      "prompt": "A square pyramid has base edges of 6 m and a height of 4 m. Open it up into its net and find the total area of its faces.",
+      "covers": "pyramid by base edge: net and surface area",
+      "expect": {
+        "solids": [
+          {
+            "kind": "pyramid",
+            "sides": 4,
+            "side": 6,
+            "height": 4,
+            "surface_area": 96
+          }
+        ],
+        "interaction": "unfold"
+      }
+    },
+    {
+      "id": "SD-07",
+      "language": "en",
+      "prompt": "Two blocks are glued into an L: a 6 × 4 × 3 slab lying down and a 2 × 4 × 7 tower against it. Show the L and add up the space inside.",
+      "covers": "L shape: two boxes joined, volume added",
+      "expect": {
+        "solids": [
+          {
+            "kind": "two_boxes",
+            "boxes": [
+              [
+                6,
+                4,
+                3
+              ],
+              [
+                2,
+                4,
+                7
+              ]
+            ],
+            "volume": 128
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-08",
+      "language": "en",
+      "prompt": "Slide a flat horizontal cut up through a cylinder of radius 2 and height 6. What shape is each slice?",
+      "covers": "cut: horizontal section sliding bottom to top",
+      "expect": {
+        "solids": [
+          {
+            "kind": "cylinder",
+            "radius": 2,
+            "height": 6
+          }
+        ],
+        "interaction": "cut"
+      }
+    },
+    {
+      "id": "SD-09",
+      "language": "en",
+      "prompt": "Open up a dice-shaped box with 5 cm sides until it lies flat, and say the flat pattern's area.",
+      "covers": "cube: net and surface area",
+      "expect": {
+        "solids": [
+          {
+            "kind": "box",
+            "size": [
+              5,
+              5,
+              5
+            ],
+            "surface_area": 150
+          }
+        ],
+        "interaction": "unfold"
+      }
+    },
+    {
+      "id": "SD-10",
+      "language": "zh",
+      "prompt": "一个圆锥形沙堆，底面半径 6 米，高 8 米。画出它，算一算体积和表面积。",
+      "covers": "cone: volume and surface area in π (Chinese)",
+      "expect": {
+        "solids": [
+          {
+            "kind": "cone",
+            "radius": 6,
+            "height": 8,
+            "volume": {
+              "pi": 96
+            },
+            "surface_area": {
+              "pi": 96
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-11",
+      "language": "zh",
+      "prompt": "长方体有几个面、几条棱、几个顶点？用一个能转动的长方体给我看看。",
+      "covers": "counts: box (any size, Chinese)",
+      "expect": {
+        "solids": [
+          {
+            "kind": "box",
+            "counts": [
+              6,
+              12,
+              8
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-12",
+      "language": "en",
+      "prompt": "A 4 cm cube and a marble 4 cm in diameter stand side by side. Which takes up more space?",
+      "covers": "beside: cube and sphere, a diameter given",
+      "expect": {
+        "solids": [
+          {
+            "kind": "box",
+            "size": [
+              4,
+              4,
+              4
+            ],
+            "volume": 64
+          },
+          {
+            "kind": "sphere",
+            "radius": 2,
+            "volume": {
+              "pi": 10.666666666666666
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-13",
+      "language": "en",
+      "prompt": "A lampshade is shaped like a cone with its top cut off: bottom radius 10, top radius 6, height 8. Show it and find its volume.",
+      "covers": "frustum: volume in π",
+      "expect": {
+        "solids": [
+          {
+            "kind": "frustum",
+            "radius": 10,
+            "top_radius": 6,
+            "height": 8,
+            "volume": {
+              "pi": 522.6666666666666
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-14",
+      "language": "zh",
+      "prompt": "一个正六棱柱，底面边长 2 厘米，高 5 厘米。画出来，并求它的体积。",
+      "covers": "regular hexagonal prism by its edge: volume",
+      "expect": {
+        "solids": [
+          {
+            "kind": "prism",
+            "sides": 6,
+            "side": 2,
+            "height": 5,
+            "volume": 51.96152422706632
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-15",
+      "language": "en",
+      "prompt": "Make a dome shaped like half a ball, with radius 3 m, and show how much air it holds.",
+      "covers": "hemisphere: volume in π",
+      "expect": {
+        "solids": [
+          {
+            "kind": "hemisphere",
+            "radius": 3,
+            "volume": {
+              "pi": 18
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SD-N1",
+      "language": "en",
+      "prompt": "Group these: a square drawn on paper, a dice, a coin outline, a ball. Which are 2D and which are 3D?",
+      "covers": "out of scope: plane figures beside solids",
+      "nearMiss": true
+    },
+    {
+      "id": "SD-N2",
+      "language": "en",
+      "prompt": "Draw a doughnut shape in 3D and find how much dough it takes.",
+      "covers": "out of scope: torus",
+      "nearMiss": true
+    },
+    {
+      "id": "SD-N3",
+      "language": "en",
+      "prompt": "Show water being poured from a cone into a cylinder with the same base and height, one cone at a time, until it is full.",
+      "covers": "out of scope: pouring demonstration",
+      "nearMiss": true
+    },
+    {
+      "id": "SD-N4",
+      "language": "en",
+      "prompt": "Build a 3 by 2 by 2 block out of unit cubes and count the little cubes.",
+      "covers": "out of scope: stacked unit cubes",
+      "nearMiss": true
+    },
+    {
+      "id": "SD-N5",
+      "language": "en",
+      "prompt": "Chop a cube diagonally so the knife passes through two edges that do not touch. What does the cut face look like?",
+      "covers": "out of scope: slanted section (a horizontal cut would mislead)",
+      "nearMiss": true,
+      "expect": {
+        "forbid": [
+          "cut"
+        ]
+      }
+    },
+    {
+      "id": "SD-N6",
+      "language": "en",
+      "prompt": "How much cardboard makes an open-top box 10 cm by 8 cm by 5 cm with no lid?",
+      "covers": "out of scope: open box (the whole surface would mislead)",
+      "nearMiss": true,
+      "expect": {
+        "forbid": [
+          "surface_area"
+        ]
+      }
+    },
+    {
+      "id": "SD-C1",
+      "language": "en",
+      "prompt": "Show me a cylinder.",
+      "covers": "control: a plain solid",
+      "control": true,
+      "expect": {
+        "solids": [
+          {
+            "kind": "cylinder"
+          }
+        ]
+      }
+    }
+  ]
+}
