@@ -2,10 +2,10 @@
 
 ## Unreleased
 
-- **Plot judge: no false misses at a domain bar's end that a slider moves** (plan 3.6). Near a domain bar's end, the judge now reads the function at the end itself, where it reads the bars:
-  - **Closed end:** a grid x a rounding step below h = 0.025 counted as the end, but √(x − h) was evaluated at the grid x, where it is undefined. That gave "undefined inside the domain bars" (plot-points probe, PJ-10).
-  - **Moving pole:** a pole a slider moves is reached through a binding a rounding step off it (n1/3 for 1/(3x − n1)). The curve gives about ±4.5e15 there, not infinity, which read as "defined outside the domain bars". Beyond 1e12 at a bar's end now counts as the pole; elsewhere a huge finite value still counts as defined.
-  - Two tests fail on main and pass now. Misses still found: an open end where the function is defined, and bars that stay put while the pole moves.
+- **Plot judge: no false misses at a domain bar's end that a slider moves** (plan 3.6).
+  - **Closed end:** a grid x a rounding step below a closed end (h = 0.025) counted as that end for the bars, but √(x − h) was read at the grid x, where it is undefined. That gave "undefined inside the domain bars" (plot-points probe, PJ-10). Such grid points are now skipped; the end itself, and any piece's end, is always sampled.
+  - **Moving pole:** a pole a slider moves is reached through a binding a rounding step off it (n1/3 for 1/(3x − n1)). The curve gives about ±4.5e15 there, not infinity, which read as "defined outside the domain bars". An open bar end now counts as the pole only where the function blows up right there: its size at the end is at least 10⁴ times its size 10⁻⁹ (relative) to either side.
+  - **Review of #115:** a first version used a fixed cutoff (|y| > 1e12 at a bar end) and read the function at the bar's end. Review showed it hid real misses: exp(5x) open at 6, a range bar wrong only there, bars at ±1e-7 around 1/x², and a closed/open slip at a piece's end. It also failed correct lessons, like exp(5x) on [−6, 6]. All of these are tests now, and main's judge passes them too.
 
 - **A dragged point across a pole hides instead of failing the lesson** (plan item 6e; OLL 8547092, player 0.12.0). A point whose slider passes where the curve has no value (A on y = 2/(x + 1) at x = −1, or (1 + 1/n)^n at n = 0) used to fail the lesson at that slider value. OLL's function plot now binds each sample point's y with `hide_when_undefined`: the point hides there and comes back, and while a secant point is hidden the player shows no secant and says why. Coach still refuses a point the curve has no value at its starting value, slider ends or animation ends.
   - **Card reuse** leaves `hide_when_undefined` out of a card's identity, so a standalone plot of cos(x) still reuses a unit circle's or a spring's plot. The flag changes only where the earlier card, already on the board, has no value either.

@@ -242,3 +242,32 @@ test("a closed domain end moved by a slider is read at the end itself", () => {
   { variables: [slider("h", 3, -5, 5, 0.025)] });
   assert.ok(judgePlot({ id: "open-end" }, open).hard.some((miss) => /defined at x = .*outside the domain bars/u.test(miss)));
 });
+
+// Review of #115: a bar end is a pole only where the function blows up right there. A large defined
+// value, a bar end merely near a pole, and a closed/open slip at a piece's end stay misses; a correct
+// lesson with a large value at a closed end passes.
+test("the pole rule at a bar end hides no real domain or range miss", () => {
+  const judge = (content, options) => judgePlot({ id: "bar-ends" }, lesson(content, options)).hard;
+  const bars = (...list) => list.map((bar, index) => ({ as: `d${index}`, axis: "x", from: null, to: null, ...bar }));
+  // exp(5x) on [−6, 6]: f(6) ≈ 1.07e13 is defined.
+  const exp = { curves: [{ as: "f", expression: "exp(5*x)" }] };
+  assert.deepEqual(judge({ ...exp, intervals: bars({ from: -6, to: 6 }) }), [], "a closed end with a large value is right");
+  assert.ok(judge({ ...exp, intervals: bars({ to: 6, to_closed: false }) }).some((miss) => /defined at x = 6, outside the domain bars/u.test(miss)), "an open end at a large defined value is a miss");
+  assert.ok(judge({ ...exp, intervals: [...bars({ to: 6, to_closed: false }), { as: "r", axis: "y", from: null, to: 1e13 }] })
+    .some((miss) => /lies outside the range bars/u.test(miss)), "the range is still checked at that end");
+  // 1e13·x on [−6, 2) wrongly open at 2: the real miss is reported, not a false one at −6.
+  const big = judge({ curves: [{ as: "f", expression: "1e13*x" }], intervals: bars({ from: -6, to: 2, to_closed: false }) });
+  assert.ok(big.some((miss) => /defined at x = 2, outside/u.test(miss)) && !big.some((miss) => /x = -6/u.test(miss)), big.join(" | "));
+  // Bar ends near a pole but not on it.
+  for (const [expression, gap] of [["1/x^2", 1e-7], ["1/x^4", 0.0009]]) {
+    const near = judge({ curves: [{ as: "f", expression }], intervals: bars({ to: -gap, to_closed: false }, { from: gap, from_closed: false }) });
+    assert.ok(near.some((miss) => /domain bars/u.test(miss)), `${expression} with bars at ±${gap}: ${near.join(" | ") || "passed"}`);
+  }
+  const expInverse = judge({ curves: [{ as: "f", expression: "exp(1/x)" }], intervals: bars({ to: 0, to_closed: false }, { from: 0.02, from_closed: false }) });
+  assert.ok(expInverse.some((miss) => /domain bars/u.test(miss)), `exp(1/x) with a bar from 0.02: ${expInverse.join(" | ") || "passed"}`);
+  // A piece open at 0.3 under a bar closed a rounding step away (0.1·3): the closed/open slip is a miss.
+  const piece = lesson({ curves: [{ as: "f", expression: "x", from: 0.3, from_closed: false }],
+    intervals: [{ as: "d", axis: "x", from: 0.3, to: null, from_closed: true }], bindings: [{ target: "d.from", expression: "0.1*k" }] },
+  { variables: [slider("k", 3, 1, 5, 1)] });
+  assert.ok(judgePlot({ id: "piece-end" }, piece).hard.some((miss) => /undefined at x = 0.3, inside the domain bars/u.test(miss)));
+});

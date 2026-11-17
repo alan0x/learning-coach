@@ -195,20 +195,36 @@ function stateMisses(drawn, values, moving) {
     return misses;
   }
   const [pieces] = functions;
-  // Near a domain bar's end the function is read at the end itself, where the bars are read too: a grid x
-  // within rounding below a closed end at h = 0.025 made √(x − h) undefined "inside the bars" (plot-points
-  // probe, PJ-10). And a pole a slider moves is reached through a binding a rounding step off it (n1/3 for
-  // 1/(3x − n1)): the curve gives about ±4.5e15 there, not infinity. Beyond 1e12 at a bar end is the pole;
-  // elsewhere a huge finite value still counts as defined.
-  const barEnd = (x) => xBars.flatMap((bar) => [bar.from, bar.to]).find((end) => end !== null && atEnd(x, end));
-  const valueHere = (x) => {
-    const end = barEnd(x);
-    const y = valueAt(pieces, end ?? x);
-    return y !== undefined && end !== undefined && Math.abs(y) > 1e12 ? undefined : y;
+  // Two rounding effects at a domain bar's end that a slider moves (review of #115):
+  // - A grid x within rounding of a bar end counts as that end for the bars, but the function was read at
+  //   the grid x: a grid x just below a closed end at h = 0.025 made √(x − h) undefined "inside the bars"
+  //   (plot-points probe, PJ-10). Such a grid x is skipped: the end itself is always sampled, and so is a
+  //   piece's end, which is never skipped.
+  // - A pole a slider moves is reached through a binding a rounding step off it (n1/3 for 1/(3x − n1)): the
+  //   curve gives about ±4.5e15 at the bar's end, not infinity. It is the pole only if the function blows up
+  //   right there: its size at the end is at least 1e4 times its size a hair (1e-9, relative) to either side.
+  //   A large defined value (exp(5x) at 6) or a bar end merely near a pole (1/x² at 1e-7) stays defined.
+  const ends = xBars.flatMap((bar) => [bar.from, bar.to]).filter((end) => end !== null);
+  const pieceEnds = new Set(drawn.curves.flatMap((curve) => [curve.from, curve.to]).filter((end) => typeof end === "number"));
+  const nearEnd = (x) => ends.find((end) => atEnd(x, end));
+  const skipped = (x) => { const end = nearEnd(x); return end !== undefined && x !== end && !pieceEnds.has(x); };
+  const poleAt = (x) => {
+    const y = valueAt(pieces, x);
+    if (y === undefined || y === 0) return false;
+    const hair = 1e-9 * Math.max(1, Math.abs(x));
+    const beside = [x - hair, x + hair].map((side) => valueAt(pieces, side)).filter((side) => side !== undefined);
+    return beside.length > 0 && beside.every((side) => Math.abs(side) * 1e4 <= Math.abs(y));
   };
+  // The value as the bars should read it: none at a pole on a bar end the bars leave open.
+  const valueHere = (x) => {
+    const y = valueAt(pieces, x);
+    return y !== undefined && nearEnd(x) !== undefined && !inBars(xBars, x) && poleAt(x) ? undefined : y;
+  };
+  const xs = sampleXs(drawn).filter((x) => !skipped(x));
+  const read = new Map(xs.map((x) => [x, valueHere(x)]));
   if (xBars.length) {
-    for (const x of sampleXs(drawn)) {
-      const defined = valueHere(x) !== undefined;  // x values are sampled at the bars' exact ends
+    for (const x of xs) {
+      const defined = read.get(x) !== undefined;  // x values are sampled at the bars' exact ends
       if (defined !== inBars(xBars, x)) {
         misses.push(defined ? `the function is defined at x = ${round(x)}, outside the domain bars, when ${at}` : `the function is undefined at x = ${round(x)}, inside the domain bars, when ${at}`);
         break;
@@ -216,8 +232,8 @@ function stateMisses(drawn, values, moving) {
     }
   }
   if (yBars.length) {
-    for (const x of sampleXs(drawn)) {
-      const y = valueHere(x);
+    for (const x of xs) {
+      const y = read.get(x);
       if (y !== undefined && !inBars(yBars, y)) {
         misses.push(`the value ${round(y)} at x = ${round(x)} lies outside the range bars when ${at}`);
         break;
