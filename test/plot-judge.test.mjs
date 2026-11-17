@@ -212,3 +212,33 @@ test("every case has expectations and a lesson above that meets them", () => {
     assert.ok(source.includes(`passes("${item.id}"`), `${item.id} is met by a lesson in this file`);
   }
 });
+
+// A pole a slider moves (plan 3.6): the domain bars' open ends follow it through a binding, so at some
+// slider values the computed end is a rounding step off the pole and the curve gives about ±4.5e15 there,
+// not infinity. That is the pole, not a value outside the bars.
+test("a pole moved by a slider is not read as a value outside the domain bars", () => {
+  const moving = (bindings) => lesson({ curves: [{ as: "f", expression: "1/(3*x - n1)" }],
+    intervals: [{ as: "d1", axis: "x", from: null, to: 0, to_closed: false }, { as: "d2", axis: "x", from: 0, from_closed: false, to: null }],
+    ...(bindings ? { bindings } : {}) }, { variables: [slider("n1", 0.1, -6, 6, 0.05)], animations: [["n1", 2.9], ["n1", -4.7]] });
+  const item = { id: "moving-pole" };
+  const verdict = judgePlot(item, moving([{ target: "d1.to", expression: "n1/3" }, { target: "d2.from", expression: "n1/3" }]));
+  assert.deepEqual(verdict.hard, [], verdict.hard.join(" | "));
+  // Bars that stay at 0 while the pole moves are still wrong.
+  const stale = judgePlot(item, moving());
+  assert.ok(stale.hard.some((miss) => /the function is (un)?defined at x = .*domain bars/u.test(miss)), stale.hard.join(" | ") || "passed");
+});
+
+// A closed end a slider moves (plot-points probe, PJ-10): a grid x a rounding step below h = 0.025 counts
+// as the bar's end, so the function is read at the end, where √(x − h) is 0, not at the grid x.
+test("a closed domain end moved by a slider is read at the end itself", () => {
+  const shifted = (from) => lesson({ curves: [{ as: "f", expression: "sqrt(x - h) + 1" }],
+    intervals: [{ as: "d", axis: "x", from, to: null, from_closed: true }], bindings: [{ target: "d.from", expression: "-(-h)/1" }] },
+  { variables: [slider("h", 3, -5, 5, 0.025)], animations: [["h", 0.025]] });
+  const verdict = judgePlot({ id: "closed-end" }, shifted(3));
+  assert.deepEqual(verdict.hard, [], verdict.hard.join(" | "));
+  // An open end where the function is defined is still a miss.
+  const open = lesson({ curves: [{ as: "f", expression: "sqrt(x - h) + 1" }],
+    intervals: [{ as: "d", axis: "x", from: 3, to: null, from_closed: false }], bindings: [{ target: "d.from", expression: "h" }] },
+  { variables: [slider("h", 3, -5, 5, 0.025)] });
+  assert.ok(judgePlot({ id: "open-end" }, open).hard.some((miss) => /defined at x = .*outside the domain bars/u.test(miss)));
+});
