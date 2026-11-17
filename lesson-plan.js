@@ -8795,7 +8795,9 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "plot:axis-intervals": "0.11.0",
   "plot:guide-hide-undefined": "0.11.0",
   // A secant over the first two of more points (marks after A and B); an older player drew no triangle then.
-  "plot:secant-first-two": "0.11.0"
+  "plot:secant-first-two": "0.11.0",
+  // A secant point hidden where the curve has no value; an older player measured it at a stale y.
+  "plot:secant-hide-undefined": "0.12.0"
 });
 var looksLikeNumberLine = (content) => typeof content.range === "object" && content.range !== null && ["points", "jumps", "intervals", "ticks"].some((field) => field in content);
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
@@ -12628,7 +12630,7 @@ function buildFunctionPlot(input) {
       const point = FUNCTION_PLOT_POINT_IDS.samples[index];
       return [
         { target: `${point}.x`, expression: sample.x_expression },
-        { target: `${point}.y`, expression: substituteX(primary, sample.x_expression) }
+        { target: `${point}.y`, expression: substituteX(primary, sample.x_expression), hide_when_undefined: true }
       ];
     });
     if (input.samples.length === 2)
@@ -16287,6 +16289,7 @@ function cardIdentity(kind, content) {
         if (path === "curves" && name === "holes") return false;
         if ((path === "curves" || path === "points") && ["label", "color"].includes(name)) return false;
       }
+      if (path === "bindings" && name === "hide_when_undefined") return false;
       return true;
     }).sort(([a], [b]) => a.localeCompare(b)).map(([name, child]) => [name, normalize2(child, name, path ? `${path}.${name}` : name)]));
   };

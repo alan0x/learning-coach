@@ -1083,7 +1083,7 @@ test("a one-variable sequence curve uses x while the lesson number moves one poi
   assert.equal(plot.curves[0].expression, "(1+1/x)^x");
   assert.deepEqual(plot.bindings, [
     { target: "moving-point.x", expression: "number_01" },
-    { target: "moving-point.y", expression: "(1+1/number_01)^number_01" },
+    { target: "moving-point.y", expression: "(1+1/number_01)^number_01", hide_when_undefined: true },
   ]);
 });
 
@@ -1123,7 +1123,7 @@ test("canonical function tokens can describe a one-variable sequence without tur
   assert.equal(plot.curves[0].expression, "((1)+((1)/(x)))^(x)");
   assert.deepEqual(plot.bindings, [
     { target: "moving-point.x", expression: "number_01" },
-    { target: "moving-point.y", expression: "((1)+((1)/(number_01)))^(number_01)" },
+    { target: "moving-point.y", expression: "((1)+((1)/(number_01)))^(number_01)", hide_when_undefined: true },
   ]);
 });
 
