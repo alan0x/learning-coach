@@ -130,6 +130,23 @@ export const MATH_RECIPES = {
     required_features: ["coordinate_circle"],
     model_guidance: "坐标系中的圆；共享数值可通过 radius_expression（例如 sqrt(n1)）驱动半径",
   },
+  // Decision 0019 (amended by 0020): the model writes each solid's shape and the sizes the question states,
+  // which measures to show and whether a cut or a net is wanted; the program computes the measures, builds
+  // the slider and its range, and places a second solid beside the first. A trial until its speed gate.
+  solid_3d: {
+    parts: ["whole", "solid", "beside", "section", "primary_control"],
+    number_inputs: [],
+    number_input_policies: [],
+    parameter_names: ["title", "solids", "join", "show", "interaction"],
+    model_parameter_names: ["title", "solids", "join", "show", "interaction"],
+    required_model_schema_parameters: ["solids"],
+    semantic_parameters: ["solids", "join", "show", "interaction"],
+    initial_camera: SCENE_FIRST_CAMERA,
+    output_kinds: ["scene3d"],
+    student_controls: ["slider", "scene3d_view"],
+    required_features: ["solid_3d"],
+    model_guidance: "立体：solids照题写尺寸，2个则并排；join叠放或两长方体拼L；show的数和滑块由程序给",
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -295,6 +312,16 @@ const MATH_SCHEMA_PROPERTIES = {
   },
   number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } },
   number_line_steps: { label_style: { enum: ["decimal", "fraction"] } },
+  solid_3d: {
+    // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
+    solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {
+      shape: { enum: ["box", "cylinder", "cone", "sphere", "hemisphere", "prism", "pyramid", "frustum"] },
+      length: { type: "number" }, width: { type: "number" }, height: { type: "number" }, radius: { type: "number" }, top_radius: { type: "number" }, sides: { type: "integer" }, side: { type: "number" },
+    } } },
+    join: { enum: ["stack", "side"] },
+    show: { type: "array", items: { enum: ["volume", "surface_area", "counts"] } },
+    interaction: { enum: ["cut", "unfold"] },
+  },
 };
 
 export const MATH_PLUGIN = {

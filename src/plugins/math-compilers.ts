@@ -3,15 +3,16 @@ import {
   buildCircleAndArc, buildCircleAreaRearrangement, buildCirclePolygons, buildCoordinateCircle, buildFunctionPlot,
   buildCubeWithSection, buildFunctionSurface, buildGeometricRearrangement, buildImplicitSurface,
   buildNumberLine, buildUnitCircle, buildUnitSquareArray, rearrangementRecipe, NUMBER_LINE_LIMITS,
-  type BuiltRecipe, type RearrangementConstruction,
+  buildSolid, describeSolid, solidHasMeasure, solidUnfolds,
+  type BuiltRecipe, type RearrangementConstruction, type Solid, type SolidMeasureKind,
 } from "octos-lesson-language/plugin-math";
-import { compileText } from "../lesson-text.js";
+import { compileText, lessonTextLanguage } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
 import { compileMathExpression, type AuthoringAction } from "octos-lesson-language";
-import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, LessonPlanError, type JsonValue, type LessonPlan, type LessonPlanMathExpression, type LessonPlanVisualContent } from "../lesson-plan.js";
 import { buildImplicitSurfaceObject } from "../scene3d-surfaces.js";
 import { COARSE_UNITS, lessonValues, moveLandings } from "./number-line-fit.js";
 import { PLOT_MARKS, formulaBars, intervalOf, markParts, pieceBars, signOf, type AxisBar, type Interval, type MarkPart, type PlotMark } from "./plot-marks.js";
@@ -1262,6 +1263,167 @@ function compileNumberLineSteps(
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, ...(built.parts.move ? { primary_control: built.parts.move } : {}) })) };
 }
 
+// ---- 3D solids (decision 0019, amended by 0020) --------------------------------------------------------
+// The model writes each solid's shape and the sizes the question states, how two solids are joined, which
+// measures to show and whether a cut or a net is wanted. The program converts a regular base's edge to the
+// builder's circumradius, computes the measures, places a second solid beside the first, and creates the
+// slider with the range the geometry decides.
+
+const SOLID_SHAPES = ["box", "cylinder", "cone", "sphere", "hemisphere", "prism", "pyramid", "frustum"] as const;
+const SOLID_SIZES = ["length", "width", "height", "radius", "top_radius", "sides", "side"] as const;
+/** Regular bases the card offers (decision 0019 §1: triangle to octagon). */
+const REGULAR_SIDES = { min: 3, max: 8 } as const;
+const SOLID_MEASURES: readonly SolidMeasureKind[] = ["volume", "surface_area", "counts"];
+
+type ModelSolid = Partial<Record<typeof SOLID_SIZES[number], number>> & { shape: typeof SOLID_SHAPES[number] };
+type Adjustment = { reason: string; detail: string };
+
+function modelSolid(value: JsonValue | undefined, path: string): ModelSolid {
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", path, "expected a solid: its shape and sizes");
+  const record = value as Record<string, JsonValue>;
+  if (!SOLID_SHAPES.includes(record.shape as typeof SOLID_SHAPES[number])) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.shape`, `expected one of ${SOLID_SHAPES.join(", ")}`);
+  }
+  const solid: ModelSolid = { shape: record.shape as ModelSolid["shape"] };
+  for (const key of SOLID_SIZES) {
+    const size = record[key];
+    if (size === undefined || size === null) continue;
+    if (typeof size !== "number" || !Number.isFinite(size) || size <= 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${key}`, `${key} must be a positive number`);
+    solid[key] = size;
+  }
+  return solid;
+}
+
+/** One solid for the builder, from the sizes the question states; a size its shape needs and lacks is refused. */
+function builderSolid(model: ModelSolid, path: string, adjustments: Adjustment[]): Solid {
+  const need = (...keys: Array<typeof SOLID_SIZES[number]>) => keys.map((key) => {
+    const size = model[key];
+    if (size === undefined) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${key}`, `a ${model.shape} needs ${keys.join(", ")}`);
+    return size;
+  });
+  const regular = () => {
+    const [sides, side] = need("sides", "side");
+    if (!Number.isInteger(sides) || sides < REGULAR_SIDES.min || sides > REGULAR_SIDES.max) {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.sides`, `a regular base has ${REGULAR_SIDES.min} to ${REGULAR_SIDES.max} sides`);
+    }
+    // The builder takes the circumradius; the question states the edge.
+    return { sides, radius: Number((side / (2 * Math.sin(Math.PI / sides))).toFixed(9)) };
+  };
+  switch (model.shape) {
+    case "box": {
+      // A cube may come as its edge alone: one reading.
+      if (model.length === undefined && model.width === undefined && model.height === undefined && model.side !== undefined) {
+        adjustments.push({ reason: "solid_cube_by_edge", detail: `${path}: a box given by side ${model.side} is a cube` });
+        return { shape: "box", size: { x: model.side, y: model.side, z: model.side } };
+      }
+      const [x, y, z] = need("length", "width", "height");
+      return { shape: "box", size: { x, y, z } };
+    }
+    case "cylinder": case "cone": { const [radius, height] = need("radius", "height"); return { shape: model.shape, radius, height }; }
+    case "sphere": case "hemisphere": { const [radius] = need("radius"); return { shape: model.shape, radius }; }
+    case "frustum": { const [radius, topRadius, height] = need("radius", "top_radius", "height"); return { shape: "frustum", radius, topRadius, height }; }
+    case "prism": case "pyramid": {
+      const [height] = need("height");
+      if (model.sides !== undefined || model.side !== undefined) return { shape: model.shape, ...regular(), height };
+      const [length, width] = need("length", "width");
+      // A prism on a rectangle is a box: one reading.
+      if (model.shape === "prism") {
+        adjustments.push({ reason: "solid_rectangular_prism", detail: `${path}: a prism on a ${length} by ${width} rectangle is a box` });
+        return { shape: "box", size: { x: length, y: width, z: height } };
+      }
+      return { shape: "pyramid", base: { kind: "rectangle", length, width }, height };
+    }
+  }
+}
+
+const sameSize = (a: number, b: number) => Math.abs(a - b) <= 1e-9 * Math.max(1, a, b);
+
+/** Two solids joined: stacked (the first at the bottom) or two boxes side by side. A pair no composite draws is refused. */
+function joinedSolid(join: "stack" | "side", pair: [Solid, Solid], path: string, adjustments: Adjustment[]): Solid {
+  const [first, second] = pair;
+  if (join === "side") {
+    if (first.shape !== "box" || second.shape !== "box") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "only two boxes join side by side (an L shape)");
+    return { shape: "composite", parts: "two_boxes", size: first.size, sideSize: second.size };
+  }
+  const stacked = (bottom: Solid, top: Solid): Solid | undefined => {
+    if (bottom.shape === "cylinder" && top.shape === "cylinder") return { shape: "composite", parts: "two_cylinders", radius: bottom.radius, height: bottom.height, topRadius: top.radius, topHeight: top.height };
+    if (bottom.shape === "cylinder" && (top.shape === "cone" || top.shape === "hemisphere")) {
+      if (!sameSize(bottom.radius, top.radius)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, `a ${top.shape} stacked on a cylinder shares its radius (${top.radius} and ${bottom.radius})`);
+      return top.shape === "cone" ? { shape: "composite", parts: "cylinder_cone", radius: bottom.radius, height: bottom.height, topHeight: top.height }
+        : { shape: "composite", parts: "cylinder_hemisphere", radius: bottom.radius, height: bottom.height };
+    }
+    if (bottom.shape === "box" && top.shape === "pyramid") {
+      const edge = "sides" in top && top.sides === 4 ? top.radius * Math.SQRT2 : "base" in top && top.base.kind === "rectangle" && sameSize(top.base.length, top.base.width) ? top.base.length : undefined;
+      if (edge === undefined || !sameSize(bottom.size.x, bottom.size.y) || !sameSize(edge, bottom.size.x)) {
+        fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, "a pyramid roof sits on a box with a square base of the same edge");
+      }
+      return { shape: "composite", parts: "box_pyramid", width: bottom.size.x, height: bottom.size.z, topHeight: top.height };
+    }
+    return undefined;
+  };
+  const upright = stacked(first, second);
+  if (upright) return upright;
+  // The same solid written top first: turned over, it is one of the stacks above.
+  const turned = stacked(second, first);
+  if (turned) {
+    adjustments.push({ reason: "solid_stack_order", detail: `${path}: ${second.shape} under ${first.shape}, as the composite stands` });
+    return turned;
+  }
+  return fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "stacks are a cone, a hemisphere or a smaller cylinder on a cylinder, or a pyramid roof on a box");
+}
+
+function compileSolid3d(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "solids", "join", "show", "interaction"], path);
+  if ((content.numbers?.length ?? 0) > 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a solid's sizes are written in solids; its slider is the program's");
+  const adjustments: Adjustment[] = [];
+  const written = input.solids;
+  if (!Array.isArray(written) || written.length < 1 || written.length > 2) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, "expected one solid, or two side by side");
+  const solids = written.map((item, index) => builderSolid(modelSolid(item, `${path}.solids[${index}]`), `${path}.solids[${index}]`, adjustments));
+  const join = input.join;
+  if (join !== undefined && join !== "stack" && join !== "side") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "expected stack or side");
+  if (join !== undefined && solids.length !== 2) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "join needs two solids");
+  const [solid, beside] = join ? [joinedSolid(join, solids as [Solid, Solid], path, adjustments), undefined] : [solids[0]!, solids[1]];
+  const shown = solids.length && input.show !== undefined ? input.show : [];
+  if (!Array.isArray(shown) || shown.some((item) => !SOLID_MEASURES.includes(item as SolidMeasureKind))) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.show`, `expected some of ${SOLID_MEASURES.join(", ")}`);
+  const measures = [...new Set(shown as SolidMeasureKind[])];
+  for (const each of [solid, ...(beside ? [beside] : [])]) {
+    for (const measure of measures) {
+      if (!solidHasMeasure(each, measure)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.show`, `a ${each.shape === "composite" ? "joined solid" : each.shape} has no ${measure.replace("_", " ")} here`);
+    }
+  }
+  const interaction = input.interaction;
+  if (interaction !== undefined && interaction !== "cut" && interaction !== "unfold") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.interaction`, "expected cut or unfold");
+  if (interaction === "unfold" && [solid, beside].some((each) => each && !solidUnfolds(each))) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.interaction`, "only a box, prism, pyramid, cylinder or cone unfolds");
+  }
+  const language = lessonTextLanguage(plan);
+  const variable = `${base.replace(/[^A-Za-z0-9]+/gu, "_")}_${interaction ?? "view"}`;
+  const built = buildSolid({
+    as: base, role, place: placement,
+    title: optionalText(input.title, compileText(plan, "立体图形"), `${path}.title`),
+    solid, ...(beside ? { beside } : {}),
+    fallback: [solid, ...(beside ? [beside] : [])].map((each) => describeSolid(each, language)).join(" "),
+    ...(measures.length ? { show: { measures, language } } : {}),
+    ...(interaction === "cut" ? { cut: { expression: variable } } : {}),
+    ...(interaction === "unfold" ? { unfold: { expression: variable } } : {}),
+  });
+  const variables: NonNullable<CompiledVisual["variables"]> = [];
+  if (interaction === "cut") {
+    const [min, max] = built.cutRange!;
+    variables.push({ as: variable, initial: Number(((min + max) / 2).toFixed(6)), min, max, label: compileText(plan, "截面高度"), control: { kind: "slider", step: Number(((max - min) / 100).toPrecision(6)) } });
+  }
+  if (interaction === "unfold") variables.push({ as: variable, initial: 0, min: 0, max: 1, label: compileText(plan, "展开"), control: { kind: "slider", step: 0.01 } });
+  return { ...builtVisual(built), primaryScene: base, ...(variables.length ? { variables } : {}), ...(adjustments.length ? { adjustments } : {}) };
+}
+
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -1279,4 +1441,5 @@ export const MATH_COMPILERS = {
   rectangle_unit_square_array: compileRectangleUnitSquareArray,
   geometric_rearrangement: compileGeometricRearrangement,
   circle_area_rearrangement: compileCircleArea,
+  solid_3d: compileSolid3d,
 } satisfies Record<string, VisualCompiler>;

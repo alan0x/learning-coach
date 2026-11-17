@@ -536,6 +536,8 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const partTargets = new Map<string, Map<string, string>>();
   const primaryScenes = new Map<string, string>();
   const reusableVisuals = new Map<string, CompiledVisual>();
+  // Sliders a visual creates itself (a solid's cut or net), by alias, in the order the visuals appear.
+  const visualVariables = new Map<string, NonNullable<CompiledVisual["variables"]>[number]>();
   const viewAdjustments: CompiledLessonPlan["view_adjustments"] = [];
   let renderedVisuals: CompiledVisualRegistry | undefined;
   const reuseCompiledVisual = (visual: CompiledVisual) => {
@@ -610,6 +612,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               });
             } else {
               reusableVisuals.set(identity, visual);
+              for (const variable of visual.variables ?? []) if (!visualVariables.has(variable.as)) visualVariables.set(variable.as, variable);
               actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
             }
             wholeTargets.set(alias, visual.whole);
@@ -828,8 +831,8 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           ...(options.adaptation_context_refs?.length ? { context_refs: [...options.adaptation_context_refs] } : {}),
         },
       } : {}),
-      ...(plan.numbers?.length ? {
-        variables: plan.numbers.map((number, index) => ({
+      ...(plan.numbers?.length || visualVariables.size ? {
+        variables: [...(plan.numbers ?? []).map((number, index) => ({
           as: variableAlias(index + 1), initial: number.initial, min: number.min, max: number.max,
           ...(number.label ? { label: number.label } : {}),
           ...(number.unit ? { unit: number.unit } : {}),
@@ -839,7 +842,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               ...(number.student_control.step ? { step: number.student_control.step } : {}),
             },
           } : {}),
-        })),
+        })), ...[...visualVariables.values()].map((variable) => ({ ...variable, control: { ...variable.control } }))],
       } : {}),
       ...(tasks.length ? { tasks } : {}),
       ...(reflections.length ? { reflections } : {}),

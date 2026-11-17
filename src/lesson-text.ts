@@ -22,6 +22,7 @@ const EN: Readonly<Record<string, string>> = {
   "目前还不能在同一张函数图中同时展示静态曲线和由控件改变的另一条曲线。": "A static curve and another curve changed by a control cannot yet be shown together in the same graph.",
   "课程内容仍在继续生成。": "The rest of the lesson is still being generated.",
   "当前白板只能执行二维图形和三维场景，不能精确模拟四维超立方体的四维旋转。你可以改问它的三维投影原理或基本结构。": "The board supports 2D diagrams and 3D scenes, but cannot accurately simulate a 4D hypercube rotating in four dimensions. You can ask about its 3D projections or basic structure instead.",
+  "立体图形": "Solids", "截面高度": "Cut height", "展开": "Unfold",
   "y 截距": "y-intercept", "x 截距": "x-intercept", "对称轴": "Axis of symmetry", "定义域": "Domain", "值域": "Range",
   "A点的x坐标": "x-coordinate of point A", "B点的x坐标": "x-coordinate of point B",
   "我没能稳定读清这次手写选区，请重新框选，或者把公式写大一些再试一次。": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",
@@ -34,6 +35,8 @@ export function lessonText(language: string | undefined, source: string, values:
 }
 const languages = new WeakMap<object, string | undefined>();
 export function setLessonTextLanguage(plan: object, language: string | undefined): void { languages.set(plan, language); }
+/** The lesson's language for program text the compiler writes in full (a solid's measures line). */
+export function lessonTextLanguage(plan: object): string { return languages.get(plan) ?? "zh-CN"; }
 export function compileText(plan: object, source: string, values?: Record<string, unknown>): string {
   return lessonText(languages.get(plan), source, values);
 }

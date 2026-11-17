@@ -55,7 +55,7 @@ export const RECIPE_CATALOG_ORDER = [
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-export const TRIAL_RECIPES = ["constant_speed_motion"] as const satisfies readonly (keyof AllRecipes)[];
+export const TRIAL_RECIPES = ["constant_speed_motion", "solid_3d"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {
@@ -95,6 +95,8 @@ export const SCHEMA_PROPERTY_ORDER = [
   "expression", "section_axis", "section_value", "level", "radius", "angle",
   "radius_expression", "center_x", "center_y", "construction", "leg_a", "leg_b", "steps", "speed", "label_style", "relation", "place",
   "marks", "pieces",
+  // The 3D solids trial recipe (decision 0019); last, so requests without it keep their order.
+  "solids", "join", "show", "interaction",
 ] as const;
 
 /** One prompt bullet: its core text and the installed plugins' sentences, or "" when empty. */

@@ -2043,11 +2043,11 @@ var require_fast_deep_equal = __commonJS({
       if (a === b) return true;
       if (a && b && typeof a == "object" && typeof b == "object") {
         if (a.constructor !== b.constructor) return false;
-        var length, i, keys;
+        var length2, i, keys;
         if (Array.isArray(a)) {
-          length = a.length;
-          if (length != b.length) return false;
-          for (i = length; i-- !== 0; )
+          length2 = a.length;
+          if (length2 != b.length) return false;
+          for (i = length2; i-- !== 0; )
             if (!equal(a[i], b[i])) return false;
           return true;
         }
@@ -2055,11 +2055,11 @@ var require_fast_deep_equal = __commonJS({
         if (a.valueOf !== Object.prototype.valueOf) return a.valueOf() === b.valueOf();
         if (a.toString !== Object.prototype.toString) return a.toString() === b.toString();
         keys = Object.keys(a);
-        length = keys.length;
-        if (length !== Object.keys(b).length) return false;
-        for (i = length; i-- !== 0; )
+        length2 = keys.length;
+        if (length2 !== Object.keys(b).length) return false;
+        for (i = length2; i-- !== 0; )
           if (!Object.prototype.hasOwnProperty.call(b, keys[i])) return false;
-        for (i = length; i-- !== 0; ) {
+        for (i = length2; i-- !== 0; ) {
           var key = keys[i];
           if (!equal(a[key], b[key])) return false;
         }
@@ -4780,11 +4780,11 @@ var require_ucs2length = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str) {
       const len = str.length;
-      let length = 0;
+      let length2 = 0;
       let pos = 0;
       let value2;
       while (pos < len) {
-        length++;
+        length2++;
         value2 = str.charCodeAt(pos++);
         if (value2 >= 55296 && value2 <= 56319 && pos < len) {
           value2 = str.charCodeAt(pos);
@@ -4792,7 +4792,7 @@ var require_ucs2length = __commonJS({
             pos++;
         }
       }
-      return length;
+      return length2;
     }
     exports.default = ucs2length;
     ucs2length.code = 'require("ajv/dist/runtime/ucs2length").default';
@@ -7218,10 +7218,10 @@ function parseNumericAnswer(text3) {
   }
   match = MIXED.exec(written);
   if (match) {
-    const whole = Number(match[2]), numerator = Number(match[3]), denominator = Number(match[4]);
-    if (!safe(whole, numerator, denominator) || denominator === 0 || numerator === 0 || numerator >= denominator || !safe(whole * denominator + numerator))
+    const whole2 = Number(match[2]), numerator = Number(match[3]), denominator = Number(match[4]);
+    if (!safe(whole2, numerator, denominator) || denominator === 0 || numerator === 0 || numerator >= denominator || !safe(whole2 * denominator + numerator))
       return void 0;
-    const value2 = (whole * denominator + numerator) / denominator;
+    const value2 = (whole2 * denominator + numerator) / denominator;
     return { value: match[1] ? -value2 : value2, form: "mixed", numerator, denominator };
   }
   return void 0;
@@ -8386,11 +8386,11 @@ function parseFraction(text3) {
   const match = FRACTION2.exec(text3);
   if (!match)
     return void 0;
-  const [, sign, whole, top, bottom] = match;
+  const [, sign, whole2, top, bottom] = match;
   const denominator = Number(bottom);
   if (!Number.isSafeInteger(denominator) || denominator < 1 || denominator > NUMBER_LINE_LIMITS.denominator)
     return void 0;
-  const numerator = Number(whole ?? 0) * denominator + Number(top);
+  const numerator = Number(whole2 ?? 0) * denominator + Number(top);
   if (!Number.isSafeInteger(numerator))
     return void 0;
   return { numerator: sign ? -numerator : numerator, denominator };
@@ -8441,7 +8441,7 @@ function planTickStep(content) {
   const step = [1, 2, 5, 10].map((factor) => factor * power2).find((candidate) => candidate >= raw * (1 - 1e-9)) ?? 10 * power2;
   return Number(step.toPrecision(12));
 }
-var near = (a, b, scale = 1) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(scale));
+var near = (a, b, scale2 = 1) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(scale2));
 function validateNumberLineContent(raw, path, fail4, options = {}) {
   const content = record(raw, path, fail4);
   only(content, ["title", "caption", "range", "ticks", "points", "jumps", "intervals", "bindings"], path, fail4);
@@ -8469,14 +8469,14 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
     fail4(`${path}/ticks/format`, "The tick format is integer, decimal, fraction or mixed");
   const shape = { range: { min, max }, ticks };
   const step = planTickStep(shape);
-  const unit = step / subdivisions;
-  if ((max - min) / unit > NUMBER_LINE_LIMITS.ticks + 1e-9)
+  const unit2 = step / subdivisions;
+  if ((max - min) / unit2 > NUMBER_LINE_LIMITS.ticks + 1e-9)
     fail4(`${path}/ticks`, `The range holds more than ${NUMBER_LINE_LIMITS.ticks} of the smallest ticks; use a larger step or fewer subdivisions`);
   if ((ticks.format === "fraction" || ticks.format === "mixed") && !Number.isInteger(step))
     fail4(`${path}/ticks/format`, "Fraction labels need a whole-number major step");
   if (ticks.format === "integer" && !Number.isInteger(step))
     fail4(`${path}/ticks/format`, "Integer labels need a whole-number major step");
-  if (ticks.format === "integer" && ticks.labels === "all" && !Number.isInteger(unit)) {
+  if (ticks.format === "integer" && ticks.labels === "all" && !Number.isInteger(unit2)) {
     fail4(`${path}/ticks`, "Integer labels on every tick need whole-number ticks; label only the major ticks, or use fraction or decimal labels");
   }
   const pointAliases = /* @__PURE__ */ new Set();
@@ -8524,9 +8524,9 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
     if (jump.hops !== void 0 && typeof jump.hops !== "boolean")
       fail4(`${jumpPath}/hops`, "hops is true or false");
     if (jump.hops) {
-      const count = Math.abs(by) / unit;
-      const whole = near(count, Math.round(count), count);
-      if (!whole && !loose || Math.ceil(count - 1e-9) > NUMBER_LINE_LIMITS.hops) {
+      const count = Math.abs(by) / unit2;
+      const whole2 = near(count, Math.round(count), count);
+      if (!whole2 && !loose || Math.ceil(count - 1e-9) > NUMBER_LINE_LIMITS.hops) {
         fail4(`${jumpPath}/hops`, `A jump drawn hop by hop moves a whole number of the smallest ticks, at most ${NUMBER_LINE_LIMITS.hops}`);
       }
     }
@@ -8554,29 +8554,29 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
     text(interval.label, `${intervalPath}/label`, fail4, 64);
   }
 }
-function decimalPlaces(unit) {
+function decimalPlaces(unit2) {
   for (let digits = 0; digits <= 6; digits += 1) {
-    const scaled = unit * 10 ** digits;
+    const scaled = unit2 * 10 ** digits;
     if (Math.abs(scaled - Math.round(scaled)) <= 1e-9 * Math.max(1, Math.abs(scaled)))
       return digits;
   }
   return 3;
 }
-function formatDecimal(value2, unit) {
-  const text3 = value2.toFixed(decimalPlaces(unit)).replace(/(\.\d*?)0+$/u, "$1").replace(/\.$/u, "");
+function formatDecimal(value2, unit2) {
+  const text3 = value2.toFixed(decimalPlaces(unit2)).replace(/(\.\d*?)0+$/u, "$1").replace(/\.$/u, "");
   return text3 === "-0" || text3 === "\u22120" ? "0" : text3.replace("-", "\u2212");
 }
 function planNumberLineTicks(content) {
   const step = planTickStep(content);
   const subdivisions = content.ticks?.subdivisions ?? 1;
-  const unit = step / subdivisions;
+  const unit2 = step / subdivisions;
   const labels = content.ticks?.labels ?? "major";
   const format = content.ticks?.format ?? (Number.isInteger(step) ? subdivisions > 1 ? "fraction" : "integer" : "decimal");
-  const first = Math.ceil(content.range.min / unit - 1e-9);
-  const last = Math.floor(content.range.max / unit + 1e-9);
+  const first = Math.ceil(content.range.min / unit2 - 1e-9);
+  const last = Math.floor(content.range.max / unit2 + 1e-9);
   const ticks = [];
   for (let index = first; index <= last; index += 1) {
-    const tickValue = Number((index * unit).toPrecision(12));
+    const tickValue = Number((index * unit2).toPrecision(12));
     const major = index % subdivisions === 0;
     const labelled = labels === "all" || labels === "major" && major;
     let label;
@@ -8593,7 +8593,7 @@ function planNumberLineTicks(content) {
           label = format === "mixed" && size > denominator ? { kind: "fraction", negative, whole: Math.floor(size / denominator), numerator: size % denominator, denominator } : { kind: "fraction", negative, numerator: size, denominator };
         }
       } else {
-        label = format === "integer" && !Number.isInteger(tickValue) ? void 0 : { kind: "text", text: formatDecimal(tickValue, format === "integer" ? 1 : unit) };
+        label = format === "integer" && !Number.isInteger(tickValue) ? void 0 : { kind: "text", text: formatDecimal(tickValue, format === "integer" ? 1 : unit2) };
       }
     }
     ticks.push({ value: tickValue, major, ...label ? { label } : {} });
@@ -8797,7 +8797,9 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   // A secant over the first two of more points (marks after A and B); an older player drew no triangle then.
   "plot:secant-first-two": "0.11.0",
   // A secant point hidden where the curve has no value; an older player measured it at a stale y.
-  "plot:secant-hide-undefined": "0.12.0"
+  "plot:secant-hide-undefined": "0.12.0",
+  // A line under a 3D scene (a solid's volume, surface area or counts); an older player left it out.
+  "scene3d:caption": "0.13.0"
 });
 var looksLikeNumberLine = (content) => typeof content.range === "object" && content.range !== null && ["points", "jumps", "intervals", "ticks"].some((field) => field in content);
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
@@ -9016,8 +9018,8 @@ function scene3dViewTargetScore(view, target) {
   if (target.match === "view_direction") {
     const actual = scene3dViewDirection(view);
     const expected = scene3dViewDirection(target);
-    const dot = Math.max(-1, Math.min(1, actual.x * expected.x + actual.y * expected.y + actual.z * expected.z));
-    return Math.acos(dot) / target.angular_tolerance;
+    const dot2 = Math.max(-1, Math.min(1, actual.x * expected.x + actual.y * expected.y + actual.z * expected.z));
+    return Math.acos(dot2) / target.angular_tolerance;
   }
   const yawDistance = Math.abs(Math.atan2(Math.sin(view.yaw - target.yaw), Math.cos(view.yaw - target.yaw)));
   angularDistance = Math.max(yawDistance, Math.abs(view.pitch - target.pitch));
@@ -9331,14 +9333,14 @@ function splitBindingTarget(value2, path) {
 }
 function bindableTargets(action) {
   const targets = /* @__PURE__ */ new Map();
-  const add2 = (field, properties) => {
+  const add3 = (field, properties) => {
     for (const item of Array.isArray(action.content[field]) ? action.content[field] : []) {
       if (typeof item?.as === "string")
         targets.set(item.as, new Set(properties));
     }
   };
   for (const [field, properties] of Object.entries(bindingCapabilitiesForNodeKind(action.kind))) {
-    add2(field, properties);
+    add3(field, properties);
   }
   return targets;
 }
@@ -11147,8 +11149,785 @@ function canonicalizeState(state) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/web-runtime/src/solids.js
+var ROUND = 40;
+var BANDS = 16;
+var TUBE = 18;
+var add = (a, b) => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z });
+var sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
+var scale = (a, k) => ({ x: a.x * k, y: a.y * k, z: a.z * k });
+var dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
+var cross = (a, b) => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
+var length = (a) => Math.hypot(a.x, a.y, a.z);
+var unit = (a) => {
+  const l = length(a) || 1;
+  return scale(a, 1 / l);
+};
+var average = (points) => scale(points.reduce(add, { x: 0, y: 0, z: 0 }), 1 / points.length);
+var UP = { x: 0, y: 0, z: 1 };
+function turn(vector, axis, angle) {
+  const cos = Math.cos(angle), sin = Math.sin(angle);
+  return add(add(scale(vector, cos), scale(cross(axis, vector), sin)), scale(axis, dot(axis, vector) * (1 - cos)));
+}
+var turnPoint = (point, hinge) => add(hinge.at, turn(sub(point, hinge.at), hinge.axis, hinge.angle));
+function hinged(facet, hinges) {
+  if (!hinges.length)
+    return facet;
+  return {
+    ...facet,
+    points: facet.points.map((point) => hinges.reduce(turnPoint, point)),
+    normal: hinges.reduce((normal, hinge) => turn(normal, hinge.axis, hinge.angle), facet.normal)
+  };
+}
+function flatFace(points, centre) {
+  let normal = { x: 0, y: 0, z: 0 };
+  points.forEach((point, index) => {
+    const next = points[(index + 1) % points.length];
+    normal = add(normal, { x: (point.y - next.y) * (point.z + next.z), y: (point.z - next.z) * (point.x + next.x), z: (point.x - next.x) * (point.y + next.y) });
+  });
+  normal = unit(normal);
+  if (dot(normal, sub(average(points), centre)) < 0)
+    normal = scale(normal, -1);
+  return { points, normal, part: "face" };
+}
+function regularBase(radius, sides) {
+  return Array.from({ length: sides }, (_, index) => {
+    const angle = -Math.PI / 2 + Math.PI / sides + 2 * Math.PI * index / sides;
+    return { x: radius * Math.cos(angle), y: radius * Math.sin(angle) };
+  });
+}
+function signedArea(base) {
+  return base.reduce((sum, point, index) => {
+    const next = base[(index + 1) % base.length];
+    return sum + point.x * next.y - next.x * point.y;
+  }, 0) / 2;
+}
+function convexBase(base) {
+  if (!Array.isArray(base) || base.length < 3 || base.length > 12)
+    return false;
+  if (!base.every((point) => point && Number.isFinite(point.x) && Number.isFinite(point.y)))
+    return false;
+  const area = signedArea(base);
+  if (Math.abs(area) < 1e-9)
+    return false;
+  const sign = Math.sign(area);
+  return base.every((point, index) => {
+    const next = base[(index + 1) % base.length], after = base[(index + 2) % base.length];
+    return sign * ((next.x - point.x) * (after.y - next.y) - (next.y - point.y) * (after.x - next.x)) > -1e-9;
+  });
+}
+function circleRing(c, radius, z) {
+  return Array.from({ length: ROUND }, (_, index) => {
+    const angle = 2 * Math.PI * index / ROUND;
+    return { x: c.x + radius * Math.cos(angle), y: c.y + radius * Math.sin(angle), z };
+  });
+}
+function roundSides(bottom, top, height, bottomRadius, topRadius) {
+  const slant = Math.hypot(height, bottomRadius - topRadius);
+  return bottom.map((point, index) => {
+    const next = (index + 1) % bottom.length;
+    const angle = 2 * Math.PI * (index + 0.5) / bottom.length;
+    const normal = { x: Math.cos(angle) * height / slant, y: Math.sin(angle) * height / slant, z: (bottomRadius - topRadius) / slant };
+    const points = topRadius > 0 ? [point, bottom[next], top[next], top[index]] : [point, bottom[next], top[0]];
+    return { points, normal, part: "side", surface: "side" };
+  });
+}
+function polyhedronVertices(kind) {
+  const phi = (1 + Math.sqrt(5)) / 2;
+  const raw = kind === "tetrahedron" ? [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]] : kind === "octahedron" ? [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]] : [[0, 1, phi], [0, -1, phi], [0, 1, -phi], [0, -1, -phi], [1, phi, 0], [-1, phi, 0], [1, -phi, 0], [-1, -phi, 0], [phi, 0, 1], [-phi, 0, 1], [phi, 0, -1], [-phi, 0, -1]];
+  return raw.map(([x, y, z]) => unit({ x, y, z }));
+}
+function triangleFaces(vertices) {
+  const distances = vertices.flatMap((a, i) => vertices.slice(i + 1).map((b) => length(sub(a, b))));
+  const edge = Math.min(...distances);
+  const near3 = (a, b) => Math.abs(length(sub(a, b)) - edge) < edge * 1e-6;
+  const faces = [];
+  for (let i = 0; i < vertices.length; i += 1)
+    for (let j = i + 1; j < vertices.length; j += 1)
+      for (let k = j + 1; k < vertices.length; k += 1) {
+        const [a, b, c] = [vertices[i], vertices[j], vertices[k]];
+        if (near3(a, b) && near3(b, c) && near3(a, c))
+          faces.push([a, b, c]);
+      }
+  return faces;
+}
+function aroundCentre(points, normal) {
+  const centre = average(points);
+  const u = unit(sub(points[0], centre));
+  const v = cross(normal, u);
+  return [...points].sort((a, b) => Math.atan2(dot(sub(a, centre), v), dot(sub(a, centre), u)) - Math.atan2(dot(sub(b, centre), v), dot(sub(b, centre), u)));
+}
+function polyhedronFacets(kind, c, radius) {
+  let faces;
+  if (kind === "dodecahedron") {
+    const icosahedron = polyhedronVertices("icosahedron");
+    const triangles = triangleFaces(icosahedron);
+    const centres = triangles.map((triangle) => unit(average(triangle)));
+    faces = icosahedron.map((vertex) => aroundCentre(triangles.flatMap((triangle, index) => triangle.includes(vertex) ? [centres[index]] : []), vertex));
+  } else
+    faces = triangleFaces(polyhedronVertices(kind));
+  return faces.map((face) => flatFace(face.map((point) => add(c, scale(point, radius))), c));
+}
+function prismLike(c, base, height, topScale, unfold) {
+  const area = signedArea(base);
+  const middle = base.reduce((sum, point, index) => {
+    const next = base[(index + 1) % base.length], k = point.x * next.y - next.x * point.y;
+    return { x: sum.x + (point.x + next.x) * k / (6 * area), y: sum.y + (point.y + next.y) * k / (6 * area) };
+  }, { x: 0, y: 0 });
+  const centred = base.map((point) => ({ x: point.x - middle.x, y: point.y - middle.y }));
+  const corners = area < 0 ? [...centred].reverse() : centred;
+  const bottomZ = c.z - height / 2, topZ = c.z + height / 2;
+  const bottom = corners.map((point) => ({ x: c.x + point.x, y: c.y + point.y, z: bottomZ }));
+  const top = corners.map((point) => ({ x: c.x + point.x * topScale, y: c.y + point.y * topScale, z: topZ }));
+  const inside = average([...bottom, ...top]);
+  const facets = [{ ...flatFace([...bottom].reverse(), inside), surface: "bottom" }];
+  let front = 0;
+  bottom.forEach((point, index) => {
+    const mid = average([point, bottom[(index + 1) % bottom.length]]);
+    if (mid.y < average([bottom[front], bottom[(front + 1) % bottom.length]]).y)
+      front = index;
+  });
+  bottom.forEach((point, index) => {
+    const next = (index + 1) % bottom.length;
+    const face = flatFace(topScale > 0 ? [point, bottom[next], top[next], top[index]] : [point, bottom[next], top[0]], inside);
+    const axis = unit(sub(bottom[next], point));
+    const outward = cross(axis, UP);
+    const toward = unit(sub(average(face.points.slice(2)), average([point, bottom[next]])));
+    const angle = Math.atan2(dot(toward, UP), -dot(toward, outward));
+    const hinge = { at: point, axis, angle: unfold * (Math.PI - angle) };
+    facets.push(hinged({ ...face, surface: `side-${index + 1}` }, [hinge]));
+    if (index === front && topScale > 0) {
+      const topHinge = { at: top[index], axis: unit(sub(top[next], top[index])), angle: unfold * angle };
+      facets.push(hinged({ ...flatFace(top, inside), surface: "top" }, [topHinge, hinge]));
+    }
+  });
+  return facets;
+}
+function unrolledRound(c, radius, height, cone, unfold) {
+  const half = height / 2;
+  const facets = [];
+  const arc = (index) => -Math.PI * radius + 2 * Math.PI * radius * index / ROUND;
+  if (!cone) {
+    const bend = 1 - unfold;
+    const at2 = (s, z) => bend < 1e-6 ? { x: c.x + s, y: c.y - radius, z } : { x: c.x + radius / bend * Math.sin(s * bend / radius), y: c.y - radius + radius / bend * (1 - Math.cos(s * bend / radius)), z };
+    const normalAt = (s) => ({ x: Math.sin(s * bend / radius), y: -Math.cos(s * bend / radius), z: 0 });
+    if (bend < 1e-6) {
+      facets.push({ points: [at2(arc(0), c.z - half), at2(arc(ROUND), c.z - half), at2(arc(ROUND), c.z + half), at2(arc(0), c.z + half)], normal: normalAt(0), part: "face", surface: "side" });
+    } else
+      for (let index = 0; index < ROUND; index += 1) {
+        const [s0, s1] = [arc(index), arc(index + 1)];
+        facets.push({ points: [at2(s0, c.z - half), at2(s1, c.z - half), at2(s1, c.z + half), at2(s0, c.z + half)], normal: normalAt((s0 + s1) / 2), part: "side", surface: "side" });
+      }
+    for (const [z, direction2] of [[c.z + half, 1], [c.z - half, -1]]) {
+      const hinge2 = { at: { x: c.x, y: c.y - radius, z }, axis: { x: direction2, y: 0, z: 0 }, angle: unfold * Math.PI / 2 };
+      const disc = circleRing(c, radius, z);
+      facets.push(hinged({ points: direction2 > 0 ? disc : [...disc].reverse(), normal: { x: 0, y: 0, z: direction2 }, part: "face", surface: direction2 > 0 ? "top" : "bottom" }, [hinge2]));
+    }
+    return facets;
+  }
+  const slant = Math.hypot(radius, height);
+  const apex = { x: c.x, y: c.y, z: c.z + half };
+  const contact = { x: c.x, y: c.y - radius, z: c.z - half };
+  const g = unit(sub(contact, apex));
+  const e1 = { x: 1, y: 0, z: 0 };
+  const inward = cross(e1, g);
+  const reach = radius + unfold * (slant - radius);
+  const beta = Math.asin(Math.min(1, reach / slant));
+  const axis = add(scale(g, Math.cos(beta)), scale(inward, Math.sin(beta)));
+  const towardG = Math.sin(beta) > 1e-9 ? unit(sub(g, scale(axis, Math.cos(beta)))) : g;
+  const direction = (psi) => add(scale(axis, Math.cos(beta)), scale(add(scale(towardG, Math.cos(psi)), scale(e1, Math.sin(psi))), Math.sin(beta)));
+  const tilt = { at: contact, axis: e1, angle: unfold * Math.atan2(radius, height) };
+  const strips = [];
+  for (let index = 0; index < ROUND; index += 1) {
+    const [s0, s1] = [arc(index), arc(index + 1)];
+    const [p0, p1] = [s0 / reach, s1 / reach];
+    const middle = direction((p0 + p1) / 2);
+    const normal = unit(cross(sub(direction(p1), direction(p0)), middle));
+    strips.push({ points: [add(apex, scale(direction(p0), slant)), add(apex, scale(direction(p1), slant)), apex], normal: dot(normal, sub(middle, axis)) < 0 ? scale(normal, -1) : normal, part: "side", surface: "side" });
+  }
+  if (unfold >= 1 - 1e-9) {
+    facets.push(hinged({ points: [apex, ...strips.map((strip) => strip.points[0]), strips.at(-1).points[1]], normal: strips[0].normal, part: "face", surface: "side" }, [tilt]));
+  } else
+    facets.push(...strips.map((strip) => hinged(strip, [tilt])));
+  const from = { x: 0, y: radius, z: 0 };
+  const to = scale(g, radius);
+  const full = Math.atan2(dot(cross(from, to), e1), dot(from, to));
+  const hinge = { at: contact, axis: e1, angle: unfold * full };
+  facets.push(hinged({ points: [...circleRing(c, radius, c.z - half)].reverse(), normal: { x: 0, y: 0, z: -1 }, part: "face", surface: "bottom" }, [hinge, tilt]));
+  return facets;
+}
+function solidFacets(object2) {
+  const c = object2.center;
+  if (!c)
+    return [];
+  const kind = String(object2.kind);
+  const unfold = Math.min(1, Math.max(0, Number(object2.unfold) || 0));
+  const radius = Number(object2.radius);
+  const height = Number(object2.height);
+  const half = height / 2;
+  if (kind === "box") {
+    const size = object2.size;
+    if (!size || !(size.x > 0 && size.y > 0 && size.z > 0))
+      return [];
+    return prismLike(c, [{ x: -size.x / 2, y: -size.y / 2 }, { x: size.x / 2, y: -size.y / 2 }, { x: size.x / 2, y: size.y / 2 }, { x: -size.x / 2, y: size.y / 2 }], size.z, 1, unfold);
+  }
+  if (kind === "prism" || kind === "pyramid") {
+    if (!(height > 0))
+      return [];
+    const base = convexBase(object2.base) ? object2.base : radius > 0 && Number.isInteger(Number(object2.sides)) && Number(object2.sides) >= 3 && Number(object2.sides) <= 12 ? regularBase(radius, Number(object2.sides)) : void 0;
+    if (!base)
+      return [];
+    const topScale = kind === "prism" ? 1 : Math.min(1, Math.max(0, Number(object2.top_scale) || 0));
+    return prismLike(c, base, height, topScale, unfold);
+  }
+  if (kind === "ellipsoid") {
+    const radii = object2.radii;
+    if (!radii || !(radii.x > 0 && radii.y > 0 && radii.z > 0))
+      return [];
+    return sphereBands(c, radii, false);
+  }
+  if (!(radius > 0))
+    return [];
+  if (kind === "sphere" || kind === "hemisphere") {
+    const facets = sphereBands(c, { x: radius, y: radius, z: radius }, kind === "hemisphere");
+    if (kind === "hemisphere")
+      facets.push({ points: [...circleRing(c, radius, c.z)].reverse(), normal: { x: 0, y: 0, z: -1 }, part: "face", surface: "bottom" });
+    return facets;
+  }
+  if (kind === "torus") {
+    const tube = Number(object2.tube);
+    if (!(tube > 0 && tube < radius))
+      return [];
+    const facets = [];
+    const at2 = (u, v) => add(c, { x: (radius + tube * Math.cos(v)) * Math.cos(u), y: (radius + tube * Math.cos(v)) * Math.sin(u), z: tube * Math.sin(v) });
+    for (let i = 0; i < ROUND; i += 1)
+      for (let j = 0; j < TUBE; j += 1) {
+        const [u0, u1] = [i, i + 1].map((step) => 2 * Math.PI * step / ROUND);
+        const [v0, v1] = [j, j + 1].map((step) => 2 * Math.PI * step / TUBE);
+        const u = (u0 + u1) / 2, v = (v0 + v1) / 2;
+        facets.push({ points: [at2(u0, v0), at2(u1, v0), at2(u1, v1), at2(u0, v1)], normal: { x: Math.cos(v) * Math.cos(u), y: Math.cos(v) * Math.sin(u), z: Math.sin(v) }, part: "side", surface: "side" });
+      }
+    return facets;
+  }
+  if (kind === "tetrahedron" || kind === "octahedron" || kind === "dodecahedron" || kind === "icosahedron")
+    return polyhedronFacets(kind, c, radius).map((facet, index) => ({ ...facet, surface: `face-${index + 1}` }));
+  if (!(height > 0))
+    return [];
+  if ((kind === "cylinder" || kind === "cone") && unfold > 0)
+    return unrolledRound(c, radius, height, kind === "cone", unfold);
+  if (kind === "cylinder" || kind === "cone" || kind === "frustum") {
+    const topRadius = kind === "cylinder" ? radius : kind === "cone" ? 0 : Number(object2.top_radius);
+    if (!(topRadius >= 0))
+      return [];
+    const bottom = circleRing(c, radius, c.z - half);
+    const top = topRadius > 0 ? circleRing(c, topRadius, c.z + half) : [{ x: c.x, y: c.y, z: c.z + half }];
+    const facets = roundSides(bottom, top, height, radius, topRadius);
+    if (topRadius > 0)
+      facets.push({ points: top, normal: { x: 0, y: 0, z: 1 }, part: "face", surface: "top" });
+    facets.push({ points: [...bottom].reverse(), normal: { x: 0, y: 0, z: -1 }, part: "face", surface: "bottom" });
+    return facets;
+  }
+  return [];
+}
+function sphereBands(c, radii, upperHalf) {
+  const facets = [];
+  for (let band = upperHalf ? BANDS / 2 : 0; band < BANDS; band += 1) {
+    const [low, high] = [band, band + 1].map((step) => -Math.PI / 2 + Math.PI * step / BANDS);
+    for (let index = 0; index < ROUND; index += 1) {
+      const [a, b] = [index, index + 1].map((step) => 2 * Math.PI * step / ROUND);
+      const at2 = (lat2, lon2) => add(c, { x: radii.x * Math.cos(lat2) * Math.cos(lon2), y: radii.y * Math.cos(lat2) * Math.sin(lon2), z: radii.z * Math.sin(lat2) });
+      const lat = (low + high) / 2, lon = (a + b) / 2;
+      const normal = unit({ x: Math.cos(lat) * Math.cos(lon) / radii.x, y: Math.cos(lat) * Math.sin(lon) / radii.y, z: Math.sin(lat) / radii.z });
+      facets.push({ points: [at2(low, a), at2(low, b), at2(high, b), at2(high, a)], normal, part: "side", surface: "side" });
+    }
+  }
+  return facets;
+}
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/solid-measures.js
+var plain = (value2) => ({ value: value2 });
+var ofPi = (coefficient2) => ({ value: coefficient2 * Math.PI, pi: coefficient2 });
+function polygonAreaPerimeter(corners) {
+  let twice = 0, perimeter = 0;
+  corners.forEach((point, index) => {
+    const next = corners[(index + 1) % corners.length];
+    twice += point.x * next.y - next.x * point.y;
+    perimeter += Math.hypot(next.x - point.x, next.y - point.y);
+  });
+  return { area: Math.abs(twice) / 2, perimeter };
+}
+function slantedSides(corners, height, k) {
+  let total = 0;
+  corners.forEach((point, index) => {
+    const next = corners[(index + 1) % corners.length];
+    const length2 = Math.hypot(next.x - point.x, next.y - point.y);
+    const distance = Math.abs(point.x * next.y - next.x * point.y) / length2;
+    total += length2 * (1 + k) / 2 * Math.hypot(height, (1 - k) * distance);
+  });
+  return total;
+}
+function compositeVolume(solid) {
+  switch (solid.parts) {
+    case "cylinder_cone":
+      return ofPi(solid.radius ** 2 * (solid.height + solid.topHeight / 3));
+    case "cylinder_hemisphere":
+      return ofPi(solid.radius ** 2 * solid.height + 2 / 3 * solid.radius ** 3);
+    case "two_cylinders":
+      return ofPi(solid.radius ** 2 * solid.height + solid.topRadius ** 2 * solid.topHeight);
+    case "box_pyramid":
+      return plain(solid.width ** 2 * (solid.height + solid.topHeight / 3));
+    case "two_boxes":
+      return plain(solid.size.x * solid.size.y * solid.size.z + solid.sideSize.x * solid.sideSize.y * solid.sideSize.z);
+  }
+}
+function solidMeasures(solid) {
+  switch (solid.shape) {
+    case "box": {
+      const { x, y, z } = solid.size;
+      return { volume: plain(x * y * z), surfaceArea: plain(2 * (x * y + y * z + x * z)), counts: { faces: 6, edges: 12, vertices: 8 } };
+    }
+    case "cylinder":
+      return { volume: ofPi(solid.radius ** 2 * solid.height), surfaceArea: ofPi(2 * solid.radius * (solid.radius + solid.height)) };
+    case "cone":
+      return { volume: ofPi(solid.radius ** 2 * solid.height / 3), surfaceArea: ofPi(solid.radius * (solid.radius + Math.hypot(solid.radius, solid.height))) };
+    case "sphere":
+      return { volume: ofPi(4 / 3 * solid.radius ** 3), surfaceArea: ofPi(4 * solid.radius ** 2) };
+    // The whole surface: the curved half and the flat disc.
+    case "hemisphere":
+      return { volume: ofPi(2 / 3 * solid.radius ** 3), surfaceArea: ofPi(3 * solid.radius ** 2) };
+    case "frustum": {
+      const { radius: r1, topRadius: r2, height: h } = solid;
+      return { volume: ofPi(h * (r1 * r1 + r1 * r2 + r2 * r2) / 3), surfaceArea: ofPi(r1 * r1 + r2 * r2 + (r1 + r2) * Math.hypot(h, r1 - r2)) };
+    }
+    case "prism":
+    case "pyramid": {
+      const corners = centredBaseCorners(solid);
+      const { area, perimeter } = polygonAreaPerimeter(corners);
+      const n = corners.length;
+      if (solid.shape === "prism") {
+        return { volume: plain(area * solid.height), surfaceArea: plain(2 * area + perimeter * solid.height), counts: { faces: n + 2, edges: 3 * n, vertices: 2 * n } };
+      }
+      const k = solid.topScale ?? 0;
+      const sides = slantedSides(corners, solid.height, k);
+      return {
+        volume: plain(solid.height * area * (1 + k + k * k) / 3),
+        surfaceArea: plain(area * (1 + k * k) + sides),
+        counts: k > 0 ? { faces: n + 2, edges: 3 * n, vertices: 2 * n } : { faces: n + 1, edges: 2 * n, vertices: n + 1 }
+      };
+    }
+    case "composite":
+      return { volume: compositeVolume(solid) };
+    default:
+      return {};
+  }
+}
+function solidHasMeasure(solid, kind) {
+  const measures = solidMeasures(solid);
+  return kind === "volume" ? measures.volume !== void 0 : kind === "surface_area" ? measures.surfaceArea !== void 0 : measures.counts !== void 0;
+}
+var whole = (value2) => Math.abs(value2 - Math.round(value2)) <= 1e-9 * Math.max(1, Math.abs(value2));
+function exactDecimal(value2) {
+  for (let places = 0; places <= 3; places += 1) {
+    const scaled = value2 * 10 ** places;
+    if (whole(scaled))
+      return (Math.round(scaled) / 10 ** places).toFixed(places);
+  }
+  return void 0;
+}
+var approximate = (value2) => (Math.round(value2 * 100) / 100).toFixed(2);
+function piText(coefficient2) {
+  const decimal = exactDecimal(coefficient2);
+  if (decimal !== void 0)
+    return decimal === "1" ? "\u03C0" : `${decimal}\u03C0`;
+  for (let denominator = 2; denominator <= 12; denominator += 1) {
+    if (whole(coefficient2 * denominator)) {
+      const numerator = Math.round(coefficient2 * denominator);
+      return `${numerator === 1 ? "" : numerator}\u03C0/${denominator}`;
+    }
+  }
+  return void 0;
+}
+function quantityText(quantity) {
+  if (quantity.pi !== void 0) {
+    const exact2 = piText(quantity.pi);
+    return exact2 !== void 0 ? `= ${exact2} \u2248 ${approximate(quantity.value)}` : `\u2248 ${approximate(quantity.value)}`;
+  }
+  const exact = exactDecimal(quantity.value);
+  return exact !== void 0 ? `= ${exact}` : `\u2248 ${approximate(quantity.value)}`;
+}
+function solidMeasuresText(solid, show, language) {
+  const zh = language.toLowerCase().startsWith("zh");
+  const measures = solidMeasures(solid);
+  const parts = [...new Set(show)].map((kind) => {
+    if (kind === "volume") {
+      if (!measures.volume)
+        throw new Error(`A ${solid.shape} has no volume formula here`);
+      return `${zh ? "\u4F53\u79EF" : "Volume"} ${quantityText(measures.volume)}`;
+    }
+    if (kind === "surface_area") {
+      if (!measures.surfaceArea)
+        throw new Error(`A ${solid.shape} has no surface area formula here`);
+      return `${zh ? "\u8868\u9762\u79EF" : "Surface area"} ${quantityText(measures.surfaceArea)}`;
+    }
+    if (!measures.counts)
+      throw new Error(`A ${solid.shape} has no face, edge and vertex counts here`);
+    const { faces, edges, vertices } = measures.counts;
+    return zh ? `${faces} \u4E2A\u9762\uFF0C${edges} \u6761\u68F1\uFF0C${vertices} \u4E2A\u9876\u70B9` : `${faces} faces, ${edges} edges, ${vertices} vertices`;
+  });
+  return parts.join(zh ? "\uFF1B" : "; ");
+}
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/solids.js
 var POLYHEDRON_REACH = { tetrahedron: 1 / Math.sqrt(3), octahedron: 1, dodecahedron: 0.7947, icosahedron: 0.8507 };
+function solidZRange(solid) {
+  switch (solid.shape) {
+    case "box":
+      return [-solid.size.z / 2, solid.size.z / 2];
+    case "sphere":
+      return [-solid.radius, solid.radius];
+    case "hemisphere":
+      return [0, solid.radius];
+    case "torus":
+      return [-solid.tube, solid.tube];
+    case "ellipsoid":
+      return [-solid.radii.z, solid.radii.z];
+    case "composite": {
+      const total = compositeHeight(solid);
+      return [-total / 2, total / 2];
+    }
+    case "tetrahedron":
+    case "octahedron":
+    case "dodecahedron":
+    case "icosahedron": {
+      const reach = solid.radius * POLYHEDRON_REACH[solid.shape];
+      return [-reach, reach];
+    }
+    default:
+      return [-solid.height / 2, solid.height / 2];
+  }
+}
+function compositeHeight(solid) {
+  if (solid.parts === "two_boxes")
+    return Math.max(solid.size.z, solid.sideSize.z);
+  return solid.parts === "cylinder_hemisphere" ? solid.height + solid.radius : solid.height + solid.topHeight;
+}
+function solidUnfolds(solid) {
+  return ["box", "prism", "pyramid", "cylinder", "cone"].includes(solid.shape);
+}
+function baseCorners(base) {
+  switch (base.kind) {
+    case "rectangle":
+      return [{ x: 0, y: 0 }, { x: base.length, y: 0 }, { x: base.length, y: base.width }, { x: 0, y: base.width }];
+    case "right_triangle":
+      return [{ x: 0, y: 0 }, { x: base.a, y: 0 }, { x: 0, y: base.b }];
+    case "triangle": {
+      const { a, b, c } = base;
+      if (!(a + b > c && b + c > a && a + c > b))
+        return void 0;
+      const x = (a * a + c * c - b * b) / (2 * a);
+      return [{ x: 0, y: 0 }, { x: a, y: 0 }, { x, y: Math.sqrt(c * c - x * x) }];
+    }
+  }
+}
+function centredBaseCorners(solid) {
+  const corners = "base" in solid ? baseCorners(solid.base) : Array.from({ length: solid.sides }, (_, index) => ({
+    x: solid.radius * Math.cos(2 * Math.PI * index / solid.sides),
+    y: solid.radius * Math.sin(2 * Math.PI * index / solid.sides)
+  }));
+  if (!corners)
+    throw new Error("The three sides do not make a triangle");
+  let twice = 0, cx = 0, cy = 0;
+  corners.forEach((point, index) => {
+    const next = corners[(index + 1) % corners.length], k = point.x * next.y - next.x * point.y;
+    twice += k;
+    cx += (point.x + next.x) * k;
+    cy += (point.y + next.y) * k;
+  });
+  const middle = { x: cx / (3 * twice), y: cy / (3 * twice) };
+  return corners.map((point) => ({ x: point.x - middle.x, y: point.y - middle.y }));
+}
+function compositeObjects(solid, base) {
+  const at2 = (z) => ({ x: 0, y: 0, z: Number(z.toFixed(6)) });
+  const bottom = -compositeHeight(solid) / 2;
+  if (solid.parts === "two_boxes") {
+    const left = -(solid.size.x + solid.sideSize.x) / 2;
+    const place5 = (x, z) => ({ x: Number(x.toFixed(6)), y: 0, z: Number(z.toFixed(6)) });
+    return [
+      { ...base, kind: "box", center: place5(left + solid.size.x / 2, bottom + solid.size.z / 2), size: solid.size },
+      { as: "solid-side", kind: "box", center: place5(left + solid.size.x + solid.sideSize.x / 2, bottom + solid.sideSize.z / 2), size: solid.sideSize }
+    ];
+  }
+  const lower = { ...base, center: at2(bottom + solid.height / 2) };
+  const upper = { as: "solid-top", center: at2(bottom + solid.height + ("topHeight" in solid ? solid.topHeight / 2 : 0)) };
+  switch (solid.parts) {
+    case "cylinder_cone":
+      return [{ ...lower, kind: "cylinder", radius: solid.radius, height: solid.height }, { ...upper, kind: "cone", radius: solid.radius, height: solid.topHeight }];
+    case "cylinder_hemisphere":
+      return [{ ...lower, kind: "cylinder", radius: solid.radius, height: solid.height }, { ...upper, kind: "hemisphere", radius: solid.radius }];
+    // A square pyramid's corners are on a circle of radius width/√2, its sides facing the box's.
+    case "box_pyramid":
+      return [
+        { ...lower, kind: "box", size: { x: solid.width, y: solid.width, z: solid.height } },
+        { ...upper, kind: "pyramid", sides: 4, radius: Number((solid.width / Math.SQRT2).toFixed(6)), height: solid.topHeight }
+      ];
+    case "two_cylinders":
+      return [{ ...lower, kind: "cylinder", radius: solid.radius, height: solid.height }, { ...upper, kind: "cylinder", radius: solid.topRadius, height: solid.topHeight }];
+  }
+}
+function solidNetXReach(solid) {
+  let reach = solidXReach(solid);
+  for (const object2 of solidObjects(solid)) {
+    for (let step = 1; step <= 40; step += 1) {
+      for (const facet of solidFacets({ ...object2, unfold: step / 40 }))
+        for (const point of facet.points)
+          reach = Math.max(reach, Math.abs(point.x));
+    }
+  }
+  return reach;
+}
+function solidXReach(solid) {
+  switch (solid.shape) {
+    case "box":
+      return solid.size.x / 2;
+    case "ellipsoid":
+      return solid.radii.x;
+    case "torus":
+      return solid.radius + solid.tube;
+    case "frustum":
+      return Math.max(solid.radius, solid.topRadius);
+    case "prism":
+    case "pyramid":
+      return "base" in solid ? Math.max(...centredBaseCorners(solid).map((point) => Math.abs(point.x))) : solid.radius;
+    case "composite":
+      switch (solid.parts) {
+        case "box_pyramid":
+          return solid.width / 2;
+        case "two_cylinders":
+          return Math.max(solid.radius, solid.topRadius);
+        case "two_boxes":
+          return (solid.size.x + solid.sideSize.x) / 2;
+        default:
+          return solid.radius;
+      }
+    default:
+      return solid.radius;
+  }
+}
+function solidObjects(solid) {
+  const at2 = (z) => ({ x: 0, y: 0, z: Number(z.toFixed(6)) });
+  const base = { as: "solid", kind: solid.shape, center: at2(0) };
+  switch (solid.shape) {
+    case "box":
+      return [{ ...base, size: solid.size }];
+    case "cylinder":
+    case "cone":
+      return [{ ...base, radius: solid.radius, height: solid.height }];
+    case "prism":
+    case "pyramid": {
+      const top = solid.shape === "pyramid" && solid.topScale !== void 0 ? { top_scale: solid.topScale } : {};
+      if ("base" in solid) {
+        const corners = baseCorners(solid.base);
+        if (!corners)
+          throw new Error("The three sides do not make a triangle");
+        return [{ ...base, base: corners.map((corner) => ({ x: Number(corner.x.toFixed(6)), y: Number(corner.y.toFixed(6)) })), height: solid.height, ...top }];
+      }
+      return [{ ...base, sides: solid.sides, radius: solid.radius, height: solid.height, ...top }];
+    }
+    case "frustum":
+      return [{ ...base, radius: solid.radius, top_radius: solid.topRadius, height: solid.height }];
+    case "torus":
+      return [{ ...base, radius: solid.radius, tube: solid.tube }];
+    case "ellipsoid":
+      return [{ ...base, radii: solid.radii }];
+    case "composite":
+      return compositeObjects(solid, base);
+    default:
+      return [{ ...base, radius: solid.radius }];
+  }
+}
+function boxFaces(size, names, unfolds, legacy = false) {
+  const [hx, hy, hz] = [size.x / 2, size.y / 2, size.z / 2];
+  const face = (as, name, a, b, corners) => {
+    const points = corners.map(([x, y, z]) => ({ x, y, z }));
+    if (legacy)
+      return { as, kind: "face", label: `${as.slice(0, -5)} ${a} \xD7 ${b}`, shown: "when_emphasized", points };
+    return { as, kind: "face", shown: "when_emphasized", label: `${name}${unfolds ? "\n" : " "}${a} \xD7 ${b}`, points };
+  };
+  return [
+    face("top-face", names.top, size.x, size.y, [[-hx, -hy, hz], [hx, -hy, hz], [hx, hy, hz], [-hx, hy, hz]]),
+    face("bottom-face", names.bottom, size.x, size.y, [[-hx, -hy, -hz], [hx, -hy, -hz], [hx, hy, -hz], [-hx, hy, -hz]]),
+    // The viewer looks from +y (OLL's "front" preset), so the front face is the +y one.
+    face("front-face", names.front, size.x, size.z, [[-hx, hy, -hz], [hx, hy, -hz], [hx, hy, hz], [-hx, hy, hz]]),
+    face("back-face", names.back, size.x, size.z, [[-hx, -hy, -hz], [hx, -hy, -hz], [hx, -hy, hz], [-hx, -hy, hz]]),
+    face("left-face", names.left, size.y, size.z, [[-hx, -hy, -hz], [-hx, hy, -hz], [-hx, hy, hz], [-hx, -hy, hz]]),
+    face("right-face", names.right, size.y, size.z, [[hx, -hy, -hz], [hx, hy, -hz], [hx, hy, hz], [hx, -hy, hz]])
+  ];
+}
+var POLYGON_ZH = ["", "", "", "\u4E09", "\u56DB", "\u4E94", "\u516D", "\u4E03", "\u516B", "\u4E5D", "\u5341", "\u5341\u4E00", "\u5341\u4E8C"];
+function compositeDescription(solid, zh) {
+  switch (solid.parts) {
+    case "cylinder_cone":
+      return zh ? `\u534A\u5F84 ${solid.radius}\u3001\u9AD8 ${solid.height} \u7684\u5706\u67F1\uFF0C\u4E0A\u9762\u662F\u9AD8 ${solid.topHeight} \u7684\u5706\u9525\u3002` : `A cylinder of radius ${solid.radius} and height ${solid.height} with a cone of height ${solid.topHeight} on top.`;
+    case "cylinder_hemisphere":
+      return zh ? `\u534A\u5F84 ${solid.radius}\u3001\u9AD8 ${solid.height} \u7684\u5706\u67F1\uFF0C\u4E0A\u9762\u662F\u534A\u7403\u3002` : `A cylinder of radius ${solid.radius} and height ${solid.height} with a hemisphere on top.`;
+    case "box_pyramid":
+      return zh ? `\u5E95\u9762\u8FB9\u957F ${solid.width}\u3001\u9AD8 ${solid.height} \u7684\u957F\u65B9\u4F53\uFF0C\u4E0A\u9762\u662F\u9AD8 ${solid.topHeight} \u7684\u56DB\u68F1\u9525\u3002` : `A box ${solid.width} wide and ${solid.height} high with a square pyramid of height ${solid.topHeight} on top.`;
+    case "two_cylinders":
+      return zh ? `\u534A\u5F84 ${solid.radius}\u3001\u9AD8 ${solid.height} \u7684\u5706\u67F1\uFF0C\u4E0A\u9762\u662F\u534A\u5F84 ${solid.topRadius}\u3001\u9AD8 ${solid.topHeight} \u7684\u5706\u67F1\u3002` : `A cylinder of radius ${solid.radius} and height ${solid.height} with a cylinder of radius ${solid.topRadius} and height ${solid.topHeight} on top.`;
+    case "two_boxes": {
+      const [a, b] = [solid.size, solid.sideSize];
+      return zh ? `\u957F ${a.x}\u3001\u5BBD ${a.y}\u3001\u9AD8 ${a.z} \u7684\u957F\u65B9\u4F53\uFF0C\u53F3\u8FB9\u7D27\u6328\u7740\u957F ${b.x}\u3001\u5BBD ${b.y}\u3001\u9AD8 ${b.z} \u7684\u957F\u65B9\u4F53\u3002` : `A box ${a.x} by ${a.y} by ${a.z} with a box ${b.x} by ${b.y} by ${b.z} against its right side.`;
+    }
+  }
+}
+function describeSolid(solid, language) {
+  const zh = language.toLowerCase().startsWith("zh");
+  switch (solid.shape) {
+    case "box":
+      return zh ? `\u957F ${solid.size.x}\u3001\u5BBD ${solid.size.y}\u3001\u9AD8 ${solid.size.z} \u7684\u957F\u65B9\u4F53\u3002` : `A box ${solid.size.x} by ${solid.size.y} by ${solid.size.z}.`;
+    case "sphere":
+      return zh ? `\u534A\u5F84 ${solid.radius} \u7684\u7403\u3002` : `A sphere of radius ${solid.radius}.`;
+    case "hemisphere":
+      return zh ? `\u534A\u5F84 ${solid.radius} \u7684\u534A\u7403\u3002` : `A hemisphere of radius ${solid.radius}.`;
+    case "cylinder":
+    case "cone":
+      return zh ? `\u534A\u5F84 ${solid.radius}\u3001\u9AD8 ${solid.height} \u7684${solid.shape === "cone" ? "\u5706\u9525" : "\u5706\u67F1"}\u3002` : `A ${solid.shape} of radius ${solid.radius} and height ${solid.height}.`;
+    case "prism":
+    case "pyramid": {
+      const truncated = solid.shape === "pyramid" && solid.topScale !== void 0;
+      const kind = zh ? solid.shape === "prism" ? "\u68F1\u67F1" : truncated ? "\u68F1\u53F0" : "\u68F1\u9525" : solid.shape === "prism" ? "prism" : truncated ? "truncated pyramid" : "pyramid";
+      const top = truncated ? zh ? `\uFF0C\u4E0A\u5E95\u662F\u4E0B\u5E95\u7684 ${solid.topScale} \u500D` : `, its top ${solid.topScale} times the base` : "";
+      if (!("base" in solid))
+        return zh ? `\u5E95\u9762\u662F\u6B63${POLYGON_ZH[solid.sides]}\u8FB9\u5F62\u7684${kind}\uFF0C\u9AD8 ${solid.height}${top}\u3002` : `A ${solid.sides}-sided ${kind} of height ${solid.height}${top}.`;
+      const base = solid.base;
+      const shape = base.kind === "rectangle" ? zh ? `\u957F ${base.length}\u3001\u5BBD ${base.width} \u7684\u957F\u65B9\u5F62` : `a ${base.length} by ${base.width} rectangle` : base.kind === "right_triangle" ? zh ? `\u76F4\u89D2\u8FB9\u4E3A ${base.a} \u548C ${base.b} \u7684\u76F4\u89D2\u4E09\u89D2\u5F62` : `a right triangle with legs ${base.a} and ${base.b}` : zh ? `\u4E09\u8FB9\u957F ${base.a}\u3001${base.b}\u3001${base.c} \u7684\u4E09\u89D2\u5F62` : `a triangle with sides ${base.a}, ${base.b} and ${base.c}`;
+      return zh ? `\u5E95\u9762\u662F${shape}\u7684${kind}\uFF0C\u9AD8 ${solid.height}${top}\u3002` : `A ${kind} on ${shape}, height ${solid.height}${top}.`;
+    }
+    case "ellipsoid":
+      return zh ? `\u4E09\u4E2A\u534A\u8F74\u662F ${solid.radii.x}\u3001${solid.radii.y}\u3001${solid.radii.z} \u7684\u692D\u7403\u3002` : `An ellipsoid with semi-axes ${solid.radii.x}, ${solid.radii.y} and ${solid.radii.z}.`;
+    case "composite":
+      return compositeDescription(solid, zh);
+    case "torus":
+      return zh ? `\u73AF\u534A\u5F84 ${solid.radius}\u3001\u7BA1\u534A\u5F84 ${solid.tube} \u7684\u5706\u73AF\u3002` : `A torus of ring radius ${solid.radius} and tube radius ${solid.tube}.`;
+    case "frustum":
+      return zh ? `\u4E0B\u5E95\u534A\u5F84 ${solid.radius}\u3001\u4E0A\u5E95\u534A\u5F84 ${solid.topRadius}\u3001\u9AD8 ${solid.height} \u7684\u5706\u53F0\u3002` : `A frustum of radii ${solid.radius} and ${solid.topRadius}, height ${solid.height}.`;
+    default: {
+      const names = { tetrahedron: ["\u6B63\u56DB\u9762\u4F53", "tetrahedron"], octahedron: ["\u6B63\u516B\u9762\u4F53", "octahedron"], dodecahedron: ["\u6B63\u5341\u4E8C\u9762\u4F53", "dodecahedron"], icosahedron: ["\u6B63\u4E8C\u5341\u9762\u4F53", "icosahedron"] }[solid.shape];
+      return zh ? `${names[0]}\u3002` : `A regular ${names[1]}.`;
+    }
+  }
+}
+var SOLID_SCENE_CAMERA = { yaw: 0.72, pitch: 0.55, zoom: 1 };
+var SOLID_PAIR_CAMERA = { yaw: 0.3, pitch: 0.45, zoom: 1 };
+function solidName(solid, zh) {
+  switch (solid.shape) {
+    case "box":
+      return solid.size.x === solid.size.y && solid.size.y === solid.size.z ? zh ? "\u6B63\u65B9\u4F53" : "Cube" : zh ? "\u957F\u65B9\u4F53" : "Box";
+    case "cylinder":
+      return zh ? "\u5706\u67F1" : "Cylinder";
+    case "cone":
+      return zh ? "\u5706\u9525" : "Cone";
+    case "sphere":
+      return zh ? "\u7403" : "Sphere";
+    case "hemisphere":
+      return zh ? "\u534A\u7403" : "Hemisphere";
+    case "frustum":
+      return zh ? "\u5706\u53F0" : "Frustum";
+    case "prism":
+      return zh ? "\u68F1\u67F1" : "Prism";
+    case "pyramid":
+      return (solid.topScale ?? 0) > 0 ? zh ? "\u68F1\u53F0" : "Truncated pyramid" : zh ? "\u68F1\u9525" : "Pyramid";
+    case "composite":
+      return zh ? "\u7EC4\u5408\u4F53" : "Composite";
+    default:
+      return zh ? "\u7ACB\u4F53" : "Solid";
+  }
+}
+function shifted(objects, dx, dz, prefix = "solid") {
+  return objects.map((object2) => {
+    const center = object2.center;
+    return {
+      ...object2,
+      as: String(object2.as).replace(/^solid/, prefix),
+      center: { x: Number((center.x + dx).toFixed(6)), y: center.y, z: Number((center.z + dz).toFixed(6)) }
+    };
+  });
+}
+function buildSolid(input) {
+  const { solid, beside } = input;
+  if (input.cut && input.unfold)
+    throw new Error("A solid is either cut or unfolded, not both");
+  if (input.unfold && !solidUnfolds(solid))
+    throw new Error(`A ${solid.shape} has no net to unfold`);
+  if (input.unfold && beside && !solidUnfolds(beside))
+    throw new Error(`A ${beside.shape} has no net to unfold`);
+  if (beside && input.box_faces)
+    throw new Error("Box faces are for a box on its own");
+  let objects = solidObjects(solid);
+  let zRange = solidZRange(solid);
+  const besideObjects = [];
+  if (beside) {
+    const reachOf = input.unfold ? solidNetXReach : solidXReach;
+    const [reachA, reachB] = [reachOf(solid), reachOf(beside)];
+    const gap = Math.max(reachA, reachB) / 2;
+    const width = 2 * reachA + gap + 2 * reachB;
+    const [rangeA, rangeB] = [zRange, solidZRange(beside)];
+    const height = Math.max(rangeA[1] - rangeA[0], rangeB[1] - rangeB[0]);
+    objects = shifted(objects, -width / 2 + reachA, -height / 2 - rangeA[0]);
+    besideObjects.push(...shifted(solidObjects(beside), width / 2 - reachB, -height / 2 - rangeB[0], "beside"));
+    zRange = [-height / 2, height / 2];
+  }
+  const all = [...objects, ...besideObjects];
+  if (input.face_targets)
+    for (const object2 of all)
+      object2.face_targets = true;
+  const caption = input.show && input.show.measures.length ? (() => {
+    const zh = input.show.language.toLowerCase().startsWith("zh");
+    if (!beside)
+      return solidMeasuresText(solid, input.show.measures, input.show.language);
+    let [nameA, nameB] = [solidName(solid, zh), solidName(beside, zh)];
+    if (nameA === nameB)
+      [nameA, nameB] = zh ? ["\u5DE6", "\u53F3"] : ["Left", "Right"];
+    return [[nameA, solid], [nameB, beside]].map(([name, each]) => `${name}${zh ? "\uFF1A" : ": "}${solidMeasuresText(each, input.show.measures, input.show.language)}`).join("\n");
+  })() : void 0;
+  const content = {
+    ...input.title !== void 0 ? { title: input.title } : {},
+    ...caption !== void 0 ? { caption } : {},
+    fallback: input.fallback,
+    axes: false,
+    camera: { ...beside ? SOLID_PAIR_CAMERA : SOLID_SCENE_CAMERA },
+    objects: input.unfold ? all.map((object2) => ({ ...object2, unfold: 0 })) : all,
+    ...solid.shape === "box" && input.box_faces ? { highlights: boxFaces(solid.size, input.box_faces.names, Boolean(input.unfold), input.box_faces.legacy) } : {}
+  };
+  if (input.unfold) {
+    content.bindings = [
+      { target: "solid.unfold", expression: input.unfold.expression },
+      ...beside ? [{ target: "beside.unfold", expression: input.unfold.expression }] : []
+    ];
+  }
+  if (input.cut) {
+    const [bottom, top] = zRange;
+    const middle = Number(((bottom + top) / 2).toFixed(6));
+    content.sections = [{ as: "cut", axis: "z", value: middle, targets: all.map((object2) => object2.as), display: "plane_and_intersection", color: "orange" }];
+    content.bindings = [{ target: "cut.value", expression: input.cut.expression }];
+  }
+  const partOf = (prefix, list2) => Object.fromEntries(list2.map((object2) => {
+    const as = String(object2.as);
+    return [as.replace("-", "_"), `${input.as}#${as}`];
+  }).filter(([key]) => key.startsWith(prefix)));
+  return {
+    actions: [{ do: "write", as: input.as, kind: "scene3d", role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts: {
+      whole: input.as,
+      ...partOf("solid", objects),
+      ...partOf("beside", besideObjects),
+      ...input.cut ? { section: `${input.as}#cut`, primary_control: `${input.as}#cut` } : {},
+      ...input.unfold ? { primary_control: `${input.as}#solid` } : {}
+    },
+    ...input.cut ? { cutRange: [Number(zRange[0].toFixed(6)), Number(zRange[1].toFixed(6))] } : {}
+  };
+}
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/rearrangement.js
 var REARRANGEMENT_CONSTRUCTIONS = {
@@ -11891,7 +12670,7 @@ var constant = (value2) => ({ text: formatNumber(value2), value: value2 });
 var formatNumber = (value2) => Object.is(value2, -0) ? "0" : String(Number(value2.toPrecision(12)));
 var isZero = (scalar) => scalar.value === 0;
 var wrap = (scalar) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(scalar.text) ? scalar.text : `(${scalar.text})`;
-function add(a, b) {
+function add2(a, b) {
   if (a.value !== void 0 && b.value !== void 0)
     return constant(a.value + b.value);
   if (isZero(a))
@@ -11957,7 +12736,7 @@ function polynomialOf(tokens, maxDegree = 2) {
         return void 0;
       let result;
       if (token.operator === "add" || token.operator === "subtract") {
-        result = powers.map((power2) => add(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
+        result = powers.map((power2) => add2(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
       } else if (token.operator === "multiply") {
         result = times(left, right, maxDegree);
       } else if (token.operator === "divide") {
@@ -11998,7 +12777,7 @@ function times(left, right, maxDegree = 2) {
         continue;
       if (i + j > maxDegree)
         return void 0;
-      result[i + j] = add(result[i + j], multiply(a, b));
+      result[i + j] = add2(result[i + j], multiply(a, b));
     }
   return result;
 }
@@ -12777,6 +13556,23 @@ var MATH_RECIPES = {
     required_features: ["coordinate_circle"],
     model_guidance: "\u5750\u6807\u7CFB\u4E2D\u7684\u5706\uFF1B\u5171\u4EAB\u6570\u503C\u53EF\u901A\u8FC7 radius_expression\uFF08\u4F8B\u5982 sqrt(n1)\uFF09\u9A71\u52A8\u534A\u5F84"
   },
+  // Decision 0019 (amended by 0020): the model writes each solid's shape and the sizes the question states,
+  // which measures to show and whether a cut or a net is wanted; the program computes the measures, builds
+  // the slider and its range, and places a second solid beside the first. A trial until its speed gate.
+  solid_3d: {
+    parts: ["whole", "solid", "beside", "section", "primary_control"],
+    number_inputs: [],
+    number_input_policies: [],
+    parameter_names: ["title", "solids", "join", "show", "interaction"],
+    model_parameter_names: ["title", "solids", "join", "show", "interaction"],
+    required_model_schema_parameters: ["solids"],
+    semantic_parameters: ["solids", "join", "show", "interaction"],
+    initial_camera: SCENE_FIRST_CAMERA,
+    output_kinds: ["scene3d"],
+    student_controls: ["slider", "scene3d_view"],
+    required_features: ["solid_3d"],
+    model_guidance: "\u7ACB\u4F53\uFF1Asolids\u7167\u9898\u5199\u5C3A\u5BF8\uFF0C2\u4E2A\u5219\u5E76\u6392\uFF1Bjoin\u53E0\u653E\u6216\u4E24\u957F\u65B9\u4F53\u62FCL\uFF1Bshow\u7684\u6570\u548C\u6ED1\u5757\u7531\u7A0B\u5E8F\u7ED9"
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -12937,7 +13733,23 @@ var MATH_SCHEMA_PROPERTIES = {
     relation: { enum: ["x>a", "x>=a", "x<a", "x<=a", "a<x<b", "a<=x<=b", "a<x<=b", "a<=x<b", "x<a|x>b", "x<=a|x>=b", "x<a|x>=b", "x<=a|x>b"] }
   },
   number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } },
-  number_line_steps: { label_style: { enum: ["decimal", "fraction"] } }
+  number_line_steps: { label_style: { enum: ["decimal", "fraction"] } },
+  solid_3d: {
+    // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
+    solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {
+      shape: { enum: ["box", "cylinder", "cone", "sphere", "hemisphere", "prism", "pyramid", "frustum"] },
+      length: { type: "number" },
+      width: { type: "number" },
+      height: { type: "number" },
+      radius: { type: "number" },
+      top_radius: { type: "number" },
+      sides: { type: "integer" },
+      side: { type: "number" }
+    } } },
+    join: { enum: ["stack", "side"] },
+    show: { type: "array", items: { enum: ["volume", "surface_area", "counts"] } },
+    interaction: { enum: ["cut", "unfold"] }
+  }
 };
 var MATH_PLUGIN = {
   // The manifest and the Jev subject line are the OLL shared layer's.
@@ -13042,18 +13854,18 @@ function buildConstantSpeedMotion(input) {
   }
   const track = `${input.as}-track`;
   const graph = `${input.as}-graph`;
-  const length = niceAxisMax(time.max * speed.max);
+  const length2 = niceAxisMax(time.max * speed.max);
   const distance = time.initial * speed.initial;
   const t = quantityValue(time);
   const v = quantityValue(speed);
   const driven2 = Boolean(time.expression || speed.expression);
-  const lane = Number((0.08 * length).toPrecision(12));
+  const lane = Number((0.08 * length2).toPrecision(12));
   const trackContent = {
     title: text3.title,
-    axes: { x: { min: -0.05 * length, max: 1.05 * length, label: text3.distance_axis }, y: { min: -0.1 * length, max: 0.2 * length, label: "" }, equal_scale: true },
+    axes: { x: { min: -0.05 * length2, max: 1.05 * length2, label: text3.distance_axis }, y: { min: -0.1 * length2, max: 0.2 * length2, label: "" }, equal_scale: true },
     points: [
       { as: "start", x: 0, y: lane, label: text3.start },
-      { as: "finish", x: length, y: lane, visible: false },
+      { as: "finish", x: length2, y: lane, visible: false },
       { as: "object", x: distance, y: lane, label: driven2 ? `${text3.distance_readout}${distance}${text3.distance_unit ? ` ${text3.distance_unit}` : ""}` : text3.object }
     ],
     segments: [
@@ -13070,7 +13882,7 @@ function buildConstantSpeedMotion(input) {
   };
   const graphContent = {
     title: text3.plot_title,
-    axes: { x: { min: 0, max: time.max, label: text3.time_axis }, y: { min: 0, max: length, label: text3.distance_axis } },
+    axes: { x: { min: 0, max: time.max, label: text3.time_axis }, y: { min: 0, max: length2, label: text3.distance_axis } },
     curves: [{ as: "primary-curve", expression: `${v}*x`, label: text3.curve_label }],
     points: [{ as: "moving-point", x: time.initial, y: distance, label: text3.current_state }],
     ...driven2 ? {
@@ -13319,7 +14131,7 @@ var RECIPE_CATALOG_ORDER = [
   // (Coach docs/PLOT_TRIAL_2026-11-15.md), ahead of the combined speed gate. Last, where the trial put it.
   "number_line_steps"
 ];
-var TRIAL_RECIPES = ["constant_speed_motion"];
+var TRIAL_RECIPES = ["constant_speed_motion", "solid_3d"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -13365,7 +14177,12 @@ var SCHEMA_PROPERTY_ORDER = [
   "relation",
   "place",
   "marks",
-  "pieces"
+  "pieces",
+  // The 3D solids trial recipe (decision 0019); last, so requests without it keep their order.
+  "solids",
+  "join",
+  "show",
+  "interaction"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text3 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -13446,6 +14263,9 @@ var EN = {
   "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5728\u540C\u4E00\u5F20\u51FD\u6570\u56FE\u4E2D\u540C\u65F6\u5C55\u793A\u9759\u6001\u66F2\u7EBF\u548C\u7531\u63A7\u4EF6\u6539\u53D8\u7684\u53E6\u4E00\u6761\u66F2\u7EBF\u3002": "A static curve and another curve changed by a control cannot yet be shown together in the same graph.",
   "\u8BFE\u7A0B\u5185\u5BB9\u4ECD\u5728\u7EE7\u7EED\u751F\u6210\u3002": "The rest of the lesson is still being generated.",
   "\u5F53\u524D\u767D\u677F\u53EA\u80FD\u6267\u884C\u4E8C\u7EF4\u56FE\u5F62\u548C\u4E09\u7EF4\u573A\u666F\uFF0C\u4E0D\u80FD\u7CBE\u786E\u6A21\u62DF\u56DB\u7EF4\u8D85\u7ACB\u65B9\u4F53\u7684\u56DB\u7EF4\u65CB\u8F6C\u3002\u4F60\u53EF\u4EE5\u6539\u95EE\u5B83\u7684\u4E09\u7EF4\u6295\u5F71\u539F\u7406\u6216\u57FA\u672C\u7ED3\u6784\u3002": "The board supports 2D diagrams and 3D scenes, but cannot accurately simulate a 4D hypercube rotating in four dimensions. You can ask about its 3D projections or basic structure instead.",
+  "\u7ACB\u4F53\u56FE\u5F62": "Solids",
+  "\u622A\u9762\u9AD8\u5EA6": "Cut height",
+  "\u5C55\u5F00": "Unfold",
   "y \u622A\u8DDD": "y-intercept",
   "x \u622A\u8DDD": "x-intercept",
   "\u5BF9\u79F0\u8F74": "Axis of symmetry",
@@ -13464,6 +14284,9 @@ function lessonText(language, source, values = {}) {
 var languages = /* @__PURE__ */ new WeakMap();
 function setLessonTextLanguage(plan, language) {
   languages.set(plan, language);
+}
+function lessonTextLanguage(plan) {
+  return languages.get(plan) ?? "zh-CN";
 }
 function compileText(plan, source, values) {
   return lessonText(languages.get(plan), source, values);
@@ -13763,15 +14586,15 @@ function formatMathExpressionDisplay(expression, symbol) {
   if (!result || stack.length !== 1) fail2("LESSON_PLAN_EXPRESSION", "$expression", "expression does not produce one result");
   return result.text;
 }
-function angleScaleForUnit(unit) {
-  if (!unit) return 1;
-  const normalized = unit.trim().toLowerCase();
+function angleScaleForUnit(unit2) {
+  if (!unit2) return 1;
+  const normalized = unit2.trim().toLowerCase();
   if (/弧度|radian|rad/u.test(normalized)) return 1;
   if (/角度|度|°|degree|deg/u.test(normalized)) return Math.PI / 180;
   return 1;
 }
-function scaledAngleExpression(variable, scale) {
-  return scale === 1 ? variable : `(${variable})*pi/180`;
+function scaledAngleExpression(variable, scale2) {
+  return scale2 === 1 ? variable : `(${variable})*pi/180`;
 }
 
 // src/plugins/number-line-fit.ts
@@ -13802,8 +14625,8 @@ var roundedFrom = (value2, denominator) => {
   const lowest = denominator / gcd2(Math.abs(numerator), denominator);
   if (places === 2 && lowest !== 3 && lowest !== 6) return false;
   const exact = numerator / denominator;
-  const scale = 10 ** places;
-  return Math.abs(value2 - Number(exact.toFixed(places))) < 0.5 / scale / 1e3 || Math.abs(value2 - Math.trunc(exact * scale) / scale) < 0.5 / scale / 1e3;
+  const scale2 = 10 ** places;
+  return Math.abs(value2 - Number(exact.toFixed(places))) < 0.5 / scale2 / 1e3 || Math.abs(value2 - Math.trunc(exact * scale2) / scale2) < 0.5 / scale2 / 1e3;
 };
 function valuesGrid(values, content) {
   const literal = content.parameters?.label_style === "decimal";
@@ -13818,11 +14641,11 @@ function valuesGrid(values, content) {
   }
   return denominator;
 }
-function inferDenominator(values, { approximate = true } = {}) {
+function inferDenominator(values, { approximate: approximate2 = true } = {}) {
   for (let denominator = 1; denominator <= 24; denominator += 1) {
     if (values.every((value2) => exactlyOn(value2, denominator))) return denominator;
   }
-  if (!approximate) return void 0;
+  if (!approximate2) return void 0;
   for (let denominator = 1; denominator <= 24; denominator += 1) {
     if (values.every((value2) => exactlyOn(value2, denominator) || roundedFrom(value2, denominator))) return denominator;
   }
@@ -13897,11 +14720,11 @@ function fitMoves(content, plan, sharedNumbers, numbers) {
   let low = Math.floor(Math.min(...used)) - 1;
   let high = Math.ceil(Math.max(...used)) + 1;
   let windowFits = high - low <= MAX_WINDOW;
-  let unit = 1;
+  let unit2 = 1;
   if (denominator === 1 && !windowFits) {
     const coarse = COARSE_UNITS.find((count) => values.every((value2) => near2(value2, 1) && Math.round(value2) % count === 0) && Math.ceil(Math.max(...used) / count) - Math.floor(Math.min(...used) / count) + 2 <= MAX_WINDOW);
     if (coarse) {
-      unit = coarse;
+      unit2 = coarse;
       grid = coarse;
       low = (Math.floor(Math.min(...used) / coarse) - 1) * coarse;
       high = (Math.ceil(Math.max(...used) / coarse) + 1) * coarse;
@@ -13928,7 +14751,7 @@ function fitMoves(content, plan, sharedNumbers, numbers) {
     if (values2.length > 1) return window;
     if (definition.student_control && carriesAnswer && definition.initial === 0) return void 0;
     if (definition.student_control && carriesAnswer) return window;
-    return [definition.initial - unit, definition.initial + unit];
+    return [definition.initial - unit2, definition.initial + unit2];
   };
   const snapped = (values2) => values2.map((value2) => grid ? snap(value2, grid) : value2);
   fit(start, snapped(startValues), rangeFor(start, startValues, [low, high], false));
@@ -14021,21 +14844,21 @@ var ROUNDING_UNITS = { hundreds: 100, tens: 10, ones: 1, tenths: 0.1, hundredths
 function fitRoundingNumbers(content, plan, sharedNumbers) {
   const fitted = /* @__PURE__ */ new Map();
   const [index] = content.numbers ?? [];
-  const unit = ROUNDING_UNITS[String(content.parameters?.place)];
+  const unit2 = ROUNDING_UNITS[String(content.parameters?.place)];
   const definition = index ? plan.numbers?.[index - 1] : void 0;
-  if (!index || !unit || !definition || sharedNumbers.has(index)) return fitted;
+  if (!index || !unit2 || !definition || sharedNumbers.has(index)) return fitted;
   const values = [definition.initial, ...lessonValues(plan, index)];
   const on = (value2, step) => {
     const count = value2 / step;
     return Math.abs(count - Math.round(count)) <= 1e-9 * Math.max(1, Math.abs(count));
   };
-  const minor = [unit / 10, unit / 100].map((step) => Number(step.toPrecision(12))).find((step) => values.every((value2) => on(value2, step)));
+  const minor = [unit2 / 10, unit2 / 100].map((step) => Number(step.toPrecision(12))).find((step) => values.every((value2) => on(value2, step)));
   if (!minor) return fitted;
   if (definition.student_control) definition.student_control.step = minor;
-  const decade = (value2) => Math.floor(value2 / unit + 1e-9);
+  const decade = (value2) => Math.floor(value2 / unit2 + 1e-9);
   if (values.every((value2) => decade(value2) === decade(values[0]))) {
-    const lower = Number((decade(values[0]) * unit).toPrecision(12));
-    const upper = Number((lower + unit - minor).toPrecision(12));
+    const lower = Number((decade(values[0]) * unit2).toPrecision(12));
+    const upper = Number((lower + unit2 - minor).toPrecision(12));
     if (lower < upper) {
       definition.min = Math.max(definition.min, lower) <= definition.initial ? Math.max(definition.min, lower) : lower;
       definition.max = Math.min(definition.max, upper) >= definition.initial ? Math.min(definition.max, upper) : upper;
@@ -14926,10 +15749,10 @@ function namesToNumbers(formula, labels, visualNumbers) {
     const lower = name.toLowerCase();
     return lower === "x" || lower === "pi" || lower === "e" || /^n\d+$/u.test(lower) || formulaFunctions.has(lower);
   };
-  return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset, whole) => {
+  return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset, whole2) => {
     if (known(name)) return name;
-    if (/^\s*\d/u.test(whole.slice(offset + name.length))) return name;
-    if (/[0-9.]/u.test(whole[offset - 1] ?? "") && /^e/iu.test(name)) return name;
+    if (/^\s*\d/u.test(whole2.slice(offset + name.length))) return name;
+    if (/[0-9.]/u.test(whole2[offset - 1] ?? "") && /^e/iu.test(name)) return name;
     const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
     return matches.length === 1 ? `n${matches[0]}` : name;
   });
@@ -16381,8 +17204,8 @@ function niceStep(raw) {
   const normalized = raw / power2;
   return ([1, 2, 2.5, 5, 10].find((value2) => normalized <= value2 + 1e-9) ?? 10) * power2;
 }
-function snap2(range, unit = 1) {
-  const step = unit === 1 ? niceStep(span(range) / 20) : unit * Math.max(1, Math.round(span(range) / unit / 8));
+function snap2(range, unit2 = 1) {
+  const step = unit2 === 1 ? niceStep(span(range) / 20) : unit2 * Math.max(1, Math.round(span(range) / unit2 / 8));
   const round = (value2) => Number(value2.toPrecision(12));
   return { min: round(Math.floor(range.min / step + 1e-9) * step), max: round(Math.ceil(range.max / step - 1e-9) * step) };
 }
@@ -16632,7 +17455,7 @@ function planPlotView(input) {
   const adjustments = [];
   const teaching = input.teachingPoints ?? [];
   const quantityX = input.quantityX === true;
-  const plain = input.plainAxes !== false;
+  const plain2 = input.plainAxes !== false;
   const curveAt = (index, state) => (x2) => {
     try {
       return compiled[index]({ ...state, x: x2 });
@@ -16831,7 +17654,7 @@ function planPlotView(input) {
   if (!acceptedX) x = nearZero(x);
   if (!acceptedY && !identity) y = nearZero(y);
   const periodicWindow = allPeriodic && !acceptedX;
-  const piTicks = !quantityX && plain && allPeriodic && span(x) >= Math.PI && periods.every((period) => period / Math.PI >= 0.5 && period / Math.PI <= 8 && Math.abs(period / Math.PI * 4 - Math.round(period / Math.PI * 4)) < 1e-9);
+  const piTicks = !quantityX && plain2 && allPeriodic && span(x) >= Math.PI && periods.every((period) => period / Math.PI >= 0.5 && period / Math.PI <= 8 && Math.abs(period / Math.PI * 4 - Math.round(period / Math.PI * 4)) < 1e-9);
   const keepXMin = naturalStart && x.min === 0 || periodicWindow;
   const keepXMax = periodicWindow;
   let finalX = x;
@@ -16851,7 +17674,7 @@ function planPlotView(input) {
   const slopes = initialItems.map((item) => linearSlopeOf(item.curve));
   const perpendicular = slopes.some((m, i) => m !== void 0 && slopes.some((n, j) => j > i && n !== void 0 && Math.abs(m * n + 1) < 1e-9));
   const aspect = span(finalY) / span(finalX);
-  const equalScale = plain && (identity || circular || perpendicular || allQuadratic && aspect >= EQUAL_ASPECT.min && aspect <= EQUAL_ASPECT.max);
+  const equalScale = plain2 && (identity || circular || perpendicular || allQuadratic && aspect >= EQUAL_ASPECT.min && aspect <= EQUAL_ASPECT.max);
   const holes = compiled.map((_, index) => initialItems.filter((item) => item.index === index).flatMap((item) => item.features.filter((feature) => feature.kind === "hole" && feature.x > finalX.min && feature.x < finalX.max && feature.y !== void 0 && feature.y > finalY.min && feature.y < finalY.max)).map((feature) => ({ x: feature.x, y: feature.y })));
   return { x: finalX, y: finalY, equalScale, piTicks, holes, adjustments };
 }
@@ -17584,7 +18407,7 @@ function compileCircleArea(base, content, role, placement, plan, path) {
   }));
 }
 var NUMBER_LINE_SPLITS = Array.from({ length: NUMBER_LINE_LIMITS.subdivisions }, (_unused, index) => index + 1);
-var exactDecimal = (parts) => {
+var exactDecimal2 = (parts) => {
   let rest = parts;
   for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime;
   return rest === 1;
@@ -17609,8 +18432,8 @@ function numberLineFrame(values, grid, shown, labelStyle, path, fit = "margin") 
   const span2 = max - min;
   const holdAll = (count, of) => of.every((value2) => onGrid(value2 / count, 1));
   const ticksFor = (of) => {
-    const whole = [1, ...COARSE_UNITS].find((count) => span2 / count <= 60 && holdAll(count, of));
-    if (whole) return { step: whole, subdivisions: 1 };
+    const whole2 = [1, ...COARSE_UNITS].find((count) => span2 / count <= 60 && holdAll(count, of));
+    if (whole2) return { step: whole2, subdivisions: 1 };
     const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value2) => onGrid(value2, count)) && span2 * count <= NUMBER_LINE_LIMITS.ticks);
     return parts ? { step: 1, subdivisions: parts } : void 0;
   };
@@ -17631,7 +18454,7 @@ function numberLineFrame(values, grid, shown, labelStyle, path, fit = "margin") 
       subdivisions: ticks.subdivisions,
       labels: ticks.subdivisions > 1 ? "all" : "major",
       // Decimals only where they are exact (halves, fifths, tenths …): thirds stay fractions, never 0.333.
-      ...labelStyle === "decimal" && ticks.subdivisions > 1 && exactDecimal(ticks.subdivisions) ? { format: "decimal" } : {}
+      ...labelStyle === "decimal" && ticks.subdivisions > 1 && exactDecimal2(ticks.subdivisions) ? { format: "decimal" } : {}
     }
   };
 }
@@ -17725,9 +18548,9 @@ var nameOf = (definition, value2) => {
   return label && Number(label) !== value2 ? label : void 0;
 };
 var ROUNDING_PLACES = { hundreds: 100, tens: 10, ones: 1, tenths: 0.1, hundredths: 0.01 };
-function roundingTicks(value2, unit) {
-  const major = Number((unit / 10).toPrecision(12));
-  for (const minor of [major, Number((unit / 100).toPrecision(12))]) {
+function roundingTicks(value2, unit2) {
+  const major = Number((unit2 / 10).toPrecision(12));
+  for (const minor of [major, Number((unit2 / 100).toPrecision(12))]) {
     const steps = value2 / minor;
     if (Math.abs(steps - Math.round(steps)) <= 1e-9 * Math.max(1, Math.abs(steps))) return { major, minor };
   }
@@ -17736,27 +18559,27 @@ function roundingTicks(value2, unit) {
 function compileNumberLineRounding(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, ["title", "place"], path);
-  const unit = ROUNDING_PLACES[input.place];
-  if (!unit) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.place`, `place is one of ${Object.keys(ROUNDING_PLACES).join(", ")}`);
+  const unit2 = ROUNDING_PLACES[input.place];
+  if (!unit2) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.place`, `place is one of ${Object.keys(ROUNDING_PLACES).join(", ")}`);
   const [numberIndex] = content.numbers ?? [];
   if (!numberIndex) fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "rounding on a number line needs the lesson number it rounds");
   const definition = numberDefinition(plan, numberIndex, `${path}.numbers[0]`);
   const reached = [definition.min, definition.max, definition.initial, ...lessonValues(plan, numberIndex)];
-  const ticks = reached.map((value2) => roundingTicks(value2, unit));
+  const ticks = reached.map((value2) => roundingTicks(value2, unit2));
   if (ticks.some((tick) => !tick)) {
     fail2("LESSON_PLAN_OUTLINE_VISUAL", `${path}.numbers`, "a rounding line marks every hundredth of the place at most; this number needs finer ticks, so choose another visual");
   }
   const minor = Math.min(...ticks.map((tick) => tick.minor));
   const major = ticks[0].major;
-  const scale = unit < 1 ? Math.round(1 / unit) : 1;
-  const steps = (variable2) => unit < 1 ? `floor(${variable2} * ${scale} + 0.000000001)` : `floor(${variable2} / ${unit} + 0.000000001)`;
-  const at2 = (expression) => unit < 1 ? `(${expression}) / ${scale}` : `(${expression}) * ${unit}`;
-  const stepsOf = (value2) => Math.floor(unit < 1 ? value2 * scale + 1e-9 : value2 / unit + 1e-9);
-  const valueAt = (count) => Number((unit < 1 ? count / scale : count * unit).toPrecision(12));
+  const scale2 = unit2 < 1 ? Math.round(1 / unit2) : 1;
+  const steps = (variable2) => unit2 < 1 ? `floor(${variable2} * ${scale2} + 0.000000001)` : `floor(${variable2} / ${unit2} + 0.000000001)`;
+  const at2 = (expression) => unit2 < 1 ? `(${expression}) / ${scale2}` : `(${expression}) * ${unit2}`;
+  const stepsOf = (value2) => Math.floor(unit2 < 1 ? value2 * scale2 + 1e-9 : value2 / unit2 + 1e-9);
+  const valueAt = (count) => Number((unit2 < 1 ? count / scale2 : count * unit2).toPrecision(12));
   const variable = variableAlias(numberIndex);
   const lowerSteps = stepsOf(definition.initial);
   const lower = valueAt(lowerSteps), upper = valueAt(lowerSteps + 1), middle = valueAt(lowerSteps + 0.5);
-  const result = definition.initial - lower >= unit / 2 - 1e-9 ? upper : lower;
+  const result = definition.initial - lower >= unit2 / 2 - 1e-9 ? upper : lower;
   const lowest = valueAt(stepsOf(Math.min(...reached))), highest = valueAt(stepsOf(Math.max(...reached)) + 1);
   const margin = major * 2;
   const range = { min: Number((lowest - margin).toPrecision(12)), max: Number((highest + margin).toPrecision(12)) };
@@ -17782,7 +18605,7 @@ function compileNumberLineRounding(base, content, role, placement, plan, path) {
       // Its tick already shows the number; a name that only repeats it ("362") is left off.
       { as: "number", value: { expression: variable, initial: definition.initial }, ...nameOf(definition, definition.initial) ? { label: nameOf(definition, definition.initial) } : {} }
     ],
-    jumps: [{ as: "move", from: "number", by: { expression: `${at2(unit < 1 ? `floor(${variable} * ${scale} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }]
+    jumps: [{ as: "move", from: "number", by: { expression: `${at2(unit2 < 1 ? `floor(${variable} * ${scale2} + 0.5 + 0.000000001)` : `floor(${variable} / ${unit2} + 0.5 + 0.000000001)`)} - ${variable}`, initial: Number((result - definition.initial).toPrecision(12)) }, hops: false }]
   });
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, primary_control: built.parts.move })) };
 }
@@ -17808,11 +18631,11 @@ function compileNumberLine(base, content, role, placement, plan, path) {
   ];
   const frame = numberLineFrame(values, grid, shown, labelStyle, path);
   const { step, subdivisions } = frame;
-  const unit = step / subdivisions;
-  const whole = (value2) => onGrid(value2 / unit, 1);
+  const unit2 = step / subdivisions;
+  const whole2 = (value2) => onGrid(value2 / unit2, 1);
   const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
   const sliderStep = change?.student_control?.step;
-  const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every(whole) && (sliderStep === void 0 || whole(sliderStep)) && Math.ceil(reach / unit - 1e-9) <= NUMBER_LINE_LIMITS.hops;
+  const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every(whole2) && (sliderStep === void 0 || whole2(sliderStep)) && Math.ceil(reach / unit2 - 1e-9) <= NUMBER_LINE_LIMITS.hops;
   const hops = hopsFit;
   const startVariable = startNumber ? variableAlias(startNumber) : void 0;
   const changeVariable = changeNumber ? variableAlias(changeNumber) : void 0;
@@ -17864,11 +18687,11 @@ function compileNumberLineSteps(base, content, role, placement, plan, path) {
     ...moveLandings(plan, [startNumber, ...moveNumbers])
   ];
   const frame = numberLineFrame(values, grid, shown, labelStyle, path);
-  const unit = frame.step / frame.subdivisions;
-  const whole = (value2) => onGrid(value2 / unit, 1);
+  const unit2 = frame.step / frame.subdivisions;
+  const whole2 = (value2) => onGrid(value2 / unit2, 1);
   const takes = moves.map((move, position) => move.student_control ? [move.min, move.max, move.initial] : [move.initial, ...lessonValues(plan, moveNumbers[position])]);
   const oneWay = takes.every((values2) => values2.every((value2) => value2 >= 0)) || takes.every((values2) => values2.every((value2) => value2 <= 0));
-  const hops = oneWay && moves.every((move, position) => takes[position].every(whole) && (move.student_control?.step === void 0 || whole(move.student_control.step)) && Math.ceil(Math.max(...takes[position].map(Math.abs)) / unit - 1e-9) <= NUMBER_LINE_LIMITS.hops);
+  const hops = oneWay && moves.every((move, position) => takes[position].every(whole2) && (move.student_control?.step === void 0 || whole2(move.student_control.step)) && Math.ceil(Math.max(...takes[position].map(Math.abs)) / unit2 - 1e-9) <= NUMBER_LINE_LIMITS.hops);
   const startVariable = variableAlias(startNumber);
   const moveVariables = moveNumbers.map((number) => variableAlias(number));
   const sum = (count) => [startVariable, ...moveVariables.slice(0, count)].map((name) => `(${name})`).join("+");
@@ -17894,6 +18717,152 @@ function compileNumberLineSteps(base, content, role, placement, plan, path) {
   });
   return { ...builtVisual(built), parts: new Map(Object.entries({ ...built.parts, ...built.parts.move ? { primary_control: built.parts.move } : {} })) };
 }
+var SOLID_SHAPES = ["box", "cylinder", "cone", "sphere", "hemisphere", "prism", "pyramid", "frustum"];
+var SOLID_SIZES = ["length", "width", "height", "radius", "top_radius", "sides", "side"];
+var REGULAR_SIDES = { min: 3, max: 8 };
+var SOLID_MEASURES = ["volume", "surface_area", "counts"];
+function modelSolid(value2, path) {
+  if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "expected a solid: its shape and sizes");
+  const record3 = value2;
+  if (!SOLID_SHAPES.includes(record3.shape)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.shape`, `expected one of ${SOLID_SHAPES.join(", ")}`);
+  }
+  const solid = { shape: record3.shape };
+  for (const key of SOLID_SIZES) {
+    const size = record3[key];
+    if (size === void 0 || size === null) continue;
+    if (typeof size !== "number" || !Number.isFinite(size) || size <= 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${key}`, `${key} must be a positive number`);
+    solid[key] = size;
+  }
+  return solid;
+}
+function builderSolid(model, path, adjustments) {
+  const need = (...keys) => keys.map((key) => {
+    const size = model[key];
+    if (size === void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${key}`, `a ${model.shape} needs ${keys.join(", ")}`);
+    return size;
+  });
+  const regular = () => {
+    const [sides, side] = need("sides", "side");
+    if (!Number.isInteger(sides) || sides < REGULAR_SIDES.min || sides > REGULAR_SIDES.max) {
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.sides`, `a regular base has ${REGULAR_SIDES.min} to ${REGULAR_SIDES.max} sides`);
+    }
+    return { sides, radius: Number((side / (2 * Math.sin(Math.PI / sides))).toFixed(9)) };
+  };
+  switch (model.shape) {
+    case "box": {
+      if (model.length === void 0 && model.width === void 0 && model.height === void 0 && model.side !== void 0) {
+        adjustments.push({ reason: "solid_cube_by_edge", detail: `${path}: a box given by side ${model.side} is a cube` });
+        return { shape: "box", size: { x: model.side, y: model.side, z: model.side } };
+      }
+      const [x, y, z] = need("length", "width", "height");
+      return { shape: "box", size: { x, y, z } };
+    }
+    case "cylinder":
+    case "cone": {
+      const [radius, height] = need("radius", "height");
+      return { shape: model.shape, radius, height };
+    }
+    case "sphere":
+    case "hemisphere": {
+      const [radius] = need("radius");
+      return { shape: model.shape, radius };
+    }
+    case "frustum": {
+      const [radius, topRadius, height] = need("radius", "top_radius", "height");
+      return { shape: "frustum", radius, topRadius, height };
+    }
+    case "prism":
+    case "pyramid": {
+      const [height] = need("height");
+      if (model.sides !== void 0 || model.side !== void 0) return { shape: model.shape, ...regular(), height };
+      const [length2, width] = need("length", "width");
+      if (model.shape === "prism") {
+        adjustments.push({ reason: "solid_rectangular_prism", detail: `${path}: a prism on a ${length2} by ${width} rectangle is a box` });
+        return { shape: "box", size: { x: length2, y: width, z: height } };
+      }
+      return { shape: "pyramid", base: { kind: "rectangle", length: length2, width }, height };
+    }
+  }
+}
+var sameSize = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, a, b);
+function joinedSolid(join, pair, path, adjustments) {
+  const [first, second] = pair;
+  if (join === "side") {
+    if (first.shape !== "box" || second.shape !== "box") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "only two boxes join side by side (an L shape)");
+    return { shape: "composite", parts: "two_boxes", size: first.size, sideSize: second.size };
+  }
+  const stacked = (bottom, top) => {
+    if (bottom.shape === "cylinder" && top.shape === "cylinder") return { shape: "composite", parts: "two_cylinders", radius: bottom.radius, height: bottom.height, topRadius: top.radius, topHeight: top.height };
+    if (bottom.shape === "cylinder" && (top.shape === "cone" || top.shape === "hemisphere")) {
+      if (!sameSize(bottom.radius, top.radius)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, `a ${top.shape} stacked on a cylinder shares its radius (${top.radius} and ${bottom.radius})`);
+      return top.shape === "cone" ? { shape: "composite", parts: "cylinder_cone", radius: bottom.radius, height: bottom.height, topHeight: top.height } : { shape: "composite", parts: "cylinder_hemisphere", radius: bottom.radius, height: bottom.height };
+    }
+    if (bottom.shape === "box" && top.shape === "pyramid") {
+      const edge = "sides" in top && top.sides === 4 ? top.radius * Math.SQRT2 : "base" in top && top.base.kind === "rectangle" && sameSize(top.base.length, top.base.width) ? top.base.length : void 0;
+      if (edge === void 0 || !sameSize(bottom.size.x, bottom.size.y) || !sameSize(edge, bottom.size.x)) {
+        fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, "a pyramid roof sits on a box with a square base of the same edge");
+      }
+      return { shape: "composite", parts: "box_pyramid", width: bottom.size.x, height: bottom.size.z, topHeight: top.height };
+    }
+    return void 0;
+  };
+  const upright = stacked(first, second);
+  if (upright) return upright;
+  const turned = stacked(second, first);
+  if (turned) {
+    adjustments.push({ reason: "solid_stack_order", detail: `${path}: ${second.shape} under ${first.shape}, as the composite stands` });
+    return turned;
+  }
+  return fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "stacks are a cone, a hemisphere or a smaller cylinder on a cylinder, or a pyramid roof on a box");
+}
+function compileSolid3d(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "solids", "join", "show", "interaction"], path);
+  if ((content.numbers?.length ?? 0) > 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a solid's sizes are written in solids; its slider is the program's");
+  const adjustments = [];
+  const written = input.solids;
+  if (!Array.isArray(written) || written.length < 1 || written.length > 2) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, "expected one solid, or two side by side");
+  const solids = written.map((item, index) => builderSolid(modelSolid(item, `${path}.solids[${index}]`), `${path}.solids[${index}]`, adjustments));
+  const join = input.join;
+  if (join !== void 0 && join !== "stack" && join !== "side") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "expected stack or side");
+  if (join !== void 0 && solids.length !== 2) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "join needs two solids");
+  const [solid, beside] = join ? [joinedSolid(join, solids, path, adjustments), void 0] : [solids[0], solids[1]];
+  const shown = solids.length && input.show !== void 0 ? input.show : [];
+  if (!Array.isArray(shown) || shown.some((item) => !SOLID_MEASURES.includes(item))) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.show`, `expected some of ${SOLID_MEASURES.join(", ")}`);
+  const measures = [...new Set(shown)];
+  for (const each of [solid, ...beside ? [beside] : []]) {
+    for (const measure of measures) {
+      if (!solidHasMeasure(each, measure)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.show`, `a ${each.shape === "composite" ? "joined solid" : each.shape} has no ${measure.replace("_", " ")} here`);
+    }
+  }
+  const interaction = input.interaction;
+  if (interaction !== void 0 && interaction !== "cut" && interaction !== "unfold") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.interaction`, "expected cut or unfold");
+  if (interaction === "unfold" && [solid, beside].some((each) => each && !solidUnfolds(each))) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.interaction`, "only a box, prism, pyramid, cylinder or cone unfolds");
+  }
+  const language = lessonTextLanguage(plan);
+  const variable = `${base.replace(/[^A-Za-z0-9]+/gu, "_")}_${interaction ?? "view"}`;
+  const built = buildSolid({
+    as: base,
+    role,
+    place: placement,
+    title: optionalText(input.title, compileText(plan, "\u7ACB\u4F53\u56FE\u5F62"), `${path}.title`),
+    solid,
+    ...beside ? { beside } : {},
+    fallback: [solid, ...beside ? [beside] : []].map((each) => describeSolid(each, language)).join(" "),
+    ...measures.length ? { show: { measures, language } } : {},
+    ...interaction === "cut" ? { cut: { expression: variable } } : {},
+    ...interaction === "unfold" ? { unfold: { expression: variable } } : {}
+  });
+  const variables = [];
+  if (interaction === "cut") {
+    const [min, max] = built.cutRange;
+    variables.push({ as: variable, initial: Number(((min + max) / 2).toFixed(6)), min, max, label: compileText(plan, "\u622A\u9762\u9AD8\u5EA6"), control: { kind: "slider", step: Number(((max - min) / 100).toPrecision(6)) } });
+  }
+  if (interaction === "unfold") variables.push({ as: variable, initial: 0, min: 0, max: 1, label: compileText(plan, "\u5C55\u5F00"), control: { kind: "slider", step: 0.01 } });
+  return { ...builtVisual(built), primaryScene: base, ...variables.length ? { variables } : {}, ...adjustments.length ? { adjustments } : {} };
+}
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -17910,7 +18879,8 @@ var MATH_COMPILERS = {
   coordinate_circle: compileCoordinateCircle,
   rectangle_unit_square_array: compileRectangleUnitSquareArray,
   geometric_rearrangement: compileGeometricRearrangement,
-  circle_area_rearrangement: compileCircleArea
+  circle_area_rearrangement: compileCircleArea,
+  solid_3d: compileSolid3d
 };
 
 // src/plugins/physics-compilers.ts
@@ -17969,7 +18939,7 @@ function compileConstantSpeedMotion(base, content, role, placement, plan, path) 
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers[0]`, "time must be able to grow past 0");
   }
   const units = motionUnits(speedDefinition?.unit, timeDefinition?.unit);
-  const unitSuffix = (unit) => unit ? compileText(plan, "\uFF08{{v0}}\uFF09", { v0: unit }) : "";
+  const unitSuffix = (unit2) => unit2 ? compileText(plan, "\uFF08{{v0}}\uFF09", { v0: unit2 }) : "";
   const built = buildConstantSpeedMotion({
     as: base,
     role,
@@ -18077,14 +19047,14 @@ function mergeEquivalentVisualInputs(plan) {
 function lessonPlanPlugins(plan) {
   const installed = new Map(INSTALLED_PLUGINS.map((plugin) => [plugin.manifest.id, plugin.manifest]));
   const used = /* @__PURE__ */ new Set();
-  const add2 = (id) => {
+  const add3 = (id) => {
     if (used.has(id)) return;
     used.add(id);
-    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add2(dependency);
+    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add3(dependency);
   };
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
-    add2(RECIPE_PLUGIN[action.content.capability]);
+    add3(RECIPE_PLUGIN[action.content.capability]);
   }
   return Object.fromEntries([...used].sort().map((id) => [id, installed.get(id).version]));
 }
@@ -18292,9 +19262,9 @@ function normalizeProgramOwnedNumberRanges(plan) {
       if (activity.value !== original) {
         const value2 = Number(activity.value.toPrecision(12));
         const label = definition.label?.trim() || compileText(plan, "\u6570\u503C");
-        const unit = definition.unit?.trim();
-        activity.prompt = compileText(plan, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: value2, v2: unit ? ` ${unit}` : "" });
-        activity.success_message = compileText(plan, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: value2, v2: unit ? ` ${unit}` : "" });
+        const unit2 = definition.unit?.trim();
+        activity.prompt = compileText(plan, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: value2, v2: unit2 ? ` ${unit2}` : "" });
+        activity.success_message = compileText(plan, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: value2, v2: unit2 ? ` ${unit2}` : "" });
       }
     }
   }
@@ -18343,11 +19313,11 @@ function moveMetTarget(plan, activity, definition, path) {
   if (alternative === void 0) fail2("LESSON_PLAN_ACTIVITY", path, "numeric task has no reachable target distinct from the initial value");
   activity.value = alternative;
   const label = definition.label?.trim() || compileText(plan, "\u6570\u503C");
-  const unit = definition.unit?.trim();
+  const unit2 = definition.unit?.trim();
   const formatted = Number(alternative.toPrecision(12));
-  activity.prompt = compileText(plan, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formatted, v2: unit ? ` ${unit}` : "" });
+  activity.prompt = compileText(plan, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formatted, v2: unit2 ? ` ${unit2}` : "" });
   activity.hints = [compileText(plan, "\u62D6\u52A8\u5DE6\u4E0B\u89D2\u7684\u6ED1\u6746\uFF0C\u89C2\u5BDF\u6570\u503C\u548C\u753B\u9762\u540C\u6B65\u53D8\u5316\u3002")];
-  activity.success_message = compileText(plan, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formatted, v2: unit ? ` ${unit}` : "" });
+  activity.success_message = compileText(plan, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formatted, v2: unit2 ? ` ${unit2}` : "" });
 }
 function resolveMetNumberTargets(plan) {
   const lineNumbers = /* @__PURE__ */ new Set();
@@ -18434,6 +19404,7 @@ function compileLessonPlan(value2, options = {}) {
   const partTargets = /* @__PURE__ */ new Map();
   const primaryScenes = /* @__PURE__ */ new Map();
   const reusableVisuals = /* @__PURE__ */ new Map();
+  const visualVariables = /* @__PURE__ */ new Map();
   const viewAdjustments = [];
   let renderedVisuals;
   const reuseCompiledVisual = (visual) => {
@@ -18503,6 +19474,7 @@ function compileLessonPlan(value2, options = {}) {
               });
             } else {
               reusableVisuals.set(identity, visual);
+              for (const variable of visual.variables ?? []) if (!visualVariables.has(variable.as)) visualVariables.set(variable.as, variable);
               actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
             }
             wholeTargets.set(alias, visual.whole);
@@ -18727,8 +19699,8 @@ function compileLessonPlan(value2, options = {}) {
           ...options.adaptation_context_refs?.length ? { context_refs: [...options.adaptation_context_refs] } : {}
         }
       } : {},
-      ...plan.numbers?.length ? {
-        variables: plan.numbers.map((number, index) => ({
+      ...plan.numbers?.length || visualVariables.size ? {
+        variables: [...(plan.numbers ?? []).map((number, index) => ({
           as: variableAlias(index + 1),
           initial: number.initial,
           min: number.min,
@@ -18741,7 +19713,7 @@ function compileLessonPlan(value2, options = {}) {
               ...number.student_control.step ? { step: number.student_control.step } : {}
             }
           } : {}
-        }))
+        })), ...[...visualVariables.values()].map((variable) => ({ ...variable, control: { ...variable.control } }))]
       } : {},
       ...tasks.length ? { tasks } : {},
       ...reflections.length ? { reflections } : {}
@@ -18834,8 +19806,8 @@ function validateCompiledVisualEffects(lesson) {
         }).filter(Number.isFinite);
         if (results.length < 2) return false;
         const spread = Math.max(...results) - Math.min(...results);
-        const scale = Math.max(1, ...results.map((result) => Math.abs(result)));
-        return spread > scale * 1e-9;
+        const scale2 = Math.max(1, ...results.map((result) => Math.abs(result)));
+        return spread > scale2 * 1e-9;
       });
     });
     if (!changes) {
@@ -20461,13 +21433,13 @@ function lowerModelActionReferences(actionName, action, currentMoment, numberCou
 }
 function lowerIntegerDecimal(record3, prefix, path) {
   const mantissa = record3[`${prefix}_mantissa`];
-  const scale = record3[`${prefix}_scale`];
-  if (!Number.isInteger(mantissa) || Math.abs(Number(mantissa)) > 1e12 || !Number.isInteger(scale) || Number(scale) < 0 || Number(scale) > 12) {
+  const scale2 = record3[`${prefix}_scale`];
+  if (!Number.isInteger(mantissa) || Math.abs(Number(mantissa)) > 1e12 || !Number.isInteger(scale2) || Number(scale2) < 0 || Number(scale2) > 12) {
     throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 12");
   }
   delete record3[`${prefix}_mantissa`];
   delete record3[`${prefix}_scale`];
-  return Number(mantissa) / 10 ** Number(scale);
+  return Number(mantissa) / 10 ** Number(scale2);
 }
 function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set()) {
   const lowered = { ...activity };
@@ -20531,10 +21503,10 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
       reachableValue = alternative;
       const formattedValue = Number(reachableValue.toPrecision(12));
       const label = definition.label?.trim() || lessonText(language, "\u6570\u503C");
-      const unit = definition.unit?.trim();
-      lowered.prompt = lessonText(language, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formattedValue, v2: unit ? ` ${unit}` : "" });
+      const unit2 = definition.unit?.trim();
+      lowered.prompt = lessonText(language, "\u8BF7\u628A{{v0}}\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formattedValue, v2: unit2 ? ` ${unit2}` : "" });
       lowered.hints = [lessonText(language, "\u62D6\u52A8\u5DE6\u4E0B\u89D2\u7684\u6ED1\u6746\uFF0C\u89C2\u5BDF\u6570\u503C\u548C\u753B\u9762\u540C\u6B65\u53D8\u5316\u3002")];
-      lowered.success_message = lessonText(language, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formattedValue, v2: unit ? ` ${unit}` : "" });
+      lowered.success_message = lessonText(language, "\u5B8C\u6210\uFF0C{{v0}}\u5DF2\u7ECF\u8C03\u5230 {{v1}}{{v2}}\u3002", { v0: label, v1: formattedValue, v2: unit2 ? ` ${unit2}` : "" });
     }
     const precision = 10 ** 12;
     lowered.value = Math.round(reachableValue * precision) / precision;
@@ -20668,14 +21640,14 @@ function reconcileBootstrapFirstSectionPositions(value2, outline) {
   return root;
 }
 function lowerAnswerActivity(value2, card) {
-  const { prompt, answer, check, unit, simplest_fraction, hints } = value2;
-  const hasUnit = unit !== void 0 && !(typeof unit === "string" && !unit.trim());
+  const { prompt, answer, check, unit: unit2, simplest_fraction, hints } = value2;
+  const hasUnit = unit2 !== void 0 && !(typeof unit2 === "string" && !unit2.trim());
   return {
     kind: "numeric_answer",
     prompt,
     answer,
     check,
-    ...hasUnit ? { unit } : {},
+    ...hasUnit ? { unit: unit2 } : {},
     ...simplest_fraction !== void 0 ? { simplest_fraction } : {},
     hints,
     reference: structuredClone(card)

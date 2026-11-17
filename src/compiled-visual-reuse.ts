@@ -7,6 +7,11 @@ export interface CompiledVisual {
   parts: Map<string, string>;
   /** Program decisions worth logging, such as a replaced model viewport. */
   adjustments?: Array<{ reason: string; detail: string }>;
+  /**
+   * Lesson variables the visual creates itself, for a slider whose range only the geometry decides
+   * (a solid's cut or net, decision 0019 as amended by 0020). They follow the plan's numbers.
+   */
+  variables?: Array<{ as: string; initial: number; min: number; max: number; label: string; control: { kind: "slider"; step: number } }>;
 }
 
 interface RenderedVisual {
