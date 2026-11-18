@@ -1363,10 +1363,10 @@ function builderSolid(model: ModelSolid, path: string, adjustments: Adjustment[]
 const sameSize = (a: number, b: number) => Math.abs(a - b) <= 1e-9 * Math.max(1, a, b);
 
 /** Two solids joined: stacked (the first at the bottom) or two boxes side by side. A pair no composite draws is refused. */
-function joinedSolid(join: "stack" | "side", pair: [Solid, Solid], path: string, adjustments: Adjustment[]): Solid {
+function joinedSolid(join: "stack" | "l_shape", pair: [Solid, Solid], path: string, adjustments: Adjustment[]): Solid {
   const [first, second] = pair;
-  if (join === "side") {
-    if (first.shape !== "box" || second.shape !== "box") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "only two boxes join side by side (an L shape)");
+  if (join === "l_shape") {
+    if (first.shape !== "box" || second.shape !== "box") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "only two boxes join into an L shape; two separate solids side by side need no join");
     return { shape: "composite", parts: "two_boxes", size: first.size, sideSize: second.size };
   }
   const stacked = (bottom: Solid, top: Solid): Solid | undefined => {
@@ -1413,7 +1413,7 @@ function compileSolid3d(
   if (!Array.isArray(written) || written.length < 1 || written.length > 2) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, "expected one solid, or two side by side");
   const solids = written.map((item, index) => builderSolid(modelSolid(item, `${path}.solids[${index}]`, adjustments), `${path}.solids[${index}]`, adjustments));
   const join = input.join;
-  if (join !== undefined && join !== "stack" && join !== "side") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "expected stack or side");
+  if (join !== undefined && join !== "stack" && join !== "l_shape") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "expected stack or l_shape; two separate solids side by side need no join");
   if (join !== undefined && solids.length !== 2) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "join needs two solids");
   const [solid, beside] = join ? [joinedSolid(join, solids as [Solid, Solid], path, adjustments), undefined] : [solids[0]!, solids[1]];
   const shown = input.show ?? [];

@@ -21,3 +21,30 @@ Passed: SD-01, 07 (the L shape), 12 (cube beside a ball given by its diameter), 
 - **Card:** "立体都选solids（含截面展开），2个并排，join叠放或拼L；问体积/全表面积/面棱顶点写show". The trial request grows by +744 B (card +152, schema +592), 24 B over the ~720 B the owner approved.
 
 568 tests pass, and all 139 recorded lessons replay identically. Probe 2 needs the owner's approval.
+
+# Probe 2 (2026-11-17, owner-approved, cap 112)
+
+The same cases and setup, on the build at 1a473c0. **58 calls**, with about 84 k prompt tokens.
+
+## Result: 10 of 16 in-scope and control cases passed (up from 6)
+
+The size-order fix worked: every round solid now has its height. The remaining misses were all choices the card left open:
+
+| Cause | Cases |
+|---|---|
+| **Outline numbers.** The model declared outline numbers (a cut height from 0 to 6, a side length, radius and height sliders) and gave them to the solid, which takes none. All four attempts were refused. | SD-08, 09, 10*, 15 |
+| **No surface area.** It was asked for and left out of `show` (the model wrote volume only, or no `show` at all). | SD-01, 06, 10 |
+| **`join: "side"` read as "side by side".** Two separate solids were asked to join. Each recovered on the retry, at the cost of one call. | SD-03, 12, N1, N3 |
+| Near miss: the whole surface area was shown for an open-top box. | SD-N6 |
+
+\* SD-10 also lost its surface area.
+
+No worse than the baseline: SD-N5 routed to the teaching cube on both arms and drew a horizontal cut there.
+
+## Fixes (offline, free)
+- `join` is `stack` or `l_shape`, and the refusal says that two separate solids need no join.
+- `show` is required in the solid's schema, so the model decides it every time.
+- **New card:** "立体都选solids（含截面展开），尺寸固定不建数；2个并排，join叠放或拼L；问到的体积/表面积/面棱顶点都写show，无盖不写表面积".
+- The trial request grows by **+801 B** (card +206, schema +595).
+
+568 tests pass, and all 139 recorded lessons replay identically. Probe 3 needs the owner's approval.

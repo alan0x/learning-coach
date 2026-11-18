@@ -13565,7 +13565,8 @@ var MATH_RECIPES = {
     number_input_policies: [],
     parameter_names: ["title", "solids", "join", "show", "interaction"],
     model_parameter_names: ["title", "solids", "join", "show", "interaction"],
-    required_model_schema_parameters: ["solids"],
+    // show is required so the model decides it every time (probe 2: asked-for surface areas left out).
+    required_model_schema_parameters: ["solids", "show"],
     semantic_parameters: ["solids", "join", "show", "interaction"],
     initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
@@ -13573,7 +13574,7 @@ var MATH_RECIPES = {
     // Its own feature, so the model can ask for it by name; with section_plane, a cut through any of its
     // shapes routes here, while solid_3d with section_plane still means the teaching cube.
     required_features: ["solids", "section_plane"],
-    model_guidance: "\u7ACB\u4F53\u90FD\u9009solids\uFF08\u542B\u622A\u9762\u5C55\u5F00\uFF09\uFF0C2\u4E2A\u5E76\u6392\uFF0Cjoin\u53E0\u653E\u6216\u62FCL\uFF1B\u95EE\u4F53\u79EF/\u5168\u8868\u9762\u79EF/\u9762\u68F1\u9876\u70B9\u5199show"
+    model_guidance: "\u7ACB\u4F53\u90FD\u9009solids\uFF08\u542B\u622A\u9762\u5C55\u5F00\uFF09\uFF0C\u5C3A\u5BF8\u56FA\u5B9A\u4E0D\u5EFA\u6570\uFF1B2\u4E2A\u5E76\u6392\uFF0Cjoin\u53E0\u653E\u6216\u62FCL\uFF1B\u95EE\u5230\u7684\u4F53\u79EF/\u8868\u9762\u79EF/\u9762\u68F1\u9876\u70B9\u90FD\u5199show\uFF0C\u65E0\u76D6\u4E0D\u5199\u8868\u9762\u79EF"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -13751,7 +13752,9 @@ var MATH_SCHEMA_PROPERTIES = {
       side: { type: "number" },
       height: { type: "number" }
     } } },
-    join: { enum: ["stack", "side"] },
+    // "side" read as "side by side" in probe 2 (4 of 22 lessons asked two separate solids to join): the
+    // L shape is named for what it is.
+    join: { enum: ["stack", "l_shape"] },
     show: { type: "array", items: { enum: ["volume", "surface_area", "counts"] } },
     interaction: { enum: ["cut", "unfold"] }
   }
@@ -18820,8 +18823,8 @@ function builderSolid(model, path, adjustments) {
 var sameSize = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, a, b);
 function joinedSolid(join, pair, path, adjustments) {
   const [first, second] = pair;
-  if (join === "side") {
-    if (first.shape !== "box" || second.shape !== "box") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "only two boxes join side by side (an L shape)");
+  if (join === "l_shape") {
+    if (first.shape !== "box" || second.shape !== "box") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "only two boxes join into an L shape; two separate solids side by side need no join");
     return { shape: "composite", parts: "two_boxes", size: first.size, sideSize: second.size };
   }
   const stacked = (bottom, top) => {
@@ -18857,7 +18860,7 @@ function compileSolid3d(base, content, role, placement, plan, path) {
   if (!Array.isArray(written) || written.length < 1 || written.length > 2) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, "expected one solid, or two side by side");
   const solids = written.map((item, index) => builderSolid(modelSolid(item, `${path}.solids[${index}]`, adjustments), `${path}.solids[${index}]`, adjustments));
   const join = input.join;
-  if (join !== void 0 && join !== "stack" && join !== "side") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "expected stack or side");
+  if (join !== void 0 && join !== "stack" && join !== "l_shape") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "expected stack or l_shape; two separate solids side by side need no join");
   if (join !== void 0 && solids.length !== 2) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "join needs two solids");
   const [solid, beside] = join ? [joinedSolid(join, solids, path, adjustments), void 0] : [solids[0], solids[1]];
   const shown = input.show ?? [];

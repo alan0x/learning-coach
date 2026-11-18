@@ -36,7 +36,7 @@ const IDEAL = {
   "SD-04": { solids: [{ shape: "sphere", radius: 6 }], show: ["volume", "surface_area"] },
   "SD-05": { solids: [{ shape: "prism", sides: 3, side: 2, height: 4 }], show: ["counts"] },
   "SD-06": { solids: [{ shape: "pyramid", sides: 4, side: 6, height: 4 }], show: ["surface_area"], interaction: "unfold" },
-  "SD-07": { solids: [{ shape: "box", length: 6, width: 4, height: 3 }, { shape: "box", length: 2, width: 4, height: 7 }], join: "side", show: ["volume"] },
+  "SD-07": { solids: [{ shape: "box", length: 6, width: 4, height: 3 }, { shape: "box", length: 2, width: 4, height: 7 }], join: "l_shape", show: ["volume"] },
   "SD-08": { solids: [{ shape: "cylinder", radius: 2, height: 6 }], interaction: "cut" },
   "SD-09": { solids: [{ shape: "box", side: 5 }], show: ["surface_area"], interaction: "unfold" },
   "SD-10": { solids: [{ shape: "cone", radius: 6, height: 8 }], show: ["volume", "surface_area"] },
@@ -100,15 +100,15 @@ test("joined solids: a stack written top first stands upright; pairs no composit
     ["turned", { solids: [{ shape: "cone", radius: 1, height: 2 }, { shape: "cylinder", radius: 1, height: 3 }], join: "stack", show: ["volume"] }, "en-US"],
     ["roof", { solids: [{ shape: "box", side: 4 }, { shape: "pyramid", sides: 4, side: 4, height: 3 }], join: "stack" }, "en-US"],
     ["radii", { solids: [{ shape: "cylinder", radius: 1, height: 3 }, { shape: "cone", radius: 2, height: 2 }], join: "stack" }, "en-US"],
-    ["side-cones", { solids: [{ shape: "cone", radius: 1, height: 3 }, { shape: "cone", radius: 1, height: 2 }], join: "side" }, "en-US"],
-    ["one-joined", { solids: [{ shape: "box", side: 2 }], join: "side" }, "en-US"],
+    ["side-cones", { solids: [{ shape: "cone", radius: 1, height: 3 }, { shape: "cone", radius: 1, height: 2 }], join: "l_shape" }, "en-US"],
+    ["one-joined", { solids: [{ shape: "box", side: 2 }], join: "l_shape" }, "en-US"],
   ]));
   assert.deepEqual(result.upright.content.objects.map((object) => object.kind), ["cylinder", "cone"]);
   assert.deepEqual(result.turned.content.objects, result.upright.content.objects, "the same solid, turned over");
   assert.equal(result.turned.content.caption, "Volume = 11π/3 ≈ 11.52", "3π + 2π/3");
   assert.deepEqual(result.roof.content.objects.map((object) => object.kind), ["box", "pyramid"]);
   assert.match(result.radii.message, /shares its radius \(2 and 1\)/u);
-  assert.match(result["side-cones"].message, /only two boxes join side by side/u);
+  assert.match(result["side-cones"].message, /only two boxes join into an L shape/u);
   assert.match(result["one-joined"].message, /join needs two solids/u);
 });
 
@@ -118,7 +118,7 @@ test("refused meaning faults: a missing size, a measure with no formula, a net t
     ["bad-shape", { solids: [{ shape: "torus", radius: 2 }] }, "en-US"],
     ["nine-sides", { solids: [{ shape: "prism", sides: 9, side: 1, height: 2 }] }, "en-US"],
     ["round-counts", { solids: [{ shape: "cylinder", radius: 1, height: 2 }], show: ["counts"] }, "en-US"],
-    ["l-area", { solids: [{ shape: "box", side: 2 }, { shape: "box", side: 1 }], join: "side", show: ["surface_area"] }, "en-US"],
+    ["l-area", { solids: [{ shape: "box", side: 2 }, { shape: "box", side: 1 }], join: "l_shape", show: ["surface_area"] }, "en-US"],
     ["sphere-net", { solids: [{ shape: "sphere", radius: 2 }], interaction: "unfold" }, "en-US"],
     ["zero", { solids: [{ shape: "sphere", radius: 0 }] }, "en-US"],
     ["three", { solids: [{ shape: "sphere", radius: 1 }, { shape: "sphere", radius: 2 }, { shape: "sphere", radius: 3 }] }, "en-US"],

@@ -139,7 +139,8 @@ export const MATH_RECIPES = {
     number_input_policies: [],
     parameter_names: ["title", "solids", "join", "show", "interaction"],
     model_parameter_names: ["title", "solids", "join", "show", "interaction"],
-    required_model_schema_parameters: ["solids"],
+    // show is required so the model decides it every time (probe 2: asked-for surface areas left out).
+    required_model_schema_parameters: ["solids", "show"],
     semantic_parameters: ["solids", "join", "show", "interaction"],
     initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
@@ -147,7 +148,7 @@ export const MATH_RECIPES = {
     // Its own feature, so the model can ask for it by name; with section_plane, a cut through any of its
     // shapes routes here, while solid_3d with section_plane still means the teaching cube.
     required_features: ["solids", "section_plane"],
-    model_guidance: "立体都选solids（含截面展开），2个并排，join叠放或拼L；问体积/全表面积/面棱顶点写show",
+    model_guidance: "立体都选solids（含截面展开），尺寸固定不建数；2个并排，join叠放或拼L；问到的体积/表面积/面棱顶点都写show，无盖不写表面积",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -323,7 +324,9 @@ const MATH_SCHEMA_PROPERTIES = {
       // height and put it in side (probe 1, 2026-11-17: 11 of 16 lessons).
       radius: { type: "number" }, top_radius: { type: "number" }, length: { type: "number" }, width: { type: "number" }, sides: { type: "integer" }, side: { type: "number" }, height: { type: "number" },
     } } },
-    join: { enum: ["stack", "side"] },
+    // "side" read as "side by side" in probe 2 (4 of 22 lessons asked two separate solids to join): the
+    // L shape is named for what it is.
+    join: { enum: ["stack", "l_shape"] },
     show: { type: "array", items: { enum: ["volume", "surface_area", "counts"] } },
     interaction: { enum: ["cut", "unfold"] },
   },
