@@ -143,3 +143,18 @@ Pooled 1 + 1b + 1c + 1d (`scripts/speed-gate.mjs`; rate 5.48 ms per generated to
 This run alone gave −2.10 s on other requests (interval −4.16 to +1.58 s).
 
 **Next (owner):** the rule decides by the median at 80 pairs, and this run reached 79. One more other pair (2 to 8 calls) completes it. The rule is not changed to fit the result.
+
+# Speed gate 1e: the last pair (2026-11-18, owner-approved)
+
+One other-request pair, **2 calls**, on the same frozen build. Both arms completed.
+
+Pooled 1 + 1b + 1c + 1d + 1e (rate 5.49 ms per generated token plus 1.62 s, r² 0.75, 201 rows):
+
+| Requests | Pairs | Median (tokens in seconds) | 95% interval | Verdict |
+|---|---|---|---|---|
+| Fitting | 20 | −2.17 s | −4.45 to −0.53 s | **pass** |
+| Other | 80 | +0.24 s | −0.81 to +1.26 s | **pass**: at the 80-pair cap, the median is at most +0.5 s |
+
+**The speed gate passes.** `solid_3d` can switch on, with `cube_with_section` retired (owner decision, 2026-11-17).
+
+Evidence for all runs: `handoff-math-expressiveness/runs/solids/` (local, not in git).
