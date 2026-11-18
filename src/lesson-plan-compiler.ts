@@ -6,6 +6,7 @@ import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safe
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
 import { PLUGIN_HOOKS, RECIPE_HOOKS } from "./plugins/hooks.js";
+import { praiseArithmetic } from "./praise-arithmetic.js";
 export { PLUGIN_COMPILERS };
 
 export { includeWrittenCardsInFocus, mathExpressionToOll } from "./recipe-kit.js";
@@ -732,13 +733,21 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         });
         return;
       }
+      // A success message whose arithmetic is false is dropped, never repaired (decision 0020; plan 3.6).
+      let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : undefined;
+      const praiseClaims = praise ? praiseArithmetic(praise) : undefined;
+      if (praise && praiseClaims?.verdict === "false") {
+        const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
+        viewAdjustments.push({ section: sectionOffset, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}` });
+        praise = undefined;
+      }
       const common = {
         as: `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`,
         prompt: namedNumbers(activity.prompt, plan),
         availability: { kind: "after_lesson" as const },
         hints: activity.hints.map(hint => namedNumbers(hint, plan)),
         ...(activity.hint_after_attempts ? { hint_after_attempts: activity.hint_after_attempts } : {}),
-        ...(activity.success_message ? { success_message: namedNumbers(activity.success_message, plan) } : {}),
+        ...(praise ? { success_message: praise } : {}),
       };
       if (activity.kind === "number_target") {
         const firstNumber = activity.number_controls[0]?.number;

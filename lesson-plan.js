@@ -8400,8 +8400,8 @@ function numberLineValue(value2) {
     return Number.isFinite(value2) ? value2 : void 0;
   if (typeof value2 !== "string")
     return void 0;
-  const fraction2 = parseFraction(value2);
-  return fraction2 ? fraction2.numerator / fraction2.denominator : void 0;
+  const fraction3 = parseFraction(value2);
+  return fraction3 ? fraction3.numerator / fraction3.denominator : void 0;
 }
 function record(value2, path, fail4) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2))
@@ -9248,11 +9248,11 @@ function validateStudentTasks(document2, variables, availableControls, scene3dCa
     if (tolerance <= 0)
       fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/tolerance`, "Task tolerance must be greater than zero");
     try {
-      const evaluate2 = compileMathExpression(expressionTask.completion.expression, variables.keys());
+      const evaluate3 = compileMathExpression(expressionTask.completion.expression, variables.keys());
       if (task.start && [...allowedVariables].some((alias) => !Object.hasOwn(startValues, alias))) {
         throw new Error("Practice start must specify all task variables");
       }
-      const initial = evaluate2({ ...Object.fromEntries(variables), ...startValues });
+      const initial = evaluate3({ ...Object.fromEntries(variables), ...startValues });
       if (!Number.isFinite(initial) || !Number.isFinite(target))
         throw new Error("Task completion result is not finite");
       const referenced = new Set(referencedMathVariables(expressionTask.completion.expression, variables.keys()));
@@ -9279,7 +9279,7 @@ function validateStudentTasks(document2, variables, availableControls, scene3dCa
           const check = (value2) => {
             if (reachable)
               return;
-            const actual = evaluate2({ [variableAlias2]: value2 });
+            const actual = evaluate3({ [variableAlias2]: value2 });
             if (Number.isFinite(actual) && Math.abs(actual - target) <= tolerance) {
               reachable = true;
             }
@@ -9333,14 +9333,14 @@ function splitBindingTarget(value2, path) {
 }
 function bindableTargets(action) {
   const targets = /* @__PURE__ */ new Map();
-  const add4 = (field, properties) => {
+  const add5 = (field, properties) => {
     for (const item of Array.isArray(action.content[field]) ? action.content[field] : []) {
       if (typeof item?.as === "string")
         targets.set(item.as, new Set(properties));
     }
   };
   for (const [field, properties] of Object.entries(bindingCapabilitiesForNodeKind(action.kind))) {
-    add4(field, properties);
+    add5(field, properties);
   }
   return targets;
 }
@@ -9387,8 +9387,8 @@ function validateValueBindings(action, path, variables) {
     seen.add(binding.target);
     requireString(binding.expression, `${bindingPath}/expression`);
     try {
-      const evaluate2 = compileMathExpression(binding.expression, variables.keys());
-      const result = evaluate2(Object.fromEntries(variables));
+      const evaluate3 = compileMathExpression(binding.expression, variables.keys());
+      const result = evaluate3(Object.fromEntries(variables));
       if (!Number.isFinite(result) && binding.hide_when_undefined !== true)
         throw new Error("result is not finite");
     } catch (error) {
@@ -9757,7 +9757,7 @@ function validateScene3dContent(action, path, variables) {
       }
       try {
         const variableNames = ["x", "y", "z", ...variables.keys()];
-        const evaluate2 = compileMathExpression(object2.expression, variableNames);
+        const evaluate3 = compileMathExpression(object2.expression, variableNames);
         const values = Object.fromEntries(variables);
         const sampled = [];
         for (let xIndex = 0; xIndex <= sampleCount; xIndex += 1) {
@@ -9766,7 +9766,7 @@ function validateScene3dContent(action, path, variables) {
             const y = yRange.min + (yRange.max - yRange.min) * yIndex / sampleCount;
             for (let zIndex = 0; zIndex <= sampleCount; zIndex += 1) {
               const z = zRange.min + (zRange.max - zRange.min) * zIndex / sampleCount;
-              const value2 = evaluate2({ ...values, x, y, z });
+              const value2 = evaluate3({ ...values, x, y, z });
               if (Number.isFinite(value2))
                 sampled.push(value2);
             }
@@ -9788,11 +9788,11 @@ function validateScene3dContent(action, path, variables) {
       }
       try {
         const variableNames = ["x", "y", ...variables.keys()];
-        const evaluate2 = compileMathExpression(object2.expression, variableNames);
+        const evaluate3 = compileMathExpression(object2.expression, variableNames);
         const values = Object.fromEntries(variables);
         for (const x of [xRange.min, (xRange.min + xRange.max) / 2, xRange.max]) {
           for (const y of [yRange.min, (yRange.min + yRange.max) / 2, yRange.max]) {
-            if (!Number.isFinite(evaluate2({ ...values, x, y })))
+            if (!Number.isFinite(evaluate3({ ...values, x, y })))
               throw new Error("surface is not finite");
           }
         }
@@ -10013,7 +10013,7 @@ function validatePlotContent(action, path, variables) {
       fail("OLL_INVALID_OPERATION_PAYLOAD", `${curvePath}/samples`, "Implicit plot samples must be an integer from 16 to 200");
     }
     try {
-      const evaluate2 = compileMathExpression(curve.expression, ["x", "y", ...variables.keys()]);
+      const evaluate3 = compileMathExpression(curve.expression, ["x", "y", ...variables.keys()]);
       const values = Object.fromEntries(variables);
       let minimum = Infinity;
       let maximum = -Infinity;
@@ -10021,7 +10021,7 @@ function validatePlotContent(action, path, variables) {
         const x = xRange.min + (xRange.max - xRange.min) * xIndex / sampleCount;
         for (let yIndex = 0; yIndex <= sampleCount; yIndex += 1) {
           const y = yRange.min + (yRange.max - yRange.min) * yIndex / sampleCount;
-          const result = evaluate2({ ...values, x, y });
+          const result = evaluate3({ ...values, x, y });
           if (!Number.isFinite(result))
             continue;
           minimum = Math.min(minimum, result);
@@ -11662,9 +11662,9 @@ var approximate = (value2) => value2 !== 0 && Math.abs(value2) < 5e-3 ? value2.t
 function piText(coefficient2) {
   if (coefficient2.n === 0n)
     return void 0;
-  const decimal = decimalText(coefficient2);
-  if (decimal !== void 0)
-    return decimal === "1" ? "\u03C0" : `${decimal}\u03C0`;
+  const decimal2 = decimalText(coefficient2);
+  if (decimal2 !== void 0)
+    return decimal2 === "1" ? "\u03C0" : `${decimal2}\u03C0`;
   if (coefficient2.d <= 12n)
     return `${coefficient2.n === 1n ? "" : coefficient2.n}\u03C0/${coefficient2.d}`;
   return void 0;
@@ -12469,7 +12469,7 @@ var DOMAIN_MARGIN = 1.1;
 function expressionUsesVariable(expression, variable) {
   return new RegExp(`(^|[^A-Za-z0-9_])${variable}([^A-Za-z0-9_]|$)`, "u").test(expression);
 }
-function sampleImplicitSurfaceStatus(evaluate2, variables, level, halfSpan, dependentVariables) {
+function sampleImplicitSurfaceStatus(evaluate3, variables, level, halfSpan, dependentVariables) {
   const resolution = variables.length === 2 ? 18 : 10;
   let minimum = Number.POSITIVE_INFINITY;
   let maximum = Number.NEGATIVE_INFINITY;
@@ -12502,7 +12502,7 @@ function sampleImplicitSurfaceStatus(evaluate2, variables, level, halfSpan, depe
         const z = variables.length === 3 ? -halfSpan + 2 * halfSpan * zIndex / resolution : 0;
         const coordinates = variables.length === 3 ? { x, y, z } : { x, y };
         try {
-          observe(evaluate2(coordinates), coordinates);
+          observe(evaluate3(coordinates), coordinates);
         } catch {
         }
       }
@@ -12516,12 +12516,12 @@ function sampleImplicitSurfaceStatus(evaluate2, variables, level, halfSpan, depe
 function implicitSurfaceDomain(expression, variables, level) {
   if (!Number.isFinite(level))
     throw new Error("Implicit surface level must be finite");
-  const evaluate2 = compileMathExpression(expression, [...variables]);
+  const evaluate3 = compileMathExpression(expression, [...variables]);
   const dependentVariables = new Set(variables.filter((variable) => expressionUsesVariable(expression, variable)));
   let firstVisibleHalfSpan;
   let previousHalfSpan = 0;
   for (const candidateHalfSpan of DOMAIN_CANDIDATE_HALF_SPANS) {
-    const status = sampleImplicitSurfaceStatus(evaluate2, variables, level, candidateHalfSpan, dependentVariables);
+    const status = sampleImplicitSurfaceStatus(evaluate3, variables, level, candidateHalfSpan, dependentVariables);
     if (status !== "absent" && firstVisibleHalfSpan === void 0) {
       firstVisibleHalfSpan = candidateHalfSpan;
     }
@@ -12530,7 +12530,7 @@ function implicitSurfaceDomain(expression, variables, level) {
       let upper = candidateHalfSpan;
       for (let step = 0; step < DOMAIN_REFINEMENT_STEPS; step += 1) {
         const middle = (lower + upper) / 2;
-        const middleStatus = sampleImplicitSurfaceStatus(evaluate2, variables, level, middle, dependentVariables);
+        const middleStatus = sampleImplicitSurfaceStatus(evaluate3, variables, level, middle, dependentVariables);
         if (middleStatus === "contained")
           upper = middle;
         else
@@ -15948,7 +15948,7 @@ function lowerPieces(parameters3, numberCount) {
   const path = "$lessonPlanSection.visual.parameters.pieces";
   const raw = parameters3.pieces;
   if (!Array.isArray(raw) || raw.length < 2 || raw.length > 4) formulaError(path, "a piecewise function has two to four pieces");
-  const decimal = (value2, where) => {
+  const decimal2 = (value2, where) => {
     if (value2 === void 0 || value2 === null) return null;
     const number = typeof value2 === "number" ? value2 : value2 && typeof value2 === "object" && "mantissa" in value2 ? Number(value2.mantissa) / 10 ** Number(value2.scale ?? 0) : Number.NaN;
     if (!Number.isFinite(number)) formulaError(where, "a piece's end is a finite number, or left out when that side is unbounded");
@@ -15962,7 +15962,7 @@ function lowerPieces(parameters3, numberCount) {
     if (tokens.some((token) => token.kind === "number")) formulaError(`${where}.formula`, "pieces are fixed formulas; use one formula when lesson numbers change the curve");
     const ends = PIECE_ENDS[String(piece.ends)];
     if (!ends) formulaError(`${where}.ends`, "ends is one of [] [) (] ()");
-    const from = decimal(piece.x_from, `${where}.x_from`), to = decimal(piece.x_to, `${where}.x_to`);
+    const from = decimal2(piece.x_from, `${where}.x_from`), to = decimal2(piece.x_to, `${where}.x_to`);
     if (from !== null && to !== null && !(from < to)) formulaError(where, "a piece's x_from is below its x_to");
     return { expression: mathExpressionToOll(tokens), from, to, from_closed: ends[0], to_closed: ends[1] };
   });
@@ -17354,9 +17354,9 @@ function snap2(range, unit2 = 1) {
   const round = (value2) => Number(value2.toPrecision(12));
   return { min: round(Math.floor(range.min / step + 1e-9) * step), max: round(Math.ceil(range.max / step - 1e-9) * step) };
 }
-function pad4(range, fraction2, keep) {
+function pad4(range, fraction3, keep) {
   const size = span(range) > 1e-9 ? span(range) : Math.max(1, Math.abs(range.min) * 0.2);
-  const amount = size * fraction2 / (1 - 2 * fraction2);
+  const amount = size * fraction3 / (1 - 2 * fraction3);
   return { min: keep?.min ? range.min : range.min - amount, max: keep?.max ? range.max : range.max + amount };
 }
 function affineArgument(argument, variables) {
@@ -19171,6 +19171,182 @@ var VISUAL_COMPILERS = {
   ...SHARED_COMPILERS
 };
 
+// src/praise-arithmetic.ts
+var abs = (x) => x < 0n ? -x : x;
+var gcd4 = (a, b) => b === 0n ? abs(a) : gcd4(b, a % b);
+function fraction2(n, d) {
+  if (d < 0n) {
+    n = -n;
+    d = -d;
+  }
+  const g = gcd4(n, d) || 1n;
+  return { n: n / g, d: d / g };
+}
+var add4 = (a, b) => fraction2(a.n * b.d + b.n * a.d, a.d * b.d);
+var sub3 = (a, b) => fraction2(a.n * b.d - b.n * a.d, a.d * b.d);
+var mul2 = (a, b) => fraction2(a.n * b.n, a.d * b.d);
+var div = (a, b) => b.n === 0n ? void 0 : fraction2(a.n * b.d, a.d * b.n);
+function decimal(text3, negative) {
+  const plain2 = text3.replace(/,/g, "");
+  const [whole, part = ""] = plain2.split(".");
+  const n = BigInt(`${whole}${part}`) * (negative ? -1n : 1n);
+  return fraction2(n, 10n ** BigInt(part.length));
+}
+var WORD_OPS = [
+  ["multiplied by", "*"],
+  ["divided by", "/"],
+  ["plus", "+"],
+  ["minus", "-"],
+  ["times", "*"],
+  ["\u4E58\u4EE5", "*"],
+  ["\u9664\u4EE5", "/"],
+  ["\u51CF\u53BB", "-"],
+  ["\u52A0\u4E0A", "+"],
+  ["\u52A0", "+"],
+  ["\u51CF", "-"],
+  ["\u4E58", "*"]
+];
+var WORD_EQS = ["is equal to", "equals", "makes", "gives", "is", "\u7B49\u4E8E", "\u5F97", "\u662F"];
+var SYMBOL_OPS = { "+": "+", "-": "-", "\u2212": "-", "\u2013": "-", "\xD7": "*", "*": "*", "\xB7": "*", "\xF7": "/", "/": "/" };
+var NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下)/iu;
+var GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″]/u;
+var NUMBER = /^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/u;
+function tokenize2(text3) {
+  const tokens = [];
+  let i = 0;
+  const previous = () => tokens[tokens.length - 1];
+  while (i < text3.length) {
+    const ch = text3[i];
+    if (/\s/u.test(ch)) {
+      i += 1;
+      continue;
+    }
+    const rest = text3.slice(i);
+    const signed = /^[-−–]\d/u.test(rest) && previous()?.kind !== "num" && previous()?.text !== ")";
+    const number = NUMBER.exec(signed ? rest.slice(1) : rest);
+    if (number) {
+      const length2 = number[0].length + (signed ? 1 : 0);
+      const before = text3[i - 1] ?? "";
+      const after = text3[i + length2] ?? "";
+      tokens.push({ kind: "num", value: decimal(number[0], signed), glued: GLUE.test(before) || GLUE.test(after), text: text3.slice(i, i + length2), rest: text3.slice(i + length2) });
+      i += length2;
+      continue;
+    }
+    if (ch === "=" || ch === "\uFF1D") {
+      tokens.push({ kind: "eq", symbol: true, text: ch, rest: text3.slice(i + 1) });
+      i += 1;
+      continue;
+    }
+    if (SYMBOL_OPS[ch]) {
+      tokens.push({ kind: "op", op: SYMBOL_OPS[ch], text: ch, rest: text3.slice(i + 1) });
+      i += 1;
+      continue;
+    }
+    const lower = rest.toLowerCase();
+    const latinBoundary = (length2) => !/[A-Za-z]/u.test(rest[length2] ?? "");
+    const wordOp = WORD_OPS.find(([word2]) => lower.startsWith(word2) && (!/[a-z]/u.test(word2[0]) || latinBoundary(word2.length)));
+    if (wordOp) {
+      tokens.push({ kind: "op", op: wordOp[1], text: wordOp[0], rest: rest.slice(wordOp[0].length) });
+      i += wordOp[0].length;
+      continue;
+    }
+    const wordEq = WORD_EQS.find((word2) => lower.startsWith(word2) && (!/[a-z]/u.test(word2[0]) || latinBoundary(word2.length)));
+    if (wordEq) {
+      tokens.push({ kind: "eq", symbol: false, text: wordEq, rest: rest.slice(wordEq.length) });
+      i += wordEq.length;
+      continue;
+    }
+    const word = /^[A-Za-z]+/u.exec(rest);
+    if (word) {
+      tokens.push({ kind: "word", text: word[0], rest: rest.slice(word[0].length) });
+      i += word[0].length;
+      continue;
+    }
+    tokens.push({ kind: new RegExp("\\p{L}", "u").test(ch) ? "word" : "other", text: ch, rest: text3.slice(i + 1) });
+    i += 1;
+  }
+  return tokens;
+}
+function operatorAt(tokens, i) {
+  const token = tokens[i];
+  if (token?.kind === "op") return token.op;
+  if (token?.kind === "word" && token.text.toLowerCase() === "x" && tokens[i - 1]?.kind === "num" && tokens[i + 1]?.kind === "num") return "*";
+  return void 0;
+}
+function evaluate2(values, ops) {
+  const terms = [values[0]];
+  const signs = [];
+  for (let k = 0; k < ops.length; k += 1) {
+    const op = ops[k];
+    const value2 = values[k + 1];
+    if (op === "*" || op === "/") {
+      const last = terms.pop();
+      const next = op === "*" ? mul2(last, value2) : div(last, value2);
+      if (!next) return void 0;
+      terms.push(next);
+    } else {
+      signs.push(op);
+      terms.push(value2);
+    }
+  }
+  let total = terms[0];
+  signs.forEach((sign, k) => {
+    total = sign === "+" ? add4(total, terms[k + 1]) : sub3(total, terms[k + 1]);
+  });
+  return total;
+}
+function holds(exact, resultText, result) {
+  const difference = sub3(exact, result);
+  if (difference.n === 0n) return true;
+  const places = (/\.(\d+)/u.exec(resultText)?.[1] ?? "").length;
+  if (places === 0) return false;
+  return abs(difference.n) * 2n * 10n ** BigInt(places) <= difference.d;
+}
+function praiseArithmetic(text3) {
+  const tokens = tokenize2(text3 ?? "");
+  const claims = [];
+  tokens.forEach((token, e) => {
+    if (token.kind !== "eq") return;
+    const first = tokens[e + 1];
+    if (first?.kind !== "num" || first.glued) return;
+    const denominator = tokens[e + 3];
+    const fractionResult = tokens[e + 2]?.kind === "op" && tokens[e + 2].text === "/" && denominator?.kind === "num" && !denominator.glued && /^\d+$/u.test(first.text.replace(/^[-−–]/u, "")) && /^\d+$/u.test(denominator.text);
+    const result = fractionResult && denominator?.kind === "num" ? (() => {
+      const value2 = div(first.value, denominator.value);
+      return value2 ? { ...denominator, value: value2, text: `${first.text}/${denominator.text}` } : void 0;
+    })() : first;
+    if (!result) return;
+    const resultEnd = e + (fractionResult ? 3 : 1);
+    const after = tokens[resultEnd + 1];
+    if (after && (operatorAt(tokens, resultEnd + 1) || after.kind === "eq" && after.symbol || after.text === "\u2248")) return;
+    if (NOT_A_RESULT.test(result.rest.trimStart())) return;
+    const values = [];
+    const ops = [];
+    let k = e - 1;
+    while (k >= 0) {
+      const value2 = tokens[k];
+      if (value2?.kind !== "num" || value2.glued) return;
+      values.unshift(value2.value);
+      const op = operatorAt(tokens, k - 1);
+      if (!op) break;
+      ops.unshift(op);
+      k -= 2;
+    }
+    if (ops.length === 0) return;
+    const before = tokens[k - 1];
+    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || before.kind === "eq" && before.symbol || /^[([{|]$/u.test(before.text))) return;
+    const exact = evaluate2(values, ops);
+    if (!exact) return;
+    const start = text3.indexOf(tokens[k].text + tokens[k].rest);
+    const end = text3.length - result.rest.length;
+    claims.push({ text: start >= 0 ? text3.slice(start, end).trim() : token.text, holds: holds(exact, result.text, result.value) });
+  });
+  return {
+    verdict: claims.length === 0 ? "none" : claims.every((claim) => claim.holds) ? "true" : "false",
+    claims
+  };
+}
+
 // src/lesson-plan-compiler.ts
 var NUMBER_DRIVEN_KINDS = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY).flatMap((recipe) => recipe.number_inputs?.length ? recipe.output_kinds ?? [] : []));
 function normalizedVisualIdentity(content, includeNumbers = true) {
@@ -19216,14 +19392,14 @@ function mergeEquivalentVisualInputs(plan) {
 function lessonPlanPlugins(plan) {
   const installed = new Map(INSTALLED_PLUGINS.map((plugin) => [plugin.manifest.id, plugin.manifest]));
   const used = /* @__PURE__ */ new Set();
-  const add4 = (id) => {
+  const add5 = (id) => {
     if (used.has(id)) return;
     used.add(id);
-    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add4(dependency);
+    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add5(dependency);
   };
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
-    add4(RECIPE_PLUGIN[action.content.capability]);
+    add5(RECIPE_PLUGIN[action.content.capability]);
   }
   return Object.fromEntries([...used].sort().map((id) => [id, installed.get(id).version]));
 }
@@ -19769,13 +19945,20 @@ function compileLessonPlan(value2, options = {}) {
         });
         return;
       }
+      let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : void 0;
+      const praiseClaims = praise ? praiseArithmetic(praise) : void 0;
+      if (praise && praiseClaims?.verdict === "false") {
+        const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
+        viewAdjustments.push({ section: sectionOffset, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}` });
+        praise = void 0;
+      }
       const common = {
         as: `section-${pad2(sectionOffset + 1)}-task-${pad2(activityOffset + 1)}`,
         prompt: namedNumbers(activity.prompt, plan),
         availability: { kind: "after_lesson" },
         hints: activity.hints.map((hint) => namedNumbers(hint, plan)),
         ...activity.hint_after_attempts ? { hint_after_attempts: activity.hint_after_attempts } : {},
-        ...activity.success_message ? { success_message: namedNumbers(activity.success_message, plan) } : {}
+        ...praise ? { success_message: praise } : {}
       };
       if (activity.kind === "number_target") {
         const firstNumber = activity.number_controls[0]?.number;
@@ -20078,11 +20261,11 @@ function coerceModelNumbers(value2, schema, path) {
     if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) {
       throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected { mantissa, scale } for a decimal number");
     }
-    const decimal = value2;
-    if (Object.keys(decimal).some((key) => key !== "mantissa" && key !== "scale") || !Number.isInteger(decimal.mantissa) || Math.abs(Number(decimal.mantissa)) > 1e12 || !Number.isInteger(decimal.scale) || Number(decimal.scale) < 0 || Number(decimal.scale) > 12) {
+    const decimal2 = value2;
+    if (Object.keys(decimal2).some((key) => key !== "mantissa" && key !== "scale") || !Number.isInteger(decimal2.mantissa) || Math.abs(Number(decimal2.mantissa)) > 1e12 || !Number.isInteger(decimal2.scale) || Number(decimal2.scale) < 0 || Number(decimal2.scale) > 12) {
       throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected bounded integer mantissa and scale from 0 to 12");
     }
-    const number = Number(decimal.mantissa) / 10 ** Number(decimal.scale);
+    const number = Number(decimal2.mantissa) / 10 ** Number(decimal2.scale);
     if (!Number.isFinite(number)) {
       throw new LessonPlanError("LESSON_PLAN_MODEL_NUMBER", path, "expected a finite decimal number");
     }
@@ -23252,6 +23435,7 @@ export {
   modelTextFromRawReply,
   numericAnswerTolerance,
   offeredRecipes,
+  praiseArithmetic,
   promptSlot,
   recipeDeclares,
   recipeInitialCamera,

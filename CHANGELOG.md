@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **A success message with false arithmetic is dropped** (plan 3.6, §10 item 5; decision 0020). When a task's model-written success message states a claim written wholly in numerals and operators (`8 + 5 = 14`, `9 plus 5 is 15`, `7 减 2 等于 4`) and the claim is false, the compiler leaves the message out; the player then shows its neutral reaction. The drop is recorded as a program adjustment (`praise_false_arithmetic`). The message is never repaired and never sent back to the model.
+  - **Exact:** claims are checked with fractions, and a decimal result counts as true only when it is the exact value rounded to the digits shown (`10 / 3 = 3.33` holds, `3.4` and `3` do not).
+  - **Read only when whole:** a letter or symbol beside a number (`2x`, `16π`, `50%`, `5²`), brackets, chains (`8 + 2 = 10 + 3 = 13`), approximations, remainders and comparisons (`is 2 more than`) are not read. So are claims in words such as "4 rows of 7 equals 28" or "5 times 4, which equals 20".
+  - **Census** (probe cases only: PA, PI and SD recordings; question-set and HO runs left out): 127 distinct messages; the checker reads 6 claims, all true, and drops none. An earlier count (2026-11-13) found 1 false claim of 9 in 144 local messages.
+  - **No request changed** (`eval/request-hashes.json` is the same). Replaying all 139 recorded lessons gives identical lines to main.
+
 - **M1 re-tag after the 3D solids switch-on** (plan 3.7; `testsuite/math-expressiveness-m1-2026-11-18.json`). Only questions the switch-on could change were re-read against `solid_3d`; `cube_with_section` leaves the component list.
   - **Fully drawn:** 35 of 145 questions that need a picture, up from 33. The L-shaped block of two boxes and the triangular prism's counts are now fully drawn.
   - **Partly drawn:** the wheel-ball-box-can comparison, cone and cylinder volumes (no pouring), and flat shapes beside solids. `solids_3d_ext` now lists what `solid_3d` does not draw: more than two solids, faces pointed out one by one, flat shapes beside solids, pouring, and unit-cube stacks.
