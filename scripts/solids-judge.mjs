@@ -20,6 +20,8 @@
 import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
 
 const EPS = 1e-6;
+/** An object's name: `as` as authored, `id` once normalized. */
+const idOf = (object) => object.as ?? object.id;
 const close = (a, b, tolerance = EPS) => Math.abs(a - b) <= tolerance * Math.max(1, Math.abs(a), Math.abs(b));
 const round = (value) => Number(Number(value).toFixed(4));
 const SOLID_KINDS = new Set(["box", "sphere", "cylinder", "cone", "prism", "pyramid", "frustum", "hemisphere", "torus", "tetrahedron", "octahedron", "dodecahedron", "icosahedron", "ellipsoid"]);
@@ -175,14 +177,25 @@ export function solidsOf(content) {
 
 const LABELS = { volume: /(?:volume|体积)\s*([=≈])\s*([^;；\n]*)/iu, surface_area: /(?:surface area|表面积)\s*([=≈])\s*([^;；\n]*)/iu };
 
-/** A shown quantity: the decimal after "≈" (two places), else the exact value written ("24", "12π", "4π/3"). */
-function shownValue(sign, text) {
-  const approx = /≈\s*(-?\d+(?:\.\d+)?)/u.exec(sign === "≈" ? `≈ ${text}` : text);
-  if (approx) return { value: Number(approx[1]), tolerance: 0.006 };
-  const exact = /^\s*(-?\d+(?:\.\d+)?)?\s*(π)?\s*(?:\/\s*(\d+))?/u.exec(text);
+/** An exact value as written: "24", "3.375", "12π", "4π/3", "π". */
+function exactValue(text) {
+  const exact = /^\s*(-?\d+(?:\.\d+)?)?\s*(π)?\s*(?:\/\s*(\d+))?\s*$/u.exec(text);
   if (!exact || (exact[1] === undefined && !exact[2])) return undefined;
-  const value = (exact[1] === undefined ? 1 : Number(exact[1])) * (exact[2] ? Math.PI : 1) / (exact[3] ? Number(exact[3]) : 1);
-  return { value, tolerance: EPS };
+  return (exact[1] === undefined ? 1 : Number(exact[1])) * (exact[2] ? Math.PI : 1) / (exact[3] ? Number(exact[3]) : 1);
+}
+
+/**
+ * A shown quantity: the decimal after "≈" (two places) and the exact value before it, each checked on
+ * its own ("= π ≈ 502.65" for 160π is wrong though its decimal is right; owner review of #116).
+ */
+function shownValue(sign, text) {
+  const [before, after] = sign === "≈" ? ["", text] : text.split("≈");
+  const approx = after === undefined ? undefined : /^\s*(-?\d+(?:\.\d+)?)\s*$/u.exec(after);
+  const exact = before.trim() ? exactValue(before) : undefined;
+  if (after !== undefined && !approx) return undefined;
+  if (before.trim() && exact === undefined) return undefined;
+  if (approx) return { value: Number(approx[1]), tolerance: 0.006, ...(exact !== undefined ? { exact } : {}) };
+  return exact === undefined ? undefined : { value: exact, tolerance: EPS };
 }
 
 /** What one line shows: volume, surface area (values) and counts. */
@@ -197,9 +210,10 @@ export function readLine(line) {
   return shown;
 }
 
-const matchesValue = (shown, value) => shown && shown.value !== undefined && Math.abs(shown.value - value) <= Math.max(shown.tolerance, EPS * Math.abs(value));
+const matchesValue = (shown, value) => shown && shown.value !== undefined && Math.abs(shown.value - value) <= Math.max(shown.tolerance, EPS * Math.abs(value))
+  && (shown.exact === undefined || close(shown.exact, value));
 const expectedValue = (want) => (typeof want === "object" && want !== null ? want.pi * Math.PI : want);
-const describe = (shown) => (shown.unreadable ? `"${shown.unreadable}"` : String(round(shown.value)));
+const describe = (shown) => (shown.unreadable ? `"${shown.unreadable}"` : shown.exact !== undefined ? `${round(shown.exact)} ≈ ${shown.value}` : String(round(shown.value)));
 
 // ---- Sliders -----------------------------------------------------------------------------------------
 
@@ -221,7 +235,10 @@ function sliders(scene) {
   });
   const nets = bindings.filter((binding) => String(binding.target).endsWith(".unfold")).map((binding) => {
     const name = expressionVariable(scene, binding.expression);
-    return { object: String(binding.target).slice(0, -".unfold".length), values: name ? variableValues(scene, name) : [] };
+    const variable = scene.variables.find((item) => item.as === name);
+    // A learner can open it: a slider that reaches both closed (0) and flat (1).
+    const learner = Boolean(variable?.control) && variable.min <= EPS && variable.max >= 1 - EPS;
+    return { object: String(binding.target).slice(0, -".unfold".length), values: name ? variableValues(scene, name) : [], learner };
   });
   const opened = (scene.content.objects ?? []).filter((object) => Number(object.unfold) > 0).map((object) => ({ object: object.as, values: [object.unfold] }));
   return { cuts, nets: [...nets, ...opened] };
@@ -239,8 +256,15 @@ function solidMatches(want, solid) {
     if (objects.length !== 2 || objects.some((object) => object.kind !== "box")) return `not two boxes joined (${objects.map((object) => object.kind).join(" + ")})`;
     const sizes = objects.map((object) => [object.size.x, object.size.y, object.size.z]);
     const [a, b] = want.boxes;
-    return (sameSizes(sizes[0], a) && sameSizes(sizes[1], b)) || (sameSizes(sizes[0], b) && sameSizes(sizes[1], a)) ? undefined
-      : `boxes ${sizes.map((size) => size.join("×")).join(" and ")}, expected ${a.join("×")} and ${b.join("×")}`;
+    if (!((sameSizes(sizes[0], a) && sameSizes(sizes[1], b)) || (sameSizes(sizes[0], b) && sameSizes(sizes[1], a)))) {
+      return `boxes ${sizes.map((size) => size.join("×")).join(" and ")}, expected ${a.join("×")} and ${b.join("×")}`;
+    }
+    // One block: on one floor, sharing part of a side face (owner review: blocks meeting at a corner passed).
+    const [first, second] = solid.parts.map((part) => part.extent);
+    if (!close(first.z[0], second.z[0])) return `boxes not on one floor (bottoms at ${round(first.z[0])} and ${round(second.z[0])})`;
+    const [ox, oy, oz] = overlaps(first, second);
+    const sideFace = oz > EPS && ((Math.abs(ox) <= EPS && oy > EPS) || (Math.abs(oy) <= EPS && ox > EPS));
+    return sideFace ? undefined : "boxes do not share a side face";
   }
   if (objects.length !== 1) return `a composite (${objects.map((object) => object.kind).join(" + ")}), expected a ${want.kind}`;
   const [object] = objects;
@@ -285,9 +309,13 @@ function sceneMisses(scene, solids, lines) {
   // A cutting plane stays within the solids it cuts, and a net opens.
   const { cuts, nets } = sliders(scene);
   const bottom = Math.min(...solids.map((solid) => solid.z[0])), top = Math.max(...solids.map((solid) => solid.z[1]));
-  for (const { values } of cuts) {
-    const outside = values.find((value) => value < bottom - EPS || value > top + EPS);
-    if (outside !== undefined) misses.push(`cutting plane at ${round(outside)}, outside the solids (${round(bottom)} to ${round(top)})`);
+  for (const { section, values } of cuts) {
+    // Along the plane's own axis, within the objects it cuts (all solids when it names none).
+    const axis = section.axis ?? "z";
+    const cut = parts.filter((part) => !(section.targets ?? []).length || section.targets.includes(idOf(part.object)));
+    const [low, high] = cut.length ? [Math.min(...cut.map((part) => part.extent[axis][0])), Math.max(...cut.map((part) => part.extent[axis][1]))] : [bottom, top];
+    const outside = values.find((value) => value < low - EPS || value > high + EPS);
+    if (outside !== undefined) misses.push(`cutting plane at ${axis} = ${round(outside)}, outside the solids (${round(low)} to ${round(high)})`);
   }
   for (const net of nets) if (!net.values.some((value) => value >= 1 - EPS)) misses.push(`net of ${net.object} never opens flat (reaches ${net.values.length ? round(Math.max(...net.values)) : "nothing"})`);
   return misses;
@@ -298,6 +326,7 @@ function expectationMisses(expect, scene, solids, lines) {
   const misses = [];
   const wanted = expect.solids ?? [];
   const used = new Set();
+  const matched = [];
   wanted.forEach((want, wantIndex) => {
     const reasons = [];
     const found = solids.findIndex((solid, index) => {
@@ -308,6 +337,7 @@ function expectationMisses(expect, scene, solids, lines) {
     });
     if (found < 0) { misses.push(`wrong solid: expected ${want.kind}${wanted.length > 1 ? ` (${wantIndex + 1} of ${wanted.length})` : ""}: ${reasons.join("; ") || "none drawn"}`); return; }
     used.add(found);
+    matched.push(solids[found]);
     const shown = lines.length === 1 && solids.length === 1 ? readLine(lines[0]) : lines[found] !== undefined ? readLine(lines[found]) : {};
     for (const key of ["volume", "surface_area"]) {
       if (want[key] === undefined) continue;
@@ -317,11 +347,23 @@ function expectationMisses(expect, scene, solids, lines) {
     if (want.counts && (!shown.counts || shown.counts.join() !== want.counts.join())) misses.push(`missing counts: expected ${want.counts.join("/")}, shown ${shown.counts?.join("/") ?? "none"}`);
   });
   const { cuts, nets } = sliders(scene);
+  // The slider acts on the expected solid (the first one matched, or any drawn when none is expected).
+  const targets = matched.length ? matched : solids;
+  const names = new Set(targets.flatMap((solid) => solid.parts.map((part) => idOf(part.object))));
   if (expect.interaction === "cut") {
-    const height = Math.max(...solids.map((solid) => solid.z[1])) - Math.min(...solids.map((solid) => solid.z[0]));
-    if (!cuts.some((cut) => cut.moves && Math.max(...cut.values) - Math.min(...cut.values) >= 0.9 * height)) misses.push("missing cut: no plane that moves through the solid");
+    // A horizontal plane (axis z) cutting the expected solid and moving through ≥ 90% of its height,
+    // never beyond it (owner review of #116: an x-axis plane on [-3, 3] passed against a cylinder of radius 2).
+    const ok = cuts.some((cut) => {
+      if (!cut.moves || (cut.section.axis ?? "z") !== "z" || !(cut.section.targets ?? []).some((target) => names.has(target))) return false;
+      const solid = targets.find((each) => each.parts.some((part) => (cut.section.targets ?? []).includes(idOf(part.object))));
+      const [low, high] = solid.z;
+      return Math.min(...cut.values) >= low - EPS && Math.max(...cut.values) <= high + EPS && Math.max(...cut.values) - Math.min(...cut.values) >= 0.9 * (high - low);
+    });
+    if (!ok) misses.push("missing cut: no horizontal plane that a learner moves through the solid");
   }
-  if (expect.interaction === "unfold" && !nets.length) misses.push("missing net: the solid never unfolds");
+  // A net the learner opens: a slider bound to the expected solid, from closed to flat (owner review: a
+  // static cube already set to unfold 1 passed).
+  if (expect.interaction === "unfold" && !nets.some((net) => net.learner && names.has(net.object))) misses.push("missing net: no slider that opens the solid from closed to flat");
   return misses;
 }
 

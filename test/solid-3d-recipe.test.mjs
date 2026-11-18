@@ -81,7 +81,7 @@ test("each in-scope case's ideal output compiles and passes the solids judge", (
   }
   // The program converts the hexagon's edge to the builder's circumradius (equal for a hexagon) and the
   // square pyramid's edge 6 to 6/√2; the measures come from the program.
-  assert.equal(result["SD-06"].content.objects[0].radius, Number((6 / Math.SQRT2).toFixed(9)));
+  assert.equal(result["SD-06"].content.objects[0].radius, 6 / (2 * Math.sin(Math.PI / 4)));
   assert.equal(result["SD-06"].content.caption, "Surface area = 96");
   assert.equal(result["SD-10"].content.caption, "体积 = 96π ≈ 301.59；表面积 = 96π ≈ 301.59");
   assert.equal(result["SD-03"].content.caption, "Cone: Volume = 15π ≈ 47.12\nCylinder: Volume = 45π ≈ 141.37");

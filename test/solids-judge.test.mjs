@@ -62,7 +62,7 @@ test("SD-03: a cone and a cylinder side by side, one line each; one line for bot
   const cone = { kind: "cone", center: at(-3.75), radius: 3, height: 5 }, cylinder = { kind: "cylinder", center: at(3.75), radius: 3, height: 5 };
   passes("SD-03", pair(cone, cylinder, "Cone: Volume = 15π ≈ 47.12\nCylinder: Volume = 45π ≈ 141.37"));
   fails("SD-03", pair(cone, cylinder, "Volume = 15π ≈ 47.12"), /one measures line for 2 solids/u);
-  fails("SD-03", pair(cone, cylinder, "Cone: Volume = 45π ≈ 141.37\nCylinder: Volume = 15π ≈ 47.12"), /wrong volume shown: 141.37, the drawn solid's is 47.1239/u);
+  fails("SD-03", pair(cone, cylinder, "Cone: Volume = 45π ≈ 141.37\nCylinder: Volume = 15π ≈ 47.12"), /wrong volume shown: 141.3717 ≈ 141.37, the drawn solid's is 47.1239/u);
   fails("SD-03", pair({ ...cone, center: at() }, { ...cylinder, center: at() }), /objects overlap: cone and cylinder/u);
   fails("SD-03", pair(cone, { ...cylinder, height: 6 }, "Cone: Volume = 15π ≈ 47.12\nCylinder: Volume = 54π ≈ 169.65"), /wrong solid: expected cylinder \(2 of 2\)/u);
 });
@@ -92,7 +92,7 @@ test("SD-06 and SD-09: nets; the pyramid's edge, not its circumradius, is the 6"
   fails("SD-06", lesson({ objects: [{ as: "solid", kind: "pyramid", center: at(), sides: 4, radius: 6, height: 4 }], caption: "Surface area ≈ 189.8" }, {}), /base edge 8.4853, expected 6/u);
   fails("SD-06", lesson({ objects: [{ as: "solid", kind: "pyramid", center: at(), sides: 4, radius: 6 / Math.SQRT2, height: 4 }], caption: "Surface area = 96" }), /missing net/u);
   fails("SD-06", lesson({ objects: [{ as: "solid", kind: "pyramid", center: at(), sides: 4, radius: 6 / Math.SQRT2, height: 4 }], caption: "Surface area = 96", bindings: [{ target: "solid.unfold", expression: "u" }] }, { variables: [slider("u", 0, 0.5)] }), /never opens flat/u);
-  passes("SD-09", lesson({ objects: [box(5, 5, 5)], caption: "Surface area = 150", bindings: [{ target: "solid.unfold", expression: "u" }] }, { variables: [{ as: "u", initial: 0, min: 0, max: 1, label: "u" }], animations: [["u", 1]] }));
+  passes("SD-09", lesson({ objects: [box(5, 5, 5)], caption: "Surface area = 150", bindings: [{ target: "solid.unfold", expression: "u" }] }, { variables: [slider("u", 0, 1)] }));
 });
 
 test("SD-07: two boxes joined into an L; two separate boxes fail", () => {
@@ -107,12 +107,12 @@ test("SD-08: a plane that moves bottom to top; a short or overreaching slider fa
     sections: [{ as: "cut", axis: "z", value: 0, targets: ["solid"], display: "plane_and_intersection" }], bindings: [{ target: "cut.value", expression: "h" }] }, { variables: [slider("h", min, max, 0)] });
   passes("SD-08", cut(-3, 3));
   fails("SD-08", cut(-1, 1), /missing cut/u);
-  fails("SD-08", cut(-5, 5), /cutting plane at -5, outside the solids/u);
+  fails("SD-08", cut(-5, 5), /cutting plane at z = -5, outside the solids/u);
 });
 
 test("SD-10 and SD-13: a cone in Chinese, a frustum", () => {
   passes("SD-10", lesson({ objects: [{ as: "solid", kind: "cone", center: at(), radius: 6, height: 8 }], caption: "体积 = 96π ≈ 301.59；表面积 = 96π ≈ 301.59" }));
-  fails("SD-10", lesson({ objects: [{ as: "solid", kind: "cone", center: at(), radius: 6, height: 8 }], caption: "体积 = 96π ≈ 301.59；表面积 = 60π ≈ 188.5" }), /wrong surface area shown: 188.5/u);
+  fails("SD-10", lesson({ objects: [{ as: "solid", kind: "cone", center: at(), radius: 6, height: 8 }], caption: "体积 = 96π ≈ 301.59；表面积 = 60π ≈ 188.5" }), /wrong surface area shown: 188.4956 ≈ 188.5/u);
   passes("SD-13", lesson({ objects: [{ as: "solid", kind: "frustum", center: at(), radius: 10, top_radius: 6, height: 8 }], caption: "Volume = 1568π/3 ≈ 1642.01" }));
 });
 
@@ -126,4 +126,21 @@ test("near misses: no scene passes, a scene passes unless it draws what the case
   passes("SD-C1", lesson({ objects: [{ as: "solid", kind: "cylinder", center: at(), radius: 1, height: 3 }] }));
   fails("SD-C1", lesson({ objects: [{ as: "solid", kind: "cone", center: at(), radius: 1, height: 3 }] }), /a cone, expected a cylinder/u);
   fails("SD-C1", { ...lesson({}), steps: [{ key: "s", purpose: "Talk", beats: [{ key: "b", say: "No picture.", actions: [] }] }] }, /no 3D scene/u);
+});
+
+test("owner review of #116: four false passes now fail, each for its own reason", () => {
+  // 1. Both values on the line are checked: "π ≈ 502.65" is not 160π.
+  fails("SD-02", lesson({ objects: [{ as: "solid", kind: "cylinder", center: at(), radius: 4, height: 10 }], caption: "Volume = π ≈ 502.65" }), /wrong volume shown: 3.1416 ≈ 502.65/u);
+  passes("SD-02", lesson({ objects: [{ as: "solid", kind: "cylinder", center: at(), radius: 4, height: 10 }], caption: "Volume = 160π ≈ 502.65" }));
+  // 2. A cut is horizontal, on the expected solid, within its height: an x-axis plane on [-3, 3] fails.
+  const cylinder = { as: "solid", kind: "cylinder", center: at(), radius: 2, height: 6 };
+  const vertical = lesson({ objects: [cylinder], sections: [{ as: "cut", axis: "x", value: 0, targets: ["solid"] }], bindings: [{ target: "cut.value", expression: "h" }] }, { variables: [slider("h", -3, 3, 0)] });
+  fails("SD-08", vertical, /missing cut: no horizontal plane/u);
+  fails("SD-08", vertical, /cutting plane at x = -3, outside the solids \(-2 to 2\)/u);
+  // 3. A net the learner opens: a static cube already at unfold 1 fails.
+  fails("SD-09", lesson({ objects: [{ ...box(5, 5, 5), unfold: 1 }], caption: "Surface area = 150" }), /missing net: no slider that opens the solid/u);
+  fails("SD-09", lesson({ objects: [box(5, 5, 5)], caption: "Surface area = 150", bindings: [{ target: "solid.unfold", expression: "u" }] }, { variables: [{ as: "u", initial: 0, min: 0, max: 1, label: "u" }], animations: [["u", 1]] }), /missing net: no slider/u, "animated only: the learner cannot open it");
+  // 4. The L's blocks share a side face on one floor: blocks meeting at a corner fail.
+  fails("SD-07", lesson({ objects: [box(6, 4, 3, at(0, 0)), { ...box(2, 4, 7, { x: 4, y: 4, z: 5 }), as: "solid-side" }], caption: "Volume = 128" }), /wrong solid: expected two_boxes: boxes not on one floor|boxes do not share a side face/u);
+  fails("SD-07", lesson({ objects: [box(6, 4, 3, at(-1, -2)), { ...box(2, 4, 7, { x: 3, y: 4, z: 0 }), as: "solid-side" }], caption: "Volume = 128" }), /boxes do not share a side face/u);
 });

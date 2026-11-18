@@ -1331,7 +1331,8 @@ function builderSolid(model: ModelSolid, path: string, adjustments: Adjustment[]
       fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.sides`, `a regular base has ${REGULAR_SIDES.min} to ${REGULAR_SIDES.max} sides`);
     }
     // The builder takes the circumradius; the question states the edge.
-    return { sides, radius: Number((side / (2 * Math.sin(Math.PI / sides))).toFixed(9)) };
+    // Full precision: rounding the radius made a whole-number surface area inexact ("≈ 96.00" for 96).
+    return { sides, radius: side / (2 * Math.sin(Math.PI / sides)) };
   };
   switch (model.shape) {
     case "box": {

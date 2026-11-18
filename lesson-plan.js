@@ -11525,7 +11525,7 @@ function solidHasMeasure(solid, kind) {
   const measures = solidMeasures(solid);
   return kind === "volume" ? measures.volume !== void 0 : kind === "surface_area" ? measures.surfaceArea !== void 0 : measures.counts !== void 0;
 }
-var whole = (value2) => Math.abs(value2 - Math.round(value2)) <= 1e-9 * Math.max(1, Math.abs(value2));
+var whole = (value2) => Math.abs(value2 - Math.round(value2)) <= 64 * Number.EPSILON * Math.max(1, Math.abs(value2));
 function exactDecimal(value2) {
   for (let places = 0; places <= 3; places += 1) {
     const scaled = value2 * 10 ** places;
@@ -18782,7 +18782,7 @@ function builderSolid(model, path, adjustments) {
     if (!Number.isInteger(sides) || sides < REGULAR_SIDES.min || sides > REGULAR_SIDES.max) {
       fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.sides`, `a regular base has ${REGULAR_SIDES.min} to ${REGULAR_SIDES.max} sides`);
     }
-    return { sides, radius: Number((side / (2 * Math.sin(Math.PI / sides))).toFixed(9)) };
+    return { sides, radius: side / (2 * Math.sin(Math.PI / sides)) };
   };
   switch (model.shape) {
     case "box": {
