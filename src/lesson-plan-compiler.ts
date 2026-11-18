@@ -6,6 +6,7 @@ import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safe
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
 import { PLUGIN_HOOKS, RECIPE_HOOKS } from "./plugins/hooks.js";
+import { praiseArithmetic } from "./praise-arithmetic.js";
 export { PLUGIN_COMPILERS };
 
 export { includeWrittenCardsInFocus, mathExpressionToOll } from "./recipe-kit.js";
@@ -27,6 +28,8 @@ export interface CompiledLessonPlan {
   plugins: Record<string, string>;
   /** Visual decisions the program made for this lesson, by section (1-based). */
   view_adjustments: Array<{ section: number; reason: string; detail: string }>;
+  /** Other program changes to the lesson's text, by section (1-based); each names its kind. */
+  program_adjustments: Array<{ section: number; kind: "success_message_removed"; reason: string; detail: string }>;
 }
 
 /** Compiled kinds a lesson number can drive: every output kind of a registered recipe with number inputs. */
@@ -539,6 +542,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   // Sliders a visual creates itself (a solid's cut or net), by alias, in the order the visuals appear.
   const visualVariables = new Map<string, NonNullable<CompiledVisual["variables"]>[number]>();
   const viewAdjustments: CompiledLessonPlan["view_adjustments"] = [];
+  const programAdjustments: CompiledLessonPlan["program_adjustments"] = [];
   let renderedVisuals: CompiledVisualRegistry | undefined;
   const reuseCompiledVisual = (visual: CompiledVisual) => {
     // The first component cannot duplicate earlier content. Initialize the
@@ -704,12 +708,18 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const tasks: NonNullable<AuthoringLesson["lesson"]["tasks"]> = [];
   const reflections: NonNullable<AuthoringLesson["lesson"]["reflections"]> = [];
   const seenTaskSemantics = new Set<string>();
-  const addTask = (task: NonNullable<AuthoringLesson["lesson"]["tasks"]>[number]): void => {
+  /**
+   * `dropped` records a success message the arithmetic check left out; it is kept only if the task is (a
+   * duplicate is thrown away, as on main). A duplicate's message never moves to the kept task: it was
+   * written for another prompt.
+   */
+  const addTask = (task: NonNullable<AuthoringLesson["lesson"]["tasks"]>[number], dropped?: CompiledLessonPlan["program_adjustments"][number]): void => {
     const semanticKey = JSON.stringify({
       allowed_operations: task.allowed_operations,
       completion: task.completion,
     });
     if (seenTaskSemantics.has(semanticKey)) return;
+    if (dropped) programAdjustments.push(dropped);
     seenTaskSemantics.add(semanticKey);
     if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
       task.start = { kind: "practice", variables: task.allowed_operations.flatMap(operation =>
@@ -732,13 +742,24 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         });
         return;
       }
+      // A success message whose arithmetic is false is dropped, never repaired (decision 0020; plan 3.6).
+      const taskAlias = `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`;
+      let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : undefined;
+      // The check can only remove a message, never cost the lesson: if it fails, the message stays.
+      const praiseClaims = praise ? (() => { try { return praiseArithmetic(praise); } catch { return undefined; } })() : undefined;
+      let droppedPraise: CompiledLessonPlan["program_adjustments"][number] | undefined;
+      if (praiseClaims?.verdict === "false") {
+        const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
+        droppedPraise = { section: sectionOffset + 1, kind: "success_message_removed", reason: "praise_false_arithmetic", detail: `${taskAlias} (${activityPath}.success_message): ${wrong}` };
+        praise = undefined;
+      }
       const common = {
-        as: `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`,
+        as: taskAlias,
         prompt: namedNumbers(activity.prompt, plan),
         availability: { kind: "after_lesson" as const },
         hints: activity.hints.map(hint => namedNumbers(hint, plan)),
         ...(activity.hint_after_attempts ? { hint_after_attempts: activity.hint_after_attempts } : {}),
-        ...(activity.success_message ? { success_message: namedNumbers(activity.success_message, plan) } : {}),
+        ...(praise ? { success_message: praise } : {}),
       };
       if (activity.kind === "number_target") {
         const firstNumber = activity.number_controls[0]?.number;
@@ -756,7 +777,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             value: activity.value,
             tolerance: activity.tolerance,
           },
-        });
+        }, droppedPraise);
       } else if (activity.kind === "numeric_answer") {
         const anchor = resolvedReference(`${activityPath}.reference`);
         // A rounded answer accepts anything that rounds to it, so a learner who
@@ -776,7 +797,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             ...(activity.unit ? { unit: activity.unit } : {}),
             ...(activity.simplest_fraction ? { form: "simplest_fraction" as const } : {}),
           },
-        });
+        }, droppedPraise);
 } else {
         const resolvedTarget = resolvedReference(`${activityPath}.reference`);
         const node = primaryScenes.get(resolvedTarget.authoring_alias)
@@ -790,7 +811,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             yaw: activity.yaw, pitch: activity.pitch, zoom: activity.zoom,
             angular_tolerance: activity.angular_tolerance, zoom_tolerance: activity.zoom_tolerance,
           },
-        });
+        }, droppedPraise);
       }
     });
   });
@@ -850,7 +871,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     steps,
     close: { summary: plan.close.summary, focus: closeFocus },
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
 }
 
 function expressionReferencesVariable(expression: unknown, variable: string): boolean {

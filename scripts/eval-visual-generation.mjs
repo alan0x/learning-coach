@@ -22,17 +22,27 @@ function normalizeExpression(value) {
   return value.normalize("NFKC").toLowerCase().replace(/^y\s*=/u, "").replace(/\s+/gu, "");
 }
 
-function completedModelCalls(stderr) {
+/** The JSON events Coach logs on stderr. */
+function loggedEvents(stderr) {
   return stderr.split("\n").flatMap((line) => {
     const prefix = "learning-coach: ";
     if (!line.startsWith(prefix)) return [];
     try {
-      const event = JSON.parse(line.slice(prefix.length));
-      return event.stage === "model-call" && event.status === "completed" ? [event] : [];
+      return [JSON.parse(line.slice(prefix.length))];
     } catch {
       return [];
     }
   });
+}
+
+/** The compiler logged leaving out this task's success message (false arithmetic, plan 3.6). */
+function messageRemoved(stderr, taskAlias) {
+  return loggedEvents(stderr).some((event) => event.stage === "lesson-plan-program-adjustment"
+    && event.kind === "success_message_removed" && String(event.detail ?? "").split(" ")[0] === taskAlias);
+}
+
+function completedModelCalls(stderr) {
+  return loggedEvents(stderr).filter((event) => event.stage === "model-call" && event.status === "completed");
 }
 
 async function runCase(item) {
@@ -154,7 +164,8 @@ async function runCase(item) {
       "student task has no usable variable control");
       assert.equal(task.completion?.kind, "expression_target");
       assert.ok(task.hints?.length > 0, "student task has no hints");
-      assert.ok(task.success_message?.trim(), "student task has no success feedback");
+      // The compiler leaves out a message whose arithmetic is false (plan 3.6); that is logged, not a miss.
+      assert.ok(task.success_message?.trim() || messageRemoved(stderr, task.as), "student task has no success feedback");
     }
     if (item.expected.scene3d_view_task) {
       const task = lesson.lesson.tasks?.find((candidate) =>
@@ -166,7 +177,7 @@ async function runCase(item) {
         operation.kind === "scene3d_view" && operation.controls?.length > 0),
       "3D view task has no usable scene control");
       assert.ok(task.hints?.length > 0, "3D view task has no hints");
-      assert.ok(task.success_message?.trim(), "3D view task has no success feedback");
+      assert.ok(task.success_message?.trim() || messageRemoved(stderr, task.as), "3D view task has no success feedback");
     }
     const requirementsMatch = stderr.match(
       /"stage":"lesson-requirements"[^\n]*"status":"completed","elapsed_ms":(\d+)/u,
