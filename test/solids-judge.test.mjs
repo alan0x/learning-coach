@@ -221,3 +221,15 @@ test("producer to judge: every exact caption the pinned builder writes passes at
   }
   assert.ok(exact >= 30, `the sweep covers exact values (${exact})`);
 });
+
+test("fifth review of #116: a zero denominator or a non-finite value is never a shown value", () => {
+  const item = { id: "X", expect: { solids: [{ kind: "box", volume: 24 }] } };
+  const boxWith = (caption) => lesson({ objects: [box(2, 3, 4)], caption });
+  for (const caption of ["Volume = 1/0", "Volume = 1/0 ≈ 24.00", "Volume = π/0 ≈ 24.00", "Volume = 0/0", `Volume = 1${"0".repeat(400)}`, `Volume ≈ 1${"0".repeat(400)}.00`]) {
+    const verdict = judgeSolids(item, boxWith(caption));
+    assert.ok(verdict.hard.some((miss) => /wrong volume|unreadable/u.test(miss)), `${caption.slice(0, 30)} must fail: ${verdict.hard.join(" | ") || "passed"}`);
+  }
+  assert.equal(readLine("Volume = 1/0").volume.unreadable !== undefined, true, "read as unreadable, not as a number");
+  assert.deepEqual(judgeSolids(item, boxWith("Volume = 24")).hard, []);
+  assert.deepEqual(judgeSolids(item, boxWith("Volume = 48/2 ≈ 24.00")).hard, []);
+});

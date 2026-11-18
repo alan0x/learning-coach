@@ -182,7 +182,11 @@ const LABELS = { volume: /(?:volume|体积)\s*([=≈])\s*([^;；\n]*)/iu, surfac
 function exactValue(text) {
   const exact = /^\s*(-?\d+(?:\.\d+)?)?\s*(π)?\s*(?:\/\s*(\d+))?\s*$/u.exec(text);
   if (!exact || (exact[1] === undefined && !exact[2])) return undefined;
-  return (exact[1] === undefined ? 1 : Number(exact[1])) * (exact[2] ? Math.PI : 1) / (exact[3] ? Number(exact[3]) : 1);
+  // A zero denominator, or a value too large for a float, is no value (owner review of #116: "1/0" parsed as
+  // Infinity, and an infinite tolerance then accepted it).
+  if (exact[3] !== undefined && Number(exact[3]) === 0) return undefined;
+  const value = (exact[1] === undefined ? 1 : Number(exact[1])) * (exact[2] ? Math.PI : 1) / (exact[3] ? Number(exact[3]) : 1);
+  return Number.isFinite(value) ? value : undefined;
 }
 
 /**
@@ -232,7 +236,8 @@ const noise = (a, b) => 64 * Number.EPSILON * Math.max(Math.abs(a), Math.abs(b))
 // A rounded value: its shown digits' tolerance, or noise if larger (a relative 1e-6 let a large value be off by
 // millions, 1881672302290.56 ± 1.9 million). An exact value, alone or before "≈": noise only (owner review of
 // #116: the relative 1e-6 let "1000001π ≈ 3141592.65" pass for 1000000π).
-const matchesValue = (shown, value) => shown && shown.value !== undefined
+const matchesValue = (shown, value) => shown && Number.isFinite(shown.value) && Number.isFinite(value)
+  && (shown.exact === undefined || Number.isFinite(shown.exact))
   && Math.abs(shown.value - value) <= Math.max(shown.tolerance, noise(shown.value, value))
   && (shown.exact === undefined || Math.abs(shown.exact - value) <= noise(shown.exact, value));
 const expectedValue = (want) => (typeof want === "object" && want !== null ? want.pi * Math.PI : want);
