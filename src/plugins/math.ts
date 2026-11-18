@@ -147,7 +147,7 @@ export const MATH_RECIPES = {
     // Its own feature, so the model can ask for it by name; with section_plane, a cut through any of its
     // shapes routes here, while solid_3d with section_plane still means the teaching cube.
     required_features: ["solids", "section_plane"],
-    model_guidance: "solids照题写尺寸，2个则并排；join叠放或两长方体拼L；show数值和滑块由程序给",
+    model_guidance: "立体都选solids（含截面展开），2个并排，join叠放或拼L；问体积/全表面积/面棱顶点写show",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -318,7 +318,10 @@ const MATH_SCHEMA_PROPERTIES = {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
     solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {
       shape: { enum: ["box", "cylinder", "cone", "sphere", "hemisphere", "prism", "pyramid", "frustum"] },
-      length: { type: "number" }, width: { type: "number" }, height: { type: "number" }, radius: { type: "number" }, top_radius: { type: "number" }, sides: { type: "integer" }, side: { type: "number" },
+      // The provider writes properties in schema order, so every shape's sizes must come in an order it can
+      // follow: height last. With height third, a cylinder written radius first had nowhere left for its
+      // height and put it in side (probe 1, 2026-11-17: 11 of 16 lessons).
+      radius: { type: "number" }, top_radius: { type: "number" }, length: { type: "number" }, width: { type: "number" }, sides: { type: "integer" }, side: { type: "number" }, height: { type: "number" },
     } } },
     join: { enum: ["stack", "side"] },
     show: { type: "array", items: { enum: ["volume", "surface_area", "counts"] } },

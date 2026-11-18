@@ -1278,16 +1278,24 @@ const SOLID_MEASURES: readonly SolidMeasureKind[] = ["volume", "surface_area", "
 type ModelSolid = Partial<Record<typeof SOLID_SIZES[number], number>> & { shape: typeof SOLID_SHAPES[number] };
 type Adjustment = { reason: string; detail: string };
 
-function modelSolid(value: JsonValue | undefined, path: string): ModelSolid {
+function modelSolid(value: JsonValue | undefined, path: string, adjustments: Adjustment[]): ModelSolid {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", path, "expected a solid: its shape and sizes");
   const record = value as Record<string, JsonValue>;
   if (!SOLID_SHAPES.includes(record.shape as typeof SOLID_SHAPES[number])) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.shape`, `expected one of ${SOLID_SHAPES.join(", ")}`);
   }
   const solid: ModelSolid = { shape: record.shape as ModelSolid["shape"] };
+  const used = SHAPE_SIZES[solid.shape];
   for (const key of SOLID_SIZES) {
     const size = record[key];
     if (size === undefined || size === null) continue;
+    // Sizes the shape is not drawn from that say nothing: a zero (the provider fills fields the model
+    // leaves), the sides of a round solid, a cylinder's top radius equal to its radius. One reading: unused.
+    const round = solid.shape === "cylinder" || solid.shape === "cone" || solid.shape === "sphere" || solid.shape === "hemisphere";
+    if (!used.includes(key) && (size === 0 || (key === "sides" && round) || (key === "top_radius" && solid.shape === "cylinder" && size === record.radius))) {
+      adjustments.push({ reason: "solid_unused_size", detail: `${path}.${key}: ${String(size)} on a ${solid.shape}, not used` });
+      continue;
+    }
     if (typeof size !== "number" || !Number.isFinite(size) || size <= 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${key}`, `${key} must be a positive number`);
     solid[key] = size;
   }
@@ -1403,7 +1411,7 @@ function compileSolid3d(
   const adjustments: Adjustment[] = [];
   const written = input.solids;
   if (!Array.isArray(written) || written.length < 1 || written.length > 2) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, "expected one solid, or two side by side");
-  const solids = written.map((item, index) => builderSolid(modelSolid(item, `${path}.solids[${index}]`), `${path}.solids[${index}]`, adjustments));
+  const solids = written.map((item, index) => builderSolid(modelSolid(item, `${path}.solids[${index}]`, adjustments), `${path}.solids[${index}]`, adjustments));
   const join = input.join;
   if (join !== undefined && join !== "stack" && join !== "side") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "expected stack or side");
   if (join !== undefined && solids.length !== 2) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "join needs two solids");

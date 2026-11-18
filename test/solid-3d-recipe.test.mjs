@@ -206,3 +206,21 @@ test("review fixes: routing, the wider cylinder below, sizes a shape does not us
   assert.match(spanish.content.caption, /^体积 = 160π/u, "title, slider and measures in the same language");
   assert.equal(spanish.variables[0].label, "截面高度");
 });
+
+test("probe 1 (2026-11-17): sizes in an order the provider can follow, and unused sizes that say nothing", () => {
+  // The provider writes properties in schema order: height must come after every other size.
+  const order = Object.keys(api.RECIPE_SCHEMA_PROPERTIES.solid_3d.solids.items.properties);
+  assert.equal(order.at(-1), "height");
+  assert.deepEqual(order.slice(0, 3), ["shape", "radius", "top_radius"]);
+  const result = withTrial(compileScript([
+    // As probe 1's model wrote a can, with its height where the schema let it.
+    ["can", { solids: [{ shape: "cylinder", radius: 4, top_radius: 4, sides: 32, side: 0, height: 10 }], show: ["volume"] }, "en-US"],
+    ["cone-zeros", { solids: [{ shape: "cone", radius: 6, top_radius: 0, side: 0, height: 8 }], show: ["volume"] }, "en-US"],
+    ["cone-top", { solids: [{ shape: "cone", radius: 6, top_radius: 3, height: 8 }] }, "en-US"],
+    ["side-as-height", { solids: [{ shape: "cylinder", radius: 4, top_radius: 4, side: 10 }] }, "en-US"],
+  ]));
+  assert.equal(result.can.content.caption, "Volume = 160π ≈ 502.65");
+  assert.equal(result["cone-zeros"].content.caption, "Volume = 96π ≈ 301.59");
+  assert.match(result["cone-top"].message, /a cone has no top_radius/u, "a real top radius means a frustum: refused");
+  assert.match(result["side-as-height"].message, /a cylinder has no side/u, "a size where another belongs is never moved");
+});

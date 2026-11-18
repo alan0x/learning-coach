@@ -13573,7 +13573,7 @@ var MATH_RECIPES = {
     // Its own feature, so the model can ask for it by name; with section_plane, a cut through any of its
     // shapes routes here, while solid_3d with section_plane still means the teaching cube.
     required_features: ["solids", "section_plane"],
-    model_guidance: "solids\u7167\u9898\u5199\u5C3A\u5BF8\uFF0C2\u4E2A\u5219\u5E76\u6392\uFF1Bjoin\u53E0\u653E\u6216\u4E24\u957F\u65B9\u4F53\u62FCL\uFF1Bshow\u6570\u503C\u548C\u6ED1\u5757\u7531\u7A0B\u5E8F\u7ED9"
+    model_guidance: "\u7ACB\u4F53\u90FD\u9009solids\uFF08\u542B\u622A\u9762\u5C55\u5F00\uFF09\uFF0C2\u4E2A\u5E76\u6392\uFF0Cjoin\u53E0\u653E\u6216\u62FCL\uFF1B\u95EE\u4F53\u79EF/\u5168\u8868\u9762\u79EF/\u9762\u68F1\u9876\u70B9\u5199show"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -13740,13 +13740,16 @@ var MATH_SCHEMA_PROPERTIES = {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
     solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {
       shape: { enum: ["box", "cylinder", "cone", "sphere", "hemisphere", "prism", "pyramid", "frustum"] },
-      length: { type: "number" },
-      width: { type: "number" },
-      height: { type: "number" },
+      // The provider writes properties in schema order, so every shape's sizes must come in an order it can
+      // follow: height last. With height third, a cylinder written radius first had nowhere left for its
+      // height and put it in side (probe 1, 2026-11-17: 11 of 16 lessons).
       radius: { type: "number" },
       top_radius: { type: "number" },
+      length: { type: "number" },
+      width: { type: "number" },
       sides: { type: "integer" },
-      side: { type: "number" }
+      side: { type: "number" },
+      height: { type: "number" }
     } } },
     join: { enum: ["stack", "side"] },
     show: { type: "array", items: { enum: ["volume", "surface_area", "counts"] } },
@@ -18726,16 +18729,22 @@ var SOLID_SHAPES = ["box", "cylinder", "cone", "sphere", "hemisphere", "prism", 
 var SOLID_SIZES = ["length", "width", "height", "radius", "top_radius", "sides", "side"];
 var REGULAR_SIDES = { min: 3, max: 8 };
 var SOLID_MEASURES = ["volume", "surface_area", "counts"];
-function modelSolid(value2, path) {
+function modelSolid(value2, path, adjustments) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "expected a solid: its shape and sizes");
   const record3 = value2;
   if (!SOLID_SHAPES.includes(record3.shape)) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.shape`, `expected one of ${SOLID_SHAPES.join(", ")}`);
   }
   const solid = { shape: record3.shape };
+  const used = SHAPE_SIZES[solid.shape];
   for (const key of SOLID_SIZES) {
     const size = record3[key];
     if (size === void 0 || size === null) continue;
+    const round = solid.shape === "cylinder" || solid.shape === "cone" || solid.shape === "sphere" || solid.shape === "hemisphere";
+    if (!used.includes(key) && (size === 0 || key === "sides" && round || key === "top_radius" && solid.shape === "cylinder" && size === record3.radius)) {
+      adjustments.push({ reason: "solid_unused_size", detail: `${path}.${key}: ${String(size)} on a ${solid.shape}, not used` });
+      continue;
+    }
     if (typeof size !== "number" || !Number.isFinite(size) || size <= 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${key}`, `${key} must be a positive number`);
     solid[key] = size;
   }
@@ -18846,7 +18855,7 @@ function compileSolid3d(base, content, role, placement, plan, path) {
   const adjustments = [];
   const written = input.solids;
   if (!Array.isArray(written) || written.length < 1 || written.length > 2) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, "expected one solid, or two side by side");
-  const solids = written.map((item, index) => builderSolid(modelSolid(item, `${path}.solids[${index}]`), `${path}.solids[${index}]`, adjustments));
+  const solids = written.map((item, index) => builderSolid(modelSolid(item, `${path}.solids[${index}]`, adjustments), `${path}.solids[${index}]`, adjustments));
   const join = input.join;
   if (join !== void 0 && join !== "stack" && join !== "side") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "expected stack or side");
   if (join !== void 0 && solids.length !== 2) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "join needs two solids");
