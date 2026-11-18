@@ -19223,12 +19223,12 @@ var SYMBOL_OPS = {
   "/": "/",
   "\uFF0F": "/"
 };
-var NOT_A_RESULT = /^((more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r)\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
+var ENDS_CLAUSE = /^$|^[\r\n]|^[。！？；，、：）”’]|^[.,!?;:)\]}"'”’](?:\s|$)/u;
 var REMAINDER = /remainder|\brem\b|(?<!nothing |no )left ?over|余数|余\s*\d|……|\bR\s?\d/iu;
 var NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不是|并非|而非|(?<![不没])错|不对/iu;
 var ASKED_CLAUSE = /^\s*(is|are|does|do|if|suppose|what if)\b|^\s*(如果|假如|假设|要是)/iu;
 var ASKED_SENTENCE = /[?？吗][\s"'”’)）]*$/u;
-var ROUNDED = /\brounded\b|\bround(?:s|ing)? (?:to|off|up|down)\b|\bdecimal places?\b|\bapproximately\b|\bnearest (?:whole|tenth|hundredth|thousandth|integer|cent)\b|约等于|大约|近似|保留|四舍五入|精确到|(?<![节制预契简大])约(?![定束会])/iu;
+var ROUNDED = /\brounded\b|\bround(?:s|ing)? (?:to|off|up|down)\b|\bdecimal places?\b|\bapproximately\b|\bnearest (?:whole|tenth|hundredth|thousandth|integer|cent)\b|约等于|大约|近似|保留|四舍五入|精确到/iu;
 var LABEL = /^(step|question|problem|part|example|exercise|no|q|第)$/iu;
 var SENTENCE_END = /[!?。！？；;\n]|\.(?!\d)/gu;
 var CLAUSE_END = /[!?。！？；;\n、]|\.(?!\d)|(?<!\d)[,，:：]|[,，:：](?!\d)/gu;
@@ -19245,6 +19245,14 @@ function tokenize2(text3) {
   const previous = () => placed[placed.length - 1];
   while (i < text3.length) {
     const ch = text3[i];
+    if (ch === "\n" || ch === "\r") {
+      push({ kind: "other", text: ch }, 1);
+      continue;
+    }
+    if (/^[-–‒－]/u.test(ch) && /^(\r|\n)$/u.test(previous()?.text ?? "")) {
+      push({ kind: "other", text: ch }, 1);
+      continue;
+    }
     if (/\s/u.test(ch)) {
       i += 1;
       continue;
@@ -19337,7 +19345,7 @@ function holds(exact, resultText, result) {
   const scale2 = 10n ** BigInt(places);
   const rounded = abs(difference.n) * 2n * scale2 <= difference.d;
   const towardZero = exact.n > 0n === difference.n > 0n && (result.n === 0n || result.n > 0n === exact.n > 0n);
-  const cutOff = towardZero && abs(difference.n) * scale2 < difference.d;
+  const cutOff = places >= 2 && towardZero && abs(difference.n) * scale2 < difference.d;
   return rounded || cutOff;
 }
 function praiseArithmetic(text3) {
@@ -19364,8 +19372,8 @@ function praiseArithmetic(text3) {
     const result = tokens[e + 1];
     if (result?.kind !== "num" || result.glued) return;
     const after = tokens[e + 2];
-    if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || after.text === "\u2248" || /^[:：,]$/u.test(after.text) && betweenDigits(after))) return;
-    if (NOT_A_RESULT.test(text3.slice(result.end, result.end + LOOKAHEAD).trimStart())) return;
+    if (after && /^[:：,]$/u.test(after.text) && betweenDigits(after)) return;
+    if (!ENDS_CLAUSE.test(text3.slice(result.end, result.end + LOOKAHEAD).replace(/^[ \t]+/u, ""))) return;
     const values = [];
     const ops = [];
     let k = e - 1;
@@ -19385,6 +19393,8 @@ function praiseArithmetic(text3) {
     const spacedEquals = !token.symbol || /\s/u.test(text3[token.at - 1] ?? "") || /\s/u.test(text3[token.end] ?? "");
     const opTokens = tokens.slice(k, e).filter((_t, index) => index % 2 === 1);
     if (spacedEquals && opTokens.some((op) => op.kind === "op" && op.op === "-" && op.text !== "\u2212" && betweenDigits(op))) return;
+    const spoken = opTokens.some((op) => !(op.text in SYMBOL_OPS));
+    if (spoken && ops.some((op) => op === "+" || op === "-") && ops.some((op) => op === "*" || op === "/")) return;
     const exact = evaluate2(values, ops);
     if (!exact) return;
     const start = tokens[k].at;
@@ -19971,23 +19981,15 @@ function compileLessonPlan(value2, options = {}) {
   });
   const tasks = [];
   const reflections = [];
-  const seenTaskSemantics = /* @__PURE__ */ new Map();
+  const seenTaskSemantics = /* @__PURE__ */ new Set();
   const addTask = (task, dropped) => {
     const semanticKey = JSON.stringify({
       allowed_operations: task.allowed_operations,
       completion: task.completion
     });
-    const kept = seenTaskSemantics.get(semanticKey);
-    if (kept) {
-      if (kept.dropped && task.success_message) {
-        kept.task.success_message = task.success_message;
-        programAdjustments.splice(programAdjustments.indexOf(kept.dropped), 1);
-        kept.dropped = void 0;
-      }
-      return;
-    }
+    if (seenTaskSemantics.has(semanticKey)) return;
     if (dropped) programAdjustments.push(dropped);
-    seenTaskSemantics.set(semanticKey, { task, dropped });
+    seenTaskSemantics.add(semanticKey);
     if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
       task.start = { kind: "practice", variables: task.allowed_operations.flatMap((operation) => operation.kind === "variable_change" ? [operation.variable] : []) };
     }

@@ -707,31 +707,20 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
 
   const tasks: NonNullable<AuthoringLesson["lesson"]["tasks"]> = [];
   const reflections: NonNullable<AuthoringLesson["lesson"]["reflections"]> = [];
-  const seenTaskSemantics = new Map<string, {
-    task: NonNullable<AuthoringLesson["lesson"]["tasks"]>[number];
-    dropped?: CompiledLessonPlan["program_adjustments"][number];
-  }>();
+  const seenTaskSemantics = new Set<string>();
   /**
    * `dropped` records a success message the arithmetic check left out; it is kept only if the task is (a
-   * duplicate is thrown away). If the check left out the kept task's message, a duplicate's own message
-   * fills it in and the record is withdrawn. A task the model wrote without a message is left as it was.
+   * duplicate is thrown away, as on main). A duplicate's message never moves to the kept task: it was
+   * written for another prompt.
    */
   const addTask = (task: NonNullable<AuthoringLesson["lesson"]["tasks"]>[number], dropped?: CompiledLessonPlan["program_adjustments"][number]): void => {
     const semanticKey = JSON.stringify({
       allowed_operations: task.allowed_operations,
       completion: task.completion,
     });
-    const kept = seenTaskSemantics.get(semanticKey);
-    if (kept) {
-      if (kept.dropped && task.success_message) {
-        kept.task.success_message = task.success_message;
-        programAdjustments.splice(programAdjustments.indexOf(kept.dropped), 1);
-        kept.dropped = undefined;
-      }
-      return;
-    }
+    if (seenTaskSemantics.has(semanticKey)) return;
     if (dropped) programAdjustments.push(dropped);
-    seenTaskSemantics.set(semanticKey, { task, dropped });
+    seenTaskSemantics.add(semanticKey);
     if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
       task.start = { kind: "practice", variables: task.allowed_operations.flatMap(operation =>
         operation.kind === "variable_change" ? [operation.variable] : []) };

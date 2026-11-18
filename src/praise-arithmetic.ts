@@ -55,8 +55,12 @@ const SYMBOL_OPS: Record<string, "+" | "-" | "*" | "/"> = {
   "+": "+", "＋": "+", "-": "-", "−": "-", "–": "-", "‒": "-", "－": "-",
   "×": "*", "*": "*", "＊": "*", "·": "*", "÷": "/", "/": "/", "／": "/",
 };
-/** A result followed by one of these is not the value of the expression. */
-const NOT_A_RESULT = /^((more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r)\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
+/**
+ * A result is read only when it ends its clause: what follows is the end of the text or one of these marks.
+ * "3 × 4 is 3 groups of 4", "8 + 5 makes 1 ten and 3 ones", "7 ÷ 2 = 3 remainder 1" and "= 24 平方厘米" are
+ * not read, so no list of words that may follow a number is needed.
+ */
+const ENDS_CLAUSE = /^$|^[\r\n]|^[。！？；，、：）”’]|^[.,!?;:)\]}"'”’](?:\s|$)/u;
 /** A division claim in a sentence that speaks of a remainder is a division with remainder, not exact. */
 const REMAINDER = /remainder|\brem\b|(?<!nothing |no )left ?over|余数|余\s*\d|……|\bR\s?\d/iu;
 /** A claim in a clause that negates it or calls it a mistake is quoted, not stated. 不错 and 没错 are praise. */
@@ -66,7 +70,7 @@ const ASKED_CLAUSE = /^\s*(is|are|does|do|if|suppose|what if)\b|^\s*(如果|假�
 /** A sentence that ends as a question. */
 const ASKED_SENTENCE = /[?？吗][\s"'”’)）]*$/u;
 /** A sentence that says it rounds is not read: the place and direction of rounding are its own. */
-const ROUNDED = /\brounded\b|\bround(?:s|ing)? (?:to|off|up|down)\b|\bdecimal places?\b|\bapproximately\b|\bnearest (?:whole|tenth|hundredth|thousandth|integer|cent)\b|约等于|大约|近似|保留|四舍五入|精确到|(?<![节制预契简大])约(?![定束会])/iu;
+const ROUNDED = /\brounded\b|\bround(?:s|ing)? (?:to|off|up|down)\b|\bdecimal places?\b|\bapproximately\b|\bnearest (?:whole|tenth|hundredth|thousandth|integer|cent)\b|约等于|大约|近似|保留|四舍五入|精确到/iu;
 /** A label number (Step 2, Question 3) is not the first term of a subtraction after it. */
 const LABEL = /^(step|question|problem|part|example|exercise|no|q|第)$/iu;
 /** Sentence ends; a full stop between digits is a decimal point. */
@@ -88,6 +92,10 @@ function tokenize(text: string): Placed[] {
   const previous = () => placed[placed.length - 1];
   while (i < text.length) {
     const ch = text[i]!;
+    // A line break ends whatever came before it, so a claim never runs across lines.
+    if (ch === "\n" || ch === "\r") { push({ kind: "other", text: ch }, 1); continue; }
+    // A dash that opens a line is a list bullet, not a minus sign.
+    if (/^[-–‒－]/u.test(ch) && /^(\r|\n)$/u.test(previous()?.text ?? "")) { push({ kind: "other", text: ch }, 1); continue; }
     if (/\s/u.test(ch)) { i += 1; continue; }
     const ahead = text.slice(i, i + LOOKAHEAD);
     // A minus sign right before a digit is the number's sign unless a number or ")" comes just before it.
@@ -180,7 +188,8 @@ function holds(exact: Fraction, resultText: string, result: Fraction): boolean {
   const scale = 10n ** BigInt(places);
   const rounded = abs(difference.n) * 2n * scale <= difference.d;
   const towardZero = (exact.n > 0n) === (difference.n > 0n) && (result.n === 0n || (result.n > 0n) === (exact.n > 0n));
-  const cutOff = towardZero && abs(difference.n) * scale < difference.d;
+  // Cut off only at two places or more, as number-line-fit never reads one place as a repeating value.
+  const cutOff = places >= 2 && towardZero && abs(difference.n) * scale < difference.d;
   return rounded || cutOff;
 }
 
@@ -203,14 +212,13 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
   const betweenDigits = (token: Placed) => /\d/u.test(text[token.at - 1] ?? "") && /\d/u.test(text[token.at + 1] ?? "");
   tokens.forEach((token, e) => {
     if (token.kind !== "eq") return;
-    // Right side: one number, not glued to a symbol, and not continued by an operator, "=", another number
-    // (the 1/2 of 1 1/2), a colon or comma between digits (3:45, 3,5) or a comparison.
+    // Right side: one number, not glued to a symbol, that ends its clause; a colon or comma between digits
+    // (3:45, 3,5) continues the number instead.
     const result = tokens[e + 1];
     if (result?.kind !== "num" || result.glued) return;
     const after = tokens[e + 2];
-    if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || after.text === "≈"
-      || /^[:：,]$/u.test(after.text) && betweenDigits(after))) return;
-    if (NOT_A_RESULT.test(text.slice(result.end, result.end + LOOKAHEAD).trimStart())) return;
+    if (after && /^[:：,]$/u.test(after.text) && betweenDigits(after)) return;
+    if (!ENDS_CLAUSE.test(text.slice(result.end, result.end + LOOKAHEAD).replace(/^[ \t]+/u, ""))) return;
     // Left side: number (operator number)+, read backwards from the "=".
     const values: Fraction[] = [];
     const ops: Array<"+" | "-" | "*" | "/"> = [];
@@ -238,6 +246,9 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
     const spacedEquals = !token.symbol || /\s/u.test(text[token.at - 1] ?? "") || /\s/u.test(text[token.end] ?? "");
     const opTokens = tokens.slice(k, e).filter((_t, index) => index % 2 === 1);
     if (spacedEquals && opTokens.some((op) => op.kind === "op" && op.op === "-" && op.text !== "−" && betweenDigits(op))) return;
+    // "2 plus 3 times 4 is 20" is spoken left to right; with word operators of both kinds the order is unclear.
+    const spoken = opTokens.some((op) => !(op.text in SYMBOL_OPS));
+    if (spoken && ops.some((op) => op === "+" || op === "-") && ops.some((op) => op === "*" || op === "/")) return;
     const exact = evaluate(values, ops);
     if (!exact) return;
     const start = tokens[k]!.at;

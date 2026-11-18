@@ -18,7 +18,6 @@ test("true claims are kept", () => {
   for (const text of [
     "Great job! 8 plus 2 equals 10.",
     "You made a ten to find 8 + 5 = 13.",
-    "很好！当长为8、宽为3时，总面积就是 8 × 3 = 24 平方厘米。",
     "Great job! 9 plus 5 is 14.",
     "从 -3 向右移动 4 个单位到达了 1，即 -3 + 4 = 1。",
     "Perfect! 5 times 3 equals 15.",
@@ -39,7 +38,6 @@ test("true claims are kept", () => {
     "Answer: 8 + 5 = 13",
     "Step 2: 4 + 4 = 8",
     "第1步：8 + 5 = 13",
-    "面积 = 8 × 3 = 24 平方厘米",
     // review, round 2: a value that ends may be rounded when the sentence says so; a decimal comma is one number
     "Great! 3 × 4 = 12, and 12 ÷ 4 = 3 with nothing left over.",
     // review, round 3: a quoted mistake is skipped in its own clause only; whole-number rounding said aloud
@@ -47,6 +45,10 @@ test("true claims are kept", () => {
     // review, round 4: a repeating value cut off at the places shown, as number-line-fit reads it
     "2 ÷ 3 = 0.66",
     "8-3=5",
+    // review, round 5: rounded at one place (1/7 is 0.14…); a bullet dash opens a line
+    "1 ÷ 7 = 0.1",
+    "Level 2\n- 8 + 5 = 13",
+    "Nice!\n-3 + 4 = 7",
     "8 ＋ 5 ＝ 13",
   ]) assert.equal(verdict(text), "true", text);
 });
@@ -78,7 +80,6 @@ test("false claims are found", () => {
     // review, round 2: common praise words are not negations; "其余" or "nothing left over" is not a remainder
     "没错，8 + 5 = 14。",
     "做得不错，8 × 3 = 25。",
-    "非常棒，8 × 3 = 25 平方厘米，没错！",
     "其余部分：6 ÷ 2 = 4",
     "15 ÷ 3 = 6, nothing left over.",
     // review, round 3: words that only contain "round", "about" or 约; negation outside the claim's clause;
@@ -93,9 +94,11 @@ test("false claims are found", () => {
     "做得不错了，8 + 5 = 14",
     "8 ＋ 5 ＝ 14",
     "8 － 3 = 4",
-    // review, round 4: "than"/"less" only as whole words
-    "8 + 5 = 14 thanks to your counting!",
-    "8 + 5 = 14 lessons learned",
+    // review, round 5: 约 alone no longer means rounded (约分 is simplifying); one place is never a cut-off
+    "约分：6 ÷ 2 = 4",
+    "2 ÷ 3 = 0.6",
+    "很好！8 × 3 = 25。",
+    "面积 = 8 × 3 = 25",
   ]) assert.equal(verdict(text), "false", text);
 });
 
@@ -157,7 +160,6 @@ test("anything not written wholly in numerals is not read", () => {
     // review, round 4: a sentence that says it rounds is not read; a result glued to a scale or unit word
     "1 ÷ 8 = 0.13 (rounded)",
     "1 ÷ 8 = 0.13 to 2 decimal places",
-    "约 1 ÷ 8 = 0.13",
     "47 ÷ 10 = 5, rounded to the nearest whole number.",
     "Rounded to the nearest whole, 7 ÷ 2 = 4.",
     "47 + 6 = 50, rounded to the nearest ten.",
@@ -170,6 +172,18 @@ test("anything not written wholly in numerals is not read", () => {
     "+ 3 = 8",
     "Times 2 is 10",
     "加 3 等于 8",
+    // review, round 5: a result read only when it ends its clause; line breaks and bullets; spoken order
+    "很好！当长为8、宽为3时，总面积就是 8 × 3 = 24 平方厘米。",
+    "面积 = 8 × 3 = 24 平方厘米",
+    "非常棒，8 × 3 = 25 平方厘米，没错！",
+    "8 + 5 = 14 thanks to your counting!",
+    "8 + 5 = 14 lessons learned",
+    "Great! 3 × 4 is 3 groups of 4.",
+    "8 + 5 makes 1 ten and 3 ones.",
+    "Nice! 8 + 5 is 10 and 3 more, so 13.",
+    "1/4 + 1/4 = 2 个 1/4。",
+    "6 + 6 is 1 dozen",
+    "2 plus 3 times 4 is 20",
     "正确，θ=π/2 时 sin θ 取得最大值 1。",
     "现在 x=2，对应 y=4。",
     "Done: Slope (m) is now -5.",
@@ -212,16 +226,16 @@ test("the lesson is otherwise unchanged when a message is dropped", () => {
   );
 });
 
-test("a duplicate task's true message fills in a kept task whose message was dropped", () => {
-  // review, round 3: the first copy was kept with no message although a later copy had a true one.
+test("a duplicate task never moves its message to the kept task", () => {
+  // review, round 5: the duplicate's message was written for another prompt, so the kept task stays as dropped.
   const plan = withPraise("Great job! 2 + 2 = 5.");
   const section = plan.sections.find((item) => (item.student_activities ?? []).some((activity) => activity.kind === "number_target"));
   const twin = structuredClone(section.student_activities.find((activity) => activity.kind === "number_target"));
   twin.success_message = "Great job! 2 + 2 = 4.";
   section.student_activities.push(twin);
   const compiled = compileAndValidateLessonPlan(plan);
-  assert.deepEqual(taskMessages(compiled), ["Great job! 2 + 2 = 4."]);
-  assert.equal(praiseDrops(compiled).length, 0, "review, round 4: a drop that was filled in is withdrawn");
+  assert.deepEqual(taskMessages(compiled), [undefined]);
+  assert.equal(praiseDrops(compiled).length, 1);
 });
 
 test("a task the model wrote with no message is not filled in by a duplicate", () => {
