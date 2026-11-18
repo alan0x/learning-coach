@@ -48,3 +48,28 @@ No worse than the baseline: SD-N5 routed to the teaching cube on both arms and d
 - The trial request grows by **+801 B** (card +206, schema +595).
 
 568 tests pass, and all 139 recorded lessons replay identically. Probe 3 needs the owner's approval.
+
+# Probe 3 (2026-11-17, owner-approved, cap 112)
+
+The same cases, on the build at the judge-fix commit (OLL 5f11ddf; the stricter judge from the owner's review). **50 calls**, with about 85 k prompt tokens. **No errors and no refusals.**
+
+## Result: 13 of 16 in-scope and control cases passed (6 → 10 → 13)
+
+Every lesson was read by hand: caption, objects and narration.
+
+| Case | Judge | Reading |
+|---|---|---|
+| SD-01, SD-10 | missing surface area | The first section teaches the volume only, and its narration says so. Later sections are not in the first part, so whether they show the area is unknown. **Not a mislead.** |
+| SD-08 | wrong solid | The outline asked for `solid_3d` + `section_plane`, the teaching cube's features. It drew a 2×2×2 box while the narration described a cylinder of radius 2 and height 6. **Misleading**, though the baseline draws the same cube. |
+| SD-06, SD-09 | pass | The narration says "let us unfold it". The net opens only when the learner drags (learner-only slider, v1), so the teacher promises motion they can't show. |
+| All other in-scope cases | pass | The narration's numbers agree with the measures line (for example SD-12: 64 and 33.51; SD-15: 18π ≈ 56.55). |
+
+Near misses, against the baseline:
+- **N1** (cube and sphere), **N3** (cone and cylinder, pouring only narrated), **N4** (a 3×2×2 box with its volume, no cube grid) and **N2** (the torus routes to the implicit surface on both arms) are no worse than the baseline.
+- **N5:** the candidate drew a cube with no cut, which is better than the baseline's forbidden horizontal cut.
+- **N6, worse than the baseline.** The candidate drew an unfolding net of a box with a lid, while the narration says there are 5 faces and no lid. The baseline drew no 3D scene.
+
+## Owner decisions this raises
+1. **SD-08 routing.** The model still picks the teaching cube for cuts. Recommended: retire `cube_with_section` when `solid_3d` is switched on, since a box with a cut covers it. That removes the choice, and the switch-on gate measures it.
+2. **N6, an open box.** Recommended: list it as a known near miss. An open-box option would be a new 0019 item.
+3. **Promised motion (SD-06, SD-09).** Recommended: a later 0020-style field that lets the model animate the program's slider, with its own probe.
