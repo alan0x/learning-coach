@@ -19796,6 +19796,7 @@ function resolveMetNumberTargets(plan) {
 function compileLessonPlan(value2, options = {}) {
   const resolved = resolveLessonPlan(value2, options);
   const plan = resolved.plan;
+  markRepeatedChanges(plan);
   setLessonTextLanguage(plan, options.language);
   for (const hooks of PLUGIN_HOOKS) hooks.normalize_plan?.(plan);
   for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
@@ -19815,6 +19816,29 @@ function compileLessonPlan(value2, options = {}) {
   const visualVariables = /* @__PURE__ */ new Map();
   const viewAdjustments = [];
   const programAdjustments = [];
+  const beatStart = (moment, sectionIndex, momentIndex) => {
+    const restarts = moment.restart_numbers ?? [];
+    const replays = Object.entries(moment.replay_from ?? {}).map(([number, from]) => [Number(number), from]).filter(([number, from]) => {
+      const definition = plan.numbers?.[number - 1];
+      const end = moment.actions.find((action) => action.action === "animate" && action.number === number)?.end_value;
+      return definition !== void 0 && end !== void 0 && from !== end && from >= definition.min && from <= definition.max && !restarts.includes(number);
+    });
+    for (const [number, from] of replays) {
+      const end = moment.actions.find((action) => action.action === "animate" && action.number === number).end_value;
+      programAdjustments.push({
+        section: sectionIndex,
+        kind: "change_replayed",
+        reason: "animation_replays_change",
+        detail: `section-${pad2(sectionIndex)}/moment-${pad2(momentIndex)}: ${variableAlias(number)} is already ${end}; replayed from ${from}`
+      });
+    }
+    if (!restarts.length && !replays.length) return {};
+    return { start: {
+      kind: "replay",
+      variables: [...restarts, ...replays.map(([number]) => number)].map(variableAlias),
+      ...replays.length ? { values: Object.fromEntries(replays.map(([number, from]) => [variableAlias(number), from])) } : {}
+    } };
+  };
   let renderedVisuals;
   const reuseCompiledVisual = (visual) => {
     if (reusableVisuals.size === 0) return visual;
@@ -19969,7 +19993,7 @@ function compileLessonPlan(value2, options = {}) {
       includeWrittenCardsInFocus(actions);
       beats.push({
         key: `moment-${pad2(momentIndex)}`,
-        ...moment.restart_numbers?.length ? { start: { kind: "replay", variables: moment.restart_numbers.map(variableAlias) } } : {},
+        ...beatStart(moment, sectionIndex, momentIndex),
         // The model sometimes writes a formula placeholder (n1) in spoken or
         // written text; learners hear and read the number's own symbol.
         ...moment.narration ? { say: namedNumbers(moment.narration, plan) } : {},
@@ -20146,52 +20170,29 @@ function compileLessonPlan(value2, options = {}) {
     steps,
     close: { summary: plan.close.summary, focus: closeFocus }
   };
-  replayRepeatedChanges(lesson, programAdjustments);
   return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
 }
-var ACTION_PHASES = ["before_speech", "during_speech", "after_speech"];
-function replayRepeatedChanges(lesson, adjustments) {
-  const variables = lesson.lesson.variables ?? [];
-  const initial = new Map(variables.map((variable) => [variable.as, variable.initial]));
-  const value2 = new Map(initial);
+function markRepeatedChanges(plan) {
+  const value2 = new Map((plan.numbers ?? []).map((number, index) => [index + 1, number.initial]));
   const changedFrom = /* @__PURE__ */ new Map();
-  lesson.steps.forEach((step, stepIndex) => step.beats.forEach((beat) => {
-    const canReplay = !beat.start || beat.start.kind === "replay";
-    if (beat.start?.kind === "replay") {
-      for (const alias of beat.start.variables ?? []) {
-        const start = beat.start.values?.[alias] ?? initial.get(alias);
-        if (start !== void 0) value2.set(alias, start);
-      }
+  for (const section of plan.sections) for (const moment of section.moments) {
+    for (const number of moment.restart_numbers ?? []) {
+      value2.set(number, plan.numbers[number - 1].initial);
+      changedFrom.delete(number);
     }
-    const touched = /* @__PURE__ */ new Set();
-    const replay = {};
-    for (const phase of ACTION_PHASES) for (const action of beat.actions) {
-      if (action.do !== "animate" || (action.when ?? "during_speech") !== phase) continue;
-      const current = value2.get(action.variable);
-      const from = changedFrom.get(action.variable);
-      if (canReplay && current === action.value && !touched.has(action.variable) && from !== void 0 && from !== current && !(beat.start?.kind === "replay" && beat.start.variables?.includes(action.variable))) {
-        replay[action.variable] = from;
-        adjustments.push({
-          section: Number(/(\d+)$/u.exec(step.key)?.[1] ?? stepIndex + 1),
-          kind: "change_replayed",
-          reason: "animation_replays_change",
-          detail: `${step.key}/${beat.key}: ${action.variable} is already ${current}; replayed from ${from}`
-        });
-      } else if (current !== action.value) {
-        changedFrom.set(action.variable, current ?? action.value);
-      }
-      touched.add(action.variable);
-      value2.set(action.variable, action.value);
+    const animations = moment.actions.filter((action) => action.action === "animate");
+    const only2 = animations.length === 1 ? animations[0] : void 0;
+    const from = only2 ? changedFrom.get(only2.number) : void 0;
+    if (only2 && (only2.timing ?? "during_speech") !== "after_speech" && value2.get(only2.number) === only2.end_value && from !== void 0 && from !== only2.end_value && !(moment.restart_numbers ?? []).includes(only2.number)) {
+      moment.replay_from = { [only2.number]: from };
     }
-    const replayed = Object.keys(replay);
-    if (replayed.length === 0) return;
-    const existing = beat.start?.kind === "replay" ? beat.start : void 0;
-    beat.start = {
-      kind: "replay",
-      variables: [...existing?.variables ?? [], ...replayed],
-      values: { ...existing?.values ?? {}, ...replay }
-    };
-  }));
+    for (const timing of ["before_speech", "during_speech", "after_speech"]) for (const action of animations) {
+      if ((action.timing ?? "during_speech") !== timing) continue;
+      const current = value2.get(action.number);
+      if (current !== void 0 && current !== action.end_value) changedFrom.set(action.number, current);
+      value2.set(action.number, action.end_value);
+    }
+  }
 }
 function expressionReferencesVariable(expression, variable) {
   if (typeof expression !== "string") return false;

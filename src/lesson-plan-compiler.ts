@@ -1,7 +1,7 @@
 import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
-import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, recipeDeclares, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, recipeDeclares, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanAnimateAction, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
 import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen } from "./recipe-kit.js";
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
@@ -523,6 +523,8 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
 export function compileLessonPlan(value: unknown, options: CompileLessonPlanOptions = {}): CompiledLessonPlan {
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
+  // Read the model's own animations before anything below normalizes or adds to them.
+  markRepeatedChanges(plan);
   setLessonTextLanguage(plan, options.language);
   for (const hooks of PLUGIN_HOOKS) hooks.normalize_plan?.(plan);
   for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
@@ -543,6 +545,32 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const visualVariables = new Map<string, NonNullable<CompiledVisual["variables"]>[number]>();
   const viewAdjustments: CompiledLessonPlan["view_adjustments"] = [];
   const programAdjustments: CompiledLessonPlan["program_adjustments"] = [];
+  /**
+   * A beat's start: the model's restarts, plus a number marked to replay its last change (markRepeatedChanges).
+   * A mark is kept only if, after the program's normalization, its value is in range and differs from the
+   * moment's animation end; otherwise the moment plays as written.
+   */
+  const beatStart = (moment: LessonPlan["sections"][number]["moments"][number], sectionIndex: number, momentIndex: number) => {
+    const restarts = moment.restart_numbers ?? [];
+    const replays = Object.entries(moment.replay_from ?? {}).map(([number, from]) => [Number(number), from] as const).filter(([number, from]) => {
+      const definition = plan.numbers?.[number - 1];
+      const end = moment.actions.find((action): action is LessonPlanAnimateAction => action.action === "animate" && action.number === number)?.end_value;
+      return definition !== undefined && end !== undefined && from !== end && from >= definition.min && from <= definition.max && !restarts.includes(number);
+    });
+    for (const [number, from] of replays) {
+      const end = moment.actions.find((action): action is LessonPlanAnimateAction => action.action === "animate" && action.number === number)!.end_value;
+      programAdjustments.push({
+        section: sectionIndex, kind: "change_replayed", reason: "animation_replays_change",
+        detail: `section-${pad(sectionIndex)}/moment-${pad(momentIndex)}: ${variableAlias(number)} is already ${end}; replayed from ${from}`,
+      });
+    }
+    if (!restarts.length && !replays.length) return {};
+    return { start: {
+      kind: "replay" as const,
+      variables: [...restarts, ...replays.map(([number]) => number)].map(variableAlias),
+      ...(replays.length ? { values: Object.fromEntries(replays.map(([number, from]) => [variableAlias(number), from])) } : {}),
+    } };
+  };
   let renderedVisuals: CompiledVisualRegistry | undefined;
   const reuseCompiledVisual = (visual: CompiledVisual) => {
     // The first component cannot duplicate earlier content. Initialize the
@@ -694,7 +722,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       includeWrittenCardsInFocus(actions);
       beats.push({
         key: `moment-${pad(momentIndex)}`,
-        ...(moment.restart_numbers?.length ? { start: { kind: "replay" as const, variables: moment.restart_numbers.map(variableAlias) } } : {}),
+        ...beatStart(moment, sectionIndex, momentIndex),
         // The model sometimes writes a formula placeholder (n1) in spoken or
         // written text; learners hear and read the number's own symbol.
         ...(moment.narration ? { say: namedNumbers(moment.narration, plan) } : {}),
@@ -871,66 +899,44 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     steps,
     close: { summary: plan.close.summary, focus: closeFocus },
   };
-  replayRepeatedChanges(lesson, programAdjustments);
   return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
 }
 
-const ACTION_PHASES = ["before_speech", "during_speech", "after_speech"] as const;
-
 /**
- * An animation to the value its number already holds draws nothing (plan 3.6). When the number got there
- * through an earlier change, the beat starts by putting it back where that change began (OLL's replay
- * start), so the animation plays the change again; the narration of such beats replays it ("as m increases
- * from 1 to 3"). Only the lesson's structure is read, never its wording. Left alone: a number that never
- * changed (nothing to replay), a beat whose own start already resets the number, and a repeat inside the
- * beat that made the change. The player runs one stream of operations, so a beat starts with the values
- * the beats before it left; within a beat, actions play before, during, then after the speech.
+ * An animation to the value its number already holds draws nothing (plan 3.6). When the model's own earlier
+ * animation brought the number there, the moment is marked to start by putting the number back where that
+ * change began, so the change plays again; the narration of such moments replays it ("as m increases from
+ * 1 to 3"). It reads the model's plan before the program normalizes or adds anything, so a repeat the
+ * program creates (a clamped or rounded end, an inserted animation) is never replayed. Only the lesson's
+ * structure is read, never its wording. A moment is marked only when:
+ * - the repeat is its only animation, so no other number is held still or moved beside it;
+ * - the repeat plays before or during the speech, as a replay start does (never after it);
+ * - the number changed by the model's own animation since the lesson began or was last restarted.
+ * Moments play in order, and a restart resets a number to its starting value.
  */
-function replayRepeatedChanges(lesson: AuthoringLesson, adjustments: CompiledLessonPlan["program_adjustments"]): void {
-  const variables = lesson.lesson.variables ?? [];
-  const initial = new Map(variables.map((variable) => [variable.as, variable.initial]));
-  const value = new Map(initial);
-  /** Where each number's most recent change began. */
-  const changedFrom = new Map<string, number>();
-  lesson.steps.forEach((step, stepIndex) => step.beats.forEach((beat) => {
-    // Only a beat with no start, or a replay start, can take one more number to replay.
-    const canReplay = !beat.start || beat.start.kind === "replay";
-    if (beat.start?.kind === "replay") {
-      for (const alias of beat.start.variables ?? []) {
-        const start = beat.start.values?.[alias] ?? initial.get(alias);
-        if (start !== undefined) value.set(alias, start);
-      }
+function markRepeatedChanges(plan: LessonPlan): void {
+  const value = new Map<number, number>((plan.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+  /** Where each number's last change by the model began, since the start or its last restart. */
+  const changedFrom = new Map<number, number>();
+  for (const section of plan.sections) for (const moment of section.moments) {
+    for (const number of moment.restart_numbers ?? []) {
+      value.set(number, plan.numbers![number - 1]!.initial);
+      changedFrom.delete(number);
     }
-    const touched = new Set<string>();
-    const replay: Record<string, number> = {};
-    for (const phase of ACTION_PHASES) for (const action of beat.actions) {
-      if (action.do !== "animate" || (action.when ?? "during_speech") !== phase) continue;
-      const current = value.get(action.variable);
-      const from = changedFrom.get(action.variable);
-      if (canReplay && current === action.value && !touched.has(action.variable) && from !== undefined && from !== current
-        && !(beat.start?.kind === "replay" && beat.start.variables?.includes(action.variable))) {
-        replay[action.variable] = from;
-        adjustments.push({
-          section: Number(/(\d+)$/u.exec(step.key)?.[1] ?? stepIndex + 1),
-          kind: "change_replayed",
-          reason: "animation_replays_change",
-          detail: `${step.key}/${beat.key}: ${action.variable} is already ${current}; replayed from ${from}`,
-        });
-      } else if (current !== action.value) {
-        changedFrom.set(action.variable, current ?? action.value);
-      }
-      touched.add(action.variable);
-      value.set(action.variable, action.value);
+    const animations = moment.actions.filter((action): action is LessonPlanAnimateAction => action.action === "animate");
+    const only = animations.length === 1 ? animations[0]! : undefined;
+    const from = only ? changedFrom.get(only.number) : undefined;
+    if (only && (only.timing ?? "during_speech") !== "after_speech" && value.get(only.number) === only.end_value
+      && from !== undefined && from !== only.end_value && !(moment.restart_numbers ?? []).includes(only.number)) {
+      moment.replay_from = { [only.number]: from };
     }
-    const replayed = Object.keys(replay);
-    if (replayed.length === 0) return;
-    const existing = beat.start?.kind === "replay" ? beat.start : undefined;
-    beat.start = {
-      kind: "replay",
-      variables: [...(existing?.variables ?? []), ...replayed],
-      values: { ...(existing?.values ?? {}), ...replay },
-    };
-  }));
+    for (const timing of ["before_speech", "during_speech", "after_speech"] as const) for (const action of animations) {
+      if ((action.timing ?? "during_speech") !== timing) continue;
+      const current = value.get(action.number);
+      if (current !== undefined && current !== action.end_value) changedFrom.set(action.number, current);
+      value.set(action.number, action.end_value);
+    }
+  }
 }
 
 function expressionReferencesVariable(expression: unknown, variable: string): boolean {

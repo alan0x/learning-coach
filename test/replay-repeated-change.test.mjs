@@ -73,3 +73,43 @@ test("a lesson with no repeat compiles exactly as before", () => {
   assert.equal(beats(compiled).some((beat) => beat.start), false);
   assert.equal(replays(compiled).length, 0);
 });
+
+// Review, round 1: the mark is made on the model's own plan, and only for the shape the probe recordings show.
+test("a repeat after the speech is left alone: a replay start plays before the speech", () => {
+  const compiled = compileAndValidateLessonPlan(planWith([[animate(3, "after_speech")]]));
+  assert.equal(beats(compiled).at(-1).start, undefined);
+  assert.equal(replays(compiled).length, 0);
+});
+
+test("after a restart there is no change to replay", () => {
+  // x goes 0 → 3, a moment restarts it to 0, then a later moment animates to 0: the last thing seen was the
+  // restart, not a change the model made, so nothing is replayed.
+  const plan = planWith([[animate(0)], [animate(0)]], (built) => { built.sections.at(-1).moments.at(-2).restart_numbers = [1]; });
+  const compiled = compileAndValidateLessonPlan(plan);
+  assert.deepEqual(beats(compiled).at(-2).start, { kind: "replay", variables: ["number_01"] });
+  assert.equal(beats(compiled).at(-1).start, undefined);
+  assert.equal(replays(compiled).length, 0);
+});
+
+const twoNumbers = (extra, edit) => {
+  const plan = structuredClone(completeLessonPlanFixtures.quadratic_translation);
+  const section = plan.sections.at(-1);
+  for (const actions of extra) section.moments.push({ narration: "Watch again.", actions });
+  edit?.(plan);
+  return plan;
+};
+const move = (number, end_value) => ({ action: "animate", number, end_value, easing: "linear", duration_intent: "normal", timing: "during_speech" });
+
+test("a repeat held beside another number's change is left alone", () => {
+  // The fixture's last moment moves h to 2 and k to -1. Holding h at 2 while k moves is one change, not two.
+  const compiled = compileAndValidateLessonPlan(twoNumbers([[move(1, 2), move(2, 1)]]));
+  assert.equal(beats(compiled).at(-1).start, undefined);
+  assert.equal(replays(compiled).length, 0);
+});
+
+test("a replay joins the model's restart of another number in one start", () => {
+  const compiled = compileAndValidateLessonPlan(twoNumbers([[move(1, 2)]], (plan) => { plan.sections.at(-1).moments.at(-1).restart_numbers = [2]; }));
+  assert.deepEqual(beats(compiled).at(-1).start, { kind: "replay", variables: ["number_02", "number_01"], values: { number_01: 0 } });
+  assert.equal(replays(compiled).length, 1);
+  assert.match(replays(compiled)[0].detail, /number_01 is already 2; replayed from 0/);
+});
