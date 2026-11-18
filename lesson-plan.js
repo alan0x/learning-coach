@@ -14145,10 +14145,14 @@ function enabledTrialRecipes(list2) {
   return TRIAL_RECIPES.filter((name) => named.has(name));
 }
 var processEnvironment = globalThis.process?.env;
-var OFFERED_RECIPES = [
-  ...RECIPE_CATALOG_ORDER,
-  ...enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES)
-];
+var TRIAL_RETIRES = {
+  solid_3d: ["cube_with_section"]
+};
+function offeredRecipes(trials) {
+  const retired = new Set(trials.flatMap((name) => TRIAL_RETIRES[name] ?? []));
+  return [...RECIPE_CATALOG_ORDER.filter((name) => !retired.has(name)), ...trials];
+}
+var OFFERED_RECIPES = offeredRecipes(enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES));
 var PLUGIN_RECIPE_REGISTRY = Object.fromEntries(
   OFFERED_RECIPES.map((name) => [name, ALL_RECIPES[name]])
 );
@@ -23089,6 +23093,7 @@ export {
   SCHEMA_PROPERTY_ORDER,
   SECTION_FACTS,
   TRIAL_RECIPES,
+  TRIAL_RETIRES,
   assembleLessonPlan,
   buildCameraLessonPlanAdmissionBootstrapJsonSchema,
   buildCameraLessonPlanAdmissionOutlineJsonSchema,
@@ -23115,6 +23120,7 @@ export {
   mathExpressionToOll,
   modelTextFromRawReply,
   numericAnswerTolerance,
+  offeredRecipes,
   promptSlot,
   recipeDeclares,
   recipeInitialCamera,

@@ -12,7 +12,10 @@ import { fileURLToPath } from "node:url";
 const api = await import(new URL("../lesson-plan.js", import.meta.url));
 const here = (path) => JSON.stringify(new URL(path, import.meta.url).href);
 
-test("by default the trial recipe is installed but not offered", () => {
+test("by default the trial recipe is installed but not offered, and the teaching cube stays", () => {
+  assert.ok(api.OFFERED_RECIPES.includes("cube_with_section"));
+  assert.deepEqual(api.TRIAL_RETIRES.solid_3d, ["cube_with_section"]);
+  assert.deepEqual(api.offeredRecipes(["solid_3d"]).filter((name) => /cube|solid/u.test(name)), ["solid_3d"]);
   assert.ok(api.TRIAL_RECIPES.includes("solid_3d"));
   assert.equal(api.OFFERED_RECIPES.includes("solid_3d"), false);
   assert.equal(api.LESSON_PLAN_CAPABILITY_NAMES.includes("solid_3d"), false);
@@ -184,10 +187,13 @@ test("a stubbed generation run decodes nested sizes from mantissa and scale", ()
 test("review fixes: routing, the wider cylinder below, sizes a shape does not use, one language per scene", () => {
   const routed = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
-    console.log(JSON.stringify([["solids"], ["solids", "section_plane"], ["solid_3d", "section_plane"], ["solid_3d"]].map((features) => api.matchLessonPlanCapability(features))));
+    const route = (features) => { try { return api.matchLessonPlanCapability(features); } catch (error) { return error.code; } };
+    console.log(JSON.stringify({ routes: [["solids"], ["solids", "section_plane"], ["solid_3d", "section_plane"]].map(route), names: api.LESSON_PLAN_CAPABILITY_NAMES }));
   `);
-  // A cut through any shape asks for solids with section_plane; the teaching cube keeps its features.
-  assert.deepEqual(routed, ["solid_3d", "solid_3d", "cube_with_section", "cube_with_section"]);
+  // A cut through any shape asks for solids with section_plane. While the trial is on, the teaching cube is
+  // retired (owner, 2026-11-17): its features are no longer offered, so no cut can route to the fixed cube.
+  assert.deepEqual(routed.routes, ["solid_3d", "solid_3d", "LESSON_PLAN_UNSUPPORTED_REQUIREMENT"]);
+  assert.ok(!routed.names.includes("cube_with_section") && routed.names.includes("solid_3d"));
   const result = withTrial(compileScript([
     ["narrow-below", { solids: [{ shape: "cylinder", radius: 1, height: 2 }, { shape: "cylinder", radius: 3, height: 1 }], join: "stack" }, "en-US"],
     ["cone-top-radius", { solids: [{ shape: "cone", radius: 6, top_radius: 3, height: 8 }] }, "en-US"],

@@ -65,10 +65,24 @@ export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIA
 
 const processEnvironment = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
 
+/**
+ * Catalog recipes a trial recipe retires while it is offered, so a measurement run sees the catalog as it
+ * will be at switch-on. solid_3d retires the teaching cube (owner, 2026-11-17, after probe 3: cuts of a
+ * cylinder still routed to the fixed cube; a box with a cut covers what it shows).
+ */
+export const TRIAL_RETIRES: Readonly<Partial<Record<typeof TRIAL_RECIPES[number], readonly (typeof RECIPE_CATALOG_ORDER[number])[]>>> = {
+  solid_3d: ["cube_with_section"],
+};
+
+/** The catalog with the named trial recipes offered, and what they retire left out. */
+export function offeredRecipes(trials: ReadonlyArray<typeof TRIAL_RECIPES[number]>): Array<typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number]> {
+  const retired = new Set<string>(trials.flatMap((name) => TRIAL_RETIRES[name] ?? []));
+  return [...RECIPE_CATALOG_ORDER.filter((name) => !retired.has(name)), ...trials];
+}
+
 /** Recipes offered to the model, in catalog order. */
-export const OFFERED_RECIPES: ReadonlyArray<typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number]> = [
-  ...RECIPE_CATALOG_ORDER, ...enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES),
-];
+export const OFFERED_RECIPES: ReadonlyArray<typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number]> =
+  offeredRecipes(enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES));
 
 type RegistryName = typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number];
 export const PLUGIN_RECIPE_REGISTRY = Object.fromEntries(
