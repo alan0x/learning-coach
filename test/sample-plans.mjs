@@ -42,7 +42,8 @@ export function makeSamplePlanModelCompatible(plan) {
 }
 
 export function samplePlan(capability) {
-  const numberCount = capability === "process_diagram"
+  // solid_3d takes no outline numbers: it makes its own cut or unfold slider (OLL decision 0019).
+  const numberCount = capability === "process_diagram" || capability === "solid_3d"
     ? 0
     : capability === "rectangle_unit_square_array" || capability === "number_line_compare"
       ? 2
@@ -52,7 +53,7 @@ export function samplePlan(capability) {
   // The number line's question types (decisions 0013 and 0016): the parameters each one needs.
   const numberLineParameters = { number_line_solution: { relation: "x>a" }, number_line_rounding: { place: "tens" } }[capability];
   const hasNumber = numberCount > 0;
-  const is3d = capability === "cube_with_section"
+  const is3d = capability === "solid_3d"
     || capability === "function_surface_with_section"
     || capability === "implicit_surface_with_section";
   const firstMomentActions = [
@@ -66,6 +67,8 @@ export function samplePlan(capability) {
           ? { expression: "x^2", sample_x_numbers: [1] }
           : capability === "implicit_surface_with_section"
             ? { expression: "x^2+y^2+z^2", level: 1, section_axis: "z" }
+          : capability === "solid_3d"
+            ? { solids: [{ shape: "cylinder", radius: 2, height: 5 }], show: ["volume"], interaction: "cut" }
             : numberLineParameters ?? {},
         ...(hasNumber ? { numbers: Array.from({ length: numberCount }, (_unused, index) => index + 1) } : {}),
       },

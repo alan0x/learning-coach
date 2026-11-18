@@ -28,7 +28,6 @@ export const RECIPE_CATALOG_ORDER = [
   "circle_polygon_bounds",
   "circle_and_arc",
   "spring_and_mass",
-  "cube_with_section",
   "function_surface_with_section",
   "implicit_surface_with_section",
   "coordinate_circle",
@@ -46,7 +45,19 @@ export const RECIPE_CATALOG_ORDER = [
   // Number line in steps (OLL decision 0017 §2): adopted by the owner on 2026-11-15 after the reduced trial
   // (Coach docs/PLOT_TRIAL_2026-11-15.md), ahead of the combined speed gate. Last, where the trial put it.
   "number_line_steps",
+  // 3D solids (OLL decision 0019, as amended by 0020): adopted 2026-11-18 after the revised speed gate passed
+  // at 80 pairs (Coach docs/SOLIDS_PROBE_2026-11-17.md, gates 1–1e). Last, where the gate measured it. It
+  // retired cube_with_section (owner, 2026-11-17): that recipe stays defined, so old lessons keep their
+  // meaning, but it is no longer offered.
+  "solid_3d",
 ] as const satisfies readonly (keyof AllRecipes)[];
+
+/**
+ * Recipes no longer offered: a newer recipe covers what they showed. They stay defined so their code and
+ * tests remain readable; nothing offers or compiles them. cube_with_section: retired when solid_3d switched
+ * on (owner, 2026-11-17; switch-on 2026-11-18).
+ */
+export const RETIRED_RECIPES = ["cube_with_section"] as const satisfies readonly (keyof AllRecipes)[];
 
 /**
  * Recipes that are built and tested but not yet offered in AI lessons. A new
@@ -55,7 +66,7 @@ export const RECIPE_CATALOG_ORDER = [
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-export const TRIAL_RECIPES = ["constant_speed_motion", "solid_3d"] as const satisfies readonly (keyof AllRecipes)[];
+export const TRIAL_RECIPES = ["constant_speed_motion"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {
@@ -67,12 +78,9 @@ const processEnvironment = (globalThis as { process?: { env?: Record<string, str
 
 /**
  * Catalog recipes a trial recipe retires while it is offered, so a measurement run sees the catalog as it
- * will be at switch-on. solid_3d retires the teaching cube (owner, 2026-11-17, after probe 3: cuts of a
- * cylinder still routed to the fixed cube; a box with a cut covers what it shows).
+ * will be at switch-on. (solid_3d retired cube_with_section this way until it switched on, 2026-11-18.)
  */
-export const TRIAL_RETIRES: Readonly<Partial<Record<typeof TRIAL_RECIPES[number], readonly (typeof RECIPE_CATALOG_ORDER[number])[]>>> = {
-  solid_3d: ["cube_with_section"],
-};
+export const TRIAL_RETIRES: Readonly<Partial<Record<typeof TRIAL_RECIPES[number], readonly (typeof RECIPE_CATALOG_ORDER[number])[]>>> = {};
 
 /** The catalog with the named trial recipes offered, and what they retire left out. */
 export function offeredRecipes(trials: ReadonlyArray<typeof TRIAL_RECIPES[number]>): Array<typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number]> {

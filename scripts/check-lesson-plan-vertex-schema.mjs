@@ -145,19 +145,19 @@ const unitCircleSectionOutline = {
   }],
 };
 const unitCircleSection = api.buildLessonPlanSectionDraftJsonSchema(unitCircleSectionOutline, 1);
+// The 3D section: solid_3d since cube_with_section was retired (2026-11-18). It takes no outline numbers.
 const cubeSection = api.buildLessonPlanSectionDraftJsonSchema({
-  numbers: [{ initial: 0, min: -1, max: 1, label: "截面高度" }],
   course_visuals: [{
-    capability: "cube_with_section",
+    capability: "solid_3d",
     create_section: 1,
     use_sections: [1],
     relation: "primary",
     reusable_item: 1,
   }],
   sections: [{
-    purpose: "用可旋转正方体观察顶点、棱、面和水平截面",
-    allowed_capabilities: ["cube_with_section"],
-    reusable_items: [{ kind: "board_item", board_kind: "visual", capability: "cube_with_section" }],
+    purpose: "用可旋转的长方体观察顶点、棱、面和水平截面",
+    allowed_capabilities: ["solid_3d"],
+    reusable_items: [{ kind: "board_item", board_kind: "visual", capability: "solid_3d" }],
   }],
 }, 1);
 const reusableBoardSection = api.buildLessonPlanSectionDraftJsonSchema({

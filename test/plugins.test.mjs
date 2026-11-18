@@ -14,9 +14,10 @@ test("each recipe belongs to exactly one installed plugin, as the plan assigns",
       owners.set(name, plugin.manifest.id);
     }
   }
-  const { TRIAL_RECIPES } = api;
-  assert.deepEqual([...owners.keys()].sort(), [...RECIPE_CATALOG_ORDER, ...TRIAL_RECIPES].sort(), "the catalog and the trial list name every recipe once");
+  const { TRIAL_RECIPES, RETIRED_RECIPES } = api;
+  assert.deepEqual([...owners.keys()].sort(), [...RECIPE_CATALOG_ORDER, ...TRIAL_RECIPES, ...RETIRED_RECIPES].sort(), "the catalog, the trial list and the retired list name every recipe once");
   assert.equal(TRIAL_RECIPES.some((name) => RECIPE_CATALOG_ORDER.includes(name)), false);
+  assert.equal(RETIRED_RECIPES.some((name) => RECIPE_CATALOG_ORDER.includes(name) || TRIAL_RECIPES.includes(name)), false);
   assert.equal(new Set(RECIPE_CATALOG_ORDER).size, RECIPE_CATALOG_ORDER.length);
   assert.deepEqual(Object.keys(LESSON_PLAN_CAPABILITY_REGISTRY), [...RECIPE_CATALOG_ORDER], "the registry follows the catalog order");
   assert.equal(RECIPE_PLUGIN.spring_and_mass, "physics");

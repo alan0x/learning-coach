@@ -147,7 +147,6 @@ test("all fixed capability samples compile through the complete OLL validation p
     circle_and_arc: ["geometry"],
     circle_polygon_bounds: ["geometry"],
     spring_and_mass: ["geometry", "plot"],
-    cube_with_section: ["scene3d"],
     function_surface_with_section: ["scene3d"],
     implicit_surface_with_section: ["scene3d"],
     coordinate_circle: ["geometry"],
@@ -160,6 +159,7 @@ test("all fixed capability samples compile through the complete OLL validation p
     number_line_solution: ["number_line"],
     number_line_rounding: ["number_line"],
     number_line_steps: ["number_line"],
+    solid_3d: ["scene3d"],
   };
   for (const capability of capabilities) {
     const compiled = compileAndValidateLessonPlan(samplePlan(capability));
@@ -542,19 +542,7 @@ test("unit circle projection keeps degree controls in range across both linked v
 });
 
 test("installed visual capabilities normalize executable numeric ranges without a model retry", () => {
-  const cube = structuredClone(completeLessonPlanFixtures.cube_and_section);
-  Object.assign(cube.numbers[0], { min: -10, max: 10, initial: 5 });
-  const compiledCube = compileAndValidateLessonPlan(cube).lesson;
-  assert.deepEqual(
-    {
-      min: compiledCube.lesson.variables[0].min,
-      max: compiledCube.lesson.variables[0].max,
-      initial: compiledCube.lesson.variables[0].initial,
-    },
-    { min: -1, max: 1, initial: 1 },
-  );
-  assert.equal(compiledCube.lesson.variables[0].control.step, 0.01);
-
+  // (The teaching cube's case left with cube_with_section, retired 2026-11-18; solid_3d makes its own slider.)
   const surface = structuredClone(completeLessonPlanFixtures.paraboloid_section);
   Object.assign(surface.numbers[0], { min: -100, max: 100, initial: 50 });
   const compiledSurface = compileAndValidateLessonPlan(surface).lesson;
@@ -791,8 +779,9 @@ test("an animated or assessed number must drive at least one visual", () => {
   assert.equal(plot.content.measurement, "secant");
 });
 
-test("eight complete previously tested courses compile without model-authored identity", () => {
-  assert.equal(Object.keys(completeLessonPlanFixtures).length, 8);
+test("seven complete previously tested courses compile without model-authored identity", () => {
+  // Eight until 2026-11-18: the cube-and-section course left with cube_with_section (retiredCubeCourse).
+  assert.equal(Object.keys(completeLessonPlanFixtures).length, 7);
   for (const [name, plan] of Object.entries(completeLessonPlanFixtures)) {
     const compiled = compileAndValidateLessonPlan(plan);
     assert.equal(compiled.lesson.steps.length, 3, name);
@@ -1696,9 +1685,9 @@ test("the compiler covers all current OLL write kinds and action kinds in one de
           { action: "create", kind: "table", role: "example", content: { columns: ["x", "y"], rows: [[0, 0], [1, 1]] }, placement: { relation: "right_of", reference: boardItem(4) } },
           { action: "create", kind: "image", role: "example", content: { resource: 1, alt: "受控测试图片" }, placement: { relation: "below", reference: boardItem(4) } },
           { action: "create", kind: "visual", role: "diagram", content: { capability: "process_diagram", parameters: { steps: ["观察", "计算", "验证"] } }, placement: { relation: "right_of", reference: boardItem(6) } },
-          { action: "create", kind: "visual", role: "diagram", content: { capability: "coordinate_circle", parameters: { radius: 2 } }, placement: { relation: "below", reference: boardItem(6) }, reusable_item: 1 },
+          { action: "create", kind: "visual", role: "diagram", content: { capability: "coordinate_circle", parameters: {}, numbers: [2] }, placement: { relation: "below", reference: boardItem(6) }, reusable_item: 1 },
           { action: "create", kind: "visual", role: "diagram", content: { capability: "function_plot", parameters: { expression: "x^2", sample_x_numbers: [1] }, numbers: [1] }, placement: { relation: "right_of", reference: boardItem(8) }, reusable_item: 2 },
-          { action: "create", kind: "visual", role: "diagram", content: { capability: "cube_with_section", parameters: {}, numbers: [2] }, placement: { relation: "below", reference: boardItem(8) } },
+          { action: "create", kind: "visual", role: "diagram", content: { capability: "solid_3d", parameters: { solids: [{ shape: "box", length: 2, width: 2, height: 2 }], interaction: "cut" } }, placement: { relation: "below", reference: boardItem(8) } },
           { action: "revise", reference: boardItem(1), kind: "text", content: { text: "修订后的普通文字" }, reason: "补充说明" },
           { action: "connect", from_ref: boardItem(8, "circle"), to_ref: boardItem(9, "primary_curve"), relation: "compares_with", label: "图形比较", reusable_item: 3 },
           { action: "group", role: "comparison", label: "二维图形组", members: [boardItem(8), boardItem(9)], reusable_item: 4 },
@@ -4933,16 +4922,16 @@ test("a count shared with a visual of another range is refused when the shared r
   const plan = samplePlan("rectangle_unit_square_array");
   plan.sections[0].student_activities = [];
   Object.assign(plan.numbers[0], { initial: 3, min: 1, max: 6 });
-  const cube = samplePlan("cube_with_section").sections[0].moments[0].actions.find((action) => action.action === "create" && action.kind === "visual");
-  plan.sections[0].reusable_items.push({ kind: "board_item", board_kind: "visual", capability: "cube_with_section" });
+  const surface = samplePlan("function_surface_with_section").sections[0].moments[0].actions.find((action) => action.action === "create" && action.kind === "visual");
+  plan.sections[0].reusable_items.push({ kind: "board_item", board_kind: "visual", capability: "function_surface_with_section" });
   plan.sections[0].moments.push({
-    narration: "Now the same count as a cube.",
+    narration: "Now the same count as a surface height.",
     delivery: "patient",
-    actions: [{ ...structuredClone(cube), content: { ...structuredClone(cube.content), numbers: [1] }, placement: { relation: "new_region" }, reusable_item: 2 }],
+    actions: [{ ...structuredClone(surface), content: { ...structuredClone(surface.content), parameters: { title: "z=x²+y²", expression: "x^2+y^2", x_min: -1, x_max: 1, y_min: -1, y_max: 1, section_axis: "z" }, numbers: [1] }, placement: { relation: "new_region" }, reusable_item: 2 }],
   });
   // The section that shares it can fix it, so it is the section's fault, at the visual that shares it.
   assert.throws(() => compileAndValidateLessonPlan(plan), (error) => error.code === "LESSON_PLAN_SHARED_NUMBER"
-    && error.capability === undefined && /number 1 is 3/.test(error.message) && /drive the cube_with_section visual/.test(error.message)
+    && error.capability === undefined && /number 1 is 3/.test(error.message) && /drive the function_surface_with_section visual/.test(error.message)
     && /moments\[1\]/.test(error.path));
 
   // A count beyond its own recipe's limit is the outline's fault even when the number is also shared.

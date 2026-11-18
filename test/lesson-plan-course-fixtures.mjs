@@ -248,34 +248,6 @@ export const completeLessonPlanFixtures = {
     activity: numberTarget({ value: Math.PI, tolerance: 0.02, prompt: "把相位调到 π，观察物体位于哪一侧。", success_message: "相位为 π 时 cos π=-1，物体位于另一侧极值。" }),
   }),
 
-  cube_and_section: course({
-    title: "从不同方向观察正方体的顶点、棱、面与水平截面",
-    goals: ["理解正方体的顶点、棱和面", "通过旋转和截面建立空间想象"],
-    number: { initial: 0, min: -0.9, max: 0.9, label: "截面高度", student_control: { kind: "slider", step: 0.1 } },
-    capability: "cube_with_section",
-    parameters: { title: "可旋转正方体与水平截面" },
-    firstNarration: "拖动场景可以从不同方向观察正方体；水平平面穿过正方体时，场景会同时显示切割平面和真实截面。",
-    formula: "V=8,\\quad E=12,\\quad F=6",
-    explanationTitle: "正方体的组成",
-    explanationItems: ["8 个顶点是棱的交点", "12 条棱连接相邻顶点", "6 个面都是正方形"],
-    animationEnd: 0.8,
-    activity: {
-      kind: "scene3d_view",
-      reference: reusable(1, 1),
-      prompt: "把正方体转到俯视方向。",
-      controls: ["orbit", "zoom", "preset", "reset"],
-      match: "view_direction",
-      yaw: 0,
-      pitch: -Math.PI / 2,
-      zoom: 1,
-      angular_tolerance: 0.12,
-      zoom_tolerance: 0.25,
-      hints: ["可以点击俯视预设，也可以直接拖动。"],
-      hint_after_attempts: 2,
-      success_message: "现在看到的是正方体的俯视方向。",
-    },
-  }),
-
   paraboloid_section: course({
     title: "用水平截面理解 z=x²+y² 的三维图像",
     goals: ["认识开口向上的抛物面", "理解水平截线为什么是圆"],
@@ -305,3 +277,33 @@ export const completeLessonPlanFixtures = {
     activity: numberTarget({ value: 1, tolerance: 0.02, prompt: "把 x 调回 1，观察 ln 1 的值。", success_message: "ln 1=0，对应从 1 到 1 的面积为零。" }),
   }),
 };
+
+// The cube-and-section course, kept out of the complete fixtures since cube_with_section was retired
+// (owner, 2026-11-17; solid_3d switched on 2026-11-18). The solids tests build on it.
+export const retiredCubeCourse = course({
+  title: "从不同方向观察正方体的顶点、棱、面与水平截面",
+  goals: ["理解正方体的顶点、棱和面", "通过旋转和截面建立空间想象"],
+  number: { initial: 0, min: -0.9, max: 0.9, label: "截面高度", student_control: { kind: "slider", step: 0.1 } },
+  capability: "cube_with_section",
+  parameters: { title: "可旋转正方体与水平截面" },
+  firstNarration: "拖动场景可以从不同方向观察正方体；水平平面穿过正方体时，场景会同时显示切割平面和真实截面。",
+  formula: "V=8,\\quad E=12,\\quad F=6",
+  explanationTitle: "正方体的组成",
+  explanationItems: ["8 个顶点是棱的交点", "12 条棱连接相邻顶点", "6 个面都是正方形"],
+  animationEnd: 0.8,
+  activity: {
+    kind: "scene3d_view",
+    reference: reusable(1, 1),
+    prompt: "把正方体转到俯视方向。",
+    controls: ["orbit", "zoom", "preset", "reset"],
+    match: "view_direction",
+    yaw: 0,
+    pitch: -Math.PI / 2,
+    zoom: 1,
+    angular_tolerance: 0.12,
+    zoom_tolerance: 0.25,
+    hints: ["可以点击俯视预设，也可以直接拖动。"],
+    hint_after_attempts: 2,
+    success_message: "现在看到的是正方体的俯视方向。",
+  },
+});
