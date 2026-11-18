@@ -180,3 +180,29 @@ test("a stubbed generation run decodes nested sizes from mantissa and scale", ()
   assert.equal(result.caption, "Cone: Volume = 13.5π ≈ 42.41\nCylinder: Volume = 40.5π ≈ 127.23");
   assert.deepEqual(result.variables.map((variable) => [variable.min, variable.max]), [[-2.25, 2.25]]);
 });
+
+test("review fixes: routing, the wider cylinder below, sizes a shape does not use, one language per scene", () => {
+  const routed = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    console.log(JSON.stringify([["solids"], ["solids", "section_plane"], ["solid_3d", "section_plane"], ["solid_3d"]].map((features) => api.matchLessonPlanCapability(features))));
+  `);
+  // A cut through any shape asks for solids with section_plane; the teaching cube keeps its features.
+  assert.deepEqual(routed, ["solid_3d", "solid_3d", "cube_with_section", "cube_with_section"]);
+  const result = withTrial(compileScript([
+    ["narrow-below", { solids: [{ shape: "cylinder", radius: 1, height: 2 }, { shape: "cylinder", radius: 3, height: 1 }], join: "stack" }, "en-US"],
+    ["cone-top-radius", { solids: [{ shape: "cone", radius: 6, top_radius: 3, height: 8 }] }, "en-US"],
+    ["sphere-height", { solids: [{ shape: "sphere", radius: 3, height: 4 }] }, "en-US"],
+    ["both-bases", { solids: [{ shape: "prism", sides: 3, side: 2, length: 4, height: 1 }] }, "en-US"],
+    ["cube-and-sizes", { solids: [{ shape: "box", side: 2, length: 3 }] }, "en-US"],
+    ["spanish", { solids: [{ shape: "cylinder", radius: 4, height: 10 }], show: ["volume"], interaction: "cut" }, "es-US"],
+  ]));
+  assert.deepEqual(result["narrow-below"].content.objects.map((object) => object.radius), [3, 1], "turned over: the wider one stands below");
+  assert.match(result["cone-top-radius"].message, /a cone has no top_radius; it is drawn from radius, height/u);
+  assert.match(result["sphere-height"].message, /a sphere has no height/u);
+  assert.match(result["both-bases"].message, /a regular base \(sides, side\) or a rectangle/u);
+  assert.match(result["cube-and-sizes"].message, /a cube by its side, or length, width and height/u);
+  const spanish = result.spanish;
+  assert.equal(spanish.content.title, "立体图形");
+  assert.match(spanish.content.caption, /^体积 = 160π/u, "title, slider and measures in the same language");
+  assert.equal(spanish.variables[0].label, "截面高度");
+});

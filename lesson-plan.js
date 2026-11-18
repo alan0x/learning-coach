@@ -13570,8 +13570,10 @@ var MATH_RECIPES = {
     initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
-    required_features: ["solid_3d"],
-    model_guidance: "\u7ACB\u4F53\uFF1Asolids\u7167\u9898\u5199\u5C3A\u5BF8\uFF0C2\u4E2A\u5219\u5E76\u6392\uFF1Bjoin\u53E0\u653E\u6216\u4E24\u957F\u65B9\u4F53\u62FCL\uFF1Bshow\u7684\u6570\u548C\u6ED1\u5757\u7531\u7A0B\u5E8F\u7ED9"
+    // Its own feature, so the model can ask for it by name; with section_plane, a cut through any of its
+    // shapes routes here, while solid_3d with section_plane still means the teaching cube.
+    required_features: ["solids", "section_plane"],
+    model_guidance: "solids\u7167\u9898\u5199\u5C3A\u5BF8\uFF0C2\u4E2A\u5219\u5E76\u6392\uFF1Bjoin\u53E0\u653E\u6216\u4E24\u957F\u65B9\u4F53\u62FCL\uFF1Bshow\u6570\u503C\u548C\u6ED1\u5757\u7531\u7A0B\u5E8F\u7ED9"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -17166,7 +17168,10 @@ var CompiledVisualRegistry = class {
       actions: visual.actions.map((action) => action.do === "write" && reused.has(action.as) ? { do: "focus", targets: [reference(action.as)], intent: "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762" } : remap(action)),
       whole: reference(visual.whole),
       ...visual.primaryScene ? { primaryScene: reference(visual.primaryScene) } : {},
-      parts: new Map([...visual.parts].map(([name, target]) => [name, reference(target)]))
+      parts: new Map([...visual.parts].map(([name, target]) => [name, reference(target)])),
+      // A visual's own slider goes with its card: kept when the card is written, dropped when an earlier
+      // identical card is shown instead (that card's slider is already in the lesson).
+      ...visual.variables && !visual.actions.some((action) => action.do === "write" && reused.has(action.as)) ? { variables: visual.variables } : {}
     };
   }
 };
@@ -18736,7 +18741,25 @@ function modelSolid(value2, path) {
   }
   return solid;
 }
+var SHAPE_SIZES = {
+  box: ["length", "width", "height", "side"],
+  cylinder: ["radius", "height"],
+  cone: ["radius", "height"],
+  sphere: ["radius"],
+  hemisphere: ["radius"],
+  frustum: ["radius", "top_radius", "height"],
+  prism: ["sides", "side", "length", "width", "height"],
+  pyramid: ["sides", "side", "length", "width", "height"]
+};
 function builderSolid(model, path, adjustments) {
+  const stray = SOLID_SIZES.filter((key) => model[key] !== void 0 && !SHAPE_SIZES[model.shape].includes(key));
+  if (stray.length) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${stray[0]}`, `a ${model.shape} has no ${stray.join(" or ")}; it is drawn from ${SHAPE_SIZES[model.shape].join(", ")}`);
+  if ((model.shape === "prism" || model.shape === "pyramid") && (model.sides !== void 0 || model.side !== void 0) && (model.length !== void 0 || model.width !== void 0)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, `a ${model.shape} has a regular base (sides, side) or a rectangle (length, width), not both`);
+  }
+  if (model.shape === "box" && model.side !== void 0 && (model.length !== void 0 || model.width !== void 0 || model.height !== void 0)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "a box is a cube by its side, or length, width and height, not both");
+  }
   const need = (...keys) => keys.map((key) => {
     const size = model[key];
     if (size === void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${key}`, `a ${model.shape} needs ${keys.join(", ")}`);
@@ -18793,7 +18816,7 @@ function joinedSolid(join, pair, path, adjustments) {
     return { shape: "composite", parts: "two_boxes", size: first.size, sideSize: second.size };
   }
   const stacked = (bottom, top) => {
-    if (bottom.shape === "cylinder" && top.shape === "cylinder") return { shape: "composite", parts: "two_cylinders", radius: bottom.radius, height: bottom.height, topRadius: top.radius, topHeight: top.height };
+    if (bottom.shape === "cylinder" && top.shape === "cylinder" && bottom.radius >= top.radius) return { shape: "composite", parts: "two_cylinders", radius: bottom.radius, height: bottom.height, topRadius: top.radius, topHeight: top.height };
     if (bottom.shape === "cylinder" && (top.shape === "cone" || top.shape === "hemisphere")) {
       if (!sameSize(bottom.radius, top.radius)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, `a ${top.shape} stacked on a cylinder shares its radius (${top.radius} and ${bottom.radius})`);
       return top.shape === "cone" ? { shape: "composite", parts: "cylinder_cone", radius: bottom.radius, height: bottom.height, topHeight: top.height } : { shape: "composite", parts: "cylinder_hemisphere", radius: bottom.radius, height: bottom.height };
@@ -18814,7 +18837,7 @@ function joinedSolid(join, pair, path, adjustments) {
     adjustments.push({ reason: "solid_stack_order", detail: `${path}: ${second.shape} under ${first.shape}, as the composite stands` });
     return turned;
   }
-  return fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "stacks are a cone, a hemisphere or a smaller cylinder on a cylinder, or a pyramid roof on a box");
+  return fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "stacks are a cone, a hemisphere or a narrower cylinder on a cylinder, or a pyramid roof on a box");
 }
 function compileSolid3d(base, content, role, placement, plan, path) {
   const input = parameters(content);
@@ -18828,7 +18851,7 @@ function compileSolid3d(base, content, role, placement, plan, path) {
   if (join !== void 0 && join !== "stack" && join !== "side") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "expected stack or side");
   if (join !== void 0 && solids.length !== 2) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.join`, "join needs two solids");
   const [solid, beside] = join ? [joinedSolid(join, solids, path, adjustments), void 0] : [solids[0], solids[1]];
-  const shown = solids.length && input.show !== void 0 ? input.show : [];
+  const shown = input.show ?? [];
   if (!Array.isArray(shown) || shown.some((item) => !SOLID_MEASURES.includes(item))) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.show`, `expected some of ${SOLID_MEASURES.join(", ")}`);
   const measures = [...new Set(shown)];
   for (const each of [solid, ...beside ? [beside] : []]) {
@@ -18841,7 +18864,7 @@ function compileSolid3d(base, content, role, placement, plan, path) {
   if (interaction === "unfold" && [solid, beside].some((each) => each && !solidUnfolds(each))) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.interaction`, "only a box, prism, pyramid, cylinder or cone unfolds");
   }
-  const language = lessonTextLanguage(plan);
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const variable = `${base.replace(/[^A-Za-z0-9]+/gu, "_")}_${interaction ?? "view"}`;
   const built = buildSolid({
     as: base,

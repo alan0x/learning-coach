@@ -122,6 +122,9 @@ export class CompiledVisualRegistry {
       whole: reference(visual.whole),
       ...(visual.primaryScene ? { primaryScene: reference(visual.primaryScene) } : {}),
       parts: new Map([...visual.parts].map(([name, target]) => [name, reference(target)])),
+      // A visual's own slider goes with its card: kept when the card is written, dropped when an earlier
+      // identical card is shown instead (that card's slider is already in the lesson).
+      ...(visual.variables && !visual.actions.some(action => action.do === "write" && reused.has(action.as)) ? { variables: visual.variables } : {}),
     };
   }
 }

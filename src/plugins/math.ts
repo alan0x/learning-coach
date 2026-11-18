@@ -144,8 +144,10 @@ export const MATH_RECIPES = {
     initial_camera: SCENE_FIRST_CAMERA,
     output_kinds: ["scene3d"],
     student_controls: ["slider", "scene3d_view"],
-    required_features: ["solid_3d"],
-    model_guidance: "立体：solids照题写尺寸，2个则并排；join叠放或两长方体拼L；show的数和滑块由程序给",
+    // Its own feature, so the model can ask for it by name; with section_plane, a cut through any of its
+    // shapes routes here, while solid_3d with section_plane still means the teaching cube.
+    required_features: ["solids", "section_plane"],
+    model_guidance: "solids照题写尺寸，2个则并排；join叠放或两长方体拼L；show数值和滑块由程序给",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],

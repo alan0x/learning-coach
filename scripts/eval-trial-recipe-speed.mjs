@@ -502,9 +502,12 @@ export function recipesInPart(part) {
     if ((content.curves ?? []).some((curve) => curve.series)) found.push("plot_pieces");
     if ((content.intervals ?? []).some((interval) => /^(domain|range)-/u.test(String(interval.as)))) found.push("plot_domain_range");
   }
-  // The 3D solids recipe (decision 0019): OLL's buildSolid names its objects solid… and beside… and gives
-  // them no colour or label (cube_with_section's teal cube is also "solid", with both).
-  if (writes.some((action) => action.kind === "scene3d" && (action.content?.objects ?? []).some((object) => /^solid/u.test(String(object.as)) && object.color === undefined && object.label === undefined))) found.push("solid_3d");
+  // The 3D solids recipe (decision 0019): every object is one of buildSolid's (solid, solid-top, solid-side,
+  // beside, beside-top, beside-side), uncoloured and unlabelled, with no teaching highlights
+  // (cube_with_section's teal cube is also "solid", labelled, with vertex, edge and face highlights).
+  const solidName = /^(solid|beside)(-top|-side)?$/u;
+  if (writes.some((action) => action.kind === "scene3d" && !(action.content?.highlights ?? []).length && (action.content?.objects ?? []).length
+    && action.content.objects.every((object) => solidName.test(String(object.as)) && object.color === undefined && object.label === undefined))) found.push("solid_3d");
   return found;
 }
 

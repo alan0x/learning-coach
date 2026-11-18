@@ -13,7 +13,11 @@ const STOP = new Set("a an the and or of to in on at by for with from into onto 
 export function terms(text) {
   const lower = String(text).toLowerCase();
   const words = (lower.match(/[a-z]+/gu) ?? []).filter((word) => word.length > 2 && !STOP.has(word));
-  const han = [...lower.matchAll(/\p{Script=Han}+/gu)].flatMap(([run]) => [...run].slice(0, -1).map((char, index) => char + run[index + 1]));
+  // Bigrams by code point (a supplementary character is one character); a lone character is its own term.
+  const han = [...lower.matchAll(/\p{Script=Han}+/gu)].flatMap(([run]) => {
+    const chars = [...run];
+    return chars.length === 1 ? chars : chars.slice(0, -1).map((char, index) => char + chars[index + 1]);
+  });
   return new Set([...words, ...han]);
 }
 
