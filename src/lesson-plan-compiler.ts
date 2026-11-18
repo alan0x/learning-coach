@@ -738,7 +738,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       const praiseClaims = praise ? praiseArithmetic(praise) : undefined;
       if (praise && praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
-        viewAdjustments.push({ section: sectionOffset, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}` });
+        viewAdjustments.push({ section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}` });
         praise = undefined;
       }
       const common = {

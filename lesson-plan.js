@@ -19210,6 +19210,7 @@ var WORD_EQS = ["is equal to", "equals", "makes", "gives", "is", "\u7B49\u4E8E",
 var SYMBOL_OPS = { "+": "+", "-": "-", "\u2212": "-", "\u2013": "-", "\xD7": "*", "*": "*", "\xB7": "*", "\xF7": "/", "/": "/" };
 var NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下)/iu;
 var GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″]/u;
+var CONTINUES = /^[≈:：]$/u;
 var NUMBER = /^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/u;
 function tokenize2(text3) {
   const tokens = [];
@@ -19223,12 +19224,20 @@ function tokenize2(text3) {
     }
     const rest = text3.slice(i);
     const signed = /^[-−–]\d/u.test(rest) && previous()?.kind !== "num" && previous()?.text !== ")";
-    const number = NUMBER.exec(signed ? rest.slice(1) : rest);
+    const unsigned = signed ? rest.slice(1) : rest;
+    const fractionNumber = /^(\d+)\/(\d+)(?![\d.,]?\d)/u.exec(unsigned);
+    const number = fractionNumber ?? NUMBER.exec(unsigned);
     if (number) {
       const length2 = number[0].length + (signed ? 1 : 0);
       const before = text3[i - 1] ?? "";
       const after = text3[i + length2] ?? "";
-      tokens.push({ kind: "num", value: decimal(number[0], signed), glued: GLUE.test(before) || GLUE.test(after), text: text3.slice(i, i + length2), rest: text3.slice(i + length2) });
+      const value2 = fractionNumber ? div(decimal(fractionNumber[1], signed), decimal(fractionNumber[2], false)) : decimal(number[0], signed);
+      if (!value2) {
+        tokens.push({ kind: "other", text: number[0], rest: text3.slice(i + length2) });
+        i += length2;
+        continue;
+      }
+      tokens.push({ kind: "num", value: value2, glued: GLUE.test(before) || GLUE.test(after), text: text3.slice(i, i + length2), rest: text3.slice(i + length2) });
       i += length2;
       continue;
     }
@@ -19307,18 +19316,10 @@ function praiseArithmetic(text3) {
   const claims = [];
   tokens.forEach((token, e) => {
     if (token.kind !== "eq") return;
-    const first = tokens[e + 1];
-    if (first?.kind !== "num" || first.glued) return;
-    const denominator = tokens[e + 3];
-    const fractionResult = tokens[e + 2]?.kind === "op" && tokens[e + 2].text === "/" && denominator?.kind === "num" && !denominator.glued && /^\d+$/u.test(first.text.replace(/^[-−–]/u, "")) && /^\d+$/u.test(denominator.text);
-    const result = fractionResult && denominator?.kind === "num" ? (() => {
-      const value2 = div(first.value, denominator.value);
-      return value2 ? { ...denominator, value: value2, text: `${first.text}/${denominator.text}` } : void 0;
-    })() : first;
-    if (!result) return;
-    const resultEnd = e + (fractionResult ? 3 : 1);
-    const after = tokens[resultEnd + 1];
-    if (after && (operatorAt(tokens, resultEnd + 1) || after.kind === "eq" && after.symbol || after.text === "\u2248")) return;
+    const result = tokens[e + 1];
+    if (result?.kind !== "num" || result.glued) return;
+    const after = tokens[e + 2];
+    if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || CONTINUES.test(after.text))) return;
     if (NOT_A_RESULT.test(result.rest.trimStart())) return;
     const values = [];
     const ops = [];
@@ -19334,7 +19335,7 @@ function praiseArithmetic(text3) {
     }
     if (ops.length === 0) return;
     const before = tokens[k - 1];
-    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || before.kind === "eq" && before.symbol || /^[([{|]$/u.test(before.text))) return;
+    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || before.kind === "eq" && before.symbol || /^[([{|:：]$/u.test(before.text))) return;
     const exact = evaluate2(values, ops);
     if (!exact) return;
     const start = text3.indexOf(tokens[k].text + tokens[k].rest);
@@ -19949,7 +19950,7 @@ function compileLessonPlan(value2, options = {}) {
       const praiseClaims = praise ? praiseArithmetic(praise) : void 0;
       if (praise && praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
-        viewAdjustments.push({ section: sectionOffset, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}` });
+        viewAdjustments.push({ section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}` });
         praise = void 0;
       }
       const common = {
@@ -23340,7 +23341,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     await options.on_program_adjustment?.(adjustment);
   }
   for (const adjustment of compiled.view_adjustments) {
-    await options.on_program_adjustment?.({ kind: "plot_view_adjusted", ...adjustment });
+    await options.on_program_adjustment?.({ kind: adjustment.reason === "praise_false_arithmetic" ? "success_message_removed" : "plot_view_adjusted", ...adjustment });
   }
   return {
     ...compiled,

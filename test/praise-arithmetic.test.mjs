@@ -2,7 +2,9 @@
 // claims written wholly in numerals and operators ("8 + 5 = 13", "9 plus 5 is 14", "8 乘 3 等于 24"), checks
 // them with exact fractions, and drops a message whose claim is false (decision 0020: a success message is a
 // part nothing else depends on). Anything it cannot read whole is left alone. Nothing drawn changes, and no
-// request changes. The expectations below were written before the checker, from general arithmetic forms.
+// request changes. The expectations below were written before the checker: general arithmetic forms, plus
+// messages copied from the probe-case census (PA, PI and SD recordings; never the question set). The cases
+// marked "review" were added after review found them read as false.
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -30,6 +32,7 @@ test("true claims are kept", () => {
     "7 − 10 = −3",
     "10 / 3 = 3.33",
     "2 / 3 = 0.667",
+    "1/2 + 1/3 + 1/6 = 1",
     "20 divided by 4 is 5.",
     "8 + 5 = 13 and 13 − 5 = 8.",
   ]) assert.equal(verdict(text), "true", text);
@@ -74,6 +77,12 @@ test("anything not written wholly in numerals is not read", () => {
     "50% + 25% = 80%",
     "Great job! A 5 by 4 garden bed is covered by 5 times 4, which equals 21 squares.",
     "8 + 5 = 13x",
+    // review: a fraction is a number, not a division; a mixed number or a clock time is not one result
+    "3/4 is 3 out of 4 equal parts.",
+    "3/4 + 3/4 = 1 1/2",
+    "3:30 + 15 = 3:45",
+    "Step 2: 4 + 4 = 8",
+    "10/3 = 3.33",
     "正确，θ=π/2 时 sin θ 取得最大值 1。",
     "现在 x=2，对应 y=4。",
     "Done: Slope (m) is now -5.",
@@ -100,6 +109,9 @@ test("the compiler drops a false message and records why; a true one is kept", (
   const records = dropped.view_adjustments.filter((item) => item.reason === "praise_false_arithmetic");
   assert.equal(records.length, 1);
   assert.match(records[0].detail, /2 \+ 2 = 5/);
+  const plan = withPraise("x");
+  const taskSection = plan.sections.findIndex((section) => (section.student_activities ?? []).some((item) => item.kind === "number_target")) + 1;
+  assert.equal(records[0].section, taskSection, "sections are counted from 1, as in the other adjustments");
 });
 
 test("the lesson is otherwise unchanged when a message is dropped", () => {

@@ -54,6 +54,8 @@ const SYMBOL_OPS: Record<string, "+" | "-" | "*" | "/"> = { "+": "+", "-": "-", 
 /** A result followed by one of these is not the value of the expression. */
 const NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下)/iu;
 const GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″]/u;
+/** A token right after the result that means the result goes on (3:45) or is not exact. */
+const CONTINUES = /^[≈:：]$/u;
 const NUMBER = /^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/u;
 
 function tokenize(text: string): Array<Token & { rest: string }> {
@@ -66,12 +68,19 @@ function tokenize(text: string): Array<Token & { rest: string }> {
     const rest = text.slice(i);
     // A minus sign right before a digit is the number's sign unless a number or ")" comes just before it.
     const signed = /^[-−–]\d/u.test(rest) && previous()?.kind !== "num" && previous()?.text !== ")";
-    const number = NUMBER.exec(signed ? rest.slice(1) : rest);
+    const unsigned = signed ? rest.slice(1) : rest;
+    // An unspaced fraction of whole numbers (3/4) is one number, as a learner reads it; "10 / 3" is a division.
+    const fractionNumber = /^(\d+)\/(\d+)(?![\d.,]?\d)/u.exec(unsigned);
+    const number = fractionNumber ?? NUMBER.exec(unsigned);
     if (number) {
       const length = number[0].length + (signed ? 1 : 0);
       const before = text[i - 1] ?? "";
       const after = text[i + length] ?? "";
-      tokens.push({ kind: "num", value: decimal(number[0], signed), glued: GLUE.test(before) || GLUE.test(after), text: text.slice(i, i + length), rest: text.slice(i + length) });
+      const value = fractionNumber
+        ? div(decimal(fractionNumber[1]!, signed), decimal(fractionNumber[2]!, false))
+        : decimal(number[0], signed);
+      if (!value) { tokens.push({ kind: "other", text: number[0], rest: text.slice(i + length) }); i += length; continue; }
+      tokens.push({ kind: "num", value, glued: GLUE.test(before) || GLUE.test(after), text: text.slice(i, i + length), rest: text.slice(i + length) });
       i += length;
       continue;
     }
@@ -141,23 +150,12 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
   const claims: PraiseArithmeticResult["claims"] = [];
   tokens.forEach((token, e) => {
     if (token.kind !== "eq") return;
-    // Right side: one number or one fraction of whole numbers (3/4), not glued to a symbol, not continued by
-    // an operator, "=" or a comparison.
-    const first = tokens[e + 1];
-    if (first?.kind !== "num" || first.glued) return;
-    const denominator = tokens[e + 3];
-    const fractionResult = tokens[e + 2]?.kind === "op" && tokens[e + 2]!.text === "/" && denominator?.kind === "num"
-      && !denominator.glued && /^\d+$/u.test(first.text.replace(/^[-−–]/u, "")) && /^\d+$/u.test(denominator.text);
-    const result = fractionResult && denominator?.kind === "num"
-      ? (() => {
-        const value = div(first.value, denominator.value);
-        return value ? { ...denominator, value, text: `${first.text}/${denominator.text}` } : undefined;
-      })()
-      : first;
-    if (!result) return;
-    const resultEnd = e + (fractionResult ? 3 : 1);
-    const after = tokens[resultEnd + 1];
-    if (after && (operatorAt(tokens, resultEnd + 1) || after.kind === "eq" && after.symbol || after.text === "≈")) return;
+    // Right side: one number, not glued to a symbol, and not continued by an operator, "=", another number
+    // (the 1/2 of 1 1/2), a colon (3:45) or a comparison.
+    const result = tokens[e + 1];
+    if (result?.kind !== "num" || result.glued) return;
+    const after = tokens[e + 2];
+    if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || CONTINUES.test(after.text))) return;
     if (NOT_A_RESULT.test(result.rest.trimStart())) return;
     // Left side: number (operator number)+, read backwards from the "=".
     const values: Fraction[] = [];
@@ -175,7 +173,7 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
     if (ops.length === 0) return;
     // What comes before the expression must end it: not a number, an operator, a bracket or a symbol "=".
     const before = tokens[k - 1];
-    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || before.kind === "eq" && before.symbol || /^[([{|]$/u.test(before.text))) return;
+    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || before.kind === "eq" && before.symbol || /^[([{|:：]$/u.test(before.text))) return;
     const exact = evaluate(values, ops);
     if (!exact) return;
     const start = text.indexOf(tokens[k]!.text + tokens[k]!.rest);

@@ -112,7 +112,7 @@ export interface GenerateLessonPlanOptions {
     error: { code: string; path?: string; message: string };
   }) => void | Promise<void>;
   on_program_adjustment?: (event: {
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed" | "plot_binding_rebuilt" | "plot_control_removed" | "plot_view_adjusted";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed" | "plot_binding_rebuilt" | "plot_control_removed" | "plot_view_adjusted" | "success_message_removed";
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -3180,7 +3180,7 @@ export async function generateLessonPlanWithModel(
     await options.on_program_adjustment?.(adjustment);
   }
   for (const adjustment of compiled.view_adjustments) {
-    await options.on_program_adjustment?.({ kind: "plot_view_adjusted", ...adjustment });
+    await options.on_program_adjustment?.({ kind: adjustment.reason === "praise_false_arithmetic" ? "success_message_removed" : "plot_view_adjusted", ...adjustment });
   }
   return {
     ...compiled,
