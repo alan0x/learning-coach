@@ -34,6 +34,7 @@ import { profileRouteEnvironment } from "./eval-payload-padding.mjs";
 import { runTool, caseLanguage } from "./eval-shadow-speed.mjs";
 import { planNumberLineTicks } from "octos-lesson-language/plugin-math";
 import { judgePlot } from "./plot-judge.mjs";
+import { generatedTokens, tokenSpeedVerdict } from "./speed-gate.mjs";
 import { judgeSolids } from "./solids-judge.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -617,7 +618,9 @@ export function summarize(rows) {
   const previous = rows.some((row) => row.arm === "previous") ? { previous: { motion: group((row) => row.kind === "motion", "previous"), other: group((row) => row.kind === "other", "previous") } } : {};
   // The groups a run planned are the kinds its speed pairs carry, whatever their outcome.
   const planned = [["motion", "fitting"], ["other", "other"]].filter(([kind]) => rows.some((row) => row.kind === kind)).map(([, name]) => name);
-  return { ...groups, ...previous, speed: speedVerdict(groups, planned), ...(quality ? { quality } : {}) };
+  // The speed gate (owner, 2026-11-18): generated tokens in seconds, judged sequentially (scripts/speed-gate.mjs).
+  // The earlier wall-clock median rule is kept beside it for comparison; it no longer decides.
+  return { ...groups, ...previous, speed: tokenSpeedVerdict(rows), speed_wall_clock: speedVerdict(groups, planned), ...(quality ? { quality } : {}) };
 }
 
 async function main() {
@@ -713,7 +716,13 @@ async function main() {
     const row = { pair, case: item.id, kind: item.kind, arm, order: order.indexOf(arm), ...kept };
     // The first call's thinking tokens, from its last usage record (runs 9 and 9b: offering the recipes
     // made the model think more often on requests they do not fit).
-    try { row.first_call_thoughts = firstCallThoughts(readFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), "utf8")); } catch { /* no reply kept */ }
+    try {
+      const raw = readFileSync(join(workDir, `${input.turn_id}.raw-model.txt`), "utf8");
+      row.first_call_thoughts = firstCallThoughts(raw);
+      // Output and thinking over every call: what the revised speed gate measures (scripts/speed-gate.mjs).
+      const tokens = generatedTokens(raw);
+      if (tokens !== undefined) row.generated_tokens = tokens;
+    } catch { /* no reply kept */ }
     // A case with expectations that produced no judged part is a hard miss, never a silent gap.
     if (arm === "candidate" && item.expect && !row.quality) row.quality = { hard: [`not judged: ${row.outcome}`], soft: [] };
     // The run stops at the first playable part, so the judge sees only the first section; when the
