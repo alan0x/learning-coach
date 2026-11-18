@@ -125,3 +125,21 @@ Judged by `scripts/speed-gate.mjs`, pooling gates 1, 1b and 1c. The fitted rate 
 | Other | 60 | +0.27 s | −0.25 to +1.28 s | **extend** |
 
 **Next (owner):** the last step, 20 more other pairs (about 45 calls), reaching the 80-pair cap where the median decides.
+
+# Speed gate 1d: final extension (2026-11-18, owner-approved)
+
+20 other-request pairs on the same frozen build as 1c. **50 calls.**
+- One candidate request ended without a lesson: on that question the model chose a non-lesson reply, while the baseline taught it. An offline replay confirms this. It is a model choice, not a crash.
+- That leaves 19 complete pairs.
+- No other request used `solid_3d`. The run's "used trial recipe" count of 4 includes plot recipes.
+
+Pooled 1 + 1b + 1c + 1d (`scripts/speed-gate.mjs`; rate 5.48 ms per generated token plus 1.63 s, r² 0.75, 199 rows):
+
+| Requests | Pairs | Median (tokens in seconds) | 95% interval | Verdict |
+|---|---|---|---|---|
+| Fitting | 20 | −2.17 s | −4.44 to −0.53 s | **pass** |
+| Other | 79 | +0.25 s | −0.70 to +1.26 s | **extend** (one pair short of the 80-pair cap) |
+
+This run alone gave −2.10 s on other requests (interval −4.16 to +1.58 s).
+
+**Next (owner):** the rule decides by the median at 80 pairs, and this run reached 79. One more other pair (2 to 8 calls) completes it. The rule is not changed to fit the result.
