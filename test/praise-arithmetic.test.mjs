@@ -40,6 +40,11 @@ test("true claims are kept", () => {
     "Step 2: 4 + 4 = 8",
     "第1步：8 + 5 = 13",
     "面积 = 8 × 3 = 24 平方厘米",
+    // review, round 2: a value that ends may be rounded when the sentence says so; a decimal comma is one number
+    "1 ÷ 8 = 0.13 (rounded)",
+    "1 ÷ 8 = 0.13 to 2 decimal places",
+    "约 1 ÷ 8 = 0.13",
+    "Great! 3 × 4 = 12, and 12 ÷ 4 = 3 with nothing left over.",
   ]) assert.equal(verdict(text), "true", text);
 });
 
@@ -67,6 +72,12 @@ test("false claims are found", () => {
     "Great job: 8 + 5 = 14!",
     "第1步：8 + 5 = 14",
     "面积 = 8 × 3 = 25",
+    // review, round 2: common praise words are not negations; "其余" or "nothing left over" is not a remainder
+    "没错，8 + 5 = 14。",
+    "做得不错，8 × 3 = 25。",
+    "非常棒，8 × 3 = 25 平方厘米，没错！",
+    "其余部分：6 ÷ 2 = 4",
+    "15 ÷ 3 = 6, nothing left over.",
   ]) assert.equal(verdict(text), "false", text);
 });
 
@@ -115,6 +126,15 @@ test("anything not written wholly in numerals is not read", () => {
     "Not 8 + 5 = 14, but 13!",
     "2 + 3 = 5, and 2 + 3 = 6 is the mistake to avoid.",
     "不是 8 + 5 = 14，而是 13。",
+    // review, round 2: questions, conditions, label numbers and decimal commas
+    "Is 8 + 5 = 14? No!",
+    "Check: is 8 + 5 = 14? Nope, it's 13.",
+    "If 8 + 5 = 14, the bar would be longer.",
+    "8 + 5 等于 14 吗？",
+    "Step 2 - 4 + 4 = 8",
+    "Step 2 – 8 + 5 = 13",
+    "Question 3 - 6 × 2 = 12",
+    "1,5 + 2 = 3,5",
     "正确，θ=π/2 时 sin θ 取得最大值 1。",
     "现在 x=2，对应 y=4。",
     "Done: Slope (m) is now -5.",
@@ -134,7 +154,6 @@ const taskMessages = (compiled) => (compiled.lesson.lesson.tasks ?? []).map((tas
 
 test("the compiler drops a false message and records why; a true one is kept", () => {
   const kept = compileAndValidateLessonPlan(withPraise("Great job! 2 + 2 = 4."));
-  assert.equal(praiseDrops(compileAndValidateLessonPlan(withPraise("Great job! 2 + 2 = 5."))).every((item) => item.kind === "success_message_removed"), true);
   assert.deepEqual(taskMessages(kept), ["Great job! 2 + 2 = 4."]);
   assert.equal(kept.view_adjustments.filter((item) => item.reason === "praise_false_arithmetic").length, 0);
 
@@ -143,6 +162,8 @@ test("the compiler drops a false message and records why; a true one is kept", (
   const records = dropped.view_adjustments.filter((item) => item.reason === "praise_false_arithmetic");
   assert.equal(records.length, 1);
   assert.match(records[0].detail, /2 \+ 2 = 5/);
+  assert.equal(records[0].kind, "success_message_removed");
+  assert.match(records[0].detail, new RegExp(`^${dropped.lesson.lesson.tasks[0].as} \\(`), "the record names the task, for the eval");
   const plan = withPraise("x");
   const taskSection = plan.sections.findIndex((section) => (section.student_activities ?? []).some((item) => item.kind === "number_target")) + 1;
   assert.equal(records[0].section, taskSection, "sections are counted from 1, as in the other adjustments");

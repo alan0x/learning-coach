@@ -19209,8 +19209,11 @@ var WORD_OPS = [
 var WORD_EQS = ["is equal to", "equals", "makes", "gives", "is", "\u7B49\u4E8E", "\u5F97", "\u662F"];
 var SYMBOL_OPS = { "+": "+", "-": "-", "\u2212": "-", "\u2013": "-", "\xD7": "*", "*": "*", "\xB7": "*", "\xF7": "/", "/": "/" };
 var NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
-var REMAINDER = /remainder|\brem\b|left ?over|余|……|\bR\s?\d/iu;
-var NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不是|并非|而非|错/iu;
+var REMAINDER = /remainder|\brem\b|(?<!nothing |no )left ?over|余数|余\s*\d|……|\bR\s?\d/iu;
+var NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不是|并非|而非|错了|错误|算错|写错|不对/iu;
+var ASKED = /^\s*(is|are|does|do|if|suppose|what if)\b|^\s*(如果|假如|假设|要是)|[?？吗]\s*$/iu;
+var ROUNDED = /round|decimal place|approximately|\babout\b|nearly|约|近似|保留|四舍五入/iu;
+var LABEL = /^(step|question|problem|part|example|exercise|no|q|第)$/iu;
 var SENTENCE_END = /[!?。！？；;\n]|\.(?!\d)/gu;
 var GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″\u0300-\u036f]/u;
 var NUMBER = /^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/u;
@@ -19315,23 +19318,29 @@ function nonTerminating(value2) {
   while (d % 5n === 0n) d /= 5n;
   return d !== 1n;
 }
-function holds(exact, resultText, result) {
+function holds(exact, resultText, result, saysRounded) {
   const difference = sub3(exact, result);
   if (difference.n === 0n) return true;
   const places = (/\.(\d+)/u.exec(resultText)?.[1] ?? "").length;
-  if (places === 0 || !nonTerminating(exact)) return false;
+  if (places === 0 || !nonTerminating(exact) && !saysRounded) return false;
   return abs(difference.n) * 2n * 10n ** BigInt(places) <= difference.d;
 }
 function praiseArithmetic(text3) {
-  const tokens = tokenize2(text3 ?? "");
+  text3 = text3 ?? "";
+  const tokens = tokenize2(text3);
   const claims = [];
+  const ends = [...text3.matchAll(SENTENCE_END)].map((match) => match.index);
+  const sentence = (start, end) => text3.slice(
+    Math.max(0, ...ends.filter((index) => index < start).map((index) => index + 1)),
+    Math.min(text3.length, ...ends.filter((index) => index >= end).map((index) => index + 1))
+  );
   tokens.forEach((token, e) => {
     if (token.kind !== "eq") return;
     const result = tokens[e + 1];
     if (result?.kind !== "num" || result.glued) return;
     const after = tokens[e + 2];
     const betweenDigits = (token2) => /\d/u.test(text3[token2.at - 1] ?? "") && /\d/u.test(text3[token2.at + 1] ?? "");
-    if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || after.text === "\u2248" || /^[:：]$/u.test(after.text) && betweenDigits(after))) return;
+    if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || after.text === "\u2248" || /^[:：,]$/u.test(after.text) && betweenDigits(after))) return;
     if (NOT_A_RESULT.test(result.rest.trimStart())) return;
     const values = [];
     const ops = [];
@@ -19348,19 +19357,16 @@ function praiseArithmetic(text3) {
     if (ops.length === 0) return;
     const before = tokens[k - 1];
     const chain = before?.kind === "eq" && before.symbol && (tokens[k - 2]?.kind === "num" || /^[)\]}|]$/u.test(tokens[k - 2]?.text ?? ""));
-    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || chain || /^[([{|]$/u.test(before.text) || /^[:：]$/u.test(before.text) && betweenDigits(before))) return;
+    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || chain || /^[([{|]$/u.test(before.text) || /^[:：,]$/u.test(before.text) && betweenDigits(before) || LABEL.test(before.text))) return;
     const opTokens = tokens.slice(k, e).filter((_t, index) => index % 2 === 1);
     if (!token.symbol && opTokens.some((op) => /^[-–]$/u.test(op.text) && /\d/u.test(text3[op.at - 1] ?? "") && /\d/u.test(text3[op.at + 1] ?? ""))) return;
-    if (ops.includes("/") && REMAINDER.test(text3)) return;
     const exact = evaluate2(values, ops);
     if (!exact) return;
     const start = tokens[k].at;
     const end = text3.length - result.rest.length;
-    const ends = [...text3.matchAll(SENTENCE_END)].map((match) => match.index);
-    const sentenceStart = Math.max(0, ...ends.filter((index) => index < start).map((index) => index + 1));
-    const sentenceEnd = Math.min(text3.length, ...ends.filter((index) => index >= end));
-    if (NEGATED.test(text3.slice(sentenceStart, sentenceEnd))) return;
-    claims.push({ text: text3.slice(start, end).trim(), holds: holds(exact, result.text, result.value) });
+    const around = sentence(start, end);
+    if (NEGATED.test(around) || ASKED.test(around) || ops.includes("/") && REMAINDER.test(around)) return;
+    claims.push({ text: text3.slice(start, end).trim(), holds: holds(exact, result.text, result.value, ROUNDED.test(around)) });
   });
   return {
     verdict: claims.length === 0 ? "none" : claims.every((claim) => claim.holds) ? "true" : "false",
@@ -19939,14 +19945,11 @@ function compileLessonPlan(value2, options = {}) {
   const tasks = [];
   const reflections = [];
   const seenTaskSemantics = /* @__PURE__ */ new Set();
-  let droppedPraise;
-  const addTask = (task) => {
+  const addTask = (task, dropped) => {
     const semanticKey = JSON.stringify({
       allowed_operations: task.allowed_operations,
       completion: task.completion
     });
-    const dropped = droppedPraise;
-    droppedPraise = void 0;
     if (seenTaskSemantics.has(semanticKey)) return;
     if (dropped) viewAdjustments.push(dropped);
     seenTaskSemantics.add(semanticKey);
@@ -19970,16 +19973,17 @@ function compileLessonPlan(value2, options = {}) {
         });
         return;
       }
-      droppedPraise = void 0;
+      const taskAlias = `section-${pad2(sectionOffset + 1)}-task-${pad2(activityOffset + 1)}`;
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : void 0;
       const praiseClaims = praise ? praiseArithmetic(praise) : void 0;
-      if (praise && praiseClaims?.verdict === "false") {
+      let droppedPraise;
+      if (praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
-        droppedPraise = { section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}`, kind: "success_message_removed" };
+        droppedPraise = { section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${taskAlias} (${activityPath}.success_message): ${wrong}`, kind: "success_message_removed" };
         praise = void 0;
       }
       const common = {
-        as: `section-${pad2(sectionOffset + 1)}-task-${pad2(activityOffset + 1)}`,
+        as: taskAlias,
         prompt: namedNumbers(activity.prompt, plan),
         availability: { kind: "after_lesson" },
         hints: activity.hints.map((hint) => namedNumbers(hint, plan)),
@@ -20002,7 +20006,7 @@ function compileLessonPlan(value2, options = {}) {
             value: activity.value,
             tolerance: activity.tolerance
           }
-        });
+        }, droppedPraise);
       } else if (activity.kind === "numeric_answer") {
         const anchor = resolvedReference(`${activityPath}.reference`);
         const tolerance = Math.max(
@@ -20020,7 +20024,7 @@ function compileLessonPlan(value2, options = {}) {
             ...activity.unit ? { unit: activity.unit } : {},
             ...activity.simplest_fraction ? { form: "simplest_fraction" } : {}
           }
-        });
+        }, droppedPraise);
       } else {
         const resolvedTarget = resolvedReference(`${activityPath}.reference`);
         const node = primaryScenes.get(resolvedTarget.authoring_alias) ?? wholeTargets.get(resolvedTarget.authoring_alias) ?? resolvedTarget.authoring_alias;
@@ -20037,7 +20041,7 @@ function compileLessonPlan(value2, options = {}) {
             angular_tolerance: activity.angular_tolerance,
             zoom_tolerance: activity.zoom_tolerance
           }
-        });
+        }, droppedPraise);
       }
     });
   });

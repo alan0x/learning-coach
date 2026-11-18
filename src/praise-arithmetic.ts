@@ -54,9 +54,15 @@ const SYMBOL_OPS: Record<string, "+" | "-" | "*" | "/"> = { "+": "+", "-": "-", 
 /** A result followed by one of these is not the value of the expression. */
 const NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
 /** A division claim in a message that speaks of a remainder is a division with remainder, not exact. */
-const REMAINDER = /remainder|\brem\b|left ?over|余|……|\bR\s?\d/iu;
+const REMAINDER = /remainder|\brem\b|(?<!nothing |no )left ?over|余数|余\s*\d|……|\bR\s?\d/iu;
 /** A claim in a sentence that negates it or calls it a mistake is quoted, not stated. */
-const NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不是|并非|而非|错/iu;
+const NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不是|并非|而非|错了|错误|算错|写错|不对/iu;
+/** A question or a condition raises a claim without stating it. */
+const ASKED = /^\s*(is|are|does|do|if|suppose|what if)\b|^\s*(如果|假如|假设|要是)|[?？吗]\s*$/iu;
+/** A sentence that says its value is rounded may round a value that ends (1 ÷ 8 = 0.13). */
+const ROUNDED = /round|decimal place|approximately|\babout\b|nearly|约|近似|保留|四舍五入/iu;
+/** A label number (Step 2, Question 3, 第2步) is not the first term of a subtraction after it. */
+const LABEL = /^(step|question|problem|part|example|exercise|no|q|第)$/iu;
 /** Sentence ends; a full stop between digits is a decimal point. */
 const SENTENCE_END = /[!?。！？；;\n]|\.(?!\d)/gu;
 const GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″\u0300-\u036f]/u;
@@ -156,18 +162,25 @@ function nonTerminating(value: Fraction): boolean {
  * rounded, at the result's own decimal places (10 / 3 = 3.33); a value that ends must be written exactly,
  * so 0.5 + 0.25 = 0.8 is false.
  */
-function holds(exact: Fraction, resultText: string, result: Fraction): boolean {
+function holds(exact: Fraction, resultText: string, result: Fraction, saysRounded: boolean): boolean {
   const difference = sub(exact, result);
   if (difference.n === 0n) return true;
   const places = (/\.(\d+)/u.exec(resultText)?.[1] ?? "").length;
-  if (places === 0 || !nonTerminating(exact)) return false;
+  if (places === 0 || !nonTerminating(exact) && !saysRounded) return false;
   // |exact − result| ≤ ½ · 10^−places, compared exactly.
   return abs(difference.n) * 2n * 10n ** BigInt(places) <= difference.d;
 }
 
 export function praiseArithmetic(text: string): PraiseArithmeticResult {
-  const tokens = tokenize(text ?? "");
+  text = text ?? "";
+  const tokens = tokenize(text);
   const claims: PraiseArithmeticResult["claims"] = [];
+  const ends = [...text.matchAll(SENTENCE_END)].map((match) => match.index!);
+  /** The sentence around [start, end), with its closing mark. */
+  const sentence = (start: number, end: number) => text.slice(
+    Math.max(0, ...ends.filter((index) => index < start).map((index) => index + 1)),
+    Math.min(text.length, ...ends.filter((index) => index >= end).map((index) => index + 1)),
+  );
   tokens.forEach((token, e) => {
     if (token.kind !== "eq") return;
     // Right side: one number, not glued to a symbol, and not continued by an operator, "=", another number
@@ -177,7 +190,7 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
     const after = tokens[e + 2];
     const betweenDigits = (token: Placed) => /\d/u.test(text[token.at - 1] ?? "") && /\d/u.test(text[token.at + 1] ?? "");
     if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || after.text === "≈"
-      || /^[:：]$/u.test(after.text) && betweenDigits(after))) return;
+      || /^[:：,]$/u.test(after.text) && betweenDigits(after))) return;
     if (NOT_A_RESULT.test(result.rest.trimStart())) return;
     // Left side: number (operator number)+, read backwards from the "=".
     const values: Fraction[] = [];
@@ -197,22 +210,20 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
     // (3:30), or an "=" that follows a value (a chain). A label before "=" (面积 = 8 × 3 = 24) is fine.
     const before = tokens[k - 1];
     const chain = before?.kind === "eq" && before.symbol && (tokens[k - 2]?.kind === "num" || /^[)\]}|]$/u.test(tokens[k - 2]?.text ?? ""));
+    // A comma between digits is a decimal comma (1,5): the number goes on past it.
     if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || chain || /^[([{|]$/u.test(before.text)
-      || /^[:：]$/u.test(before.text) && betweenDigits(before))) return;
+      || /^[:：,]$/u.test(before.text) && betweenDigits(before) || LABEL.test(before.text))) return;
     const opTokens = tokens.slice(k, e).filter((_t, index) => index % 2 === 1);
     // "3-5 is 2" or "2024-11-18 is a day" is a range or a date: an unspaced hyphen read with a word "is".
     if (!token.symbol && opTokens.some((op) => /^[-–]$/u.test(op.text) && /\d/u.test(text[op.at - 1] ?? "") && /\d/u.test(text[op.at + 1] ?? ""))) return;
-    if (ops.includes("/") && REMAINDER.test(text)) return;
     const exact = evaluate(values, ops);
     if (!exact) return;
     const start = tokens[k]!.at;
     const end = text.length - result.rest.length;
-    // The sentence holding the claim: if it negates the claim or calls it a mistake, the claim is quoted.
-    const ends = [...text.matchAll(SENTENCE_END)].map((match) => match.index!);
-    const sentenceStart = Math.max(0, ...ends.filter((index) => index < start).map((index) => index + 1));
-    const sentenceEnd = Math.min(text.length, ...ends.filter((index) => index >= end));
-    if (NEGATED.test(text.slice(sentenceStart, sentenceEnd))) return;
-    claims.push({ text: text.slice(start, end).trim(), holds: holds(exact, result.text, result.value) });
+    // Read in its sentence: a quoted mistake, a question, a condition or a remainder is not a stated claim.
+    const around = sentence(start, end);
+    if (NEGATED.test(around) || ASKED.test(around) || ops.includes("/") && REMAINDER.test(around)) return;
+    claims.push({ text: text.slice(start, end).trim(), holds: holds(exact, result.text, result.value, ROUNDED.test(around)) });
   });
   return {
     verdict: claims.length === 0 ? "none" : claims.every((claim) => claim.holds) ? "true" : "false",

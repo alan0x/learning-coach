@@ -706,15 +706,12 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const tasks: NonNullable<AuthoringLesson["lesson"]["tasks"]> = [];
   const reflections: NonNullable<AuthoringLesson["lesson"]["reflections"]> = [];
   const seenTaskSemantics = new Set<string>();
-  /** A dropped success message, recorded only if its task is kept (a duplicate task is thrown away). */
-  let droppedPraise: CompiledLessonPlan["view_adjustments"][number] | undefined;
-  const addTask = (task: NonNullable<AuthoringLesson["lesson"]["tasks"]>[number]): void => {
+  /** `dropped` records a success message left out; it is kept only if the task is (a duplicate is thrown away). */
+  const addTask = (task: NonNullable<AuthoringLesson["lesson"]["tasks"]>[number], dropped?: CompiledLessonPlan["view_adjustments"][number]): void => {
     const semanticKey = JSON.stringify({
       allowed_operations: task.allowed_operations,
       completion: task.completion,
     });
-    const dropped = droppedPraise;
-    droppedPraise = undefined;
     if (seenTaskSemantics.has(semanticKey)) return;
     if (dropped) viewAdjustments.push(dropped);
     seenTaskSemantics.add(semanticKey);
@@ -740,16 +737,17 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         return;
       }
       // A success message whose arithmetic is false is dropped, never repaired (decision 0020; plan 3.6).
-      droppedPraise = undefined;
+      const taskAlias = `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`;
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : undefined;
       const praiseClaims = praise ? praiseArithmetic(praise) : undefined;
-      if (praise && praiseClaims?.verdict === "false") {
+      let droppedPraise: CompiledLessonPlan["view_adjustments"][number] | undefined;
+      if (praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
-        droppedPraise = { section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}`, kind: "success_message_removed" };
+        droppedPraise = { section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${taskAlias} (${activityPath}.success_message): ${wrong}`, kind: "success_message_removed" };
         praise = undefined;
       }
       const common = {
-        as: `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`,
+        as: taskAlias,
         prompt: namedNumbers(activity.prompt, plan),
         availability: { kind: "after_lesson" as const },
         hints: activity.hints.map(hint => namedNumbers(hint, plan)),
@@ -772,7 +770,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             value: activity.value,
             tolerance: activity.tolerance,
           },
-        });
+        }, droppedPraise);
       } else if (activity.kind === "numeric_answer") {
         const anchor = resolvedReference(`${activityPath}.reference`);
         // A rounded answer accepts anything that rounds to it, so a learner who
@@ -792,7 +790,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             ...(activity.unit ? { unit: activity.unit } : {}),
             ...(activity.simplest_fraction ? { form: "simplest_fraction" as const } : {}),
           },
-        });
+        }, droppedPraise);
 } else {
         const resolvedTarget = resolvedReference(`${activityPath}.reference`);
         const node = primaryScenes.get(resolvedTarget.authoring_alias)
@@ -806,7 +804,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             yaw: activity.yaw, pitch: activity.pitch, zoom: activity.zoom,
             angular_tolerance: activity.angular_tolerance, zoom_tolerance: activity.zoom_tolerance,
           },
-        });
+        }, droppedPraise);
       }
     });
   });
