@@ -27,8 +27,9 @@ export interface CompiledLessonPlan {
   /** Plugin ID to version for the plugins that built this lesson's visuals. */
   plugins: Record<string, string>;
   /** Visual decisions the program made for this lesson, by section (1-based). */
-  /** Program changes to the compiled lesson. `kind` names a change that is not to a plot or view. */
-  view_adjustments: Array<{ section: number; reason: string; detail: string; kind?: "success_message_removed" }>;
+  view_adjustments: Array<{ section: number; reason: string; detail: string }>;
+  /** Other program changes to the lesson's text, by section (1-based); each names its kind. */
+  program_adjustments: Array<{ section: number; kind: "success_message_removed"; reason: string; detail: string }>;
 }
 
 /** Compiled kinds a lesson number can drive: every output kind of a registered recipe with number inputs. */
@@ -541,6 +542,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   // Sliders a visual creates itself (a solid's cut or net), by alias, in the order the visuals appear.
   const visualVariables = new Map<string, NonNullable<CompiledVisual["variables"]>[number]>();
   const viewAdjustments: CompiledLessonPlan["view_adjustments"] = [];
+  const programAdjustments: CompiledLessonPlan["program_adjustments"] = [];
   let renderedVisuals: CompiledVisualRegistry | undefined;
   const reuseCompiledVisual = (visual: CompiledVisual) => {
     // The first component cannot duplicate earlier content. Initialize the
@@ -705,16 +707,23 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
 
   const tasks: NonNullable<AuthoringLesson["lesson"]["tasks"]> = [];
   const reflections: NonNullable<AuthoringLesson["lesson"]["reflections"]> = [];
-  const seenTaskSemantics = new Set<string>();
-  /** `dropped` records a success message left out; it is kept only if the task is (a duplicate is thrown away). */
-  const addTask = (task: NonNullable<AuthoringLesson["lesson"]["tasks"]>[number], dropped?: CompiledLessonPlan["view_adjustments"][number]): void => {
+  const seenTaskSemantics = new Map<string, NonNullable<AuthoringLesson["lesson"]["tasks"]>[number]>();
+  /**
+   * `dropped` records a success message left out; it is kept only if the task is (a duplicate is thrown
+   * away). A duplicate's own message fills in a kept task whose message was left out.
+   */
+  const addTask = (task: NonNullable<AuthoringLesson["lesson"]["tasks"]>[number], dropped?: CompiledLessonPlan["program_adjustments"][number]): void => {
     const semanticKey = JSON.stringify({
       allowed_operations: task.allowed_operations,
       completion: task.completion,
     });
-    if (seenTaskSemantics.has(semanticKey)) return;
-    if (dropped) viewAdjustments.push(dropped);
-    seenTaskSemantics.add(semanticKey);
+    const kept = seenTaskSemantics.get(semanticKey);
+    if (kept) {
+      if (!kept.success_message && task.success_message) kept.success_message = task.success_message;
+      return;
+    }
+    if (dropped) programAdjustments.push(dropped);
+    seenTaskSemantics.set(semanticKey, task);
     if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
       task.start = { kind: "practice", variables: task.allowed_operations.flatMap(operation =>
         operation.kind === "variable_change" ? [operation.variable] : []) };
@@ -740,10 +749,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       const taskAlias = `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`;
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : undefined;
       const praiseClaims = praise ? praiseArithmetic(praise) : undefined;
-      let droppedPraise: CompiledLessonPlan["view_adjustments"][number] | undefined;
+      let droppedPraise: CompiledLessonPlan["program_adjustments"][number] | undefined;
       if (praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
-        droppedPraise = { section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${taskAlias} (${activityPath}.success_message): ${wrong}`, kind: "success_message_removed" };
+        droppedPraise = { section: sectionOffset + 1, kind: "success_message_removed", reason: "praise_false_arithmetic", detail: `${taskAlias} (${activityPath}.success_message): ${wrong}` };
         praise = undefined;
       }
       const common = {
@@ -864,7 +873,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     steps,
     close: { summary: plan.close.summary, focus: closeFocus },
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
 }
 
 function expressionReferencesVariable(expression: unknown, variable: string): boolean {

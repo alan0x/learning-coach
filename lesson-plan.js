@@ -19207,21 +19207,40 @@ var WORD_OPS = [
   ["\u4E58", "*"]
 ];
 var WORD_EQS = ["is equal to", "equals", "makes", "gives", "is", "\u7B49\u4E8E", "\u5F97", "\u662F"];
-var SYMBOL_OPS = { "+": "+", "-": "-", "\u2212": "-", "\u2013": "-", "\xD7": "*", "*": "*", "\xB7": "*", "\xF7": "/", "/": "/" };
+var SYMBOL_OPS = {
+  "+": "+",
+  "\uFF0B": "+",
+  "-": "-",
+  "\u2212": "-",
+  "\u2013": "-",
+  "\u2012": "-",
+  "\uFF0D": "-",
+  "\xD7": "*",
+  "*": "*",
+  "\uFF0A": "*",
+  "\xB7": "*",
+  "\xF7": "/",
+  "/": "/",
+  "\uFF0F": "/"
+};
 var NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
 var REMAINDER = /remainder|\brem\b|(?<!nothing |no )left ?over|余数|余\s*\d|……|\bR\s?\d/iu;
-var NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不是|并非|而非|错了|错误|算错|写错|不对/iu;
-var ASKED = /^\s*(is|are|does|do|if|suppose|what if)\b|^\s*(如果|假如|假设|要是)|[?？吗]\s*$/iu;
-var ROUNDED = /round|decimal place|approximately|\babout\b|nearly|约|近似|保留|四舍五入/iu;
+var NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不是|并非|而非|(?<![不没])错|不对/iu;
+var ASKED_CLAUSE = /^\s*(is|are|does|do|if|suppose|what if)\b|^\s*(如果|假如|假设|要是)/iu;
+var ASKED_SENTENCE = /[?？吗][\s"'”’)）]*$/u;
+var ROUNDED = /\brounded\b|\bround(?:s|ing)? (?:to|off|up|down)\b|\bdecimal places?\b|\bapproximately\b|\bnearest (?:whole|tenth|hundredth|thousandth|integer|cent)\b|约等于|大约|近似|保留|四舍五入|精确到|(?<![节制预契简大])约(?![定束会])/iu;
 var LABEL = /^(step|question|problem|part|example|exercise|no|q|第)$/iu;
 var SENTENCE_END = /[!?。！？；;\n]|\.(?!\d)/gu;
+var CLAUSE_END = /[!?。！？；;\n、]|\.(?!\d)|(?<!\d)[,，:：]|[,，:：](?!\d)/gu;
 var GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″\u0300-\u036f]/u;
 var NUMBER = /^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/u;
+var LOOKAHEAD = 40;
 function tokenize2(text3) {
   const placed = [];
   let i = 0;
-  const push = (token) => {
-    placed.push({ ...token, at: i });
+  const push = (token, length2) => {
+    placed.push({ ...token, at: i, end: i + length2 });
+    i += length2;
   };
   const previous = () => placed[placed.length - 1];
   while (i < text3.length) {
@@ -19230,9 +19249,9 @@ function tokenize2(text3) {
       i += 1;
       continue;
     }
-    const rest = text3.slice(i);
-    const signed = /^[-−–]\d/u.test(rest) && previous()?.kind !== "num" && previous()?.text !== ")";
-    const unsigned = signed ? rest.slice(1) : rest;
+    const ahead = text3.slice(i, i + LOOKAHEAD);
+    const signed = /^[-−–‒－]\d/u.test(ahead) && previous()?.kind !== "num" && previous()?.text !== ")";
+    const unsigned = signed ? ahead.slice(1) : ahead;
     const fractionNumber = /^(\d+)\/(\d+)(?![\d.,]?\d)/u.exec(unsigned);
     const number = fractionNumber ?? NUMBER.exec(unsigned);
     if (number) {
@@ -19241,46 +19260,38 @@ function tokenize2(text3) {
       const after = text3[i + length2] ?? "";
       const value2 = fractionNumber ? div(decimal(fractionNumber[1], signed), decimal(fractionNumber[2], false)) : decimal(number[0], signed);
       if (!value2) {
-        push({ kind: "other", text: number[0], rest: text3.slice(i + length2) });
-        i += length2;
+        push({ kind: "other", text: number[0] }, length2);
         continue;
       }
-      push({ kind: "num", value: value2, glued: GLUE.test(before) || GLUE.test(after), text: text3.slice(i, i + length2), rest: text3.slice(i + length2) });
-      i += length2;
+      push({ kind: "num", value: value2, glued: GLUE.test(before) || GLUE.test(after), text: text3.slice(i, i + length2) }, length2);
       continue;
     }
     if (ch === "=" || ch === "\uFF1D") {
-      push({ kind: "eq", symbol: true, text: ch, rest: text3.slice(i + 1) });
-      i += 1;
+      push({ kind: "eq", symbol: true, text: ch }, 1);
       continue;
     }
     if (SYMBOL_OPS[ch]) {
-      push({ kind: "op", op: SYMBOL_OPS[ch], text: ch, rest: text3.slice(i + 1) });
-      i += 1;
+      push({ kind: "op", op: SYMBOL_OPS[ch], text: ch }, 1);
       continue;
     }
-    const lower = rest.toLowerCase();
-    const latinBoundary = (length2) => !/[A-Za-z]/u.test(rest[length2] ?? "");
+    const lower = ahead.toLowerCase();
+    const latinBoundary = (length2) => !/[A-Za-z]/u.test(text3[i + length2] ?? "");
     const wordOp = WORD_OPS.find(([word2]) => lower.startsWith(word2) && (!/[a-z]/u.test(word2[0]) || latinBoundary(word2.length)));
     if (wordOp) {
-      push({ kind: "op", op: wordOp[1], text: wordOp[0], rest: rest.slice(wordOp[0].length) });
-      i += wordOp[0].length;
+      push({ kind: "op", op: wordOp[1], text: wordOp[0] }, wordOp[0].length);
       continue;
     }
     const wordEq = WORD_EQS.find((word2) => lower.startsWith(word2) && (!/[a-z]/u.test(word2[0]) || latinBoundary(word2.length)));
     if (wordEq) {
-      push({ kind: "eq", symbol: false, text: wordEq, rest: rest.slice(wordEq.length) });
-      i += wordEq.length;
+      push({ kind: "eq", symbol: false, text: wordEq }, wordEq.length);
       continue;
     }
-    const word = /^[A-Za-z]+/u.exec(rest);
+    const word = /^[A-Za-z]+/u.exec(ahead);
     if (word) {
-      push({ kind: "word", text: word[0], rest: rest.slice(word[0].length) });
-      i += word[0].length;
+      push({ kind: "word", text: word[0] }, word[0].length);
       continue;
     }
-    push({ kind: new RegExp("\\p{L}", "u").test(ch) ? "word" : "other", text: ch, rest: text3.slice(i + 1) });
-    i += 1;
+    push({ kind: new RegExp("\\p{L}", "u").test(ch) ? "word" : "other", text: ch }, 1);
   }
   return placed;
 }
@@ -19322,26 +19333,35 @@ function holds(exact, resultText, result, saysRounded) {
   const difference = sub3(exact, result);
   if (difference.n === 0n) return true;
   const places = (/\.(\d+)/u.exec(resultText)?.[1] ?? "").length;
-  if (places === 0 || !nonTerminating(exact) && !saysRounded) return false;
+  if (!saysRounded && (places === 0 || !nonTerminating(exact))) return false;
   return abs(difference.n) * 2n * 10n ** BigInt(places) <= difference.d;
 }
 function praiseArithmetic(text3) {
   text3 = text3 ?? "";
   const tokens = tokenize2(text3);
   const claims = [];
-  const ends = [...text3.matchAll(SENTENCE_END)].map((match) => match.index);
-  const sentence = (start, end) => text3.slice(
-    Math.max(0, ...ends.filter((index) => index < start).map((index) => index + 1)),
-    Math.min(text3.length, ...ends.filter((index) => index >= end).map((index) => index + 1))
-  );
+  const sentenceEnds = [...text3.matchAll(SENTENCE_END)].map((match) => match.index);
+  const clauseEnds = [...text3.matchAll(CLAUSE_END)].map((match) => match.index);
+  const span2 = (ends, start, end) => {
+    let from = 0;
+    let to = text3.length;
+    for (const index of ends) {
+      if (index < start) from = index + 1;
+      else if (index >= end) {
+        to = index + 1;
+        break;
+      }
+    }
+    return text3.slice(from, to);
+  };
+  const betweenDigits = (token) => /\d/u.test(text3[token.at - 1] ?? "") && /\d/u.test(text3[token.at + 1] ?? "");
   tokens.forEach((token, e) => {
     if (token.kind !== "eq") return;
     const result = tokens[e + 1];
     if (result?.kind !== "num" || result.glued) return;
     const after = tokens[e + 2];
-    const betweenDigits = (token2) => /\d/u.test(text3[token2.at - 1] ?? "") && /\d/u.test(text3[token2.at + 1] ?? "");
     if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || after.text === "\u2248" || /^[:：,]$/u.test(after.text) && betweenDigits(after))) return;
-    if (NOT_A_RESULT.test(result.rest.trimStart())) return;
+    if (NOT_A_RESULT.test(text3.slice(result.end, result.end + LOOKAHEAD).trimStart())) return;
     const values = [];
     const ops = [];
     let k = e - 1;
@@ -19358,15 +19378,17 @@ function praiseArithmetic(text3) {
     const before = tokens[k - 1];
     const chain = before?.kind === "eq" && before.symbol && (tokens[k - 2]?.kind === "num" || /^[)\]}|]$/u.test(tokens[k - 2]?.text ?? ""));
     if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || chain || /^[([{|]$/u.test(before.text) || /^[:：,]$/u.test(before.text) && betweenDigits(before) || LABEL.test(before.text))) return;
+    const spacedEquals = !token.symbol || /\s/u.test(text3[token.at - 1] ?? "") || /\s/u.test(text3[token.end] ?? "");
     const opTokens = tokens.slice(k, e).filter((_t, index) => index % 2 === 1);
-    if (!token.symbol && opTokens.some((op) => /^[-–]$/u.test(op.text) && /\d/u.test(text3[op.at - 1] ?? "") && /\d/u.test(text3[op.at + 1] ?? ""))) return;
+    if (spacedEquals && opTokens.some((op) => op.kind === "op" && op.op === "-" && op.text !== "\u2212" && betweenDigits(op))) return;
     const exact = evaluate2(values, ops);
     if (!exact) return;
     const start = tokens[k].at;
-    const end = text3.length - result.rest.length;
-    const around = sentence(start, end);
-    if (NEGATED.test(around) || ASKED.test(around) || ops.includes("/") && REMAINDER.test(around)) return;
-    claims.push({ text: text3.slice(start, end).trim(), holds: holds(exact, result.text, result.value, ROUNDED.test(around)) });
+    const end = result.end;
+    const clause = span2(clauseEnds, start, end);
+    const sentence = span2(sentenceEnds, start, end);
+    if (NEGATED.test(clause) || ASKED_CLAUSE.test(clause) || ASKED_SENTENCE.test(sentence) || ops.includes("/") && REMAINDER.test(sentence)) return;
+    claims.push({ text: text3.slice(start, end).trim(), holds: holds(exact, result.text, result.value, ROUNDED.test(sentence)) });
   });
   return {
     verdict: claims.length === 0 ? "none" : claims.every((claim) => claim.holds) ? "true" : "false",
@@ -19778,6 +19800,7 @@ function compileLessonPlan(value2, options = {}) {
   const reusableVisuals = /* @__PURE__ */ new Map();
   const visualVariables = /* @__PURE__ */ new Map();
   const viewAdjustments = [];
+  const programAdjustments = [];
   let renderedVisuals;
   const reuseCompiledVisual = (visual) => {
     if (reusableVisuals.size === 0) return visual;
@@ -19944,15 +19967,19 @@ function compileLessonPlan(value2, options = {}) {
   });
   const tasks = [];
   const reflections = [];
-  const seenTaskSemantics = /* @__PURE__ */ new Set();
+  const seenTaskSemantics = /* @__PURE__ */ new Map();
   const addTask = (task, dropped) => {
     const semanticKey = JSON.stringify({
       allowed_operations: task.allowed_operations,
       completion: task.completion
     });
-    if (seenTaskSemantics.has(semanticKey)) return;
-    if (dropped) viewAdjustments.push(dropped);
-    seenTaskSemantics.add(semanticKey);
+    const kept = seenTaskSemantics.get(semanticKey);
+    if (kept) {
+      if (!kept.success_message && task.success_message) kept.success_message = task.success_message;
+      return;
+    }
+    if (dropped) programAdjustments.push(dropped);
+    seenTaskSemantics.set(semanticKey, task);
     if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
       task.start = { kind: "practice", variables: task.allowed_operations.flatMap((operation) => operation.kind === "variable_change" ? [operation.variable] : []) };
     }
@@ -19979,7 +20006,7 @@ function compileLessonPlan(value2, options = {}) {
       let droppedPraise;
       if (praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
-        droppedPraise = { section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${taskAlias} (${activityPath}.success_message): ${wrong}`, kind: "success_message_removed" };
+        droppedPraise = { section: sectionOffset + 1, kind: "success_message_removed", reason: "praise_false_arithmetic", detail: `${taskAlias} (${activityPath}.success_message): ${wrong}` };
         praise = void 0;
       }
       const common = {
@@ -20103,7 +20130,7 @@ function compileLessonPlan(value2, options = {}) {
     steps,
     close: { summary: plan.close.summary, focus: closeFocus }
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
 }
 function expressionReferencesVariable(expression, variable) {
   if (typeof expression !== "string") return false;
@@ -23370,7 +23397,10 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     await options.on_program_adjustment?.(adjustment);
   }
   for (const adjustment of compiled.view_adjustments) {
-    await options.on_program_adjustment?.({ ...adjustment, kind: adjustment.kind ?? "plot_view_adjusted" });
+    await options.on_program_adjustment?.({ kind: "plot_view_adjusted", ...adjustment });
+  }
+  for (const adjustment of compiled.program_adjustments) {
+    await options.on_program_adjustment?.(adjustment);
   }
   return {
     ...compiled,

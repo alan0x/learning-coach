@@ -3180,7 +3180,10 @@ export async function generateLessonPlanWithModel(
     await options.on_program_adjustment?.(adjustment);
   }
   for (const adjustment of compiled.view_adjustments) {
-    await options.on_program_adjustment?.({ ...adjustment, kind: adjustment.kind ?? "plot_view_adjusted" });
+    await options.on_program_adjustment?.({ kind: "plot_view_adjusted", ...adjustment });
+  }
+  for (const adjustment of compiled.program_adjustments) {
+    await options.on_program_adjustment?.(adjustment);
   }
   return {
     ...compiled,

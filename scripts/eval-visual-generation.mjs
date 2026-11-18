@@ -22,22 +22,27 @@ function normalizeExpression(value) {
   return value.normalize("NFKC").toLowerCase().replace(/^y\s*=/u, "").replace(/\s+/gu, "");
 }
 
-/** The compiler logged leaving out this task's success message (false arithmetic, plan 3.6). */
-function messageRemoved(stderr, taskAlias) {
-  return stderr.split("\n").some((line) => line.includes('"kind":"success_message_removed"') && line.includes(`${taskAlias} (`));
-}
-
-function completedModelCalls(stderr) {
+/** The JSON events Coach logs on stderr. */
+function loggedEvents(stderr) {
   return stderr.split("\n").flatMap((line) => {
     const prefix = "learning-coach: ";
     if (!line.startsWith(prefix)) return [];
     try {
-      const event = JSON.parse(line.slice(prefix.length));
-      return event.stage === "model-call" && event.status === "completed" ? [event] : [];
+      return [JSON.parse(line.slice(prefix.length))];
     } catch {
       return [];
     }
   });
+}
+
+/** The compiler logged leaving out this task's success message (false arithmetic, plan 3.6). */
+function messageRemoved(stderr, taskAlias) {
+  return loggedEvents(stderr).some((event) => event.stage === "lesson-plan-program-adjustment"
+    && event.kind === "success_message_removed" && String(event.detail ?? "").split(" ")[0] === taskAlias);
+}
+
+function completedModelCalls(stderr) {
+  return loggedEvents(stderr).filter((event) => event.stage === "model-call" && event.status === "completed");
 }
 
 async function runCase(item) {
