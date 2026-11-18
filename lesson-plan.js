@@ -20146,7 +20146,52 @@ function compileLessonPlan(value2, options = {}) {
     steps,
     close: { summary: plan.close.summary, focus: closeFocus }
   };
+  replayRepeatedChanges(lesson, programAdjustments);
   return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
+}
+var ACTION_PHASES = ["before_speech", "during_speech", "after_speech"];
+function replayRepeatedChanges(lesson, adjustments) {
+  const variables = lesson.lesson.variables ?? [];
+  const initial = new Map(variables.map((variable) => [variable.as, variable.initial]));
+  const value2 = new Map(initial);
+  const changedFrom = /* @__PURE__ */ new Map();
+  lesson.steps.forEach((step, stepIndex) => step.beats.forEach((beat) => {
+    const canReplay = !beat.start || beat.start.kind === "replay";
+    if (beat.start?.kind === "replay") {
+      for (const alias of beat.start.variables ?? []) {
+        const start = beat.start.values?.[alias] ?? initial.get(alias);
+        if (start !== void 0) value2.set(alias, start);
+      }
+    }
+    const touched = /* @__PURE__ */ new Set();
+    const replay = {};
+    for (const phase of ACTION_PHASES) for (const action of beat.actions) {
+      if (action.do !== "animate" || (action.when ?? "during_speech") !== phase) continue;
+      const current = value2.get(action.variable);
+      const from = changedFrom.get(action.variable);
+      if (canReplay && current === action.value && !touched.has(action.variable) && from !== void 0 && from !== current && !(beat.start?.kind === "replay" && beat.start.variables?.includes(action.variable))) {
+        replay[action.variable] = from;
+        adjustments.push({
+          section: Number(/(\d+)$/u.exec(step.key)?.[1] ?? stepIndex + 1),
+          kind: "change_replayed",
+          reason: "animation_replays_change",
+          detail: `${step.key}/${beat.key}: ${action.variable} is already ${current}; replayed from ${from}`
+        });
+      } else if (current !== action.value) {
+        changedFrom.set(action.variable, current ?? action.value);
+      }
+      touched.add(action.variable);
+      value2.set(action.variable, action.value);
+    }
+    const replayed = Object.keys(replay);
+    if (replayed.length === 0) return;
+    const existing = beat.start?.kind === "replay" ? beat.start : void 0;
+    beat.start = {
+      kind: "replay",
+      variables: [...existing?.variables ?? [], ...replayed],
+      values: { ...existing?.values ?? {}, ...replay }
+    };
+  }));
 }
 function expressionReferencesVariable(expression, variable) {
   if (typeof expression !== "string") return false;

@@ -29,7 +29,7 @@ export interface CompiledLessonPlan {
   /** Visual decisions the program made for this lesson, by section (1-based). */
   view_adjustments: Array<{ section: number; reason: string; detail: string }>;
   /** Other program changes to the lesson's text, by section (1-based); each names its kind. */
-  program_adjustments: Array<{ section: number; kind: "success_message_removed"; reason: string; detail: string }>;
+  program_adjustments: Array<{ section: number; kind: "success_message_removed" | "change_replayed"; reason: string; detail: string }>;
 }
 
 /** Compiled kinds a lesson number can drive: every output kind of a registered recipe with number inputs. */
@@ -871,7 +871,66 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     steps,
     close: { summary: plan.close.summary, focus: closeFocus },
   };
+  replayRepeatedChanges(lesson, programAdjustments);
   return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
+}
+
+const ACTION_PHASES = ["before_speech", "during_speech", "after_speech"] as const;
+
+/**
+ * An animation to the value its number already holds draws nothing (plan 3.6). When the number got there
+ * through an earlier change, the beat starts by putting it back where that change began (OLL's replay
+ * start), so the animation plays the change again; the narration of such beats replays it ("as m increases
+ * from 1 to 3"). Only the lesson's structure is read, never its wording. Left alone: a number that never
+ * changed (nothing to replay), a beat whose own start already resets the number, and a repeat inside the
+ * beat that made the change. The player runs one stream of operations, so a beat starts with the values
+ * the beats before it left; within a beat, actions play before, during, then after the speech.
+ */
+function replayRepeatedChanges(lesson: AuthoringLesson, adjustments: CompiledLessonPlan["program_adjustments"]): void {
+  const variables = lesson.lesson.variables ?? [];
+  const initial = new Map(variables.map((variable) => [variable.as, variable.initial]));
+  const value = new Map(initial);
+  /** Where each number's most recent change began. */
+  const changedFrom = new Map<string, number>();
+  lesson.steps.forEach((step, stepIndex) => step.beats.forEach((beat) => {
+    // Only a beat with no start, or a replay start, can take one more number to replay.
+    const canReplay = !beat.start || beat.start.kind === "replay";
+    if (beat.start?.kind === "replay") {
+      for (const alias of beat.start.variables ?? []) {
+        const start = beat.start.values?.[alias] ?? initial.get(alias);
+        if (start !== undefined) value.set(alias, start);
+      }
+    }
+    const touched = new Set<string>();
+    const replay: Record<string, number> = {};
+    for (const phase of ACTION_PHASES) for (const action of beat.actions) {
+      if (action.do !== "animate" || (action.when ?? "during_speech") !== phase) continue;
+      const current = value.get(action.variable);
+      const from = changedFrom.get(action.variable);
+      if (canReplay && current === action.value && !touched.has(action.variable) && from !== undefined && from !== current
+        && !(beat.start?.kind === "replay" && beat.start.variables?.includes(action.variable))) {
+        replay[action.variable] = from;
+        adjustments.push({
+          section: Number(/(\d+)$/u.exec(step.key)?.[1] ?? stepIndex + 1),
+          kind: "change_replayed",
+          reason: "animation_replays_change",
+          detail: `${step.key}/${beat.key}: ${action.variable} is already ${current}; replayed from ${from}`,
+        });
+      } else if (current !== action.value) {
+        changedFrom.set(action.variable, current ?? action.value);
+      }
+      touched.add(action.variable);
+      value.set(action.variable, action.value);
+    }
+    const replayed = Object.keys(replay);
+    if (replayed.length === 0) return;
+    const existing = beat.start?.kind === "replay" ? beat.start : undefined;
+    beat.start = {
+      kind: "replay",
+      variables: [...(existing?.variables ?? []), ...replayed],
+      values: { ...(existing?.values ?? {}), ...replay },
+    };
+  }));
 }
 
 function expressionReferencesVariable(expression: unknown, variable: string): boolean {
