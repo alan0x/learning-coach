@@ -113,3 +113,26 @@ test("a replay joins the model's restart of another number in one start", () => 
   assert.equal(replays(compiled).length, 1);
   assert.match(replays(compiled)[0].detail, /number_01 is already 2; replayed from 0/);
 });
+
+// Review, round 2: the walk runs on the final plan, so a replay starts from a value the learner saw.
+const { samplePlan } = await import(new URL("./sample-plans.mjs", import.meta.url));
+test("a replay starts from the value shown, after the program rounds it", () => {
+  // A polygon's side count is whole: the model's 12.4 is drawn as 12, so the replay starts at 12.
+  const plan = samplePlan("circle_polygon_bounds");
+  const moments = plan.sections[0].moments;
+  for (const end_value of [12.4, 20, 20]) moments.push({ narration: "Watch the sides.", actions: [{ action: "animate", number: 1, end_value, timing: "during_speech" }] });
+  const compiled = compileAndValidateLessonPlan(plan);
+  assert.deepEqual(compiled.lesson.steps[0].beats.at(-1).start, { kind: "replay", variables: ["number_01"], values: { number_01: 12 } });
+});
+
+test("a repeat after another number has changed is left alone: that picture was never shown", () => {
+  // h and k move together to 2 and -1; k then moves to 3; h "to 2" again would replay h from 0 beside k = 3.
+  const compiled = compileAndValidateLessonPlan(twoNumbers([[move(2, 3)], [move(1, 2)]]));
+  assert.equal(beats(compiled).at(-1).start, undefined);
+  assert.equal(replays(compiled).length, 0);
+});
+
+test("the compiled plan keeps no program-only field", () => {
+  const compiled = compileAndValidateLessonPlan(planWith([[animate(3)]]));
+  assert.equal(JSON.stringify(compiled.resolved.plan).includes("replay_from"), false);
+});

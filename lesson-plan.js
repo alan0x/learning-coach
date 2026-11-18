@@ -19796,13 +19796,14 @@ function resolveMetNumberTargets(plan) {
 function compileLessonPlan(value2, options = {}) {
   const resolved = resolveLessonPlan(value2, options);
   const plan = resolved.plan;
-  markRepeatedChanges(plan);
+  const writtenAnimations = snapshotAnimations(plan);
   setLessonTextLanguage(plan, options.language);
   for (const hooks of PLUGIN_HOOKS) hooks.normalize_plan?.(plan);
   for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
   normalizeProgramOwnedNumberRanges(plan);
   resolveMetNumberTargets(plan);
   mergeEquivalentVisualInputs(plan);
+  const replayFrom = markRepeatedChanges(plan, writtenAnimations);
   for (const [sectionIndex, section] of plan.sections.entries()) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
     const visual = action.content;
@@ -19818,13 +19819,8 @@ function compileLessonPlan(value2, options = {}) {
   const programAdjustments = [];
   const beatStart = (moment, sectionIndex, momentIndex) => {
     const restarts = moment.restart_numbers ?? [];
-    const replays = Object.entries(moment.replay_from ?? {}).map(([number, from]) => [Number(number), from]).filter(([number, from]) => {
-      const definition = plan.numbers?.[number - 1];
-      const end = moment.actions.find((action) => action.action === "animate" && action.number === number)?.end_value;
-      return definition !== void 0 && end !== void 0 && from !== end && from >= definition.min && from <= definition.max && !restarts.includes(number);
-    });
-    for (const [number, from] of replays) {
-      const end = moment.actions.find((action) => action.action === "animate" && action.number === number).end_value;
+    const replays = replayFrom.get(moment) ?? [];
+    for (const { number, from, end } of replays) {
       programAdjustments.push({
         section: sectionIndex,
         kind: "change_replayed",
@@ -19835,8 +19831,8 @@ function compileLessonPlan(value2, options = {}) {
     if (!restarts.length && !replays.length) return {};
     return { start: {
       kind: "replay",
-      variables: [...restarts, ...replays.map(([number]) => number)].map(variableAlias),
-      ...replays.length ? { values: Object.fromEntries(replays.map(([number, from]) => [variableAlias(number), from])) } : {}
+      variables: [...restarts, ...replays.map(({ number }) => number)].map(variableAlias),
+      ...replays.length ? { values: Object.fromEntries(replays.map(({ number, from }) => [variableAlias(number), from])) } : {}
     } };
   };
   let renderedVisuals;
@@ -20172,27 +20168,48 @@ function compileLessonPlan(value2, options = {}) {
   };
   return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
 }
-function markRepeatedChanges(plan) {
+function snapshotAnimations(plan) {
+  return new Map(plan.sections.flatMap((section) => section.moments.map((moment) => [
+    moment,
+    moment.actions.map((action) => action.action === "animate" ? { number: action.number, end: action.end_value } : null)
+  ])));
+}
+function markRepeatedChanges(plan, written) {
+  const marks = /* @__PURE__ */ new Map();
   const value2 = new Map((plan.numbers ?? []).map((number, index) => [index + 1, number.initial]));
-  const changedFrom = /* @__PURE__ */ new Map();
+  const lastChange = /* @__PURE__ */ new Map();
+  const modelAnimation = (moment, index, action) => {
+    const entry = written.get(moment)?.[index];
+    return entry && entry.number === action.number ? entry : void 0;
+  };
   for (const section of plan.sections) for (const moment of section.moments) {
     for (const number of moment.restart_numbers ?? []) {
       value2.set(number, plan.numbers[number - 1].initial);
-      changedFrom.delete(number);
+      lastChange.delete(number);
     }
-    const animations = moment.actions.filter((action) => action.action === "animate");
+    const animations = moment.actions.flatMap((action, index) => action.action === "animate" ? [{ action, index }] : []);
     const only2 = animations.length === 1 ? animations[0] : void 0;
-    const from = only2 ? changedFrom.get(only2.number) : void 0;
-    if (only2 && (only2.timing ?? "during_speech") !== "after_speech" && value2.get(only2.number) === only2.end_value && from !== void 0 && from !== only2.end_value && !(moment.restart_numbers ?? []).includes(only2.number)) {
-      moment.replay_from = { [only2.number]: from };
+    if (only2 && (only2.action.timing ?? "during_speech") !== "after_speech" && !(moment.restart_numbers ?? []).includes(only2.action.number)) {
+      const { action } = only2;
+      const change = lastChange.get(action.number);
+      const writtenRepeat = modelAnimation(moment, only2.index, action);
+      const othersUnchanged = change !== void 0 && [...value2].every(([number, current]) => number === action.number || change.before.get(number) === current);
+      if (change && writtenRepeat && value2.get(action.number) === action.end_value && change.from !== action.end_value && writtenRepeat.end === change.writtenEnd && othersUnchanged) {
+        marks.set(moment, [{ number: action.number, from: change.from, end: action.end_value }]);
+      }
     }
-    for (const timing of ["before_speech", "during_speech", "after_speech"]) for (const action of animations) {
+    for (const timing of ["before_speech", "during_speech", "after_speech"]) for (const { action, index } of animations) {
       if ((action.timing ?? "during_speech") !== timing) continue;
       const current = value2.get(action.number);
-      if (current !== void 0 && current !== action.end_value) changedFrom.set(action.number, current);
+      if (current !== void 0 && current !== action.end_value) {
+        const mine = modelAnimation(moment, index, action);
+        if (mine) lastChange.set(action.number, { from: current, writtenEnd: mine.end, before: new Map(value2) });
+        else lastChange.delete(action.number);
+      }
       value2.set(action.number, action.end_value);
     }
   }
+  return marks;
 }
 function expressionReferencesVariable(expression, variable) {
   if (typeof expression !== "string") return false;

@@ -523,14 +523,15 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
 export function compileLessonPlan(value: unknown, options: CompileLessonPlanOptions = {}): CompiledLessonPlan {
   const resolved = resolveLessonPlan(value, options);
   const plan = resolved.plan;
-  // Read the model's own animations before anything below normalizes or adds to them.
-  markRepeatedChanges(plan);
+  // The model's own animations as written, before anything below normalizes or adds to them.
+  const writtenAnimations = snapshotAnimations(plan);
   setLessonTextLanguage(plan, options.language);
   for (const hooks of PLUGIN_HOOKS) hooks.normalize_plan?.(plan);
   for (const hooks of PLUGIN_HOOKS) hooks.check_plan?.(plan);
   normalizeProgramOwnedNumberRanges(plan);
   resolveMetNumberTargets(plan);
   mergeEquivalentVisualInputs(plan);
+  const replayFrom = markRepeatedChanges(plan, writtenAnimations);
   for (const [sectionIndex, section] of plan.sections.entries()) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
     const visual = action.content as LessonPlanVisualContent;
@@ -545,20 +546,11 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const visualVariables = new Map<string, NonNullable<CompiledVisual["variables"]>[number]>();
   const viewAdjustments: CompiledLessonPlan["view_adjustments"] = [];
   const programAdjustments: CompiledLessonPlan["program_adjustments"] = [];
-  /**
-   * A beat's start: the model's restarts, plus a number marked to replay its last change (markRepeatedChanges).
-   * A mark is kept only if, after the program's normalization, its value is in range and differs from the
-   * moment's animation end; otherwise the moment plays as written.
-   */
+  /** A beat's start: the model's restarts, plus a number marked to replay its last change (markRepeatedChanges). */
   const beatStart = (moment: LessonPlan["sections"][number]["moments"][number], sectionIndex: number, momentIndex: number) => {
     const restarts = moment.restart_numbers ?? [];
-    const replays = Object.entries(moment.replay_from ?? {}).map(([number, from]) => [Number(number), from] as const).filter(([number, from]) => {
-      const definition = plan.numbers?.[number - 1];
-      const end = moment.actions.find((action): action is LessonPlanAnimateAction => action.action === "animate" && action.number === number)?.end_value;
-      return definition !== undefined && end !== undefined && from !== end && from >= definition.min && from <= definition.max && !restarts.includes(number);
-    });
-    for (const [number, from] of replays) {
-      const end = moment.actions.find((action): action is LessonPlanAnimateAction => action.action === "animate" && action.number === number)!.end_value;
+    const replays = replayFrom.get(moment) ?? [];
+    for (const { number, from, end } of replays) {
       programAdjustments.push({
         section: sectionIndex, kind: "change_replayed", reason: "animation_replays_change",
         detail: `section-${pad(sectionIndex)}/moment-${pad(momentIndex)}: ${variableAlias(number)} is already ${end}; replayed from ${from}`,
@@ -567,8 +559,8 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     if (!restarts.length && !replays.length) return {};
     return { start: {
       kind: "replay" as const,
-      variables: [...restarts, ...replays.map(([number]) => number)].map(variableAlias),
-      ...(replays.length ? { values: Object.fromEntries(replays.map(([number, from]) => [variableAlias(number), from])) } : {}),
+      variables: [...restarts, ...replays.map(({ number }) => number)].map(variableAlias),
+      ...(replays.length ? { values: Object.fromEntries(replays.map(({ number, from }) => [variableAlias(number), from])) } : {}),
     } };
   };
   let renderedVisuals: CompiledVisualRegistry | undefined;
@@ -902,41 +894,70 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
 }
 
+type Moment = LessonPlan["sections"][number]["moments"][number];
+/** Per moment, by position: the number and written end of each animation the model wrote (null for other actions). */
+type WrittenAnimations = Map<Moment, Array<{ number: number; end: number } | null>>;
+
+function snapshotAnimations(plan: LessonPlan): WrittenAnimations {
+  return new Map(plan.sections.flatMap((section) => section.moments.map((moment) => [moment,
+    moment.actions.map((action) => (action.action === "animate" ? { number: action.number, end: action.end_value } : null))] as const)));
+}
+
 /**
  * An animation to the value its number already holds draws nothing (plan 3.6). When the model's own earlier
- * animation brought the number there, the moment is marked to start by putting the number back where that
- * change began, so the change plays again; the narration of such moments replays it ("as m increases from
- * 1 to 3"). It reads the model's plan before the program normalizes or adds anything, so a repeat the
- * program creates (a clamped or rounded end, an inserted animation) is never replayed. Only the lesson's
- * structure is read, never its wording. A moment is marked only when:
- * - the repeat is its only animation, so no other number is held still or moved beside it;
- * - the repeat plays before or during the speech, as a replay start does (never after it);
- * - the number changed by the model's own animation since the lesson began or was last restarted.
- * Moments play in order, and a restart resets a number to its starting value.
+ * animation brought the number there, the moment starts by putting the number back where that change began,
+ * so the change plays again; the narration of such moments replays it ("as m increases from 1 to 3").
+ *
+ * It walks the final plan, after the program has normalized ranges and starting values and added its own
+ * animations, so every value it replays from is one the learner saw. Only structure is read, never wording.
+ * A moment is marked only when:
+ * - the repeat is its only animation (no number held still or moved beside it);
+ * - it plays before or during the speech, as a replay start does (never after it);
+ * - the number's last change was the model's own animation (not one the program added), and the model wrote
+ *   both ends the same, so a repeat the program made by clamping or rounding two different ends is left;
+ * - no other number has changed since that change began, so the replayed picture is one already shown;
+ * - the moment does not already restart the number.
+ * Moments play in order; within one, actions play before, during, then after the speech. A restart resets
+ * a number to its starting value and clears its last change.
  */
-function markRepeatedChanges(plan: LessonPlan): void {
+function markRepeatedChanges(plan: LessonPlan, written: WrittenAnimations): Map<Moment, Array<{ number: number; from: number; end: number }>> {
+  const marks = new Map<Moment, Array<{ number: number; from: number; end: number }>>();
   const value = new Map<number, number>((plan.numbers ?? []).map((number, index) => [index + 1, number.initial]));
-  /** Where each number's last change by the model began, since the start or its last restart. */
-  const changedFrom = new Map<number, number>();
+  /** Each number's last change by the model: where it began, its written end, and every value then. */
+  const lastChange = new Map<number, { from: number; writtenEnd: number; before: Map<number, number> }>();
+  const modelAnimation = (moment: Moment, index: number, action: LessonPlanAnimateAction) => {
+    const entry = written.get(moment)?.[index];
+    return entry && entry.number === action.number ? entry : undefined;
+  };
   for (const section of plan.sections) for (const moment of section.moments) {
     for (const number of moment.restart_numbers ?? []) {
       value.set(number, plan.numbers![number - 1]!.initial);
-      changedFrom.delete(number);
+      lastChange.delete(number);
     }
-    const animations = moment.actions.filter((action): action is LessonPlanAnimateAction => action.action === "animate");
+    const animations = moment.actions.flatMap((action, index) => (action.action === "animate" ? [{ action, index }] : []));
     const only = animations.length === 1 ? animations[0]! : undefined;
-    const from = only ? changedFrom.get(only.number) : undefined;
-    if (only && (only.timing ?? "during_speech") !== "after_speech" && value.get(only.number) === only.end_value
-      && from !== undefined && from !== only.end_value && !(moment.restart_numbers ?? []).includes(only.number)) {
-      moment.replay_from = { [only.number]: from };
+    if (only && (only.action.timing ?? "during_speech") !== "after_speech" && !(moment.restart_numbers ?? []).includes(only.action.number)) {
+      const { action } = only;
+      const change = lastChange.get(action.number);
+      const writtenRepeat = modelAnimation(moment, only.index, action);
+      const othersUnchanged = change !== undefined && [...value].every(([number, current]) => number === action.number || change.before.get(number) === current);
+      if (change && writtenRepeat && value.get(action.number) === action.end_value && change.from !== action.end_value
+        && writtenRepeat.end === change.writtenEnd && othersUnchanged) {
+        marks.set(moment, [{ number: action.number, from: change.from, end: action.end_value }]);
+      }
     }
-    for (const timing of ["before_speech", "during_speech", "after_speech"] as const) for (const action of animations) {
+    for (const timing of ["before_speech", "during_speech", "after_speech"] as const) for (const { action, index } of animations) {
       if ((action.timing ?? "during_speech") !== timing) continue;
       const current = value.get(action.number);
-      if (current !== undefined && current !== action.end_value) changedFrom.set(action.number, current);
+      if (current !== undefined && current !== action.end_value) {
+        const mine = modelAnimation(moment, index, action);
+        if (mine) lastChange.set(action.number, { from: current, writtenEnd: mine.end, before: new Map(value) });
+        else lastChange.delete(action.number);
+      }
       value.set(action.number, action.end_value);
     }
   }
+  return marks;
 }
 
 function expressionReferencesVariable(expression: unknown, variable: string): boolean {

@@ -280,11 +280,6 @@ export type LessonPlanAction =
 
 export interface LessonPlanMoment {
   restart_numbers?: number[];
-  /**
-   * Program-written, never accepted from the model: numbers this moment puts back to where their last
-   * change began before its speech, so a repeated change plays again (plan 3.6). Number position to value.
-   */
-  replay_from?: Record<number, number>;
   narration?: string;
   delivery?: LessonPlanDelivery;
   actions: LessonPlanAction[];
