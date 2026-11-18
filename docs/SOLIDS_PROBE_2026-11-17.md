@@ -90,3 +90,25 @@ Quality, read by hand:
 - In the fitting pairs, SD-08 once drew a solid with no learner cut, and once drew no solid in its first section. SD-01, SD-09 and SD-10 taught volume first; later sections were not judged.
 
 **Next (owner):** the one repeat the earlier gates allowed (run 9b), on the 20 other pairs only. That is about 50 calls, inside this gate's remaining 94.
+
+# Speed gate 1b, the allowed repeat on other requests (2026-11-18, owner-approved)
+
+20 other-request pairs, **49 calls**, no errors.
+
+| Run | Pairs | Median paired difference | 95% CI |
+|---|---|---|---|
+| Gate 1, other | 20 | +1.20 s | −1.0 to +3.0 s |
+| Gate 1b, other | 20 | +0.75 s | −1.2 to +3.3 s |
+| Pooled | 40 | +1.18 s | — |
+
+**FAILED after the allowed repeat, so `solid_3d` stays a trial** (the pre-set rule, as in run 9b).
+
+**Signal from the recorded replies** (the first call's usage, medians):
+- the candidate wrote about 40 more output tokens;
+- it spent more thinking tokens: 515 against 476 in gate 1, and 788 against 605 in gate 1b;
+- the number of thinking turns did not change (16 of 20 on both arms);
+- the prompt grew by only +27 tokens.
+
+As in runs 9 and 9b, the likely cause is the model thinking longer on requests the new card doesn't fit, not the request's size.
+
+**Proposed next (owner):** a three-arm diagnostic on the 20 other requests, like run 10, at about 70 calls. The arms are the baseline, the trial with the cube retired, and the trial keeping the cube. It separates the cost of the new card from the cost of the changed catalog. Then a card rewrite, if the card is the cause, and a new gate.
