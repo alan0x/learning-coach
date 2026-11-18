@@ -153,3 +153,34 @@ test("second review of #116: an animation-only cut fails; the learner's slider r
   fails("SD-08", lesson(scene, { variables: [slider("h", -1, 1, 0)], animations: [["h", 1]] }), /missing cut/u);
   passes("SD-08", lesson(scene, { variables: [slider("h", -3, 3, 0)], animations: [["h", 3]] }));
 });
+
+test("third review of #116: a rounded value is read as the producer writes it, to the digits it shows", () => {
+  const cube = (side, caption) => lesson({ objects: [box(side, side, side)], caption });
+  const item = (volume) => ({ id: "X", expect: { solids: [{ kind: "box", volume }] } });
+  const verdict = (side, caption, volume = side ** 3) => judgeSolids(item(volume), cube(side, caption)).hard;
+  // Exponent form, as OLL writes a value too small for two places.
+  assert.deepEqual(verdict(0.00001, "Volume ≈ 1.00e-15"), []);
+  assert.ok(verdict(0.00001, "Volume ≈ 1.00e-14").some((miss) => /wrong volume shown: 1e-14/u.test(miss)), "a changed exponent fails");
+  assert.ok(verdict(0.00001, "Volume ≈ 1.10e-15").some((miss) => /wrong volume shown/u.test(miss)), "a changed significant digit fails");
+  // Small fixed-point values are held to their shown digits, not to two places.
+  assert.deepEqual(verdict(0.0464, "Volume ≈ 0.0000999"), []);
+  assert.ok(verdict(0.144, "Volume ≈ 0.000100").some((miss) => /wrong volume shown/u.test(miss)), "0.000100 for 0.003 fails");
+  // Large values are held to their two places, not a relative tolerance.
+  assert.deepEqual(verdict(12345.67, "Volume ≈ 1881672302290.56"), []);
+  assert.ok(verdict(12345.67, "Volume ≈ 1881672302290.66").some((miss) => /wrong volume shown/u.test(miss)));
+});
+
+test("producer to judge: the pinned buildSolid's own captions are read correctly (third review of #116)", async () => {
+  const { buildSolid } = await import("octos-lesson-language/plugin-math");
+  const built = (solid) => {
+    const scene = buildSolid({ as: "scene", role: "main_visual", place: { relation: "new_region" }, solid, fallback: "A solid.", show: { measures: ["volume"], language: "en-US" } });
+    return lesson(scene.actions[0].content);
+  };
+  const item = (want) => ({ id: "X", expect: { solids: [want] } });
+  for (const [side, volume] of [[0.00001, 1e-15], [1345.87, 1345.87 ** 3], [12345.67, 12345.67 ** 3], [123.45, 123.45 ** 3], [0.1, 0.001], [3, 27]]) {
+    const verdict = judgeSolids(item({ kind: "box", size: [side, side, side], volume }), built({ shape: "box", size: { x: side, y: side, z: side } }));
+    assert.deepEqual(verdict.hard, [], `cube ${side}: ${verdict.hard.join(" | ")}`);
+  }
+  const pyramid = judgeSolids(item({ kind: "pyramid", sides: 4, side: 6, height: 4, volume: 48 }), built({ shape: "pyramid", sides: 4, side: 6, height: 4 }));
+  assert.deepEqual(pyramid.hard, [], "a regular base given by its edge");
+});

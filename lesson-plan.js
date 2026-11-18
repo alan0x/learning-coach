@@ -2973,22 +2973,22 @@ var require_compile = __commonJS({
       }
     }
     exports.compileSchema = compileSchema;
-    function resolveRef(root, baseId, ref) {
+    function resolveRef(root2, baseId, ref) {
       var _a;
       ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, ref);
-      const schOrFunc = root.refs[ref];
+      const schOrFunc = root2.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve.call(this, root, ref);
+      let _sch = resolve.call(this, root2, ref);
       if (_sch === void 0) {
-        const schema = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
+        const schema = (_a = root2.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
         if (schema)
-          _sch = new SchemaEnv({ schema, schemaId, root, baseId });
+          _sch = new SchemaEnv({ schema, schemaId, root: root2, baseId });
       }
       if (_sch === void 0)
         return;
-      return root.refs[ref] = inlineOrCompile.call(this, _sch);
+      return root2.refs[ref] = inlineOrCompile.call(this, _sch);
     }
     exports.resolveRef = resolveRef;
     function inlineOrCompile(sch) {
@@ -3006,23 +3006,23 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve(root, ref) {
+    function resolve(root2, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
-      return sch || this.schemas[ref] || resolveSchema.call(this, root, ref);
+      return sch || this.schemas[ref] || resolveSchema.call(this, root2, ref);
     }
-    function resolveSchema(root, ref) {
+    function resolveSchema(root2, ref) {
       const p = this.opts.uriResolver.parse(ref);
       const refPath = (0, resolve_1._getFullPath)(this.opts.uriResolver, p);
-      let baseId = (0, resolve_1.getFullPath)(this.opts.uriResolver, root.baseId, void 0);
-      if (Object.keys(root.schema).length > 0 && refPath === baseId) {
-        return getJsonPointer.call(this, p, root);
+      let baseId = (0, resolve_1.getFullPath)(this.opts.uriResolver, root2.baseId, void 0);
+      if (Object.keys(root2.schema).length > 0 && refPath === baseId) {
+        return getJsonPointer.call(this, p, root2);
       }
       const id = (0, resolve_1.normalizeId)(refPath);
       const schOrRef = this.refs[id] || this.schemas[id];
       if (typeof schOrRef == "string") {
-        const sch = resolveSchema.call(this, root, schOrRef);
+        const sch = resolveSchema.call(this, root2, schOrRef);
         if (typeof (sch === null || sch === void 0 ? void 0 : sch.schema) !== "object")
           return;
         return getJsonPointer.call(this, p, sch);
@@ -3037,7 +3037,7 @@ var require_compile = __commonJS({
         const schId = schema[schemaId];
         if (schId)
           baseId = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schId);
-        return new SchemaEnv({ schema, schemaId, root, baseId });
+        return new SchemaEnv({ schema, schemaId, root: root2, baseId });
       }
       return getJsonPointer.call(this, p, schOrRef);
     }
@@ -3049,7 +3049,7 @@ var require_compile = __commonJS({
       "dependencies",
       "definitions"
     ]);
-    function getJsonPointer(parsedRef, { baseId, schema, root }) {
+    function getJsonPointer(parsedRef, { baseId, schema, root: root2 }) {
       var _a;
       if (((_a = parsedRef.fragment) === null || _a === void 0 ? void 0 : _a[0]) !== "/")
         return;
@@ -3068,10 +3068,10 @@ var require_compile = __commonJS({
       let env;
       if (typeof schema != "boolean" && schema.$ref && !(0, util_1.schemaHasRulesButRef)(schema, this.RULES)) {
         const $ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schema.$ref);
-        env = resolveSchema.call(this, root, $ref);
+        env = resolveSchema.call(this, root2, $ref);
       }
       const { schemaId } = this.opts;
-      env = env || new SchemaEnv({ schema, schemaId, root, baseId });
+      env = env || new SchemaEnv({ schema, schemaId, root: root2, baseId });
       if (env.schema !== env.root.schema)
         return env;
       return void 0;
@@ -4226,8 +4226,8 @@ var require_core = __commonJS({
           keyRef = sch;
         if (sch === void 0) {
           const { schemaId } = this.opts;
-          const root = new compile_1.SchemaEnv({ schema: {}, schemaId });
-          sch = compile_1.resolveSchema.call(this, root, keyRef);
+          const root2 = new compile_1.SchemaEnv({ schema: {}, schemaId });
+          sch = compile_1.resolveSchema.call(this, root2, keyRef);
           if (!sch)
             return;
           this.refs[keyRef] = sch;
@@ -4588,20 +4588,20 @@ var require_ref = __commonJS({
       code(cxt) {
         const { gen, schema: $ref, it } = cxt;
         const { baseId, schemaEnv: env, validateName, opts, self } = it;
-        const { root } = env;
-        if (($ref === "#" || $ref === "#/") && baseId === root.baseId)
+        const { root: root2 } = env;
+        if (($ref === "#" || $ref === "#/") && baseId === root2.baseId)
           return callRootRef();
-        const schOrEnv = compile_1.resolveRef.call(self, root, baseId, $ref);
+        const schOrEnv = compile_1.resolveRef.call(self, root2, baseId, $ref);
         if (schOrEnv === void 0)
           throw new ref_error_1.default(it.opts.uriResolver, baseId, $ref);
         if (schOrEnv instanceof compile_1.SchemaEnv)
           return callValidate(schOrEnv);
         return inlineRefSchema(schOrEnv);
         function callRootRef() {
-          if (env === root)
+          if (env === root2)
             return callRef(cxt, validateName, env, env.$async);
-          const rootName = gen.scopeValue("root", { ref: root });
-          return callRef(cxt, (0, codegen_1._)`${rootName}.validate`, root, root.$async);
+          const rootName = gen.scopeValue("root", { ref: root2 });
+          return callRef(cxt, (0, codegen_1._)`${rootName}.validate`, root2, root2.$async);
         }
         function callValidate(sch) {
           const v = getValidate(cxt, sch);
@@ -6126,9 +6126,9 @@ var require_dynamicAnchor = __commonJS({
     exports.dynamicAnchor = dynamicAnchor;
     function _getValidate(cxt) {
       const { schemaEnv, schema, self } = cxt.it;
-      const { root, baseId, localRefs, meta } = schemaEnv.root;
+      const { root: root2, baseId, localRefs, meta } = schemaEnv.root;
       const { schemaId } = self.opts;
-      const sch = new compile_1.SchemaEnv({ schema, schemaId, root, baseId, localRefs, meta });
+      const sch = new compile_1.SchemaEnv({ schema, schemaId, root: root2, baseId, localRefs, meta });
       compile_1.compileSchema.call(self, sch);
       return (0, ref_1.getValidate)(cxt, sch);
     }
@@ -7218,10 +7218,10 @@ function parseNumericAnswer(text3) {
   }
   match = MIXED.exec(written);
   if (match) {
-    const whole2 = Number(match[2]), numerator = Number(match[3]), denominator = Number(match[4]);
-    if (!safe(whole2, numerator, denominator) || denominator === 0 || numerator === 0 || numerator >= denominator || !safe(whole2 * denominator + numerator))
+    const whole = Number(match[2]), numerator = Number(match[3]), denominator = Number(match[4]);
+    if (!safe(whole, numerator, denominator) || denominator === 0 || numerator === 0 || numerator >= denominator || !safe(whole * denominator + numerator))
       return void 0;
-    const value2 = (whole2 * denominator + numerator) / denominator;
+    const value2 = (whole * denominator + numerator) / denominator;
     return { value: match[1] ? -value2 : value2, form: "mixed", numerator, denominator };
   }
   return void 0;
@@ -8386,11 +8386,11 @@ function parseFraction(text3) {
   const match = FRACTION2.exec(text3);
   if (!match)
     return void 0;
-  const [, sign, whole2, top, bottom] = match;
+  const [, sign, whole, top, bottom] = match;
   const denominator = Number(bottom);
   if (!Number.isSafeInteger(denominator) || denominator < 1 || denominator > NUMBER_LINE_LIMITS.denominator)
     return void 0;
-  const numerator = Number(whole2 ?? 0) * denominator + Number(top);
+  const numerator = Number(whole ?? 0) * denominator + Number(top);
   if (!Number.isSafeInteger(numerator))
     return void 0;
   return { numerator: sign ? -numerator : numerator, denominator };
@@ -8400,8 +8400,8 @@ function numberLineValue(value2) {
     return Number.isFinite(value2) ? value2 : void 0;
   if (typeof value2 !== "string")
     return void 0;
-  const fraction = parseFraction(value2);
-  return fraction ? fraction.numerator / fraction.denominator : void 0;
+  const fraction2 = parseFraction(value2);
+  return fraction2 ? fraction2.numerator / fraction2.denominator : void 0;
 }
 function record(value2, path, fail4) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2))
@@ -8525,8 +8525,8 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
       fail4(`${jumpPath}/hops`, "hops is true or false");
     if (jump.hops) {
       const count = Math.abs(by) / unit2;
-      const whole2 = near(count, Math.round(count), count);
-      if (!whole2 && !loose || Math.ceil(count - 1e-9) > NUMBER_LINE_LIMITS.hops) {
+      const whole = near(count, Math.round(count), count);
+      if (!whole && !loose || Math.ceil(count - 1e-9) > NUMBER_LINE_LIMITS.hops) {
         fail4(`${jumpPath}/hops`, `A jump drawn hop by hop moves a whole number of the smallest ticks, at most ${NUMBER_LINE_LIMITS.hops}`);
       }
     }
@@ -9333,14 +9333,14 @@ function splitBindingTarget(value2, path) {
 }
 function bindableTargets(action) {
   const targets = /* @__PURE__ */ new Map();
-  const add3 = (field, properties) => {
+  const add4 = (field, properties) => {
     for (const item of Array.isArray(action.content[field]) ? action.content[field] : []) {
       if (typeof item?.as === "string")
         targets.set(item.as, new Set(properties));
     }
   };
   for (const [field, properties] of Object.entries(bindingCapabilitiesForNodeKind(action.kind))) {
-    add3(field, properties);
+    add4(field, properties);
   }
   return targets;
 }
@@ -11445,8 +11445,52 @@ function sphereBands(c, radii, upperHalf) {
 }
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/solid-measures.js
-var plain = (value2) => ({ value: value2 });
-var ofPi = (coefficient2) => ({ value: coefficient2 * Math.PI, pi: coefficient2 });
+var gcd2 = (a, b) => {
+  a = a < 0n ? -a : a;
+  b = b < 0n ? -b : b;
+  while (b)
+    [a, b] = [b, a % b];
+  return a;
+};
+var fraction = (n, d = 1n) => {
+  if (d < 0n)
+    [n, d] = [-n, -d];
+  const g = gcd2(n, d) || 1n;
+  return { n: n / g, d: d / g };
+};
+var add2 = (a, b) => fraction(a.n * b.d + b.n * a.d, a.d * b.d);
+var sub2 = (a, b) => fraction(a.n * b.d - b.n * a.d, a.d * b.d);
+var mul = (...factors) => factors.reduce((a, b) => fraction(a.n * b.n, a.d * b.d), fraction(1n));
+var ratio = (n, d) => fraction(BigInt(n), BigInt(d));
+function exactNumber(value2) {
+  if (!Number.isFinite(value2))
+    return void 0;
+  const match = /^(-?)(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/u.exec(String(value2));
+  if (!match)
+    return void 0;
+  const digits = BigInt(`${match[2]}${match[3] ?? ""}`) * (match[1] ? -1n : 1n);
+  const exponent = Number(match[4] ?? 0) - (match[3]?.length ?? 0);
+  return exponent >= 0 ? fraction(digits * 10n ** BigInt(exponent)) : fraction(digits, 10n ** BigInt(-exponent));
+}
+var isqrt = (value2) => {
+  if (value2 < 2n)
+    return value2;
+  let x = BigInt(Math.floor(Math.sqrt(Number(value2))));
+  while (x * x > value2)
+    x -= 1n;
+  while ((x + 1n) * (x + 1n) <= value2)
+    x += 1n;
+  return x;
+};
+var root = (value2) => {
+  if (value2.n < 0n)
+    return void 0;
+  const [n, d] = [isqrt(value2.n), isqrt(value2.d)];
+  return n * n === value2.n && d * d === value2.d ? fraction(n, d) : void 0;
+};
+var all = (values) => values.some((value2) => value2 === void 0) ? void 0 : values;
+var plain = (value2, exact) => ({ value: value2, ...exact ? { exact } : {} });
+var ofPi = (coefficient2, exact) => ({ value: coefficient2 * Math.PI, pi: coefficient2, ...exact ? { exact } : {} });
 function polygonAreaPerimeter(corners) {
   let twice = 0, perimeter = 0;
   corners.forEach((point, index) => {
@@ -11466,52 +11510,126 @@ function slantedSides(corners, height, k) {
   });
   return total;
 }
+function exactBase(solid) {
+  if ("base" in solid) {
+    const base = solid.base;
+    if (base.kind === "rectangle") {
+      const [l, w] = all([exactNumber(base.length), exactNumber(base.width)]) ?? [];
+      if (!l || !w)
+        return {};
+      const half = (value2) => mul(value2, ratio(1, 2));
+      return { area: mul(l, w), perimeter: mul(ratio(2, 1), add2(l, w)), edges: [{ length: l, distance: half(w) }, { length: w, distance: half(l) }, { length: l, distance: half(w) }, { length: w, distance: half(l) }] };
+    }
+    if (base.kind === "right_triangle") {
+      const [a, b] = all([exactNumber(base.a), exactNumber(base.b)]) ?? [];
+      if (!a || !b)
+        return {};
+      const hypotenuse = root(add2(mul(a, a), mul(b, b)));
+      return { area: mul(a, b, ratio(1, 2)), ...hypotenuse ? { perimeter: add2(add2(a, b), hypotenuse) } : {} };
+    }
+    return {};
+  }
+  if (solid.sides === 4 && "side" in solid) {
+    const s = exactNumber(solid.side);
+    if (!s)
+      return {};
+    const edge = { length: s, distance: mul(s, ratio(1, 2)) };
+    return { area: mul(s, s), perimeter: mul(ratio(4, 1), s), edges: [edge, edge, edge, edge] };
+  }
+  return {};
+}
 function compositeVolume(solid) {
+  const third = ratio(1, 3);
   switch (solid.parts) {
-    case "cylinder_cone":
-      return ofPi(solid.radius ** 2 * (solid.height + solid.topHeight / 3));
-    case "cylinder_hemisphere":
-      return ofPi(solid.radius ** 2 * solid.height + 2 / 3 * solid.radius ** 3);
-    case "two_cylinders":
-      return ofPi(solid.radius ** 2 * solid.height + solid.topRadius ** 2 * solid.topHeight);
-    case "box_pyramid":
-      return plain(solid.width ** 2 * (solid.height + solid.topHeight / 3));
-    case "two_boxes":
-      return plain(solid.size.x * solid.size.y * solid.size.z + solid.sideSize.x * solid.sideSize.y * solid.sideSize.z);
+    case "cylinder_cone": {
+      const [r, h, t] = all([exactNumber(solid.radius), exactNumber(solid.height), exactNumber(solid.topHeight)]) ?? [];
+      return ofPi(solid.radius ** 2 * (solid.height + solid.topHeight / 3), r && h && t ? mul(r, r, add2(h, mul(t, third))) : void 0);
+    }
+    case "cylinder_hemisphere": {
+      const [r, h] = all([exactNumber(solid.radius), exactNumber(solid.height)]) ?? [];
+      return ofPi(solid.radius ** 2 * solid.height + 2 / 3 * solid.radius ** 3, r && h ? add2(mul(r, r, h), mul(ratio(2, 3), r, r, r)) : void 0);
+    }
+    case "two_cylinders": {
+      const [r, h, R, H] = all([exactNumber(solid.radius), exactNumber(solid.height), exactNumber(solid.topRadius), exactNumber(solid.topHeight)]) ?? [];
+      return ofPi(solid.radius ** 2 * solid.height + solid.topRadius ** 2 * solid.topHeight, r && h && R && H ? add2(mul(r, r, h), mul(R, R, H)) : void 0);
+    }
+    case "box_pyramid": {
+      const [w, h, t] = all([exactNumber(solid.width), exactNumber(solid.height), exactNumber(solid.topHeight)]) ?? [];
+      return plain(solid.width ** 2 * (solid.height + solid.topHeight / 3), w && h && t ? mul(w, w, add2(h, mul(t, third))) : void 0);
+    }
+    case "two_boxes": {
+      const sizes = all([solid.size.x, solid.size.y, solid.size.z, solid.sideSize.x, solid.sideSize.y, solid.sideSize.z].map(exactNumber));
+      const value2 = solid.size.x * solid.size.y * solid.size.z + solid.sideSize.x * solid.sideSize.y * solid.sideSize.z;
+      return plain(value2, sizes ? add2(mul(sizes[0], sizes[1], sizes[2]), mul(sizes[3], sizes[4], sizes[5])) : void 0);
+    }
   }
 }
 function solidMeasures(solid) {
   switch (solid.shape) {
     case "box": {
       const { x, y, z } = solid.size;
-      return { volume: plain(x * y * z), surfaceArea: plain(2 * (x * y + y * z + x * z)), counts: { faces: 6, edges: 12, vertices: 8 } };
+      const [a, b, c] = all([exactNumber(x), exactNumber(y), exactNumber(z)]) ?? [];
+      return {
+        volume: plain(x * y * z, a && b && c ? mul(a, b, c) : void 0),
+        surfaceArea: plain(2 * (x * y + y * z + x * z), a && b && c ? mul(ratio(2, 1), add2(add2(mul(a, b), mul(b, c)), mul(a, c))) : void 0),
+        counts: { faces: 6, edges: 12, vertices: 8 }
+      };
     }
-    case "cylinder":
-      return { volume: ofPi(solid.radius ** 2 * solid.height), surfaceArea: ofPi(2 * solid.radius * (solid.radius + solid.height)) };
-    case "cone":
-      return { volume: ofPi(solid.radius ** 2 * solid.height / 3), surfaceArea: ofPi(solid.radius * (solid.radius + Math.hypot(solid.radius, solid.height))) };
-    case "sphere":
-      return { volume: ofPi(4 / 3 * solid.radius ** 3), surfaceArea: ofPi(4 * solid.radius ** 2) };
+    case "cylinder": {
+      const [r, h] = all([exactNumber(solid.radius), exactNumber(solid.height)]) ?? [];
+      return { volume: ofPi(solid.radius ** 2 * solid.height, r && h ? mul(r, r, h) : void 0), surfaceArea: ofPi(2 * solid.radius * (solid.radius + solid.height), r && h ? mul(ratio(2, 1), r, add2(r, h)) : void 0) };
+    }
+    case "cone": {
+      const [r, h] = all([exactNumber(solid.radius), exactNumber(solid.height)]) ?? [];
+      const slant = r && h ? root(add2(mul(r, r), mul(h, h))) : void 0;
+      return {
+        volume: ofPi(solid.radius ** 2 * solid.height / 3, r && h ? mul(r, r, h, ratio(1, 3)) : void 0),
+        surfaceArea: ofPi(solid.radius * (solid.radius + Math.hypot(solid.radius, solid.height)), r && slant ? mul(r, add2(r, slant)) : void 0)
+      };
+    }
+    case "sphere": {
+      const r = exactNumber(solid.radius);
+      return { volume: ofPi(4 / 3 * solid.radius ** 3, r ? mul(ratio(4, 3), r, r, r) : void 0), surfaceArea: ofPi(4 * solid.radius ** 2, r ? mul(ratio(4, 1), r, r) : void 0) };
+    }
     // The whole surface: the curved half and the flat disc.
-    case "hemisphere":
-      return { volume: ofPi(2 / 3 * solid.radius ** 3), surfaceArea: ofPi(3 * solid.radius ** 2) };
+    case "hemisphere": {
+      const r = exactNumber(solid.radius);
+      return { volume: ofPi(2 / 3 * solid.radius ** 3, r ? mul(ratio(2, 3), r, r, r) : void 0), surfaceArea: ofPi(3 * solid.radius ** 2, r ? mul(ratio(3, 1), r, r) : void 0) };
+    }
     case "frustum": {
       const { radius: r1, topRadius: r2, height: h } = solid;
-      return { volume: ofPi(h * (r1 * r1 + r1 * r2 + r2 * r2) / 3), surfaceArea: ofPi(r1 * r1 + r2 * r2 + (r1 + r2) * Math.hypot(h, r1 - r2)) };
+      const [a, b, c] = all([exactNumber(r1), exactNumber(r2), exactNumber(h)]) ?? [];
+      const slant = a && b && c ? root(add2(mul(c, c), mul(sub2(a, b), sub2(a, b)))) : void 0;
+      return {
+        volume: ofPi(h * (r1 * r1 + r1 * r2 + r2 * r2) / 3, a && b && c ? mul(c, add2(add2(mul(a, a), mul(a, b)), mul(b, b)), ratio(1, 3)) : void 0),
+        surfaceArea: ofPi(r1 * r1 + r2 * r2 + (r1 + r2) * Math.hypot(h, r1 - r2), a && b && slant ? add2(add2(mul(a, a), mul(b, b)), mul(add2(a, b), slant)) : void 0)
+      };
     }
     case "prism":
     case "pyramid": {
       const corners = centredBaseCorners(solid);
       const { area, perimeter } = polygonAreaPerimeter(corners);
       const n = corners.length;
+      const exact = exactBase(solid);
+      const h = exactNumber(solid.height);
       if (solid.shape === "prism") {
-        return { volume: plain(area * solid.height), surfaceArea: plain(2 * area + perimeter * solid.height), counts: { faces: n + 2, edges: 3 * n, vertices: 2 * n } };
+        return {
+          volume: plain(area * solid.height, exact.area && h ? mul(exact.area, h) : void 0),
+          surfaceArea: plain(2 * area + perimeter * solid.height, exact.area && exact.perimeter && h ? add2(mul(ratio(2, 1), exact.area), mul(exact.perimeter, h)) : void 0),
+          counts: { faces: n + 2, edges: 3 * n, vertices: 2 * n }
+        };
       }
       const k = solid.topScale ?? 0;
       const sides = slantedSides(corners, solid.height, k);
+      const scale2 = exactNumber(k);
+      const faces = exact.edges && h && scale2 ? all(exact.edges.map(({ length: length2, distance }) => {
+        const inward = mul(sub2(fraction(1n), scale2), distance);
+        const slant = root(add2(mul(h, h), mul(inward, inward)));
+        return slant ? mul(ratio(1, 2), length2, add2(fraction(1n), scale2), slant) : void 0;
+      })) : void 0;
       return {
-        volume: plain(solid.height * area * (1 + k + k * k) / 3),
-        surfaceArea: plain(area * (1 + k * k) + sides),
+        volume: plain(solid.height * area * (1 + k + k * k) / 3, exact.area && h && scale2 ? mul(h, exact.area, add2(add2(fraction(1n), scale2), mul(scale2, scale2)), ratio(1, 3)) : void 0),
+        surfaceArea: plain(area * (1 + k * k) + sides, exact.area && scale2 && faces ? faces.reduce(add2, mul(exact.area, add2(fraction(1n), mul(scale2, scale2)))) : void 0),
         counts: k > 0 ? { faces: n + 2, edges: 3 * n, vertices: 2 * n } : { faces: n + 1, edges: 2 * n, vertices: n + 1 }
       };
     }
@@ -11525,36 +11643,35 @@ function solidHasMeasure(solid, kind) {
   const measures = solidMeasures(solid);
   return kind === "volume" ? measures.volume !== void 0 : kind === "surface_area" ? measures.surfaceArea !== void 0 : measures.counts !== void 0;
 }
-var whole = (value2) => Math.abs(value2 - Math.round(value2)) <= 64 * Number.EPSILON * Math.max(1, Math.abs(value2));
-var EXACT_LIMIT = 1e12;
-var exactAt = (value2, scaled) => Math.abs(scaled) < EXACT_LIMIT && whole(scaled) && (Math.round(scaled) !== 0 || value2 === 0);
-function exactDecimal(value2) {
+function decimalText(value2) {
   for (let places = 0; places <= 3; places += 1) {
-    const scaled = value2 * 10 ** places;
-    if (exactAt(value2, scaled))
-      return (Math.round(scaled) / 10 ** places).toFixed(places);
+    const scale2 = 10n ** BigInt(places);
+    if (value2.n * scale2 % value2.d !== 0n)
+      continue;
+    const scaled = value2.n * scale2 / value2.d;
+    const sign = scaled < 0n ? "-" : "";
+    const digits = (scaled < 0n ? -scaled : scaled).toString().padStart(places + 1, "0");
+    return places ? `${sign}${digits.slice(0, -places)}.${digits.slice(-places)}` : `${sign}${digits}`;
   }
   return void 0;
 }
 var approximate = (value2) => value2 !== 0 && Math.abs(value2) < 5e-3 ? value2.toPrecision(3) : (Math.round(value2 * 100) / 100).toFixed(2);
 function piText(coefficient2) {
-  const decimal = exactDecimal(coefficient2);
+  if (coefficient2.n === 0n)
+    return void 0;
+  const decimal = decimalText(coefficient2);
   if (decimal !== void 0)
     return decimal === "1" ? "\u03C0" : `${decimal}\u03C0`;
-  for (let denominator = 2; denominator <= 12; denominator += 1) {
-    if (exactAt(coefficient2, coefficient2 * denominator)) {
-      const numerator = Math.round(coefficient2 * denominator);
-      return `${numerator === 1 ? "" : numerator}\u03C0/${denominator}`;
-    }
-  }
+  if (coefficient2.d <= 12n)
+    return `${coefficient2.n === 1n ? "" : coefficient2.n}\u03C0/${coefficient2.d}`;
   return void 0;
 }
 function quantityText(quantity) {
   if (quantity.pi !== void 0) {
-    const exact2 = piText(quantity.pi);
+    const exact2 = quantity.exact ? piText(quantity.exact) : void 0;
     return exact2 !== void 0 ? `= ${exact2} \u2248 ${approximate(quantity.value)}` : `\u2248 ${approximate(quantity.value)}`;
   }
-  const exact = exactDecimal(quantity.value);
+  const exact = quantity.exact && quantity.exact.n !== 0n ? decimalText(quantity.exact) : void 0;
   return exact !== void 0 ? `= ${exact}` : `\u2248 ${approximate(quantity.value)}`;
 }
 function solidMeasuresText(solid, show, language) {
@@ -11580,6 +11697,9 @@ function solidMeasuresText(solid, show, language) {
 }
 
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/solids.js
+function regularRadius(solid) {
+  return "radius" in solid ? solid.radius : solid.side / (2 * Math.sin(Math.PI / solid.sides));
+}
 var POLYHEDRON_REACH = { tetrahedron: 1 / Math.sqrt(3), octahedron: 1, dodecahedron: 0.7947, icosahedron: 0.8507 };
 function solidZRange(solid) {
   switch (solid.shape) {
@@ -11633,8 +11753,8 @@ function baseCorners(base) {
 }
 function centredBaseCorners(solid) {
   const corners = "base" in solid ? baseCorners(solid.base) : Array.from({ length: solid.sides }, (_, index) => ({
-    x: solid.radius * Math.cos(2 * Math.PI * index / solid.sides),
-    y: solid.radius * Math.sin(2 * Math.PI * index / solid.sides)
+    x: regularRadius(solid) * Math.cos(2 * Math.PI * index / solid.sides),
+    y: regularRadius(solid) * Math.sin(2 * Math.PI * index / solid.sides)
   }));
   if (!corners)
     throw new Error("The three sides do not make a triangle");
@@ -11699,7 +11819,7 @@ function solidXReach(solid) {
       return Math.max(solid.radius, solid.topRadius);
     case "prism":
     case "pyramid":
-      return "base" in solid ? Math.max(...centredBaseCorners(solid).map((point) => Math.abs(point.x))) : solid.radius;
+      return "base" in solid ? Math.max(...centredBaseCorners(solid).map((point) => Math.abs(point.x))) : regularRadius(solid);
     case "composite":
       switch (solid.parts) {
         case "box_pyramid":
@@ -11733,7 +11853,7 @@ function solidObjects(solid) {
           throw new Error("The three sides do not make a triangle");
         return [{ ...base, base: corners.map((corner) => ({ x: Number(corner.x.toFixed(6)), y: Number(corner.y.toFixed(6)) })), height: solid.height, ...top }];
       }
-      return [{ ...base, sides: solid.sides, radius: solid.radius, height: solid.height, ...top }];
+      return [{ ...base, sides: solid.sides, radius: regularRadius(solid), height: solid.height, ...top }];
     }
     case "frustum":
       return [{ ...base, radius: solid.radius, top_radius: solid.topRadius, height: solid.height }];
@@ -11799,8 +11919,10 @@ function describeSolid(solid, language) {
       const truncated = solid.shape === "pyramid" && solid.topScale !== void 0;
       const kind = zh ? solid.shape === "prism" ? "\u68F1\u67F1" : truncated ? "\u68F1\u53F0" : "\u68F1\u9525" : solid.shape === "prism" ? "prism" : truncated ? "truncated pyramid" : "pyramid";
       const top = truncated ? zh ? `\uFF0C\u4E0A\u5E95\u662F\u4E0B\u5E95\u7684 ${solid.topScale} \u500D` : `, its top ${solid.topScale} times the base` : "";
-      if (!("base" in solid))
-        return zh ? `\u5E95\u9762\u662F\u6B63${POLYGON_ZH[solid.sides]}\u8FB9\u5F62\u7684${kind}\uFF0C\u9AD8 ${solid.height}${top}\u3002` : `A ${solid.sides}-sided ${kind} of height ${solid.height}${top}.`;
+      if (!("base" in solid)) {
+        const edge = "side" in solid ? zh ? `\uFF0C\u5E95\u9762\u8FB9\u957F ${solid.side}` : `, base edge ${solid.side}` : "";
+        return zh ? `\u5E95\u9762\u662F\u6B63${POLYGON_ZH[solid.sides]}\u8FB9\u5F62\u7684${kind}\uFF0C\u9AD8 ${solid.height}${edge}${top}\u3002` : `A ${solid.sides}-sided ${kind} of height ${solid.height}${edge}${top}.`;
+      }
       const base = solid.base;
       const shape = base.kind === "rectangle" ? zh ? `\u957F ${base.length}\u3001\u5BBD ${base.width} \u7684\u957F\u65B9\u5F62` : `a ${base.length} by ${base.width} rectangle` : base.kind === "right_triangle" ? zh ? `\u76F4\u89D2\u8FB9\u4E3A ${base.a} \u548C ${base.b} \u7684\u76F4\u89D2\u4E09\u89D2\u5F62` : `a right triangle with legs ${base.a} and ${base.b}` : zh ? `\u4E09\u8FB9\u957F ${base.a}\u3001${base.b}\u3001${base.c} \u7684\u4E09\u89D2\u5F62` : `a triangle with sides ${base.a}, ${base.b} and ${base.c}`;
       return zh ? `\u5E95\u9762\u662F${shape}\u7684${kind}\uFF0C\u9AD8 ${solid.height}${top}\u3002` : `A ${kind} on ${shape}, height ${solid.height}${top}.`;
@@ -11879,9 +12001,9 @@ function buildSolid(input) {
     besideObjects.push(...shifted(solidObjects(beside), width / 2 - reachB, -height / 2 - rangeB[0], "beside"));
     zRange = [-height / 2, height / 2];
   }
-  const all = [...objects, ...besideObjects];
+  const all2 = [...objects, ...besideObjects];
   if (input.face_targets)
-    for (const object2 of all)
+    for (const object2 of all2)
       object2.face_targets = true;
   const caption = input.show && input.show.measures.length ? (() => {
     const zh = input.show.language.toLowerCase().startsWith("zh");
@@ -11898,7 +12020,7 @@ function buildSolid(input) {
     fallback: input.fallback,
     axes: false,
     camera: { ...beside ? SOLID_PAIR_CAMERA : SOLID_SCENE_CAMERA },
-    objects: input.unfold ? all.map((object2) => ({ ...object2, unfold: 0 })) : all,
+    objects: input.unfold ? all2.map((object2) => ({ ...object2, unfold: 0 })) : all2,
     ...solid.shape === "box" && input.box_faces ? { highlights: boxFaces(solid.size, input.box_faces.names, Boolean(input.unfold), input.box_faces.legacy) } : {}
   };
   if (input.unfold) {
@@ -11910,7 +12032,7 @@ function buildSolid(input) {
   if (input.cut) {
     const [bottom, top] = zRange;
     const middle = Number(((bottom + top) / 2).toFixed(6));
-    content.sections = [{ as: "cut", axis: "z", value: middle, targets: all.map((object2) => object2.as), display: "plane_and_intersection", color: "orange" }];
+    content.sections = [{ as: "cut", axis: "z", value: middle, targets: all2.map((object2) => object2.as), display: "plane_and_intersection", color: "orange" }];
     content.bindings = [{ target: "cut.value", expression: input.cut.expression }];
   }
   const partOf = (prefix, list2) => Object.fromEntries(list2.map((object2) => {
@@ -12672,7 +12794,7 @@ var constant = (value2) => ({ text: formatNumber(value2), value: value2 });
 var formatNumber = (value2) => Object.is(value2, -0) ? "0" : String(Number(value2.toPrecision(12)));
 var isZero = (scalar) => scalar.value === 0;
 var wrap = (scalar) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(scalar.text) ? scalar.text : `(${scalar.text})`;
-function add2(a, b) {
+function add3(a, b) {
   if (a.value !== void 0 && b.value !== void 0)
     return constant(a.value + b.value);
   if (isZero(a))
@@ -12738,7 +12860,7 @@ function polynomialOf(tokens, maxDegree = 2) {
         return void 0;
       let result;
       if (token.operator === "add" || token.operator === "subtract") {
-        result = powers.map((power2) => add2(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
+        result = powers.map((power2) => add3(coefficient(left, power2), token.operator === "add" ? coefficient(right, power2) : negate(coefficient(right, power2))));
       } else if (token.operator === "multiply") {
         result = times(left, right, maxDegree);
       } else if (token.operator === "divide") {
@@ -12779,7 +12901,7 @@ function times(left, right, maxDegree = 2) {
         continue;
       if (i + j > maxDegree)
         return void 0;
-      result[i + j] = add2(result[i + j], multiply(a, b));
+      result[i + j] = add3(result[i + j], multiply(a, b));
     }
   return result;
 }
@@ -12809,9 +12931,9 @@ function markParts(tokens, requested, labels, check, path) {
         if (!isZero(b))
           parts.push({ kind: "point", as: "mark-x-intercept", label: labels("x \u622A\u8DDD"), x: negate(divide(c, b)).text, y: "0" });
       } else {
-        const root = `sqrt(${wrap(b)}^2-4*${wrap(a)}*${wrap(c)})`;
+        const root2 = `sqrt(${wrap(b)}^2-4*${wrap(a)}*${wrap(c)})`;
         for (const [index, sign] of ["-", "+"].entries()) {
-          parts.push({ kind: "point", as: `mark-x-intercept-${index + 1}`, label: labels("x \u622A\u8DDD"), x: `(${negate(b).text}${sign}${root})/(2*${wrap(a)})`, y: "0" });
+          parts.push({ kind: "point", as: `mark-x-intercept-${index + 1}`, label: labels("x \u622A\u8DDD"), x: `(${negate(b).text}${sign}${root2})/(2*${wrap(a)})`, y: "0" });
         }
       }
     } else {
@@ -12869,7 +12991,7 @@ var polyOf = (tokens, node) => polynomialOf(tokens.slice(node.start, node.end));
 var degreeOf = (p) => p.reduce((highest, scalar, power2) => scalar.value === 0 ? highest : power2, 0);
 var at = (p, power2) => p[power2] ?? { text: "0", value: 0 };
 var wrap2 = (text3) => /^[A-Za-z_][A-Za-z0-9_]*$|^\d+(\.\d+)?$/u.test(text3) ? text3 : `(${text3})`;
-function shapeOf(tokens, root) {
+function shapeOf(tokens, root2) {
   const terms = [];
   const split = (node2, sign) => {
     if (node2.token.kind === "operator" && (node2.token.operator === "add" || node2.token.operator === "subtract")) {
@@ -12880,7 +13002,7 @@ function shapeOf(tokens, root) {
     else
       terms.push({ node: node2, sign });
   };
-  split(root, 1);
+  split(root2, 1);
   const constantTerm = (node2) => {
     const p = polyOf(tokens, node2);
     return p && degreeOf(p) === 0 ? at(p, 0).text : void 0;
@@ -12964,10 +13086,10 @@ function formulaBars(tokens, want, check, path) {
     throw new PlotDerivationRefusal(`${path}.marks`, `the ${what} mark ${why}; leave it out of marks and do not narrate it`);
   };
   const first = want.domain ? "domain" : "range";
-  const root = treeOf(tokens);
-  if (!root)
+  const root2 = treeOf(tokens);
+  if (!root2)
     return refuse(first, "could not be derived");
-  const all = (axis) => ({ axis, from: null, to: null, from_closed: false, to_closed: false });
+  const all2 = (axis) => ({ axis, from: null, to: null, from_closed: false, to_closed: false });
   const proved = (text3) => check.sign(text3) !== "unknown";
   const bySign = (sign, end, up, axis) => {
     const s = check.sign(sign);
@@ -12984,7 +13106,7 @@ function formulaBars(tokens, want, check, path) {
   if (polynomial2) {
     const [c, b, a] = [0, 1, 2].map((power2) => at(polynomial2, power2));
     if (want.domain)
-      bars.push(all("x"));
+      bars.push(all2("x"));
     if (want.range) {
       if (a.value === 0) {
         if (b.value === 0)
@@ -12992,7 +13114,7 @@ function formulaBars(tokens, want, check, path) {
         else if (!proved(b.text))
           refuse("range", "collapses to one value where the slope is 0");
         else
-          bars.push(all("y"));
+          bars.push(all2("y"));
       } else {
         const vertexY = `${wrap2(c.text)}-${wrap2(b.text)}^2/(4*${wrap2(a.text)})`;
         bars.push(...bySign(a.text, vertexY, { from_closed: true }, "y"));
@@ -13004,17 +13126,17 @@ function formulaBars(tokens, want, check, path) {
   if (higher) {
     const top = degreeOf(higher);
     if (want.domain)
-      bars.push(all("x"));
+      bars.push(all2("x"));
     if (want.range) {
       if (top % 2 === 0)
         refuse("range", "is derived for polynomials of odd degree, lines and quadratics only");
       if (!proved(at(higher, top).text))
         refuse("range", "collapses where the leading coefficient is 0");
-      bars.push(all("y"));
+      bars.push(all2("y"));
     }
     return guarded(bars, first, refuse);
   }
-  const shape = shapeOf(tokens, root);
+  const shape = shapeOf(tokens, root2);
   if (!shape)
     return refuse(first, "is derived only for polynomials, roots, reciprocals, exponentials, logarithms, sines and cosines");
   const pSign = shape.p.value;
@@ -13025,11 +13147,11 @@ function formulaBars(tokens, want, check, path) {
   }
   if (want.domain) {
     if (shape.family === "sinusoid")
-      bars.push(all("x"));
+      bars.push(all2("x"));
     else if (shape.family === "exponential") {
       if (shape.base && check.sign(shape.base.text) !== "positive")
         refuse("domain", "needs a base above 0");
-      bars.push(all("x"));
+      bars.push(all2("x"));
     } else if (shape.family === "reciprocal") {
       bars.push({ axis: "x", from: null, to: edge, from_closed: false, to_closed: false }, { axis: "x", from: edge, to: null, from_closed: false, to_closed: false });
     } else {
@@ -13046,7 +13168,7 @@ function formulaBars(tokens, want, check, path) {
     } else if (shape.family === "log") {
       if (!proved(shape.a))
         refuse("range", "collapses to one value where the coefficient is 0");
-      bars.push(all("y"));
+      bars.push(all2("y"));
     } else if (shape.family === "reciprocal") {
       const guard = proved(shape.a) ? shape.k : `${wrap2(shape.k)}+0*log((${shape.a})^2)`;
       bars.push({ axis: "y", from: null, to: guard, from_closed: false, to_closed: false }, { axis: "y", from: guard, to: null, from_closed: false, to_closed: false });
@@ -14619,9 +14741,9 @@ var near2 = (value2, grid) => Math.abs(value2 - Math.round(value2 / grid) * grid
 var snap = (value2, grid) => Number((Math.round(value2 / grid) * grid).toPrecision(12));
 var floorTo = (value2, grid) => Number((Math.ceil(value2 / grid - 1e-9) * grid).toPrecision(12));
 var ceilTo = (value2, grid) => Number((Math.floor(value2 / grid + 1e-9) * grid).toPrecision(12));
-var gcd2 = (a, b) => b === 0 ? a : gcd2(b, a % b);
+var gcd3 = (a, b) => b === 0 ? a : gcd3(b, a % b);
 var repeats = (numerator, denominator) => {
-  let rest = denominator / gcd2(Math.abs(numerator), denominator);
+  let rest = denominator / gcd3(Math.abs(numerator), denominator);
   for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime;
   return rest !== 1;
 };
@@ -14636,7 +14758,7 @@ var roundedFrom = (value2, denominator) => {
   if (places < 2 || places > 12) return false;
   const numerator = Math.round(value2 * denominator);
   if (!repeats(numerator, denominator)) return false;
-  const lowest = denominator / gcd2(Math.abs(numerator), denominator);
+  const lowest = denominator / gcd3(Math.abs(numerator), denominator);
   if (places === 2 && lowest !== 3 && lowest !== 6) return false;
   const exact = numerator / denominator;
   const scale2 = 10 ** places;
@@ -15763,10 +15885,10 @@ function namesToNumbers(formula, labels, visualNumbers) {
     const lower = name.toLowerCase();
     return lower === "x" || lower === "pi" || lower === "e" || /^n\d+$/u.test(lower) || formulaFunctions.has(lower);
   };
-  return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset, whole2) => {
+  return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset, whole) => {
     if (known(name)) return name;
-    if (/^\s*\d/u.test(whole2.slice(offset + name.length))) return name;
-    if (/[0-9.]/u.test(whole2[offset - 1] ?? "") && /^e/iu.test(name)) return name;
+    if (/^\s*\d/u.test(whole.slice(offset + name.length))) return name;
+    if (/[0-9.]/u.test(whole[offset - 1] ?? "") && /^e/iu.test(name)) return name;
     const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
     return matches.length === 1 ? `n${matches[0]}` : name;
   });
@@ -16314,19 +16436,19 @@ function validateLessonPlanNumbers(value2, path) {
   return numbers;
 }
 function resolveLessonPlan(value2, options = {}) {
-  const root = record2(value2, "$lessonPlan");
-  allowedKeys(root, ["version", "title", "goals", "teaching_strategies", "numbers", "sections", "close"], "$lessonPlan");
-  if (root.version !== LESSON_PLAN_VERSION) fail3("LESSON_PLAN_VERSION", "$lessonPlan.version", `expected '${LESSON_PLAN_VERSION}'`);
-  nonEmptyString(root.title, "$lessonPlan.title", 160);
-  const goals = array(root.goals, "$lessonPlan.goals");
+  const root2 = record2(value2, "$lessonPlan");
+  allowedKeys(root2, ["version", "title", "goals", "teaching_strategies", "numbers", "sections", "close"], "$lessonPlan");
+  if (root2.version !== LESSON_PLAN_VERSION) fail3("LESSON_PLAN_VERSION", "$lessonPlan.version", `expected '${LESSON_PLAN_VERSION}'`);
+  nonEmptyString(root2.title, "$lessonPlan.title", 160);
+  const goals = array(root2.goals, "$lessonPlan.goals");
   if (goals.length < 1 || goals.length > 8) fail3("LESSON_PLAN_GOALS", "$lessonPlan.goals", "expected 1 to 8 goals");
   goals.forEach((goal, index) => nonEmptyString(goal, `$lessonPlan.goals[${index}]`, 480));
-  if (root.teaching_strategies !== void 0) {
-    const strategies = array(root.teaching_strategies, "$lessonPlan.teaching_strategies");
+  if (root2.teaching_strategies !== void 0) {
+    const strategies = array(root2.teaching_strategies, "$lessonPlan.teaching_strategies");
     if (strategies.length > 16) fail3("LESSON_PLAN_STRATEGIES", "$lessonPlan.teaching_strategies", "expected at most 16 strategies");
     strategies.forEach((strategy, index) => nonEmptyString(strategy, `$lessonPlan.teaching_strategies[${index}]`, 240));
   }
-  const rawNumbers = validateLessonPlanNumbers(root.numbers, "$lessonPlan.numbers");
+  const rawNumbers = validateLessonPlanNumbers(root2.numbers, "$lessonPlan.numbers");
   const hostReferences = options.host_references ?? [];
   const imageResources = options.image_resources ?? [];
   imageResources.forEach((resource, index) => {
@@ -16349,7 +16471,7 @@ function resolveLessonPlan(value2, options = {}) {
       hostParts: new Set(host.parts ?? [])
     });
   });
-  const rawSections = array(root.sections, "$lessonPlan.sections");
+  const rawSections = array(root2.sections, "$lessonPlan.sections");
   if (rawSections.length < 1 || rawSections.length > 24) fail3("LESSON_PLAN_SECTIONS", "$lessonPlan.sections", "expected 1 to 24 sections");
   const locals = /* @__PURE__ */ new Map();
   const reusables = /* @__PURE__ */ new Map();
@@ -16670,7 +16792,7 @@ function resolveLessonPlan(value2, options = {}) {
       reusable_items: resolvedReusable
     });
   });
-  const close = record2(root.close, "$lessonPlan.close");
+  const close = record2(root2.close, "$lessonPlan.close");
   allowedKeys(close, ["summary", "focus"], "$lessonPlan.close");
   nonEmptyString(close.summary, "$lessonPlan.close.summary", 1200);
   const closeFocus = array(close.focus, "$lessonPlan.close.focus");
@@ -17226,9 +17348,9 @@ function snap2(range, unit2 = 1) {
   const round = (value2) => Number(value2.toPrecision(12));
   return { min: round(Math.floor(range.min / step + 1e-9) * step), max: round(Math.ceil(range.max / step - 1e-9) * step) };
 }
-function pad4(range, fraction, keep) {
+function pad4(range, fraction2, keep) {
   const size = span(range) > 1e-9 ? span(range) : Math.max(1, Math.abs(range.min) * 0.2);
-  const amount = size * fraction / (1 - 2 * fraction);
+  const amount = size * fraction2 / (1 - 2 * fraction2);
   return { min: keep?.min ? range.min : range.min - amount, max: keep?.max ? range.max : range.max + amount };
 }
 function affineArgument(argument, variables) {
@@ -17390,10 +17512,10 @@ function analyse(curve, scan) {
           fa = fm;
         } else b = mid;
       }
-      const root = (a + b) / 2;
-      if (!known(root)) {
-        if (Math.abs(curve(root)) < 1e-6 * typical) features.push({ kind: "root", x: root, y: 0 });
-        else if (poleAt(root)) features.push({ kind: "pole", x: root });
+      const root2 = (a + b) / 2;
+      if (!known(root2)) {
+        if (Math.abs(curve(root2)) < 1e-6 * typical) features.push({ kind: "root", x: root2, y: 0 });
+        else if (poleAt(root2)) features.push({ kind: "pole", x: root2 });
       }
     }
     if (index >= 2) {
@@ -17401,9 +17523,9 @@ function analyse(curve, scan) {
       if (finite2(yPrev) && (y0 - yPrev) * (y1 - y0) < 0) {
         const maximum = y0 > yPrev;
         let a = xs[index - 2], b = x1;
-        const ratio = (Math.sqrt(5) - 1) / 2;
+        const ratio2 = (Math.sqrt(5) - 1) / 2;
         for (let step = 0; step < 60; step += 1) {
-          const c = b - ratio * (b - a), d = a + ratio * (b - a);
+          const c = b - ratio2 * (b - a), d = a + ratio2 * (b - a);
           if (maximum ? curve(c) > curve(d) : curve(c) < curve(d)) b = d;
           else a = c;
         }
@@ -18424,7 +18546,7 @@ function compileCircleArea(base, content, role, placement, plan, path) {
   }));
 }
 var NUMBER_LINE_SPLITS = Array.from({ length: NUMBER_LINE_LIMITS.subdivisions }, (_unused, index) => index + 1);
-var exactDecimal2 = (parts) => {
+var exactDecimal = (parts) => {
   let rest = parts;
   for (const prime of [2, 5]) while (rest % prime === 0) rest /= prime;
   return rest === 1;
@@ -18449,8 +18571,8 @@ function numberLineFrame(values, grid, shown, labelStyle, path, fit = "margin") 
   const span2 = max - min;
   const holdAll = (count, of) => of.every((value2) => onGrid(value2 / count, 1));
   const ticksFor = (of) => {
-    const whole2 = [1, ...COARSE_UNITS].find((count) => span2 / count <= 60 && holdAll(count, of));
-    if (whole2) return { step: whole2, subdivisions: 1 };
+    const whole = [1, ...COARSE_UNITS].find((count) => span2 / count <= 60 && holdAll(count, of));
+    if (whole) return { step: whole, subdivisions: 1 };
     const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value2) => onGrid(value2, count)) && span2 * count <= NUMBER_LINE_LIMITS.ticks);
     return parts ? { step: 1, subdivisions: parts } : void 0;
   };
@@ -18471,7 +18593,7 @@ function numberLineFrame(values, grid, shown, labelStyle, path, fit = "margin") 
       subdivisions: ticks.subdivisions,
       labels: ticks.subdivisions > 1 ? "all" : "major",
       // Decimals only where they are exact (halves, fifths, tenths …): thirds stay fractions, never 0.333.
-      ...labelStyle === "decimal" && ticks.subdivisions > 1 && exactDecimal2(ticks.subdivisions) ? { format: "decimal" } : {}
+      ...labelStyle === "decimal" && ticks.subdivisions > 1 && exactDecimal(ticks.subdivisions) ? { format: "decimal" } : {}
     }
   };
 }
@@ -18649,10 +18771,10 @@ function compileNumberLine(base, content, role, placement, plan, path) {
   const frame = numberLineFrame(values, grid, shown, labelStyle, path);
   const { step, subdivisions } = frame;
   const unit2 = step / subdivisions;
-  const whole2 = (value2) => onGrid(value2 / unit2, 1);
+  const whole = (value2) => onGrid(value2 / unit2, 1);
   const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
   const sliderStep = change?.student_control?.step;
-  const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every(whole2) && (sliderStep === void 0 || whole2(sliderStep)) && Math.ceil(reach / unit2 - 1e-9) <= NUMBER_LINE_LIMITS.hops;
+  const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every(whole) && (sliderStep === void 0 || whole(sliderStep)) && Math.ceil(reach / unit2 - 1e-9) <= NUMBER_LINE_LIMITS.hops;
   const hops = hopsFit;
   const startVariable = startNumber ? variableAlias(startNumber) : void 0;
   const changeVariable = changeNumber ? variableAlias(changeNumber) : void 0;
@@ -18705,10 +18827,10 @@ function compileNumberLineSteps(base, content, role, placement, plan, path) {
   ];
   const frame = numberLineFrame(values, grid, shown, labelStyle, path);
   const unit2 = frame.step / frame.subdivisions;
-  const whole2 = (value2) => onGrid(value2 / unit2, 1);
+  const whole = (value2) => onGrid(value2 / unit2, 1);
   const takes = moves.map((move, position) => move.student_control ? [move.min, move.max, move.initial] : [move.initial, ...lessonValues(plan, moveNumbers[position])]);
   const oneWay = takes.every((values2) => values2.every((value2) => value2 >= 0)) || takes.every((values2) => values2.every((value2) => value2 <= 0));
-  const hops = oneWay && moves.every((move, position) => takes[position].every(whole2) && (move.student_control?.step === void 0 || whole2(move.student_control.step)) && Math.ceil(Math.max(...takes[position].map(Math.abs)) / unit2 - 1e-9) <= NUMBER_LINE_LIMITS.hops);
+  const hops = oneWay && moves.every((move, position) => takes[position].every(whole) && (move.student_control?.step === void 0 || whole(move.student_control.step)) && Math.ceil(Math.max(...takes[position].map(Math.abs)) / unit2 - 1e-9) <= NUMBER_LINE_LIMITS.hops);
   const startVariable = variableAlias(startNumber);
   const moveVariables = moveNumbers.map((number) => variableAlias(number));
   const sum = (count) => [startVariable, ...moveVariables.slice(0, count)].map((name) => `(${name})`).join("+");
@@ -18788,7 +18910,7 @@ function builderSolid(model, path, adjustments) {
     if (!Number.isInteger(sides) || sides < REGULAR_SIDES.min || sides > REGULAR_SIDES.max) {
       fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.sides`, `a regular base has ${REGULAR_SIDES.min} to ${REGULAR_SIDES.max} sides`);
     }
-    return { sides, radius: side / (2 * Math.sin(Math.PI / sides)) };
+    return { sides, side };
   };
   switch (model.shape) {
     case "box": {
@@ -18840,7 +18962,7 @@ function joinedSolid(join, pair, path, adjustments) {
       return top.shape === "cone" ? { shape: "composite", parts: "cylinder_cone", radius: bottom.radius, height: bottom.height, topHeight: top.height } : { shape: "composite", parts: "cylinder_hemisphere", radius: bottom.radius, height: bottom.height };
     }
     if (bottom.shape === "box" && top.shape === "pyramid") {
-      const edge = "sides" in top && top.sides === 4 ? top.radius * Math.SQRT2 : "base" in top && top.base.kind === "rectangle" && sameSize(top.base.length, top.base.width) ? top.base.length : void 0;
+      const edge = "sides" in top && top.sides === 4 ? "side" in top ? top.side : top.radius * Math.SQRT2 : "base" in top && top.base.kind === "rectangle" && sameSize(top.base.length, top.base.width) ? top.base.length : void 0;
       if (edge === void 0 || !sameSize(bottom.size.x, bottom.size.y) || !sameSize(edge, bottom.size.x)) {
         fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, "a pyramid roof sits on a box with a square base of the same edge");
       }
@@ -19088,14 +19210,14 @@ function mergeEquivalentVisualInputs(plan) {
 function lessonPlanPlugins(plan) {
   const installed = new Map(INSTALLED_PLUGINS.map((plugin) => [plugin.manifest.id, plugin.manifest]));
   const used = /* @__PURE__ */ new Set();
-  const add3 = (id) => {
+  const add4 = (id) => {
     if (used.has(id)) return;
     used.add(id);
-    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add3(dependency);
+    for (const dependency of Object.keys(installed.get(id)?.depends ?? {})) add4(dependency);
   };
   for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
-    add3(RECIPE_PLUGIN[action.content.capability]);
+    add4(RECIPE_PLUGIN[action.content.capability]);
   }
   return Object.fromEntries([...used].sort().map((id) => [id, installed.get(id).version]));
 }
@@ -20764,9 +20886,9 @@ function defaultCoverageSection(requestPart, requestPartCount, sectionCount) {
   );
 }
 function lowerModelOutline(value2, requestPartCount = 0) {
-  const root = pruneModelNulls(value2);
-  if (!root || typeof root !== "object" || Array.isArray(root)) return root;
-  const candidate = root;
+  const root2 = pruneModelNulls(value2);
+  if (!root2 || typeof root2 !== "object" || Array.isArray(root2)) return root2;
+  const candidate = root2;
   candidate.version = LESSON_PLAN_VERSION;
   if (Array.isArray(candidate.numbers)) {
     candidate.numbers = candidate.numbers.map((entry, index) => {
@@ -21594,16 +21716,16 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
   return lowered;
 }
 function reconcileBootstrapFirstSectionPositions(value2, outline) {
-  const root = structuredClone(value2);
-  if (!root || typeof root !== "object" || Array.isArray(root)) return root;
-  const candidate = root;
-  if (!Array.isArray(candidate.moments)) return root;
+  const root2 = structuredClone(value2);
+  if (!root2 || typeof root2 !== "object" || Array.isArray(root2)) return root2;
+  const candidate = root2;
+  if (!Array.isArray(candidate.moments)) return root2;
   if (candidate.course_visual_creates !== void 0 || candidate.reusable_board_creates !== void 0) {
     for (const momentValue of candidate.moments) {
       if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) continue;
       delete momentValue.visual_creates;
     }
-    return root;
+    return root2;
   }
   const collect = (collection) => candidate.moments.flatMap((momentValue, momentIndex) => {
     if (!momentValue || typeof momentValue !== "object" || Array.isArray(momentValue)) return [];
@@ -21678,7 +21800,7 @@ function reconcileBootstrapFirstSectionPositions(value2, outline) {
   const expectsReusableBoardCreates = reusableItems.some((item) => item.kind === "board_item" && (item.board_kind === "math" || item.board_kind === "note"));
   if (expectsReusableBoardCreates) candidate.reusable_board_creates = fixedReusableCreates;
   else delete candidate.reusable_board_creates;
-  return root;
+  return root2;
 }
 function lowerAnswerActivity(value2, card) {
   const { prompt, answer, check, unit: unit2, simplest_fraction, hints } = value2;
@@ -21715,11 +21837,11 @@ function taughtContent(draft) {
   }));
 }
 function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedReusableCreates = false, language) {
-  const root = pruneModelNulls(value2);
-  if (!root || typeof root !== "object" || Array.isArray(root)) {
+  const root2 = pruneModelNulls(value2);
+  if (!root2 || typeof root2 !== "object" || Array.isArray(root2)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection", "expected an object");
   }
-  const candidate = root;
+  const candidate = root2;
   const allowedRoot = /* @__PURE__ */ new Set([
     "version",
     "section",
@@ -22303,9 +22425,9 @@ function requestParts(input) {
   });
 }
 function executableNumberIndexesForSection(outline, drafts, sectionNumber) {
-  const all = (outline.numbers ?? []).map((_number, index) => index + 1);
+  const all2 = (outline.numbers ?? []).map((_number, index) => index + 1);
   const courseVisuals = outline.course_visuals ?? [];
-  if (courseVisuals.some((visual) => visual.create_section === sectionNumber)) return all;
+  if (courseVisuals.some((visual) => visual.create_section === sectionNumber)) return all2;
   const indexes = /* @__PURE__ */ new Set();
   for (const visual of courseVisuals) {
     if (visual.create_section >= sectionNumber) continue;

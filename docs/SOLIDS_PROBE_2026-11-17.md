@@ -112,3 +112,16 @@ Quality, read by hand:
 As in runs 9 and 9b, the likely cause is the model thinking longer on requests the new card doesn't fit, not the request's size.
 
 **Proposed next (owner):** a three-arm diagnostic on the 20 other requests, like run 10, at about 70 calls. The arms are the baseline, the trial with the cube retired, and the trial keeping the cube. It separates the cost of the new card from the cost of the changed catalog. Then a card rewrite, if the card is the cause, and a new gate.
+
+# Speed gate 1c: first extension under the revised rule (2026-11-18, owner-approved)
+
+20 other-request pairs on a frozen copy of the build whose request is byte-identical to gates 1 and 1b. **41 calls**, no errors.
+
+Judged by `scripts/speed-gate.mjs`, pooling gates 1, 1b and 1c. The fitted rate is 5.40 ms per generated token plus 1.66 s (r² 0.69, 160 rows).
+
+| Requests | Pairs | Median (tokens in seconds) | 95% interval | Verdict |
+|---|---|---|---|---|
+| Fitting | 20 | −2.14 s | −4.38 to −0.52 s | **pass** |
+| Other | 60 | +0.27 s | −0.25 to +1.28 s | **extend** |
+
+**Next (owner):** the last step, 20 more other pairs (about 45 calls), reaching the 80-pair cap where the median decides.

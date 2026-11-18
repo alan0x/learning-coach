@@ -1330,9 +1330,9 @@ function builderSolid(model: ModelSolid, path: string, adjustments: Adjustment[]
     if (!Number.isInteger(sides) || sides < REGULAR_SIDES.min || sides > REGULAR_SIDES.max) {
       fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.sides`, `a regular base has ${REGULAR_SIDES.min} to ${REGULAR_SIDES.max} sides`);
     }
-    // The builder takes the circumradius; the question states the edge.
-    // Full precision: rounding the radius made a whole-number surface area inexact ("≈ 96.00" for 96).
-    return { sides, radius: side / (2 * Math.sin(Math.PI / sides)) };
+    // The edge as the question states it; the builder works out the circumradius, and the measures line
+    // stays exact where the edge makes it so (a square base of edge 6: 96, not ≈ 96.00).
+    return { sides, side };
   };
   switch (model.shape) {
     case "box": {
@@ -1379,7 +1379,7 @@ function joinedSolid(join: "stack" | "l_shape", pair: [Solid, Solid], path: stri
         : { shape: "composite", parts: "cylinder_hemisphere", radius: bottom.radius, height: bottom.height };
     }
     if (bottom.shape === "box" && top.shape === "pyramid") {
-      const edge = "sides" in top && top.sides === 4 ? top.radius * Math.SQRT2 : "base" in top && top.base.kind === "rectangle" && sameSize(top.base.length, top.base.width) ? top.base.length : undefined;
+      const edge = "sides" in top && top.sides === 4 ? ("side" in top ? top.side : top.radius * Math.SQRT2) : "base" in top && top.base.kind === "rectangle" && sameSize(top.base.length, top.base.width) ? top.base.length : undefined;
       if (edge === undefined || !sameSize(bottom.size.x, bottom.size.y) || !sameSize(edge, bottom.size.x)) {
         fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.solids`, "a pyramid roof sits on a box with a square base of the same edge");
       }

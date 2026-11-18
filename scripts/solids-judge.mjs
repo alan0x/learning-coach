@@ -23,7 +23,8 @@ const EPS = 1e-6;
 /** An object's name: `as` as authored, `id` once normalized. */
 const idOf = (object) => object.as ?? object.id;
 const close = (a, b, tolerance = EPS) => Math.abs(a - b) <= tolerance * Math.max(1, Math.abs(a), Math.abs(b));
-const round = (value) => Number(Number(value).toFixed(4));
+// Four places, or four significant digits for a value too small to show in four (1e-14 is not "0").
+const round = (value) => (value !== 0 && Math.abs(value) < 1e-3 ? Number(Number(value).toPrecision(4)) : Number(Number(value).toFixed(4)));
 const SOLID_KINDS = new Set(["box", "sphere", "cylinder", "cone", "prism", "pyramid", "frustum", "hemisphere", "torus", "tetrahedron", "octahedron", "dodecahedron", "icosahedron", "ellipsoid"]);
 
 /** The scenes a whole authoring lesson draws, each with its variables and animations in order. */
@@ -190,12 +191,26 @@ function exactValue(text) {
  */
 function shownValue(sign, text) {
   const [before, after] = sign === "≈" ? ["", text] : text.split("≈");
-  const approx = after === undefined ? undefined : /^\s*(-?\d+(?:\.\d+)?)\s*$/u.exec(after);
+  const approx = after === undefined ? undefined : approximation(after);
   const exact = before.trim() ? exactValue(before) : undefined;
   if (after !== undefined && !approx) return undefined;
   if (before.trim() && exact === undefined) return undefined;
-  if (approx) return { value: Number(approx[1]), tolerance: 0.006, ...(exact !== undefined ? { exact } : {}) };
+  if (approx) return { ...approx, ...(exact !== undefined ? { exact } : {}) };
   return exact === undefined ? undefined : { value: exact, tolerance: EPS };
+}
+
+/**
+ * A rounded value as the producer writes it ("502.65", "0.000100", "1.00e-15"), with the tolerance its
+ * shown digits allow: half a unit of the last digit (owner review of #116: "1.00e-15" was unreadable, and a
+ * fixed 0.006 would let "0.000100" stand for 0.003).
+ */
+function approximation(text) {
+  const match = /^\s*(-?\d+)(?:\.(\d+))?(?:e([+-]?\d+))?\s*$/u.exec(text);
+  if (!match) return undefined;
+  const value = Number(text.trim());
+  if (!Number.isFinite(value)) return undefined;
+  const unit = 10 ** (Number(match[3] ?? 0) - (match[2]?.length ?? 0));
+  return { value, tolerance: unit / 2 * (1 + 1e-9) };
 }
 
 /** What one line shows: volume, surface area (values) and counts. */
@@ -210,7 +225,9 @@ export function readLine(line) {
   return shown;
 }
 
-const matchesValue = (shown, value) => shown && shown.value !== undefined && Math.abs(shown.value - value) <= Math.max(shown.tolerance, EPS * Math.abs(value))
+// The shown digits' tolerance, plus floating-point noise only: a relative 1e-6 let a large value be off by
+// millions (1881672302290.56 ± 1.9 million).
+const matchesValue = (shown, value) => shown && shown.value !== undefined && Math.abs(shown.value - value) <= Math.max(shown.tolerance, 64 * Number.EPSILON * Math.abs(value))
   && (shown.exact === undefined || close(shown.exact, value));
 const expectedValue = (want) => (typeof want === "object" && want !== null ? want.pi * Math.PI : want);
 const describe = (shown) => (shown.unreadable ? `"${shown.unreadable}"` : shown.exact !== undefined ? `${round(shown.exact)} ≈ ${shown.value}` : String(round(shown.value)));
