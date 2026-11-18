@@ -27,7 +27,8 @@ export interface CompiledLessonPlan {
   /** Plugin ID to version for the plugins that built this lesson's visuals. */
   plugins: Record<string, string>;
   /** Visual decisions the program made for this lesson, by section (1-based). */
-  view_adjustments: Array<{ section: number; reason: string; detail: string }>;
+  /** Program changes to the compiled lesson. `kind` names a change that is not to a plot or view. */
+  view_adjustments: Array<{ section: number; reason: string; detail: string; kind?: "success_message_removed" }>;
 }
 
 /** Compiled kinds a lesson number can drive: every output kind of a registered recipe with number inputs. */
@@ -705,12 +706,17 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const tasks: NonNullable<AuthoringLesson["lesson"]["tasks"]> = [];
   const reflections: NonNullable<AuthoringLesson["lesson"]["reflections"]> = [];
   const seenTaskSemantics = new Set<string>();
+  /** A dropped success message, recorded only if its task is kept (a duplicate task is thrown away). */
+  let droppedPraise: CompiledLessonPlan["view_adjustments"][number] | undefined;
   const addTask = (task: NonNullable<AuthoringLesson["lesson"]["tasks"]>[number]): void => {
     const semanticKey = JSON.stringify({
       allowed_operations: task.allowed_operations,
       completion: task.completion,
     });
+    const dropped = droppedPraise;
+    droppedPraise = undefined;
     if (seenTaskSemantics.has(semanticKey)) return;
+    if (dropped) viewAdjustments.push(dropped);
     seenTaskSemantics.add(semanticKey);
     if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
       task.start = { kind: "practice", variables: task.allowed_operations.flatMap(operation =>
@@ -734,11 +740,12 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         return;
       }
       // A success message whose arithmetic is false is dropped, never repaired (decision 0020; plan 3.6).
+      droppedPraise = undefined;
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : undefined;
       const praiseClaims = praise ? praiseArithmetic(praise) : undefined;
       if (praise && praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
-        viewAdjustments.push({ section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}` });
+        droppedPraise = { section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}`, kind: "success_message_removed" };
         praise = undefined;
       }
       const common = {

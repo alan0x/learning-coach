@@ -154,7 +154,8 @@ async function runCase(item) {
       "student task has no usable variable control");
       assert.equal(task.completion?.kind, "expression_target");
       assert.ok(task.hints?.length > 0, "student task has no hints");
-      assert.ok(task.success_message?.trim(), "student task has no success feedback");
+      // The compiler leaves out a message whose arithmetic is false (plan 3.6); that is logged, not a miss.
+      assert.ok(task.success_message?.trim() || /"kind":"success_message_removed"/u.test(stderr), "student task has no success feedback");
     }
     if (item.expected.scene3d_view_task) {
       const task = lesson.lesson.tasks?.find((candidate) =>
@@ -166,7 +167,7 @@ async function runCase(item) {
         operation.kind === "scene3d_view" && operation.controls?.length > 0),
       "3D view task has no usable scene control");
       assert.ok(task.hints?.length > 0, "3D view task has no hints");
-      assert.ok(task.success_message?.trim(), "3D view task has no success feedback");
+      assert.ok(task.success_message?.trim() || /"kind":"success_message_removed"/u.test(stderr), "3D view task has no success feedback");
     }
     const requirementsMatch = stderr.match(
       /"stage":"lesson-requirements"[^\n]*"status":"completed","elapsed_ms":(\d+)/u,

@@ -19208,14 +19208,19 @@ var WORD_OPS = [
 ];
 var WORD_EQS = ["is equal to", "equals", "makes", "gives", "is", "\u7B49\u4E8E", "\u5F97", "\u662F"];
 var SYMBOL_OPS = { "+": "+", "-": "-", "\u2212": "-", "\u2013": "-", "\xD7": "*", "*": "*", "\xB7": "*", "\xF7": "/", "/": "/" };
-var NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下)/iu;
-var GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″]/u;
-var CONTINUES = /^[≈:：]$/u;
+var NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
+var REMAINDER = /remainder|\brem\b|left ?over|余|……|\bR\s?\d/iu;
+var NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不是|并非|而非|错/iu;
+var SENTENCE_END = /[!?。！？；;\n]|\.(?!\d)/gu;
+var GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″\u0300-\u036f]/u;
 var NUMBER = /^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/u;
 function tokenize2(text3) {
-  const tokens = [];
+  const placed = [];
   let i = 0;
-  const previous = () => tokens[tokens.length - 1];
+  const push = (token) => {
+    placed.push({ ...token, at: i });
+  };
+  const previous = () => placed[placed.length - 1];
   while (i < text3.length) {
     const ch = text3[i];
     if (/\s/u.test(ch)) {
@@ -19233,21 +19238,21 @@ function tokenize2(text3) {
       const after = text3[i + length2] ?? "";
       const value2 = fractionNumber ? div(decimal(fractionNumber[1], signed), decimal(fractionNumber[2], false)) : decimal(number[0], signed);
       if (!value2) {
-        tokens.push({ kind: "other", text: number[0], rest: text3.slice(i + length2) });
+        push({ kind: "other", text: number[0], rest: text3.slice(i + length2) });
         i += length2;
         continue;
       }
-      tokens.push({ kind: "num", value: value2, glued: GLUE.test(before) || GLUE.test(after), text: text3.slice(i, i + length2), rest: text3.slice(i + length2) });
+      push({ kind: "num", value: value2, glued: GLUE.test(before) || GLUE.test(after), text: text3.slice(i, i + length2), rest: text3.slice(i + length2) });
       i += length2;
       continue;
     }
     if (ch === "=" || ch === "\uFF1D") {
-      tokens.push({ kind: "eq", symbol: true, text: ch, rest: text3.slice(i + 1) });
+      push({ kind: "eq", symbol: true, text: ch, rest: text3.slice(i + 1) });
       i += 1;
       continue;
     }
     if (SYMBOL_OPS[ch]) {
-      tokens.push({ kind: "op", op: SYMBOL_OPS[ch], text: ch, rest: text3.slice(i + 1) });
+      push({ kind: "op", op: SYMBOL_OPS[ch], text: ch, rest: text3.slice(i + 1) });
       i += 1;
       continue;
     }
@@ -19255,26 +19260,26 @@ function tokenize2(text3) {
     const latinBoundary = (length2) => !/[A-Za-z]/u.test(rest[length2] ?? "");
     const wordOp = WORD_OPS.find(([word2]) => lower.startsWith(word2) && (!/[a-z]/u.test(word2[0]) || latinBoundary(word2.length)));
     if (wordOp) {
-      tokens.push({ kind: "op", op: wordOp[1], text: wordOp[0], rest: rest.slice(wordOp[0].length) });
+      push({ kind: "op", op: wordOp[1], text: wordOp[0], rest: rest.slice(wordOp[0].length) });
       i += wordOp[0].length;
       continue;
     }
     const wordEq = WORD_EQS.find((word2) => lower.startsWith(word2) && (!/[a-z]/u.test(word2[0]) || latinBoundary(word2.length)));
     if (wordEq) {
-      tokens.push({ kind: "eq", symbol: false, text: wordEq, rest: rest.slice(wordEq.length) });
+      push({ kind: "eq", symbol: false, text: wordEq, rest: rest.slice(wordEq.length) });
       i += wordEq.length;
       continue;
     }
     const word = /^[A-Za-z]+/u.exec(rest);
     if (word) {
-      tokens.push({ kind: "word", text: word[0], rest: rest.slice(word[0].length) });
+      push({ kind: "word", text: word[0], rest: rest.slice(word[0].length) });
       i += word[0].length;
       continue;
     }
-    tokens.push({ kind: new RegExp("\\p{L}", "u").test(ch) ? "word" : "other", text: ch, rest: text3.slice(i + 1) });
+    push({ kind: new RegExp("\\p{L}", "u").test(ch) ? "word" : "other", text: ch, rest: text3.slice(i + 1) });
     i += 1;
   }
-  return tokens;
+  return placed;
 }
 function operatorAt(tokens, i) {
   const token = tokens[i];
@@ -19304,11 +19309,17 @@ function evaluate2(values, ops) {
   });
   return total;
 }
+function nonTerminating(value2) {
+  let d = value2.d;
+  while (d % 2n === 0n) d /= 2n;
+  while (d % 5n === 0n) d /= 5n;
+  return d !== 1n;
+}
 function holds(exact, resultText, result) {
   const difference = sub3(exact, result);
   if (difference.n === 0n) return true;
   const places = (/\.(\d+)/u.exec(resultText)?.[1] ?? "").length;
-  if (places === 0) return false;
+  if (places === 0 || !nonTerminating(exact)) return false;
   return abs(difference.n) * 2n * 10n ** BigInt(places) <= difference.d;
 }
 function praiseArithmetic(text3) {
@@ -19319,7 +19330,8 @@ function praiseArithmetic(text3) {
     const result = tokens[e + 1];
     if (result?.kind !== "num" || result.glued) return;
     const after = tokens[e + 2];
-    if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || CONTINUES.test(after.text))) return;
+    const betweenDigits = (token2) => /\d/u.test(text3[token2.at - 1] ?? "") && /\d/u.test(text3[token2.at + 1] ?? "");
+    if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || after.text === "\u2248" || /^[:：]$/u.test(after.text) && betweenDigits(after))) return;
     if (NOT_A_RESULT.test(result.rest.trimStart())) return;
     const values = [];
     const ops = [];
@@ -19335,12 +19347,20 @@ function praiseArithmetic(text3) {
     }
     if (ops.length === 0) return;
     const before = tokens[k - 1];
-    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || before.kind === "eq" && before.symbol || /^[([{|:：]$/u.test(before.text))) return;
+    const chain = before?.kind === "eq" && before.symbol && (tokens[k - 2]?.kind === "num" || /^[)\]}|]$/u.test(tokens[k - 2]?.text ?? ""));
+    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || chain || /^[([{|]$/u.test(before.text) || /^[:：]$/u.test(before.text) && betweenDigits(before))) return;
+    const opTokens = tokens.slice(k, e).filter((_t, index) => index % 2 === 1);
+    if (!token.symbol && opTokens.some((op) => /^[-–]$/u.test(op.text) && /\d/u.test(text3[op.at - 1] ?? "") && /\d/u.test(text3[op.at + 1] ?? ""))) return;
+    if (ops.includes("/") && REMAINDER.test(text3)) return;
     const exact = evaluate2(values, ops);
     if (!exact) return;
-    const start = text3.indexOf(tokens[k].text + tokens[k].rest);
+    const start = tokens[k].at;
     const end = text3.length - result.rest.length;
-    claims.push({ text: start >= 0 ? text3.slice(start, end).trim() : token.text, holds: holds(exact, result.text, result.value) });
+    const ends = [...text3.matchAll(SENTENCE_END)].map((match) => match.index);
+    const sentenceStart = Math.max(0, ...ends.filter((index) => index < start).map((index) => index + 1));
+    const sentenceEnd = Math.min(text3.length, ...ends.filter((index) => index >= end));
+    if (NEGATED.test(text3.slice(sentenceStart, sentenceEnd))) return;
+    claims.push({ text: text3.slice(start, end).trim(), holds: holds(exact, result.text, result.value) });
   });
   return {
     verdict: claims.length === 0 ? "none" : claims.every((claim) => claim.holds) ? "true" : "false",
@@ -19919,12 +19939,16 @@ function compileLessonPlan(value2, options = {}) {
   const tasks = [];
   const reflections = [];
   const seenTaskSemantics = /* @__PURE__ */ new Set();
+  let droppedPraise;
   const addTask = (task) => {
     const semanticKey = JSON.stringify({
       allowed_operations: task.allowed_operations,
       completion: task.completion
     });
+    const dropped = droppedPraise;
+    droppedPraise = void 0;
     if (seenTaskSemantics.has(semanticKey)) return;
+    if (dropped) viewAdjustments.push(dropped);
     seenTaskSemantics.add(semanticKey);
     if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
       task.start = { kind: "practice", variables: task.allowed_operations.flatMap((operation) => operation.kind === "variable_change" ? [operation.variable] : []) };
@@ -19946,11 +19970,12 @@ function compileLessonPlan(value2, options = {}) {
         });
         return;
       }
+      droppedPraise = void 0;
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : void 0;
       const praiseClaims = praise ? praiseArithmetic(praise) : void 0;
       if (praise && praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
-        viewAdjustments.push({ section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}` });
+        droppedPraise = { section: sectionOffset + 1, reason: "praise_false_arithmetic", detail: `${activityPath}.success_message: ${wrong}`, kind: "success_message_removed" };
         praise = void 0;
       }
       const common = {
@@ -23341,7 +23366,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     await options.on_program_adjustment?.(adjustment);
   }
   for (const adjustment of compiled.view_adjustments) {
-    await options.on_program_adjustment?.({ kind: adjustment.reason === "praise_false_arithmetic" ? "success_message_removed" : "plot_view_adjusted", ...adjustment });
+    await options.on_program_adjustment?.({ ...adjustment, kind: adjustment.kind ?? "plot_view_adjusted" });
   }
   return {
     ...compiled,

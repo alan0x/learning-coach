@@ -35,6 +35,11 @@ test("true claims are kept", () => {
     "1/2 + 1/3 + 1/6 = 1",
     "20 divided by 4 is 5.",
     "8 + 5 = 13 and 13 − 5 = 8.",
+    // review, round 1: a label before "=" or a colon is not a chain or a clock
+    "Answer: 8 + 5 = 13",
+    "Step 2: 4 + 4 = 8",
+    "第1步：8 + 5 = 13",
+    "面积 = 8 × 3 = 24 平方厘米",
   ]) assert.equal(verdict(text), "true", text);
 });
 
@@ -53,6 +58,15 @@ test("false claims are found", () => {
     "2 + 3 × 4 = 20",
     "8 + 5 = 13 and 13 − 5 = 9.",
     "6 multiplied by 7 equals 42, and 6 plus 7 equals 14.",
+    // review, round 1: a value that ends must be written exactly; labelled claims are read
+    "0.5 + 0.25 = 0.8",
+    "2.5 + 1.25 = 3.8",
+    "0.15 + 0.2 = 0.3",
+    "1/8 + 1/8 = 0.3",
+    "Answer: 8 + 5 = 14",
+    "Great job: 8 + 5 = 14!",
+    "第1步：8 + 5 = 14",
+    "面积 = 8 × 3 = 25",
   ]) assert.equal(verdict(text), "false", text);
 });
 
@@ -81,8 +95,26 @@ test("anything not written wholly in numerals is not read", () => {
     "3/4 is 3 out of 4 equal parts.",
     "3/4 + 3/4 = 1 1/2",
     "3:30 + 15 = 3:45",
-    "Step 2: 4 + 4 = 8",
     "10/3 = 3.33",
+    // review, round 1: repeating decimals, remainders in any form, ranges and dates, quoted mistakes
+    "2 ÷ 3 = 0.666...",
+    "2 ÷ 3 = 0.666…",
+    "1 ÷ 6 = 0.1666...",
+    "2 ÷ 3 = 0.6̇",
+    "2 ÷ 3 = 0.6̅",
+    "7 ÷ 2 = 3……1",
+    "17 ÷ 5 = 3……2，余数是2",
+    "18 ÷ 4 = 4 (remainder 2)",
+    "18 ÷ 4 = 4, remainder 2",
+    "18 ÷ 4 = 4 rem 2",
+    "18 ÷ 4 = 4 with 2 left over",
+    "Ages 3-5 is 2 years",
+    "Pages 1-3 is 3 pages",
+    "1–2 是 1",
+    "2024-11-18 is 1 day",
+    "Not 8 + 5 = 14, but 13!",
+    "2 + 3 = 5, and 2 + 3 = 6 is the mistake to avoid.",
+    "不是 8 + 5 = 14，而是 13。",
     "正确，θ=π/2 时 sin θ 取得最大值 1。",
     "现在 x=2，对应 y=4。",
     "Done: Slope (m) is now -5.",
@@ -97,10 +129,12 @@ const withPraise = (success_message) => {
   activity.success_message = success_message;
   return plan;
 };
+const praiseDrops = (compiled) => compiled.view_adjustments.filter((item) => item.reason === "praise_false_arithmetic");
 const taskMessages = (compiled) => (compiled.lesson.lesson.tasks ?? []).map((task) => task.success_message);
 
 test("the compiler drops a false message and records why; a true one is kept", () => {
   const kept = compileAndValidateLessonPlan(withPraise("Great job! 2 + 2 = 4."));
+  assert.equal(praiseDrops(compileAndValidateLessonPlan(withPraise("Great job! 2 + 2 = 5."))).every((item) => item.kind === "success_message_removed"), true);
   assert.deepEqual(taskMessages(kept), ["Great job! 2 + 2 = 4."]);
   assert.equal(kept.view_adjustments.filter((item) => item.reason === "praise_false_arithmetic").length, 0);
 
@@ -120,4 +154,16 @@ test("the lesson is otherwise unchanged when a message is dropped", () => {
     strip(compileAndValidateLessonPlan(withPraise("Great job! 2 + 2 = 5."))),
     strip(compileAndValidateLessonPlan(withPraise("Great job! 2 + 2 = 4."))),
   );
+});
+
+test("a duplicate task that is thrown away records no drop", () => {
+  // review, round 1: the drop was recorded before the compiler threw the duplicate task away.
+  const plan = withPraise("Great job! 2 + 2 = 4.");
+  const section = plan.sections.find((item) => (item.student_activities ?? []).some((activity) => activity.kind === "number_target"));
+  const twin = structuredClone(section.student_activities.find((activity) => activity.kind === "number_target"));
+  twin.success_message = "Great job! 2 + 2 = 5.";
+  section.student_activities.push(twin);
+  const compiled = compileAndValidateLessonPlan(plan);
+  assert.deepEqual(taskMessages(compiled), ["Great job! 2 + 2 = 4."]);
+  assert.equal(praiseDrops(compiled).length, 0);
 });

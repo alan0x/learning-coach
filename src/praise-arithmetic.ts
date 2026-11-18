@@ -52,16 +52,24 @@ const WORD_OPS: Array<[string, "+" | "-" | "*" | "/"]> = [
 const WORD_EQS = ["is equal to", "equals", "makes", "gives", "is", "等于", "得", "是"];
 const SYMBOL_OPS: Record<string, "+" | "-" | "*" | "/"> = { "+": "+", "-": "-", "−": "-", "–": "-", "×": "*", "*": "*", "·": "*", "÷": "/", "/": "/" };
 /** A result followed by one of these is not the value of the expression. */
-const NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下)/iu;
-const GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″]/u;
-/** A token right after the result that means the result goes on (3:45) or is not exact. */
-const CONTINUES = /^[≈:：]$/u;
+const NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
+/** A division claim in a message that speaks of a remainder is a division with remainder, not exact. */
+const REMAINDER = /remainder|\brem\b|left ?over|余|……|\bR\s?\d/iu;
+/** A claim in a sentence that negates it or calls it a mistake is quoted, not stated. */
+const NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不是|并非|而非|错/iu;
+/** Sentence ends; a full stop between digits is a decimal point. */
+const SENTENCE_END = /[!?。！？；;\n]|\.(?!\d)/gu;
+const GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″\u0300-\u036f]/u;
 const NUMBER = /^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/u;
 
-function tokenize(text: string): Array<Token & { rest: string }> {
-  const tokens: Array<Token & { rest: string }> = [];
+type Placed = Token & { rest: string; at: number };
+
+function tokenize(text: string): Placed[] {
+  const placed: Placed[] = [];
   let i = 0;
-  const previous = () => tokens[tokens.length - 1];
+  // Every token records where it starts, so checks can see what touches it.
+  const push = (token: Token & { rest: string }) => { placed.push({ ...token, at: i } as Placed); };
+  const previous = () => placed[placed.length - 1];
   while (i < text.length) {
     const ch = text[i]!;
     if (/\s/u.test(ch)) { i += 1; continue; }
@@ -79,30 +87,30 @@ function tokenize(text: string): Array<Token & { rest: string }> {
       const value = fractionNumber
         ? div(decimal(fractionNumber[1]!, signed), decimal(fractionNumber[2]!, false))
         : decimal(number[0], signed);
-      if (!value) { tokens.push({ kind: "other", text: number[0], rest: text.slice(i + length) }); i += length; continue; }
-      tokens.push({ kind: "num", value, glued: GLUE.test(before) || GLUE.test(after), text: text.slice(i, i + length), rest: text.slice(i + length) });
+      if (!value) { push({ kind: "other", text: number[0], rest: text.slice(i + length) }); i += length; continue; }
+      push({ kind: "num", value, glued: GLUE.test(before) || GLUE.test(after), text: text.slice(i, i + length), rest: text.slice(i + length) });
       i += length;
       continue;
     }
-    if (ch === "=" || ch === "＝") { tokens.push({ kind: "eq", symbol: true, text: ch, rest: text.slice(i + 1) }); i += 1; continue; }
-    if (SYMBOL_OPS[ch]) { tokens.push({ kind: "op", op: SYMBOL_OPS[ch]!, text: ch, rest: text.slice(i + 1) }); i += 1; continue; }
+    if (ch === "=" || ch === "＝") { push({ kind: "eq", symbol: true, text: ch, rest: text.slice(i + 1) }); i += 1; continue; }
+    if (SYMBOL_OPS[ch]) { push({ kind: "op", op: SYMBOL_OPS[ch]!, text: ch, rest: text.slice(i + 1) }); i += 1; continue; }
     const lower = rest.toLowerCase();
     const latinBoundary = (length: number) => !/[A-Za-z]/u.test(rest[length] ?? "");
     const wordOp = WORD_OPS.find(([word]) => lower.startsWith(word) && (!/[a-z]/u.test(word[0]!) || latinBoundary(word.length)));
-    if (wordOp) { tokens.push({ kind: "op", op: wordOp[1], text: wordOp[0], rest: rest.slice(wordOp[0].length) }); i += wordOp[0].length; continue; }
+    if (wordOp) { push({ kind: "op", op: wordOp[1], text: wordOp[0], rest: rest.slice(wordOp[0].length) }); i += wordOp[0].length; continue; }
     const wordEq = WORD_EQS.find((word) => lower.startsWith(word) && (!/[a-z]/u.test(word[0]!) || latinBoundary(word.length)));
-    if (wordEq) { tokens.push({ kind: "eq", symbol: false, text: wordEq, rest: rest.slice(wordEq.length) }); i += wordEq.length; continue; }
+    if (wordEq) { push({ kind: "eq", symbol: false, text: wordEq, rest: rest.slice(wordEq.length) }); i += wordEq.length; continue; }
     const word = /^[A-Za-z]+/u.exec(rest);
     if (word) {
       // "5 x 4": a lone x between two numbers is a times sign; the caller decides from its neighbours.
-      tokens.push({ kind: "word", text: word[0], rest: rest.slice(word[0].length) });
+      push({ kind: "word", text: word[0], rest: rest.slice(word[0].length) });
       i += word[0].length;
       continue;
     }
-    tokens.push({ kind: /\p{L}/u.test(ch) ? "word" : "other", text: ch, rest: text.slice(i + 1) });
+    push({ kind: /\p{L}/u.test(ch) ? "word" : "other", text: ch, rest: text.slice(i + 1) });
     i += 1;
   }
-  return tokens;
+  return placed;
 }
 
 /** Operator at index i, counting a lone "x" between two numbers as a times sign. */
@@ -135,12 +143,24 @@ function evaluate(values: Fraction[], ops: Array<"+" | "-" | "*" | "/">): Fracti
   return total;
 }
 
-/** The exact value equals the result as written, or rounds to it at the result's own decimal places. */
+/** A fraction with no finite decimal form (1/3), as opposed to one that ends (3/4 = 0.75). */
+function nonTerminating(value: Fraction): boolean {
+  let d = value.d;
+  while (d % 2n === 0n) d /= 2n;
+  while (d % 5n === 0n) d /= 5n;
+  return d !== 1n;
+}
+
+/**
+ * The exact value equals the result as written. Only a value with no finite decimal form may be shown
+ * rounded, at the result's own decimal places (10 / 3 = 3.33); a value that ends must be written exactly,
+ * so 0.5 + 0.25 = 0.8 is false.
+ */
 function holds(exact: Fraction, resultText: string, result: Fraction): boolean {
   const difference = sub(exact, result);
   if (difference.n === 0n) return true;
   const places = (/\.(\d+)/u.exec(resultText)?.[1] ?? "").length;
-  if (places === 0) return false;
+  if (places === 0 || !nonTerminating(exact)) return false;
   // |exact − result| ≤ ½ · 10^−places, compared exactly.
   return abs(difference.n) * 2n * 10n ** BigInt(places) <= difference.d;
 }
@@ -155,7 +175,9 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
     const result = tokens[e + 1];
     if (result?.kind !== "num" || result.glued) return;
     const after = tokens[e + 2];
-    if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || CONTINUES.test(after.text))) return;
+    const betweenDigits = (token: Placed) => /\d/u.test(text[token.at - 1] ?? "") && /\d/u.test(text[token.at + 1] ?? "");
+    if (after && (operatorAt(tokens, e + 2) || after.kind === "num" || after.kind === "eq" && after.symbol || after.text === "≈"
+      || /^[:：]$/u.test(after.text) && betweenDigits(after))) return;
     if (NOT_A_RESULT.test(result.rest.trimStart())) return;
     // Left side: number (operator number)+, read backwards from the "=".
     const values: Fraction[] = [];
@@ -171,14 +193,26 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
       k -= 2;
     }
     if (ops.length === 0) return;
-    // What comes before the expression must end it: not a number, an operator, a bracket or a symbol "=".
+    // What comes before the expression must end it: not a number, an operator, a bracket, a clock colon
+    // (3:30), or an "=" that follows a value (a chain). A label before "=" (面积 = 8 × 3 = 24) is fine.
     const before = tokens[k - 1];
-    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || before.kind === "eq" && before.symbol || /^[([{|:：]$/u.test(before.text))) return;
+    const chain = before?.kind === "eq" && before.symbol && (tokens[k - 2]?.kind === "num" || /^[)\]}|]$/u.test(tokens[k - 2]?.text ?? ""));
+    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || chain || /^[([{|]$/u.test(before.text)
+      || /^[:：]$/u.test(before.text) && betweenDigits(before))) return;
+    const opTokens = tokens.slice(k, e).filter((_t, index) => index % 2 === 1);
+    // "3-5 is 2" or "2024-11-18 is a day" is a range or a date: an unspaced hyphen read with a word "is".
+    if (!token.symbol && opTokens.some((op) => /^[-–]$/u.test(op.text) && /\d/u.test(text[op.at - 1] ?? "") && /\d/u.test(text[op.at + 1] ?? ""))) return;
+    if (ops.includes("/") && REMAINDER.test(text)) return;
     const exact = evaluate(values, ops);
     if (!exact) return;
-    const start = text.indexOf(tokens[k]!.text + tokens[k]!.rest);
+    const start = tokens[k]!.at;
     const end = text.length - result.rest.length;
-    claims.push({ text: start >= 0 ? text.slice(start, end).trim() : token.text, holds: holds(exact, result.text, result.value) });
+    // The sentence holding the claim: if it negates the claim or calls it a mistake, the claim is quoted.
+    const ends = [...text.matchAll(SENTENCE_END)].map((match) => match.index!);
+    const sentenceStart = Math.max(0, ...ends.filter((index) => index < start).map((index) => index + 1));
+    const sentenceEnd = Math.min(text.length, ...ends.filter((index) => index >= end));
+    if (NEGATED.test(text.slice(sentenceStart, sentenceEnd))) return;
+    claims.push({ text: text.slice(start, end).trim(), holds: holds(exact, result.text, result.value) });
   });
   return {
     verdict: claims.length === 0 ? "none" : claims.every((claim) => claim.holds) ? "true" : "false",
