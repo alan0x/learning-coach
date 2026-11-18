@@ -19223,7 +19223,7 @@ var SYMBOL_OPS = {
   "/": "/",
   "\uFF0F": "/"
 };
-var NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
+var NOT_A_RESULT = /^((more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r)\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
 var REMAINDER = /remainder|\brem\b|(?<!nothing |no )left ?over|余数|余\s*\d|……|\bR\s?\d/iu;
 var NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不是|并非|而非|(?<![不没])错|不对/iu;
 var ASKED_CLAUSE = /^\s*(is|are|does|do|if|suppose|what if)\b|^\s*(如果|假如|假设|要是)/iu;
@@ -19263,7 +19263,7 @@ function tokenize2(text3) {
         push({ kind: "other", text: number[0] }, length2);
         continue;
       }
-      push({ kind: "num", value: value2, glued: GLUE.test(before) || GLUE.test(after), text: text3.slice(i, i + length2) }, length2);
+      push({ kind: "num", value: value2, glued: GLUE.test(before) || GLUE.test(after) || new RegExp("\\p{L}", "u").test(after), text: text3.slice(i, i + length2) }, length2);
       continue;
     }
     if (ch === "=" || ch === "\uFF1D") {
@@ -19329,12 +19329,16 @@ function nonTerminating(value2) {
   while (d % 5n === 0n) d /= 5n;
   return d !== 1n;
 }
-function holds(exact, resultText, result, saysRounded) {
+function holds(exact, resultText, result) {
   const difference = sub3(exact, result);
   if (difference.n === 0n) return true;
   const places = (/\.(\d+)/u.exec(resultText)?.[1] ?? "").length;
-  if (!saysRounded && (places === 0 || !nonTerminating(exact))) return false;
-  return abs(difference.n) * 2n * 10n ** BigInt(places) <= difference.d;
+  if (places === 0 || !nonTerminating(exact)) return false;
+  const scale2 = 10n ** BigInt(places);
+  const rounded = abs(difference.n) * 2n * scale2 <= difference.d;
+  const towardZero = exact.n > 0n === difference.n > 0n && (result.n === 0n || result.n > 0n === exact.n > 0n);
+  const cutOff = towardZero && abs(difference.n) * scale2 < difference.d;
+  return rounded || cutOff;
 }
 function praiseArithmetic(text3) {
   text3 = text3 ?? "";
@@ -19365,7 +19369,7 @@ function praiseArithmetic(text3) {
     const values = [];
     const ops = [];
     let k = e - 1;
-    while (k >= 0) {
+    for (; ; ) {
       const value2 = tokens[k];
       if (value2?.kind !== "num" || value2.glued) return;
       values.unshift(value2.value);
@@ -19374,7 +19378,7 @@ function praiseArithmetic(text3) {
       ops.unshift(op);
       k -= 2;
     }
-    if (ops.length === 0) return;
+    if (ops.length === 0 || values.length !== ops.length + 1) return;
     const before = tokens[k - 1];
     const chain = before?.kind === "eq" && before.symbol && (tokens[k - 2]?.kind === "num" || /^[)\]}|]$/u.test(tokens[k - 2]?.text ?? ""));
     if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || chain || /^[([{|]$/u.test(before.text) || /^[:：,]$/u.test(before.text) && betweenDigits(before) || LABEL.test(before.text))) return;
@@ -19387,8 +19391,8 @@ function praiseArithmetic(text3) {
     const end = result.end;
     const clause = span2(clauseEnds, start, end);
     const sentence = span2(sentenceEnds, start, end);
-    if (NEGATED.test(clause) || ASKED_CLAUSE.test(clause) || ASKED_SENTENCE.test(sentence) || ops.includes("/") && REMAINDER.test(sentence)) return;
-    claims.push({ text: text3.slice(start, end).trim(), holds: holds(exact, result.text, result.value, ROUNDED.test(sentence)) });
+    if (NEGATED.test(clause) || ASKED_CLAUSE.test(clause) || ASKED_SENTENCE.test(sentence) || ROUNDED.test(sentence) || ops.includes("/") && REMAINDER.test(sentence)) return;
+    claims.push({ text: text3.slice(start, end).trim(), holds: holds(exact, result.text, result.value) });
   });
   return {
     verdict: claims.length === 0 ? "none" : claims.every((claim) => claim.holds) ? "true" : "false",
@@ -19975,11 +19979,15 @@ function compileLessonPlan(value2, options = {}) {
     });
     const kept = seenTaskSemantics.get(semanticKey);
     if (kept) {
-      if (!kept.success_message && task.success_message) kept.success_message = task.success_message;
+      if (kept.dropped && task.success_message) {
+        kept.task.success_message = task.success_message;
+        programAdjustments.splice(programAdjustments.indexOf(kept.dropped), 1);
+        kept.dropped = void 0;
+      }
       return;
     }
     if (dropped) programAdjustments.push(dropped);
-    seenTaskSemantics.set(semanticKey, task);
+    seenTaskSemantics.set(semanticKey, { task, dropped });
     if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
       task.start = { kind: "practice", variables: task.allowed_operations.flatMap((operation) => operation.kind === "variable_change" ? [operation.variable] : []) };
     }
@@ -20002,7 +20010,13 @@ function compileLessonPlan(value2, options = {}) {
       }
       const taskAlias = `section-${pad2(sectionOffset + 1)}-task-${pad2(activityOffset + 1)}`;
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : void 0;
-      const praiseClaims = praise ? praiseArithmetic(praise) : void 0;
+      const praiseClaims = praise ? (() => {
+        try {
+          return praiseArithmetic(praise);
+        } catch {
+          return void 0;
+        }
+      })() : void 0;
       let droppedPraise;
       if (praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");

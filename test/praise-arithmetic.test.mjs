@@ -41,14 +41,11 @@ test("true claims are kept", () => {
     "第1步：8 + 5 = 13",
     "面积 = 8 × 3 = 24 平方厘米",
     // review, round 2: a value that ends may be rounded when the sentence says so; a decimal comma is one number
-    "1 ÷ 8 = 0.13 (rounded)",
-    "1 ÷ 8 = 0.13 to 2 decimal places",
-    "约 1 ÷ 8 = 0.13",
     "Great! 3 × 4 = 12, and 12 ÷ 4 = 3 with nothing left over.",
     // review, round 3: a quoted mistake is skipped in its own clause only; whole-number rounding said aloud
     "2 + 3 = 5, and 2 + 3 = 6 is the mistake to avoid.",
-    "47 ÷ 10 = 5, rounded to the nearest whole number.",
-    "Rounded to the nearest whole, 7 ÷ 2 = 4.",
+    // review, round 4: a repeating value cut off at the places shown, as number-line-fit reads it
+    "2 ÷ 3 = 0.66",
     "8-3=5",
     "8 ＋ 5 ＝ 13",
   ]) assert.equal(verdict(text), "true", text);
@@ -96,6 +93,9 @@ test("false claims are found", () => {
     "做得不错了，8 + 5 = 14",
     "8 ＋ 5 ＝ 14",
     "8 － 3 = 4",
+    // review, round 4: "than"/"less" only as whole words
+    "8 + 5 = 14 thanks to your counting!",
+    "8 + 5 = 14 lessons learned",
   ]) assert.equal(verdict(text), "false", text);
 });
 
@@ -154,6 +154,22 @@ test("anything not written wholly in numerals is not read", () => {
     "1,5 + 2 = 3,5",
     // review, round 3: a range with a spaced "="
     "Pages 1-3 = 3 pages",
+    // review, round 4: a sentence that says it rounds is not read; a result glued to a scale or unit word
+    "1 ÷ 8 = 0.13 (rounded)",
+    "1 ÷ 8 = 0.13 to 2 decimal places",
+    "约 1 ÷ 8 = 0.13",
+    "47 ÷ 10 = 5, rounded to the nearest whole number.",
+    "Rounded to the nearest whole, 7 ÷ 2 = 4.",
+    "47 + 6 = 50, rounded to the nearest ten.",
+    "10 ÷ 3 = 4 (rounded up)",
+    "30000 + 40000 = 7万",
+    "1/2 + 1/4 = 4分之3",
+    // review, round 4: an operator first is no claim, and never a crash
+    "Plus 3 is 7!",
+    "- 8 + 5 = 13",
+    "+ 3 = 8",
+    "Times 2 is 10",
+    "加 3 等于 8",
     "正确，θ=π/2 时 sin θ 取得最大值 1。",
     "现在 x=2，对应 y=4。",
     "Done: Slope (m) is now -5.",
@@ -205,7 +221,29 @@ test("a duplicate task's true message fills in a kept task whose message was dro
   section.student_activities.push(twin);
   const compiled = compileAndValidateLessonPlan(plan);
   assert.deepEqual(taskMessages(compiled), ["Great job! 2 + 2 = 4."]);
-  assert.equal(praiseDrops(compiled).length, 1, "the drop still happened, on the first copy");
+  assert.equal(praiseDrops(compiled).length, 0, "review, round 4: a drop that was filled in is withdrawn");
+});
+
+test("a task the model wrote with no message is not filled in by a duplicate", () => {
+  // review, round 4: only a message the check left out is filled in; deduplication is otherwise as on main.
+  const plan = withPraise(undefined);
+  const section = plan.sections.find((item) => (item.student_activities ?? []).some((activity) => activity.kind === "number_target"));
+  const first = section.student_activities.find((activity) => activity.kind === "number_target");
+  delete first.success_message;
+  const twin = structuredClone(first);
+  twin.success_message = "Nice!";
+  section.student_activities.push(twin);
+  assert.deepEqual(taskMessages(compileAndValidateLessonPlan(plan)), [undefined]);
+});
+
+test("the checker never throws, so it can never cost a lesson", () => {
+  const pieces = ["8", "+", "−", "-", "=", "is", "等于", "加", "plus", "3/4", "0.5", ",", ":", "(", ")", "x", "Plus", "万", " ", "?", "not", "…", "÷", "0"];
+  let seed = 7;
+  const next = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed; };
+  for (let round = 0; round < 3000; round += 1) {
+    const text = Array.from({ length: 1 + (next() % 9) }, () => pieces[next() % pieces.length]).join(next() % 2 ? " " : "");
+    assert.doesNotThrow(() => praiseArithmetic(text), text);
+  }
 });
 
 test("plot and view adjustments stay separate from text adjustments", () => {

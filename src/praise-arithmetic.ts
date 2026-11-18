@@ -56,7 +56,7 @@ const SYMBOL_OPS: Record<string, "+" | "-" | "*" | "/"> = {
   "×": "*", "*": "*", "＊": "*", "·": "*", "÷": "/", "/": "/", "／": "/",
 };
 /** A result followed by one of these is not the value of the expression. */
-const NOT_A_RESULT = /^(more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
+const NOT_A_RESULT = /^((more|less|fewer|greater|smaller|larger|bigger|times|than|remainder|r)\b|R\d|余|多|少|倍|以上|以下|\.\.|…)/iu;
 /** A division claim in a sentence that speaks of a remainder is a division with remainder, not exact. */
 const REMAINDER = /remainder|\brem\b|(?<!nothing |no )left ?over|余数|余\s*\d|……|\bR\s?\d/iu;
 /** A claim in a clause that negates it or calls it a mistake is quoted, not stated. 不错 and 没错 are praise. */
@@ -65,7 +65,7 @@ const NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|�
 const ASKED_CLAUSE = /^\s*(is|are|does|do|if|suppose|what if)\b|^\s*(如果|假如|假设|要是)/iu;
 /** A sentence that ends as a question. */
 const ASKED_SENTENCE = /[?？吗][\s"'”’)）]*$/u;
-/** A sentence that says its value is rounded may round a value that ends (1 ÷ 8 = 0.13, 47 ÷ 10 = 5). */
+/** A sentence that says it rounds is not read: the place and direction of rounding are its own. */
 const ROUNDED = /\brounded\b|\bround(?:s|ing)? (?:to|off|up|down)\b|\bdecimal places?\b|\bapproximately\b|\bnearest (?:whole|tenth|hundredth|thousandth|integer|cent)\b|约等于|大约|近似|保留|四舍五入|精确到|(?<![节制预契简大])约(?![定束会])/iu;
 /** A label number (Step 2, Question 3) is not the first term of a subtraction after it. */
 const LABEL = /^(step|question|problem|part|example|exercise|no|q|第)$/iu;
@@ -104,7 +104,9 @@ function tokenize(text: string): Placed[] {
         ? div(decimal(fractionNumber[1]!, signed), decimal(fractionNumber[2]!, false))
         : decimal(number[0], signed);
       if (!value) { push({ kind: "other", text: number[0] }, length); continue; }
-      push({ kind: "num", value, glued: GLUE.test(before) || GLUE.test(after), text: text.slice(i, i + length) }, length);
+      // A letter of any script right after a number scales or names it (7万, 4分之3); only Latin and Greek
+      // letters right before one join it (x2).
+      push({ kind: "num", value, glued: GLUE.test(before) || GLUE.test(after) || /\p{L}/u.test(after), text: text.slice(i, i + length) }, length);
       continue;
     }
     if (ch === "=" || ch === "＝") { push({ kind: "eq", symbol: true, text: ch }, 1); continue; }
@@ -163,17 +165,23 @@ function nonTerminating(value: Fraction): boolean {
 
 /**
  * The exact value equals the result as written. Only a value with no finite decimal form may be shown
- * rounded, at the result's own decimal places (10 / 3 = 3.33); a value that ends must be written exactly,
- * so 0.5 + 0.25 = 0.8 is false, unless the sentence says it is rounded (47 ÷ 10 = 5, rounded).
+ * rounded or cut off at the result's own decimal places (10 / 3 = 3.33); a value that ends must be written
+ * exactly, so 0.5 + 0.25 = 0.8 is false. A sentence that says it rounds is not read at all.
  */
-function holds(exact: Fraction, resultText: string, result: Fraction, saysRounded: boolean): boolean {
+function holds(exact: Fraction, resultText: string, result: Fraction): boolean {
   const difference = sub(exact, result);
   if (difference.n === 0n) return true;
   const places = (/\.(\d+)/u.exec(resultText)?.[1] ?? "").length;
-  // Unless the sentence says it rounds: a whole-number result must be exact, and so must a value that ends.
-  if (!saysRounded && (places === 0 || !nonTerminating(exact))) return false;
-  // |exact − result| ≤ ½ · 10^−places, compared exactly.
-  return abs(difference.n) * 2n * 10n ** BigInt(places) <= difference.d;
+  // A whole-number result must be exact, and so must a value that ends.
+  if (places === 0 || !nonTerminating(exact)) return false;
+  // Rounded or cut off at the places shown, as number-line-fit reads model decimals (0.67 and 0.66 are 2/3),
+  // compared exactly. Rounded: |exact − result| ≤ ½ · 10^−places. Cut off: the result is the exact value
+  // with its later digits removed, so it lies between zero and the exact value, less than 10^−places away.
+  const scale = 10n ** BigInt(places);
+  const rounded = abs(difference.n) * 2n * scale <= difference.d;
+  const towardZero = (exact.n > 0n) === (difference.n > 0n) && (result.n === 0n || (result.n > 0n) === (exact.n > 0n));
+  const cutOff = towardZero && abs(difference.n) * scale < difference.d;
+  return rounded || cutOff;
 }
 
 export function praiseArithmetic(text: string): PraiseArithmeticResult {
@@ -207,8 +215,9 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
     const values: Fraction[] = [];
     const ops: Array<"+" | "-" | "*" | "/"> = [];
     let k = e - 1;
-    while (k >= 0) {
+    for (;;) {
       const value = tokens[k];
+      // An expression starts and ends on a number: an operator at the very start ("Plus 3 is 7") is no claim.
       if (value?.kind !== "num" || value.glued) return;
       values.unshift(value.value);
       const op = operatorAt(tokens, k - 1);
@@ -216,7 +225,7 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
       ops.unshift(op);
       k -= 2;
     }
-    if (ops.length === 0) return;
+    if (ops.length === 0 || values.length !== ops.length + 1) return;
     // What comes before the expression must end it: not a number, an operator, a bracket, a colon or comma
     // between digits, a label (Step 2), or an "=" that follows a value (a chain). A label before "="
     // (面积 = 8 × 3 = 24) is fine.
@@ -237,9 +246,9 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
     // sentence) is not a stated claim.
     const clause = span(clauseEnds, start, end);
     const sentence = span(sentenceEnds, start, end);
-    if (NEGATED.test(clause) || ASKED_CLAUSE.test(clause) || ASKED_SENTENCE.test(sentence)
+    if (NEGATED.test(clause) || ASKED_CLAUSE.test(clause) || ASKED_SENTENCE.test(sentence) || ROUNDED.test(sentence)
       || ops.includes("/") && REMAINDER.test(sentence)) return;
-    claims.push({ text: text.slice(start, end).trim(), holds: holds(exact, result.text, result.value, ROUNDED.test(sentence)) });
+    claims.push({ text: text.slice(start, end).trim(), holds: holds(exact, result.text, result.value) });
   });
   return {
     verdict: claims.length === 0 ? "none" : claims.every((claim) => claim.holds) ? "true" : "false",
