@@ -11526,21 +11526,23 @@ function solidHasMeasure(solid, kind) {
   return kind === "volume" ? measures.volume !== void 0 : kind === "surface_area" ? measures.surfaceArea !== void 0 : measures.counts !== void 0;
 }
 var whole = (value2) => Math.abs(value2 - Math.round(value2)) <= 64 * Number.EPSILON * Math.max(1, Math.abs(value2));
+var EXACT_LIMIT = 1e12;
+var exactAt = (value2, scaled) => Math.abs(scaled) < EXACT_LIMIT && whole(scaled) && (Math.round(scaled) !== 0 || value2 === 0);
 function exactDecimal(value2) {
   for (let places = 0; places <= 3; places += 1) {
     const scaled = value2 * 10 ** places;
-    if (whole(scaled))
+    if (exactAt(value2, scaled))
       return (Math.round(scaled) / 10 ** places).toFixed(places);
   }
   return void 0;
 }
-var approximate = (value2) => (Math.round(value2 * 100) / 100).toFixed(2);
+var approximate = (value2) => value2 !== 0 && Math.abs(value2) < 5e-3 ? value2.toPrecision(3) : (Math.round(value2 * 100) / 100).toFixed(2);
 function piText(coefficient2) {
   const decimal = exactDecimal(coefficient2);
   if (decimal !== void 0)
     return decimal === "1" ? "\u03C0" : `${decimal}\u03C0`;
   for (let denominator = 2; denominator <= 12; denominator += 1) {
-    if (whole(coefficient2 * denominator)) {
+    if (exactAt(coefficient2, coefficient2 * denominator)) {
       const numerator = Math.round(coefficient2 * denominator);
       return `${numerator === 1 ? "" : numerator}\u03C0/${denominator}`;
     }

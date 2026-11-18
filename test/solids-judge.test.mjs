@@ -144,3 +144,12 @@ test("owner review of #116: four false passes now fail, each for its own reason"
   fails("SD-07", lesson({ objects: [box(6, 4, 3, at(0, 0)), { ...box(2, 4, 7, { x: 4, y: 4, z: 5 }), as: "solid-side" }], caption: "Volume = 128" }), /wrong solid: expected two_boxes: boxes not on one floor|boxes do not share a side face/u);
   fails("SD-07", lesson({ objects: [box(6, 4, 3, at(-1, -2)), { ...box(2, 4, 7, { x: 3, y: 4, z: 0 }), as: "solid-side" }], caption: "Volume = 128" }), /boxes do not share a side face/u);
 });
+
+test("second review of #116: an animation-only cut fails; the learner's slider range is what counts", () => {
+  const cylinder = { as: "solid", kind: "cylinder", center: at(), radius: 2, height: 6 };
+  const scene = { objects: [cylinder], sections: [{ as: "cut", axis: "z", value: -3, targets: ["solid"] }], bindings: [{ target: "cut.value", expression: "h" }] };
+  fails("SD-08", lesson(scene, { variables: [{ as: "h", initial: -3, min: -3, max: 3, label: "h" }], animations: [["h", 3]] }), /missing cut: no horizontal plane that a learner moves/u);
+  // A short slider stays short, whatever an animation does within it.
+  fails("SD-08", lesson(scene, { variables: [slider("h", -1, 1, 0)], animations: [["h", 1]] }), /missing cut/u);
+  passes("SD-08", lesson(scene, { variables: [slider("h", -3, 3, 0)], animations: [["h", 3]] }));
+});

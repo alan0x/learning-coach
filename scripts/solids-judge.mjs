@@ -231,7 +231,10 @@ function sliders(scene) {
   const cuts = (scene.content.sections ?? []).map((section) => {
     const binding = bindings.find((item) => item.target === `${section.as ?? section.id}.value`);
     const name = binding && expressionVariable(scene, binding.expression);
-    return { section, values: name ? variableValues(scene, name) : [section.value], moves: Boolean(name) };
+    const variable = scene.variables.find((item) => item.as === name);
+    // What a learner can do with it: a slider's own range (animation ends count only toward the bounds check).
+    const slider = variable?.control ? [variable.min, variable.max] : undefined;
+    return { section, values: name ? variableValues(scene, name) : [section.value], moves: Boolean(name), slider };
   });
   const nets = bindings.filter((binding) => String(binding.target).endsWith(".unfold")).map((binding) => {
     const name = expressionVariable(scene, binding.expression);
@@ -353,11 +356,14 @@ function expectationMisses(expect, scene, solids, lines) {
   if (expect.interaction === "cut") {
     // A horizontal plane (axis z) cutting the expected solid and moving through ≥ 90% of its height,
     // never beyond it (owner review of #116: an x-axis plane on [-3, 3] passed against a cylinder of radius 2).
+    // The learner moves it: a slider whose own range covers the travel (second review: an animation-only
+    // cut, with no slider, passed).
     const ok = cuts.some((cut) => {
-      if (!cut.moves || (cut.section.axis ?? "z") !== "z" || !(cut.section.targets ?? []).some((target) => names.has(target))) return false;
+      if (!cut.slider || (cut.section.axis ?? "z") !== "z" || !(cut.section.targets ?? []).some((target) => names.has(target))) return false;
       const solid = targets.find((each) => each.parts.some((part) => (cut.section.targets ?? []).includes(idOf(part.object))));
       const [low, high] = solid.z;
-      return Math.min(...cut.values) >= low - EPS && Math.max(...cut.values) <= high + EPS && Math.max(...cut.values) - Math.min(...cut.values) >= 0.9 * (high - low);
+      const [min, max] = cut.slider;
+      return min >= low - EPS && max <= high + EPS && max - min >= 0.9 * (high - low);
     });
     if (!ok) misses.push("missing cut: no horizontal plane that a learner moves through the solid");
   }
