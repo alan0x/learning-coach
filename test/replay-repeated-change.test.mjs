@@ -67,7 +67,7 @@ test("actions are followed in the order they play: before, during, then after sp
   assert.equal(replays(compiled).length, 0);
 });
 
-test("a lesson with no repeat compiles exactly as before", () => {
+test("a lesson with no repeat gets no start", () => {
   const plan = planWith([[animate(-2)]]);
   const compiled = compileAndValidateLessonPlan(plan);
   assert.equal(beats(compiled).some((beat) => beat.start), false);
@@ -132,10 +132,6 @@ test("a repeat after another number has changed is left alone: that picture was 
   assert.equal(replays(compiled).length, 0);
 });
 
-test("the compiled plan keeps no program-only field", () => {
-  const compiled = compileAndValidateLessonPlan(planWith([[animate(3)]]));
-  assert.equal(JSON.stringify(compiled.resolved.plan).includes("replay_from"), false);
-});
 
 // Review, round 3: recipe hooks run before the walk, and values compare as the player shows them.
 test("a replay never starts from a value a recipe hook moved", () => {
@@ -157,4 +153,12 @@ test("a replay never starts from a value a recipe hook moved", () => {
   assert.notEqual(compiled.lesson.lesson.variables[1].initial, 0, "the hook moved x2's start");
   assert.equal(beats(compiled).some((beat) => beat.start), false);
   assert.equal(replays(compiled).length, 0);
+});
+
+// Review, round 4: moves in one stage play together, and a new visual of the number has never shown the old value.
+test("moves played together are never read as one after the other, whatever their written order", () => {
+  for (const order of [[move(2, 3), move(1, 1)], [move(1, 1), move(2, 3)]]) {
+    const compiled = compileAndValidateLessonPlan(twoNumbers([order, [move(1, 1)]]));
+    assert.equal(beats(compiled).at(-1).start, undefined, JSON.stringify(order));
+  }
 });

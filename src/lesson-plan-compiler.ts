@@ -548,7 +548,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const viewAdjustments: CompiledLessonPlan["view_adjustments"] = [];
   const programAdjustments: CompiledLessonPlan["program_adjustments"] = [];
   /** A beat's start: the model's restarts, plus a number marked to replay its last change (markRepeatedChanges). */
-  const beatStart = (moment: LessonPlan["sections"][number]["moments"][number], sectionIndex: number, momentIndex: number) => {
+  const beatStart = (moment: Moment, sectionIndex: number, momentIndex: number) => {
     const restarts = moment.restart_numbers ?? [];
     const replays = replayFrom.get(moment) ?? [];
     for (const { number, from, end } of replays) {
@@ -923,42 +923,55 @@ const sameValue = (a: number | undefined, b: number | undefined) => a !== undefi
  * - it plays before or during the speech, as a replay start does (never after it);
  * - the number's last change was the model's own animation, written with the same end, so a repeat the
  *   program made by clamping or rounding two different ends is left;
- * - no other number has changed since that change began, so the replayed picture is one already shown;
- * - the moment does not already restart the number.
+ * - no other number has changed since that change began (compared with the values at the start of the
+ *   change's stage, so moves played together never count as one after the other), and no visual that draws
+ *   the number has been created since: the replayed picture is one already shown.
  * Moments play in order; within one, actions play before, during, then after the speech. A restart resets
  * a number to its starting value and clears its last change.
  */
 function markRepeatedChanges(plan: LessonPlan, written: WrittenAnimations): Map<Moment, Array<{ number: number; from: number; end: number }>> {
   const marks = new Map<Moment, Array<{ number: number; from: number; end: number }>>();
   const value = new Map<number, number>((plan.numbers ?? []).map((number, index) => [index + 1, number.initial]));
-  /** Each number's last change by the model: where it began, its written end, and every value then. */
-  const lastChange = new Map<number, { from: number; writtenEnd: number; before: Map<number, number> }>();
+  /** Each number's last change by the model: where it began, its written end, every value then, and visuals drawn. */
+  const lastChange = new Map<number, { from: number; writtenEnd: number; before: Map<number, number>; visuals: number }>();
+  /** How many visuals drawing each number have been created so far. */
+  const visualsDrawing = new Map<number, number>();
   const timingOf = (action: LessonPlanAnimateAction) => action.timing ?? "during_speech";
   for (const section of plan.sections) for (const moment of section.moments) {
     for (const number of moment.restart_numbers ?? []) {
       value.set(number, plan.numbers![number - 1]!.initial);
       lastChange.delete(number);
     }
+    for (const action of moment.actions) {
+      if (action.action !== "create" || action.kind !== "visual") continue;
+      for (const number of new Set((action.content as LessonPlanVisualContent).numbers ?? [])) visualsDrawing.set(number, (visualsDrawing.get(number) ?? 0) + 1);
+    }
     const animations = moment.actions.filter((action): action is LessonPlanAnimateAction => action.action === "animate");
     const mine = animations.filter((action) => written.has(action));
     const repeat = mine.length === 1 ? mine[0]! : undefined;
-    if (repeat && timingOf(repeat) !== "after_speech" && !(moment.restart_numbers ?? []).includes(repeat.number)
+    // A restart above has already cleared the number's last change, so a restarted number is never marked.
+    if (repeat && timingOf(repeat) !== "after_speech"
       && !animations.some((action) => !written.has(action) && action.number !== repeat.number && timingOf(action) !== "after_speech")) {
       const change = lastChange.get(repeat.number);
       if (change && sameValue(value.get(repeat.number), repeat.end_value) && sameValue(written.get(repeat), change.writtenEnd)
+        && (visualsDrawing.get(repeat.number) ?? 0) === change.visuals
         && [...value].every(([number, current]) => number === repeat.number || sameValue(change.before.get(number), current))) {
         marks.set(moment, [{ number: repeat.number, from: change.from, end: repeat.end_value }]);
       }
     }
-    for (const timing of ["before_speech", "during_speech", "after_speech"] as const) for (const action of animations) {
-      if (timingOf(action) !== timing) continue;
-      const current = value.get(action.number);
-      if (current !== undefined && !sameValue(current, action.end_value)) {
-        const writtenEnd = written.get(action);
-        if (writtenEnd !== undefined) lastChange.set(action.number, { from: current, writtenEnd, before: new Map(value) });
-        else lastChange.delete(action.number);
+    for (const timing of ["before_speech", "during_speech", "after_speech"] as const) {
+      // Moves in one stage play together: each is compared with the values before the stage began.
+      const stageStart = new Map(value);
+      for (const action of animations) {
+        if (timingOf(action) !== timing) continue;
+        const current = value.get(action.number);
+        if (current !== undefined && !sameValue(current, action.end_value)) {
+          const writtenEnd = written.get(action);
+          if (writtenEnd !== undefined) lastChange.set(action.number, { from: current, writtenEnd, before: stageStart, visuals: visualsDrawing.get(action.number) ?? 0 });
+          else lastChange.delete(action.number);
+        }
+        value.set(action.number, action.end_value);
       }
-      value.set(action.number, action.end_value);
     }
   }
   return marks;
