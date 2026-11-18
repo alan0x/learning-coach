@@ -73,3 +73,20 @@ Near misses, against the baseline:
 1. **SD-08 routing.** The model still picks the teaching cube for cuts. Recommended: retire `cube_with_section` when `solid_3d` is switched on, since a box with a cut covers it. That removes the choice, and the switch-on gate measures it.
 2. **N6, an open box.** Recommended: list it as a known near miss. An open-box option would be a new 0019 item.
 3. **Promised motion (SD-06, SD-09).** Recommended: a later 0020-style field that lets the model animate the program's slider, with its own probe.
+
+# Speed gate 1 (2026-11-18, owner-approved, cap 200)
+
+The run used `--pairs 40 --recipes solid_3d --cases SD-08,SD-09,SD-N5 --lesson-calls 4` on the build at 1d9fbb9, where the trial retires `cube_with_section`. **106 calls.** No errors, and every lesson reached its first playable part.
+
+| Requests | Pairs | Median paired difference | 95% CI | Prompt tokens (median) | Thinking turns, baseline / candidate |
+|---|---|---|---|---|---|
+| Fitting (SD-01–10) | 20 | **−1.71 s** | −4.8 to −0.5 s | +27 | 13 / 6 |
+| Other (held-out routing) | 20 | **+1.20 s** | −1.0 to +3.0 s | +27 | 14 / 13 |
+
+**The M4 rule fails on other requests** (+1.20 s, limit +0.5 s). The candidate added only 27 prompt tokens and no extra thinking turns. Per-request differences ranged from −6.0 s to +13.9 s, and one HO-CH-01 pair alone was +13.9 s. Earlier gates found that a change with no cost fails a 20-pair +0.5 s median about 1 time in 8.
+
+Quality, read by hand:
+- SD-08, SD-09 and SD-N5 passed the quality check.
+- In the fitting pairs, SD-08 once drew a solid with no learner cut, and once drew no solid in its first section. SD-01, SD-09 and SD-10 taught volume first; later sections were not judged.
+
+**Next (owner):** the one repeat the earlier gates allowed (run 9b), on the 20 other pairs only. That is about 50 calls, inside this gate's remaining 94.
