@@ -277,8 +277,8 @@ test("speed is judged separately for requests the recipe fits and requests it do
     row(1, "other", "baseline", 8000, 0), row(1, "other", "candidate", 10000, 500),
   ];
   const summary = summarize(rows);
-  assert.equal(summary.speed.result, "fail");
-  assert.match(summary.speed.reason, /other requests \+2000 ms/);
+  assert.equal(summary.speed_wall_clock.result, "fail");
+  assert.match(summary.speed_wall_clock.reason, /other requests \+2000 ms/);
   assert.deepEqual(summary.other.thinking_turns, { baseline: "0/1", candidate: "1/1" });
   // A group the run leaves out is not judged; a planned group with no complete pairs makes it incomplete.
   assert.equal(speedVerdict({ motion: summary.motion, other: { complete_pairs: 0 } }, ["fitting"]).result, "pass");
@@ -299,9 +299,14 @@ test("a planned group whose candidate runs failed makes the speed verdict incomp
     ok(0, "motion", "baseline", 10000), ok(0, "motion", "candidate", 7000),
     ok(1, "other", "baseline", 8000), { pair: 1, kind: "other", arm: "candidate", case: "x", outcome: "call_cap", first_playable_ms: null },
   ]);
-  assert.deepEqual(summary.speed, { result: "incomplete", reason: "no complete other pairs" });
+  assert.deepEqual(summary.speed_wall_clock, { result: "incomplete", reason: "no complete other pairs" });
+  // The revised gate (generated tokens) keeps the rule: a planned group with no complete pair is incomplete.
+  assert.equal(summarize([
+    { ...ok(0, "motion", "baseline", 10000), generated_tokens: 900 }, { ...ok(0, "motion", "candidate", 7000), generated_tokens: 800 },
+    { ...ok(1, "other", "baseline", 8000), generated_tokens: 900 }, { pair: 1, kind: "other", arm: "candidate", case: "x", outcome: "call_cap", first_playable_ms: null },
+  ]).speed.result, "incomplete");
   // An other-only run plans only the other group.
-  assert.equal(summarize([ok(0, "other", "baseline", 8000), ok(0, "other", "candidate", 8200)]).speed.result, "pass");
+  assert.equal(summarize([ok(0, "other", "baseline", 8000), ok(0, "other", "candidate", 8200)]).speed_wall_clock.result, "pass");
 });
 
 test("other-only runs skip the quality cases unless asked (review of #73)", async () => {
