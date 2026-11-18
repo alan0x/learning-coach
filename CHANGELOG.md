@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **M1 re-tag after the 3D solids switch-on** (plan 3.7; `testsuite/math-expressiveness-m1-2026-11-18.json`). Only questions the switch-on could change were re-read against `solid_3d`; `cube_with_section` leaves the component list.
+  - **Fully drawn:** 35 of 145 questions that need a picture, up from 33. The L-shaped block of two boxes and the triangular prism's counts are now fully drawn.
+  - **Partly drawn:** the wheel-ball-box-can comparison, cone and cylinder volumes (no pouring), and flat shapes beside solids. `solids_3d_ext` now lists what `solid_3d` does not draw: more than two solids, faces pointed out one by one, flat shapes beside solids, pouring, and unit-cube stacks.
+  - **Held-out tags:** one held-out question moves from the cube to `solid_3d`, still fully drawn. The open ranking of candidates is unchanged at the top: fraction area models, counters and ten frames, data charts.
+
 - **Plot judge: no false misses at a domain bar's end that a slider moves** (plan 3.6).
   - **Closed end:** a grid x a rounding step below a closed end (h = 0.025) counted as that end for the bars, but √(x − h) was read at the grid x, where it is undefined. That gave "undefined inside the domain bars" (plot-points probe, PJ-10). Such grid points are now skipped; the end itself, and any piece's end, is always sampled.
   - **Moving pole:** a pole a slider moves is reached through a binding a rounding step off it (n1/3 for 1/(3x − n1)). The curve gives about ±4.5e15 there, not infinity, which read as "defined outside the domain bars". An open bar end now counts as the pole only where the function blows up right there: its size at the end is at least 10⁴ times its size 10⁻⁹ (relative) to either side.
