@@ -1,5 +1,5 @@
-// The 3D solids recipe (OLL decision 0019, amended by 0020). It is a trial recipe: offered only when
-// LEARNING_COACH_TRIAL_RECIPES names it, so default requests stay byte-identical.
+// The 3D solids recipe (OLL decision 0019, amended by 0020). A trial until 2026-11-18; now offered by default,
+// with cube_with_section retired. (withTrial below still sets the old switch; it no longer changes anything.)
 // The model writes shapes and the sizes a question states; the program converts, computes the measures,
 // places a second solid and makes the cut or net slider. Each SD case's ideal model output compiles and
 // passes the solids judge; each refusal names its reason; a stubbed generation run decodes the sizes from
@@ -12,13 +12,15 @@ import { fileURLToPath } from "node:url";
 const api = await import(new URL("../lesson-plan.js", import.meta.url));
 const here = (path) => JSON.stringify(new URL(path, import.meta.url).href);
 
-test("by default the trial recipe is installed but not offered, and the teaching cube stays", () => {
-  assert.ok(api.OFFERED_RECIPES.includes("cube_with_section"));
-  assert.deepEqual(api.TRIAL_RETIRES.solid_3d, ["cube_with_section"]);
-  assert.deepEqual(api.offeredRecipes(["solid_3d"]).filter((name) => /cube|solid/u.test(name)), ["solid_3d"]);
-  assert.ok(api.TRIAL_RECIPES.includes("solid_3d"));
-  assert.equal(api.OFFERED_RECIPES.includes("solid_3d"), false);
-  assert.equal(api.LESSON_PLAN_CAPABILITY_NAMES.includes("solid_3d"), false);
+test("solid_3d is offered by default, last in the catalog where its gate measured it, and the teaching cube is retired", () => {
+  // Switched on 2026-11-18 after the revised speed gate passed at 80 pairs (docs/SOLIDS_PROBE_2026-11-17.md).
+  assert.equal(api.RECIPE_CATALOG_ORDER.at(-1), "solid_3d");
+  assert.ok(api.OFFERED_RECIPES.includes("solid_3d"));
+  assert.ok(api.LESSON_PLAN_CAPABILITY_NAMES.includes("solid_3d"));
+  assert.equal(api.TRIAL_RECIPES.includes("solid_3d"), false);
+  assert.deepEqual(api.RETIRED_RECIPES, ["cube_with_section"]);
+  assert.equal(api.OFFERED_RECIPES.includes("cube_with_section"), false);
+  assert.equal(api.LESSON_PLAN_CAPABILITY_NAMES.includes("cube_with_section"), false);
   assert.equal(api.RECIPE_PLUGIN.solid_3d, "math");
 });
 
@@ -146,12 +148,12 @@ test("refused meaning faults: a missing size, a measure with no formula, a net t
 test("a stubbed generation run decodes nested sizes from mantissa and scale", () => {
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
-    const { completeLessonPlanFixtures } = await import(${here("./lesson-plan-course-fixtures.mjs")});
+    const { retiredCubeCourse } = await import(${here("./lesson-plan-course-fixtures.mjs")});
     const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
     const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
     // The cube-and-section course with its visual swapped for solid_3d: no outline numbers, so no
     // animations or number targets (the solid's slider is the program's).
-    const plan = structuredClone(completeLessonPlanFixtures.cube_and_section);
+    const plan = structuredClone(retiredCubeCourse);
     delete plan.numbers;
     for (const section of plan.sections) {
       for (const moment of section.moments) moment.actions = moment.actions.filter((action) => action.action !== "animate");

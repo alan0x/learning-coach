@@ -14247,7 +14247,6 @@ var RECIPE_CATALOG_ORDER = [
   "circle_polygon_bounds",
   "circle_and_arc",
   "spring_and_mass",
-  "cube_with_section",
   "function_surface_with_section",
   "implicit_surface_with_section",
   "coordinate_circle",
@@ -14264,17 +14263,21 @@ var RECIPE_CATALOG_ORDER = [
   "number_line_rounding",
   // Number line in steps (OLL decision 0017 §2): adopted by the owner on 2026-11-15 after the reduced trial
   // (Coach docs/PLOT_TRIAL_2026-11-15.md), ahead of the combined speed gate. Last, where the trial put it.
-  "number_line_steps"
+  "number_line_steps",
+  // 3D solids (OLL decision 0019, as amended by 0020): adopted 2026-11-18 after the revised speed gate passed
+  // at 80 pairs (Coach docs/SOLIDS_PROBE_2026-11-17.md, gates 1–1e). Last, where the gate measured it. It
+  // retired cube_with_section (owner, 2026-11-17): that recipe stays defined, so old lessons keep their
+  // meaning, but it is no longer offered.
+  "solid_3d"
 ];
-var TRIAL_RECIPES = ["constant_speed_motion", "solid_3d"];
+var RETIRED_RECIPES = ["cube_with_section"];
+var TRIAL_RECIPES = ["constant_speed_motion"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
 }
 var processEnvironment = globalThis.process?.env;
-var TRIAL_RETIRES = {
-  solid_3d: ["cube_with_section"]
-};
+var TRIAL_RETIRES = {};
 function offeredRecipes(trials) {
   const retired = new Set(trials.flatMap((name) => TRIAL_RETIRES[name] ?? []));
   return [...RECIPE_CATALOG_ORDER.filter((name) => !retired.has(name)), ...trials];
@@ -23217,6 +23220,7 @@ export {
   RECIPE_HOOKS,
   RECIPE_PLUGIN,
   RECIPE_SCHEMA_PROPERTIES,
+  RETIRED_RECIPES,
   SCHEMA_PROPERTY_ORDER,
   SECTION_FACTS,
   TRIAL_RECIPES,

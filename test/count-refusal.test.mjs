@@ -79,14 +79,16 @@ test("a decimal at a count's range edge is a rounding, not a shared-number fault
 });
 
 test("a shared-number fault names the visual whose range pushed the count out (review finding 5)", () => {
-  // A coordinate circle (whose positive range leaves 3 alone) binds the count first; a cube section (−1 to 1) narrows it.
+  // A coordinate circle (whose positive range leaves 3 alone) binds the count first; a surface section whose
+  // heights run 0 to 2 narrows it. (A cube section, −1 to 1, did this until cube_with_section was retired, 2026-11-18.)
   const plan = arrayPlan({ initial: 3, min: 1, max: 6 });
   addVisual(plan, "coordinate_circle", [1]);
-  addVisual(plan, "cube_with_section", [1]);
+  addVisual(plan, "function_surface_with_section", [1]);
+  plan.sections[0].moments.at(-1).actions[0].content.parameters = { title: "z=x²+y²", expression: "x^2+y^2", x_min: -1, x_max: 1, y_min: -1, y_max: 1, section_axis: "z" };
   const error = refusal(plan);
   assert.equal(error?.code, "LESSON_PLAN_SHARED_NUMBER");
-  assert.match(error.message, /drive the cube_with_section visual/);
-  assert.match(error.path, /moments\[2\]/, "the cube's moment, not the circle's");
+  assert.match(error.message, /drive the function_surface_with_section visual/);
+  assert.match(error.path, /moments\[2\]/, "the surface's moment, not the circle's");
 });
 
 test("after first playable, a count its visual cannot draw is the section's to fix (review finding 1)", () => {

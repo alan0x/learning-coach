@@ -46,9 +46,10 @@ const passes = (id, result) => {
   assert.deepEqual(judgeNumberLine(cases[id], result).hard, [], `${id}: ${JSON.stringify(result.content)}`);
 };
 
-test("the line in steps is offered by default, last in the catalog, where the trial put it (owner, 2026-11-15)", () => {
+test("the line in steps is offered by default, after the other number lines, where the trial put it (owner, 2026-11-15)", () => {
   assert.equal(api.TRIAL_RECIPES.includes("number_line_steps"), false);
-  assert.deepEqual(api.LESSON_PLAN_CAPABILITY_NAMES.slice(-2), ["number_line_rounding", "number_line_steps"]);
+  // solid_3d follows it since 2026-11-18.
+  assert.deepEqual(api.LESSON_PLAN_CAPABILITY_NAMES.slice(-3), ["number_line_rounding", "number_line_steps", "solid_3d"]);
   assert.equal(api.RECIPE_PLUGIN.number_line_steps, "math");
 });
 
