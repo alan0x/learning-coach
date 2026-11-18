@@ -33,7 +33,7 @@ const fails = (id, built, pattern) => {
 const box = (x, y, z, center = at()) => ({ as: "solid", kind: "box", center, size: { x, y, z } });
 
 test("the measures line is read in English and Chinese, exact or rounded", () => {
-  assert.deepEqual(readLine("Volume = 24; Surface area = 52"), { volume: { value: 24, tolerance: 1e-6 }, surface_area: { value: 52, tolerance: 1e-6 } });
+  assert.deepEqual(readLine("Volume = 24; Surface area = 52"), { volume: { value: 24, tolerance: 0 }, surface_area: { value: 52, tolerance: 0 } });
   assert.equal(readLine("Volume = 4π/3 ≈ 4.19").volume.value, 4.19);
   assert.equal(readLine("体积 = 96π ≈ 301.59；表面积 ≈ 45.51").surface_area.value, 45.51);
   assert.deepEqual(readLine("6 个面，12 条棱，8 个顶点").counts, [6, 12, 8]);
@@ -183,4 +183,41 @@ test("producer to judge: the pinned buildSolid's own captions are read correctly
   }
   const pyramid = judgeSolids(item({ kind: "pyramid", sides: 4, side: 6, height: 4, volume: 48 }), built({ shape: "pyramid", sides: 4, side: 6, height: 4 }));
   assert.deepEqual(pyramid.hard, [], "a regular base given by its edge");
+});
+
+test("fourth review of #116: an exact value is held to floating-point noise, alone or before ≈", () => {
+  const item = (kind, volume) => ({ id: "X", expect: { solids: [{ kind, volume }] } });
+  const cube = (side, caption) => lesson({ objects: [box(side, side, side)], caption });
+  // An exact value alone: "= 0" is not a cube of side 0.00001 (the absolute 1e-6 let it pass).
+  assert.ok(judgeSolids(item("box", 1e-15), cube(0.00001, "Volume = 0")).hard.some((miss) => /wrong volume/u.test(miss)));
+  // An exact π coefficient: 1000001π is not 1000000π, though its decimal is close (the relative 1e-6 let it pass).
+  const cylinder = (caption) => lesson({ objects: [{ as: "solid", kind: "cylinder", center: at(0, 50), radius: 100, height: 100 }], caption });
+  assert.ok(judgeSolids(item("cylinder", { pi: 1000000 }), cylinder("Volume = 1000001π ≈ 3141592.65")).hard.some((miss) => /wrong volume/u.test(miss)));
+  assert.deepEqual(judgeSolids(item("cylinder", { pi: 1000000 }), cylinder("Volume = 1000000π ≈ 3141592.65")).hard, []);
+  // The rounded decimal keeps its shown-digit tolerance.
+  assert.deepEqual(judgeSolids(item("box", 27), cube(3, "Volume = 27")).hard, []);
+});
+
+test("producer to judge: every exact caption the pinned builder writes passes at noise-only tolerance (fourth review of #116)", async () => {
+  const { buildSolid } = await import("octos-lesson-language/plugin-math");
+  const solids = [
+    { shape: "box", size: { x: 2, y: 3, z: 4 } }, { shape: "box", size: { x: 0.1, y: 0.2, z: 0.3 } },
+    { shape: "cylinder", radius: 3, height: 5 }, { shape: "cylinder", radius: 100, height: 100 },
+    { shape: "cone", radius: 3, height: 4 }, { shape: "cone", radius: 0.3, height: 0.4 }, { shape: "cone", radius: 1.1, height: 2.3 },
+    { shape: "sphere", radius: 6 }, { shape: "hemisphere", radius: 2 },
+    { shape: "frustum", radius: 4, topRadius: 1, height: 4 }, { shape: "frustum", radius: 3, topRadius: 1, height: 4 },
+    { shape: "prism", sides: 3, side: 2, height: 4 }, { shape: "prism", sides: 6, side: 2, height: 3 }, { shape: "prism", sides: 4, side: 2.5, height: 1.5 },
+    { shape: "pyramid", sides: 4, side: 6, height: 4 }, { shape: "pyramid", sides: 3, side: 3, height: 5 }, { shape: "pyramid", sides: 5, side: 2, height: 3 },
+  ];
+  let exact = 0;
+  for (const solid of solids) {
+    for (const language of ["en-US", "zh-CN"]) {
+      const scene = buildSolid({ as: "scene", role: "main_visual", place: { relation: "new_region" }, solid, fallback: "A solid.", show: { measures: ["volume", "surface_area"], language } });
+      const content = scene.actions[0].content;
+      exact += (String(content.caption).match(/=/gu) ?? []).length;
+      const verdict = judgeSolids({ id: "X", expect: { solids: [{ kind: solid.shape === "hemisphere" ? "hemisphere" : solid.shape }] } }, lesson(content));
+      assert.deepEqual(verdict.hard.filter((miss) => /wrong|unreadable/u.test(miss)), [], `${JSON.stringify(solid)} ${language}: "${content.caption}"`);
+    }
+  }
+  assert.ok(exact >= 30, `the sweep covers exact values (${exact})`);
 });
