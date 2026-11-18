@@ -19803,12 +19803,12 @@ function compileLessonPlan(value2, options = {}) {
   normalizeProgramOwnedNumberRanges(plan);
   resolveMetNumberTargets(plan);
   mergeEquivalentVisualInputs(plan);
-  const replayFrom = markRepeatedChanges(plan, writtenAnimations);
   for (const [sectionIndex, section] of plan.sections.entries()) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
     const visual = action.content;
     RECIPE_HOOKS[visual.capability]?.before_compile?.(visual, plan, sectionIndex);
   }
+  const replayFrom = markRepeatedChanges(plan, writtenAnimations);
   const resolvedReferences = new Map(resolved.references.map((item) => [item.path, item]));
   const wholeTargets = /* @__PURE__ */ new Map();
   const partTargets = /* @__PURE__ */ new Map();
@@ -20169,41 +20169,38 @@ function compileLessonPlan(value2, options = {}) {
   return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
 }
 function snapshotAnimations(plan) {
-  return new Map(plan.sections.flatMap((section) => section.moments.map((moment) => [
-    moment,
-    moment.actions.map((action) => action.action === "animate" ? { number: action.number, end: action.end_value } : null)
-  ])));
+  const written = /* @__PURE__ */ new WeakMap();
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action === "animate") written.set(action, action.end_value);
+  }
+  return written;
 }
+var sameValue = (a, b) => a !== void 0 && b !== void 0 && Number(a.toPrecision(12)) === Number(b.toPrecision(12));
 function markRepeatedChanges(plan, written) {
   const marks = /* @__PURE__ */ new Map();
   const value2 = new Map((plan.numbers ?? []).map((number, index) => [index + 1, number.initial]));
   const lastChange = /* @__PURE__ */ new Map();
-  const modelAnimation = (moment, index, action) => {
-    const entry = written.get(moment)?.[index];
-    return entry && entry.number === action.number ? entry : void 0;
-  };
+  const timingOf = (action) => action.timing ?? "during_speech";
   for (const section of plan.sections) for (const moment of section.moments) {
     for (const number of moment.restart_numbers ?? []) {
       value2.set(number, plan.numbers[number - 1].initial);
       lastChange.delete(number);
     }
-    const animations = moment.actions.flatMap((action, index) => action.action === "animate" ? [{ action, index }] : []);
-    const only2 = animations.length === 1 ? animations[0] : void 0;
-    if (only2 && (only2.action.timing ?? "during_speech") !== "after_speech" && !(moment.restart_numbers ?? []).includes(only2.action.number)) {
-      const { action } = only2;
-      const change = lastChange.get(action.number);
-      const writtenRepeat = modelAnimation(moment, only2.index, action);
-      const othersUnchanged = change !== void 0 && [...value2].every(([number, current]) => number === action.number || change.before.get(number) === current);
-      if (change && writtenRepeat && value2.get(action.number) === action.end_value && change.from !== action.end_value && writtenRepeat.end === change.writtenEnd && othersUnchanged) {
-        marks.set(moment, [{ number: action.number, from: change.from, end: action.end_value }]);
+    const animations = moment.actions.filter((action) => action.action === "animate");
+    const mine = animations.filter((action) => written.has(action));
+    const repeat = mine.length === 1 ? mine[0] : void 0;
+    if (repeat && timingOf(repeat) !== "after_speech" && !(moment.restart_numbers ?? []).includes(repeat.number) && !animations.some((action) => !written.has(action) && action.number !== repeat.number && timingOf(action) !== "after_speech")) {
+      const change = lastChange.get(repeat.number);
+      if (change && sameValue(value2.get(repeat.number), repeat.end_value) && sameValue(written.get(repeat), change.writtenEnd) && [...value2].every(([number, current]) => number === repeat.number || sameValue(change.before.get(number), current))) {
+        marks.set(moment, [{ number: repeat.number, from: change.from, end: repeat.end_value }]);
       }
     }
-    for (const timing of ["before_speech", "during_speech", "after_speech"]) for (const { action, index } of animations) {
-      if ((action.timing ?? "during_speech") !== timing) continue;
+    for (const timing of ["before_speech", "during_speech", "after_speech"]) for (const action of animations) {
+      if (timingOf(action) !== timing) continue;
       const current = value2.get(action.number);
-      if (current !== void 0 && current !== action.end_value) {
-        const mine = modelAnimation(moment, index, action);
-        if (mine) lastChange.set(action.number, { from: current, writtenEnd: mine.end, before: new Map(value2) });
+      if (current !== void 0 && !sameValue(current, action.end_value)) {
+        const writtenEnd = written.get(action);
+        if (writtenEnd !== void 0) lastChange.set(action.number, { from: current, writtenEnd, before: new Map(value2) });
         else lastChange.delete(action.number);
       }
       value2.set(action.number, action.end_value);

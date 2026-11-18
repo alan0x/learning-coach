@@ -531,12 +531,13 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   normalizeProgramOwnedNumberRanges(plan);
   resolveMetNumberTargets(plan);
   mergeEquivalentVisualInputs(plan);
-  const replayFrom = markRepeatedChanges(plan, writtenAnimations);
   for (const [sectionIndex, section] of plan.sections.entries()) for (const moment of section.moments) for (const action of moment.actions) {
     if (action.action !== "create" || action.kind !== "visual") continue;
     const visual = action.content as LessonPlanVisualContent;
     RECIPE_HOOKS[visual.capability]?.before_compile?.(visual, plan, sectionIndex);
   }
+  // After every normalization and hook above, so the walk sees the values the learner will see.
+  const replayFrom = markRepeatedChanges(plan, writtenAnimations);
   const resolvedReferences = new Map(resolved.references.map((item) => [item.path, item]));
   const wholeTargets = new Map<string, string>();
   const partTargets = new Map<string, Map<string, string>>();
@@ -895,26 +896,33 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
 }
 
 type Moment = LessonPlan["sections"][number]["moments"][number];
-/** Per moment, by position: the number and written end of each animation the model wrote (null for other actions). */
-type WrittenAnimations = Map<Moment, Array<{ number: number; end: number } | null>>;
+/** The model's own animations, by object, with the end it wrote. Actions the program adds are new objects. */
+type WrittenAnimations = WeakMap<LessonPlanAnimateAction, number>;
 
 function snapshotAnimations(plan: LessonPlan): WrittenAnimations {
-  return new Map(plan.sections.flatMap((section) => section.moments.map((moment) => [moment,
-    moment.actions.map((action) => (action.action === "animate" ? { number: action.number, end: action.end_value } : null))] as const)));
+  const written: WrittenAnimations = new WeakMap();
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action === "animate") written.set(action, action.end_value);
+  }
+  return written;
 }
+
+/** Two values the player shows the same: equal to 12 significant digits, as the compiler rounds elsewhere. */
+const sameValue = (a: number | undefined, b: number | undefined) => a !== undefined && b !== undefined && Number(a.toPrecision(12)) === Number(b.toPrecision(12));
 
 /**
  * An animation to the value its number already holds draws nothing (plan 3.6). When the model's own earlier
  * animation brought the number there, the moment starts by putting the number back where that change began,
  * so the change plays again; the narration of such moments replays it ("as m increases from 1 to 3").
  *
- * It walks the final plan, after the program has normalized ranges and starting values and added its own
- * animations, so every value it replays from is one the learner saw. Only structure is read, never wording.
- * A moment is marked only when:
- * - the repeat is its only animation (no number held still or moved beside it);
+ * It walks the final plan, after the program has normalized ranges and starting values, run the recipes'
+ * hooks and added its own animations, so every value it replays from is one the learner saw. Only structure
+ * is read, never wording. A moment is marked only when:
+ * - the repeat is the only animation the model wrote in it, and the program added none of another number
+ *   before or during the speech (a reset after the speech, as at a prefix's end, changes nothing here);
  * - it plays before or during the speech, as a replay start does (never after it);
- * - the number's last change was the model's own animation (not one the program added), and the model wrote
- *   both ends the same, so a repeat the program made by clamping or rounding two different ends is left;
+ * - the number's last change was the model's own animation, written with the same end, so a repeat the
+ *   program made by clamping or rounding two different ends is left;
  * - no other number has changed since that change began, so the replayed picture is one already shown;
  * - the moment does not already restart the number.
  * Moments play in order; within one, actions play before, during, then after the speech. A restart resets
@@ -925,33 +933,29 @@ function markRepeatedChanges(plan: LessonPlan, written: WrittenAnimations): Map<
   const value = new Map<number, number>((plan.numbers ?? []).map((number, index) => [index + 1, number.initial]));
   /** Each number's last change by the model: where it began, its written end, and every value then. */
   const lastChange = new Map<number, { from: number; writtenEnd: number; before: Map<number, number> }>();
-  const modelAnimation = (moment: Moment, index: number, action: LessonPlanAnimateAction) => {
-    const entry = written.get(moment)?.[index];
-    return entry && entry.number === action.number ? entry : undefined;
-  };
+  const timingOf = (action: LessonPlanAnimateAction) => action.timing ?? "during_speech";
   for (const section of plan.sections) for (const moment of section.moments) {
     for (const number of moment.restart_numbers ?? []) {
       value.set(number, plan.numbers![number - 1]!.initial);
       lastChange.delete(number);
     }
-    const animations = moment.actions.flatMap((action, index) => (action.action === "animate" ? [{ action, index }] : []));
-    const only = animations.length === 1 ? animations[0]! : undefined;
-    if (only && (only.action.timing ?? "during_speech") !== "after_speech" && !(moment.restart_numbers ?? []).includes(only.action.number)) {
-      const { action } = only;
-      const change = lastChange.get(action.number);
-      const writtenRepeat = modelAnimation(moment, only.index, action);
-      const othersUnchanged = change !== undefined && [...value].every(([number, current]) => number === action.number || change.before.get(number) === current);
-      if (change && writtenRepeat && value.get(action.number) === action.end_value && change.from !== action.end_value
-        && writtenRepeat.end === change.writtenEnd && othersUnchanged) {
-        marks.set(moment, [{ number: action.number, from: change.from, end: action.end_value }]);
+    const animations = moment.actions.filter((action): action is LessonPlanAnimateAction => action.action === "animate");
+    const mine = animations.filter((action) => written.has(action));
+    const repeat = mine.length === 1 ? mine[0]! : undefined;
+    if (repeat && timingOf(repeat) !== "after_speech" && !(moment.restart_numbers ?? []).includes(repeat.number)
+      && !animations.some((action) => !written.has(action) && action.number !== repeat.number && timingOf(action) !== "after_speech")) {
+      const change = lastChange.get(repeat.number);
+      if (change && sameValue(value.get(repeat.number), repeat.end_value) && sameValue(written.get(repeat), change.writtenEnd)
+        && [...value].every(([number, current]) => number === repeat.number || sameValue(change.before.get(number), current))) {
+        marks.set(moment, [{ number: repeat.number, from: change.from, end: repeat.end_value }]);
       }
     }
-    for (const timing of ["before_speech", "during_speech", "after_speech"] as const) for (const { action, index } of animations) {
-      if ((action.timing ?? "during_speech") !== timing) continue;
+    for (const timing of ["before_speech", "during_speech", "after_speech"] as const) for (const action of animations) {
+      if (timingOf(action) !== timing) continue;
       const current = value.get(action.number);
-      if (current !== undefined && current !== action.end_value) {
-        const mine = modelAnimation(moment, index, action);
-        if (mine) lastChange.set(action.number, { from: current, writtenEnd: mine.end, before: new Map(value) });
+      if (current !== undefined && !sameValue(current, action.end_value)) {
+        const writtenEnd = written.get(action);
+        if (writtenEnd !== undefined) lastChange.set(action.number, { from: current, writtenEnd, before: new Map(value) });
         else lastChange.delete(action.number);
       }
       value.set(action.number, action.end_value);

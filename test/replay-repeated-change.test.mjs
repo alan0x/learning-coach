@@ -136,3 +136,25 @@ test("the compiled plan keeps no program-only field", () => {
   const compiled = compileAndValidateLessonPlan(planWith([[animate(3)]]));
   assert.equal(JSON.stringify(compiled.resolved.plan).includes("replay_from"), false);
 });
+
+// Review, round 3: recipe hooks run before the walk, and values compare as the player shows them.
+test("a replay never starts from a value a recipe hook moved", () => {
+  // Two sample numbers both start at 0; the plot hook moves the second to about 1.2 so the points differ.
+  // The model then writes x2 → 1.2 twice: the first moved nothing the learner saw, so nothing is replayed.
+  const plan = structuredClone(completeLessonPlanFixtures.square_function);
+  plan.numbers.push({ ...structuredClone(plan.numbers[0]), label: "x2" });
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action === "create" && action.kind === "visual" && action.content.capability === "function_plot") {
+      action.content.numbers = [1, 2];
+      action.content.parameters.sample_x_numbers = [1, 2];
+    }
+  }
+  const last = plan.sections.at(-1);
+  for (const moment of last.moments) moment.actions = moment.actions.filter((action) => action.action !== "animate");
+  const toX2 = () => ({ action: "animate", number: 2, end_value: 1.2, easing: "linear", duration_intent: "normal", timing: "during_speech" });
+  last.moments.push({ narration: "Watch.", actions: [toX2()] }, { narration: "Watch again.", actions: [toX2()] });
+  const compiled = compileAndValidateLessonPlan(plan);
+  assert.notEqual(compiled.lesson.lesson.variables[1].initial, 0, "the hook moved x2's start");
+  assert.equal(beats(compiled).some((beat) => beat.start), false);
+  assert.equal(replays(compiled).length, 0);
+});
