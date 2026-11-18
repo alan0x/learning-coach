@@ -11472,20 +11472,23 @@ function exactNumber(value2) {
   const exponent = Number(match[4] ?? 0) - (match[3]?.length ?? 0);
   return exponent >= 0 ? fraction(digits * 10n ** BigInt(exponent)) : fraction(digits, 10n ** BigInt(-exponent));
 }
-var isqrt = (value2) => {
+function integerSqrt(value2) {
+  if (value2 < 0n)
+    throw new RangeError("integerSqrt of a negative number");
   if (value2 < 2n)
     return value2;
-  let x = BigInt(Math.floor(Math.sqrt(Number(value2))));
-  while (x * x > value2)
-    x -= 1n;
-  while ((x + 1n) * (x + 1n) <= value2)
-    x += 1n;
-  return x;
-};
+  let x = 1n << BigInt(Math.ceil(value2.toString(2).length / 2));
+  for (; ; ) {
+    const next = x + value2 / x >> 1n;
+    if (next >= x)
+      return x;
+    x = next;
+  }
+}
 var root = (value2) => {
   if (value2.n < 0n)
     return void 0;
-  const [n, d] = [isqrt(value2.n), isqrt(value2.d)];
+  const [n, d] = [integerSqrt(value2.n), integerSqrt(value2.d)];
   return n * n === value2.n && d * d === value2.d ? fraction(n, d) : void 0;
 };
 var all = (values) => values.some((value2) => value2 === void 0) ? void 0 : values;

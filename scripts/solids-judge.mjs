@@ -196,7 +196,9 @@ function shownValue(sign, text) {
   if (after !== undefined && !approx) return undefined;
   if (before.trim() && exact === undefined) return undefined;
   if (approx) return { ...approx, ...(exact !== undefined ? { exact } : {}) };
-  return exact === undefined ? undefined : { value: exact, tolerance: EPS };
+  // An exact value alone has no shown-digit tolerance: only floating-point noise (owner review of #116: an
+  // absolute 1e-6 let "Volume = 0" stand for a cube of side 0.00001).
+  return exact === undefined ? undefined : { value: exact, tolerance: 0 };
 }
 
 /**
@@ -225,12 +227,17 @@ export function readLine(line) {
   return shown;
 }
 
-// The shown digits' tolerance, plus floating-point noise only: a relative 1e-6 let a large value be off by
-// millions (1881672302290.56 ± 1.9 million).
-const matchesValue = (shown, value) => shown && shown.value !== undefined && Math.abs(shown.value - value) <= Math.max(shown.tolerance, 64 * Number.EPSILON * Math.abs(value))
-  && (shown.exact === undefined || close(shown.exact, value));
+// Floating-point noise between the judge's own computation and the value shown: 64 units in the last place.
+const noise = (a, b) => 64 * Number.EPSILON * Math.max(Math.abs(a), Math.abs(b));
+// A rounded value: its shown digits' tolerance, or noise if larger (a relative 1e-6 let a large value be off by
+// millions, 1881672302290.56 ± 1.9 million). An exact value, alone or before "≈": noise only (owner review of
+// #116: the relative 1e-6 let "1000001π ≈ 3141592.65" pass for 1000000π).
+const matchesValue = (shown, value) => shown && shown.value !== undefined
+  && Math.abs(shown.value - value) <= Math.max(shown.tolerance, noise(shown.value, value))
+  && (shown.exact === undefined || Math.abs(shown.exact - value) <= noise(shown.exact, value));
 const expectedValue = (want) => (typeof want === "object" && want !== null ? want.pi * Math.PI : want);
-const describe = (shown) => (shown.unreadable ? `"${shown.unreadable}"` : shown.exact !== undefined ? `${round(shown.exact)} ≈ ${shown.value}` : String(round(shown.value)));
+// An exact value alone is described in full: rounded, "= 96.0000001" would read as the 96 it is not.
+const describe = (shown) => (shown.unreadable ? `"${shown.unreadable}"` : shown.exact !== undefined ? `${round(shown.exact)} ≈ ${shown.value}` : shown.tolerance === 0 ? String(shown.value) : String(round(shown.value)));
 
 // ---- Sliders -----------------------------------------------------------------------------------------
 
@@ -315,7 +322,7 @@ function sceneMisses(scene, solids, lines) {
       if (!shown[key]) continue;
       const truth = solid.measures[key];
       if (truth === undefined) misses.push(`${key.replace("_", " ")} shown for solid ${index + 1}, which has no ${key.replace("_", " ")} here`);
-      else if (!matchesValue(shown[key], truth)) misses.push(`wrong ${key.replace("_", " ")} shown: ${describe(shown[key])}, the drawn solid's is ${round(truth)}`);
+      else if (!matchesValue(shown[key], truth)) misses.push(`wrong ${key.replace("_", " ")} shown: ${describe(shown[key])}, the drawn solid's is ${shown[key].tolerance === 0 ? truth : round(truth)}`);
     }
     if (shown.counts && (!solid.measures.counts || shown.counts.join() !== solid.measures.counts.join())) {
       misses.push(`wrong counts shown: ${shown.counts.join("/")}, the drawn solid's are ${solid.measures.counts?.join("/") ?? "none"}`);
