@@ -35,6 +35,7 @@ import { runTool, caseLanguage } from "./eval-shadow-speed.mjs";
 import { planNumberLineTicks } from "octos-lesson-language/plugin-math";
 import { judgePlot } from "./plot-judge.mjs";
 import { generatedTokens, tokenSpeedVerdict } from "./speed-gate.mjs";
+import { judgeSolids } from "./solids-judge.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -181,7 +182,16 @@ export const POINTS_PROBE_CASES = [
   { id: "DP-01", language: "zh-CN", prompt: "拖动抛物线 y = x² 上的点 P，看它的纵坐标怎样随横坐标变化。", judge: "plot" },
   { id: "DP-02", language: "en", prompt: "Drag a point along y = sqrt(x) and watch how its height changes.", judge: "plot" },
 ];
-export const TRIAL_QUALITY_CASES = { function_plot_extensions: PLOT_CASES, retry_narrowing: RETRY_NARROWING_CASES, plot_points: POINTS_PROBE_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
+/**
+ * The 3D solids recipe (decision 0019 §5 step 4): the solids judge's cases SD-01–15, near misses SD-N1–N6
+ * and control SD-C1 (testsuite/solids-judge-cases.json), judged with scripts/solids-judge.mjs. Near misses
+ * get the checks needing no expectation plus their `forbid` list.
+ */
+export const SOLID_CASES = JSON.parse(await readFile(join(root, "testsuite/solids-judge-cases.json"), "utf8")).cases
+  .map(({ id, language, prompt, nearMiss, expect }) => ({ id, language, prompt, judge: "solids", ...(nearMiss ? { nearMiss } : {}), expect: expect ?? {} }));
+/** Its speed pairs, fixed before any run: the first ten in-scope cases, SD-01–10. */
+export const SOLID_SPEED_CASES = SOLID_CASES.filter((item) => /^SD-(0[1-9]|10)$/u.test(item.id));
+export const TRIAL_QUALITY_CASES = { solid_3d: SOLID_CASES, function_plot_extensions: PLOT_CASES, retry_narrowing: RETRY_NARROWING_CASES, plot_points: POINTS_PROBE_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
 
 /**
  * The speed gate for the two switch-ons of 2026-11-15 (plan §7 step 3.2: number-line steps, Coach #99, and
@@ -196,7 +206,7 @@ export const EXTENSIONS_SWITCH_ON_CASES = [
 ];
 
 /** The requests each trial recipe fits (or each switch-on, for a two-build gate). */
-export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES, extensions_switch_on: EXTENSIONS_SWITCH_ON_CASES };
+export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES, extensions_switch_on: EXTENSIONS_SWITCH_ON_CASES, solid_3d: SOLID_SPEED_CASES };
 /**
  * The quality cases of every recipe a run offers, in the order named (run 9 took only the first recipe's,
  * so its comparing, solution-set and rounding cases never ran).
@@ -493,6 +503,12 @@ export function recipesInPart(part) {
     if ((content.curves ?? []).some((curve) => curve.series)) found.push("plot_pieces");
     if ((content.intervals ?? []).some((interval) => /^(domain|range)-/u.test(String(interval.as)))) found.push("plot_domain_range");
   }
+  // The 3D solids recipe (decision 0019): every object is one of buildSolid's (solid, solid-top, solid-side,
+  // beside, beside-top, beside-side), uncoloured and unlabelled, with no teaching highlights
+  // (cube_with_section's teal cube is also "solid", labelled, with vertex, edge and face highlights).
+  const solidName = /^(solid|beside)(-top|-side)?$/u;
+  if (writes.some((action) => action.kind === "scene3d" && !(action.content?.highlights ?? []).length && (action.content?.objects ?? []).length
+    && action.content.objects.every((object) => solidName.test(String(object.as)) && object.color === undefined && object.label === undefined))) found.push("solid_3d");
   return found;
 }
 
@@ -690,7 +706,7 @@ async function main() {
           const line = numberLineInPart(part);
           // Near misses are judged on both arms, so "no worse than without the option" can be read
           // from the report; only the candidate's judgement counts toward the verdict.
-          const judge = item.judge === "plot" ? () => judgePlot(item, part) : () => judgeNumberLine(item, numberLineLesson(part));
+          const judge = item.judge === "plot" ? () => judgePlot(item, part) : item.judge === "solids" ? () => judgeSolids(item, part) : () => judgeNumberLine(item, numberLineLesson(part));
           const judged = item.expect && (arm === "candidate" || item.nearMiss || bothArms) ? { quality: judge() } : {};
           return { recipes: recipesInPart(part), ...(line ? { number_line: line } : {}), ...judged };
         } catch { return { recipes: null }; }
@@ -712,7 +728,7 @@ async function main() {
     // The run stops at the first playable part, so the judge sees only the first section; when the
     // outline has more, a later section may show what the first lacks, and the miss is read by hand.
     if (row.quality?.hard.length && row.sections > 1) row.quality.review = "later sections not judged: read by hand";
-    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).some((name) => name.startsWith("number_line") || name.startsWith("plot_"))) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew the trial's visual: read by hand" };
+    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).some((name) => name.startsWith("number_line") || name.startsWith("plot_") || name === "solid_3d")) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew the trial's visual: read by hand" };
     rows.push(row);
     console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null, ...(row.quality ? { hard: row.quality.hard } : {}) }));
     await persist();

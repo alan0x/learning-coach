@@ -7,6 +7,11 @@ export interface CompiledVisual {
   parts: Map<string, string>;
   /** Program decisions worth logging, such as a replaced model viewport. */
   adjustments?: Array<{ reason: string; detail: string }>;
+  /**
+   * Lesson variables the visual creates itself, for a slider whose range only the geometry decides
+   * (a solid's cut or net, decision 0019 as amended by 0020). They follow the plan's numbers.
+   */
+  variables?: Array<{ as: string; initial: number; min: number; max: number; label: string; control: { kind: "slider"; step: number } }>;
 }
 
 interface RenderedVisual {
@@ -117,6 +122,9 @@ export class CompiledVisualRegistry {
       whole: reference(visual.whole),
       ...(visual.primaryScene ? { primaryScene: reference(visual.primaryScene) } : {}),
       parts: new Map([...visual.parts].map(([name, target]) => [name, reference(target)])),
+      // A visual's own slider goes with its card: kept when the card is written, dropped when an earlier
+      // identical card is shown instead (that card's slider is already in the lesson).
+      ...(visual.variables && !visual.actions.some(action => action.do === "write" && reused.has(action.as)) ? { variables: visual.variables } : {}),
     };
   }
 }

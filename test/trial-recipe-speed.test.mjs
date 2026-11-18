@@ -26,10 +26,14 @@ test("the summary splits motion and other requests", () => {
 
 test("the number line trial has its own fitting requests, and its card is recognised", () => {
   assert.equal(NUMBER_LINE_CASES.length, OTHER_CASE_IDS.length);
-  assert.deepEqual(Object.keys(TRIAL_CASES), ["constant_speed_motion", "number_line", "extensions_switch_on"]);
+  assert.deepEqual(Object.keys(TRIAL_CASES), ["constant_speed_motion", "number_line", "extensions_switch_on", "solid_3d"]);
   assert.deepEqual(MOTION_CASES, TRIAL_CASES.constant_speed_motion);
   const part = { steps: [{ beats: [{ actions: [{ do: "write", as: "v1", kind: "number_line", content: { range: { min: 0, max: 1 } } }] }] }] };
   assert.deepEqual(recipesInPart(part), ["number_line"]);
+  // OLL's buildSolid objects (no colour, no label) are the solids recipe; cube_with_section's teal cube is not.
+  const scene = (object) => ({ steps: [{ beats: [{ actions: [{ do: "write", as: "v1", kind: "scene3d", content: { objects: [object] } }] }] }] });
+  assert.deepEqual(recipesInPart(scene({ as: "solid", kind: "cone", radius: 1, height: 2 })), ["solid_3d"]);
+  assert.deepEqual(recipesInPart(scene({ as: "solid", kind: "box", label: "正方体", color: "teal" })), []);
 });
 
 test("a first part's number line is summarised for judging quality", () => {

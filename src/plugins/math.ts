@@ -130,6 +130,26 @@ export const MATH_RECIPES = {
     required_features: ["coordinate_circle"],
     model_guidance: "坐标系中的圆；共享数值可通过 radius_expression（例如 sqrt(n1)）驱动半径",
   },
+  // Decision 0019 (amended by 0020): the model writes each solid's shape and the sizes the question states,
+  // which measures to show and whether a cut or a net is wanted; the program computes the measures, builds
+  // the slider and its range, and places a second solid beside the first. A trial until its speed gate.
+  solid_3d: {
+    parts: ["whole", "solid", "beside", "section", "primary_control"],
+    number_inputs: [],
+    number_input_policies: [],
+    parameter_names: ["title", "solids", "join", "show", "interaction"],
+    model_parameter_names: ["title", "solids", "join", "show", "interaction"],
+    // show is required so the model decides it every time (probe 2: asked-for surface areas left out).
+    required_model_schema_parameters: ["solids", "show"],
+    semantic_parameters: ["solids", "join", "show", "interaction"],
+    initial_camera: SCENE_FIRST_CAMERA,
+    output_kinds: ["scene3d"],
+    student_controls: ["slider", "scene3d_view"],
+    // Its own feature, so the model can ask for it by name; with section_plane, a cut through any of its
+    // shapes routes here, while solid_3d with section_plane still means the teaching cube.
+    required_features: ["solids", "section_plane"],
+    model_guidance: "立体都选solids（含截面展开），尺寸固定不建数；2个并排，join叠放或拼L；问到的体积/表面积/面棱顶点都写show，无盖不写表面积",
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -295,6 +315,21 @@ const MATH_SCHEMA_PROPERTIES = {
   },
   number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } },
   number_line_steps: { label_style: { enum: ["decimal", "fraction"] } },
+  solid_3d: {
+    // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
+    solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {
+      shape: { enum: ["box", "cylinder", "cone", "sphere", "hemisphere", "prism", "pyramid", "frustum"] },
+      // The provider writes properties in schema order, so every shape's sizes must come in an order it can
+      // follow: height last. With height third, a cylinder written radius first had nowhere left for its
+      // height and put it in side (probe 1, 2026-11-17: 11 of 16 lessons).
+      radius: { type: "number" }, top_radius: { type: "number" }, length: { type: "number" }, width: { type: "number" }, sides: { type: "integer" }, side: { type: "number" }, height: { type: "number" },
+    } } },
+    // "side" read as "side by side" in probe 2 (4 of 22 lessons asked two separate solids to join): the
+    // L shape is named for what it is.
+    join: { enum: ["stack", "l_shape"] },
+    show: { type: "array", items: { enum: ["volume", "surface_area", "counts"] } },
+    interaction: { enum: ["cut", "unfold"] },
+  },
 };
 
 export const MATH_PLUGIN = {

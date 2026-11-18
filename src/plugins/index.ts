@@ -55,7 +55,7 @@ export const RECIPE_CATALOG_ORDER = [
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-export const TRIAL_RECIPES = ["constant_speed_motion"] as const satisfies readonly (keyof AllRecipes)[];
+export const TRIAL_RECIPES = ["constant_speed_motion", "solid_3d"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {
@@ -65,10 +65,24 @@ export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIA
 
 const processEnvironment = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
 
+/**
+ * Catalog recipes a trial recipe retires while it is offered, so a measurement run sees the catalog as it
+ * will be at switch-on. solid_3d retires the teaching cube (owner, 2026-11-17, after probe 3: cuts of a
+ * cylinder still routed to the fixed cube; a box with a cut covers what it shows).
+ */
+export const TRIAL_RETIRES: Readonly<Partial<Record<typeof TRIAL_RECIPES[number], readonly (typeof RECIPE_CATALOG_ORDER[number])[]>>> = {
+  solid_3d: ["cube_with_section"],
+};
+
+/** The catalog with the named trial recipes offered, and what they retire left out. */
+export function offeredRecipes(trials: ReadonlyArray<typeof TRIAL_RECIPES[number]>): Array<typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number]> {
+  const retired = new Set<string>(trials.flatMap((name) => TRIAL_RETIRES[name] ?? []));
+  return [...RECIPE_CATALOG_ORDER.filter((name) => !retired.has(name)), ...trials];
+}
+
 /** Recipes offered to the model, in catalog order. */
-export const OFFERED_RECIPES: ReadonlyArray<typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number]> = [
-  ...RECIPE_CATALOG_ORDER, ...enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES),
-];
+export const OFFERED_RECIPES: ReadonlyArray<typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number]> =
+  offeredRecipes(enabledTrialRecipes(processEnvironment?.LEARNING_COACH_TRIAL_RECIPES));
 
 type RegistryName = typeof RECIPE_CATALOG_ORDER[number] | typeof TRIAL_RECIPES[number];
 export const PLUGIN_RECIPE_REGISTRY = Object.fromEntries(
@@ -95,6 +109,8 @@ export const SCHEMA_PROPERTY_ORDER = [
   "expression", "section_axis", "section_value", "level", "radius", "angle",
   "radius_expression", "center_x", "center_y", "construction", "leg_a", "leg_b", "steps", "speed", "label_style", "relation", "place",
   "marks", "pieces",
+  // The 3D solids trial recipe (decision 0019); last, so requests without it keep their order.
+  "solids", "join", "show", "interaction",
 ] as const;
 
 /** One prompt bullet: its core text and the installed plugins' sentences, or "" when empty. */
