@@ -1,0 +1,235 @@
+{
+  "note": "Probe cases for the outline's \"no visual\" rule (math expressiveness plan 3.6), written for this probe and never taken from the question set. Classes: no_fit (no recipe shows the concept), stand_in (a recipe shows the same concept only with a change, which must be said aloud), fit (a recipe fits; the picture must not be lost). Expectations and the pass bar are in docs/NO_VISUAL_PROBE_2026-11-18.md, written before any run.",
+  "cases": [
+    {
+      "id": "NV-01",
+      "class": "no_fit",
+      "candidate": "fraction_area_model",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Use a pizza cut into 8 slices to show that 3/8 + 2/8 = 5/8."
+    },
+    {
+      "id": "NV-02",
+      "class": "no_fit",
+      "candidate": "data_charts",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Make a line plot of these pencil lengths in inches: 3, 4, 4, 5, 5, 5, 6. Which length is most common?"
+    },
+    {
+      "id": "NV-03",
+      "class": "no_fit",
+      "candidate": "data_charts",
+      "language": "zh-CN",
+      "expected_component": null,
+      "prompt": "画一个象形统计图：小明有 4 本书，小红有 6 本，小刚有 3 本，谁的书最多？"
+    },
+    {
+      "id": "NV-04",
+      "class": "no_fit",
+      "candidate": "data_charts",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Draw a box plot for 3, 7, 8, 12, 15, 18, 21 and find the interquartile range."
+    },
+    {
+      "id": "NV-05",
+      "class": "no_fit",
+      "candidate": "data_charts",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Hours studied and test scores were (1, 60), (2, 65), (3, 75), (4, 80). Is there a positive correlation?"
+    },
+    {
+      "id": "NV-06",
+      "class": "no_fit",
+      "candidate": "place_value",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Subtract 41 − 17 by trading one ten rod for ten unit cubes."
+    },
+    {
+      "id": "NV-07",
+      "class": "no_fit",
+      "candidate": "tape_diagram_ratio_table",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Juice is mixed 2 cups of concentrate to 5 cups of water. Use a ratio table to find the water needed for 6 cups of concentrate."
+    },
+    {
+      "id": "NV-08",
+      "class": "no_fit",
+      "candidate": "tape_diagram_ratio_table",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Sam has 3 times as many stickers as Jo. Together they have 48. Use a tape diagram to find how many Jo has."
+    },
+    {
+      "id": "NV-09",
+      "class": "no_fit",
+      "candidate": "probability",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "A spinner has 4 equal parts: red, blue, green and yellow. What is the chance of landing on blue twice in a row?"
+    },
+    {
+      "id": "NV-10",
+      "class": "no_fit",
+      "candidate": "probability",
+      "language": "zh-CN",
+      "expected_component": null,
+      "prompt": "同时掷两个骰子，点数之和是 7 的概率是多少？"
+    },
+    {
+      "id": "NV-11",
+      "class": "no_fit",
+      "candidate": "clocks_money",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "What time will it be 45 minutes after 2:30? Show it on a clock face."
+    },
+    {
+      "id": "NV-12",
+      "class": "no_fit",
+      "candidate": "clocks_money",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "How many ways can you make 25 cents using only nickels and dimes?"
+    },
+    {
+      "id": "NV-13",
+      "class": "no_fit",
+      "candidate": "counters_ten_frames",
+      "language": "zh-CN",
+      "expected_component": null,
+      "prompt": "用十格阵说明 7 + 4 = 11。"
+    },
+    {
+      "id": "NV-14",
+      "class": "no_fit",
+      "candidate": "balance",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Use a balance scale to explain how to solve 3x + 2 = 11."
+    },
+    {
+      "id": "NV-15",
+      "class": "no_fit",
+      "candidate": "geometry_symmetry_transformations",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Reflect the triangle with vertices (1, 2), (3, 2) and (2, 5) over the y-axis. What are the new vertices?"
+    },
+    {
+      "id": "NV-16",
+      "class": "no_fit",
+      "candidate": "geometry_symmetry_transformations",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Fold a square along every line that makes the two halves match. How many folds are there?"
+    },
+    {
+      "id": "NV-17",
+      "class": "stand_in",
+      "stand_in": "rectangle_unit_square_array",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "A classroom floor measures 11 yards by 10 yards. How many square yards of carpet are needed?"
+    },
+    {
+      "id": "NV-18",
+      "class": "stand_in",
+      "stand_in": "rectangle_unit_square_array",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Show 9 × 6 as an array of dots."
+    },
+    {
+      "id": "NV-19",
+      "class": "stand_in",
+      "stand_in": "number_line_compare",
+      "language": "en",
+      "expected_component": null,
+      "prompt": "Compare 2/3 and 3/5 using fraction bars. Which is larger?"
+    },
+    {
+      "id": "NV-20",
+      "class": "stand_in",
+      "stand_in": "rectangle_unit_square_array",
+      "language": "zh-CN",
+      "expected_component": null,
+      "prompt": "把 12 个苹果平均分成 3 组，用小圆片摆一摆，每组几个？"
+    },
+    {
+      "id": "NV-21",
+      "class": "fit",
+      "language": "en",
+      "expected_component": "number_line_steps",
+      "prompt": "The temperature was −4 °C at dawn and rose 9 degrees by noon. What was the noon temperature?"
+    },
+    {
+      "id": "NV-22",
+      "class": "fit",
+      "language": "en",
+      "expected_component": "number_line_solution",
+      "prompt": "Solve 2x − 3 > 5 and show every solution."
+    },
+    {
+      "id": "NV-23",
+      "class": "fit",
+      "language": "en",
+      "expected_component": "number_line_compare",
+      "prompt": "Is 0.7 greater than 2/3?"
+    },
+    {
+      "id": "NV-24",
+      "class": "fit",
+      "language": "en",
+      "expected_component": "function_plot",
+      "prompt": "A car travels at 60 km per hour. How does the distance it covers grow over 3 hours?"
+    },
+    {
+      "id": "NV-25",
+      "class": "fit",
+      "language": "en",
+      "expected_component": "function_plot",
+      "prompt": "A ball is thrown upward with height h = 20t − 5t². When does it land?"
+    },
+    {
+      "id": "NV-26",
+      "class": "fit",
+      "language": "en",
+      "expected_component": "solid_3d",
+      "prompt": "What is the volume of a shoebox 30 cm by 20 cm by 12 cm?"
+    },
+    {
+      "id": "NV-27",
+      "class": "fit",
+      "language": "en",
+      "expected_component": "geometric_rearrangement",
+      "prompt": "A triangle is half of a parallelogram. Show why the triangle's area is one half times base times height."
+    },
+    {
+      "id": "NV-28",
+      "class": "fit",
+      "language": "zh-CN",
+      "expected_component": "rectangle_unit_square_array",
+      "prompt": "一块菜地长 6 米、宽 4 米，面积是多少平方米？"
+    },
+    {
+      "id": "NV-29",
+      "class": "fit",
+      "language": "en",
+      "expected_component": "unit_circle_projection",
+      "prompt": "As a point travels around a circle of radius 1, how does its height give the sine of the turning angle?"
+    },
+    {
+      "id": "NV-30",
+      "class": "fit",
+      "language": "en",
+      "expected_component": "circle_and_arc",
+      "prompt": "A pizza slice has a 45° angle and the pizza's radius is 8 inches. How long is the crust edge of the slice?"
+    }
+  ]
+}
