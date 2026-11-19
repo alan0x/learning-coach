@@ -389,3 +389,21 @@ test("a slope triangle on one model point runs to B two units right, moving with
   assert.equal(off.content.measurement, undefined);
   assert.deepEqual(off.content.points.map((point) => point.label), ["P(x, y)"]);
 });
+
+// Plan 3.6: a slope triangle's run must not cross a pole. 1/(x − 2) exists at 1 and 3, but the secant
+// between them jumps across x = 2; a slider can carry a pole across the run between its ends.
+test("the slope triangle's run never crosses a pole, fixed or moved by a slider", async () => {
+  const fixed = await generate(plotReply({ formula: "1/(x-2)", marks: ["slope_triangle"], moments: [{ say: "看两点之间的斜率。" }] }));
+  assert.ok(fixed.lesson, fixed.rejected.join(" | "));
+  const [a, b] = plotContent(fixed.lesson).points.map((point) => point.x);
+  assert.ok(!(a < 2 && 2 < b), `run ${a}..${b} crosses the pole`);
+  const moved = await generate(plotReply({
+    formula: "1/(x-n1)", marks: ["slope_triangle"], numbers: [[0, 0, 5, "h"]], moments: [{ say: "看两点之间的斜率。" }],
+  }));
+  assert.ok(moved.lesson, moved.rejected.join(" | "));
+  const [c, d] = plotContent(moved.lesson).points.map((point) => point.x);
+  assert.ok(d < 0 || c > 5, `run ${c}..${d} meets a pole the slider moves through [0, 5]`);
+  // A root between the points is not a pole: x² − 4 keeps the first pair.
+  const root = await generate(plotReply({ formula: "x^2-4", marks: ["slope_triangle"], moments: [{ say: "看两点之间的斜率。" }] }));
+  assert.deepEqual(plotContent(root.lesson).points.map((point) => point.x), [1, 3]);
+});

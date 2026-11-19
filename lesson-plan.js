@@ -18058,7 +18058,40 @@ function compileFunctionPlot(base, content, role, placement, plan, path) {
     });
     const pairs = markList.length ? [[1, 3], [2, 4], [-1, 1], [3, 5], [-3, -1], [4, 6], [-5, -3], [6, 8], [8, 10], [0.5, 1.5]] : [[0, 1]];
     const reached = markList.length ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value2) => ({ ...initialState, [parameter.name]: value2 })))] : [initialState];
-    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2));
+    const continuousBetween = (values, [from, to]) => {
+      const f = (x) => {
+        try {
+          return evaluateCurve({ ...values, x });
+        } catch {
+          return Number.NaN;
+        }
+      };
+      const ends = Math.max(Math.abs(f(from)), Math.abs(f(to)), 1);
+      const SAMPLES = 96;
+      let previous = { x: from, y: f(from) };
+      for (let index = 1; index <= SAMPLES; index += 1) {
+        const x = from + (to - from) * index / SAMPLES;
+        const y = f(x);
+        if (!Number.isFinite(y) || Math.abs(y) > 1e3 * ends) return false;
+        if (Math.sign(y) * Math.sign(previous.y) < 0) {
+          let [left, right] = [previous, { x, y }];
+          for (let step = 0; step < 60; step += 1) {
+            const middle = (left.x + right.x) / 2, value2 = f(middle);
+            if (!Number.isFinite(value2)) return false;
+            if (Math.sign(value2) === Math.sign(left.y)) left = { x: middle, y: value2 };
+            else right = { x: middle, y: value2 };
+          }
+          if (Math.min(Math.abs(left.y), Math.abs(right.y)) > 1e-6 * ends) return false;
+        }
+        previous = { x, y };
+      }
+      return true;
+    };
+    const between = curveParameters.flatMap((parameter) => Array.from({ length: 7 }, (_, index) => ({ ...initialState, [parameter.name]: parameter.min + (parameter.max - parameter.min) * (index + 1) / 8 })));
+    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2) && (!markList.length || [...reached, ...between].every((values) => {
+      const ends = referencePoints(values, pair);
+      return ends.length < 2 || continuousBetween(values, pair);
+    })));
     if (xs) {
       references = referencePoints(initialState, xs);
       teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));
