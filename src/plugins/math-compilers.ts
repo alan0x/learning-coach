@@ -1523,11 +1523,13 @@ function compileFractionModel(
   path: string,
 ): CompiledVisual {
   const input = parameters(content);
-  allowParameterKeys(input, ["title", "fraction_shape", "fractions", "fraction_view", "split"], path);
+  allowParameterKeys(input, ["title", "fractions", "fraction_shape", "fraction_view", "split_each_part"], path);
   if ((content.numbers?.length ?? 0) > 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a fraction card's values are written in fractions; it uses no lesson numbers");
   const view = input.fraction_view;
   if (!FRACTION_VIEWS.includes(view as typeof FRACTION_VIEWS[number])) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_view`, `expected one of ${FRACTION_VIEWS.join(", ")}`);
   const written = input.fractions;
+  // Probe 2: the first reply often named the shape and view and left the values out.
+  if (written === undefined) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, "write the fractions as values, each {numerator, denominator}; a numerator of 0 shows a whole divided with none shaded");
   const count = view === "compare" || view === "equivalent" ? 2 : 1;
   if (!Array.isArray(written) || written.length !== count) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
   const fractions = (written as JsonValue[]).map((item, index) => {
@@ -1537,6 +1539,13 @@ function compileFractionModel(
     if (typeof numerator !== "number" || !Number.isInteger(numerator) || numerator < 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${at}.numerator`, "the numerator is a whole number of parts, 0 or more");
     if (typeof denominator !== "number" || !Number.isInteger(denominator) || denominator < 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${at}.denominator`, "the denominator is a whole number of equal parts, 1 or more");
     return { numerator: numerator as number, denominator: denominator as number };
+  });
+  // A denominator no card can draw (over 12, and no grid of at most 10 by 10): say so, so the next reply
+  // does not try another shape that cannot draw it either (FM-N6, 5/37, lost in probes 1 and 2).
+  fractions.forEach((fraction, index) => {
+    if (fraction.denominator > FRACTION_MODEL_LIMITS.denominator && !fractionGrid(fraction.denominator)) {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[${index}].denominator`, `no fraction card draws ${fraction.denominator} equal parts (bars and circles up to ${FRACTION_MODEL_LIMITS.denominator}, grids up to 10 by 10); choose another visual, or none`);
+    }
   });
   const shapeWritten = input.fraction_shape;
   if (shapeWritten !== undefined && !FRACTION_SHAPES.includes(shapeWritten as typeof FRACTION_SHAPES[number])) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, `expected one of ${FRACTION_SHAPES.join(", ")}`);
@@ -1564,16 +1573,16 @@ function compileFractionModel(
   let split: number | undefined;
   if (view === "split") {
     // Written as a choice ("2" to "6"); a whole number is read the same way.
-    const k = typeof input.split === "string" && /^[0-9]{1,2}$/u.test(input.split) ? Number(input.split) : input.split;
+    const k = typeof input.split_each_part === "string" && /^[0-9]{1,2}$/u.test(input.split_each_part) ? Number(input.split_each_part) : input.split_each_part;
     if (shape === "grid") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "a grid's cells are not split again; use a bar or a circle");
     if (typeof k !== "number" || !Number.isInteger(k) || k < FRACTION_MODEL_LIMITS.splitMin || k > FRACTION_MODEL_LIMITS.splitMax) {
-      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, `split each part into ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, `split each part into ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
     }
-    if (fractions[0]!.denominator * (k as number) > FRACTION_MODEL_LIMITS.splitParts) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, `after splitting, a whole has at most ${FRACTION_MODEL_LIMITS.splitParts} parts`);
+    if (fractions[0]!.denominator * (k as number) > FRACTION_MODEL_LIMITS.splitParts) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, `after splitting, a whole has at most ${FRACTION_MODEL_LIMITS.splitParts} parts`);
     if (fractions[0]!.numerator < 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].numerator`, "splitting shares the shaded parts: shade at least one");
     split = k as number;
-  } else if (input.split !== undefined) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, "split goes with fraction_view split");
+  } else if (input.split_each_part !== undefined) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, "split_each_part goes with fraction_view split");
   }
   // One share is the shaded amount split k ways: numerator / (denominator × split), drawn as that many of the
   // smallest pieces in a row. A share that is a whole number is written as one (6/3 split 2: "6/6 = 1").

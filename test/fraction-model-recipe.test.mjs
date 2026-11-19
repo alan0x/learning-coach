@@ -43,9 +43,9 @@ const IDEAL = {
   "FM-09": { fraction_shape: "circle", fractions: [f(12, 3)], fraction_view: "one" },
   "FM-10": { fractions: [f(43, 100)], fraction_view: "one" },
   "FM-11": { fractions: [f(160, 100)], fraction_view: "one" },
-  "FM-12": { fractions: [f(3, 4)], fraction_view: "split", split: "2" },
-  "FM-13": { fraction_shape: "circle", fractions: [f(3, 5)], fraction_view: "split", split: "4" },
-  "FM-14": { fraction_shape: "circle", fractions: [f(3, 1)], fraction_view: "split", split: "4" },
+  "FM-12": { fractions: [f(3, 4)], fraction_view: "split", split_each_part: "2" },
+  "FM-13": { fraction_shape: "circle", fractions: [f(3, 5)], fraction_view: "split", split_each_part: "4" },
+  "FM-14": { fraction_shape: "circle", fractions: [f(3, 1)], fraction_view: "split", split_each_part: "4" },
   "FM-15": { fractions: [f(6, 3)], fraction_view: "one" },
   "FM-17": { fractions: [f(3, 10), f(7, 10)], fraction_view: "compare" },
   "FM-18": { fractions: [f(3, 10), f(1, 2)], fraction_view: "compare" },
@@ -100,22 +100,30 @@ test("each in-scope case's ideal output compiles and passes the fraction judge (
 test("refused values are this section's faults, each naming its reason", () => {
   const result = withTrial(compileScript([
     ["thirteenths", { fractions: [f(1, 13)], fraction_view: "one" }, "en-US"],
-    ["grid-15", { fraction_shape: "grid", fractions: [f(7, 37)], fraction_view: "one" }, "en-US"],
+    ["twentieths-bar", { fraction_shape: "bar", fractions: [f(1, 20)], fraction_view: "one" }, "en-US"],
+    ["grid-11", { fraction_shape: "grid", fractions: [f(7, 11)], fraction_view: "one" }, "en-US"],
+    ["thirty-sevenths", { fractions: [f(5, 37)], fraction_view: "one" }, "en-US"],
+    ["thirty-sevenths-grid", { fraction_shape: "grid", fractions: [f(5, 37)], fraction_view: "one" }, "en-US"],
+    ["no-fractions", { fraction_shape: "circle", fraction_view: "one" }, "en-US"],
     ["not-equal", { fractions: [f(2, 3), f(3, 4)], fraction_view: "equivalent" }, "en-US"],
     ["one-for-two", { fractions: [f(2, 3)], fraction_view: "compare" }, "en-US"],
     ["too-many-wholes", { fractions: [f(37, 4)], fraction_view: "one" }, "en-US"],
-    ["split-big", { fractions: [f(1, 5)], fraction_view: "split", split: "6" }, "en-US"],
+    ["split-big", { fractions: [f(1, 5)], fraction_view: "split", split_each_part: "6" }, "en-US"],
     ["split-none", { fractions: [f(1, 5)], fraction_view: "split" }, "en-US"],
-    ["split-zero", { fractions: [f(0, 5)], fraction_view: "split", split: "2" }, "en-US"],
-    ["split-grid", { fraction_shape: "grid", fractions: [f(30, 100)], fraction_view: "split", split: "2" }, "en-US"],
-    ["split-stray", { fractions: [f(1, 5)], fraction_view: "one", split: "2" }, "en-US"],
-    ["split-seven", { fractions: [f(1, 5)], fraction_view: "split", split: "7" }, "en-US"],
-    ["split-runaway", { fractions: [f(1, 5)], fraction_view: "split", split: "11296257600000" }, "en-US"],
+    ["split-zero", { fractions: [f(0, 5)], fraction_view: "split", split_each_part: "2" }, "en-US"],
+    ["split-grid", { fraction_shape: "grid", fractions: [f(30, 100)], fraction_view: "split", split_each_part: "2" }, "en-US"],
+    ["split-stray", { fractions: [f(1, 5)], fraction_view: "one", split_each_part: "2" }, "en-US"],
+    ["split-seven", { fractions: [f(1, 5)], fraction_view: "split", split_each_part: "7" }, "en-US"],
+    ["split-runaway", { fractions: [f(1, 5)], fraction_view: "split", split_each_part: "11296257600000" }, "en-US"],
     ["half-part", { fractions: [f(1.5, 4)], fraction_view: "one" }, "en-US"],
     ["two-grids", { fraction_shape: "grid", fractions: [f(30, 100), f(3, 10)], fraction_view: "compare" }, "en-US"],
   ]));
-  assert.match(result.thirteenths.message, /at most 12 parts; hundredths go on a grid/u);
-  assert.match(result["grid-15"].message, /no grid of at most 10 by 10 has 37 cells/u);
+  assert.match(result.thirteenths.message, /no fraction card draws 13 equal parts .*choose another visual, or none/u);
+  assert.match(result["twentieths-bar"].message, /at most 12 parts; hundredths go on a grid/u);
+  assert.match(result["grid-11"].message, /no grid of at most 10 by 10 has 11 cells/u);
+  assert.match(result["thirty-sevenths"].message, /no fraction card draws 37 equal parts/u);
+  assert.match(result["thirty-sevenths-grid"].message, /no fraction card draws 37 equal parts/u);
+  assert.match(result["no-fractions"].message, /write the fractions as values.*a numerator of 0 shows a whole divided with none shaded/u);
   assert.match(result["not-equal"].message, /2\/3 and 3\/4 are not equal; compare them instead/u);
   assert.match(result["one-for-two"].message, /compare shows two fractions/u);
   assert.match(result["too-many-wholes"].message, /at most 8 wholes/u);
@@ -123,7 +131,7 @@ test("refused values are this section's faults, each naming its reason", () => {
   assert.match(result["split-none"].message, /split each part into 2 to 6/u);
   assert.match(result["split-zero"].message, /shade at least one/u);
   assert.match(result["split-grid"].message, /a grid's cells are not split again/u);
-  assert.match(result["split-stray"].message, /split goes with fraction_view split/u);
+  assert.match(result["split-stray"].message, /split_each_part goes with fraction_view split/u);
   assert.match(result["split-seven"].message, /split each part into 2 to 6/u);
   assert.match(result["split-runaway"].message, /split each part into 2 to 6/u);
   assert.match(result["half-part"].message, /whole number of parts/u);
@@ -146,8 +154,15 @@ test("a stubbed generation run: the card reaches the lesson; numerators and deno
   // Only "number" fields go to the provider as { mantissa, scale }; the fraction fields are integers.
   const items = api.RECIPE_SCHEMA_PROPERTIES.fraction_model.fractions.items.properties;
   assert.deepEqual([items.numerator.type, items.denominator.type], ["integer", "integer"]);
-  // split is a choice, not a free integer (fraction probe 1: runaway integers of thousands of digits).
-  assert.deepEqual(api.RECIPE_SCHEMA_PROPERTIES.fraction_model.split, { enum: ["2", "3", "4", "5", "6"] });
+  // split_each_part is a choice, not a free integer (fraction probe 1: runaway integers of thousands of digits),
+  // named so it cannot be read as the number of parts (probe 2).
+  assert.deepEqual(api.RECIPE_SCHEMA_PROPERTIES.fraction_model.split_each_part, { enum: ["2", "3", "4", "5", "6"] });
+  assert.equal(api.RECIPE_SCHEMA_PROPERTIES.fraction_model.split, undefined);
+  // The values come first, and each fraction needs both numbers (probe 2: the first reply left them out).
+  assert.deepEqual(Object.keys(api.RECIPE_SCHEMA_PROPERTIES.fraction_model), ["fractions", "fraction_shape", "fraction_view", "split_each_part"]);
+  assert.deepEqual(api.RECIPE_SCHEMA_PROPERTIES.fraction_model.fractions.items.required, ["numerator", "denominator"]);
+  const order = api.SCHEMA_PROPERTY_ORDER;
+  assert.ok(order.indexOf("fractions") < order.indexOf("fraction_shape"), "fractions before the shape in the provider's order");
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { retiredCubeCourse } = await import(${here("./lesson-plan-course-fixtures.mjs")});
@@ -190,15 +205,21 @@ test("a stubbed generation run: the card reaches the lesson; numerators and deno
 });
 
 test("a share that is a whole number is written as one (review of #131)", () => {
-  const result = withTrial(compileScript([["whole-share", { fractions: [f(6, 3)], fraction_view: "split", split: "2" }, "en-US"]]));
+  const result = withTrial(compileScript([["whole-share", { fractions: [f(6, 3)], fraction_view: "split", split_each_part: "2" }, "en-US"]]));
   assert.equal(result["whole-share"].content.caption, "Each share is 6/6 = 1");
 });
 
 test("split is read from its choice; a whole number is read the same way (probe 2 fixes)", () => {
   const result = withTrial(compileScript([
-    ["as-choice", { fractions: [f(3, 4)], fraction_view: "split", split: "2" }, "en-US"],
-    ["as-number", { fractions: [f(3, 4)], fraction_view: "split", split: 2 }, "en-US"],
+    ["as-choice", { fractions: [f(3, 4)], fraction_view: "split", split_each_part: "2" }, "en-US"],
+    ["as-number", { fractions: [f(3, 4)], fraction_view: "split", split_each_part: 2 }, "en-US"],
   ]));
   assert.deepEqual(result["as-number"].content, result["as-choice"].content);
   assert.equal(result["as-choice"].content.caption, "Each share is 3/8");
+});
+
+test("a numerator of 0 draws the whole divided with none shaded (the refusal for missing fractions offers it)", () => {
+  const result = withTrial(compileScript([["sixths-none", { fraction_shape: "circle", fractions: [f(0, 6)], fraction_view: "one" }, "en-US"]]));
+  assert.equal(result["sixths-none"].error, undefined, result["sixths-none"].message);
+  assert.deepEqual(result["sixths-none"].content.fractions[0], { as: "a", numerator: 0, denominator: 6 });
 });

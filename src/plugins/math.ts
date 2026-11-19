@@ -156,14 +156,14 @@ export const MATH_RECIPES = {
     parts: ["whole", "a", "b"],
     number_inputs: [],
     number_input_policies: [],
-    parameter_names: ["title", "fraction_shape", "fractions", "fraction_view", "split"],
-    model_parameter_names: ["title", "fraction_shape", "fractions", "fraction_view", "split"],
+    parameter_names: ["title", "fractions", "fraction_shape", "fraction_view", "split_each_part"],
+    model_parameter_names: ["title", "fractions", "fraction_shape", "fraction_view", "split_each_part"],
     required_model_schema_parameters: ["fractions", "fraction_view"],
-    semantic_parameters: ["fraction_shape", "fractions", "fraction_view", "split"],
+    semantic_parameters: ["fractions", "fraction_shape", "fraction_view", "split_each_part"],
     output_kinds: ["fraction_model"],
     student_controls: [],
     required_features: ["fraction_parts"],
-    model_guidance: "分数等分图：fractions写分子分母的值；view：one、compare两个、equivalent等值、split每份再分split份（求每份）；shape可选bar/circle/grid（百分之几用grid）；不用于不等分、一组物体的几分之几、比；大于1写一个假分数",
+    model_guidance: "分数等分图：fractions写分子分母的值；view：one、compare两个、equivalent等值、split每份再分split_each_part份（求每份）；shape可选bar/circle/grid（百分之几用grid）；不用于不等分、一组物体的几分之几、比；大于1写一个假分数",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -331,12 +331,16 @@ const MATH_SCHEMA_PROPERTIES = {
   number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } },
   number_line_steps: { label_style: { enum: ["decimal", "fraction"] } },
   fraction_model: {
+    // First, as the solids' array is: the provider writes properties in schema order, and with the shape
+    // first the model wrote the shape and view and left the values out (fraction probe 2: 16 of 19 lessons).
+    fractions: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: { numerator: { type: "integer" }, denominator: { type: "integer" } }, required: ["numerator", "denominator"] } },
     fraction_shape: { enum: ["bar", "circle", "grid"] },
-    fractions: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: { numerator: { type: "integer" }, denominator: { type: "integer" } } } },
     fraction_view: { enum: ["one", "compare", "equivalent", "split"] },
     // A choice, not a free integer: as an integer the model filled it with thousands of digits when the view
-    // had no use for it (fraction probe 1, 2026-11-19: 13 times in 11 of 23 lessons).
-    split: { enum: ["2", "3", "4", "5", "6"] },
+    // had no use for it (fraction probe 1, 2026-11-19: 13 times in 11 of 23 lessons). Named for what it does:
+    // as "split" the model wrote the number of parts there ("split": "6" for sixths) and left out the fractions
+    // (probe 2).
+    split_each_part: { enum: ["2", "3", "4", "5", "6"] },
   },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.

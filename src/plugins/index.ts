@@ -120,7 +120,7 @@ export const SCHEMA_PROPERTY_ORDER = [
   // The 3D solids trial recipe (decision 0019); last, so requests without it keep their order.
   "solids", "join", "show", "interaction",
   // The fraction model trial recipe (decision 0021); last, so requests without it keep their order.
-  "fraction_shape", "fractions", "fraction_view", "split",
+  "fractions", "fraction_shape", "fraction_view", "split_each_part",
 ] as const;
 
 /** One prompt bullet: its core text and the installed plugins' sentences, or "" when empty. */
