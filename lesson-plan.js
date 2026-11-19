@@ -12833,6 +12833,10 @@ function divide(a, b) {
     return a;
   return { text: `${wrap(a)}/${wrap(b)}` };
 }
+var zeroBelow = (value2, scale2) => `(${value2})*(1-floor(1/(1+floor(abs(${value2})${scale2 ? `/${scale2}` : ""}*1e12))))`;
+var snapped = (text3) => zeroBelow(text3);
+var canCancel = (scalar) => scalar.value === void 0 && /[+-]/u.test(scalar.text.replace(/^-/u, "").replace(/(\d)e[+-]/gu, "$1e"));
+var snap = (scalar) => canCancel(scalar) ? { text: snapped(scalar.text) } : scalar;
 var degree = (p) => p.reduce((highest, scalar, power2) => isZero(scalar) ? highest : power2, 0);
 var coefficient = (p, power2) => p[power2] ?? constant(0);
 function polynomialOf(tokens, maxDegree = 2) {
@@ -12926,27 +12930,31 @@ function markParts(tokens, requested, labels, check, path) {
   const linear = isZero(a);
   const parts = [];
   const owners = /* @__PURE__ */ new Map();
+  const written = (snappedPart, plainPart) => [snappedPart.x, snappedPart.y, snappedPart.value].every((text3) => text3 === void 0 || text3.length <= 240) ? snappedPart : plainPart;
   for (const mark of marks) {
     const before = parts.length;
     if (mark === "intercepts") {
       parts.push({ kind: "point", as: "mark-y-intercept", label: labels("y \u622A\u8DDD"), x: "0", y: c.text });
       if (linear) {
-        if (!isZero(b))
-          parts.push({ kind: "point", as: "mark-x-intercept", label: labels("x \u622A\u8DDD"), x: negate(divide(c, b)).text, y: "0" });
+        if (!isZero(b)) {
+          const part = (divisor) => ({ kind: "point", as: "mark-x-intercept", label: labels("x \u622A\u8DDD"), x: negate(divide(c, divisor)).text, y: "0" });
+          parts.push(written(part(snap(b)), part(b)));
+        }
       } else {
-        const root2 = `sqrt(${wrap(b)}^2-4*${wrap(a)}*${wrap(c)})`;
+        const discriminant = `${wrap(b)}^2-4*${wrap(a)}*${wrap(c)}`;
+        const scale2 = `(${wrap(b)}^2+abs(4*${wrap(a)}*${wrap(c)})+1e-300)`;
+        const relative = zeroBelow(discriminant, scale2);
         for (const [index, sign] of ["-", "+"].entries()) {
-          parts.push({ kind: "point", as: `mark-x-intercept-${index + 1}`, label: labels("x \u622A\u8DDD"), x: `(${negate(b).text}${sign}${root2})/(2*${wrap(a)})`, y: "0" });
+          const part = (root2, divisor) => ({ kind: "point", as: `mark-x-intercept-${index + 1}`, label: labels("x \u622A\u8DDD"), x: `(${negate(b).text}${sign}${root2})/(2*${wrap(divisor)})`, y: "0" });
+          parts.push(written(part(`sqrt(${relative})`, snap(a)), part(`sqrt(${discriminant})`, a)));
         }
       }
     } else {
       if (linear)
         refuse(mark, "needs a quadratic");
-      const axis = `${negate(b).text === "0" ? "0" : `(${negate(b).text})`}/(2*${wrap(a)})`;
-      if (mark === "vertex")
-        parts.push({ kind: "point", as: "mark-vertex", label: labels("\u9876\u70B9"), x: axis, y: `${wrap(c)}-${wrap(b)}^2/(4*${wrap(a)})` });
-      else
-        parts.push({ kind: "guide", as: "mark-axis", label: labels("\u5BF9\u79F0\u8F74"), value: axis });
+      const axis = (divisor) => `${negate(b).text === "0" ? "0" : `(${negate(b).text})`}/(2*${wrap(divisor)})`;
+      const part = (divisor) => mark === "vertex" ? { kind: "point", as: "mark-vertex", label: labels("\u9876\u70B9"), x: axis(divisor), y: `${wrap(c)}-${wrap(b)}^2/(4*${wrap(divisor)})` } : { kind: "guide", as: "mark-axis", label: labels("\u5BF9\u79F0\u8F74"), value: axis(divisor) };
+      parts.push(written(part(snap(a)), part(a)));
     }
     for (const part of parts.slice(before))
       owners.set(part, mark);
@@ -14744,7 +14752,7 @@ var fractionTolerance = (denominator) => Math.min(0.011, 0.25 / (denominator * d
 var MAX_WINDOW = 58;
 var COARSE_UNITS = [2, 5, 10, 20, 25, 50, 100, 250, 500, 1e3];
 var near2 = (value2, grid) => Math.abs(value2 - Math.round(value2 / grid) * grid) <= fractionTolerance(Math.round(1 / grid));
-var snap = (value2, grid) => Number((Math.round(value2 / grid) * grid).toPrecision(12));
+var snap2 = (value2, grid) => Number((Math.round(value2 / grid) * grid).toPrecision(12));
 var floorTo = (value2, grid) => Number((Math.ceil(value2 / grid - 1e-9) * grid).toPrecision(12));
 var ceilTo = (value2, grid) => Number((Math.floor(value2 / grid + 1e-9) * grid).toPrecision(12));
 var gcd3 = (a, b) => b === 0 ? a : gcd3(b, a % b);
@@ -14775,10 +14783,10 @@ function valuesGrid(values, content) {
   const denominator = inferDenominator(values, { approximate: !literal });
   if (!denominator) return void 0;
   const grid = 1 / denominator;
-  const snapped = values.map((value2) => snap(value2, grid));
+  const snapped2 = values.map((value2) => snap2(value2, grid));
   for (let i = 0; i < values.length; i += 1) for (let j = i + 1; j < values.length; j += 1) {
     const written = Math.sign(Number((values[i] - values[j]).toPrecision(12)));
-    const drawn = Math.sign(Number((snapped[i] - snapped[j]).toPrecision(12)));
+    const drawn = Math.sign(Number((snapped2[i] - snapped2[j]).toPrecision(12)));
     if (written !== drawn) return void 0;
   }
   return denominator;
@@ -14875,7 +14883,7 @@ function fitMoves(content, plan, sharedNumbers, numbers) {
   }
   const fit = (definition, values2, range) => {
     if (grid) {
-      definition.initial = snap(definition.initial, grid);
+      definition.initial = snap2(definition.initial, grid);
       if (definition.student_control) definition.student_control.step = grid;
     }
     if (range) {
@@ -14895,11 +14903,11 @@ function fitMoves(content, plan, sharedNumbers, numbers) {
     if (definition.student_control && carriesAnswer) return window;
     return [definition.initial - unit2, definition.initial + unit2];
   };
-  const snapped = (values2) => values2.map((value2) => grid ? snap(value2, grid) : value2);
-  fit(start, snapped(startValues), rangeFor(start, startValues, [low, high], false));
+  const snapped2 = (values2) => values2.map((value2) => grid ? snap2(value2, grid) : value2);
+  fit(start, snapped2(startValues), rangeFor(start, startValues, [low, high], false));
   let lowest = start.min, highest = start.max;
   moves.forEach((move, position) => {
-    fit(move, snapped(moveValues[position]), rangeFor(move, moveValues[position], [low - lowest, high - highest], true));
+    fit(move, snapped2(moveValues[position]), rangeFor(move, moveValues[position], [low - lowest, high - highest], true));
     lowest += move.min;
     highest += move.max;
   });
@@ -14938,8 +14946,8 @@ function fitComparedNumbers(content, plan, sharedNumbers) {
   const high = Math.max(low + 1, Math.ceil(Math.max(...values) - 1e-9));
   const original = definitions.map((definition) => structuredClone(definition));
   for (const [position, definition] of definitions.entries()) {
-    const own = [definition.initial, ...lessonValues(plan, indexes[position])].map((value2) => snap(value2, grid));
-    definition.initial = snap(definition.initial, grid);
+    const own = [definition.initial, ...lessonValues(plan, indexes[position])].map((value2) => snap2(value2, grid));
+    definition.initial = snap2(definition.initial, grid);
     if (definition.student_control) definition.student_control.step = grid;
     definition.min = floorTo(Math.max(definition.min, Math.min(low, ...own)), grid);
     definition.max = ceilTo(Math.min(definition.max, Math.max(high, ...own)), grid);
@@ -14963,8 +14971,8 @@ function fitSolutionNumbers(content, plan, sharedNumbers) {
   const high = highIndex ? plan.numbers?.[highIndex - 1] : void 0;
   if (!low || !high || sharedNumbers.has(lowIndex) || sharedNumbers.has(highIndex)) return fitted;
   const grid = fitted.get(lowIndex) || void 0;
-  const lowTop = Math.max(low.initial, ...lessonValues(plan, lowIndex).map((value2) => grid ? snap(value2, grid) : value2));
-  const highBottom = Math.min(high.initial, ...lessonValues(plan, highIndex).map((value2) => grid ? snap(value2, grid) : value2));
+  const lowTop = Math.max(low.initial, ...lessonValues(plan, lowIndex).map((value2) => grid ? snap2(value2, grid) : value2));
+  const highBottom = Math.min(high.initial, ...lessonValues(plan, highIndex).map((value2) => grid ? snap2(value2, grid) : value2));
   if (!(lowTop < highBottom)) return fitted;
   const middle = (lowTop + highBottom) / 2;
   const lowMax = grid ? Number((Math.ceil(middle / grid - 1e-9) * grid - grid).toPrecision(12)) : lowTop + (highBottom - lowTop) / 3;
@@ -17349,7 +17357,7 @@ function niceStep(raw) {
   const normalized = raw / power2;
   return ([1, 2, 2.5, 5, 10].find((value2) => normalized <= value2 + 1e-9) ?? 10) * power2;
 }
-function snap2(range, unit2 = 1) {
+function snap3(range, unit2 = 1) {
   const step = unit2 === 1 ? niceStep(span(range) / 20) : unit2 * Math.max(1, Math.round(span(range) / unit2 / 8));
   const round = (value2) => Number(value2.toPrecision(12));
   return { min: round(Math.floor(range.min / step + 1e-9) * step), max: round(Math.ceil(range.max / step - 1e-9) * step) };
@@ -17804,14 +17812,14 @@ function planPlotView(input) {
   const keepXMax = periodicWindow;
   let finalX = x;
   if (!acceptedX) {
-    finalX = snap2(pad4(x, EDGE_INSET, { min: keepXMin, max: keepXMax }), piTicks ? Math.PI / 2 : 1);
+    finalX = snap3(pad4(x, EDGE_INSET, { min: keepXMin, max: keepXMax }), piTicks ? Math.PI / 2 : 1);
     if (keepXMin) finalX.min = x.min;
     if (keepXMax) finalX.max = x.max;
   }
   const keepYMin = quantityX && y.min === 0;
   let finalY = y;
   if (!acceptedY) {
-    finalY = identity ? { ...finalX } : snap2(pad4(y, EDGE_INSET, { min: keepYMin }));
+    finalY = identity ? { ...finalX } : snap3(pad4(y, EDGE_INSET, { min: keepYMin }));
     if (keepYMin) finalY.min = 0;
   }
   const initialItems = base.filter((item) => item.state === initial);
