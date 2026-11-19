@@ -4,7 +4,7 @@
     {
       "id": "FM-01",
       "language": "en",
-      "prompt": "My recipe says to use 2/5 of a bag of flour. Can you show me what 2/5 of the bag looks like?",
+      "prompt": "The fuel gauge says the tank is 2/5 full. Can you show me what 2/5 of the tank looks like?",
       "covers": "one fraction, bar",
       "expect": {
         "models": [
@@ -342,14 +342,15 @@
         "slider": {
           "denominator": 8,
           "target": 5
-        }
+        },
+        "wholes": 1
       }
     },
     {
       "id": "FM-17",
       "language": "zh-CN",
-      "prompt": "一根绳子平均分成 7 段，用了 3 段，还剩几分之几？",
-      "covers": "the rest: 4/7 left (Chinese)",
+      "prompt": "一根绳子平均分成 10 段，用掉了 3 段，用掉的和剩下的各是几分之几？",
+      "covers": "used and left: 3/10 and 7/10 (Chinese)",
       "expect": {
         "models": [
           "bar"
@@ -358,13 +359,13 @@
           [
             {
               "numerator": 3,
-              "denominator": 7
+              "denominator": 10
             }
           ],
           [
             {
-              "numerator": 4,
-              "denominator": 7
+              "numerator": 7,
+              "denominator": 10
             }
           ]
         ]

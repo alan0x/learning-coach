@@ -75,8 +75,26 @@ function cardMisses(card) {
     const { variable } = fraction.bound;
     if (!variable) { misses.push(`${fraction.as}: numerator bound to an expression, not a slider variable`); continue; }
     const step = variable.control?.step;
+    // A slider that never reaches into the last whole leaves it empty, and the picture reads as a smaller fraction.
+    if (fraction.wholes !== undefined && fraction.wholes > 1 && variable.max <= fraction.denominator * (fraction.wholes - 1)) {
+      misses.push(`${fraction.as}: ${fraction.wholes} wholes drawn, but the slider reaches only ${variable.max}/${fraction.denominator}, so the last whole is always empty`);
+    }
     if (variable.control && step !== undefined && !Number.isInteger(step)) misses.push(`${fraction.as}: the slider steps by ${step}, not whole parts`);
     if (!Number.isInteger(variable.min) || !Number.isInteger(variable.max)) misses.push(`${fraction.as}: the slider runs ${variable.min} to ${variable.max}, not whole parts`);
+  }
+  return misses;
+}
+
+/** Practice tasks on a slider that drives a fraction's numerator: each must accept less than one part either side. */
+function taskMisses(card, lesson) {
+  const misses = [];
+  for (const fraction of card.fractions) {
+    const variable = fraction.bound?.variable;
+    if (!variable) continue;
+    for (const task of lesson.lesson?.tasks ?? []) {
+      if (task.completion?.kind !== "expression_target" || String(task.completion.expression).trim() !== variable.as) continue;
+      if (!(task.completion.tolerance < 1)) misses.push(`${fraction.as}: a practice task accepts ±${task.completion.tolerance} parts around ${task.completion.value}, so a wrong number of parts counts as done`);
+    }
   }
   return misses;
 }
@@ -111,7 +129,12 @@ function expectationMisses(expect, card, lesson) {
     && card.fractions.every((fraction) => expect.fractionsFrom.some((want) => showsFraction(fraction, want))))) {
     misses.push(`shows ${drawn}, expected two of ${expect.fractionsFrom.map(text).join(", ")}`);
   }
-  if (expect.relation && card.relation !== expect.relation) misses.push(`relation ${card.relation ?? "none"}, expected ${expect.relation}`);
+  // An equal pair compared shows the same card as one shown equivalent ("5/6 = 10/12", computed by the
+  // program), and does not assume the answer (review of #130).
+  const equalPair = card.fractions.length === 2 && relationOf(card.fractions[0], card.fractions[1]) === "=";
+  if (expect.relation && card.relation !== expect.relation && !(expect.relation === "equivalent" && card.relation === "compare" && equalPair)) {
+    misses.push(`relation ${card.relation ?? "none"}, expected ${expect.relation}`);
+  }
   const first = card.fractions[0];
   if (expect.wholes !== undefined && first) {
     const wholes = first.wholes ?? Math.max(1, Math.ceil(first.numerator / first.denominator));
@@ -150,7 +173,7 @@ export function judgeFractions(item, lesson) {
   const perCard = [];
   for (const card of cards) {
     if (card.error) { hard.push(`card ${card.as}: ${card.error}`); continue; }
-    for (const miss of cardMisses(card)) hard.push(`card ${card.as}: ${miss}`);
+    for (const miss of [...cardMisses(card), ...taskMisses(card, lesson)]) hard.push(`card ${card.as}: ${miss}`);
     if (!item.nearMiss) perCard.push(expectationMisses(expect, card, lesson));
   }
   if (!item.nearMiss && !perCard.some((misses) => !misses.length)) {

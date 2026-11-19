@@ -64,7 +64,7 @@ test("every in-scope case has a passing card and at least one failing mutation; 
       animations: [["n", 3]],
       tasks: task(5),
     }),
-    "FM-17": lesson({ model: "bar", fractions: [f(4, 7)] }),
+    "FM-17": lesson({ model: "bar", fractions: [f(7, 10)] }),
     "FM-18": lesson({ model: "bar", fractions: [f(2, 3), f(3, 10)], relation: "compare" }),
   };
   for (const [id, built] of Object.entries(passing)) passes(id, built);
@@ -97,7 +97,9 @@ test("wrong fractions fail: another numerator or denominator, a reduced fraction
 test("relation, wholes, grid, split and highlight are checked when a case gives them", () => {
   // OLL itself refuses unequal fractions shown equivalent; the judge reports the refusal.
   fails("FM-04", lesson({ model: "circle", fractions: [f(3, 8), f(1, 3)], relation: "equivalent" }), /Fractions shown equivalent are equal/u);
-  fails("FM-07", lesson({ model: "circle", fractions: [f(10, 12), f(5, 6)], relation: "compare" }), /relation compare, expected equivalent/u);
+  // An equal pair compared is the same card ("10/12 = 5/6", computed); an unequal pair compared is not (review of #130).
+  passes("FM-07", lesson({ model: "circle", fractions: [f(10, 12), f(5, 6)], relation: "compare" }), "an equal pair compared");
+  fails("FM-07", lesson({ model: "circle", fractions: [f(10, 12), f(4, 6)], relation: "compare" }), /expected 5\/6, 10\/12/u);
   fails("FM-08", lesson({ model: "bar", fractions: [f(11, 4, { wholes: 4 })] }), /4 whole\(s\), expected 3/u);
   fails("FM-10", lesson({ model: "grid", grid: { rows: 4, columns: 25 }, fractions: [f(43, 100)] }), /grid 4×25|grid count|grid/u);
   fails("FM-13", lesson({ model: "circle", fractions: [f(3, 5, { split: 4, highlight: 1 })] }), /highlight 1, expected 3/u);
@@ -135,6 +137,13 @@ test("a slider: the numerator must be bound over the right denominator, step in 
   fails("FM-16", lesson(bound(), { variables: variables(1), animations: [["n", 3]], tasks: task(4) }), /no practice task setting the numerator to 5 \(tasks: 4\)/u);
   fails("FM-16", lesson({ model: "circle", fractions: [f(5, 8)] }), /no slider on a numerator over 8/u);
   fails("FM-16", lesson(bound(), { variables: variables(0.5), tasks: task(5), animations: [["n", 5]] }), /steps by 0.5, not whole parts/u);
+  // Two circles for a slider that stops at 8/8: the second is always empty (review of #130).
+  const twoWholes = { model: "circle", fractions: [{ numerator: { expression: "n", initial: 0 }, denominator: 8, wholes: 2 }] };
+  fails("FM-16", lesson(twoWholes, { variables: variables(1), tasks: task(5) }), /the last whole is always empty/u);
+  // A task that accepts 4/8 or 6/8 as 5/8.
+  const loose = task(5);
+  loose[0].completion.tolerance = 1.5;
+  fails("FM-16", lesson(bound(), { variables: variables(1), tasks: loose }), /accepts ±1.5 parts around 5/u);
 });
 
 test("checks needing no expectation: a lesson that does not normalize is a hard miss", () => {
