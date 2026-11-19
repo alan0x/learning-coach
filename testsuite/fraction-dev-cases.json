@@ -1,0 +1,199 @@
+{
+ "note": "Fraction redesign development cases (2026-11-19), written from testsuite/fraction-blueprint.json. Each case's teacher_picture was written before its prompt and says what a good teacher draws for that exact question, independent of any card. Used for design and tuning. The scoring set is separate: written by a fresh agent from the blueprint alone, sealed, and never used for tuning (its SHA-256 is recorded in docs/FRACTION_REDESIGN_2026-11-19.md). Never taken from the question set. Mix: 12 questions, 7 detailed requests, 5 topic names; 5 in Chinese. All under the case-overlap bars (0.20 open, 0.15 held-out); FD-06 first came out identical to an open question and was rewritten.",
+ "cases": [
+  {
+   "id": "FD-01",
+   "row": "B01",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "A rectangle (the brownie) cut into 2 equal parts, one shaded and labelled 1/2; beside it the same rectangle cut into a big and a small piece, labelled 'not halves'.",
+   "prompt": "My son cut a brownie in two and says we each got half, but one piece is way bigger. Is that still a half?"
+  },
+  {
+   "id": "FD-02",
+   "row": "B01",
+   "language": "zh-CN",
+   "kind": "topic",
+   "teacher_picture": "A circle cut into 2 equal parts with one shaded (1/2), and a circle cut into 3 equal parts with one shaded (1/3).",
+   "prompt": "认识二分之一和三分之一"
+  },
+  {
+   "id": "FD-03",
+   "row": "B02",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "A bar cut into 6 equal parts, each labelled 1/6; 5 parts shaded and counted 1/6, 2/6, ... 5/6.",
+   "prompt": "My kid reads 5/6 as 'five sixes'. What does the 5 in 5/6 actually count?"
+  },
+  {
+   "id": "FD-04",
+   "row": "B03",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "4 identical bars, each cut into 3 equal parts, all shaded; labelled 12/3 = 4.",
+   "prompt": "My daughter's worksheet asks her to write 4 as a fraction with a denominator of 3 and she's completely stuck. How do I explain it to her?"
+  },
+  {
+   "id": "FD-05",
+   "row": "B04",
+   "language": "en-US",
+   "kind": "topic",
+   "teacher_picture": "Three identical bars stacked: halves with 1 shaded, fourths with 2 shaded, eighths with 4 shaded; the shaded lengths line up.",
+   "prompt": "Equivalent fractions"
+  },
+  {
+   "id": "FD-06",
+   "row": "B04",
+   "language": "zh-CN",
+   "kind": "question",
+   "teacher_picture": "Two identical bars: one in sixths with 3 shaded, one in tenths with 5 shaded; the shaded lengths line up at the half mark; labelled 3/6 = 5/10 = 1/2.",
+   "prompt": "我家老二坚持说六分之三比十分之五大，因为六比十小，切的块更大。怎么跟她解释这两个其实一样多？"
+  },
+  {
+   "id": "FD-07",
+   "row": "B05",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "Two identical circles: 5/8 and 2/3 shaded; both re-cut into 24ths (15/24 and 16/24); written 5/8 < 2/3.",
+   "prompt": "My brother and I are arguing: which is the bigger slice of the same pie, 5/8 or 2/3?"
+  },
+  {
+   "id": "FD-08",
+   "row": "B05",
+   "language": "en-US",
+   "kind": "topic",
+   "teacher_picture": "Two identical bars: 3/4 and 3/8 shaded; fewer, bigger pieces in fourths; written 3/4 > 3/8.",
+   "prompt": "Same top number, different bottom number: which fraction wins"
+  },
+  {
+   "id": "FD-09",
+   "row": "B06",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "One circle cut into 8 equal parts: 2 shaded in one colour, the next 3 in another; written 2/8 + 3/8 = 5/8.",
+   "prompt": "I ate 2/8 of a cake and my sister ate 3/8. How much of the cake did we eat together?"
+  },
+  {
+   "id": "FD-10",
+   "row": "B06",
+   "language": "zh-CN",
+   "kind": "detailed",
+   "teacher_picture": "One bar cut into 10 equal parts: 7 shaded, 3 of them crossed out, 4 left; written 7/10 − 3/10 = 4/10. The parts stay tenths, so the denominator stays 10.",
+   "prompt": "孩子做 7/10 − 3/10，写成了 4/0，说分子减分子、分母减分母。我该怎么跟他讲为什么不对？"
+  },
+  {
+   "id": "FD-11",
+   "row": "B07",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "3 identical bars cut into thirds: 2 fully shaded and 1 third of the third bar shaded; the thirds counted to 7; written 2 1/3 = 7/3.",
+   "prompt": "How do I turn 2 1/3 into an improper fraction?"
+  },
+  {
+   "id": "FD-12",
+   "row": "B08",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "5 bars, each with 3 of 4 parts shaded (5 copies of 3/4); the 15 fourths regrouped into 3 whole bars and 3/4; written 5 x 3/4 = 15/4 = 3 3/4 cups.",
+   "prompt": "We're baking five batches of muffins for the school fair and each batch takes 3/4 cup of flour. My son asked how much flour we have to buy altogether. Can you show him?"
+  },
+  {
+   "id": "FD-13",
+   "row": "B09",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "A hundred grid with 5 full columns shaded: 5 tenths = 50 hundredths; written 0.5 = 5/10 = 50/100 = 0.50.",
+   "prompt": "Grandpa here. Junior insists 0.50 is bigger than 0.5 because it has more digits. How do I convince him?"
+  },
+  {
+   "id": "FD-14",
+   "row": "B09",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "One fully shaded hundred grid (1) and a second grid with 2 columns and 5 squares shaded (0.25); written 1.25 = 1 + 25/100.",
+   "prompt": "In science my daughter recorded that her bean plant grew 1.25 cm this week. She asked what the .25 part actually means. How do I explain it?"
+  },
+  {
+   "id": "FD-15",
+   "row": "B10",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "A bar for 2/5 and a bar for 1/4, both re-cut into twentieths (8/20 and 5/20), then joined on one bar: 13/20; written 2/5 + 1/4 = 8/20 + 5/20 = 13/20, not 3/9.",
+   "prompt": "I wrote 2/5 + 1/4 = 3/9 and the teacher marked it wrong. Why?"
+  },
+  {
+   "id": "FD-16",
+   "row": "B11",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "2 bars (sandwiches), each cut into 5 equal parts; each person takes one fifth from each sandwich; one person's 2 fifths marked; written 2 / 5 = 2/5 of a sandwich each.",
+   "prompt": "Five of us are splitting 2 sandwiches evenly at lunch. How much sandwich does each person get?"
+  },
+  {
+   "id": "FD-17",
+   "row": "B11",
+   "language": "zh-CN",
+   "kind": "topic",
+   "teacher_picture": "A tape labelled 3 m cut into 4 equal pieces, each labelled 3/4 m; written 3 ÷ 4 = 3/4.",
+   "prompt": "分数与除法的关系"
+  },
+  {
+   "id": "FD-18",
+   "row": "B12",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "A tape for 24 children cut into 8 equal parts, each labelled 3; 3 parts marked; 9 children; written 3/8 of 24 = 9.",
+   "prompt": "There are 24 kids in my class and the teacher said 3/8 of us walk to school. I need to work out how many kids walk, and I don't know where to start."
+  },
+  {
+   "id": "FD-19",
+   "row": "B13",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "A unit square (the acre) cut into 5 columns with 3 shaded one way, and 2 rows with 1 shaded the other way; the overlap is 3 of 10 small rectangles; written 1/2 x 3/5 = 3/10 acre.",
+   "prompt": "A garden plot is 3/5 of an acre and half of it is planted with tomatoes. What part of an acre is tomatoes, and why does the answer come out smaller?"
+  },
+  {
+   "id": "FD-20",
+   "row": "B14",
+   "language": "en-US",
+   "kind": "detailed",
+   "teacher_picture": "3 bars (cups), each cut into 4 quarters; the quarter scoops counted 1 to 12; written 3 / (1/4) = 12.",
+   "prompt": "My daughter's homework asks how many 1/4-cup scoops are in 3 cups of rice. She got 12 but thinks it must be wrong because dividing should make it smaller. How do I explain?"
+  },
+  {
+   "id": "FD-21",
+   "row": "B14",
+   "language": "en-US",
+   "kind": "question",
+   "teacher_picture": "A bar (the lasagna) cut into thirds with one third left; that third cut into 2 equal pieces; the other thirds shown cut the same way to count sixths; one piece is 1/6 of the lasagna; written 1/3 / 2 = 1/6.",
+   "prompt": "There's 1/3 of a lasagna left and two of us want to split it evenly. What fraction of the whole lasagna does each of us get?"
+  },
+  {
+   "id": "FD-22",
+   "row": "B15",
+   "language": "en-US",
+   "kind": "topic",
+   "teacher_picture": "A hundred grid with 35 squares shaded; written 35% = 35/100.",
+   "prompt": "Percentages explained"
+  },
+  {
+   "id": "FD-23",
+   "row": "X01",
+   "language": "en-US",
+   "kind": "detailed",
+   "near_miss": true,
+   "teacher_picture": "Two tapes of equal unit blocks: red 3 blocks, yellow 2 blocks; 5 blocks = 15 cups, so each block is 3 cups: red 9, yellow 6. A fraction-of-one-whole card would mislead.",
+   "prompt": "Our paint mix is 3 cups of red for every 2 cups of yellow. We need 15 cups of paint for the mural. My son is trying to work out how many cups of each to use."
+  },
+  {
+   "id": "FD-24",
+   "row": "X03",
+   "language": "zh-CN",
+   "kind": "question",
+   "near_miss": true,
+   "teacher_picture": "A before tape (80 yuan) and an after tape (100 yuan), the 20-yuan increase marked against 80: 20/80 = 25%. A single fraction card would mislead.",
+   "prompt": "一件衣服原价 80 元，现在卖 100 元，涨了百分之几？"
+  }
+ ]
+}
