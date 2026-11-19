@@ -160,3 +160,45 @@ After the verdicts, `tools/noop-census.mjs` lists every animation to the value i
 - **Size:** 120 whole lessons.
 - **Expected calls:** about 290. Recorded runs average 2.1–2.5 calls per lesson, rising to 4 when a refusal re-asks the outline.
 - **Cap:** 340 calls, enforced by the driver.
+
+# Result (2026-11-18, owner-approved run)
+
+**Run:** 120 lessons, **285 calls** (cap 340), no provider retries, no case dropped. Route google / gemini-3.6-flash.
+- Control: 146 calls, 2.43 per lesson; median first playable 9.7 s.
+- Candidate: 139 calls, 2.32 per lesson; median first playable 8.0 s.
+
+**Reading:** blind, by three readers given the rubric above word for word. Each reader judged every lesson of 10 cases, so one standard applies within a case. All 120 verdicts were written to `verdicts.json` before the key was opened. Scored by `handoff-math-expressiveness/tools/nv-score.py`.
+
+## Verdict: fail (test 1). Stop rule applies: the rule is dropped.
+
+| Test | Result | Bar |
+|---|---|---|
+| 1. Improve where nothing fits (20 cases) | misleading 11 of 40 (control) against 11 of 40 (candidate); Σd = 0, p = 0.62 | pass at p ≤ 0.20: **fails** |
+| 2. No lost pictures or misleads where one fits (10 cases) | Σd = −1, p = 1.0 | fails at p ≤ 0.10: holds |
+| 3. No lost lessons (30 cases) | 3 failed (control) against 0 (candidate); Σd = −3, p = 1.0 | fails at p ≤ 0.10: holds |
+
+**4a:** the reworded repair message fired in no candidate lesson, so nothing is separated.
+
+## What the run shows (reported, not judged)
+- **The rule changed what was drawn, not whether lessons misled.**
+  - Where nothing fits, the candidate drew no picture in 10 of 40 lessons; the control never did.
+  - Misleads with a stand-in picture fell from 9 to 4.
+  - Misleads where the narration describes a picture that is not on the screen rose from 3 to 7, for example "looking at our line plot, 5 inches has three dots" over a note of tallies.
+  - The model leaves the picture out when told to, but keeps talking as if it were there.
+- **No cost seen on the other side:**
+  - Fit pictures were lost in 2 of 20 lessons in both arms. Both losses were NV-23 ("Is 0.7 greater than 2/3?"), which is a flowchart in the control and no visual in the candidate.
+  - No candidate lesson failed.
+- **What this means for the next step:** the lever left is the narration, not the picture choice. #79's section-1 narration rule also showed no effect, and spoken text cannot be checked by a program without a word list. This goes to the owner with 3.8's re-measure.
+
+## Coach #121 count (rule fixed above)
+Each animation to the value its number already holds after its own change, with the beat's speech:
+- **Replays (4 lessons):**
+  - NV-11 ("adding the remaining 15 minutes … brings us to 3:15");
+  - NV-06 ("step back 7 more … to land on 24");
+  - NV-18 ("9 equal jumps of 6 … reaching 54");
+  - NV-13 ("把剩下的 1 个圆点放入第二个十格阵").
+- **Holds (3 lessons):**
+  - NV-25, twice ("t = 4 seconds, which is when the ball lands");
+  - NV-07 ("to find the water for 6 cups, we multiply by 3").
+
+**Pooled with the earlier 6:** 9 replays and 4 holds over 13 lessons. The decision rule needed at least 3 to 1 (12 replays), so **the recommendation is to close #121**, with the structural re-ask left as the option.
