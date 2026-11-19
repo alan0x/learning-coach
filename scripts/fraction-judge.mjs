@@ -22,6 +22,8 @@ const sameFraction = (a, b) => a.numerator === b.numerator && a.denominator === 
 /** A card's fraction shows the wanted one: the same denominator, and the numerator as written or a value it is animated to. */
 const showsFraction = (fraction, want) => fraction.denominator === want.denominator && (fraction.values ?? [fraction.numerator]).includes(want.numerator);
 const text = (fraction) => `${fraction.numerator}/${fraction.denominator}`;
+const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+const lcm = (a, b) => a / gcd(a, b) * b;
 const relationOf = (a, b) => {
   const left = a.numerator * b.denominator, right = b.numerator * a.denominator;
   return left < right ? "<" : left > right ? ">" : "=";
@@ -159,11 +161,17 @@ function expectationMisses(expect, card, lesson) {
   // most `highlightAtMost`).
   const pieces = (fraction) => fraction.denominator * (fraction.split ?? 1);
   for (const fraction of card.fractions) {
-    // A split that brings two fractions to the same pieces (3/4 in twelfths beside 9/12; 5/6 and 7/9 both
-    // in eighteenths) is the textbook way to compare them (review of #130, round 5).
-    const common = card.fractions.length === 2 && card.fractions.every((each) => pieces(each) === pieces(fraction));
+    // A split that brings two fractions to their least common pieces (3/4 in twelfths beside 9/12; 5/6 and
+    // 7/9 both in eighteenths) is the textbook way to compare them (review of #130, round 5); finer pieces
+    // than that (eighths beside eighths, both in sixteenths) are not asked for (round 6).
+    const common = card.fractions.length === 2
+      && card.fractions.every((each) => pieces(each) === lcm(card.fractions[0].denominator, card.fractions[1].denominator));
     if (fraction.split !== undefined && !common && expect.split === undefined && expect.smallestPart === undefined) misses.push(`${text(fraction)} split into ${fraction.split}, which the case does not ask for`);
-    if (fraction.highlight !== undefined && expect.highlight === undefined && !(expect.highlightAtMost !== undefined && fraction.highlight <= expect.highlightAtMost)) {
+    // Counting wholes (`highlightWholes`): one piece, or whole wholes the numerator fills (the two full laps of 11/4).
+    const wholesMarked = expect.highlightWholes && fraction.highlight !== undefined
+      && (fraction.highlight === 1 || (fraction.highlight % pieces(fraction) === 0
+        && fraction.highlight <= Math.floor(fraction.numerator / fraction.denominator) * pieces(fraction)));
+    if (fraction.highlight !== undefined && expect.highlight === undefined && !wholesMarked && !(expect.highlightAtMost !== undefined && fraction.highlight <= expect.highlightAtMost)) {
       misses.push(`${text(fraction)} marks ${fraction.highlight} piece(s) as a share, which the case does not ask for`);
     }
   }

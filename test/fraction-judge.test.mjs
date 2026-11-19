@@ -140,11 +140,20 @@ test("a split to common pieces, a whole marked when counting wholes, and a fixed
   // One whole marked where the case counts wholes.
   passes("FM-09", lesson({ model: "circle", fractions: [f(12, 3, { highlight: 3 })] }), "one cake marked");
   fails("FM-09", lesson({ model: "circle", fractions: [f(12, 3, { highlight: 4 })] }), /marks 4 piece\(s\)/u);
+  // The two full laps of 11/4 marked; a mark of 3 is three quarters of lap 1, which counts nothing (round 6).
+  passes("FM-08", lesson({ model: "bar", fractions: [f(11, 4, { highlight: 8 })] }), "two full laps marked");
+  fails("FM-08", lesson({ model: "bar", fractions: [f(11, 4, { highlight: 3 })] }), /marks 3 piece\(s\)/u);
+  fails("FM-08", lesson({ model: "bar", fractions: [f(11, 4, { highlight: 12 })] }), /marks 12 piece\(s\)|highlight/u);
+  // Both fractions split finer than their common pieces: sixteenths beside sixteenths, twentieths (round 6).
+  fails("FM-17", lesson({ model: "bar", fractions: [f(3, 10, { split: 2 }), f(7, 10, { split: 2 })], relation: "compare" }), /split into 2, which the case does not ask for/u);
+  fails("FM-07", lesson({ model: "circle", fractions: [f(5, 6, { split: 4 }), f(10, 12, { split: 2 })], relation: "equivalent" }), /split into/u);
   // A fixed fraction beside the slider must be one the case expects.
   const variables = [{ as: "n", initial: 0, min: 0, max: 8, label: "parts", control: { kind: "slider", step: 1 } }];
   const beside = (fixed) => lesson({ model: "circle", fractions: [f(fixed, 8, { wholes: 1 }), { numerator: { expression: "n", initial: 0 }, denominator: 8, wholes: 1 }], relation: "compare" }, { variables, tasks: task(5) });
   fails("FM-16", beside(3), /3\/8 beside the slider, which the case does not ask for/u);
   passes("FM-16", beside(5), "a fixed 5/8 to match");
+  const halves = lesson({ model: "circle", fractions: [f(5, 8, { wholes: 1, split: 2 }), { numerator: { expression: "n", initial: 0 }, denominator: 8, wholes: 1, split: 2 }], relation: "compare" }, { variables, tasks: task(5) });
+  fails("FM-16", halves, /split into 2, which the case does not ask for/u);
 });
 
 test("a model a teacher would not choose is a soft miss, not a hard one, whatever the order of the cards", () => {
