@@ -150,6 +150,21 @@ export const MATH_RECIPES = {
     required_features: ["solids", "section_plane"],
     model_guidance: "立体都选solids（含截面展开），尺寸固定不建数；2个并排，join叠放或拼L；问到的体积/表面积/面棱顶点都写show，无盖不写表面积",
   },
+  // Decision 0021 (amended): the model writes the fractions as values and what the card shows; the program
+  // draws the parts, decides the wholes, the grid and the marked share. A trial until its probe and gate.
+  fraction_model: {
+    parts: ["whole", "a", "b"],
+    number_inputs: [],
+    number_input_policies: [],
+    parameter_names: ["title", "fraction_shape", "fractions", "fraction_view", "split"],
+    model_parameter_names: ["title", "fraction_shape", "fractions", "fraction_view", "split"],
+    required_model_schema_parameters: ["fractions", "fraction_view"],
+    semantic_parameters: ["fraction_shape", "fractions", "fraction_view", "split"],
+    output_kinds: ["fraction_model"],
+    student_controls: [],
+    required_features: ["fraction_parts"],
+    model_guidance: "分数等分图：fractions写分子分母的值；view：one、compare两个、equivalent等值、split每份再分split份（求每份）；shape可选bar/circle/grid（百分之几用grid）",
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -315,6 +330,12 @@ const MATH_SCHEMA_PROPERTIES = {
   },
   number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } },
   number_line_steps: { label_style: { enum: ["decimal", "fraction"] } },
+  fraction_model: {
+    fraction_shape: { enum: ["bar", "circle", "grid"] },
+    fractions: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: { numerator: { type: "integer" }, denominator: { type: "integer" } } } },
+    fraction_view: { enum: ["one", "compare", "equivalent", "split"] },
+    split: { type: "integer" },
+  },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
     solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {
