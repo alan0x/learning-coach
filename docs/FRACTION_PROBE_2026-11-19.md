@@ -1,4 +1,4 @@
-# Fraction model probe 1 (planned 2026-11-19; not run)
+# Fraction model probe 1 (run 2026-11-19: fails bars 2 and 4)
 
 Decision 0021 §5 step 4: a small paid probe of the `fraction_model` trial recipe (Coach #131, with #132's runner and caption fix), quality only. **It needs the owner's approval of the call cap before it runs**, and it waits for the owner's answer on how a fraction's slider is made (FM-16 is left out until then).
 
@@ -28,3 +28,24 @@ A near pass is reported as a miss. Another probe is a new paid step that the own
 - **A split view always marks a share and names it** (review of #131). A model that uses split only to count pieces (4 ÷ 1/5 written as 4/1 split 5) or to show 3/4 = 6/8 gets a share it did not ask for; the judge counts an unasked share as a miss, and the hand reading watches for it.
 - **A fault in section 2 or later** (a value the card cannot hold) is retried as a section; if every retry fails, the lesson is lost after section 1 has played, the 3.8 pattern. Bar 3 counts these.
 - **Request cost** with the trial on: card 220 B and schema 292 B on the first request, within 0021's 700 B.
+
+## Result (run 2026-11-19, approved by the owner; slider left out of v1 by the owner the same day)
+Build Coach `98d3938` (frozen copy), Gemini 3.6 Flash via the owner's profile, 46 lessons, **102 calls** of the 180 cap, none not run. Report and lessons: `handoff-math-expressiveness/runs/fractions/probe-1/`.
+
+| Bar | Result | Verdict |
+|---|---|---|
+| 1. In-scope judge passes | **14 / 17** (misses FM-11, FM-14, FM-15) | pass |
+| 2. Near misses with a fraction card | **3 / 6** (FM-N1, FM-N2, FM-N5) | **fail** |
+| 3. Lost lessons | candidate 1 (FM-N6), baseline 2 (FM-10, FM-N5) | pass |
+| 4. Misleading narration, read by hand | **2** (FM-11, FM-15) | **fail** |
+
+**Probe 1 fails.** No switch-on; another probe is a new paid step.
+
+What the rows and raw replies show:
+- **Near misses (bar 2).** The model drew the card for an unequal "half" (N1: an equal 1/2 bar beside narration that says the halves are unequal), a fraction of a set (N2: a 1/4 bar for 1/4 of 12 marbles) and a ratio tape (N5: 4/5 and 1/5 compared, so the card reads "4/5 > 1/5"). None draws a wrong value, but each is a card the case forbade. N6 (5/37) asked for a bar of 37 parts, was refused three times, and the lesson was lost; the baseline played it.
+- **FM-11 (1.6 on hundred grids).** The model wrote two fractions, 100/100 and 60/100, as *compare*. The card draws "100/100 > 60/100" while the narration adds them to make 1.6. Counted as misleading. One fraction, 160/100, draws the two grids correctly.
+- **FM-15 (cups of 1/3 in 2 litres).** The model wrote 1/3 in one whole; the narration counts six cups across two litres that the card does not show. Counted as misleading. This is the risk recorded above, in a different form.
+- **FM-14** used the number line, as allowed by the case but without a fraction card; a judge miss, not a fault.
+- **A runaway `split` (new, not foreseen).** In 11 of 23 candidate lessons the first reply filled the optional `split` with a degenerate integer of more than 70 digits, mostly when the view was not *split*. The section was refused (`expected a finite number`) and asked again. This is why the candidate arm used more calls: 47 for the 17 in-scope lessons against 28 on the baseline. Other refusals: a view with the wrong number of fractions (4), `split` beside a view other than *split* (2), a grid split again, hundredths on a bar.
+- FM-N2 used 5 calls under `--lesson-calls 4`: the limit is checked before a retry starts, so one lesson can go one over. The cap arithmetic above holds within one call per lesson.
+- The bar script first read only `quality` rows and missed the `near_miss` rows; fixed before the verdict above.
