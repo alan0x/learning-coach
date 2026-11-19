@@ -7559,7 +7559,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7636,6 +7636,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "number_line" } }
           },
           then: { properties: { content: { $ref: "#/$defs/numberLineContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "fraction_model" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/fractionModelContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -7853,6 +7860,20 @@ var v0_1_schema_default = {
       required: ["range"],
       properties: {
         range: { type: "object", required: ["min", "max"] },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
+    fractionModelContent: {
+      type: "object",
+      required: ["model", "fractions"],
+      properties: {
+        model: { enum: ["bar", "circle", "grid"] },
+        fractions: { type: "array", minItems: 1, maxItems: 2 },
         bindings: {
           type: "array",
           minItems: 1,
@@ -8375,6 +8396,18 @@ function planJumpLanes(content, jumps) {
   });
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/fraction-model.js
+var FRACTION_MODEL_KIND = "fraction_model";
+var FRACTION_MODEL_FEATURE = "plugin:math/fraction-model@1";
+var FRACTION_MODEL_PLUGIN_VERSION = "0.4.0";
+var FRACTION_MODEL_BINDINGS = {
+  fractions: ["numerator"]
+};
+var FRACTION_MODEL_VIEW_WIDTH = 520;
+var SIDE = 20;
+var LABEL_COLUMN = 72;
+var DRAW_WIDTH = FRACTION_MODEL_VIEW_WIDTH - 2 * SIDE - LABEL_COLUMN;
+
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_NODE_KINDS = [
   "text",
@@ -8418,7 +8451,8 @@ var OLL_BINDING_CAPABILITIES = {
     sections: ["value"],
     objects: ["unfold"]
   },
-  number_line: NUMBER_LINE_BINDINGS
+  number_line: NUMBER_LINE_BINDINGS,
+  fraction_model: FRACTION_MODEL_BINDINGS
 };
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
 function collectBindingCapabilities() {
@@ -8488,7 +8522,8 @@ var ZH = {
 var MATH_PLUGIN_MANIFEST = {
   id: "math",
   // 0.2.0: the number line (decision 0013). 0.3.0: jump lanes for several jumps on one line (decision 0017).
-  version: "0.3.0",
+  // 0.4.0: the fraction model (decision 0021).
+  version: "0.4.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -8553,18 +8588,20 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION },
     detect(content, kind, use) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
         if (usesJumpLanes(content))
           use(NUMBER_LINE_JUMP_LANES_FEATURE);
       }
+      if (kind === FRACTION_MODEL_KIND)
+        use(FRACTION_MODEL_FEATURE);
     }
   }
 ]);
 var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
-var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE });
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
