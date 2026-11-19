@@ -55,7 +55,7 @@ test("every in-scope case has a passing card and at least one failing mutation; 
     "FM-09": lesson({ model: "bar", fractions: [f(12, 3)] }),
     "FM-10": lesson({ model: "grid", grid: { rows: 10, columns: 10 }, fractions: [f(43, 100)] }),
     "FM-11": lesson({ model: "grid", grid: { rows: 10, columns: 10 }, fractions: [f(160, 100)] }),
-    "FM-12": lesson({ model: "bar", fractions: [f(1, 4, { split: 3, highlight: 1 })] }),
+    "FM-12": lesson({ model: "bar", fractions: [f(3, 4, { split: 2, highlight: 3 })] }),
     "FM-13": lesson({ model: "circle", fractions: [f(3, 5, { split: 4, highlight: 3 })] }),
     "FM-14": lesson({ model: "circle", fractions: [f(3, 1, { split: 4, highlight: 3 })] }),
     "FM-15": lesson({ model: "bar", fractions: [f(2, 1, { split: 3 })] }),
@@ -86,7 +86,8 @@ test("wrong fractions fail: another numerator or denominator, a reduced fraction
   fails("FM-04", lesson({ model: "circle", fractions: [f(3, 8)] }), /1 fraction\(s\) \(3\/8\), expected 2/u);
   // Order matters unless the case says otherwise.
   passes("FM-04", lesson({ model: "circle", fractions: [f(3, 8), f(1, 3)], relation: "compare" }), "in either order");
-  fails("FM-12", lesson({ model: "bar", fractions: [f(1, 12)] }), /split none, expected 3/u);
+  fails("FM-12", lesson({ model: "bar", fractions: [f(3, 8)] }), /shows 3\/8, expected 3\/4/u);
+  fails("FM-12", lesson({ model: "bar", fractions: [f(3, 4)] }), /split none, expected 2/u);
   fails("FM-15", lesson({ model: "bar", fractions: [f(2, 1, { split: 2 })] }), /neither split nor denominator is 3/u);
   fails("FM-18", lesson({ model: "bar", fractions: [f(2, 3), f(3, 4)], relation: "compare" }), /expected two of/u);
 });
@@ -98,13 +99,29 @@ test("relation, wholes, grid, split and highlight are checked when a case gives 
   fails("FM-08", lesson({ model: "bar", fractions: [f(11, 4, { wholes: 4 })] }), /4 whole\(s\), expected 3/u);
   fails("FM-10", lesson({ model: "grid", grid: { rows: 4, columns: 25 }, fractions: [f(43, 100)] }), /grid 4×25|grid count|grid/u);
   fails("FM-13", lesson({ model: "circle", fractions: [f(3, 5, { split: 4, highlight: 1 })] }), /highlight 1, expected 3/u);
-  fails("FM-14", lesson({ model: "circle", fractions: [f(3, 1, { split: 3, highlight: 3 })] }), /split 3, expected 4/u);
+  fails("FM-14", lesson({ model: "circle", fractions: [f(3, 1, { split: 3, highlight: 3 })] }), /neither split nor denominator is 4/u);
+  // Three wholes cut into quarters is the same picture written as 12/4 (review of #130).
+  passes("FM-14", lesson({ model: "circle", fractions: [f(12, 4, { highlight: 3 })] }), "as 12/4 in quarters");
+  fails("FM-14", lesson({ model: "circle", fractions: [f(12, 4, { highlight: 4 })] }), /highlight 4, expected 3/u);
 });
 
-test("a model a teacher would not choose is a soft miss, not a hard one", () => {
+test("a model a teacher would not choose is a soft miss, not a hard one, whatever the order of the cards", () => {
   const verdictFor = verdict("FM-02", lesson({ model: "bar", fractions: [f(5, 6)] }));
   assert.deepEqual(verdictFor.hard, []);
   assert.deepEqual(verdictFor.soft, ["model bar, expected circle"]);
+  // A wrong circle first, then a right bar (review of #130: the first card's miss used to decide).
+  const two = lesson({ model: "circle", fractions: [f(1, 6)] });
+  two.steps[0].beats.push({ key: "more", say: "And now.", actions: buildFractionModel({ as: "second", role: "main_visual", place: { relation: "new_region" }, model: "bar", fractions: [f(5, 6)] }).actions });
+  assert.deepEqual(verdict("FM-02", two), { hard: [], soft: ["model bar, expected circle"] });
+});
+
+test("a fraction compared with itself orders nothing; an empty extra whole is a miss; an animated numerator counts", () => {
+  fails("FM-18", lesson({ model: "bar", fractions: [f(1, 2), f(1, 2)], relation: "compare" }), /expected two of/u);
+  fails("FM-06", lesson({ model: "bar", fractions: [f(3, 4, { wholes: 2 }), f(9, 12)], relation: "equivalent" }), /2 wholes drawn for 3\/4, which fills 1/u);
+  // A numerator bound and animated from 0 to 2 shows 2/5.
+  passes("FM-01", lesson({ model: "bar", fractions: [{ numerator: { expression: "n", initial: 0 }, denominator: 5, wholes: 1 }] }, {
+    variables: [{ as: "n", initial: 0, min: 0, max: 5, label: "parts", control: { kind: "slider", step: 1 } }], animations: [["n", 2]],
+  }), "animated to 2/5");
 });
 
 test("a slider: the numerator must be bound over the right denominator, step in whole parts, and a task must target it", () => {

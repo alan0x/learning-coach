@@ -18,6 +18,8 @@
 import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
 
 const sameFraction = (a, b) => a.numerator === b.numerator && a.denominator === b.denominator;
+/** A card's fraction shows the wanted one: the same denominator, and the numerator as written or a value it is animated to. */
+const showsFraction = (fraction, want) => fraction.denominator === want.denominator && (fraction.values ?? [fraction.numerator]).includes(want.numerator);
 const text = (fraction) => `${fraction.numerator}/${fraction.denominator}`;
 const relationOf = (a, b) => {
   const left = a.numerator * b.denominator, right = b.numerator * a.denominator;
@@ -65,6 +67,9 @@ function cardMisses(card) {
     if (relationOf(a, b) !== "=") misses.push(`shown equivalent but ${text(a)} ${relationOf(a, b)} ${text(b)}`);
   }
   for (const fraction of card.fractions) {
+    // A whole drawn past what a fixed numerator fills stands empty, and reads as part of the fraction's whole.
+    const fills = Math.max(1, Math.ceil(fraction.numerator / fraction.denominator));
+    if (!fraction.bound && fraction.wholes !== undefined && fraction.wholes > fills) misses.push(`${fraction.as}: ${fraction.wholes} wholes drawn for ${text(fraction)}, which fills ${fills}`);
     if (!fraction.bound) continue;
     const { variable } = fraction.bound;
     if (!variable) { misses.push(`${fraction.as}: numerator bound to an expression, not a slider variable`); continue; }
@@ -92,15 +97,17 @@ function expectationMisses(expect, card, lesson) {
         misses.push(`shows ${drawn}, expected ${expect.fractions.map(text).join(", ")}`);
       }
     } else {
-      const inOrder = expect.fractions.every((want, index) => sameFraction(card.fractions[index], want));
-      const anyOrder = expect.fractions.every((want) => card.fractions.some((fraction) => sameFraction(fraction, want)));
+      const inOrder = expect.fractions.every((want, index) => showsFraction(card.fractions[index], want));
+      const anyOrder = expect.fractions.every((want) => card.fractions.some((fraction) => showsFraction(fraction, want)));
       if (!(inOrder || (expect.anyOrder && anyOrder))) misses.push(`shows ${drawn}, expected ${expect.fractions.map(text).join(", ")}`);
     }
   }
-  if (expect.fractionsAnyOf && !expect.fractionsAnyOf.some((set) => set.length === card.fractions.length && set.every((want) => card.fractions.some((fraction) => sameFraction(fraction, want))))) {
+  if (expect.fractionsAnyOf && !expect.fractionsAnyOf.some((set) => set.length === card.fractions.length && set.every((want) => card.fractions.some((fraction) => showsFraction(fraction, want))))) {
     misses.push(`shows ${drawn}, expected one of ${expect.fractionsAnyOf.map((set) => set.map(text).join(" and ")).join("; ")}`);
   }
-  if (expect.fractionsFrom && !(card.fractions.length === 2 && card.fractions.every((fraction) => expect.fractionsFrom.some((want) => sameFraction(fraction, want))))) {
+  // Two different fractions from the list: one compared with itself orders nothing (review of #130).
+  if (expect.fractionsFrom && !(card.fractions.length === 2 && !sameFraction(card.fractions[0], card.fractions[1])
+    && card.fractions.every((fraction) => expect.fractionsFrom.some((want) => showsFraction(fraction, want))))) {
     misses.push(`shows ${drawn}, expected two of ${expect.fractionsFrom.map(text).join(", ")}`);
   }
   if (expect.relation && card.relation !== expect.relation) misses.push(`relation ${card.relation ?? "none"}, expected ${expect.relation}`);
@@ -144,10 +151,11 @@ export function judgeFractions(item, lesson) {
     if (!item.nearMiss) perCard.push(expectationMisses(expect, card, lesson));
   }
   if (!item.nearMiss && !perCard.some((misses) => !misses.length)) {
-    const best = perCard.sort((a, b) => a.length - b.length)[0] ?? ["no card to judge"];
-    // The model is a teacher's choice among good ones: a card right in every other way is a soft miss.
-    if (best.length === 1 && best[0].startsWith("model ")) soft.push(best[0]);
-    else hard.push(...best);
+    // The model is a teacher's choice among good ones: a card right in every other way is a soft miss,
+    // whichever card it is (review of #130: the order of the cards decided it).
+    const modelOnly = perCard.find((misses) => misses.length === 1 && misses[0].startsWith("model "));
+    if (modelOnly) soft.push(modelOnly[0]);
+    else hard.push(...([...perCard].sort((a, b) => a.length - b.length)[0] ?? ["no card to judge"]));
   }
   return { hard, soft };
 }
