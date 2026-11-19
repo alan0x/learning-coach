@@ -305,7 +305,7 @@
         "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view"]},
         "when": {"enum": ["before_speech", "during_speech", "after_speech"]},
         "as": {"$ref": "#/$defs/alias"},
-        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line"]},
+        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model"]},
         "role": {"type": "string"},
         "content": {"type": "object"},
         "place": {"$ref": "#/$defs/placement"},
@@ -382,6 +382,13 @@
             "properties": {"do": {"const": "write"}, "kind": {"const": "number_line"}}
           },
           "then": {"properties": {"content": {"$ref": "#/$defs/numberLineContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "fraction_model"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/fractionModelContent"}}}
         },
         {
           "if": {"properties": {"do": {"const": "revise"}}},
@@ -594,6 +601,20 @@
       "required": ["range"],
       "properties": {
         "range": {"type": "object", "required": ["min", "max"]},
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
+    "fractionModelContent": {
+      "type": "object",
+      "required": ["model", "fractions"],
+      "properties": {
+        "model": {"enum": ["bar", "circle", "grid"]},
+        "fractions": {"type": "array", "minItems": 1, "maxItems": 2},
         "bindings": {
           "type": "array",
           "minItems": 1,

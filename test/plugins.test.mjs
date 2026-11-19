@@ -137,7 +137,9 @@ test("a compiled lesson records the plugins that built its visuals", () => {
   assert.deepEqual(lessonPlanPlugins({ sections: [] }), {});
   assert.deepEqual(lessonPlanPlugins(plan("process_diagram")), { shared: "0.1.0" });
   assert.deepEqual(lessonPlanPlugins(plan("spring_and_mass")), { physics: "0.1.0", shared: "0.1.0" });
-  assert.deepEqual(lessonPlanPlugins(plan("unit_circle_projection")), { math: "0.3.0", shared: "0.1.0" });
+  // The math plugin's installed version (0.4.0 since the fraction model, OLL 0021). Learn reads only the names;
+  // a player checks the versions a lesson's features need (a number line still needs math 0.2.0).
+  assert.deepEqual(lessonPlanPlugins(plan("unit_circle_projection")), { math: "0.4.0", shared: "0.1.0" });
   assert.equal(typeof compileLessonPlan, "function");
 });
 
