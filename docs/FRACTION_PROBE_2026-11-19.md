@@ -1,4 +1,4 @@
-# Fraction model probes 1–3 (run 2026-11-19: all fail; the card is parked)
+# Fraction model probes 1–3 (run 2026-11-19: all fail; parked, then reopened for redesign by the owner the same day)
 
 Decision 0021 §5 step 4: a small paid probe of the `fraction_model` trial recipe (Coach #131, with #132's runner and caption fix), quality only. **It needs the owner's approval of the call cap before it runs**, and it waits for the owner's answer on how a fraction's slider is made (FM-16 is left out until then).
 
@@ -113,3 +113,19 @@ What the fixes did and did not do:
   Both come from questions whose whole is not one bar: a number above 1 written as two parts, and a whole-number dividend. The card has no way to show either one reliably from the model's choice of fractions.
 
 Over three probes, misleading lessons: 3, 4 (plus 1 borderline), 2. Near misses with a card: 3, 1, 2.
+
+## Review after parking (owner and Fable, 2026-11-19): reopened for redesign
+The three verdicts stand as scored against their bars. The owner questioned what they measured, and an independent Fable review agreed. **The owner reopened the card for redesign, before counters and ten frames (decision 0022 is on hold).**
+
+- **Card expressiveness (owner's point 1).** The cases that failed asked the model to turn a quantity into a fraction the card could not show naturally.
+  - FM-14 (3 m cut into 4) needs a tape labelled 3 m with each piece labelled 3/4 m. The card has no total, units or values on parts. The model drew the right geometry (one bar in 4); the card's own shading and "3/4" label contradicted the narration.
+  - FM-11 (1.6): the model's squares were right; the program-added "100/100 > 60/100" line made it wrong. A whole-plus-part or decimal input is missing.
+  - FM-15: probe 3's picture (two thirds-bars) was right and not misleading.
+  - In all three probes, the 11 cases that state the fraction (FM-01–09, 12, 17) drew a correct card with matching narration, apart from FM-06 in probe 2 (borderline).
+- **Case design (owner's point 2).** About 16 of 24 prompts dictate the picture rather than ask as a learner would (FM-11 names the hundred grid). Two near misses were wrong to forbid: N1 (a true half beside "halves must be equal" is good teaching), and N6 (5/37 is a limit test, not a learner question). Without them, bar 2 passes probe 3.
+- **Method faults, mine:**
+  - Each round's fixes were written from the same cases the next probe scored.
+  - The baseline arm's narration was never read, so "no worse than today" was not measured.
+  - One run per case cannot support "at most 1 misleading": FM-13 and FM-15 changed outcome between probes.
+  - Probe 1's FM-13 narration ("1 part from each of the 3 shaded sections") does not match where the card marks the share; this was not counted.
+- **Next, free first:** cases rebuilt from a standards blueprint, worded as learners ask, with a separate frozen scoring set never used for tuning; an audit of what the card can draw for each case; then an amendment to 0021 for the owner.
