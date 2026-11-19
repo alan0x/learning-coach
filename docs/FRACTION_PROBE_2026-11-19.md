@@ -79,3 +79,13 @@ Other findings:
 - **FM-N6 (5/37) was lost on the candidate arm in both probes.** Each refusal for 37 parts says "hundredths go on a grid", but no grid can draw 37 parts either. The model kept retrying the card.
 - **FM-N5 (paint ratio):** the first reply declared a fraction card; the final outline chose a process diagram, so section 1 drew none.
 - Misleading narration moved between cases from run to run (FM-13 passed in probe 1). Wording changes followed by a re-probe are not converging on bar 4.
+
+## Probe 3, registered before the run (owner approved the fixes and probe 3, 2026-11-19)
+The last probe of this recipe. **If bar 4 fails again, the fraction card is parked** (the trial stays off; the card, judge and cases stay) and the work moves to counters and ten frames (owner, 2026-11-19).
+
+- **Fixes, written after reading probes 1 and 2:**
+  - Coach #137: `fractions` comes first in the card's settings, and each fraction needs both values. `split` is renamed `split_each_part`. A missing `fractions` gets its own refusal, and a denominator no card can draw is refused as such.
+  - OLL #78: grids shade column by column.
+- **Same as probes 1 and 2:** the 23 cases (FM-16 out), both arms, the command, and bars 1–4 unchanged.
+- **Build:** Coach main once #137 and the OLL #78 pin are merged, frozen. Gemini 3.6 Flash on the development key (`dev-probes.json`), cap **120** calls.
+- **Hand reading (bar 4)** reads the card as drawn, not only its data. A grid's columns and rows, the wholes shown, the parts split and any share marked are all checked against the narration.
