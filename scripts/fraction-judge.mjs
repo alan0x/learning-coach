@@ -8,7 +8,8 @@
 //
 // Two kinds of check:
 // - Expected values, written into each case before any run (0021 §5): the fractions shown (numerator
-//   over denominator as written, so 9/12 is not 3/4), the model, wholes, split, highlight, relation,
+//   over denominator as written, so 9/12 is not 3/4), the model, wholes, split, highlight, relation, the
+//   smallest piece,
 //   the slider a practice task uses, and what must not appear (`forbid`, for near misses).
 // - Checks needing no expectation, on every card: the lesson normalizes; two fractions have a relation;
 //   fractions shown equivalent are equal; a bound numerator moves in whole parts.
@@ -118,8 +119,10 @@ function expectationMisses(expect, card, lesson) {
   }
   if (expect.split !== undefined && first?.split !== expect.split) misses.push(`split ${first?.split ?? "none"}, expected ${expect.split}`);
   if (expect.highlight !== undefined && first?.highlight !== expect.highlight) misses.push(`highlight ${first?.highlight ?? "none"}, expected ${expect.highlight}`);
-  if (expect.splitOrDenominator !== undefined && first && first.split !== expect.splitOrDenominator && first.denominator !== expect.splitOrDenominator) {
-    misses.push(`neither split nor denominator is ${expect.splitOrDenominator}`);
+  // Each smallest piece is 1/smallestPart of a whole: 3 wholes in quarters as 3/1 split 4 or 12/4, never
+  // 12/4 split 2 (eighths; review of #130).
+  if (expect.smallestPart !== undefined && first && first.denominator * (first.split ?? 1) !== expect.smallestPart) {
+    misses.push(`smallest pieces are 1/${first.denominator * (first.split ?? 1)}, expected 1/${expect.smallestPart}`);
   }
   if (expect.slider) {
     const bound = card.fractions.find((fraction) => fraction.bound?.variable && fraction.denominator === expect.slider.denominator);

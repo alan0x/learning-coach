@@ -50,7 +50,7 @@ test("every in-scope case has a passing card and at least one failing mutation; 
     "FM-04": lesson({ model: "circle", fractions: [f(1, 3), f(3, 8)], relation: "compare" }),
     "FM-05": lesson({ model: "bar", fractions: [f(5, 6), f(7, 9)], relation: "compare" }),
     "FM-06": lesson({ model: "bar", fractions: [f(3, 4), f(9, 12)], relation: "equivalent" }),
-    "FM-07": lesson({ model: "circle", fractions: [f(4, 10), f(2, 5)], relation: "equivalent" }),
+    "FM-07": lesson({ model: "circle", fractions: [f(10, 12), f(5, 6)], relation: "equivalent" }),
     "FM-08": lesson({ model: "bar", fractions: [f(11, 4)] }),
     "FM-09": lesson({ model: "bar", fractions: [f(12, 3)] }),
     "FM-10": lesson({ model: "grid", grid: { rows: 10, columns: 10 }, fractions: [f(43, 100)] }),
@@ -88,18 +88,23 @@ test("wrong fractions fail: another numerator or denominator, a reduced fraction
   passes("FM-04", lesson({ model: "circle", fractions: [f(3, 8), f(1, 3)], relation: "compare" }), "in either order");
   fails("FM-12", lesson({ model: "bar", fractions: [f(3, 8)] }), /shows 3\/8, expected 3\/4/u);
   fails("FM-12", lesson({ model: "bar", fractions: [f(3, 4)] }), /split none, expected 2/u);
-  fails("FM-15", lesson({ model: "bar", fractions: [f(2, 1, { split: 2 })] }), /neither split nor denominator is 3/u);
+  fails("FM-15", lesson({ model: "bar", fractions: [f(2, 1, { split: 2 })] }), /smallest pieces are 1\/2, expected 1\/3/u);
+  fails("FM-15", lesson({ model: "bar", fractions: [f(6, 3, { split: 2 })] }), /smallest pieces are 1\/6, expected 1\/3/u);
+  passes("FM-15", lesson({ model: "bar", fractions: [f(6, 3)] }), "as 6/3");
   fails("FM-18", lesson({ model: "bar", fractions: [f(2, 3), f(3, 4)], relation: "compare" }), /expected two of/u);
 });
 
 test("relation, wholes, grid, split and highlight are checked when a case gives them", () => {
   // OLL itself refuses unequal fractions shown equivalent; the judge reports the refusal.
   fails("FM-04", lesson({ model: "circle", fractions: [f(3, 8), f(1, 3)], relation: "equivalent" }), /Fractions shown equivalent are equal/u);
-  fails("FM-07", lesson({ model: "circle", fractions: [f(4, 10), f(2, 5)], relation: "compare" }), /relation compare, expected equivalent/u);
+  fails("FM-07", lesson({ model: "circle", fractions: [f(10, 12), f(5, 6)], relation: "compare" }), /relation compare, expected equivalent/u);
   fails("FM-08", lesson({ model: "bar", fractions: [f(11, 4, { wholes: 4 })] }), /4 whole\(s\), expected 3/u);
   fails("FM-10", lesson({ model: "grid", grid: { rows: 4, columns: 25 }, fractions: [f(43, 100)] }), /grid 4×25|grid count|grid/u);
   fails("FM-13", lesson({ model: "circle", fractions: [f(3, 5, { split: 4, highlight: 1 })] }), /highlight 1, expected 3/u);
-  fails("FM-14", lesson({ model: "circle", fractions: [f(3, 1, { split: 3, highlight: 3 })] }), /neither split nor denominator is 4/u);
+  fails("FM-14", lesson({ model: "circle", fractions: [f(3, 1, { split: 3, highlight: 3 })] }), /smallest pieces are 1\/3, expected 1\/4/u);
+  // Eighths or twelfths with three marked are 3/8 or 3/12 of a whole, not 3/4 (review of #130, round 2).
+  fails("FM-14", lesson({ model: "circle", fractions: [f(12, 4, { split: 2, highlight: 3 })] }), /smallest pieces are 1\/8, expected 1\/4/u);
+  fails("FM-14", lesson({ model: "circle", fractions: [f(12, 4, { split: 3, highlight: 3 })] }), /smallest pieces are 1\/12, expected 1\/4/u);
   // Three wholes cut into quarters is the same picture written as 12/4 (review of #130).
   passes("FM-14", lesson({ model: "circle", fractions: [f(12, 4, { highlight: 3 })] }), "as 12/4 in quarters");
   fails("FM-14", lesson({ model: "circle", fractions: [f(12, 4, { highlight: 4 })] }), /highlight 4, expected 3/u);

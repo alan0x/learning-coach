@@ -1,5 +1,5 @@
 {
-  "note": "Fraction model judge cases (OLL decision 0021 §5 step 2: judge before recipe). Written for the probe, never taken from the question set: the fractions and wording are new. Each case's expectation is fixed before any run. `fractions` lists what the lesson's fraction card must show (numerator over denominator, in order unless `anyOrder`); `wholes`, `split`, `highlight` and `relation` are checked when given; `models` lists the models a teacher would accept. Near misses (`nearMiss`) are out of 0021's scope: the lesson must not draw a fraction card for them (`forbid`).",
+  "note": "Fraction model judge cases (OLL decision 0021 §5 step 2: judge before recipe). Written for the probe, never taken from the question set: the fractions and wording are new. Each case's expectation is fixed before any run. `fractions` lists what the lesson's fraction card must show (numerator over denominator, in order unless `anyOrder`); `wholes`, `split`, `highlight`, `relation` and `smallestPart` (the denominator times the split: what each smallest piece is a part of the whole) are checked when given; `models` lists the models a teacher would accept. Near misses (`nearMiss`) are out of 0021's scope: the lesson must not draw a fraction card for them (`forbid`).",
   "cases": [
     {
       "id": "FM-01",
@@ -104,7 +104,7 @@
     {
       "id": "FM-06",
       "language": "en",
-      "prompt": "Show me why 3/4 is the same amount as 9/12.",
+      "prompt": "A baker fills a jug to 3/4. Her helper fills an identical jug to 9/12. Did they pour equal amounts? Use pictures.",
       "covers": "equivalent, same whole",
       "expect": {
         "models": [
@@ -128,21 +128,21 @@
     {
       "id": "FM-07",
       "language": "zh-CN",
-      "prompt": "为什么 2/5 等于 4/10？画图说明。",
+      "prompt": "小明说 5/6 和 10/12 一样多，他说得对吗？用两个大小相同的圆来检验。",
       "covers": "equivalent (Chinese)",
       "expect": {
         "models": [
-          "bar",
-          "circle"
+          "circle",
+          "bar"
         ],
         "fractions": [
           {
-            "numerator": 2,
-            "denominator": 5
+            "numerator": 5,
+            "denominator": 6
           },
           {
-            "numerator": 4,
-            "denominator": 10
+            "numerator": 10,
+            "denominator": 12
           }
         ],
         "anyOrder": true,
@@ -152,7 +152,7 @@
     {
       "id": "FM-08",
       "language": "en",
-      "prompt": "What does 11/4 look like? Is it more than 2 wholes?",
+      "prompt": "A runner has done 11 quarter-laps of a track. Picture how many full laps that covers.",
       "covers": "improper fraction over several wholes",
       "expect": {
         "models": [
@@ -171,33 +171,26 @@
     {
       "id": "FM-09",
       "language": "en",
-      "prompt": "Explain why 5/5 is equal to one whole and 12/3 is equal to 4.",
-      "covers": "whole numbers as fractions",
+      "prompt": "Picture 12/3 as cakes cut into thirds. How many whole cakes is that?",
+      "covers": "a whole number written as a fraction",
       "expect": {
         "models": [
-          "bar",
-          "circle"
+          "circle",
+          "bar"
         ],
-        "fractionsAnyOf": [
-          [
-            {
-              "numerator": 5,
-              "denominator": 5
-            }
-          ],
-          [
-            {
-              "numerator": 12,
-              "denominator": 3
-            }
-          ]
-        ]
+        "fractions": [
+          {
+            "numerator": 12,
+            "denominator": 3
+          }
+        ],
+        "wholes": 4
       }
     },
     {
       "id": "FM-10",
       "language": "en",
-      "prompt": "What does 0.43 mean on a hundredths grid?",
+      "prompt": "Shade 0.43 on a ten-by-ten square.",
       "covers": "hundredths grid",
       "expect": {
         "models": [
@@ -240,7 +233,7 @@
     {
       "id": "FM-12",
       "language": "en",
-      "prompt": "A ribbon is 3/4 of a metre long. I cut it into 2 equal pieces. What fraction of a metre is each piece?",
+      "prompt": "A ribbon 3/4 of a metre long is halved. Each half is what part of a metre?",
       "covers": "split: three quarters cut in 2 (each piece 3/8)",
       "expect": {
         "models": [
@@ -259,8 +252,8 @@
     {
       "id": "FM-13",
       "language": "en",
-      "prompt": "Four friends share 3/5 of a cake equally. How much of the whole cake does each friend get?",
-      "covers": "split: three fifths shared by four",
+      "prompt": "A garden bed covers 3/5 of a yard. Four kinds of plant get equal space in that bed. What part of the yard does each kind get?",
+      "covers": "split: three fifths in four equal portions (each 3/20)",
       "expect": {
         "models": [
           "bar",
@@ -279,8 +272,8 @@
     {
       "id": "FM-14",
       "language": "zh-CN",
-      "prompt": "3 张饼平均分给 4 个人，每人分到多少张？画图说明。",
-      "covers": "three wholes shared by four: wholes cut into quarters, one share of three quarters marked (Chinese)",
+      "prompt": "一块 3 米长的布剪成同样长的 4 段，每段长几米？画图说明。",
+      "covers": "three wholes cut into four equal lengths: wholes in quarters, one length of three quarters marked (Chinese)",
       "expect": {
         "models": [
           "circle",
@@ -300,15 +293,15 @@
             }
           ]
         ],
-        "splitOrDenominator": 4,
-        "highlight": 3
+        "highlight": 3,
+        "smallestPart": 4
       }
     },
     {
       "id": "FM-15",
       "language": "en",
-      "prompt": "How many 1/3s are in 2? Draw it so I can count them.",
-      "covers": "split wholes into thirds and count",
+      "prompt": "A jug holds 2 litres. How many 1/3-litre cups can it fill? Picture the cups so I can count them.",
+      "covers": "wholes cut into thirds, counted",
       "expect": {
         "models": [
           "bar",
@@ -328,7 +321,7 @@
             }
           ]
         ],
-        "splitOrDenominator": 3
+        "smallestPart": 3
       }
     },
     {
@@ -427,8 +420,8 @@
     {
       "id": "FM-N3",
       "language": "en",
-      "prompt": "What is 35% of 80?",
-      "covers": "out of scope: percent of a number",
+      "prompt": "A town grew from 2,000 to 2,300 people. By what percent did it grow?",
+      "covers": "out of scope: percent change",
       "nearMiss": true,
       "forbid": [
         "fraction_model"
@@ -437,7 +430,7 @@
     {
       "id": "FM-N4",
       "language": "zh-CN",
-      "prompt": "用面积模型分解 (x + 4)(x + 1)。",
+      "prompt": "用面积模型展开 (2x + 3)(x + 2)。",
       "covers": "out of scope: the symbolic area model (0021 question 4)",
       "nearMiss": true,
       "forbid": [
@@ -447,7 +440,7 @@
     {
       "id": "FM-N5",
       "language": "en",
-      "prompt": "The ratio of boys to girls is 2 to 3. Draw a tape diagram.",
+      "prompt": "A paint mix uses 4 cups of blue for every 1 cup of white. Draw a tape diagram for the mix.",
       "covers": "out of scope: ratio tape diagram",
       "nearMiss": true,
       "forbid": [
