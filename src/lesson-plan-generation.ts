@@ -1320,6 +1320,8 @@ function lowerModelActivityNumbers(
   /** Numbers a number line or a count recipe shows: their targets stay as written, and a met target is
    * resolved at compile, which knows the range the visual draws. */
   exactNumbers: ReadonlySet<number> = new Set(),
+  /** Numbers a number line in an earlier section shows: their targets keep the value written. */
+  earlierLineNumbers: ReadonlySet<number> = new Set(),
 ): Record<string, unknown> {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
@@ -1375,7 +1377,12 @@ function lowerModelActivityNumbers(
       ) * (1 + 1e-9);
       return lowered;
     }
-    let reachableValue = snapToReachableValue(requestedValue);
+    // A number an earlier section's line shows keeps the value written: the line's ticks hold the lesson's
+    // values, and rounding onto the derived step left one they cannot (2 became 1.99 on a 1–10 slider),
+    // so the line refused it in every retry of the section (re-run 3.8). A met target moves as before.
+    let reachableValue = earlierLineNumbers.has(numberIndex)
+      ? Math.min(maximum, Math.max(minimum, requestedValue))
+      : snapToReachableValue(requestedValue);
     const tolerance = Math.max(
       typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
       range / 1000,
@@ -1626,12 +1633,25 @@ function taughtContent(draft: LessonPlanSectionDraft): unknown[] {
   }));
 }
 
+/** Numbers a number line in these sections shows. */
+function numberLineNumbersIn(drafts: readonly LessonPlanSectionDraft[]): Set<number> {
+  const numbers = new Set<number>();
+  for (const draft of drafts) for (const moment of draft?.moments ?? []) for (const action of moment.actions) {
+    if (action.action === "create" && action.kind === "visual" && isNumberLineCapability((action.content as LessonPlanVisualContent).capability)) {
+      for (const number of (action.content as LessonPlanVisualContent).numbers ?? []) numbers.add(number);
+    }
+  }
+  return numbers;
+}
+
 function lowerModelSectionDraft(
   value: unknown,
   outline: LessonPlanOutline,
   expectedSection: number,
   requireFixedReusableCreates = false,
   language?: string,
+  /** Numbers a number line in an earlier section shows (numberLineNumbersIn). */
+  earlierLineNumbers: ReadonlySet<number> = new Set(),
 ): LessonPlanSectionDraft {
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) {
@@ -1921,8 +1941,8 @@ function lowerModelSectionDraft(
   // Numbers this section's number line shows, and counts its visuals draw (squares in a row). Their
   // targets stay as written: snapping a count to the slider's step turned 9 squares into 8.975, and moving
   // a met target to the end of the model's range (10) went past what the array draws, so compile refused
-  // the program's own value (Coach #78 review). A visual created in an earlier section is not seen here,
-  // and its targets are rounded as for any slider.
+  // the program's own value (Coach #78 review). A visual created in an earlier section is not seen here:
+  // its targets are lowered as for any slider, except that a line's keep their value (earlierLineNumbers).
   const numberLineNumbers = new Set(moments.flatMap((moment) => moment.actions).flatMap((action) => {
     const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
     if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
@@ -1942,7 +1962,7 @@ function lowerModelSectionDraft(
       if (kind === "number_target" && lowered.reference !== undefined) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers, earlierLineNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -2971,6 +2991,7 @@ export async function generateLessonPlanWithModel(
         section,
         true,
         input.language,
+        numberLineNumbersIn(drafts.slice(0, section - 1)),
       );
       specializeDraft(candidate, outline, drafts.slice(0, section - 1));
     } catch (error) {

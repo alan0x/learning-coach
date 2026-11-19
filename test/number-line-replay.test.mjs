@@ -98,6 +98,38 @@ test("a lesson of two sections: every compile of the growing lesson returns the 
   }
 });
 
+test("a later section's target on an earlier section's line keeps its value: 20 on a 1–30 slider is not rounded to 19.995 (re-run 3.8)", async () => {
+  // NL-20's two-section turn as above, with the change's range written as 1 to 30: its derived step
+  // (29 / 200) puts no whole number but 1 and 30 on the slider. Before, the second section's target was
+  // rounded onto that step, and the line, drawn in section 1, refused a value its ticks cannot hold in
+  // every retry of section 2: the lesson was lost after its first section.
+  const turn = run5.turns.find((entry) => entry.pair === 43);
+  const bootstrap = structuredClone(turn.replies[0]);
+  Object.assign(bootstrap.course.outline.numbers[1], { min: { mantissa: 1, scale: 0 }, max: { mantissa: 30, scale: 0 } });
+  const second = {
+    moments: [
+      { narration: "Break 26 into friendly jumps: first 3, to reach 20.", delivery: "patient", animations: [{ timing: "during_speech", number: 2, end_value: { mantissa: 3, scale: 0 }, duration_intent: "normal" }] },
+      { narration: "Then 23 more: 26 in all, and we land on 43.", delivery: "encouraging", animations: [{ timing: "during_speech", number: 2, end_value: { mantissa: 26, scale: 0 }, duration_intent: "normal" }] },
+    ],
+    number_activities: [{ prompt: "Set the change to 20.", hints: ["Move the slider to 20."], number: 2, value_mantissa: 20, value_scale: 0 }],
+  };
+  const replies = [bootstrap, ...turn.replies.slice(1), second].map((reply) => JSON.stringify(reply));
+  const { generateLessonPlanWithModel } = await import(new URL("../lesson-plan.js", import.meta.url));
+  const rejected = [];
+  let next = 0;
+  const generated = await generateLessonPlanWithModel(async () => {
+    if (next >= replies.length) throw new Error("no more replies: a section was asked again");
+    return replies[next++];
+  }, { turn_id: "earlier-line", learner_request: caseById.get("NL-20").prompt, input_modality: "text", request_source: "self_contained" }, {
+    on_rejected_part: (event) => rejected.push(event.error.message),
+  });
+  assert.deepEqual(rejected, []);
+  const line = numberLineLesson(generated.lesson);
+  assert.deepEqual(line.tasks.map((task) => task.completion.value), [26, 20]);
+  assert.deepEqual([line.content.ticks.step, line.content.ticks.subdivisions], [1, 1]);
+  assert.equal(line.variables[1].control.step, 1);
+});
+
 test("a starting value at the wrong scale is refused in the outline, where a retry can fix it (NL-18 in runs 5 and 6)", async () => {
   // The model wrote 2/3 as mantissa 666666666667 with scale 1. Before, the range widened to fit it
   // and the lesson failed three times at compile, where only the section is retried.

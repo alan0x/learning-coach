@@ -21912,7 +21912,7 @@ function lowerIntegerDecimal(record3, prefix, path) {
   delete record3[`${prefix}_scale`];
   return Number(mantissa) / 10 ** Number(scale2);
 }
-function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set()) {
+function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set(), earlierLineNumbers = /* @__PURE__ */ new Set()) {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
   lowered.hint_after_attempts = PROGRAM_HINT_AFTER_ATTEMPTS;
@@ -21954,7 +21954,7 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
       ) * (1 + 1e-9);
       return lowered;
     }
-    let reachableValue = snapToReachableValue(requestedValue);
+    let reachableValue = earlierLineNumbers.has(numberIndex) ? Math.min(maximum, Math.max(minimum, requestedValue)) : snapToReachableValue(requestedValue);
     const tolerance = Math.max(
       typeof step === "number" && Number.isFinite(step) && step > 0 ? step / 2 : 0,
       range / 1e3,
@@ -22144,7 +22144,16 @@ function taughtContent(draft) {
     written: moment.actions.flatMap((action) => action.action === "create" && (action.kind === "math" || action.kind === "note") ? [action.content] : [])
   }));
 }
-function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedReusableCreates = false, language) {
+function numberLineNumbersIn(drafts) {
+  const numbers = /* @__PURE__ */ new Set();
+  for (const draft of drafts) for (const moment of draft?.moments ?? []) for (const action of moment.actions) {
+    if (action.action === "create" && action.kind === "visual" && isNumberLineCapability(action.content.capability)) {
+      for (const number of action.content.numbers ?? []) numbers.add(number);
+    }
+  }
+  return numbers;
+}
+function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedReusableCreates = false, language, earlierLineNumbers = /* @__PURE__ */ new Set()) {
   const root2 = pruneModelNulls(value2);
   if (!root2 || typeof root2 !== "object" || Array.isArray(root2)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection", "expected an object");
@@ -22430,7 +22439,7 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
       if (kind === "number_target" && lowered.reference !== void 0) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers, earlierLineNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -23266,7 +23275,8 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         outline,
         section,
         true,
-        input.language
+        input.language,
+        numberLineNumbersIn(drafts.slice(0, section - 1))
       );
       specializeDraft(candidate, outline, drafts.slice(0, section - 1));
     } catch (error) {
