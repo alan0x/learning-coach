@@ -86,6 +86,10 @@ Gaps, by type:
    - One (FM-N6 baseline) hit the call cap.
    - Rejected first-section cards are inside the saved bootstrap reply, so free re-compiles of saved replies cover every judged attempt.
 
+## Checks of the sealed set
+- A fresh agent checked the arithmetic of all 34 cases without revealing any text: every result, equation and picture fits its prompt.
+- A second copy is kept outside the repository.
+
 ## Scoring set hash at freeze
 Eight sealed cases were first over the overlap bars and were reworded by the same agent, which saw only IDs and scores. All 34 are now under the bars; the file is read-only.
 
@@ -97,8 +101,8 @@ Ranked by open M1 questions completed, as 0021's table did, and by probe mislead
 | Gap | Open M1 questions it would complete | Probe misleads it would have removed |
 |---|---|---|
 | Quantity (tape) view | 4: G35-31, G68-08, G68-12, G68-38, all tagged for the planned tape-diagram component (`tape_diagram_ratio_table`: "bars of labelled parts and totals"), not the fraction card | FM-14 (probes 2, 3), FM-15 (probes 1, 2) |
-| Sharing: one piece from each whole | 1: G35-40 (two sandwiches in thirds, a third from each) | FM-13 (probe 1) |
-| Relation line only when comparing | 0 | FM-11 (probes 1, 3) |
-| Decimal and mixed-number input, converted and labelled by the program | 0 | FM-11 (all three probes), FM-10's labels |
+| Where the split view marks the share: one small piece in each shaded part, not a run from the start | 1: G35-40 (two sandwiches in thirds, a third from each: with a denominator of 1, one piece per whole) | FM-13 (probe 1: narration took one piece from each shaded fifth; the card marked three pieces inside the first fifth) |
+| A two-fraction view that is not a comparison, or an input that needs only one fraction (1.6 as a decimal) | 0 | FM-11 (probes 1 and 3: the model chose compare because no other view takes two fractions; dropping the line alone would not have helped) |
+| Decimal and mixed-number input, converted and labelled by the program | 0 | FM-11 (probes 1 and 3; in probe 2 it failed on a re-ask that lost 160/100), FM-10's labels |
 | Operation views (join, cross out, copies, re-cut) | 0 tagged | none |
 | Area model (two-way) | 0 for fractions (G912-06 is algebraic, kept for its own decision) | none |
