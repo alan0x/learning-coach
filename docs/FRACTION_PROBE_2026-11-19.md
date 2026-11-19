@@ -1,4 +1,4 @@
-# Fraction model probe 1 (run 2026-11-19: fails bars 2 and 4)
+# Fraction model probes 1 and 2 (run 2026-11-19: both fail bar 4)
 
 Decision 0021 §5 step 4: a small paid probe of the `fraction_model` trial recipe (Coach #131, with #132's runner and caption fix), quality only. **It needs the owner's approval of the call cap before it runs**, and it waits for the owner's answer on how a fraction's slider is made (FM-16 is left out until then).
 
@@ -46,6 +46,36 @@ What the rows and raw replies show:
 - **FM-11 (1.6 on hundred grids).** The model wrote two fractions, 100/100 and 60/100, as *compare*. The card draws "100/100 > 60/100" while the narration adds them to make 1.6. Counted as misleading. One fraction, 160/100, draws the two grids correctly.
 - **FM-15 (cups of 1/3 in 2 litres).** The model wrote 1/3 in one whole; the narration counts six cups across two litres that the card does not show. Counted as misleading. This is the risk recorded above, in a different form.
 - **FM-14** used the number line, as allowed by the case but without a fraction card; a judge miss, not a fault.
-- **A runaway `split` (new, not foreseen).** In 11 of 23 candidate lessons the first reply filled the optional `split` with a runaway integer of 2,500 to 6,800 digits (13 times, always beside the view *one* or *compare*, where split has no use). Those digits are output the model spends time writing. The section was refused (`expected a finite number`) and asked again. This is why the candidate arm used more calls: 47 for the 17 in-scope lessons against 28 on the baseline. Other refusals: a view with the wrong number of fractions (4), `split` beside a view other than *split* (2), a grid split again, hundredths on a bar.
+- **A runaway `split` (new, not foreseen).** In 11 of 23 candidate lessons the first reply filled the optional `split` with a runaway integer of 2,500 to 6,800 digits (13 times, always beside the view *one* or *compare*, where split has no use). Those digits are output the model spends time writing. The section was refused (`expected a finite number`) and asked again. It was taken at first for the reason the candidate arm used more calls (47 for the 17 in-scope lessons against 28); probe 2 shows the larger cause is the missing fractions below. Other refusals: a view with the wrong number of fractions (4), `split` beside a view other than *split* (2), a grid split again, hundredths on a bar.
 - FM-N2 used 5 calls under `--lesson-calls 4`: the limit is checked before a retry starts, so one lesson can go one over. The cap arithmetic above holds within one call per lesson.
 - The bar script first read only `quality` rows and missed the `near_miss` rows; fixed before the verdict above.
+
+**Corrections after probe 2:** FM-10 (0.43 on a grid) is also misleading in probe 1: its narration shades "four full columns", but the card fills row by row. Probe 1's bar 4 is 3, not 2. The hand reading read card data, not the picture; it now checks the fill order.
+
+## Probe 2 (run 2026-11-19, approved by the owner; after Coach #135)
+Fixes before the run, written after reading probe 1's cases: `split` became a choice of "2" to "6", and the card's guidance gained "not for unequal parts, a fraction of a set, or ratios; a number above 1 is one improper fraction". The same cases, arms, command and bars as probe 1. Build Coach `89c8211` (frozen copy), Gemini 3.6 Flash on the owner's dedicated development key (`dev-probes.json`), cap 120: **104 calls**, none not run. Report and lessons: `handoff-math-expressiveness/runs/fractions/probe-2/`.
+
+| Bar | Result | Verdict |
+|---|---|---|
+| 1. In-scope judge passes | **13 / 17** (misses FM-11, FM-13, FM-14, FM-15) | pass |
+| 2. Near misses with a fraction card | **1 / 6** (FM-N1) | pass |
+| 3. Lost lessons | candidate 2 (FM-15, FM-N6), baseline 1 (FM-07) | pass, at the limit |
+| 4. Misleading narration, read by hand | **4, plus 1 borderline** | **fail** |
+
+**Probe 2 fails.** The misleading lessons:
+- **FM-10:** "four full columns", on a grid filled by rows (as in probe 1).
+- **FM-11:** one grid of 60/100; the narration fills a whole grid and 60 squares of a second.
+- **FM-13:** 3/5 with no split; the narration splits each fifth into 4 and counts twentieths that the card does not show.
+- **FM-14:** 3/4 of one bar; the narration says the bar is the 3-metre cloth cut into 4, so the 3 shaded parts would be 9/4 m.
+- **FM-06, borderline, counted:** 3/4 and 9/12 compared; the narration says each shaded quarter of the 3/4 bar is divided into 3, which that bar does not show.
+
+**The main cause is in the program, not the model's arithmetic.** In the first reply, the section-1 card is chosen from a list of every card's settings, in which nothing is required. In 16 of 19 candidate lessons (13 of 19 in probe 1) the model wrote the card's shape, view and split there but no `fractions`. The section was refused ("one shows one fraction") and asked again, and the second reply sometimes lost the meaning:
+- FM-11's first reply had the right 160/100 for its second card; the re-ask wrote 60/100.
+- FM-14 and FM-15 first asked for a split (4 and 3) with no fractions; the re-ask dropped the split.
+
+These refusals, not the runaway split, are the main reason the candidate arm used more calls (49 against 32 for the in-scope lessons). The 3-D solids card has the same kind of list and showed no such refusal in its probe 3, so the cause is not certain from the code alone.
+
+Other findings:
+- **FM-N6 (5/37) was lost on the candidate arm in both probes.** Each refusal for 37 parts says "hundredths go on a grid", but no grid can draw 37 parts either. The model kept retrying the card.
+- **FM-N5 (paint ratio):** the first reply declared a fraction card; the final outline chose a process diagram, so section 1 drew none.
+- Misleading narration moved between cases from run to run (FM-13 passed in probe 1). Wording changes followed by a re-probe are not converging on bar 4.
