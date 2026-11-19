@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **OLL at 51af57b** (OLL #74): function-plot marks hide at a coefficient that cancels to a rounding residue, and a double root whose discriminant cancels is drawn (plan 3.6, renderer defect). Only lessons whose quadratic marks have a summed coefficient get different mark text. The 259 recorded lessons replay identically, and the request and lesson digests are unchanged.
+
 - **A slope triangle never spans a pole** (plan 3.6, renderer defect). The automatic A and B (marks: `slope_triangle`) were checked only at their own x: 1/(x − 2) took A = 1 and B = 3, and the triangle's secant jumped across the pole at x = 2. Between the two points the curve must now exist at every one of 96 samples, change sign only through a root (bisected: a root closes in on 0, a pole blows up), and stay within 1000 times its size at the ends, at the start, at every demonstrated state, at each curve slider's ends and at 7 values inside each slider's range (a slider can carry a pole across the run). Otherwise the next pair is tried, and with none the triangle is left out, as before. Lessons without marks are unchanged. Tests: a fixed pole, a pole a slider moves, a root between the points (kept). The 259 recorded lessons replay identically.
 
 - **Praise check, follow-up to #120** (plan 3.6). It still only drops a message, never repairs one, and changes no request.
