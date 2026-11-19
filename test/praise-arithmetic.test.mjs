@@ -287,10 +287,8 @@ test("follow-up: a task that asks for rounding lets its message round to those p
   assert.equal(at("7 ÷ 2 = 4", undefined), "false");
 });
 
-test("follow-up: labels by structure, curly apostrophes, tight-slash fractions, spaced scale words", () => {
+test("follow-up: curly apostrophes, tight-slash fractions, spaced scale words", () => {
   for (const text of [
-    "Task 2 - 4 + 4 = 8",
-    "No. 2 - 4 + 4 = 8",
     "第2 - 4 + 4 = 8",
     "8 + 5 = 14 isn’t right, it’s 13!",
     "70 ÷ 10 = 7 tens",
@@ -319,7 +317,19 @@ test("follow-up: the drop record names its task in a field, and a rounding task 
   assert.equal(rounding("半径 2.5，面积是多少？保留两位小数。", "对！3.14 × 2.5 × 2.5 = 19.64。"), undefined);
 });
 
-test("follow-up: a word that opens a clause inside a sentence is not a label", () => {
+test("follow-up review: a word before a subtraction is not a label unless it is a label word", () => {
+  // review of #123: a structural label rule kept these false messages, which main drops
+  for (const text of ["Well done! So 15 - 7 = 9.", "Great job. 12 - 5 = 8!", "真棒。所以15-7=9。", "So 15 minus 7 is 9."]) assert.equal(verdict(text), "false", text);
   assert.deepEqual(praiseArithmetic("Great job! 32 minus 10 is 22, and 22 minus 5 is 17.").claims.length, 2);
   assert.equal(verdict("8 + 5 = 13 and 13 − 5 = 8."), "true");
+});
+
+test("follow-up review: a bare 'round' with a whole answer does not let a false message through", () => {
+  const plan = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
+  plan.sections[1].student_activities = [{
+    kind: "numeric_answer", prompt: "Round 2: what is 6 × 7?", answer: "42", check: "6 * 7", success_message: "Yes! And 7 ÷ 2 = 4.",
+    reference: { source: "local_board_item", moment: 1, item: 2 }, hints: ["Six sevens."],
+  }];
+  const task = compileAndValidateLessonPlan(plan).lesson.lesson.tasks.find((item) => item.completion.kind === "numeric_answer");
+  assert.equal(task.success_message, undefined);
 });

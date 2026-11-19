@@ -71,6 +71,8 @@ const ASKED_CLAUSE = /^\s*(is|are|does|do|if|suppose|what if)\b|^\s*(如果|假�
 const ASKED_SENTENCE = /[?？吗][\s"'”’)）]*$/u;
 /** A sentence that says it rounds is not read: the place and direction of rounding are its own. */
 const ROUNDED = /\brounded\b|\bround(?:s|ing)? (?:to|off|up|down)\b|\bdecimal places?\b|\bapproximately\b|\bnearest (?:whole|tenth|hundredth|thousandth|integer|cent)\b|约等于|大约|近似|保留|四舍五入|精确到/iu;
+/** A label number (Step 2, Question 3) is not the first term of a subtraction after it. */
+const LABEL = /^(step|question|problem|part|example|exercise|no|q|第)$/iu;
 /** Sentence ends; a full stop between digits is a decimal point. */
 const SENTENCE_END = /[!?。！？；;\n]|\.(?!\d)/gu;
 /** Clause ends inside a sentence; a comma or colon between digits is part of a number or a time. */
@@ -242,13 +244,12 @@ export function praiseArithmetic(text: string, options: { places?: number } = {}
     const loneFraction = ops.length === 0 && values.length === 1 && tokens[k]!.text.includes("/");
     if (!loneFraction && (ops.length === 0 || values.length !== ops.length + 1)) return;
     // What comes before the expression must end it: not a number, an operator, a bracket, a colon or comma
-    // between digits, or an "=" that follows a value (a chain). A label before "=" (面积 = 8 × 3 = 24) is fine.
-    // A number followed by a minus is a label, whatever the word, when one word opens its sentence before it
-    // (Step 2 - …, 第2 - …) or a one-word sentence comes just before it (No. 2 - …).
+    // between digits, a label (Step 2), or an "=" that follows a value (a chain). A label before "="
+    // (面积 = 8 × 3 = 24) is fine.
     const before = tokens[k - 1];
     const chain = before?.kind === "eq" && before.symbol && (tokens[k - 2]?.kind === "num" || /^[)\]}|]$/u.test(tokens[k - 2]?.text ?? ""));
     if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || chain || /^[([{|]$/u.test(before.text)
-      || /^[:：,]$/u.test(before.text) && betweenDigits(before))) return;
+      || /^[:：,]$/u.test(before.text) && betweenDigits(before) || LABEL.test(before.text))) return;
     // "3-5 is 2", "Pages 1-3 = 3" or "2024-11-18 is a day" is a range or a date: an unspaced hyphen between
     // digits, read with a word "is" or a spaced "=". "8-3=5", written tight, is a subtraction.
     const spacedEquals = !token.symbol || /\s/u.test(text[token.at - 1] ?? "") || /\s/u.test(text[token.end] ?? "");
@@ -257,12 +258,6 @@ export function praiseArithmetic(text: string, options: { places?: number } = {}
     // "2 plus 3 times 4 is 20" is spoken left to right; with word operators of both kinds the order is unclear.
     const spoken = opTokens.some((op) => !(op.text in SYMBOL_OPS));
     if (spoken && ops.some((op) => op === "+" || op === "-") && ops.some((op) => op === "*" || op === "/")) return;
-    if (ops[0] === "-") {
-      const opened = sentenceEnds.filter((index) => index < tokens[k]!.at).at(-1);
-      const sentenceStart = opened === undefined ? 0 : opened + 1;
-      const lead = text.slice(sentenceStart, tokens[k]!.at);
-      if (/^\s*\p{L}+\s*$/u.test(lead) || /^\s*$/u.test(lead) && /(?:^|[\s.!?。])\p{L}+\.\s*$/u.test(text.slice(0, sentenceStart))) return;
-    }
     const exact = evaluate(values, ops);
     if (!exact) return;
     const start = tokens[k]!.at;

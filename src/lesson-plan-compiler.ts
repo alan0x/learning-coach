@@ -746,8 +746,11 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       const taskAlias = `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`;
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : undefined;
       // The check can only remove a message, never cost the lesson: if it fails, the message stays.
-      // A task that asks for rounding lets its message show results rounded to those places.
-      const places = activity.kind === "numeric_answer" ? roundingPlaces(activity.prompt, String(activity.answer)) : undefined;
+      // A task that asks for rounding to decimal places lets its message show results rounded to those places.
+      // Whole-number rounding is left out: a bare "round" in a prompt ("Round 2: …") with a whole answer reads
+      // as 0 places, and would let 7 ÷ 2 = 4 through.
+      const asked = activity.kind === "numeric_answer" ? roundingPlaces(activity.prompt, String(activity.answer)) : undefined;
+      const places = asked !== undefined && asked > 0 ? asked : undefined;
       let droppedPraise: CompiledLessonPlan["program_adjustments"][number] | undefined;
       let praiseClaims: ReturnType<typeof praiseArithmetic> | undefined;
       if (praise) {

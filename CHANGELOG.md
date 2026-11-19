@@ -3,12 +3,12 @@
 ## Unreleased
 
 - **Praise check, follow-up to #120** (plan 3.6). It still only drops a message, never repairs one, and changes no request.
-  - **A task that asks for rounding** ("保留两位小数", "to the nearest tenth", read by `roundingPlaces`) lets its message show results rounded to exactly those places, even a value that ends: `3.14 × 2.5 × 2.5 = 19.63` holds for that task and stays false elsewhere.
-  - **Labels by structure, not by a word list:** a number followed by a minus is a label when one word opens its sentence before it (`Task 2 - …`, `第2 - …`) or a one-word sentence comes just before it (`No. 2 - …`). The label word list is deleted. "…, and 22 minus 5 is 17" is still read.
+  - **A task that asks for rounding to decimal places** ("保留两位小数", "to the nearest tenth", read by `roundingPlaces`) lets its message show results rounded to exactly those places, even a value that ends: `3.14 × 2.5 × 2.5 = 19.63` holds for that task and stays false elsewhere. Whole-number rounding is left out, since a bare "round" in a prompt ("Round 2: …") with a whole answer reads as 0 places.
   - **A lone unspaced fraction** is a claim about its value: `6/3 = 2` and `3/4 = 0.75` hold, `6/3 = 3` is false.
   - **A curly apostrophe inside a word** (`isn’t`) counts as a straight one, so a negated claim is not read.
   - **Records:** a success-message record carries the task in a `task` field (the eval reads it). If the checker ever throws, the message is still kept, and a `success_message_unchecked` record says so.
   - **Unchanged:** the 139 recorded lessons replay identically; the census of 307 probe messages reads 10 claims on both builds, all true, none dropped.
+  - **Labels stay as on main.** A structural label rule was tried and dropped in review: one word before a subtraction ("Well done! So 15 - 7 = 9.", "真棒。所以15-7=9。") would have kept false messages that main drops. Labels outside the list ("Task 2 - …", "No. 2 - …") can still drop a correct message.
   - **Known, left:** a value that ends, shown rounded without the task asking (`19.63` elsewhere); remainders are still recognised by their words; `gcd` and the repeating-decimal test still duplicate number-line-fit's.
 
 - **A success message with false arithmetic is dropped** (plan 3.6, §10 item 5; decision 0020). When a task's model-written success message states a claim written wholly in numerals and operators (`8 + 5 = 14`, `9 plus 5 is 15`, `7 减 2 等于 4`) and the claim is false, the compiler leaves the message out; the player then shows its neutral reaction. The message is never repaired and never sent back to the model.
