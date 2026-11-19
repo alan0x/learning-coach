@@ -1563,7 +1563,8 @@ function compileFractionModel(
   }
   let split: number | undefined;
   if (view === "split") {
-    const k = input.split;
+    // Written as a choice ("2" to "6"); a whole number is read the same way.
+    const k = typeof input.split === "string" && /^[0-9]{1,2}$/u.test(input.split) ? Number(input.split) : input.split;
     if (shape === "grid") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "a grid's cells are not split again; use a bar or a circle");
     if (typeof k !== "number" || !Number.isInteger(k) || k < FRACTION_MODEL_LIMITS.splitMin || k > FRACTION_MODEL_LIMITS.splitMax) {
       fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, `split each part into ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);

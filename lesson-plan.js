@@ -13942,7 +13942,7 @@ var MATH_RECIPES = {
     output_kinds: ["fraction_model"],
     student_controls: [],
     required_features: ["fraction_parts"],
-    model_guidance: "\u5206\u6570\u7B49\u5206\u56FE\uFF1Afractions\u5199\u5206\u5B50\u5206\u6BCD\u7684\u503C\uFF1Bview\uFF1Aone\u3001compare\u4E24\u4E2A\u3001equivalent\u7B49\u503C\u3001split\u6BCF\u4EFD\u518D\u5206split\u4EFD\uFF08\u6C42\u6BCF\u4EFD\uFF09\uFF1Bshape\u53EF\u9009bar/circle/grid\uFF08\u767E\u5206\u4E4B\u51E0\u7528grid\uFF09"
+    model_guidance: "\u5206\u6570\u7B49\u5206\u56FE\uFF1Afractions\u5199\u5206\u5B50\u5206\u6BCD\u7684\u503C\uFF1Bview\uFF1Aone\u3001compare\u4E24\u4E2A\u3001equivalent\u7B49\u503C\u3001split\u6BCF\u4EFD\u518D\u5206split\u4EFD\uFF08\u6C42\u6BCF\u4EFD\uFF09\uFF1Bshape\u53EF\u9009bar/circle/grid\uFF08\u767E\u5206\u4E4B\u51E0\u7528grid\uFF09\uFF1B\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5206\u3001\u4E00\u7EC4\u7269\u4F53\u7684\u51E0\u5206\u4E4B\u51E0\u3001\u6BD4\uFF1B\u5927\u4E8E1\u5199\u4E00\u4E2A\u5047\u5206\u6570"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -14109,7 +14109,9 @@ var MATH_SCHEMA_PROPERTIES = {
     fraction_shape: { enum: ["bar", "circle", "grid"] },
     fractions: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: { numerator: { type: "integer" }, denominator: { type: "integer" } } } },
     fraction_view: { enum: ["one", "compare", "equivalent", "split"] },
-    split: { type: "integer" }
+    // A choice, not a free integer: as an integer the model filled it with thousands of digits when the view
+    // had no use for it (fraction probe 1, 2026-11-19: 13 times in 11 of 23 lessons).
+    split: { enum: ["2", "3", "4", "5", "6"] }
   },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
@@ -19374,7 +19376,7 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   }
   let split;
   if (view === "split") {
-    const k = input.split;
+    const k = typeof input.split === "string" && /^[0-9]{1,2}$/u.test(input.split) ? Number(input.split) : input.split;
     if (shape === "grid") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "a grid's cells are not split again; use a bar or a circle");
     if (typeof k !== "number" || !Number.isInteger(k) || k < FRACTION_MODEL_LIMITS.splitMin || k > FRACTION_MODEL_LIMITS.splitMax) {
       fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, `split each part into ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
