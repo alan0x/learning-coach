@@ -4,6 +4,7 @@ import {
   buildCubeWithSection, buildFunctionSurface, buildGeometricRearrangement, buildImplicitSurface,
   buildNumberLine, buildUnitCircle, buildUnitSquareArray, rearrangementRecipe, NUMBER_LINE_LIMITS,
   buildSolid, describeSolid, solidHasMeasure, solidUnfolds,
+  buildFractionModel, FRACTION_MODEL_LIMITS,
   type BuiltRecipe, type RearrangementConstruction, type Solid, type SolidMeasureKind,
 } from "octos-lesson-language/plugin-math";
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
@@ -1486,6 +1487,115 @@ function compileSolid3d(
   return { ...builtVisual(built), primaryScene: base, ...(variables.length ? { variables } : {}), ...(adjustments.length ? { adjustments } : {}) };
 }
 
+// ---- Fraction model (decision 0021, amended) ------------------------------------------------------------
+
+const FRACTION_VIEWS = ["one", "compare", "equivalent", "split"] as const;
+const FRACTION_SHAPES = ["bar", "circle", "grid"] as const;
+
+/** A grid for a denominator: rows × columns, both at most 10, as close to square as can be (100 is 10 × 10). */
+export function fractionGrid(denominator: number): { rows: number; columns: number } | undefined {
+  let best: { rows: number; columns: number } | undefined;
+  for (let rows = 1; rows <= FRACTION_MODEL_LIMITS.gridSide; rows += 1) {
+    if (denominator % rows) continue;
+    const columns = denominator / rows;
+    if (columns < rows || columns > FRACTION_MODEL_LIMITS.gridSide) continue;
+    best = { rows, columns };
+  }
+  return best;
+}
+
+const gcdOf = (a: number, b: number): number => (b === 0 ? a : gcdOf(b, a % b));
+
+/**
+ * Decision 0021: the model writes the fractions as values and what the card shows (one, two compared,
+ * two equivalent, or each part split again); the program draws the parts, decides the wholes, picks a
+ * model when none is written (a grid for hundredths, else a bar), lays out a grid's rows and columns,
+ * marks one share when parts are split (one piece of each shaded part: 3/5 split 4 marks 3/20) and writes
+ * that share under the card. A value the card cannot hold is this section's fault, which a retry can fix.
+ */
+function compileFractionModel(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "fraction_shape", "fractions", "fraction_view", "split"], path);
+  if ((content.numbers?.length ?? 0) > 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a fraction card's values are written in fractions; it uses no lesson numbers");
+  const view = input.fraction_view;
+  if (!FRACTION_VIEWS.includes(view as typeof FRACTION_VIEWS[number])) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_view`, `expected one of ${FRACTION_VIEWS.join(", ")}`);
+  const written = input.fractions;
+  const count = view === "compare" || view === "equivalent" ? 2 : 1;
+  if (!Array.isArray(written) || written.length !== count) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
+  const fractions = (written as JsonValue[]).map((item, index) => {
+    const at = `${path}.fractions[${index}]`;
+    const record = item && typeof item === "object" && !Array.isArray(item) ? item as Record<string, JsonValue> : fail("LESSON_PLAN_CAPABILITY_PARAMETER", at, "expected {numerator, denominator}");
+    const numerator = record.numerator, denominator = record.denominator;
+    if (typeof numerator !== "number" || !Number.isInteger(numerator) || numerator < 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${at}.numerator`, "the numerator is a whole number of parts, 0 or more");
+    if (typeof denominator !== "number" || !Number.isInteger(denominator) || denominator < 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${at}.denominator`, "the denominator is a whole number of equal parts, 1 or more");
+    return { numerator: numerator as number, denominator: denominator as number };
+  });
+  const shapeWritten = input.fraction_shape;
+  if (shapeWritten !== undefined && !FRACTION_SHAPES.includes(shapeWritten as typeof FRACTION_SHAPES[number])) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, `expected one of ${FRACTION_SHAPES.join(", ")}`);
+  const shape = (shapeWritten as typeof FRACTION_SHAPES[number] | undefined) ?? (fractions.every((fraction) => fraction.denominator === 100) ? "grid" : "bar");
+  let grid: { rows: number; columns: number } | undefined;
+  if (shape === "grid") {
+    const cells = fractions[0]!.denominator;
+    if (fractions.some((fraction) => fraction.denominator !== cells)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, "two fractions on grids share one denominator (one grid of cells); use bars or circles");
+    grid = fractionGrid(cells) ?? fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `no grid of at most 10 by 10 has ${cells} cells; use a bar or a circle`);
+  } else {
+    fractions.forEach((fraction, index) => {
+      if (fraction.denominator > FRACTION_MODEL_LIMITS.denominator) {
+        fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[${index}].denominator`, `a ${shape} has at most ${FRACTION_MODEL_LIMITS.denominator} parts; hundredths go on a grid`);
+      }
+    });
+  }
+  const maxWholes = shape === "grid" ? FRACTION_MODEL_LIMITS.gridWholes : FRACTION_MODEL_LIMITS.wholes;
+  fractions.forEach((fraction, index) => {
+    if (Math.ceil(fraction.numerator / fraction.denominator) > maxWholes) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[${index}]`, `at most ${maxWholes} wholes can be drawn`);
+  });
+  if (view === "equivalent") {
+    const [a, b] = fractions as [typeof fractions[0], typeof fractions[0]];
+    if (a.numerator * b.denominator !== b.numerator * a.denominator) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_view`, `${a.numerator}/${a.denominator} and ${b.numerator}/${b.denominator} are not equal; compare them instead`);
+  }
+  let split: number | undefined;
+  if (view === "split") {
+    const k = input.split;
+    if (shape === "grid") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "a grid's cells are not split again; use a bar or a circle");
+    if (typeof k !== "number" || !Number.isInteger(k) || k < FRACTION_MODEL_LIMITS.splitMin || k > FRACTION_MODEL_LIMITS.splitMax) {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, `split each part into ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
+    }
+    if (fractions[0]!.denominator * (k as number) > FRACTION_MODEL_LIMITS.splitParts) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, `after splitting, a whole has at most ${FRACTION_MODEL_LIMITS.splitParts} parts`);
+    if (fractions[0]!.numerator < 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].numerator`, "splitting shares the shaded parts: shade at least one");
+    split = k as number;
+  } else if (input.split !== undefined) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, "split goes with fraction_view split");
+  }
+  // One share: one piece of each shaded part, so the share is numerator / (denominator × split).
+  let caption: string | undefined;
+  if (split !== undefined) {
+    const { numerator, denominator } = fractions[0]!;
+    const parts = denominator * split, divisor = gcdOf(numerator, parts);
+    const share = divisor > 1 ? `${numerator}/${parts} = ${numerator / divisor}/${parts / divisor}` : `${numerator}/${parts}`;
+    caption = compileText(plan, "每份是 {{v0}}", { v0: share });
+  }
+  const built = buildFractionModel({
+    as: base, role, place: placement,
+    title: optionalText(input.title, compileText(plan, "分数"), `${path}.title`),
+    ...(caption ? { caption } : {}),
+    model: shape,
+    ...(grid ? { grid } : {}),
+    fractions: fractions.map((fraction) => ({
+      numerator: fraction.numerator, denominator: fraction.denominator,
+      ...(split !== undefined ? { split, highlight: fraction.numerator } : {}),
+    })),
+    ...(count === 2 ? { relation: view as "compare" | "equivalent" } : {}),
+  });
+  return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
+}
+
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -1504,4 +1614,5 @@ export const MATH_COMPILERS = {
   geometric_rearrangement: compileGeometricRearrangement,
   circle_area_rearrangement: compileCircleArea,
   solid_3d: compileSolid3d,
+  fraction_model: compileFractionModel,
 } satisfies Record<string, VisualCompiler>;

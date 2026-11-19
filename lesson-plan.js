@@ -12915,6 +12915,51 @@ function buildNumberLine(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/fraction-model-builder.js
+var driven2 = (value2) => typeof value2 === "object" && value2 !== null && typeof value2.expression === "string";
+function buildFractionModel(input) {
+  const bindings = [];
+  const names = ["a", "b"];
+  const fractions = input.fractions.map((fraction3, index) => {
+    const as = fraction3.as ?? names[index];
+    let numerator;
+    if (driven2(fraction3.numerator)) {
+      bindings.push({ target: `${as}.numerator`, expression: fraction3.numerator.expression });
+      numerator = fraction3.numerator.initial;
+    } else {
+      numerator = fraction3.numerator;
+    }
+    return {
+      as,
+      numerator,
+      denominator: fraction3.denominator,
+      ...fraction3.wholes !== void 0 ? { wholes: fraction3.wholes } : {},
+      ...fraction3.split !== void 0 ? { split: fraction3.split } : {},
+      ...fraction3.highlight !== void 0 ? { highlight: fraction3.highlight } : {}
+    };
+  });
+  const content = {
+    ...input.title !== void 0 ? { title: input.title } : {},
+    ...input.caption !== void 0 ? { caption: input.caption } : {},
+    model: input.model,
+    ...input.grid ? { grid: { ...input.grid } } : {},
+    fractions,
+    ...input.relation ? { relation: input.relation } : {},
+    ...bindings.length ? { bindings } : {}
+  };
+  const parts = { whole: input.as };
+  for (const fraction3 of fractions)
+    parts[fraction3.as] = `${input.as}#${fraction3.as}`;
+  const bound = fractions.find((fraction3) => bindings.some((binding) => binding.target === `${fraction3.as}.numerator`));
+  if (bound)
+    parts.primary_control = `${input.as}#${bound.as}`;
+  return {
+    actions: [{ do: "write", as: input.as, kind: "fraction_model", role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts
+  };
+}
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
 var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
 
@@ -13657,9 +13702,9 @@ function buildUnitCircle(input) {
 }
 function buildCirclePolygons(input) {
   const { radius } = input;
-  const driven2 = typeof input.sides === "number" ? void 0 : input.sides;
+  const driven3 = typeof input.sides === "number" ? void 0 : input.sides;
   const sides = typeof input.sides === "number" ? input.sides : input.sides.initial;
-  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven2?.min ?? sides)) * 1.18 : radius * 1.3;
+  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven3?.min ?? sides)) * 1.18 : radius * 1.3;
   const polygon = (as, label) => ({
     as,
     center: "center",
@@ -13680,9 +13725,9 @@ function buildCirclePolygons(input) {
       ...input.circumscribed ? [polygon("circumscribed", input.text.circumscribed_label)] : []
     ],
     ...input.text.caption !== void 0 ? { caption: input.text.caption } : {},
-    ...driven2 ? { bindings: [
-      { target: "inscribed.sides", expression: driven2.expression },
-      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven2.expression }] : []
+    ...driven3 ? { bindings: [
+      { target: "inscribed.sides", expression: driven3.expression },
+      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven3.expression }] : []
     ] } : {}
   };
   return {
@@ -13884,6 +13929,21 @@ var MATH_RECIPES = {
     required_features: ["solids", "section_plane"],
     model_guidance: "\u7ACB\u4F53\u90FD\u9009solids\uFF08\u542B\u622A\u9762\u5C55\u5F00\uFF09\uFF0C\u5C3A\u5BF8\u56FA\u5B9A\u4E0D\u5EFA\u6570\uFF1B2\u4E2A\u5E76\u6392\uFF0Cjoin\u53E0\u653E\u6216\u62FCL\uFF1B\u95EE\u5230\u7684\u4F53\u79EF/\u8868\u9762\u79EF/\u9762\u68F1\u9876\u70B9\u90FD\u5199show\uFF0C\u65E0\u76D6\u4E0D\u5199\u8868\u9762\u79EF"
   },
+  // Decision 0021 (amended): the model writes the fractions as values and what the card shows; the program
+  // draws the parts, decides the wholes, the grid and the marked share. A trial until its probe and gate.
+  fraction_model: {
+    parts: ["whole", "a", "b"],
+    number_inputs: [],
+    number_input_policies: [],
+    parameter_names: ["title", "fraction_shape", "fractions", "fraction_view", "split"],
+    model_parameter_names: ["title", "fraction_shape", "fractions", "fraction_view", "split"],
+    required_model_schema_parameters: ["fractions", "fraction_view"],
+    semantic_parameters: ["fraction_shape", "fractions", "fraction_view", "split"],
+    output_kinds: ["fraction_model"],
+    student_controls: [],
+    required_features: ["fraction_parts"],
+    model_guidance: "\u5206\u6570\u7B49\u5206\u56FE\uFF1Afractions\u5199\u5206\u5B50\u5206\u6BCD\u7684\u503C\uFF1Bview\uFF1Aone\u3001compare\u4E24\u4E2A\u3001equivalent\u7B49\u503C\u3001split\u6BCF\u4EFD\u518D\u5206split\u4EFD\uFF08\u6C42\u6BCF\u4EFD\uFF09\uFF1Bshape\u53EF\u9009bar/circle/grid\uFF08\u767E\u5206\u4E4B\u51E0\u7528grid\uFF09"
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -14045,6 +14105,12 @@ var MATH_SCHEMA_PROPERTIES = {
   },
   number_line_rounding: { place: { enum: ["hundreds", "tens", "ones", "tenths", "hundredths"] } },
   number_line_steps: { label_style: { enum: ["decimal", "fraction"] } },
+  fraction_model: {
+    fraction_shape: { enum: ["bar", "circle", "grid"] },
+    fractions: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: { numerator: { type: "integer" }, denominator: { type: "integer" } } } },
+    fraction_view: { enum: ["one", "compare", "equivalent", "split"] },
+    split: { type: "integer" }
+  },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
     solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {
@@ -14174,7 +14240,7 @@ function buildConstantSpeedMotion(input) {
   const distance = time.initial * speed.initial;
   const t = quantityValue(time);
   const v = quantityValue(speed);
-  const driven2 = Boolean(time.expression || speed.expression);
+  const driven3 = Boolean(time.expression || speed.expression);
   const lane = Number((0.08 * length2).toPrecision(12));
   const trackContent = {
     title: text4.title,
@@ -14182,13 +14248,13 @@ function buildConstantSpeedMotion(input) {
     points: [
       { as: "start", x: 0, y: lane, label: text4.start },
       { as: "finish", x: length2, y: lane, visible: false },
-      { as: "object", x: distance, y: lane, label: driven2 ? `${text4.distance_readout}${distance}${text4.distance_unit ? ` ${text4.distance_unit}` : ""}` : text4.object }
+      { as: "object", x: distance, y: lane, label: driven3 ? `${text4.distance_readout}${distance}${text4.distance_unit ? ` ${text4.distance_unit}` : ""}` : text4.object }
     ],
     segments: [
       { as: "track", from: "start", to: "finish", style: "dashed" },
       { as: "travelled", from: "start", to: "object", style: "solid" }
     ],
-    ...driven2 ? {
+    ...driven3 ? {
       bindings: [{
         target: "object.x",
         expression: `${v}*${t}`,
@@ -14201,7 +14267,7 @@ function buildConstantSpeedMotion(input) {
     axes: { x: { min: 0, max: time.max, label: text4.time_axis }, y: { min: 0, max: length2, label: text4.distance_axis } },
     curves: [{ as: "primary-curve", expression: `${v}*x`, label: text4.curve_label }],
     points: [{ as: "moving-point", x: time.initial, y: distance, label: text4.current_state }],
-    ...driven2 ? {
+    ...driven3 ? {
       bindings: [
         { target: "moving-point.x", expression: t },
         { target: "moving-point.y", expression: `${v}*${t}` }
@@ -14452,7 +14518,7 @@ var RECIPE_CATALOG_ORDER = [
   "solid_3d"
 ];
 var RETIRED_RECIPES = ["cube_with_section"];
-var TRIAL_RECIPES = ["constant_speed_motion"];
+var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -14505,7 +14571,12 @@ var SCHEMA_PROPERTY_ORDER = [
   "solids",
   "join",
   "show",
-  "interaction"
+  "interaction",
+  // The fraction model trial recipe (decision 0021); last, so requests without it keep their order.
+  "fraction_shape",
+  "fractions",
+  "fraction_view",
+  "split"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text4 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -14589,6 +14660,8 @@ var EN = {
   "\u7ACB\u4F53\u56FE\u5F62": "Solids",
   "\u622A\u9762\u9AD8\u5EA6": "Cut height",
   "\u5C55\u5F00": "Unfold",
+  "\u5206\u6570": "Fractions",
+  "\u6BCF\u4EFD\u662F {{v0}}": "Each share is {{v0}}",
   "y \u622A\u8DDD": "y-intercept",
   "x \u622A\u8DDD": "x-intercept",
   "\u5BF9\u79F0\u8F74": "Axis of symmetry",
@@ -19246,6 +19319,96 @@ function compileSolid3d(base, content, role, placement, plan, path) {
   if (interaction === "unfold") variables.push({ as: variable, initial: 0, min: 0, max: 1, label: compileText(plan, "\u5C55\u5F00"), control: { kind: "slider", step: 0.01 } });
   return { ...builtVisual(built), primaryScene: base, ...variables.length ? { variables } : {}, ...adjustments.length ? { adjustments } : {} };
 }
+var FRACTION_VIEWS = ["one", "compare", "equivalent", "split"];
+var FRACTION_SHAPES = ["bar", "circle", "grid"];
+function fractionGrid(denominator) {
+  let best;
+  for (let rows = 1; rows <= FRACTION_MODEL_LIMITS.gridSide; rows += 1) {
+    if (denominator % rows) continue;
+    const columns = denominator / rows;
+    if (columns < rows || columns > FRACTION_MODEL_LIMITS.gridSide) continue;
+    best = { rows, columns };
+  }
+  return best;
+}
+var gcdOf = (a, b) => b === 0 ? a : gcdOf(b, a % b);
+function compileFractionModel(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, ["title", "fraction_shape", "fractions", "fraction_view", "split"], path);
+  if ((content.numbers?.length ?? 0) > 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a fraction card's values are written in fractions; it uses no lesson numbers");
+  const view = input.fraction_view;
+  if (!FRACTION_VIEWS.includes(view)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_view`, `expected one of ${FRACTION_VIEWS.join(", ")}`);
+  const written = input.fractions;
+  const count = view === "compare" || view === "equivalent" ? 2 : 1;
+  if (!Array.isArray(written) || written.length !== count) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
+  const fractions = written.map((item, index) => {
+    const at2 = `${path}.fractions[${index}]`;
+    const record4 = item && typeof item === "object" && !Array.isArray(item) ? item : fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, "expected {numerator, denominator}");
+    const numerator = record4.numerator, denominator = record4.denominator;
+    if (typeof numerator !== "number" || !Number.isInteger(numerator) || numerator < 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.numerator`, "the numerator is a whole number of parts, 0 or more");
+    if (typeof denominator !== "number" || !Number.isInteger(denominator) || denominator < 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.denominator`, "the denominator is a whole number of equal parts, 1 or more");
+    return { numerator, denominator };
+  });
+  const shapeWritten = input.fraction_shape;
+  if (shapeWritten !== void 0 && !FRACTION_SHAPES.includes(shapeWritten)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, `expected one of ${FRACTION_SHAPES.join(", ")}`);
+  const shape = shapeWritten ?? (fractions.every((fraction3) => fraction3.denominator === 100) ? "grid" : "bar");
+  let grid;
+  if (shape === "grid") {
+    const cells = fractions[0].denominator;
+    if (fractions.some((fraction3) => fraction3.denominator !== cells)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, "two fractions on grids share one denominator (one grid of cells); use bars or circles");
+    grid = fractionGrid(cells) ?? fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `no grid of at most 10 by 10 has ${cells} cells; use a bar or a circle`);
+  } else {
+    fractions.forEach((fraction3, index) => {
+      if (fraction3.denominator > FRACTION_MODEL_LIMITS.denominator) {
+        fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[${index}].denominator`, `a ${shape} has at most ${FRACTION_MODEL_LIMITS.denominator} parts; hundredths go on a grid`);
+      }
+    });
+  }
+  const maxWholes = shape === "grid" ? FRACTION_MODEL_LIMITS.gridWholes : FRACTION_MODEL_LIMITS.wholes;
+  fractions.forEach((fraction3, index) => {
+    if (Math.ceil(fraction3.numerator / fraction3.denominator) > maxWholes) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[${index}]`, `at most ${maxWholes} wholes can be drawn`);
+  });
+  if (view === "equivalent") {
+    const [a, b] = fractions;
+    if (a.numerator * b.denominator !== b.numerator * a.denominator) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_view`, `${a.numerator}/${a.denominator} and ${b.numerator}/${b.denominator} are not equal; compare them instead`);
+  }
+  let split;
+  if (view === "split") {
+    const k = input.split;
+    if (shape === "grid") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "a grid's cells are not split again; use a bar or a circle");
+    if (typeof k !== "number" || !Number.isInteger(k) || k < FRACTION_MODEL_LIMITS.splitMin || k > FRACTION_MODEL_LIMITS.splitMax) {
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, `split each part into ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
+    }
+    if (fractions[0].denominator * k > FRACTION_MODEL_LIMITS.splitParts) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, `after splitting, a whole has at most ${FRACTION_MODEL_LIMITS.splitParts} parts`);
+    if (fractions[0].numerator < 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].numerator`, "splitting shares the shaded parts: shade at least one");
+    split = k;
+  } else if (input.split !== void 0) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, "split goes with fraction_view split");
+  }
+  let caption;
+  if (split !== void 0) {
+    const { numerator, denominator } = fractions[0];
+    const parts = denominator * split, divisor = gcdOf(numerator, parts);
+    const share = divisor > 1 ? `${numerator}/${parts} = ${numerator / divisor}/${parts / divisor}` : `${numerator}/${parts}`;
+    caption = compileText(plan, "\u6BCF\u4EFD\u662F {{v0}}", { v0: share });
+  }
+  const built = buildFractionModel({
+    as: base,
+    role,
+    place: placement,
+    title: optionalText(input.title, compileText(plan, "\u5206\u6570"), `${path}.title`),
+    ...caption ? { caption } : {},
+    model: shape,
+    ...grid ? { grid } : {},
+    fractions: fractions.map((fraction3) => ({
+      numerator: fraction3.numerator,
+      denominator: fraction3.denominator,
+      ...split !== void 0 ? { split, highlight: fraction3.numerator } : {}
+    })),
+    ...count === 2 ? { relation: view } : {}
+  });
+  return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
+}
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -19263,7 +19426,8 @@ var MATH_COMPILERS = {
   rectangle_unit_square_array: compileRectangleUnitSquareArray,
   geometric_rearrangement: compileGeometricRearrangement,
   circle_area_rearrangement: compileCircleArea,
-  solid_3d: compileSolid3d
+  solid_3d: compileSolid3d,
+  fraction_model: compileFractionModel
 };
 
 // src/plugins/physics-compilers.ts
