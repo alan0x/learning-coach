@@ -43,7 +43,9 @@ Each case was hand-encoded as the closest card today's recipe can draw, compiled
 | FD-23 (near miss) | two tapes for a ratio | if drawn: "3/5 > 2/5", misleading | must not be drawn | — |
 | FD-24 (near miss) | before and after tapes | if drawn on a grid: misleading | must not be drawn | — |
 
-**In-scope cases (22):** fully 3, mostly 7, partly 9, not drawable or misleading 3. **In 7, the model has to compute the answer to the question just to write the card**, against decision 0020 (the program writes the logic).
+**In-scope cases (22):** fully 3, mostly 7, partly 9, not drawable or misleading 3. Split by 0021's scope (one fraction, compare, equivalent, split, several wholes, grids):
+- **Inside 0021's scope (16 cases):** fully 3, mostly 7, partly 6, none misleading.
+- **Outside it (6 cases; adding, subtracting, copies, quantities):** partly 3, not drawable or misleading 3. **In 7, the model has to compute the answer to the question just to write the card**, against decision 0020 (the program writes the logic).
 
 Gaps, by type:
 1. **Quantity (tape) view** with a total, a unit and a value on each part: FD-17, FD-18, and FD-16 and FD-20 naturally. Earlier: FM-14, FM-15, FM-N2.
@@ -64,14 +66,14 @@ Gaps, by type:
 7. **A two-way area model:** FD-19, where the bar is an acceptable alternative.
 
 ## Free checks
-1. **What lessons show today without the card** (probe 3, card off):
-   - FM-15: a 2 × 3 unit grid, one row per litre, 6 cups. A better picture than the card drew in probes 1 and 2.
-   - FM-14: a 0–3 number line cut into 4.
-   - FM-13: a 5 × 4 area grid, with a canned line ("each square has an area of 1 square unit") that does not fit.
-   - FM-10: no picture, with narration that describes shading a grid that is not on the board.
-   - FM-11: lost.
+1. **What lessons show today without the card** (all three probes, the card off; read from the drawn content, not only the narration):
+   - **FM-14 (3 m cut into 4):** number lines whose jump goes 3 → 3.25, 0 → 0.25, and 0 → 0. None shows 3 m cut into 4, and each contradicts narration about pieces of 3/4 m.
+   - **FM-15 (1/3-litre cups):** jumps 0 → 1/3 and 0 → 0, and once a 2 × 3 array whose fixed caption says "each square has an area of 1 square unit", under a cups problem.
+   - **FM-13:** a 5-column area array (a fair picture), with the same area caption.
+   - **FM-10:** no picture, with narration that shades a grid that is not on the board.
+   - **FM-11:** lost.
 
-   So "no worse than today" is not automatic: for quantity problems, today's number line and array sometimes beat the fraction card.
+   Today, these quantity problems get a wrong number line, an area array captioned for area, or nothing. "No worse than card-off" is a low bar for them, and the card-off arm needs its own reading in any future probe. (An earlier draft of this record, from the narration only, said today's pictures sometimes beat the card; the drawn content does not support that.)
 2. **Can the narration see the card?** Not in the same call: each section's reply carries its narration and its card's values together (seen in every saved reply). Three options:
    - a second call per section, which costs time and changes every request with the trial on;
    - a check after compiling that compares numerals in the narration with the card's computed facts and asks again on a contradiction. Decision 0020 allows a re-ask on wording, and the praise check (Coach #120) is the numerals-only precedent; no word lists;
@@ -88,3 +90,15 @@ Gaps, by type:
 Eight sealed cases were first over the overlap bars and were reworded by the same agent, which saw only IDs and scores. All 34 are now under the bars; the file is read-only.
 
 **SHA-256 `1fbcdcc098630c5a1b6830059c9ce7f3f6b404bdb27984ea89bff070f38d4468`.** Any edit changes it; it is checked again before scoring.
+
+## Gaps ranked by gain
+Ranked by open M1 questions completed, as 0021's table did, and by probe misleads removed. Not ranked by development-case counts: the set has one or two cases per row by construction.
+
+| Gap | Open M1 questions it would complete | Probe misleads it would have removed |
+|---|---|---|
+| Quantity (tape) view | 4: G35-31, G68-08, G68-12, G68-38, all tagged for the planned tape-diagram component (`tape_diagram_ratio_table`: "bars of labelled parts and totals"), not the fraction card | FM-14 (probes 2, 3), FM-15 (probes 1, 2) |
+| Sharing: one piece from each whole | 1: G35-40 (two sandwiches in thirds, a third from each) | FM-13 (probe 1) |
+| Relation line only when comparing | 0 | FM-11 (probes 1, 3) |
+| Decimal and mixed-number input, converted and labelled by the program | 0 | FM-11 (all three probes), FM-10's labels |
+| Operation views (join, cross out, copies, re-cut) | 0 tagged | none |
+| Area model (two-way) | 0 for fractions (G912-06 is algebraic, kept for its own decision) | none |
