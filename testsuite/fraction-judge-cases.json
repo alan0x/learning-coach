@@ -1,5 +1,5 @@
 {
-  "note": "Fraction model judge cases (OLL decision 0021 §5 step 2: judge before recipe). Written for the probe, never taken from the question set: the fractions and wording are new. Each case's expectation is fixed before any run. `fractions` lists what the lesson's fraction card must show (numerator over denominator, in order unless `anyOrder`); `wholes`, `split`, `highlight`, `relation` and `smallestPart` (the denominator times the split: what each smallest piece is a part of the whole) are checked when given; `models` lists the models a teacher would accept. Near misses (`nearMiss`) are out of 0021's scope: the lesson must not draw a fraction card for them (`forbid`).",
+  "note": "Fraction model judge cases (OLL decision 0021 §5 step 2: judge before recipe). Written for the probe, never taken from the question set: the fractions and wording are new. Each case's expectation is fixed before any run. `fractions` lists what the lesson's fraction card must show (numerator over denominator, in order unless `anyOrder`); `wholes`, `split`, `highlight`, `relation` and `smallestPart` (the denominator times the split: what each smallest piece is a part of the whole) are checked when given, on the fraction the case is about (the slider's, or the one showing an expected fraction); a split or a marked share the case does not ask for is a miss (`highlightAtMost` allows a small one); `models` lists the models a teacher would accept. Near misses (`nearMiss`) are out of 0021's scope: the lesson must not draw a fraction card for them (`forbid`).",
   "cases": [
     {
       "id": "FM-01",
@@ -321,7 +321,8 @@
             }
           ]
         ],
-        "smallestPart": 3
+        "smallestPart": 3,
+        "highlightAtMost": 1
       }
     },
     {
@@ -363,6 +364,16 @@
             }
           ],
           [
+            {
+              "numerator": 7,
+              "denominator": 10
+            }
+          ],
+          [
+            {
+              "numerator": 3,
+              "denominator": 10
+            },
             {
               "numerator": 7,
               "denominator": 10

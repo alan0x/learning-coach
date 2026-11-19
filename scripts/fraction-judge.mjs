@@ -9,7 +9,7 @@
 // Two kinds of check:
 // - Expected values, written into each case before any run (0021 §5): the fractions shown (numerator
 //   over denominator as written, so 9/12 is not 3/4), the model, wholes, split, highlight, relation, the
-//   smallest piece,
+//   smallest piece, and nothing the case does not ask for (no split or marked share),
 //   the slider a practice task uses, and what must not appear (`forbid`, for near misses).
 // - Checks needing no expectation, on every card: the lesson normalizes; two fractions have a relation;
 //   fractions shown equivalent are equal; a bound numerator moves in whole parts.
@@ -130,22 +130,38 @@ function expectationMisses(expect, card, lesson) {
     misses.push(`shows ${drawn}, expected two of ${expect.fractionsFrom.map(text).join(", ")}`);
   }
   // An equal pair compared shows the same card as one shown equivalent ("5/6 = 10/12", computed by the
-  // program), and does not assume the answer (review of #130).
-  const equalPair = card.fractions.length === 2 && relationOf(card.fractions[0], card.fractions[1]) === "=";
+  // program), and does not assume the answer; a pair equal at a value a numerator is animated to counts
+  // too, since OLL allows no bound numerator on an equivalent card (review of #130).
+  const [left, right] = card.fractions;
+  const equalPair = card.fractions.length === 2 && left.values.some((a) => right.values.some((b) =>
+    relationOf({ numerator: a, denominator: left.denominator }, { numerator: b, denominator: right.denominator }) === "="));
   if (expect.relation && card.relation !== expect.relation && !(expect.relation === "equivalent" && card.relation === "compare" && equalPair)) {
     misses.push(`relation ${card.relation ?? "none"}, expected ${expect.relation}`);
   }
-  const first = card.fractions[0];
-  if (expect.wholes !== undefined && first) {
-    const wholes = first.wholes ?? Math.max(1, Math.ceil(first.numerator / first.denominator));
+  // The fraction the case is about: the slider's in a slider case, else the one showing an expected
+  // fraction, else the first (review of #130: a second fraction escaped every check).
+  const wanted = [...(expect.fractions ?? []), ...(expect.fractionsAnyOf ?? []).flat()];
+  const subject = (expect.slider && card.fractions.find((fraction) => fraction.bound?.variable && fraction.denominator === expect.slider.denominator))
+    ?? card.fractions.find((fraction) => wanted.some((want) => showsFraction(fraction, want))) ?? card.fractions[0];
+  if (expect.wholes !== undefined && subject) {
+    const wholes = subject.wholes ?? Math.max(1, Math.ceil(subject.numerator / subject.denominator));
     if (wholes !== expect.wholes) misses.push(`${wholes} whole(s), expected ${expect.wholes}`);
   }
-  if (expect.split !== undefined && first?.split !== expect.split) misses.push(`split ${first?.split ?? "none"}, expected ${expect.split}`);
-  if (expect.highlight !== undefined && first?.highlight !== expect.highlight) misses.push(`highlight ${first?.highlight ?? "none"}, expected ${expect.highlight}`);
+  if (expect.split !== undefined && subject?.split !== expect.split) misses.push(`split ${subject?.split ?? "none"}, expected ${expect.split}`);
+  if (expect.highlight !== undefined && subject?.highlight !== expect.highlight) misses.push(`highlight ${subject?.highlight ?? "none"}, expected ${expect.highlight}`);
   // Each smallest piece is 1/smallestPart of a whole: 3 wholes in quarters as 3/1 split 4 or 12/4, never
   // 12/4 split 2 (eighths; review of #130).
-  if (expect.smallestPart !== undefined && first && first.denominator * (first.split ?? 1) !== expect.smallestPart) {
-    misses.push(`smallest pieces are 1/${first.denominator * (first.split ?? 1)}, expected 1/${expect.smallestPart}`);
+  if (expect.smallestPart !== undefined && subject && subject.denominator * (subject.split ?? 1) !== expect.smallestPart) {
+    misses.push(`smallest pieces are 1/${subject.denominator * (subject.split ?? 1)}, expected 1/${expect.smallestPart}`);
+  }
+  // What a case does not ask for is not drawn: no split (a pie of sixths cut into twelfths) unless the case
+  // gives a split or a smallest piece, and no marked share unless it gives a highlight (or allows one, at
+  // most `highlightAtMost`).
+  for (const fraction of card.fractions) {
+    if (fraction.split !== undefined && expect.split === undefined && expect.smallestPart === undefined) misses.push(`${text(fraction)} split into ${fraction.split}, which the case does not ask for`);
+    if (fraction.highlight !== undefined && expect.highlight === undefined && !(expect.highlightAtMost !== undefined && fraction.highlight <= expect.highlightAtMost)) {
+      misses.push(`${text(fraction)} marks ${fraction.highlight} piece(s) as a share, which the case does not ask for`);
+    }
   }
   if (expect.slider) {
     const bound = card.fractions.find((fraction) => fraction.bound?.variable && fraction.denominator === expect.slider.denominator);
