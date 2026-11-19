@@ -1510,7 +1510,8 @@ const gcdOf = (a: number, b: number): number => (b === 0 ? a : gcdOf(b, a % b));
  * Decision 0021: the model writes the fractions as values and what the card shows (one, two compared,
  * two equivalent, or each part split again); the program draws the parts, decides the wholes, picks a
  * model when none is written (a grid for hundredths, else a bar), lays out a grid's rows and columns,
- * marks one share when parts are split (one piece of each shaded part: 3/5 split 4 marks 3/20) and writes
+ * marks one share when parts are split (as many of the smallest pieces as the numerator, in a row from the
+ * start: 3/5 split 4 marks three twentieths, 3/20 in all) and writes
  * that share under the card. A value the card cannot hold is this section's fault, which a retry can fix.
  */
 function compileFractionModel(
@@ -1573,12 +1574,14 @@ function compileFractionModel(
   } else if (input.split !== undefined) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split`, "split goes with fraction_view split");
   }
-  // One share: one piece of each shaded part, so the share is numerator / (denominator × split).
+  // One share is the shaded amount split k ways: numerator / (denominator × split), drawn as that many of the
+  // smallest pieces in a row. A share that is a whole number is written as one (6/3 split 2: "6/6 = 1").
   let caption: string | undefined;
   if (split !== undefined) {
     const { numerator, denominator } = fractions[0]!;
     const parts = denominator * split, divisor = gcdOf(numerator, parts);
-    const share = divisor > 1 ? `${numerator}/${parts} = ${numerator / divisor}/${parts / divisor}` : `${numerator}/${parts}`;
+    const simplest = parts / divisor === 1 ? `${numerator / divisor}` : `${numerator / divisor}/${parts / divisor}`;
+    const share = divisor > 1 ? `${numerator}/${parts} = ${simplest}` : `${numerator}/${parts}`;
     caption = compileText(plan, "每份是 {{v0}}", { v0: share });
   }
   const built = buildFractionModel({

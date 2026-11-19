@@ -180,4 +180,10 @@ test("a stubbed generation run: the card reaches the lesson; numerators and deno
   assert.deepEqual(result.content.fractions, [{ as: "a", numerator: 5, denominator: 8 }, { as: "b", numerator: 2, denominator: 3 }]);
   assert.equal(result.content.model, "circle");
   assert.equal(result.content.relation, "compare");
+  assert.deepEqual(result.plugins, { math: "0.4.0", shared: "0.1.0" });
+});
+
+test("a share that is a whole number is written as one (review of #131)", () => {
+  const result = withTrial(compileScript([["whole-share", { fractions: [f(6, 3)], fraction_view: "split", split: 2 }, "en-US"]]));
+  assert.equal(result["whole-share"].content.caption, "Each share is 6/6 = 1");
 });
