@@ -165,7 +165,8 @@
             "denominator": 4
           }
         ],
-        "wholes": 3
+        "wholes": 3,
+        "highlightAtMost": 4
       }
     },
     {
@@ -184,7 +185,8 @@
             "denominator": 3
           }
         ],
-        "wholes": 4
+        "wholes": 4,
+        "highlightAtMost": 3
       }
     },
     {

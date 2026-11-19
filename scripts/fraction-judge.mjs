@@ -157,10 +157,20 @@ function expectationMisses(expect, card, lesson) {
   // What a case does not ask for is not drawn: no split (a pie of sixths cut into twelfths) unless the case
   // gives a split or a smallest piece, and no marked share unless it gives a highlight (or allows one, at
   // most `highlightAtMost`).
+  const pieces = (fraction) => fraction.denominator * (fraction.split ?? 1);
   for (const fraction of card.fractions) {
-    if (fraction.split !== undefined && expect.split === undefined && expect.smallestPart === undefined) misses.push(`${text(fraction)} split into ${fraction.split}, which the case does not ask for`);
+    // A split that brings two fractions to the same pieces (3/4 in twelfths beside 9/12; 5/6 and 7/9 both
+    // in eighteenths) is the textbook way to compare them (review of #130, round 5).
+    const common = card.fractions.length === 2 && card.fractions.every((each) => pieces(each) === pieces(fraction));
+    if (fraction.split !== undefined && !common && expect.split === undefined && expect.smallestPart === undefined) misses.push(`${text(fraction)} split into ${fraction.split}, which the case does not ask for`);
     if (fraction.highlight !== undefined && expect.highlight === undefined && !(expect.highlightAtMost !== undefined && fraction.highlight <= expect.highlightAtMost)) {
       misses.push(`${text(fraction)} marks ${fraction.highlight} piece(s) as a share, which the case does not ask for`);
+    }
+  }
+  // In a slider case, a fixed fraction beside the slider must be one the case expects (review of #130, round 5).
+  if (expect.slider) {
+    for (const fraction of card.fractions) {
+      if (fraction !== subject && !wanted.some((want) => showsFraction(fraction, want))) misses.push(`${text(fraction)} beside the slider, which the case does not ask for`);
     }
   }
   if (expect.slider) {

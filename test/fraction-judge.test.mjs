@@ -131,6 +131,22 @@ test("what a case does not ask for is a miss, on the fraction the case is about 
   fails("FM-17", lesson({ model: "bar", fractions: [f(3, 10), f(3, 10)], relation: "compare" }), /expected one of/u);
 });
 
+test("a split to common pieces, a whole marked when counting wholes, and a fixed fraction beside a slider (review of #130, round 5)", () => {
+  passes("FM-06", lesson({ model: "bar", fractions: [f(3, 4, { split: 3 }), f(9, 12)], relation: "equivalent" }), "3/4 in twelfths beside 9/12");
+  passes("FM-05", lesson({ model: "bar", fractions: [f(5, 6, { split: 3 }), f(7, 9, { split: 2 })], relation: "compare" }), "both in eighteenths");
+  passes("FM-18", lesson({ model: "bar", fractions: [f(1, 2, { split: 5 }), f(3, 10)], relation: "compare" }), "1/2 in tenths beside 3/10");
+  // A split that does not bring the two to the same pieces is still a miss.
+  fails("FM-06", lesson({ model: "bar", fractions: [f(3, 4), f(9, 12, { split: 2 })], relation: "equivalent" }), /9\/12 split into 2, which the case does not ask for/u);
+  // One whole marked where the case counts wholes.
+  passes("FM-09", lesson({ model: "circle", fractions: [f(12, 3, { highlight: 3 })] }), "one cake marked");
+  fails("FM-09", lesson({ model: "circle", fractions: [f(12, 3, { highlight: 4 })] }), /marks 4 piece\(s\)/u);
+  // A fixed fraction beside the slider must be one the case expects.
+  const variables = [{ as: "n", initial: 0, min: 0, max: 8, label: "parts", control: { kind: "slider", step: 1 } }];
+  const beside = (fixed) => lesson({ model: "circle", fractions: [f(fixed, 8, { wholes: 1 }), { numerator: { expression: "n", initial: 0 }, denominator: 8, wholes: 1 }], relation: "compare" }, { variables, tasks: task(5) });
+  fails("FM-16", beside(3), /3\/8 beside the slider, which the case does not ask for/u);
+  passes("FM-16", beside(5), "a fixed 5/8 to match");
+});
+
 test("a model a teacher would not choose is a soft miss, not a hard one, whatever the order of the cards", () => {
   const verdictFor = verdict("FM-02", lesson({ model: "bar", fractions: [f(5, 6)] }));
   assert.deepEqual(verdictFor.hard, []);
