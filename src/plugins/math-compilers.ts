@@ -282,7 +282,41 @@ function compileFunctionPlot(
     const reached = markList.length
       ? [initialState, ...demonstrations, ...curveParameters.flatMap((parameter) => [parameter.min, parameter.max].map((value) => ({ ...initialState, [parameter.name]: value })))]
       : [initialState];
-    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2));
+    // With marks, the triangle's run must not cross a pole or a gap: 1/x has points at −1 and 1, but the
+    // secant between them jumps across x = 0 (plan 3.6). Between the two points the curve must exist at
+    // every sample, change sign only through a root, and not swell far beyond its ends.
+    const continuousBetween = (values: Record<string, number>, [from, to]: readonly [number, number]) => {
+      const f = (x: number) => { try { return evaluateCurve({ ...values, x }); } catch { return Number.NaN; } };
+      const ends = Math.max(Math.abs(f(from)), Math.abs(f(to)), 1);
+      const SAMPLES = 96;
+      let previous = { x: from, y: f(from) };
+      for (let index = 1; index <= SAMPLES; index += 1) {
+        const x = from + ((to - from) * index) / SAMPLES;
+        const y = f(x);
+        if (!Number.isFinite(y) || Math.abs(y) > 1e3 * ends) return false;
+        if (Math.sign(y) * Math.sign(previous.y) < 0) {
+          // A sign change: a root closes in on 0, a pole blows up. Bisect to tell which.
+          let [left, right] = [previous, { x, y }];
+          for (let step = 0; step < 60; step += 1) {
+            const middle = (left.x + right.x) / 2, value = f(middle);
+            if (!Number.isFinite(value)) return false;
+            if (Math.sign(value) === Math.sign(left.y)) left = { x: middle, y: value }; else right = { x: middle, y: value };
+          }
+          if (Math.min(Math.abs(left.y), Math.abs(right.y)) > 1e-6 * ends) return false;
+        }
+        previous = { x, y };
+      }
+      return true;
+    };
+    // A slider can carry a pole across the run between its ends, so the run is also checked at values inside
+    // each curve slider's range (only for continuity; the points need only exist where they did before).
+    const between = curveParameters.flatMap((parameter) => Array.from({ length: 7 }, (_, index) =>
+      ({ ...initialState, [parameter.name]: parameter.min + ((parameter.max - parameter.min) * (index + 1)) / 8 })));
+    const xs = pairs.find((pair) => reached.every((values) => referencePoints(values, pair).length === 2)
+      && (!markList.length || [...reached, ...between].every((values) => {
+        const ends = referencePoints(values, pair);
+        return ends.length < 2 || continuousBetween(values, pair);
+      })));
     if (xs) {
       references = referencePoints(initialState, xs);
       teachingPoints.push(...references, ...demonstrations.flatMap((values) => referencePoints(values, xs)));

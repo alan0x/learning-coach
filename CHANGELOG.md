@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **A slope triangle never spans a pole** (plan 3.6, renderer defect). The automatic A and B (marks: `slope_triangle`) were checked only at their own x: 1/(x − 2) took A = 1 and B = 3, and the triangle's secant jumped across the pole at x = 2. Between the two points the curve must now exist at every one of 96 samples, change sign only through a root (bisected: a root closes in on 0, a pole blows up), and stay within 1000 times its size at the ends, at the start, at every demonstrated state, at each curve slider's ends and at 7 values inside each slider's range (a slider can carry a pole across the run). Otherwise the next pair is tried, and with none the triangle is left out, as before. Lessons without marks are unchanged. Tests: a fixed pole, a pole a slider moves, a root between the points (kept). The 259 recorded lessons replay identically.
+
 - **Praise check, follow-up to #120** (plan 3.6). It still only drops a message, never repairs one, and changes no request.
   - **A task that asks for rounding to decimal places** ("保留两位小数", "to the nearest tenth", read by `roundingPlaces`) lets its message show results rounded to exactly those places, even a value that ends: `3.14 × 2.5 × 2.5 = 19.63` holds for that task and stays false elsewhere. Whole-number rounding is left out, since a bare "round" in a prompt ("Round 2: …") with a whole answer reads as 0 places.
   - **A lone unspaced fraction** is a claim about its value: `6/3 = 2` and `3/4 = 0.75` hold, `6/3 = 3` is false.
