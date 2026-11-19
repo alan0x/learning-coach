@@ -79,7 +79,7 @@ export function runLesson({ build, input, env, maxCalls, onRaw = () => {} }) {
   return new Promise((done) => {
     const startedAt = Date.now();
     const child = spawn(process.execPath, [join(build, "main"), "oll_generate_lesson"], { env, stdio: ["pipe", "pipe", "pipe"] });
-    const row = { outcome: "error", first_playable_ms: null, total_ms: null, calls: 0, prompt_tokens: 0, candidate_tokens: 0, thought_tokens: 0, sections: null, parts: [], rejections: 0 };
+    const row = { outcome: "error", first_playable_ms: null, total_ms: null, calls: 0, prompt_tokens: 0, candidate_tokens: 0, thought_tokens: 0, sections: null, parts: [], rejections: 0, provider_failures: 0 };
     let stdout = "";
     let buffer = "";
     child.stdout.on("data", (chunk) => { stdout += chunk.toString("utf8"); });
@@ -100,6 +100,8 @@ export function runLesson({ build, input, env, maxCalls, onRaw = () => {} }) {
         try { entry = JSON.parse(json); } catch { continue; }
         if (entry.stage === "lesson-plan-outline-ready" && typeof entry.sections === "number") row.sections = entry.sections;
         if (entry.stage === "lesson-plan-local-rejection") row.rejections += 1;
+        // A transport failure is the provider's, not the build's: probe drivers retry such a lesson once.
+        if (entry.stage === "model-call" && entry.status === "failed") row.provider_failures += 1;
         if (entry.stage === "lesson-prefix-published" && row.first_playable_ms === null) row.first_playable_ms = Date.now() - startedAt;
         if (entry.stage === "model-call" && entry.status === "started") {
           row.calls += 1;
