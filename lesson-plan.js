@@ -19229,7 +19229,6 @@ var NEGATED = /\b(not|isn't|aren't|never|instead|mistake|wrong|incorrect)\b|不�
 var ASKED_CLAUSE = /^\s*(is|are|does|do|if|suppose|what if)\b|^\s*(如果|假如|假设|要是)/iu;
 var ASKED_SENTENCE = /[?？吗][\s"'”’)）]*$/u;
 var ROUNDED = /\brounded\b|\bround(?:s|ing)? (?:to|off|up|down)\b|\bdecimal places?\b|\bapproximately\b|\bnearest (?:whole|tenth|hundredth|thousandth|integer|cent)\b|约等于|大约|近似|保留|四舍五入|精确到/iu;
-var LABEL = /^(step|question|problem|part|example|exercise|no|q|第)$/iu;
 var SENTENCE_END = /[!?。！？；;\n]|\.(?!\d)/gu;
 var CLAUSE_END = /[!?。！？；;\n、]|\.(?!\d)|(?<!\d)[,，:：]|[,，:：](?!\d)/gu;
 var GLUE = /[A-Za-zα-ωπ%°²³⁰¹⁴⁵⁶⁷⁸⁹^′″\u0300-\u036f]/u;
@@ -19337,19 +19336,20 @@ function nonTerminating(value2) {
   while (d % 5n === 0n) d /= 5n;
   return d !== 1n;
 }
-function holds(exact, resultText, result) {
+function holds(exact, resultText, result, taskPlaces) {
   const difference = sub3(exact, result);
   if (difference.n === 0n) return true;
   const places = (/\.(\d+)/u.exec(resultText)?.[1] ?? "").length;
-  if (places === 0 || !nonTerminating(exact)) return false;
   const scale2 = 10n ** BigInt(places);
+  if (taskPlaces === places && abs(difference.n) * 2n * scale2 <= difference.d) return true;
+  if (places === 0 || !nonTerminating(exact)) return false;
   const rounded = abs(difference.n) * 2n * scale2 <= difference.d;
   const towardZero = exact.n > 0n === difference.n > 0n && (result.n === 0n || result.n > 0n === exact.n > 0n);
   const cutOff = places >= 2 && towardZero && abs(difference.n) * scale2 < difference.d;
   return rounded || cutOff;
 }
-function praiseArithmetic(text3) {
-  text3 = text3 ?? "";
+function praiseArithmetic(text3, options = {}) {
+  text3 = (text3 ?? "").replace(new RegExp("(?<=\\p{L})[\u2019\u2018](?=\\p{L})", "gu"), "'");
   const tokens = tokenize2(text3);
   const claims = [];
   const sentenceEnds = [...text3.matchAll(SENTENCE_END)].map((match) => match.index);
@@ -19386,15 +19386,22 @@ function praiseArithmetic(text3) {
       ops.unshift(op);
       k -= 2;
     }
-    if (ops.length === 0 || values.length !== ops.length + 1) return;
+    const loneFraction = ops.length === 0 && values.length === 1 && tokens[k].text.includes("/");
+    if (!loneFraction && (ops.length === 0 || values.length !== ops.length + 1)) return;
     const before = tokens[k - 1];
     const chain = before?.kind === "eq" && before.symbol && (tokens[k - 2]?.kind === "num" || /^[)\]}|]$/u.test(tokens[k - 2]?.text ?? ""));
-    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || chain || /^[([{|]$/u.test(before.text) || /^[:：,]$/u.test(before.text) && betweenDigits(before) || LABEL.test(before.text))) return;
+    if (before && (before.kind === "num" || operatorAt(tokens, k - 1) || chain || /^[([{|]$/u.test(before.text) || /^[:：,]$/u.test(before.text) && betweenDigits(before))) return;
     const spacedEquals = !token.symbol || /\s/u.test(text3[token.at - 1] ?? "") || /\s/u.test(text3[token.end] ?? "");
     const opTokens = tokens.slice(k, e).filter((_t, index) => index % 2 === 1);
     if (spacedEquals && opTokens.some((op) => op.kind === "op" && op.op === "-" && op.text !== "\u2212" && betweenDigits(op))) return;
     const spoken = opTokens.some((op) => !(op.text in SYMBOL_OPS));
     if (spoken && ops.some((op) => op === "+" || op === "-") && ops.some((op) => op === "*" || op === "/")) return;
+    if (ops[0] === "-") {
+      const opened = sentenceEnds.filter((index) => index < tokens[k].at).at(-1);
+      const sentenceStart = opened === void 0 ? 0 : opened + 1;
+      const lead = text3.slice(sentenceStart, tokens[k].at);
+      if (new RegExp("^\\s*\\p{L}+\\s*$", "u").test(lead) || /^\s*$/u.test(lead) && new RegExp("(?:^|[\\s.!?\u3002])\\p{L}+\\.\\s*$", "u").test(text3.slice(0, sentenceStart))) return;
+    }
     const exact = evaluate2(values, ops);
     if (!exact) return;
     const start = tokens[k].at;
@@ -19402,7 +19409,7 @@ function praiseArithmetic(text3) {
     const clause = span2(clauseEnds, start, end);
     const sentence = span2(sentenceEnds, start, end);
     if (NEGATED.test(clause) || ASKED_CLAUSE.test(clause) || ASKED_SENTENCE.test(sentence) || ROUNDED.test(sentence) || ops.includes("/") && REMAINDER.test(sentence)) return;
-    claims.push({ text: text3.slice(start, end).trim(), holds: holds(exact, result.text, result.value) });
+    claims.push({ text: text3.slice(start, end).trim(), holds: holds(exact, result.text, result.value, options.places) });
   });
   return {
     verdict: claims.length === 0 ? "none" : claims.every((claim) => claim.holds) ? "true" : "false",
@@ -20012,17 +20019,19 @@ function compileLessonPlan(value2, options = {}) {
       }
       const taskAlias = `section-${pad2(sectionOffset + 1)}-task-${pad2(activityOffset + 1)}`;
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : void 0;
-      const praiseClaims = praise ? (() => {
-        try {
-          return praiseArithmetic(praise);
-        } catch {
-          return void 0;
-        }
-      })() : void 0;
+      const places = activity.kind === "numeric_answer" ? roundingPlaces(activity.prompt, String(activity.answer)) : void 0;
       let droppedPraise;
+      let praiseClaims;
+      if (praise) {
+        try {
+          praiseClaims = praiseArithmetic(praise, { places });
+        } catch (error) {
+          droppedPraise = { section: sectionOffset + 1, kind: "success_message_unchecked", reason: "praise_check_failed", task: taskAlias, detail: `${taskAlias} (${activityPath}.success_message): ${String(error?.message ?? error).slice(0, 200)}` };
+        }
+      }
       if (praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
-        droppedPraise = { section: sectionOffset + 1, kind: "success_message_removed", reason: "praise_false_arithmetic", detail: `${taskAlias} (${activityPath}.success_message): ${wrong}` };
+        droppedPraise = { section: sectionOffset + 1, kind: "success_message_removed", reason: "praise_false_arithmetic", task: taskAlias, detail: `${taskAlias} (${activityPath}.success_message): ${wrong}` };
         praise = void 0;
       }
       const common = {
