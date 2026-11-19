@@ -19389,7 +19389,8 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   if (split !== void 0) {
     const { numerator, denominator } = fractions[0];
     const parts = denominator * split, divisor = gcdOf(numerator, parts);
-    const share = divisor > 1 ? `${numerator}/${parts} = ${numerator / divisor}/${parts / divisor}` : `${numerator}/${parts}`;
+    const simplest = parts / divisor === 1 ? `${numerator / divisor}` : `${numerator / divisor}/${parts / divisor}`;
+    const share = divisor > 1 ? `${numerator}/${parts} = ${simplest}` : `${numerator}/${parts}`;
     caption = compileText(plan, "\u6BCF\u4EFD\u662F {{v0}}", { v0: share });
   }
   const built = buildFractionModel({

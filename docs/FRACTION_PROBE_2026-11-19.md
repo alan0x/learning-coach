@@ -23,5 +23,6 @@ A near pass is reported as a miss. Another probe is a new paid step that the own
 
 ## Known risks, recorded before the run
 - **"How many 1/3s in 2" (FM-15):** the recipe marks one share whenever parts are split. If the model writes 2/1 split into 3 instead of 6/3, two pieces are marked and the judge fails it. The card does not say which form to use.
+- **A split view always marks a share and names it** (review of #131). A model that uses split only to count pieces (4 ÷ 1/5 written as 4/1 split 5) or to show 3/4 = 6/8 gets a share it did not ask for; the judge counts an unasked share as a miss, and the hand reading watches for it.
 - **A fault in section 2 or later** (a value the card cannot hold) is retried as a section; if every retry fails, the lesson is lost after section 1 has played, the 3.8 pattern. Bar 3 counts these.
 - **Request cost** with the trial on: card 220 B and schema 292 B on the first request, within 0021's 700 B.
