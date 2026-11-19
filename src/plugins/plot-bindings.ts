@@ -163,15 +163,12 @@ const omittedControls = new WeakMap<LessonPlanSectionDraft, Set<number>>();
 const omittedSamplePlots = new WeakMap<LessonPlanSectionDraft, Set<number>>();
 
 export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, context: DraftSpecializationContext): void {
-  const { outline, accepted, adjust } = context;
+  const { outline, request, accepted, adjust } = context;
   const visuals = sectionVisuals(draft);
   const previousVisuals = accepted.flatMap(sectionVisuals);
   const plots = visuals.filter(({ visual }) => visual.capability === "function_plot");
   const text = sectionText(draft);
-  // Only what this section writes can ask for dragged points: a retry of the section can change its own
-  // text, never the outline's purpose or the learner's request, so a refusal keyed on those could never be
-  // met and the lesson would be lost (plan 3.6, 6c).
-  const plotText = text;
+  const plotText = [...text, ...clauses(outline.sections[draft.section - 1]?.purpose ?? ""), ...clauses(request)];
   const wantsVertex = plots.length === 1 && text.some(line => positiveInstruction(line, vertexInstruction)
     && (visuals.length === 1 || /抛物线|\bparabola\b/iu.test(line)));
   const asksForSamples = (line: string) => positiveInstruction(line, sampleIntent) && interactionVerb.test(line);
@@ -273,7 +270,9 @@ export function normalizePlotDraftBindings(draft: LessonPlanSectionDraft, contex
       curve = plotCurveNumbers(visual.parameters);
       adjust({ kind: "plot_binding_rebuilt", section: draft.section, moment, reason: "quadratic_vertex_from_confirmed_roles" });
     } else {
-      if (fixed && singleFormula && sampleIntentUnmet && (plots.length === 1 || candidates.length)) {
+      // Only when the outline declares a lesson number a dragged point could use: a section retry cannot add
+      // one, so without any this refusal could never be met and the lesson would be lost (plan 3.6, 6c).
+      if (fixed && singleFormula && sampleIntentUnmet && count > 0 && (plots.length === 1 || candidates.length)) {
         const indexes = candidates.slice(0, 2);
         fail("LESSON_PLAN_INTERACTION_MISMATCH", path, indexes.length
           ? `Use parameters.points with ${indexes.map((index) => `{slider: "n${index}"}`).join(" and ")} for the points the learner drags; one entry for one point`

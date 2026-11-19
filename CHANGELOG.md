@@ -2,10 +2,9 @@
 
 ## Unreleased
 
-- **No refusal a section retry cannot meet (plan 3.6, 6c).** Two section checks read text the section cannot change, so a retry could never satisfy them and the lesson was lost.
-  - **Dragged points:** whether a plot must carry dragged points is now read from the section's own narration and tasks only, not from the outline's purpose or the learner's request. When only the request asks to move points and the section changes the curve, the unused samples are dropped (as for any unused sample) instead of refused.
-  - **Circle area with a polygon rearrangement:** the guard reads the moment's narration and the picture's title, not the section's purpose.
-  - **Evidence:** in 259 recorded lessons (the 139 replays and the no-visual probe's 120), neither refusal ever fired through the purpose or the request; every lesson replays identically. No request changes. Two tests pin the new behaviour; both fail on main.
+- **No refusal a section retry cannot meet (plan 3.6, 6c).** When the learner's request asks to drag points on a fixed curve but the outline declares no lesson number, the section was refused with "use parameters.points with {slider: nK}". No section retry can add a lesson number, so the lesson was lost. The plot is now drawn without dragged points in that case; with a number available, the section is still asked for its points.
+  - **Kept as on main, after review:** the outline's purpose and the learner's request still count as asking for dragged points, and the circle-area guard still reads the purpose. A first version removed both. Review showed that this let through a polygon rearrangement presented as deriving circle area, and later narration asking to move points that do not exist. Main's refusals there can be met by a retry.
+  - **Evidence:** of 259 recorded lessons (the 139 replays and the no-visual probe's 120), one hits the case (NV-05 on main, a scatter of four points). It is lost on both builds for another reason (a plot holds at most two points), so only its rejection list differs. Every other lesson replays identically. No request changes. One test pins the change and fails on main; another pins that a number still gets asked for.
 
 - **Praise check, follow-up to #120** (plan 3.6). It still only drops a message, never repairs one, and changes no request.
   - **A task that asks for rounding to decimal places** ("保留两位小数", "to the nearest tenth", read by `roundingPlaces`) lets its message show results rounded to exactly those places, even a value that ends: `3.14 × 2.5 × 2.5 = 19.63` holds for that task and stays false elsewhere. Whole-number rounding is left out, since a bare "round" in a prompt ("Round 2: …") with a whole answer reads as 0 places.

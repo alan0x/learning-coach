@@ -248,8 +248,7 @@ export function validateTeachingClaims(plan: LessonPlan): void {
       for (const action of visuals) {
         if (action.action!=="create" || action.kind!=="visual") continue;
         const visual=action.content as {capability:string;parameters?:Record<string,unknown>;numbers?:number[]};
-        // The section's own text only: a section retry cannot change the outline's purpose (plan 3.6, 6c).
-        const text=[moment.narration,visual.parameters?.title].join(" ");
+        const text=[section.purpose,moment.narration,visual.parameters?.title].join(" ");
         const path=`$plan.sections[${si}].moments[${mi}]`;
         if (visual.capability==="geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text)
           && /证明|推导|拼|重排|prove|derive/i.test(text)) {

@@ -399,12 +399,22 @@ test("an unreadable earlier sample field does not hide later use of an unbound c
   assert.deepEqual(prefixes[0].plot, plot);
 });
 
-test("6c: the learner's request alone never forces dragged points a section retry cannot add", async () => {
-  // The request asks to move points; the section changes the curve and never mentions points. A retry of the
-  // section cannot change the request, so the program drops the unused samples instead of refusing.
-  const result = await run(plotDraft({ formula: parameterizedFormula, samples: [1, 2], narration: vertexInstruction }),
-    { learnerRequest: sampleInstruction });
+test("6c: a request for dragged points is not forced on a plot whose outline has no number to drag", async () => {
+  // The request asks to move points, but the outline declares no lesson number, so no section retry can add
+  // a dragged point: main refused until the lesson was lost. The fixed curve is drawn instead.
+  const draft = plotDraft();
+  draft.outline.numbers = [];
+  const result = await run(draft, { learnerRequest: sampleInstruction });
   assert.deepEqual(result.rejections, []);
   assert.equal(result.prefixes[0].calls, 1);
-  assert.ok(result.adjustments.some(event => event.reason === "unused_samples_on_parameterized_curve"));
 });
+
+test("6c: with a number to drag, the request still asks the section for its points", async () => {
+  const result = await run(plotDraft(), {
+    learnerRequest: sampleInstruction,
+    fix(draft) { draft.course_visual_creates.visual_1.content.parameters.points = [{ slider: "n1" }]; },
+  });
+  assert.equal(result.rejections.length, 1);
+  assert.match(result.rejections[0].error.message, /parameters\.points/u);
+});
+
