@@ -1,4 +1,4 @@
-# Fraction model probes 1 and 2 (run 2026-11-19: both fail bar 4)
+# Fraction model probes 1–3 (run 2026-11-19: all fail; the card is parked)
 
 Decision 0021 §5 step 4: a small paid probe of the `fraction_model` trial recipe (Coach #131, with #132's runner and caption fix), quality only. **It needs the owner's approval of the call cap before it runs**, and it waits for the owner's answer on how a fraction's slider is made (FM-16 is left out until then).
 
@@ -89,3 +89,27 @@ The last probe of this recipe. **If bar 4 fails again, the fraction card is park
 - **Same as probes 1 and 2:** the 23 cases (FM-16 out), both arms, the command, and bars 1–4 unchanged.
 - **Build:** Coach main once #137 and the OLL #78 pin are merged, frozen. Gemini 3.6 Flash on the development key (`dev-probes.json`), cap **120** calls.
 - **Hand reading (bar 4)** reads the card as drawn, not only its data. A grid's columns and rows, the wholes shown, the parts split and any share marked are all checked against the narration.
+
+## Probe 3 result (run 2026-11-19): fails bars 2 and 4; the card is parked
+Build Coach `420695d` (frozen copy; #137 and the OLL da6c807 pin), Gemini 3.6 Flash on the development key, cap 120: **101 calls**, none not run. Report and lessons: `handoff-math-expressiveness/runs/fractions/probe-3/`.
+
+| Bar | Result | Verdict |
+|---|---|---|
+| 1. In-scope judge passes | **14 / 17** (misses FM-11, FM-14, FM-15) | pass |
+| 2. Near misses with a fraction card | **2 / 6** (FM-N1, FM-N6) | **fail** |
+| 3. Lost lessons | candidate 0, baseline 3 | pass |
+| 4. Misleading narration, read by hand | **2** (FM-11, FM-14) | **fail** |
+
+**By the stop rule registered above, the fraction card is parked.** The trial stays off; the card (OLL), its judge, cases and the trial recipe stay, and the work moves to counters and ten frames.
+
+What the fixes did and did not do:
+- **Grids by columns worked:** FM-10's "four full columns" now matches the card.
+- **Fractions in the first reply improved but were not fixed:** missing in 9 of 17 lessons (16 of 19 in probe 2). The re-asks cost fewer calls than before (43 for the in-scope lessons against 36 on the baseline, from 49 against 32).
+- **The honest refusal for 37 parts misfired (FM-N6):** told no card draws 37 parts, the model drew 1/5 "for comparison" under a lesson about 5/37. No lesson was lost, but the card shows a fraction the question never asked about.
+- **The misleading lessons are the same two problems as before:**
+  - FM-11: 1.6 drawn as "100/100 > 60/100" while the narration adds them.
+  - FM-14: 3 ÷ 4 drawn as 3/4 of one bar while the narration calls the bar the 3-metre cloth.
+  
+  Both come from questions whose whole is not one bar: a number above 1 written as two parts, and a whole-number dividend. The card has no way to show either one reliably from the model's choice of fractions.
+
+Over three probes, misleading lessons: 3, 4 (plus 1 borderline), 2. Near misses with a card: 3, 1, 2.
