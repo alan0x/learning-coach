@@ -4940,3 +4940,13 @@ test("a count shared with a visual of another range is refused when the shared r
   assert.throws(() => compileAndValidateLessonPlan(plan), (error) => error.code === "LESSON_PLAN_OUTLINE_VISUAL"
     && error.capability === "rectangle_unit_square_array" && /number 1 is 12/.test(error.message));
 });
+
+test("6c: the circle-area guard reads the section's own text, not the outline's purpose", () => {
+  // A section retry cannot change the outline's purpose, so a refusal keyed on it could never be met.
+  const plan = samplePlan("geometric_rearrangement");
+  plan.sections[0].purpose = "推导圆的面积公式";
+  plan.sections[0].moments[0].narration = "先看直角三角形拼成的正方形。";
+  assert.doesNotThrow(() => compileAndValidateLessonPlan(plan));
+  plan.sections[0].moments[0].narration = "用这些图形拼一拼，推导圆的面积。";
+  assert.throws(() => compileAndValidateLessonPlan(plan), error => error.code === "LESSON_PLAN_TEACHING_MISMATCH");
+});

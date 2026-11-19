@@ -398,3 +398,13 @@ test("an unreadable earlier sample field does not hide later use of an unbound c
   assert.match(rejections[0].error.message, /no visual binding/u);
   assert.deepEqual(prefixes[0].plot, plot);
 });
+
+test("6c: the learner's request alone never forces dragged points a section retry cannot add", async () => {
+  // The request asks to move points; the section changes the curve and never mentions points. A retry of the
+  // section cannot change the request, so the program drops the unused samples instead of refusing.
+  const result = await run(plotDraft({ formula: parameterizedFormula, samples: [1, 2], narration: vertexInstruction }),
+    { learnerRequest: sampleInstruction });
+  assert.deepEqual(result.rejections, []);
+  assert.equal(result.prefixes[0].calls, 1);
+  assert.ok(result.adjustments.some(event => event.reason === "unused_samples_on_parameterized_curve"));
+});

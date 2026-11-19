@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **No refusal a section retry cannot meet (plan 3.6, 6c).** Two section checks read text the section cannot change, so a retry could never satisfy them and the lesson was lost.
+  - **Dragged points:** whether a plot must carry dragged points is now read from the section's own narration and tasks only, not from the outline's purpose or the learner's request. When only the request asks to move points and the section changes the curve, the unused samples are dropped (as for any unused sample) instead of refused.
+  - **Circle area with a polygon rearrangement:** the guard reads the moment's narration and the picture's title, not the section's purpose.
+  - **Evidence:** in 259 recorded lessons (the 139 replays and the no-visual probe's 120), neither refusal ever fired through the purpose or the request; every lesson replays identically. No request changes. Two tests pin the new behaviour; both fail on main.
+
 - **Praise check, follow-up to #120** (plan 3.6). It still only drops a message, never repairs one, and changes no request.
   - **A task that asks for rounding to decimal places** ("保留两位小数", "to the nearest tenth", read by `roundingPlaces`) lets its message show results rounded to exactly those places, even a value that ends: `3.14 × 2.5 × 2.5 = 19.63` holds for that task and stays false elsewhere. Whole-number rounding is left out, since a bare "round" in a prompt ("Round 2: …") with a whole answer reads as 0 places.
   - **A lone unspaced fraction** is a claim about its value: `6/3 = 2` and `3/4 = 0.75` hold, `6/3 = 3` is false.

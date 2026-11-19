@@ -15315,12 +15315,12 @@ function recoverVertex(visual, candidates, outline) {
 var omittedControls = /* @__PURE__ */ new WeakMap();
 var omittedSamplePlots = /* @__PURE__ */ new WeakMap();
 function normalizePlotDraftBindings(draft, context) {
-  const { outline, request, accepted, adjust } = context;
+  const { outline, accepted, adjust } = context;
   const visuals = sectionVisuals(draft);
   const previousVisuals = accepted.flatMap(sectionVisuals);
   const plots = visuals.filter(({ visual }) => visual.capability === "function_plot");
   const text3 = sectionText(draft);
-  const plotText = [...text3, ...clauses(outline.sections[draft.section - 1]?.purpose ?? ""), ...clauses(request)];
+  const plotText = text3;
   const wantsVertex = plots.length === 1 && text3.some((line) => positiveInstruction(line, vertexInstruction) && (visuals.length === 1 || /抛物线|\bparabola\b/iu.test(line)));
   const asksForSamples = (line) => positiveInstruction(line, sampleIntent) && interactionVerb.test(line);
   const wantsSamples = plotText.some(asksForSamples);
@@ -15650,7 +15650,7 @@ function validateTeachingClaims(plan) {
       for (const action of visuals) {
         if (action.action !== "create" || action.kind !== "visual") continue;
         const visual = action.content;
-        const text3 = [section.purpose, moment.narration, visual.parameters?.title].join(" ");
+        const text3 = [moment.narration, visual.parameters?.title].join(" ");
         const path = `$plan.sections[${si}].moments[${mi}]`;
         if (visual.capability === "geometric_rearrangement" && /圆(?:的)?面积|circle.{0,12}area|area.{0,12}circle/i.test(text3) && /证明|推导|拼|重排|prove|derive/i.test(text3)) {
           throw new LessonPlanError("LESSON_PLAN_TEACHING_MISMATCH", path, "circle area requires circle_area_rearrangement; polygon recipes cannot prove pi*r^2");
