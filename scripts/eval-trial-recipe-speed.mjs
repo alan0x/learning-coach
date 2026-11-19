@@ -190,7 +190,6 @@ export const POINTS_PROBE_CASES = [
  */
 export const SOLID_CASES = JSON.parse(await readFile(join(root, "testsuite/solids-judge-cases.json"), "utf8")).cases
   .map(({ id, language, prompt, nearMiss, expect }) => ({ id, language, prompt, judge: "solids", ...(nearMiss ? { nearMiss } : {}), expect: expect ?? {} }));
-/** Its speed pairs, fixed before any run: the first ten in-scope cases, SD-01–10. */
 /**
  * The fraction model recipe (decision 0021 §5 step 4): the fraction judge's cases FM-01–18 and near misses
  * FM-N1–N6 (testsuite/fraction-judge-cases.json), judged with scripts/fraction-judge.mjs. FM-16 (a slider to
@@ -200,6 +199,7 @@ export const FRACTION_CASES = JSON.parse(await readFile(join(root, "testsuite/fr
   .filter(({ id }) => id !== "FM-16")
   .map(({ id, language, prompt, nearMiss, expect, forbid }) => ({ id, language, prompt, judge: "fractions", ...(nearMiss ? { nearMiss } : {}), ...(forbid ? { forbid } : {}), expect: expect ?? {} }));
 
+/** Its speed pairs, fixed before any run: the first ten in-scope cases, SD-01–10. */
 export const SOLID_SPEED_CASES = SOLID_CASES.filter((item) => /^SD-(0[1-9]|10)$/u.test(item.id));
 export const TRIAL_QUALITY_CASES = { fraction_model: FRACTION_CASES, solid_3d: SOLID_CASES, function_plot_extensions: PLOT_CASES, retry_narrowing: RETRY_NARROWING_CASES, plot_points: POINTS_PROBE_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
 
