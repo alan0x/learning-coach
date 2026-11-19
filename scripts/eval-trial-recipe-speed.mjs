@@ -36,6 +36,7 @@ import { planNumberLineTicks } from "octos-lesson-language/plugin-math";
 import { judgePlot } from "./plot-judge.mjs";
 import { generatedTokens, tokenSpeedVerdict } from "./speed-gate.mjs";
 import { judgeSolids } from "./solids-judge.mjs";
+import { judgeFractions } from "./fraction-judge.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -190,8 +191,17 @@ export const POINTS_PROBE_CASES = [
 export const SOLID_CASES = JSON.parse(await readFile(join(root, "testsuite/solids-judge-cases.json"), "utf8")).cases
   .map(({ id, language, prompt, nearMiss, expect }) => ({ id, language, prompt, judge: "solids", ...(nearMiss ? { nearMiss } : {}), expect: expect ?? {} }));
 /** Its speed pairs, fixed before any run: the first ten in-scope cases, SD-01–10. */
+/**
+ * The fraction model recipe (decision 0021 §5 step 4): the fraction judge's cases FM-01–18 and near misses
+ * FM-N1–N6 (testsuite/fraction-judge-cases.json), judged with scripts/fraction-judge.mjs. FM-16 (a slider to
+ * practise on) is left out until the owner decides how a fraction's slider is made.
+ */
+export const FRACTION_CASES = JSON.parse(await readFile(join(root, "testsuite/fraction-judge-cases.json"), "utf8")).cases
+  .filter(({ id }) => id !== "FM-16")
+  .map(({ id, language, prompt, nearMiss, expect, forbid }) => ({ id, language, prompt, judge: "fractions", ...(nearMiss ? { nearMiss } : {}), ...(forbid ? { forbid } : {}), expect: expect ?? {} }));
+
 export const SOLID_SPEED_CASES = SOLID_CASES.filter((item) => /^SD-(0[1-9]|10)$/u.test(item.id));
-export const TRIAL_QUALITY_CASES = { solid_3d: SOLID_CASES, function_plot_extensions: PLOT_CASES, retry_narrowing: RETRY_NARROWING_CASES, plot_points: POINTS_PROBE_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
+export const TRIAL_QUALITY_CASES = { fraction_model: FRACTION_CASES, solid_3d: SOLID_CASES, function_plot_extensions: PLOT_CASES, retry_narrowing: RETRY_NARROWING_CASES, plot_points: POINTS_PROBE_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
 
 /**
  * The speed gate for the two switch-ons of 2026-11-15 (plan §7 step 3.2: number-line steps, Coach #99, and
@@ -509,6 +519,8 @@ export function recipesInPart(part) {
   const solidName = /^(solid|beside)(-top|-side)?$/u;
   if (writes.some((action) => action.kind === "scene3d" && !(action.content?.highlights ?? []).length && (action.content?.objects ?? []).length
     && action.content.objects.every((object) => solidName.test(String(object.as)) && object.color === undefined && object.label === undefined))) found.push("solid_3d");
+  // The fraction model (decision 0021): its own card kind.
+  if (writes.some((action) => action.kind === "fraction_model")) found.push("fraction_model");
   return found;
 }
 
@@ -706,7 +718,8 @@ async function main() {
           const line = numberLineInPart(part);
           // Near misses are judged on both arms, so "no worse than without the option" can be read
           // from the report; only the candidate's judgement counts toward the verdict.
-          const judge = item.judge === "plot" ? () => judgePlot(item, part) : item.judge === "solids" ? () => judgeSolids(item, part) : () => judgeNumberLine(item, numberLineLesson(part));
+          const judge = item.judge === "plot" ? () => judgePlot(item, part) : item.judge === "solids" ? () => judgeSolids(item, part)
+            : item.judge === "fractions" ? () => judgeFractions(item, part) : () => judgeNumberLine(item, numberLineLesson(part));
           const judged = item.expect && (arm === "candidate" || item.nearMiss || bothArms) ? { quality: judge() } : {};
           return { recipes: recipesInPart(part), ...(line ? { number_line: line } : {}), ...judged };
         } catch { return { recipes: null }; }
@@ -728,7 +741,7 @@ async function main() {
     // The run stops at the first playable part, so the judge sees only the first section; when the
     // outline has more, a later section may show what the first lacks, and the miss is read by hand.
     if (row.quality?.hard.length && row.sections > 1) row.quality.review = "later sections not judged: read by hand";
-    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).some((name) => name.startsWith("number_line") || name.startsWith("plot_") || name === "solid_3d")) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew the trial's visual: read by hand" };
+    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).some((name) => name.startsWith("number_line") || name.startsWith("plot_") || name === "solid_3d" || name === "fraction_model")) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew the trial's visual: read by hand" };
     rows.push(row);
     console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null, ...(row.quality ? { hard: row.quality.hard } : {}) }));
     await persist();
