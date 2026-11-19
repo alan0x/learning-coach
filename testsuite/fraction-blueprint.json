@@ -1,0 +1,77 @@
+{
+  "note": "Fraction redesign blueprint (owner reopened the fraction card for redesign, 2026-11-19). One row per fraction idea, from the Common Core standards (codes checked against thecorestandards.org on 2026-11-19). Each row's teacher picture says what a good teacher draws, written without reference to any card: what is drawn, what is labelled, what is marked, and the states the telling passes through. Cases (development and scoring) are written from these rows, worded as learners ask. Phrasing mix to match the question set's open questions (counts only, held-out excluded): about 45% short questions, 30% detailed requests, 25% topic names; about 20% in Chinese. Never taken from the question set.",
+  "rows": [
+    {
+      "id": "B01", "idea": "Equal shares: halves, thirds, fourths", "standards": ["2.G.A.3"], "grades": "1-2",
+      "teacher_picture": "A circle or rectangle cut into 2, 3 or 4 equal parts, one part shaded and named (one half, one third, one fourth). Often beside it, the same shape cut into unequal parts, labelled 'not halves'. States: the whole; cut into equal parts; one part named."
+    },
+    {
+      "id": "B02", "idea": "Unit fractions and a/b as a parts of size 1/b", "standards": ["3.NF.A.1"], "grades": "3",
+      "teacher_picture": "One whole (bar, circle or rectangle) cut into b equal parts, a parts shaded, labelled a/b; the unit part labelled 1/b. States: the whole; cut into b equal parts (each 1/b); a of them shaded, counted 1/b, 2/b, ... a/b."
+    },
+    {
+      "id": "B03", "idea": "Whole numbers as fractions; fractions equal to whole numbers", "standards": ["3.NF.A.3.c"], "grades": "3",
+      "teacher_picture": "Several identical wholes, each cut into b equal parts, all shaded; labelled for example 6/2 = 3 or 3 = 3/1, 4/4 = 1. States: count the parts; group them into whole ones."
+    },
+    {
+      "id": "B04", "idea": "Equivalent fractions", "standards": ["3.NF.A.3.a", "3.NF.A.3.b", "4.NF.A.1"], "grades": "3-4",
+      "teacher_picture": "Two identical wholes one above the other: one cut into b parts with a shaded, the other cut into n*b parts with n*a shaded; the shaded lengths line up. Often each of the b parts is shown cut into n smaller parts (dashed lines). Labelled a/b = na/nb."
+    },
+    {
+      "id": "B05", "idea": "Comparing fractions", "standards": ["3.NF.A.3.d", "4.NF.A.2"], "grades": "3-4",
+      "teacher_picture": "Two identical wholes side by side or stacked, each showing one fraction; the comparison written with >, < or =. For unlike fractions, sometimes both re-cut to a common denominator, or a benchmark line at 1/2. The wholes must be the same size."
+    },
+    {
+      "id": "B06", "idea": "Adding and subtracting like denominators; decomposing", "standards": ["4.NF.B.3.a", "4.NF.B.3.b", "4.NF.B.3.d"], "grades": "4",
+      "teacher_picture": "One whole cut into b parts: the first addend's parts shaded in one colour, the second's in another next to them (joining); or parts crossed out (separating). The equation a/b + c/b = (a+c)/b written below. Decomposing: the same fraction shown split into groups of unit parts in more than one way."
+    },
+    {
+      "id": "B07", "idea": "Mixed numbers and improper fractions", "standards": ["4.NF.B.3.c", "3.NF.A.3.c"], "grades": "4",
+      "teacher_picture": "Whole ones cut into b parts: some wholes fully shaded and one partly shaded, labelled for example 2 3/4 = 11/4. States: the full wholes; the part of the next whole; the count of all parts."
+    },
+    {
+      "id": "B08", "idea": "Multiplying a fraction by a whole number", "standards": ["4.NF.B.4.a", "4.NF.B.4.b", "4.NF.B.4.c"], "grades": "4",
+      "teacher_picture": "n copies of a/b (n bars each with a of b parts shaded), or one row of n*a unit parts of size 1/b; labelled n x a/b = na/b, regrouped into wholes when it is more than 1."
+    },
+    {
+      "id": "B09", "idea": "Tenths and hundredths; decimal notation; comparing decimals", "standards": ["4.NF.C.5", "4.NF.C.6", "4.NF.C.7"], "grades": "4",
+      "teacher_picture": "A hundred grid: tenths shaded as whole columns, hundredths as single squares, labelled as a fraction and a decimal (0.43 = 43/100). A number above 1 uses one fully shaded grid plus a partly shaded one (1.6). Comparing: two same-size grids. Also 3/10 = 30/100 shown on one grid."
+    },
+    {
+      "id": "B10", "idea": "Adding and subtracting unlike denominators", "standards": ["5.NF.A.1", "5.NF.A.2"], "grades": "5",
+      "teacher_picture": "Both fractions shown on identical wholes, then each re-cut into the common denominator; the parts combined on one whole (or taken away); equation with the rewritten fractions. In word problems, a benchmark check that the answer is reasonable."
+    },
+    {
+      "id": "B11", "idea": "A fraction as division", "standards": ["5.NF.B.3"], "grades": "5",
+      "teacher_picture": "A tape for the total quantity, labelled with its unit (3 m), cut into equal pieces, each piece labelled with its value (3/4 m). Or: the total as a whole number of unit wholes, each cut into the number of shares, with one share taken from each. Labelled a / b = a/b."
+    },
+    {
+      "id": "B12", "idea": "A fraction of a quantity (a fraction times a whole number as part of a partition)", "standards": ["5.NF.B.4.a", "4.NF.B.4.c"], "grades": "4-5",
+      "teacher_picture": "A tape for the quantity (12 marbles, 24 km) cut into b equal parts, each part labelled with its value (3 marbles), a parts marked; the answer labelled. For objects, the objects drawn in b equal groups."
+    },
+    {
+      "id": "B13", "idea": "Multiplying a fraction by a fraction (area model)", "standards": ["5.NF.B.4.b", "5.NF.B.6"], "grades": "5",
+      "teacher_picture": "A unit square cut into b columns with a shaded one way, and d rows with c shaded the other way; the overlap (a*c of b*d small rectangles) is the product. Labelled a/b x c/d = ac/bd."
+    },
+    {
+      "id": "B14", "idea": "Dividing with unit fractions", "standards": ["5.NF.B.7.a", "5.NF.B.7.b", "5.NF.B.7.c"], "grades": "5",
+      "teacher_picture": "Whole number divided by a unit fraction: that many wholes, each cut into unit pieces, the pieces counted (2 / (1/3) = 6). Unit fraction divided by a whole number: the unit fraction's part of a whole cut into n equal pieces, one piece's size labelled (1/3 / 4 = 1/12)."
+    },
+    {
+      "id": "B15", "idea": "Percent as hundredths", "standards": ["6.RP.A.3.c"], "grades": "6",
+      "teacher_picture": "A hundred grid with p squares shaded, labelled p% = p/100; for a percent of a quantity, a tape for the quantity cut into ten or a hundred parts with the part labelled."
+    },
+    {
+      "id": "X01", "idea": "Ratios of two parts (not a fraction of one whole)", "standards": ["6.RP.A.3"], "grades": "6", "near_miss": true,
+      "teacher_picture": "Two tapes made of equal unit blocks, one per quantity (4 blocks blue, 1 block white). A fraction card for two parts with a > or < between them would mislead."
+    },
+    {
+      "id": "X02", "idea": "Algebraic area models (polynomial products)", "standards": [], "grades": "9", "near_miss": true,
+      "teacher_picture": "A rectangle whose sides are labelled with algebraic terms, split into regions labelled x^2, 2x and so on. A fraction card would mislead."
+    },
+    {
+      "id": "X03", "idea": "Percent change between two amounts", "standards": [], "grades": "7", "near_miss": true,
+      "teacher_picture": "A before tape and an after tape, the change marked against the before amount. A single fraction card of one amount would mislead."
+    }
+  ]
+}
