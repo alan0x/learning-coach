@@ -71,7 +71,7 @@
    }
   },
   "reader_effect": "The 2026-11-14 reading of the same baseline lessons counted 13 misleading; today's readers count 25. Absolute numbers depend on the reader; only the paired comparison is read as a change.",
-  "failed": "4 of the 5 failed lessons end on number-line refusals that re-ask the outline (a steps line needs two or three moves, three lessons; at most 24 parts per unit, one), 1 on the array missing its column and row numbers. Counted from offline replay of the recorded replies, not read."
+  "failed": "4 of the 5 failed lessons end on number-line refusals in section 2, after section 1 played (at most 24 parts per unit, three lessons; a steps line needs two or three moves, one), 1 on the array missing its column and row numbers. Counted from offline replay of the recorded replies, not read. Corrected 2026-11-18: first recorded with the split reversed and as outline re-asks. The three 24-parts losses are a program defect (Coach #128)."
  },
  "readings": {
   "rerun": [
