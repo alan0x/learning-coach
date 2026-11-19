@@ -43,9 +43,9 @@ const IDEAL = {
   "FM-09": { fraction_shape: "circle", fractions: [f(12, 3)], fraction_view: "one" },
   "FM-10": { fractions: [f(43, 100)], fraction_view: "one" },
   "FM-11": { fractions: [f(160, 100)], fraction_view: "one" },
-  "FM-12": { fractions: [f(3, 4)], fraction_view: "split", split: 2 },
-  "FM-13": { fraction_shape: "circle", fractions: [f(3, 5)], fraction_view: "split", split: 4 },
-  "FM-14": { fraction_shape: "circle", fractions: [f(3, 1)], fraction_view: "split", split: 4 },
+  "FM-12": { fractions: [f(3, 4)], fraction_view: "split", split: "2" },
+  "FM-13": { fraction_shape: "circle", fractions: [f(3, 5)], fraction_view: "split", split: "4" },
+  "FM-14": { fraction_shape: "circle", fractions: [f(3, 1)], fraction_view: "split", split: "4" },
   "FM-15": { fractions: [f(6, 3)], fraction_view: "one" },
   "FM-17": { fractions: [f(3, 10), f(7, 10)], fraction_view: "compare" },
   "FM-18": { fractions: [f(3, 10), f(1, 2)], fraction_view: "compare" },
@@ -104,11 +104,13 @@ test("refused values are this section's faults, each naming its reason", () => {
     ["not-equal", { fractions: [f(2, 3), f(3, 4)], fraction_view: "equivalent" }, "en-US"],
     ["one-for-two", { fractions: [f(2, 3)], fraction_view: "compare" }, "en-US"],
     ["too-many-wholes", { fractions: [f(37, 4)], fraction_view: "one" }, "en-US"],
-    ["split-big", { fractions: [f(1, 5)], fraction_view: "split", split: 6 }, "en-US"],
+    ["split-big", { fractions: [f(1, 5)], fraction_view: "split", split: "6" }, "en-US"],
     ["split-none", { fractions: [f(1, 5)], fraction_view: "split" }, "en-US"],
-    ["split-zero", { fractions: [f(0, 5)], fraction_view: "split", split: 2 }, "en-US"],
-    ["split-grid", { fraction_shape: "grid", fractions: [f(30, 100)], fraction_view: "split", split: 2 }, "en-US"],
-    ["split-stray", { fractions: [f(1, 5)], fraction_view: "one", split: 2 }, "en-US"],
+    ["split-zero", { fractions: [f(0, 5)], fraction_view: "split", split: "2" }, "en-US"],
+    ["split-grid", { fraction_shape: "grid", fractions: [f(30, 100)], fraction_view: "split", split: "2" }, "en-US"],
+    ["split-stray", { fractions: [f(1, 5)], fraction_view: "one", split: "2" }, "en-US"],
+    ["split-seven", { fractions: [f(1, 5)], fraction_view: "split", split: "7" }, "en-US"],
+    ["split-runaway", { fractions: [f(1, 5)], fraction_view: "split", split: "11296257600000" }, "en-US"],
     ["half-part", { fractions: [f(1.5, 4)], fraction_view: "one" }, "en-US"],
     ["two-grids", { fraction_shape: "grid", fractions: [f(30, 100), f(3, 10)], fraction_view: "compare" }, "en-US"],
   ]));
@@ -122,6 +124,8 @@ test("refused values are this section's faults, each naming its reason", () => {
   assert.match(result["split-zero"].message, /shade at least one/u);
   assert.match(result["split-grid"].message, /a grid's cells are not split again/u);
   assert.match(result["split-stray"].message, /split goes with fraction_view split/u);
+  assert.match(result["split-seven"].message, /split each part into 2 to 6/u);
+  assert.match(result["split-runaway"].message, /split each part into 2 to 6/u);
   assert.match(result["half-part"].message, /whole number of parts/u);
   assert.match(result["two-grids"].message, /share one denominator/u);
   for (const [id, item] of Object.entries(result)) assert.equal(item.error, "LESSON_PLAN_CAPABILITY_PARAMETER", id);
@@ -142,6 +146,8 @@ test("a stubbed generation run: the card reaches the lesson; numerators and deno
   // Only "number" fields go to the provider as { mantissa, scale }; the fraction fields are integers.
   const items = api.RECIPE_SCHEMA_PROPERTIES.fraction_model.fractions.items.properties;
   assert.deepEqual([items.numerator.type, items.denominator.type], ["integer", "integer"]);
+  // split is a choice, not a free integer (fraction probe 1: runaway integers of thousands of digits).
+  assert.deepEqual(api.RECIPE_SCHEMA_PROPERTIES.fraction_model.split, { enum: ["2", "3", "4", "5", "6"] });
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { retiredCubeCourse } = await import(${here("./lesson-plan-course-fixtures.mjs")});
@@ -184,6 +190,15 @@ test("a stubbed generation run: the card reaches the lesson; numerators and deno
 });
 
 test("a share that is a whole number is written as one (review of #131)", () => {
-  const result = withTrial(compileScript([["whole-share", { fractions: [f(6, 3)], fraction_view: "split", split: 2 }, "en-US"]]));
+  const result = withTrial(compileScript([["whole-share", { fractions: [f(6, 3)], fraction_view: "split", split: "2" }, "en-US"]]));
   assert.equal(result["whole-share"].content.caption, "Each share is 6/6 = 1");
+});
+
+test("split is read from its choice; a whole number is read the same way (probe 2 fixes)", () => {
+  const result = withTrial(compileScript([
+    ["as-choice", { fractions: [f(3, 4)], fraction_view: "split", split: "2" }, "en-US"],
+    ["as-number", { fractions: [f(3, 4)], fraction_view: "split", split: 2 }, "en-US"],
+  ]));
+  assert.deepEqual(result["as-number"].content, result["as-choice"].content);
+  assert.equal(result["as-choice"].content.caption, "Each share is 3/8");
 });
