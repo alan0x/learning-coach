@@ -229,7 +229,7 @@ test("later demonstrations cannot change a previously published viewport", async
   assert.equal(prefixes[0].calls, 1);
   assert.deepEqual(calls.slice(1).map(call => call.section), [2, 2, 3]);
   assert.equal(rejections.length, 1);
-  assert.match(rejections[0].error.message, /published graph.*range/u);
+  assert.match(rejections[0].error.message, /range \[.*\], fixed by a visual already shown/u);
   assert.deepEqual(plot, prefixes[0].plot);
   assert.ok(plot.axes.y.min > -32, "the later animation target is outside the first screen");
 });
@@ -262,7 +262,7 @@ test("a later visual cannot narrow a published plot range by reusing its input",
   assert.equal(prefixes[0].calls, 1);
   assert.deepEqual(calls.slice(1).map(call => call.section), [2, 2, 3]);
   assert.equal(rejections.length, 1);
-  assert.match(rejections[0].error.message, /without changing number 1 in the published graph/u);
+  assert.match(rejections[0].error.message, /without changing number 1, whose range a visual already shown fixes/u);
   assert.deepEqual(plot, prefixes[0].plot);
 });
 

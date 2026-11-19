@@ -260,7 +260,7 @@ function normalizeProgramOwnedNumberRanges(plan: LessonPlan): void {
           if (prior && (definition.min !== prior.min || definition.max !== prior.max || definition.initial !== prior.initial
             || definition.student_control?.step !== prior.step)) {
             fail("LESSON_PLAN_INTERACTION_MISMATCH", path,
-              `Use a number that fits this visual without changing number ${numberIndex} in the published graph`);
+              `Use a number that fits this visual without changing number ${numberIndex}, whose range a visual already shown fixes`);
           }
         }
       }
