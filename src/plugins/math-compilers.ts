@@ -1529,7 +1529,9 @@ function compileFractionModel(
   if (!FRACTION_VIEWS.includes(view as typeof FRACTION_VIEWS[number])) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_view`, `expected one of ${FRACTION_VIEWS.join(", ")}`);
   const written = input.fractions;
   // Probe 2: the first reply often named the shape and view and left the values out.
-  if (written === undefined) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, "write the fractions as values, each {numerator, denominator}; a numerator of 0 shows a whole divided with none shaded");
+  if (written === undefined) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, view === "split"
+    ? "write the fraction as values, {numerator, denominator}; split_each_part splits its shaded parts, so shade at least one"
+    : "write the fractions as values, each {numerator, denominator}; a numerator of 0 shows a whole divided with none shaded");
   const count = view === "compare" || view === "equivalent" ? 2 : 1;
   if (!Array.isArray(written) || written.length !== count) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
   const fractions = (written as JsonValue[]).map((item, index) => {
@@ -1558,7 +1560,7 @@ function compileFractionModel(
   } else {
     fractions.forEach((fraction, index) => {
       if (fraction.denominator > FRACTION_MODEL_LIMITS.denominator) {
-        fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[${index}].denominator`, `a ${shape} has at most ${FRACTION_MODEL_LIMITS.denominator} parts; hundredths go on a grid`);
+        fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[${index}].denominator`, `a ${shape} has at most ${FRACTION_MODEL_LIMITS.denominator} parts; ${fraction.denominator} parts fit a grid (fraction_shape grid)`);
       }
     });
   }

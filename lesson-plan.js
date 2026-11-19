@@ -19345,7 +19345,7 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   const view = input.fraction_view;
   if (!FRACTION_VIEWS.includes(view)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_view`, `expected one of ${FRACTION_VIEWS.join(", ")}`);
   const written = input.fractions;
-  if (written === void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, "write the fractions as values, each {numerator, denominator}; a numerator of 0 shows a whole divided with none shaded");
+  if (written === void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, view === "split" ? "write the fraction as values, {numerator, denominator}; split_each_part splits its shaded parts, so shade at least one" : "write the fractions as values, each {numerator, denominator}; a numerator of 0 shows a whole divided with none shaded");
   const count = view === "compare" || view === "equivalent" ? 2 : 1;
   if (!Array.isArray(written) || written.length !== count) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
   const fractions = written.map((item, index) => {
@@ -19372,7 +19372,7 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   } else {
     fractions.forEach((fraction3, index) => {
       if (fraction3.denominator > FRACTION_MODEL_LIMITS.denominator) {
-        fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[${index}].denominator`, `a ${shape} has at most ${FRACTION_MODEL_LIMITS.denominator} parts; hundredths go on a grid`);
+        fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[${index}].denominator`, `a ${shape} has at most ${FRACTION_MODEL_LIMITS.denominator} parts; ${fraction3.denominator} parts fit a grid (fraction_shape grid)`);
       }
     });
   }

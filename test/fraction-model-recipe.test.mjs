@@ -105,6 +105,7 @@ test("refused values are this section's faults, each naming its reason", () => {
     ["thirty-sevenths", { fractions: [f(5, 37)], fraction_view: "one" }, "en-US"],
     ["thirty-sevenths-grid", { fraction_shape: "grid", fractions: [f(5, 37)], fraction_view: "one" }, "en-US"],
     ["no-fractions", { fraction_shape: "circle", fraction_view: "one" }, "en-US"],
+    ["no-fractions-split", { fraction_shape: "bar", fraction_view: "split", split_each_part: "3" }, "en-US"],
     ["not-equal", { fractions: [f(2, 3), f(3, 4)], fraction_view: "equivalent" }, "en-US"],
     ["one-for-two", { fractions: [f(2, 3)], fraction_view: "compare" }, "en-US"],
     ["too-many-wholes", { fractions: [f(37, 4)], fraction_view: "one" }, "en-US"],
@@ -119,11 +120,14 @@ test("refused values are this section's faults, each naming its reason", () => {
     ["two-grids", { fraction_shape: "grid", fractions: [f(30, 100), f(3, 10)], fraction_view: "compare" }, "en-US"],
   ]));
   assert.match(result.thirteenths.message, /no fraction card draws 13 equal parts .*choose another visual, or none/u);
-  assert.match(result["twentieths-bar"].message, /at most 12 parts; hundredths go on a grid/u);
+  assert.match(result["twentieths-bar"].message, /at most 12 parts; 20 parts fit a grid \(fraction_shape grid\)/u);
   assert.match(result["grid-11"].message, /no grid of at most 10 by 10 has 11 cells/u);
   assert.match(result["thirty-sevenths"].message, /no fraction card draws 37 equal parts/u);
   assert.match(result["thirty-sevenths-grid"].message, /no fraction card draws 37 equal parts/u);
   assert.match(result["no-fractions"].message, /write the fractions as values.*a numerator of 0 shows a whole divided with none shaded/u);
+  // On a split card a numerator of 0 is refused, so the hint there asks for at least one shaded part.
+  assert.match(result["no-fractions-split"].message, /write the fraction as values.*so shade at least one/u);
+  assert.doesNotMatch(result["no-fractions-split"].message, /numerator of 0/u);
   assert.match(result["not-equal"].message, /2\/3 and 3\/4 are not equal; compare them instead/u);
   assert.match(result["one-for-two"].message, /compare shows two fractions/u);
   assert.match(result["too-many-wholes"].message, /at most 8 wholes/u);
