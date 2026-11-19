@@ -85,4 +85,6 @@ Gaps, by type:
    - Rejected first-section cards are inside the saved bootstrap reply, so free re-compiles of saved replies cover every judged attempt.
 
 ## Scoring set hash at freeze
-Pending: eight sealed cases were over the overlap bars and are being reworded by the same agent. The final hash goes here.
+Eight sealed cases were first over the overlap bars and were reworded by the same agent, which saw only IDs and scores. All 34 are now under the bars; the file is read-only.
+
+**SHA-256 `1fbcdcc098630c5a1b6830059c9ce7f3f6b404bdb27984ea89bff070f38d4468`.** Any edit changes it; it is checked again before scoring.
