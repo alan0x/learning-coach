@@ -1,7 +1,7 @@
 import { compileText, setLessonTextLanguage } from "./lesson-text.js";
 import { CompiledVisualRegistry, type CompiledVisual } from "./compiled-visual-reuse.js";
 import { applyLessonOpeningPolicy, type LessonOpeningPolicy, compileMathExpression, normalizeAuthoringLesson, reduceCanonicalEvents, validateAuthoringLesson, validateAuthoringSchema, type AuthoringAction, type AuthoringLesson, type ResourceContext } from "octos-lesson-language";
-import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, recipeDeclares, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
+import { LESSON_PLAN_CAPABILITY_REGISTRY, LessonPlanError, countRange, isNumberLineCapability, recipeDeclares, LESSON_PLAN_CAPABILITY_NUMBER_LIMITS, numericAnswerTolerance, roundingPlaces, roundingTolerance, resolveLessonPlan, type LessonPlan, type LessonPlanBoardContent, type LessonPlanBoardKind, type LessonPlanHostReference, type LessonPlanVisualContent, type ResolveLessonPlanOptions, type ResolvedLessonPlan, type ResolvedLessonPlanReference } from "./lesson-plan.js";
 import { fail, pad, variableAlias, parameters, optionalNumber, assertRange, safeFunctionExpression, mathExpressionToOll, place, includeWrittenCardsInFocus, namedNumbers, actionWhen } from "./recipe-kit.js";
 import { PLUGIN_COMPILERS, VISUAL_COMPILERS } from "./plugins/compilers.js";
 import { INSTALLED_PLUGINS, RECIPE_PLUGIN } from "./plugins/index.js";
@@ -29,7 +29,7 @@ export interface CompiledLessonPlan {
   /** Visual decisions the program made for this lesson, by section (1-based). */
   view_adjustments: Array<{ section: number; reason: string; detail: string }>;
   /** Other program changes to the lesson's text, by section (1-based); each names its kind. */
-  program_adjustments: Array<{ section: number; kind: "success_message_removed"; reason: string; detail: string }>;
+  program_adjustments: Array<{ section: number; kind: "success_message_removed" | "success_message_unchecked"; reason: string; detail: string; task: string }>;
 }
 
 /** Compiled kinds a lesson number can drive: every output kind of a registered recipe with number inputs. */
@@ -746,11 +746,21 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       const taskAlias = `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`;
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : undefined;
       // The check can only remove a message, never cost the lesson: if it fails, the message stays.
-      const praiseClaims = praise ? (() => { try { return praiseArithmetic(praise); } catch { return undefined; } })() : undefined;
+      // A task that asks for rounding to decimal places lets its message show results rounded to those places.
+      // Whole-number rounding is left out: a bare "round" in a prompt ("Round 2: …") with a whole answer reads
+      // as 0 places, and would let 7 ÷ 2 = 4 through.
+      const asked = activity.kind === "numeric_answer" ? roundingPlaces(activity.prompt, String(activity.answer)) : undefined;
+      const places = asked !== undefined && asked > 0 ? asked : undefined;
       let droppedPraise: CompiledLessonPlan["program_adjustments"][number] | undefined;
+      let praiseClaims: ReturnType<typeof praiseArithmetic> | undefined;
+      if (praise) {
+        try { praiseClaims = praiseArithmetic(praise, { places }); } catch (error) {
+          droppedPraise = { section: sectionOffset + 1, kind: "success_message_unchecked", reason: "praise_check_failed", task: taskAlias, detail: `${taskAlias} (${activityPath}.success_message): ${String((error as Error)?.message ?? error).slice(0, 200)}` };
+        }
+      }
       if (praiseClaims?.verdict === "false") {
         const wrong = praiseClaims.claims.filter((claim) => !claim.holds).map((claim) => claim.text).join("; ");
-        droppedPraise = { section: sectionOffset + 1, kind: "success_message_removed", reason: "praise_false_arithmetic", detail: `${taskAlias} (${activityPath}.success_message): ${wrong}` };
+        droppedPraise = { section: sectionOffset + 1, kind: "success_message_removed", reason: "praise_false_arithmetic", task: taskAlias, detail: `${taskAlias} (${activityPath}.success_message): ${wrong}` };
         praise = undefined;
       }
       const common = {

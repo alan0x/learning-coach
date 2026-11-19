@@ -112,7 +112,7 @@ export interface GenerateLessonPlanOptions {
     error: { code: string; path?: string; message: string };
   }) => void | Promise<void>;
   on_program_adjustment?: (event: {
-    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed" | "plot_binding_rebuilt" | "plot_control_removed" | "plot_view_adjusted" | "success_message_removed";
+    kind: "visual_removed" | "duplicate_board_item_removed" | "number_interaction_removed" | "answer_activity_removed" | "plot_binding_rebuilt" | "plot_control_removed" | "plot_view_adjusted" | CompiledLessonPlan["program_adjustments"][number]["kind"];
     section: number;
     capability?: keyof typeof LESSON_PLAN_CAPABILITIES;
     moment?: number;
@@ -120,6 +120,8 @@ export interface GenerateLessonPlanOptions {
     number?: number;
     reason: string;
     detail?: string;
+    /** The task a success-message record is about. */
+    task?: string;
   }) => void | Promise<void>;
 }
 

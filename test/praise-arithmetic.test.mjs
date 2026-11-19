@@ -127,7 +127,6 @@ test("anything not written wholly in numerals is not read", () => {
     "3/4 is 3 out of 4 equal parts.",
     "3/4 + 3/4 = 1 1/2",
     "3:30 + 15 = 3:45",
-    "10/3 = 3.33",
     // review, round 1: repeating decimals, remainders in any form, ranges and dates, quoted mistakes
     "2 ÷ 3 = 0.666...",
     "2 ÷ 3 = 0.666…",
@@ -275,4 +274,62 @@ test("a duplicate task that is thrown away records no drop", () => {
   const compiled = compileAndValidateLessonPlan(plan);
   assert.deepEqual(taskMessages(compiled), ["Great job! 2 + 2 = 4."]);
   assert.equal(praiseDrops(compiled).length, 0);
+});
+
+test("follow-up: a task that asks for rounding lets its message round to those places", () => {
+  const at = (text, places) => praiseArithmetic(text, { places }).verdict;
+  assert.equal(at("3.14 × 2.5 × 2.5 = 19.63", 2), "true");
+  assert.equal(at("3.14 × 2.5 × 2.5 = 19.63", undefined), "false", "a value that ends is exact unless the task rounds");
+  assert.equal(at("3.14 × 2.5 × 2.5 = 19.63", 1), "false", "only at the task's own places");
+  assert.equal(at("3.14 × 2.5 × 2.5 = 19.64", 2), "false", "rounded, not anything near");
+  assert.equal(at("0.5 + 0.25 = 0.8", 1), "true");
+  assert.equal(at("7 ÷ 2 = 4", 0), "true");
+  assert.equal(at("7 ÷ 2 = 4", undefined), "false");
+});
+
+test("follow-up: curly apostrophes, tight-slash fractions, spaced scale words", () => {
+  for (const text of [
+    "第2 - 4 + 4 = 8",
+    "8 + 5 = 14 isn’t right, it’s 13!",
+    "70 ÷ 10 = 7 tens",
+    "1,000 × 3,000 = 3 million",
+  ]) assert.equal(verdict(text), "none", text);
+  for (const text of ["6/3 = 2", "3/4 = 0.75", "1/3 = 0.33", "10/3 = 3.33", "Yes! 2/4 = 1/2."]) assert.equal(verdict(text), "true", text);
+  for (const text of ["6/3 = 3", "3/4 = 0.7"]) assert.equal(verdict(text), "false", text);
+  assert.equal(verdict("Step 2: 4 + 4 = 8"), "true", "a label before a colon still lets the claim be read");
+});
+
+test("follow-up: the drop record names its task in a field, and a rounding task keeps its rounded message", () => {
+  const dropped = compileAndValidateLessonPlan(withPraise("Great job! 2 + 2 = 5."));
+  const record = dropped.program_adjustments.find((item) => item.reason === "praise_false_arithmetic");
+  assert.equal(record.task, dropped.lesson.lesson.tasks[0].as);
+
+  const plan = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
+  const rounding = (prompt, success_message) => {
+    const copy = structuredClone(plan);
+    copy.sections[1].student_activities = [{
+      kind: "numeric_answer", prompt, answer: "19.63", check: "3.14 * 2.5 * 2.5", success_message,
+      reference: { source: "local_board_item", moment: 1, item: 2 }, hints: ["半径的平方乘 3.14。"],
+    }];
+    return compileAndValidateLessonPlan(copy).lesson.lesson.tasks.find((task) => task.completion.kind === "numeric_answer").success_message;
+  };
+  assert.equal(rounding("半径 2.5，面积是多少？保留两位小数。", "对！3.14 × 2.5 × 2.5 = 19.63。"), "对！3.14 × 2.5 × 2.5 = 19.63。");
+  assert.equal(rounding("半径 2.5，面积是多少？保留两位小数。", "对！3.14 × 2.5 × 2.5 = 19.64。"), undefined);
+});
+
+test("follow-up review: a word before a subtraction is not a label unless it is a label word", () => {
+  // review of #123: a structural label rule kept these false messages, which main drops
+  for (const text of ["Well done! So 15 - 7 = 9.", "Great job. 12 - 5 = 8!", "真棒。所以15-7=9。", "So 15 minus 7 is 9."]) assert.equal(verdict(text), "false", text);
+  assert.deepEqual(praiseArithmetic("Great job! 32 minus 10 is 22, and 22 minus 5 is 17.").claims.length, 2);
+  assert.equal(verdict("8 + 5 = 13 and 13 − 5 = 8."), "true");
+});
+
+test("follow-up review: a bare 'round' with a whole answer does not let a false message through", () => {
+  const plan = structuredClone(completeLessonPlanFixtures.unit_circle_to_sine);
+  plan.sections[1].student_activities = [{
+    kind: "numeric_answer", prompt: "Round 2: what is 6 × 7?", answer: "42", check: "6 * 7", success_message: "Yes! And 7 ÷ 2 = 4.",
+    reference: { source: "local_board_item", moment: 1, item: 2 }, hints: ["Six sevens."],
+  }];
+  const task = compileAndValidateLessonPlan(plan).lesson.lesson.tasks.find((item) => item.completion.kind === "numeric_answer");
+  assert.equal(task.success_message, undefined);
 });

@@ -38,7 +38,7 @@ function loggedEvents(stderr) {
 /** The compiler logged leaving out this task's success message (false arithmetic, plan 3.6). */
 function messageRemoved(stderr, taskAlias) {
   return loggedEvents(stderr).some((event) => event.stage === "lesson-plan-program-adjustment"
-    && event.kind === "success_message_removed" && String(event.detail ?? "").split(" ")[0] === taskAlias);
+    && event.kind === "success_message_removed" && (event.task ?? String(event.detail ?? "").split(" ")[0]) === taskAlias);
 }
 
 function completedModelCalls(stderr) {

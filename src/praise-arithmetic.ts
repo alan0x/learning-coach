@@ -176,16 +176,19 @@ function nonTerminating(value: Fraction): boolean {
  * rounded or cut off at the result's own decimal places (10 / 3 = 3.33); a value that ends must be written
  * exactly, so 0.5 + 0.25 = 0.8 is false. A sentence that says it rounds is not read at all.
  */
-function holds(exact: Fraction, resultText: string, result: Fraction): boolean {
+function holds(exact: Fraction, resultText: string, result: Fraction, taskPlaces?: number): boolean {
   const difference = sub(exact, result);
   if (difference.n === 0n) return true;
   const places = (/\.(\d+)/u.exec(resultText)?.[1] ?? "").length;
+  // The task asks for rounding to these places, so a result shown at those places may be rounded, even a
+  // value that ends (3.14 × 2.5 × 2.5 = 19.63 for "to 2 decimal places").
+  const scale = 10n ** BigInt(places);
+  if (taskPlaces === places && abs(difference.n) * 2n * scale <= difference.d) return true;
   // A whole-number result must be exact, and so must a value that ends.
   if (places === 0 || !nonTerminating(exact)) return false;
   // Rounded or cut off at the places shown, as number-line-fit reads model decimals (0.67 and 0.66 are 2/3),
   // compared exactly. Rounded: |exact − result| ≤ ½ · 10^−places. Cut off: the result is the exact value
   // with its later digits removed, so it lies between zero and the exact value, less than 10^−places away.
-  const scale = 10n ** BigInt(places);
   const rounded = abs(difference.n) * 2n * scale <= difference.d;
   const towardZero = (exact.n > 0n) === (difference.n > 0n) && (result.n === 0n || (result.n > 0n) === (exact.n > 0n));
   // Cut off only at two places or more, as number-line-fit never reads one place as a repeating value.
@@ -193,8 +196,12 @@ function holds(exact: Fraction, resultText: string, result: Fraction): boolean {
   return rounded || cutOff;
 }
 
-export function praiseArithmetic(text: string): PraiseArithmeticResult {
-  text = text ?? "";
+/**
+ * `places`: the decimal places the task itself asks the learner to round to (roundingPlaces), when it does.
+ */
+export function praiseArithmetic(text: string, options: { places?: number } = {}): PraiseArithmeticResult {
+  // An apostrophe inside a word (isn’t) is the same as a straight one, so the negation check sees it.
+  text = (text ?? "").replace(/(?<=\p{L})[’‘](?=\p{L})/gu, "'");
   const tokens = tokenize(text);
   const claims: PraiseArithmeticResult["claims"] = [];
   const sentenceEnds = [...text.matchAll(SENTENCE_END)].map((match) => match.index!);
@@ -233,7 +240,9 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
       ops.unshift(op);
       k -= 2;
     }
-    if (ops.length === 0 || values.length !== ops.length + 1) return;
+    // A lone unspaced fraction (6/3 = 2, 3/4 = 0.75) is a claim about its value.
+    const loneFraction = ops.length === 0 && values.length === 1 && tokens[k]!.text.includes("/");
+    if (!loneFraction && (ops.length === 0 || values.length !== ops.length + 1)) return;
     // What comes before the expression must end it: not a number, an operator, a bracket, a colon or comma
     // between digits, a label (Step 2), or an "=" that follows a value (a chain). A label before "="
     // (面积 = 8 × 3 = 24) is fine.
@@ -259,7 +268,7 @@ export function praiseArithmetic(text: string): PraiseArithmeticResult {
     const sentence = span(sentenceEnds, start, end);
     if (NEGATED.test(clause) || ASKED_CLAUSE.test(clause) || ASKED_SENTENCE.test(sentence) || ROUNDED.test(sentence)
       || ops.includes("/") && REMAINDER.test(sentence)) return;
-    claims.push({ text: text.slice(start, end).trim(), holds: holds(exact, result.text, result.value) });
+    claims.push({ text: text.slice(start, end).trim(), holds: holds(exact, result.text, result.value, options.places) });
   });
   return {
     verdict: claims.length === 0 ? "none" : claims.every((claim) => claim.holds) ? "true" : "false",
