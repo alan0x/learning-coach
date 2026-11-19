@@ -143,11 +143,11 @@ const ANSWER_ACTIVITY_RULE = "answer 只写一个数（整数、小数、分数 
 const OUTLINE_SYSTEM_PROMPT = [
   `设计完整课程目录，不生成 OLL、执行 ID、组件名或自由对象名。`,
   `- 需要同步对照的图复用同一共享数值，并通过 supporting/comparison 声明关联；不要用两个独立 main 图表示同一联动关系。`,
-  `- visual_recipes 为 [features,numbers,purpose]。course_visuals 选其中 features，只列必要画面，可为空；后续复用，确需并排才建 comparison，supporting/comparison 指向较早画面。`,
+  `- visual_recipes 为 [features,numbers,purpose]。course_visuals 选其中 features，只列必要画面；没有画面能展示所讲关系时不列（可为空），用公式、笔记和讲解讲清，不用其他画面代替；后续复用，确需并排才建 comparison，supporting/comparison 指向较早画面。`,
   `- 选择图形特征时，以本节需要展示的数学关系为依据；不能仅因讲解中出现某个数学对象，就选用包含该对象的图形特征。`,
   promptSlot("outline.visual_choice"),
   `- numbers 只写有教学作用的共享数值、范围和初值，顺序依 visual_recipes 的 numbers；控件与步长由程序生成。`,
-  `- request_coverage 依 request_parts 顺序覆盖：可实现写 teach+章节。只是要求的互动或画面形式做不到（如可自由拖动顶点的任意三角形），但已有画面能展示同一数学关系时，写 teach 并换成它，在第一节旁白里用一句话说明换成了什么；没有画面能展示这一关系时仍写 teach，不建画面，用公式、笔记和讲解讲清，不用其他画面代替；只有数学内容本身无法正确呈现时才写 unsupported、空章节及原因。`,
+  `- request_coverage 依 request_parts 顺序覆盖：可实现写 teach+章节。只是要求的互动或画面形式做不到（如可自由拖动顶点的任意三角形），但已有画面能展示同一数学关系时，写 teach 并换成它，在第一节旁白里用一句话说明换成了什么；没有这样的画面时仍写 teach，不建画面；只有数学内容本身无法正确呈现时才写 unsupported、空章节及原因。`,
   `- 按独立教学目标和学习进程分节，不按主题数或画面数分节。每节只承担一个完成后可验证的目标；连续推导及须同步观察的画面留在同一节的多个 moment。简单问题能围绕一个目标讲清时用 1 节；若须分别建立直觉、纠错或解释原理、推导或演示、应用、检查掌握中的多个目标，拆成 2–4 节。不要为凑节数重复开场、定义或总结，也不要把本应独立的推导、应用和检查全塞进一节。为什么须推导，怎么算须步骤与检验，是什么须直觉与边界。不猜年级；close 只总结。`,
   `只返回符合响应 Schema 的 JSON。`,
 ].filter(Boolean).join("\n");

@@ -132,6 +132,6 @@ test("practice wording follows what happened in the lesson, and a missing intera
   assert.match(plain.system_prompt, /只有课中滑杆确实到过的值才能说“调回”/u);
   assert.match(plain.system_prompt, /后一项的说明、提示和完成语按那时各数值的实际状态计算/u);
   // An unsupported interaction form falls back to a drawable visual instead of an unsupported answer.
-  assert.match(plain.system_prompt, /只是要求的互动或画面形式做不到.*写 teach 并换成它.*没有画面能展示这一关系时仍写 teach，不建画面/u);
+  assert.match(plain.system_prompt, /只是要求的互动或画面形式做不到.*写 teach 并换成它.*没有这样的画面时仍写 teach，不建画面/u);
   assert.match(plain.system_prompt, /只有数学内容本身无法正确呈现时才写 unsupported/u);
 });

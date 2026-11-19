@@ -55,7 +55,7 @@
       "candidate": "tape_diagram_ratio_table",
       "language": "en",
       "expected_component": null,
-      "prompt": "Juice is mixed 2 cups of concentrate to 5 cups of water. Use a ratio table to find the water needed for 6 cups of concentrate."
+      "prompt": "Juice is mixed 2 cups of concentrate to 5 cups of water. How much water goes with 6 cups of concentrate?"
     },
     {
       "id": "NV-08",
@@ -63,7 +63,7 @@
       "candidate": "tape_diagram_ratio_table",
       "language": "en",
       "expected_component": null,
-      "prompt": "Sam has 3 times as many stickers as Jo. Together they have 48. Use a tape diagram to find how many Jo has."
+      "prompt": "Sam has 3 times as many stickers as Jo. Together they have 48. How many stickers does Jo have?"
     },
     {
       "id": "NV-09",
@@ -165,7 +165,7 @@
       "id": "NV-21",
       "class": "fit",
       "language": "en",
-      "expected_component": "number_line_steps",
+      "expected_component": "number_line",
       "prompt": "The temperature was −4 °C at dawn and rose 9 degrees by noon. What was the noon temperature?"
     },
     {
@@ -208,7 +208,7 @@
       "class": "fit",
       "language": "en",
       "expected_component": "geometric_rearrangement",
-      "prompt": "A triangle is half of a parallelogram. Show why the triangle's area is one half times base times height."
+      "prompt": "Arrange four copies of a right triangle with legs 3 and 4 inside a big square to show that 3² + 4² = 5²."
     },
     {
       "id": "NV-28",
