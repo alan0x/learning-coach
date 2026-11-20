@@ -319,17 +319,21 @@ test("a plain card, then its cut: the second create is drawn as a revision at it
     const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
     const outline = stagedOutline(plan, drafts);
     const out = {};
-    for (const [name, firstParameters, laterParameters] of [
+    for (const [name, firstParameters, laterParameters, laterTiming] of [
       ["cut", { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "one" }, { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "split", split_each_part: "4" }],
       ["share", { fractions: [{ numerator: 2, denominator: 1 }], fraction_view: "one" }, { fractions: [{ numerator: 2, denominator: 5 }], fraction_view: "share" }],
       ["fractions differ", { fractions: [{ numerator: 3, denominator: 1 }], fraction_view: "one" }, { fractions: [{ numerator: 12, denominator: 4 }], fraction_view: "split", split_each_part: "4" }],
       ["shapes differ", { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "one" }, { fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "split", split_each_part: "2" }],
+      // Review of #148: the card keeps its title, and a cut written before the speech waits for it.
+      ["titled", { title: "Three fifths of a pizza", fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "one" }, { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "split", split_each_part: "4" }, "before_speech"],
+      // Hundredths with no shape draw on a grid, which cannot be cut: the first create is kept, with no re-ask.
+      ["hundredths", { fractions: [{ numerator: 43, denominator: 100 }], fraction_view: "one" }, { fractions: [{ numerator: 43, denominator: 100 }], fraction_view: "split", split_each_part: "2" }],
     ]) {
       const first = bootstrapSectionFromExact(outline, drafts[0]);
       const at = first.moments.findIndex((moment) => moment.visual_creates?.length);
       const create = first.moments[at].visual_creates[0];
       create.content = { parameters: firstParameters };
-      const later = first.moments.push({ narration: "Now cut it.", delivery: first.moments[at].delivery, visual_creates: [{ course_visual: create.course_visual, content: { parameters: laterParameters } }] }) - 1;
+      const later = first.moments.push({ narration: "Now cut it.", delivery: first.moments[at].delivery, visual_creates: [{ course_visual: create.course_visual, ...(laterTiming ? { timing: laterTiming } : {}), content: { parameters: laterParameters } }] }) - 1;
       const labels = [];
       let prefix;
       try {
@@ -340,7 +344,7 @@ test("a plain card, then its cut: the second create is drawn as a revision at it
         }, { turn_id: "rule-1", learner_request: "Three fifths shared by four", language: "en-US" }, { max_attempts_per_part: 1, on_playable_prefix: ({ compiled }) => { prefix ??= compiled; } });
       } catch {}
       const beats = prefix?.lesson.steps[0].beats ?? [];
-      const cards = beats.flatMap((beat, index) => beat.actions.filter((action) => action.kind === "fraction_model" || action.do === "revise").map((action) => ({ beat: index + 1, do: action.do, as: action.as, target: action.target, fractions: action.content.fractions, caption: action.content.caption })));
+      const cards = beats.flatMap((beat, index) => beat.actions.filter((action) => action.kind === "fraction_model" || action.do === "revise").map((action) => ({ beat: index + 1, do: action.do, as: action.as, target: action.target, fractions: action.content.fractions, caption: action.content.caption, title: action.content.title, when: action.when })));
       let board;
       if (prefix) {
         const node = Object.values(reduceCanonicalEvents(normalizeAuthoringLesson(prefix.lesson, { lessonId: "l", boardId: "b", baseRevision: 0, regionIntent: "new_topic" })).nodes).find((each) => each.kind === "fraction_model");
@@ -367,7 +371,11 @@ test("a plain card, then its cut: the second create is drawn as a revision at it
   ]);
   assert.equal(result.share.cards[1].caption, "Each share is 2/5");
   // Anything outside the typed table keeps the first create, as before (FD-20's sixteenths are not drawn).
-  for (const name of ["fractions differ", "shapes differ"]) assert.deepEqual(result[name].cards.map((card) => card.do), ["write"], name);
+  for (const name of ["fractions differ", "shapes differ", "hundredths"]) assert.deepEqual(result[name].cards.map((card) => card.do), ["write"], name);
+  assert.deepEqual(result.hundredths.labels, ["lesson-plan-bootstrap", "lesson-plan-section"], "no re-ask for hundredths");
+  const titled = result.titled.cards;
+  assert.deepEqual(titled.map((card) => [card.do, card.title]), [["write", "Three fifths of a pizza"], ["revise", "Three fifths of a pizza"]]);
+  assert.notEqual(titled[1].when, "before_speech", "the cut waits for the speech");
   assert.deepEqual(result["fractions differ"].cards[0].fractions, [{ as: "a", numerator: 3, denominator: 1 }]);
 });
 

@@ -16026,7 +16026,8 @@ var MATH_HOOKS = {
       const [first, second] = contents.map((content) => content?.parameters ?? {});
       if (!hasFractionValues(contents[0]) || !hasFractionValues(contents[1])) return void 0;
       if (first.fraction_view !== "one" || first.fractions.length !== 1 || second.fractions.length !== 1) return void 0;
-      if ((first.fraction_shape ?? "bar") !== (second.fraction_shape ?? "bar")) return void 0;
+      const shape = (parameters3) => parameters3.fraction_shape ?? (parameters3.fractions.every((fraction3) => fraction3.denominator === 100) ? "grid" : "bar");
+      if (shape(first) !== shape(second) || shape(first) === "grid") return void 0;
       const a = first.fractions[0], b = second.fractions[0];
       if (second.fraction_view === "split" && a.numerator === b.numerator && a.denominator === b.denominator) return 1;
       if (second.fraction_view === "share" && a.denominator === 1 && a.numerator === b.numerator) return 1;
@@ -22481,11 +22482,16 @@ function reconcileBootstrapFirstSectionPositions(value2, outline) {
     matchedVisuals.set(chosen ? { ...match, entry: chosen.entry } : match, position);
     const then = later.length && recipeDeclares(visual.capability, "revised_by_program") ? RECIPE_HOOKS[visual.capability]?.then_create?.(contents, chosen ? later.indexOf(chosen) + 1 : 0) : void 0;
     const next = then !== void 0 && Number.isInteger(then) && then > 0 && then <= later.length && later[then - 1] !== chosen ? later[then - 1] : void 0;
-    if (next && next.moment > (chosen ?? match).moment) {
+    if (next && next.moment > match.moment) {
       unmatchedVisuals.delete(next);
       const content = next.entry.content && typeof next.entry.content === "object" && !Array.isArray(next.entry.content) ? { ...next.entry.content } : {};
       delete content.capability;
-      revisions.set(position, { moment: next.moment, ...next.entry.timing !== void 0 ? { timing: next.entry.timing } : {}, content });
+      const drawn = (chosen ?? match).entry.content;
+      const title = drawn?.parameters?.title ?? drawn?.title;
+      const nextParameters = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? content.parameters : {};
+      if (title !== void 0 && nextParameters.title === void 0 && content.title === void 0) content.parameters = { ...nextParameters, title };
+      const timing = next.entry.timing !== void 0 && next.entry.timing !== "before_speech" ? next.entry.timing : void 0;
+      revisions.set(position, { moment: next.moment, ...timing !== void 0 ? { timing } : {}, content });
     }
   }
   const fixedCourseCreates = Object.fromEntries([...matchedVisuals].map(([match, position]) => {

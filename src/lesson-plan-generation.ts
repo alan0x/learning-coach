@@ -1547,11 +1547,20 @@ function reconcileBootstrapFirstSectionPositions(
     const then = later.length && recipeDeclares(visual.capability, "revised_by_program")
       ? RECIPE_HOOKS[visual.capability]?.then_create?.(contents, chosen ? later.indexOf(chosen) + 1 : 0) : undefined;
     const next = then !== undefined && Number.isInteger(then) && then > 0 && then <= later.length && later[then - 1] !== chosen ? later[then - 1] : undefined;
-    if (next && next.moment > (chosen ?? match).moment) {
+    // The card is drawn at the first create's moment, so its next step comes later.
+    if (next && next.moment > match.moment) {
       unmatchedVisuals.delete(next);
       const content = next.entry.content && typeof next.entry.content === "object" && !Array.isArray(next.entry.content) ? { ...(next.entry.content as Record<string, unknown>) } : {};
       delete content.capability;
-      revisions.set(position, { moment: next.moment, ...(next.entry.timing !== undefined ? { timing: next.entry.timing } : {}), content });
+      // The card keeps its title unless the next step writes its own (review of #148).
+      const drawn = (chosen ?? match).entry.content as { title?: unknown; parameters?: Record<string, unknown> } | undefined;
+      const title = drawn?.parameters?.title ?? drawn?.title;
+      const nextParameters = (content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? content.parameters : {}) as Record<string, unknown>;
+      if (title !== undefined && nextParameters.title === undefined && content.title === undefined) content.parameters = { ...nextParameters, title };
+      // A program revision never comes before the narration that introduces it (review of #148): before_speech
+      // falls back to the default, during the speech.
+      const timing = next.entry.timing !== undefined && next.entry.timing !== "before_speech" ? next.entry.timing : undefined;
+      revisions.set(position, { moment: next.moment, ...(timing !== undefined ? { timing } : {}), content });
     }
   }
   const fixedCourseCreates = Object.fromEntries([...matchedVisuals].map(([match, position]) => {

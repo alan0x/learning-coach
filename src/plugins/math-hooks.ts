@@ -116,7 +116,9 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       const [first, second] = contents.map((content) => (content?.parameters ?? {}) as { fractions?: Array<{ numerator?: unknown; denominator?: unknown }>; fraction_shape?: unknown; fraction_view?: unknown });
       if (!hasFractionValues(contents[0]) || !hasFractionValues(contents[1])) return undefined;
       if (first!.fraction_view !== "one" || first!.fractions!.length !== 1 || second!.fractions!.length !== 1) return undefined;
-      if ((first!.fraction_shape ?? "bar") !== (second!.fraction_shape ?? "bar")) return undefined;
+      // The shape the compiler draws: as written, else a grid for hundredths and a bar otherwise (review of #148).
+      const shape = (parameters: typeof first) => parameters!.fraction_shape ?? (parameters!.fractions!.every((fraction) => fraction.denominator === 100) ? "grid" : "bar");
+      if (shape(first) !== shape(second) || shape(first) === "grid") return undefined;
       const a = first!.fractions![0]!, b = second!.fractions![0]!;
       if (second!.fraction_view === "split" && a.numerator === b.numerator && a.denominator === b.denominator) return 1;
       if (second!.fraction_view === "share" && a.denominator === 1 && a.numerator === b.numerator) return 1;
