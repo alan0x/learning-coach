@@ -22,6 +22,8 @@
 //   A probe: --pairs 0 --cases NL-03,NM-01 --quality-repeats 5 (candidate arm only, no speed pairs).
 //   A quality run: --pairs 0 --recipes number_line_steps,function_plot_extensions --quality-repeats 2 [--lesson-calls 4]
 //   (every case of the named recipes on the candidate arm; near misses on both arms; --both-arms: every case).
+//   A diagnostic: --pairs 0 --recipes fraction_model --cases-file <cases.json> --both-arms (the file's cases in
+//   file order instead of the recipes' quality cases; --recipes still names the trial recipes offered).
 //   Two builds: --baseline-build <dir> --build <dir> --recipes number_line (both arms the same environment;
 //   --recipes picks the fitting requests only).
 //   The gate for the 2026-11-15 switch-ons: --baseline-build <75578ab> --build <main> --recipes extensions_switch_on
@@ -217,6 +219,23 @@ export const EXTENSIONS_SWITCH_ON_CASES = [
 
 /** The requests each trial recipe fits (or each switch-on, for a two-build gate). */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES, extensions_switch_on: EXTENSIONS_SWITCH_ON_CASES, solid_3d: SOLID_SPEED_CASES };
+/**
+ * Cases from a file (--cases-file, a {"cases": [...]} file such as testsuite/fraction-dev-cases.json), in file
+ * order. They carry no expectations, so nothing is judged in the run: each row records what its arm drew and
+ * the raw replies are kept, to be read afterwards. `near_miss` (or `nearMiss`) marks a near miss.
+ */
+export function casesFromFile(text) {
+  const { cases } = JSON.parse(text);
+  if (!Array.isArray(cases) || !cases.length) throw new Error("--cases-file has no cases");
+  const ids = new Set();
+  return cases.map(({ id, language, prompt, near_miss: snake, nearMiss = snake }) => {
+    if (typeof id !== "string" || !id || typeof prompt !== "string" || !prompt) throw new Error(`--cases-file: a case needs an id and a prompt (${JSON.stringify(id)})`);
+    if (ids.has(id)) throw new Error(`--cases-file: case '${id}' appears twice`);
+    ids.add(id);
+    return { id, ...(language ? { language } : {}), prompt, ...(nearMiss ? { nearMiss: true } : {}) };
+  });
+}
+
 /**
  * The quality cases of every recipe a run offers, in the order named (run 9 took only the first recipe's,
  * so its comparing, solution-set and rounding cases never ran).
@@ -681,9 +700,13 @@ async function main() {
   // A probe (--cases NL-03,NM-01) runs only the named cases, on the candidate arm, with no speed pairs:
   // a cheap first look at how the model meets a change, before any gate run.
   const probeIds = option("--cases")?.split(",").map((id) => id.trim()).filter(Boolean);
+  const casesFile = option("--cases-file");
+  // An empty or missing path must not fall back to the recipes' own cases (review of #143: a paid run on the wrong set).
+  if (args.includes("--cases-file") && (!casesFile || casesFile.startsWith("--"))) throw new Error("--cases-file needs a path");
+  if (casesFile && probeIds) throw new Error("--cases and --cases-file cannot be used together");
   // Any case of any trial recipe can be probed (number_line,number_line_compare offers both).
   const allCases = [...Object.values(TRIAL_CASES).flat(), ...Object.values(TRIAL_QUALITY_CASES).flat()];
-  const qualityCases = (probeIds ? probeIds.map((id) => {
+  const qualityCases = (casesFile ? casesFromFile(await readFile(resolve(casesFile), "utf8")) : probeIds ? probeIds.map((id) => {
     const item = allCases.find((entry) => entry.id === id);
     if (!item) throw new Error(`no case '${id}'`);
     return item;

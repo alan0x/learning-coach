@@ -106,3 +106,34 @@ Ranked by open M1 questions completed, as 0021's table did, and by probe mislead
 | Decimal and mixed-number input, converted and labelled by the program | 0 | FM-11 (probes 1 and 3; in probe 2 it failed on a re-ask that lost 160/100), FM-10's labels |
 | Operation views (join, cross out, copies, re-cut) | 0 tagged | none |
 | Area model (two-way) | 0 for fractions (G912-06 is algebraic, kept for its own decision) | none |
+
+## Paid diagnostic on the development set (registered before the run)
+The owner approved (2026-11-19) the four recommendations: the labelled-quantity picture becomes its own tape-diagram card, built before the fraction card is switched on; the fraction fixes and the tape card come first, then counters (OLL decision 0022 stays on hold); the scoring method below; and this diagnostic, run before the views of a smaller first version are chosen.
+
+**Purpose.** To see how the model uses today's card on natural questions and to separate the model's choices from the card's gaps. One run per case and arm, so there are no rates and no pass or fail. Not one of the two scoring runs, and the sealed set is untouched.
+
+**Run.**
+- Build: probe 3's frozen build, Coach 420695d. Main (0ef1c50) differs from it only in docs and testsuite. `lesson-plan.js` SHA-256 `f8981f19…81ef`, `main` `5acc24ff…d711`.
+- Cases: `testsuite/fraction-dev-cases.json` (SHA-256 `631acd12…850c`), reordered in the run directory (`dev-cases-ordered.json`, `e40a6a42…3f77`) so that a call cap cuts the least informative cases:
+  - first the tape and near-miss cases: FD-17, 18, 23, 24;
+  - then operations and number forms: FD-15, 16, 20, 09, 10, 12, 11, 04, 14, 13, 22, 19;
+  - then FD-03, 05, 01, 02, 07;
+  - last the three cases today's card draws fully: FD-06, 08, 21.
+- Model and limits: Gemini 3.6 Flash on the dev key (`~/.octos/profiles/dev-probes.json`), with the card on and off, alternating which goes first. 48 lessons at about 2.2 calls each (probes 1–3: 2.22, 2.26, 2.20), 4 calls per lesson, a cap of **130** calls, not raised. The runner's cap is set to 129: the call that crosses it starts before it is stopped, so at most 130 calls start.
+- Command: `--pairs 0 --recipes fraction_model --cases-file <dev-cases-ordered.json> --both-arms --quality-repeats 1 --lesson-calls 4 --max-calls 129`.
+- The cases carry no expectations, so the runner judges nothing. The report's quality summary is not read (a near miss with a card is counted there as judged), and if the cap is reached, a case that ran on one arm only is read from the rows. Checks before the run continues:
+  - the header names `trial_recipes: fraction_model`;
+  - the first in-scope lesson with the card on lists `fraction_model`, or the run is stopped.
+
+**Reading, fixed now.**
+1. **Each lesson with the card on.** Its card is read from OLL's plan of the drawing (`describe` in `tools/fraction-audit.mjs`) and set beside that case's best card in the audit above. The lesson goes in one of three groups:
+   - **reached:** the model drew the best card today's card allows;
+   - **short:** it fell short of that card. This is the model's choice.
+   - **gap:** it reached that card, but the card is poor. This is the card's gap.
+2. **Each lesson with the card off.** Read from what it draws (not the narration): what it showed instead, and whether that picture is right.
+3. **Counted across the run:**
+   - whether a card was drawn on FD-17 and FD-18 (no card fits), and on FD-23 and FD-24 (no card should be drawn);
+   - how many first replies lack `fractions`;
+   - in the 7 cases where the answer would have to go on the card, whether the model computed it and whether it was right;
+   - calls and re-asks per arm.
+4. **The use.** The groups decide which views and inputs the 0021 amendment's first version gets: a gap that recurs earns a view; a short that recurs earns guidance or a refusal; no amount of either changes the cases.
