@@ -220,7 +220,9 @@ test("share (0021 amendment 2): a/b is a wholes shared among b, one piece of eac
     ["on-a-grid", { fraction_shape: "grid", fractions: [f(2, 5)], fraction_view: "share" }, "en-US"],
     ["with-a-split", { fractions: [f(2, 5)], fraction_view: "share", split_each_part: "2" }, "en-US"],
     ["no-values", { fraction_view: "share" }, "en-US"],
+    ["a-pie", { fraction_shape: "pie", fractions: [f(2, 5)], fraction_view: "share" }, "en-US"],
   ]));
+  assert.match(result["a-pie"].message, /expected one of bar, circle, grid/);
   assert.deepEqual(result["two-among-five"].content.fractions, [{ as: "a", numerator: 2, denominator: 1, split: 5, highlight: 2 }]);
   assert.equal(result["two-among-five"].content.model, "bar");
   assert.equal(result["two-among-five"].content.caption, "Each share is 2/5");

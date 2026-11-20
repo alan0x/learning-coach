@@ -19389,6 +19389,7 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   });
   if (view === "share") {
     const { numerator: wholes, denominator: shares } = fractions[0];
+    if (input.fraction_shape !== void 0 && !FRACTION_SHAPES.includes(input.fraction_shape)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, `expected one of ${FRACTION_SHAPES.join(", ")}`);
     if (wholes < 1 || wholes > FRACTION_MODEL_LIMITS.wholes) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].numerator`, `share 1 to ${FRACTION_MODEL_LIMITS.wholes} wholes`);
     if (shares < FRACTION_MODEL_LIMITS.splitMin || shares > FRACTION_MODEL_LIMITS.splitMax) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].denominator`, `share among ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
     if (input.fraction_shape === "grid") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "shared wholes are bars or circles");
