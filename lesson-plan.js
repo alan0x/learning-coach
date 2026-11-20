@@ -13939,6 +13939,8 @@ var MATH_RECIPES = {
     output_kinds: ["fraction_model"],
     student_controls: [],
     required_features: ["fraction_parts"],
+    // The program may draw the card's next step as a revision (0021 amendment 2: a fraction, then its cut).
+    revised_by_program: true,
     model_guidance: "\u5206\u6570\u7B49\u5206\u56FE\uFF1Afractions\u5199\u5206\u5B50\u5206\u6BCD\u7684\u503C\uFF1Bview\uFF1Aone\u3001compare\u4E24\u4E2A\u3001equivalent\u7B49\u503C\u3001split\u6BCF\u4EFD\u518D\u5206split_each_part\u4EFD\u3001share\u628Aa\u4E2A\u6574\u4F53\u5E73\u5206\u7ED9b\u4EFD\u5199a/b\uFF1Bshape\uFF1Abar/circle/grid\uFF08\u767E\u5206\u4E4B\u51E0\u7528grid\uFF09\uFF1B\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5206\u3001\u4E00\u7EC4\u7269\u4F53\u7684\u51E0\u5206\u4E4B\u51E0\u3001\u6BD4\uFF1B\u5927\u4E8E1\u5199\u4E00\u4E2A\u5047\u5206\u6570"
   },
   rectangle_unit_square_array: {
@@ -14665,6 +14667,7 @@ var EN = {
   "\u5C55\u5F00": "Unfold",
   "\u5206\u6570": "Fractions",
   "\u6BCF\u4EFD\u662F {{v0}}": "Each share is {{v0}}",
+  "\u753B\u9762\u7684\u4E0B\u4E00\u6B65": "the picture's next step",
   "y \u622A\u8DDD": "y-intercept",
   "x \u622A\u8DDD": "x-intercept",
   "\u5BF9\u79F0\u8F74": "Axis of symmetry",
@@ -16012,6 +16015,23 @@ var MATH_HOOKS = {
       if (hasFractionValues(contents[0])) return 0;
       const later = contents.findIndex((content, index) => index > 0 && hasFractionValues(content));
       return later > 0 ? later : 0;
+    },
+    // OLL 0021 amendment 2, rule 1: the teacher's two steps on one card, by a typed table. Exactly two
+    // creates, the same shape, the first one fraction shown plainly, and the second either cuts each of its
+    // parts (split, the same a/b) or shares its wholes (share a/b after a/1). Anything else keeps the first:
+    // the diagnostic's FD-20 (3/1, then 12/4 split 4) would draw sixteenths, FD-05 (1/2, then an
+    // "equivalent" of 2/4 alone) would be refused.
+    then_create(contents, chosen) {
+      if (contents.length !== 2 || chosen !== 0) return void 0;
+      const [first, second] = contents.map((content) => content?.parameters ?? {});
+      if (!hasFractionValues(contents[0]) || !hasFractionValues(contents[1])) return void 0;
+      if (first.fraction_view !== "one" || first.fractions.length !== 1 || second.fractions.length !== 1) return void 0;
+      const shape = (parameters3) => parameters3.fraction_shape ?? (parameters3.fractions.every((fraction3) => fraction3.denominator === 100) ? "grid" : "bar");
+      if (shape(first) !== shape(second) || shape(first) === "grid") return void 0;
+      const a = first.fractions[0], b = second.fractions[0];
+      if (second.fraction_view === "split" && a.numerator === b.numerator && a.denominator === b.denominator) return 1;
+      if (second.fraction_view === "share" && a.denominator === 1 && a.numerator === b.numerator) return 1;
+      return void 0;
     }
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
@@ -19370,6 +19390,7 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   });
   if (view === "share") {
     const { numerator: wholes, denominator: shares } = fractions[0];
+    if (input.fraction_shape !== void 0 && !FRACTION_SHAPES.includes(input.fraction_shape)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, `expected one of ${FRACTION_SHAPES.join(", ")}`);
     if (wholes < 1 || wholes > FRACTION_MODEL_LIMITS.wholes) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].numerator`, `share 1 to ${FRACTION_MODEL_LIMITS.wholes} wholes`);
     if (shares < FRACTION_MODEL_LIMITS.splitMin || shares > FRACTION_MODEL_LIMITS.splitMax) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].denominator`, `share among ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
     if (input.fraction_shape === "grid") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "shared wholes are bars or circles");
@@ -20328,7 +20349,17 @@ function compileLessonPlan(value2, options = {}) {
         } else if (item.action === "revise") {
           const target = reference(`${actionPath}.reference`);
           if (item.kind === "visual" || item.content.capability) {
-            fail2("LESSON_PLAN_COMPILER_UNSUPPORTED_REVISION", `${actionPath}.content`, "visual capability revision is not in the first compiler batch");
+            const visualContent = item.content;
+            if (!recipeDeclares(visualContent.capability, "revised_by_program")) {
+              fail2("LESSON_PLAN_COMPILER_UNSUPPORTED_REVISION", `${actionPath}.content`, "visual capability revision is not in the first compiler batch");
+            }
+            const compiled = compileVisual(target, visualContent, "main_visual", { relation: "new_region" }, plan, `${actionPath}.content.parameters`);
+            const write2 = compiled.actions.length === 1 && compiled.actions[0].do === "write" ? compiled.actions[0] : void 0;
+            if (!write2 || write2.content.bindings !== void 0 || compiled.variables?.length) {
+              fail2("LESSON_PLAN_COMPILER_UNSUPPORTED_REVISION", `${actionPath}.content`, "a revised card is one fixed card, with no slider");
+            }
+            actions.push({ do: "revise", target, content: write2.content, reason: item.reason, ...actionWhen(item.timing) });
+            return;
           }
           const content = item.content;
           actions.push({
@@ -22404,6 +22435,7 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
   }
   return lowered;
 }
+var PROGRAM_VISUAL_REVISIONS = /* @__PURE__ */ new WeakMap();
 function reconcileBootstrapFirstSectionPositions(value2, outline) {
   const root2 = structuredClone(value2);
   if (!root2 || typeof root2 !== "object" || Array.isArray(root2)) return root2;
@@ -22429,6 +22461,7 @@ function reconcileBootstrapFirstSectionPositions(value2, outline) {
   }).sort((left, right) => left.moment - right.moment || (Number.isFinite(left.order) ? left.order : Number.MAX_SAFE_INTEGER) - (Number.isFinite(right.order) ? right.order : Number.MAX_SAFE_INTEGER) || left.index - right.index);
   const visualCreates = collect("visual_creates");
   const unmatchedVisuals = new Set(visualCreates);
+  const revisions = /* @__PURE__ */ new Map();
   const matchedVisuals = /* @__PURE__ */ new Map();
   const expectedVisuals = (outline.course_visuals ?? []).map((visual, index) => ({ visual, position: index + 1 })).filter(({ visual }) => visual.create_section === 1);
   for (const { visual, position } of expectedVisuals) {
@@ -22442,10 +22475,24 @@ function reconcileBootstrapFirstSectionPositions(value2, outline) {
     unmatchedVisuals.delete(match);
     const later = visualCreates.filter((candidateEntry) => unmatchedVisuals.has(candidateEntry) && candidateEntry.entry.course_visual === position && visualCreates.indexOf(candidateEntry) > visualCreates.indexOf(match));
     const choose = later.length ? RECIPE_HOOKS[visual.capability]?.choose_first_create : void 0;
-    const pick = choose?.([match, ...later].map((candidateEntry) => candidateEntry.entry.content));
+    const contents = [match, ...later].map((candidateEntry) => candidateEntry.entry.content);
+    const pick = choose?.(contents);
     const chosen = pick !== void 0 && Number.isInteger(pick) && pick > 0 && pick <= later.length ? later[pick - 1] : void 0;
     if (chosen) unmatchedVisuals.delete(chosen);
     matchedVisuals.set(chosen ? { ...match, entry: chosen.entry } : match, position);
+    const then = later.length && recipeDeclares(visual.capability, "revised_by_program") ? RECIPE_HOOKS[visual.capability]?.then_create?.(contents, chosen ? later.indexOf(chosen) + 1 : 0) : void 0;
+    const next = then !== void 0 && Number.isInteger(then) && then > 0 && then <= later.length && later[then - 1] !== chosen ? later[then - 1] : void 0;
+    if (next && next.moment > match.moment) {
+      unmatchedVisuals.delete(next);
+      const content = next.entry.content && typeof next.entry.content === "object" && !Array.isArray(next.entry.content) ? { ...next.entry.content } : {};
+      delete content.capability;
+      const drawn = (chosen ?? match).entry.content;
+      const title = drawn?.parameters?.title ?? drawn?.title;
+      const nextParameters = content.parameters && typeof content.parameters === "object" && !Array.isArray(content.parameters) ? content.parameters : {};
+      if (title !== void 0 && nextParameters.title === void 0 && content.title === void 0) content.parameters = { ...nextParameters, title };
+      const timing = next.entry.timing !== void 0 && next.entry.timing !== "before_speech" ? next.entry.timing : void 0;
+      revisions.set(position, { moment: next.moment, ...timing !== void 0 ? { timing } : {}, content });
+    }
   }
   const fixedCourseCreates = Object.fromEntries([...matchedVisuals].map(([match, position]) => {
     const entry = structuredClone(match.entry);
@@ -22463,6 +22510,7 @@ function reconcileBootstrapFirstSectionPositions(value2, outline) {
   }
   if (expectedVisuals.length > 0) candidate.course_visual_creates = fixedCourseCreates;
   else delete candidate.course_visual_creates;
+  if (revisions.size) PROGRAM_VISUAL_REVISIONS.set(root2, revisions);
   const createsByKind = {
     math: collect("math_creates"),
     note: collect("note_creates")
@@ -22531,6 +22579,7 @@ function taughtContent(draft) {
   }));
 }
 function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedReusableCreates = false, language) {
+  const programRevisions = value2 && typeof value2 === "object" ? PROGRAM_VISUAL_REVISIONS.get(value2) : void 0;
   const root2 = pruneModelNulls(value2);
   if (!root2 || typeof root2 !== "object" || Array.isArray(root2)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection", "expected an object");
@@ -22775,6 +22824,32 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
             )
           }
         });
+      });
+    }
+    for (const [position, revision] of programRevisions ?? []) {
+      const declaration = courseVisuals[position - 1];
+      if (revision.moment !== momentIndex + 1 || !declaration) continue;
+      const created = [...fixedCourseCreates].find(([, entries]) => entries.some((entry) => entry.course_visual === position));
+      if (!created || created[0] >= revision.moment) continue;
+      const item = created[1].findIndex((entry) => entry.course_visual === position) + 1;
+      ordered.push({
+        order: 0,
+        action: {
+          action: "revise",
+          ...lowerModelActionReferences(
+            "revise",
+            {
+              kind: "visual",
+              reference: { source: "local_board_item", moment: created[0], item },
+              content: { capability: declaration.capability, ...revision.content },
+              reason: lessonText(language, "\u753B\u9762\u7684\u4E0B\u4E00\u6B65"),
+              ...revision.timing !== void 0 ? { timing: revision.timing } : {}
+            },
+            momentIndex + 1,
+            outline.numbers?.length ?? 0,
+            (outline.numbers ?? []).map((number) => number.label ?? "")
+          )
+        }
       });
     }
     ordered.sort((left, right) => left.order - right.order);

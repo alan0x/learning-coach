@@ -163,6 +163,8 @@ export const MATH_RECIPES = {
     output_kinds: ["fraction_model"],
     student_controls: [],
     required_features: ["fraction_parts"],
+    // The program may draw the card's next step as a revision (0021 amendment 2: a fraction, then its cut).
+    revised_by_program: true,
     model_guidance: "分数等分图：fractions写分子分母的值；view：one、compare两个、equivalent等值、split每份再分split_each_part份、share把a个整体平分给b份写a/b；shape：bar/circle/grid（百分之几用grid）；不用于不等分、一组物体的几分之几、比；大于1写一个假分数",
   },
   rectangle_unit_square_array: {

@@ -220,7 +220,9 @@ test("share (0021 amendment 2): a/b is a wholes shared among b, one piece of eac
     ["on-a-grid", { fraction_shape: "grid", fractions: [f(2, 5)], fraction_view: "share" }, "en-US"],
     ["with-a-split", { fractions: [f(2, 5)], fraction_view: "share", split_each_part: "2" }, "en-US"],
     ["no-values", { fraction_view: "share" }, "en-US"],
+    ["a-pie", { fraction_shape: "pie", fractions: [f(2, 5)], fraction_view: "share" }, "en-US"],
   ]));
+  assert.match(result["a-pie"].message, /expected one of bar, circle, grid/);
   assert.deepEqual(result["two-among-five"].content.fractions, [{ as: "a", numerator: 2, denominator: 1, split: 5, highlight: 2 }]);
   assert.equal(result["two-among-five"].content.model, "bar");
   assert.equal(result["two-among-five"].content.caption, "Each share is 2/5");
@@ -291,6 +293,164 @@ test("a fraction card first written without its values takes a later create's va
   assert.equal(rule.writes[0].beat, rule.at, "drawn at the first create's moment");
   // With no values in either create, the section is refused as before.
   assert.deepEqual(result["both without values"].writes, []);
+});
+
+test("a plain card, then its cut: the second create is drawn as a revision at its moment (0021 amendment 2, rule 1)", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { retiredCubeCourse } = await import(${here("./lesson-plan-course-fixtures.mjs")});
+    const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+    const { judgeFractions } = await import(${here("../scripts/fraction-judge.mjs")});
+    const { readFileSync } = await import("node:fs");
+    const { normalizeAuthoringLesson, reduceCanonicalEvents } = await import("octos-lesson-language");
+    const cases = Object.fromEntries(JSON.parse(readFileSync(new URL(${here("../testsuite/fraction-judge-cases.json")}), "utf8")).cases.map((item) => [item.id, item]));
+    const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+    const plan = structuredClone(retiredCubeCourse);
+    delete plan.numbers;
+    for (const section of plan.sections) {
+      for (const moment of section.moments) moment.actions = moment.actions.filter((action) => action.action !== "animate");
+      if (section.student_activities) section.student_activities = section.student_activities.filter((activity) => activity.kind !== "number_target" && activity.kind !== "scene3d_view");
+      if (!section.student_activities?.length) delete section.student_activities;
+      for (const item of section.reusable_items ?? []) if (item.capability === "cube_with_section") item.capability = "fraction_model";
+      for (const moment of section.moments) for (const action of moment.actions) {
+        if (action.content?.capability === "cube_with_section") action.content = { capability: "fraction_model", parameters: { fractions: [{ numerator: 3, denominator: 8 }], fraction_view: "one" } };
+      }
+    }
+    const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+    const outline = stagedOutline(plan, drafts);
+    const out = {};
+    for (const [name, firstParameters, laterParameters, laterTiming] of [
+      ["cut", { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "one" }, { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "split", split_each_part: "4" }],
+      ["share", { fractions: [{ numerator: 2, denominator: 1 }], fraction_view: "one" }, { fractions: [{ numerator: 2, denominator: 5 }], fraction_view: "share" }],
+      ["fractions differ", { fractions: [{ numerator: 3, denominator: 1 }], fraction_view: "one" }, { fractions: [{ numerator: 12, denominator: 4 }], fraction_view: "split", split_each_part: "4" }],
+      ["shapes differ", { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "one" }, { fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "split", split_each_part: "2" }],
+      // Review of #148: the card keeps its title, and a cut written before the speech waits for it.
+      ["titled", { title: "Three fifths of a pizza", fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "one" }, { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "split", split_each_part: "4" }, "before_speech"],
+      // Hundredths with no shape draw on a grid, which cannot be cut: the first create is kept, with no re-ask.
+      ["hundredths", { fractions: [{ numerator: 43, denominator: 100 }], fraction_view: "one" }, { fractions: [{ numerator: 43, denominator: 100 }], fraction_view: "split", split_each_part: "2" }],
+    ]) {
+      const first = bootstrapSectionFromExact(outline, drafts[0]);
+      const at = first.moments.findIndex((moment) => moment.visual_creates?.length);
+      const create = first.moments[at].visual_creates[0];
+      create.content = { parameters: firstParameters };
+      const later = first.moments.push({ narration: "Now cut it.", delivery: first.moments[at].delivery, visual_creates: [{ course_visual: create.course_visual, ...(laterTiming ? { timing: laterTiming } : {}), content: { parameters: laterParameters } }] }) - 1;
+      const labels = [];
+      let prefix;
+      try {
+        await api.generateLessonPlanWithModel(async (request) => {
+          labels.push(request.label);
+          if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, first);
+          throw new Error("stop after the first section");
+        }, { turn_id: "rule-1", learner_request: "Three fifths shared by four", language: "en-US" }, { max_attempts_per_part: 1, on_playable_prefix: ({ compiled }) => { prefix ??= compiled; } });
+      } catch {}
+      const beats = prefix?.lesson.steps[0].beats ?? [];
+      const cards = beats.flatMap((beat, index) => beat.actions.filter((action) => action.kind === "fraction_model" || action.do === "revise").map((action) => ({ beat: index + 1, do: action.do, as: action.as, target: action.target, fractions: action.content.fractions, caption: action.content.caption, title: action.content.title, when: action.when })));
+      let board;
+      if (prefix) {
+        const node = Object.values(reduceCanonicalEvents(normalizeAuthoringLesson(prefix.lesson, { lessonId: "l", boardId: "b", baseRevision: 0, regionIntent: "new_topic" })).nodes).find((each) => each.kind === "fraction_model");
+        board = node?.content.fractions;
+      }
+      out[name] = { labels, cards, at: at + 1, later: later + 1, board, ...(prefix && name === "cut" ? { fm13: judgeFractions(cases["FM-13"], prefix.lesson) } : {}) };
+    }
+    console.log(JSON.stringify(out));
+  `);
+  const cut = result.cut;
+  assert.deepEqual(cut.labels, ["lesson-plan-bootstrap", "lesson-plan-section"], "the first section plays from the first reply");
+  assert.deepEqual(cut.cards.map((card) => [card.beat, card.do]), [[cut.at, "write"], [cut.later, "revise"]]);
+  assert.deepEqual(cut.cards[0].fractions, [{ as: "a", numerator: 3, denominator: 5 }]);
+  assert.deepEqual(cut.cards[1].fractions, [{ as: "a", numerator: 3, denominator: 5, split: 4, highlight: 3 }]);
+  assert.equal(cut.cards[1].caption, "Each share is 3/20");
+  assert.equal(cut.cards[1].target, cut.cards[0].as, "the revision targets the card it cuts");
+  // The board ends with the cut card, and the judge reads both steps: FM-13 (3/5 in four portions) passes.
+  assert.deepEqual(cut.board.map(({ numerator, denominator, split, highlight }) => ({ numerator, denominator, split, highlight })), [{ numerator: 3, denominator: 5, split: 4, highlight: 3 }]);
+  assert.deepEqual(cut.fm13, { hard: [], soft: [] });
+  // Two wholes, then shared by five: one fifth of each.
+  assert.deepEqual(result.share.cards.map((card) => [card.do, card.fractions]), [
+    ["write", [{ as: "a", numerator: 2, denominator: 1 }]],
+    ["revise", [{ as: "a", numerator: 2, denominator: 1, split: 5, highlight: 2 }]],
+  ]);
+  assert.equal(result.share.cards[1].caption, "Each share is 2/5");
+  // Anything outside the typed table keeps the first create, as before (FD-20's sixteenths are not drawn).
+  for (const name of ["fractions differ", "shapes differ", "hundredths"]) assert.deepEqual(result[name].cards.map((card) => card.do), ["write"], name);
+  assert.deepEqual(result.hundredths.labels, ["lesson-plan-bootstrap", "lesson-plan-section"], "no re-ask for hundredths");
+  const titled = result.titled.cards;
+  assert.deepEqual(titled.map((card) => [card.do, card.title]), [["write", "Three fifths of a pizza"], ["revise", "Three fifths of a pizza"]]);
+  assert.notEqual(titled[1].when, "before_speech", "the cut waits for the speech");
+  assert.deepEqual(result["fractions differ"].cards[0].fractions, [{ as: "a", numerator: 3, denominator: 1 }]);
+});
+
+test("rule 1 to the end: a two-step lesson plays all its sections, the cut fraction stays addressable, and a refused cut is asked again", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { retiredCubeCourse } = await import(${here("./lesson-plan-course-fixtures.mjs")});
+    const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+    const { judgeFractions } = await import(${here("../scripts/fraction-judge.mjs")});
+    const { readFileSync } = await import("node:fs");
+    const { normalizeAuthoringLesson } = await import("octos-lesson-language");
+    const cases = Object.fromEntries(JSON.parse(readFileSync(new URL(${here("../testsuite/fraction-judge-cases.json")}), "utf8")).cases.map((item) => [item.id, item]));
+    const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+    const plan = structuredClone(retiredCubeCourse);
+    delete plan.numbers;
+    for (const section of plan.sections) {
+      for (const moment of section.moments) moment.actions = moment.actions.filter((action) => action.action !== "animate");
+      if (section.student_activities) section.student_activities = section.student_activities.filter((activity) => activity.kind !== "number_target" && activity.kind !== "scene3d_view");
+      if (!section.student_activities?.length) delete section.student_activities;
+      for (const item of section.reusable_items ?? []) if (item.capability === "cube_with_section") item.capability = "fraction_model";
+      for (const moment of section.moments) for (const action of moment.actions) {
+        if (action.content?.capability === "cube_with_section") action.content = { capability: "fraction_model", parameters: { fractions: [{ numerator: 3, denominator: 8 }], fraction_view: "one" } };
+      }
+    }
+    const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+    const outline = stagedOutline(plan, drafts);
+    const out = {};
+    for (const [name, firstParameters, laterParameters] of [
+      ["cut", { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "one" }, { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "split", split_each_part: "4" }],
+      // Eighths cut into four are 32 parts, more than a whole holds: the cut is refused.
+      ["refused cut", { fractions: [{ numerator: 5, denominator: 8 }], fraction_view: "one" }, { fractions: [{ numerator: 5, denominator: 8 }], fraction_view: "split", split_each_part: "4" }],
+    ]) {
+      const first = bootstrapSectionFromExact(outline, drafts[0]);
+      const at = first.moments.findIndex((moment) => moment.visual_creates?.length);
+      const create = first.moments[at].visual_creates[0];
+      create.content = { parameters: firstParameters };
+      first.moments.push({ narration: "Now cut it.", delivery: first.moments[at].delivery, visual_creates: [{ course_visual: create.course_visual, content: { parameters: laterParameters } }] });
+      const labels = [];
+      const rejected = [];
+      let generated;
+      try {
+        generated = await api.generateLessonPlanWithModel(async (request) => {
+          labels.push(request.label + (request.section ? " " + request.section : ""));
+          if (labels.length > 8) throw new Error("unexpected extra model request");
+          if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, first);
+          return JSON.stringify(drafts[request.section - 1]);
+        }, { turn_id: "rule-1-full", learner_request: "Three fifths shared by four", language: "en-US" }, {
+          max_attempts_per_part: 3,
+          on_rejected_part: (part) => rejected.push(part.error.code + " " + part.error.message),
+        });
+      } catch (error) { out[name] = { labels, rejected, error: String(error.message) }; continue; }
+      const lesson = generated.lesson;
+      // An emphasis on the cut fraction's part, after the revision: the part is still addressable.
+      const alias = lesson.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions).find((action) => action.kind === "fraction_model")?.as;
+      const emphasized = structuredClone(lesson);
+      emphasized.steps.at(-1).beats.push({ key: "look-again", say: "Look at one share again.", actions: [{ do: "emphasize", target: alias + "#a", emphasis: "focus" }] });
+      let emphasis = "ok";
+      try { normalizeAuthoringLesson(emphasized, { lessonId: "l", boardId: "b", baseRevision: 0, regionIntent: "new_topic" }); } catch (error) { emphasis = String(error.message); }
+      out[name] = { labels, rejected, sections: lesson.steps.length, emphasis, fm13: judgeFractions(cases["FM-13"], lesson),
+        revisions: lesson.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions).filter((action) => action.do === "revise").length };
+    }
+    console.log(JSON.stringify(out));
+  `);
+  const cut = result.cut;
+  assert.equal(cut.error, undefined, cut.error);
+  assert.equal(cut.sections, 3, "all three sections play");
+  assert.equal(cut.revisions, 1);
+  assert.equal(cut.emphasis, "ok", "the cut fraction's part stays addressable after the revision");
+  assert.deepEqual(cut.fm13, { hard: [], soft: [] });
+  assert.deepEqual(cut.rejected, []);
+  // A refused cut is this section's fault: section 1 is asked again (and plays from the reply), never silently dropped.
+  const refused = result["refused cut"];
+  assert.match(refused.rejected.join(" | "), /after splitting, a whole has at most 24 parts/u);
+  assert.ok(refused.labels.includes("lesson-plan-section 1"), refused.labels.join(", "));
+  assert.equal(refused.error, undefined, refused.error);
 });
 
 test("a share that is a whole number is written as one (review of #131)", () => {

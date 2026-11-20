@@ -1548,6 +1548,8 @@ function compileFractionModel(
   // cut into b, and marks one piece of each whole as one share (2 sandwiches among 5: a fifth of each).
   if (view === "share") {
     const { numerator: wholes, denominator: shares } = fractions[0]!;
+    // The shape is checked here too: a name outside the list must not become a bar (review of #147).
+    if (input.fraction_shape !== undefined && !FRACTION_SHAPES.includes(input.fraction_shape as typeof FRACTION_SHAPES[number])) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, `expected one of ${FRACTION_SHAPES.join(", ")}`);
     if (wholes < 1 || wholes > FRACTION_MODEL_LIMITS.wholes) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].numerator`, `share 1 to ${FRACTION_MODEL_LIMITS.wholes} wholes`);
     if (shares < FRACTION_MODEL_LIMITS.splitMin || shares > FRACTION_MODEL_LIMITS.splitMax) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].denominator`, `share among ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
     if (input.fraction_shape === "grid") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "shared wholes are bars or circles");

@@ -44,7 +44,7 @@ export function recipeInitialCamera(capability: string | undefined): { yaw: numb
 }
 
 /** A recipe's declared flag (`numbers_in_parameters`, `ranges_fixed_once_shown`); false when absent. */
-export function recipeDeclares(capability: string | undefined, flag: "numbers_in_parameters" | "ranges_fixed_once_shown"): boolean {
+export function recipeDeclares(capability: string | undefined, flag: "numbers_in_parameters" | "ranges_fixed_once_shown" | "revised_by_program"): boolean {
   return recipeEntry(capability)?.[flag] === true;
 }
 export const LESSON_PLAN_VISUAL_FEATURES = [...new Set(

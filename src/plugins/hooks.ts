@@ -49,6 +49,12 @@ export interface RecipeHooks {
    * keeps the first and drops the rest. Out of range or not a whole number: the first.
    */
   choose_first_create?(contents: readonly Record<string, unknown>[]): number;
+  /**
+   * After `choose_first_create` chose `chosen`: the index of a later create (in the same contents) that is
+   * the card's next step, drawn as a revision of the card at that create's moment; or undefined. Only for a
+   * recipe that declares `revised_by_program`.
+   */
+  then_create?(contents: readonly Record<string, unknown>[], chosen: number): number | undefined;
 }
 
 export type { LessonPlanMathExpression };

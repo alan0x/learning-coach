@@ -106,6 +106,24 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       const later = contents.findIndex((content, index) => index > 0 && hasFractionValues(content));
       return later > 0 ? later : 0;
     },
+    // OLL 0021 amendment 2, rule 1: the teacher's two steps on one card, by a typed table. Exactly two
+    // creates, the same shape, the first one fraction shown plainly, and the second either cuts each of its
+    // parts (split, the same a/b) or shares its wholes (share a/b after a/1). Anything else keeps the first:
+    // the diagnostic's FD-20 (3/1, then 12/4 split 4) would draw sixteenths, FD-05 (1/2, then an
+    // "equivalent" of 2/4 alone) would be refused.
+    then_create(contents, chosen) {
+      if (contents.length !== 2 || chosen !== 0) return undefined;
+      const [first, second] = contents.map((content) => (content?.parameters ?? {}) as { fractions?: Array<{ numerator?: unknown; denominator?: unknown }>; fraction_shape?: unknown; fraction_view?: unknown });
+      if (!hasFractionValues(contents[0]) || !hasFractionValues(contents[1])) return undefined;
+      if (first!.fraction_view !== "one" || first!.fractions!.length !== 1 || second!.fractions!.length !== 1) return undefined;
+      // The shape the compiler draws: as written, else a grid for hundredths and a bar otherwise (review of #148).
+      const shape = (parameters: typeof first) => parameters!.fraction_shape ?? (parameters!.fractions!.every((fraction) => fraction.denominator === 100) ? "grid" : "bar");
+      if (shape(first) !== shape(second) || shape(first) === "grid") return undefined;
+      const a = first!.fractions![0]!, b = second!.fractions![0]!;
+      if (second!.fraction_view === "split" && a.numerator === b.numerator && a.denominator === b.denominator) return 1;
+      if (second!.fraction_view === "share" && a.denominator === 1 && a.numerator === b.numerator) return 1;
+      return undefined;
+    },
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
