@@ -45,7 +45,8 @@ const IDEAL = {
   "FM-11": { fractions: [f(160, 100)], fraction_view: "one" },
   "FM-12": { fractions: [f(3, 4)], fraction_view: "split", split_each_part: "2" },
   "FM-13": { fraction_shape: "circle", fractions: [f(3, 5)], fraction_view: "split", split_each_part: "4" },
-  "FM-14": { fraction_shape: "circle", fractions: [f(3, 1)], fraction_view: "split", split_each_part: "4" },
+  // Three wholes shared by four: since the share view, a split of whole things draws the cuts only.
+  "FM-14": { fraction_shape: "circle", fractions: [f(3, 4)], fraction_view: "share" },
   "FM-15": { fractions: [f(6, 3)], fraction_view: "one" },
   "FM-17": { fractions: [f(3, 10), f(7, 10)], fraction_view: "compare" },
   "FM-18": { fractions: [f(3, 10), f(1, 2)], fraction_view: "compare" },
@@ -451,6 +452,36 @@ test("rule 1 to the end: a two-step lesson plays all its sections, the cut fract
   assert.match(refused.rejected.join(" | "), /after splitting, a whole has at most 24 parts/u);
   assert.ok(refused.labels.includes("lesson-plan-section 1"), refused.labels.join(", "));
   assert.equal(refused.error, undefined, refused.error);
+});
+
+test("after the v1 re-run: an equivalence with its cut, whole things cut without a share, and the split view's purpose in the guidance", () => {
+  const result = withTrial(compileScript([
+    ["half-in-quarters", { fractions: [f(1, 2), f(2, 4)], fraction_view: "equivalent", split_each_part: "2" }, "en-US"],
+    ["fine-first", { fraction_shape: "circle", fractions: [f(9, 12), f(3, 4)], fraction_view: "equivalent", split_each_part: "3" }, "en-US"],
+    ["wrong-count", { fractions: [f(1, 2), f(3, 6)], fraction_view: "equivalent", split_each_part: "2" }, "en-US"],
+    ["no-count-works", { fractions: [f(2, 4), f(3, 6)], fraction_view: "equivalent", split_each_part: "2" }, "en-US"],
+    ["same-fraction", { fractions: [f(1, 2), f(1, 2)], fraction_view: "equivalent", split_each_part: "2" }, "en-US"],
+    ["FM-06", { fractions: [f(3, 4), f(9, 12)], fraction_view: "equivalent", split_each_part: "3" }, "en"],
+    ["cups-in-quarters", { fractions: [f(3, 1)], fraction_view: "split", split_each_part: "4" }, "en-US"],
+    ["FM-15", { fractions: [f(2, 1)], fraction_view: "split", split_each_part: "3" }, "en"],
+  ]));
+  assert.deepEqual(result["half-in-quarters"].content.fractions, [{ as: "a", numerator: 1, denominator: 2, split: 2 }, { as: "b", numerator: 2, denominator: 4 }]);
+  assert.equal(result["half-in-quarters"].content.relation, "equivalent");
+  assert.equal(result["half-in-quarters"].content.caption, undefined);
+  // The coarser fraction is cut, whichever comes first.
+  assert.deepEqual(result["fine-first"].content.fractions, [{ as: "a", numerator: 9, denominator: 12 }, { as: "b", numerator: 3, denominator: 4, split: 3 }]);
+  // A refusal says how to retry (review of #151): the count that works, or to leave the field out.
+  assert.match(result["wrong-count"].message, /cutting each part of 1\/2 3 ways gives 3\/6: use split_each_part 3/);
+  for (const name of ["no-count-works", "same-fraction"]) assert.match(result[name].message, /neither fraction is the other with its parts cut 2 to 6 ways; leave split_each_part out/, name);
+  // The judge's equivalence case passes with the cut drawn (pieces common to both: the textbook comparison).
+  assert.deepEqual(result["FM-06"].verdict, { hard: [], soft: [] });
+  // Whole things cut: the pieces only, no share marked and no "Each share" (3 ÷ 1/4 counts 12 quarter cups).
+  assert.deepEqual(result["cups-in-quarters"].content.fractions, [{ as: "a", numerator: 3, denominator: 1, split: 4 }]);
+  assert.equal(result["cups-in-quarters"].content.caption, undefined);
+  assert.deepEqual(result["FM-15"].verdict, { hard: [], soft: [] });
+  // The split view says what it is for again (the re-run: the model wrote the part count there without it).
+  const guidance = withTrial(`const api = await import(${here("../lesson-plan.js")}); console.log(JSON.stringify(api.LESSON_PLAN_CAPABILITY_REGISTRY.fraction_model.model_guidance));`);
+  assert.match(guidance, /split把每份再分split_each_part份求每份/u);
 });
 
 test("a share that is a whole number is written as one (review of #131)", () => {

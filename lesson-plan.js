@@ -13941,7 +13941,7 @@ var MATH_RECIPES = {
     required_features: ["fraction_parts"],
     // The program may draw the card's next step as a revision (0021 amendment 2: a fraction, then its cut).
     revised_by_program: true,
-    model_guidance: "\u5206\u6570\u7B49\u5206\u56FE\uFF1Afractions\u5199\u5206\u5B50\u5206\u6BCD\u7684\u503C\uFF1Bview\uFF1Aone\u3001compare\u4E24\u4E2A\u3001equivalent\u7B49\u503C\u3001split\u6BCF\u4EFD\u518D\u5206split_each_part\u4EFD\u3001share\u628Aa\u4E2A\u6574\u4F53\u5E73\u5206\u7ED9b\u4EFD\u5199a/b\uFF1Bshape\uFF1Abar/circle/grid\uFF08\u767E\u5206\u4E4B\u51E0\u7528grid\uFF09\uFF1B\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5206\u3001\u4E00\u7EC4\u7269\u4F53\u7684\u51E0\u5206\u4E4B\u51E0\u3001\u6BD4\uFF1B\u5927\u4E8E1\u5199\u4E00\u4E2A\u5047\u5206\u6570"
+    model_guidance: "\u5206\u6570\u7B49\u5206\u56FE\uFF1Afractions\u5199\u5206\u5B50\u5206\u6BCD\u7684\u503C\uFF1Bview\uFF1Aone\u3001compare\u4E24\u4E2A\u3001equivalent\u7B49\u503C\u3001split\u628A\u6BCF\u4EFD\u518D\u5206split_each_part\u4EFD\u6C42\u6BCF\u4EFD\u3001share\u628Aa\u4E2A\u6574\u4F53\u5E73\u5206\u7ED9b\u4EFD\u5199a/b\uFF1Bshape\uFF1Abar/circle/grid\uFF08\u767E\u5206\u4E4B\u51E0\u7528grid\uFF09\uFF1B\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5206\u3001\u4E00\u7EC4\u7269\u4F53\u7684\u51E0\u5206\u4E4B\u51E0\u3001\u6BD4\uFF1B\u5927\u4E8E1\u5199\u4E00\u4E2A\u5047\u5206\u6570"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -19437,6 +19437,7 @@ function compileFractionModel(base, content, role, placement, plan, path) {
     if (a.numerator * b.denominator !== b.numerator * a.denominator) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_view`, `${a.numerator}/${a.denominator} and ${b.numerator}/${b.denominator} are not equal; compare them instead`);
   }
   let split;
+  let splitIndex = 0;
   if (view === "split") {
     const k = typeof input.split_each_part === "string" && /^[0-9]{1,2}$/u.test(input.split_each_part) ? Number(input.split_each_part) : input.split_each_part;
     if (shape === "grid") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "a grid's cells are not split again; use a bar or a circle");
@@ -19446,11 +19447,29 @@ function compileFractionModel(base, content, role, placement, plan, path) {
     if (fractions[0].denominator * k > FRACTION_MODEL_LIMITS.splitParts) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, `after splitting, a whole has at most ${FRACTION_MODEL_LIMITS.splitParts} parts`);
     if (fractions[0].numerator < 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].numerator`, "splitting shares the shaded parts: shade at least one");
     split = k;
+  } else if (view === "equivalent" && input.split_each_part !== void 0) {
+    const k = typeof input.split_each_part === "string" && /^[0-9]{1,2}$/u.test(input.split_each_part) ? Number(input.split_each_part) : input.split_each_part;
+    if (shape === "grid") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "a grid's cells are not split again; use a bar or a circle");
+    if (typeof k !== "number" || !Number.isInteger(k) || k < FRACTION_MODEL_LIMITS.splitMin || k > FRACTION_MODEL_LIMITS.splitMax) {
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, `split each part into ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
+    }
+    const [a, b] = fractions;
+    const cuts = (coarse, fine) => fine.numerator === coarse.numerator * k && fine.denominator === coarse.denominator * k;
+    if (cuts(a, b)) splitIndex = 0;
+    else if (cuts(b, a)) splitIndex = 1;
+    else {
+      const [coarse, fine] = a.denominator <= b.denominator ? [a, b] : [b, a];
+      const ratio2 = fine.denominator / coarse.denominator;
+      const works = Number.isInteger(ratio2) && ratio2 >= FRACTION_MODEL_LIMITS.splitMin && ratio2 <= FRACTION_MODEL_LIMITS.splitMax && fine.numerator === coarse.numerator * ratio2;
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, works ? `cutting each part of ${coarse.numerator}/${coarse.denominator} ${ratio2} ways gives ${fine.numerator}/${fine.denominator}: use split_each_part ${ratio2}` : `neither fraction is the other with its parts cut ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax} ways; leave split_each_part out`);
+    }
+    split = k;
   } else if (input.split_each_part !== void 0) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, "split_each_part goes with fraction_view split");
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, "split_each_part goes with fraction_view split or equivalent");
   }
+  const sharing = view === "split" && fractions[0].denominator !== 1;
   let caption;
-  if (split !== void 0) {
+  if (split !== void 0 && sharing) {
     const { numerator, denominator } = fractions[0];
     const parts = denominator * split, divisor = gcdOf(numerator, parts);
     const simplest = parts / divisor === 1 ? `${numerator / divisor}` : `${numerator / divisor}/${parts / divisor}`;
@@ -19465,10 +19484,10 @@ function compileFractionModel(base, content, role, placement, plan, path) {
     ...caption ? { caption } : {},
     model: shape,
     ...grid ? { grid } : {},
-    fractions: fractions.map((fraction3) => ({
+    fractions: fractions.map((fraction3, index) => ({
       numerator: fraction3.numerator,
       denominator: fraction3.denominator,
-      ...split !== void 0 ? { split, highlight: fraction3.numerator } : {}
+      ...split !== void 0 && index === splitIndex ? { split, ...sharing ? { highlight: fraction3.numerator } : {} } : {}
     })),
     ...count === 2 ? { relation: view } : {}
   });
