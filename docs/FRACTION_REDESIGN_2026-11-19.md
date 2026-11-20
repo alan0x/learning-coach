@@ -320,3 +320,25 @@ The owner approved (2026-11-19) the fixes after the first re-run (Coach #151) an
 3. **FD-05 and FD-20:** whether the equivalence is drawn with its cut, and whether whole things are cut without a share.
 
 **The use.** If a core card still misleads, the cause is read from the replies before anything changes, and the owner decides. Otherwise the first version waits for the tape card, and both are scored together.
+
+## Second re-run results (2026-11-19)
+Run as registered (#152): **65 calls** of the 90 allowed, and all 48 lessons reached their first section. The full reading is in the handoff folder (`runs/fractions/v1-rerun-2/reading.md`).
+
+- **Card on, 22 in-scope lessons:**
+  - a good card in 10 (re-run 1: 9; diagnostic: 8), including `share` in FD-16 and FD-17, and two steps in FD-19;
+  - the model fell short in 3;
+  - near misses with a card: 1 of 2 (a true 25/100 grid).
+- **Still misleading:**
+  - FD-04, core B03: "12/3 = 4" cut into ninths, "Each share is 12/9 = 4/3";
+  - FD-20, outside v1: 1/4 cut into four, "Each share is 1/16".
+
+  FD-11 now draws well. **Restoring the split view's purpose did not stop the model writing the part count in `split_each_part`; the misuse moved.**
+- **Cause:** every misleading caption so far is the third reply of a chain:
+  - the part count with no fractions;
+  - then one fraction per whole, refused;
+  - then the whole fraction with the part count as its cut.
+- **Two candidate program rules**, tested for free on every split written in all six runs (details in the reading):
+  - R1, refuse a cut equal to the denominator: catches all 8 bad writes, but would block a correct "half of a half";
+  - R2, refuse a split of an improper fraction: catches the 3 core misleads and blocks none seen, but misses 1/2 cut in two in an equivalence lesson.
+
+FD-04 is core, so the tape card and scoring wait for the owner's decision. Nothing is built before it.
