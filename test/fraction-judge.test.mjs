@@ -190,6 +190,26 @@ test("a slider: the numerator must be bound over the right denominator, step in 
   fails("FM-16", lesson(bound(), { variables: variables(1), tasks: loose }), /accepts ±1.5 parts around 5/u);
 });
 
+test("a card drawn plain and then revised with its cuts is judged at each step (0021 amendment 2)", async () => {
+  const { fractionCardsIn } = await import("../scripts/fraction-judge.mjs");
+  const stepped = (revised) => {
+    const built = lesson({ model: "bar", fractions: [f(3, 5)] });
+    built.steps[0].beats.push({ key: "cut", say: "Cut each fifth.", actions: [{ do: "revise", target: "model", reason: "cut each fifth", content: revised }] });
+    return built;
+  };
+  const cut = stepped({ title: "Fractions", model: "bar", fractions: [{ as: "a", numerator: 3, denominator: 5, split: 4, highlight: 3 }], caption: "Each share is 3/20" });
+  const cards = fractionCardsIn(cut);
+  assert.deepEqual(cards.map((card) => [card.step, card.fractions[0].split]), [[0, undefined], [1, 4]]);
+  // FM-13 asks for 3/5 in four portions: the revised step meets it; the plain step alone would not.
+  passes("FM-13", cut, "with the cut in the second step");
+  fails("FM-13", lesson({ model: "bar", fractions: [f(3, 5)] }), /split none, expected 4/);
+  // Checks needing no expectation hold at every step: a revised step that draws an empty extra whole is a miss there.
+  const extra = stepped({ model: "bar", fractions: [{ as: "a", numerator: 3, denominator: 5, wholes: 2 }] });
+  assert.match(judgeFractions(cases["FM-13"], extra).hard.join(" | "), /card model step 2: a: 2 wholes drawn for 3\/5/);
+  // A lesson with no revision keeps one entry and no step.
+  assert.deepEqual(fractionCardsIn(lesson({ model: "bar", fractions: [f(3, 5)] })).map((card) => card.step), [undefined]);
+});
+
 test("checks needing no expectation: a lesson that does not normalize is a hard miss", () => {
   // Fractions shown equivalent that are not: the card refuses it, so the lesson does not normalize.
   const broken = lesson({ model: "bar", fractions: [f(2, 3), f(3, 4)], relation: "compare" });

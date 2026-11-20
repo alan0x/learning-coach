@@ -29,7 +29,11 @@ const relationOf = (a, b) => {
   return left < right ? "<" : left > right ? ">" : "=";
 };
 
-/** The fraction cards a whole authoring lesson draws, each with every numerator value it shows. */
+/**
+ * The fraction cards a whole authoring lesson draws, each with every numerator value it shows. A card
+ * revised later (0021 amendment 2: drawn plain, then revised with its cuts) gives one entry per state it
+ * shows, in order, with `step` counting from 0, so the plain step and the cut are each judged.
+ */
 export function fractionCardsIn(lesson) {
   const actions = (lesson?.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? []);
   const writes = actions.filter((action) => action.do === "write" && action.kind === "fraction_model");
@@ -44,20 +48,24 @@ export function fractionCardsIn(lesson) {
   const variables = lesson.lesson?.variables ?? [];
   const animated = new Map();
   for (const action of actions) if (action.do === "animate") animated.set(action.variable, [...(animated.get(action.variable) ?? []), action.value]);
-  return writes.map((write) => {
+  return writes.flatMap((write) => {
     const node = nodes.find((candidate) => String(candidate.id).endsWith(`:node:${write.as}`));
-    if (!node) return { as: write.as, error: "fraction_model node not found" };
-    const bindings = write.content.bindings ?? [];
-    // Each fraction as written, then every value its numerator takes: the start, each animation of a
-    // variable bound directly, and the end of the lesson (the reduced board).
-    const fractions = (write.content.fractions ?? []).map((fraction, index) => {
-      const binding = bindings.find((candidate) => candidate.target === `${fraction.as}.numerator`);
-      const variable = binding && variables.find((candidate) => candidate.as === String(binding.expression).trim());
-      const end = node.content.fractions?.[index]?.numerator ?? fraction.numerator;
-      const values = [fraction.numerator, end, ...(variable ? animated.get(variable.as) ?? [] : [])];
-      return { ...fraction, values: [...new Set(values)], ...(binding ? { bound: { expression: binding.expression, variable } } : {}) };
+    if (!node) return [{ as: write.as, error: "fraction_model node not found" }];
+    const revisions = actions.filter((action) => action.do === "revise" && action.target === write.as && action.content && typeof action.content === "object");
+    return [write.content, ...revisions.map((action) => action.content)].map((content, step, states) => {
+      // A revision carries no bindings (OLL refuses them there), so only the written state can be bound.
+      const bindings = content.bindings ?? [];
+      // Each fraction as written, then every value its numerator takes: the start, each animation of a
+      // variable bound directly, and the end of the lesson (the reduced board, when this is the last state).
+      const fractions = (content.fractions ?? []).map((fraction, index) => {
+        const binding = bindings.find((candidate) => candidate.target === `${fraction.as}.numerator`);
+        const variable = binding && variables.find((candidate) => candidate.as === String(binding.expression).trim());
+        const end = step === states.length - 1 ? node.content.fractions?.[index]?.numerator ?? fraction.numerator : fraction.numerator;
+        const values = [fraction.numerator, end, ...(variable ? animated.get(variable.as) ?? [] : [])];
+        return { ...fraction, values: [...new Set(values)], ...(binding ? { bound: { expression: binding.expression, variable } } : {}) };
+      });
+      return { as: write.as, ...(states.length > 1 ? { step } : {}), model: content.model, grid: content.grid, relation: content.relation, fractions };
     });
-    return { as: write.as, model: write.content.model, grid: write.content.grid, relation: write.content.relation, fractions };
   });
 }
 
@@ -206,8 +214,9 @@ export function judgeFractions(item, lesson) {
   if (!cards.length) return item.nearMiss ? { hard, soft } : { hard: ["no fraction card"], soft };
   const perCard = [];
   for (const card of cards) {
-    if (card.error) { hard.push(`card ${card.as}: ${card.error}`); continue; }
-    for (const miss of [...cardMisses(card), ...taskMisses(card, lesson)]) hard.push(`card ${card.as}: ${miss}`);
+    const name = `card ${card.as}${card.step !== undefined ? ` step ${card.step + 1}` : ""}`;
+    if (card.error) { hard.push(`${name}: ${card.error}`); continue; }
+    for (const miss of [...cardMisses(card), ...taskMisses(card, lesson)]) hard.push(`${name}: ${miss}`);
     if (!item.nearMiss) perCard.push(expectationMisses(expect, card, lesson));
   }
   if (!item.nearMiss && !perCard.some((misses) => !misses.length)) {
