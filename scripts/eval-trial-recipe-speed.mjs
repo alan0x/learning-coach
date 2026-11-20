@@ -220,10 +220,6 @@ export const EXTENSIONS_SWITCH_ON_CASES = [
 /** The requests each trial recipe fits (or each switch-on, for a two-build gate). */
 export const TRIAL_CASES = { constant_speed_motion: MOTION_CASES, number_line: NUMBER_LINE_CASES, extensions_switch_on: EXTENSIONS_SWITCH_ON_CASES, solid_3d: SOLID_SPEED_CASES };
 /**
- * The quality cases of every recipe a run offers, in the order named (run 9 took only the first recipe's,
- * so its comparing, solution-set and rounding cases never ran).
- */
-/**
  * Cases from a file (--cases-file, a {"cases": [...]} file such as testsuite/fraction-dev-cases.json), in file
  * order. They carry no expectations, so nothing is judged in the run: each row records what its arm drew and
  * the raw replies are kept, to be read afterwards. `near_miss` (or `nearMiss`) marks a near miss.
@@ -240,6 +236,10 @@ export function casesFromFile(text) {
   });
 }
 
+/**
+ * The quality cases of every recipe a run offers, in the order named (run 9 took only the first recipe's,
+ * so its comparing, solution-set and rounding cases never ran).
+ */
 export function qualityCasesFor(recipes) {
   return recipes.split(",").map((name) => name.trim()).filter(Boolean).flatMap((name) => TRIAL_QUALITY_CASES[name] ?? []);
 }
@@ -701,6 +701,8 @@ async function main() {
   // a cheap first look at how the model meets a change, before any gate run.
   const probeIds = option("--cases")?.split(",").map((id) => id.trim()).filter(Boolean);
   const casesFile = option("--cases-file");
+  // An empty or missing path must not fall back to the recipes' own cases (review of #143: a paid run on the wrong set).
+  if (args.includes("--cases-file") && (!casesFile || casesFile.startsWith("--"))) throw new Error("--cases-file needs a path");
   if (casesFile && probeIds) throw new Error("--cases and --cases-file cannot be used together");
   // Any case of any trial recipe can be probed (number_line,number_line_compare offers both).
   const allCases = [...Object.values(TRIAL_CASES).flat(), ...Object.values(TRIAL_QUALITY_CASES).flat()];

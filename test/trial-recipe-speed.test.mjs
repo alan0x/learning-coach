@@ -219,6 +219,11 @@ test("the harness runs pairs and quality cases, keeps raw replies, judges each c
   assert.ok(fromFile.rows.every((row) => !row.quality?.hard.length), "no expectations, so nothing is judged");
   assert.equal(fromFile.rows.find((row) => row.case === "D-02" && row.arm === "candidate").quality.review, "near miss drew the trial's visual: read by hand");
   assert.equal(fromFile.trial_recipes, "number_line");
+  // An empty or missing path is refused, never a run of the recipes' own cases.
+  for (const tail of [["--cases-file", ""], ["--cases-file"], ["--cases-file", "--both-arms"]]) {
+    await assert.rejects(new Promise((done, fail) => execFile(process.execPath, [script, "--build", dir, "--recipes", "number_line", "--octos-profile", join(dir, "profile.json"), "--pairs", "0", "--max-calls", "20", ...tail],
+      { timeout: 60000 }, (error, _stdout, stderr) => (error ? fail(new Error(stderr)) : done()))), /--cases-file needs a path/);
+  }
   // A budget too small for the plan is reported, never passed over.
   await run(3, join(dir, "short.json"));
   const short = JSON.parse(await readFile(join(dir, "short.json"), "utf8"));

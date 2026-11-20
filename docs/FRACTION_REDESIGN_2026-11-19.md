@@ -119,9 +119,9 @@ The owner approved (2026-11-19) the four recommendations: the labelled-quantity 
   - then operations and number forms: FD-15, 16, 20, 09, 10, 12, 11, 04, 14, 13, 22, 19;
   - then FD-03, 05, 01, 02, 07;
   - last the three cases today's card draws fully: FD-06, 08, 21.
-- Model and limits: Gemini 3.6 Flash on the dev key (`~/.octos/profiles/dev-probes.json`), with the card on and off, alternating which goes first. 48 lessons at about 2.2 calls each (probes 1–3: 2.22, 2.26, 2.20), 4 calls per lesson, a cap of **130** calls, not raised.
-- Command: `--pairs 0 --recipes fraction_model --cases-file <dev-cases-ordered.json> --both-arms --quality-repeats 1 --lesson-calls 4 --max-calls 130`.
-- The cases carry no expectations, so the runner judges nothing. Checks before the run continues:
+- Model and limits: Gemini 3.6 Flash on the dev key (`~/.octos/profiles/dev-probes.json`), with the card on and off, alternating which goes first. 48 lessons at about 2.2 calls each (probes 1–3: 2.22, 2.26, 2.20), 4 calls per lesson, a cap of **130** calls, not raised. The runner's cap is set to 129: the call that crosses it starts before it is stopped, so at most 130 calls start.
+- Command: `--pairs 0 --recipes fraction_model --cases-file <dev-cases-ordered.json> --both-arms --quality-repeats 1 --lesson-calls 4 --max-calls 129`.
+- The cases carry no expectations, so the runner judges nothing. The report's quality summary is not read (a near miss with a card is counted there as judged), and if the cap is reached, a case that ran on one arm only is read from the rows. Checks before the run continues:
   - the header names `trial_recipes: fraction_model`;
   - the first in-scope lesson with the card on lists `fraction_model`, or the run is stopped.
 
