@@ -205,7 +205,7 @@ test("a stubbed generation run: the card reaches the lesson; numerators and deno
   assert.deepEqual(result.content.fractions, [{ as: "a", numerator: 5, denominator: 8 }, { as: "b", numerator: 2, denominator: 3 }]);
   assert.equal(result.content.model, "circle");
   assert.equal(result.content.relation, "compare");
-  assert.deepEqual(result.plugins, { math: "0.4.1", shared: "0.1.0" });
+  assert.deepEqual(result.plugins, { math: "0.4.2", shared: "0.1.0" });
 });
 
 test("a share that is a whole number is written as one (review of #131)", () => {
