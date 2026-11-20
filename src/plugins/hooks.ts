@@ -43,6 +43,12 @@ export interface RecipeHooks {
    * another visual also shows, which a recipe must leave alone.
    */
   fit_numbers?(content: LessonPlanVisualContent, plan: LessonPlan, shared: ReadonlySet<number>): Map<number, number>;
+  /**
+   * The model wrote several first-section creates of this course visual (their contents, in order): the
+   * index of the one the card is made from, drawn at the first create's moment. Without the hook Coach
+   * keeps the first and drops the rest. Out of range or not a whole number: the first.
+   */
+  choose_first_create?(contents: readonly Record<string, unknown>[]): number;
 }
 
 export type { LessonPlanMathExpression };

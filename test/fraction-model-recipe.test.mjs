@@ -208,6 +208,91 @@ test("a stubbed generation run: the card reaches the lesson; numerators and deno
   assert.deepEqual(result.plugins, { math: "0.4.2", shared: "0.1.0" });
 });
 
+test("share (0021 amendment 2): a/b is a wholes shared among b, one piece of each whole marked; the program draws the wholes", () => {
+  const result = withTrial(compileScript([
+    ["two-among-five", { fractions: [f(2, 5)], fraction_view: "share" }, "en-US"],
+    ["four-among-six", { fraction_shape: "circle", fractions: [f(4, 6)], fraction_view: "share" }, "en-US"],
+    ["three-among-four-zh", { fractions: [f(3, 4)], fraction_view: "share" }, "zh-CN"],
+    ["five-among-two", { fractions: [f(5, 2)], fraction_view: "share" }, "en-US"],
+    ["among-seven", { fractions: [f(2, 7)], fraction_view: "share" }, "en-US"],
+    ["nothing", { fractions: [f(0, 3)], fraction_view: "share" }, "en-US"],
+    ["nine-wholes", { fractions: [f(9, 2)], fraction_view: "share" }, "en-US"],
+    ["on-a-grid", { fraction_shape: "grid", fractions: [f(2, 5)], fraction_view: "share" }, "en-US"],
+    ["with-a-split", { fractions: [f(2, 5)], fraction_view: "share", split_each_part: "2" }, "en-US"],
+    ["no-values", { fraction_view: "share" }, "en-US"],
+  ]));
+  assert.deepEqual(result["two-among-five"].content.fractions, [{ as: "a", numerator: 2, denominator: 1, split: 5, highlight: 2 }]);
+  assert.equal(result["two-among-five"].content.model, "bar");
+  assert.equal(result["two-among-five"].content.caption, "Each share is 2/5");
+  assert.equal(result["four-among-six"].content.model, "circle");
+  assert.equal(result["four-among-six"].content.caption, "Each share is 4/6 = 2/3");
+  assert.equal(result["three-among-four-zh"].content.caption, "每份是 3/4");
+  assert.deepEqual(result["five-among-two"].content.fractions, [{ as: "a", numerator: 5, denominator: 1, split: 2, highlight: 5 }]);
+  assert.match(result["among-seven"].message, /share among 2 to 6/);
+  assert.match(result["nothing"].message, /share 1 to 8 wholes/);
+  assert.match(result["nine-wholes"].message, /share 1 to 8 wholes/);
+  assert.match(result["on-a-grid"].message, /shared wholes are bars or circles/);
+  assert.match(result["with-a-split"].message, /split_each_part goes with fraction_view split/);
+  assert.match(result["no-values"].message, /numerator wholes shared equally among denominator/);
+  // The choice is offered in the provider schema.
+  assert.ok(api.RECIPE_SCHEMA_PROPERTIES.fraction_model.fraction_view.enum.includes("share"));
+});
+
+test("a fraction card first written without its values takes a later create's values, at the first moment (0021 amendment 2, rule 2)", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { retiredCubeCourse } = await import(${here("./lesson-plan-course-fixtures.mjs")});
+    const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+    const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+    const plan = structuredClone(retiredCubeCourse);
+    delete plan.numbers;
+    for (const section of plan.sections) {
+      for (const moment of section.moments) moment.actions = moment.actions.filter((action) => action.action !== "animate");
+      if (section.student_activities) section.student_activities = section.student_activities.filter((activity) => activity.kind !== "number_target" && activity.kind !== "scene3d_view");
+      if (!section.student_activities?.length) delete section.student_activities;
+      for (const item of section.reusable_items ?? []) if (item.capability === "cube_with_section") item.capability = "fraction_model";
+      for (const moment of section.moments) for (const action of moment.actions) {
+        if (action.content?.capability === "cube_with_section") action.content = { capability: "fraction_model", parameters: { fractions: [{ numerator: 3, denominator: 8 }], fraction_view: "one" } };
+      }
+    }
+    const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+    const outline = stagedOutline(plan, drafts);
+    const out = {};
+    for (const [name, firstValues, laterValues] of [
+      ["rule 2", undefined, [{ numerator: 1, denominator: 3 }, { numerator: 1, denominator: 6 }]],
+      ["both without values", undefined, undefined],
+    ]) {
+      const first = bootstrapSectionFromExact(outline, drafts[0]);
+      const at = first.moments.findIndex((moment) => moment.visual_creates?.length);
+      const create = first.moments[at].visual_creates[0];
+      create.content = { parameters: { fraction_shape: "bar", fraction_view: "compare", ...(firstValues ? { fractions: firstValues } : {}) } };
+      // The fixture's first section has one moment: the values come in a second one.
+      const later = first.moments.length > at + 1 ? at + 1 : first.moments.push({ narration: "Here are the two fractions.", delivery: first.moments[at].delivery }) - 1;
+      first.moments[later].visual_creates = [{ course_visual: create.course_visual, content: { parameters: { fraction_shape: "bar", fraction_view: "compare", ...(laterValues ? { fractions: laterValues } : {}) } } }];
+      const labels = [];
+      let prefix;
+      try {
+        await api.generateLessonPlanWithModel(async (request) => {
+          labels.push(request.label);
+          if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, first);
+          throw new Error("stop after the first section");
+        }, { turn_id: "rule-2", learner_request: "Same top number, which is bigger?", language: "en-US" }, { max_attempts_per_part: 1, on_playable_prefix: ({ compiled }) => { prefix ??= compiled; } });
+      } catch {}
+      const beats = prefix?.lesson.steps[0].beats ?? [];
+      const writes = beats.flatMap((beat, index) => beat.actions.filter((action) => action.kind === "fraction_model").map((action) => ({ beat: index + 1, fractions: action.content.fractions })));
+      out[name] = { labels, writes, at: at + 1 };
+    }
+    console.log(JSON.stringify(out));
+  `);
+  const rule = result["rule 2"];
+  assert.deepEqual(rule.labels, ["lesson-plan-bootstrap", "lesson-plan-section"], "the first section plays from the first reply");
+  assert.equal(rule.writes.length, 1);
+  assert.deepEqual(rule.writes[0].fractions, [{ as: "a", numerator: 1, denominator: 3 }, { as: "b", numerator: 1, denominator: 6 }]);
+  assert.equal(rule.writes[0].beat, rule.at, "drawn at the first create's moment");
+  // With no values in either create, the section is refused as before.
+  assert.deepEqual(result["both without values"].writes, []);
+});
+
 test("a share that is a whole number is written as one (review of #131)", () => {
   const result = withTrial(compileScript([["whole-share", { fractions: [f(6, 3)], fraction_view: "split", split_each_part: "2" }, "en-US"]]));
   assert.equal(result["whole-share"].content.caption, "Each share is 6/6 = 1");

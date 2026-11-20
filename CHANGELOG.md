@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Fraction trial: a `share` view, and a card's values from a later create** (OLL decision 0021 amendment 2, step 3a). Trial off: requests byte-identical, the 319 recorded lessons replay identically.
+  - `fraction_view: "share"`: the model writes the share a/b for a wholes shared equally among b (1 to 8 wholes, 2 to 6 shares, bars or circles). The program draws a wholes each cut into b and marks one piece of each whole (OLL 0.4.2), with "Each share is a/b" under the card (reduced when it can be: "4/6 = 2/3"). Before, 2 sandwiches among 5 could only be written as 2/1 split 5, and the model wrote 2/5 split 5 instead (fraction diagnostic, FD-16).
+  - A fraction card first written without its values takes them from the first later create of the same card that has them, drawn at the first create's moment: the recipe's new `choose_first_create` hook (Coach otherwise keeps the first create and drops the rest). Replaying the diagnostic's saved replies, FD-08 now draws 1/3 and 1/6 from its first reply instead of losing them to a re-ask; the other 23 lessons, and all 23 of probe 3, compile as before.
+  - The card's guidance names `share` and is trimmed to fit: first-request cost with the trial on is 698 B (budget 700 B).
+
 - **OLL at cea255a** (OLL #81; decision 0021 amendment 2, step 1): a fraction card's marked share takes one piece of each part (2 wholes shared by 3 mark one third of each, half of 3/5 one half of each fifth), and the card writes the number's other form beside its label (whole or mixed numbers on bars and circles, decimals on grids of tenths or hundredths). The player redraws a revised fraction card with its cuts. The compiled lessons stamp math 0.4.2. Requests and the 319 recorded lessons are unchanged.
 
 - **OLL at da6c807** (OLL #78): fraction grids shade column by column (math plugin 0.4.1), the usual US hundred-grid order and what lesson narration says ("four full columns"). The compiled lessons stamp math 0.4.1. Requests and the 319 recorded lessons are unchanged.

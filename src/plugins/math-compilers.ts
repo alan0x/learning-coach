@@ -1489,7 +1489,7 @@ function compileSolid3d(
 
 // ---- Fraction model (decision 0021, amended) ------------------------------------------------------------
 
-const FRACTION_VIEWS = ["one", "compare", "equivalent", "split"] as const;
+const FRACTION_VIEWS = ["one", "compare", "equivalent", "split", "share"] as const;
 const FRACTION_SHAPES = ["bar", "circle", "grid"] as const;
 
 /** A grid for a denominator: rows × columns, both at most 10, as close to square as can be (100 is 10 × 10). */
@@ -1531,7 +1531,9 @@ function compileFractionModel(
   // Probe 2: the first reply often named the shape and view and left the values out.
   if (written === undefined) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, view === "split"
     ? "write the fraction as values, {numerator, denominator}; split_each_part splits its shaded parts, so shade at least one"
-    : "write the fractions as values, each {numerator, denominator}; a numerator of 0 shows a whole divided with none shaded");
+    : view === "share"
+      ? "write the share as values, {numerator, denominator}: numerator wholes shared equally among denominator"
+      : "write the fractions as values, each {numerator, denominator}; a numerator of 0 shows a whole divided with none shaded");
   const count = view === "compare" || view === "equivalent" ? 2 : 1;
   if (!Array.isArray(written) || written.length !== count) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
   const fractions = (written as JsonValue[]).map((item, index) => {
@@ -1542,6 +1544,25 @@ function compileFractionModel(
     if (typeof denominator !== "number" || !Number.isInteger(denominator) || denominator < 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${at}.denominator`, "the denominator is a whole number of equal parts, 1 or more");
     return { numerator: numerator as number, denominator: denominator as number };
   });
+  // 0021 amendment 2: a ÷ b shared equally. The model writes the share a/b; the program draws a wholes, each
+  // cut into b, and marks one piece of each whole as one share (2 sandwiches among 5: a fifth of each).
+  if (view === "share") {
+    const { numerator: wholes, denominator: shares } = fractions[0]!;
+    if (wholes < 1 || wholes > FRACTION_MODEL_LIMITS.wholes) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].numerator`, `share 1 to ${FRACTION_MODEL_LIMITS.wholes} wholes`);
+    if (shares < FRACTION_MODEL_LIMITS.splitMin || shares > FRACTION_MODEL_LIMITS.splitMax) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].denominator`, `share among ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
+    if (input.fraction_shape === "grid") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "shared wholes are bars or circles");
+    if (input.split_each_part !== undefined) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, "split_each_part goes with fraction_view split");
+    const divisor = gcdOf(wholes, shares);
+    const simplest = shares / divisor === 1 ? `${wholes / divisor}` : `${wholes / divisor}/${shares / divisor}`;
+    const built = buildFractionModel({
+      as: base, role, place: placement,
+      title: optionalText(input.title, compileText(plan, "分数"), `${path}.title`),
+      caption: compileText(plan, "每份是 {{v0}}", { v0: divisor > 1 ? `${wholes}/${shares} = ${simplest}` : `${wholes}/${shares}` }),
+      model: input.fraction_shape === "circle" ? "circle" : "bar",
+      fractions: [{ numerator: wholes, denominator: 1, split: shares, highlight: wholes }],
+    });
+    return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
+  }
   // A denominator no card can draw (over 12, and no grid of at most 10 by 10): say so, so the next reply
   // does not try another shape that cannot draw it either (FM-N6, 5/37, lost in probes 1 and 2).
   fractions.forEach((fraction, index) => {
