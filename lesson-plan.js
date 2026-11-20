@@ -19457,7 +19457,12 @@ function compileFractionModel(base, content, role, placement, plan, path) {
     const cuts = (coarse, fine) => fine.numerator === coarse.numerator * k && fine.denominator === coarse.denominator * k;
     if (cuts(a, b)) splitIndex = 0;
     else if (cuts(b, a)) splitIndex = 1;
-    else fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, `cutting each part of one fraction ${k} ways must give the other (1/2 cut into 2 is 2/4)`);
+    else {
+      const [coarse, fine] = a.denominator <= b.denominator ? [a, b] : [b, a];
+      const ratio2 = fine.denominator / coarse.denominator;
+      const works = Number.isInteger(ratio2) && ratio2 >= FRACTION_MODEL_LIMITS.splitMin && ratio2 <= FRACTION_MODEL_LIMITS.splitMax && fine.numerator === coarse.numerator * ratio2;
+      fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, works ? `cutting each part of ${coarse.numerator}/${coarse.denominator} ${ratio2} ways gives ${fine.numerator}/${fine.denominator}: use split_each_part ${ratio2}` : `neither fraction is the other with its parts cut ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax} ways; leave split_each_part out`);
+    }
     split = k;
   } else if (input.split_each_part !== void 0) {
     fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, "split_each_part goes with fraction_view split or equivalent");

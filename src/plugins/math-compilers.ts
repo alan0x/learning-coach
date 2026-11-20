@@ -1610,7 +1610,7 @@ function compileFractionModel(
     split = k as number;
   } else if (view === "equivalent" && input.split_each_part !== undefined) {
     // 0021 amendment 2, after the v1 re-run (FD-05): an equivalence written with the cut that makes it, 1/2 and
-    // 2/4 with "2", draws the coarser fraction with each part cut that many ways (dashed), above the finer one:
+    // 2/4 with "2", draws the coarser fraction with each part cut that many ways (dashed), beside the finer one:
     // the textbook picture (blueprint B04). A count that does not turn one into the other is refused.
     const k = typeof input.split_each_part === "string" && /^[0-9]{1,2}$/u.test(input.split_each_part) ? Number(input.split_each_part) : input.split_each_part;
     if (shape === "grid") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "a grid's cells are not split again; use a bar or a circle");
@@ -1621,7 +1621,15 @@ function compileFractionModel(
     const cuts = (coarse: typeof a, fine: typeof a) => fine.numerator === coarse.numerator * (k as number) && fine.denominator === coarse.denominator * (k as number);
     if (cuts(a, b)) splitIndex = 0;
     else if (cuts(b, a)) splitIndex = 1;
-    else fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, `cutting each part of one fraction ${k} ways must give the other (1/2 cut into 2 is 2/4)`);
+    else {
+      // The retry needs a way out (review of #151): the count that would work, or to leave the field out.
+      const [coarse, fine] = a.denominator <= b.denominator ? [a, b] : [b, a];
+      const ratio = fine.denominator / coarse.denominator;
+      const works = Number.isInteger(ratio) && ratio >= FRACTION_MODEL_LIMITS.splitMin && ratio <= FRACTION_MODEL_LIMITS.splitMax && fine.numerator === coarse.numerator * ratio;
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, works
+        ? `cutting each part of ${coarse.numerator}/${coarse.denominator} ${ratio} ways gives ${fine.numerator}/${fine.denominator}: use split_each_part ${ratio}`
+        : `neither fraction is the other with its parts cut ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax} ways; leave split_each_part out`);
+    }
     split = k as number;
   } else if (input.split_each_part !== undefined) {
     fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, "split_each_part goes with fraction_view split or equivalent");

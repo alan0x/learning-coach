@@ -459,6 +459,8 @@ test("after the v1 re-run: an equivalence with its cut, whole things cut without
     ["half-in-quarters", { fractions: [f(1, 2), f(2, 4)], fraction_view: "equivalent", split_each_part: "2" }, "en-US"],
     ["fine-first", { fraction_shape: "circle", fractions: [f(9, 12), f(3, 4)], fraction_view: "equivalent", split_each_part: "3" }, "en-US"],
     ["wrong-count", { fractions: [f(1, 2), f(3, 6)], fraction_view: "equivalent", split_each_part: "2" }, "en-US"],
+    ["no-count-works", { fractions: [f(2, 4), f(3, 6)], fraction_view: "equivalent", split_each_part: "2" }, "en-US"],
+    ["same-fraction", { fractions: [f(1, 2), f(1, 2)], fraction_view: "equivalent", split_each_part: "2" }, "en-US"],
     ["FM-06", { fractions: [f(3, 4), f(9, 12)], fraction_view: "equivalent", split_each_part: "3" }, "en"],
     ["cups-in-quarters", { fractions: [f(3, 1)], fraction_view: "split", split_each_part: "4" }, "en-US"],
     ["FM-15", { fractions: [f(2, 1)], fraction_view: "split", split_each_part: "3" }, "en"],
@@ -468,7 +470,9 @@ test("after the v1 re-run: an equivalence with its cut, whole things cut without
   assert.equal(result["half-in-quarters"].content.caption, undefined);
   // The coarser fraction is cut, whichever comes first.
   assert.deepEqual(result["fine-first"].content.fractions, [{ as: "a", numerator: 9, denominator: 12 }, { as: "b", numerator: 3, denominator: 4, split: 3 }]);
-  assert.match(result["wrong-count"].message, /cutting each part of one fraction 2 ways must give the other/);
+  // A refusal says how to retry (review of #151): the count that works, or to leave the field out.
+  assert.match(result["wrong-count"].message, /cutting each part of 1\/2 3 ways gives 3\/6: use split_each_part 3/);
+  for (const name of ["no-count-works", "same-fraction"]) assert.match(result[name].message, /neither fraction is the other with its parts cut 2 to 6 ways; leave split_each_part out/, name);
   // The judge's equivalence case passes with the cut drawn (pieces common to both: the textbook comparison).
   assert.deepEqual(result["FM-06"].verdict, { hard: [], soft: [] });
   // Whole things cut: the pieces only, no share marked and no "Each share" (3 ÷ 1/4 counts 12 quarter cups).

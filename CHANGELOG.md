@@ -4,7 +4,7 @@
 
 - **Fraction trial: fixes after the v1 dev-set re-run** (owner approved, 2026-11-19; `docs/FRACTION_REDESIGN_2026-11-19.md`). Trial off: requests byte-identical, the 319 recorded lessons replay identically. Trial on: the first request is 710 B. That is over the 700 B budget, within the 720 B the owner allowed (0021 amendment 2, question 4).
   - The guidance says what the split view is for again ("split把每份再分split_each_part份求每份"). In the re-run, without it, the model wrote the part count there: FD-11's 7/3 was cut into ninths under "Each share is 7/9".
-  - An `equivalent` card written with the cut that makes it (1/2 and 2/4 with "2") draws the coarser fraction with each part cut that many ways, dashed, above the finer one: the textbook picture. A count that does not turn one into the other is refused. Before, the field was refused outright (FD-05 lost its pair to the re-ask).
+  - An `equivalent` card written with the cut that makes it (1/2 and 2/4 with "2") draws the coarser fraction with each part cut that many ways, dashed, beside the finer one: the textbook picture. A count that does not turn one into the other is refused. Before, the field was refused outright (FD-05 lost its pair to the re-ask).
   - A split view on whole things (a/1) draws the cuts only, with no share marked and no "Each share is". Sharing wholes has its own view, and here the pieces are counted (FD-20: 3 cups in quarter-cup scoops read "Each share is 3/4").
   - Replays of saved replies: in the re-run only FD-20 and FD-05 change, as intended. The diagnostic, probe 3 and the 319 lessons are unchanged. FM-14's ideal card is now written as a share and compiles to the same card.
 
