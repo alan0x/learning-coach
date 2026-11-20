@@ -369,6 +369,80 @@ test("a plain card, then its cut: the second create is drawn as a revision at it
   assert.deepEqual(result["fractions differ"].cards[0].fractions, [{ as: "a", numerator: 3, denominator: 1 }]);
 });
 
+test("rule 1 to the end: a two-step lesson plays all its sections, the cut fraction stays addressable, and a refused cut is asked again", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { retiredCubeCourse } = await import(${here("./lesson-plan-course-fixtures.mjs")});
+    const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+    const { judgeFractions } = await import(${here("../scripts/fraction-judge.mjs")});
+    const { readFileSync } = await import("node:fs");
+    const { normalizeAuthoringLesson } = await import("octos-lesson-language");
+    const cases = Object.fromEntries(JSON.parse(readFileSync(new URL(${here("../testsuite/fraction-judge-cases.json")}), "utf8")).cases.map((item) => [item.id, item]));
+    const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+    const plan = structuredClone(retiredCubeCourse);
+    delete plan.numbers;
+    for (const section of plan.sections) {
+      for (const moment of section.moments) moment.actions = moment.actions.filter((action) => action.action !== "animate");
+      if (section.student_activities) section.student_activities = section.student_activities.filter((activity) => activity.kind !== "number_target" && activity.kind !== "scene3d_view");
+      if (!section.student_activities?.length) delete section.student_activities;
+      for (const item of section.reusable_items ?? []) if (item.capability === "cube_with_section") item.capability = "fraction_model";
+      for (const moment of section.moments) for (const action of moment.actions) {
+        if (action.content?.capability === "cube_with_section") action.content = { capability: "fraction_model", parameters: { fractions: [{ numerator: 3, denominator: 8 }], fraction_view: "one" } };
+      }
+    }
+    const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+    const outline = stagedOutline(plan, drafts);
+    const out = {};
+    for (const [name, firstParameters, laterParameters] of [
+      ["cut", { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "one" }, { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "split", split_each_part: "4" }],
+      // Eighths cut into four are 32 parts, more than a whole holds: the cut is refused.
+      ["refused cut", { fractions: [{ numerator: 5, denominator: 8 }], fraction_view: "one" }, { fractions: [{ numerator: 5, denominator: 8 }], fraction_view: "split", split_each_part: "4" }],
+    ]) {
+      const first = bootstrapSectionFromExact(outline, drafts[0]);
+      const at = first.moments.findIndex((moment) => moment.visual_creates?.length);
+      const create = first.moments[at].visual_creates[0];
+      create.content = { parameters: firstParameters };
+      first.moments.push({ narration: "Now cut it.", delivery: first.moments[at].delivery, visual_creates: [{ course_visual: create.course_visual, content: { parameters: laterParameters } }] });
+      const labels = [];
+      const rejected = [];
+      let generated;
+      try {
+        generated = await api.generateLessonPlanWithModel(async (request) => {
+          labels.push(request.label + (request.section ? " " + request.section : ""));
+          if (labels.length > 8) throw new Error("unexpected extra model request");
+          if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, first);
+          return JSON.stringify(drafts[request.section - 1]);
+        }, { turn_id: "rule-1-full", learner_request: "Three fifths shared by four", language: "en-US" }, {
+          max_attempts_per_part: 3,
+          on_rejected_part: (part) => rejected.push(part.error.code + " " + part.error.message),
+        });
+      } catch (error) { out[name] = { labels, rejected, error: String(error.message) }; continue; }
+      const lesson = generated.lesson;
+      // An emphasis on the cut fraction's part, after the revision: the part is still addressable.
+      const alias = lesson.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions).find((action) => action.kind === "fraction_model")?.as;
+      const emphasized = structuredClone(lesson);
+      emphasized.steps.at(-1).beats.push({ key: "look-again", say: "Look at one share again.", actions: [{ do: "emphasize", target: alias + "#a", emphasis: "focus" }] });
+      let emphasis = "ok";
+      try { normalizeAuthoringLesson(emphasized, { lessonId: "l", boardId: "b", baseRevision: 0, regionIntent: "new_topic" }); } catch (error) { emphasis = String(error.message); }
+      out[name] = { labels, rejected, sections: lesson.steps.length, emphasis, fm13: judgeFractions(cases["FM-13"], lesson),
+        revisions: lesson.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions).filter((action) => action.do === "revise").length };
+    }
+    console.log(JSON.stringify(out));
+  `);
+  const cut = result.cut;
+  assert.equal(cut.error, undefined, cut.error);
+  assert.equal(cut.sections, 3, "all three sections play");
+  assert.equal(cut.revisions, 1);
+  assert.equal(cut.emphasis, "ok", "the cut fraction's part stays addressable after the revision");
+  assert.deepEqual(cut.fm13, { hard: [], soft: [] });
+  assert.deepEqual(cut.rejected, []);
+  // A refused cut is this section's fault: section 1 is asked again (and plays from the reply), never silently dropped.
+  const refused = result["refused cut"];
+  assert.match(refused.rejected.join(" | "), /after splitting, a whole has at most 24 parts/u);
+  assert.ok(refused.labels.includes("lesson-plan-section 1"), refused.labels.join(", "));
+  assert.equal(refused.error, undefined, refused.error);
+});
+
 test("a share that is a whole number is written as one (review of #131)", () => {
   const result = withTrial(compileScript([["whole-share", { fractions: [f(6, 3)], fraction_view: "split", split_each_part: "2" }, "en-US"]]));
   assert.equal(result["whole-share"].content.caption, "Each share is 6/6 = 1");
