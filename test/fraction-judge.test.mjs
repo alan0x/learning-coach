@@ -210,6 +210,33 @@ test("a card drawn plain and then revised with its cuts is judged at each step (
   assert.deepEqual(fractionCardsIn(lesson({ model: "bar", fractions: [f(3, 5)] })).map((card) => card.step), [undefined]);
 });
 
+test("review of #145: a revision of one fraction, animations by step, a dropped slider, and what is not asked for at every step", () => {
+  const revised = (built, content, target = "model", after = []) => {
+    built.steps[0].beats.push({ key: "cut", say: "Change it.", actions: [{ do: "revise", target, reason: "change it", content }] }, ...after);
+    return built;
+  };
+  // A revision aimed at one fraction ("model#a") replaces the whole card, and is read like one aimed at the card.
+  passes("FM-13", revised(lesson({ model: "circle", fractions: [f(3, 5)] }), { model: "circle", fractions: [{ as: "a", numerator: 3, denominator: 5, split: 4, highlight: 3 }] }, "model#a"), "revised through model#a");
+  fails("FM-01", revised(lesson({ model: "bar", fractions: [f(2, 5)] }), { model: "bar", fractions: [{ as: "a", numerator: 2, denominator: 5, wholes: 2 }] }, "model#a"), /step 2: a: 2 wholes drawn for 2\/5/u);
+  // An animation after the revision moves nothing on the card, so the written step never showed 2/5.
+  const slider = { variables: [{ as: "n", initial: 0, min: 0, max: 5, label: "parts", control: { kind: "slider", step: 1 } }] };
+  const late = revised(lesson({ model: "bar", fractions: [{ numerator: { expression: "n", initial: 0 }, denominator: 5, wholes: 1 }] }, slider),
+    { model: "bar", fractions: [{ as: "a", numerator: 0, denominator: 5 }] }, "model", [{ key: "move", say: "Watch.", actions: [{ do: "animate", variable: "n", value: 2 }] }]);
+  fails("FM-01", late, /shows 0\/5, expected 2\/5/u);
+  // The same animation before the revision does show 2/5 on the written step.
+  const early = lesson({ model: "bar", fractions: [{ numerator: { expression: "n", initial: 0 }, denominator: 5, wholes: 1 }] }, { ...slider, animations: [["n", 2]] });
+  passes("FM-01", revised(early, { model: "bar", fractions: [{ as: "a", numerator: 2, denominator: 5 }] }), "animated to 2/5 before the revision");
+  // A revision after the slider lesson drops its binding: the practice slider moves nothing.
+  const practice = lesson({ model: "circle", fractions: [{ numerator: { expression: "n", initial: 0 }, denominator: 8, wholes: 1 }] }, {
+    variables: [{ as: "n", initial: 0, min: 0, max: 8, label: "parts", control: { kind: "slider", step: 1 } }], animations: [["n", 3]], tasks: task(5),
+  });
+  passes("FM-16", practice);
+  fails("FM-16", revised(practice, { model: "circle", fractions: [{ as: "a", numerator: 3, denominator: 8 }] }), /drops the slider's binding/u);
+  // What a case does not ask for holds at every step: a cut revised onto 2/5 is a miss, as the same cut written directly is.
+  fails("FM-01", revised(lesson({ model: "bar", fractions: [f(2, 5)] }), { model: "bar", fractions: [{ as: "a", numerator: 2, denominator: 5, split: 3, highlight: 2 }] }), /split into 3, which the case does not ask for/u);
+  fails("FM-01", lesson({ model: "bar", fractions: [f(2, 5, { split: 3, highlight: 2 })] }), /split into 3, which the case does not ask for/u);
+});
+
 test("checks needing no expectation: a lesson that does not normalize is a hard miss", () => {
   // Fractions shown equivalent that are not: the card refuses it, so the lesson does not normalize.
   const broken = lesson({ model: "bar", fractions: [f(2, 3), f(3, 4)], relation: "compare" });
