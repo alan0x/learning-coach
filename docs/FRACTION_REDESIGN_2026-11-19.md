@@ -270,3 +270,33 @@ It also counts what the program still changes or drops. One run per case and arm
 - A misleading card in the core rows, or a lost lesson the diagnostic did not have: fixed before the tape card and scoring.
 - A recurring "model fell short" that wording could address: one guidance change, measured before the scoring run.
 - Otherwise the first version waits for the tape card, and both are scored together.
+
+## Dev-set re-run results (2026-11-19)
+Run as registered: **69 calls** of the 90 allowed. All 48 lessons reached their first section, and the stop check passed. The full reading is in the handoff folder (`runs/fractions/v1-rerun/reading.md`). One run per case, so each difference from the diagnostic is a lead, not a result.
+
+**Card on, 22 in-scope lessons:**
+
+| Group | Count | Diagnostic |
+|---|---|---|
+| A good card | 9 | 8 |
+| v1's best card, which falls short | 4 | 6 |
+| Another good visual | 2 | 2 |
+| The model fell short | 4 | 1 |
+| The program kept the first create | 1 | 3 dropped |
+| No card fits (tape) | 1 | 2 |
+
+**Working as designed:**
+- `share` in FD-16;
+- two steps in FD-19 and FD-21;
+- the labels;
+- no card on either near miss (0 of 2, against 2 of 2).
+
+**Two misleading cards, the cut view's caption on a question that is not a share:**
+- FD-11 (core B07): "7/3 = 2 1/3" cut into ninths, "Each share is 7/9";
+- FD-20 (outside v1): 3 cups cut into quarters, "Each share is 3/4" for 3 ÷ 1/4.
+
+Replayed through the diagnostic's build, the same replies draw the same captions, so the 3a and 3b rules are not the cause. The model wrote the part count in `split_each_part` (3 for thirds, 4 for quarters). The one request change that touches the view is #147's guidance trim, which removed the split view's purpose ("（求每份）"). Under the registration, FD-11 must be fixed before the tape card and scoring.
+
+**FD-05:** its re-asked reply held the right `equivalent` pair 1/2 and 2/4, with a consistent `split_each_part`. That field got it refused. Replayed with the field ignored, it draws "1/2 = 2/4".
+
+**Refusals and calls with the card on:** 12 refusals and 41 calls, against 9 and 36. The outline refused a second fraction visual 5 times, against 3.
