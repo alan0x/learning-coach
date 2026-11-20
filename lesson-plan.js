@@ -13939,7 +13939,7 @@ var MATH_RECIPES = {
     output_kinds: ["fraction_model"],
     student_controls: [],
     required_features: ["fraction_parts"],
-    model_guidance: "\u5206\u6570\u7B49\u5206\u56FE\uFF1Afractions\u5199\u5206\u5B50\u5206\u6BCD\u7684\u503C\uFF1Bview\uFF1Aone\u3001compare\u4E24\u4E2A\u3001equivalent\u7B49\u503C\u3001split\u6BCF\u4EFD\u518D\u5206split_each_part\u4EFD\uFF08\u6C42\u6BCF\u4EFD\uFF09\uFF1Bshape\u53EF\u9009bar/circle/grid\uFF08\u767E\u5206\u4E4B\u51E0\u7528grid\uFF09\uFF1B\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5206\u3001\u4E00\u7EC4\u7269\u4F53\u7684\u51E0\u5206\u4E4B\u51E0\u3001\u6BD4\uFF1B\u5927\u4E8E1\u5199\u4E00\u4E2A\u5047\u5206\u6570"
+    model_guidance: "\u5206\u6570\u7B49\u5206\u56FE\uFF1Afractions\u5199\u5206\u5B50\u5206\u6BCD\u7684\u503C\uFF1Bview\uFF1Aone\u3001compare\u4E24\u4E2A\u3001equivalent\u7B49\u503C\u3001split\u6BCF\u4EFD\u518D\u5206split_each_part\u4EFD\u3001share\u628Aa\u4E2A\u6574\u4F53\u5E73\u5206\u7ED9b\u4EFD\u5199a/b\uFF1Bshape\uFF1Abar/circle/grid\uFF08\u767E\u5206\u4E4B\u51E0\u7528grid\uFF09\uFF1B\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5206\u3001\u4E00\u7EC4\u7269\u4F53\u7684\u51E0\u5206\u4E4B\u51E0\u3001\u6BD4\uFF1B\u5927\u4E8E1\u5199\u4E00\u4E2A\u5047\u5206\u6570"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -14107,7 +14107,7 @@ var MATH_SCHEMA_PROPERTIES = {
     // first the model wrote the shape and view and left the values out (fraction probe 2: 16 of 19 lessons).
     fractions: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: { numerator: { type: "integer" }, denominator: { type: "integer" } }, required: ["numerator", "denominator"] } },
     fraction_shape: { enum: ["bar", "circle", "grid"] },
-    fraction_view: { enum: ["one", "compare", "equivalent", "split"] },
+    fraction_view: { enum: ["one", "compare", "equivalent", "split", "share"] },
     // A choice, not a free integer: as an integer the model filled it with thousands of digits when the view
     // had no use for it (fraction probe 1, 2026-11-19: 13 times in 11 of 23 lessons). Named for what it does:
     // as "split" the model wrote the number of parts there ("split": "6" for sixths) and left out the fractions
@@ -15998,7 +15998,22 @@ function surfaceSectionRange(content, path) {
   }
   return { min: Math.min(...values), max: Math.max(...values) };
 }
+function hasFractionValues(content) {
+  const parameters3 = content?.parameters;
+  return Array.isArray(parameters3?.fractions) && parameters3.fractions.length > 0;
+}
 var MATH_HOOKS = {
+  // OLL 0021 amendment 2, rule 2: a card first written without its values takes them from the first later
+  // create that has them. The model often writes the shape and view first and the values in a later moment;
+  // the later create used to be dropped and the values with it (fraction diagnostic, 2026-11-19: FD-08; probe
+  // 2: FM-11's right 160/100). Anything else keeps the first, as Coach does without the hook.
+  fraction_model: {
+    choose_first_create(contents) {
+      if (hasFractionValues(contents[0])) return 0;
+      const later = contents.findIndex((content, index) => index > 0 && hasFractionValues(content));
+      return later > 0 ? later : 0;
+    }
+  },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
   number_line_solution: { fit_numbers: fitSolutionNumbers },
@@ -19322,7 +19337,7 @@ function compileSolid3d(base, content, role, placement, plan, path) {
   if (interaction === "unfold") variables.push({ as: variable, initial: 0, min: 0, max: 1, label: compileText(plan, "\u5C55\u5F00"), control: { kind: "slider", step: 0.01 } });
   return { ...builtVisual(built), primaryScene: base, ...variables.length ? { variables } : {}, ...adjustments.length ? { adjustments } : {} };
 }
-var FRACTION_VIEWS = ["one", "compare", "equivalent", "split"];
+var FRACTION_VIEWS = ["one", "compare", "equivalent", "split", "share"];
 var FRACTION_SHAPES = ["bar", "circle", "grid"];
 function fractionGrid(denominator) {
   let best;
@@ -19342,7 +19357,7 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   const view = input.fraction_view;
   if (!FRACTION_VIEWS.includes(view)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_view`, `expected one of ${FRACTION_VIEWS.join(", ")}`);
   const written = input.fractions;
-  if (written === void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, view === "split" ? "write the fraction as values, {numerator, denominator}; split_each_part splits its shaded parts, so shade at least one" : "write the fractions as values, each {numerator, denominator}; a numerator of 0 shows a whole divided with none shaded");
+  if (written === void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, view === "split" ? "write the fraction as values, {numerator, denominator}; split_each_part splits its shaded parts, so shade at least one" : view === "share" ? "write the share as values, {numerator, denominator}: numerator wholes shared equally among denominator" : "write the fractions as values, each {numerator, denominator}; a numerator of 0 shows a whole divided with none shaded");
   const count = view === "compare" || view === "equivalent" ? 2 : 1;
   if (!Array.isArray(written) || written.length !== count) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions`, `${view} shows ${count === 2 ? "two fractions" : "one fraction"}`);
   const fractions = written.map((item, index) => {
@@ -19353,6 +19368,25 @@ function compileFractionModel(base, content, role, placement, plan, path) {
     if (typeof denominator !== "number" || !Number.isInteger(denominator) || denominator < 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${at2}.denominator`, "the denominator is a whole number of equal parts, 1 or more");
     return { numerator, denominator };
   });
+  if (view === "share") {
+    const { numerator: wholes, denominator: shares } = fractions[0];
+    if (wholes < 1 || wholes > FRACTION_MODEL_LIMITS.wholes) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].numerator`, `share 1 to ${FRACTION_MODEL_LIMITS.wholes} wholes`);
+    if (shares < FRACTION_MODEL_LIMITS.splitMin || shares > FRACTION_MODEL_LIMITS.splitMax) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].denominator`, `share among ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
+    if (input.fraction_shape === "grid") fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "shared wholes are bars or circles");
+    if (input.split_each_part !== void 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, "split_each_part goes with fraction_view split");
+    const divisor = gcdOf(wholes, shares);
+    const simplest = shares / divisor === 1 ? `${wholes / divisor}` : `${wholes / divisor}/${shares / divisor}`;
+    const built2 = buildFractionModel({
+      as: base,
+      role,
+      place: placement,
+      title: optionalText(input.title, compileText(plan, "\u5206\u6570"), `${path}.title`),
+      caption: compileText(plan, "\u6BCF\u4EFD\u662F {{v0}}", { v0: divisor > 1 ? `${wholes}/${shares} = ${simplest}` : `${wholes}/${shares}` }),
+      model: input.fraction_shape === "circle" ? "circle" : "bar",
+      fractions: [{ numerator: wholes, denominator: 1, split: shares, highlight: wholes }]
+    });
+    return { actions: built2.actions, whole: built2.whole, parts: new Map(Object.entries(built2.parts)) };
+  }
   fractions.forEach((fraction3, index) => {
     if (fraction3.denominator > FRACTION_MODEL_LIMITS.denominator && !fractionGrid(fraction3.denominator)) {
       fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[${index}].denominator`, `no fraction card draws ${fraction3.denominator} equal parts (bars and circles up to ${FRACTION_MODEL_LIMITS.denominator}, grids up to 10 by 10); choose another visual, or none`);
@@ -22405,8 +22439,13 @@ function reconcileBootstrapFirstSectionPositions(value2, outline) {
     };
     const match = visualCreates.find((candidateEntry) => candidateEntry.entry.course_visual === position && unmatchedVisuals.has(candidateEntry)) ?? visualCreates.find(matchesCapability);
     if (!match) continue;
-    matchedVisuals.set(match, position);
     unmatchedVisuals.delete(match);
+    const later = visualCreates.filter((candidateEntry) => unmatchedVisuals.has(candidateEntry) && candidateEntry.entry.course_visual === position && visualCreates.indexOf(candidateEntry) > visualCreates.indexOf(match));
+    const choose = later.length ? RECIPE_HOOKS[visual.capability]?.choose_first_create : void 0;
+    const pick = choose?.([match, ...later].map((candidateEntry) => candidateEntry.entry.content));
+    const chosen = pick !== void 0 && Number.isInteger(pick) && pick > 0 && pick <= later.length ? later[pick - 1] : void 0;
+    if (chosen) unmatchedVisuals.delete(chosen);
+    matchedVisuals.set(chosen ? { ...match, entry: chosen.entry } : match, position);
   }
   const fixedCourseCreates = Object.fromEntries([...matchedVisuals].map(([match, position]) => {
     const entry = structuredClone(match.entry);

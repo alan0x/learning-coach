@@ -1524,8 +1524,16 @@ function reconcileBootstrapFirstSectionPositions(
       candidateEntry.entry.course_visual === position && unmatchedVisuals.has(candidateEntry)
     )) ?? visualCreates.find(matchesCapability);
     if (!match) continue;
-    matchedVisuals.set(match, position);
     unmatchedVisuals.delete(match);
+    // Later creates of the same course visual: a recipe may choose one of them for the card, drawn at the
+    // first create's moment (its `choose_first_create` hook); Coach otherwise keeps the first.
+    const later = visualCreates.filter((candidateEntry) => unmatchedVisuals.has(candidateEntry)
+      && candidateEntry.entry.course_visual === position && visualCreates.indexOf(candidateEntry) > visualCreates.indexOf(match));
+    const choose = later.length ? RECIPE_HOOKS[visual.capability]?.choose_first_create : undefined;
+    const pick = choose?.([match, ...later].map((candidateEntry) => candidateEntry.entry.content as Record<string, unknown>));
+    const chosen = pick !== undefined && Number.isInteger(pick) && pick > 0 && pick <= later.length ? later[pick - 1] : undefined;
+    if (chosen) unmatchedVisuals.delete(chosen);
+    matchedVisuals.set(chosen ? { ...match, entry: chosen.entry } : match, position);
   }
   const fixedCourseCreates = Object.fromEntries([...matchedVisuals].map(([match, position]) => {
     const entry = structuredClone(match.entry);

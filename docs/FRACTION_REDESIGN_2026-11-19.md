@@ -195,3 +195,14 @@ At 3 runs per case, the core is 48 lessons. The bars get numbers when the scorin
 
 **The judge reads each step.** A card drawn plain and then revised with its cuts is judged at each step (`scripts/fraction-judge.mjs`, `fractionCardsIn`). An expectation can be met by any step, and every check that needs no expectation holds at every step. The reading tool in the handoff folder prints the later step too.
 
+## Build, step 3a (2026-11-19)
+- **`share` view:** a/b is a wholes shared among b. The card draws a wholes and marks one piece of each, with "Each share is a/b" under it.
+- **Rule 2:** a card first written without values takes a later create's values (the recipe hook `choose_first_create`).
+- **Guidance trimmed:** with the trial on the first request is 698 B, inside the 700 B budget.
+- **Replays of saved replies, no model calls:**
+  - diagnostic: only FD-08 changes (1/3 and 1/6 from the first reply, no re-ask);
+  - probe 3: identical;
+  - trial off: the 319 lessons and the request hashes are identical.
+
+Rule 1 (a plain card, then its cut, as a revision) is step 3b.
+

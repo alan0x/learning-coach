@@ -89,7 +89,24 @@ function surfaceSectionRange(content: LessonPlanVisualContent, path: string): { 
   return { min: Math.min(...values), max: Math.max(...values) };
 }
 
+/** A fraction card's content that carries its values (a non-empty `fractions`). */
+function hasFractionValues(content: Record<string, unknown> | undefined): boolean {
+  const parameters = content?.parameters as { fractions?: unknown } | undefined;
+  return Array.isArray(parameters?.fractions) && parameters!.fractions.length > 0;
+}
+
 export const MATH_HOOKS: Record<string, RecipeHooks> = {
+  // OLL 0021 amendment 2, rule 2: a card first written without its values takes them from the first later
+  // create that has them. The model often writes the shape and view first and the values in a later moment;
+  // the later create used to be dropped and the values with it (fraction diagnostic, 2026-11-19: FD-08; probe
+  // 2: FM-11's right 160/100). Anything else keeps the first, as Coach does without the hook.
+  fraction_model: {
+    choose_first_create(contents) {
+      if (hasFractionValues(contents[0])) return 0;
+      const later = contents.findIndex((content, index) => index > 0 && hasFractionValues(content));
+      return later > 0 ? later : 0;
+    },
+  },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
   number_line_solution: { fit_numbers: fitSolutionNumbers },
