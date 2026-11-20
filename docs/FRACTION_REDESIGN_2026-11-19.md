@@ -213,3 +213,60 @@ At 3 runs per case, the core is 48 lessons. The bars get numbers when the scorin
   - probe 3: identical;
   - trial off: the 319 lessons and the request hashes are unchanged.
 
+
+## Dev-set re-run of the first version (registered before the run)
+The fraction card's first version is built: OLL #81, Coach #145–#148. The 0021 amendment's order calls for one run on the development set before the sealed scoring run. It needs the owner's approval of its calls.
+
+**Purpose.** To see how the model uses the first version on the 24 development cases:
+- the `share` view;
+- the two steps;
+- the labels;
+- the later values.
+
+It also counts what the program still changes or drops. One run per case and arm, so there are no rates and no pass or fail. This is not one of the two scoring runs; the sealed set is untouched.
+
+**Run.**
+- **Build:** Coach main at fe3d6f3, frozen (OLL cea255a, math 0.4.2). `lesson-plan.js` SHA-256 `72eecb5e…804f`, `main` `492be91a…f7be`.
+- **Cases:** the diagnostic's ordered file, the same 24 cases in the same order (`dev-cases-ordered.json`, `e40a6a42…3f77`).
+- **Model and limits:**
+  - Gemini 3.6 Flash on the dev key, with the card on and off, alternating which goes first;
+  - 4 calls per lesson;
+  - a cap of **90** calls: `--max-calls 89`, because the call that crosses the cap starts before it is stopped.
+  - The diagnostic used 69 calls on these cases.
+- **Command:** as the diagnostic's, with `--max-calls 89`.
+- **Checks before the run continues:**
+  - the header names `trial_recipes: fraction_model`;
+  - after the first pair, the card-on lesson's `prompt_tokens` exceed the card-off lesson's, or the run is stopped. This held in all 24 of the diagnostic's pairs. The first case, FD-17, may rightly draw no card, so "the first lesson lists `fraction_model`" would stop a healthy run.
+- **The frozen `main` was checked offline first.** It was driven with FD-19's saved reply through a local stub provider (no key, no calls). From one call it published section 1 with the card written plain at beat 1 and revised with its cut at beat 2 ("Each share is 3/10").
+
+**Reading, fixed now.**
+1. **Each lesson with the card on.** Its first section, each step of the card (write and revise), is read from OLL's plan of the drawing (`tools/fraction-diagnostic-read.mjs`). It is set beside the first version's best card for that case (`runs/fractions/audit/best-cards-v1.txt`):
+   - FD-16 and FD-17 shared;
+   - FD-19 in two steps;
+   - the labels "= 4", "= 2 1/3", "= 0.25".
+
+   Each lesson goes in one group:
+   - reached a good card;
+   - reached the first version's best card, which falls short;
+   - no card fits (tape);
+   - the model fell short;
+   - **the program changed or dropped the card** (`tools/fraction-creates.mjs`: kept first; the outline's refusals of a second fraction visual);
+   - another good visual.
+2. **Each lesson with the card off.** Read from what it draws, as in the diagnostic.
+3. **Counted:**
+   - whether `share` is used where it fits (FD-16, FD-17), or anywhere it does not;
+   - the two steps drawn (`fraction-creates`: two steps);
+   - the later values used;
+   - cards on the near misses (FD-23, FD-24);
+   - first replies without `fractions`;
+   - refusals and calls per arm;
+   - for each "later values" lesson, whether the later create's view differs from the first's (a cut shown one moment early);
+   - on share lessons, how the label "2/1 = 2" reads beside "Each share is 2/5";
+   - shares refused by the 2 to 6 limit.
+   Any lesson that was asked again is read by hand, because `fraction-creates.mjs` classifies from the first reply only.
+4. **Each case beside the diagnostic.** Same cases and order; one run each, so a difference is a lead, not a result.
+
+**The use.**
+- A misleading card in the core rows, or a lost lesson the diagnostic did not have: fixed before the tape card and scoring.
+- A recurring "model fell short" that wording could address: one guidance change, measured before the scoring run.
+- Otherwise the first version waits for the tape card, and both are scored together.
