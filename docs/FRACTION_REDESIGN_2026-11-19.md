@@ -236,7 +236,8 @@ It also counts what the program still changes or drops. One run per case and arm
 - **Command:** as the diagnostic's, with `--max-calls 89`.
 - **Checks before the run continues:**
   - the header names `trial_recipes: fraction_model`;
-  - the first in-scope lesson with the card on lists `fraction_model`, or the run is stopped.
+  - after the first pair, the card-on lesson's `prompt_tokens` exceed the card-off lesson's, or the run is stopped. This held in all 24 of the diagnostic's pairs. The first case, FD-17, may rightly draw no card, so "the first lesson lists `fraction_model`" would stop a healthy run.
+- **The frozen `main` was checked offline first.** It was driven with FD-19's saved reply through a local stub provider (no key, no calls). From one call it published section 1 with the card written plain at beat 1 and revised with its cut at beat 2 ("Each share is 3/10").
 
 **Reading, fixed now.**
 1. **Each lesson with the card on.** Its first section, each step of the card (write and revise), is read from OLL's plan of the drawing (`tools/fraction-diagnostic-read.mjs`). It is set beside the first version's best card for that case (`runs/fractions/audit/best-cards-v1.txt`):
@@ -258,7 +259,11 @@ It also counts what the program still changes or drops. One run per case and arm
    - the later values used;
    - cards on the near misses (FD-23, FD-24);
    - first replies without `fractions`;
-   - refusals and calls per arm.
+   - refusals and calls per arm;
+   - for each "later values" lesson, whether the later create's view differs from the first's (a cut shown one moment early);
+   - on share lessons, how the label "2/1 = 2" reads beside "Each share is 2/5";
+   - shares refused by the 2 to 6 limit.
+   Any lesson that was asked again is read by hand, because `fraction-creates.mjs` classifies from the first reply only.
 4. **Each case beside the diagnostic.** Same cases and order; one run each, so a difference is a lead, not a result.
 
 **The use.**
