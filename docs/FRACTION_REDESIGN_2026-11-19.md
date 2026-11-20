@@ -181,6 +181,20 @@ The registered three groups did not foresee the fifth; under them, those three l
 4. **Program-written labels** for the number forms: mixed, whole, decimal and percent (FD-04, 11, 13, 14, 22).
 5. **Operations** (join, cross out, copies): wait for the scoring set. Card-off number lines may already serve them.
 
+## Scope frozen (2026-11-19)
+The owner accepted 0021 amendment 2 (OLL #80). Before the sealed set is opened, a fresh agent tagged each sealed case by blueprint row and picture from the amendment's closed list. It verified the hash and returned IDs and tags only. The tags are in `testsuite/fraction-scoring-scope.json`:
+
+| Group | Bar | Cases |
+|---|---|---|
+| Core | never misleading | 16 |
+| Outside v1 | no worse than with the card off | 10 |
+| Tape card | scored with the tape-diagram card | 4 |
+| Near misses | no card, or a card that does not mislead | 4 |
+
+At 3 runs per case, the core is 48 lessons. The bars get numbers when the scoring run is registered.
+
+**The judge reads each step.** A card drawn plain and then revised with its cuts is judged at each step (`scripts/fraction-judge.mjs`, `fractionCardsIn`). An expectation can be met by any step, and every check that needs no expectation holds at every step. The reading tool in the handoff folder prints the later step too.
+
 ## Build, step 3a (2026-11-19)
 - **`share` view:** a/b is a wholes shared among b. The card draws a wholes and marks one piece of each, with "Each share is a/b" under it.
 - **Rule 2:** a card first written without values takes a later create's values (the recipe hook `choose_first_create`).

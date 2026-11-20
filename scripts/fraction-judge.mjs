@@ -29,7 +29,11 @@ const relationOf = (a, b) => {
   return left < right ? "<" : left > right ? ">" : "=";
 };
 
-/** The fraction cards a whole authoring lesson draws, each with every numerator value it shows. */
+/**
+ * The fraction cards a whole authoring lesson draws, each with every numerator value it shows. A card
+ * revised later (0021 amendment 2: drawn plain, then revised with its cuts) gives one entry per state it
+ * shows, in order, with `step` counting from 0, so the plain step and the cut are each judged.
+ */
 export function fractionCardsIn(lesson) {
   const actions = (lesson?.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? []);
   const writes = actions.filter((action) => action.do === "write" && action.kind === "fraction_model");
@@ -42,22 +46,36 @@ export function fractionCardsIn(lesson) {
   }
   const nodes = Object.values(reduceCanonicalEvents(events).nodes);
   const variables = lesson.lesson?.variables ?? [];
-  const animated = new Map();
-  for (const action of actions) if (action.do === "animate") animated.set(action.variable, [...(animated.get(action.variable) ?? []), action.value]);
-  return writes.map((write) => {
+  // A revision may target the card or one of its fractions ("model#a"); either replaces the whole card.
+  const card = (target) => String(target ?? "").split("#")[0];
+  return writes.flatMap((write) => {
     const node = nodes.find((candidate) => String(candidate.id).endsWith(`:node:${write.as}`));
-    if (!node) return { as: write.as, error: "fraction_model node not found" };
-    const bindings = write.content.bindings ?? [];
-    // Each fraction as written, then every value its numerator takes: the start, each animation of a
-    // variable bound directly, and the end of the lesson (the reduced board).
-    const fractions = (write.content.fractions ?? []).map((fraction, index) => {
-      const binding = bindings.find((candidate) => candidate.target === `${fraction.as}.numerator`);
-      const variable = binding && variables.find((candidate) => candidate.as === String(binding.expression).trim());
-      const end = node.content.fractions?.[index]?.numerator ?? fraction.numerator;
-      const values = [fraction.numerator, end, ...(variable ? animated.get(variable.as) ?? [] : [])];
-      return { ...fraction, values: [...new Set(values)], ...(binding ? { bound: { expression: binding.expression, variable } } : {}) };
+    if (!node) return [{ as: write.as, error: "fraction_model node not found" }];
+    const written = actions.indexOf(write);
+    const states = [{ content: write.content, at: written }, ...actions.flatMap((action, at) => (
+      at > written && action.do === "revise" && card(action.target) === write.as && action.content && typeof action.content === "object" ? [{ content: action.content, at }] : []
+    ))];
+    return states.map(({ content, at }, step) => {
+      const last = step === states.length - 1;
+      // The animations that play while this state is on the board (all of them for a card never revised).
+      const from = step === 0 ? -Infinity : at, until = last ? Infinity : states[step + 1].at;
+      // A revision carries no bindings (OLL refuses them there), so only the written state can be bound.
+      const bindings = content.bindings ?? [];
+      // Each fraction as written, then every value its numerator takes: the start, each animation of a
+      // variable bound directly while this state shows, and the end of the lesson (the reduced board, for the
+      // last state).
+      const fractions = (content.fractions ?? []).map((fraction, index) => {
+        const binding = bindings.find((candidate) => candidate.target === `${fraction.as}.numerator`);
+        const variable = binding && variables.find((candidate) => candidate.as === String(binding.expression).trim());
+        const end = last ? node.content.fractions?.[index]?.numerator ?? fraction.numerator : fraction.numerator;
+        const moved = variable ? actions.flatMap((action, index2) => (action.do === "animate" && action.variable === variable.as && index2 > from && index2 < until ? [action.value] : [])) : [];
+        return { ...fraction, values: [...new Set([fraction.numerator, end, ...moved])], ...(binding ? { bound: { expression: binding.expression, variable } } : {}) };
+      });
+      return {
+        as: write.as, ...(states.length > 1 ? { step, ...(last ? {} : { superseded: true }) } : {}),
+        model: content.model, grid: content.grid, relation: content.relation, fractions,
+      };
     });
-    return { as: write.as, model: write.content.model, grid: write.content.grid, relation: write.content.relation, fractions };
   });
 }
 
@@ -87,14 +105,19 @@ function cardMisses(card) {
   return misses;
 }
 
-/** Practice tasks on a slider that drives a fraction's numerator: each must accept less than one part either side. */
-function taskMisses(card, lesson) {
+/**
+ * Practice tasks on a slider that drives a fraction's numerator: each must accept less than one part either
+ * side, and the card must still be bound when the lesson ends (a revision drops the binding).
+ */
+function taskMisses(card, lesson, boundAtEnd = new Set()) {
   const misses = [];
   for (const fraction of card.fractions) {
     const variable = fraction.bound?.variable;
     if (!variable) continue;
     for (const task of lesson.lesson?.tasks ?? []) {
       if (task.completion?.kind !== "expression_target" || String(task.completion.expression).trim() !== variable.as) continue;
+      // Another card left on the board may still be bound to the slider (review of #145, round 2).
+      if (card.superseded && !boundAtEnd.has(variable.as)) misses.push(`${fraction.as}: a later revision of the card drops the slider's binding, so the practice slider moves nothing`);
       if (!(task.completion.tolerance < 1)) misses.push(`${fraction.as}: a practice task accepts ±${task.completion.tolerance} parts around ${task.completion.value}, so a wrong number of parts counts as done`);
     }
   }
@@ -103,6 +126,35 @@ function taskMisses(card, lesson) {
 
 /** A fraction a card shows at some point: as written, or a value its numerator reaches. */
 const shows = (card, want) => card.fractions.some((fraction) => fraction.denominator === want.denominator && fraction.values.includes(want.numerator));
+
+/**
+ * What a case does not ask for, on one card state: a split or a marked share the case does not give. Unlike
+ * the expectations, which any state of a card may meet, these hold at every state of it (review of #145: a
+ * cut revised onto a plain card escaped them).
+ */
+function unaskedMisses(expect, card) {
+  const misses = [];
+  // What a case does not ask for is not drawn: no split (a pie of sixths cut into twelfths) unless the case
+  // gives a split or a smallest piece, and no marked share unless it gives a highlight (or allows one, at
+  // most `highlightAtMost`).
+  const pieces = (fraction) => fraction.denominator * (fraction.split ?? 1);
+  for (const fraction of card.fractions) {
+    // A split that brings two fractions to their least common pieces (3/4 in twelfths beside 9/12; 5/6 and
+    // 7/9 both in eighteenths) is the textbook way to compare them (review of #130, round 5); finer pieces
+    // than that (eighths beside eighths, both in sixteenths) are not asked for (round 6).
+    const common = card.fractions.length === 2
+      && card.fractions.every((each) => pieces(each) === lcm(card.fractions[0].denominator, card.fractions[1].denominator));
+    if (fraction.split !== undefined && !common && expect.split === undefined && expect.smallestPart === undefined) misses.push(`${text(fraction)} split into ${fraction.split}, which the case does not ask for`);
+    // Counting wholes (`highlightWholes`): one piece, or whole wholes the numerator fills (the two full laps of 11/4).
+    const wholesMarked = expect.highlightWholes && fraction.highlight !== undefined
+      && (fraction.highlight === 1 || (fraction.highlight % pieces(fraction) === 0
+        && fraction.highlight <= Math.floor(fraction.numerator / fraction.denominator) * pieces(fraction)));
+    if (fraction.highlight !== undefined && expect.highlight === undefined && !wholesMarked && !(expect.highlightAtMost !== undefined && fraction.highlight <= expect.highlightAtMost)) {
+      misses.push(`${text(fraction)} marks ${fraction.highlight} piece(s) as a share, which the case does not ask for`);
+    }
+  }
+  return misses;
+}
 
 /** Expected-value misses for one card. */
 function expectationMisses(expect, card, lesson) {
@@ -156,25 +208,6 @@ function expectationMisses(expect, card, lesson) {
   if (expect.smallestPart !== undefined && subject && subject.denominator * (subject.split ?? 1) !== expect.smallestPart) {
     misses.push(`smallest pieces are 1/${subject.denominator * (subject.split ?? 1)}, expected 1/${expect.smallestPart}`);
   }
-  // What a case does not ask for is not drawn: no split (a pie of sixths cut into twelfths) unless the case
-  // gives a split or a smallest piece, and no marked share unless it gives a highlight (or allows one, at
-  // most `highlightAtMost`).
-  const pieces = (fraction) => fraction.denominator * (fraction.split ?? 1);
-  for (const fraction of card.fractions) {
-    // A split that brings two fractions to their least common pieces (3/4 in twelfths beside 9/12; 5/6 and
-    // 7/9 both in eighteenths) is the textbook way to compare them (review of #130, round 5); finer pieces
-    // than that (eighths beside eighths, both in sixteenths) are not asked for (round 6).
-    const common = card.fractions.length === 2
-      && card.fractions.every((each) => pieces(each) === lcm(card.fractions[0].denominator, card.fractions[1].denominator));
-    if (fraction.split !== undefined && !common && expect.split === undefined && expect.smallestPart === undefined) misses.push(`${text(fraction)} split into ${fraction.split}, which the case does not ask for`);
-    // Counting wholes (`highlightWholes`): one piece, or whole wholes the numerator fills (the two full laps of 11/4).
-    const wholesMarked = expect.highlightWholes && fraction.highlight !== undefined
-      && (fraction.highlight === 1 || (fraction.highlight % pieces(fraction) === 0
-        && fraction.highlight <= Math.floor(fraction.numerator / fraction.denominator) * pieces(fraction)));
-    if (fraction.highlight !== undefined && expect.highlight === undefined && !wholesMarked && !(expect.highlightAtMost !== undefined && fraction.highlight <= expect.highlightAtMost)) {
-      misses.push(`${text(fraction)} marks ${fraction.highlight} piece(s) as a share, which the case does not ask for`);
-    }
-  }
   // In a slider case, a fixed fraction beside the slider must be one the case expects (review of #130, round 5).
   if (expect.slider) {
     for (const fraction of card.fractions) {
@@ -205,10 +238,19 @@ export function judgeFractions(item, lesson) {
   if (forbid.includes("fraction_model") && cards.length) hard.push(`forbidden fraction card: ${cards.map((card) => card.fractions?.map(text).join(", ") ?? card.error).join("; ")}`);
   if (!cards.length) return item.nearMiss ? { hard, soft } : { hard: ["no fraction card"], soft };
   const perCard = [];
+  const states = new Map();
+  // The variables a card still on the board at the end is bound to: a practice slider moves those.
+  const boundAtEnd = new Set(cards.filter((card) => !card.error && !card.superseded).flatMap((card) => card.fractions.flatMap((fraction) => fraction.bound?.variable ? [fraction.bound.variable.as] : [])));
   for (const card of cards) {
-    if (card.error) { hard.push(`card ${card.as}: ${card.error}`); continue; }
-    for (const miss of [...cardMisses(card), ...taskMisses(card, lesson)]) hard.push(`card ${card.as}: ${miss}`);
-    if (!item.nearMiss) perCard.push(expectationMisses(expect, card, lesson));
+    const name = `card ${card.as}${card.step !== undefined ? ` step ${card.step + 1}` : ""}`;
+    if (card.error) { hard.push(`${name}: ${card.error}`); continue; }
+    for (const miss of [...cardMisses(card), ...taskMisses(card, lesson, boundAtEnd)]) hard.push(`${name}: ${miss}`);
+    if (!item.nearMiss) states.set(card.as, [...(states.get(card.as) ?? []), card]);
+  }
+  // Per card: the expectations met by its best state, and nothing unasked at any state.
+  for (const shown of states.values()) {
+    const best = shown.map((state) => expectationMisses(expect, state, lesson)).sort((a, b) => a.length - b.length)[0];
+    perCard.push([...best, ...new Set(shown.flatMap((state) => unaskedMisses(expect, state)))]);
   }
   if (!item.nearMiss && !perCard.some((misses) => !misses.length)) {
     // The model is a teacher's choice among good ones: a card right in every other way is a soft miss,
