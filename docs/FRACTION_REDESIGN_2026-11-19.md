@@ -300,3 +300,23 @@ Replayed through the diagnostic's build, the same replies draw the same captions
 **FD-05:** its re-asked reply held the right `equivalent` pair 1/2 and 2/4, with a consistent `split_each_part`. That field got it refused. Replayed with the field ignored, it draws "1/2 = 2/4".
 
 **Refusals and calls with the card on:** 12 refusals and 41 calls, against 9 and 36. The outline refused a second fraction visual 5 times, against 3.
+
+## Second dev-set re-run (registered before the run)
+The owner approved (2026-11-19) the fixes after the first re-run (Coach #151) and one more re-run to measure them: Gemini 3.6 Flash, the dev key, about 70 calls, a cap of 90.
+
+**Purpose.** To see whether restoring the split view's purpose in the guidance stops the model writing the part count in `split_each_part`, which gave FD-11's and FD-20's misleading captions. Also to see the two program changes at work: an equivalence with its cut, and whole things cut without a share. One run per case and arm, so there are no rates and no pass or fail. Not one of the two scoring runs; the sealed set is untouched.
+
+**Run.**
+- **Build:** Coach main at 02643e3, frozen (OLL cea255a, math 0.4.2). `lesson-plan.js` SHA-256 `fbda3da0…3603`, `main` `492be91a…f7be`. With the trial on, the first request is 710 B.
+- **Cases and command:** the same 24 cases in the same order (`e40a6a42…3f77`) and the same command as the first re-run, with `--max-calls 89`.
+- **Checks before the run continues:**
+  - the header names `trial_recipes: fraction_model`;
+  - after the first pair, the card-on lesson's `prompt_tokens` exceed the card-off lesson's.
+- **The frozen `main` was checked offline first** with the stub provider on FD-19's saved reply: from one call it published section 1, with the card plain at beat 1 and cut at beat 2.
+
+**Reading, fixed now.** As registered for the first re-run (groups against v1's best cards; the card-off arm read from what it draws; the counts), plus:
+1. **`split_each_part` on every create:** the value beside the fraction's denominator. Count the creates whose value equals the denominator of a fraction not being shared (the part count), against 4 in the first re-run (FD-02 twice, FD-11, FD-20).
+2. **Captions:** every "Each share is …" drawn, and whether its lesson is a share. In the first re-run 2 were not.
+3. **FD-05 and FD-20:** whether the equivalence is drawn with its cut, and whether whole things are cut without a share.
+
+**The use.** If a core card still misleads, the cause is read from the replies before anything changes, and the owner decides. Otherwise the first version waits for the tape card, and both are scored together.
