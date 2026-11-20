@@ -8403,10 +8403,6 @@ var FRACTION_MODEL_PLUGIN_VERSION = "0.4.0";
 var FRACTION_MODEL_BINDINGS = {
   fractions: ["numerator"]
 };
-var FRACTION_MODEL_VIEW_WIDTH = 520;
-var SIDE = 20;
-var LABEL_COLUMN = 72;
-var DRAW_WIDTH = FRACTION_MODEL_VIEW_WIDTH - 2 * SIDE - LABEL_COLUMN;
 
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_NODE_KINDS = [
@@ -8522,8 +8518,9 @@ var ZH = {
 var MATH_PLUGIN_MANIFEST = {
   id: "math",
   // 0.2.0: the number line (decision 0013). 0.3.0: jump lanes for several jumps on one line (decision 0017).
-  // 0.4.0: the fraction model (decision 0021). 0.4.1: grids fill column by column.
-  version: "0.4.1",
+  // 0.4.0: the fraction model (decision 0021). 0.4.1: grids fill column by column. 0.4.2: a share marks one
+  // piece of each part; the program writes a fraction's other form beside its label (0021 amendment 2).
+  version: "0.4.2",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
