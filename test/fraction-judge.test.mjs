@@ -232,6 +232,12 @@ test("review of #145: a revision of one fraction, animations by step, a dropped 
   });
   passes("FM-16", practice);
   fails("FM-16", revised(practice, { model: "circle", fractions: [{ as: "a", numerator: 3, denominator: 8 }] }), /drops the slider's binding/u);
+  // Another card still bound to the slider keeps the practice working (review of #145, round 2).
+  const second = buildFractionModel({ as: "m2", role: "main_visual", place: { relation: "new_region" }, model: "circle", fractions: [{ numerator: { expression: "n", initial: 0 }, denominator: 8, wholes: 1 }] });
+  const kept = revised(lesson({ model: "circle", fractions: [{ numerator: { expression: "n", initial: 0 }, denominator: 8, wholes: 1 }] }, {
+    variables: [{ as: "n", initial: 0, min: 0, max: 8, label: "parts", control: { kind: "slider", step: 1 } }], animations: [["n", 3]], tasks: task(5),
+  }), { model: "circle", fractions: [{ as: "a", numerator: 3, denominator: 8 }] }, "model", [{ key: "again", say: "Again.", actions: second.actions }]);
+  assert.doesNotMatch(verdict("FM-16", kept).hard.join(" | "), /drops the slider's binding/u);
   // What a case does not ask for holds at every step: a cut revised onto 2/5 is a miss, as the same cut written directly is.
   fails("FM-01", revised(lesson({ model: "bar", fractions: [f(2, 5)] }), { model: "bar", fractions: [{ as: "a", numerator: 2, denominator: 5, split: 3, highlight: 2 }] }), /split into 3, which the case does not ask for/u);
   fails("FM-01", lesson({ model: "bar", fractions: [f(2, 5, { split: 3, highlight: 2 })] }), /split into 3, which the case does not ask for/u);

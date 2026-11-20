@@ -109,14 +109,15 @@ function cardMisses(card) {
  * Practice tasks on a slider that drives a fraction's numerator: each must accept less than one part either
  * side, and the card must still be bound when the lesson ends (a revision drops the binding).
  */
-function taskMisses(card, lesson) {
+function taskMisses(card, lesson, boundAtEnd = new Set()) {
   const misses = [];
   for (const fraction of card.fractions) {
     const variable = fraction.bound?.variable;
     if (!variable) continue;
     for (const task of lesson.lesson?.tasks ?? []) {
       if (task.completion?.kind !== "expression_target" || String(task.completion.expression).trim() !== variable.as) continue;
-      if (card.superseded) misses.push(`${fraction.as}: a later revision of the card drops the slider's binding, so the practice slider moves nothing`);
+      // Another card left on the board may still be bound to the slider (review of #145, round 2).
+      if (card.superseded && !boundAtEnd.has(variable.as)) misses.push(`${fraction.as}: a later revision of the card drops the slider's binding, so the practice slider moves nothing`);
       if (!(task.completion.tolerance < 1)) misses.push(`${fraction.as}: a practice task accepts ±${task.completion.tolerance} parts around ${task.completion.value}, so a wrong number of parts counts as done`);
     }
   }
@@ -238,10 +239,12 @@ export function judgeFractions(item, lesson) {
   if (!cards.length) return item.nearMiss ? { hard, soft } : { hard: ["no fraction card"], soft };
   const perCard = [];
   const states = new Map();
+  // The variables a card still on the board at the end is bound to: a practice slider moves those.
+  const boundAtEnd = new Set(cards.filter((card) => !card.error && !card.superseded).flatMap((card) => card.fractions.flatMap((fraction) => fraction.bound?.variable ? [fraction.bound.variable.as] : [])));
   for (const card of cards) {
     const name = `card ${card.as}${card.step !== undefined ? ` step ${card.step + 1}` : ""}`;
     if (card.error) { hard.push(`${name}: ${card.error}`); continue; }
-    for (const miss of [...cardMisses(card), ...taskMisses(card, lesson)]) hard.push(`${name}: ${miss}`);
+    for (const miss of [...cardMisses(card), ...taskMisses(card, lesson, boundAtEnd)]) hard.push(`${name}: ${miss}`);
     if (!item.nearMiss) states.set(card.as, [...(states.get(card.as) ?? []), card]);
   }
   // Per card: the expectations met by its best state, and nothing unasked at any state.
