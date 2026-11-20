@@ -137,3 +137,46 @@ The owner approved (2026-11-19) the four recommendations: the labelled-quantity 
    - in the 7 cases where the answer would have to go on the card, whether the model computed it and whether it was right;
    - calls and re-asks per arm.
 4. **The use.** The groups decide which views and inputs the 0021 amendment's first version gets: a gap that recurs earns a view; a short that recurs earns guidance or a refusal; no amount of either changes the cases.
+
+## Diagnostic results (2026-11-19)
+Run as registered: **69 calls** of the 130 allowed (card on 36, card off 33); all 48 lessons reached their first section. Read from the drawn content of the first section only; the full reading, with every lesson, is in the handoff folder (`runs/fractions/diagnostic/reading.md`).
+
+**Card on, 22 in-scope cases:**
+
+| Group | Cases | Count |
+|---|---|---|
+| Reached a good card | FD-01, 02, 04, 06, 07, 08, 21, 22 | 8 |
+| Reached the best card, which falls short (the card's gap) | FD-03 unit labels, 09 and 15 no join or re-cut (a program-added ">" line instead), 10 cross-out, 11 mixed label, 12 copies | 6 |
+| No card fits (tape) | FD-17 (drew 3/4 of one circle for 3 ÷ 4), FD-18 (no card) | 2 |
+| The model fell short | FD-16: wrote 2/5 split 5 for 2 sandwiches shared by 5 (25 parts, refused twice), then fell back to 2/5 of one bar | 1 |
+| *Added after the run:* the program dropped the model's second card | FD-05, 19, 20 | 3 |
+| *Added after the run:* a reasonable plan or another good visual | FD-13 (0.5 and 0.50 at one point on a number line), FD-14 (section 2 places 1.25 on a number line) | 2 |
+
+The registered three groups did not foresee the fifth; under them, those three lessons would have been charged to the model.
+
+**New finding: second cards are dropped without a refusal.**
+- **The mechanism:** in the first section, Coach keeps one create per course visual and discards the rest (`src/lesson-plan-generation.ts`, the `matchedVisuals` loop).
+- **What the model wants:** the teacher's two states, the plain fraction and then the cut or regrouped one (3/5, then each fifth halved; 1/2, then fourths; 3 cups, then quarters). The narration follows both states, but the learner sees only the first.
+- **How often:** 5 of 24 lessons with the card on here, and 4, 4 and 2 in probes 1–3. It happened in none of the 93 lessons with the card off, so in practice this is the fraction card's problem, not main's today.
+- **What was lost** (each dropped card compiled through the card with no model call):
+  - FD-19: a good card;
+  - FD-08: a fine card;
+  - FD-05: a card that would have been refused;
+  - FD-20: a card that would have drawn sixteenths, which is wrong.
+- **In the probes:** probe 2's misleading FM-13 was this drop. In FM-11 the dropped second card was the one with the right 160/100. Most first cards without `fractions` are the first of two.
+
+**Other counts:**
+- **Near misses:** a card was drawn in 2 of 2.
+  - FD-23 misleads: "3/5 > 2/5" for a 3:2 paint ratio.
+  - FD-24 is true but not the teacher's before-and-after picture: 20 of 80 squares for the rise against the old price.
+- **Answers written on the card:** each one the model wrote was right (12/3, 7/3, 15/4, 12/4).
+- **Missing `fractions`:** 4 first replies lacked them.
+- **Refusals with the card on:** 9, against 22, 24 and 13 in probes 1–3. The cases differ and each was run once, so this is not a trend.
+- **Card off:** number lines showed several operations and comparisons well: 2/8 + 3/8 as a jump, 7/10 − 3/10, 5 × 3/4 reaching 3.75, 80 → 100, and 2/5 against the wrong 3/9. They drew 3 ÷ 1/4 as 3 → 3.25, which is wrong. This is one run each, read by the audit's author: a hypothesis, not the basis for v1's scope.
+
+**What this suggests for the amendment's first version** (the owner decides there):
+1. **Two states on one card.** The split and equivalent views first show the plain fraction, then the cut, so the model need not write two cards. A second create of the same card is refused and asked again, not dropped.
+2. **A typed share input.** "a wholes shared by b", in place of "a/1 split b" (FD-16, and FD-20's misuse of split).
+3. **No program-added relation line** unless the view is a comparison (FD-09, 15, 23).
+4. **Program-written labels** for the number forms: mixed, whole, decimal and percent (FD-04, 11, 13, 14, 22).
+5. **Operations** (join, cross out, copies): wait for the scoring set. Card-off number lines may already serve them.
