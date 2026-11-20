@@ -1,13 +1,24 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { MOTION_CASES, NUMBER_LINE_CASES, OTHER_CASE_IDS, TRIAL_CASES, numberLineInPart, numberLineLesson, lessonShownStates, recipesInPart, summarize } from "../scripts/eval-trial-recipe-speed.mjs";
+import { MOTION_CASES, NUMBER_LINE_CASES, OTHER_CASE_IDS, TRIAL_CASES, casesFromFile, numberLineInPart, numberLineLesson, lessonShownStates, recipesInPart, summarize } from "../scripts/eval-trial-recipe-speed.mjs";
 
 test("trial-recipe cases pair motion requests with held-out requests from other subjects", async () => {
   const heldOut = new Set(JSON.parse(await readFile(new URL("../eval/subject-routing-heldout.json", import.meta.url), "utf8")).cases.map((item) => item.id));
   assert.equal(MOTION_CASES.length, OTHER_CASE_IDS.length);
   for (const id of OTHER_CASE_IDS) assert.ok(heldOut.has(id), id);
   assert.equal(new Set(MOTION_CASES.map((item) => item.id)).size, MOTION_CASES.length);
+});
+
+test("a cases file is read in file order, without expectations, near misses marked", async () => {
+  const cases = casesFromFile(await readFile(new URL("../testsuite/fraction-dev-cases.json", import.meta.url), "utf8"));
+  assert.equal(cases.length, 24);
+  assert.deepEqual(cases.filter((item) => item.nearMiss).map((item) => item.id), ["FD-23", "FD-24"]);
+  assert.ok(cases.every((item) => !("expect" in item) && /^(en-US|zh-CN)$/u.test(item.language)));
+  assert.equal(cases.filter((item) => item.language === "zh-CN").length, 5);
+  assert.throws(() => casesFromFile(JSON.stringify({ cases: [{ id: "A", prompt: "x" }, { id: "A", prompt: "y" }] })), /appears twice/);
+  assert.throws(() => casesFromFile(JSON.stringify({ cases: [{ id: "A" }] })), /needs an id and a prompt/);
+  assert.throws(() => casesFromFile(JSON.stringify({ cases: [] })), /no cases/);
 });
 
 test("a first part built by the motion builder is recognised", () => {
@@ -199,6 +210,15 @@ test("the harness runs pairs and quality cases, keeps raw replies, judges each c
     { timeout: 60000 }, (error) => (error ? fail(error) : done())));
   const probe = JSON.parse(await readFile(join(dir, "probe.json"), "utf8"));
   assert.deepEqual(probe.rows.map((row) => [row.case, row.arm]), [["NL-03", "candidate"], ["NM-01", "candidate"], ["NL-03", "candidate"], ["NM-01", "candidate"]]);
+  // A diagnostic: a file's cases in file order, both arms, the near miss marked, nothing judged.
+  await writeFile(join(dir, "cases.json"), JSON.stringify({ cases: [{ id: "D-01", language: "en-US", kind: "question", prompt: "Where is 3/4?" }, { id: "D-02", language: "zh-CN", near_miss: true, prompt: "比一比" }] }));
+  await new Promise((done, fail) => execFile(process.execPath, [script, "--build", dir, "--recipes", "number_line", "--octos-profile", join(dir, "profile.json"), "--pairs", "0", "--cases-file", join(dir, "cases.json"), "--both-arms", "--max-calls", "20", "--out", join(dir, "file.json")],
+    { timeout: 60000 }, (error) => (error ? fail(error) : done())));
+  const fromFile = JSON.parse(await readFile(join(dir, "file.json"), "utf8"));
+  assert.deepEqual(fromFile.rows.map((row) => [row.case, row.kind, row.arm]), [["D-01", "quality", "baseline"], ["D-01", "quality", "candidate"], ["D-02", "near_miss", "candidate"], ["D-02", "near_miss", "baseline"]]);
+  assert.ok(fromFile.rows.every((row) => !row.quality?.hard.length), "no expectations, so nothing is judged");
+  assert.equal(fromFile.rows.find((row) => row.case === "D-02" && row.arm === "candidate").quality.review, "near miss drew the trial's visual: read by hand");
+  assert.equal(fromFile.trial_recipes, "number_line");
   // A budget too small for the plan is reported, never passed over.
   await run(3, join(dir, "short.json"));
   const short = JSON.parse(await readFile(join(dir, "short.json"), "utf8"));
