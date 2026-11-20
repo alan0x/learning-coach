@@ -1596,6 +1596,8 @@ function compileFractionModel(
     if (a.numerator * b.denominator !== b.numerator * a.denominator) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_view`, `${a.numerator}/${a.denominator} and ${b.numerator}/${b.denominator} are not equal; compare them instead`);
   }
   let split: number | undefined;
+  // Which fraction a split cuts: the only one in a split view; in an equivalent view, the coarser one.
+  let splitIndex = 0;
   if (view === "split") {
     // Written as a choice ("2" to "6"); a whole number is read the same way.
     const k = typeof input.split_each_part === "string" && /^[0-9]{1,2}$/u.test(input.split_each_part) ? Number(input.split_each_part) : input.split_each_part;
@@ -1606,13 +1608,31 @@ function compileFractionModel(
     if (fractions[0]!.denominator * (k as number) > FRACTION_MODEL_LIMITS.splitParts) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, `after splitting, a whole has at most ${FRACTION_MODEL_LIMITS.splitParts} parts`);
     if (fractions[0]!.numerator < 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fractions[0].numerator`, "splitting shares the shaded parts: shade at least one");
     split = k as number;
+  } else if (view === "equivalent" && input.split_each_part !== undefined) {
+    // 0021 amendment 2, after the v1 re-run (FD-05): an equivalence written with the cut that makes it, 1/2 and
+    // 2/4 with "2", draws the coarser fraction with each part cut that many ways (dashed), above the finer one:
+    // the textbook picture (blueprint B04). A count that does not turn one into the other is refused.
+    const k = typeof input.split_each_part === "string" && /^[0-9]{1,2}$/u.test(input.split_each_part) ? Number(input.split_each_part) : input.split_each_part;
+    if (shape === "grid") fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.fraction_shape`, "a grid's cells are not split again; use a bar or a circle");
+    if (typeof k !== "number" || !Number.isInteger(k) || k < FRACTION_MODEL_LIMITS.splitMin || k > FRACTION_MODEL_LIMITS.splitMax) {
+      fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, `split each part into ${FRACTION_MODEL_LIMITS.splitMin} to ${FRACTION_MODEL_LIMITS.splitMax}`);
+    }
+    const [a, b] = fractions as [typeof fractions[0], typeof fractions[0]];
+    const cuts = (coarse: typeof a, fine: typeof a) => fine.numerator === coarse.numerator * (k as number) && fine.denominator === coarse.denominator * (k as number);
+    if (cuts(a, b)) splitIndex = 0;
+    else if (cuts(b, a)) splitIndex = 1;
+    else fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, `cutting each part of one fraction ${k} ways must give the other (1/2 cut into 2 is 2/4)`);
+    split = k as number;
   } else if (input.split_each_part !== undefined) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, "split_each_part goes with fraction_view split");
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.split_each_part`, "split_each_part goes with fraction_view split or equivalent");
   }
+  // A split view on whole things (a/1) draws the cuts only: sharing wholes has its own view, and here the
+  // pieces are counted (3 cups in quarter-cup scoops, after the v1 re-run's FD-20), so no share is marked.
+  const sharing = view === "split" && fractions[0]!.denominator !== 1;
   // One share is the shaded amount split k ways: numerator / (denominator × split), drawn as that many of the
   // smallest pieces in a row. A share that is a whole number is written as one (6/3 split 2: "6/6 = 1").
   let caption: string | undefined;
-  if (split !== undefined) {
+  if (split !== undefined && sharing) {
     const { numerator, denominator } = fractions[0]!;
     const parts = denominator * split, divisor = gcdOf(numerator, parts);
     const simplest = parts / divisor === 1 ? `${numerator / divisor}` : `${numerator / divisor}/${parts / divisor}`;
@@ -1625,9 +1645,9 @@ function compileFractionModel(
     ...(caption ? { caption } : {}),
     model: shape,
     ...(grid ? { grid } : {}),
-    fractions: fractions.map((fraction) => ({
+    fractions: fractions.map((fraction, index) => ({
       numerator: fraction.numerator, denominator: fraction.denominator,
-      ...(split !== undefined ? { split, highlight: fraction.numerator } : {}),
+      ...(split !== undefined && index === splitIndex ? { split, ...(sharing ? { highlight: fraction.numerator } : {}) } : {}),
     })),
     ...(count === 2 ? { relation: view as "compare" | "equivalent" } : {}),
   });
