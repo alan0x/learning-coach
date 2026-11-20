@@ -1458,6 +1458,13 @@ function lowerModelActivityNumbers(
  * the accepted outline, rather than the speculative section, remains the
  * authority and triggers a section-only repair.
  */
+/**
+ * A card's next step the program draws as a revision (a recipe's `then_create`), per reconciled first
+ * section: course visual position → the later create's moment, timing and content. Kept apart from the
+ * section so a model reply can never supply one.
+ */
+const PROGRAM_VISUAL_REVISIONS = new WeakMap<object, Map<number, { moment: number; timing?: unknown; content: Record<string, unknown> }>>();
+
 function reconcileBootstrapFirstSectionPositions(
   value: unknown,
   outline: LessonPlanOutline,
@@ -1509,6 +1516,7 @@ function reconcileBootstrapFirstSectionPositions(
 
   const visualCreates = collect("visual_creates");
   const unmatchedVisuals = new Set(visualCreates);
+  const revisions = new Map<number, { moment: number; timing?: unknown; content: Record<string, unknown> }>();
   const matchedVisuals = new Map<CreateCandidate, number>();
   const expectedVisuals = (outline.course_visuals ?? [])
     .map((visual, index) => ({ visual, position: index + 1 }))
@@ -1530,10 +1538,21 @@ function reconcileBootstrapFirstSectionPositions(
     const later = visualCreates.filter((candidateEntry) => unmatchedVisuals.has(candidateEntry)
       && candidateEntry.entry.course_visual === position && visualCreates.indexOf(candidateEntry) > visualCreates.indexOf(match));
     const choose = later.length ? RECIPE_HOOKS[visual.capability]?.choose_first_create : undefined;
-    const pick = choose?.([match, ...later].map((candidateEntry) => candidateEntry.entry.content as Record<string, unknown>));
+    const contents = [match, ...later].map((candidateEntry) => candidateEntry.entry.content as Record<string, unknown>);
+    const pick = choose?.(contents);
     const chosen = pick !== undefined && Number.isInteger(pick) && pick > 0 && pick <= later.length ? later[pick - 1] : undefined;
     if (chosen) unmatchedVisuals.delete(chosen);
     matchedVisuals.set(chosen ? { ...match, entry: chosen.entry } : match, position);
+    // The card's next step, drawn as a revision at its own moment, when the recipe allows it.
+    const then = later.length && recipeDeclares(visual.capability, "revised_by_program")
+      ? RECIPE_HOOKS[visual.capability]?.then_create?.(contents, chosen ? later.indexOf(chosen) + 1 : 0) : undefined;
+    const next = then !== undefined && Number.isInteger(then) && then > 0 && then <= later.length && later[then - 1] !== chosen ? later[then - 1] : undefined;
+    if (next && next.moment > (chosen ?? match).moment) {
+      unmatchedVisuals.delete(next);
+      const content = next.entry.content && typeof next.entry.content === "object" && !Array.isArray(next.entry.content) ? { ...(next.entry.content as Record<string, unknown>) } : {};
+      delete content.capability;
+      revisions.set(position, { moment: next.moment, ...(next.entry.timing !== undefined ? { timing: next.entry.timing } : {}), content });
+    }
   }
   const fixedCourseCreates = Object.fromEntries([...matchedVisuals].map(([match, position]) => {
     const entry = structuredClone(match.entry);
@@ -1553,6 +1572,7 @@ function reconcileBootstrapFirstSectionPositions(
   }
   if (expectedVisuals.length > 0) candidate.course_visual_creates = fixedCourseCreates;
   else delete candidate.course_visual_creates;
+  if (revisions.size) PROGRAM_VISUAL_REVISIONS.set(root as object, revisions);
 
   const createsByKind = {
     math: collect("math_creates"),
@@ -1641,6 +1661,8 @@ function lowerModelSectionDraft(
   requireFixedReusableCreates = false,
   language?: string,
 ): LessonPlanSectionDraft {
+  // Read before pruning, which copies the section: the program's revisions are keyed by the reconciled object.
+  const programRevisions = value && typeof value === "object" ? PROGRAM_VISUAL_REVISIONS.get(value) : undefined;
   const root = pruneModelNulls(value);
   if (!root || typeof root !== "object" || Array.isArray(root)) {
     throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", "$lessonPlanModelSection", "expected an object");
@@ -1904,6 +1926,36 @@ function lowerModelSectionDraft(
             ),
           },
         });
+      });
+    }
+    // A card's next step (a recipe's `then_create`): a revision of the card, first in this moment, as the
+    // create the model wrote here would have been.
+    for (const [position, revision] of programRevisions ?? []) {
+      const declaration = courseVisuals[position - 1];
+      if (revision.moment !== momentIndex + 1 || !declaration) continue;
+      // The card by its place in this section (a reusable item is filled only once the section is done):
+      // the moment that creates it, and its place among that moment's creates, which come first in a moment.
+      const created = [...fixedCourseCreates].find(([, entries]) => entries.some((entry) => entry.course_visual === position));
+      if (!created || created[0] >= revision.moment) continue;
+      const item = created[1].findIndex((entry) => entry.course_visual === position) + 1;
+      ordered.push({
+        order: 0,
+        action: {
+          action: "revise",
+          ...lowerModelActionReferences(
+            "revise",
+            {
+              kind: "visual",
+              reference: { source: "local_board_item", moment: created[0], item },
+              content: { capability: declaration.capability, ...revision.content },
+              reason: lessonText(language, "画面的下一步"),
+              ...(revision.timing !== undefined ? { timing: revision.timing } : {}),
+            },
+            momentIndex + 1,
+            outline.numbers?.length ?? 0,
+            (outline.numbers ?? []).map((number) => number.label ?? ""),
+          ),
+        },
       });
     }
     ordered.sort((left, right) => left.order - right.order);

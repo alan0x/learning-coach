@@ -293,6 +293,82 @@ test("a fraction card first written without its values takes a later create's va
   assert.deepEqual(result["both without values"].writes, []);
 });
 
+test("a plain card, then its cut: the second create is drawn as a revision at its moment (0021 amendment 2, rule 1)", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { retiredCubeCourse } = await import(${here("./lesson-plan-course-fixtures.mjs")});
+    const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+    const { judgeFractions } = await import(${here("../scripts/fraction-judge.mjs")});
+    const { readFileSync } = await import("node:fs");
+    const { normalizeAuthoringLesson, reduceCanonicalEvents } = await import("octos-lesson-language");
+    const cases = Object.fromEntries(JSON.parse(readFileSync(new URL(${here("../testsuite/fraction-judge-cases.json")}), "utf8")).cases.map((item) => [item.id, item]));
+    const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+    const plan = structuredClone(retiredCubeCourse);
+    delete plan.numbers;
+    for (const section of plan.sections) {
+      for (const moment of section.moments) moment.actions = moment.actions.filter((action) => action.action !== "animate");
+      if (section.student_activities) section.student_activities = section.student_activities.filter((activity) => activity.kind !== "number_target" && activity.kind !== "scene3d_view");
+      if (!section.student_activities?.length) delete section.student_activities;
+      for (const item of section.reusable_items ?? []) if (item.capability === "cube_with_section") item.capability = "fraction_model";
+      for (const moment of section.moments) for (const action of moment.actions) {
+        if (action.content?.capability === "cube_with_section") action.content = { capability: "fraction_model", parameters: { fractions: [{ numerator: 3, denominator: 8 }], fraction_view: "one" } };
+      }
+    }
+    const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+    const outline = stagedOutline(plan, drafts);
+    const out = {};
+    for (const [name, firstParameters, laterParameters] of [
+      ["cut", { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "one" }, { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "split", split_each_part: "4" }],
+      ["share", { fractions: [{ numerator: 2, denominator: 1 }], fraction_view: "one" }, { fractions: [{ numerator: 2, denominator: 5 }], fraction_view: "share" }],
+      ["fractions differ", { fractions: [{ numerator: 3, denominator: 1 }], fraction_view: "one" }, { fractions: [{ numerator: 12, denominator: 4 }], fraction_view: "split", split_each_part: "4" }],
+      ["shapes differ", { fraction_shape: "circle", fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "one" }, { fractions: [{ numerator: 3, denominator: 5 }], fraction_view: "split", split_each_part: "2" }],
+    ]) {
+      const first = bootstrapSectionFromExact(outline, drafts[0]);
+      const at = first.moments.findIndex((moment) => moment.visual_creates?.length);
+      const create = first.moments[at].visual_creates[0];
+      create.content = { parameters: firstParameters };
+      const later = first.moments.push({ narration: "Now cut it.", delivery: first.moments[at].delivery, visual_creates: [{ course_visual: create.course_visual, content: { parameters: laterParameters } }] }) - 1;
+      const labels = [];
+      let prefix;
+      try {
+        await api.generateLessonPlanWithModel(async (request) => {
+          labels.push(request.label);
+          if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, first);
+          throw new Error("stop after the first section");
+        }, { turn_id: "rule-1", learner_request: "Three fifths shared by four", language: "en-US" }, { max_attempts_per_part: 1, on_playable_prefix: ({ compiled }) => { prefix ??= compiled; } });
+      } catch {}
+      const beats = prefix?.lesson.steps[0].beats ?? [];
+      const cards = beats.flatMap((beat, index) => beat.actions.filter((action) => action.kind === "fraction_model" || action.do === "revise").map((action) => ({ beat: index + 1, do: action.do, as: action.as, target: action.target, fractions: action.content.fractions, caption: action.content.caption })));
+      let board;
+      if (prefix) {
+        const node = Object.values(reduceCanonicalEvents(normalizeAuthoringLesson(prefix.lesson, { lessonId: "l", boardId: "b", baseRevision: 0, regionIntent: "new_topic" })).nodes).find((each) => each.kind === "fraction_model");
+        board = node?.content.fractions;
+      }
+      out[name] = { labels, cards, at: at + 1, later: later + 1, board, ...(prefix && name === "cut" ? { fm13: judgeFractions(cases["FM-13"], prefix.lesson) } : {}) };
+    }
+    console.log(JSON.stringify(out));
+  `);
+  const cut = result.cut;
+  assert.deepEqual(cut.labels, ["lesson-plan-bootstrap", "lesson-plan-section"], "the first section plays from the first reply");
+  assert.deepEqual(cut.cards.map((card) => [card.beat, card.do]), [[cut.at, "write"], [cut.later, "revise"]]);
+  assert.deepEqual(cut.cards[0].fractions, [{ as: "a", numerator: 3, denominator: 5 }]);
+  assert.deepEqual(cut.cards[1].fractions, [{ as: "a", numerator: 3, denominator: 5, split: 4, highlight: 3 }]);
+  assert.equal(cut.cards[1].caption, "Each share is 3/20");
+  assert.equal(cut.cards[1].target, cut.cards[0].as, "the revision targets the card it cuts");
+  // The board ends with the cut card, and the judge reads both steps: FM-13 (3/5 in four portions) passes.
+  assert.deepEqual(cut.board.map(({ numerator, denominator, split, highlight }) => ({ numerator, denominator, split, highlight })), [{ numerator: 3, denominator: 5, split: 4, highlight: 3 }]);
+  assert.deepEqual(cut.fm13, { hard: [], soft: [] });
+  // Two wholes, then shared by five: one fifth of each.
+  assert.deepEqual(result.share.cards.map((card) => [card.do, card.fractions]), [
+    ["write", [{ as: "a", numerator: 2, denominator: 1 }]],
+    ["revise", [{ as: "a", numerator: 2, denominator: 1, split: 5, highlight: 2 }]],
+  ]);
+  assert.equal(result.share.cards[1].caption, "Each share is 2/5");
+  // Anything outside the typed table keeps the first create, as before (FD-20's sixteenths are not drawn).
+  for (const name of ["fractions differ", "shapes differ"]) assert.deepEqual(result[name].cards.map((card) => card.do), ["write"], name);
+  assert.deepEqual(result["fractions differ"].cards[0].fractions, [{ as: "a", numerator: 3, denominator: 1 }]);
+});
+
 test("a share that is a whole number is written as one (review of #131)", () => {
   const result = withTrial(compileScript([["whole-share", { fractions: [f(6, 3)], fraction_view: "split", split_each_part: "2" }, "en-US"]]));
   assert.equal(result["whole-share"].content.caption, "Each share is 6/6 = 1");

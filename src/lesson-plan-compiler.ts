@@ -637,7 +637,19 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         } else if (item.action === "revise") {
           const target = reference(`${actionPath}.reference`);
           if (item.kind === "visual" || (item.content as LessonPlanVisualContent).capability) {
-            fail("LESSON_PLAN_COMPILER_UNSUPPORTED_REVISION", `${actionPath}.content`, "visual capability revision is not in the first compiler batch");
+            // A recipe that declares `revised_by_program` draws its card's next step as a revision: the content
+            // compiles as a create would, and the revision carries the whole card (OLL 0021 amendment 2).
+            const visualContent = item.content as LessonPlanVisualContent;
+            if (!recipeDeclares(visualContent.capability, "revised_by_program")) {
+              fail("LESSON_PLAN_COMPILER_UNSUPPORTED_REVISION", `${actionPath}.content`, "visual capability revision is not in the first compiler batch");
+            }
+            const compiled = compileVisual(target, visualContent, "main_visual", { relation: "new_region" } as ReturnType<typeof place>, plan, `${actionPath}.content.parameters`);
+            const write = compiled.actions.length === 1 && compiled.actions[0]!.do === "write" ? compiled.actions[0] as { content: Record<string, unknown> } : undefined;
+            if (!write || write.content.bindings !== undefined || compiled.variables?.length) {
+              fail("LESSON_PLAN_COMPILER_UNSUPPORTED_REVISION", `${actionPath}.content`, "a revised card is one fixed card, with no slider");
+            }
+            actions.push({ do: "revise", target, content: write!.content, reason: item.reason, ...actionWhen(item.timing) } as AuthoringAction);
+            return;
           }
           const content = item.content as LessonPlanBoardContent;
           actions.push({

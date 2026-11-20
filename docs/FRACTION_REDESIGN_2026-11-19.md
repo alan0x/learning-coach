@@ -204,5 +204,12 @@ At 3 runs per case, the core is 48 lessons. The bars get numbers when the scorin
   - probe 3: identical;
   - trial off: the 319 lessons and the request hashes are identical.
 
-Rule 1 (a plain card, then its cut, as a revision) is step 3b.
+## Build, step 3b (2026-11-19)
+- **Rule 1:** a plain fraction, then the same fraction cut (or wholes, then shared), in the same shape, is drawn as the card and then its revision at the second create's moment.
+- **Implementation:** the recipe's `then_create` hook, allowed by `revised_by_program`, and a program-written plan `revise` that the compiler compiles like a create.
+- **Anything outside that table keeps the first create.**
+- **Replays, no model calls:**
+  - diagnostic: FD-19 now cuts on its second step;
+  - probe 3: identical;
+  - trial off: the 319 lessons and the request hashes are unchanged.
 
