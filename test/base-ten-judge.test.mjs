@@ -81,6 +81,10 @@ test("each break is caught by its own check", () => {
   // Same number as the lesson's (44), though the pile differs (review of #155).
   only([0, 3, 14], tradingLesson({ practice: [0, 4, 4] }), ["the practice pile's number differs from the lesson's"]);
   only([0, 3, 14], tradingLesson({ number: 36 }), ["the number question answers the practice pile"]);
+  // A one-digit practice pile for a two-digit lesson (review of #155, round 2).
+  only([0, 3, 14], tradingLesson({ practice: [0, 0, 5] }), ["the practice pile has as many places as the lesson's"]);
+  // A practice pile that is no starting pile (149 on two columns): OLL already refuses the lesson.
+  only([0, 3, 14], tradingLesson({ practice: [0, 9, 59] }), ["the lesson plays"]);
   only([0, 3, 14], tradingLesson({ counts: { answers: [2, 17] } }), ["a counts row answers the practice pile"]);
   // Place words swapped: the answers are right only for the wrong words (review of #155).
   only([0, 3, 14], tradingLesson({ counts: { answers: [7, 3], words: ["ones", "tens"] } }), ["a counts row answers the practice pile"]);
