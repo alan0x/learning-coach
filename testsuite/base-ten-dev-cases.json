@@ -37,7 +37,7 @@
       "language": "en-US",
       "kind": "topic",
       "teacher_picture": "Ten ones becoming one ten, with a few extra ones left over (for example 16 ones: one ten and six ones).",
-      "prompt": "Trading ten ones for a ten",
+      "prompt": "Swapping loose cubes for rods — say, sixteen single cubes",
       "expect": {
         "lesson_pile": [
           0,

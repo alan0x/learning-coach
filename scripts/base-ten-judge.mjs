@@ -38,17 +38,21 @@ function pileAt(content, variables) {
 export function tradingMatIn(lesson) {
   const actions = (lesson?.steps ?? []).flatMap((step) => step.beats ?? []).flatMap((beat) => beat.actions ?? []);
   const writes = actions.filter((action) => action.do === "write" && action.kind === "base_ten_trade");
-  if (!writes.length) return { cards: 0 };
-  let events;
+  if (!writes.length) {
+    // A near miss must still be a lesson that plays (review of #155).
+    try { normalizeAuthoringLesson(lesson, { lessonId: "judge", boardId: "judge", baseRevision: 0, regionIntent: "new_topic" }); }
+    catch (error) { return { cards: 0, error: `${error.code ?? "error"}: ${String(error.message).slice(0, 160)}` }; }
+    return { cards: 0 };
+  }
+  let board;
   try {
-    events = normalizeAuthoringLesson(lesson, { lessonId: "judge", boardId: "judge", baseRevision: 0, regionIntent: "new_topic" });
+    board = reduceCanonicalEvents(normalizeAuthoringLesson(lesson, { lessonId: "judge", boardId: "judge", baseRevision: 0, regionIntent: "new_topic" }));
   } catch (error) {
     return { cards: writes.length, error: `${error.code ?? "error"}: ${String(error.message).slice(0, 160)}` };
   }
   const write = writes[0];
   const declared = Object.fromEntries((lesson.lesson?.variables ?? []).map((variable) => [variable.as, variable.initial]));
   const lessonStart = pileAt(write.content, declared);
-  const board = reduceCanonicalEvents(events);
   const node = Object.values(board.nodes).find((candidate) => String(candidate.id).endsWith(`:node:${write.as}`));
   const end = node ? baseTenFacts(baseTenMat(node.content)) : undefined;
   const tasks = lesson.lesson?.tasks ?? [];
@@ -65,6 +69,7 @@ export function judgeTradingMat(item, lesson) {
   const mat = tradingMatIn(lesson);
   if (item.expect?.forbid) {
     check("no trading mat for this question", mat.cards === 0, `${mat.cards} mat(s) drawn`);
+    check("the lesson plays", !mat.error, mat.error);
     return { pass: checks.every((each) => each.pass), checks };
   }
   check("one trading mat", mat.cards === 1, `${mat.cards} mats`);
@@ -81,6 +86,7 @@ export function judgeTradingMat(item, lesson) {
   check("the demonstration trades when the pile needs it", !needsTrade || mat.taps > 0, "no taps in the lesson");
   // The practice pile is the model's; it is checked by rule.
   check("a card task with a practice pile", mat.cardTask && mat.practice, "no card_fact task with a start");
+  check("the card task asks whether no trade is left, on the mat", mat.cardTask?.completion?.fact === "no_trade_left" && mat.cardTask?.completion?.node === mat.as, JSON.stringify(mat.cardTask?.completion));
   if (!mat.practice) return { pass: false, checks };
   const practice = mat.practice.pile;
   let practiceValid = true;
@@ -88,7 +94,8 @@ export function judgeTradingMat(item, lesson) {
     validateBaseTenTradeContent({ columns, places: [{ as: "ones", count: practice[2], tray: mat.practice.trays[0] }, { as: "tens", count: practice[1], ...(columns === 3 ? { tray: mat.practice.trays[1] } : {}) }, ...(columns === 3 ? [{ as: "hundreds", count: practice[0] }] : [])] }, "$", (path, message) => { throw new Error(`${path}: ${message}`); });
   } catch (error) { practiceValid = String(error.message); }
   check("the practice pile is a starting pile", practiceValid === true, practiceValid);
-  check("the practice pile differs from the lesson's", JSON.stringify(practice) !== JSON.stringify(pile), `both ${JSON.stringify(pile)}`);
+  // Its number must differ: the narration has said the lesson pile's number (review of #155: 3 tens 14 ones and 4 tens 4 ones are both 44).
+  check("the practice pile's number differs from the lesson's", valueOf(practice) !== valueOf(pile), `both make ${valueOf(pile)}`);
   check("the practice pile has as many places as the lesson's", digitsOf(valueOf(practice)) === digitsOf(valueOf(pile)), `${valueOf(practice)} for a lesson about ${valueOf(pile)}`);
   // The questions answer the practice pile.
   const value = valueOf(practice), digits = digitsOf(value);
@@ -98,12 +105,18 @@ export function judgeTradingMat(item, lesson) {
   const number = mat.tasks.find((task) => task.completion?.kind === "numeric_answer");
   const rows = mat.tasks.filter((task) => task.completion?.kind === "numeric_row");
   const blanks = (task) => task.completion.parts.flatMap((part) => ("blank" in part ? [part.blank] : []));
-  const answers = (task) => blanks(task).map((blank) => Number(blank.answer));
+  // A blank's answer is a whole number written out; an empty answer is never 0 (review of #155).
+  const answers = (task) => blanks(task).map((blank) => (/^\d+$/.test(String(blank.answer ?? "").trim()) ? Number(blank.answer) : NaN));
+  const texts = (task) => task.completion.parts.flatMap((part) => ("text" in part ? [part.text.trim()] : []));
+  const words = places.map((p) => PLACES[p]);
   check("the number question answers the practice pile", number && Number(number.completion.answer) === value, `${number?.completion.answer} for ${value}`);
-  check("a counts row answers the practice pile", rows.some((row) => JSON.stringify(answers(row)) === JSON.stringify(counts)), `rows ${JSON.stringify(rows.map(answers))}, counts ${JSON.stringify(counts)}`);
-  check("a parts row answers the practice pile", rows.some((row) => JSON.stringify(answers(row)) === JSON.stringify(parts)), `rows ${JSON.stringify(rows.map(answers))}, parts ${JSON.stringify(parts)}`);
-  // The parts row is the one that writes the number by places ("37 = __ + __"), whatever its answers.
+  // The counts row names each place after its blank, highest first ("[3] tens [7] ones"); the parts row
+  // writes the practice number first ("37 = [30] + [7]"), so a row's words match its answers (review of #155).
+  const countsRow = rows.find((row) => JSON.stringify(texts(row)) === JSON.stringify(words));
+  check("a counts row answers the practice pile", countsRow && JSON.stringify(answers(countsRow)) === JSON.stringify(counts), `rows ${JSON.stringify(rows.map((row) => [texts(row), answers(row)]))}, counts ${JSON.stringify(counts)} for ${words.join("/")}`);
   const partsRow = rows.find((row) => "text" in (row.completion.parts[0] ?? {}) && /=\s*$/.test(row.completion.parts[0].text));
+  check("a parts row answers the practice pile", partsRow && partsRow.completion.parts[0].text.replace(/\s*=\s*$/, "") === String(value) && JSON.stringify(answers(partsRow)) === JSON.stringify(parts),
+    `parts row ${JSON.stringify(partsRow && [texts(partsRow), answers(partsRow)])}, want ${value} = ${parts.join(" + ")}`);
   check("the parts row asks what each place is worth", partsRow && /\bworth\b/i.test(`${partsRow.prompt} ${blanks(partsRow).map((blank) => blank.label ?? "").join(" ")}`), partsRow?.prompt ?? "no row writes the number by places");
   check("no label shows a number", rows.every((row) => blanks(row).every((blank) => !/\d/.test(blank.label ?? ""))), "a label has a digit");
   check("every question sits by the mat", [number, ...rows].filter(Boolean).every((task) => task.anchor === mat.as), "a question anchored elsewhere");
@@ -123,10 +136,12 @@ if (process.argv[1] && new URL(import.meta.url).pathname === (await import("node
   let passed = 0;
   for (const item of cases) {
     let lesson;
-    try { lesson = JSON.parse(await readFile(join(runDirectory, `${item.id}.json`), "utf8")); } catch { console.log(`${item.id}\tmissing`); continue; }
-    const verdict = judgeTradingMat(item, lesson);
+    try { lesson = JSON.parse(await readFile(join(runDirectory, `${item.id}.json`), "utf8")); } catch (error) { console.log(`${item.id}\t${error.code === "ENOENT" ? "missing" : "unreadable"}`); continue; }
+    let verdict;
+    try { verdict = judgeTradingMat(item, lesson); } catch (error) { console.log(`${item.id}\tFAIL\tjudge error: ${String(error?.message ?? error).slice(0, 160)}`); continue; }
     if (verdict.pass) passed += 1;
     console.log(`${item.id}\t${verdict.pass ? "pass" : "FAIL"}\t${verdict.checks.filter((each) => !each.pass).map((each) => `${each.check}: ${each.detail}`).join("; ")}`);
   }
   console.log(`${passed}/${cases.length} pass`);
+  process.exitCode = passed === cases.length ? 0 : 1;
 }

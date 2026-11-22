@@ -1,44 +1,63 @@
-// The trading mat judge (OLL decision 0023): a good lesson passes, and each kind of break is caught.
+// The trading mat judge (OLL decision 0023): good lessons pass, on two and three columns and with a zero
+// place, and each kind of break is caught by the check meant for it.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { buildBaseTenTrade } from "octos-lesson-language/plugin-math";
 import { judgeTradingMat } from "../scripts/base-ten-judge.mjs";
 
+const PLACES = ["ones", "tens", "hundreds"];
 const v = (as, initial, max) => ({ as, initial, min: 0, max, label: as });
 const tap = (kind, at) => ({ do: "tap", target: "mat", tap: kind, at });
+const valueOf = ([h, t, o]) => h * 100 + t * 10 + o;
 
-/** A lesson as the recipe will write it: the question's pile, a demonstration, a practice pile and three questions. */
-function tradingLesson({ lesson = [0, 3, 14], practice = [0, 2, 17], demoTrades = 1, numberAnswer, countsAnswers, partsAnswers, partsPrompt, label } = {}) {
-  const [, t, o] = lesson;
-  const [, pt, po] = practice;
-  const value = pt * 10 + po;
-  const built = buildBaseTenTrade({ as: "mat", role: "Tens and ones", place: { relation: "new_region" }, columns: 2,
-    places: [{ count: { expression: "ones", initial: o }, tray: { expression: "tray_ones", initial: 0 } }, { count: { expression: "tens", initial: t } }] });
-  const demo = [];
-  for (let k = 0; k < demoTrades; k += 1) demo.push(...Array.from({ length: 10 }, () => tap("gather", "ones")), tap("make", "ones"));
+/** The demonstration's taps for a pile: every ones trade, then every tens trade (on three columns). */
+function demonstration([h, t, o], columns) {
+  const taps = [];
+  let ones = o, tens = t;
+  while (ones >= 10) { taps.push(...Array.from({ length: 10 }, () => tap("gather", "ones")), tap("make", "ones")); ones -= 10; tens += 1; }
+  while (columns === 3 && tens >= 10) { taps.push(...Array.from({ length: 10 }, () => tap("gather", "tens")), tap("make", "tens")); tens -= 10; }
+  return taps;
+}
+
+/**
+ * A lesson as the recipe will write it, with overrides to break one thing at a time. `rows` edits the
+ * program's rows: counts (words and answers) and parts (lead text, answers, labels).
+ */
+function tradingLesson({ lesson = [0, 3, 14], practice = [0, 2, 17], columns, demo = true, cardTask = {}, number, counts = {}, parts = {}, extraMat = false, anchor = "mat" } = {}) {
+  const cols = columns ?? (valueOf(lesson) >= 100 || lesson[0] > 0 ? 3 : 2);
+  const places = Array.from({ length: cols }, (_, p) => p);
+  const name = (p, field) => (field === "count" ? PLACES[p] : `tray_${PLACES[p]}`);
+  const max = [59, cols === 2 ? 9 : 34, 9];
+  const built = buildBaseTenTrade({ as: "mat", role: "Tens and ones", place: { relation: "new_region" }, columns: cols,
+    places: places.map((p) => ({ count: { expression: name(p, "count"), initial: lesson[2 - p] }, ...(p < cols - 1 ? { tray: { expression: name(p, "tray"), initial: 0 } } : {}) })) });
+  const variables = places.flatMap((p) => [v(name(p, "count"), lesson[2 - p], max[p]), ...(p < cols - 1 ? [v(name(p, "tray"), 0, 10)] : [])]);
+  const value = valueOf(practice);
+  const digits = value >= 100 ? 3 : value >= 10 ? 2 : 1;
+  const high = Array.from({ length: digits }, (_, i) => digits - 1 - i);
+  const countAnswers = counts.answers ?? high.map((p) => Math.floor(value / 10 ** p) % 10);
+  const countWords = counts.words ?? high.map((p) => PLACES[p]);
+  const partAnswers = parts.answers ?? high.map((p) => (Math.floor(value / 10 ** p) % 10) * 10 ** p);
+  const partLabels = parts.labels ?? high.map((p) => `the ${PLACES[p]} are worth`);
+  const task = (as, prompt, completion, ops = [{ kind: "row_entry" }]) => ({ as, anchor, prompt, availability: { kind: "after_lesson" }, allowed_operations: ops, completion, hints: ["Look at the mat."] });
   return {
     dsl: "octos.lesson", version: "0.1", profile: "authoring",
     lesson: {
       mode: "explain", language: "en-US", title: "Tens and ones", goals: ["Ten ones make a ten"],
-      variables: [v("ones", o, 59), v("tray_ones", 0, 10), v("tens", t, 9)],
+      variables,
       tasks: [
-        { as: "trade", start: { kind: "practice", variables: ["ones", "tray_ones", "tens"], values: { ones: po, tray_ones: 0, tens: pt } },
-          prompt: `Your turn: ${pt} tens and ${po} ones. Make tens until you can't, then tap I'm done.`, availability: { kind: "after_lesson" },
-          allowed_operations: [{ kind: "card_tap", node: "mat" }, { kind: "card_submit" }], completion: { kind: "card_fact", node: "mat", fact: "no_trade_left" }, hints: ["Put ones in the tray."] },
-        { as: "number", anchor: "mat", prompt: "How many are there?", availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "answer_entry" }],
-          completion: { kind: "numeric_answer", answer: String(numberAnswer ?? value) }, hints: ["Count the tens, then the ones."] },
-        { as: "counts", anchor: "mat", prompt: "How many of each are on the mat?", availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "row_entry" }],
-          completion: { kind: "numeric_row", parts: [{ blank: { as: "tens", answer: String((countsAnswers ?? [Math.floor(value / 10), value % 10])[0]) } }, { text: "tens" }, { blank: { as: "ones", answer: String((countsAnswers ?? [Math.floor(value / 10), value % 10])[1]) } }, { text: "ones" }] },
-          hints: ["Count each column."] },
-        { as: "parts", anchor: "mat", prompt: partsPrompt ?? `What are the tens and the ones worth? Write ${value} by places.`, availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "row_entry" }],
-          completion: { kind: "numeric_row", parts: [{ text: `${value} =` }, { blank: { as: "tens-part", answer: String((partsAnswers ?? [Math.floor(value / 10) * 10, value % 10])[0]), label: label ?? "the tens are worth" } }, { text: "+" }, { blank: { as: "ones-part", answer: String((partsAnswers ?? [Math.floor(value / 10) * 10, value % 10])[1]), label: label ? "the ones" : "the ones are worth" } }] },
-          hints: ["What are the tens worth?"] },
+        { as: "trade", start: { kind: "practice", variables: variables.map((each) => each.as), values: Object.fromEntries(places.map((p) => [name(p, "count"), practice[2 - p]])) },
+          prompt: "Your turn. Make tens until you can't, then tap I'm done.", availability: { kind: "after_lesson" },
+          allowed_operations: [{ kind: "card_tap", node: "mat" }, { kind: "card_submit" }],
+          completion: { kind: "card_fact", node: "mat", fact: "no_trade_left", ...cardTask }, hints: ["Put ones in the tray."] },
+        task("number", "How many are there?", { kind: "numeric_answer", answer: String(number ?? value) }, [{ kind: "answer_entry" }]),
+        task("counts", "How many of each are on the mat?", { kind: "numeric_row", parts: countAnswers.flatMap((answer, i) => [{ blank: { as: `c${i}`, answer: String(answer) } }, { text: countWords[i] }]) }),
+        task("parts", parts.prompt ?? `What is each place worth? Write ${value} by places.`, { kind: "numeric_row", parts: [{ text: `${parts.lead ?? value} =` }, ...partAnswers.flatMap((answer, i) => [...(i ? [{ text: "+" }] : []), { blank: { as: `p${i}`, answer: String(answer), label: partLabels[i] } }])] }),
       ],
     },
     steps: [{ key: "watch", purpose: "Watch a trade", beats: [
-      { key: "pile", say: "Here is the pile.", actions: built.actions },
-      ...(demo.length ? [{ key: "trade", say: "Ten ones make a ten.", actions: demo }] : []),
+      { key: "pile", say: "Here is the pile.", actions: [...built.actions, ...(extraMat ? buildBaseTenTrade({ as: "mat2", role: "Again", place: { relation: "new_region" }, columns: 2, places: [{ count: 3 }, { count: 1 }] }).actions : [])] },
+      ...(demo && demonstration(lesson, cols).length ? [{ key: "trade", say: "Ten make one of the next place.", actions: demonstration(lesson, cols) }] : []),
     ] }],
     close: { summary: "Ten ones make a ten.", focus: ["mat"] },
   };
@@ -46,28 +65,56 @@ function tradingLesson({ lesson = [0, 3, 14], practice = [0, 2, 17], demoTrades 
 const item = (pile) => ({ id: "x", expect: { lesson_pile: pile } });
 const failed = (verdict) => verdict.checks.filter((check) => !check.pass).map((check) => check.check);
 
-test("a good trading lesson passes every check", () => {
-  const verdict = judgeTradingMat(item([0, 3, 14]), tradingLesson());
-  assert.deepEqual(failed(verdict), []);
-  assert.equal(verdict.pass, true);
+test("good lessons pass: two columns, and three columns with a zero place", () => {
+  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 14]), tradingLesson())), []);
+  // 6 hundreds, 9 tens, 16 ones (706) demonstrated; practice 4 hundreds, 9 tens, 12 ones (502): three blanks, a zero ten.
+  const three = tradingLesson({ lesson: [6, 9, 16], practice: [4, 9, 12] });
+  assert.deepEqual(failed(judgeTradingMat(item([6, 9, 16]), three)), []);
+  // A pile with nothing to trade (345) needs no demonstration taps.
+  assert.deepEqual(failed(judgeTradingMat(item([3, 4, 5]), tradingLesson({ lesson: [3, 4, 5], practice: [2, 6, 8] }))), []);
 });
 
-test("each break is caught", () => {
-  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 15]), tradingLesson())), ["the lesson pile is the question's"]);
-  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 14]), tradingLesson({ demoTrades: 0 }))),
-    ["the demonstration ends with no trade left", "the demonstration trades when the pile needs it"]);
-  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 14]), tradingLesson({ practice: [0, 3, 14] }))), ["the practice pile differs from the lesson's"]);
-  // A one-digit practice pile for a two-digit lesson (its two-blank rows are then wrong too).
-  assert.ok(failed(judgeTradingMat(item([0, 3, 14]), tradingLesson({ practice: [0, 0, 5] }))).includes("the practice pile has as many places as the lesson's"));
-  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 14]), tradingLesson({ numberAnswer: 36 }))), ["the number question answers the practice pile"]);
-  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 14]), tradingLesson({ countsAnswers: [2, 17] }))), ["a counts row answers the practice pile"]);
-  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 14]), tradingLesson({ partsAnswers: [3, 7] }))), ["a parts row answers the practice pile"]);
-  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 14]), tradingLesson({ partsPrompt: "Write 37 by places.", label: "the tens" }))), ["the parts row asks what each place is worth"]);
+test("each break is caught by its own check", () => {
+  const only = (pile, lesson, expected) => assert.deepEqual(failed(judgeTradingMat(item(pile), lesson)), expected);
+  only([0, 3, 15], tradingLesson(), ["the lesson pile is the question's"]);
+  only([0, 3, 14], tradingLesson({ demo: false }), ["the demonstration ends with no trade left", "the demonstration trades when the pile needs it"]);
+  // Same number as the lesson's (44), though the pile differs (review of #155).
+  only([0, 3, 14], tradingLesson({ practice: [0, 4, 4] }), ["the practice pile's number differs from the lesson's"]);
+  only([0, 3, 14], tradingLesson({ number: 36 }), ["the number question answers the practice pile"]);
+  only([0, 3, 14], tradingLesson({ counts: { answers: [2, 17] } }), ["a counts row answers the practice pile"]);
+  // Place words swapped: the answers are right only for the wrong words (review of #155).
+  only([0, 3, 14], tradingLesson({ counts: { answers: [7, 3], words: ["ones", "tens"] } }), ["a counts row answers the practice pile"]);
+  only([0, 3, 14], tradingLesson({ parts: { answers: [3, 7] } }), ["a parts row answers the practice pile"]);
+  // The row writes another number than the practice pile's (review of #155).
+  only([0, 3, 14], tradingLesson({ parts: { lead: 54 } }), ["a parts row answers the practice pile"]);
+  // An empty answer on a zero place is not 0 (review of #155): OLL already refuses such a lesson, and the
+  // judge reads it as not playing.
+  only([6, 9, 16], tradingLesson({ lesson: [6, 9, 16], practice: [4, 9, 12], parts: { answers: [500, "", 2] } }), ["the lesson plays"]);
+  only([0, 3, 14], tradingLesson({ parts: { prompt: "Write 37 by places.", labels: ["the tens", "the ones"] } }), ["the parts row asks what each place is worth"]);
+  // A label with a number: OLL already refuses it (a blank's label is words only), so the lesson does not play.
+  only([0, 3, 14], tradingLesson({ parts: { labels: ["30 here", "the ones are worth"] } }), ["the lesson plays"]);
+  only([0, 3, 14], tradingLesson({ anchor: "elsewhere-card" }), ["the lesson plays"]);
+  only([0, 3, 14], tradingLesson({ extraMat: true }), ["one trading mat"]);
+  only([0, 3, 14], tradingLesson({ cardTask: { node: "mat2" } }), ["the lesson plays"]);
 });
 
-test("a near miss passes only without a mat", () => {
-  assert.equal(judgeTradingMat({ id: "n", expect: { forbid: ["base_ten_trade"] } }, tradingLesson()).pass, false);
-  assert.equal(judgeTradingMat({ id: "n", expect: { forbid: ["base_ten_trade"] } }, { lesson: { tasks: [] }, steps: [] }).pass, true);
+test("a lesson without its card task fails, and so does one that does not play", () => {
+  const lesson = tradingLesson();
+  lesson.lesson.tasks = lesson.lesson.tasks.filter((task) => task.completion.kind !== "card_fact");
+  assert.ok(failed(judgeTradingMat(item([0, 3, 14]), lesson)).includes("a card task with a practice pile"));
+  // Eleven ones in the tray: the card refuses the tap, so OLL refuses the lesson.
+  const unplayable = tradingLesson();
+  unplayable.steps[0].beats.push({ key: "more", say: "More.", actions: Array.from({ length: 11 }, () => tap("gather", "ones")) });
+  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 14]), unplayable)), ["the lesson plays"]);
+});
+
+test("a near miss passes only without a mat, and only if the lesson plays", () => {
+  const near = { id: "n", expect: { forbid: ["base_ten_trade"] } };
+  assert.equal(judgeTradingMat(near, tradingLesson()).pass, false);
+  const plain = { dsl: "octos.lesson", version: "0.1", profile: "authoring", lesson: { mode: "explain", language: "en-US", title: "Compare", goals: ["Compare"] },
+    steps: [{ key: "s", purpose: "p", beats: [{ key: "b", say: "354 is more.", actions: [{ do: "write", as: "t", kind: "text", role: "note", content: { text: "354 > 345" }, place: { relation: "new_region" } }] }] }], close: { summary: "Done.", focus: ["t"] } };
+  assert.equal(judgeTradingMat(near, plain).pass, true);
+  assert.deepEqual(failed(judgeTradingMat(near, {})), ["the lesson plays"]);
 });
 
 test("every development case names a pile the mat can start with, or is a near miss", async () => {
@@ -76,6 +123,6 @@ test("every development case names a pile the mat can start with, or is a near m
   for (const each of cases) {
     if (each.expect.forbid) continue;
     const [h, t, o] = each.expect.lesson_pile;
-    assert.ok(h <= 9 && t <= 19 && o <= 59 && h * 100 + t * 10 + o <= 999, `${each.id} ${each.expect.lesson_pile}`);
+    assert.ok(h <= 9 && t <= 19 && o <= 59 && valueOf([h, t, o]) <= 999, `${each.id} ${each.expect.lesson_pile}`);
   }
 });
