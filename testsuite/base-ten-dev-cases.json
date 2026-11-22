@@ -1,0 +1,297 @@
+{
+  "note": "Trading tens and ones development cases (OLL decision 0023), 2026-11-22, written from testsuite/base-ten-blueprint.json. Each teacher_picture was written before its prompt. Used for design and tuning; the scoring set is separate, written later by a fresh agent from the blueprint alone, sealed. Never taken from the question set. English only (the mat's words are English). expect.lesson_pile is the pile as the question states it, [hundreds, tens, loose ones]; the practice pile is the model's and is checked by rule. BT-17 to BT-20 are near misses: the mat must not be used.",
+  "cases": [
+    {
+      "id": "BT-01",
+      "row": "T1",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Thirteen loose cubes; ten gathered into a rod, three left: one ten and three ones.",
+      "prompt": "I have 13 cubes. How many tens can I make, and how many are left over?",
+      "expect": {
+        "lesson_pile": [
+          0,
+          0,
+          13
+        ]
+      }
+    },
+    {
+      "id": "BT-02",
+      "row": "T1",
+      "language": "en-US",
+      "kind": "detailed",
+      "teacher_picture": "Twelve loose ones in a pile and one ten-rod already made; ten more ones bundled into a second rod, two ones left.",
+      "prompt": "My daughter has one bundle of ten popsicle sticks and 12 loose sticks. She is stuck on how many sticks that is altogether. Can you walk her through it?",
+      "expect": {
+        "lesson_pile": [
+          0,
+          1,
+          12
+        ]
+      }
+    },
+    {
+      "id": "BT-03",
+      "row": "T1",
+      "language": "en-US",
+      "kind": "topic",
+      "teacher_picture": "Ten ones becoming one ten, with a few extra ones left over (for example 16 ones: one ten and six ones).",
+      "prompt": "Trading ten ones for a ten",
+      "expect": {
+        "lesson_pile": [
+          0,
+          0,
+          16
+        ]
+      }
+    },
+    {
+      "id": "BT-04",
+      "row": "T2",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Fifty loose ones bundled into five tens with none left over: 50 is five tens and zero ones.",
+      "prompt": "If I have 50 single beads and put them in groups of ten, how many tens do I get?",
+      "expect": {
+        "lesson_pile": [
+          0,
+          0,
+          50
+        ]
+      }
+    },
+    {
+      "id": "BT-05",
+      "row": "T2",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Seven ten-rods and ten loose ones; the ten ones make an eighth rod: 80 is eight tens.",
+      "prompt": "Grandpa gave me 7 rolls of ten pennies plus 10 loose pennies. Is that 80 cents?",
+      "expect": {
+        "lesson_pile": [
+          0,
+          7,
+          10
+        ]
+      }
+    },
+    {
+      "id": "BT-06",
+      "row": "T3",
+      "language": "en-US",
+      "kind": "detailed",
+      "teacher_picture": "Three rubber-banded bundles of ten straws and 24 loose straws; two more bundles made, 4 left: 54.",
+      "prompt": "We are counting straws for the 100th day of school. We have 3 bundles of ten and 24 loose straws. How do we find the total without counting every straw?",
+      "expect": {
+        "lesson_pile": [
+          0,
+          3,
+          24
+        ]
+      }
+    },
+    {
+      "id": "BT-07",
+      "row": "T3",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Nine bundles of ten and 26 loose; two more bundles make eleven tens, ten of which make a hundred: 1 hundred, 1 ten, 6 ones = 116.",
+      "prompt": "9 bundles of ten and 26 loose sticks. How many sticks is that?",
+      "expect": {
+        "lesson_pile": [
+          0,
+          9,
+          26
+        ]
+      }
+    },
+    {
+      "id": "BT-08",
+      "row": "T3",
+      "language": "en-US",
+      "kind": "topic",
+      "teacher_picture": "A pile of loose objects counted by bundling tens (for example 38 loose counters: 3 tens and 8 ones).",
+      "prompt": "Help me count a jar of buttons by grouping them in tens — we spilled 38 on the table.",
+      "expect": {
+        "lesson_pile": [
+          0,
+          0,
+          38
+        ]
+      }
+    },
+    {
+      "id": "BT-09",
+      "row": "T4",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Six flats, nine rods, sixteen cubes; ten cubes make a rod, ten rods make a flat: 7 hundreds, 0 tens, 6 ones = 706.",
+      "prompt": "A puzzle in my homework: six hundred-flats, nine ten-rods and sixteen little cubes. What number do they make?",
+      "expect": {
+        "lesson_pile": [
+          6,
+          9,
+          16
+        ]
+      }
+    },
+    {
+      "id": "BT-10",
+      "row": "T4",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Ten rods traded for one flat: 100 is ten tens.",
+      "prompt": "My teacher said a hundred block is just ten rods stuck together. Can you prove it?",
+      "expect": {
+        "lesson_pile": [
+          0,
+          10,
+          0
+        ]
+      }
+    },
+    {
+      "id": "BT-11",
+      "row": "T4",
+      "language": "en-US",
+      "kind": "detailed",
+      "teacher_picture": "Two flats, fourteen rods, three cubes on a place-value mat; ten rods make a flat: 3 hundreds, 4 tens, 3 ones = 343.",
+      "prompt": "Worksheet trouble: the picture shows 2 hundred squares, 14 ten sticks and 3 single cubes, and my son answered 2143. What should he have written, and why?",
+      "expect": {
+        "lesson_pile": [
+          2,
+          14,
+          3
+        ]
+      }
+    },
+    {
+      "id": "BT-12",
+      "row": "T4",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Four flats, nine rods and eleven cubes; ten cubes make a rod, then ten rods make a flat: 5 hundreds, 0 tens, 1 one = 501.",
+      "prompt": "lunch counts — 4 boxes of a hundred napkins, 9 packs of ten, 11 single napkins. total?",
+      "expect": {
+        "lesson_pile": [
+          4,
+          9,
+          11
+        ]
+      }
+    },
+    {
+      "id": "BT-13",
+      "row": "T4",
+      "language": "en-US",
+      "kind": "topic",
+      "teacher_picture": "Regrouping a pile with too many tens and ones into hundreds, tens and ones (for example 1 hundred, 12 tens, 15 ones = 235).",
+      "prompt": "Practise regrouping with blocks: one flat, twelve rods and fifteen unit cubes on the mat.",
+      "expect": {
+        "lesson_pile": [
+          1,
+          12,
+          15
+        ]
+      }
+    },
+    {
+      "id": "BT-14",
+      "row": "T5",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Three flats, four rods, five cubes; written 345 = 300 + 40 + 5.",
+      "prompt": "How do you write 345 in expanded form?",
+      "expect": {
+        "lesson_pile": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "BT-15",
+      "row": "T5",
+      "language": "en-US",
+      "kind": "detailed",
+      "teacher_picture": "Five flats, no rods, eight cubes; written 508 = 500 + 0 + 8, the zero tens shown as an empty place.",
+      "prompt": "My daughter keeps writing 58 for five hundred eight. Can you build it with blocks so she sees the empty tens place?",
+      "expect": {
+        "lesson_pile": [
+          5,
+          0,
+          8
+        ]
+      }
+    },
+    {
+      "id": "BT-16",
+      "row": "T5",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Two rods and seventeen cubes regrouped into three rods and seven cubes; written 37 = 30 + 7.",
+      "prompt": "Leo has two bags of ten marbles and seventeen loose marbles. Write his marbles as tens plus ones.",
+      "expect": {
+        "lesson_pile": [
+          0,
+          2,
+          17
+        ]
+      }
+    },
+    {
+      "id": "BT-17",
+      "row": "T4",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Not this need: comparing two numbers by places (2.NBT.A.4).",
+      "prompt": "Two kids argue: Ana says 354 beats 345, Ben says they tie because the digits match. Who's right?",
+      "expect": {
+        "forbid": [
+          "base_ten_trade"
+        ]
+      }
+    },
+    {
+      "id": "BT-18",
+      "row": "T1",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Not this need: adding with regrouping (2.NBT.B.5), its own component.",
+      "prompt": "What is 38 + 25?",
+      "expect": {
+        "forbid": [
+          "base_ten_trade"
+        ]
+      }
+    },
+    {
+      "id": "BT-19",
+      "row": "T1",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Not this need: ten more than a number (1.NBT.C.5).",
+      "prompt": "Our class reads 47 pages, then ten more. Where do we land?",
+      "expect": {
+        "forbid": [
+          "base_ten_trade"
+        ]
+      }
+    },
+    {
+      "id": "BT-20",
+      "row": "T5",
+      "language": "en-US",
+      "kind": "question",
+      "teacher_picture": "Not this need: rounding (3.NBT.A.1).",
+      "prompt": "Round 347 to the nearest ten.",
+      "expect": {
+        "forbid": [
+          "base_ten_trade"
+        ]
+      }
+    }
+  ]
+}
