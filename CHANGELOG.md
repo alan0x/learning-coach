@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Trading tens and ones: judge and cases** (OLL decision 0023, step 2; `docs/BASE_TEN_TRADE_2026-11-22.md`). A blueprint of five rows from the standards; 20 development cases (16 with the pile the question states, 4 near misses), all under the case-overlap bars; and `scripts/base-ten-judge.mjs`, which reads a lesson through OLL and checks the mat, the demonstration, the practice pile and the questions. No request or lesson changes.
+
 - **OLL at 0225643** (OLL #86–#94; decision 0023): the `base_ten_trade` card, card tasks (`card_fact`), the lesson's `tap` action, rows of blanks (`numeric_row`), question cards stacked in order, and player 0.14.0. The vendored authoring schema is synced. Coach uses none of it yet. Requests and the recorded lessons are byte-identical; compiled lessons stamp math 0.5.0, which Learn already pins.
 
 - **Fraction trial: fixes after the v1 dev-set re-run** (owner approved, 2026-11-19; `docs/FRACTION_REDESIGN_2026-11-19.md`). Trial off: requests byte-identical, the 319 recorded lessons replay identically. Trial on: the first request is 710 B. That is over the 700 B budget, within the 720 B the owner allowed (0021 amendment 2, question 4).

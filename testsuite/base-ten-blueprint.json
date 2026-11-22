@@ -1,0 +1,53 @@
+{
+  "note": "Trading tens and ones blueprint (OLL decision 0023, need K2N-23 of the frozen K-12 component map), 2026-11-22. One row per idea, from the Common Core standards: 1.NBT.B.2.a and c, 1.NBT.A.1 (a collection up to 120 written as a numeral), 2.NBT.A.1.a and b, 2.NBT.A.3. Each row's teacher picture says what a good teacher draws, written without reference to any card. Cases (development and scoring) are written from these rows, worded as learners ask. English only: the mat's own words (Make a ten, the refusals) are English. Never taken from the question set.",
+  "rows": [
+    {
+      "id": "T1",
+      "idea": "Ten ones make a ten",
+      "standards": [
+        "1.NBT.B.2.a"
+      ],
+      "grades": "1",
+      "teacher_picture": "Loose unit cubes; ten of them gathered and bundled (or snapped into a rod) to make one ten; the rod is the same length as ten cubes in a row. States: the loose ones; ten gathered; one ten."
+    },
+    {
+      "id": "T2",
+      "idea": "Decades: tens and no ones",
+      "standards": [
+        "1.NBT.B.2.c"
+      ],
+      "grades": "1",
+      "teacher_picture": "Ten-rods only, for example 6 rods named sixty: six tens and zero ones; sometimes built from loose ones bundled ten at a time until none are left over."
+    },
+    {
+      "id": "T3",
+      "idea": "A collection counted by bundling tens, up to 120",
+      "standards": [
+        "1.NBT.A.1",
+        "1.NBT.B.2.a"
+      ],
+      "grades": "1",
+      "teacher_picture": "A pile of objects (straws, sticks, cubes) bundled into tens with a few left over; the bundles and the leftovers counted and the number written: 4 bundles and 7 left is 47. Past 100, ten bundles make a hundred: 11 bundles and 3 is 113."
+    },
+    {
+      "id": "T4",
+      "idea": "Hundreds, tens and ones; 100 as ten tens; a place with zero",
+      "standards": [
+        "2.NBT.A.1",
+        "2.NBT.A.1.a",
+        "2.NBT.A.1.b"
+      ],
+      "grades": "2",
+      "teacher_picture": "Flats, rods and unit cubes on a place-value mat; ten rods traded for one flat; a pile with too many ones or tens regrouped until each place has fewer than ten, then read: 706 is 7 hundreds, 0 tens and 6 ones."
+    },
+    {
+      "id": "T5",
+      "idea": "Expanded form",
+      "standards": [
+        "2.NBT.A.3"
+      ],
+      "grades": "2",
+      "teacher_picture": "A number shown with flats, rods and cubes and written by places: 345 = 300 + 40 + 5; each part is what that place is worth."
+    }
+  ]
+}
