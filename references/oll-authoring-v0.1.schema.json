@@ -197,6 +197,31 @@
                 "properties": {
                   "kind": {"const": "answer_entry"}
                 }
+              },
+              {
+                "type": "object",
+                "required": ["kind", "node"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "card_tap"},
+                  "node": {"$ref": "#/$defs/alias"}
+                }
+              },
+              {
+                "type": "object",
+                "required": ["kind"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "card_submit"}
+                }
+              },
+              {
+                "type": "object",
+                "required": ["kind"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "row_entry"}
+                }
               }
             ]
           }
@@ -240,6 +265,45 @@
                 "unit": {"type": "string", "minLength": 1, "maxLength": 16},
                 "form": {"enum": ["any", "simplest_fraction"]}
               }
+            },
+            {
+              "type": "object",
+              "required": ["kind", "node", "fact"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {"const": "card_fact"},
+                "node": {"$ref": "#/$defs/alias"},
+                "fact": {"enum": ["no_trade_left"]}
+              }
+            },
+            {
+              "type": "object",
+              "required": ["kind", "parts"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {"const": "numeric_row"},
+                "parts": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 12,
+                  "items": {
+                    "oneOf": [
+                      {"type": "object", "required": ["text"], "additionalProperties": false, "properties": {"text": {"type": "string", "minLength": 1, "maxLength": 80}}},
+                      {"type": "object", "required": ["blank"], "additionalProperties": false, "properties": {"blank": {
+                        "type": "object", "required": ["as", "answer"], "additionalProperties": false,
+                        "properties": {
+                          "as": {"$ref": "#/$defs/alias"},
+                          "answer": {"type": "string", "minLength": 1, "maxLength": 64},
+                          "tolerance": {"type": "number", "minimum": 0},
+                          "unit": {"type": "string", "minLength": 1, "maxLength": 16},
+                          "form": {"enum": ["any", "simplest_fraction"]},
+                          "label": {"type": "string", "minLength": 1, "maxLength": 24}
+                        }
+                      }}}
+                    ]
+                  }
+                }
+              }
             }
           ]
         },
@@ -252,7 +316,7 @@
         "hint_after_attempts": {"type": "integer", "minimum": 1, "maximum": 20},
         "success_message": {"type": "string", "minLength": 1, "maxLength": 480}
       },
-      "if": {"properties": {"completion": {"properties": {"kind": {"const": "numeric_answer"}}, "required": ["kind"]}}, "required": ["completion"]},
+      "if": {"properties": {"completion": {"properties": {"kind": {"enum": ["numeric_answer", "numeric_row"]}}, "required": ["kind"]}}, "required": ["completion"]},
       "then": {"required": ["anchor"]},
       "else": {"not": {"required": ["anchor"]}}
     },
@@ -302,10 +366,10 @@
       "required": ["do"],
       "additionalProperties": false,
       "properties": {
-        "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view"]},
+        "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"]},
         "when": {"enum": ["before_speech", "during_speech", "after_speech"]},
         "as": {"$ref": "#/$defs/alias"},
-        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model"]},
+        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade"]},
         "role": {"type": "string"},
         "content": {"type": "object"},
         "place": {"$ref": "#/$defs/placement"},
@@ -326,6 +390,8 @@
         "reason": {"type": "string"},
         "show": {"type": "string"},
         "preset": {"enum": ["front", "top", "side", "isometric"]},
+        "tap": {"enum": ["gather", "ungather", "make", "break"]},
+        "at": {"enum": ["ones", "tens", "hundreds"]},
         "source": {
           "type": "object",
           "required": ["selection", "confirmed_by"],
@@ -391,6 +457,13 @@
           "then": {"properties": {"content": {"$ref": "#/$defs/fractionModelContent"}}}
         },
         {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "base_ten_trade"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/baseTenTradeContent"}}}
+        },
+        {
           "if": {"properties": {"do": {"const": "revise"}}},
           "then": {"required": ["target", "content", "reason"]}
         },
@@ -429,6 +502,10 @@
         {
           "if": {"properties": {"do": {"const": "animate"}}},
           "then": {"required": ["variable", "value"]}
+        },
+        {
+          "if": {"properties": {"do": {"const": "tap"}}},
+          "then": {"required": ["target", "tap", "at"]}
         }
       ]
     },
@@ -615,6 +692,34 @@
       "properties": {
         "model": {"enum": ["bar", "circle", "grid"]},
         "fractions": {"type": "array", "minItems": 1, "maxItems": 2},
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
+    "baseTenTradeContent": {
+      "type": "object",
+      "required": ["columns", "places"],
+      "properties": {
+        "columns": {"enum": [2, 3]},
+        "places": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["as", "count"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"enum": ["ones", "tens", "hundreds"]},
+              "count": {"type": "integer", "minimum": 0},
+              "tray": {"type": "integer", "minimum": 0, "maximum": 10}
+            }
+          }
+        },
         "bindings": {
           "type": "array",
           "minItems": 1,

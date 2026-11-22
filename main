@@ -7449,6 +7449,31 @@ var v0_1_schema_default = {
                 properties: {
                   kind: { const: "answer_entry" }
                 }
+              },
+              {
+                type: "object",
+                required: ["kind", "node"],
+                additionalProperties: false,
+                properties: {
+                  kind: { const: "card_tap" },
+                  node: { $ref: "#/$defs/alias" }
+                }
+              },
+              {
+                type: "object",
+                required: ["kind"],
+                additionalProperties: false,
+                properties: {
+                  kind: { const: "card_submit" }
+                }
+              },
+              {
+                type: "object",
+                required: ["kind"],
+                additionalProperties: false,
+                properties: {
+                  kind: { const: "row_entry" }
+                }
               }
             ]
           }
@@ -7492,6 +7517,47 @@ var v0_1_schema_default = {
                 unit: { type: "string", minLength: 1, maxLength: 16 },
                 form: { enum: ["any", "simplest_fraction"] }
               }
+            },
+            {
+              type: "object",
+              required: ["kind", "node", "fact"],
+              additionalProperties: false,
+              properties: {
+                kind: { const: "card_fact" },
+                node: { $ref: "#/$defs/alias" },
+                fact: { enum: ["no_trade_left"] }
+              }
+            },
+            {
+              type: "object",
+              required: ["kind", "parts"],
+              additionalProperties: false,
+              properties: {
+                kind: { const: "numeric_row" },
+                parts: {
+                  type: "array",
+                  minItems: 1,
+                  maxItems: 12,
+                  items: {
+                    oneOf: [
+                      { type: "object", required: ["text"], additionalProperties: false, properties: { text: { type: "string", minLength: 1, maxLength: 80 } } },
+                      { type: "object", required: ["blank"], additionalProperties: false, properties: { blank: {
+                        type: "object",
+                        required: ["as", "answer"],
+                        additionalProperties: false,
+                        properties: {
+                          as: { $ref: "#/$defs/alias" },
+                          answer: { type: "string", minLength: 1, maxLength: 64 },
+                          tolerance: { type: "number", minimum: 0 },
+                          unit: { type: "string", minLength: 1, maxLength: 16 },
+                          form: { enum: ["any", "simplest_fraction"] },
+                          label: { type: "string", minLength: 1, maxLength: 24 }
+                        }
+                      } } }
+                    ]
+                  }
+                }
+              }
             }
           ]
         },
@@ -7504,7 +7570,7 @@ var v0_1_schema_default = {
         hint_after_attempts: { type: "integer", minimum: 1, maximum: 20 },
         success_message: { type: "string", minLength: 1, maxLength: 480 }
       },
-      if: { properties: { completion: { properties: { kind: { const: "numeric_answer" } }, required: ["kind"] } }, required: ["completion"] },
+      if: { properties: { completion: { properties: { kind: { enum: ["numeric_answer", "numeric_row"] } }, required: ["kind"] } }, required: ["completion"] },
       then: { required: ["anchor"] },
       else: { not: { required: ["anchor"] } }
     },
@@ -7556,10 +7622,10 @@ var v0_1_schema_default = {
       required: ["do"],
       additionalProperties: false,
       properties: {
-        do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view"] },
+        do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7580,6 +7646,8 @@ var v0_1_schema_default = {
         reason: { type: "string" },
         show: { type: "string" },
         preset: { enum: ["front", "top", "side", "isometric"] },
+        tap: { enum: ["gather", "ungather", "make", "break"] },
+        at: { enum: ["ones", "tens", "hundreds"] },
         source: {
           type: "object",
           required: ["selection", "confirmed_by"],
@@ -7645,6 +7713,13 @@ var v0_1_schema_default = {
           then: { properties: { content: { $ref: "#/$defs/fractionModelContent" } } }
         },
         {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "base_ten_trade" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/baseTenTradeContent" } } }
+        },
+        {
           if: { properties: { do: { const: "revise" } } },
           then: { required: ["target", "content", "reason"] }
         },
@@ -7683,6 +7758,10 @@ var v0_1_schema_default = {
         {
           if: { properties: { do: { const: "animate" } } },
           then: { required: ["variable", "value"] }
+        },
+        {
+          if: { properties: { do: { const: "tap" } } },
+          then: { required: ["target", "tap", "at"] }
         }
       ]
     },
@@ -7874,6 +7953,34 @@ var v0_1_schema_default = {
       properties: {
         model: { enum: ["bar", "circle", "grid"] },
         fractions: { type: "array", minItems: 1, maxItems: 2 },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
+    baseTenTradeContent: {
+      type: "object",
+      required: ["columns", "places"],
+      properties: {
+        columns: { enum: [2, 3] },
+        places: {
+          type: "array",
+          minItems: 2,
+          maxItems: 3,
+          items: {
+            type: "object",
+            required: ["as", "count"],
+            additionalProperties: false,
+            properties: {
+              as: { enum: ["ones", "tens", "hundreds"] },
+              count: { type: "integer", minimum: 0 },
+              tray: { type: "integer", minimum: 0, maximum: 10 }
+            }
+          }
+        },
         bindings: {
           type: "array",
           minItems: 1,
@@ -8404,6 +8511,14 @@ var FRACTION_MODEL_BINDINGS = {
   fractions: ["numerator"]
 };
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/base-ten-trade.js
+var BASE_TEN_TRADE_KIND = "base_ten_trade";
+var BASE_TEN_TRADE_FEATURE = "plugin:math/base-ten-trade@1";
+var BASE_TEN_TRADE_PLUGIN_VERSION = "0.5.0";
+var BASE_TEN_TRADE_BINDINGS = {
+  places: ["count", "tray"]
+};
+
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_NODE_KINDS = [
   "text",
@@ -8429,7 +8544,8 @@ var OLL_ACTION_NAMES = [
   "expression",
   "animate",
   "hide",
-  "view"
+  "view",
+  "tap"
 ];
 var OLL_BINDING_CAPABILITIES = {
   geometry: {
@@ -8448,7 +8564,8 @@ var OLL_BINDING_CAPABILITIES = {
     objects: ["unfold"]
   },
   number_line: NUMBER_LINE_BINDINGS,
-  fraction_model: FRACTION_MODEL_BINDINGS
+  fraction_model: FRACTION_MODEL_BINDINGS,
+  base_ten_trade: BASE_TEN_TRADE_BINDINGS
 };
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
 function collectBindingCapabilities() {
@@ -8520,7 +8637,8 @@ var MATH_PLUGIN_MANIFEST = {
   // 0.2.0: the number line (decision 0013). 0.3.0: jump lanes for several jumps on one line (decision 0017).
   // 0.4.0: the fraction model (decision 0021). 0.4.1: grids fill column by column. 0.4.2: a share marks one
   // piece of each part; the program writes a fraction's other form beside its label (0021 amendment 2).
-  version: "0.4.2",
+  // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023).
+  version: "0.5.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -8551,6 +8669,12 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "student-tasks:expression_target": "0.1.0",
   "student-tasks:scene3d_view_target": "0.1.0",
   "student-tasks:numeric_answer": "0.5.0",
+  // Decision 0023: the learner taps a card and says "done"; an older player has no taps or card facts.
+  "student-tasks:card_fact": "0.14.0",
+  // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
+  "student-tasks:numeric_row": "0.14.0",
+  // The lesson taps a card by the card's rules (a demonstration); an older player does not know the action.
+  "action:card.tap": "0.14.0",
   "reflections": "0.3.0",
   "binding-hide-undefined": "0.3.0",
   "lesson-mode:learner_taught": "0.6.0",
@@ -8585,7 +8709,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION },
     detect(content, kind, use) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -8594,11 +8718,13 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
       }
       if (kind === FRACTION_MODEL_KIND)
         use(FRACTION_MODEL_FEATURE);
+      if (kind === BASE_TEN_TRADE_KIND)
+        use(BASE_TEN_TRADE_FEATURE);
     }
   }
 ]);
 var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
-var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE });
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **OLL at 0225643** (OLL #86–#94; decision 0023): the `base_ten_trade` card, card tasks (`card_fact`), the lesson's `tap` action, rows of blanks (`numeric_row`), question cards stacked in order, and player 0.14.0. The vendored authoring schema is synced. Coach uses none of it yet. Requests and the recorded lessons are byte-identical; compiled lessons stamp math 0.5.0, which Learn already pins.
+
 - **Fraction trial: fixes after the v1 dev-set re-run** (owner approved, 2026-11-19; `docs/FRACTION_REDESIGN_2026-11-19.md`). Trial off: requests byte-identical, the 319 recorded lessons replay identically. Trial on: the first request is 710 B. That is over the 700 B budget, within the 720 B the owner allowed (0021 amendment 2, question 4).
   - The guidance says what the split view is for again ("split把每份再分split_each_part份求每份"). In the re-run, without it, the model wrote the part count there: FD-11's 7/3 was cut into ninths under "Each share is 7/9".
   - An `equivalent` card written with the cut that makes it (1/2 and 2/4 with "2") draws the coarser fraction with each part cut that many ways, dashed, beside the finer one: the textbook picture. A count that does not turn one into the other is refused. Before, the field was refused outright (FD-05 lost its pair to the re-ask).
