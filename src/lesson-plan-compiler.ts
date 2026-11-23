@@ -29,12 +29,16 @@ export interface CompiledLessonPlan {
   /** Visual decisions the program made for this lesson, by section (1-based). */
   view_adjustments: Array<{ section: number; reason: string; detail: string }>;
   /** Other program changes to the lesson's text, by section (1-based); each names its kind. */
-  program_adjustments: Array<{ section: number; kind: "success_message_removed" | "success_message_unchecked"; reason: string; detail: string; task: string }>;
+  program_adjustments: Array<{ section: number; kind: "success_message_removed" | "success_message_unchecked" | "activity_removed"; reason: string; detail: string; task: string }>;
+  /** True when a visual writes its own practice (the trading mat), so no separate practice request is made. */
+  practice_by_program?: boolean;
 }
 
 /** Compiled kinds a lesson number can drive: every output kind of a registered recipe with number inputs. */
-const NUMBER_DRIVEN_KINDS: ReadonlySet<string> = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { number_inputs?: readonly string[]; output_kinds?: readonly string[] }>)
-  .flatMap((recipe) => (recipe.number_inputs?.length ? recipe.output_kinds ?? [] : [])));
+// A recipe whose card binds variables it creates itself (the trading mat's counts, which the lesson taps and
+// animates) is number-driven too.
+const NUMBER_DRIVEN_KINDS: ReadonlySet<string> = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { number_inputs?: readonly string[]; output_kinds?: readonly string[]; variables_by_program?: boolean }>)
+  .flatMap((recipe) => (recipe.number_inputs?.length || recipe.variables_by_program ? recipe.output_kinds ?? [] : [])));
 
 function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbers = true): string {
   const sourceParameters = content.parameters ?? {};
@@ -543,6 +547,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const visualVariables = new Map<string, NonNullable<CompiledVisual["variables"]>[number]>();
   const viewAdjustments: CompiledLessonPlan["view_adjustments"] = [];
   const programAdjustments: CompiledLessonPlan["program_adjustments"] = [];
+  // What visuals add themselves (OLL decision 0023): tasks before the model's, and the cards whose practice
+  // the program writes, so the model's questions on them are dropped.
+  const programTasks: NonNullable<AuthoringLesson["lesson"]["tasks"]> = [];
+  const practiceOwners = new Set<string>();
   let renderedVisuals: CompiledVisualRegistry | undefined;
   const reuseCompiledVisual = (visual: CompiledVisual) => {
     // The first component cannot duplicate earlier content. Initialize the
@@ -581,6 +589,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       const momentIndex = momentOffset + 1;
       const momentPath = `${sectionPath}.moments[${momentOffset}]`;
       const actions: AuthoringAction[] = [];
+      const programBeats: AuthoringLesson["steps"][number]["beats"] = [];
       let boardItemIndex = 0;
       let connectionIndex = 0;
       let groupIndex = 0;
@@ -618,6 +627,9 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               reusableVisuals.set(identity, visual);
               for (const variable of visual.variables ?? []) if (!visualVariables.has(variable.as)) visualVariables.set(variable.as, variable);
               actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
+              programBeats.push(...(visual.program_beats ?? []));
+              programTasks.push(...(visual.program_tasks ?? []));
+              if (visual.owns_practice) practiceOwners.add(visual.whole);
             }
             wholeTargets.set(alias, visual.whole);
             partTargets.set(alias, visual.parts);
@@ -713,6 +725,8 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         ...(moment.delivery ? { delivery: moment.delivery } : {}),
         actions,
       });
+      // The program's own beats follow the moment that drew their card; the model's beat keys are unchanged.
+      programBeats.forEach((beat, index) => beats.push({ ...beat, key: `moment-${pad(momentIndex)}-program-${pad(index + 1)}` }));
     });
     steps.push({ key: `section-${pad(sectionIndex)}`, purpose: section.purpose, beats });
   });
@@ -739,12 +753,21 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     }
     tasks.push(task);
   };
+  for (const task of programTasks) addTask(task);
+  /** A model question or reflection on a card whose practice the program writes is dropped, and recorded. */
+  const ownedByProgram = (anchor: string, section: number, task: string, path: string): boolean => {
+    if (!practiceOwners.has(anchor)) return false;
+    programAdjustments.push({ section, kind: "activity_removed", reason: "practice_by_program", task, detail: `${task} (${path}): the program writes this card's practice` });
+    return true;
+  };
   plan.sections.forEach((section, sectionOffset) => {
     const sectionPath = `$lessonPlan.sections[${sectionOffset}]`;
     section.student_activities?.forEach((activity, activityOffset) => {
       const activityPath = `${sectionPath}.student_activities[${activityOffset}]`;
       if (activity.kind === "reflection") {
         const anchor = resolvedReference(`${activityPath}.reference`);
+        const anchorTarget = wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias;
+        if (ownedByProgram(anchorTarget, sectionOffset + 1, `section-${pad(sectionOffset + 1)}-reflection-${pad(activityOffset + 1)}`, activityPath)) return;
         reflections.push({
           as: `section-${pad(sectionOffset + 1)}-reflection-${pad(activityOffset + 1)}`,
           prompt: namedNumbers(activity.prompt, plan),
@@ -756,6 +779,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       }
       // A success message whose arithmetic is false is dropped, never repaired (decision 0020; plan 3.6).
       const taskAlias = `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`;
+      if (activity.kind !== "number_target") {
+        const target = resolvedReference(`${activityPath}.reference`);
+        if (ownedByProgram(wholeTargets.get(target.authoring_alias) ?? target.authoring_alias, sectionOffset + 1, taskAlias, activityPath)) return;
+      }
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : undefined;
       // The check can only remove a message, never cost the lesson: if it fails, the message stays.
       // A task that asks for rounding to decimal places lets its message show results rounded to those places.
@@ -885,7 +912,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               ...(number.student_control.step ? { step: number.student_control.step } : {}),
             },
           } : {}),
-        })), ...[...visualVariables.values()].map((variable) => ({ ...variable, control: { ...variable.control } }))],
+        })), ...[...visualVariables.values()].map((variable) => ({ ...variable, ...(variable.control ? { control: { ...variable.control } } : {}) }))],
       } : {}),
       ...(tasks.length ? { tasks } : {}),
       ...(reflections.length ? { reflections } : {}),
@@ -893,7 +920,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     steps,
     close: { summary: plan.close.summary, focus: closeFocus },
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments, ...(practiceOwners.size ? { practice_by_program: true } : {}) };
 }
 
 function expressionReferencesVariable(expression: unknown, variable: string): boolean {

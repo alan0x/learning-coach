@@ -1,4 +1,4 @@
-import type { AuthoringAction } from "octos-lesson-language";
+import type { AuthoringAction, AuthoringLesson } from "octos-lesson-language";
 
 export interface CompiledVisual {
   actions: AuthoringAction[];
@@ -11,8 +11,20 @@ export interface CompiledVisual {
    * Lesson variables the visual creates itself, for a slider whose range only the geometry decides
    * (a solid's cut or net, decision 0019 as amended by 0020). They follow the plan's numbers.
    */
-  variables?: Array<{ as: string; initial: number; min: number; max: number; label: string; control: { kind: "slider"; step: number } }>;
+  variables?: Array<{ as: string; initial: number; min: number; max: number; label: string; control?: { kind: "slider"; step: number } }>;
+  /**
+   * Beats the program adds right after the moment that first draws this visual (OLL decision 0023: the
+   * trading mat's demonstration, in the program's own words). Never added where the card is only reused.
+   */
+  program_beats?: AuthoringBeat[];
+  /** Tasks the program writes for this visual (its practice), placed before the model's. */
+  program_tasks?: AuthoringTask[];
+  /** The visual owns its practice: the model's questions and reflections anchored to it are dropped. */
+  owns_practice?: boolean;
 }
+
+type AuthoringBeat = AuthoringLesson["steps"][number]["beats"][number];
+type AuthoringTask = NonNullable<AuthoringLesson["lesson"]["tasks"]>[number];
 
 interface RenderedVisual {
   node: string;
@@ -125,6 +137,12 @@ export class CompiledVisualRegistry {
       // A visual's own slider goes with its card: kept when the card is written, dropped when an earlier
       // identical card is shown instead (that card's slider is already in the lesson).
       ...(visual.variables && !visual.actions.some(action => action.do === "write" && reused.has(action.as)) ? { variables: visual.variables } : {}),
+      // What the program adds for a card goes with the card, as its slider does.
+      ...(!visual.actions.some(action => action.do === "write" && reused.has(action.as)) ? {
+        ...(visual.program_beats ? { program_beats: visual.program_beats } : {}),
+        ...(visual.program_tasks ? { program_tasks: visual.program_tasks } : {}),
+        ...(visual.owns_practice ? { owns_practice: true } : {}),
+      } : {}),
     };
   }
 }

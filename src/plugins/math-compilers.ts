@@ -5,6 +5,7 @@ import {
   buildNumberLine, buildUnitCircle, buildUnitSquareArray, rearrangementRecipe, NUMBER_LINE_LIMITS,
   buildSolid, describeSolid, solidHasMeasure, solidUnfolds,
   buildFractionModel, FRACTION_MODEL_LIMITS,
+  buildBaseTenTrade, validateBaseTenTradeContent, BASE_TEN_TRADE_LIMITS,
   type BuiltRecipe, type RearrangementConstruction, type Solid, type SolidMeasureKind,
 } from "octos-lesson-language/plugin-math";
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
@@ -1662,6 +1663,194 @@ function compileFractionModel(
   return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
 }
 
+/** The model's six whole numbers: a pile as [hundreds, tens, loose ones]. */
+const BASE_TEN_FIELDS = ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"] as const;
+const BASE_TEN_PLACE_NAMES = ["ones", "tens", "hundreds"] as const;
+const pileValue = ([h, t, o]: readonly number[]) => h! * 100 + t! * 10 + o!;
+const digitCount = (value: number) => (value >= 100 ? 3 : value >= 10 ? 2 : 1);
+
+/**
+ * The program's own words for the trading mat (OLL decision 0023; owner, 2026-11-22: English and Chinese).
+ * Whole sentences per language and place, never a word put into another sentence. No sentence a learner
+ * reads before answering states a number (Chinese first-use test: a locked question's prompt gave its
+ * answer away); numbers in the mat's own sentences are words.
+ */
+const BASE_TEN_TEXT = {
+  "en-US": {
+    title: ["Tens and ones", "Hundreds, tens and ones"],
+    fill: ["Ten ones make one ten. Put ones in the tray, one at a time.", "Ten tens make one hundred. Put tens in the tray, one at a time."],
+    make: ["The tray is full: ten ones. Make a ten!", "The tray is full: ten tens. Make a hundred!"],
+    rest: ["The other ones trade the same way: every ten ones make one ten.", "The other tens trade the same way: every ten tens make one hundred."],
+    variable: ["ones", "ones in the tray", "tens", "tens in the tray", "hundreds"],
+    trade: ["Your turn. Make tens until you can't, then tap I'm done.", "Your turn. Make tens and hundreds until you can't, then tap I'm done."],
+    tradeHint: ["Put ten ones in the tray, then tap Make a ten.", "Put ten ones in the tray, then tap Make a ten. Ten tens make a hundred the same way."],
+    number: "How many are on the mat?",
+    numberHint: ["Count the tens by tens, then the ones.", "Count the hundreds by hundreds, the tens by tens, then the ones."],
+    counts: ["How many of each are on the mat?", "How many of each are on the mat?"],
+    countsHint: "Count what is in each column.",
+    words: ["ones", "tens", "hundreds"],
+    parts: "What is each place worth?",
+    partsHint: ["Each ten is worth ten.", "Each ten is worth ten, and each hundred is worth one hundred."],
+    labels: ["the ones are worth", "the tens are worth", "the hundreds are worth"],
+  },
+  "zh-CN": {
+    title: ["十和一", "百、十和一"],
+    fill: ["十个一是一个十。先把十个一放进托盘，一次放一个。", "十个十是一个百。先把十个十放进托盘，一次放一个。"],
+    make: ["托盘满了：十个一。换成一个十！", "托盘满了：十个十。换成一个百！"],
+    rest: ["剩下的一也这样换，每十个一换成一个十。", "剩下的十也这样换，每十个十换成一个百。"],
+    variable: ["个一", "托盘里的一", "个十", "托盘里的十", "个百"],
+    trade: ["轮到你了。能换就一直换，换不了了就点“我做完了”。", "轮到你了。能换就一直换，换不了了就点“我做完了”。"],
+    tradeHint: ["把十个一放进托盘，再点“换成一个十”。", "把十个一放进托盘，再点“换成一个十”。十个十也这样换成一个百。"],
+    number: "这些方块一共是多少？",
+    numberHint: ["先十个十个地数，再一个一个地数。", "先一百一百地数，再十个十个地数，最后一个一个地数。"],
+    counts: ["各有几个十、几个一？", "各有几个百、几个十、几个一？"],
+    countsHint: "数一数每一位上有几个。",
+    words: ["个一", "个十", "个百"],
+    parts: "每一位表示多少？",
+    partsHint: ["一个十表示十。", "一个十表示十，一个百表示一百。"],
+    labels: ["个位表示", "十位表示", "百位表示"],
+  },
+} as const;
+
+/** The lesson pile and practice pile the model wrote, checked as the mat's starting piles. */
+function baseTenPiles(input: Record<string, unknown>, path: string): { lesson: number[]; practice: number[]; columns: 2 | 3 } {
+  const read = (field: typeof BASE_TEN_FIELDS[number]) => {
+    const value = input[field];
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${field}`, "write a whole number (0 when the question has none of that place)");
+    return value;
+  };
+  const values = Object.fromEntries(BASE_TEN_FIELDS.map((field) => [field, read(field)])) as Record<typeof BASE_TEN_FIELDS[number], number>;
+  const lesson = [values.lesson_hundreds, values.lesson_tens, values.lesson_ones];
+  const practice = [values.practice_hundreds, values.practice_tens, values.practice_ones];
+  const [mostHundreds, mostTens, mostOnes] = [BASE_TEN_TRADE_LIMITS.start[2]!, BASE_TEN_TRADE_LIMITS.start[1]!, BASE_TEN_TRADE_LIMITS.start[0]!];
+  for (const [name, pile] of [["lesson", lesson], ["practice", practice]] as const) {
+    const [h, t, o] = pile as [number, number, number];
+    if (o > mostOnes) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_ones`, `a pile starts with at most ${mostOnes} loose ones`);
+    if (t > mostTens) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_tens`, `a pile starts with at most ${mostTens} tens`);
+    if (h > mostHundreds) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_hundreds`, `a pile starts with at most ${mostHundreds} hundreds`);
+    if (pileValue(pile) > 999) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_hundreds`, "after trading a pile has at most 9 hundreds (999)");
+    // A number under ten has no ten to make: that is not a trading question (review of #157).
+    if (pileValue(pile) < 10) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_ones`, `a pile of ${pileValue(pile)} has no ten to make: the mat is for numbers of ten or more`);
+  }
+  const columns: 2 | 3 = pileValue(lesson) >= 100 || lesson[0]! > 0 ? 3 : 2;
+  if (pileValue(practice) === pileValue(lesson)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_ones`, `the practice pile makes ${pileValue(lesson)} too: write a pile with another number`);
+  if (digitCount(pileValue(practice)) !== digitCount(pileValue(lesson))) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_ones`, `the practice pile makes ${pileValue(practice)}: write one with as many places as ${pileValue(lesson)}`);
+  }
+  if (columns === 2 && practice[0]! > 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_hundreds`, "a tens-and-ones lesson practises without hundreds");
+  // OLL's own check of each starting pile, on the mat it will start on.
+  for (const [name, pile] of [["lesson", lesson], ["practice", practice]] as const) {
+    validateBaseTenTradeContent({ columns, places: [{ as: "ones", count: pile[2], tray: 0 }, { as: "tens", count: pile[1], ...(columns === 3 ? { tray: 0 } : {}) }, ...(columns === 3 ? [{ as: "hundreds", count: pile[0] }] : [])] },
+      `${path}.${name}`, (at, message) => fail("LESSON_PLAN_CAPABILITY_PARAMETER", at, message));
+  }
+  return { lesson, practice, columns };
+}
+
+/**
+ * The trading mat (OLL decision 0023, a trial): the model writes the question's pile and a practice pile
+ * with another number; the program draws the mat, demonstrates the trades in its own words (the first of
+ * each place tap by tap, the rest at once), and writes the practice: "I'm done" on the practice pile, then
+ * the number, the counts row and the parts row. Model questions about the mat are dropped.
+ */
+function compileBaseTenTrade(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, [...BASE_TEN_FIELDS], path);
+  if ((content.numbers?.length ?? 0) > 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "the mat's piles are written in its six whole numbers; it uses no lesson numbers");
+  // One mat per lesson (owner decision 4): a later mat with other piles is refused at its own path, so the
+  // section that wrote it is asked again, never the first one, which may already be playing (review of #157).
+  const pilesOf = (content: LessonPlanVisualContent) => JSON.stringify(BASE_TEN_FIELDS.map((field) => parameters(content)[field]));
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "base_ten_trade");
+  if (first && pilesOf(first.content as LessonPlanVisualContent) !== pilesOf(content)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", path, "a lesson has one trading mat: write the same two piles each time, or show the other pile in words");
+  }
+  const { lesson, practice, columns } = baseTenPiles(input, path);
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text = BASE_TEN_TEXT[language];
+  const wide = columns === 3 ? 1 : 0;
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_");
+  const names = [`${stem}_ones`, `${stem}_tray_ones`, `${stem}_tens`, `${stem}_tray_tens`, `${stem}_hundreds`] as const;
+  const drawn = BASE_TEN_TRADE_LIMITS.drawn;
+  const variables: NonNullable<CompiledVisual["variables"]> = [
+    { as: names[0], initial: lesson[2]!, min: 0, max: drawn[0]!, label: text.variable[0] },
+    { as: names[1], initial: 0, min: 0, max: BASE_TEN_TRADE_LIMITS.tray, label: text.variable[1] },
+    { as: names[2], initial: lesson[1]!, min: 0, max: columns === 2 ? 9 : drawn[1]!, label: text.variable[2] },
+    ...(columns === 3 ? [
+      { as: names[3], initial: 0, min: 0, max: BASE_TEN_TRADE_LIMITS.tray, label: text.variable[3] },
+      { as: names[4], initial: lesson[0]!, min: 0, max: drawn[2]!, label: text.variable[4] },
+    ] : []),
+  ];
+  const built = buildBaseTenTrade({
+    as: base, role, place: placement, title: text.title[wide],
+    ...(language === "zh-CN" ? { language } : {}),
+    columns,
+    places: [
+      { count: { expression: names[0], initial: lesson[2]! }, tray: { expression: names[1], initial: 0 } },
+      { count: { expression: names[2], initial: lesson[1]! }, ...(columns === 3 ? { tray: { expression: names[3], initial: 0 } } : {}) },
+      ...(columns === 3 ? [{ count: { expression: names[4], initial: lesson[0]! } }] : []),
+    ],
+  });
+  // The demonstration: for each place below the highest, while it holds ten or more, the first trade tap by
+  // tap (ten into the tray, then make), and the rest at once (owner decision 2).
+  const beats: NonNullable<CompiledVisual["program_beats"]> = [];
+  const counts = [lesson[2]!, lesson[1]!, lesson[0]!];
+  for (let p = 0; p < columns - 1; p += 1) {
+    if (counts[p]! < 10) continue;
+    const at = BASE_TEN_PLACE_NAMES[p]!;
+    beats.push({ key: "fill", say: text.fill[p]!, actions: Array.from({ length: 10 }, () => ({ do: "tap", target: base, tap: "gather", at }) as unknown as AuthoringAction) });
+    beats.push({ key: "make", say: text.make[p]!, actions: [{ do: "tap", target: base, tap: "make", at } as unknown as AuthoringAction] });
+    counts[p] = counts[p]! - 10;
+    counts[p + 1] = counts[p + 1]! + 1;
+    if (counts[p]! >= 10) {
+      // Each remaining trade: the tray fills in one brief animation (units in the tray still count in their
+      // place, so the mat shows the true amount throughout), then the make, which is atomic. Two animated
+      // counts would play one after the other and show a wrong amount in between (Learn playback, 2026-11-22).
+      const trades = Math.floor(counts[p]! / 10);
+      counts[p] = counts[p]! - 10 * trades;
+      counts[p + 1] = counts[p + 1]! + trades;
+      beats.push({ key: "rest", say: text.rest[p]!, actions: Array.from({ length: trades }, () => [
+        { do: "animate", variable: names[p === 0 ? 1 : 3], value: 10, duration_intent: "brief" } as AuthoringAction,
+        { do: "tap", target: base, tap: "make", at } as unknown as AuthoringAction,
+      ]).flat() });
+    }
+  }
+  // The practice, all from the practice pile, by the mat (owner decision 3).
+  const value = pileValue(practice);
+  const digits = digitCount(value);
+  const high = Array.from({ length: digits }, (_, i) => digits - 1 - i);
+  const digit = (p: number) => Math.floor(value / 10 ** p) % 10;
+  const after = { kind: "after_lesson" as const };
+  const tasks: NonNullable<CompiledVisual["program_tasks"]> = [
+    {
+      as: `${base}-trade`,
+      start: { kind: "practice", variables: variables.map((variable) => variable.as), values: Object.fromEntries([[names[0], practice[2]!], [names[1], 0], [names[2], practice[1]!], ...(columns === 3 ? [[names[3], 0], [names[4], practice[0]!]] : [])]) },
+      prompt: text.trade[wide]!, availability: after,
+      allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
+      completion: { kind: "card_fact", node: base, fact: "no_trade_left" },
+      hints: [text.tradeHint[wide]!],
+    },
+    { as: `${base}-number`, anchor: base, prompt: text.number, availability: after, allowed_operations: [{ kind: "answer_entry" }], completion: { kind: "numeric_answer", answer: String(value) }, hints: [text.numberHint[wide]!] },
+    {
+      as: `${base}-counts`, anchor: base, prompt: text.counts[wide]!, availability: after, allowed_operations: [{ kind: "row_entry" }],
+      completion: { kind: "numeric_row", parts: high.flatMap((p) => [{ blank: { as: `${BASE_TEN_PLACE_NAMES[p]}`, answer: String(digit(p)) } }, { text: text.words[p]! }]) },
+      hints: [text.countsHint],
+    },
+    {
+      as: `${base}-parts`, anchor: base, prompt: text.parts, availability: after, allowed_operations: [{ kind: "row_entry" }],
+      completion: { kind: "numeric_row", parts: [{ text: `${value} =` }, ...high.flatMap((p, i) => [...(i ? [{ text: "+" }] : []), { blank: { as: `${BASE_TEN_PLACE_NAMES[p]}-part`, answer: String(digit(p) * 10 ** p), label: text.labels[p]! } }])] },
+      hints: [text.partsHint[wide]!],
+    },
+  ] as unknown as NonNullable<CompiledVisual["program_tasks"]>;
+  return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)), variables, program_beats: beats, program_tasks: tasks, owns_practice: true };
+}
+
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -1681,4 +1870,5 @@ export const MATH_COMPILERS = {
   circle_area_rearrangement: compileCircleArea,
   solid_3d: compileSolid3d,
   fraction_model: compileFractionModel,
+  base_ten_trade: compileBaseTenTrade,
 } satisfies Record<string, VisualCompiler>;
