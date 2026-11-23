@@ -1809,13 +1809,16 @@ function compileBaseTenTrade(
     counts[p] = counts[p]! - 10;
     counts[p + 1] = counts[p + 1]! + 1;
     if (counts[p]! >= 10) {
+      // Each remaining trade: the tray fills in one brief animation (units in the tray still count in their
+      // place, so the mat shows the true amount throughout), then the make, which is atomic. Two animated
+      // counts would play one after the other and show a wrong amount in between (Learn playback, 2026-11-22).
       const trades = Math.floor(counts[p]! / 10);
       counts[p] = counts[p]! - 10 * trades;
       counts[p + 1] = counts[p + 1]! + trades;
-      beats.push({ key: "rest", say: text.rest[p]!, actions: [
-        { do: "animate", variable: names[p === 0 ? 0 : 2], value: counts[p]! } as AuthoringAction,
-        { do: "animate", variable: names[p === 0 ? 2 : 4], value: counts[p + 1]! } as AuthoringAction,
-      ] });
+      beats.push({ key: "rest", say: text.rest[p]!, actions: Array.from({ length: trades }, () => [
+        { do: "animate", variable: names[p === 0 ? 1 : 3], value: 10, duration_intent: "brief" } as AuthoringAction,
+        { do: "tap", target: base, tap: "make", at } as unknown as AuthoringAction,
+      ]).flat() });
     }
   }
   // The practice, all from the practice pile, by the mat (owner decision 3).

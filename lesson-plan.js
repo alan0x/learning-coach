@@ -14584,7 +14584,7 @@ var MATH_RECIPES = {
     required_features: ["place_value_trading"],
     // The card binds counts the program creates; the lesson taps and animates them.
     variables_by_program: true,
-    model_guidance: "\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF1Alesson_*\u7167\u9898\u76EE\u5199\u6563\u7684\u4E00\u3001\u5341\u3001\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u51990\uFF09\uFF0Cpractice_*\u53E6\u5199\u4E00\u5806\uFF08\u4F4D\u6570\u76F8\u540C\uFF0C\u603B\u6570\u4E0D\u540C\uFF09\uFF1B\u7A0B\u5E8F\u6F14\u793A\u4EA4\u6362\u3001\u51FA\u7EC3\u4E60\uFF1B\u65C1\u767D\u8BF4\u9898\u76EE\u548C\u6362\u5B8C\u540E\u6446\u9762\u4E0A\u6709\u51E0\u4E2A\u5341\u51E0\u4E2A\u4E00\uFF0C\u4E0D\u8BF4\u7EC3\u4E60\u7684\u6570\uFF1B\u4E0D\u5199\u5173\u4E8E\u6446\u9762\u7684\u9898"
+    model_guidance: "\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF1Alesson_*\u7167\u9898\u76EE\u5199\u4E00\u3001\u5341\u3001\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u51990\uFF09\uFF0Cpractice_*\u53E6\u5199\u4E00\u5806\uFF08\u4F4D\u6570\u540C\u3001\u603B\u6570\u4E0D\u540C\uFF09\uFF1B\u7A0B\u5E8F\u6F14\u793A\u4EA4\u6362\u5E76\u51FA\u9898\uFF1B\u65C1\u767D\u8BF4\u9898\u76EE\u548C\u6362\u5B8C\u7684\u7ED3\u679C\uFF0C\u4E0D\u8BF4\u7EC3\u4E60\u7684\u6570\uFF0C\u4E0D\u5199\u6446\u9762\u7684\u9898"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -15199,6 +15199,16 @@ var RECIPE_SCHEMA_PROPERTIES = Object.assign(
   ...INSTALLED_PLUGINS.map((plugin) => plugin.schema_properties)
 );
 var SCHEMA_PROPERTY_ORDER = [
+  // The trading mat trial recipe (decision 0023): its six numbers first. The first combined reply's schema
+  // lists every offered recipe's fields and requires none, and fields written late were left out (fraction
+  // probe 2), so the mat's values come before everything; ones first, so a tens-and-ones question writes the
+  // hundreds last, as 0. Requests without the trial do not list them, so their order is unchanged.
+  "lesson_ones",
+  "lesson_tens",
+  "lesson_hundreds",
+  "practice_ones",
+  "practice_tens",
+  "practice_hundreds",
   "title",
   "projection",
   "x_label",
@@ -15234,15 +15244,7 @@ var SCHEMA_PROPERTY_ORDER = [
   "fractions",
   "fraction_shape",
   "fraction_view",
-  "split_each_part",
-  // The trading mat trial recipe (decision 0023): its six numbers, ones first, so a tens-and-ones question
-  // writes the hundreds last; last in the list, so requests without it keep their order.
-  "lesson_ones",
-  "lesson_tens",
-  "lesson_hundreds",
-  "practice_ones",
-  "practice_tens",
-  "practice_hundreds"
+  "split_each_part"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text5 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -20287,10 +20289,10 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
       const trades = Math.floor(counts[p] / 10);
       counts[p] = counts[p] - 10 * trades;
       counts[p + 1] = counts[p + 1] + trades;
-      beats.push({ key: "rest", say: text5.rest[p], actions: [
-        { do: "animate", variable: names[p === 0 ? 0 : 2], value: counts[p] },
-        { do: "animate", variable: names[p === 0 ? 2 : 4], value: counts[p + 1] }
-      ] });
+      beats.push({ key: "rest", say: text5.rest[p], actions: Array.from({ length: trades }, () => [
+        { do: "animate", variable: names[p === 0 ? 1 : 3], value: 10, duration_intent: "brief" },
+        { do: "tap", target: base, tap: "make", at: at2 }
+      ]).flat() });
     }
   }
   const value2 = pileValue(practice);

@@ -18,7 +18,7 @@
 // Narration is not judged here: what the lesson says is read by hand under the probe's pass rules.
 
 import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
-import { baseTenFacts, baseTenMat, validateBaseTenTradeContent } from "octos-lesson-language/plugin-math";
+import { applyBaseTenTap, baseTenFacts, baseTenMat, validateBaseTenTradeContent } from "octos-lesson-language/plugin-math";
 
 const PLACES = ["ones", "tens", "hundreds"];
 // The counts row's word after each blank, and the word that asks what a place is worth, per lesson language.
@@ -63,7 +63,24 @@ export function tradingMatIn(lesson) {
   const cardTask = tasks.find((task) => task.completion?.kind === "card_fact");
   const practice = cardTask?.start ? pileAt(write.content, { ...declared, ...(cardTask.start.values ?? {}) }) : undefined;
   const taps = actions.filter((action) => action.do === "tap" && action.target === write.as).length;
-  return { cards: writes.length, as: write.as, content: write.content, lessonStart, end, cardTask, practice, tasks, taps };
+  // The mat's value after each demonstration action, in order: a tap by the card's rules, an animation by its
+  // end value. Each must keep the value: two animated counts play one after the other, so a trade written as
+  // two animations shows a wrong amount in between (Learn playback, 2026-11-22).
+  const bound = new Map((write.content.bindings ?? []).map((binding) => [String(binding.expression).trim(), binding.target]));
+  const steps = [];
+  let current = { columns: lessonStart.columns, counts: [lessonStart.pile[2], lessonStart.pile[1], lessonStart.pile[0]].slice(0, lessonStart.columns), trays: lessonStart.trays.slice(0, lessonStart.columns - 1) };
+  for (const action of actions.slice(actions.indexOf(write) + 1)) {
+    if (action.do === "tap" && action.target === write.as) {
+      const result = applyBaseTenTap(current, { kind: action.tap, place: PLACES.indexOf(action.at) });
+      if (result.ok) current = result.mat;
+    } else if (action.do === "animate" && bound.has(action.variable)) {
+      const [place, field] = bound.get(action.variable).split(".");
+      const p = PLACES.indexOf(place);
+      current = field === "count" ? { ...current, counts: current.counts.map((n, i) => (i === p ? action.value : n)) } : { ...current, trays: current.trays.map((n, i) => (i === p ? action.value : n)) };
+    } else continue;
+    steps.push({ action: action.do === "tap" ? `${action.tap}:${action.at}` : `${action.variable}=${action.value}`, value: current.counts.reduce((sum, n, i) => sum + n * 10 ** i, 0) });
+  }
+  return { cards: writes.length, as: write.as, content: write.content, lessonStart, end, cardTask, practice, tasks, taps, steps };
 }
 
 /** Judges one case's lesson. Returns { pass, checks: [{ check, pass, detail? }] }. */
@@ -86,6 +103,8 @@ export function judgeTradingMat(item, lesson) {
   check("the mat has the columns the pile needs", columns === (valueOf(want) >= 100 || want[0] > 0 ? 3 : 2), `${columns} columns for ${JSON.stringify(want)}`);
   check("the demonstration ends with no trade left", mat.end?.no_trade_left === true, `the lesson ends at ${JSON.stringify(mat.end)}`);
   check("the demonstration keeps the value", mat.end?.value === valueOf(pile), `ends at ${mat.end?.value}, starts at ${valueOf(pile)}`);
+  const moved = mat.steps.find((step) => step.value !== valueOf(pile));
+  check("every demonstration step keeps the value", !moved, moved && `after ${moved.action} the mat shows ${moved.value}, not ${valueOf(pile)}`);
   const needsTrade = pile[2] >= 10 || pile[1] >= 10;
   check("the demonstration trades when the pile needs it", !needsTrade || mat.taps > 0, "no taps in the lesson");
   // The practice pile is the model's; it is checked by rule.

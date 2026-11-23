@@ -111,6 +111,10 @@ test("each break is caught by its own check", () => {
   only([0, 3, 14], tradingLesson({ parts: { labels: ["30 here", "the ones are worth"] } }), ["the lesson plays"]);
   only([0, 3, 14], tradingLesson({ anchor: "elsewhere-card" }), ["the lesson plays"]);
   only([0, 3, 14], tradingLesson({ extraMat: true }), ["one trading mat"]);
+  // A trade written as two animations shows a wrong amount between them (Learn playback, 2026-11-22).
+  const animated = tradingLesson({ demo: false });
+  animated.steps[0].beats.push({ key: "rest", say: "The other ones trade the same way.", actions: [{ do: "animate", variable: "ones", value: 4 }, { do: "animate", variable: "tens", value: 4 }] });
+  only([0, 3, 14], animated, ["every demonstration step keeps the value", "the demonstration trades when the pile needs it"]);
   only([0, 3, 14], tradingLesson({ cardTask: { node: "mat2" } }), ["the lesson plays"]);
 });
 

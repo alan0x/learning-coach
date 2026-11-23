@@ -100,7 +100,9 @@ test("the demonstration: the first trade tap by tap, the rest at once, in the pr
   assert.deepEqual(program("two").map((beat) => [beat.key, beat.say, beat.actions.map((action) => action.do === "tap" ? `${action.tap}:${action.at}` : `${action.variable}=${action.value}`)]), [
     ["moment-01-program-01", "Ten ones make one ten. Put ones in the tray, one at a time.", Array(10).fill("gather:ones")],
     ["moment-01-program-02", "The tray is full: ten ones. Make a ten!", ["make:ones"]],
-    ["moment-01-program-03", "The other ones trade the same way: every ten ones make one ten.", ["section_01_moment_01_item_01_ones=7", "section_01_moment_01_item_01_tens=6"]],
+    // Each remaining trade fills the tray in one brief animation, then makes: never two animated counts, which
+    // would play one after the other and show a wrong amount in between (Learn playback, 2026-11-22).
+    ["moment-01-program-03", "The other ones trade the same way: every ten ones make one ten.", Array(3).fill(["section_01_moment_01_item_01_tray_ones=10", "make:ones"]).flat()],
   ]);
   // 6 hundreds, 9 tens, 16 ones: one ones trade makes ten tens, then one tens trade, in Chinese.
   assert.deepEqual(program("three-zh").map((beat) => [beat.say, beat.actions.length]), [
@@ -197,13 +199,22 @@ test("a one-section lesson with the mat makes no separate practice request", () 
     const generated = await api.generateLessonPlanWithModel(async (request) => {
       labels.push(request.part ?? request.label);
       if (labels.length > 4) throw new Error("unexpected extra model request");
-      if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, bootstrapSectionFromExact(outline, drafts[0]));
+      if (request.label === "lesson-plan-bootstrap") {
+        // Where the six numbers sit in the first combined reply's schema (fraction probe 2: late fields were left out).
+        const found = [];
+        const walk = (node) => { if (!node || typeof node !== "object") return; if (node.properties?.lesson_ones) found.push(Object.keys(node.properties)); Object.values(node).forEach(walk); };
+        walk(request.response_schema);
+        globalThis.firstKeys = found.map((keys) => keys.slice(0, 7));
+        return bootstrapModelResponse(request, outline, bootstrapSectionFromExact(outline, drafts[0]));
+      }
       return JSON.stringify(drafts[request.section - 1]);
     }, { turn_id: "trading", learner_request: "I have 2 tens and 47 ones. Trade them.", language: "en-US" }, { max_attempts_per_part: 1 });
     const write = generated.lesson.steps.flatMap((step) => step.beats).flatMap((beat) => beat.actions).find((action) => action.kind === "base_ten_trade");
-    console.log(JSON.stringify({ labels, places: write?.content.places, tasks: generated.lesson.lesson.tasks?.length, calls: generated.model_calls }));
+    console.log(JSON.stringify({ labels, places: write?.content.places, tasks: generated.lesson.lesson.tasks?.length, calls: generated.model_calls, firstKeys: globalThis.firstKeys }));
   `);
   assert.ok(!result.labels.includes("practice"), JSON.stringify(result.labels));
   assert.deepEqual(result.places.map((place) => place.count), [47, 2]);
   assert.equal(result.tasks, 4);
+  // The first combined reply lists the six numbers first, ones first.
+  assert.deepEqual(result.firstKeys, [["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds", "title"]]);
 });

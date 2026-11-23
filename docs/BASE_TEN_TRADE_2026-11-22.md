@@ -37,3 +37,17 @@ Narration is read by hand under the probe's pass rules.
 `test/base-ten-judge.test.mjs` checks that a good lesson passes and that each kind of break is caught.
 
 `node scripts/base-ten-judge.mjs testsuite/base-ten-dev-cases.json <run-directory>` judges a run's lessons.
+
+Added with the recipe (step 3): the mat speaks the lesson's language, and the rows' words are that language's (0023 amendment 3); no question's prompt or hint shows a number, because a locked question shows its prompt (Chinese first-use test); every demonstration step keeps the value, not only the end (two animated counts play one after the other and showed 37 for 67 in Learn's player).
+
+## Step 3: the recipe (a trial, off by default)
+
+Owner decisions (2026-11-22): the program speaks the trade steps; the first trade of each place tap by tap, the rest at once; the program writes the practice; one mat per lesson; English and Chinese.
+
+- **The model writes** six whole numbers, ones first: `lesson_ones`, `lesson_tens`, `lesson_hundreds`, `practice_ones`, `practice_tens`, `practice_hundreds`. They are first in the first combined reply's schema, which requires no field (fraction probe 2: late fields were left out); a missing or bad number is refused and the section asked again with a schema that requires all six.
+- **Refused, with the reason:** a pile outside the starting limits or over 999; a practice pile with the lesson's number or another number of places; hundreds in a tens-and-ones practice; a second, different mat; lesson numbers.
+- **The program draws** the mat (two columns, or three when the pile has hundreds or makes 100 or more), in Chinese for a Chinese lesson.
+- **The program demonstrates,** after the moment that draws the mat, in its own sentences per language: for each place below the highest that holds ten or more, ten taps into the tray and the make; each remaining trade of that place fills the tray in one brief animation and makes (the amount on the mat stays true throughout; 50 ones take about 28 s in Learn, against nearly a minute tap by tap).
+- **The program writes the practice:** "I'm done" on the practice pile, the number, the counts row and the parts row. The model's questions and thinking questions on the mat are dropped and recorded (`activity_removed`); a one-section lesson makes no separate practice request.
+- **Request cost** with the trial on (first request): prompt 279 B, schema 382 B, 661 B in all. Requests and recorded lessons are unchanged with it off.
+- `test/base-ten-recipe.test.mjs`: every development case's ideal output compiles and passes the judge in English and Chinese; the demonstration's sentences and actions; the practice; dropping; refusals; a stubbed generation run.
