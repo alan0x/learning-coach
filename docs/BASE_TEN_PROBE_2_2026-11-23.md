@@ -12,15 +12,16 @@ Probe 1 failed bars 2 and 4. The rebuild changes who writes what: the pile is le
 - **Cases:** the same 33 development cases as probe 1 (`testsuite/base-ten-dev-cases.json`): 26 trading questions (16 English, 10 Chinese) and 7 near misses (4 English, 3 Chinese). None comes from the question set. The sealed scoring set is not used.
 - **Whole lessons, not first parts.** The model's practice can sit in a later section or in the practice request that follows a one-section lesson, so the judge needs the whole lesson. This is the main difference from probe 1's setup.
 - **Arms:** candidate (`--trial base_ten_trade`) and baseline (no trial), each case once per arm, each arm in its own run folder.
-- **Build:** Coach main at the commit that merges this record, copied to `handoff-math-expressiveness/runs/base-ten/probe-2/build` and frozen.
+- **Build:** Coach main at the commit that merges this record: its `main` and `lesson-plan.js`, copied to `handoff-math-expressiveness/runs/base-ten/probe-2/build` and frozen.
+- **Only a row whose outcome is a whole lesson is judged.** The runner saves no lesson for a case that failed or was stopped, and the judge reports it missing.
 - **Model:** the dev-probe profile (`~/.octos/profiles/dev-probes.json`, Gemini 3.6 Flash).
-- **Smoke first:** BT-07 and BT-27 on the candidate arm (a trade of ones then tens, English and Chinese). It confirms that the mat is drawn from lesson numbers, the model's animation plays as trades, and the judge reads the saved lesson. If the smoke shows a build or runner fault, the batch does not start.
+- **Smoke first:** BT-07 and BT-27 on the candidate arm (a trade of ones then tens, English and Chinese). It confirms that `report.json` names the trial recipe, the mat is drawn from lesson numbers, the model's animation plays as trades, and the judge reads the saved lesson. If the smoke shows a build or runner fault, the batch does not start.
 - **Commands:**
   - smoke: `node scripts/eval-math-expressiveness.mjs --build <build> --octos-profile ~/.octos/profiles/dev-probes.json --cases-file testsuite/base-ten-dev-cases.json --ids BT-07,BT-27 --trial base_ten_trade --lesson-calls 6 --max-calls 12 --out <run>/smoke`
   - candidate: the same with no `--ids`, `--max-calls 198 --out <run>/candidate`
   - baseline: the same without `--trial`, `--max-calls 198 --out <run>/baseline`
   - judge: `node scripts/base-ten-judge.mjs testsuite/base-ten-dev-cases.json <run>/candidate`
-- **Calls:** in the two earlier whole-lesson runs a lesson took 2.3 and 2.4 calls on average, and 4 at most. That makes about 80 per arm and about 165 in all. The caps are 12 for the smoke and 198 per arm (33 lessons at a 6-call limit), so **408 at most**. The runner stops before a lesson that would start with fewer than 6 calls left, and says so.
+- **Calls:** in the two earlier whole-lesson runs a lesson took 2.3 and 2.4 calls on average, and 4 at most. That makes about 80 per arm and about 165 in all. The caps are 12 for the smoke and 198 per arm (33 lessons at a 6-call limit), so **408**. The runner stops before a lesson that would start with fewer than 6 calls left, and says so. A lesson is stopped as its 7th call starts, so each run can start one call past its cap: 411 started at most.
 
 ## Pass bar, written before the run (two sides, per language; judged only against this)
 The same four bars as probe 1. Bar 1 uses the rebuilt judge, whose checks are listed below.

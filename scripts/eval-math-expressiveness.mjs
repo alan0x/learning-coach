@@ -189,7 +189,10 @@ async function main() {
     await writeFile(join(dir, "raw-replies.txt"), raw.length ? `${raw.join("\n")}\n` : "");
     const oll = join(workDir, "study", "oll");
     const files = existsSync(oll) ? readdirSync(oll) : [];
-    const lesson = files.find((file) => file.endsWith(".octos-lesson.json"));
+    // Only this turn's whole lesson: Coach also writes each part as <turn>.part-NNN.octos-lesson.json, and a
+    // resumed case leaves an earlier attempt's parts in the same folder. A lesson that failed after its first
+    // part has no whole file, so nothing is saved and the judge reports it missing (review of #161).
+    const lesson = files.find((file) => file === `${turn}.octos-lesson.json`);
     if (lesson) await copyFile(join(oll, lesson), join(dir, "lesson.json"));
     const { parts, ...kept } = run;
     const row = {

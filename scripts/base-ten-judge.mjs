@@ -146,6 +146,7 @@ if (process.argv[1] && new URL(import.meta.url).pathname === (await import("node
       try { found = await readFile(path, "utf8"); break; } catch (error) { if (error.code !== "ENOENT") { found = null; break; } }
     }
     if (found === undefined) { console.log(`${item.id}\tmissing`); continue; }
+    if (found === null) { console.log(`${item.id}\tunreadable`); continue; }
     try { lesson = JSON.parse(found); } catch { console.log(`${item.id}\tunreadable`); continue; }
     let verdict;
     try { verdict = judgeTradingMat(item, lesson); } catch (error) { console.log(`${item.id}\tFAIL\tjudge error: ${String(error?.message ?? error).slice(0, 160)}`); continue; }
