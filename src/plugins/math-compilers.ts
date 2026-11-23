@@ -10,7 +10,7 @@ import {
 } from "octos-lesson-language/plugin-math";
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
-import { baseTenStartFault, baseTenState, baseTenTraded } from "./base-ten-moves.js";
+import { baseTenSliderTask, baseTenStartFault, baseTenState } from "./base-ten-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
@@ -1690,7 +1690,7 @@ function compileBaseTenTrade(
   const start = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
   const fault = baseTenStartFault(start);
   if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault);
-  // The mat's numbers are its own: their range is the mat's and they have no slider, so another visual
+  // The mat's numbers are its own: their range is the mat's and their slider makes trades, so another visual
   // cannot also show them (review of #160: a number line's slider task became a tap task on the mat).
   const sharing = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "base_ten_trade"
@@ -1762,18 +1762,16 @@ function compileBaseTenTrade(
         return actions;
       },
       task(position, value) {
-        const traded = baseTenTraded(state);
-        if (traded.every((count, place) => count === state[place])) return { drop: "this pile has no trade to make" };
-        // A hundreds number of 0 on a pile under a hundred has no column: it stays 0.
-        if (Math.abs(value - (traded[position] ?? 0)) > 1e-6) {
-          return { refuse: `when every trade is made the ${BASE_TEN_PLACE_NAMES[position]} are ${traded[position] ?? 0}: ask the learner to trade until then (the task ends when no trade is left)` };
-        }
+        // The model's slider task, on the mat's own slider (0023 amendment 4; owner, 2026-11-23: every
+        // component has sliders). The mat starts again from the lesson's pile, trays empty; each stop of the
+        // slider is one trade, so the learner makes the trades and the amount never changes.
+        const own = baseTenSliderTask(state, position, value);
+        if (!("slider" in own)) return own;
         return {
           task: {
-            // The mat starts again from the lesson's pile, trays empty; the learner trades and says done.
-            start: { kind: "practice", variables: [...counts, ...trays], values: Object.fromEntries([...counts.map((as, place) => [as, state[place]!]), ...trays.map((as) => [as, 0])]) },
-            allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
-            completion: { kind: "card_fact", node: base, fact: "no_trade_left" },
+            start: { kind: "practice", variables: [...counts, ...trays], values: Object.fromEntries([...counts.map((as, place) => [as, own.start[place]!]), ...trays.map((as) => [as, 0])]) },
+            allowed_operations: [{ kind: "variable_change", variable: counts[own.slider]!, controls: ["slider"] }],
+            completion: { kind: "expression_target", expression: counts[own.slider]!, value: own.target, tolerance: 0.5 },
           },
         };
       },

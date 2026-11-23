@@ -179,10 +179,11 @@ export const MATH_RECIPES = {
     required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["base_ten_trade"],
-    // The counts change by taps only, never by a slider (OLL 0023).
-    student_controls: [],
+    // Every component's numbers have a slider (owner, 2026-11-23). The ones (and tens on a three-column mat)
+    // slide in steps of ten, each stop one trade by the card's rules (OLL 0023 amendment 4).
+    student_controls: ["slider"],
     required_features: ["trade_ten_for_one"],
-    model_guidance: "方块换一换：十个一换一个十（十个十换一个百）。数值依次是散的一、十的个数（题目有百再加百的个数），照题目写；讲到交换的那一刻把“一”的数值动画到换完的个数（一次少整十，如26到6），十自己跟着多；百同理动画“十”。练习可让孩子把“一”换到不能再换；另出新题用文字说一堆新的方块",
+    model_guidance: "方块换一换：十个一换一个十（十个十换一个百）。数值依次是散的一、十的个数（题目有百再加百的个数），照题目写；讲到交换的那一刻把“一”的数值动画到换完的个数（一次少整十，如26到6），十自己跟着多；百同理动画“十”。孩子的滑块在“一”上（有百时“十”也有），每滑一格就是换一次，所以练习让孩子把“一”滑到换完的个数；另出新题用文字说一堆新的方块",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],

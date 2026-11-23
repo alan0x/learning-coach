@@ -90,14 +90,19 @@ test("every development case's ideal lesson compiles and passes the judge, in En
   const piles = CASES.filter((item) => item.expect.lesson_pile).map((item) => [item.id, item.expect.lesson_pile]);
   const entries = piles.flatMap(([id, pile]) => ["en-US", "zh-CN"].map((language) => {
     const needsTrade = pile[2] >= 10 || pile[1] >= 10;
-    return [`${id} ${language}`, numbersOf(pile), idealMoves(pile), language, [...(needsTrade ? [trading(pile[2] % 10)] : []), typed(53)], pile];
+    // The ideal task slides the ones to the traded count; a pile whose ones need no trade slides the tens.
+    const task = pile[2] >= 10 ? trading(pile[2] % 10) : { ...trading(pile[1] % 10), number_controls: [{ number: 2, controls: ["slider"] }] };
+    return [`${id} ${language}`, numbersOf(pile), idealMoves(pile), language, [...(needsTrade ? [task] : []), typed(53)], pile];
   }));
   const result = withTrial(compileScript(entries));
   for (const [id] of entries) {
     assert.ok(!result[id].error, `${id}: ${result[id].message}`);
     assert.deepEqual(result[id].verdict.checks.filter((check) => !check.pass), [], id);
-    // The mat's counts have no slider: they change only by trades.
-    assert.ok(result[id].lesson.lesson.variables.every((variable) => variable.control === undefined), id);
+    // Every component's numbers have a slider (owner, 2026-11-23): the ones, and the tens on a three-column
+    // mat, slide in steps of ten, each stop one trade (OLL 0023 amendment 4). Nothing else has one.
+    const sliders = result[id].lesson.lesson.variables.filter((variable) => variable.control).map((variable) => [variable.as, variable.control.step]);
+    const columns = result[id].lesson.steps[0].beats[0].actions[0].content.columns;
+    assert.deepEqual(sliders, [["number_01", 10], ...(columns === 3 ? [["number_02", 10]] : [])], id);
   }
 });
 
@@ -130,21 +135,40 @@ test("a trade plays in the model's own moment: the first tap by tap, later ones 
   assert.equal(played("none").length, 1);
 });
 
-test("the practice is the model's: its trading task becomes taps on the mat, and its typed question stays", () => {
+test("the practice is the model's: its slider task is the mat's slider, each stop one trade, and its typed question stays", () => {
   const result = withTrial(compileScript([
     ["en", [14, 3], [[[1, 4]]], "en-US", [trading(4), typed(53)]],
     ["no-trade", [5, 4, 3], [], "en-US", [trading(5), typed(53)]],
+    // Not only the fully traded count: one trade of two is a target too.
+    ["part", [26, 3], [[[1, 6]]], "en-US", [trading(16)]],
+    // Two columns: the tens have no slider, so "bring the tens to 5" is the ones' slider at 6.
+    ["tens", [26, 3], [[[1, 6]]], "en-US", [{ ...trading(5), number_controls: [{ number: 2, controls: ["slider"] }] }]],
+    // 116: the tens to 1 needs the ones traded first, so the task starts with the ones traded.
+    ["chain", [26, 9], [[[1, 6]], [[2, 1]]], "en-US", [{ ...trading(1), number_controls: [{ number: 2, controls: ["slider"] }] }]],
+    // Review of #163: the hundreds of 116 reach 1 on the tens slider once the ones are traded (B1); the tens
+    // of 116 reach 11 on the ones slider (B3).
+    ["hundreds", [26, 9, 0], [[[1, 6]], [[2, 1]]], "en-US", [{ ...trading(1), number_controls: [{ number: 3, controls: ["slider"] }] }]],
+    ["tens-up", [26, 9], [[[1, 6]], [[2, 1]]], "en-US", [{ ...trading(11), number_controls: [{ number: 2, controls: ["slider"] }] }]],
+    // A start OLL would refuse (20 tens once the ones are traded) is never used (B2): refused with the values the tens reach.
+    ["too-many-tens", [26, 18], [], "en-US", [{ ...trading(0), number_controls: [{ number: 2, controls: ["slider"] }] }]],
   ]));
   const tasks = result.en.lesson.lesson.tasks;
   assert.deepEqual(tasks.map((task) => [task.prompt, task.completion.kind]), [
-    ["Your turn: trade until you cannot.", "card_fact"],
+    ["Your turn: trade until you cannot.", "expression_target"],
     ["Four tens and thirteen ones: what number is that?", "numeric_answer"],
   ]);
-  // The learner's trading starts again from the lesson's pile, trays empty, and ends when no trade is left.
+  // The learner's slider starts again from the lesson's pile, trays empty.
   assert.deepEqual(tasks[0].start.values, { number_01: 14, number_02: 3, section_01_moment_01_item_01_tray_ones: 0 });
-  assert.deepEqual(tasks[0].allowed_operations.map((operation) => operation.kind), ["card_tap", "card_submit"]);
-  assert.equal(tasks[0].completion.fact, "no_trade_left");
+  assert.deepEqual(tasks[0].allowed_operations, [{ kind: "variable_change", variable: "number_01", controls: ["slider"] }]);
+  assert.deepEqual([tasks[0].completion.expression, tasks[0].completion.value], ["number_01", 4]);
   assert.deepEqual(result.en.adjustments, []);
+  const only = (id) => { const [task] = result[id].lesson.lesson.tasks; return [task.allowed_operations[0].variable, task.completion.value, task.start.values]; };
+  assert.deepEqual(only("part"), ["number_01", 16, { number_01: 26, number_02: 3, section_01_moment_01_item_01_tray_ones: 0 }]);
+  assert.deepEqual(only("tens"), ["number_01", 6, { number_01: 26, number_02: 3, section_01_moment_01_item_01_tray_ones: 0 }]);
+  assert.deepEqual(only("chain"), ["number_02", 1, { number_01: 6, number_02: 11, section_01_moment_01_item_01_hundreds: 0, section_01_moment_01_item_01_tray_ones: 0, section_01_moment_01_item_01_tray_tens: 0 }]);
+  assert.deepEqual(only("hundreds"), ["number_02", 1, { number_01: 6, number_02: 11, number_03: 0, section_01_moment_01_item_01_tray_ones: 0, section_01_moment_01_item_01_tray_tens: 0 }]);
+  assert.deepEqual(only("tens-up"), ["number_01", 6, { number_01: 26, number_02: 9, section_01_moment_01_item_01_hundreds: 0, section_01_moment_01_item_01_tray_ones: 0, section_01_moment_01_item_01_tray_tens: 0 }]);
+  assert.match(result["too-many-tens"].message, /the tens can be 8 or 19 or 20, not 0/);
   // A pile with nothing to trade has no trading task; the typed question stays.
   assert.deepEqual(result["no-trade"].lesson.lesson.tasks.map((task) => task.completion.kind), ["numeric_answer"]);
   assert.deepEqual(result["no-trade"].adjustments.map((adjustment) => [adjustment.kind, adjustment.reason]), [["activity_removed", "nothing_to_do_on_card"]]);
@@ -159,7 +183,7 @@ test("refusals name their reason", () => {
     ["too-many", [60, 3], [], "en-US"],
     ["small", [7, 0], [], "en-US"],
     ["one-number", [26], [], "en-US"],
-    ["target", [26, 9], [[[1, 6]]], "en-US", [trading(16)]],
+    ["target", [26, 9], [[[1, 6]]], "en-US", [trading(5)]],
   ]));
   assert.match(result["off-tens"].message, /from 26 they can be 16 or 6/);
   assert.match(result["off-tens"].path, /moments\[1\]\.actions\[0\]\.end_value$/);
@@ -169,7 +193,7 @@ test("refusals name their reason", () => {
   assert.match(result["too-many"].message, /at most 59 loose ones/);
   assert.match(result.small.message, /a pile of 7 has no ten to make/);
   assert.match(result["one-number"].message, /two or three lesson numbers/);
-  assert.match(result.target.message, /when every trade is made the ones are 6/);
+  assert.match(result.target.message, /each stop of a slider is one trade, so the loose ones can be 6 or 16, not 5/);
 });
 
 test("the judge catches each kind of break", () => {
@@ -184,13 +208,13 @@ test("the judge catches each kind of break", () => {
   assert.deepEqual(failed(result.zh.verdict), []);
   // The lesson never makes the trade it is about.
   assert.deepEqual(failed(result["not-traded"].verdict), ["the demonstration ends with no trade left", "the demonstration trades when the pile needs it"]);
-  assert.deepEqual(failed(result["no-practice"].verdict), ["the learner trades the lesson's pile on the mat", "the card task asks whether no trade is left, on the mat", "the card task starts from the lesson's pile, trays empty", "a typed question follows"]);
+  assert.deepEqual(failed(result["no-practice"].verdict), ["the learner trades the lesson's pile on the mat", "the task on the mat is the card's trading or its slider", "the task starts from the lesson's pile, trays empty", "a typed question follows"]);
   const item = (pile) => ({ id: "x", expect: { lesson_pile: pile } });
   assert.deepEqual(failed(judgeTradingMat(item([0, 3, 15]), result.good.lesson)), ["the lesson pile is the question's"]);
   // The task starts from another pile.
   const moved = structuredClone(result.good.lesson);
   moved.lesson.tasks[0].start.values.number_01 = 24;
-  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 14]), moved)), ["the card task starts from the lesson's pile, trays empty"]);
+  assert.deepEqual(failed(judgeTradingMat(item([0, 3, 14]), moved)), ["the task starts from the lesson's pile, trays empty"]);
   // The mat speaks another language than the lesson.
   const mixed = structuredClone(result.good.lesson);
   mixed.lesson.language = "zh-CN";
@@ -271,9 +295,9 @@ test("review of #160, round 2: a beat's 24 actions, a hundreds target with no co
   ]));
   const actions = result.crowded.lesson.steps[0].beats[1].actions.map((action) => (action.do === "tap" ? `${action.tap}:${action.at}` : "fill"));
   assert.deepEqual(actions, [...Array(10).fill("gather:ones"), "make:ones", "fill", "make:ones", "fill", "make:ones", "fill", "make:tens"]);
-  assert.deepEqual(result.crowded.verdict.checks.filter((check) => !check.pass && !/learner|card task|typed/.test(check.check)), []);
+  assert.deepEqual(result.crowded.verdict.checks.filter((check) => !check.pass && !/learner|task|typed/.test(check.check)), []);
   // A hundreds number of 0 has no column: animating it to 0 changes nothing, and a target other than 0 is refused.
-  assert.match(result["zero-hundreds-target"].message, /the hundreds are 0/);
+  assert.match(result["zero-hundreds-target"].message, /its hundreds stay 0/);
   // That no-change step does not stop the ones' first trade being tapped out (review, round 3).
   const beside = withTrial(compileScript([["beside-zero", [13, 0, 0], [[[1, 3], [3, 0]]], "en-US"]]));
   assert.equal(beside["beside-zero"].lesson.steps[0].beats[1].actions.filter((action) => action.do === "tap" && action.tap === "gather").length, 10);
@@ -342,6 +366,6 @@ test("a generated lesson: the trades in section 1, the learner's trading and a t
     console.log(JSON.stringify(out));
   `);
   for (const id of ["tight", "odd", "wide"]) {
-    assert.deepEqual(result[id], { rejected: [], tasks: ["card_fact", "numeric_answer"], failed: [] }, `${id}: ${JSON.stringify(result[id])}`);
+    assert.deepEqual(result[id], { rejected: [], tasks: ["expression_target", "numeric_answer"], failed: [] }, `${id}: ${JSON.stringify(result[id])}`);
   }
 });

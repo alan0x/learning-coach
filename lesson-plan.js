@@ -8895,6 +8895,9 @@ var BASE_TEN_TRADE_FEATURE = "plugin:math/base-ten-trade@1";
 var BASE_TEN_TRADE_PLUGIN_VERSION = "0.5.0";
 var BASE_TEN_TRADE_LANGUAGE_FEATURE = "plugin:math/base-ten-trade-language@1";
 var BASE_TEN_TRADE_LANGUAGE_VERSION = "0.6.0";
+var BASE_TEN_TRADE_SLIDER_FEATURE = "plugin:math/base-ten-trade-slider@1";
+var BASE_TEN_TRADE_SLIDER_VERSION = "0.7.0";
+var BASE_TEN_SLIDER_STEP = 10;
 var BASE_TEN_TRADE_LANGUAGES = ["en-US", "zh-CN"];
 var BASE_TEN_TRADE_BINDINGS = {
   places: ["count", "tray"]
@@ -9024,6 +9027,73 @@ function applyBaseTenTap(mat, tap) {
     return { ok: false, reason: "no_room" };
   const counts = set(set(mat.counts, p, mat.counts[p] - 1), p - 1, mat.counts[p - 1] + 10);
   return { ok: true, mat: { ...mat, counts, trays: set(mat.trays, p - 1, 10) } };
+}
+var drawnMost = (columns, p) => columns === 2 && p === 1 ? 9 : BASE_TEN_TRADE_LIMITS.drawn[p];
+function baseTenBoundField(raw, alias) {
+  const content = raw;
+  const places = Array.isArray(content?.places) ? content.places : [];
+  for (const binding of Array.isArray(content?.bindings) ? content.bindings : []) {
+    if (typeof binding?.target !== "string" || typeof binding.expression !== "string" || binding.expression.trim() !== alias)
+      continue;
+    const separator = binding.target.lastIndexOf(".");
+    const name = binding.target.slice(0, separator);
+    const field = binding.target.slice(separator + 1);
+    const place5 = places.findIndex((item) => (item?.id ?? item?.as) === name);
+    if (place5 >= 0 && (field === "count" || field === "tray"))
+      return { place: place5, field };
+  }
+  return void 0;
+}
+function baseTenSliderPlace(raw, alias) {
+  const bound = baseTenBoundField(raw, alias);
+  const columns = raw?.columns === 3 ? 3 : 2;
+  return bound && bound.field === "count" && hasTray(columns, bound.place) ? bound.place : void 0;
+}
+function baseTenSliderStop(mat, place5, direction) {
+  if (!hasTray(mat.columns, place5))
+    return { ok: false, reason: "no_tray" };
+  const steps = [];
+  let current = mat;
+  const tap = (kind, at2) => {
+    const result = applyBaseTenTap(current, { kind, place: at2 });
+    if (!result.ok)
+      return result.reason;
+    current = result.mat;
+    steps.push({ tap: { kind, place: at2 }, mat: current });
+    return void 0;
+  };
+  let refused;
+  if (direction < 0) {
+    while (!refused && current.trays[place5] < BASE_TEN_TRADE_LIMITS.tray)
+      refused = tap("gather", place5);
+    refused ??= tap("make", place5);
+    if (!refused && current.counts[place5 + 1] > drawnMost(mat.columns, place5 + 1))
+      refused = "no_room";
+  } else {
+    while (!refused && current.trays[place5] > 0)
+      refused = tap("ungather", place5);
+    refused ??= tap("break", place5 + 1);
+    while (!refused && current.trays[place5] > 0)
+      refused = tap("ungather", place5);
+  }
+  return refused ? { ok: false, reason: refused } : { ok: true, steps, mat: current };
+}
+function baseTenSliderReachable(mat, places) {
+  const key = (state) => `${state.counts.join(",")}/${state.trays.join(",")}`;
+  const seen = /* @__PURE__ */ new Set([key(mat)]);
+  const found = [mat];
+  for (let i = 0; i < found.length; i += 1) {
+    for (const place5 of places) {
+      for (const direction of [-1, 1]) {
+        const stop = baseTenSliderStop(found[i], place5, direction);
+        if (!stop.ok || seen.has(key(stop.mat)))
+          continue;
+        seen.add(key(stop.mat));
+        found.push(stop.mat);
+      }
+    }
+  }
+  return found;
 }
 var BASE_TEN_WORDS = {
   "en-US": {
@@ -9208,8 +9278,8 @@ var MATH_PLUGIN_MANIFEST = {
   // 0.4.0: the fraction model (decision 0021). 0.4.1: grids fill column by column. 0.4.2: a share marks one
   // piece of each part; the program writes a fraction's other form beside its label (0021 amendment 2).
   // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023). 0.6.0: the mat speaks Chinese
-  // (0023 amendment 3).
-  version: "0.6.0",
+  // (0023 amendment 3). 0.7.0: a slider on a place's count, each stop one trade (0023 amendment 4).
+  version: "0.7.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -9280,8 +9350,8 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION },
-    detect(content, kind, use) {
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION },
+    detect(content, kind, use, lesson) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
         if (usesJumpLanes(content))
@@ -9293,6 +9363,8 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
         use(BASE_TEN_TRADE_FEATURE);
         if (content.language !== void 0)
           use(BASE_TEN_TRADE_LANGUAGE_FEATURE);
+        if (lesson?.variables.some((variable) => variable.control?.kind === "slider" && baseTenSliderPlace(content, variable.as) !== void 0))
+          use(BASE_TEN_TRADE_SLIDER_FEATURE);
       }
     }
   }
@@ -9597,7 +9669,7 @@ function validateAnswerStudentTask(task, path, registry, feedback = true) {
   if (feedback)
     validateTaskFeedback(task, path);
 }
-function baseTenTapVariables(content, declarations, path) {
+function baseTenTapVariables(content, declarations, path, writer = "Tapping a card") {
   const columns = content.columns === 3 ? 3 : 2;
   const bindings = /* @__PURE__ */ new Map();
   for (const binding of Array.isArray(content.bindings) ? content.bindings : []) {
@@ -9616,13 +9688,13 @@ function baseTenTapVariables(content, declarations, path) {
       const alias = bindings.get(target);
       const declaration = declarations.find((variable) => variable.as === alias);
       if (!alias || !declaration) {
-        fail("OLL_INVALID_STUDENT_TASK", path, `Tapping a card needs '${target}' bound to its own lesson variable`);
+        fail("OLL_INVALID_STUDENT_TASK", path, `${writer} needs '${target}' bound to its own lesson variable`);
       }
       if (used.has(alias))
         fail("OLL_INVALID_STUDENT_TASK", path, `Variable '${alias}' is bound to two fields a tap changes`);
       used.add(alias);
       if (declaration.min !== 0 || declaration.max !== most || declaration.wrap) {
-        fail("OLL_INVALID_STUDENT_TASK", path, `Variable '${alias}' (${target}) must run from 0 to ${most}, the most a tap can make`);
+        fail("OLL_INVALID_STUDENT_TASK", path, `Variable '${alias}' (${target}) must run from 0 to ${most}, the most a trade can make`);
       }
       result.set(target, alias);
     }
@@ -9641,7 +9713,7 @@ function baseTenContentAt(content, variables, values) {
   }
   return at2;
 }
-function validateCardStudentTask(task, path, registry, cards, declarations, startValues, availableControls) {
+function validateCardStudentTask(task, path, registry, cards, declarations, startValues, availableControls, cardSliders) {
   const completion = task.completion;
   resolveLocal(registry, completion.node, `${path}/completion/node`, ["node"]);
   const content = cards.get(completion.node);
@@ -9650,13 +9722,15 @@ function validateCardStudentTask(task, path, registry, cards, declarations, star
   if (completion.fact !== "no_trade_left")
     fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/fact`, `Unsupported card fact '${String(completion.fact)}'`);
   requireArray(task.allowed_operations, `${path}/allowed_operations`);
-  const kinds = task.allowed_operations.map((operation) => operation?.kind).sort();
-  if (task.allowed_operations.length !== 2 || kinds[0] !== "card_submit" || kinds[1] !== "card_tap" || task.allowed_operations.some((operation) => operation.kind === "card_tap" && operation.node !== completion.node)) {
-    fail("OLL_INVALID_STUDENT_TASK", `${path}/allowed_operations`, "A card task allows tapping its card (card_tap) and saying done (card_submit), nothing else");
+  const operations = task.allowed_operations;
+  const count = (kind) => operations.filter((operation) => operation?.kind === kind).length;
+  const sliders = operations.filter((operation) => operation?.kind === "variable_change");
+  if (count("card_tap") !== 1 || count("card_submit") !== 1 || count("card_tap") + count("card_submit") + sliders.length !== operations.length || operations.some((operation) => operation.kind === "card_tap" && operation.node !== completion.node) || sliders.some((operation) => cardSliders.get(String(operation.variable))?.card !== completion.node || !Array.isArray(operation.controls) || operation.controls.length !== 1 || operation.controls[0] !== "slider") || new Set(sliders.map((operation) => operation.variable)).size !== sliders.length) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/allowed_operations`, 'A card task allows tapping its card (card_tap) and saying done (card_submit), and may allow a slider on its counts (variable_change with controls ["slider"]), nothing else');
   }
   const variables = baseTenTapVariables(content, declarations, `${path}/completion/node`);
   for (const alias of variables.values()) {
-    if (declarations.find((variable) => variable.as === alias)?.control || availableControls.get(alias)?.size) {
+    if ((declarations.find((variable) => variable.as === alias)?.control || availableControls.get(alias)?.size) && cardSliders.get(alias)?.card !== completion.node) {
       fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/node`, `Variable '${alias}' is changed only by tapping the card; it cannot have its own control`);
     }
   }
@@ -9790,7 +9864,61 @@ function validateReflections(document2, registry) {
     resolveLocal(registry, reflection.anchor, `${path}/anchor`, ["node"]);
   });
 }
-function validateStudentTasks(document2, variables, availableControls, scene3dCameras, registry, numberLineGrids = /* @__PURE__ */ new Map(), baseTenTradeContents = /* @__PURE__ */ new Map()) {
+function cardSliderVariables(document2, contents, availableControls) {
+  const sliders = /* @__PURE__ */ new Map();
+  const declarations = document2.lesson.variables ?? [];
+  for (const [card, content] of contents) {
+    for (const [index, declaration] of declarations.entries()) {
+      const bound = baseTenBoundField(content, declaration.as);
+      const controls = [...availableControls.get(declaration.as) ?? []];
+      if (!bound || !declaration.control && !controls.length)
+        continue;
+      const path = `/lesson/variables/${index}`;
+      const target = `${BASE_TEN_TRADE_PLACES[bound.place]}.${bound.field}`;
+      const place5 = baseTenSliderPlace(content, declaration.as);
+      if (place5 === void 0) {
+        fail("OLL_INVALID_VARIABLE", path, `Variable '${declaration.as}' (${target}) cannot have a control: only the count of a place with a tray takes a slider, and it moves by trades`);
+      }
+      if (declaration.control?.kind !== "slider" || declaration.control.step !== BASE_TEN_SLIDER_STEP || controls.some((control) => control !== "slider")) {
+        fail("OLL_INVALID_VARIABLE", path, `Variable '${declaration.as}' (${target}) takes only a slider of step ${BASE_TEN_SLIDER_STEP}: each stop is one trade`);
+      }
+      if (sliders.has(declaration.as))
+        fail("OLL_INVALID_VARIABLE", path, `Variable '${declaration.as}' is a count of two cards; a slider trades on one card`);
+      baseTenTapVariables(content, declarations, path, "A slider on a card's count");
+      sliders.set(declaration.as, { card, place: place5 });
+    }
+  }
+  return sliders;
+}
+function cardSliderTask(task, path, allowedVariables, cardSliders, contents, declarations, startValues) {
+  const cards = new Set([...allowedVariables].map((alias) => cardSliders.get(alias)?.card));
+  if (cards.size !== 1 || cards.has(void 0)) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/allowed_operations`, "A task on a card's count sliders allows only sliders on that card's counts");
+  }
+  for (const operation of task.allowed_operations) {
+    if (operation.controls.length !== 1 || operation.controls[0] !== "slider") {
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/allowed_operations`, "A card's count is moved only by its slider");
+    }
+  }
+  const content = contents.get([...cards][0]);
+  const variables = baseTenTapVariables(content, declarations, `${path}/allowed_operations`, "A slider on a card's count");
+  if (!task.start)
+    fail("OLL_INVALID_PHASE_START", `${path}/start`, "A task on a card's count sliders gives the learner's practice pile in start");
+  const missing = [...variables.values()].filter((alias) => !Object.hasOwn(startValues, alias));
+  if (missing.length)
+    fail("OLL_INVALID_PHASE_START", `${path}/start/variables`, `A card task's practice pile sets every count and tray; missing ${missing.join(", ")}`);
+  const values = { ...Object.fromEntries(declarations.map((variable) => [variable.as, variable.initial])), ...startValues };
+  const pile = baseTenContentAt(content, variables, values);
+  validateBaseTenTradeContent(pile, "$", (failPath, detail) => fail("OLL_INVALID_STUDENT_TASK", `${path}/start/values`, `The task's starting pile is not a starting pile: ${detail} (${failPath.replace(/^\$\//, "")})`));
+  const places = [...allowedVariables].map((alias) => cardSliders.get(alias).place);
+  const piles = baseTenSliderReachable(baseTenMat(pile), places).map((mat) => Object.fromEntries([...variables].map(([target, alias]) => {
+    const [name, field] = target.split(".");
+    const p = BASE_TEN_TRADE_PLACES.indexOf(name);
+    return [alias, field === "count" ? mat.counts[p] : mat.trays[p]];
+  })));
+  return { piles };
+}
+function validateStudentTasks(document2, variables, availableControls, scene3dCameras, registry, numberLineGrids = /* @__PURE__ */ new Map(), baseTenTradeContents = /* @__PURE__ */ new Map(), cardSliders = /* @__PURE__ */ new Map()) {
   const taskAliases = /* @__PURE__ */ new Set();
   for (const [index, task] of (document2.lesson.tasks ?? []).entries()) {
     const path = `/lesson/tasks/${index}`;
@@ -9824,7 +9952,7 @@ function validateStudentTasks(document2, variables, availableControls, scene3dCa
       continue;
     }
     if (task.completion.kind === "card_fact") {
-      validateCardStudentTask(task, path, registry, baseTenTradeContents, document2.lesson.variables ?? [], startValues, availableControls);
+      validateCardStudentTask(task, path, registry, baseTenTradeContents, document2.lesson.variables ?? [], startValues, availableControls, cardSliders);
       continue;
     }
     const expressionTask = task;
@@ -9859,6 +9987,7 @@ function validateStudentTasks(document2, variables, availableControls, scene3dCa
         controls.add(control);
       });
     });
+    const card = [...allowedVariables].some((alias) => cardSliders.has(alias)) ? cardSliderTask(expressionTask, path, allowedVariables, cardSliders, baseTenTradeContents, document2.lesson.variables ?? [], startValues) : void 0;
     const target = requireFiniteNumber(expressionTask.completion.value, `${path}/completion/value`);
     const tolerance = requireFiniteNumber(expressionTask.completion.tolerance, `${path}/completion/tolerance`);
     if (tolerance <= 0)
@@ -9887,7 +10016,13 @@ function validateStudentTasks(document2, variables, availableControls, scene3dCa
       if (Math.abs(initial - target) <= tolerance) {
         throw new Error("Task completion condition is already satisfied by the lesson's initial values");
       }
-      if (allowedVariables.size === 1) {
+      if (card) {
+        if (!card.piles.some((values) => {
+          const actual = evaluate3({ ...Object.fromEntries(variables), ...startValues, ...values });
+          return Number.isFinite(actual) && Math.abs(actual - target) <= tolerance;
+        }))
+          throw new Error("No pile the card's sliders can make by trades from the task's starting pile satisfies the task completion condition");
+      } else if (allowedVariables.size === 1) {
         const [variableAlias2] = allowedVariables;
         const declaration = document2.lesson.variables?.find((variable) => variable.as === variableAlias2);
         if (declaration) {
@@ -11235,14 +11370,17 @@ function validateAuthoringLesson(document2, resourceContext = null) {
       }
     });
   });
+  const cardSliders = cardSliderVariables(document2, baseTenTradeContents, availableStudentControls);
   for (const alias of tappedCards) {
     for (const variable of baseTenTapVariables(baseTenTradeContents.get(alias), document2.lesson.variables ?? [], `/content`).values()) {
+      if (cardSliders.get(variable)?.card === alias)
+        continue;
       if ((document2.lesson.variables ?? []).find((declaration) => declaration.as === variable)?.control || availableStudentControls.get(variable)?.size) {
         fail("OLL_INVALID_VARIABLE", "/lesson/variables", `Variable '${variable}' is changed only by tapping the card; it cannot have its own control`);
       }
     }
   }
-  validateStudentTasks(document2, lessonVariables, availableStudentControls, scene3dCameras, registry, numberLineGrids, baseTenTradeContents);
+  validateStudentTasks(document2, lessonVariables, availableStudentControls, scene3dCameras, registry, numberLineGrids, baseTenTradeContents, cardSliders);
   validateReflections(document2, registry);
   if (document2.close?.focus) {
     for (let index = 0; index < document2.close.focus.length; index += 1) {
@@ -14580,10 +14718,11 @@ var MATH_RECIPES = {
     required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["base_ten_trade"],
-    // The counts change by taps only, never by a slider (OLL 0023).
-    student_controls: [],
+    // Every component's numbers have a slider (owner, 2026-11-23). The ones (and tens on a three-column mat)
+    // slide in steps of ten, each stop one trade by the card's rules (OLL 0023 amendment 4).
+    student_controls: ["slider"],
     required_features: ["trade_ten_for_one"],
-    model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF08\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\uFF09\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF08\u9898\u76EE\u6709\u767E\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF09\uFF0C\u7167\u9898\u76EE\u5199\uFF1B\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u767E\u540C\u7406\u52A8\u753B\u201C\u5341\u201D\u3002\u7EC3\u4E60\u53EF\u8BA9\u5B69\u5B50\u628A\u201C\u4E00\u201D\u6362\u5230\u4E0D\u80FD\u518D\u6362\uFF1B\u53E6\u51FA\u65B0\u9898\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757"
+    model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF08\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\uFF09\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF08\u9898\u76EE\u6709\u767E\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF09\uFF0C\u7167\u9898\u76EE\u5199\uFF1B\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u767E\u540C\u7406\u52A8\u753B\u201C\u5341\u201D\u3002\u5B69\u5B50\u7684\u6ED1\u5757\u5728\u201C\u4E00\u201D\u4E0A\uFF08\u6709\u767E\u65F6\u201C\u5341\u201D\u4E5F\u6709\uFF09\uFF0C\u6BCF\u6ED1\u4E00\u683C\u5C31\u662F\u6362\u4E00\u6B21\uFF0C\u6240\u4EE5\u7EC3\u4E60\u8BA9\u5B69\u5B50\u628A\u201C\u4E00\u201D\u6ED1\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF1B\u53E6\u51FA\u65B0\u9898\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -16643,9 +16782,34 @@ function baseTenMoves(state, moves) {
   }
   return { steps };
 }
-function baseTenTraded(state) {
-  const value2 = baseTenValue(state);
-  return state.length === 3 ? [value2 % 10, Math.floor(value2 / 10) % 10, Math.floor(value2 / 100)] : [value2 % 10, Math.floor(value2 / 10)];
+function baseTenSliderTask(state, position, value2) {
+  const names = ["loose ones", "tens", "hundreds"];
+  if (!whole(value2)) return { refuse: "blocks are counted in whole numbers" };
+  if (position >= state.length) return value2 === 0 ? { drop: "this pile has no hundreds column" } : { refuse: "this pile has tens and ones only: its hundreds stay 0" };
+  if (state[position] === value2) return { drop: `the ${names[position]} are already ${value2}` };
+  const columns = state.length;
+  const most = (place5, limits) => columns === 2 && place5 === 1 ? 9 : limits[place5];
+  const fits = (pile, limits) => pile.every((count, place5) => count >= 0 && count <= most(place5, limits));
+  const starts = [[...state]];
+  const onesTraded = [state[0] % 10, state[1] + Math.floor(state[0] / 10), ...state.slice(2)];
+  if (columns === 3 && onesTraded[1] !== state[1] && fits(onesTraded, BASE_TEN_START)) starts.push(onesTraded);
+  const sliders = [position, position - 1].filter((place5) => place5 >= 0 && place5 < columns - 1);
+  const reached = /* @__PURE__ */ new Set();
+  for (const slider of sliders) {
+    for (const start of starts) {
+      if (!fits(start, BASE_TEN_START)) continue;
+      for (let stops = 1; start[slider] - 10 * stops >= 0; stops += 1) {
+        const pile = [...start];
+        pile[slider] = start[slider] - 10 * stops;
+        pile[slider + 1] = start[slider + 1] + stops;
+        if (!fits(pile, BASE_TEN_DRAWN)) break;
+        reached.add(pile[position]);
+        if (pile[position] === value2) return { slider, target: pile[slider], start };
+      }
+    }
+  }
+  const values = [...reached].filter((each) => each !== state[position]).sort((a, b) => a - b);
+  return { refuse: values.length ? `on the mat each stop of a slider is one trade, so the ${names[position]} can be ${values.join(" or ")}, not ${value2}` : `the ${names[position]} cannot change by trading on this pile: they stay ${state[position]}` };
 }
 
 // src/plugins/math-hooks.ts
@@ -16750,8 +16914,10 @@ var MATH_HOOKS = {
     }
   },
   base_ten_trade: {
-    // The mat's counts run from 0 to the most it draws and have no slider: they change only by trades
-    // (OLL 0023's tap rule). The starting values stay as the model wrote them; the compiler checks them.
+    // The mat's counts run from 0 to the most it draws (OLL 0023's tap rule). Every component's numbers
+    // have a slider (owner, 2026-11-23): a place with a tray (ones; tens on a three-column mat) slides in
+    // steps of ten, each stop one trade made by the card's own rules (0023 amendment 4). The highest place
+    // has no slider. The starting values stay as the model wrote them; the compiler checks them.
     fit_numbers(content, plan) {
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
@@ -16760,7 +16926,8 @@ var MATH_HOOKS = {
       definitions.forEach((definition, place5) => {
         definition.min = 0;
         definition.max = columns === 2 && place5 === 1 ? 9 : BASE_TEN_DRAWN[place5] ?? 0;
-        delete definition.student_control;
+        if (place5 < columns - 1) definition.student_control = { kind: "slider", step: 10 };
+        else delete definition.student_control;
       });
       return new Map(numbers.map((number) => [number, 0]));
     },
@@ -20300,17 +20467,13 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
         return actions;
       },
       task(position, value2) {
-        const traded = baseTenTraded(state);
-        if (traded.every((count, place5) => count === state[place5])) return { drop: "this pile has no trade to make" };
-        if (Math.abs(value2 - (traded[position] ?? 0)) > 1e-6) {
-          return { refuse: `when every trade is made the ${BASE_TEN_PLACE_NAMES[position]} are ${traded[position] ?? 0}: ask the learner to trade until then (the task ends when no trade is left)` };
-        }
+        const own = baseTenSliderTask(state, position, value2);
+        if (!("slider" in own)) return own;
         return {
           task: {
-            // The mat starts again from the lesson's pile, trays empty; the learner trades and says done.
-            start: { kind: "practice", variables: [...counts, ...trays], values: Object.fromEntries([...counts.map((as, place5) => [as, state[place5]]), ...trays.map((as) => [as, 0])]) },
-            allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
-            completion: { kind: "card_fact", node: base, fact: "no_trade_left" }
+            start: { kind: "practice", variables: [...counts, ...trays], values: Object.fromEntries([...counts.map((as, place5) => [as, own.start[place5]]), ...trays.map((as) => [as, 0])]) },
+            allowed_operations: [{ kind: "variable_change", variable: counts[own.slider], controls: ["slider"] }],
+            completion: { kind: "expression_target", expression: counts[own.slider], value: own.target, tolerance: 0.5 }
           }
         };
       }
@@ -21341,7 +21504,7 @@ function compileLessonPlan(value2, options = {}) {
     if (seenTaskSemantics.has(semanticKey)) return;
     if (dropped) programAdjustments.push(dropped);
     seenTaskSemantics.add(semanticKey);
-    if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
+    if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target" && !task.start) {
       task.start = { kind: "practice", variables: task.allowed_operations.flatMap((operation) => operation.kind === "variable_change" ? [operation.variable] : []) };
     }
     tasks.push(task);
