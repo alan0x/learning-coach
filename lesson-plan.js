@@ -7218,10 +7218,10 @@ function parseNumericAnswer(text5) {
   }
   match = MIXED.exec(written);
   if (match) {
-    const whole = Number(match[2]), numerator = Number(match[3]), denominator = Number(match[4]);
-    if (!safe(whole, numerator, denominator) || denominator === 0 || numerator === 0 || numerator >= denominator || !safe(whole * denominator + numerator))
+    const whole2 = Number(match[2]), numerator = Number(match[3]), denominator = Number(match[4]);
+    if (!safe(whole2, numerator, denominator) || denominator === 0 || numerator === 0 || numerator >= denominator || !safe(whole2 * denominator + numerator))
       return void 0;
-    const value2 = (whole * denominator + numerator) / denominator;
+    const value2 = (whole2 * denominator + numerator) / denominator;
     return { value: match[1] ? -value2 : value2, form: "mixed", numerator, denominator };
   }
   return void 0;
@@ -8526,11 +8526,11 @@ function parseFraction(text5) {
   const match = FRACTION2.exec(text5);
   if (!match)
     return void 0;
-  const [, sign, whole, top, bottom] = match;
+  const [, sign, whole2, top, bottom] = match;
   const denominator = Number(bottom);
   if (!Number.isSafeInteger(denominator) || denominator < 1 || denominator > NUMBER_LINE_LIMITS.denominator)
     return void 0;
-  const numerator = Number(whole ?? 0) * denominator + Number(top);
+  const numerator = Number(whole2 ?? 0) * denominator + Number(top);
   if (!Number.isSafeInteger(numerator))
     return void 0;
   return { numerator: sign ? -numerator : numerator, denominator };
@@ -8665,8 +8665,8 @@ function validateNumberLineContent(raw, path, fail4, options = {}) {
       fail4(`${jumpPath}/hops`, "hops is true or false");
     if (jump.hops) {
       const count = Math.abs(by) / unit2;
-      const whole = near(count, Math.round(count), count);
-      if (!whole && !loose2 || Math.ceil(count - 1e-9) > NUMBER_LINE_LIMITS.hops) {
+      const whole2 = near(count, Math.round(count), count);
+      if (!whole2 && !loose2 || Math.ceil(count - 1e-9) > NUMBER_LINE_LIMITS.hops) {
         fail4(`${jumpPath}/hops`, `A jump drawn hop by hop moves a whole number of the smallest ticks, at most ${NUMBER_LINE_LIMITS.hops}`);
       }
     }
@@ -8976,10 +8976,10 @@ function validateBaseTenTradeContent(raw, path, fail4, options = {}) {
 function baseTenMat(raw) {
   const content = raw;
   const columns = content.columns === 3 ? 3 : 2;
-  const whole = (value2) => typeof value2 === "number" && Number.isFinite(value2) ? Math.max(0, Math.round(value2)) : 0;
+  const whole2 = (value2) => typeof value2 === "number" && Number.isFinite(value2) ? Math.max(0, Math.round(value2)) : 0;
   const places = Array.isArray(content.places) ? content.places : [];
-  const counts = Array.from({ length: columns }, (_, p) => Math.min(whole(places[p]?.count), columns === 2 && p === 1 ? 9 : BASE_TEN_TRADE_LIMITS.drawn[p]));
-  const trays = Array.from({ length: columns - 1 }, (_, p) => Math.min(whole(places[p]?.tray), counts[p], BASE_TEN_TRADE_LIMITS.tray));
+  const counts = Array.from({ length: columns }, (_, p) => Math.min(whole2(places[p]?.count), columns === 2 && p === 1 ? 9 : BASE_TEN_TRADE_LIMITS.drawn[p]));
+  const trays = Array.from({ length: columns - 1 }, (_, p) => Math.min(whole2(places[p]?.tray), counts[p], BASE_TEN_TRADE_LIMITS.tray));
   return { columns, counts, trays };
 }
 var set = (values, index, value2) => values.map((x, i) => i === index ? value2 : x);
@@ -14568,23 +14568,22 @@ var MATH_RECIPES = {
     revised_by_program: true,
     model_guidance: "\u5206\u6570\u7B49\u5206\u56FE\uFF1Afractions\u5199\u5206\u5B50\u5206\u6BCD\u7684\u503C\uFF1Bview\uFF1Aone\u3001compare\u4E24\u4E2A\u3001equivalent\u7B49\u503C\u3001split\u628A\u6BCF\u4EFD\u518D\u5206split_each_part\u4EFD\u6C42\u6BCF\u4EFD\u3001share\u628Aa\u4E2A\u6574\u4F53\u5E73\u5206\u7ED9b\u4EFD\u5199a/b\uFF1Bshape\uFF1Abar/circle/grid\uFF08\u767E\u5206\u4E4B\u51E0\u7528grid\uFF09\uFF1B\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5206\u3001\u4E00\u7EC4\u7269\u4F53\u7684\u51E0\u5206\u4E4B\u51E0\u3001\u6BD4\uFF1B\u5927\u4E8E1\u5199\u4E00\u4E2A\u5047\u5206\u6570"
   },
-  // OLL decision 0023 (a trial): the model writes the question's pile and a practice pile as six whole
-  // numbers; the program draws the mat, demonstrates the trades in its own words and writes the practice.
+  // OLL decision 0023 (a trial), rebuilt 2026-11-23: the trading mat on lesson numbers.
   base_ten_trade: {
     parts: ["whole", "ones", "tens", "hundreds"],
-    number_inputs: [],
-    number_input_policies: [],
-    parameter_names: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
-    model_parameter_names: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
-    // All six, every time: an unused field left to the model was filled with runaway numbers (fraction probe 1).
-    required_model_schema_parameters: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
-    semantic_parameters: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
+    // The pile is lesson numbers, as every earlier component's values are (owner, 2026-11-23): the model
+    // declares them in the outline, moves them in its own moments and writes the practice.
+    number_inputs: ["loose_ones", "tens", "hundreds"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: [],
+    model_parameter_names: [],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
     output_kinds: ["base_ten_trade"],
+    // The counts change by taps only, never by a slider (OLL 0023).
     student_controls: [],
-    required_features: ["place_value_trading"],
-    // The card binds counts the program creates; the lesson taps and animates them.
-    variables_by_program: true,
-    model_guidance: "\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF1Alesson_*\u7167\u9898\u76EE\u5199\u4E00\u3001\u5341\u3001\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u51990\uFF09\uFF0Cpractice_*\u53E6\u5199\u4E00\u5806\uFF08\u4F4D\u6570\u540C\u3001\u603B\u6570\u4E0D\u540C\uFF09\uFF1B\u7A0B\u5E8F\u6F14\u793A\u4EA4\u6362\u5E76\u51FA\u9898\uFF1B\u65C1\u767D\u8BF4\u9898\u76EE\u548C\u6362\u5B8C\u7684\u7ED3\u679C\uFF0C\u4E0D\u8BF4\u7EC3\u4E60\u7684\u6570\uFF0C\u4E0D\u5199\u5173\u4E8E\u8FD9\u4E9B\u65B9\u5757\u7684\u9898"
+    required_features: ["trade_ten_for_one"],
+    model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF08\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\uFF09\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF08\u9898\u76EE\u6709\u767E\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF09\uFF0C\u7167\u9898\u76EE\u5199\uFF1B\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u767E\u540C\u7406\u52A8\u753B\u201C\u5341\u201D\u3002\u7EC3\u4E60\u53EF\u8BA9\u5B69\u5B50\u628A\u201C\u4E00\u201D\u6362\u5230\u4E0D\u80FD\u518D\u6362\uFF1B\u53E6\u51FA\u65B0\u9898\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -14758,16 +14757,6 @@ var MATH_SCHEMA_PROPERTIES = {
     // as "split" the model wrote the number of parts there ("split": "6" for sixths) and left out the fractions
     // (probe 2).
     split_each_part: { enum: ["2", "3", "4", "5", "6"] }
-  },
-  base_ten_trade: {
-    // Ones first, so a tens-and-ones question writes the hundreds last, as 0 (0023 §4). Bounded by the mat's
-    // starting limits; the compiler checks the piles together.
-    lesson_ones: { type: "integer", minimum: 0, maximum: 59 },
-    lesson_tens: { type: "integer", minimum: 0, maximum: 19 },
-    lesson_hundreds: { type: "integer", minimum: 0, maximum: 9 },
-    practice_ones: { type: "integer", minimum: 0, maximum: 59 },
-    practice_tens: { type: "integer", minimum: 0, maximum: 19 },
-    practice_hundreds: { type: "integer", minimum: 0, maximum: 9 }
   },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
@@ -15199,16 +15188,6 @@ var RECIPE_SCHEMA_PROPERTIES = Object.assign(
   ...INSTALLED_PLUGINS.map((plugin) => plugin.schema_properties)
 );
 var SCHEMA_PROPERTY_ORDER = [
-  // The trading mat trial recipe (decision 0023): its six numbers first. The first combined reply's schema
-  // lists every offered recipe's fields and requires none, and fields written late were left out (fraction
-  // probe 2), so the mat's values come before everything; ones first, so a tens-and-ones question writes the
-  // hundreds last, as 0. Requests without the trial do not list them, so their order is unchanged.
-  "lesson_ones",
-  "lesson_tens",
-  "lesson_hundreds",
-  "practice_ones",
-  "practice_tens",
-  "practice_hundreds",
   "title",
   "projection",
   "x_label",
@@ -16596,6 +16575,79 @@ function validateTeachingClaims(plan) {
   }
 }
 
+// src/plugins/base-ten-moves.ts
+var BASE_TEN_DRAWN = [59, 34, 9];
+var BASE_TEN_START = [59, 19, 9];
+var whole = (value2) => Number.isInteger(value2) && value2 >= 0;
+function baseTenValue(values) {
+  return (values[0] ?? 0) + 10 * (values[1] ?? 0) + 100 * (values[2] ?? 0);
+}
+function baseTenColumns(values) {
+  return (values[2] ?? 0) > 0 || baseTenValue(values) >= 100 ? 3 : 2;
+}
+function baseTenStartFault(values) {
+  if (values.length < 2 || values.length > 3) return "the mat takes two or three lesson numbers: the loose ones, the tens, and the hundreds when the question has them";
+  const names = ["loose ones", "tens", "hundreds"];
+  for (const [p, value3] of values.entries()) {
+    if (!whole(value3)) return `the ${names[p]} are a whole number (0 when the question has none)`;
+    if (value3 > BASE_TEN_START[p]) return `a pile starts with at most ${BASE_TEN_START[p]} ${names[p]}`;
+  }
+  const value2 = baseTenValue(values);
+  if (value2 > 999) return "after trading a pile has at most 9 hundreds (999)";
+  if (value2 < 10) return `a pile of ${value2} has no ten to make: the mat is for numbers of ten or more`;
+  return void 0;
+}
+function baseTenState(start) {
+  return baseTenColumns(start) === 3 ? [start[0] ?? 0, start[1] ?? 0, start[2] ?? 0] : [start[0] ?? 0, start[1] ?? 0];
+}
+function baseTenMove(state, position, to) {
+  const next = [...state];
+  const from = state[position];
+  if (from === void 0) return to === 0 ? next : "this pile has tens and ones only: its hundreds stay 0";
+  if (to === from) return next;
+  if (!whole(to)) return "blocks are counted in whole numbers";
+  const reachable = Array.from({ length: Math.floor(from / 10) }, (_, k) => from - 10 * (k + 1));
+  if (position === 0) {
+    if (to > from) return `the loose ones only go down, ten at a time, as they are traded for tens: they are ${from} now`;
+    if ((from - to) % 10 !== 0) {
+      return reachable.length ? `the loose ones go down by tens (each ten ones become one ten): from ${from} they can be ${reachable.join(" or ")}` : `there are only ${from} loose ones: no ten to trade`;
+    }
+    const tens = state[1] + (from - to) / 10;
+    if (tens > (state.length === 2 ? 9 : BASE_TEN_DRAWN[1])) return `the mat cannot hold ${tens} tens`;
+    next[0] = to;
+    next[1] = tens;
+    return next;
+  }
+  if (position === 1) {
+    if (to > from) return `the tens rise by themselves when ones are traded: animate the loose ones down by tens, and the tens follow (they are ${from} now)`;
+    if (state.length === 2) return "this mat has tens and ones only: the tens are not traded";
+    if ((from - to) % 10 !== 0) {
+      return reachable.length ? `the tens go down by tens (each ten tens become one hundred): from ${from} they can be ${reachable.join(" or ")}` : `there are only ${from} tens: no hundred to make`;
+    }
+    const hundreds = state[2] + (from - to) / 10;
+    if (hundreds > BASE_TEN_DRAWN[2]) return `the mat cannot hold ${hundreds} hundreds`;
+    next[1] = to;
+    next[2] = hundreds;
+    return next;
+  }
+  return `the hundreds rise by themselves when tens are traded: animate the tens down by tens (the hundreds are ${from} now)`;
+}
+function baseTenMoves(state, moves) {
+  const steps = [];
+  let current = [...state];
+  for (const move of [...moves].sort((a, b) => a.position - b.position)) {
+    const result = baseTenMove(current, move.position, move.to);
+    if (typeof result === "string") return { refused: { position: move.position, reason: result } };
+    steps.push({ position: move.position, from: current, to: result });
+    current = result;
+  }
+  return { steps };
+}
+function baseTenTraded(state) {
+  const value2 = baseTenValue(state);
+  return state.length === 3 ? [value2 % 10, Math.floor(value2 / 10) % 10, Math.floor(value2 / 100)] : [value2 % 10, Math.floor(value2 / 10)];
+}
+
 // src/plugins/math-hooks.ts
 function separateInitialSamples(visual, plan, sectionIndex) {
   const words = plan.sections[sectionIndex].moments.map((moment) => moment.narration).join(" ");
@@ -16696,6 +16748,23 @@ var MATH_HOOKS = {
       if (second.fraction_view === "share" && a.denominator === 1 && a.numerator === b.numerator) return 1;
       return void 0;
     }
+  },
+  base_ten_trade: {
+    // The mat's counts run from 0 to the most it draws and have no slider: they change only by trades
+    // (OLL 0023's tap rule). The starting values stay as the model wrote them; the compiler checks them.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return /* @__PURE__ */ new Map();
+      const columns = baseTenColumns(definitions.map((definition) => definition.initial));
+      definitions.forEach((definition, place5) => {
+        definition.min = 0;
+        definition.max = columns === 2 && place5 === 1 ? 9 : BASE_TEN_DRAWN[place5] ?? 0;
+        delete definition.student_control;
+      });
+      return new Map(numbers.map((number) => [number, 0]));
+    },
+    number_moves: { state: baseTenState, moves: baseTenMoves }
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
@@ -16846,10 +16915,10 @@ function namesToNumbers(formula, labels, visualNumbers) {
     const lower = name.toLowerCase();
     return lower === "x" || lower === "pi" || lower === "e" || /^n\d+$/u.test(lower) || formulaFunctions.has(lower);
   };
-  return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset, whole) => {
+  return left + right.replace(/n\d+|[A-Za-z_]+/giu, (name, offset, whole2) => {
     if (known(name)) return name;
-    if (/^\s*\d/u.test(whole.slice(offset + name.length))) return name;
-    if (/[0-9.]/u.test(whole[offset - 1] ?? "") && /^e/iu.test(name)) return name;
+    if (/^\s*\d/u.test(whole2.slice(offset + name.length))) return name;
+    if (/[0-9.]/u.test(whole2[offset - 1] ?? "") && /^e/iu.test(name)) return name;
     const matches = visualNumbers.filter((number) => symbol(labels[number - 1] ?? "") === name);
     return matches.length === 1 ? `n${matches[0]}` : name;
   });
@@ -17439,6 +17508,7 @@ function resolveLessonPlan(value2, options = {}) {
   const references = [];
   const visuallyBoundNumbers = /* @__PURE__ */ new Set();
   const requiredVisualNumberUses = [];
+  const cardMovedNumbers2 = /* @__PURE__ */ new Set();
   const resolvedSections = [];
   const resolveReference = (raw, path, sectionIndex, momentIndex) => {
     const ref = validateReference(raw, path);
@@ -17552,6 +17622,7 @@ function resolveLessonPlan(value2, options = {}) {
             const visualContent = content;
             const boundNumbers = RECIPE_HOOKS[visualContent.capability]?.bound_numbers?.(visualContent);
             for (const number of boundNumbers ?? visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
+            if (RECIPE_HOOKS[visualContent.capability]?.number_moves) for (const number of visualContent.numbers ?? []) cardMovedNumbers2.add(number);
           }
           boardItemIndex += 1;
           const id = `section-${pad3(sectionIndex)}-moment-${pad3(momentIndex)}-item-${pad3(boardItemIndex)}`;
@@ -17624,7 +17695,7 @@ function resolveLessonPlan(value2, options = {}) {
           if (number > rawNumbers.length) fail3("LESSON_PLAN_NUMBER_REFERENCE", `${itemPath}.number`, "number reference is unavailable");
           const end = finiteNumber(action.end_value, `${itemPath}.end_value`);
           const definition = record4(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
-          if (end < Number(definition.min) || end > Number(definition.max)) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.end_value`, "animation end is outside the number range");
+          if (!cardMovedNumbers2.has(number) && (end < Number(definition.min) || end > Number(definition.max))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.end_value`, "animation end is outside the number range");
           if (action.easing !== void 0 && !["linear", "ease_in_out"].includes(String(action.easing))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.easing`, "unsupported easing");
           if (action.duration_intent !== void 0 && !["brief", "normal", "extended"].includes(String(action.duration_intent))) fail3("LESSON_PLAN_ANIMATION", `${itemPath}.duration_intent`, "unsupported duration intent");
           optionalTiming(action.timing, `${itemPath}.timing`);
@@ -18267,12 +18338,7 @@ var CompiledVisualRegistry = class {
       // A visual's own slider goes with its card: kept when the card is written, dropped when an earlier
       // identical card is shown instead (that card's slider is already in the lesson).
       ...visual.variables && !visual.actions.some((action) => action.do === "write" && reused.has(action.as)) ? { variables: visual.variables } : {},
-      // What the program adds for a card goes with the card, as its slider does.
-      ...!visual.actions.some((action) => action.do === "write" && reused.has(action.as)) ? {
-        ...visual.program_beats ? { program_beats: visual.program_beats } : {},
-        ...visual.program_tasks ? { program_tasks: visual.program_tasks } : {},
-        ...visual.owns_practice ? { owns_practice: true } : {}
-      } : {}
+      ...visual.mover ? { mover: visual.mover } : {}
     };
   }
 };
@@ -19571,8 +19637,8 @@ function numberLineFrame(values, grid, shown, labelStyle, path, fit = "margin") 
   const span2 = max - min;
   const holdAll = (count, of) => of.every((value2) => onGrid(value2 / count, 1));
   const ticksFor = (of) => {
-    const whole = [1, ...COARSE_UNITS].find((count) => span2 / count <= 60 && holdAll(count, of));
-    if (whole) return { step: whole, subdivisions: 1 };
+    const whole2 = [1, ...COARSE_UNITS].find((count) => span2 / count <= 60 && holdAll(count, of));
+    if (whole2) return { step: whole2, subdivisions: 1 };
     const parts = NUMBER_LINE_SPLITS.find((count) => of.every((value2) => onGrid(value2, count)) && span2 * count <= NUMBER_LINE_LIMITS.ticks);
     return parts ? { step: 1, subdivisions: parts } : void 0;
   };
@@ -19771,10 +19837,10 @@ function compileNumberLine(base, content, role, placement, plan, path) {
   const frame = numberLineFrame(values, grid, shown, labelStyle, path);
   const { step, subdivisions } = frame;
   const unit2 = step / subdivisions;
-  const whole = (value2) => onGrid(value2 / unit2, 1);
+  const whole2 = (value2) => onGrid(value2 / unit2, 1);
   const reach = change ? Math.max(Math.abs(change.min), Math.abs(change.max)) : 0;
   const sliderStep = change?.student_control?.step;
-  const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every(whole) && (sliderStep === void 0 || whole(sliderStep)) && Math.ceil(reach / unit2 - 1e-9) <= NUMBER_LINE_LIMITS.hops;
+  const hopsFit = change !== void 0 && [change.min, change.max, change.initial].every(whole2) && (sliderStep === void 0 || whole2(sliderStep)) && Math.ceil(reach / unit2 - 1e-9) <= NUMBER_LINE_LIMITS.hops;
   const hops = hopsFit;
   const startVariable = startNumber ? variableAlias(startNumber) : void 0;
   const changeVariable = changeNumber ? variableAlias(changeNumber) : void 0;
@@ -19827,10 +19893,10 @@ function compileNumberLineSteps(base, content, role, placement, plan, path) {
   ];
   const frame = numberLineFrame(values, grid, shown, labelStyle, path);
   const unit2 = frame.step / frame.subdivisions;
-  const whole = (value2) => onGrid(value2 / unit2, 1);
+  const whole2 = (value2) => onGrid(value2 / unit2, 1);
   const takes = moves.map((move, position) => move.student_control ? [move.min, move.max, move.initial] : [move.initial, ...lessonValues(plan, moveNumbers[position])]);
   const oneWay = takes.every((values2) => values2.every((value2) => value2 >= 0)) || takes.every((values2) => values2.every((value2) => value2 <= 0));
-  const hops = oneWay && moves.every((move, position) => takes[position].every(whole) && (move.student_control?.step === void 0 || whole(move.student_control.step)) && Math.ceil(Math.max(...takes[position].map(Math.abs)) / unit2 - 1e-9) <= NUMBER_LINE_LIMITS.hops);
+  const hops = oneWay && moves.every((move, position) => takes[position].every(whole2) && (move.student_control?.step === void 0 || whole2(move.student_control.step)) && Math.ceil(Math.max(...takes[position].map(Math.abs)) / unit2 - 1e-9) <= NUMBER_LINE_LIMITS.hops);
   const startVariable = variableAlias(startNumber);
   const moveVariables = moveNumbers.map((number) => variableAlias(number));
   const sum = (count) => [startVariable, ...moveVariables.slice(0, count)].map((name) => `(${name})`).join("+");
@@ -20162,172 +20228,94 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   });
   return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
 }
-var BASE_TEN_FIELDS = ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"];
 var BASE_TEN_PLACE_NAMES = ["ones", "tens", "hundreds"];
-var pileValue = ([h, t, o]) => h * 100 + t * 10 + o;
-var digitCount = (value2) => value2 >= 100 ? 3 : value2 >= 10 ? 2 : 1;
 var BASE_TEN_TEXT = {
-  "en-US": {
-    title: ["Tens and ones", "Hundreds, tens and ones"],
-    fill: ["Ten ones make one ten. Put ones in the tray, one at a time.", "Ten tens make one hundred. Put tens in the tray, one at a time."],
-    make: ["The tray is full: ten ones. Make a ten!", "The tray is full: ten tens. Make a hundred!"],
-    rest: ["The other ones trade the same way: every ten ones make one ten.", "The other tens trade the same way: every ten tens make one hundred."],
-    variable: ["ones", "ones in the tray", "tens", "tens in the tray", "hundreds"],
-    trade: ["Your turn. Make tens until you can't, then tap I'm done.", "Your turn. Make tens and hundreds until you can't, then tap I'm done."],
-    tradeHint: ["Put ten ones in the tray, then tap Make a ten.", "Put ten ones in the tray, then tap Make a ten. Ten tens make a hundred the same way."],
-    number: "How many are on the mat?",
-    numberHint: ["Count the tens by tens, then the ones.", "Count the hundreds by hundreds, the tens by tens, then the ones."],
-    counts: ["How many of each are on the mat?", "How many of each are on the mat?"],
-    countsHint: "Count what is in each column.",
-    words: ["ones", "tens", "hundreds"],
-    parts: "What is each place worth?",
-    partsHint: ["Each ten is worth ten.", "Each ten is worth ten, and each hundred is worth one hundred."],
-    labels: ["the ones are worth", "the tens are worth", "the hundreds are worth"]
-  },
-  "zh-CN": {
-    title: ["\u5341\u548C\u4E00", "\u767E\u3001\u5341\u548C\u4E00"],
-    fill: ["\u5341\u4E2A\u4E00\u662F\u4E00\u4E2A\u5341\u3002\u5148\u628A\u5341\u4E2A\u4E00\u653E\u8FDB\u6258\u76D8\uFF0C\u4E00\u6B21\u653E\u4E00\u4E2A\u3002", "\u5341\u4E2A\u5341\u662F\u4E00\u4E2A\u767E\u3002\u5148\u628A\u5341\u4E2A\u5341\u653E\u8FDB\u6258\u76D8\uFF0C\u4E00\u6B21\u653E\u4E00\u4E2A\u3002"],
-    make: ["\u6258\u76D8\u6EE1\u4E86\uFF1A\u5341\u4E2A\u4E00\u3002\u6362\u6210\u4E00\u4E2A\u5341\uFF01", "\u6258\u76D8\u6EE1\u4E86\uFF1A\u5341\u4E2A\u5341\u3002\u6362\u6210\u4E00\u4E2A\u767E\uFF01"],
-    rest: ["\u5269\u4E0B\u7684\u4E00\u4E5F\u8FD9\u6837\u6362\uFF0C\u6BCF\u5341\u4E2A\u4E00\u6362\u6210\u4E00\u4E2A\u5341\u3002", "\u5269\u4E0B\u7684\u5341\u4E5F\u8FD9\u6837\u6362\uFF0C\u6BCF\u5341\u4E2A\u5341\u6362\u6210\u4E00\u4E2A\u767E\u3002"],
-    variable: ["\u4E2A\u4E00", "\u6258\u76D8\u91CC\u7684\u4E00", "\u4E2A\u5341", "\u6258\u76D8\u91CC\u7684\u5341", "\u4E2A\u767E"],
-    trade: ["\u8F6E\u5230\u4F60\u4E86\u3002\u80FD\u6362\u5C31\u4E00\u76F4\u6362\uFF0C\u6362\u4E0D\u4E86\u4E86\u5C31\u70B9\u201C\u6211\u505A\u5B8C\u4E86\u201D\u3002", "\u8F6E\u5230\u4F60\u4E86\u3002\u80FD\u6362\u5C31\u4E00\u76F4\u6362\uFF0C\u6362\u4E0D\u4E86\u4E86\u5C31\u70B9\u201C\u6211\u505A\u5B8C\u4E86\u201D\u3002"],
-    tradeHint: ["\u628A\u5341\u4E2A\u4E00\u653E\u8FDB\u6258\u76D8\uFF0C\u518D\u70B9\u201C\u6362\u6210\u4E00\u4E2A\u5341\u201D\u3002", "\u628A\u5341\u4E2A\u4E00\u653E\u8FDB\u6258\u76D8\uFF0C\u518D\u70B9\u201C\u6362\u6210\u4E00\u4E2A\u5341\u201D\u3002\u5341\u4E2A\u5341\u4E5F\u8FD9\u6837\u6362\u6210\u4E00\u4E2A\u767E\u3002"],
-    number: "\u8FD9\u4E9B\u65B9\u5757\u4E00\u5171\u662F\u591A\u5C11\uFF1F",
-    numberHint: ["\u5148\u5341\u4E2A\u5341\u4E2A\u5730\u6570\uFF0C\u518D\u4E00\u4E2A\u4E00\u4E2A\u5730\u6570\u3002", "\u5148\u4E00\u767E\u4E00\u767E\u5730\u6570\uFF0C\u518D\u5341\u4E2A\u5341\u4E2A\u5730\u6570\uFF0C\u6700\u540E\u4E00\u4E2A\u4E00\u4E2A\u5730\u6570\u3002"],
-    counts: ["\u5404\u6709\u51E0\u4E2A\u5341\u3001\u51E0\u4E2A\u4E00\uFF1F", "\u5404\u6709\u51E0\u4E2A\u767E\u3001\u51E0\u4E2A\u5341\u3001\u51E0\u4E2A\u4E00\uFF1F"],
-    countsHint: "\u6570\u4E00\u6570\u6BCF\u4E00\u4F4D\u4E0A\u6709\u51E0\u4E2A\u3002",
-    words: ["\u4E2A\u4E00", "\u4E2A\u5341", "\u4E2A\u767E"],
-    parts: "\u6BCF\u4E00\u4F4D\u8868\u793A\u591A\u5C11\uFF1F",
-    partsHint: ["\u4E00\u4E2A\u5341\u8868\u793A\u5341\u3002", "\u4E00\u4E2A\u5341\u8868\u793A\u5341\uFF0C\u4E00\u4E2A\u767E\u8868\u793A\u4E00\u767E\u3002"],
-    labels: ["\u4E2A\u4F4D\u8868\u793A", "\u5341\u4F4D\u8868\u793A", "\u767E\u4F4D\u8868\u793A"]
-  }
+  "en-US": { title: ["Tens and ones", "Hundreds, tens and ones"], tray: ["ones in the tray", "tens in the tray"], hundreds: "hundreds" },
+  "zh-CN": { title: ["\u5341\u548C\u4E00", "\u767E\u3001\u5341\u548C\u4E00"], tray: ["\u6258\u76D8\u91CC\u7684\u4E00", "\u6258\u76D8\u91CC\u7684\u5341"], hundreds: "\u4E2A\u767E" }
 };
-function baseTenPiles(input, path) {
-  const read = (field) => {
-    const value2 = input[field];
-    if (typeof value2 !== "number" || !Number.isInteger(value2) || value2 < 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${field}`, "write a whole number (0 when the question has none of that place)");
-    return value2;
-  };
-  const values = Object.fromEntries(BASE_TEN_FIELDS.map((field) => [field, read(field)]));
-  const lesson = [values.lesson_hundreds, values.lesson_tens, values.lesson_ones];
-  const practice = [values.practice_hundreds, values.practice_tens, values.practice_ones];
-  const [mostHundreds, mostTens, mostOnes] = [BASE_TEN_TRADE_LIMITS.start[2], BASE_TEN_TRADE_LIMITS.start[1], BASE_TEN_TRADE_LIMITS.start[0]];
-  for (const [name, pile] of [["lesson", lesson], ["practice", practice]]) {
-    const [h, t, o] = pile;
-    if (o > mostOnes) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_ones`, `a pile starts with at most ${mostOnes} loose ones`);
-    if (t > mostTens) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_tens`, `a pile starts with at most ${mostTens} tens`);
-    if (h > mostHundreds) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_hundreds`, `a pile starts with at most ${mostHundreds} hundreds`);
-    if (pileValue(pile) > 999) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_hundreds`, "after trading a pile has at most 9 hundreds (999)");
-    if (pileValue(pile) < 10) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_ones`, `a pile of ${pileValue(pile)} has no ten to make: the mat is for numbers of ten or more`);
-  }
-  const columns = pileValue(lesson) >= 100 || lesson[0] > 0 ? 3 : 2;
-  if (pileValue(practice) === pileValue(lesson)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_ones`, `the practice pile makes ${pileValue(lesson)} too: write a pile with another number`);
-  if (digitCount(pileValue(practice)) !== digitCount(pileValue(lesson))) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_ones`, `the practice pile makes ${pileValue(practice)}: write one with as many places as ${pileValue(lesson)}`);
-  }
-  if (columns === 2 && practice[0] > 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_hundreds`, "a tens-and-ones lesson practises without hundreds");
-  for (const [name, pile] of [["lesson", lesson], ["practice", practice]]) {
-    validateBaseTenTradeContent(
-      { columns, places: [{ as: "ones", count: pile[2], tray: 0 }, { as: "tens", count: pile[1], ...columns === 3 ? { tray: 0 } : {} }, ...columns === 3 ? [{ as: "hundreds", count: pile[0] }] : []] },
-      `${path}.${name}`,
-      (at2, message) => fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, message)
-    );
-  }
-  return { lesson, practice, columns };
-}
 function compileBaseTenTrade(base, content, role, placement, plan, path) {
-  const input = parameters(content);
-  allowParameterKeys(input, [...BASE_TEN_FIELDS], path);
-  if ((content.numbers?.length ?? 0) > 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "the mat's piles are written in its six whole numbers; it uses no lesson numbers");
-  const pilesOf = (content2) => JSON.stringify(BASE_TEN_FIELDS.map((field) => parameters(content2)[field]));
-  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "base_ten_trade");
-  if (first && pilesOf(first.content) !== pilesOf(content)) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "a lesson has one trading mat: write the same two piles each time, or show the other pile in words");
+  allowParameterKeys(parameters(content), [], path);
+  const numbers = content.numbers ?? [];
+  const start = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
+  const fault = baseTenStartFault(start);
+  if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault);
+  const sharing = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "base_ten_trade" && (action.content.numbers ?? []).some((number) => numbers.includes(number)));
+  if (sharing) {
+    fail2("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${sharing.content.capability} visual shows one of them; show the pile on the mat only, or in words`);
   }
-  const { lesson, practice, columns } = baseTenPiles(input, path);
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "base_ten_trade");
+  if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one trading mat: use the same lesson numbers each time, or show another pile in words");
+  }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text5 = BASE_TEN_TEXT[language];
-  const wide = columns === 3 ? 1 : 0;
+  const state = baseTenState(start);
+  const columns = state.length;
   const stem = base.replace(/[^A-Za-z0-9]+/gu, "_");
-  const names = [`${stem}_ones`, `${stem}_tray_ones`, `${stem}_tens`, `${stem}_tray_tens`, `${stem}_hundreds`];
-  const drawn = BASE_TEN_TRADE_LIMITS.drawn;
+  const counts = state.map((_, place5) => numbers[place5] !== void 0 ? variableAlias(numbers[place5]) : `${stem}_hundreds`);
+  const trays = [`${stem}_tray_ones`, `${stem}_tray_tens`].slice(0, columns - 1);
   const variables = [
-    { as: names[0], initial: lesson[2], min: 0, max: drawn[0], label: text5.variable[0] },
-    { as: names[1], initial: 0, min: 0, max: BASE_TEN_TRADE_LIMITS.tray, label: text5.variable[1] },
-    { as: names[2], initial: lesson[1], min: 0, max: columns === 2 ? 9 : drawn[1], label: text5.variable[2] },
-    ...columns === 3 ? [
-      { as: names[3], initial: 0, min: 0, max: BASE_TEN_TRADE_LIMITS.tray, label: text5.variable[3] },
-      { as: names[4], initial: lesson[0], min: 0, max: drawn[2], label: text5.variable[4] }
-    ] : []
+    ...trays.map((as, place5) => ({ as, initial: 0, min: 0, max: BASE_TEN_TRADE_LIMITS.tray, label: text5.tray[place5] })),
+    ...columns === 3 && numbers[2] === void 0 ? [{ as: counts[2], initial: 0, min: 0, max: BASE_TEN_TRADE_LIMITS.drawn[2], label: text5.hundreds }] : []
   ];
   const built = buildBaseTenTrade({
     as: base,
     role,
     place: placement,
-    title: text5.title[wide],
+    title: text5.title[columns - 2],
     ...language === "zh-CN" ? { language } : {},
     columns,
-    places: [
-      { count: { expression: names[0], initial: lesson[2] }, tray: { expression: names[1], initial: 0 } },
-      { count: { expression: names[2], initial: lesson[1] }, ...columns === 3 ? { tray: { expression: names[3], initial: 0 } } : {} },
-      ...columns === 3 ? [{ count: { expression: names[4], initial: lesson[0] } }] : []
-    ]
+    places: state.map((count, place5) => ({
+      count: { expression: counts[place5], initial: count },
+      ...place5 < columns - 1 ? { tray: { expression: trays[place5], initial: 0 } } : {}
+    }))
   });
-  const beats = [];
-  const counts = [lesson[2], lesson[1], lesson[0]];
-  for (let p = 0; p < columns - 1; p += 1) {
-    if (counts[p] < 10) continue;
-    const at2 = BASE_TEN_PLACE_NAMES[p];
-    beats.push({ key: "fill", say: text5.fill[p], actions: Array.from({ length: 10 }, () => ({ do: "tap", target: base, tap: "gather", at: at2 })) });
-    beats.push({ key: "make", say: text5.make[p], actions: [{ do: "tap", target: base, tap: "make", at: at2 }] });
-    counts[p] = counts[p] - 10;
-    counts[p + 1] = counts[p + 1] + 1;
-    if (counts[p] >= 10) {
-      const trades = Math.floor(counts[p] / 10);
-      counts[p] = counts[p] - 10 * trades;
-      counts[p + 1] = counts[p + 1] + trades;
-      beats.push({ key: "rest", say: text5.rest[p], actions: Array.from({ length: trades }, () => [
-        { do: "animate", variable: names[p === 0 ? 1 : 3], value: 10, duration_intent: "brief" },
-        { do: "tap", target: base, tap: "make", at: at2 }
-      ]).flat() });
+  const shown = /* @__PURE__ */ new Set();
+  return {
+    actions: built.actions,
+    whole: built.whole,
+    parts: new Map(Object.entries(built.parts)),
+    variables,
+    mover: {
+      numbers: [...numbers],
+      play(steps, room) {
+        const actions = [];
+        const tradesOf = (step) => ((step.from[step.position] ?? 0) - (step.to[step.position] ?? 0)) / 10;
+        const quick = (from) => 2 * steps.slice(from).reduce((sum, step) => sum + tradesOf(step), 0);
+        for (const [index, step] of steps.entries()) {
+          const place5 = step.position;
+          const at2 = BASE_TEN_PLACE_NAMES[place5];
+          let trades = tradesOf(step);
+          if (trades > 0 && !shown.has(place5) && actions.length + 9 + quick(index) <= room) {
+            shown.add(place5);
+            trades -= 1;
+            for (let tap = 0; tap < 10; tap += 1) actions.push({ do: "tap", target: base, tap: "gather", at: at2 });
+            actions.push({ do: "tap", target: base, tap: "make", at: at2 });
+          }
+          for (; trades > 0; trades -= 1) {
+            actions.push({ do: "animate", variable: trays[place5], value: 10, duration_intent: "brief" });
+            actions.push({ do: "tap", target: base, tap: "make", at: at2 });
+          }
+        }
+        return actions;
+      },
+      task(position, value2) {
+        const traded = baseTenTraded(state);
+        if (traded.every((count, place5) => count === state[place5])) return { drop: "this pile has no trade to make" };
+        if (Math.abs(value2 - (traded[position] ?? 0)) > 1e-6) {
+          return { refuse: `when every trade is made the ${BASE_TEN_PLACE_NAMES[position]} are ${traded[position] ?? 0}: ask the learner to trade until then (the task ends when no trade is left)` };
+        }
+        return {
+          task: {
+            // The mat starts again from the lesson's pile, trays empty; the learner trades and says done.
+            start: { kind: "practice", variables: [...counts, ...trays], values: Object.fromEntries([...counts.map((as, place5) => [as, state[place5]]), ...trays.map((as) => [as, 0])]) },
+            allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
+            completion: { kind: "card_fact", node: base, fact: "no_trade_left" }
+          }
+        };
+      }
     }
-  }
-  const value2 = pileValue(practice);
-  const digits = digitCount(value2);
-  const high = Array.from({ length: digits }, (_, i) => digits - 1 - i);
-  const digit = (p) => Math.floor(value2 / 10 ** p) % 10;
-  const after = { kind: "after_lesson" };
-  const tasks = [
-    {
-      as: `${base}-trade`,
-      start: { kind: "practice", variables: variables.map((variable) => variable.as), values: Object.fromEntries([[names[0], practice[2]], [names[1], 0], [names[2], practice[1]], ...columns === 3 ? [[names[3], 0], [names[4], practice[0]]] : []]) },
-      prompt: text5.trade[wide],
-      availability: after,
-      allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
-      completion: { kind: "card_fact", node: base, fact: "no_trade_left" },
-      hints: [text5.tradeHint[wide]]
-    },
-    { as: `${base}-number`, anchor: base, prompt: text5.number, availability: after, allowed_operations: [{ kind: "answer_entry" }], completion: { kind: "numeric_answer", answer: String(value2) }, hints: [text5.numberHint[wide]] },
-    {
-      as: `${base}-counts`,
-      anchor: base,
-      prompt: text5.counts[wide],
-      availability: after,
-      allowed_operations: [{ kind: "row_entry" }],
-      completion: { kind: "numeric_row", parts: high.flatMap((p) => [{ blank: { as: `${BASE_TEN_PLACE_NAMES[p]}`, answer: String(digit(p)) } }, { text: text5.words[p] }]) },
-      hints: [text5.countsHint]
-    },
-    {
-      as: `${base}-parts`,
-      anchor: base,
-      prompt: text5.parts,
-      availability: after,
-      allowed_operations: [{ kind: "row_entry" }],
-      completion: { kind: "numeric_row", parts: [{ text: `${value2} =` }, ...high.flatMap((p, i) => [...i ? [{ text: "+" }] : [], { blank: { as: `${BASE_TEN_PLACE_NAMES[p]}-part`, answer: String(digit(p) * 10 ** p), label: text5.labels[p] } }])] },
-      hints: [text5.partsHint[wide]]
-    }
-  ];
-  return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)), variables, program_beats: beats, program_tasks: tasks, owns_practice: true };
+  };
 }
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
@@ -20487,8 +20475,8 @@ var mul2 = (a, b) => fraction2(a.n * b.n, a.d * b.d);
 var div = (a, b) => b.n === 0n ? void 0 : fraction2(a.n * b.d, a.d * b.n);
 function decimal(text5, negative) {
   const plain2 = text5.replace(/,/g, "");
-  const [whole, part = ""] = plain2.split(".");
-  const n = BigInt(`${whole}${part}`) * (negative ? -1n : 1n);
+  const [whole2, part = ""] = plain2.split(".");
+  const n = BigInt(`${whole2}${part}`) * (negative ? -1n : 1n);
   return fraction2(n, 10n ** BigInt(part.length));
 }
 var WORD_OPS = [
@@ -20712,7 +20700,7 @@ function praiseArithmetic(text5, options = {}) {
 }
 
 // src/lesson-plan-compiler.ts
-var NUMBER_DRIVEN_KINDS = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY).flatMap((recipe) => recipe.number_inputs?.length || recipe.variables_by_program ? recipe.output_kinds ?? [] : []));
+var NUMBER_DRIVEN_KINDS = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY).flatMap((recipe) => recipe.number_inputs?.length ? recipe.output_kinds ?? [] : []));
 function normalizedVisualIdentity(content, includeNumbers = true) {
   const sourceParameters = content.parameters ?? {};
   const parameters3 = Object.fromEntries(
@@ -21039,6 +21027,7 @@ function resolveMetNumberTargets(plan) {
       }
     }
   }
+  const ownNumbers = new Set(plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).flatMap((action) => action.action === "create" && action.kind === "visual" && RECIPE_HOOKS[action.content.capability]?.number_moves ? action.content.numbers ?? [] : []));
   const lastMoment = plan.sections.at(-1)?.moments.at(-1);
   const resetNumbers = /* @__PURE__ */ new Set();
   const valueAtEnd2 = (number) => {
@@ -21054,6 +21043,7 @@ function resolveMetNumberTargets(plan) {
       const number = activity.number_controls[0].number;
       const definition = plan.numbers?.[number - 1];
       if (!definition || !lastMoment) continue;
+      if (ownNumbers.has(number)) continue;
       const met = (value2) => Math.abs(activity.value - value2) <= activity.tolerance * (1 + 1e-9);
       if (!lineNumbers.has(number)) {
         if (met(definition.initial)) moveMetTarget(plan, activity, definition, `$lessonPlan.sections[${sectionIndex}].student_activities[${activityIndex}]`);
@@ -21116,8 +21106,9 @@ function compileLessonPlan(value2, options = {}) {
   const visualVariables = /* @__PURE__ */ new Map();
   const viewAdjustments = [];
   const programAdjustments = [];
-  const programTasks = [];
-  const practiceOwners = /* @__PURE__ */ new Set();
+  const movers = /* @__PURE__ */ new Map();
+  const moverStates = /* @__PURE__ */ new Map();
+  const cardNumbers = new Set(plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).flatMap((action) => action.action === "create" && action.kind === "visual" && RECIPE_HOOKS[action.content.capability]?.number_moves ? action.content.numbers ?? [] : []));
   let renderedVisuals;
   const reuseCompiledVisual = (visual) => {
     if (reusableVisuals.size === 0) return visual;
@@ -21152,7 +21143,32 @@ function compileLessonPlan(value2, options = {}) {
       const momentIndex = momentOffset + 1;
       const momentPath = `${sectionPath}.moments[${momentOffset}]`;
       const actions = [];
-      const programBeats = [];
+      const replayed = new Set((moment.restart_numbers ?? []).map(variableAlias));
+      for (const number of moment.restart_numbers ?? []) {
+        const mover = movers.get(number);
+        const state = mover && moverStates.get(mover.visual);
+        if (!mover || !state) continue;
+        state.now = [...state.start];
+        for (const other of mover.visual.mover.numbers) replayed.add(variableAlias(other));
+        for (const variable of mover.visual.variables ?? []) replayed.add(variable.as);
+      }
+      const moved = /* @__PURE__ */ new Set();
+      let leftOut = false;
+      const playMoves = (visual, capability2) => {
+        const state = moverStates.get(visual);
+        const animations = moment.actions.flatMap((item, offset) => item.action === "animate" && movers.get(item.number)?.visual === visual ? [{ offset, position: movers.get(item.number).position, to: item.end_value, timing: item.timing }] : []);
+        const result = RECIPE_HOOKS[capability2].number_moves.moves(state.now, animations);
+        if ("refused" in result) {
+          const at2 = animations.find((animation) => animation.position === result.refused.position);
+          fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at2.offset}].end_value`, result.refused.reason);
+        }
+        state.now = result.steps.at(-1)?.to ?? state.now;
+        const when = actionWhen(animations[0].timing);
+        const first = animations[0].offset;
+        const room = 24 - actions.length - moment.actions.slice(first + 1).filter((item) => !(item.action === "animate" && movers.get(item.number)?.visual === visual)).length;
+        const played = visual.mover.play(result.steps, room).map((action) => ({ ...action, ...when }));
+        return played.length ? played : [{ do: "focus", targets: [visual.whole], intent: compileText(plan, "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762"), ...when }];
+      };
       let boardItemIndex = 0;
       let connectionIndex = 0;
       let groupIndex = 0;
@@ -21189,9 +21205,12 @@ function compileLessonPlan(value2, options = {}) {
               reusableVisuals.set(identity, visual);
               for (const variable of visual.variables ?? []) if (!visualVariables.has(variable.as)) visualVariables.set(variable.as, variable);
               actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
-              programBeats.push(...visual.program_beats ?? []);
-              programTasks.push(...visual.program_tasks ?? []);
-              if (visual.owns_practice) practiceOwners.add(visual.whole);
+              if (visual.mover && RECIPE_HOOKS[visualContent.capability]?.number_moves) {
+                const start = visual.mover.numbers.map((number) => plan.numbers[number - 1].initial);
+                const state = RECIPE_HOOKS[visualContent.capability].number_moves.state(start);
+                moverStates.set(visual, { start: state, now: [...state] });
+                visual.mover.numbers.forEach((number, position) => movers.set(number, { visual, capability: visualContent.capability, position }));
+              }
             }
             wholeTargets.set(alias, visual.whole);
             partTargets.set(alias, visual.parts);
@@ -21269,6 +21288,17 @@ function compileLessonPlan(value2, options = {}) {
           actions.push({ do: "point", target: reference(`${actionPath}.reference`), ...actionWhen(item.timing) });
         } else if (item.action === "teacher_expression") {
           actions.push({ do: "expression", expression: item.expression, ...actionWhen(item.timing) });
+        } else if (movers.has(item.number)) {
+          const { visual, capability: capability2 } = movers.get(item.number);
+          if (!moved.has(visual)) {
+            moved.add(visual);
+            actions.push(...playMoves(visual, capability2));
+          }
+        } else if (cardNumbers.has(item.number) && plan.sections.slice(sectionOffset + 1).some((later) => later.moments.some((each) => each.actions.some((action) => action.action === "create" && action.kind === "visual" && (action.content.numbers ?? []).includes(item.number) && RECIPE_HOOKS[action.content.capability]?.number_moves)))) {
+          viewAdjustments.push({ section: sectionIndex, reason: "animation_before_card", detail: `${actionPath}: number ${item.number} is animated before the card that moves it is drawn; left out` });
+          leftOut = true;
+        } else if (cardNumbers.has(item.number)) {
+          fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${actionPath}.end_value`, "this number belongs to a card that is drawn later: animate it in the moment that draws the card, after its create, or in a later moment");
         } else {
           actions.push({
             do: "animate",
@@ -21280,20 +21310,23 @@ function compileLessonPlan(value2, options = {}) {
           });
         }
       });
+      if (actions.length > 24 && moved.size) {
+        fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions`, "this moment holds more than the board can play at once with its trades: make the second place's trade, or the pointing, in the next moment");
+      }
+      if (actions.length === 0 && leftOut) actions.push({ do: "expression", expression: "neutral", when: "after_speech" });
       if (actions.length === 0) {
         fail2("LESSON_PLAN_COMPILER_EMPTY_BEAT", `${momentPath}.actions`, "OLL requires at least one action per moment");
       }
       includeWrittenCardsInFocus(actions);
       beats.push({
         key: `moment-${pad2(momentIndex)}`,
-        ...moment.restart_numbers?.length ? { start: { kind: "replay", variables: moment.restart_numbers.map(variableAlias) } } : {},
+        ...replayed.size ? { start: { kind: "replay", variables: [...replayed] } } : {},
         // The model sometimes writes a formula placeholder (n1) in spoken or
         // written text; learners hear and read the number's own symbol.
         ...moment.narration ? { say: namedNumbers(moment.narration, plan) } : {},
         ...moment.delivery ? { delivery: moment.delivery } : {},
         actions
       });
-      programBeats.forEach((beat, index) => beats.push({ ...beat, key: `moment-${pad2(momentIndex)}-program-${pad2(index + 1)}` }));
     });
     steps.push({ key: `section-${pad2(sectionIndex)}`, purpose: section.purpose, beats });
   });
@@ -21313,12 +21346,6 @@ function compileLessonPlan(value2, options = {}) {
     }
     tasks.push(task);
   };
-  for (const task of programTasks) addTask(task);
-  const ownedByProgram = (anchor, section, task, path) => {
-    if (!practiceOwners.has(anchor)) return false;
-    programAdjustments.push({ section, kind: "activity_removed", reason: "practice_by_program", task, detail: `${task} (${path}): the program writes this card's practice` });
-    return true;
-  };
   plan.sections.forEach((section, sectionOffset) => {
     const sectionPath = `$lessonPlan.sections[${sectionOffset}]`;
     section.student_activities?.forEach((activity, activityOffset) => {
@@ -21326,7 +21353,6 @@ function compileLessonPlan(value2, options = {}) {
       if (activity.kind === "reflection") {
         const anchor = resolvedReference(`${activityPath}.reference`);
         const anchorTarget = wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias;
-        if (ownedByProgram(anchorTarget, sectionOffset + 1, `section-${pad2(sectionOffset + 1)}-reflection-${pad2(activityOffset + 1)}`, activityPath)) return;
         reflections.push({
           as: `section-${pad2(sectionOffset + 1)}-reflection-${pad2(activityOffset + 1)}`,
           prompt: namedNumbers(activity.prompt, plan),
@@ -21337,10 +21363,6 @@ function compileLessonPlan(value2, options = {}) {
         return;
       }
       const taskAlias = `section-${pad2(sectionOffset + 1)}-task-${pad2(activityOffset + 1)}`;
-      if (activity.kind !== "number_target") {
-        const target = resolvedReference(`${activityPath}.reference`);
-        if (ownedByProgram(wholeTargets.get(target.authoring_alias) ?? target.authoring_alias, sectionOffset + 1, taskAlias, activityPath)) return;
-      }
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : void 0;
       const asked = activity.kind === "numeric_answer" ? roundingPlaces(activity.prompt, String(activity.answer)) : void 0;
       const places = asked !== void 0 && asked > 0 ? asked : void 0;
@@ -21369,6 +21391,17 @@ function compileLessonPlan(value2, options = {}) {
       if (activity.kind === "number_target") {
         const firstNumber = activity.number_controls[0]?.number;
         if (!firstNumber) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.number_controls`, "number task requires controls");
+        const mover = movers.get(firstNumber);
+        if (mover) {
+          const own = mover.visual.mover.task(mover.position, activity.value);
+          if ("refuse" in own) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.value`, own.refuse);
+          if ("drop" in own) {
+            programAdjustments.push({ section: sectionOffset + 1, kind: "activity_removed", reason: "nothing_to_do_on_card", task: taskAlias, detail: `${taskAlias} (${activityPath}): ${own.drop}` });
+            return;
+          }
+          addTask({ ...common, ...own.task }, droppedPraise);
+          return;
+        }
         addTask({
           ...common,
           allowed_operations: activity.number_controls.map((control) => ({
@@ -21479,7 +21512,7 @@ function compileLessonPlan(value2, options = {}) {
     steps,
     close: { summary: plan.close.summary, focus: closeFocus }
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments, ...practiceOwners.size ? { practice_by_program: true } : {} };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
 }
 function expressionReferencesVariable(expression, variable) {
   if (typeof expression !== "string") return false;
@@ -23199,7 +23232,14 @@ function lowerIntegerDecimal(record5, prefix, path) {
   delete record5[`${prefix}_scale`];
   return Number(mantissa) / 10 ** Number(scale2);
 }
-function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set()) {
+function cardMovedNumbers(actions) {
+  return actions.flatMap((action) => {
+    const entry = action;
+    if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
+    return RECIPE_HOOKS[entry.content.capability]?.number_moves ? entry.content.numbers ?? [] : [];
+  });
+}
+function lowerModelActivityNumbers(activity, kind, path, outline, expectedSection, language, exactNumbers = /* @__PURE__ */ new Set(), cardNumbers = /* @__PURE__ */ new Set()) {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
   lowered.hint_after_attempts = PROGRAM_HINT_AFTER_ATTEMPTS;
@@ -23220,6 +23260,11 @@ function lowerModelActivityNumbers(activity, kind, path, outline, expectedSectio
       number: numberIndex,
       controls: ["slider", ...canUseGeometryPoint ? ["geometry_point"] : []]
     }];
+    if (cardNumbers.has(numberIndex)) {
+      lowered.value = requestedValue;
+      lowered.tolerance = 0.5;
+      return lowered;
+    }
     const minimum = Number(definition.min);
     const maximum = Number(definition.max);
     const range = maximum - minimum;
@@ -23453,7 +23498,7 @@ function taughtContent(draft) {
     written: moment.actions.flatMap((action) => action.action === "create" && (action.kind === "math" || action.kind === "note") ? [action.content] : [])
   }));
 }
-function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedReusableCreates = false, language) {
+function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedReusableCreates = false, language, earlierCardNumbers = /* @__PURE__ */ new Set()) {
   const programRevisions = value2 && typeof value2 === "object" ? PROGRAM_VISUAL_REVISIONS.get(value2) : void 0;
   const root2 = pruneModelNulls(value2);
   if (!root2 || typeof root2 !== "object" || Array.isArray(root2)) {
@@ -23754,6 +23799,7 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
     const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability]?.number_input_policies ?? [];
     return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]));
   }));
+  const cardNumbers = /* @__PURE__ */ new Set([...earlierCardNumbers, ...cardMovedNumbers(moments.flatMap((moment) => moment.actions))]);
   const activities = [];
   const collectActivities = (values, kind, path) => {
     values.forEach((activity, index) => {
@@ -23766,7 +23812,7 @@ function lowerModelSectionDraft(value2, outline, expectedSection, requireFixedRe
       if (kind === "number_target" && lowered.reference !== void 0) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers, cardNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -24526,9 +24572,30 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   if (outlineResult) return outlineResult;
   const currentNumbersBefore = (section) => {
     const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+    const cards = [];
+    const cardNumbers = new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
     for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
-      for (const number of moment.restart_numbers ?? []) state.set(number, outline.numbers[number - 1].initial);
-      for (const action of moment.actions) if (action.action === "animate") state.set(action.number, action.end_value);
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const content = action.content;
+        const hook = RECIPE_HOOKS[content.capability]?.number_moves;
+        if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers.join())) cards.push({ numbers: [...content.numbers], hook });
+      }
+      for (const number of moment.restart_numbers ?? []) {
+        const card = cards.find((each) => each.numbers.includes(number));
+        for (const each of card?.numbers ?? [number]) state.set(each, outline.numbers[each - 1].initial);
+      }
+      for (const card of cards) {
+        const moves = moment.actions.flatMap((action) => action.action === "animate" && card.numbers.includes(action.number) ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []);
+        if (!moves.length) continue;
+        const started = card.hook.state(card.numbers.map((number) => outline.numbers[number - 1].initial));
+        const now = [...card.numbers.map((number) => state.get(number)), ...started.slice(card.numbers.length)];
+        const result = card.hook.moves(now, moves);
+        if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1).to[position]));
+      }
+      for (const action of moment.actions) {
+        if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
+      }
     }
     return state;
   };
@@ -24602,7 +24669,8 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         outline,
         section,
         true,
-        input.language
+        input.language,
+        new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)))
       );
       specializeDraft(candidate, outline, drafts.slice(0, section - 1));
     } catch (error) {
@@ -24707,10 +24775,6 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     const draft = drafts[0];
     const card = draft && practiceCard(draft);
     if (!draft || !card) return;
-    try {
-      if (compilePrefix(outline, [draft], options.compile).practice_by_program) return;
-    } catch {
-    }
     const reject = (error) => options.on_rejected_part?.({
       label: "lesson-plan-section",
       section: 1,

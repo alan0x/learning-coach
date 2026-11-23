@@ -113,11 +113,6 @@ export const RECIPE_SCHEMA_PROPERTIES: Readonly<Record<string, Readonly<Record<s
  * entry lists goes after these, in the order the recipes declare it.
  */
 export const SCHEMA_PROPERTY_ORDER = [
-  // The trading mat trial recipe (decision 0023): its six numbers first. The first combined reply's schema
-  // lists every offered recipe's fields and requires none, and fields written late were left out (fraction
-  // probe 2), so the mat's values come before everything; ones first, so a tens-and-ones question writes the
-  // hundreds last, as 0. Requests without the trial do not list them, so their order is unchanged.
-  "lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds",
   "title", "projection", "x_label", "y_label", "formulas", "sample_x_numbers", "points",
   "expression", "section_axis", "section_value", "level", "radius", "angle",
   "radius_expression", "center_x", "center_y", "construction", "leg_a", "leg_b", "steps", "speed", "label_style", "relation", "place",

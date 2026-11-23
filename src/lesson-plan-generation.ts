@@ -50,7 +50,7 @@ import {
 import { completedJsonObjectProperty } from "./json-stream.js";
 import { promptSlot } from "./plugins/index.js";
 import { SECTION_FACTS } from "./plugins/section-facts.js";
-import { RECIPE_HOOKS, PLUGIN_HOOKS } from "./plugins/hooks.js";
+import { RECIPE_HOOKS, PLUGIN_HOOKS, type RecipeHooks } from "./plugins/hooks.js";
 
 export interface LessonPlanGenerationInput {
   turn_id: string;
@@ -1310,6 +1310,15 @@ function lowerIntegerDecimal(record: Record<string, unknown>, prefix: string, pa
   return Number(mantissa) / 10 ** Number(scale);
 }
 
+/** Lesson numbers bound to a card that moves them by its own rules (recipe hook `number_moves`). */
+function cardMovedNumbers(actions: readonly unknown[]): number[] {
+  return actions.flatMap((action) => {
+    const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
+    if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
+    return RECIPE_HOOKS[entry.content.capability as keyof typeof RECIPE_HOOKS]?.number_moves ? entry.content.numbers ?? [] : [];
+  });
+}
+
 function lowerModelActivityNumbers(
   activity: Record<string, unknown>,
   kind: "number_target" | "scene3d_view",
@@ -1320,6 +1329,8 @@ function lowerModelActivityNumbers(
   /** Numbers a number line or a count recipe shows: their targets stay as written, and a met target is
    * resolved at compile, which knows the range the visual draws. */
   exactNumbers: ReadonlySet<number> = new Set(),
+  /** Numbers of a card that moves them by its own rules (the trading mat): the card checks the target. */
+  cardNumbers: ReadonlySet<number> = new Set(),
 ): Record<string, unknown> {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
@@ -1350,6 +1361,14 @@ function lowerModelActivityNumbers(
       number: numberIndex,
       controls: ["slider", ...(canUseGeometryPoint ? ["geometry_point"] : [])],
     }];
+    if (cardNumbers.has(numberIndex)) {
+      // Kept exactly as written, in whichever section it stands: neither the range the model gave the
+      // number nor a slider's step applies to a count that changes by trades. The card refuses a wrong
+      // target with the right one (review of #160: a 6 snapped to 5.98 was refused as "the ones are 6").
+      lowered.value = requestedValue;
+      lowered.tolerance = 0.5;
+      return lowered;
+    }
     const minimum = Number(definition.min);
     const maximum = Number(definition.max);
     const range = maximum - minimum;
@@ -1669,6 +1688,8 @@ function lowerModelSectionDraft(
   expectedSection: number,
   requireFixedReusableCreates = false,
   language?: string,
+  /** Numbers of a card that moves them itself (the trading mat), drawn in sections already written. */
+  earlierCardNumbers: ReadonlySet<number> = new Set(),
 ): LessonPlanSectionDraft {
   // Read before pruning, which copies the section: the program's revisions are keyed by the reconciled object.
   const programRevisions = value && typeof value === "object" ? PROGRAM_VISUAL_REVISIONS.get(value) : undefined;
@@ -1999,6 +2020,8 @@ function lowerModelSectionDraft(
     const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY]?.number_input_policies ?? [];
     return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
   }));
+  // Numbers of a card that moves them itself: this section's, and those of sections already written.
+  const cardNumbers = new Set([...earlierCardNumbers, ...cardMovedNumbers(moments.flatMap((moment) => moment.actions))]);
   const activities: Array<{ order: number; activity: Record<string, unknown> }> = [];
   const collectActivities = (values: unknown[], kind: "number_target" | "scene3d_view", path: string): void => {
     values.forEach((activity, index) => {
@@ -2011,7 +2034,7 @@ function lowerModelSectionDraft(
       if (kind === "number_target" && lowered.reference !== undefined) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers, cardNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -2951,9 +2974,34 @@ export async function generateLessonPlanWithModel(
   // subsequent sections play. Retries must never include the rejected draft.
   const currentNumbersBefore = (section: number): Map<number, number> => {
     const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+    // Cards that move their own numbers (the trading mat): one number's animation changes the others too.
+    const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]> }> = [];
+    // A card's numbers do not move before the card is drawn: the compiler leaves such an animation out.
+    const cardNumbers = new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
     for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
-      for (const number of moment.restart_numbers ?? []) state.set(number, outline.numbers![number - 1].initial);
-      for (const action of moment.actions) if (action.action === "animate") state.set(action.number, action.end_value);
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const content = action.content as LessonPlanVisualContent;
+        const hook = RECIPE_HOOKS[content.capability]?.number_moves;
+        if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers!.join())) cards.push({ numbers: [...content.numbers], hook });
+      }
+      for (const number of moment.restart_numbers ?? []) {
+        const card = cards.find((each) => each.numbers.includes(number));
+        for (const each of card?.numbers ?? [number]) state.set(each, outline.numbers![each - 1].initial);
+      }
+      for (const card of cards) {
+        const moves = moment.actions.flatMap((action) => (action.action === "animate" && card.numbers.includes(action.number)
+          ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []));
+        if (!moves.length) continue;
+        // The card's state: its lesson numbers first, as they stand, then what its start adds (a hundreds column).
+        const started = card.hook.state(card.numbers.map((number) => outline.numbers![number - 1].initial));
+        const now = [...card.numbers.map((number) => state.get(number)!), ...started.slice(card.numbers.length)];
+        const result = card.hook.moves(now, moves);
+        if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1)!.to[position]!));
+      }
+      for (const action of moment.actions) {
+        if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
+      }
     }
     return state;
   };
@@ -3040,6 +3088,7 @@ export async function generateLessonPlanWithModel(
         section,
         true,
         input.language,
+        new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions))),
       );
       specializeDraft(candidate, outline, drafts.slice(0, section - 1));
     } catch (error) {
@@ -3163,9 +3212,6 @@ export async function generateLessonPlanWithModel(
     const draft = drafts[0];
     const card = draft && practiceCard(draft);
     if (!draft || !card) return;
-    // A card that writes its own practice (the trading mat, OLL decision 0023) has its practice already: a
-    // policy choice, so the lesson's practice is the program's alone and no paid call is spent on more.
-    try { if (compilePrefix(outline, [draft], options.compile).practice_by_program) return; } catch { /* asked as before */ }
     const reject = (error: unknown) => options.on_rejected_part?.({
       label: "lesson-plan-section", section: 1, attempt: 1, error: rejectionDetails(error),
     });

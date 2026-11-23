@@ -44,6 +44,18 @@ export interface RecipeHooks {
    */
   fit_numbers?(content: LessonPlanVisualContent, plan: LessonPlan, shared: ReadonlySet<number>): Map<number, number>;
   /**
+   * For a visual whose numbers do not change freely (the trading mat: ones go down by tens, and the tens
+   * follow). `start` holds the starting values of the visual's lesson numbers, in its number order.
+   * `state(start)` is the card's state at the start; `move` gives the state after the visual's number at
+   * `position` is animated to `to`, or the reason the card cannot make that change. A state's first
+   * entries are the visual's lesson numbers, in order.
+   */
+  number_moves?: {
+    state(start: readonly number[]): number[];
+    moves(state: readonly number[], moves: ReadonlyArray<{ position: number; to: number }>):
+      { steps: Array<{ position: number; from: number[]; to: number[] }> } | { refused: { position: number; reason: string } };
+  };
+  /**
    * The model wrote several first-section creates of this course visual (their contents, in order): the
    * index of the one the card is made from, drawn at the first create's moment. Without the hook Coach
    * keeps the first and drops the rest. Out of range or not a whole number: the first.

@@ -167,23 +167,22 @@ export const MATH_RECIPES = {
     revised_by_program: true,
     model_guidance: "分数等分图：fractions写分子分母的值；view：one、compare两个、equivalent等值、split把每份再分split_each_part份求每份、share把a个整体平分给b份写a/b；shape：bar/circle/grid（百分之几用grid）；不用于不等分、一组物体的几分之几、比；大于1写一个假分数",
   },
-  // OLL decision 0023 (a trial): the model writes the question's pile and a practice pile as six whole
-  // numbers; the program draws the mat, demonstrates the trades in its own words and writes the practice.
+  // OLL decision 0023 (a trial), rebuilt 2026-11-23: the trading mat on lesson numbers.
   base_ten_trade: {
     parts: ["whole", "ones", "tens", "hundreds"],
-    number_inputs: [],
-    number_input_policies: [],
-    parameter_names: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
-    model_parameter_names: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
-    // All six, every time: an unused field left to the model was filled with runaway numbers (fraction probe 1).
-    required_model_schema_parameters: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
-    semantic_parameters: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
+    // The pile is lesson numbers, as every earlier component's values are (owner, 2026-11-23): the model
+    // declares them in the outline, moves them in its own moments and writes the practice.
+    number_inputs: ["loose_ones", "tens", "hundreds"],
+    number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    parameter_names: [],
+    model_parameter_names: [],
+    required_model_schema_parameters: [],
+    semantic_parameters: [],
     output_kinds: ["base_ten_trade"],
+    // The counts change by taps only, never by a slider (OLL 0023).
     student_controls: [],
-    required_features: ["place_value_trading"],
-    // The card binds counts the program creates; the lesson taps and animates them.
-    variables_by_program: true,
-    model_guidance: "十个一换一个十：lesson_*照题目写一、十、百的个数（没有写0），practice_*另写一堆（位数同、总数不同）；程序演示交换并出题；旁白说题目和换完的结果，不说练习的数，不写关于这些方块的题",
+    required_features: ["trade_ten_for_one"],
+    model_guidance: "方块换一换：十个一换一个十（十个十换一个百）。数值依次是散的一、十的个数（题目有百再加百的个数），照题目写；讲到交换的那一刻把“一”的数值动画到换完的个数（一次少整十，如26到6），十自己跟着多；百同理动画“十”。练习可让孩子把“一”换到不能再换；另出新题用文字说一堆新的方块",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -361,16 +360,6 @@ const MATH_SCHEMA_PROPERTIES = {
     // as "split" the model wrote the number of parts there ("split": "6" for sixths) and left out the fractions
     // (probe 2).
     split_each_part: { enum: ["2", "3", "4", "5", "6"] },
-  },
-  base_ten_trade: {
-    // Ones first, so a tens-and-ones question writes the hundreds last, as 0 (0023 §4). Bounded by the mat's
-    // starting limits; the compiler checks the piles together.
-    lesson_ones: { type: "integer", minimum: 0, maximum: 59 },
-    lesson_tens: { type: "integer", minimum: 0, maximum: 19 },
-    lesson_hundreds: { type: "integer", minimum: 0, maximum: 9 },
-    practice_ones: { type: "integer", minimum: 0, maximum: 59 },
-    practice_tens: { type: "integer", minimum: 0, maximum: 19 },
-    practice_hundreds: { type: "integer", minimum: 0, maximum: 9 },
   },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.

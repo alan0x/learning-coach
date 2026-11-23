@@ -13,18 +13,18 @@ export interface CompiledVisual {
    */
   variables?: Array<{ as: string; initial: number; min: number; max: number; label: string; control?: { kind: "slider"; step: number } }>;
   /**
-   * Beats the program adds right after the moment that first draws this visual (OLL decision 0023: the
-   * trading mat's demonstration, in the program's own words). Never added where the card is only reused.
+   * For a visual whose numbers change only by its own rules (hook `number_moves`; the trading mat): how the
+   * card plays a change as actions, and how "bring this number to a value" becomes the learner's task on it.
    */
-  program_beats?: AuthoringBeat[];
-  /** Tasks the program writes for this visual (its practice), placed before the model's. */
-  program_tasks?: AuthoringTask[];
-  /** The visual owns its practice: the model's questions and reflections anchored to it are dropped. */
-  owns_practice?: boolean;
+  mover?: {
+    /** The visual's lesson numbers, in its number order. */
+    numbers: number[];
+    /** `room` is how many actions the moment can still hold (OLL allows 24 in a beat). */
+    play(steps: ReadonlyArray<{ position: number; from: number[]; to: number[] }>, room: number): AuthoringAction[];
+    task(position: number, value: number): { task: Record<string, unknown> } | { drop: string } | { refuse: string };
+  };
 }
 
-type AuthoringBeat = AuthoringLesson["steps"][number]["beats"][number];
-type AuthoringTask = NonNullable<AuthoringLesson["lesson"]["tasks"]>[number];
 
 interface RenderedVisual {
   node: string;
@@ -137,12 +137,7 @@ export class CompiledVisualRegistry {
       // A visual's own slider goes with its card: kept when the card is written, dropped when an earlier
       // identical card is shown instead (that card's slider is already in the lesson).
       ...(visual.variables && !visual.actions.some(action => action.do === "write" && reused.has(action.as)) ? { variables: visual.variables } : {}),
-      // What the program adds for a card goes with the card, as its slider does.
-      ...(!visual.actions.some(action => action.do === "write" && reused.has(action.as)) ? {
-        ...(visual.program_beats ? { program_beats: visual.program_beats } : {}),
-        ...(visual.program_tasks ? { program_tasks: visual.program_tasks } : {}),
-        ...(visual.owns_practice ? { owns_practice: true } : {}),
-      } : {}),
+      ...(visual.mover ? { mover: visual.mover } : {}),
     };
   }
 }
