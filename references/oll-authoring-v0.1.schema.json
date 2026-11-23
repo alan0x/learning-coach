@@ -705,6 +705,7 @@
       "required": ["columns", "places"],
       "properties": {
         "columns": {"enum": [2, 3]},
+        "language": {"enum": ["en-US", "zh-CN"]},
         "places": {
           "type": "array",
           "minItems": 2,

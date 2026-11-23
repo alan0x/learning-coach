@@ -7972,6 +7972,7 @@ var v0_1_schema_default = {
       required: ["columns", "places"],
       properties: {
         columns: { enum: [2, 3] },
+        language: { enum: ["en-US", "zh-CN"] },
         places: {
           type: "array",
           minItems: 2,
@@ -8892,6 +8893,9 @@ function validateFractionModelContent(raw, path, fail4, options = {}) {
 var BASE_TEN_TRADE_KIND = "base_ten_trade";
 var BASE_TEN_TRADE_FEATURE = "plugin:math/base-ten-trade@1";
 var BASE_TEN_TRADE_PLUGIN_VERSION = "0.5.0";
+var BASE_TEN_TRADE_LANGUAGE_FEATURE = "plugin:math/base-ten-trade-language@1";
+var BASE_TEN_TRADE_LANGUAGE_VERSION = "0.6.0";
+var BASE_TEN_TRADE_LANGUAGES = ["en-US", "zh-CN"];
 var BASE_TEN_TRADE_BINDINGS = {
   places: ["count", "tray"]
 };
@@ -8930,7 +8934,10 @@ var hasTray = (columns, p) => p >= 0 && p < columns - 1;
 var valueOf = (counts) => counts.reduce((sum, count, p) => sum + count * 10 ** p, 0);
 function validateBaseTenTradeContent(raw, path, fail4, options = {}) {
   const content = record3(raw, path, fail4);
-  only3(content, ["title", "caption", "columns", "places", "bindings"], path, fail4);
+  only3(content, ["title", "caption", "columns", "places", "bindings", "language"], path, fail4);
+  if (content.language !== void 0 && !BASE_TEN_TRADE_LANGUAGES.includes(content.language)) {
+    fail4(`${path}/language`, `A mat speaks ${BASE_TEN_TRADE_LANGUAGES.join(" or ")}`);
+  }
   text3(content.title, `${path}/title`, fail4);
   text3(content.caption, `${path}/caption`, fail4, 480);
   const columns = content.columns;
@@ -9018,27 +9025,52 @@ function applyBaseTenTap(mat, tap) {
   const counts = set(set(mat.counts, p, mat.counts[p] - 1), p - 1, mat.counts[p - 1] + 10);
   return { ok: true, mat: { ...mat, counts, trays: set(mat.trays, p - 1, 10) } };
 }
-function baseTenRefusalText(reason, place5) {
-  const name = BASE_TEN_TRADE_PLACES[place5] ?? "ones";
-  const up = ["ten", "hundred", "thousand"][place5] ?? "ten";
-  const unit2 = ["one", "ten", "hundred"][place5] ?? "one";
-  switch (reason) {
-    case "tray_full":
-      return "The tray holds only ten.";
-    // A fact, true whether more can still go in or not (first-use test): never "fill it", which can be impossible.
-    case "tray_not_ten":
-      return `This tray does not hold a ${up}: a ${up} is ten ${name}.`;
-    case "tray_empty":
-      return `Tap ${name} to put them in the tray first.`;
-    case "tray_not_empty":
-      return "Empty the tray first.";
-    case "no_room":
-      return "There is no room on the mat for ten more.";
-    case "none_loose":
-      return `There is no loose ${unit2} to use.`;
-    default:
-      return "That can't be done here.";
+var BASE_TEN_WORDS = {
+  "en-US": {
+    /** The mat's own name, for a screen reader (review of #95). */
+    matLabel: "A place-value mat",
+    headings: ["Ones", "Tens", "Hundreds"],
+    trayLabel: ["Ten ones make a ten", "Ten tens make a hundred"],
+    make: ["\u2190 Make a ten", "\u2190 Make a hundred"],
+    break: ["Break a ten \u2192", "Break a hundred \u2192"],
+    put: ["Put this one in the tray", "Put this ten in the tray", "Put this hundred in the tray"],
+    take: ["Take this one out of the tray", "Take this ten out of the tray", "Take this hundred out of the tray"],
+    refusal: {
+      tray_full: ["The tray holds only ten.", "The tray holds only ten."],
+      // A fact, true whether more can still go in or not (first-use test): never "fill it", which can be impossible.
+      tray_not_ten: ["This tray does not hold a ten: a ten is ten ones.", "This tray does not hold a hundred: a hundred is ten tens."],
+      tray_empty: ["Tap ones to put them in the tray first.", "Tap tens to put them in the tray first."],
+      tray_not_empty: ["Empty the tray first.", "Empty the tray first."],
+      no_room: ["There is no room on the mat for ten more.", "There is no room on the mat for ten more."],
+      none_loose: ["There is no loose one to use.", "There is no loose ten to use.", "There is no loose hundred to use."]
+    },
+    other: "That can't be done here."
+  },
+  "zh-CN": {
+    matLabel: "\u6570\u4F4D\u6446\u9762",
+    headings: ["\u4E2A\u4F4D", "\u5341\u4F4D", "\u767E\u4F4D"],
+    trayLabel: ["\u5341\u4E2A\u4E00\u662F\u4E00\u4E2A\u5341", "\u5341\u4E2A\u5341\u662F\u4E00\u4E2A\u767E"],
+    make: ["\u2190 \u6362\u6210\u4E00\u4E2A\u5341", "\u2190 \u6362\u6210\u4E00\u4E2A\u767E"],
+    break: ["\u62C6\u5F00\u4E00\u4E2A\u5341 \u2192", "\u62C6\u5F00\u4E00\u4E2A\u767E \u2192"],
+    put: ["\u628A\u8FD9\u4E2A\u4E00\u653E\u8FDB\u6258\u76D8", "\u628A\u8FD9\u4E2A\u5341\u653E\u8FDB\u6258\u76D8", "\u628A\u8FD9\u4E2A\u767E\u653E\u8FDB\u6258\u76D8"],
+    take: ["\u628A\u8FD9\u4E2A\u4E00\u4ECE\u6258\u76D8\u91CC\u62FF\u51FA\u6765", "\u628A\u8FD9\u4E2A\u5341\u4ECE\u6258\u76D8\u91CC\u62FF\u51FA\u6765", "\u628A\u8FD9\u4E2A\u767E\u4ECE\u6258\u76D8\u91CC\u62FF\u51FA\u6765"],
+    refusal: {
+      tray_full: ["\u6258\u76D8\u91CC\u53EA\u80FD\u653E\u5341\u4E2A\u3002", "\u6258\u76D8\u91CC\u53EA\u80FD\u653E\u5341\u4E2A\u3002"],
+      tray_not_ten: ["\u6258\u76D8\u91CC\u8FD8\u4E0D\u662F\u4E00\u4E2A\u5341\uFF1A\u4E00\u4E2A\u5341\u662F\u5341\u4E2A\u4E00\u3002", "\u6258\u76D8\u91CC\u8FD8\u4E0D\u662F\u4E00\u4E2A\u767E\uFF1A\u4E00\u4E2A\u767E\u662F\u5341\u4E2A\u5341\u3002"],
+      tray_empty: ["\u5148\u70B9\u4E2A\u4F4D\u91CC\u7684\u4E00\uFF0C\u628A\u5B83\u4EEC\u653E\u8FDB\u6258\u76D8\u3002", "\u5148\u70B9\u5341\u4F4D\u91CC\u7684\u5341\uFF0C\u628A\u5B83\u4EEC\u653E\u8FDB\u6258\u76D8\u3002"],
+      tray_not_empty: ["\u5148\u628A\u6258\u76D8\u6E05\u7A7A\u3002", "\u5148\u628A\u6258\u76D8\u6E05\u7A7A\u3002"],
+      no_room: ["\u6446\u9762\u4E0A\u6CA1\u6709\u5730\u65B9\u518D\u653E\u5341\u4E2A\u4E86\u3002", "\u6446\u9762\u4E0A\u6CA1\u6709\u5730\u65B9\u518D\u653E\u5341\u4E2A\u4E86\u3002"],
+      none_loose: ["\u6CA1\u6709\u6563\u7684\u4E00\u53EF\u4EE5\u7528\u4E86\u3002", "\u6CA1\u6709\u6563\u7684\u5341\u53EF\u4EE5\u7528\u4E86\u3002", "\u6CA1\u6709\u6563\u7684\u767E\u53EF\u4EE5\u7528\u4E86\u3002"]
+    },
+    other: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002"
   }
+};
+function baseTenRefusalText(reason, place5, language = "en-US") {
+  const words = BASE_TEN_WORDS[language] ?? BASE_TEN_WORDS["en-US"];
+  const sentences = words.refusal[reason];
+  if (!sentences)
+    return words.other;
+  return sentences[Math.min(Math.max(0, Number.isInteger(place5) ? place5 : 0), sentences.length - 1)];
 }
 function baseTenChanges(before, after) {
   const changes = [];
@@ -9175,8 +9207,9 @@ var MATH_PLUGIN_MANIFEST = {
   // 0.2.0: the number line (decision 0013). 0.3.0: jump lanes for several jumps on one line (decision 0017).
   // 0.4.0: the fraction model (decision 0021). 0.4.1: grids fill column by column. 0.4.2: a share marks one
   // piece of each part; the program writes a fraction's other form beside its label (0021 amendment 2).
-  // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023).
-  version: "0.5.0",
+  // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023). 0.6.0: the mat speaks Chinese
+  // (0023 amendment 3).
+  version: "0.6.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -9247,7 +9280,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION },
     detect(content, kind, use) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -9256,8 +9289,11 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
       }
       if (kind === FRACTION_MODEL_KIND)
         use(FRACTION_MODEL_FEATURE);
-      if (kind === BASE_TEN_TRADE_KIND)
+      if (kind === BASE_TEN_TRADE_KIND) {
         use(BASE_TEN_TRADE_FEATURE);
+        if (content.language !== void 0)
+          use(BASE_TEN_TRADE_LANGUAGE_FEATURE);
+      }
     }
   }
 ]);
