@@ -829,6 +829,9 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
   const references: ResolvedLessonPlanReference[] = [];
   const visuallyBoundNumbers = new Set<number>();
   const requiredVisualNumberUses: Array<{ number: number; path: string }> = [];
+  // Numbers of a card that moves them by its own rules (the trading mat): the card sets their range and
+  // checks every move itself, with the reason, so the range the model wrote is not what refuses a move.
+  const cardMovedNumbers = new Set<number>();
   const resolvedSections: ResolvedLessonPlan["sections"] = [];
 
   const resolveReference = (raw: unknown, path: string, sectionIndex: number, momentIndex: number): TargetRecord => {
@@ -948,6 +951,7 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
             const visualContent = content as LessonPlanVisualContent;
             const boundNumbers = RECIPE_HOOKS[visualContent.capability]?.bound_numbers?.(visualContent);
             for (const number of boundNumbers ?? visualContent.numbers ?? []) visuallyBoundNumbers.add(number);
+            if (RECIPE_HOOKS[visualContent.capability]?.number_moves) for (const number of visualContent.numbers ?? []) cardMovedNumbers.add(number);
           }
           boardItemIndex += 1;
           const id = `section-${pad(sectionIndex)}-moment-${pad(momentIndex)}-item-${pad(boardItemIndex)}`;
@@ -1020,7 +1024,7 @@ export function resolveLessonPlan(value: unknown, options: ResolveLessonPlanOpti
           if (number > rawNumbers.length) fail("LESSON_PLAN_NUMBER_REFERENCE", `${itemPath}.number`, "number reference is unavailable");
           const end = finiteNumber(action.end_value, `${itemPath}.end_value`);
           const definition = record(rawNumbers[number - 1], `$lessonPlan.numbers[${number - 1}]`);
-          if (end < Number(definition.min) || end > Number(definition.max)) fail("LESSON_PLAN_ANIMATION", `${itemPath}.end_value`, "animation end is outside the number range");
+          if (!cardMovedNumbers.has(number) && (end < Number(definition.min) || end > Number(definition.max))) fail("LESSON_PLAN_ANIMATION", `${itemPath}.end_value`, "animation end is outside the number range");
           if (action.easing !== undefined && !["linear", "ease_in_out"].includes(String(action.easing))) fail("LESSON_PLAN_ANIMATION", `${itemPath}.easing`, "unsupported easing");
           if (action.duration_intent !== undefined && !["brief", "normal", "extended"].includes(String(action.duration_intent))) fail("LESSON_PLAN_ANIMATION", `${itemPath}.duration_intent`, "unsupported duration intent");
           optionalTiming(action.timing, `${itemPath}.timing`);

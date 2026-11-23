@@ -51,3 +51,24 @@ Owner decisions (2026-11-22): the program speaks the trade steps; the first trad
 - **The program writes the practice:** "I'm done" on the practice pile, the number, the counts row and the parts row. The model's questions and thinking questions on the mat are dropped and recorded (`activity_removed`); a one-section lesson makes no separate practice request.
 - **Request cost** with the trial on (first request): prompt 279 B, schema 382 B, 661 B in all. Requests and recorded lessons are unchanged with it off.
 - `test/base-ten-recipe.test.mjs`: every development case's ideal output compiles and passes the judge in English and Chinese; the demonstration's sentences and actions; the practice; dropping; refusals; a stubbed generation run.
+
+## Rebuilt on lesson numbers (2026-11-23; replaces "Step 3" above)
+
+Probe 1 failed two of its four bars (`docs/BASE_TEN_PROBE_2026-11-22.md`). Two failures came from where the recipe left the pattern of every earlier component: a demonstration timed by the program, practice written by the program, and six number fields of its own. The owner asked for the mat to follow the earlier pattern (2026-11-23).
+
+- **The pile is lesson numbers:** the loose ones, the tens, and the hundreds when the question has them. The model declares them in the outline as it does for every other component. The mat has no field for the model to fill.
+- **The model writes the trades in its own moments:** "animate the ones from 26 to 6". The mat plays that as trades by the card's rules: the first trade of a place tap by tap, later ones as a brief tray fill and a make. The tens follow by themselves. The amount on the mat is true at every instant.
+  - Several animations of the mat in one moment are one step, applied lowest place first, whatever order they were written in.
+  - A change the mat cannot make is refused with the reason ("the loose ones go down by tens: from 26 they can be 16 or 6"), and the section is asked again.
+  - A pile of tens and ones that makes a hundred gets a hundreds column of the mat's own.
+- **The model writes the practice.**
+  - "Bring the ones to 6" becomes the learner's own trading: the mat starts again from the lesson's pile, the learner taps and says "I'm done", and the program checks that no trade is left. The program refuses a target that is not the fully traded count. On a pile with nothing to trade, the task is dropped and recorded.
+  - Typed questions are the model's, as for the number line.
+- **Chosen by the feature `trade_ten_for_one`** (was `place_value_trading`: both comparison questions of probe 1 asked for that and got the mat).
+- **Removed:** the program's beats and tasks, "the visual owns its practice", the six fields, the practice-pile rules.
+- **In the request with the trial on:** about 460 bytes (guidance 408, number names 32, feature 21), against 661. With the trial off, requests and recorded lessons are unchanged.
+- **How it is built:** a recipe hook, `number_moves`, gives the state of a card whose numbers change only by its own rules, and the state after a move. The compiler, the later sections' number facts and the judge use the same rules (`src/plugins/base-ten-moves.ts`). The compiled visual's `mover` plays the steps and makes the task.
+- **The judge:**
+  - **Kept:** one mat; the lesson pile is the question's; every step keeps the amount; the lesson ends with no trade left; the learner's task starts from the lesson's pile; a typed question follows; the mat speaks the lesson's language.
+  - **Dropped:** a separate practice pile and the wording checks on prompts.
+- **Paper test before the build:** on the 26 lessons of probe 1 that drew the mat, every trade the model narrated fits the rule (28 of ones, 6 of tens). In 3 lessons the model only said a trade "can" be made. Record: handoff `COMPONENT-INTERFACE-2026-11-23.md` §8.

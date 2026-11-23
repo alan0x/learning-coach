@@ -8,6 +8,7 @@ import type { PluginHooks, RecipeHooks } from "./hooks.js";
 import { fitComparedNumbers, fitNumberLineNumbers, fitRoundingNumbers, fitSolutionNumbers, fitStepsNumbers } from "./number-line-fit.js";
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./math-teaching-contracts.js";
 import { formulaError, formulaFunctions, parseModelFormula } from "./math-formulas.js";
+import { BASE_TEN_DRAWN, baseTenColumns, baseTenMoves, baseTenState } from "./base-ten-moves.js";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
 /**
@@ -124,6 +125,23 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       if (second!.fraction_view === "share" && a.denominator === 1 && a.numerator === b.numerator) return 1;
       return undefined;
     },
+  },
+  base_ten_trade: {
+    // The mat's counts run from 0 to the most it draws and have no slider: they change only by trades
+    // (OLL 0023's tap rule). The starting values stay as the model wrote them; the compiler checks them.
+    fit_numbers(content, plan) {
+      const numbers = content.numbers ?? [];
+      const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
+      if (!definitions.length || definitions.some((definition) => !definition)) return new Map();
+      const columns = baseTenColumns(definitions.map((definition) => definition!.initial));
+      definitions.forEach((definition, place) => {
+        definition!.min = 0;
+        definition!.max = columns === 2 && place === 1 ? 9 : BASE_TEN_DRAWN[place] ?? 0;
+        delete definition!.student_control;
+      });
+      return new Map(numbers.map((number) => [number, 0]));
+    },
+    number_moves: { state: baseTenState, moves: baseTenMoves },
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },

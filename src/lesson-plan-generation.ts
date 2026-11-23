@@ -50,7 +50,7 @@ import {
 import { completedJsonObjectProperty } from "./json-stream.js";
 import { promptSlot } from "./plugins/index.js";
 import { SECTION_FACTS } from "./plugins/section-facts.js";
-import { RECIPE_HOOKS, PLUGIN_HOOKS } from "./plugins/hooks.js";
+import { RECIPE_HOOKS, PLUGIN_HOOKS, type RecipeHooks } from "./plugins/hooks.js";
 
 export interface LessonPlanGenerationInput {
   turn_id: string;
@@ -1996,6 +1996,8 @@ function lowerModelSectionDraft(
     const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
     if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
     if (isNumberLineCapability(entry.content.capability)) return entry.content.numbers ?? [];
+    // A card that moves its own numbers (the trading mat) checks its task's value itself, exactly.
+    if (RECIPE_HOOKS[entry.content.capability as keyof typeof RECIPE_HOOKS]?.number_moves) return entry.content.numbers ?? [];
     const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY]?.number_input_policies ?? [];
     return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
   }));
@@ -2951,9 +2953,32 @@ export async function generateLessonPlanWithModel(
   // subsequent sections play. Retries must never include the rejected draft.
   const currentNumbersBefore = (section: number): Map<number, number> => {
     const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
+    // Cards that move their own numbers (the trading mat): one number's animation changes the others too.
+    const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]> }> = [];
     for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
-      for (const number of moment.restart_numbers ?? []) state.set(number, outline.numbers![number - 1].initial);
-      for (const action of moment.actions) if (action.action === "animate") state.set(action.number, action.end_value);
+      for (const action of moment.actions) {
+        if (action.action !== "create" || action.kind !== "visual") continue;
+        const content = action.content as LessonPlanVisualContent;
+        const hook = RECIPE_HOOKS[content.capability]?.number_moves;
+        if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers!.join())) cards.push({ numbers: [...content.numbers], hook });
+      }
+      for (const number of moment.restart_numbers ?? []) {
+        const card = cards.find((each) => each.numbers.includes(number));
+        for (const each of card?.numbers ?? [number]) state.set(each, outline.numbers![each - 1].initial);
+      }
+      for (const card of cards) {
+        const moves = moment.actions.flatMap((action) => (action.action === "animate" && card.numbers.includes(action.number)
+          ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []));
+        if (!moves.length) continue;
+        // The card's state: its lesson numbers first, as they stand, then what its start adds (a hundreds column).
+        const started = card.hook.state(card.numbers.map((number) => outline.numbers![number - 1].initial));
+        const now = [...card.numbers.map((number) => state.get(number)!), ...started.slice(card.numbers.length)];
+        const result = card.hook.moves(now, moves);
+        if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1)!.to[position]!));
+      }
+      for (const action of moment.actions) {
+        if (action.action === "animate" && !cards.some((card) => card.numbers.includes(action.number))) state.set(action.number, action.end_value);
+      }
     }
     return state;
   };
@@ -3163,9 +3188,6 @@ export async function generateLessonPlanWithModel(
     const draft = drafts[0];
     const card = draft && practiceCard(draft);
     if (!draft || !card) return;
-    // A card that writes its own practice (the trading mat, OLL decision 0023) has its practice already: a
-    // policy choice, so the lesson's practice is the program's alone and no paid call is spent on more.
-    try { if (compilePrefix(outline, [draft], options.compile).practice_by_program) return; } catch { /* asked as before */ }
     const reject = (error: unknown) => options.on_rejected_part?.({
       label: "lesson-plan-section", section: 1, attempt: 1, error: rejectionDetails(error),
     });

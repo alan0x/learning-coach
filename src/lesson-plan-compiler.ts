@@ -31,14 +31,13 @@ export interface CompiledLessonPlan {
   /** Other program changes to the lesson's text, by section (1-based); each names its kind. */
   program_adjustments: Array<{ section: number; kind: "success_message_removed" | "success_message_unchecked" | "activity_removed"; reason: string; detail: string; task: string }>;
   /** True when a visual writes its own practice (the trading mat), so no separate practice request is made. */
-  practice_by_program?: boolean;
 }
 
 /** Compiled kinds a lesson number can drive: every output kind of a registered recipe with number inputs. */
 // A recipe whose card binds variables it creates itself (the trading mat's counts, which the lesson taps and
 // animates) is number-driven too.
 const NUMBER_DRIVEN_KINDS: ReadonlySet<string> = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { number_inputs?: readonly string[]; output_kinds?: readonly string[]; variables_by_program?: boolean }>)
-  .flatMap((recipe) => (recipe.number_inputs?.length || recipe.variables_by_program ? recipe.output_kinds ?? [] : [])));
+  .flatMap((recipe) => (recipe.number_inputs?.length ? recipe.output_kinds ?? [] : [])));
 
 function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbers = true): string {
   const sourceParameters = content.parameters ?? {};
@@ -461,6 +460,9 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
       }
     }
   }
+  const ownNumbers = new Set(plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).flatMap((action) => (
+    action.action === "create" && action.kind === "visual" && RECIPE_HOOKS[(action.content as LessonPlanVisualContent).capability]?.number_moves
+      ? (action.content as LessonPlanVisualContent).numbers ?? [] : [])));
   const lastMoment = plan.sections.at(-1)?.moments.at(-1);
   // One return per number, however many of its tasks the lesson's end would meet.
   const resetNumbers = new Set<number>();
@@ -478,6 +480,9 @@ function resolveMetNumberTargets(plan: LessonPlan): void {
       const number = activity.number_controls[0]!.number;
       const definition = plan.numbers?.[number - 1];
       if (!definition || !lastMoment) continue;
+      // A card that moves its own numbers (the trading mat) starts its task from its own pile and checks
+      // the value itself: nothing here moves the target or the number.
+      if (ownNumbers.has(number)) continue;
       const met = (value: number) => Math.abs(activity.value - value) <= activity.tolerance * (1 + 1e-9);
       if (!lineNumbers.has(number)) {
         // Other visuals: the reply's lowering already moved a target its starting value met, but a
@@ -549,8 +554,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   const programAdjustments: CompiledLessonPlan["program_adjustments"] = [];
   // What visuals add themselves (OLL decision 0023): tasks before the model's, and the cards whose practice
   // the program writes, so the model's questions on them are dropped.
-  const programTasks: NonNullable<AuthoringLesson["lesson"]["tasks"]> = [];
-  const practiceOwners = new Set<string>();
+  // Visuals whose numbers change only by their own rules (the trading mat), by lesson number; and each
+  // one's state as the lesson plays, so every move starts from what the card shows.
+  const movers = new Map<number, { visual: CompiledVisual; capability: LessonPlanVisualContent["capability"]; position: number }>();
+  const moverStates = new Map<CompiledVisual, { start: number[]; now: number[] }>();
   let renderedVisuals: CompiledVisualRegistry | undefined;
   const reuseCompiledVisual = (visual: CompiledVisual) => {
     // The first component cannot duplicate earlier content. Initialize the
@@ -589,7 +596,35 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       const momentIndex = momentOffset + 1;
       const momentPath = `${sectionPath}.moments[${momentOffset}]`;
       const actions: AuthoringAction[] = [];
-      const programBeats: AuthoringLesson["steps"][number]["beats"] = [];
+      // A replayed number of such a visual replays the whole card: its other numbers and its own variables.
+      const replayed = new Set((moment.restart_numbers ?? []).map(variableAlias));
+      for (const number of moment.restart_numbers ?? []) {
+        const mover = movers.get(number);
+        const state = mover && moverStates.get(mover.visual);
+        if (!mover || !state) continue;
+        state.now = [...state.start];
+        for (const other of mover.visual.mover!.numbers) replayed.add(variableAlias(other));
+        for (const variable of mover.visual.variables ?? []) replayed.add(variable.as);
+      }
+      // This moment's animations of such a visual are one teaching step: applied lowest place first, and
+      // played where the first of them stands. Worked out at that first animation, so a card drawn earlier
+      // in the same moment can move in it.
+      const moved = new Set<CompiledVisual>();
+      const playMoves = (visual: CompiledVisual, capability: LessonPlanVisualContent["capability"]): AuthoringAction[] => {
+        const state = moverStates.get(visual)!;
+        const animations = moment.actions.flatMap((item, offset) => (item.action === "animate" && movers.get(item.number)?.visual === visual
+          ? [{ offset, position: movers.get(item.number)!.position, to: item.end_value, timing: item.timing }] : []));
+        const result = RECIPE_HOOKS[capability]!.number_moves!.moves(state.now, animations);
+        if ("refused" in result) {
+          const at = animations.find((animation) => animation.position === result.refused.position)!;
+          fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at.offset}].end_value`, result.refused.reason);
+        }
+        state.now = result.steps.at(-1)?.to ?? state.now;
+        const when = actionWhen(animations[0]!.timing);
+        const played = visual.mover!.play(result.steps).map((action) => ({ ...action, ...when }));
+        // An animation to the value already shown changes nothing: the moment still looks at the card.
+        return played.length ? played : [{ do: "focus", targets: [visual.whole], intent: compileText(plan, "继续观察已有的同一画面"), ...when } as AuthoringAction];
+      };
       let boardItemIndex = 0;
       let connectionIndex = 0;
       let groupIndex = 0;
@@ -627,9 +662,12 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               reusableVisuals.set(identity, visual);
               for (const variable of visual.variables ?? []) if (!visualVariables.has(variable.as)) visualVariables.set(variable.as, variable);
               actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
-              programBeats.push(...(visual.program_beats ?? []));
-              programTasks.push(...(visual.program_tasks ?? []));
-              if (visual.owns_practice) practiceOwners.add(visual.whole);
+              if (visual.mover && RECIPE_HOOKS[visualContent.capability]?.number_moves) {
+                const start = visual.mover.numbers.map((number) => plan.numbers![number - 1]!.initial);
+                const state = RECIPE_HOOKS[visualContent.capability]!.number_moves!.state(start);
+                moverStates.set(visual, { start: state, now: [...state] });
+                visual.mover.numbers.forEach((number, position) => movers.set(number, { visual, capability: visualContent.capability, position }));
+              }
             }
             wholeTargets.set(alias, visual.whole);
             partTargets.set(alias, visual.parts);
@@ -703,6 +741,12 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           actions.push({ do: "point", target: reference(`${actionPath}.reference`), ...actionWhen(item.timing) });
         } else if (item.action === "teacher_expression") {
           actions.push({ do: "expression", expression: item.expression, ...actionWhen(item.timing) });
+        } else if (movers.has(item.number)) {
+          const { visual, capability } = movers.get(item.number)!;
+          if (!moved.has(visual)) {
+            moved.add(visual);
+            actions.push(...playMoves(visual, capability));
+          }
         } else {
           actions.push({
             do: "animate", variable: variableAlias(item.number), value: item.end_value,
@@ -718,15 +762,13 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       includeWrittenCardsInFocus(actions);
       beats.push({
         key: `moment-${pad(momentIndex)}`,
-        ...(moment.restart_numbers?.length ? { start: { kind: "replay" as const, variables: moment.restart_numbers.map(variableAlias) } } : {}),
+        ...(replayed.size ? { start: { kind: "replay" as const, variables: [...replayed] } } : {}),
         // The model sometimes writes a formula placeholder (n1) in spoken or
         // written text; learners hear and read the number's own symbol.
         ...(moment.narration ? { say: namedNumbers(moment.narration, plan) } : {}),
         ...(moment.delivery ? { delivery: moment.delivery } : {}),
         actions,
       });
-      // The program's own beats follow the moment that drew their card; the model's beat keys are unchanged.
-      programBeats.forEach((beat, index) => beats.push({ ...beat, key: `moment-${pad(momentIndex)}-program-${pad(index + 1)}` }));
     });
     steps.push({ key: `section-${pad(sectionIndex)}`, purpose: section.purpose, beats });
   });
@@ -753,13 +795,6 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     }
     tasks.push(task);
   };
-  for (const task of programTasks) addTask(task);
-  /** A model question or reflection on a card whose practice the program writes is dropped, and recorded. */
-  const ownedByProgram = (anchor: string, section: number, task: string, path: string): boolean => {
-    if (!practiceOwners.has(anchor)) return false;
-    programAdjustments.push({ section, kind: "activity_removed", reason: "practice_by_program", task, detail: `${task} (${path}): the program writes this card's practice` });
-    return true;
-  };
   plan.sections.forEach((section, sectionOffset) => {
     const sectionPath = `$lessonPlan.sections[${sectionOffset}]`;
     section.student_activities?.forEach((activity, activityOffset) => {
@@ -767,7 +802,6 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       if (activity.kind === "reflection") {
         const anchor = resolvedReference(`${activityPath}.reference`);
         const anchorTarget = wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias;
-        if (ownedByProgram(anchorTarget, sectionOffset + 1, `section-${pad(sectionOffset + 1)}-reflection-${pad(activityOffset + 1)}`, activityPath)) return;
         reflections.push({
           as: `section-${pad(sectionOffset + 1)}-reflection-${pad(activityOffset + 1)}`,
           prompt: namedNumbers(activity.prompt, plan),
@@ -779,10 +813,6 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       }
       // A success message whose arithmetic is false is dropped, never repaired (decision 0020; plan 3.6).
       const taskAlias = `section-${pad(sectionOffset + 1)}-task-${pad(activityOffset + 1)}`;
-      if (activity.kind !== "number_target") {
-        const target = resolvedReference(`${activityPath}.reference`);
-        if (ownedByProgram(wholeTargets.get(target.authoring_alias) ?? target.authoring_alias, sectionOffset + 1, taskAlias, activityPath)) return;
-      }
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : undefined;
       // The check can only remove a message, never cost the lesson: if it fails, the message stays.
       // A task that asks for rounding to decimal places lets its message show results rounded to those places.
@@ -813,6 +843,18 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       if (activity.kind === "number_target") {
         const firstNumber = activity.number_controls[0]?.number;
         if (!firstNumber) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.number_controls`, "number task requires controls");
+        const mover = movers.get(firstNumber);
+        if (mover) {
+          // The card's own task: "bring this number to a value" is done on the card, by its rules.
+          const own = mover.visual.mover!.task(mover.position, activity.value);
+          if ("refuse" in own) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.value`, own.refuse);
+          if ("drop" in own) {
+            programAdjustments.push({ section: sectionOffset + 1, kind: "activity_removed", reason: "nothing_to_do_on_card", task: taskAlias, detail: `${taskAlias} (${activityPath}): ${own.drop}` });
+            return;
+          }
+          addTask({ ...common, ...own.task } as unknown as NonNullable<AuthoringLesson["lesson"]["tasks"]>[number], droppedPraise);
+          return;
+        }
         addTask({
           ...common,
           allowed_operations: activity.number_controls.map((control) => ({
@@ -920,7 +962,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     steps,
     close: { summary: plan.close.summary, focus: closeFocus },
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments, ...(practiceOwners.size ? { practice_by_program: true } : {}) };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
 }
 
 function expressionReferencesVariable(expression: unknown, variable: string): boolean {
