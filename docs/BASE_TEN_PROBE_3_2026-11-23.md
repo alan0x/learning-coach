@@ -61,3 +61,38 @@ The same four bars as probes 1 and 2.
 
 ## Known risks, recorded before the run
 - The mat's slider shows the count of one place. A typed question asking for that count would be on the screen; reading by hand catches that under bar 4's "states the answer" only if the narration says it. This is reported, not a bar.
+
+## Result: probe 3 fails bars 1 and 4; stopped (run 2026-11-23)
+**Build and calls.** The build is 81ca1e9, frozen in `handoff-math-expressiveness/runs/base-ten/probe-3/build`. Calls: smoke 5, candidate 73, baseline 85, so 163 in all. The smoke showed no build or runner fault.
+
+| Bar | Need | Result |
+|---|---|---|
+| 1. Trading questions pass the judge | EN ≥ 13 of 16, ZH ≥ 8 of 10 | **Fail:** EN 9, ZH 5 |
+| 2. Mat drawn on near misses | at most 1 of 7 | Pass: 1 (BT-32, 46 + 37) |
+| 3. Lost lessons | candidate ≤ baseline + 1 | Pass: EN 0 vs 1, ZH 1 vs 1 |
+| 4. Misleading narration | at most 1 per language | **Fail:** EN 6 (4 firm), ZH 6 (4 firm) |
+
+### What the slider fixed
+- **Refusals** fell from 33 (probe 2) to 7. Slider targets the mat could not reach fell from 23 to 6; the 6 left are targets that would change the total ("the loose ones to 15"). The seventh is an animation upward.
+- **Lost lessons** fell from 3 to 1 (BT-26).
+- **Slider tasks on the mat:** 17 of the 26 trading lessons have one, against 19 card tasks in probe 2. 16 of the 17 slide to the fully traded count; BT-25 slides to a partial count.
+
+### Why bar 1 fails (EN: BT-01, 03, 05, 07, 09, 10, 13; ZH: BT-22, 24, 26, 27, 29)
+- **The model uses the slider to set a count, not to make a trade: 9 lessons** (BT-01, 05, 10, 12, 13, 24, 25, 27, 32). Their slider tasks ask to go "back to 13" or "调回 23根": the starting pile, which the task already opens on. The program drops each such task ("the loose ones are already 13"). In five of these lessons (BT-01, 05, 13, 24, 27) the only task on the mat was dropped. The model writes this in the same way it uses every other component's slider: move a number, and the picture follows.
+- **No typed question: 4 lessons** (BT-03, 10, 22, 29).
+- **Trades left unmade: 2 lessons.** BT-07 never trades its tens; BT-09 ends with ten tens.
+- **Lost: BT-26.**
+
+### Why bar 4 fails (blind reading of `candidate-narration.txt`)
+- **A later part retells the starting pile or the trade while the mat shows the finished pile: 6 lessons** (BT-12, 13, 22, 25, 27, 32). This is the main source of firm faults, and the same cause as in probe 2 (BT-02, 09, 11, 27 there).
+- **A tens trade narrated but never made on the mat: 2 lessons** (BT-07, 09).
+- **An invitation to trade "these 10" when the mat no longer holds them: 2 lessons** (BT-03, 28).
+- **A faulty task prompt: 2 lessons.** BT-23 asks the trade backwards; in BT-15 the lesson's own example states the typed answer.
+- **Read as not misleading:** 10 lessons end by inviting the learner to slide to a value the mat already shows at that moment. The slider task starts from the lesson's pile, where the move is real, so the reader scored these as not misleading under rule 4. Read the other way, more lessons would fail.
+
+### What this means
+The slider removed probe 2's main cause: refused slider targets and the lessons they lost. What is left is the model's writing, not the mat:
+- the model treats a slider as "set this count";
+- the model loses track of what the mat shows across sections.
+
+The second appeared in all three probes. Under the stop rule no further design is tried without the owner.
