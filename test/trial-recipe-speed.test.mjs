@@ -419,3 +419,16 @@ test("the plot points probe runs seven judge cases and two dragged-point cases (
   assert.deepEqual(POINTS_PROBE_CASES.map((item) => item.id), ["PJ-01", "PJ-02", "PJ-04", "PJ-07", "PJ-10", "PJ-05", "PJ-17", "DP-01", "DP-02"]);
   assert.equal(qualityCasesFor("plot_points").length, 9);
 });
+
+test("the trading mat probe runs the 33 development cases, both languages, near misses marked (decision 0023)", async () => {
+  const { BASE_TEN_CASES, TRIAL_QUALITY_CASES, judgeBaseTen, qualityCasesFor } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  // A part that draws the mat names the recipe, so a near miss that drew it is flagged for reading (review of #158).
+  assert.deepEqual(recipesInPart({ steps: [{ beats: [{ actions: [{ do: "write", kind: "base_ten_trade", content: { columns: 2, places: [] } }] }] }] }), ["base_ten_trade"]);
+  assert.equal(TRIAL_QUALITY_CASES.base_ten_trade, BASE_TEN_CASES);
+  assert.equal(qualityCasesFor("base_ten_trade").length, 33);
+  assert.deepEqual(BASE_TEN_CASES.filter((item) => item.nearMiss).map((item) => item.id), ["BT-17", "BT-18", "BT-19", "BT-20", "BT-31", "BT-32", "BT-33"]);
+  assert.equal(BASE_TEN_CASES.filter((item) => item.language === "zh-CN").length, 13);
+  assert.ok(BASE_TEN_CASES.every((item) => item.judge === "base_ten" && (item.nearMiss ? item.expect.forbid : item.expect.lesson_pile)));
+  // Every failed check of the judge is a hard miss, named with its detail.
+  assert.deepEqual(judgeBaseTen(BASE_TEN_CASES[0], { lesson: { tasks: [], variables: [] }, steps: [] }), { hard: ["one trading mat: 0 mats"], soft: [] });
+});
