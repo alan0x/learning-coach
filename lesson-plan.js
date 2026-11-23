@@ -9902,14 +9902,14 @@ function cardSliderTask(task, path, allowedVariables, cardSliders, contents, dec
   }
   const content = contents.get([...cards][0]);
   const variables = baseTenTapVariables(content, declarations, `${path}/allowed_operations`, "A slider on a card's count");
-  if (task.start) {
-    const missing = [...variables.values()].filter((alias) => !Object.hasOwn(startValues, alias));
-    if (missing.length)
-      fail("OLL_INVALID_PHASE_START", `${path}/start/variables`, `A card task's practice pile sets every count and tray; missing ${missing.join(", ")}`);
-  }
+  if (!task.start)
+    fail("OLL_INVALID_PHASE_START", `${path}/start`, "A task on a card's count sliders gives the learner's practice pile in start");
+  const missing = [...variables.values()].filter((alias) => !Object.hasOwn(startValues, alias));
+  if (missing.length)
+    fail("OLL_INVALID_PHASE_START", `${path}/start/variables`, `A card task's practice pile sets every count and tray; missing ${missing.join(", ")}`);
   const values = { ...Object.fromEntries(declarations.map((variable) => [variable.as, variable.initial])), ...startValues };
   const pile = baseTenContentAt(content, variables, values);
-  validateBaseTenTradeContent(pile, "$", (failPath, detail) => fail("OLL_INVALID_STUDENT_TASK", task.start ? `${path}/start/values` : `${path}/allowed_operations`, `The task's starting pile is not a starting pile: ${detail} (${failPath.replace(/^\$\//, "")})`));
+  validateBaseTenTradeContent(pile, "$", (failPath, detail) => fail("OLL_INVALID_STUDENT_TASK", `${path}/start/values`, `The task's starting pile is not a starting pile: ${detail} (${failPath.replace(/^\$\//, "")})`));
   const places = [...allowedVariables].map((alias) => cardSliders.get(alias).place);
   const piles = baseTenSliderReachable(baseTenMat(pile), places).map((mat) => Object.fromEntries([...variables].map(([target, alias]) => {
     const [name, field] = target.split(".");
