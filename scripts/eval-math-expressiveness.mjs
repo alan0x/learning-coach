@@ -12,6 +12,9 @@
  *
  *   node scripts/eval-math-expressiveness.mjs --octos-profile ~/.octos/profiles/<id>.json --out <dir>
  *     [--ids K2-01,G35-03] [--max-calls 400] [--lesson-calls 12] [--build <dir with main>]
+ *     [--cases-file <cases.json>] [--trial <recipes>]
+ *   --trial names trial recipes to switch on (LEARNING_COACH_TRIAL_RECIPES) for a probe of a recipe that is
+ *   not on yet; without it the run is the default build's, as before.
  *   Re-running with the same --out skips questions that already have a row.
  */
 import { spawn } from "node:child_process";
@@ -136,6 +139,8 @@ async function main() {
   const build = resolve(option("--build", root));
   const maxCalls = Number(option("--max-calls", "400"));
   const lessonCalls = Number(option("--lesson-calls", "12"));
+  const trial = option("--trial");
+  if (args.includes("--trial") && (!trial || trial.startsWith("--"))) throw new Error("--trial needs the recipes to switch on");
   const read = (name) => JSON.parse(readFileSync(join(root, "testsuite", name), "utf8"));
   const set = read("math-expressiveness-question-set.json");
   const m1 = read("math-expressiveness-m1-baseline.json");
@@ -157,7 +162,9 @@ async function main() {
   const route = { provider: routeEnv.OCTOS_PROFILE_LLM_PROVIDER, model: routeEnv.OCTOS_PROFILE_LLM_MODEL };
   await mkdir(resolve(out), { recursive: true });
   const reportPath = join(resolve(out), "report.json");
-  const report = existsSync(reportPath) ? JSON.parse(readFileSync(reportPath, "utf8")) : { ...route, build, rows: [] };
+  const report = existsSync(reportPath) ? JSON.parse(readFileSync(reportPath, "utf8")) : { ...route, build, ...(trial ? { trial_recipes: trial } : {}), rows: [] };
+  // A run directory holds one arm: resuming it with other trial recipes would mix two arms in one report.
+  if ((report.trial_recipes ?? null) !== (trial ?? null)) throw new Error(`${reportPath} was made with trial recipes ${JSON.stringify(report.trial_recipes ?? null)}; use another --out`);
   const done = new Set(report.rows.map((row) => row.id));
   let spent = report.rows.reduce((sum, row) => sum + row.calls, 0);
   console.error(JSON.stringify({ stage: "math-expressiveness", ...route, questions: ids.length, already: done.size, max_calls: maxCalls }));
@@ -171,7 +178,9 @@ async function main() {
     const workDir = join(dir, "work");
     const turn = `m2-${id}-${Date.now()}`;
     const env = { ...process.env, ...routeEnv, OCTOS_WORK_DIR: workDir, OLL_DEBUG_GENERATION: "1" };
+    // Only what --trial names is on: a variable left in the shell never changes a run.
     delete env.LEARNING_COACH_TRIAL_RECIPES;
+    if (trial) env.LEARNING_COACH_TRIAL_RECIPES = trial;
     const input = { turn_id: turn, learner_request: q.prompt, request_source: "self_contained", language: q.language === "zh-CN" ? "zh-CN" : "en", input_modality: "text" };
     const raw = [];
     // Coach writes each raw reply as one stderr line with OLL_DEBUG_GENERATION; kept for reading and replay.
