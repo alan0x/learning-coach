@@ -7966,6 +7966,7 @@ var v0_1_schema_default = {
       required: ["columns", "places"],
       properties: {
         columns: { enum: [2, 3] },
+        language: { enum: ["en-US", "zh-CN"] },
         places: {
           type: "array",
           minItems: 2,
@@ -8515,6 +8516,8 @@ var FRACTION_MODEL_BINDINGS = {
 var BASE_TEN_TRADE_KIND = "base_ten_trade";
 var BASE_TEN_TRADE_FEATURE = "plugin:math/base-ten-trade@1";
 var BASE_TEN_TRADE_PLUGIN_VERSION = "0.5.0";
+var BASE_TEN_TRADE_LANGUAGE_FEATURE = "plugin:math/base-ten-trade-language@1";
+var BASE_TEN_TRADE_LANGUAGE_VERSION = "0.6.0";
 var BASE_TEN_TRADE_BINDINGS = {
   places: ["count", "tray"]
 };
@@ -8637,8 +8640,9 @@ var MATH_PLUGIN_MANIFEST = {
   // 0.2.0: the number line (decision 0013). 0.3.0: jump lanes for several jumps on one line (decision 0017).
   // 0.4.0: the fraction model (decision 0021). 0.4.1: grids fill column by column. 0.4.2: a share marks one
   // piece of each part; the program writes a fraction's other form beside its label (0021 amendment 2).
-  // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023).
-  version: "0.5.0",
+  // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023). 0.6.0: the mat speaks Chinese
+  // (0023 amendment 3).
+  version: "0.6.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -8709,7 +8713,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION },
     detect(content, kind, use) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -8718,8 +8722,11 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
       }
       if (kind === FRACTION_MODEL_KIND)
         use(FRACTION_MODEL_FEATURE);
-      if (kind === BASE_TEN_TRADE_KIND)
+      if (kind === BASE_TEN_TRADE_KIND) {
         use(BASE_TEN_TRADE_FEATURE);
+        if (content.language !== void 0)
+          use(BASE_TEN_TRADE_LANGUAGE_FEATURE);
+      }
     }
   }
 ]);
