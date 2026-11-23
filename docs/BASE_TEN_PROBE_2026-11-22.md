@@ -52,5 +52,42 @@ These are **not** misleading:
 - **Practice start:** in Learn the mat animates from the lesson pile to the practice pile, showing wrong amounts for about a second (OLL, open). The probe does not judge playback.
 - **Request cost** with the trial on: prompt 279 B, schema 382 B (661 B).
 
-## Result
-Not run yet.
+## Result: probe 1 fails bars 2 and 4 (run 2026-11-22)
+Build Coach `fd4375c` (frozen copy), Gemini 3.6 Flash via the dev-probe profile. The smoke used 2 calls (both lessons passed, in the right language). The batch ran 66 lessons on **129 calls** of the 280 cap; none was left unrun. Report, kept parts and narration: `handoff-math-expressiveness/runs/base-ten/probe-1/`.
+
+| Bar | English | Chinese | Verdict |
+|---|---|---|---|
+| 1. Trading questions pass the judge | **14 / 16** (misses BT-10, BT-14) | **9 / 10** (miss BT-29) | pass |
+| 2. Near misses that draw the mat (at most 1 of 7) | BT-17 | BT-31 | **fail (2 of 7)** |
+| 3. Lost lessons (candidate vs baseline) | 1 vs 0 (BT-14) | 1 vs 0 (BT-29) | pass |
+| 4. Misleading narration (at most 1 per language) | **7** (BT-02, 06, 07, 09, 12, 16; BT-17) | **2** (BT-27, 30) | **fail** |
+
+**What failed, and why:**
+- **Narration (bar 4): a timing fault in the recipe, not wrong arithmetic.**
+  - The program plays its demonstration right after the beat that draws the mat. The model's explanation comes after it, and describes the pile before the trade while the mat already shows the pile after it.
+  - Examples:
+    - "Notice the 26 loose sticks" while the mat shows 6;
+    - "we have 11 single napkins" while it shows 1;
+    - 「这里一共有 11 根」 while it shows 1;
+    - "Watch how 20 of our loose straws group together" when nothing moves.
+  - Every end result the narration states is right. No narration gives away the practice answer.
+- **Near misses (bar 2):** both are comparing two numbers ("354 or 345", 「263和236哪个大」). The mat drew one of the numbers and the narration compared both. BT-17 also told the child to change the second number, which the mat cannot do, so it also counts under bar 4. Adding, ten-more and rounding were never drawn on the mat.
+- **The practice pile (the two lost lessons, and BT-10):**
+  - In expanded-form questions (345, 406) the pile has nothing to trade. The model wrote a practice pile of zeros, then 12, then the lesson's own number, and every try was refused.
+  - **BT-10:** the replies show a hundred added to the lesson pile, drawn as [1,10,0] for ten tens. Its practice piles had been refused twice: once for making 100 too (ten tens), then for having two places (45). Adding a hundred to the lesson pile made a practice pile of 120 acceptable.
+  - **BT-24 passed the judge with a practice pile that has nothing to trade:** five tens and no ones, after a lesson about trading ten ones. The judge does not check that the practice pile needs a trade.
+- **Refusals, all kinds (candidate arm, from the report's rows):** 24 in all.
+  - A missing lesson number: 11, each in a first reply.
+  - Practice piles: 13 in all.
+    - 7 with nothing to make;
+    - 3 with the wrong number of places;
+    - 2 with the lesson's own number;
+    - 1 with a missing number.
+  - **Which numbers the first replies wrote** (of the 28 that wrote any):
+    - all six: 16;
+    - **only `lesson_hundreds`: 9**;
+    - other subsets: 3.
+  - The repeated "only the hundreds" pattern is to be checked against how the schema reaches the model. It costs a call and time, but no lesson.
+- **Speed (information only, not a bar):** median time to the first playable part was 8.8 s with the mat and 10.3 s without. Calls: 67 against 62.
+
+Another probe needs fixes first. They will be designed on these development cases only, never on the sealed set.
