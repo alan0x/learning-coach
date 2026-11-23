@@ -19,7 +19,7 @@
  */
 import { spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { mkdir, writeFile, copyFile } from "node:fs/promises";
+import { mkdir, writeFile, copyFile, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { profileRouteEnvironment } from "./eval-payload-padding.mjs";
@@ -175,6 +175,9 @@ async function main() {
     if (spent + lessonCalls > maxCalls) { console.error(JSON.stringify({ stage: "stopped", reason: "call budget", spent })); break; }
     const dir = join(resolve(out), id);
     await mkdir(dir, { recursive: true });
+    // A case that is run again starts clean: a lesson saved by an attempt that never reached the report
+    // must not be judged as this one's (review of #161).
+    await rm(join(dir, "lesson.json"), { force: true });
     const workDir = join(dir, "work");
     const turn = `m2-${id}-${Date.now()}`;
     const env = { ...process.env, ...routeEnv, OCTOS_WORK_DIR: workDir, OLL_DEBUG_GENERATION: "1" };
