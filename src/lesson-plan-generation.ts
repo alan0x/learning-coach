@@ -3163,6 +3163,9 @@ export async function generateLessonPlanWithModel(
     const draft = drafts[0];
     const card = draft && practiceCard(draft);
     if (!draft || !card) return;
+    // A card that writes its own practice (the trading mat, OLL decision 0023) makes the request a paid call
+    // whose questions would be dropped: it is not made.
+    try { if (compilePrefix(outline, [draft], options.compile).practice_by_program) return; } catch { /* asked as before */ }
     const reject = (error: unknown) => options.on_rejected_part?.({
       label: "lesson-plan-section", section: 1, attempt: 1, error: rejectionDetails(error),
     });

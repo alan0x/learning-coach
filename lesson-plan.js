@@ -13546,6 +13546,42 @@ function buildFractionModel(input) {
   };
 }
 
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/base-ten-trade-builder.js
+var driven3 = (value2) => typeof value2 === "object" && value2 !== null && typeof value2.expression === "string";
+function buildBaseTenTrade(input) {
+  const bindings = [];
+  const value2 = (raw, target) => {
+    if (!driven3(raw))
+      return raw;
+    bindings.push({ target, expression: raw.expression });
+    return raw.initial;
+  };
+  const places = input.places.map((place5, p) => {
+    const as = BASE_TEN_TRADE_PLACES[p];
+    return {
+      as,
+      count: value2(place5.count, `${as}.count`),
+      ...place5.tray !== void 0 ? { tray: value2(place5.tray, `${as}.tray`) } : {}
+    };
+  });
+  const content = {
+    ...input.title !== void 0 ? { title: input.title } : {},
+    ...input.caption !== void 0 ? { caption: input.caption } : {},
+    columns: input.columns,
+    places,
+    ...bindings.length ? { bindings } : {},
+    ...input.language !== void 0 ? { language: input.language } : {}
+  };
+  const parts = { whole: input.as };
+  for (const place5 of places)
+    parts[place5.as] = `${input.as}#${place5.as}`;
+  return {
+    actions: [{ do: "write", as: input.as, kind: BASE_TEN_TRADE_KIND, role: input.role, content, place: input.place }],
+    whole: input.as,
+    parts
+  };
+}
+
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/number-line-form.js
 var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdivisions, moves: 3 };
 
@@ -14288,9 +14324,9 @@ function buildUnitCircle(input) {
 }
 function buildCirclePolygons(input) {
   const { radius } = input;
-  const driven3 = typeof input.sides === "number" ? void 0 : input.sides;
+  const driven4 = typeof input.sides === "number" ? void 0 : input.sides;
   const sides = typeof input.sides === "number" ? input.sides : input.sides.initial;
-  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven3?.min ?? sides)) * 1.18 : radius * 1.3;
+  const extent = input.circumscribed ? radius / Math.cos(Math.PI / (driven4?.min ?? sides)) * 1.18 : radius * 1.3;
   const polygon = (as, label) => ({
     as,
     center: "center",
@@ -14311,9 +14347,9 @@ function buildCirclePolygons(input) {
       ...input.circumscribed ? [polygon("circumscribed", input.text.circumscribed_label)] : []
     ],
     ...input.text.caption !== void 0 ? { caption: input.text.caption } : {},
-    ...driven3 ? { bindings: [
-      { target: "inscribed.sides", expression: driven3.expression },
-      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven3.expression }] : []
+    ...driven4 ? { bindings: [
+      { target: "inscribed.sides", expression: driven4.expression },
+      ...input.circumscribed ? [{ target: "circumscribed.sides", expression: driven4.expression }] : []
     ] } : {}
   };
   return {
@@ -14532,6 +14568,24 @@ var MATH_RECIPES = {
     revised_by_program: true,
     model_guidance: "\u5206\u6570\u7B49\u5206\u56FE\uFF1Afractions\u5199\u5206\u5B50\u5206\u6BCD\u7684\u503C\uFF1Bview\uFF1Aone\u3001compare\u4E24\u4E2A\u3001equivalent\u7B49\u503C\u3001split\u628A\u6BCF\u4EFD\u518D\u5206split_each_part\u4EFD\u6C42\u6BCF\u4EFD\u3001share\u628Aa\u4E2A\u6574\u4F53\u5E73\u5206\u7ED9b\u4EFD\u5199a/b\uFF1Bshape\uFF1Abar/circle/grid\uFF08\u767E\u5206\u4E4B\u51E0\u7528grid\uFF09\uFF1B\u4E0D\u7528\u4E8E\u4E0D\u7B49\u5206\u3001\u4E00\u7EC4\u7269\u4F53\u7684\u51E0\u5206\u4E4B\u51E0\u3001\u6BD4\uFF1B\u5927\u4E8E1\u5199\u4E00\u4E2A\u5047\u5206\u6570"
   },
+  // OLL decision 0023 (a trial): the model writes the question's pile and a practice pile as six whole
+  // numbers; the program draws the mat, demonstrates the trades in its own words and writes the practice.
+  base_ten_trade: {
+    parts: ["whole", "ones", "tens", "hundreds"],
+    number_inputs: [],
+    number_input_policies: [],
+    parameter_names: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
+    model_parameter_names: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
+    // All six, every time: an unused field left to the model was filled with runaway numbers (fraction probe 1).
+    required_model_schema_parameters: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
+    semantic_parameters: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
+    output_kinds: ["base_ten_trade"],
+    student_controls: [],
+    required_features: ["place_value_trading"],
+    // The card binds counts the program creates; the lesson taps and animates them.
+    variables_by_program: true,
+    model_guidance: "\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF1Alesson_*\u7167\u9898\u76EE\u5199\u6563\u7684\u4E00\u3001\u5341\u3001\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u51990\uFF09\uFF0Cpractice_*\u53E6\u5199\u4E00\u5806\uFF08\u4F4D\u6570\u76F8\u540C\uFF0C\u603B\u6570\u4E0D\u540C\uFF09\uFF1B\u7A0B\u5E8F\u6F14\u793A\u4EA4\u6362\u3001\u51FA\u7EC3\u4E60\uFF1B\u65C1\u767D\u8BF4\u9898\u76EE\u548C\u6362\u5B8C\u540E\u6446\u9762\u4E0A\u6709\u51E0\u4E2A\u5341\u51E0\u4E2A\u4E00\uFF0C\u4E0D\u8BF4\u7EC3\u4E60\u7684\u6570\uFF1B\u4E0D\u5199\u5173\u4E8E\u6446\u9762\u7684\u9898"
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -14705,6 +14759,16 @@ var MATH_SCHEMA_PROPERTIES = {
     // (probe 2).
     split_each_part: { enum: ["2", "3", "4", "5", "6"] }
   },
+  base_ten_trade: {
+    // Ones first, so a tens-and-ones question writes the hundreds last, as 0 (0023 §4). Bounded by the mat's
+    // starting limits; the compiler checks the piles together.
+    lesson_ones: { type: "integer", minimum: 0, maximum: 59 },
+    lesson_tens: { type: "integer", minimum: 0, maximum: 19 },
+    lesson_hundreds: { type: "integer", minimum: 0, maximum: 9 },
+    practice_ones: { type: "integer", minimum: 0, maximum: 59 },
+    practice_tens: { type: "integer", minimum: 0, maximum: 19 },
+    practice_hundreds: { type: "integer", minimum: 0, maximum: 9 }
+  },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
     solids: { type: "array", minItems: 1, maxItems: 2, items: { type: "object", properties: {
@@ -14834,7 +14898,7 @@ function buildConstantSpeedMotion(input) {
   const distance = time.initial * speed.initial;
   const t = quantityValue(time);
   const v = quantityValue(speed);
-  const driven3 = Boolean(time.expression || speed.expression);
+  const driven4 = Boolean(time.expression || speed.expression);
   const lane = Number((0.08 * length2).toPrecision(12));
   const trackContent = {
     title: text5.title,
@@ -14842,13 +14906,13 @@ function buildConstantSpeedMotion(input) {
     points: [
       { as: "start", x: 0, y: lane, label: text5.start },
       { as: "finish", x: length2, y: lane, visible: false },
-      { as: "object", x: distance, y: lane, label: driven3 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
+      { as: "object", x: distance, y: lane, label: driven4 ? `${text5.distance_readout}${distance}${text5.distance_unit ? ` ${text5.distance_unit}` : ""}` : text5.object }
     ],
     segments: [
       { as: "track", from: "start", to: "finish", style: "dashed" },
       { as: "travelled", from: "start", to: "object", style: "solid" }
     ],
-    ...driven3 ? {
+    ...driven4 ? {
       bindings: [{
         target: "object.x",
         expression: `${v}*${t}`,
@@ -14861,7 +14925,7 @@ function buildConstantSpeedMotion(input) {
     axes: { x: { min: 0, max: time.max, label: text5.time_axis }, y: { min: 0, max: length2, label: text5.distance_axis } },
     curves: [{ as: "primary-curve", expression: `${v}*x`, label: text5.curve_label }],
     points: [{ as: "moving-point", x: time.initial, y: distance, label: text5.current_state }],
-    ...driven3 ? {
+    ...driven4 ? {
       bindings: [
         { target: "moving-point.x", expression: t },
         { target: "moving-point.y", expression: `${v}*${t}` }
@@ -15112,7 +15176,7 @@ var RECIPE_CATALOG_ORDER = [
   "solid_3d"
 ];
 var RETIRED_RECIPES = ["cube_with_section"];
-var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model"];
+var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "base_ten_trade"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));
@@ -15170,7 +15234,15 @@ var SCHEMA_PROPERTY_ORDER = [
   "fractions",
   "fraction_shape",
   "fraction_view",
-  "split_each_part"
+  "split_each_part",
+  // The trading mat trial recipe (decision 0023): its six numbers, ones first, so a tens-and-ones question
+  // writes the hundreds last; last in the list, so requests without it keep their order.
+  "lesson_ones",
+  "lesson_tens",
+  "lesson_hundreds",
+  "practice_ones",
+  "practice_tens",
+  "practice_hundreds"
 ];
 function promptSlot(slot, core = "", plugins = INSTALLED_PLUGINS) {
   const text5 = core + plugins.map((plugin) => plugin.prompt_rules[slot] ?? "").join("");
@@ -18192,7 +18264,13 @@ var CompiledVisualRegistry = class {
       parts: new Map([...visual.parts].map(([name, target]) => [name, reference(target)])),
       // A visual's own slider goes with its card: kept when the card is written, dropped when an earlier
       // identical card is shown instead (that card's slider is already in the lesson).
-      ...visual.variables && !visual.actions.some((action) => action.do === "write" && reused.has(action.as)) ? { variables: visual.variables } : {}
+      ...visual.variables && !visual.actions.some((action) => action.do === "write" && reused.has(action.as)) ? { variables: visual.variables } : {},
+      // What the program adds for a card goes with the card, as its slider does.
+      ...!visual.actions.some((action) => action.do === "write" && reused.has(action.as)) ? {
+        ...visual.program_beats ? { program_beats: visual.program_beats } : {},
+        ...visual.program_tasks ? { program_tasks: visual.program_tasks } : {},
+        ...visual.owns_practice ? { owns_practice: true } : {}
+      } : {}
     };
   }
 };
@@ -20082,6 +20160,176 @@ function compileFractionModel(base, content, role, placement, plan, path) {
   });
   return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)) };
 }
+var BASE_TEN_FIELDS = ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"];
+var BASE_TEN_PLACE_NAMES = ["ones", "tens", "hundreds"];
+var pileValue = ([h, t, o]) => h * 100 + t * 10 + o;
+var digitCount = (value2) => value2 >= 100 ? 3 : value2 >= 10 ? 2 : 1;
+var BASE_TEN_TEXT = {
+  "en-US": {
+    title: ["Tens and ones", "Hundreds, tens and ones"],
+    fill: ["Ten ones make one ten. Put ones in the tray, one at a time.", "Ten tens make one hundred. Put tens in the tray, one at a time."],
+    make: ["The tray is full: ten ones. Make a ten!", "The tray is full: ten tens. Make a hundred!"],
+    rest: ["The other ones trade the same way: every ten ones make one ten.", "The other tens trade the same way: every ten tens make one hundred."],
+    variable: ["ones", "ones in the tray", "tens", "tens in the tray", "hundreds"],
+    trade: ["Your turn. Make tens until you can't, then tap I'm done.", "Your turn. Make tens and hundreds until you can't, then tap I'm done."],
+    tradeHint: ["Put ten ones in the tray, then tap Make a ten.", "Put ten ones in the tray, then tap Make a ten. Ten tens make a hundred the same way."],
+    number: "How many are on the mat?",
+    numberHint: ["Count the tens by tens, then the ones.", "Count the hundreds by hundreds, the tens by tens, then the ones."],
+    counts: "How many of each are on the mat?",
+    countsHint: "Count what is in each column.",
+    words: ["ones", "tens", "hundreds"],
+    parts: "What is each place worth?",
+    partsHint: ["Each ten is worth ten.", "Each ten is worth ten, and each hundred is worth one hundred."],
+    labels: ["the ones are worth", "the tens are worth", "the hundreds are worth"]
+  },
+  "zh-CN": {
+    title: ["\u5341\u548C\u4E00", "\u767E\u3001\u5341\u548C\u4E00"],
+    fill: ["\u5341\u4E2A\u4E00\u662F\u4E00\u4E2A\u5341\u3002\u5148\u628A\u5341\u4E2A\u4E00\u653E\u8FDB\u6258\u76D8\uFF0C\u4E00\u6B21\u653E\u4E00\u4E2A\u3002", "\u5341\u4E2A\u5341\u662F\u4E00\u4E2A\u767E\u3002\u5148\u628A\u5341\u4E2A\u5341\u653E\u8FDB\u6258\u76D8\uFF0C\u4E00\u6B21\u653E\u4E00\u4E2A\u3002"],
+    make: ["\u6258\u76D8\u6EE1\u4E86\uFF1A\u5341\u4E2A\u4E00\u3002\u6362\u6210\u4E00\u4E2A\u5341\uFF01", "\u6258\u76D8\u6EE1\u4E86\uFF1A\u5341\u4E2A\u5341\u3002\u6362\u6210\u4E00\u4E2A\u767E\uFF01"],
+    rest: ["\u5269\u4E0B\u7684\u4E00\u4E5F\u8FD9\u6837\u6362\uFF0C\u6BCF\u5341\u4E2A\u4E00\u6362\u6210\u4E00\u4E2A\u5341\u3002", "\u5269\u4E0B\u7684\u5341\u4E5F\u8FD9\u6837\u6362\uFF0C\u6BCF\u5341\u4E2A\u5341\u6362\u6210\u4E00\u4E2A\u767E\u3002"],
+    variable: ["\u4E2A\u4E00", "\u6258\u76D8\u91CC\u7684\u4E00", "\u4E2A\u5341", "\u6258\u76D8\u91CC\u7684\u5341", "\u4E2A\u767E"],
+    trade: ["\u8F6E\u5230\u4F60\u4E86\u3002\u80FD\u6362\u5C31\u4E00\u76F4\u6362\uFF0C\u6362\u4E0D\u4E86\u4E86\u5C31\u70B9\u201C\u6211\u505A\u5B8C\u4E86\u201D\u3002", "\u8F6E\u5230\u4F60\u4E86\u3002\u80FD\u6362\u5C31\u4E00\u76F4\u6362\uFF0C\u6362\u4E0D\u4E86\u4E86\u5C31\u70B9\u201C\u6211\u505A\u5B8C\u4E86\u201D\u3002"],
+    tradeHint: ["\u628A\u5341\u4E2A\u4E00\u653E\u8FDB\u6258\u76D8\uFF0C\u518D\u70B9\u201C\u6362\u6210\u4E00\u4E2A\u5341\u201D\u3002", "\u628A\u5341\u4E2A\u4E00\u653E\u8FDB\u6258\u76D8\uFF0C\u518D\u70B9\u201C\u6362\u6210\u4E00\u4E2A\u5341\u201D\u3002\u5341\u4E2A\u5341\u4E5F\u8FD9\u6837\u6362\u6210\u4E00\u4E2A\u767E\u3002"],
+    number: "\u6446\u9762\u4E0A\u4E00\u5171\u6709\u591A\u5C11\uFF1F",
+    numberHint: ["\u5148\u5341\u4E2A\u5341\u4E2A\u5730\u6570\uFF0C\u518D\u4E00\u4E2A\u4E00\u4E2A\u5730\u6570\u3002", "\u5148\u4E00\u767E\u4E00\u767E\u5730\u6570\uFF0C\u518D\u5341\u4E2A\u5341\u4E2A\u5730\u6570\uFF0C\u6700\u540E\u4E00\u4E2A\u4E00\u4E2A\u5730\u6570\u3002"],
+    counts: "\u6446\u9762\u4E0A\u5404\u6709\u51E0\u4E2A\uFF1F",
+    countsHint: "\u6570\u4E00\u6570\u6BCF\u4E00\u4F4D\u4E0A\u6709\u51E0\u4E2A\u3002",
+    words: ["\u4E2A\u4E00", "\u4E2A\u5341", "\u4E2A\u767E"],
+    parts: "\u6BCF\u4E00\u4F4D\u8868\u793A\u591A\u5C11\uFF1F",
+    partsHint: ["\u4E00\u4E2A\u5341\u8868\u793A\u5341\u3002", "\u4E00\u4E2A\u5341\u8868\u793A\u5341\uFF0C\u4E00\u4E2A\u767E\u8868\u793A\u4E00\u767E\u3002"],
+    labels: ["\u4E2A\u4F4D\u8868\u793A", "\u5341\u4F4D\u8868\u793A", "\u767E\u4F4D\u8868\u793A"]
+  }
+};
+function baseTenPiles(input, path) {
+  const read = (field) => {
+    const value2 = input[field];
+    if (typeof value2 !== "number" || !Number.isInteger(value2) || value2 < 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${field}`, "write a whole number (0 when the question has none of that place)");
+    return value2;
+  };
+  const values = Object.fromEntries(BASE_TEN_FIELDS.map((field) => [field, read(field)]));
+  const lesson = [values.lesson_hundreds, values.lesson_tens, values.lesson_ones];
+  const practice = [values.practice_hundreds, values.practice_tens, values.practice_ones];
+  const [mostHundreds, mostTens, mostOnes] = [BASE_TEN_TRADE_LIMITS.start[2], BASE_TEN_TRADE_LIMITS.start[1], BASE_TEN_TRADE_LIMITS.start[0]];
+  for (const [name, pile] of [["lesson", lesson], ["practice", practice]]) {
+    const [h, t, o] = pile;
+    if (o > mostOnes) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_ones`, `a pile starts with at most ${mostOnes} loose ones`);
+    if (t > mostTens) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_tens`, `a pile starts with at most ${mostTens} tens`);
+    if (h > mostHundreds) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_hundreds`, `a pile starts with at most ${mostHundreds} hundreds`);
+    if (pileValue(pile) > 999) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_hundreds`, "after trading a pile has at most 9 hundreds (999)");
+    if (pileValue(pile) === 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_ones`, "a pile has at least one unit");
+  }
+  const columns = pileValue(lesson) >= 100 || lesson[0] > 0 ? 3 : 2;
+  if (pileValue(practice) === pileValue(lesson)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_ones`, `the practice pile makes ${pileValue(lesson)} too: write a pile with another number`);
+  if (digitCount(pileValue(practice)) !== digitCount(pileValue(lesson))) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_ones`, `the practice pile makes ${pileValue(practice)}: write one with as many places as ${pileValue(lesson)}`);
+  }
+  if (columns === 2 && practice[0] > 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_hundreds`, "a tens-and-ones lesson practises without hundreds");
+  for (const [name, pile] of [["lesson", lesson], ["practice", practice]]) {
+    validateBaseTenTradeContent(
+      { columns, places: [{ as: "ones", count: pile[2], tray: 0 }, { as: "tens", count: pile[1], ...columns === 3 ? { tray: 0 } : {} }, ...columns === 3 ? [{ as: "hundreds", count: pile[0] }] : []] },
+      `${path}.${name}`,
+      (at2, message) => fail2("LESSON_PLAN_CAPABILITY_PARAMETER", at2, message)
+    );
+  }
+  return { lesson, practice, columns };
+}
+function compileBaseTenTrade(base, content, role, placement, plan, path) {
+  const input = parameters(content);
+  allowParameterKeys(input, [...BASE_TEN_FIELDS], path);
+  if ((content.numbers?.length ?? 0) > 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "the mat's piles are written in its six whole numbers; it uses no lesson numbers");
+  const piles = /* @__PURE__ */ new Set();
+  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
+    if (action.action === "create" && action.kind === "visual" && action.content.capability === "base_ten_trade") {
+      const other = parameters(action.content);
+      piles.add(JSON.stringify(BASE_TEN_FIELDS.map((field) => other[field])));
+    }
+  }
+  if (piles.size > 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "a lesson has one trading mat: write the same two piles each time, or show the other pile in words");
+  const { lesson, practice, columns } = baseTenPiles(input, path);
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text5 = BASE_TEN_TEXT[language];
+  const wide = columns === 3 ? 1 : 0;
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_");
+  const names = [`${stem}_ones`, `${stem}_tray_ones`, `${stem}_tens`, `${stem}_tray_tens`, `${stem}_hundreds`];
+  const drawn = BASE_TEN_TRADE_LIMITS.drawn;
+  const variables = [
+    { as: names[0], initial: lesson[2], min: 0, max: drawn[0], label: text5.variable[0] },
+    { as: names[1], initial: 0, min: 0, max: BASE_TEN_TRADE_LIMITS.tray, label: text5.variable[1] },
+    { as: names[2], initial: lesson[1], min: 0, max: columns === 2 ? 9 : drawn[1], label: text5.variable[2] },
+    ...columns === 3 ? [
+      { as: names[3], initial: 0, min: 0, max: BASE_TEN_TRADE_LIMITS.tray, label: text5.variable[3] },
+      { as: names[4], initial: lesson[0], min: 0, max: drawn[2], label: text5.variable[4] }
+    ] : []
+  ];
+  const built = buildBaseTenTrade({
+    as: base,
+    role,
+    place: placement,
+    title: text5.title[wide],
+    ...language === "zh-CN" ? { language } : {},
+    columns,
+    places: [
+      { count: { expression: names[0], initial: lesson[2] }, tray: { expression: names[1], initial: 0 } },
+      { count: { expression: names[2], initial: lesson[1] }, ...columns === 3 ? { tray: { expression: names[3], initial: 0 } } : {} },
+      ...columns === 3 ? [{ count: { expression: names[4], initial: lesson[0] } }] : []
+    ]
+  });
+  const beats = [];
+  const counts = [lesson[2], lesson[1], lesson[0]];
+  for (let p = 0; p < columns - 1; p += 1) {
+    if (counts[p] < 10) continue;
+    const at2 = BASE_TEN_PLACE_NAMES[p];
+    beats.push({ key: "fill", say: text5.fill[p], actions: Array.from({ length: 10 }, () => ({ do: "tap", target: base, tap: "gather", at: at2 })) });
+    beats.push({ key: "make", say: text5.make[p], actions: [{ do: "tap", target: base, tap: "make", at: at2 }] });
+    counts[p] = counts[p] - 10;
+    counts[p + 1] = counts[p + 1] + 1;
+    if (counts[p] >= 10) {
+      const trades = Math.floor(counts[p] / 10);
+      counts[p] = counts[p] - 10 * trades;
+      counts[p + 1] = counts[p + 1] + trades;
+      beats.push({ key: "rest", say: text5.rest[p], actions: [
+        { do: "animate", variable: names[p === 0 ? 0 : 2], value: counts[p] },
+        { do: "animate", variable: names[p === 0 ? 2 : 4], value: counts[p + 1] }
+      ] });
+    }
+  }
+  const value2 = pileValue(practice);
+  const digits = digitCount(value2);
+  const high = Array.from({ length: digits }, (_, i) => digits - 1 - i);
+  const digit = (p) => Math.floor(value2 / 10 ** p) % 10;
+  const after = { kind: "after_lesson" };
+  const tasks = [
+    {
+      as: `${base}-trade`,
+      start: { kind: "practice", variables: variables.map((variable) => variable.as), values: Object.fromEntries([[names[0], practice[2]], [names[1], 0], [names[2], practice[1]], ...columns === 3 ? [[names[3], 0], [names[4], practice[0]]] : []]) },
+      prompt: text5.trade[wide],
+      availability: after,
+      allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
+      completion: { kind: "card_fact", node: base, fact: "no_trade_left" },
+      hints: [text5.tradeHint[wide]]
+    },
+    { as: `${base}-number`, anchor: base, prompt: text5.number, availability: after, allowed_operations: [{ kind: "answer_entry" }], completion: { kind: "numeric_answer", answer: String(value2) }, hints: [text5.numberHint[wide]] },
+    {
+      as: `${base}-counts`,
+      anchor: base,
+      prompt: text5.counts,
+      availability: after,
+      allowed_operations: [{ kind: "row_entry" }],
+      completion: { kind: "numeric_row", parts: high.flatMap((p) => [{ blank: { as: `${BASE_TEN_PLACE_NAMES[p]}`, answer: String(digit(p)) } }, { text: text5.words[p] }]) },
+      hints: [text5.countsHint]
+    },
+    {
+      as: `${base}-parts`,
+      anchor: base,
+      prompt: text5.parts,
+      availability: after,
+      allowed_operations: [{ kind: "row_entry" }],
+      completion: { kind: "numeric_row", parts: [{ text: `${value2} =` }, ...high.flatMap((p, i) => [...i ? [{ text: "+" }] : [], { blank: { as: `${BASE_TEN_PLACE_NAMES[p]}-part`, answer: String(digit(p) * 10 ** p), label: text5.labels[p] } }])] },
+      hints: [text5.partsHint[wide]]
+    }
+  ];
+  return { actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)), variables, program_beats: beats, program_tasks: tasks, owns_practice: true };
+}
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -20100,7 +20348,8 @@ var MATH_COMPILERS = {
   geometric_rearrangement: compileGeometricRearrangement,
   circle_area_rearrangement: compileCircleArea,
   solid_3d: compileSolid3d,
-  fraction_model: compileFractionModel
+  fraction_model: compileFractionModel,
+  base_ten_trade: compileBaseTenTrade
 };
 
 // src/plugins/physics-compilers.ts
@@ -20464,7 +20713,7 @@ function praiseArithmetic(text5, options = {}) {
 }
 
 // src/lesson-plan-compiler.ts
-var NUMBER_DRIVEN_KINDS = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY).flatMap((recipe) => recipe.number_inputs?.length ? recipe.output_kinds ?? [] : []));
+var NUMBER_DRIVEN_KINDS = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY).flatMap((recipe) => recipe.number_inputs?.length || recipe.variables_by_program ? recipe.output_kinds ?? [] : []));
 function normalizedVisualIdentity(content, includeNumbers = true) {
   const sourceParameters = content.parameters ?? {};
   const parameters3 = Object.fromEntries(
@@ -20868,6 +21117,8 @@ function compileLessonPlan(value2, options = {}) {
   const visualVariables = /* @__PURE__ */ new Map();
   const viewAdjustments = [];
   const programAdjustments = [];
+  const programTasks = [];
+  const practiceOwners = /* @__PURE__ */ new Set();
   let renderedVisuals;
   const reuseCompiledVisual = (visual) => {
     if (reusableVisuals.size === 0) return visual;
@@ -20902,6 +21153,7 @@ function compileLessonPlan(value2, options = {}) {
       const momentIndex = momentOffset + 1;
       const momentPath = `${sectionPath}.moments[${momentOffset}]`;
       const actions = [];
+      const programBeats = [];
       let boardItemIndex = 0;
       let connectionIndex = 0;
       let groupIndex = 0;
@@ -20938,6 +21190,9 @@ function compileLessonPlan(value2, options = {}) {
               reusableVisuals.set(identity, visual);
               for (const variable of visual.variables ?? []) if (!visualVariables.has(variable.as)) visualVariables.set(variable.as, variable);
               actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
+              programBeats.push(...visual.program_beats ?? []);
+              programTasks.push(...visual.program_tasks ?? []);
+              if (visual.owns_practice) practiceOwners.add(visual.whole);
             }
             wholeTargets.set(alias, visual.whole);
             partTargets.set(alias, visual.parts);
@@ -21039,6 +21294,7 @@ function compileLessonPlan(value2, options = {}) {
         ...moment.delivery ? { delivery: moment.delivery } : {},
         actions
       });
+      programBeats.forEach((beat, index) => beats.push({ ...beat, key: `moment-${pad2(momentIndex)}-program-${pad2(index + 1)}` }));
     });
     steps.push({ key: `section-${pad2(sectionIndex)}`, purpose: section.purpose, beats });
   });
@@ -21058,12 +21314,20 @@ function compileLessonPlan(value2, options = {}) {
     }
     tasks.push(task);
   };
+  for (const task of programTasks) addTask(task);
+  const ownedByProgram = (anchor, section, task, path) => {
+    if (!practiceOwners.has(anchor)) return false;
+    programAdjustments.push({ section, kind: "activity_removed", reason: "practice_by_program", task, detail: `${task} (${path}): the program writes this card's practice` });
+    return true;
+  };
   plan.sections.forEach((section, sectionOffset) => {
     const sectionPath = `$lessonPlan.sections[${sectionOffset}]`;
     section.student_activities?.forEach((activity, activityOffset) => {
       const activityPath = `${sectionPath}.student_activities[${activityOffset}]`;
       if (activity.kind === "reflection") {
         const anchor = resolvedReference(`${activityPath}.reference`);
+        const anchorTarget = wholeTargets.get(anchor.authoring_alias) ?? anchor.authoring_alias;
+        if (ownedByProgram(anchorTarget, sectionOffset + 1, `section-${pad2(sectionOffset + 1)}-reflection-${pad2(activityOffset + 1)}`, activityPath)) return;
         reflections.push({
           as: `section-${pad2(sectionOffset + 1)}-reflection-${pad2(activityOffset + 1)}`,
           prompt: namedNumbers(activity.prompt, plan),
@@ -21074,6 +21338,10 @@ function compileLessonPlan(value2, options = {}) {
         return;
       }
       const taskAlias = `section-${pad2(sectionOffset + 1)}-task-${pad2(activityOffset + 1)}`;
+      if (activity.kind !== "number_target") {
+        const target = resolvedReference(`${activityPath}.reference`);
+        if (ownedByProgram(wholeTargets.get(target.authoring_alias) ?? target.authoring_alias, sectionOffset + 1, taskAlias, activityPath)) return;
+      }
       let praise = activity.success_message ? namedNumbers(activity.success_message, plan) : void 0;
       const asked = activity.kind === "numeric_answer" ? roundingPlaces(activity.prompt, String(activity.answer)) : void 0;
       const places = asked !== void 0 && asked > 0 ? asked : void 0;
@@ -21204,7 +21472,7 @@ function compileLessonPlan(value2, options = {}) {
               ...number.student_control.step ? { step: number.student_control.step } : {}
             }
           } : {}
-        })), ...[...visualVariables.values()].map((variable) => ({ ...variable, control: { ...variable.control } }))]
+        })), ...[...visualVariables.values()].map((variable) => ({ ...variable, ...variable.control ? { control: { ...variable.control } } : {} }))]
       } : {},
       ...tasks.length ? { tasks } : {},
       ...reflections.length ? { reflections } : {}
@@ -21212,7 +21480,7 @@ function compileLessonPlan(value2, options = {}) {
     steps,
     close: { summary: plan.close.summary, focus: closeFocus }
   };
-  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments };
+  return { lesson: applyLessonOpeningPolicy(lesson, options.opening_policy ?? (options.construction_rules === "explicit-v1" ? { kind: "title" } : { kind: "preserve" })), resolved, plugins: lessonPlanPlugins(plan), view_adjustments: viewAdjustments, program_adjustments: programAdjustments, ...practiceOwners.size ? { practice_by_program: true } : {} };
 }
 function expressionReferencesVariable(expression, variable) {
   if (typeof expression !== "string") return false;
@@ -24440,6 +24708,10 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     const draft = drafts[0];
     const card = draft && practiceCard(draft);
     if (!draft || !card) return;
+    try {
+      if (compilePrefix(outline, [draft], options.compile).practice_by_program) return;
+    } catch {
+    }
     const reject = (error) => options.on_rejected_part?.({
       label: "lesson-plan-section",
       section: 1,

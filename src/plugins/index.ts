@@ -66,7 +66,7 @@ export const RETIRED_RECIPES = ["cube_with_section"] as const satisfies readonly
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-export const TRIAL_RECIPES = ["constant_speed_motion", "fraction_model"] as const satisfies readonly (keyof AllRecipes)[];
+export const TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "base_ten_trade"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {
@@ -121,6 +121,9 @@ export const SCHEMA_PROPERTY_ORDER = [
   "solids", "join", "show", "interaction",
   // The fraction model trial recipe (decision 0021); last, so requests without it keep their order.
   "fractions", "fraction_shape", "fraction_view", "split_each_part",
+  // The trading mat trial recipe (decision 0023): its six numbers, ones first, so a tens-and-ones question
+  // writes the hundreds last; last in the list, so requests without it keep their order.
+  "lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds",
 ] as const;
 
 /** One prompt bullet: its core text and the installed plugins' sentences, or "" when empty. */

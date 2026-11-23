@@ -11,7 +11,9 @@
 //   the same number of places as the lesson pile; the demonstration ends with no trade left at the same
 //   value; the practice pile is a starting pile, different from the lesson pile, and its card task starts
 //   it; the number, the counts row and the parts row answer the practice pile; the parts row asks what each
-//   place is worth; no blank's label shows a number; every question sits by the mat.
+//   place is worth; no blank's label shows a number; every question sits by the mat; the mat speaks the
+//   lesson's language (0023 amendment 3), and the rows' words are that language's; no question's prompt or
+//   hint shows a number, since a locked question shows its prompt (Chinese first-use test, 2026-11-22).
 //
 // Narration is not judged here: what the lesson says is read by hand under the probe's pass rules.
 
@@ -19,6 +21,8 @@ import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-la
 import { baseTenFacts, baseTenMat, validateBaseTenTradeContent } from "octos-lesson-language/plugin-math";
 
 const PLACES = ["ones", "tens", "hundreds"];
+// The counts row's word after each blank, and the word that asks what a place is worth, per lesson language.
+const WORDS = { en: { places: PLACES, worth: /\bworth\b/i }, zh: { places: ["个一", "个十", "个百"], worth: /表示/ } };
 const valueOf = ([h, t, o]) => h * 100 + t * 10 + o;
 const digitsOf = (value) => (value >= 100 ? 3 : value >= 10 ? 2 : 1);
 
@@ -108,7 +112,9 @@ export function judgeTradingMat(item, lesson) {
   // A blank's answer is a whole number written out; an empty answer is never 0 (review of #155).
   const answers = (task) => blanks(task).map((blank) => (/^\d+$/.test(String(blank.answer ?? "").trim()) ? Number(blank.answer) : NaN));
   const texts = (task) => task.completion.parts.flatMap((part) => ("text" in part ? [part.text.trim()] : []));
-  const words = places.map((p) => PLACES[p]);
+  const zh = /^zh(?:-|$)/i.test(String(lesson.lesson?.language ?? ""));
+  const vocabulary = zh ? WORDS.zh : WORDS.en;
+  const words = places.map((p) => vocabulary.places[p]);
   check("the number question answers the practice pile", number && Number(number.completion.answer) === value, `${number?.completion.answer} for ${value}`);
   // The counts row names each place after its blank, highest first ("[3] tens [7] ones"); the parts row
   // writes the practice number first ("37 = [30] + [7]"), so a row's words match its answers (review of #155).
@@ -117,9 +123,12 @@ export function judgeTradingMat(item, lesson) {
   const partsRow = rows.find((row) => "text" in (row.completion.parts[0] ?? {}) && /=\s*$/.test(row.completion.parts[0].text));
   check("a parts row answers the practice pile", partsRow && partsRow.completion.parts[0].text.replace(/\s*=\s*$/, "") === String(value) && JSON.stringify(answers(partsRow)) === JSON.stringify(parts),
     `parts row ${JSON.stringify(partsRow && [texts(partsRow), answers(partsRow)])}, want ${value} = ${parts.join(" + ")}`);
-  check("the parts row asks what each place is worth", partsRow && /\bworth\b/i.test(`${partsRow.prompt} ${blanks(partsRow).map((blank) => blank.label ?? "").join(" ")}`), partsRow?.prompt ?? "no row writes the number by places");
+  check("the parts row asks what each place is worth", partsRow && vocabulary.worth.test(`${partsRow.prompt} ${blanks(partsRow).map((blank) => blank.label ?? "").join(" ")}`), partsRow?.prompt ?? "no row writes the number by places");
   check("no label shows a number", rows.every((row) => blanks(row).every((blank) => !/\d/.test(blank.label ?? ""))), "a label has a digit");
   check("every question sits by the mat", [number, ...rows].filter(Boolean).every((task) => task.anchor === mat.as), "a question anchored elsewhere");
+  check("the mat speaks the lesson's language", (mat.content.language ?? "en-US") === (zh ? "zh-CN" : "en-US"), `mat ${mat.content.language ?? "en-US"}, lesson ${lesson.lesson?.language}`);
+  const shown = [mat.cardTask, number, ...rows].filter(Boolean).flatMap((task) => [task.prompt, ...(task.hints ?? [])]);
+  check("no question's prompt or hint shows a number", shown.every((line) => !/[0-9０-９]/u.test(String(line ?? ""))), shown.filter((line) => /[0-9０-９]/u.test(String(line ?? ""))).join(" | "));
   return { pass: checks.every((each) => each.pass), checks };
 }
 

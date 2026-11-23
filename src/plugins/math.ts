@@ -167,6 +167,24 @@ export const MATH_RECIPES = {
     revised_by_program: true,
     model_guidance: "分数等分图：fractions写分子分母的值；view：one、compare两个、equivalent等值、split把每份再分split_each_part份求每份、share把a个整体平分给b份写a/b；shape：bar/circle/grid（百分之几用grid）；不用于不等分、一组物体的几分之几、比；大于1写一个假分数",
   },
+  // OLL decision 0023 (a trial): the model writes the question's pile and a practice pile as six whole
+  // numbers; the program draws the mat, demonstrates the trades in its own words and writes the practice.
+  base_ten_trade: {
+    parts: ["whole", "ones", "tens", "hundreds"],
+    number_inputs: [],
+    number_input_policies: [],
+    parameter_names: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
+    model_parameter_names: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
+    // All six, every time: an unused field left to the model was filled with runaway numbers (fraction probe 1).
+    required_model_schema_parameters: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
+    semantic_parameters: ["lesson_ones", "lesson_tens", "lesson_hundreds", "practice_ones", "practice_tens", "practice_hundreds"],
+    output_kinds: ["base_ten_trade"],
+    student_controls: [],
+    required_features: ["place_value_trading"],
+    // The card binds counts the program creates; the lesson taps and animates them.
+    variables_by_program: true,
+    model_guidance: "十个一换一个十：lesson_*照题目写散的一、十、百的个数（没有写0），practice_*另写一堆（位数相同，总数不同）；程序演示交换、出练习；旁白说题目和换完后摆面上有几个十几个一，不说练习的数；不写关于摆面的题",
+  },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
     number_inputs: ["columns_or_length", "rows_or_width"],
@@ -343,6 +361,16 @@ const MATH_SCHEMA_PROPERTIES = {
     // as "split" the model wrote the number of parts there ("split": "6" for sixths) and left out the fractions
     // (probe 2).
     split_each_part: { enum: ["2", "3", "4", "5", "6"] },
+  },
+  base_ten_trade: {
+    // Ones first, so a tens-and-ones question writes the hundreds last, as 0 (0023 §4). Bounded by the mat's
+    // starting limits; the compiler checks the piles together.
+    lesson_ones: { type: "integer", minimum: 0, maximum: 59 },
+    lesson_tens: { type: "integer", minimum: 0, maximum: 19 },
+    lesson_hundreds: { type: "integer", minimum: 0, maximum: 9 },
+    practice_ones: { type: "integer", minimum: 0, maximum: 59 },
+    practice_tens: { type: "integer", minimum: 0, maximum: 19 },
+    practice_hundreds: { type: "integer", minimum: 0, maximum: 9 },
   },
   solid_3d: {
     // The compiler checks the fields (each solid's shape and sizes), so the schema carries no strictness keywords.
