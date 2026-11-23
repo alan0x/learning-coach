@@ -20280,11 +20280,12 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
       numbers: [...numbers],
       play(steps, room) {
         const actions = [];
-        const quick = (from) => 2 * steps.slice(from).reduce((sum, step) => sum + (step.from[step.position] - step.to[step.position]) / 10, 0);
+        const tradesOf = (step) => ((step.from[step.position] ?? 0) - (step.to[step.position] ?? 0)) / 10;
+        const quick = (from) => 2 * steps.slice(from).reduce((sum, step) => sum + tradesOf(step), 0);
         for (const [index, step] of steps.entries()) {
           const place5 = step.position;
           const at2 = BASE_TEN_PLACE_NAMES[place5];
-          let trades = (step.from[place5] - step.to[place5]) / 10;
+          let trades = tradesOf(step);
           if (trades > 0 && !shown.has(place5) && actions.length + 9 + quick(index) <= room) {
             shown.add(place5);
             trades -= 1;
@@ -21152,6 +21153,7 @@ function compileLessonPlan(value2, options = {}) {
         for (const variable of mover.visual.variables ?? []) replayed.add(variable.as);
       }
       const moved = /* @__PURE__ */ new Set();
+      let leftOut = false;
       const playMoves = (visual, capability2) => {
         const state = moverStates.get(visual);
         const animations = moment.actions.flatMap((item, offset) => item.action === "animate" && movers.get(item.number)?.visual === visual ? [{ offset, position: movers.get(item.number).position, to: item.end_value, timing: item.timing }] : []);
@@ -21294,6 +21296,7 @@ function compileLessonPlan(value2, options = {}) {
           }
         } else if (cardNumbers.has(item.number) && plan.sections.slice(sectionOffset + 1).some((later) => later.moments.some((each) => each.actions.some((action) => action.action === "create" && action.kind === "visual" && (action.content.numbers ?? []).includes(item.number) && RECIPE_HOOKS[action.content.capability]?.number_moves)))) {
           viewAdjustments.push({ section: sectionIndex, reason: "animation_before_card", detail: `${actionPath}: number ${item.number} is animated before the card that moves it is drawn; left out` });
+          leftOut = true;
         } else if (cardNumbers.has(item.number)) {
           fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${actionPath}.end_value`, "this number belongs to a card that is drawn later: animate it in the moment that draws the card, after its create, or in a later moment");
         } else {
@@ -21310,6 +21313,7 @@ function compileLessonPlan(value2, options = {}) {
       if (actions.length > 24 && moved.size) {
         fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions`, "this moment holds more than the board can play at once with its trades: make the second place's trade, or the pointing, in the next moment");
       }
+      if (actions.length === 0 && leftOut) actions.push({ do: "expression", expression: "neutral", when: "after_speech" });
       if (actions.length === 0) {
         fail2("LESSON_PLAN_COMPILER_EMPTY_BEAT", `${momentPath}.actions`, "OLL requires at least one action per moment");
       }
@@ -24569,6 +24573,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   const currentNumbersBefore = (section) => {
     const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
     const cards = [];
+    const cardNumbers = new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
     for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
       for (const action of moment.actions) {
         if (action.action !== "create" || action.kind !== "visual") continue;
@@ -24589,7 +24594,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1).to[position]));
       }
       for (const action of moment.actions) {
-        if (action.action === "animate" && !cards.some((card) => card.numbers.includes(action.number))) state.set(action.number, action.end_value);
+        if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
       }
     }
     return state;

@@ -1741,11 +1741,13 @@ function compileBaseTenTrade(
         // so a place's first trade is tapped out only where the moment has room for it and for every other
         // trade it makes: ones and tens both traded in one moment show the ones tap by tap and the tens
         // quickly (review of #160: 26 actions were refused by OLL at a path the model never wrote).
-        const quick = (from: number) => 2 * steps.slice(from).reduce((sum, step) => sum + (step.from[step.position]! - step.to[step.position]!) / 10, 0);
+        // A step on a column the mat does not draw (a hundreds number of 0) trades nothing.
+        const tradesOf = (step: { position: number; from: number[]; to: number[] }) => ((step.from[step.position] ?? 0) - (step.to[step.position] ?? 0)) / 10;
+        const quick = (from: number) => 2 * steps.slice(from).reduce((sum, step) => sum + tradesOf(step), 0);
         for (const [index, step] of steps.entries()) {
           const place = step.position;
           const at = BASE_TEN_PLACE_NAMES[place]!;
-          let trades = (step.from[place]! - step.to[place]!) / 10;
+          let trades = tradesOf(step);
           if (trades > 0 && !shown.has(place) && actions.length + 9 + quick(index) <= room) {
             shown.add(place);
             trades -= 1;

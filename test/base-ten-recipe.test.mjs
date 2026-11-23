@@ -274,6 +274,9 @@ test("review of #160, round 2: a beat's 24 actions, a hundreds target with no co
   assert.deepEqual(result.crowded.verdict.checks.filter((check) => !check.pass && !/learner|card task|typed/.test(check.check)), []);
   // A hundreds number of 0 has no column: animating it to 0 changes nothing, and a target other than 0 is refused.
   assert.match(result["zero-hundreds-target"].message, /the hundreds are 0/);
+  // That no-change step does not stop the ones' first trade being tapped out (review, round 3).
+  const beside = withTrial(compileScript([["beside-zero", [13, 0, 0], [[[1, 3], [3, 0]]], "en-US"]]));
+  assert.equal(beside["beside-zero"].lesson.steps[0].beats[1].actions.filter((action) => action.do === "tap" && action.tap === "gather").length, 10);
   const early = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { samplePlan } = await import(${here("./sample-plans.mjs")});
@@ -283,17 +286,19 @@ test("review of #160, round 2: a beat's 24 actions, a hundreds target with no co
     // Section 1 writes a note and animates the ones; the mat is only drawn in section 2.
     plan.sections[0].reusable_items = [{ kind: "board_item", board_kind: "note" }];
     plan.sections[0].moments[0].actions = [{ action: "create", kind: "note", role: "explanation", content: { title: "Trading", items: ["Ten ones make one ten."] }, placement: { relation: "new_region" }, reusable_item: 1 }, animate(1, 6)];
+    // A moment that is only the early trade keeps its sentence, with a neutral expression (round 3).
+    plan.sections[0].moments.push({ narration: "Now six ones.", actions: [animate(1, 6)] });
     delete plan.sections[0].student_activities;
     plan.sections[1].moments[0].actions = [{ action: "create", kind: "visual", role: "main_visual", placement: { relation: "new_region" }, content: { capability: "base_ten_trade", parameters: {}, numbers: [1, 2] } }, animate(1, 6)];
     plan.close.focus = [{ source: "reusable", section: 1, item: 1 }];
     try {
       const compiled = api.compileAndValidateLessonPlan(plan, { language: "en-US" });
-      console.log(JSON.stringify({ first: compiled.lesson.steps[0].beats[0].actions.map((action) => action.do), second: compiled.lesson.steps[1].beats[0].actions.filter((action) => action.do === "tap").length, adjustments: compiled.view_adjustments.map((each) => each.reason) }));
+      console.log(JSON.stringify({ first: compiled.lesson.steps[0].beats[0].actions.map((action) => action.do), alone: compiled.lesson.steps[0].beats[1].actions.map((action) => action.do + ":" + action.expression), second: compiled.lesson.steps[1].beats[0].actions.filter((action) => action.do === "tap").length, adjustments: compiled.view_adjustments.map((each) => each.reason) }));
     } catch (error) { console.log(JSON.stringify({ code: error.code, message: error.message, path: error.path })); }
   `);
   // Left out and recorded where it stands; the mat then starts from its lesson numbers and makes both trades in
   // section 2 (ten taps and a make, then a quick fill and a make: 12 taps).
-  assert.deepEqual(early, { first: ["write"], second: 12, adjustments: ["animation_before_card"] }, JSON.stringify(early));
+  assert.deepEqual(early, { first: ["write"], alone: ["expression:neutral"], second: 12, adjustments: ["animation_before_card", "animation_before_card"] }, JSON.stringify(early));
 });
 
 test("a generated lesson: the trades in section 1, the learner's trading and a typed question in section 2, whatever range the model gave the numbers", () => {

@@ -2976,6 +2976,8 @@ export async function generateLessonPlanWithModel(
     const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
     // Cards that move their own numbers (the trading mat): one number's animation changes the others too.
     const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]> }> = [];
+    // A card's numbers do not move before the card is drawn: the compiler leaves such an animation out.
+    const cardNumbers = new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
     for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
       for (const action of moment.actions) {
         if (action.action !== "create" || action.kind !== "visual") continue;
@@ -2998,7 +3000,7 @@ export async function generateLessonPlanWithModel(
         if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1)!.to[position]!));
       }
       for (const action of moment.actions) {
-        if (action.action === "animate" && !cards.some((card) => card.numbers.includes(action.number))) state.set(action.number, action.end_value);
+        if (action.action === "animate" && !cardNumbers.has(action.number)) state.set(action.number, action.end_value);
       }
     }
     return state;

@@ -613,6 +613,8 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       // played where the first of them stands. Worked out at that first animation, so a card drawn earlier
       // in the same moment can move in it.
       const moved = new Set<CompiledVisual>();
+      // An animation left out because its card is drawn in a later section (below).
+      let leftOut = false;
       const playMoves = (visual: CompiledVisual, capability: LessonPlanVisualContent["capability"]): AuthoringAction[] => {
         const state = moverStates.get(visual)!;
         const animations = moment.actions.flatMap((item, offset) => (item.action === "animate" && movers.get(item.number)?.visual === visual
@@ -758,6 +760,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           // animation is left out and recorded, as it is while only this section exists (no visual shows the
           // number yet). The card then starts from its lesson numbers (review of #160, round 2).
           viewAdjustments.push({ section: sectionIndex, reason: "animation_before_card", detail: `${actionPath}: number ${item.number} is animated before the card that moves it is drawn; left out` });
+          leftOut = true;
         } else if (cardNumbers.has(item.number)) {
           // The card that moves this number is drawn later in this section: a plain animation would change its
           // pile without its rules, and the mat would start at a wrong amount (review of #160: 96 drawn for 116).
@@ -774,6 +777,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
       if (actions.length > 24 && moved.size) {
         fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions`, "this moment holds more than the board can play at once with its trades: make the second place's trade, or the pointing, in the next moment");
       }
+      // A moment left with nothing but its sentence keeps it, with the neutral expression the section got
+      // while it stood alone (a dead animation is replaced the same way when a section is first accepted),
+      // so a section already playing does not change (review of #160, round 3).
+      if (actions.length === 0 && leftOut) actions.push({ do: "expression", expression: "neutral", when: "after_speech" } as AuthoringAction);
       if (actions.length === 0) {
         fail("LESSON_PLAN_COMPILER_EMPTY_BEAT", `${momentPath}.actions`, "OLL requires at least one action per moment");
       }
