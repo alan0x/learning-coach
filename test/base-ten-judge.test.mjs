@@ -139,7 +139,10 @@ test("a near miss passes only without a mat, and only if the lesson plays", () =
 
 test("every development case names a pile the mat can start with, or is a near miss", async () => {
   const { cases } = JSON.parse(await readFile(new URL("../testsuite/base-ten-dev-cases.json", import.meta.url), "utf8"));
-  assert.equal(cases.length, 20);
+  // 20 English (BT-01–20) and 13 Chinese (BT-21–33), each language with its own near misses.
+  assert.equal(cases.length, 33);
+  assert.equal(cases.filter((each) => each.language === "zh-CN").length, 13);
+  assert.equal(cases.filter((each) => each.language === "zh-CN" && each.expect.forbid).length, 3);
   for (const each of cases) {
     if (each.expect.forbid) continue;
     const [h, t, o] = each.expect.lesson_pile;

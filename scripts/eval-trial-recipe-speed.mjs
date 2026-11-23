@@ -22,6 +22,7 @@
 //   A probe: --pairs 0 --cases NL-03,NM-01 --quality-repeats 5 (candidate arm only, no speed pairs).
 //   A quality run: --pairs 0 --recipes number_line_steps,function_plot_extensions --quality-repeats 2 [--lesson-calls 4]
 //   (every case of the named recipes on the candidate arm; near misses on both arms; --both-arms: every case).
+//   --keep-parts <dir>: keep each lesson's first playable part there, for reading narration by hand.
 //   A diagnostic: --pairs 0 --recipes fraction_model --cases-file <cases.json> --both-arms (the file's cases in
 //   file order instead of the recipes' quality cases; --recipes still names the trial recipes offered).
 //   Two builds: --baseline-build <dir> --build <dir> --recipes number_line (both arms the same environment;
@@ -39,6 +40,7 @@ import { judgePlot } from "./plot-judge.mjs";
 import { generatedTokens, tokenSpeedVerdict } from "./speed-gate.mjs";
 import { judgeSolids } from "./solids-judge.mjs";
 import { judgeFractions } from "./fraction-judge.mjs";
+import { judgeTradingMat } from "./base-ten-judge.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -201,9 +203,23 @@ export const FRACTION_CASES = JSON.parse(await readFile(join(root, "testsuite/fr
   .filter(({ id }) => id !== "FM-16")
   .map(({ id, language, prompt, nearMiss, expect, forbid }) => ({ id, language, prompt, judge: "fractions", ...(nearMiss ? { nearMiss } : {}), ...(forbid ? { forbid } : {}), expect: expect ?? {} }));
 
+/**
+ * The trading mat recipe (OLL decision 0023, step 4): the development cases BT-01–33 (testsuite/base-ten-dev-cases.json),
+ * English and Chinese, judged with scripts/base-ten-judge.mjs on the first playable part. A case with
+ * `expect.forbid` is a near miss.
+ */
+export const BASE_TEN_CASES = JSON.parse(await readFile(join(root, "testsuite/base-ten-dev-cases.json"), "utf8")).cases
+  .map(({ id, language, prompt, expect }) => ({ id, language, prompt, judge: "base_ten", ...(expect.forbid ? { nearMiss: true } : {}), expect }));
+
+/** The trading mat judge's verdict in the runner's form: every failed check is a hard miss. */
+export function judgeBaseTen(item, part) {
+  const verdict = judgeTradingMat(item, part);
+  return { hard: verdict.checks.filter((each) => !each.pass).map((each) => `${each.check}${each.detail ? `: ${each.detail}` : ""}`), soft: [] };
+}
+
 /** Its speed pairs, fixed before any run: the first ten in-scope cases, SD-01–10. */
 export const SOLID_SPEED_CASES = SOLID_CASES.filter((item) => /^SD-(0[1-9]|10)$/u.test(item.id));
-export const TRIAL_QUALITY_CASES = { fraction_model: FRACTION_CASES, solid_3d: SOLID_CASES, function_plot_extensions: PLOT_CASES, retry_narrowing: RETRY_NARROWING_CASES, plot_points: POINTS_PROBE_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
+export const TRIAL_QUALITY_CASES = { base_ten_trade: BASE_TEN_CASES, fraction_model: FRACTION_CASES, solid_3d: SOLID_CASES, function_plot_extensions: PLOT_CASES, retry_narrowing: RETRY_NARROWING_CASES, plot_points: POINTS_PROBE_CASES, number_line: NUMBER_LINE_QUALITY_CASES, number_line_compare: NUMBER_LINE_COMPARE_CASES, number_line_solution: NUMBER_LINE_SOLUTION_CASES, number_line_rounding: NUMBER_LINE_ROUNDING_CASES, number_line_steps: NUMBER_LINE_STEPS_CASES };
 
 /**
  * The speed gate for the two switch-ons of 2026-11-15 (plan §7 step 3.2: number-line steps, Coach #99, and
@@ -727,7 +743,9 @@ async function main() {
     await writeFile(resolve(out), `${JSON.stringify({ measured_at: new Date().toISOString(), ...route, trial_recipes: baselineBuild ? null : recipes, ...(baselineBuild ? { baseline_build: baselineBuild, candidate_build: build } : {}), pairs, max_calls: maxCalls, work_dir: workDir, summary: { ...summarize(rows), ...(notRun.length ? { not_run: notRun } : {}) }, rows }, null, 1)}\n`);
   };
   console.error(JSON.stringify({ stage: "trial-recipe-speed", ...route, trial_recipes: baselineBuild ? null : recipes, ...(baselineBuild ? { baseline_build: baselineBuild, candidate_build: build, fitting_cases: recipes } : {}), pairs, max_calls: maxCalls }));
-  const { appendFileSync, readFileSync } = await import("node:fs");
+  const { appendFileSync, readFileSync, copyFileSync, mkdirSync } = await import("node:fs");
+  const keepParts = option("--keep-parts") ? resolve(option("--keep-parts")) : null;
+  if (keepParts) mkdirSync(keepParts, { recursive: true });
   const runOne = async (pair, item, arm, order) => {
     const input = { turn_id: `trial-${pair}-${arm}-${Date.now()}`, learner_request: item.prompt, request_source: "self_contained", language: caseLanguage(item), input_modality: "text" };
     const tool = await runTool({
@@ -742,7 +760,10 @@ async function main() {
           // Near misses are judged on both arms, so "no worse than without the option" can be read
           // from the report; only the candidate's judgement counts toward the verdict.
           const judge = item.judge === "plot" ? () => judgePlot(item, part) : item.judge === "solids" ? () => judgeSolids(item, part)
-            : item.judge === "fractions" ? () => judgeFractions(item, part) : () => judgeNumberLine(item, numberLineLesson(part));
+            : item.judge === "fractions" ? () => judgeFractions(item, part) : item.judge === "base_ten" ? () => judgeBaseTen(item, part)
+            : () => judgeNumberLine(item, numberLineLesson(part));
+          // --keep-parts <dir>: each first part as <case>-<arm>-<run>.json, for the hand reading of narration.
+          if (keepParts) copyFileSync(path, join(keepParts, `${item.id}-${arm}-${pair}.json`));
           const judged = item.expect && (arm === "candidate" || item.nearMiss || bothArms) ? { quality: judge() } : {};
           return { recipes: recipesInPart(part), ...(line ? { number_line: line } : {}), ...judged };
         } catch { return { recipes: null }; }
@@ -764,7 +785,7 @@ async function main() {
     // The run stops at the first playable part, so the judge sees only the first section; when the
     // outline has more, a later section may show what the first lacks, and the miss is read by hand.
     if (row.quality?.hard.length && row.sections > 1) row.quality.review = "later sections not judged: read by hand";
-    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).some((name) => name.startsWith("number_line") || name.startsWith("plot_") || name === "solid_3d" || name === "fraction_model")) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew the trial's visual: read by hand" };
+    if (arm === "candidate" && item.nearMiss && (row.recipes ?? []).some((name) => name.startsWith("number_line") || name.startsWith("plot_") || name === "solid_3d" || name === "fraction_model" || name === "base_ten_trade")) row.quality = { ...(row.quality ?? { hard: [], soft: [] }), review: "near miss drew the trial's visual: read by hand" };
     rows.push(row);
     console.error(JSON.stringify({ pair, case: item.id, kind: item.kind, arm, outcome: row.outcome, ms: row.first_playable_ms, calls: row.calls, recipes: row.recipes ?? null, ...(row.quality ? { hard: row.quality.hard } : {}) }));
     await persist();

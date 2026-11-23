@@ -1,5 +1,5 @@
 {
-  "note": "Trading tens and ones development cases (OLL decision 0023), 2026-11-22, written from testsuite/base-ten-blueprint.json. Each teacher_picture was written before its prompt. Used for design and tuning; the scoring set is separate, written later by a fresh agent from the blueprint alone, sealed. Never taken from the question set. English only (the mat's words are English). expect.lesson_pile is the pile as the question states it, [hundreds, tens, loose ones]; the practice pile is the model's and is checked by rule. BT-17 to BT-20 are near misses: the mat must not be used.",
+  "note": "Trading tens and ones development cases (OLL decision 0023), 2026-11-22, written from testsuite/base-ten-blueprint.json. Each teacher_picture was written before its prompt. Used for design and tuning; the scoring set is separate, written later by a fresh agent from the blueprint alone, sealed. Never taken from the question set. BT-01 to BT-20 are English; BT-21 to BT-33 are Chinese (owner decision 5, 2026-11-22: both languages; the mat speaks Chinese since 0023 amendment 3), written from the same rows with their own piles; BT-31 to BT-33 are Chinese near misses. expect.lesson_pile is the pile as the question states it, [hundreds, tens, loose ones]; the practice pile is the model's and is checked by rule. BT-17 to BT-20 are near misses: the mat must not be used.",
   "cases": [
     {
       "id": "BT-01",
@@ -287,6 +287,192 @@
       "kind": "question",
       "teacher_picture": "Not this need: rounding (3.NBT.A.1).",
       "prompt": "Round 347 to the nearest ten.",
+      "expect": {
+        "forbid": [
+          "base_ten_trade"
+        ]
+      }
+    },
+    {
+      "id": "BT-21",
+      "row": "T1",
+      "language": "zh-CN",
+      "kind": "question",
+      "teacher_picture": "十五个小方块散在桌上；十个拼成一根十条，剩五个：一个十和五个一。",
+      "prompt": "我有15个小方块，能拼成几个十？还剩几个？",
+      "expect": {
+        "lesson_pile": [
+          0,
+          0,
+          15
+        ]
+      }
+    },
+    {
+      "id": "BT-22",
+      "row": "T1",
+      "language": "zh-CN",
+      "kind": "detailed",
+      "teacher_picture": "一捆十根的小棒和十四根散的；散的里再捆出一捆，剩四根：两个十和四个一。",
+      "prompt": "孩子有1捆小棒（每捆十根），还有14根散的。她不知道一共有几捆、几根，怎么教她？",
+      "expect": {
+        "lesson_pile": [
+          0,
+          1,
+          14
+        ]
+      }
+    },
+    {
+      "id": "BT-23",
+      "row": "T2",
+      "language": "zh-CN",
+      "kind": "question",
+      "teacher_picture": "四十颗散珠子，十颗一串，正好四串，一颗不剩：四个十、零个一。",
+      "prompt": "40颗珠子，每十颗串成一串，能串几串？",
+      "expect": {
+        "lesson_pile": [
+          0,
+          0,
+          40
+        ]
+      }
+    },
+    {
+      "id": "BT-24",
+      "row": "T2",
+      "language": "zh-CN",
+      "kind": "question",
+      "teacher_picture": "八卷十个的硬币和十个散的；散的正好又是一卷：九个十、零个一。",
+      "prompt": "奶奶给我8卷硬币，每卷十枚，又给了10枚散的。是不是正好九十枚？",
+      "expect": {
+        "lesson_pile": [
+          0,
+          8,
+          10
+        ]
+      }
+    },
+    {
+      "id": "BT-25",
+      "row": "T3",
+      "language": "zh-CN",
+      "kind": "detailed",
+      "teacher_picture": "五捆吸管和二十三根散的；散的捆出两捆，剩三根：七捆三根，七十三。",
+      "prompt": "班里数吸管：已经捆好5捆（每捆十根），还有23根散的。一共多少根？想让孩子自己捆着数。",
+      "expect": {
+        "lesson_pile": [
+          0,
+          5,
+          23
+        ]
+      }
+    },
+    {
+      "id": "BT-26",
+      "row": "T3",
+      "language": "zh-CN",
+      "kind": "topic",
+      "teacher_picture": "二十九颗纽扣，十颗一堆分成两堆，剩九颗：二十九。",
+      "prompt": "教我十个十个地数纽扣，桌上撒了29颗。",
+      "expect": {
+        "lesson_pile": [
+          0,
+          0,
+          29
+        ]
+      }
+    },
+    {
+      "id": "BT-27",
+      "row": "T4",
+      "language": "zh-CN",
+      "kind": "question",
+      "teacher_picture": "三块百板、十一根十条、七个小方块；十根十条拼成一块百板：四个百、一个十、七个一。",
+      "prompt": "作业里有一道题：三块百板，十一根十条，七个小方块，这是多少？",
+      "expect": {
+        "lesson_pile": [
+          3,
+          11,
+          7
+        ]
+      }
+    },
+    {
+      "id": "BT-28",
+      "row": "T4",
+      "language": "zh-CN",
+      "kind": "detailed",
+      "teacher_picture": "十根十条和四个小方块；十根十条拼成一块百板：一个百、零个十、四个一，一百零四。",
+      "prompt": "老师说十个十就是一百。我手里有10根十条和4个小方块，这是多少？中间那位为什么写0？",
+      "expect": {
+        "lesson_pile": [
+          0,
+          10,
+          4
+        ]
+      }
+    },
+    {
+      "id": "BT-29",
+      "row": "T5",
+      "language": "zh-CN",
+      "kind": "question",
+      "teacher_picture": "四块百板、没有十条、六个小方块：400 + 6。",
+      "prompt": "406写成几百加几十加几的形式是什么？",
+      "expect": {
+        "lesson_pile": [
+          4,
+          0,
+          6
+        ]
+      }
+    },
+    {
+      "id": "BT-30",
+      "row": "T5",
+      "language": "zh-CN",
+      "kind": "question",
+      "teacher_picture": "两袋十颗的弹珠和十三颗散的；散的再装一袋，剩三颗：三个十和三个一，30 + 3。",
+      "prompt": "小明有2袋弹珠（每袋十颗）和13颗散的。用几个十加几个一写出来。",
+      "expect": {
+        "lesson_pile": [
+          0,
+          2,
+          13
+        ]
+      }
+    },
+    {
+      "id": "BT-31",
+      "row": "T4",
+      "language": "zh-CN",
+      "kind": "question",
+      "prompt": "小华和弟弟比谁的积分多：小华263分，弟弟236分。弟弟说数字都一样，所以一样多。他说得对吗？",
+      "expect": {
+        "forbid": [
+          "base_ten_trade"
+        ]
+      }
+    },
+    {
+      "id": "BT-32",
+      "row": "T1",
+      "language": "zh-CN",
+      "kind": "question",
+      "prompt": "妈妈上午买菜花了46元，下午又花了37元。今天一共花了多少元？",
+      "expect": {
+        "forbid": [
+          "base_ten_trade"
+        ]
+      }
+    },
+    {
+      "id": "BT-33",
+      "row": "T5",
+      "language": "zh-CN",
+      "kind": "question",
+      "prompt": "把562四舍五入到十位。",
       "expect": {
         "forbid": [
           "base_ten_trade"
