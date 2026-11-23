@@ -814,7 +814,8 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
     if (seenTaskSemantics.has(semanticKey)) return;
     if (dropped) programAdjustments.push(dropped);
     seenTaskSemantics.add(semanticKey);
-    if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target") {
+    // A task that brings its own pile (the trading mat's slider) keeps it: the mat restarts whole, trays too.
+    if (options.construction_rules === "explicit-v1" && task.completion.kind === "expression_target" && !task.start) {
       task.start = { kind: "practice", variables: task.allowed_operations.flatMap(operation =>
         operation.kind === "variable_change" ? [operation.variable] : []) };
     }

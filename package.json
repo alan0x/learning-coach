@@ -19,7 +19,7 @@
     "postinstall": "node scripts/apply-oll-runtime-patch.mjs"
   },
   "dependencies": {
-    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#728c27986ace6e25d5f358c8ac148144a9786662"
+    "octos-lesson-language": "git+https://github.com/alan0x/octos-lesson-language.git#f465d3a0833d2ba6a18a6ca348cbcbd61d6a6810"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"

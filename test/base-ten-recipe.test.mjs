@@ -90,7 +90,9 @@ test("every development case's ideal lesson compiles and passes the judge, in En
   const piles = CASES.filter((item) => item.expect.lesson_pile).map((item) => [item.id, item.expect.lesson_pile]);
   const entries = piles.flatMap(([id, pile]) => ["en-US", "zh-CN"].map((language) => {
     const needsTrade = pile[2] >= 10 || pile[1] >= 10;
-    return [`${id} ${language}`, numbersOf(pile), idealMoves(pile), language, [...(needsTrade ? [trading(pile[2] % 10)] : []), typed(53)], pile];
+    // The ideal task slides the ones to the traded count; a pile whose ones need no trade slides the tens.
+    const task = pile[2] >= 10 ? trading(pile[2] % 10) : { ...trading(pile[1] % 10), number_controls: [{ number: 2, controls: ["slider"] }] };
+    return [`${id} ${language}`, numbersOf(pile), idealMoves(pile), language, [...(needsTrade ? [task] : []), typed(53)], pile];
   }));
   const result = withTrial(compileScript(entries));
   for (const [id] of entries) {
