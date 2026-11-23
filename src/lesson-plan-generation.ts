@@ -1310,6 +1310,15 @@ function lowerIntegerDecimal(record: Record<string, unknown>, prefix: string, pa
   return Number(mantissa) / 10 ** Number(scale);
 }
 
+/** Lesson numbers bound to a card that moves them by its own rules (recipe hook `number_moves`). */
+function cardMovedNumbers(actions: readonly unknown[]): number[] {
+  return actions.flatMap((action) => {
+    const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
+    if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
+    return RECIPE_HOOKS[entry.content.capability as keyof typeof RECIPE_HOOKS]?.number_moves ? entry.content.numbers ?? [] : [];
+  });
+}
+
 function lowerModelActivityNumbers(
   activity: Record<string, unknown>,
   kind: "number_target" | "scene3d_view",
@@ -1320,6 +1329,8 @@ function lowerModelActivityNumbers(
   /** Numbers a number line or a count recipe shows: their targets stay as written, and a met target is
    * resolved at compile, which knows the range the visual draws. */
   exactNumbers: ReadonlySet<number> = new Set(),
+  /** Numbers of a card that moves them by its own rules (the trading mat): the card checks the target. */
+  cardNumbers: ReadonlySet<number> = new Set(),
 ): Record<string, unknown> {
   const lowered = { ...activity };
   delete lowered.hint_after_attempts;
@@ -1350,6 +1361,14 @@ function lowerModelActivityNumbers(
       number: numberIndex,
       controls: ["slider", ...(canUseGeometryPoint ? ["geometry_point"] : [])],
     }];
+    if (cardNumbers.has(numberIndex)) {
+      // Kept exactly as written, in whichever section it stands: neither the range the model gave the
+      // number nor a slider's step applies to a count that changes by trades. The card refuses a wrong
+      // target with the right one (review of #160: a 6 snapped to 5.98 was refused as "the ones are 6").
+      lowered.value = requestedValue;
+      lowered.tolerance = 0.5;
+      return lowered;
+    }
     const minimum = Number(definition.min);
     const maximum = Number(definition.max);
     const range = maximum - minimum;
@@ -1669,6 +1688,8 @@ function lowerModelSectionDraft(
   expectedSection: number,
   requireFixedReusableCreates = false,
   language?: string,
+  /** Numbers of a card that moves them itself (the trading mat), drawn in sections already written. */
+  earlierCardNumbers: ReadonlySet<number> = new Set(),
 ): LessonPlanSectionDraft {
   // Read before pruning, which copies the section: the program's revisions are keyed by the reconciled object.
   const programRevisions = value && typeof value === "object" ? PROGRAM_VISUAL_REVISIONS.get(value) : undefined;
@@ -1996,11 +2017,11 @@ function lowerModelSectionDraft(
     const entry = action as { action?: string; kind?: string; content?: { capability?: string; numbers?: number[] } };
     if (entry.action !== "create" || entry.kind !== "visual" || !entry.content?.capability) return [];
     if (isNumberLineCapability(entry.content.capability)) return entry.content.numbers ?? [];
-    // A card that moves its own numbers (the trading mat) checks its task's value itself, exactly.
-    if (RECIPE_HOOKS[entry.content.capability as keyof typeof RECIPE_HOOKS]?.number_moves) return entry.content.numbers ?? [];
     const policies = LESSON_PLAN_CAPABILITY_REGISTRY[entry.content.capability as keyof typeof LESSON_PLAN_CAPABILITY_REGISTRY]?.number_input_policies ?? [];
     return (entry.content.numbers ?? []).filter((_number, index) => policies[index] && countRange(policies[index]!));
   }));
+  // Numbers of a card that moves them itself: this section's, and those of sections already written.
+  const cardNumbers = new Set([...earlierCardNumbers, ...cardMovedNumbers(moments.flatMap((moment) => moment.actions))]);
   const activities: Array<{ order: number; activity: Record<string, unknown> }> = [];
   const collectActivities = (values: unknown[], kind: "number_target" | "scene3d_view", path: string): void => {
     values.forEach((activity, index) => {
@@ -2013,7 +2034,7 @@ function lowerModelSectionDraft(
       if (kind === "number_target" && lowered.reference !== undefined) {
         lowered.reference = lowerModelReference(lowered.reference, candidate.moments.length);
       }
-      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers);
+      lowered = lowerModelActivityNumbers(lowered, kind, itemPath, outline, expectedSection, language, numberLineNumbers, cardNumbers);
       activities.push({ order, activity: { kind, ...lowered } });
     });
   };
@@ -3065,6 +3086,7 @@ export async function generateLessonPlanWithModel(
         section,
         true,
         input.language,
+        new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions))),
       );
       specializeDraft(candidate, outline, drafts.slice(0, section - 1));
     } catch (error) {

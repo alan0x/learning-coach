@@ -167,8 +167,7 @@ export const MATH_RECIPES = {
     revised_by_program: true,
     model_guidance: "分数等分图：fractions写分子分母的值；view：one、compare两个、equivalent等值、split把每份再分split_each_part份求每份、share把a个整体平分给b份写a/b；shape：bar/circle/grid（百分之几用grid）；不用于不等分、一组物体的几分之几、比；大于1写一个假分数",
   },
-  // OLL decision 0023 (a trial): the model writes the question's pile and a practice pile as six whole
-  // numbers; the program draws the mat, demonstrates the trades in its own words and writes the practice.
+  // OLL decision 0023 (a trial), rebuilt 2026-11-23: the trading mat on lesson numbers.
   base_ten_trade: {
     parts: ["whole", "ones", "tens", "hundreds"],
     // The pile is lesson numbers, as every earlier component's values are (owner, 2026-11-23): the model

@@ -219,3 +219,89 @@ test("a second mat on other numbers is refused where it is written", () => {
   assert.match(second.message ?? "", /one trading mat/);
   assert.match(second.path ?? "", /^\$lessonPlan\.sections\[1\]/);
 });
+
+test("review of #160: a pile with a hundreds number of 0 draws two columns; the mat's numbers are its own; no move before the mat is drawn", () => {
+  const result = withTrial(compileScript([["zero-hundreds", [13, 0, 0], [[[1, 3]]], "en-US", [trading(3), typed(53)], [0, 0, 13]]]));
+  assert.deepEqual(result["zero-hundreds"].verdict.checks.filter((check) => !check.pass), []);
+  assert.equal(result["zero-hundreds"].lesson.steps[0].beats[0].actions[0].content.columns, 2);
+  const faults = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { samplePlan } = await import(${here("./sample-plans.mjs")});
+    const { judgeTradingMat } = await import(${here("../scripts/base-ten-judge.mjs")});
+    const mat = (change) => {
+      const plan = samplePlan("rectangle_unit_square_array");
+      plan.numbers = [26, 9].map((initial, index) => ({ initial, min: 0, max: 59, label: "n" + index, student_control: { kind: "slider", step: 1 } }));
+      const first = plan.sections[0].moments[0];
+      first.actions = first.actions.filter((action) => action.action !== "animate");
+      first.actions[0].content = { capability: "base_ten_trade", parameters: {}, numbers: [1, 2] };
+      plan.sections[0].reusable_items[0].capability = "base_ten_trade";
+      delete plan.sections[0].student_activities;
+      change(plan);
+      try { return { lesson: api.compileAndValidateLessonPlan(plan, { language: "en-US" }).lesson }; }
+      catch (error) { return { code: error.code, message: error.message, path: error.path }; }
+    };
+    const animate = (number, end_value) => ({ action: "animate", number, end_value, duration_intent: "brief", timing: "during_speech" });
+    const out = {
+      // The ones animated in the mat's own moment, before its create: refused, never drawn as 9 tens and 6 ones.
+      early: mat((plan) => { plan.sections[0].moments[0].actions.unshift(animate(1, 6)); }),
+      // Another visual on the mat's numbers, in a later section: refused where the mat is, not rewritten.
+      shared: mat((plan) => { plan.sections[1].moments[0].actions.push({ action: "create", kind: "visual", role: "main_visual", placement: { relation: "new_region" }, content: { capability: "number_line_compare", parameters: {}, numbers: [1, 2] } }); }),
+    };
+    // The judge on a lesson whose pile is changed before the mat is drawn (made by hand: the compiler refuses it).
+    const good = mat((plan) => { plan.sections[0].moments.push({ narration: "Trade.", actions: [animate(1, 6), animate(2, 1)] }); }).lesson;
+    const failed = (lesson) => judgeTradingMat({ id: "x", expect: { lesson_pile: [0, 9, 26] } }, lesson).checks.filter((check) => !check.pass).map((check) => check.check);
+    const before = failed(good);
+    good.steps[0].beats.unshift({ key: "moment-00", say: "First.", actions: [{ do: "animate", variable: "number_02", value: 9 }] });
+    out.judged = failed(good).filter((check) => !before.includes(check));
+    console.log(JSON.stringify(out));
+  `);
+  assert.match(faults.early.message ?? "", /belongs to a card that is drawn later/);
+  assert.match(faults.shared.message ?? "", /lesson numbers of its own/);
+  assert.match(faults.shared.path ?? "", /^\$lessonPlan\.sections\[0\]\.moments\[0\]/);
+  assert.deepEqual(faults.judged, ["nothing changes the pile before the mat is drawn"]);
+});
+
+test("a generated lesson: the trades in section 1, the learner's trading and a typed question in section 2, whatever range the model gave the numbers", () => {
+  // Review of #160: with the ones declared 0 to 26 the target 6 was snapped to a slider step (5.98) in a later
+  // section and then refused as "the ones are 6", which no retry could repair.
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { samplePlan } = await import(${here("./sample-plans.mjs")});
+    const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+    const { judgeTradingMat } = await import(${here("../scripts/base-ten-judge.mjs")});
+    const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+    const out = {};
+    for (const [id, onesMax, tensMax] of [["tight", 26, 9], ["odd", 36, 12], ["wide", 59, 34]]) {
+      const plan = samplePlan("rectangle_unit_square_array");
+      plan.numbers = [{ initial: 26, min: 0, max: onesMax, label: "loose ones" }, { initial: 9, min: 0, max: tensMax, label: "tens" }];
+      const first = plan.sections[0].moments[0];
+      first.actions = first.actions.filter((action) => action.action !== "animate");
+      first.actions[0].content = { capability: "base_ten_trade", parameters: {}, numbers: [1, 2] };
+      plan.sections[0].reusable_items[0].capability = "base_ten_trade";
+      delete plan.sections[0].student_activities;
+      const animate = (number, end_value) => ({ action: "animate", number, end_value, duration_intent: "brief", timing: "during_speech" });
+      plan.sections[0].moments.push({ narration: "Ten ones make a ten: now 6 ones.", actions: [animate(1, 6)] }, { narration: "Ten tens make a hundred.", actions: [animate(2, 1)] });
+      plan.sections[1].moments[0].actions = [
+        { action: "create", kind: "note", role: "explanation", content: { title: "Trading", items: ["Ten ones make one ten."] }, placement: { relation: "new_region" } },
+        { action: "focus", references: [{ source: "reusable", section: 1, item: 1 }], intent: "look at the mat again" }];
+      plan.sections[1].student_activities = [{ kind: "number_target", prompt: "Your turn: trade until you cannot.", number_controls: [{ number: 1, controls: ["slider"] }], value: 6, tolerance: 0.02, hints: ["Ten ones make a ten."] }];
+      const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+      drafts[1].answer_activities = [{ prompt: "Four tens and thirteen ones: what number is that?", answer: "53", check: "53", hints: ["Trade ten ones for a ten first."] }];
+      const outline = stagedOutline(plan, drafts);
+      const rejected = [];
+      try {
+        const generated = await api.generateLessonPlanWithModel(async (request) => {
+          if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, bootstrapSectionFromExact(outline, drafts[0]));
+          return JSON.stringify(drafts[request.section - 1]);
+        }, { turn_id: "t", learner_request: "I have 9 tens and 26 ones. What number is that?", language: "en-US" },
+        { max_attempts_per_part: 1, on_rejected_part: (part) => rejected.push(part.error?.message) });
+        out[id] = { rejected, tasks: generated.lesson.lesson.tasks.map((task) => task.completion.kind),
+          failed: judgeTradingMat({ id, expect: { lesson_pile: [0, 9, 26] } }, generated.lesson).checks.filter((check) => !check.pass).map((check) => check.check) };
+      } catch (error) { out[id] = { error: error.message, rejected }; }
+    }
+    console.log(JSON.stringify(out));
+  `);
+  for (const id of ["tight", "odd", "wide"]) {
+    assert.deepEqual(result[id], { rejected: [], tasks: ["card_fact", "numeric_answer"], failed: [] }, `${id}: ${JSON.stringify(result[id])}`);
+  }
+});

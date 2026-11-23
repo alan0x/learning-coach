@@ -1690,6 +1690,14 @@ function compileBaseTenTrade(
   const start = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
   const fault = baseTenStartFault(start);
   if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault);
+  // The mat's numbers are its own: their range is the mat's and they have no slider, so another visual
+  // cannot also show them (review of #160: a number line's slider task became a tap task on the mat).
+  const sharing = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "base_ten_trade"
+      && ((action.content as LessonPlanVisualContent).numbers ?? []).some((number) => numbers.includes(number)));
+  if (sharing) {
+    fail("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${(sharing.content as LessonPlanVisualContent).capability} visual shows one of them; show the pile on the mat only, or in words`);
+  }
   // One mat per lesson: a later mat on other numbers is refused at its own path, so the section that
   // wrote it is asked again, never the first one, which may already be playing (review of #157).
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
@@ -1749,7 +1757,7 @@ function compileBaseTenTrade(
       task(position, value) {
         const traded = baseTenTraded(state);
         if (traded.every((count, place) => count === state[place])) return { drop: "this pile has no trade to make" };
-        if (value !== traded[position]) {
+        if (Math.abs(value - traded[position]!) > 1e-6) {
           return { refuse: `when every trade is made the ${BASE_TEN_PLACE_NAMES[position]} are ${traded[position]}: ask the learner to trade until then (the task ends when no trade is left)` };
         }
         return {

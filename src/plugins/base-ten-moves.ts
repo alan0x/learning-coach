@@ -16,9 +16,9 @@ export function baseTenValue(values: readonly number[]): number {
   return (values[0] ?? 0) + 10 * (values[1] ?? 0) + 100 * (values[2] ?? 0);
 }
 
-/** Three columns when the lesson gives hundreds or the pile makes a hundred; else tens and ones. */
+/** Three columns when the pile has hundreds or makes a hundred; else tens and ones (a hundreds number of 0 adds no column). */
 export function baseTenColumns(values: readonly number[]): 2 | 3 {
-  return values.length >= 3 || baseTenValue(values) >= 100 ? 3 : 2;
+  return (values[2] ?? 0) > 0 || baseTenValue(values) >= 100 ? 3 : 2;
 }
 
 /** Why a pile cannot start a mat, or undefined. */

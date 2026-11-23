@@ -76,7 +76,10 @@ export function tradingMatIn(lesson) {
     } else continue;
     steps.push({ action: action.do === "tap" ? `${action.tap}:${action.at}` : `${action.variable}=${action.value}`, value: current.counts.reduce((sum, n, i) => sum + n * 10 ** i, 0) });
   }
-  return { cards: writes.length, as: write.as, content: write.content, lessonStart, end, cardTask, practice, tasks, taps, steps };
+  // A change to one of the mat's variables before the mat is drawn: the pile would start at another amount
+  // than the lesson's numbers say (review of #160).
+  const early = actions.slice(0, actions.indexOf(write)).find((action) => action.do === "animate" && bound.has(action.variable));
+  return { cards: writes.length, as: write.as, content: write.content, lessonStart, end, cardTask, practice, tasks, taps, steps, early };
 }
 
 /** Judges one case's lesson. Returns { pass, checks: [{ check, pass, detail? }] }. */
@@ -99,6 +102,7 @@ export function judgeTradingMat(item, lesson) {
   check("the mat has the columns the pile needs", columns === (valueOf(want) >= 100 || want[0] > 0 ? 3 : 2), `${columns} columns for ${JSON.stringify(want)}`);
   check("the demonstration ends with no trade left", mat.end?.no_trade_left === true, `the lesson ends at ${JSON.stringify(mat.end)}`);
   check("the demonstration keeps the value", mat.end?.value === valueOf(pile), `ends at ${mat.end?.value}, starts at ${valueOf(pile)}`);
+  check("nothing changes the pile before the mat is drawn", !mat.early, mat.early && `${mat.early.variable} is animated to ${mat.early.value} before the mat is drawn`);
   const moved = mat.steps.find((step) => step.value !== valueOf(pile));
   check("every demonstration step keeps the value", !moved, moved && `after ${moved.action} the mat shows ${moved.value}, not ${valueOf(pile)}`);
   const needsTrade = pile[2] >= 10 || pile[1] >= 10;

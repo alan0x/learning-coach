@@ -30,13 +30,12 @@ export interface CompiledLessonPlan {
   view_adjustments: Array<{ section: number; reason: string; detail: string }>;
   /** Other program changes to the lesson's text, by section (1-based); each names its kind. */
   program_adjustments: Array<{ section: number; kind: "success_message_removed" | "success_message_unchecked" | "activity_removed"; reason: string; detail: string; task: string }>;
-  /** True when a visual writes its own practice (the trading mat), so no separate practice request is made. */
 }
 
 /** Compiled kinds a lesson number can drive: every output kind of a registered recipe with number inputs. */
 // A recipe whose card binds variables it creates itself (the trading mat's counts, which the lesson taps and
 // animates) is number-driven too.
-const NUMBER_DRIVEN_KINDS: ReadonlySet<string> = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { number_inputs?: readonly string[]; output_kinds?: readonly string[]; variables_by_program?: boolean }>)
+const NUMBER_DRIVEN_KINDS: ReadonlySet<string> = new Set(Object.values(LESSON_PLAN_CAPABILITY_REGISTRY as Record<string, { number_inputs?: readonly string[]; output_kinds?: readonly string[] }>)
   .flatMap((recipe) => (recipe.number_inputs?.length ? recipe.output_kinds ?? [] : [])));
 
 function normalizedVisualIdentity(content: LessonPlanVisualContent, includeNumbers = true): string {
@@ -558,6 +557,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
   // one's state as the lesson plays, so every move starts from what the card shows.
   const movers = new Map<number, { visual: CompiledVisual; capability: LessonPlanVisualContent["capability"]; position: number }>();
   const moverStates = new Map<CompiledVisual, { start: number[]; now: number[] }>();
+  // Every number such a card binds anywhere in the plan: none of them moves before its card is drawn.
+  const cardNumbers = new Set(plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).flatMap((action) => (
+    action.action === "create" && action.kind === "visual" && RECIPE_HOOKS[(action.content as LessonPlanVisualContent).capability]?.number_moves
+      ? (action.content as LessonPlanVisualContent).numbers ?? [] : [])));
   let renderedVisuals: CompiledVisualRegistry | undefined;
   const reuseCompiledVisual = (visual: CompiledVisual) => {
     // The first component cannot duplicate earlier content. Initialize the
@@ -747,6 +750,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             moved.add(visual);
             actions.push(...playMoves(visual, capability));
           }
+        } else if (cardNumbers.has(item.number)) {
+          // The card that moves this number is drawn later: a plain animation would change its pile without
+          // its rules, and the mat would start at a wrong amount (review of #160: 96 drawn for a pile of 116).
+          fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${actionPath}.end_value`, "this number belongs to a card that is drawn later: animate it in the moment that draws the card, after its create, or in a later moment");
         } else {
           actions.push({
             do: "animate", variable: variableAlias(item.number), value: item.end_value,
