@@ -139,7 +139,15 @@ if (process.argv[1] && new URL(import.meta.url).pathname === (await import("node
   let passed = 0;
   for (const item of cases) {
     let lesson;
-    try { lesson = JSON.parse(await readFile(join(runDirectory, `${item.id}.json`), "utf8")); } catch (error) { console.log(`${item.id}\t${error.code === "ENOENT" ? "missing" : "unreadable"}`); continue; }
+    // A lesson is <run>/<id>.json, or <run>/<id>/lesson.json as eval-math-expressiveness.mjs saves it. A
+    // near miss with no lesson is not judged; a trading question with none fails.
+    let found;
+    for (const path of [join(runDirectory, `${item.id}.json`), join(runDirectory, item.id, "lesson.json")]) {
+      try { found = await readFile(path, "utf8"); break; } catch (error) { if (error.code !== "ENOENT") { found = null; break; } }
+    }
+    if (found === undefined) { console.log(`${item.id}\tmissing`); continue; }
+    if (found === null) { console.log(`${item.id}\tunreadable`); continue; }
+    try { lesson = JSON.parse(found); } catch { console.log(`${item.id}\tunreadable`); continue; }
     let verdict;
     try { verdict = judgeTradingMat(item, lesson); } catch (error) { console.log(`${item.id}\tFAIL\tjudge error: ${String(error?.message ?? error).slice(0, 160)}`); continue; }
     if (verdict.pass) passed += 1;
