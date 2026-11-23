@@ -67,5 +67,50 @@ Restating the question's numbers, and naming a trade's result in or after the mo
 - **The model may declare one number** (the total) instead of ones and tens. It is refused with the reason.
 - **Comparison questions** have no component of their own. The feature is now `trade_ten_for_one`, so they should not reach the mat, but the model may still ask for it.
 
-## Result
-Not run yet.
+## Result: probe 2 fails all four bars; stopped (run 2026-11-23)
+Build Coach `78a5267` (frozen copy), Gemini 3.6 Flash via the dev-probe profile. **190 calls:** smoke 5, candidate 97, baseline 88; nothing was left unrun. Reports, lessons and the hand-reading file: `handoff-math-expressiveness/runs/base-ten/probe-2/`.
+
+| Bar | English | Chinese | Verdict |
+|---|---|---|---|
+| 1. Trading questions pass the judge | **10 / 16** (needed 13) | **7 / 10** (needed 8) | **fail** |
+| 2. Near misses that draw the mat (at most 1 of 7) | none | BT-31, BT-32 | **fail (2 of 7)** |
+| 3. Lost lessons (candidate vs baseline) | 1 vs 1 | **2 vs 0** | **fail (Chinese)** |
+| 4. Misleading narration (at most 1 per language) | **8** of 15 (6 firm) | **5** of 10 (4 firm) | **fail** |
+
+Under the stop rule, no further design is tried without the owner.
+
+### What worked
+- **Every trade the model made played in its own moment, with its own sentence.** The hand reading found the trades narrated correctly in almost every lesson. That is the fault probe 1 failed on.
+- **The English comparison and other near misses no longer reach the mat.**
+- **All 26 trading questions asked for the mat,** and all 37 typed questions have the right answer for the pile they state.
+- **Speed:** median time to the first playable part 9.7 s with the mat, 11.1 s without.
+
+### The main cause: the model thinks the mat's numbers have sliders
+Every earlier component lets the child slide its lesson numbers, and the model's general instructions for practice describe a slider. The mat has none: the child trades by tapping. The model was told so only in the mat's one line.
+- **The child's task was written as a slider task with a new target:** "Adjust the loose straws slider to 14", 「把散落的弹珠数量滑动调整到 23 颗」. The mat refuses a target that is not the fully traded count.
+  - That refusal was **23 of the 33 refusals** in the candidate arm.
+  - It lost **all three lost lessons** (BT-06, BT-26, BT-28), after the retries were used up.
+- **16 of the 19 trading tasks that survived use slider words** ("adjust", "set", 调到, 滑动), although the child can only tap.
+- **Slider words in the narration are 8 of the 13 misleading lessons** ("Now try setting the loose ones to 6 yourself").
+
+### The other causes
+- **Bar 1, lessons that end with a trade to make (4):**
+  - in three (BT-02, BT-05, BT-22) the model made the trade, then put the mat back to its starting pile for the child's turn. The judge reads the end of the lesson, so it fails them. The reset is unnecessary, since the task restarts the mat itself;
+  - in one (BT-04) it made three of five trades and handed the rest to the child.
+- **Bar 1, no trading task (2):** BT-01 and BT-12.
+- **Bar 2:** BT-31 compares two numbers and BT-32 adds 46 and 37. Both asked for `trade_ten_for_one`. BT-32's mat shows a real trade (7 tens and 13 ones), so calling it a near miss is arguable; the case was fixed before the run and counts.
+- **Bar 4, a later section explains the pile from the start again** while the mat shows it traded (BT-02, BT-09, BT-11, BT-27): "Right now, we have 2 hundred squares, 14 ten sticks…" with 3 hundreds and 4 tens on the mat.
+- **Bar 4, a note written a moment before its trade** (BT-04, BT-13; counted, though doubtful), **and one lesson whose notes state both typed answers** (BT-10).
+
+### A fault in the reading file, found and fixed during the reading
+The first file ignored replay steps, where a lesson puts the mat back to its start. The reader noticed an impossible pile (−7 ones). The file was corrected, and the four lessons it affected were read again; no verdict changed.
+
+### Reported, not bars
+- **Refusals in the candidate arm:** 33, in 18 of the 33 lessons:
+  - 23 the task's target;
+  - 5 a move the mat cannot make;
+  - 2 a number line sharing the mat's numbers;
+  - 2 a typed answer that did not equal its own check;
+  - 1 another.
+- **Calls per lesson:** 2.9 with the mat, 2.7 without.
+- **Three static mats:** BT-14, BT-15 and BT-29 drew the mat for expanded form, with nothing to trade. They pass the judge and match what is taught.
