@@ -84,7 +84,8 @@ export function tradingMatIn(lesson) {
   // A change to one of the mat's variables before the mat is drawn: the pile would start at another amount
   // than the lesson's numbers say (review of #160).
   const early = actions.slice(0, actions.indexOf(write)).find((action) => action.do === "animate" && bound.has(action.variable));
-  return { cards: writes.length, as: write.as, content: write.content, lessonStart, end, cardTask, practice, tasks, taps, steps, early };
+  const countOf = Object.fromEntries((write.content.bindings ?? []).filter((binding) => /\.count$/.test(binding.target)).map((binding) => [binding.target.split(".")[0], String(binding.expression).trim()]));
+  return { cards: writes.length, as: write.as, content: write.content, lessonStart, end, cardTask, practice, tasks, taps, steps, early, countOf };
 }
 
 /** Judges one case's lesson. Returns { pass, checks: [{ check, pass, detail? }] }. */
@@ -112,17 +113,19 @@ export function judgeTradingMat(item, lesson) {
   check("every demonstration step keeps the value", !moved, moved && `after ${moved.action} the mat shows ${moved.value}, not ${valueOf(pile)}`);
   const needsTrade = pile[2] >= 10 || pile[1] >= 10;
   check("the demonstration trades when the pile needs it", !needsTrade || mat.taps > 0, "no taps in the lesson");
-  // The child's own trading (the child's action is the idea, and the child says when it is done): a pile
-  // that needs a trade has a task on the mat that starts again from the lesson's pile, trays empty, and
-  // ends when no trade is left. A pile with nothing to trade has no such task.
+  // The child's own trading: a pile that needs a trade has a task on the mat that starts again from the
+  // lesson's pile, trays empty: the mat's slider to the value the model named (one trade or all of them), or
+  // tapping until no trade is left. A pile with nothing to trade has no such task.
   if (needsTrade) {
     check("the learner trades the lesson's pile on the mat", mat.cardTask && mat.practice, "no task on the mat with a start");
     const onSlider = mat.cardTask?.completion?.kind === "expression_target";
     check("the task on the mat is the card's trading or its slider", onSlider
       ? mat.cardTask.allowed_operations.length === 1 && String(mat.cardTask.completion.expression).trim() === mat.cardTask.allowed_operations[0].variable
       : mat.cardTask?.completion?.fact === "no_trade_left" && mat.cardTask?.completion?.node === mat.as, JSON.stringify(mat.cardTask?.completion));
-    // A slider task on the tens may start with the ones already traded: the same amount, trays empty.
-    const sameStart = mat.practice && (JSON.stringify(mat.practice.pile) === JSON.stringify(pile) || (onSlider && valueOf(mat.practice.pile) === valueOf(pile) && mat.practice.pile[2] < 10));
+    // A slider task on the tens may start with the ones already traded: the same amount, trays empty. A ones
+    // slider starts from the lesson's pile itself (review of #163: a traded start sliding up un-trades).
+    const tensSlider = onSlider && String(mat.cardTask.allowed_operations[0].variable) === mat.countOf?.tens;
+    const sameStart = mat.practice && (JSON.stringify(mat.practice.pile) === JSON.stringify(pile) || (tensSlider && valueOf(mat.practice.pile) === valueOf(pile) && mat.practice.pile[2] < 10));
     check("the task starts from the lesson's pile, trays empty", sameStart && mat.practice.trays.every((tray) => tray === 0),
       `starts at ${JSON.stringify(mat.practice?.pile)} trays ${JSON.stringify(mat.practice?.trays)}, the lesson's pile is ${JSON.stringify(pile)}`);
   } else {

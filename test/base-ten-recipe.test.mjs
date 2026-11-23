@@ -145,6 +145,12 @@ test("the practice is the model's: its slider task is the mat's slider, each sto
     ["tens", [26, 3], [[[1, 6]]], "en-US", [{ ...trading(5), number_controls: [{ number: 2, controls: ["slider"] }] }]],
     // 116: the tens to 1 needs the ones traded first, so the task starts with the ones traded.
     ["chain", [26, 9], [[[1, 6]], [[2, 1]]], "en-US", [{ ...trading(1), number_controls: [{ number: 2, controls: ["slider"] }] }]],
+    // Review of #163: the hundreds of 116 reach 1 on the tens slider once the ones are traded (B1); the tens
+    // of 116 reach 11 on the ones slider (B3).
+    ["hundreds", [26, 9, 0], [[[1, 6]], [[2, 1]]], "en-US", [{ ...trading(1), number_controls: [{ number: 3, controls: ["slider"] }] }]],
+    ["tens-up", [26, 9], [[[1, 6]], [[2, 1]]], "en-US", [{ ...trading(11), number_controls: [{ number: 2, controls: ["slider"] }] }]],
+    // A start OLL would refuse (20 tens once the ones are traded) is never used (B2): refused with the values the tens reach.
+    ["too-many-tens", [26, 18], [], "en-US", [{ ...trading(0), number_controls: [{ number: 2, controls: ["slider"] }] }]],
   ]));
   const tasks = result.en.lesson.lesson.tasks;
   assert.deepEqual(tasks.map((task) => [task.prompt, task.completion.kind]), [
@@ -160,6 +166,9 @@ test("the practice is the model's: its slider task is the mat's slider, each sto
   assert.deepEqual(only("part"), ["number_01", 16, { number_01: 26, number_02: 3, section_01_moment_01_item_01_tray_ones: 0 }]);
   assert.deepEqual(only("tens"), ["number_01", 6, { number_01: 26, number_02: 3, section_01_moment_01_item_01_tray_ones: 0 }]);
   assert.deepEqual(only("chain"), ["number_02", 1, { number_01: 6, number_02: 11, section_01_moment_01_item_01_hundreds: 0, section_01_moment_01_item_01_tray_ones: 0, section_01_moment_01_item_01_tray_tens: 0 }]);
+  assert.deepEqual(only("hundreds"), ["number_02", 1, { number_01: 6, number_02: 11, number_03: 0, section_01_moment_01_item_01_tray_ones: 0, section_01_moment_01_item_01_tray_tens: 0 }]);
+  assert.deepEqual(only("tens-up"), ["number_01", 6, { number_01: 26, number_02: 9, section_01_moment_01_item_01_hundreds: 0, section_01_moment_01_item_01_tray_ones: 0, section_01_moment_01_item_01_tray_tens: 0 }]);
+  assert.match(result["too-many-tens"].message, /the tens can be 8 or 19 or 20, not 0/);
   // A pile with nothing to trade has no trading task; the typed question stays.
   assert.deepEqual(result["no-trade"].lesson.lesson.tasks.map((task) => task.completion.kind), ["numeric_answer"]);
   assert.deepEqual(result["no-trade"].adjustments.map((adjustment) => [adjustment.kind, adjustment.reason]), [["activity_removed", "nothing_to_do_on_card"]]);
@@ -184,7 +193,7 @@ test("refusals name their reason", () => {
   assert.match(result["too-many"].message, /at most 59 loose ones/);
   assert.match(result.small.message, /a pile of 7 has no ten to make/);
   assert.match(result["one-number"].message, /two or three lesson numbers/);
-  assert.match(result.target.message, /slide down by tens \(each stop is one trade\): from 26 they can be 16 or 6/);
+  assert.match(result.target.message, /each stop of a slider is one trade, so the loose ones can be 6 or 16, not 5/);
 });
 
 test("the judge catches each kind of break", () => {

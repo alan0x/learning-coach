@@ -16787,25 +16787,29 @@ function baseTenSliderTask(state, position, value2) {
   if (!whole(value2)) return { refuse: "blocks are counted in whole numbers" };
   if (position >= state.length) return value2 === 0 ? { drop: "this pile has no hundreds column" } : { refuse: "this pile has tens and ones only: its hundreds stay 0" };
   if (state[position] === value2) return { drop: `the ${names[position]} are already ${value2}` };
-  let slider = position;
-  let target = value2;
-  if (position === state.length - 1) {
-    slider = position - 1;
-    target = state[slider] - 10 * (value2 - state[position]);
-  }
+  const columns = state.length;
+  const most = (place5, limits) => columns === 2 && place5 === 1 ? 9 : limits[place5];
+  const fits = (pile, limits) => pile.every((count, place5) => count >= 0 && count <= most(place5, limits));
   const starts = [[...state]];
-  if (slider === 1) {
-    const ones = baseTenMove(state, 0, state[0] % 10);
-    if (Array.isArray(ones) && ones[1] !== state[1]) starts.push(ones);
+  const onesTraded = [state[0] % 10, state[1] + Math.floor(state[0] / 10), ...state.slice(2)];
+  if (columns === 3 && onesTraded[1] !== state[1] && fits(onesTraded, BASE_TEN_START)) starts.push(onesTraded);
+  const sliders = [position, position - 1].filter((place5) => place5 >= 0 && place5 < columns - 1);
+  const reached = /* @__PURE__ */ new Set();
+  for (const slider of sliders) {
+    for (const start of starts) {
+      if (!fits(start, BASE_TEN_START)) continue;
+      for (let stops = 1; start[slider] - 10 * stops >= 0; stops += 1) {
+        const pile = [...start];
+        pile[slider] = start[slider] - 10 * stops;
+        pile[slider + 1] = start[slider + 1] + stops;
+        if (!fits(pile, BASE_TEN_DRAWN)) break;
+        reached.add(pile[position]);
+        if (pile[position] === value2) return { slider, target: pile[slider], start };
+      }
+    }
   }
-  for (const start of starts) {
-    if (start[slider] === target) continue;
-    const moved = baseTenMove(start, slider, target);
-    if (Array.isArray(moved)) return { slider, target, start };
-  }
-  const from = starts[starts.length - 1];
-  const reachable = Array.from({ length: Math.floor(from[slider] / 10) }, (_, k) => from[slider] - 10 * (k + 1));
-  return { refuse: reachable.length ? `on the mat the ${names[slider]} slide down by tens (each stop is one trade): from ${from[slider]} they can be ${reachable.join(" or ")}` : `the ${names[slider]} are ${from[slider]}: there is no ten to trade` };
+  const values = [...reached].filter((each) => each !== state[position]).sort((a, b) => a - b);
+  return { refuse: values.length ? `on the mat each stop of a slider is one trade, so the ${names[position]} can be ${values.join(" or ")}, not ${value2}` : `the ${names[position]} cannot change by trading on this pile: they stay ${state[position]}` };
 }
 
 // src/plugins/math-hooks.ts

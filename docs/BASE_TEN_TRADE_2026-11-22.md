@@ -77,9 +77,9 @@ Probe 1 failed two of its four bars (`docs/BASE_TEN_PROBE_2026-11-22.md`). Two f
 The owner ruled after probe 2: "I think all interactive components should support slider-based interaction." Probe 2 had failed mainly because the model wrote slider tasks for a mat that had none (23 of 33 refusals; all three lost lessons).
 - **The numbers:** the ones, and the tens on a three-column mat, get a slider with step 10 (`fit_numbers`). Each stop is one trade made by the card's own rules in OLL: down a stop, ten units become one of the next place, animated as the taps are; up a stop, one of the next place breaks into ten. The highest place has no slider.
 - **The child's task is the model's slider task** (`baseTenSliderTask` in `src/plugins/base-ten-moves.ts`). The mat starts again from the lesson's pile with the trays empty, and the child slides the count to the value the model named.
-  - Any value the trades reach is accepted, not only the fully traded count.
-  - A target on a place without a slider becomes the same pile on the slider below: on a two-column mat, 2 more tens is 20 fewer ones.
-  - A tens target that needs the ones traded first starts with the ones traded.
-  - Anything else is refused with the values that can be reached ("from 26 they can be 16 or 6").
+  - The child trades down: any value reached by trading down is accepted, not only the fully traded count.
+  - The target may be on the asked place's own slider or on the slider below it: on a two-column mat, 2 more tens is 20 fewer ones; the tens of 116 reach 11 on the ones slider.
+  - A target that needs the ones traded first (the tens or hundreds of 116) starts with the ones traded, if that pile is one OLL lets a task start from (at most 19 tens).
+  - Anything else is refused with the values the place can reach ("the loose ones can be 6 or 16, not 5"). Review of #163 found three reachable targets refused and a start OLL refuses; all four are fixed and tested.
 - **The judge** accepts the slider task or the card's tapping task, started from the lesson's pile (or, for a tens slider, the same amount with the ones traded) with empty trays.
 - **The guidance** tells the model the slider is on the ones, and on the tens when there are hundreds, and that each stop is one trade.

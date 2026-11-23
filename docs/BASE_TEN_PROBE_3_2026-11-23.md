@@ -11,7 +11,7 @@ Probe 2 failed all four bars. Its main cause was that the model wrote slider tas
 The mat now has the slider the model expects (OLL decision 0023 amendment 4; `docs/BASE_TEN_TRADE_2026-11-22.md`, last section):
 - the ones, and the tens on a three-column mat, slide in steps of ten;
 - each stop is one trade, made and animated by the card's own rules;
-- the model's slider task is the child's task, from the lesson's pile, to any value the trades reach.
+- the model's slider task is the child's task, from the lesson's pile (or that pile with its ones traded), to any value reached by trading down.
 
 Nothing else changed: the model's lesson pipeline, the guidance except one clause about the slider, and the judge except its task check.
 
