@@ -20218,7 +20218,7 @@ function baseTenPiles(input, path) {
     if (t > mostTens) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_tens`, `a pile starts with at most ${mostTens} tens`);
     if (h > mostHundreds) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_hundreds`, `a pile starts with at most ${mostHundreds} hundreds`);
     if (pileValue(pile) > 999) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_hundreds`, "after trading a pile has at most 9 hundreds (999)");
-    if (pileValue(pile) === 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_ones`, "a pile has at least one unit");
+    if (pileValue(pile) < 10) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_ones`, `a pile of ${pileValue(pile)} has no ten to make: the mat is for numbers of ten or more`);
   }
   const columns = pileValue(lesson) >= 100 || lesson[0] > 0 ? 3 : 2;
   if (pileValue(practice) === pileValue(lesson)) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_ones`, `the practice pile makes ${pileValue(lesson)} too: write a pile with another number`);
@@ -20239,14 +20239,11 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
   const input = parameters(content);
   allowParameterKeys(input, [...BASE_TEN_FIELDS], path);
   if ((content.numbers?.length ?? 0) > 0) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "the mat's piles are written in its six whole numbers; it uses no lesson numbers");
-  const piles = /* @__PURE__ */ new Set();
-  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
-    if (action.action === "create" && action.kind === "visual" && action.content.capability === "base_ten_trade") {
-      const other = parameters(action.content);
-      piles.add(JSON.stringify(BASE_TEN_FIELDS.map((field) => other[field])));
-    }
+  const pilesOf = (content2) => JSON.stringify(BASE_TEN_FIELDS.map((field) => parameters(content2)[field]));
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "base_ten_trade");
+  if (first && pilesOf(first.content) !== pilesOf(content)) {
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "a lesson has one trading mat: write the same two piles each time, or show the other pile in words");
   }
-  if (piles.size > 1) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", path, "a lesson has one trading mat: write the same two piles each time, or show the other pile in words");
   const { lesson, practice, columns } = baseTenPiles(input, path);
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text5 = BASE_TEN_TEXT[language];

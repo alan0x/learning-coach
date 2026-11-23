@@ -156,12 +156,15 @@ test("refusals name their reason: equal numbers, other places, a pile out of ran
   const result = withTrial(compileScript([
     // 3 tens 14 ones and 4 tens 4 ones are both 44.
     ["same", parametersOf([0, 3, 14], [0, 4, 4]), "en-US"],
-    ["places", parametersOf([0, 3, 14], [0, 0, 5]), "en-US"],
+    ["places", parametersOf([1, 2, 3], [0, 4, 5]), "en-US"],
     ["ones", parametersOf([0, 3, 60], [0, 2, 17]), "en-US"],
     ["hundreds-in-two", parametersOf([0, 3, 14], [1, 0, 0]), "en-US"],
+    // Under ten there is no ten to make (review of #157).
+    ["small", parametersOf([0, 0, 7], [0, 0, 5]), "en-US"],
   ]));
+  assert.match(result.small.message, /a pile of 7 has no ten to make/);
   assert.match(result.same.message, /practice pile makes 44 too/);
-  assert.match(result.places.message, /practice pile makes 5: write one with as many places as 44/);
+  assert.match(result.places.message, /practice pile makes 45: write one with as many places as 123/);
   assert.match(result.ones.message, /at most 59 loose ones/);
   assert.match(result["hundreds-in-two"].message, /practice pile makes 100/);
   const second = withTrial(`
@@ -175,9 +178,11 @@ test("refusals name their reason: equal numbers, other places, a pile out of ran
     plan.sections[1].moments[0].actions.push({ action: "create", kind: "visual", role: "main_visual", placement: { relation: "new_region" },
       content: { capability: "base_ten_trade", parameters: ${JSON.stringify(parametersOf([0, 4, 12], [0, 2, 17]))} } });
     try { api.compileAndValidateLessonPlan(plan, { language: "en-US" }); console.log(JSON.stringify({})); }
-    catch (error) { console.log(JSON.stringify({ code: error.code, message: error.message })); }
+    catch (error) { console.log(JSON.stringify({ code: error.code, message: error.message, path: error.path })); }
   `);
   assert.match(second.message ?? "", /one trading mat/);
+  // Refused where the second mat is written, so that section is asked again, not the first (review of #157).
+  assert.match(second.path ?? "", /^\$lessonPlan\.sections\[1\]/);
 });
 
 test("a one-section lesson with the mat makes no separate practice request", () => {

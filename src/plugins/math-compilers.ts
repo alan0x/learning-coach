@@ -1729,7 +1729,8 @@ function baseTenPiles(input: Record<string, unknown>, path: string): { lesson: n
     if (t > mostTens) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_tens`, `a pile starts with at most ${mostTens} tens`);
     if (h > mostHundreds) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_hundreds`, `a pile starts with at most ${mostHundreds} hundreds`);
     if (pileValue(pile) > 999) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_hundreds`, "after trading a pile has at most 9 hundreds (999)");
-    if (pileValue(pile) === 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_ones`, "a pile has at least one unit");
+    // A number under ten has no ten to make: that is not a trading question (review of #157).
+    if (pileValue(pile) < 10) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.${name}_ones`, `a pile of ${pileValue(pile)} has no ten to make: the mat is for numbers of ten or more`);
   }
   const columns: 2 | 3 = pileValue(lesson) >= 100 || lesson[0]! > 0 ? 3 : 2;
   if (pileValue(practice) === pileValue(lesson)) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.practice_ones`, `the practice pile makes ${pileValue(lesson)} too: write a pile with another number`);
@@ -1762,15 +1763,14 @@ function compileBaseTenTrade(
   const input = parameters(content);
   allowParameterKeys(input, [...BASE_TEN_FIELDS], path);
   if ((content.numbers?.length ?? 0) > 0) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "the mat's piles are written in its six whole numbers; it uses no lesson numbers");
-  // One mat per lesson (owner decision 4): a second, different pile is refused, and the section asked again.
-  const piles = new Set<string>();
-  for (const section of plan.sections) for (const moment of section.moments) for (const action of moment.actions) {
-    if (action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "base_ten_trade") {
-      const other = parameters(action.content as LessonPlanVisualContent);
-      piles.add(JSON.stringify(BASE_TEN_FIELDS.map((field) => other[field])));
-    }
+  // One mat per lesson (owner decision 4): a later mat with other piles is refused at its own path, so the
+  // section that wrote it is asked again, never the first one, which may already be playing (review of #157).
+  const pilesOf = (content: LessonPlanVisualContent) => JSON.stringify(BASE_TEN_FIELDS.map((field) => parameters(content)[field]));
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "base_ten_trade");
+  if (first && pilesOf(first.content as LessonPlanVisualContent) !== pilesOf(content)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", path, "a lesson has one trading mat: write the same two piles each time, or show the other pile in words");
   }
-  if (piles.size > 1) fail("LESSON_PLAN_CAPABILITY_PARAMETER", path, "a lesson has one trading mat: write the same two piles each time, or show the other pile in words");
   const { lesson, practice, columns } = baseTenPiles(input, path);
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text = BASE_TEN_TEXT[language];
