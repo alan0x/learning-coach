@@ -12,10 +12,13 @@ A small paid probe of the `base_ten_trade` trial recipe (Coach #157), quality on
 - **Build:** Coach main at the commit that merges this record, copied to `handoff-math-expressiveness/runs/base-ten/probe-1/build` (`main`, `lesson-plan.js`, `COMMIT`) and frozen. It pins OLL 728c279.
 - **Model:** the dev-probe profile (`~/.octos/profiles/dev-probes.json`, Gemini 3.6 Flash, the app's lesson model on its own key).
 - **Smoke first:** BT-01 and BT-21 on the candidate arm only, to confirm that the mat is drawn in the lesson's language and the judge reads the part. The smoke counts toward the cap. If the smoke shows a runner or build fault, the batch does not start.
-- **Command (batch):** `node scripts/eval-trial-recipe-speed.mjs --build <frozen build> --octos-profile ~/.octos/profiles/dev-probes.json --pairs 0 --recipes base_ten_trade --both-arms --quality-repeats 1 --lesson-calls 4 --max-calls 264 --keep-parts <run>/parts --out <run>/report.json`
-- **Calls:** 66 lessons at the 4-call limit, so a cap of 264: English 40 lessons (160), Chinese 26 (104). The smoke adds 2 lessons, 8 calls, so the total cap is 272.
+- **Command (smoke):** `node scripts/eval-trial-recipe-speed.mjs --build <frozen build> --octos-profile ~/.octos/profiles/dev-probes.json --pairs 0 --recipes base_ten_trade --cases BT-01,BT-21 --lesson-calls 4 --max-calls 10 --keep-parts <run>/smoke-parts --out <run>/smoke.json`. Its parts go in a folder of their own: its file names match the batch's.
+- **Command (batch):** `node scripts/eval-trial-recipe-speed.mjs --build <frozen build> --octos-profile ~/.octos/profiles/dev-probes.json --pairs 0 --recipes base_ten_trade --both-arms --quality-repeats 1 --lesson-calls 4 --max-calls 280 --keep-parts <run>/parts --out <run>/report.json`
+- **Calls:** 66 lessons at the 4-call limit, which is 264: English 40 lessons (160), Chinese 26 (104).
+  - A lesson stopped at its limit has already started a 5th call, which counts (review of #158). The batch cap is therefore **280**, which leaves room for 16 such lessons.
+  - The smoke's cap is 10 (2 lessons). The total cap is **290**.
   - A missing or bad number among the six costs one re-ask, inside the 4-call limit.
-  - A lesson that starts with fewer than 4 calls left is reported as not run, never judged.
+  - A lesson that starts with fewer than 4 calls left runs with what is left. One stopped at that smaller limit is a hard miss ("not judged: call_cap"). Lessons the budget never reaches are reported as not run.
 - **Judged:** the first playable part of each lesson, by `scripts/base-ten-judge.mjs` (inside the runner). Every candidate lesson that draws the mat is also read by hand for its narration (below).
 
 ## Pass bar, written before the run (plan §5: two sides, per language; judged only against this)

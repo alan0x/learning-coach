@@ -556,6 +556,7 @@ export function recipesInPart(part) {
     && action.content.objects.every((object) => solidName.test(String(object.as)) && object.color === undefined && object.label === undefined))) found.push("solid_3d");
   // The fraction model (decision 0021): its own card kind.
   if (writes.some((action) => action.kind === "fraction_model")) found.push("fraction_model");
+  if (writes.some((action) => action.kind === "base_ten_trade")) found.push("base_ten_trade");
   return found;
 }
 

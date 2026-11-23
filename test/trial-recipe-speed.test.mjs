@@ -422,6 +422,8 @@ test("the plot points probe runs seven judge cases and two dragged-point cases (
 
 test("the trading mat probe runs the 33 development cases, both languages, near misses marked (decision 0023)", async () => {
   const { BASE_TEN_CASES, TRIAL_QUALITY_CASES, judgeBaseTen, qualityCasesFor } = await import("../scripts/eval-trial-recipe-speed.mjs");
+  // A part that draws the mat names the recipe, so a near miss that drew it is flagged for reading (review of #158).
+  assert.deepEqual(recipesInPart({ steps: [{ beats: [{ actions: [{ do: "write", kind: "base_ten_trade", content: { columns: 2, places: [] } }] }] }] }), ["base_ten_trade"]);
   assert.equal(TRIAL_QUALITY_CASES.base_ten_trade, BASE_TEN_CASES);
   assert.equal(qualityCasesFor("base_ten_trade").length, 33);
   assert.deepEqual(BASE_TEN_CASES.filter((item) => item.nearMiss).map((item) => item.id), ["BT-17", "BT-18", "BT-19", "BT-20", "BT-31", "BT-32", "BT-33"]);
