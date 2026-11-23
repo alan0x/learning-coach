@@ -78,7 +78,14 @@ The same four bars as probes 1 and 2.
 - **Slider tasks on the mat:** 17 of the 26 trading lessons have one, against 19 card tasks in probe 2. 16 of the 17 slide to the fully traded count; BT-25 slides to a partial count.
 
 ### Why bar 1 fails (EN: BT-01, 03, 05, 07, 09, 10, 13; ZH: BT-22, 24, 26, 27, 29)
-- **The model uses the slider to set a count, not to make a trade: 9 lessons** (BT-01, 05, 10, 12, 13, 24, 25, 27, 32). Their slider tasks ask to go "back to 13" or "调回 23根": the starting pile, which the task already opens on. The program drops each such task ("the loose ones are already 13"). In five of these lessons (BT-01, 05, 13, 24, 27) the only task on the mat was dropped. The model writes this in the same way it uses every other component's slider: move a number, and the picture follows.
+- **The model asks the child to undo the lesson's trade, and Coach drops the task: 9 lessons** (BT-01, 05, 10, 12, 13, 24, 25, 27, 32).
+  - The tasks say "move the slider back to 13" or "调回10枚" (hint: "drag right"). They are written after the lesson traded the ones away, and they ask for a break back to the starting count.
+  - The mat can do that: a stop up breaks a ten.
+  - Coach turns it into nothing to do, because it reopens the task on the lesson's starting pile and accepts trades down only ("the loose ones are already 13").
+  - Ordinary sliders meet the same habit differently: `resolveMetNumberTargets` moves the target or the start. The mat skips that step.
+  - So this cause is Coach's rule as much as the model.
+  - In five of these lessons (BT-01, 05, 13, 24, 27) the only task on the mat was dropped.
+- **The model asks for a count that would change the total: 6 refusals** ("the loose ones to 15", "to 14"). These are genuine set-a-count requests.
 - **No typed question: 4 lessons** (BT-03, 10, 22, 29).
 - **Trades left unmade: 2 lessons.** BT-07 never trades its tens; BT-09 ends with ten tens.
 - **Lost: BT-26.**
@@ -90,9 +97,18 @@ The same four bars as probes 1 and 2.
 - **A faulty task prompt: 2 lessons.** BT-23 asks the trade backwards; in BT-15 the lesson's own example states the typed answer.
 - **Read as not misleading:** 10 lessons end by inviting the learner to slide to a value the mat already shows at that moment. The slider task starts from the lesson's pile, where the move is real, so the reader scored these as not misleading under rule 4. Read the other way, more lessons would fail.
 
+### Two checks after the reading (no calls)
+- **The retelling is not a missing fact.** Every later-section request already gives each lesson number its current value (`current_value` in `sectionPromptContext`), so the model was told what the mat showed and retold the starting pile anyway. A program fact in the same form would not fix it.
+- **No single change clears the bars.**
+  - Recovering the five lessons whose only mat task was dropped gives EN 11 and ZH 7, still short of 13 and 8.
+  - Bar 4 stays at 6 and 6, against at most 1.
+
 ### What this means
-The slider removed probe 2's main cause: refused slider targets and the lessons they lost. What is left is the model's writing, not the mat:
-- the model treats a slider as "set this count";
-- the model loses track of what the mat shows across sections.
+The slider removed probe 2's main cause: refused slider targets and the lessons they lost. What is left has three parts:
+- **Coach's task rule:** start from the lesson's pile and trade down only. It drops the model's "undo the trade" tasks.
+- **"Set this count" tasks** that would change the total.
+- **The model's narration losing track of what the mat shows, although it is told.** This has appeared in all three probes.
+
+The slider also shows the count of a place, a number on screen. Decision 0023 had said no number appears until the child types; amendment 4 changed that.
 
 The second appeared in all three probes. Under the stop rule no further design is tried without the owner.
