@@ -14584,7 +14584,7 @@ var MATH_RECIPES = {
     required_features: ["place_value_trading"],
     // The card binds counts the program creates; the lesson taps and animates them.
     variables_by_program: true,
-    model_guidance: "\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF1Alesson_*\u7167\u9898\u76EE\u5199\u4E00\u3001\u5341\u3001\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u51990\uFF09\uFF0Cpractice_*\u53E6\u5199\u4E00\u5806\uFF08\u4F4D\u6570\u540C\u3001\u603B\u6570\u4E0D\u540C\uFF09\uFF1B\u7A0B\u5E8F\u6F14\u793A\u4EA4\u6362\u5E76\u51FA\u9898\uFF1B\u65C1\u767D\u8BF4\u9898\u76EE\u548C\u6362\u5B8C\u7684\u7ED3\u679C\uFF0C\u4E0D\u8BF4\u7EC3\u4E60\u7684\u6570\uFF0C\u4E0D\u5199\u6446\u9762\u7684\u9898"
+    model_guidance: "\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF1Alesson_*\u7167\u9898\u76EE\u5199\u4E00\u3001\u5341\u3001\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u51990\uFF09\uFF0Cpractice_*\u53E6\u5199\u4E00\u5806\uFF08\u4F4D\u6570\u540C\u3001\u603B\u6570\u4E0D\u540C\uFF09\uFF1B\u7A0B\u5E8F\u6F14\u793A\u4EA4\u6362\u5E76\u51FA\u9898\uFF1B\u65C1\u767D\u8BF4\u9898\u76EE\u548C\u6362\u5B8C\u7684\u7ED3\u679C\uFF0C\u4E0D\u8BF4\u7EC3\u4E60\u7684\u6570\uFF0C\u4E0D\u5199\u5173\u4E8E\u8FD9\u4E9B\u65B9\u5757\u7684\u9898"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -20177,7 +20177,7 @@ var BASE_TEN_TEXT = {
     tradeHint: ["Put ten ones in the tray, then tap Make a ten.", "Put ten ones in the tray, then tap Make a ten. Ten tens make a hundred the same way."],
     number: "How many are on the mat?",
     numberHint: ["Count the tens by tens, then the ones.", "Count the hundreds by hundreds, the tens by tens, then the ones."],
-    counts: "How many of each are on the mat?",
+    counts: ["How many of each are on the mat?", "How many of each are on the mat?"],
     countsHint: "Count what is in each column.",
     words: ["ones", "tens", "hundreds"],
     parts: "What is each place worth?",
@@ -20192,9 +20192,9 @@ var BASE_TEN_TEXT = {
     variable: ["\u4E2A\u4E00", "\u6258\u76D8\u91CC\u7684\u4E00", "\u4E2A\u5341", "\u6258\u76D8\u91CC\u7684\u5341", "\u4E2A\u767E"],
     trade: ["\u8F6E\u5230\u4F60\u4E86\u3002\u80FD\u6362\u5C31\u4E00\u76F4\u6362\uFF0C\u6362\u4E0D\u4E86\u4E86\u5C31\u70B9\u201C\u6211\u505A\u5B8C\u4E86\u201D\u3002", "\u8F6E\u5230\u4F60\u4E86\u3002\u80FD\u6362\u5C31\u4E00\u76F4\u6362\uFF0C\u6362\u4E0D\u4E86\u4E86\u5C31\u70B9\u201C\u6211\u505A\u5B8C\u4E86\u201D\u3002"],
     tradeHint: ["\u628A\u5341\u4E2A\u4E00\u653E\u8FDB\u6258\u76D8\uFF0C\u518D\u70B9\u201C\u6362\u6210\u4E00\u4E2A\u5341\u201D\u3002", "\u628A\u5341\u4E2A\u4E00\u653E\u8FDB\u6258\u76D8\uFF0C\u518D\u70B9\u201C\u6362\u6210\u4E00\u4E2A\u5341\u201D\u3002\u5341\u4E2A\u5341\u4E5F\u8FD9\u6837\u6362\u6210\u4E00\u4E2A\u767E\u3002"],
-    number: "\u6446\u9762\u4E0A\u4E00\u5171\u6709\u591A\u5C11\uFF1F",
+    number: "\u8FD9\u4E9B\u65B9\u5757\u4E00\u5171\u662F\u591A\u5C11\uFF1F",
     numberHint: ["\u5148\u5341\u4E2A\u5341\u4E2A\u5730\u6570\uFF0C\u518D\u4E00\u4E2A\u4E00\u4E2A\u5730\u6570\u3002", "\u5148\u4E00\u767E\u4E00\u767E\u5730\u6570\uFF0C\u518D\u5341\u4E2A\u5341\u4E2A\u5730\u6570\uFF0C\u6700\u540E\u4E00\u4E2A\u4E00\u4E2A\u5730\u6570\u3002"],
-    counts: "\u6446\u9762\u4E0A\u5404\u6709\u51E0\u4E2A\uFF1F",
+    counts: ["\u5404\u6709\u51E0\u4E2A\u5341\u3001\u51E0\u4E2A\u4E00\uFF1F", "\u5404\u6709\u51E0\u4E2A\u767E\u3001\u51E0\u4E2A\u5341\u3001\u51E0\u4E2A\u4E00\uFF1F"],
     countsHint: "\u6570\u4E00\u6570\u6BCF\u4E00\u4F4D\u4E0A\u6709\u51E0\u4E2A\u3002",
     words: ["\u4E2A\u4E00", "\u4E2A\u5341", "\u4E2A\u767E"],
     parts: "\u6BCF\u4E00\u4F4D\u8868\u793A\u591A\u5C11\uFF1F",
@@ -20311,7 +20311,7 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
     {
       as: `${base}-counts`,
       anchor: base,
-      prompt: text5.counts,
+      prompt: text5.counts[wide],
       availability: after,
       allowed_operations: [{ kind: "row_entry" }],
       completion: { kind: "numeric_row", parts: high.flatMap((p) => [{ blank: { as: `${BASE_TEN_PLACE_NAMES[p]}`, answer: String(digit(p)) } }, { text: text5.words[p] }]) },

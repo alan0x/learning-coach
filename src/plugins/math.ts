@@ -183,7 +183,7 @@ export const MATH_RECIPES = {
     required_features: ["place_value_trading"],
     // The card binds counts the program creates; the lesson taps and animates them.
     variables_by_program: true,
-    model_guidance: "十个一换一个十：lesson_*照题目写一、十、百的个数（没有写0），practice_*另写一堆（位数同、总数不同）；程序演示交换并出题；旁白说题目和换完的结果，不说练习的数，不写摆面的题",
+    model_guidance: "十个一换一个十：lesson_*照题目写一、十、百的个数（没有写0），practice_*另写一堆（位数同、总数不同）；程序演示交换并出题；旁白说题目和换完的结果，不说练习的数，不写关于这些方块的题",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],

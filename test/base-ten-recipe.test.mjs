@@ -125,7 +125,11 @@ test("the practice: I'm done on the practice pile, then the number and two rows,
     ["How many of each are on the mat?", "numeric_row"],
     ["What is each place worth?", "numeric_row"],
   ]);
-  assert.deepEqual(tasks("zh").map((task) => task.prompt), ["轮到你了。能换就一直换，换不了了就点“我做完了”。", "摆面上一共有多少？", "摆面上各有几个？", "每一位表示多少？"]);
+  assert.deepEqual(tasks("zh").map((task) => task.prompt), ["轮到你了。能换就一直换，换不了了就点“我做完了”。", "这些方块一共是多少？", "各有几个十、几个一？", "每一位表示多少？"]);
+  // The child sees blocks, not a "mat" (owner, 2026-11-22); a mat with hundreds asks for all three.
+  const wideZh = withTrial(compileScript([["zh3", parametersOf([1, 2, 14], [1, 3, 15]), "zh-CN"]]));
+  assert.equal(wideZh.zh3.lesson.lesson.tasks[2].prompt, "各有几个百、几个十、几个一？");
+  for (const id of ["zh", "zh3"]) for (const task of (id === "zh" ? tasks("zh") : wideZh.zh3.lesson.lesson.tasks)) assert.ok(![task.prompt, ...task.hints].some((line) => line.includes("摆面")), task.prompt);
   assert.deepEqual(tasks("zh")[2].completion.parts.filter((part) => "text" in part).map((part) => part.text), ["个十", "个一"]);
   assert.deepEqual(tasks("zh")[3].completion.parts.filter((part) => "blank" in part).map((part) => [part.blank.answer, part.blank.label]), [["30", "十位表示"], ["7", "个位表示"]]);
   assert.equal(tasks("en")[3].completion.parts[0].text, "37 =");
