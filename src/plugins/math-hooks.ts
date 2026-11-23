@@ -127,8 +127,10 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
     },
   },
   base_ten_trade: {
-    // The mat's counts run from 0 to the most it draws and have no slider: they change only by trades
-    // (OLL 0023's tap rule). The starting values stay as the model wrote them; the compiler checks them.
+    // The mat's counts run from 0 to the most it draws (OLL 0023's tap rule). Every component's numbers
+    // have a slider (owner, 2026-11-23): a place with a tray (ones; tens on a three-column mat) slides in
+    // steps of ten, each stop one trade made by the card's own rules (0023 amendment 4). The highest place
+    // has no slider. The starting values stay as the model wrote them; the compiler checks them.
     fit_numbers(content, plan) {
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
@@ -137,7 +139,8 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       definitions.forEach((definition, place) => {
         definition!.min = 0;
         definition!.max = columns === 2 && place === 1 ? 9 : BASE_TEN_DRAWN[place] ?? 0;
-        delete definition!.student_control;
+        if (place < columns - 1) definition!.student_control = { kind: "slider", step: 10 };
+        else delete definition!.student_control;
       });
       return new Map(numbers.map((number) => [number, 0]));
     },

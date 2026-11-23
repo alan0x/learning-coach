@@ -14580,10 +14580,11 @@ var MATH_RECIPES = {
     required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["base_ten_trade"],
-    // The counts change by taps only, never by a slider (OLL 0023).
-    student_controls: [],
+    // Every component's numbers have a slider (owner, 2026-11-23). The ones (and tens on a three-column mat)
+    // slide in steps of ten, each stop one trade by the card's rules (OLL 0023 amendment 4).
+    student_controls: ["slider"],
     required_features: ["trade_ten_for_one"],
-    model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF08\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\uFF09\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF08\u9898\u76EE\u6709\u767E\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF09\uFF0C\u7167\u9898\u76EE\u5199\uFF1B\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u767E\u540C\u7406\u52A8\u753B\u201C\u5341\u201D\u3002\u7EC3\u4E60\u53EF\u8BA9\u5B69\u5B50\u628A\u201C\u4E00\u201D\u6362\u5230\u4E0D\u80FD\u518D\u6362\uFF1B\u53E6\u51FA\u65B0\u9898\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757"
+    model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF08\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\uFF09\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF08\u9898\u76EE\u6709\u767E\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF09\uFF0C\u7167\u9898\u76EE\u5199\uFF1B\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u767E\u540C\u7406\u52A8\u753B\u201C\u5341\u201D\u3002\u5B69\u5B50\u7684\u6ED1\u5757\u5728\u201C\u4E00\u201D\u4E0A\uFF08\u6709\u767E\u65F6\u201C\u5341\u201D\u4E5F\u6709\uFF09\uFF0C\u6BCF\u6ED1\u4E00\u683C\u5C31\u662F\u6362\u4E00\u6B21\uFF0C\u6240\u4EE5\u7EC3\u4E60\u8BA9\u5B69\u5B50\u628A\u201C\u4E00\u201D\u6ED1\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF1B\u53E6\u51FA\u65B0\u9898\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -16643,9 +16644,30 @@ function baseTenMoves(state, moves) {
   }
   return { steps };
 }
-function baseTenTraded(state) {
-  const value2 = baseTenValue(state);
-  return state.length === 3 ? [value2 % 10, Math.floor(value2 / 10) % 10, Math.floor(value2 / 100)] : [value2 % 10, Math.floor(value2 / 10)];
+function baseTenSliderTask(state, position, value2) {
+  const names = ["loose ones", "tens", "hundreds"];
+  if (!whole(value2)) return { refuse: "blocks are counted in whole numbers" };
+  if (position >= state.length) return value2 === 0 ? { drop: "this pile has no hundreds column" } : { refuse: "this pile has tens and ones only: its hundreds stay 0" };
+  if (state[position] === value2) return { drop: `the ${names[position]} are already ${value2}` };
+  let slider = position;
+  let target = value2;
+  if (position === state.length - 1) {
+    slider = position - 1;
+    target = state[slider] - 10 * (value2 - state[position]);
+  }
+  const starts = [[...state]];
+  if (slider === 1) {
+    const ones = baseTenMove(state, 0, state[0] % 10);
+    if (Array.isArray(ones) && ones[1] !== state[1]) starts.push(ones);
+  }
+  for (const start of starts) {
+    if (start[slider] === target) continue;
+    const moved = baseTenMove(start, slider, target);
+    if (Array.isArray(moved)) return { slider, target, start };
+  }
+  const from = starts[starts.length - 1];
+  const reachable = Array.from({ length: Math.floor(from[slider] / 10) }, (_, k) => from[slider] - 10 * (k + 1));
+  return { refuse: reachable.length ? `on the mat the ${names[slider]} slide down by tens (each stop is one trade): from ${from[slider]} they can be ${reachable.join(" or ")}` : `the ${names[slider]} are ${from[slider]}: there is no ten to trade` };
 }
 
 // src/plugins/math-hooks.ts
@@ -16750,8 +16772,10 @@ var MATH_HOOKS = {
     }
   },
   base_ten_trade: {
-    // The mat's counts run from 0 to the most it draws and have no slider: they change only by trades
-    // (OLL 0023's tap rule). The starting values stay as the model wrote them; the compiler checks them.
+    // The mat's counts run from 0 to the most it draws (OLL 0023's tap rule). Every component's numbers
+    // have a slider (owner, 2026-11-23): a place with a tray (ones; tens on a three-column mat) slides in
+    // steps of ten, each stop one trade made by the card's own rules (0023 amendment 4). The highest place
+    // has no slider. The starting values stay as the model wrote them; the compiler checks them.
     fit_numbers(content, plan) {
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
@@ -16760,7 +16784,8 @@ var MATH_HOOKS = {
       definitions.forEach((definition, place5) => {
         definition.min = 0;
         definition.max = columns === 2 && place5 === 1 ? 9 : BASE_TEN_DRAWN[place5] ?? 0;
-        delete definition.student_control;
+        if (place5 < columns - 1) definition.student_control = { kind: "slider", step: 10 };
+        else delete definition.student_control;
       });
       return new Map(numbers.map((number) => [number, 0]));
     },
@@ -20300,17 +20325,13 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
         return actions;
       },
       task(position, value2) {
-        const traded = baseTenTraded(state);
-        if (traded.every((count, place5) => count === state[place5])) return { drop: "this pile has no trade to make" };
-        if (Math.abs(value2 - (traded[position] ?? 0)) > 1e-6) {
-          return { refuse: `when every trade is made the ${BASE_TEN_PLACE_NAMES[position]} are ${traded[position] ?? 0}: ask the learner to trade until then (the task ends when no trade is left)` };
-        }
+        const own = baseTenSliderTask(state, position, value2);
+        if (!("slider" in own)) return own;
         return {
           task: {
-            // The mat starts again from the lesson's pile, trays empty; the learner trades and says done.
-            start: { kind: "practice", variables: [...counts, ...trays], values: Object.fromEntries([...counts.map((as, place5) => [as, state[place5]]), ...trays.map((as) => [as, 0])]) },
-            allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
-            completion: { kind: "card_fact", node: base, fact: "no_trade_left" }
+            start: { kind: "practice", variables: [...counts, ...trays], values: Object.fromEntries([...counts.map((as, place5) => [as, own.start[place5]]), ...trays.map((as) => [as, 0])]) },
+            allowed_operations: [{ kind: "variable_change", variable: counts[own.slider], controls: ["slider"] }],
+            completion: { kind: "expression_target", expression: counts[own.slider], value: own.target, tolerance: 0 }
           }
         };
       }

@@ -9,7 +9,8 @@
 //   ([hundreds, tens, loose ones]), or `forbid` for a near miss (a question that is not trading).
 // - Checks needing no expectation: one mat; the mat's columns hold the pile; every step of the lesson keeps
 //   the amount, and the lesson ends with no trade left; a pile that needs a trade has the learner's own
-//   task on the mat, starting from the lesson's pile and ending when no trade is left; a typed question
+//   task on the mat, starting from the lesson's pile (since 0023 amendment 4, 2026-11-23: the mat's slider,
+//   each stop one trade, to the value the model named; or tapping until no trade is left); a typed question
 //   follows; the mat speaks the lesson's language (0023 amendment 3).
 // - Since the rebuild of 2026-11-23 the pile is lesson numbers and the model writes the trades and the
 //   practice, so the judge no longer checks a separate practice pile or the wording of prompts.
@@ -56,7 +57,11 @@ export function tradingMatIn(lesson) {
   const node = Object.values(board.nodes).find((candidate) => String(candidate.id).endsWith(`:node:${write.as}`));
   const end = node ? baseTenFacts(baseTenMat(node.content)) : undefined;
   const tasks = lesson.lesson?.tasks ?? [];
-  const cardTask = tasks.find((task) => task.completion?.kind === "card_fact");
+  // The learner's task on the mat: tapping until no trade is left, or the mat's own slider on one of its
+  // counts (0023 amendment 4), each started from a pile of its own.
+  const countVariables = new Set((write.content.bindings ?? []).filter((binding) => /\.count$/.test(binding.target)).map((binding) => String(binding.expression).trim()));
+  const cardTask = tasks.find((task) => task.completion?.kind === "card_fact")
+    ?? tasks.find((task) => (task.allowed_operations ?? []).some((operation) => operation.kind === "variable_change" && countVariables.has(operation.variable) && (operation.controls ?? []).includes("slider")));
   const practice = cardTask?.start ? pileAt(write.content, { ...declared, ...(cardTask.start.values ?? {}) }) : undefined;
   const taps = actions.filter((action) => action.do === "tap" && action.target === write.as).length;
   // The mat's value after each demonstration action, in order: a tap by the card's rules, an animation by its
@@ -111,12 +116,17 @@ export function judgeTradingMat(item, lesson) {
   // that needs a trade has a task on the mat that starts again from the lesson's pile, trays empty, and
   // ends when no trade is left. A pile with nothing to trade has no such task.
   if (needsTrade) {
-    check("the learner trades the lesson's pile on the mat", mat.cardTask && mat.practice, "no card task with a start");
-    check("the card task asks whether no trade is left, on the mat", mat.cardTask?.completion?.fact === "no_trade_left" && mat.cardTask?.completion?.node === mat.as, JSON.stringify(mat.cardTask?.completion));
-    check("the card task starts from the lesson's pile, trays empty", mat.practice && JSON.stringify(mat.practice.pile) === JSON.stringify(pile) && mat.practice.trays.every((tray) => tray === 0),
+    check("the learner trades the lesson's pile on the mat", mat.cardTask && mat.practice, "no task on the mat with a start");
+    const onSlider = mat.cardTask?.completion?.kind === "expression_target";
+    check("the task on the mat is the card's trading or its slider", onSlider
+      ? mat.cardTask.allowed_operations.length === 1 && String(mat.cardTask.completion.expression).trim() === mat.cardTask.allowed_operations[0].variable
+      : mat.cardTask?.completion?.fact === "no_trade_left" && mat.cardTask?.completion?.node === mat.as, JSON.stringify(mat.cardTask?.completion));
+    // A slider task on the tens may start with the ones already traded: the same amount, trays empty.
+    const sameStart = mat.practice && (JSON.stringify(mat.practice.pile) === JSON.stringify(pile) || (onSlider && valueOf(mat.practice.pile) === valueOf(pile) && mat.practice.pile[2] < 10));
+    check("the task starts from the lesson's pile, trays empty", sameStart && mat.practice.trays.every((tray) => tray === 0),
       `starts at ${JSON.stringify(mat.practice?.pile)} trays ${JSON.stringify(mat.practice?.trays)}, the lesson's pile is ${JSON.stringify(pile)}`);
   } else {
-    check("no trading task on a pile with nothing to trade", !mat.cardTask, "a card task on a pile that needs no trade");
+    check("no trading task on a pile with nothing to trade", !mat.cardTask, "a task on the mat on a pile that needs no trade");
   }
   // A typed question, which the model writes about a pile it states in words: that it exists is checked
   // here; what it asks, and that its answer is not on the screen, is read by hand.
