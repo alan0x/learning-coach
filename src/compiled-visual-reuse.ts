@@ -19,7 +19,8 @@ export interface CompiledVisual {
   mover?: {
     /** The visual's lesson numbers, in its number order. */
     numbers: number[];
-    play(steps: ReadonlyArray<{ position: number; from: number[]; to: number[] }>): AuthoringAction[];
+    /** `room` is how many actions the moment can still hold (OLL allows 24 in a beat). */
+    play(steps: ReadonlyArray<{ position: number; from: number[]; to: number[] }>, room: number): AuthoringAction[];
     task(position: number, value: number): { task: Record<string, unknown> } | { drop: string } | { refuse: string };
   };
 }

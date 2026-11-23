@@ -1735,13 +1735,18 @@ function compileBaseTenTrade(
     actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)), variables,
     mover: {
       numbers: [...numbers],
-      play(steps) {
+      play(steps, room) {
         const actions: AuthoringAction[] = [];
-        for (const step of steps) {
+        // A trade shown quickly takes two actions, one shown tap by tap eleven. A beat holds 24 actions (OLL),
+        // so a place's first trade is tapped out only where the moment has room for it and for every other
+        // trade it makes: ones and tens both traded in one moment show the ones tap by tap and the tens
+        // quickly (review of #160: 26 actions were refused by OLL at a path the model never wrote).
+        const quick = (from: number) => 2 * steps.slice(from).reduce((sum, step) => sum + (step.from[step.position]! - step.to[step.position]!) / 10, 0);
+        for (const [index, step] of steps.entries()) {
           const place = step.position;
           const at = BASE_TEN_PLACE_NAMES[place]!;
           let trades = (step.from[place]! - step.to[place]!) / 10;
-          if (trades > 0 && !shown.has(place)) {
+          if (trades > 0 && !shown.has(place) && actions.length + 9 + quick(index) <= room) {
             shown.add(place);
             trades -= 1;
             for (let tap = 0; tap < 10; tap += 1) actions.push({ do: "tap", target: base, tap: "gather", at } as unknown as AuthoringAction);
@@ -1757,8 +1762,9 @@ function compileBaseTenTrade(
       task(position, value) {
         const traded = baseTenTraded(state);
         if (traded.every((count, place) => count === state[place])) return { drop: "this pile has no trade to make" };
-        if (Math.abs(value - traded[position]!) > 1e-6) {
-          return { refuse: `when every trade is made the ${BASE_TEN_PLACE_NAMES[position]} are ${traded[position]}: ask the learner to trade until then (the task ends when no trade is left)` };
+        // A hundreds number of 0 on a pile under a hundred has no column: it stays 0.
+        if (Math.abs(value - (traded[position] ?? 0)) > 1e-6) {
+          return { refuse: `when every trade is made the ${BASE_TEN_PLACE_NAMES[position]} are ${traded[position] ?? 0}: ask the learner to trade until then (the task ends when no trade is left)` };
         }
         return {
           task: {

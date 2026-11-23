@@ -50,7 +50,8 @@ export function baseTenState(start: readonly number[]): number[] {
 export function baseTenMove(state: readonly number[], position: number, to: number): number[] | string {
   const next = [...state];
   const from = state[position];
-  if (from === undefined) return "the mat has no such number";
+  // A hundreds number of 0 on a pile under a hundred has no column: it stays 0.
+  if (from === undefined) return to === 0 ? next : "this pile has tens and ones only: its hundreds stay 0";
   if (to === from) return next;
   if (!whole(to)) return "blocks are counted in whole numbers";
   const reachable = Array.from({ length: Math.floor(from / 10) }, (_, k) => from - 10 * (k + 1));

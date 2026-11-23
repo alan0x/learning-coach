@@ -624,7 +624,10 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         }
         state.now = result.steps.at(-1)?.to ?? state.now;
         const when = actionWhen(animations[0]!.timing);
-        const played = visual.mover!.play(result.steps).map((action) => ({ ...action, ...when }));
+        // What the moment can still hold: OLL's 24 actions in a beat, less what it has and what is to come.
+        const first = animations[0]!.offset;
+        const room = 24 - actions.length - moment.actions.slice(first + 1).filter((item) => !(item.action === "animate" && movers.get(item.number)?.visual === visual)).length;
+        const played = visual.mover!.play(result.steps, room).map((action) => ({ ...action, ...when }));
         // An animation to the value already shown changes nothing: the moment still looks at the card.
         return played.length ? played : [{ do: "focus", targets: [visual.whole], intent: compileText(plan, "继续观察已有的同一画面"), ...when } as AuthoringAction];
       };
@@ -750,9 +753,14 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
             moved.add(visual);
             actions.push(...playMoves(visual, capability));
           }
+        } else if (cardNumbers.has(item.number) && plan.sections.slice(sectionOffset + 1).some((later) => later.moments.some((each) => each.actions.some((action) => action.action === "create" && action.kind === "visual" && ((action.content as LessonPlanVisualContent).numbers ?? []).includes(item.number) && RECIPE_HOOKS[(action.content as LessonPlanVisualContent).capability]?.number_moves)))) {
+          // The card that moves this number is drawn in a later section, which cannot repair this one: the
+          // animation is left out and recorded, as it is while only this section exists (no visual shows the
+          // number yet). The card then starts from its lesson numbers (review of #160, round 2).
+          viewAdjustments.push({ section: sectionIndex, reason: "animation_before_card", detail: `${actionPath}: number ${item.number} is animated before the card that moves it is drawn; left out` });
         } else if (cardNumbers.has(item.number)) {
-          // The card that moves this number is drawn later: a plain animation would change its pile without
-          // its rules, and the mat would start at a wrong amount (review of #160: 96 drawn for a pile of 116).
+          // The card that moves this number is drawn later in this section: a plain animation would change its
+          // pile without its rules, and the mat would start at a wrong amount (review of #160: 96 drawn for 116).
           fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${actionPath}.end_value`, "this number belongs to a card that is drawn later: animate it in the moment that draws the card, after its create, or in a later moment");
         } else {
           actions.push({
@@ -763,6 +771,9 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           });
         }
       });
+      if (actions.length > 24 && moved.size) {
+        fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions`, "this moment holds more than the board can play at once with its trades: make the second place's trade, or the pointing, in the next moment");
+      }
       if (actions.length === 0) {
         fail("LESSON_PLAN_COMPILER_EMPTY_BEAT", `${momentPath}.actions`, "OLL requires at least one action per moment");
       }

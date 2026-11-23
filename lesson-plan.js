@@ -16603,7 +16603,7 @@ function baseTenState(start) {
 function baseTenMove(state, position, to) {
   const next = [...state];
   const from = state[position];
-  if (from === void 0) return "the mat has no such number";
+  if (from === void 0) return to === 0 ? next : "this pile has tens and ones only: its hundreds stay 0";
   if (to === from) return next;
   if (!whole(to)) return "blocks are counted in whole numbers";
   const reachable = Array.from({ length: Math.floor(from / 10) }, (_, k) => from - 10 * (k + 1));
@@ -20278,13 +20278,14 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
     variables,
     mover: {
       numbers: [...numbers],
-      play(steps) {
+      play(steps, room) {
         const actions = [];
-        for (const step of steps) {
+        const quick = (from) => 2 * steps.slice(from).reduce((sum, step) => sum + (step.from[step.position] - step.to[step.position]) / 10, 0);
+        for (const [index, step] of steps.entries()) {
           const place5 = step.position;
           const at2 = BASE_TEN_PLACE_NAMES[place5];
           let trades = (step.from[place5] - step.to[place5]) / 10;
-          if (trades > 0 && !shown.has(place5)) {
+          if (trades > 0 && !shown.has(place5) && actions.length + 9 + quick(index) <= room) {
             shown.add(place5);
             trades -= 1;
             for (let tap = 0; tap < 10; tap += 1) actions.push({ do: "tap", target: base, tap: "gather", at: at2 });
@@ -20300,8 +20301,8 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
       task(position, value2) {
         const traded = baseTenTraded(state);
         if (traded.every((count, place5) => count === state[place5])) return { drop: "this pile has no trade to make" };
-        if (Math.abs(value2 - traded[position]) > 1e-6) {
-          return { refuse: `when every trade is made the ${BASE_TEN_PLACE_NAMES[position]} are ${traded[position]}: ask the learner to trade until then (the task ends when no trade is left)` };
+        if (Math.abs(value2 - (traded[position] ?? 0)) > 1e-6) {
+          return { refuse: `when every trade is made the ${BASE_TEN_PLACE_NAMES[position]} are ${traded[position] ?? 0}: ask the learner to trade until then (the task ends when no trade is left)` };
         }
         return {
           task: {
@@ -21161,7 +21162,9 @@ function compileLessonPlan(value2, options = {}) {
         }
         state.now = result.steps.at(-1)?.to ?? state.now;
         const when = actionWhen(animations[0].timing);
-        const played = visual.mover.play(result.steps).map((action) => ({ ...action, ...when }));
+        const first = animations[0].offset;
+        const room = 24 - actions.length - moment.actions.slice(first + 1).filter((item) => !(item.action === "animate" && movers.get(item.number)?.visual === visual)).length;
+        const played = visual.mover.play(result.steps, room).map((action) => ({ ...action, ...when }));
         return played.length ? played : [{ do: "focus", targets: [visual.whole], intent: compileText(plan, "\u7EE7\u7EED\u89C2\u5BDF\u5DF2\u6709\u7684\u540C\u4E00\u753B\u9762"), ...when }];
       };
       let boardItemIndex = 0;
@@ -21289,6 +21292,8 @@ function compileLessonPlan(value2, options = {}) {
             moved.add(visual);
             actions.push(...playMoves(visual, capability2));
           }
+        } else if (cardNumbers.has(item.number) && plan.sections.slice(sectionOffset + 1).some((later) => later.moments.some((each) => each.actions.some((action) => action.action === "create" && action.kind === "visual" && (action.content.numbers ?? []).includes(item.number) && RECIPE_HOOKS[action.content.capability]?.number_moves)))) {
+          viewAdjustments.push({ section: sectionIndex, reason: "animation_before_card", detail: `${actionPath}: number ${item.number} is animated before the card that moves it is drawn; left out` });
         } else if (cardNumbers.has(item.number)) {
           fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${actionPath}.end_value`, "this number belongs to a card that is drawn later: animate it in the moment that draws the card, after its create, or in a later moment");
         } else {
@@ -21302,6 +21307,9 @@ function compileLessonPlan(value2, options = {}) {
           });
         }
       });
+      if (actions.length > 24 && moved.size) {
+        fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions`, "this moment holds more than the board can play at once with its trades: make the second place's trade, or the pointing, in the next moment");
+      }
       if (actions.length === 0) {
         fail2("LESSON_PLAN_COMPILER_EMPTY_BEAT", `${momentPath}.actions`, "OLL requires at least one action per moment");
       }
