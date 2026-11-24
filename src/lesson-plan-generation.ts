@@ -1090,7 +1090,22 @@ function sanitizeNonessentialVisuals(
       section.student_activities = section.student_activities.flatMap((activity) => {
         if (activity.kind === "number_target") return [activity];
         const reference = normalizeReference(activity.reference, sectionNumber);
-        return reference ? [{ ...activity, reference }] : [];
+        if (reference) return [{ ...activity, reference }];
+        // A typed or thinking question whose card was removed asks beside the latest card still kept from
+        // this or an earlier section; with none left it is recorded as removed, never dropped silently
+        // (owner, 2026-11-24; review of #167). A 3D view task needs its own 3D card and is recorded.
+        if (activity.kind === "reflection" || activity.kind === "numeric_answer") {
+          for (let earlier = sectionNumber; earlier >= 1; earlier -= 1) {
+            const items = outline.sections[earlier - 1]?.reusable_items ?? [];
+            for (let item = items.length; item >= 1; item -= 1) {
+              if (items[item - 1]?.kind !== "board_item") continue;
+              const kept = normalizeReference({ source: "reusable", section: earlier, item } as LessonPlanReference, sectionNumber);
+              if (kept) return [{ ...activity, reference: kept }];
+            }
+          }
+        }
+        adjustments.push({ kind: "answer_activity_removed", section: sectionNumber, reason: `card_removed:${activity.kind}` });
+        return [];
       });
       if (section.student_activities.length === 0) delete section.student_activities;
     }

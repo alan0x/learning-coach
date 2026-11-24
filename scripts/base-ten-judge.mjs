@@ -110,10 +110,10 @@ export function judgeTradingMat(item, lesson) {
     check("the lesson plays", !mat.error, mat.error);
     return done();
   }
-  note("one trading mat", mat.cards === 1, `${mat.cards} mats`);
-  if (mat.cards !== 1) return done();
+  // The lesson must play whatever it drew (review of #167: a lesson OLL refuses, with no mat, passed).
   check("the lesson plays", !mat.error, mat.error);
-  if (mat.error) return done();
+  note("one trading mat", mat.cards === 1, `${mat.cards} mats`);
+  if (mat.cards !== 1 || mat.error) return done();
   const want = item.expect.lesson_pile;
   const { pile, columns } = mat.lessonStart;
   check("the lesson pile is the question's", JSON.stringify(pile) === JSON.stringify(want), `drawn ${JSON.stringify(pile)}, question ${JSON.stringify(want)}`);

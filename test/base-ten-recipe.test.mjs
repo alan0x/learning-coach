@@ -389,39 +389,51 @@ test("a generated lesson: the trades in section 1, the learner's trading and a t
 
 test("a later section that draws no card keeps its typed and thinking questions beside the latest earlier card", () => {
   // Owner, 2026-11-24 (BT-27): a section that only moves the mat drew no card, so its questions were dropped
-  // without a record. They now sit beside the latest card an earlier section kept on the board.
+  // without a record. They now sit beside the latest card an earlier section kept on the board, also when
+  // that card is a visual the program removes afterwards (review of #167: a process diagram whose step is
+  // too long): they move to the latest card still kept, the mat.
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     const { samplePlan } = await import(${here("./sample-plans.mjs")});
     const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
     const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
-    const plan = samplePlan("rectangle_unit_square_array");
-    plan.numbers = [{ initial: 26, min: 0, max: 59, label: "loose ones" }, { initial: 9, min: 0, max: 34, label: "tens" }];
-    const first = plan.sections[0].moments[0];
-    first.actions = first.actions.filter((action) => action.action !== "animate");
-    first.actions[0].content = { capability: "base_ten_trade", parameters: {}, numbers: [1, 2] };
-    plan.sections[0].reusable_items[0].capability = "base_ten_trade";
-    delete plan.sections[0].student_activities;
-    const animate = (number, end_value) => ({ action: "animate", number, end_value, duration_intent: "brief", timing: "during_speech" });
-    plan.sections[1].moments = [{ narration: "Ten ones make a ten: now 6 ones.", actions: [animate(1, 6)] }];
-    delete plan.sections[1].student_activities;
-    const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
-    drafts[1].answer_activities = [{ prompt: "Four tens and thirteen ones: what number is that?", answer: "53", check: "53", hints: ["Trade ten ones for a ten first."] }];
-    drafts[1].reflection_activities = [{ prompt: "Why does the amount stay the same after a trade?", answer: "Ten ones are worth one ten." }];
-    const outline = stagedOutline(plan, drafts);
-    const adjustments = [];
-    const generated = await api.generateLessonPlanWithModel(async (request) => {
-      if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, bootstrapSectionFromExact(outline, drafts[0]));
-      return JSON.stringify(drafts[request.section - 1]);
-    }, { turn_id: "t", learner_request: "I have 9 tens and 26 ones. What number is that?", language: "en-US" },
-    { max_attempts_per_part: 1, on_program_adjustment: (adjustment) => adjustments.push(adjustment.kind + ":" + adjustment.reason) });
-    const lesson = generated.lesson.lesson;
-    const cards = new Set(generated.lesson.steps[0].beats.flatMap((beat) => beat.actions).flatMap((action) => action.do === "write" ? [action.as] : []));
-    console.log(JSON.stringify({
-      typed: lesson.tasks.filter((task) => task.completion.kind === "numeric_answer").map((task) => cards.has(task.anchor)),
-      thinking: (lesson.reflections ?? []).map((reflection) => cards.has(reflection.anchor)),
-      removed: adjustments.filter((each) => each.startsWith("answer_activity_removed")),
-    }));
+    const out = {};
+    for (const variant of ["mat", "removed-diagram"]) {
+      const plan = samplePlan("rectangle_unit_square_array");
+      plan.numbers = [{ initial: 26, min: 0, max: 59, label: "loose ones" }, { initial: 9, min: 0, max: 34, label: "tens" }];
+      const first = plan.sections[0].moments[0];
+      first.actions = first.actions.filter((action) => action.action !== "animate");
+      first.actions[0].content = { capability: "base_ten_trade", parameters: {}, numbers: [1, 2] };
+      plan.sections[0].reusable_items[0].capability = "base_ten_trade";
+      if (variant === "removed-diagram") {
+        first.actions.splice(1, 0, { action: "create", kind: "visual", role: "supporting_visual", content: { capability: "process_diagram", parameters: { title: "Trading", steps: ["x".repeat(400)] } }, placement: { relation: "new_region" }, reusable_item: 2 });
+        plan.sections[0].reusable_items.push({ kind: "board_item", board_kind: "visual", capability: "process_diagram" });
+      }
+      delete plan.sections[0].student_activities;
+      const animate = (number, end_value) => ({ action: "animate", number, end_value, duration_intent: "brief", timing: "during_speech" });
+      plan.sections[1].moments = [{ narration: "Ten ones make a ten: now 6 ones.", actions: [animate(1, 6)] }];
+      delete plan.sections[1].student_activities;
+      const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+      drafts[1].answer_activities = [{ prompt: "Four tens and thirteen ones: what number is that?", answer: "53", check: "53", hints: ["Trade ten ones for a ten first."] }];
+      drafts[1].reflection_activities = [{ prompt: "Why does the amount stay the same after a trade?", answer: "Ten ones are worth one ten." }];
+      const outline = stagedOutline(plan, drafts);
+      const adjustments = [];
+      const generated = await api.generateLessonPlanWithModel(async (request) => {
+        if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, bootstrapSectionFromExact(outline, drafts[0]));
+        return JSON.stringify(drafts[request.section - 1]);
+      }, { turn_id: "t", learner_request: "I have 9 tens and 26 ones. What number is that?", language: "en-US" },
+      { max_attempts_per_part: 1, on_program_adjustment: (adjustment) => adjustments.push(adjustment.kind + ":" + adjustment.reason) });
+      const lesson = generated.lesson.lesson;
+      const cards = new Set(generated.lesson.steps[0].beats.flatMap((beat) => beat.actions).flatMap((action) => action.do === "write" ? [action.as] : []));
+      out[variant] = {
+        typed: lesson.tasks.filter((task) => task.completion.kind === "numeric_answer").map((task) => cards.has(task.anchor)),
+        thinking: (lesson.reflections ?? []).map((reflection) => cards.has(reflection.anchor)),
+        removed: adjustments.filter((each) => each.startsWith("answer_activity_removed")),
+      };
+    }
+    console.log(JSON.stringify(out));
   `);
-  assert.deepEqual(result, { typed: [true], thinking: [true], removed: [] }, JSON.stringify(result));
+  for (const variant of ["mat", "removed-diagram"]) {
+    assert.deepEqual(result[variant], { typed: [true], thinking: [true], removed: [] }, `${variant}: ${JSON.stringify(result)}`);
+  }
 });
