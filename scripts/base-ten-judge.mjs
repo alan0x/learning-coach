@@ -7,15 +7,18 @@
 //
 // - Expected values written into each case before any run: the lesson pile as the question states it
 //   ([hundreds, tens, loose ones]), or `forbid` for a near miss (a question that is not trading).
-// - Checks needing no expectation: one mat; the mat's columns hold the pile; every step of the lesson keeps
-//   the amount, and the lesson ends with no trade left; a pile that needs a trade has the learner's own
-//   task on the mat, starting from the lesson's pile (since 0023 amendment 4, 2026-11-23: the mat's slider,
-//   each stop one trade, to the value the model named; or tapping until no trade is left); a typed question
-//   follows; the mat speaks the lesson's language (0023 amendment 3).
+// - Checks (objective; owner, 2026-11-24): the lesson plays; one mat draws the question's pile with the
+//   columns it needs; every step of the lesson keeps the amount, and nothing moves the pile before the mat
+//   is drawn; a task on the mat is the card's trading or its slider, starts from a pile of the lesson's amount
+//   with its trays empty, and a slider's target is a whole number of trades away; the mat speaks the
+//   lesson's language (0023 amendment 3).
+// - Notes (what the lesson chose to teach; the owner judges lessons): whether the demonstration trades,
+//   whether it ends with no trade left ("correct but less complete"), whether the learner has a task on the
+//   mat, whether a typed question follows, and whether a near miss drew a mat.
 // - Since the rebuild of 2026-11-23 the pile is lesson numbers and the model writes the trades and the
 //   practice, so the judge no longer checks a separate practice pile or the wording of prompts.
 //
-// Narration is not judged here: what the lesson says is read by hand under the probe's pass rules.
+// Narration is not judged.
 
 import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
 import { applyBaseTenTap, baseTenFacts, baseTenMat } from "octos-lesson-language/plugin-math";
@@ -88,55 +91,65 @@ export function tradingMatIn(lesson) {
   return { cards: writes.length, as: write.as, content: write.content, lessonStart, end, cardTask, practice, tasks, taps, steps, early, countOf };
 }
 
-/** Judges one case's lesson. Returns { pass, checks: [{ check, pass, detail? }] }. */
+/**
+ * Judges one case's lesson. Returns { pass, checks: [{ check, pass, detail? }], notes: [...] }.
+ * Checks are objective: the lesson plays, the mat draws the question's pile, every step keeps the amount,
+ * and every task on the mat can be done. What the lesson chooses to teach (whether it finishes every trade,
+ * gives the child a task, asks a typed question) is a note, not a failure: the owner judges lessons
+ * (2026-11-24); ending with a trade left is "correct but less complete".
+ */
 export function judgeTradingMat(item, lesson) {
   const checks = [];
+  const notes = [];
   const check = (name, pass, detail) => checks.push({ check: name, pass: Boolean(pass), ...(pass ? {} : { detail }) });
+  const note = (name, holds, detail) => notes.push({ check: name, pass: Boolean(holds), ...(holds ? {} : { detail }) });
+  const done = () => ({ pass: checks.every((each) => each.pass), checks, notes });
   const mat = tradingMatIn(lesson);
   if (item.expect?.forbid) {
-    check("no trading mat for this question", mat.cards === 0, `${mat.cards} mat(s) drawn`);
+    note("no trading mat for this question", mat.cards === 0, `${mat.cards} mat(s) drawn`);
     check("the lesson plays", !mat.error, mat.error);
-    return { pass: checks.every((each) => each.pass), checks };
+    return done();
   }
-  check("one trading mat", mat.cards === 1, `${mat.cards} mats`);
-  if (mat.cards !== 1) return { pass: false, checks };
+  note("one trading mat", mat.cards === 1, `${mat.cards} mats`);
+  if (mat.cards !== 1) return done();
   check("the lesson plays", !mat.error, mat.error);
-  if (mat.error) return { pass: false, checks };
+  if (mat.error) return done();
   const want = item.expect.lesson_pile;
   const { pile, columns } = mat.lessonStart;
   check("the lesson pile is the question's", JSON.stringify(pile) === JSON.stringify(want), `drawn ${JSON.stringify(pile)}, question ${JSON.stringify(want)}`);
   check("the mat has the columns the pile needs", columns === (valueOf(want) >= 100 || want[0] > 0 ? 3 : 2), `${columns} columns for ${JSON.stringify(want)}`);
-  check("the demonstration ends with no trade left", mat.end?.no_trade_left === true, `the lesson ends at ${JSON.stringify(mat.end)}`);
   check("the demonstration keeps the value", mat.end?.value === valueOf(pile), `ends at ${mat.end?.value}, starts at ${valueOf(pile)}`);
   check("nothing changes the pile before the mat is drawn", !mat.early, mat.early && `${mat.early.variable} is animated to ${mat.early.value} before the mat is drawn`);
   const moved = mat.steps.find((step) => step.value !== valueOf(pile));
   check("every demonstration step keeps the value", !moved, moved && `after ${moved.action} the mat shows ${moved.value}, not ${valueOf(pile)}`);
   const needsTrade = pile[2] >= 10 || pile[1] >= 10;
-  check("the demonstration trades when the pile needs it", !needsTrade || mat.taps > 0, "no taps in the lesson");
-  // The child's own trading: a pile that needs a trade has a task on the mat that starts again from the
-  // lesson's pile, trays empty: the mat's slider to the value the model named (one trade or all of them), or
-  // tapping until no trade is left. A pile with nothing to trade has no such task.
-  if (needsTrade) {
-    check("the learner trades the lesson's pile on the mat", mat.cardTask && mat.practice, "no task on the mat with a start");
-    const onSlider = mat.cardTask?.completion?.kind === "expression_target";
+  note("the demonstration trades when the pile needs it", !needsTrade || mat.taps > 0, "no taps in the lesson");
+  note("the demonstration ends with no trade left", mat.end?.no_trade_left === true, `the lesson ends at ${JSON.stringify(mat.end)}`);
+  note("the learner has a task on the mat", Boolean(mat.cardTask && mat.practice), "no task on the mat with a start");
+  // A task on the mat can be done: it is the card's trading or its slider; it starts from a pile of the
+  // lesson's amount with the trays empty (the lesson's pile, that pile with its ones traded, the pile the
+  // lesson ends with, or a pile a trade away: owner, 2026-11-24); and a slider's target is a whole number of
+  // stops away, each stop one trade.
+  if (mat.cardTask) {
+    const onSlider = mat.cardTask.completion?.kind === "expression_target";
     check("the task on the mat is the card's trading or its slider", onSlider
       ? mat.cardTask.allowed_operations.length === 1 && String(mat.cardTask.completion.expression).trim() === mat.cardTask.allowed_operations[0].variable
-      : mat.cardTask?.completion?.fact === "no_trade_left" && mat.cardTask?.completion?.node === mat.as, JSON.stringify(mat.cardTask?.completion));
-    // A slider task on the tens may start with the ones already traded: the same amount, trays empty. A ones
-    // slider starts from the lesson's pile itself (review of #163: a traded start sliding up un-trades).
-    const tensSlider = onSlider && String(mat.cardTask.allowed_operations[0].variable) === mat.countOf?.tens;
-    const sameStart = mat.practice && (JSON.stringify(mat.practice.pile) === JSON.stringify(pile) || (tensSlider && valueOf(mat.practice.pile) === valueOf(pile) && mat.practice.pile[2] < 10));
-    check("the task starts from the lesson's pile, trays empty", sameStart && mat.practice.trays.every((tray) => tray === 0),
+      : mat.cardTask.completion?.fact === "no_trade_left" && mat.cardTask.completion?.node === mat.as, JSON.stringify(mat.cardTask.completion));
+    check("the task starts from the lesson's amount, trays empty", mat.practice && valueOf(mat.practice.pile) === valueOf(pile) && mat.practice.trays.every((tray) => tray === 0),
       `starts at ${JSON.stringify(mat.practice?.pile)} trays ${JSON.stringify(mat.practice?.trays)}, the lesson's pile is ${JSON.stringify(pile)}`);
-  } else {
-    check("no trading task on a pile with nothing to trade", !mat.cardTask, "a task on the mat on a pile that needs no trade");
+    if (onSlider && mat.practice) {
+      const variable = String(mat.cardTask.allowed_operations[0].variable);
+      const place = ["hundreds", "tens", "ones"].find((name) => mat.countOf?.[name] === variable);
+      const from = place && mat.practice.pile[["hundreds", "tens", "ones"].indexOf(place)];
+      const gap = from === undefined ? NaN : Math.abs(from - mat.cardTask.completion.value);
+      check("the slider's target is a whole number of trades away", gap > 0 && gap % 10 === 0, `${place ?? variable} starts at ${from}, target ${mat.cardTask.completion.value}`);
+    }
   }
-  // A typed question, which the model writes about a pile it states in words: that it exists is checked
-  // here; what it asks, and that its answer is not on the screen, is read by hand.
-  check("a typed question follows", mat.tasks.some((task) => task.completion?.kind === "numeric_answer"), "no typed question in the lesson");
+  // A typed question, which the model writes about a pile it states in words: whether it exists is a note.
+  note("a typed question follows", mat.tasks.some((task) => task.completion?.kind === "numeric_answer"), "no typed question in the lesson");
   const zh = /^zh(?:-|$)/i.test(String(lesson.lesson?.language ?? ""));
   check("the mat speaks the lesson's language", (mat.content.language ?? "en-US") === (zh ? "zh-CN" : "en-US"), `mat ${mat.content.language ?? "en-US"}, lesson ${lesson.lesson?.language}`);
-  return { pass: checks.every((each) => each.pass), checks };
+  return done();
 }
 
 // node scripts/base-ten-judge.mjs <cases.json> <run-directory>: judges <run-directory>/<case id>.json lessons.
@@ -164,7 +177,9 @@ if (process.argv[1] && new URL(import.meta.url).pathname === (await import("node
     let verdict;
     try { verdict = judgeTradingMat(item, lesson); } catch (error) { console.log(`${item.id}\tFAIL\tjudge error: ${String(error?.message ?? error).slice(0, 160)}`); continue; }
     if (verdict.pass) passed += 1;
-    console.log(`${item.id}\t${verdict.pass ? "pass" : "FAIL"}\t${verdict.checks.filter((each) => !each.pass).map((each) => `${each.check}: ${each.detail}`).join("; ")}`);
+    const failed = verdict.checks.filter((each) => !each.pass).map((each) => `${each.check}: ${each.detail}`).join("; ");
+    const noted = verdict.notes.filter((each) => !each.pass).map((each) => `note: ${each.check}: ${each.detail}`).join("; ");
+    console.log(`${item.id}\t${verdict.pass ? "pass" : "FAIL"}\t${[failed, noted].filter(Boolean).join("; ")}`);
   }
   console.log(`${passed}/${cases.length} pass`);
   process.exitCode = passed === cases.length ? 0 : 1;

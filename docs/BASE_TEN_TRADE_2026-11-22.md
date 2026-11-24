@@ -83,3 +83,27 @@ The owner ruled after probe 2: "I think all interactive components should suppor
   - Anything else is refused with the values the place can reach ("the loose ones can be 6 or 16, not 5"). Review of #163 found three reachable targets refused and a start OLL refuses; all four are fixed and tested.
 - **The judge** accepts the slider task or the card's tapping task, started from the lesson's pile (or, for a tens slider, the same amount with the ones traded) with empty trays.
 - **The guidance** tells the model the slider is on the ones, and on the tens when there are hundreds, and that each stop is one trade.
+
+## Keeping the model's questions and tasks (2026-11-24)
+
+The owner traced two generated lessons (BT-07, BT-27) and found that Coach had dropped work the model wrote. Owner decisions of 2026-11-24:
+- **Questions:** a later section that only moves the mat draws no card. Its typed and thinking questions used to be dropped without a record. They now sit beside the latest card an earlier section kept on the board. A question with no card anywhere is recorded as `answer_activity_removed` (`no_card_for_question`). This applies to every component.
+- **Slider tasks whose target the lesson's starting pile already shows** (e.g. 「请将十条数量调回11根」 after the lesson made a hundred of 11 tens) used to be dropped. They now start where the target is not yet met:
+  - first, the pile the lesson ends with, with the slider going either way;
+  - otherwise, a pile one trade away from the lesson's.
+  
+  Only when neither works is the task removed, and the removal is recorded.
+- **Guidance:**
+  - The mat's guidance now says that a total of 100 or more gets a hundreds column. The model then declares the hundreds and trades ten tens for a hundred, usually until every place is under ten.
+  - The guidance also says where the practice starts.
+  - The task invitation says the child acts after the lesson.
+  - Later sections now receive each card's guidance with the card. Before, only the first request had it.
+- **Request size** is tracked, not capped (`eval/payload-ceilings.json` records sizes, and the measurement reports growth).
+- **The judge** keeps objective checks only:
+  - the lesson plays;
+  - the pile and columns are right;
+  - every step keeps the amount;
+  - a task on the mat starts from the lesson's amount with empty trays and can be done;
+  - the language is right.
+  
+  What the lesson chooses to teach is a note, not a failure: finishing every trade ("correct but less complete" when it doesn't), a task on the mat, a typed question, and a near miss drawing the mat. The owner judges lessons.

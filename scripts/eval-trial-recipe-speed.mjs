@@ -214,7 +214,9 @@ export const BASE_TEN_CASES = JSON.parse(await readFile(join(root, "testsuite/ba
 /** The trading mat judge's verdict in the runner's form: every failed check is a hard miss. */
 export function judgeBaseTen(item, part) {
   const verdict = judgeTradingMat(item, part);
-  return { hard: verdict.checks.filter((each) => !each.pass).map((each) => `${each.check}${each.detail ? `: ${each.detail}` : ""}`), soft: [] };
+  // Checks are objective misses; notes (what the lesson chose to teach) are soft, for the owner's reading.
+  const named = (list) => list.filter((each) => !each.pass).map((each) => `${each.check}${each.detail ? `: ${each.detail}` : ""}`);
+  return { hard: named(verdict.checks), soft: named(verdict.notes) };
 }
 
 /** Its speed pairs, fixed before any run: the first ten in-scope cases, SD-01–10. */
