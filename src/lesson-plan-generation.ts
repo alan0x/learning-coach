@@ -1098,9 +1098,8 @@ function sanitizeNonessentialVisuals(
           for (let earlier = sectionNumber; earlier >= 1; earlier -= 1) {
             const items = outline.sections[earlier - 1]?.reusable_items ?? [];
             for (let item = items.length; item >= 1; item -= 1) {
-              if (items[item - 1]?.kind !== "board_item") continue;
-              const kept = normalizeReference({ source: "reusable", section: earlier, item } as LessonPlanReference, sectionNumber);
-              if (kept) return [{ ...activity, reference: kept }];
+              // The outline's reusable items are already renumbered to the kept ones, so `item` is final.
+              if (items[item - 1]?.kind === "board_item") return [{ ...activity, reference: { source: "reusable", section: earlier, item } as LessonPlanReference }];
             }
           }
         }
