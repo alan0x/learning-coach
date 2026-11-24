@@ -429,6 +429,10 @@ test("the trading mat probe runs the 33 development cases, both languages, near 
   assert.deepEqual(BASE_TEN_CASES.filter((item) => item.nearMiss).map((item) => item.id), ["BT-17", "BT-18", "BT-19", "BT-20", "BT-31", "BT-32", "BT-33"]);
   assert.equal(BASE_TEN_CASES.filter((item) => item.language === "zh-CN").length, 13);
   assert.ok(BASE_TEN_CASES.every((item) => item.judge === "base_ten" && (item.nearMiss ? item.expect.forbid : item.expect.lesson_pile)));
-  // Every failed check of the judge is a hard miss, named with its detail.
-  assert.deepEqual(judgeBaseTen(BASE_TEN_CASES[0], { lesson: { tasks: [], variables: [] }, steps: [] }), { hard: ["one trading mat: 0 mats"], soft: [] });
+  // A failed check of the judge is a hard miss and a note a soft one, each named with its detail (owner,
+  // 2026-11-24: objective checks only; what the lesson chose is for the owner).
+  const unplayable = judgeBaseTen(BASE_TEN_CASES[0], { lesson: { tasks: [], variables: [] }, steps: [] });
+  assert.equal(unplayable.hard.length, 1);
+  assert.match(unplayable.hard[0], /^the lesson plays: /);
+  assert.deepEqual(unplayable.soft, ["one trading mat: 0 mats"]);
 });

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Usage:
 //   node scripts/measure-lesson-payload.mjs [--out report.json]   measure and print the per-entry-point summary
-//   node scripts/measure-lesson-payload.mjs --record-ceilings     write eval/payload-ceilings.json from this build
+//   node scripts/measure-lesson-payload.mjs --record-ceilings     record this build's sizes in eval/payload-ceilings.json (tracked, not enforced)
 //   node scripts/measure-lesson-payload.mjs --record-hashes       write eval/request-hashes.json from this build
 // Run `npm run build` first; this reads the built lesson-plan.js.
 import { readFile, writeFile } from "node:fs/promises";
@@ -26,7 +26,7 @@ if (failed.length) {
 if (args.includes("--record-ceilings")) {
   if (failed.length) throw new Error("Refusing to record ceilings while some runs fail");
   const ceilings = {
-    note: "Hard payload ceilings per input route and request path (subject plugin plan, decision S6). Bytes of system prompt + prompt + response schema, excluding images. Raising a ceiling requires a plan change and a fresh live speed comparison.",
+    note: "Recorded request sizes per input route and request path: bytes of system prompt + prompt + response schema, excluding images. Tracked, not enforced (owner, 2026-11-24): the measurement reports growth since this record; speed is measured in live runs. Supersedes the ceilings of decisions S6 and S14.",
     recorded_from: "learning-coach main baseline",
     entry_points: Object.fromEntries(Object.entries(report.entry_points).map(([key, summary]) => [key, {
       total_bytes: summary.total_bytes.max,
@@ -56,5 +56,5 @@ try {
 } catch (error) {
   if (error.code !== "ENOENT") throw error;
 }
-console.log(JSON.stringify({ fixtures: report.fixtures.length, entry_points: report.entry_points, ceiling_problems: problems }, null, 2));
-if (problems.length) process.exitCode = 1;
+// Growth since the recorded sizes is reported, never a failure (owner, 2026-11-24).
+console.log(JSON.stringify({ fixtures: report.fixtures.length, entry_points: report.entry_points, grown_since_record: problems }, null, 2));

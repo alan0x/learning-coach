@@ -163,7 +163,7 @@ const SECTION_SYSTEM_PROMPT = [
   `- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。`,
   promptSlot("section.formulas"),
   `- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。`,
-  `- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
+  `- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment，并说明是课后去做（如“下课后你来试试”）：课中滑杆不能动，不说“现在试试”。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
   `- 思考题课中只问不答；题与参考答案写入 reflection_activities，课后以收起的答案卡片出现。`,
   `- 本节讲了能算出确定数值的内容（计算、换算、读数、代入求值）时，写 1 道 answer_activities 让学生课后填数：用课中没算过的新数，课中不说答案。${ANSWER_ACTIVITY_RULE}`,
   promptSlot("section.bounds"),
@@ -184,7 +184,7 @@ const BOOTSTRAP_FIRST_SECTION_PROMPT = [
   `- number_activities 只选数值位置和目标值；scene3d_activities 只选预设视角。控件、容差、提示出现次数、相机和运行时引用由程序生成。`,
   promptSlot("section.formulas"),
   `- animations 只写数值、目标和节奏；程序生成缓动。连续演示承接当前状态；独立重演才在 moment 写 restart_numbers（数值位置列表，起点由程序取初值），不要每段都重置；目标已是当前值则无需动画。`,
-  `- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
+  `- 课中教师演示并配动画，不写“请你调到 4”“请你拖动”；学生操作留给课后 number_activities，邀请只放最后一个 moment，并说明是课后去做（如“下课后你来试试”）：课中滑杆不能动，不说“现在试试”。邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值（不写“调回 0”这类已经达到的目标）。只有课中滑杆确实到过的值才能说“调回”。有多个 number_activities 时学生按顺序完成，前一项结束时的数值会保留；后一项的说明、提示和完成语按那时各数值的实际状态计算，不按初值算。`,
   promptSlot("section.bounds"),
   promptSlot("section.linked_numbers", "联动图引用同一 numbers；"),
   promptSlot("section.constructions"),
@@ -1090,7 +1090,21 @@ function sanitizeNonessentialVisuals(
       section.student_activities = section.student_activities.flatMap((activity) => {
         if (activity.kind === "number_target") return [activity];
         const reference = normalizeReference(activity.reference, sectionNumber);
-        return reference ? [{ ...activity, reference }] : [];
+        if (reference) return [{ ...activity, reference }];
+        // A typed or thinking question whose card was removed asks beside the latest card still kept from
+        // this or an earlier section; with none left it is recorded as removed, never dropped silently
+        // (owner, 2026-11-24; review of #167). A 3D view task needs its own 3D card and is recorded.
+        if (activity.kind === "reflection" || activity.kind === "numeric_answer") {
+          for (let earlier = sectionNumber; earlier >= 1; earlier -= 1) {
+            const items = outline.sections[earlier - 1]?.reusable_items ?? [];
+            for (let item = items.length; item >= 1; item -= 1) {
+              // The outline's reusable items are already renumbered to the kept ones, so `item` is final.
+              if (items[item - 1]?.kind === "board_item") return [{ ...activity, reference: { source: "reusable", section: earlier, item } as LessonPlanReference }];
+            }
+          }
+        }
+        adjustments.push({ kind: "answer_activity_removed", section: sectionNumber, reason: `card_removed:${activity.kind}` });
+        return [];
       });
       if (section.student_activities.length === 0) delete section.student_activities;
     }
@@ -2043,6 +2057,17 @@ function lowerModelSectionDraft(
   // A thinking question sits by the last formula or note this section wrote
   // (the program chooses the card; the model writes only question and answer).
   // A typed question prefers that card too, otherwise the last card of any kind.
+  // A section that draws no card (a later section that only moves the card already on the board) asks
+  // beside the latest card an earlier section kept on the board. Neither question is ever dropped
+  // silently: one with no card anywhere is recorded as removed (owner, 2026-11-24).
+  let earlierCard: Record<string, unknown> | undefined;
+  for (let section = expectedSection - 1; section >= 1 && !earlierCard; section -= 1) {
+    const items = outline.sections[section - 1]?.reusable_items ?? [];
+    for (let item = items.length; item >= 1 && !earlierCard; item -= 1) {
+      if (items[item - 1]?.kind === "board_item") earlierCard = { source: "reusable", section, item };
+    }
+  }
+  const removed: Array<{ reason: string; detail: string }> = [];
   let questionCard: Record<string, unknown> | undefined;
   let lastCard: Record<string, unknown> | undefined;
   (moments as Array<{ actions?: Array<Record<string, unknown>> }>).forEach((moment, momentOffset) => {
@@ -2060,16 +2085,23 @@ function lowerModelSectionDraft(
       throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", itemPath, "expected an object");
     }
     const { prompt, answer } = value as Record<string, unknown>;
-    if (!questionCard) return;
-    activities.push({ order: activities.length + 1, activity: { kind: "reflection", prompt, answer, reference: structuredClone(questionCard) } });
+    const card = questionCard ?? lastCard ?? earlierCard;
+    if (!card) {
+      removed.push({ reason: "no_card_for_question", detail: `${itemPath}: the lesson has no card to ask beside` });
+      return;
+    }
+    activities.push({ order: activities.length + 1, activity: { kind: "reflection", prompt, answer, reference: structuredClone(card) } });
   });
   (candidate.answer_activities as unknown[] | undefined ?? []).forEach((value, index) => {
     const itemPath = `$lessonPlanModelSection.answer_activities[${index}]`;
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       throw new LessonPlanError("LESSON_PLAN_SECTION_DRAFTS", itemPath, "expected an object");
     }
-    const card = questionCard ?? lastCard;
-    if (!card) return;
+    const card = questionCard ?? lastCard ?? earlierCard;
+    if (!card) {
+      removed.push({ reason: "no_card_for_question", detail: `${itemPath}: the lesson has no card to ask beside` });
+      return;
+    }
     activities.push({ order: activities.length + 1, activity: lowerAnswerActivity(value as Record<string, unknown>, card) });
   });
   activities.sort((left, right) => left.order - right.order);
@@ -2335,13 +2367,18 @@ function lowerModelSectionDraft(
     }
     item.activity.reference = structuredClone(sceneReference);
   }
-  return {
+  const draft: LessonPlanSectionDraft = {
     version: outline.version,
     section: expectedSection,
     moments: moments as LessonPlanSectionDraft["moments"],
     student_activities: activities.map((item) => item.activity) as LessonPlanSectionDraft["student_activities"],
   };
+  if (removed.length) LOWERING_REMOVALS.set(draft, removed);
+  return draft;
 }
+
+/** Questions the lowering could not keep, by draft, reported with the draft's other adjustments. */
+const LOWERING_REMOVALS = new WeakMap<LessonPlanSectionDraft, Array<{ reason: string; detail: string }>>();
 
 function inputContext(input: LessonPlanGenerationInput): Record<string, unknown> {
   if (!input.turn_id.trim()) throw new Error("turn_id is required");
@@ -2613,7 +2650,9 @@ export async function generateLessonPlanWithModel(
   type ProgramAdjustment = Parameters<NonNullable<GenerateLessonPlanOptions["on_program_adjustment"]>>[0];
   const draftAdjustments = new WeakMap<LessonPlanSectionDraft, ProgramAdjustment[]>();
   const specializeDraft = (draft: LessonPlanSectionDraft, outline: LessonPlanOutline, accepted: readonly LessonPlanSectionDraft[]) => {
-    const adjustments: ProgramAdjustment[] = [];
+    const adjustments: ProgramAdjustment[] = (LOWERING_REMOVALS.get(draft) ?? []).map((removed) => ({
+      kind: "answer_activity_removed" as const, section: draft.section, ...removed,
+    }));
     for (const hooks of PLUGIN_HOOKS) hooks.specialize_draft?.(draft, {
       outline, accepted, request: input.learner_request,
       adjust: adjustment => adjustments.push(adjustment),
@@ -3023,6 +3062,9 @@ export async function generateLessonPlanWithModel(
       ...lead,
       course_visual: index + 1, capability: visual.capability,
       mode, relation: visual.relation,
+      // How the card works, as the planning request said it: a later section writes for the same card
+      // (owner, 2026-11-24: request size is tracked, not capped; each request carries what its cards need).
+      guidance: LESSON_PLAN_CAPABILITY_REGISTRY[visual.capability].model_guidance,
       ...facts,
       ...(visual.related_visual === undefined ? {} : { related_visual: visual.related_visual }),
     }];

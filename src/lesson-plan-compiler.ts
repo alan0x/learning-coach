@@ -872,7 +872,9 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         const mover = movers.get(firstNumber);
         if (mover) {
           // The card's own task: "bring this number to a value" is done on the card, by its rules.
-          const own = mover.visual.mover!.task(mover.position, activity.value);
+          // The mat's state when the lesson ends: every section's moves have been played by now.
+          const end = moverStates.get(mover.visual)?.now ?? [];
+          const own = mover.visual.mover!.task(mover.position, activity.value, end);
           if ("refuse" in own) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.value`, own.refuse);
           if ("drop" in own) {
             programAdjustments.push({ section: sectionOffset + 1, kind: "activity_removed", reason: "nothing_to_do_on_card", task: taskAlias, detail: `${taskAlias} (${activityPath}): ${own.drop}` });

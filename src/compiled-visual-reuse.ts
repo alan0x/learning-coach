@@ -21,7 +21,8 @@ export interface CompiledVisual {
     numbers: number[];
     /** `room` is how many actions the moment can still hold (OLL allows 24 in a beat). */
     play(steps: ReadonlyArray<{ position: number; from: number[]; to: number[] }>, room: number): AuthoringAction[];
-    task(position: number, value: number): { task: Record<string, unknown> } | { drop: string } | { refuse: string };
+    /** `end` is the card's state when the lesson ends (a task whose value the lesson's start already shows starts there). */
+    task(position: number, value: number, end: readonly number[]): { task: Record<string, unknown> } | { drop: string } | { refuse: string };
   };
 }
 

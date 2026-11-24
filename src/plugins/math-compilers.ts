@@ -1761,11 +1761,12 @@ function compileBaseTenTrade(
         }
         return actions;
       },
-      task(position, value) {
+      task(position, value, end) {
         // The model's slider task, on the mat's own slider (0023 amendment 4; owner, 2026-11-23: every
-        // component has sliders). The mat starts again from the lesson's pile, trays empty; each stop of the
-        // slider is one trade, so the learner makes the trades and the amount never changes.
-        const own = baseTenSliderTask(state, position, value);
+        // component has sliders). The mat starts again from the lesson's pile, trays empty (or, where that
+        // pile already shows the value, from the pile the lesson ends with); each stop of the slider is one
+        // trade, so the learner makes the trades and the amount never changes.
+        const own = baseTenSliderTask(state, position, value, end);
         if (!("slider" in own)) return own;
         return {
           task: {
