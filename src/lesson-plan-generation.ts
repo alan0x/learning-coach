@@ -3180,7 +3180,9 @@ export async function generateLessonPlanWithModel(
           course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
-          ...(withdrawnNotes.has(section) ? { removed_picture: withdrawnNotes.get(section) } : {}),
+          // The note stays for later sections too: their purposes may also name the picture (review of this change).
+          ...([...withdrawnNotes.keys()].some((from) => from <= section)
+            ? { removed_picture: [...withdrawnNotes].filter(([from]) => from <= section).map(([, note]) => note).join(" ") } : {}),
           ...(sectionErrors.has(section)
             ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) }
             : {}),
@@ -3277,7 +3279,7 @@ export async function generateLessonPlanWithModel(
             : undefined;
           if (!withdrawn) throw error;
           // The outline's purposes and strategies were written around the picture and still name it.
-          withdrawnNotes.set(section, `The picture this section was planned around (${LESSON_PLAN_CAPABILITY_REGISTRY[capability as keyof typeof LESSON_PLAN_CAPABILITIES]?.required_features.join(", ") ?? capability}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
+          withdrawnNotes.set(section, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability as keyof typeof LESSON_PLAN_CAPABILITIES]?.required_features.join(", ") ?? capability}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
           outline = withdrawn;
           await options.on_rejected_part?.({
             label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error),
