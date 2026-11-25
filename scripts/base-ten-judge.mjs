@@ -127,10 +127,9 @@ export function judgeTradingMat(item, lesson) {
   note("the demonstration trades when the pile needs it", !needsTrade || mat.taps > 0, "no taps in the lesson");
   note("the demonstration ends with no trade left", mat.end?.no_trade_left === true, `the lesson ends at ${JSON.stringify(mat.end)}`);
   note("the learner has a task on the mat", Boolean(mat.cardTask && mat.practice), "no task on the mat with a start");
-  // A task on the mat can be done: it is the card's trading or its slider; it starts from a pile of the
-  // lesson's amount with the trays empty (the lesson's pile, that pile with its ones traded, the pile the
-  // lesson ends with, or a pile a trade away: owner, 2026-11-24); and a slider's target is a whole number of
-  // stops away, each stop one trade.
+  // A task on the mat can be done: it is the card's trading by taps (0023 amendment 5); it starts from a pile
+  // of the lesson's amount with the trays empty (the lesson's pile, the pile the lesson ends with, or a pile a
+  // trade away: owner, 2026-11-24); and a count asked for is another count of its place.
   if (mat.cardTask) {
     const onSlider = mat.cardTask.completion?.kind === "expression_target";
     const taps = (mat.cardTask.allowed_operations ?? []).map((operation) => operation.kind).sort().join(",") === "card_submit,card_tap";
@@ -138,13 +137,6 @@ export function judgeTradingMat(item, lesson) {
       && ["no_trade_left", "count"].includes(mat.cardTask.completion?.fact), JSON.stringify([mat.cardTask.allowed_operations, mat.cardTask.completion]));
     check("the task starts from the lesson's amount, trays empty", mat.practice && valueOf(mat.practice.pile) === valueOf(pile) && mat.practice.trays.every((tray) => tray === 0),
       `starts at ${JSON.stringify(mat.practice?.pile)} trays ${JSON.stringify(mat.practice?.trays)}, the lesson's pile is ${JSON.stringify(pile)}`);
-    if (onSlider && mat.practice) {
-      const variable = String(mat.cardTask.allowed_operations[0].variable);
-      const place = ["hundreds", "tens", "ones"].find((name) => mat.countOf?.[name] === variable);
-      const from = place && mat.practice.pile[["hundreds", "tens", "ones"].indexOf(place)];
-      const gap = from === undefined ? NaN : Math.abs(from - mat.cardTask.completion.value);
-      check("the slider's target is a whole number of trades away", gap > 0 && gap % 10 === 0, `${place ?? variable} starts at ${from}, target ${mat.cardTask.completion.value}`);
-    }
     if (mat.cardTask.completion?.fact === "count" && mat.practice) {
       const place = ["ones", "tens", "hundreds"].indexOf(mat.cardTask.completion.at);
       const from = mat.practice.pile[mat.practice.pile.length - 1 - place];
