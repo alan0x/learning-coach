@@ -1,7 +1,7 @@
 // A picture that keeps breaking its own limits costs that picture, not the lesson (owner, 2026-11-25).
 // Replayed from the model replies of the two lessons base-ten check 3 lost (BT-31, BT-32), so these tests
 // follow the path a live lesson took; where the recorded replies end, a reply written here stands in.
-process.env.LEARNING_COACH_TRIAL_RECIPES = "base_ten_trade";
+// (The mat is offered by default since 2026-11-25.)
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -19,7 +19,7 @@ async function replay(id, extra = []) {
       requests.push(request);
       if (requests.length > replies.length) throw new Error("recorded replies exhausted");
       return replies[requests.length - 1];
-    }, { turn_id: "replay", learner_request: CASES.find((item) => item.id === id).prompt, language: "zh-CN", input_modality: "text", request_source: "self_contained" }, {
+    }, { turn_id: "replay", learner_request: CASES.find((item) => item.id === id.replace(/-c4$/u, "")).prompt, language: "zh-CN", input_modality: "text", request_source: "self_contained" }, {
       on_program_adjustment: (adjustment) => adjustments.push(adjustment),
       on_playable_prefix: ({ completed_sections, compiled }) => prefixes.push({ completed_sections, lesson: structuredClone(compiled.lesson) }),
     });
@@ -76,4 +76,26 @@ test("a picture an earlier, published section drew is never withdrawn", async ()
   const { result } = await replay("BT-32", [withoutMat]);
   // The number line is created in section 1: withdrawing it while writing section 2 is refused.
   assert.equal(api.withdrawSectionVisual(result.outline, 2, "number_line_steps", result.outline.request_coverage.length), undefined);
+});
+
+test("check 4, BT-31: a mat move the card refuses (two piles moved as one) also plans the lesson again without the mat", async () => {
+  // Section 1's three recorded replies move the loose ones up, which the mat refuses. The fault now names the mat.
+  const { error, requests, adjustments } = await replay("BT-31-c4");
+  assert.match(error.message, /recorded replies exhausted/u);
+  assert.deepEqual(requests.map((request) => `${request.part}${request.section ?? ""}`), ["bootstrap", "outline", "section1", "section1", "section1", "outline"]);
+  assert.doesNotMatch(JSON.stringify(JSON.parse(requests.at(-1).prompt).visual_recipes), /trade_ten_for_one/u);
+  assert.deepEqual(adjustments.filter((adjustment) => adjustment.kind === "visual_removed").map(({ section, capability }) => ({ section, capability })),
+    [{ section: 1, capability: "base_ten_trade" }]);
+});
+
+test("check 4, BT-32: a number line in section 2 on the numbers of the mat section 1 showed is the picture withdrawn", async () => {
+  // The fault is found at the mat's path in section 1, which is published; the later picture is the one to lose.
+  const { error, requests, adjustments } = await replay("BT-32-c4");
+  assert.match(error.message, /recorded replies exhausted/u);
+  assert.deepEqual(requests.map((request) => `${request.part}${request.section ?? ""}`), ["bootstrap", "section1", "section2", "section2", "section2", "section2"]);
+  assert.deepEqual(adjustments.filter((adjustment) => adjustment.kind === "visual_removed").map(({ section, capability }) => ({ section, capability })),
+    [{ section: 2, capability: "number_line_steps" }]);
+  const last = JSON.parse(requests.at(-1).prompt);
+  assert.deepEqual(last.visuals_for_section.map((visual) => visual.capability), ["base_ten_trade"]);
+  assert.match(last.removed_picture, /section 2/u);
 });

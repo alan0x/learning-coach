@@ -20483,9 +20483,17 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
   allowParameterKeys(parameters(content), [], path);
   const numbers = content.numbers ?? [];
   const start = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
-  const sharing = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "base_ten_trade" && (action.content.numbers ?? []).some((number) => numbers.includes(number)));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "base_ten_trade" && (action.content.numbers ?? []).some((number) => numbers.includes(number)))));
+  const sharing = sharingAt < 0 ? void 0 : plan.sections[sharingAt].moments.flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "base_ten_trade" && (action.content.numbers ?? []).some((number) => numbers.includes(number)));
   if (sharing) {
-    fail2("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${sharing.content.capability} visual shows one of them; show the pile on the mat only, or in words`, "base_ten_trade");
+    const matAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = sharing.content.capability;
+    fail2(
+      "LESSON_PLAN_SHARED_NUMBER",
+      `${path}.numbers`,
+      `the trading mat needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the pile on the mat only, or in words`,
+      sharingAt > matAt ? sharingCapability : "base_ten_trade"
+    );
   }
   const fault = baseTenStartFault(start);
   if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "base_ten_trade");
@@ -21406,7 +21414,7 @@ function compileLessonPlan(value2, options = {}) {
         const result = RECIPE_HOOKS[capability2].number_moves.moves(state.now, animations);
         if ("refused" in result) {
           const at2 = animations.find((animation) => animation.position === result.refused.position);
-          fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at2.offset}].end_value`, result.refused.reason);
+          fail2("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at2.offset}].end_value`, result.refused.reason, capability2);
         }
         state.now = result.steps.at(-1)?.to ?? state.now;
         const when = actionWhen(animations[0].timing);
