@@ -16,8 +16,8 @@ test("the number line and its three question types are offered by default, befor
     assert.equal(api.RECIPE_PLUGIN[name], "math");
   }
   // solid_3d joined after them on 2026-11-18, where its own gate measured it.
-  assert.deepEqual(api.RECIPE_CATALOG_ORDER.slice(-6, -2), types);
-  assert.deepEqual(api.RECIPE_CATALOG_ORDER.slice(-2), ["number_line_steps", "solid_3d"]);
+  assert.deepEqual(api.RECIPE_CATALOG_ORDER.slice(-7, -3), types);
+  assert.deepEqual(api.RECIPE_CATALOG_ORDER.slice(-3), ["number_line_steps", "solid_3d", "base_ten_trade"]);
 });
 
 const compile = (numbers, parameters = {}, extra = {}) => {

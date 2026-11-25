@@ -15347,10 +15347,14 @@ var RECIPE_CATALOG_ORDER = [
   // at 80 pairs (Coach docs/SOLIDS_PROBE_2026-11-17.md, gates 1–1e). Last, where the gate measured it. It
   // retired cube_with_section (owner, 2026-11-17): that recipe stays defined, so old lessons keep their
   // meaning, but it is no longer offered.
-  "solid_3d"
+  "solid_3d",
+  // The trading mat (OLL decision 0023): adopted by the owner on 2026-11-25 after three objective checks of
+  // the 33 development cases and the fix that withdraws a picture instead of losing the lesson (Coach #170),
+  // ahead of a speed gate. Last, where the checks offered it.
+  "base_ten_trade"
 ];
 var RETIRED_RECIPES = ["cube_with_section"];
-var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "base_ten_trade"];
+var TRIAL_RECIPES = ["constant_speed_motion", "fraction_model"];
 function enabledTrialRecipes(list2) {
   const named = new Set((list2 ?? "").split(",").map((name) => name.trim()).filter(Boolean));
   return TRIAL_RECIPES.filter((name) => named.has(name));

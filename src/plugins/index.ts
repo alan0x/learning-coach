@@ -50,6 +50,10 @@ export const RECIPE_CATALOG_ORDER = [
   // retired cube_with_section (owner, 2026-11-17): that recipe stays defined, so old lessons keep their
   // meaning, but it is no longer offered.
   "solid_3d",
+  // The trading mat (OLL decision 0023): adopted by the owner on 2026-11-25 after three objective checks of
+  // the 33 development cases and the fix that withdraws a picture instead of losing the lesson (Coach #170),
+  // ahead of a speed gate. Last, where the checks offered it.
+  "base_ten_trade",
 ] as const satisfies readonly (keyof AllRecipes)[];
 
 /**
@@ -66,7 +70,7 @@ export const RETIRED_RECIPES = ["cube_with_section"] as const satisfies readonly
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-export const TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "base_ten_trade"] as const satisfies readonly (keyof AllRecipes)[];
+export const TRIAL_RECIPES = ["constant_speed_motion", "fraction_model"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {
