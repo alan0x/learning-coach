@@ -1,7 +1,7 @@
 // Recipe hooks of the math plugin.
 import { compileMathExpression } from "octos-lesson-language";
 import type { LessonPlan, LessonPlanMathToken, LessonPlanOutline, LessonPlanSectionDraft, LessonPlanVisualContent } from "../lesson-plan.js";
-import { lessonText } from "../lesson-text.js";
+import { lessonText, lessonTextLanguage } from "../lesson-text.js";
 import { assertRange, fail, mathExpressionToOll, optionalNumber, parameters, safeFunctionExpression } from "../recipe-kit.js";
 import { implicitSurfaceDomain } from "../scene3d-surfaces.js";
 import type { PluginHooks, RecipeHooks } from "./hooks.js";
@@ -96,6 +96,12 @@ function hasFractionValues(content: Record<string, unknown> | undefined): boolea
   return Array.isArray(parameters?.fractions) && parameters!.fractions.length > 0;
 }
 
+/** The trading mat's counts, named by their values (lowest place first). */
+const BASE_TEN_COUNT_NAMES = {
+  "en-US": ["ones", "tens", "hundreds"],
+  "zh-CN": ["一的个数", "十的个数", "百的个数"],
+} as const;
+
 export const MATH_HOOKS: Record<string, RecipeHooks> = {
   // OLL 0021 amendment 2, rule 2: a card first written without its values takes them from the first later
   // create that has them. The model often writes the shape and view first and the values in a later moment;
@@ -136,10 +142,15 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
       if (!definitions.length || definitions.some((definition) => !definition)) return new Map();
       const columns = baseTenColumns(definitions.map((definition) => definition!.initial));
+      // The counts are named by their values, the mat's own words (owner, 2026-11-25: 一, 十, 百, never
+      // block names such as 十条 or 百板, which the model wrote in check 3).
+      const names = BASE_TEN_COUNT_NAMES[/^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN"];
       definitions.forEach((definition, place) => {
         definition!.min = 0;
         definition!.max = columns === 2 && place === 1 ? 9 : BASE_TEN_DRAWN[place] ?? 0;
         delete definition!.student_control;
+        definition!.label = names[place]!;
+        delete definition!.unit;
       });
       return new Map(numbers.map((number) => [number, 0]));
     },

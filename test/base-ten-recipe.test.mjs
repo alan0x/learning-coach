@@ -101,6 +101,11 @@ test("every development case's ideal lesson compiles and passes the judge, in En
     // The mat's counts have no control: the learner works the mat by its own taps (OLL 0023 amendment 5;
     // owner, 2026-11-24: the model never names a control).
     assert.deepEqual(result[id].lesson.lesson.variables.filter((variable) => variable.control).map((variable) => variable.as), [], id);
+    // The counts are named by their values, whatever the model called them (owner, 2026-11-25).
+    const names = id.endsWith("zh-CN") ? ["一的个数", "十的个数", "百的个数"] : ["ones", "tens", "hundreds"];
+    const counts = result[id].lesson.lesson.variables.filter((variable) => /^number_\d+$/u.test(variable.as));
+    assert.deepEqual(counts.map((variable) => variable.label), names.slice(0, counts.length), id);
+    assert.ok(counts.every((variable) => variable.unit === undefined), id);
   }
 });
 
