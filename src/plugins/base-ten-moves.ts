@@ -170,12 +170,16 @@ export function baseTenFacts(start: readonly number[], now?: readonly number[]):
     }
     if (passes.length > 1) steps[`${names[place]}_as_traded`] = passes;
   }
+  // The pile now, column for column with the start. A pile of tens and ones worth a hundred or more has a
+  // hundreds column of the mat's own, which no lesson number follows: it is what the amount leaves (review of #169).
+  const nowPile = now && state.map((count, place) => now[place]
+    ?? (place === state.length - 1 ? (baseTenValue(state) - baseTenValue(now.slice(0, place))) / 10 ** place : count));
   return {
     practice_starts_from: pile(state),
     amount: baseTenValue(state),
     amount_never_changes: true,
     ...steps,
     fully_traded: pile(baseTenTraded(state)),
-    ...(now && now.some((count, place) => count !== state[place]) ? { pile_now: pile(baseTenState(now).map((_, place) => now[place] ?? 0)) } : {}),
+    ...(nowPile && nowPile.some((count, place) => count !== state[place]) ? { pile_now: pile(nowPile) } : {}),
   };
 }

@@ -224,10 +224,14 @@ test("section facts state the mat in its own terms: where practice starts, the a
     loose_ones_as_traded: [26, 16, 6], tens_as_traded: [11, 1], fully_traded: { loose_ones: 6, tens: 1, hundreds: 1 },
     pile_now: { loose_ones: 6, tens: 11, hundreds: 0 },
   });
-  // A section that draws the mat: the lesson's numbers in order are assumed and named.
-  assert.deepEqual(facts({ section: 1, mode: "create", numbers: [{ initial: 29 }, { initial: 0 }], state: new Map() }).facts.numbers, [1, 2]);
-  // Numbers that are not a pile give no facts.
-  assert.deepEqual(facts({ section: 1, mode: "create", numbers: [{ initial: 3 }], state: new Map() }), {});
+  // Review of #169: the tens traded too. The pile now keeps the mat's own hundreds, which no lesson number follows.
+  assert.deepEqual(facts({ section: 2, mode: "reuse", established: { capability: "base_ten_trade", numbers: [1, 2] }, numbers, state: new Map([[1, 6], [2, 1]]) }).facts.pile_now,
+    { loose_ones: 6, tens: 1, hundreds: 1 });
+  // Nothing moved on a mat with a hundreds number of 0 under a hundred: no pile_now.
+  const small = [{ initial: 13 }, { initial: 0 }, { initial: 0 }];
+  assert.equal(facts({ section: 2, mode: "reuse", established: { capability: "base_ten_trade", numbers: [1, 2, 3] }, numbers: small, state: new Map([[1, 13], [2, 0], [3, 0]]) }).facts.pile_now, undefined);
+  // A section that draws the mat: which numbers it shows is the section's own choice, so no pile facts (review of #169).
+  assert.deepEqual(facts({ section: 1, mode: "create", numbers: [{ initial: 26 }, { initial: 9 }, { initial: 2 }], state: new Map() }), {});
 });
 
 test("the judge catches each kind of break", () => {
