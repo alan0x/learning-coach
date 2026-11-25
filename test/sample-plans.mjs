@@ -45,7 +45,7 @@ export function samplePlan(capability) {
   // solid_3d takes no outline numbers: it makes its own cut or unfold slider (OLL decision 0019).
   const numberCount = capability === "process_diagram" || capability === "solid_3d"
     ? 0
-    : capability === "rectangle_unit_square_array" || capability === "number_line_compare"
+    : capability === "rectangle_unit_square_array" || capability === "number_line_compare" || capability === "base_ten_trade"
       ? 2
       : capability === "number_line_steps"
         ? 3
@@ -86,7 +86,7 @@ export function samplePlan(capability) {
     firstMomentActions.push({
       action: "animate",
       number: 1,
-      end_value: capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
+      end_value: capability === "base_ten_trade" ? 4 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -108,6 +108,9 @@ export function samplePlan(capability) {
             { initial: 2, min: 1, max: 3, label: "first move" },
             { initial: 3, min: 1, max: 4, label: "second move" },
           ][index]
+        : capability === "base_ten_trade"
+        // The trading mat (OLL decision 0023): 14 loose ones and 2 tens; the ones are traded down to 4.
+        ? { initial: index === 0 ? 14 : 2, min: 0, max: 20, label: index === 0 ? "loose ones" : "tens" }
         : capability === "number_line_compare"
         ? { initial: index === 0 ? 0.5 : 0.25, min: 0, max: 1, label: index === 0 ? "first" : "second", student_control: { kind: "slider", step: 0.05 } }
         : capability === "rectangle_unit_square_array"

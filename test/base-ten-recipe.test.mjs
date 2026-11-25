@@ -16,10 +16,11 @@ const { judgeTradingMat } = await import(new URL("../scripts/base-ten-judge.mjs"
 const here = (path) => JSON.stringify(new URL(path, import.meta.url).href);
 const CASES = JSON.parse(readFileSync(new URL("../testsuite/base-ten-dev-cases.json", import.meta.url), "utf8")).cases;
 
-test("base_ten_trade is a trial recipe on lesson numbers: not offered by default, no fields of its own", () => {
-  assert.ok(api.TRIAL_RECIPES.includes("base_ten_trade"));
-  assert.equal(api.OFFERED_RECIPES.includes("base_ten_trade"), false);
-  assert.equal(api.LESSON_PLAN_CAPABILITY_NAMES.includes("base_ten_trade"), false);
+test("base_ten_trade is offered by default, last in the catalog (owner, 2026-11-25), on lesson numbers, no fields of its own", () => {
+  assert.equal(api.TRIAL_RECIPES.includes("base_ten_trade"), false);
+  assert.equal(api.RECIPE_CATALOG_ORDER.at(-1), "base_ten_trade");
+  assert.ok(api.OFFERED_RECIPES.includes("base_ten_trade"));
+  assert.ok(api.LESSON_PLAN_CAPABILITY_NAMES.includes("base_ten_trade"));
   assert.equal(api.RECIPE_PLUGIN.base_ten_trade, "math");
   // No field for the model to fill: the six numbers of probe 1 are gone.
   assert.equal(api.RECIPE_SCHEMA_PROPERTIES.base_ten_trade, undefined);
@@ -36,7 +37,7 @@ test("base_ten_trade is a trial recipe on lesson numbers: not offered by default
   assert.match(moves.moves([26, 9, 0], [{ position: 1, to: 11 }]).refused.reason, /tens rise by themselves/);
 });
 
-/** Runs a script with the trial switched on (the switch is read once, when the module loads). */
+/** Runs a script in its own process. (It named the trial when the mat was one; the mat is offered since 2026-11-25.) */
 function withTrial(script) {
   return JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", script], {
     env: { ...process.env, LEARNING_COACH_TRIAL_RECIPES: "base_ten_trade" },
