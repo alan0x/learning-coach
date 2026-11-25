@@ -106,69 +106,42 @@ export function baseTenTraded(state: readonly number[]): number[] {
 }
 
 /**
- * The learner's slider task on the mat (0023 amendment 4: a place with a tray slides in steps of ten, each
- * stop one trade: down makes ten of its place into one of the next, up breaks one of the next into ten):
- * "bring the count at `position` to `value`" as a slider on one count, from a starting pile.
- * Starting piles are tried in order:
- * - the lesson's pile, then the lesson's pile with its ones traded (the tens of 116 reach 1 only after the
- *   ones are traded), trading down;
- * - where the lesson's pile already shows the value: the pile the lesson ends with (`end`; "move the tens
- *   back to 11" after the lesson made a hundred of them), then a pile one trade away from the lesson's, in
- *   either direction. The task starts where the value is not yet met, as a number line's task does.
- * For each start the slider of the asked place is tried, then the slider below it (2 more tens is 20
- * fewer ones). A start must be a pile OLL lets a task start from, and every pile on the way must fit the mat.
- * Returns the slider's position, its target and the starting pile; `drop` when no start leaves anything
- * to do; or the reason, naming the values the place can reach.
+ * The learner's task on the mat (0023 amendment 5; owner, 2026-11-24: the model never names a control,
+ * and the mat is worked by its own taps): "bring the count at `position` to `value`", made by tapping the
+ * mat from a starting pile, trays empty. `reach(pile)` gives every pile taps can make from it (OLL's exact
+ * search over the tap rules), so the target is checked as the player checks it. Starting piles are tried in
+ * order:
+ * - the lesson's pile;
+ * - where it already shows the value: the pile the lesson ends with (`end`; "move the tens back to 11" after
+ *   the lesson made a hundred of them), then a pile one trade away from the lesson's. The task starts where
+ *   the value is not yet met, as a number line's task does.
+ * A start must be a pile OLL lets a task start from. Returns the starting pile; `drop` when no start leaves
+ * anything to do; or the reason, naming the values the place can reach.
  */
-export function baseTenSliderTask(state: readonly number[], position: number, value: number, end: readonly number[] = state):
-  { slider: number; target: number; start: number[] } | { drop: string } | { refuse: string } {
+export function baseTenTapTask(state: readonly number[], position: number, value: number, end: readonly number[],
+  reach: (pile: readonly number[]) => number[][]): { start: number[] } | { drop: string } | { refuse: string } {
   const names = ["loose ones", "tens", "hundreds"];
   if (!whole(value)) return { refuse: "blocks are counted in whole numbers" };
   if (position >= state.length) return value === 0 ? { drop: "this pile has no hundreds column" } : { refuse: "this pile has tens and ones only: its hundreds stay 0" };
   const columns = state.length;
-  const most = (place: number, limits: readonly number[]) => (columns === 2 && place === 1 ? 9 : limits[place]!);
-  const fits = (pile: readonly number[], limits: readonly number[]) => pile.every((count, place) => count >= 0 && count <= most(place, limits));
-  // The places with a slider: every place below the highest column.
-  const sliders = [position, position - 1].filter((place) => place >= 0 && place < columns - 1);
-  const trade = (pile: readonly number[], slider: number, stops: number) => {
-    const next = [...pile];
-    next[slider] = pile[slider]! - 10 * stops;
-    next[slider + 1] = pile[slider + 1]! + stops;
-    return next;
-  };
-  const reached = new Set<number>();
-  const search = (starts: number[][], directions: readonly number[]) => {
-    for (const slider of sliders) {
-      for (const start of starts) {
-        if (!fits(start, BASE_TEN_START) || start[position] === value) continue;
-        for (const direction of directions) {
-          for (let stops = 1; ; stops += 1) {
-            const pile = trade(start, slider, direction * stops);
-            if (!fits(pile, BASE_TEN_DRAWN)) break;
-            reached.add(pile[position]!);
-            if (pile[position] === value) return { slider, target: pile[slider]!, start };
-          }
-        }
-      }
-    }
-    return undefined;
-  };
+  const fits = (pile: readonly number[]) => pile.every((count, place) => whole(count) && count <= (columns === 2 && place === 1 ? 9 : BASE_TEN_START[place]!));
+  const counts = (pile: readonly number[]) => [...new Set(reach(pile).map((each) => each[position]!))].sort((a, b) => a - b);
+  const from = (pile: readonly number[]) => fits(pile) && pile[position] !== value && counts(pile).includes(value);
   if (state[position] !== value) {
-    const starts = [[...state]];
-    const onesTraded = [state[0]! % 10, state[1]! + Math.floor(state[0]! / 10), ...state.slice(2)];
-    if (columns === 3 && onesTraded[1] !== state[1] && fits(onesTraded, BASE_TEN_START)) starts.push(onesTraded);
-    const found = search(starts, [1]);
-    if (found) return found;
-    const values = [...reached].filter((each) => each !== state[position]).sort((a, b) => a - b);
+    if (from(state)) return { start: [...state] };
+    const values = counts(state).filter((each) => each !== state[position]);
     return { refuse: values.length
-      ? `on the mat each stop of a slider is one trade, so the ${names[position]} can be ${values.join(" or ")}, not ${value}`
+      ? `trading on this pile makes the ${names[position]} ${values.join(" or ")}, never ${value}`
       : `the ${names[position]} cannot change by trading on this pile: they stay ${state[position]}` };
   }
-  // The lesson's pile already shows the value: start where the lesson ends, else one trade away.
-  const fromEnd = search([[...end]], [1, -1]);
-  if (fromEnd) return fromEnd;
-  const near = sliders.flatMap((slider) => [1, -1].map((stops) => trade(state, slider, stops)));
-  const fromNear = search(near.filter((pile) => fits(pile, BASE_TEN_START)), [1, -1]);
-  if (fromNear) return fromNear;
-  return { drop: `the ${names[position]} are already ${value}, and no pile a trade away can slide back to it` };
+  if (from(end)) return { start: [...end] };
+  // One trade away from the lesson's pile: a make or a break at any place.
+  const near: number[][] = [];
+  for (let place = 0; place < columns; place += 1) {
+    if (place < columns - 1 && state[place]! >= 10) near.push(state.map((count, q) => (q === place ? count - 10 : q === place + 1 ? count + 1 : count)));
+    if (place > 0 && state[place]! >= 1) near.push(state.map((count, q) => (q === place ? count - 1 : q === place - 1 ? count + 10 : count)));
+  }
+  const found = near.find(from);
+  if (found) return { start: found };
+  return { drop: `the ${names[position]} are already ${value}, and no pile a trade away can be traded back to it` };
 }

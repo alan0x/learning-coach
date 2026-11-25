@@ -9,8 +9,9 @@
 //   ([hundreds, tens, loose ones]), or `forbid` for a near miss (a question that is not trading).
 // - Checks (objective; owner, 2026-11-24): the lesson plays; one mat draws the question's pile with the
 //   columns it needs; every step of the lesson keeps the amount, and nothing moves the pile before the mat
-//   is drawn; a task on the mat is the card's trading or its slider, starts from a pile of the lesson's amount
-//   with its trays empty, and a slider's target is a whole number of trades away; the mat speaks the
+//   is drawn; a task on the mat is the card's trading (no trade left, or a count made by tapping: 0023
+//   amendment 5), starts from a pile of the lesson's amount with its trays empty, and a count's target is
+//   another count of that place; the mat's counts have no slider (owner, 2026-11-24); the mat speaks the
 //   lesson's language (0023 amendment 3).
 // - Notes (what the lesson chose to teach; the owner judges lessons): whether the demonstration trades,
 //   whether it ends with no trade left ("correct but less complete"), whether the learner has a task on the
@@ -60,8 +61,8 @@ export function tradingMatIn(lesson) {
   const node = Object.values(board.nodes).find((candidate) => String(candidate.id).endsWith(`:node:${write.as}`));
   const end = node ? baseTenFacts(baseTenMat(node.content)) : undefined;
   const tasks = lesson.lesson?.tasks ?? [];
-  // The learner's task on the mat: tapping until no trade is left, or the mat's own slider on one of its
-  // counts (0023 amendment 4), each started from a pile of its own.
+  // The learner's task on the mat: tapping until no trade is left or a place holds a count (amendment 5), or
+  // the mat's own slider on one of its counts (amendment 4, no longer written), each from a pile of its own.
   const countVariables = new Set((write.content.bindings ?? []).filter((binding) => /\.count$/.test(binding.target)).map((binding) => String(binding.expression).trim()));
   const cardTask = tasks.find((task) => task.completion?.kind === "card_fact")
     ?? tasks.find((task) => (task.allowed_operations ?? []).some((operation) => operation.kind === "variable_change" && countVariables.has(operation.variable) && (operation.controls ?? []).includes("slider")));
@@ -88,7 +89,7 @@ export function tradingMatIn(lesson) {
   // than the lesson's numbers say (review of #160).
   const early = actions.slice(0, actions.indexOf(write)).find((action) => action.do === "animate" && bound.has(action.variable));
   const countOf = Object.fromEntries((write.content.bindings ?? []).filter((binding) => /\.count$/.test(binding.target)).map((binding) => [binding.target.split(".")[0], String(binding.expression).trim()]));
-  return { cards: writes.length, as: write.as, content: write.content, lessonStart, end, cardTask, practice, tasks, taps, steps, early, countOf };
+  return { cards: writes.length, as: write.as, content: write.content, lessonStart, end, cardTask, practice, tasks, taps, steps, early, countOf, countVariables };
 }
 
 /**
@@ -126,25 +127,28 @@ export function judgeTradingMat(item, lesson) {
   note("the demonstration trades when the pile needs it", !needsTrade || mat.taps > 0, "no taps in the lesson");
   note("the demonstration ends with no trade left", mat.end?.no_trade_left === true, `the lesson ends at ${JSON.stringify(mat.end)}`);
   note("the learner has a task on the mat", Boolean(mat.cardTask && mat.practice), "no task on the mat with a start");
-  // A task on the mat can be done: it is the card's trading or its slider; it starts from a pile of the
-  // lesson's amount with the trays empty (the lesson's pile, that pile with its ones traded, the pile the
-  // lesson ends with, or a pile a trade away: owner, 2026-11-24); and a slider's target is a whole number of
-  // stops away, each stop one trade.
+  // A task on the mat can be done: it is the card's trading by taps (0023 amendment 5); it starts from a pile
+  // of the lesson's amount with the trays empty (the lesson's pile, the pile the lesson ends with, or a pile a
+  // trade away: owner, 2026-11-24); and a count asked for is another count of its place.
   if (mat.cardTask) {
     const onSlider = mat.cardTask.completion?.kind === "expression_target";
-    check("the task on the mat is the card's trading or its slider", onSlider
-      ? mat.cardTask.allowed_operations.length === 1 && String(mat.cardTask.completion.expression).trim() === mat.cardTask.allowed_operations[0].variable
-      : mat.cardTask.completion?.fact === "no_trade_left" && mat.cardTask.completion?.node === mat.as, JSON.stringify(mat.cardTask.completion));
+    const taps = (mat.cardTask.allowed_operations ?? []).map((operation) => operation.kind).sort().join(",") === "card_submit,card_tap";
+    check("the task on the mat is the card's trading, by taps", !onSlider && taps && mat.cardTask.completion?.node === mat.as
+      && ["no_trade_left", "count"].includes(mat.cardTask.completion?.fact), JSON.stringify([mat.cardTask.allowed_operations, mat.cardTask.completion]));
     check("the task starts from the lesson's amount, trays empty", mat.practice && valueOf(mat.practice.pile) === valueOf(pile) && mat.practice.trays.every((tray) => tray === 0),
       `starts at ${JSON.stringify(mat.practice?.pile)} trays ${JSON.stringify(mat.practice?.trays)}, the lesson's pile is ${JSON.stringify(pile)}`);
-    if (onSlider && mat.practice) {
-      const variable = String(mat.cardTask.allowed_operations[0].variable);
-      const place = ["hundreds", "tens", "ones"].find((name) => mat.countOf?.[name] === variable);
-      const from = place && mat.practice.pile[["hundreds", "tens", "ones"].indexOf(place)];
-      const gap = from === undefined ? NaN : Math.abs(from - mat.cardTask.completion.value);
-      check("the slider's target is a whole number of trades away", gap > 0 && gap % 10 === 0, `${place ?? variable} starts at ${from}, target ${mat.cardTask.completion.value}`);
+    if (mat.cardTask.completion?.fact === "count" && mat.practice) {
+      const place = ["ones", "tens", "hundreds"].indexOf(mat.cardTask.completion.at);
+      const from = mat.practice.pile[mat.practice.pile.length - 1 - place];
+      check("the count asked for is another count of that place", place >= 0 && from !== undefined && from !== mat.cardTask.completion.value,
+        `${mat.cardTask.completion.at} start at ${from}, target ${mat.cardTask.completion.value}`);
     }
+    // The task's words, as the learner reads them: whether they name a slider or dragging (an objective count).
+    const words = [mat.cardTask.prompt, ...(mat.cardTask.hints ?? []), mat.cardTask.success_message ?? ""].join(" ");
+    note("the task's words name no slider", !/滑|拖|slid|drag/i.test(words), words);
   }
+  check("the mat's counts have no slider", (lesson.lesson?.variables ?? []).every((variable) => !mat.countVariables?.has(variable.as) || !variable.control),
+    JSON.stringify((lesson.lesson?.variables ?? []).filter((variable) => variable.control).map((variable) => variable.as)));
   // A typed question, which the model writes about a pile it states in words: whether it exists is a note.
   note("a typed question follows", mat.tasks.some((task) => task.completion?.kind === "numeric_answer"), "no typed question in the lesson");
   const zh = /^zh(?:-|$)/i.test(String(lesson.lesson?.language ?? ""));

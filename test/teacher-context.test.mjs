@@ -120,16 +120,18 @@ test("all three complete-lesson actions declare the host fields; the agent-facin
 });
 
 test("a practice invitation names the practice's own target, not one already reached", async () => {
-  // The compiler swaps a target equal to the slider's resting value for a
+  // The compiler swaps a target equal to the number's resting value for a
   // reachable one; the narration must not have promised the original value.
+  // The model is never told which control the learner uses (owner, 2026-11-24).
   const plain = await firstRequest({});
-  assert.match(plain.system_prompt, /邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时滑杆所在的值/u);
+  assert.match(plain.system_prompt, /邀请里说的目标值必须就是 number_activities 的目标值，且不同于课程结束时这个数的值/u);
+  assert.doesNotMatch(plain.system_prompt, /滑杆|滑块/u);
 });
 
 test("practice wording follows what happened in the lesson, and a missing interaction is replaced rather than refused", async () => {
   const plain = await firstRequest({});
-  // "调回" only for a value the slider really had; later practice is computed from the earlier one's result.
-  assert.match(plain.system_prompt, /只有课中滑杆确实到过的值才能说“调回”/u);
+  // "调回" only for a value the number really had; later practice is computed from the earlier one's result.
+  assert.match(plain.system_prompt, /只有课中这个数确实到过的值才能说“调回”/u);
   assert.match(plain.system_prompt, /后一项的说明、提示和完成语按那时各数值的实际状态计算/u);
   // An unsupported interaction form falls back to a drawable visual instead of an unsupported answer.
   assert.match(plain.system_prompt, /只是要求的互动或画面形式做不到.*写 teach 并换成可实现的画面/u);
