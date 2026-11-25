@@ -622,7 +622,9 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
         const result = RECIPE_HOOKS[capability]!.number_moves!.moves(state.now, animations);
         if ("refused" in result) {
           const at = animations.find((animation) => animation.position === result.refused.position)!;
-          fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at.offset}].end_value`, result.refused.reason);
+          // Named by the card's recipe, so a section whose repairs are spent on it can lose that card, not the
+          // lesson (BT-31, check 4: two piles to compare, moved as one; Coach #170).
+          fail("LESSON_PLAN_NUMBER_NOT_DRAWABLE", `${momentPath}.actions[${at.offset}].end_value`, result.refused.reason, capability);
         }
         state.now = result.steps.at(-1)?.to ?? state.now;
         const when = actionWhen(animations[0]!.timing);

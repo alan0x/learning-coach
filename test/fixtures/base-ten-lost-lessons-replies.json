@@ -1,5 +1,5 @@
 {
- "_doc": "Model replies recorded in base-ten objective check 3 (2026-11-25, gemini-3.6-flash, dev cases BT-31 and BT-32; both lessons were lost). Used by test/visual-withdrawal.test.mjs.",
+ "_doc": "Model replies recorded in base-ten objective checks 3 and 4 (2026-11-25, gemini-3.6-flash). Check 3: BT-31, BT-32 (both lost). Check 4: BT-31-c4, BT-32-c4 (both lost to faults #170 did not name). Used by test/visual-withdrawal.test.mjs.",
  "turns": {
   "BT-31": [
    {
@@ -1291,6 +1291,1356 @@
       "success_message": "太棒了！你成功完成了满十进一的操作！",
       "number": 3,
       "value_mantissa": 3,
+      "value_scale": 0
+     }
+    ]
+   }
+  ],
+  "BT-31-c4": [
+   {
+    "disposition": "generate_lesson",
+    "learner_response": "",
+    "course": {
+     "outline": {
+      "title": "比较263与236的大小与数位意义",
+      "goals": [
+       "理解相同数字在不同数位上表示的值不同",
+       "掌握比较三位数大小的方法（先比最高位/百位）"
+      ],
+      "teaching_strategies": [
+       "利用百位、十位、个位的数位分析直观对比263与236",
+       "通过数轴上的位置分布直观体会数的大小差异"
+      ],
+      "request_coverage": [
+       {
+        "treatment": "teach",
+        "sections": [
+         1
+        ]
+       },
+       {
+        "treatment": "teach",
+        "sections": [
+         1
+        ]
+       },
+       {
+        "treatment": "teach",
+        "sections": [
+         1
+        ]
+       }
+      ],
+      "course_visuals": [
+       {
+        "required_features": [
+         "trade_ten_for_one"
+        ],
+        "use_sections": [
+         1
+        ],
+        "relation": "primary"
+       },
+       {
+        "required_features": [
+         "number_line",
+         "number_comparison"
+        ],
+        "use_sections": [
+         1
+        ],
+        "relation": "supporting",
+        "related_visual": 1
+       }
+      ],
+      "sections": [
+       {
+        "purpose": "通过数位组成与数轴位置，辨析数字相同但位置不同数值不同的道理，并得出263大于236的结论",
+        "reusable_items": [
+         {
+          "kind": "board_item",
+          "board_kind": "note"
+         },
+         {
+          "kind": "board_item",
+          "board_kind": "math"
+         }
+        ]
+       }
+      ],
+      "close": {
+       "summary": "弟弟说得不对。虽然263和236包含相同的数字2、6、3，但数字所在的位置（数位）不同，表示的大小就不同。比较时先看百位，263和236百位都是2；再看十位，263的十位是6，表示6个十，236的十位是3，表示3个十，所以263大于236，小华的积分更多。"
+      }
+     },
+     "first_section": {
+      "moments": [
+       {
+        "narration": "弟弟说得不对哦！虽然263和236都是由数字2、6、3组成的，但数字放在不同的位置，表示的大小完全不同。",
+        "delivery": "patient",
+        "visual_creates": [
+         {
+          "timing": "before_speech",
+          "course_visual": 1,
+          "content": {
+           "parameters": {
+            "title": "263的数位模型"
+           },
+           "numbers": [
+            1,
+            2,
+            3
+           ]
+          }
+         }
+        ],
+        "note_creates": [
+         {
+          "timing": "during_speech",
+          "reusable_item": 1,
+          "content": {
+           "title": "数位上的含义",
+           "items": [
+            "263：2个百，6个十，3个一",
+            "236：2个百，3个十，6个一"
+           ]
+          }
+         }
+        ]
+       },
+       {
+        "narration": "我们来看看263：这里的6在十位上，代表6个十，也就是60分；而236里的6在个位上，只代表6个一，也就是6分。十位上的6可比个位上的6大多了！",
+        "delivery": "neutral",
+        "focuses": [
+         {
+          "timing": "during_speech",
+          "intent": "强调数位不同代表的值不同"
+         }
+        ]
+       },
+       {
+        "narration": "比较三位数大小时，我们先看最高位百位，它们都是2个百。接着看十位，263有6个十，236只有3个十，6个十大于3个十，所以263大于236。",
+        "delivery": "careful",
+        "visual_creates": [
+         {
+          "timing": "during_speech",
+          "course_visual": 2,
+          "content": {
+           "parameters": {
+            "title": "数轴比较"
+           },
+           "numbers": [
+            1,
+            4
+           ]
+          }
+         }
+        ],
+        "math_creates": [
+         {
+          "timing": "after_speech",
+          "reusable_item": 2,
+          "content": {
+           "latex": "263 > 236"
+          }
+         }
+        ]
+       },
+       {
+        "narration": "在数轴上，263也排在236的右边，越往右数越大。因此小华的积分比弟弟多。下课后你可以亲自在数轴上观察它们的位置。",
+        "delivery": "encouraging"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "disposition": "generate_lesson",
+    "learner_response": "",
+    "course": {
+     "title": "比较263与236的大小与数位意义",
+     "goals": [
+      "理解相同数字在不同数位上表示的实际价值不同",
+      "掌握借助百位、十位、个位拆分比较三位数大小的方法"
+     ],
+     "teaching_strategies": [
+      "直观演示：通过百、十、一计数方块展示263与236的实际构成",
+      "互动对比：引导观察百位相同的情况下比较十位的大小"
+     ],
+     "numbers": [
+      {
+       "initial": {
+        "mantissa": 3,
+        "scale": 0
+       },
+       "min": {
+        "mantissa": 0,
+        "scale": 0
+       },
+       "max": {
+        "mantissa": 9,
+        "scale": 0
+       },
+       "label": "散的一",
+       "unit": "个"
+      },
+      {
+       "initial": {
+        "mantissa": 6,
+        "scale": 0
+       },
+       "min": {
+        "mantissa": 0,
+        "scale": 0
+       },
+       "max": {
+        "mantissa": 9,
+        "scale": 0
+       },
+       "label": "十的个数",
+       "unit": "个"
+      },
+      {
+       "initial": {
+        "mantissa": 2,
+        "scale": 0
+       },
+       "min": {
+        "mantissa": 0,
+        "scale": 0
+       },
+       "max": {
+        "mantissa": 9,
+        "scale": 0
+       },
+       "label": "百的个数",
+       "unit": "个"
+      }
+     ],
+     "request_coverage": [
+      {
+       "treatment": "teach",
+       "sections": [
+        1,
+        2
+       ]
+      },
+      {
+       "treatment": "teach",
+       "sections": [
+        1
+       ]
+      },
+      {
+       "treatment": "teach",
+       "sections": [
+        1,
+        2
+       ]
+      }
+     ],
+     "course_visuals": [
+      {
+       "required_features": [
+        "trade_ten_for_one"
+       ],
+       "use_sections": [
+        1,
+        2
+       ],
+       "relation": "primary"
+      }
+     ],
+     "sections": [
+      {
+       "purpose": "通过方块模型展示263和236的结构，澄清数位不同价值不同的概念",
+       "reusable_items": [
+        {
+         "kind": "board_item",
+         "board_kind": "note"
+        },
+        {
+         "kind": "board_item",
+         "board_kind": "math"
+        }
+       ]
+      },
+      {
+       "purpose": "总结三位数比较大小的具体步骤并给出结论判断",
+       "reusable_items": [
+        {
+         "kind": "board_item",
+         "board_kind": "math"
+        }
+       ]
+      }
+     ],
+     "close": {
+      "summary": "数字虽然相同，但所在数位不同代表的值也不同。比较三位数时，百位相同就看十位，263大于236，所以小华的积分多，弟弟的说法不对。"
+     }
+    }
+   },
+   {
+    "moments": [
+     {
+      "narration": "小华有263分，弟弟有236分。弟弟觉得两个数的数字组成完全一样，所以积分也一样多。",
+      "delivery": "neutral",
+      "math_creates": [
+       {
+        "timing": "during_speech",
+        "content": {
+         "latex": "263 \\neq 236"
+        }
+       }
+      ],
+      "note_creates": [
+       {
+        "timing": "before_speech",
+        "content": {
+         "title": "比较263与236",
+         "items": [
+          "263：2个百，6个十，3个一",
+          "236：2个百，3个十，6个一"
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "narration": "弟弟的想法是不对的。虽然数字相同，但它们在不同的数位上表示的价值完全不同。",
+      "delivery": "emphatic",
+      "focuses": [
+       {
+        "timing": "during_speech",
+        "intent": "强调数位决定数值大小"
+       }
+      ]
+     },
+     {
+      "narration": "我们来看百位，两人的百位都是2，都表示2个百，也就是200分。再看十位，小华的十位是6，表示6个十，也就是60分；而弟弟的十位是3，表示3个十，也就是30分。60分大于30分，所以小华的积分更多。",
+      "delivery": "patient",
+      "points": [
+       {
+        "timing": "during_speech"
+       }
+      ]
+     },
+     {
+      "narration": "如果把小华的6个十换成更多的散的一，比如把其中3个十拆开，十的个数就会变成3个，散的一就会增加30个，变成33个一。",
+      "delivery": "careful",
+      "animations": [
+       {
+        "timing": "during_speech",
+        "number": 2,
+        "end_value": {
+         "mantissa": 3,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       },
+       {
+        "timing": "during_speech",
+        "number": 1,
+        "end_value": {
+         "mantissa": 33,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       }
+      ]
+     },
+     {
+      "narration": "虽然总数没变，但十位的数值变了。下课后你来试试把十的个数换成6个吧。",
+      "delivery": "encouraging"
+     }
+    ],
+    "course_visual_creates": {
+     "visual_1": {
+      "moment": 1,
+      "timing": "before_speech",
+      "content": {
+       "parameters": {},
+       "numbers": [
+        1,
+        2,
+        3
+       ]
+      }
+     }
+    },
+    "reusable_board_creates": {
+     "item_1": {
+      "moment": 1,
+      "timing": "before_speech",
+      "content": {
+       "title": "比较263与236",
+       "items": [
+        "263：2个百，6个十，3个一",
+        "236：2个百，3个十，6个一"
+       ]
+      }
+     },
+     "item_2": {
+      "moment": 1,
+      "timing": "during_speech",
+      "content": {
+       "latex": "263 \\neq 236"
+      }
+     }
+    },
+    "reflection_activities": [
+     {
+      "prompt": "如果一个三位数的百位、十位、个位数字加起来都是12，百位数字越大，这个数就一定越大吗？",
+      "answer": "是的。因为百位上的数表示几个百，高位的数值对整个数的大小起决定性作用。百位越大，数就越大。"
+     }
+    ],
+    "answer_activities": [
+     {
+      "prompt": "小明有345张卡片，小红有354张卡片。两人百位都是3，小红的十位比小明多1个十，那么小红比小明多多少张卡片？",
+      "answer": "9",
+      "check": "354-345",
+      "hints": [
+       "先用 354 减去 345 计算差值。",
+       "也可以观察：小红多1个十（+10），但少9个一（-9），所以总体多 10 - 1 张。"
+      ]
+     }
+    ],
+    "number_activities": [
+     {
+      "prompt": "请在方块模型中，把十的个数换成6个，还原小华的263分结构。",
+      "hints": [
+       "10个一可以换成1个十。",
+       "将30个一换回3个十，十的个数就会增加到6个。"
+      ],
+      "success_message": "太棒了！你成功把十的个数换成了6个，还原了263的分数结构！",
+      "number": 2,
+      "value_mantissa": 6,
+      "value_scale": 0
+     }
+    ]
+   },
+   {
+    "moments": [
+     {
+      "narration": "小华有 263 分，弟弟有 236 分。弟弟说，这两个数都是由 2、6、3 这三个数字组成的，所以两人一样多。弟弟说得对吗？",
+      "delivery": "patient"
+     },
+     {
+      "narration": "我们用小方块来分别摆出 263 和 236 看一看。先来看小华的 263：它由 2 个百、6 个十和 3 个一组成。",
+      "delivery": "neutral",
+      "focuses": [
+       {
+        "timing": "during_speech",
+        "intent": "观察263的数位组成"
+       }
+      ]
+     },
+     {
+      "narration": "再看弟弟的 236：它由 2 个百、3 个十和 6 个一组成。虽然用的数字相同，但数字所在的位置——也就是数位不同！",
+      "delivery": "emphatic",
+      "animations": [
+       {
+        "timing": "during_speech",
+        "number": 2,
+        "end_value": {
+         "mantissa": 3,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       },
+       {
+        "timing": "during_speech",
+        "number": 1,
+        "end_value": {
+         "mantissa": 6,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       }
+      ]
+     },
+     {
+      "narration": "百位上都是 2，表示的都是 200；但小华的十位是 6，表示 6 个十即 60；弟弟的十位是 3，表示 3 个十即 30。60 比 30 大，所以 263 大于 236，弟弟说错了！",
+      "delivery": "emphatic",
+      "points": [
+       {
+        "timing": "during_speech"
+       }
+      ]
+     },
+     {
+      "narration": "比较三位数大小时，先看百位；百位相同时，再看十位。数位不同，数字的实际价值就完全不同。下课后，你也来动手把十的个数换成 6 个，看一看它的变化吧！",
+      "delivery": "encouraging"
+     }
+    ],
+    "course_visual_creates": {
+     "visual_1": {
+      "moment": 2,
+      "timing": "before_speech",
+      "content": {
+       "parameters": {},
+       "numbers": [
+        1,
+        2,
+        3
+       ]
+      }
+     }
+    },
+    "reusable_board_creates": {
+     "item_1": {
+      "moment": 2,
+      "timing": "before_speech",
+      "content": {
+       "title": "三位数的数位意义",
+       "items": [
+        "数字相同，所在数位不同，价值就不同",
+        "百位相同看十位，十位大数就大"
+       ]
+      }
+     },
+     "item_2": {
+      "moment": 4,
+      "timing": "during_speech",
+      "content": {
+       "latex": "263 > 236"
+      }
+     }
+    },
+    "number_activities": [
+     {
+      "prompt": "请将十的个数换成 6 个，摆出小华的分数 263",
+      "hints": [
+       "10个一可以换成1个十",
+       "将十的个数增加到6"
+      ],
+      "success_message": "太棒了！成功还原了263的分数结构！",
+      "number": 2,
+      "value_mantissa": 6,
+      "value_scale": 0
+     }
+    ]
+   },
+   {
+    "moments": [
+     {
+      "narration": "小华有263分，弟弟有236分。弟弟说：我们用的数字都是2、3、6，所以积分一样多。他说的真的对吗？",
+      "delivery": "patient",
+      "math_creates": [
+       {
+        "timing": "during_speech",
+        "content": {
+         "latex": "263 \\neq 236"
+        }
+       }
+      ],
+      "note_creates": [
+       {
+        "timing": "before_speech",
+        "content": {
+         "title": "比较263与236",
+         "items": [
+          "数字相同，位置不同",
+          "数位决定数值大小"
+         ]
+        }
+       }
+      ],
+      "focuses": [
+       {
+        "timing": "during_speech",
+        "intent": "聚焦263与236的数位差异"
+       }
+      ]
+     },
+     {
+      "narration": "我们先来看263。它由2个百、6个十和3个一组成。百位上的2表示200，十位上的6表示60，个位上的3表示3。",
+      "delivery": "emphatic",
+      "points": [
+       {
+        "timing": "during_speech"
+       }
+      ]
+     },
+     {
+      "narration": "再看弟弟的236。它由2个百、3个十和6个一组成。虽然都有数字3和6，但3在十位表示30，在个位只表示3！",
+      "delivery": "emphatic",
+      "animations": [
+       {
+        "timing": "during_speech",
+        "number": 2,
+        "end_value": {
+         "mantissa": 3,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       },
+       {
+        "timing": "during_speech",
+        "number": 1,
+        "end_value": {
+         "mantissa": 6,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       }
+      ]
+     },
+     {
+      "narration": "因为263的十位是6，而236的十位是3，6个十大于3个十，所以263大于236，弟弟说得不对。下课后你来试试把十的个数换成6吧！",
+      "delivery": "encouraging",
+      "focuses": [
+       {
+        "timing": "during_speech",
+        "intent": "比较十位数值大小得出结论"
+       }
+      ]
+     }
+    ],
+    "course_visual_creates": {
+     "visual_1": {
+      "moment": 1,
+      "timing": "before_speech",
+      "content": {
+       "parameters": {},
+       "numbers": [
+        1,
+        2,
+        3
+       ]
+      }
+     }
+    },
+    "reusable_board_creates": {
+     "item_1": {
+      "moment": 1,
+      "timing": "before_speech",
+      "content": {
+       "title": "比较263与236",
+       "items": [
+        "数字相同，位置不同",
+        "数位决定数值大小"
+       ]
+      }
+     },
+     "item_2": {
+      "moment": 1,
+      "timing": "during_speech",
+      "content": {
+       "latex": "263 \\neq 236"
+      }
+     }
+    },
+    "reflection_activities": [
+     {
+      "prompt": "为什么263和236包含相同的数字2、3、6，但263却比236大？",
+      "answer": "因为数字所在的数位不同，表示的实际价值就不同。263的十位是6表示60，而236的十位是3表示30，60大于30，所以263更大。"
+     }
+    ],
+    "answer_activities": [
+     {
+      "prompt": "小明有452分，小红有425分，小明比小红多多少分？",
+      "answer": "27",
+      "check": "452-425",
+      "unit": "分",
+      "hints": [
+       "先用452减去425计算分差。",
+       "百位数相同，可以直接用十位和个位组成的数进行相减：52 - 25。"
+      ]
+     }
+    ],
+    "number_activities": [
+     {
+      "prompt": "把十的个数换成6，重新拼出小华的积分263。",
+      "hints": [
+       "10个一可以换成1个十。",
+       "增加十位上的数量，使十的个数达到6。"
+      ],
+      "success_message": "太棒了！你成功重构了263的分数结构！",
+      "number": 2,
+      "value_mantissa": 6,
+      "value_scale": 0
+     }
+    ]
+   }
+  ],
+  "BT-32-c4": [
+   {
+    "disposition": "generate_lesson",
+    "learner_response": "",
+    "course": {
+     "outline": {
+      "title": "两位数加两位数进位加法：46 + 37",
+      "goals": [
+       "理解两位数加两位数进位加法的算理（个位相加满十向十位进一）",
+       "掌握46+37的计算过程与结果"
+      ],
+      "teaching_strategies": [
+       "借助小方块模型直观呈现“满十进一”的换算过程",
+       "结合数轴拆分法（先加整十再加个位）印证计算结果"
+      ],
+      "numbers": [
+       {
+        "initial": {
+         "mantissa": 16,
+         "scale": 0
+        },
+        "min": {
+         "mantissa": 0,
+         "scale": 0
+        },
+        "max": {
+         "mantissa": 20,
+         "scale": 0
+        },
+        "label": "散落的“一”",
+        "unit": "个"
+       },
+       {
+        "initial": {
+         "mantissa": 7,
+         "scale": 0
+        },
+        "min": {
+         "mantissa": 0,
+         "scale": 0
+        },
+        "max": {
+         "mantissa": 20,
+         "scale": 0
+        },
+        "label": "“十”的个数",
+        "unit": "个"
+       },
+       {
+        "initial": {
+         "mantissa": 0,
+         "scale": 0
+        },
+        "min": {
+         "mantissa": 0,
+         "scale": 0
+        },
+        "max": {
+         "mantissa": 10,
+         "scale": 0
+        },
+        "label": "“百”的个数",
+        "unit": "个"
+       }
+      ],
+      "request_coverage": [
+       {
+        "treatment": "teach",
+        "sections": [
+         1,
+         2
+        ]
+       },
+       {
+        "treatment": "teach",
+        "sections": [
+         2
+        ]
+       }
+      ],
+      "course_visuals": [
+       {
+        "required_features": [
+         "trade_ten_for_one"
+        ],
+        "use_sections": [
+         1
+        ],
+        "relation": "primary"
+       },
+       {
+        "required_features": [
+         "number_line",
+         "number_steps"
+        ],
+        "use_sections": [
+         2
+        ],
+        "relation": "primary"
+       }
+      ],
+      "sections": [
+       {
+        "purpose": "利用方块凑十换一，直观理解个位相加满十进一的算理",
+        "reusable_items": [
+         {
+          "kind": "board_item",
+          "board_kind": "math"
+         },
+         {
+          "kind": "board_item",
+          "board_kind": "note"
+         }
+        ]
+       },
+       {
+        "purpose": "用数轴验证 46 + 37 的分步计算并得出答案",
+        "reusable_items": []
+       }
+      ],
+      "close": {
+       "summary": "今天我们学习了 46 + 37 的计算方法。把 46 和 37 合起来时，个位上的 6 和 7 合起来是 13，满十可以换成 1 个十，向十位进一，个位剩 3，十位 4 加 3 再加进上来的 1 得到 8，所以一共花了 83 元。"
+      }
+     },
+     "first_section": {
+      "moments": [
+       {
+        "narration": "妈妈上午买了 46 元的菜，下午又花了 37 元。要求今天一共花了多少元，我们需要把 46 和 37 加起来。",
+        "delivery": "patient",
+        "visual_creates": [
+         {
+          "timing": "before_speech",
+          "course_visual": 1,
+          "content": {
+           "numbers": [
+            1,
+            2,
+            3
+           ]
+          }
+         }
+        ],
+        "math_creates": [
+         {
+          "timing": "during_speech",
+          "reusable_item": 1,
+          "content": {
+           "latex": "46 + 37 = ?"
+          }
+         }
+        ],
+        "note_creates": [
+         {
+          "timing": "after_speech",
+          "reusable_item": 2,
+          "content": {
+           "title": "计数器摆法",
+           "items": [
+            "46：4个十和6个一",
+            "37：3个十和7个一",
+            "合起来：7个十和13个一"
+           ]
+          }
+         }
+        ]
+       },
+       {
+        "narration": "看，我们把 46 和 37 的方块合在一起：十位上有 7 个十，个位上有 13 个一。",
+        "delivery": "neutral",
+        "focuses": [
+         {
+          "timing": "during_speech",
+          "intent": "观察个位上的13个一"
+         }
+        ]
+       },
+       {
+        "narration": "个位上的 13 个一满十了！我们把其中的 10 个一合起来，换成 1 个十放到十位上。现在个位只剩下 3 个一，十位变成了 8 个十。",
+        "delivery": "emphatic",
+        "animations": [
+         {
+          "timing": "during_speech",
+          "number": 1,
+          "end_value": {
+           "mantissa": 3,
+           "scale": 0
+          },
+          "duration_intent": "normal"
+         }
+        ]
+       },
+       {
+        "narration": "8 个十和 3 个一合起来就是 83。下课后，你可以自己试着把 13 个一换成 1 个十。",
+        "delivery": "encouraging",
+        "points": [
+         {
+          "timing": "before_speech"
+         }
+        ]
+       }
+      ],
+      "number_activities": [
+       {
+        "prompt": "试着把散落的 13 个一，满十换成 1 个十，看看个位剩几个。",
+        "hints": [
+         "满 10 个一就可以向十位进 1 个十",
+         "13 减去 10 之后还剩 3 个一"
+        ],
+        "success_message": "太棒了！10个一换成1个十后，十位变成8，个位剩3，答案是83！",
+        "number": 1,
+        "value_mantissa": 3,
+        "value_scale": 0
+       }
+      ]
+     }
+    }
+   },
+   {
+    "moments": [
+     {
+      "narration": "妈妈上午买菜花了46元，下午又花了37元。我们要算一共花了多少元，就是把46和37合起来。",
+      "delivery": "neutral",
+      "math_creates": [
+       {
+        "timing": "during_speech",
+        "content": {
+         "latex": "46 + 37 = ?"
+        }
+       }
+      ],
+      "note_creates": [
+       {
+        "timing": "after_speech",
+        "content": {
+         "title": "计算步骤",
+         "items": [
+          "把两部分的十和个合并",
+          "个位相加满十向十位进一"
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "narration": "我们用小方块来摆一摆：46是4个十和6个一，37是3个十和7个一。合起来一共有7个十和16个一。",
+      "delivery": "patient",
+      "focuses": [
+       {
+        "timing": "during_speech",
+        "intent": "观察散落的16个一和7个十"
+       }
+      ]
+     },
+     {
+      "narration": "看，散落的“一”有16个，满十了！我们把其中的10个“一”换成1个“十”。",
+      "delivery": "emphatic",
+      "animations": [
+       {
+        "timing": "during_speech",
+        "number": 1,
+        "end_value": {
+         "mantissa": 6,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       }
+      ]
+     },
+     {
+      "narration": "现在散落的“一”剩下6个，“十”变成了8个，合起来就是83。所以46加37等于83元。下课后你来试试把方块换成包含6个“一”的状态吧！",
+      "delivery": "encouraging",
+      "focuses": [
+       {
+        "timing": "after_speech",
+        "intent": "确认凑十进一后的最终结果"
+       }
+      ]
+     }
+    ],
+    "course_visual_creates": {
+     "visual_1": {
+      "moment": 2,
+      "timing": "before_speech",
+      "content": {
+       "parameters": {},
+       "numbers": [
+        1,
+        2,
+        3
+       ]
+      }
+     }
+    },
+    "reusable_board_creates": {
+     "item_1": {
+      "moment": 1,
+      "timing": "during_speech",
+      "content": {
+       "latex": "46 + 37 = 83"
+      }
+     },
+     "item_2": {
+      "moment": 1,
+      "timing": "after_speech",
+      "content": {
+       "title": "两位数加法（进位）",
+       "items": [
+        "个位：6 + 7 = 13（满十进一）",
+        "十位：4 + 3 + 1 = 8"
+       ]
+      }
+     }
+    },
+    "reflection_activities": [
+     {
+      "prompt": "在计算两位数加法时，如果个位相加刚好等于10，需要向十位进一吗？",
+      "answer": "需要。只要个位相加满十（包括等于10），就要向十位进一，个位写0。"
+     }
+    ],
+    "answer_activities": [
+     {
+      "prompt": "小明买书花了28元，买文具花了45元。小明一共花了多少元？",
+      "answer": "73",
+      "check": "28+45",
+      "unit": "元",
+      "hints": [
+       "先算个位 8 + 5 = 13，满十向十位进1",
+       "再算十位 2 + 4 + 1 = 7"
+      ]
+     }
+    ],
+    "number_activities": [
+     {
+      "prompt": "请你动手操作方块，把10个“一”换成1个“十”，让散落的“一”变成6个。",
+      "hints": [
+       "十个一可以换成一个十",
+       "将散落的“一”从16个换成6个"
+      ],
+      "success_message": "太棒了！你成功完成了凑十进一！",
+      "number": 1,
+      "value_mantissa": 6,
+      "value_scale": 0
+     }
+    ]
+   },
+   {
+    "moments": [
+     {
+      "narration": "在上一节中，我们知道了妈妈上午花了46元，下午花了37元。求今天一共花了多少元，列式为 46 加 37。",
+      "delivery": "patient",
+      "math_creates": [
+       {
+        "timing": "during_speech",
+        "content": {
+         "latex": "46 + 37 = ?"
+        }
+       }
+      ]
+     },
+     {
+      "narration": "现在我们借助数轴来验证这个过程。首先在数轴上标出起点 46。",
+      "delivery": "neutral",
+      "focuses": [
+       {
+        "timing": "during_speech",
+        "intent": "观察数轴起点 46"
+       }
+      ]
+     },
+     {
+      "narration": "我们要加上 37。先把 37 拆分成 30 和 7。首先从 46 向右跳跃 30 个单位，来到 76。",
+      "delivery": "neutral",
+      "animations": [
+       {
+        "timing": "during_speech",
+        "number": 2,
+        "end_value": {
+         "mantissa": 76,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       }
+      ]
+     },
+     {
+      "narration": "接着再往右跳跃 7 个单位。在数轴上，76 再加 7 刚好落在了 83。",
+      "delivery": "emphatic",
+      "animations": [
+       {
+        "timing": "during_speech",
+        "number": 1,
+        "end_value": {
+         "mantissa": 83,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       }
+      ]
+     },
+     {
+      "narration": "通过数轴的直观验证，46 加 37 算出的结果准确无误，就是 83 元。",
+      "delivery": "encouraging",
+      "note_creates": [
+       {
+        "timing": "during_speech",
+        "content": {
+         "title": "验证结论",
+         "items": [
+          "46 + 30 = 76",
+          "76 + 7 = 83",
+          "46 + 37 = 83（元）"
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "narration": "想想看，如果先把 37 拆成 4 和 33，先跳 4 凑成整十数再跳 33，结果会变化吗？下课后你可以亲自调动数轴体验一下。",
+      "delivery": "encouraging"
+     }
+    ],
+    "course_visual_creates": {
+     "visual_2": {
+      "moment": 2,
+      "timing": "before_speech",
+      "content": {
+       "parameters": {
+        "title": "数轴分步验证 46 + 37",
+        "label_style": "decimal"
+       },
+       "numbers": [
+        1,
+        2
+       ]
+      }
+     }
+    },
+    "reflection_activities": [
+     {
+      "prompt": "如果把 37 拆成 4 和 33，先算 46 + 4 = 50，再算 50 + 33，结果是多少？",
+      "answer": "结果依然是 83。因为无论拆分的先后顺序如何，总加数没有改变。"
+     }
+    ],
+    "answer_activities": [
+     {
+      "prompt": "妈妈如果上午花了 58 元，下午花了 27 元，今天一共花了多少元？",
+      "answer": "85",
+      "check": "58+27",
+      "unit": "元",
+      "hints": [
+       "可以先算 58 + 20 = 78",
+       "再算 78 + 7 = 85"
+      ]
+     }
+    ],
+    "number_activities": [
+     {
+      "prompt": "下课后你来试试，请将数轴上的点调整到目标位置 83。",
+      "hints": [
+       "先在数轴上向右加 30 到达 76",
+       "再向右加 7 即可到达 83"
+      ],
+      "success_message": "太棒了！你用数轴成功验证了 46 + 37 = 83！",
+      "number": 1,
+      "value_mantissa": 83,
+      "value_scale": 0
+     }
+    ]
+   },
+   {
+    "moments": [
+     {
+      "narration": "今天我们来看妈妈买菜花钱的问题。上午买菜花了46元，下午又花了37元，要求今天一共花了多少元。",
+      "delivery": "patient",
+      "math_creates": [
+       {
+        "timing": "during_speech",
+        "content": {
+         "latex": "46 + 37 = ?"
+        }
+       }
+      ]
+     },
+     {
+      "narration": "我们可以借助数轴来分步验证。起点是上午花的46元。先加上下午37元中的30元，一下跳到76。",
+      "delivery": "careful",
+      "animations": [
+       {
+        "timing": "during_speech",
+        "number": 2,
+        "end_value": {
+         "mantissa": 7,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       }
+      ]
+     },
+     {
+      "narration": "接着，再把剩下的7元加上去。76加上7，个位6加7满十进一，正好落到了83。",
+      "delivery": "emphatic",
+      "animations": [
+       {
+        "timing": "during_speech",
+        "number": 1,
+        "end_value": {
+         "mantissa": 13,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       }
+      ]
+     },
+     {
+      "narration": "所以，46加上37的结果是83元。妈妈今天一共花了83元。下课后你来试试在数轴上把移动的步数调整看看吧。",
+      "delivery": "encouraging",
+      "math_creates": [
+       {
+        "timing": "before_speech",
+        "content": {
+         "latex": "46 + 37 = 83"
+        }
+       }
+      ]
+     }
+    ],
+    "course_visual_creates": {
+     "visual_2": {
+      "moment": 2,
+      "timing": "before_speech",
+      "content": {
+       "parameters": {
+        "title": "数轴分步计算 46 + 37",
+        "label_style": "decimal"
+       },
+       "numbers": [
+        1,
+        2
+       ]
+      }
+     }
+    },
+    "reflection_activities": [
+     {
+      "prompt": "如果先加7元，再加30元，数轴上的落点会改变吗？",
+      "answer": "不会改变。46 + 7 = 53，再加 30 等于 83，结果是一样的。"
+     }
+    ],
+    "answer_activities": [
+     {
+      "prompt": "小明上午看了28页书，下午看了45页书，今天一共看了多少页书？",
+      "answer": "73",
+      "check": "28+45",
+      "hints": [
+       "用两位数加两位数的进位加法来计算。",
+       "先用 28 加上 40 得到 68，再用 68 加上 5。"
+      ]
+     }
+    ],
+    "number_activities": [
+     {
+      "prompt": "请在数轴上尝试调整加上个位散落的“一”，将其调到 7。",
+      "hints": [
+       "找到表示散落“一”的控制项。",
+       "将数值调整为 7。"
+      ],
+      "success_message": "太棒了！你成功验证了分步加法的过程。",
+      "number": 1,
+      "value_mantissa": 7,
+      "value_scale": 0
+     }
+    ]
+   },
+   {
+    "moments": [
+     {
+      "narration": "上午买了46元，我们在数轴上找到起点46。",
+      "delivery": "neutral",
+      "focuses": [
+       {
+        "timing": "during_speech",
+        "intent": "定位数轴起点 46"
+       }
+      ]
+     },
+     {
+      "narration": "下午又花了37元。我们先把37拆成30和7，先往右跳30个单位加到76。",
+      "delivery": "patient",
+      "animations": [
+       {
+        "timing": "during_speech",
+        "number": 2,
+        "end_value": {
+         "mantissa": 7,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       }
+      ]
+     },
+     {
+      "narration": "接着从76再往右跳7个单位，先跳4凑成80，再跳3得到83。",
+      "delivery": "patient",
+      "animations": [
+       {
+        "timing": "during_speech",
+        "number": 1,
+        "end_value": {
+         "mantissa": 3,
+         "scale": 0
+        },
+        "duration_intent": "normal"
+       },
+       {
+        "timing": "after_speech",
+        "number": 2,
+        "end_value": {
+         "mantissa": 8,
+         "scale": 0
+        },
+        "duration_intent": "brief"
+       }
+      ]
+     },
+     {
+      "narration": "所以46加37等于83，妈妈今天一共花了83元。下课后你来试试把个位调到5看会落在哪里。",
+      "delivery": "encouraging",
+      "points": [
+       {
+        "timing": "during_speech"
+       }
+      ]
+     }
+    ],
+    "course_visual_creates": {
+     "visual_2": {
+      "moment": 1,
+      "timing": "before_speech",
+      "content": {
+       "parameters": {
+        "title": "46 + 37 的数轴跳跃验证",
+        "label_style": "decimal"
+       },
+       "numbers": [
+        1,
+        2
+       ]
+      }
+     }
+    },
+    "reflection_activities": [
+     {
+      "prompt": "如果先跳7再跳30，数轴上的终点会改变吗？",
+      "answer": "不会改变。先跳7得到53，再跳30同样得到83，加法的交换与结合律保证了结果相同。"
+     }
+    ],
+    "answer_activities": [
+     {
+      "prompt": "如果妈妈上午花了58元，下午花了25元，今天一共花了多少元？",
+      "answer": "83",
+      "check": "58+25",
+      "unit": "元",
+      "hints": [
+       "可以先算 58 + 20 = 78。",
+       "再算 78 + 5 的结果。"
+      ]
+     }
+    ],
+    "number_activities": [
+     {
+      "prompt": "下课后你来试试在数轴验证中将“一”的个数调到 5 吧！",
+      "hints": [
+       "拖动“一”的个数控制滑块。",
+       "将其目标值调整为 5。"
+      ],
+      "success_message": "太棒了！你成功完成了数轴位置调整！",
+      "number": 1,
+      "value_mantissa": 5,
       "value_scale": 0
      }
     ]

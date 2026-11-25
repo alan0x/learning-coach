@@ -1690,11 +1690,19 @@ function compileBaseTenTrade(
   const start = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
   // The mat's numbers are its own: their range is the mat's and they change only by trades, so another visual
   // cannot also show them (review of #160: a number line's slider task became a tap task on the mat).
-  const sharing = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some((action) => action.action === "create"
+    && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "base_ten_trade"
+    && ((action.content as LessonPlanVisualContent).numbers ?? []).some((number) => numbers.includes(number)))));
+  const sharing = sharingAt < 0 ? undefined : plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "base_ten_trade"
       && ((action.content as LessonPlanVisualContent).numbers ?? []).some((number) => numbers.includes(number)));
   if (sharing) {
-    fail("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${(sharing.content as LessonPlanVisualContent).capability} visual shows one of them; show the pile on the mat only, or in words`, "base_ten_trade");
+    // The fault is named by the later of the two pictures, the one a section still being written can lose: a
+    // number line in section 2 on the numbers of a mat section 1 already showed (BT-32, check 4).
+    const matAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
+    fail("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the pile on the mat only, or in words`,
+      sharingAt > matAt ? sharingCapability : "base_ten_trade");
   }
   // Checked after sharing, so numbers borrowed from another visual are named as such, not as a pile too big
   // (BT-32, check 3: the number line's 46, 30 and 7 were refused three times as "at most 19 tens").
