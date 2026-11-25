@@ -877,7 +877,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
           const own = mover.visual.mover!.task(mover.position, activity.value, end);
           if ("refuse" in own) fail("LESSON_PLAN_ACTIVITY", `${activityPath}.value`, own.refuse);
           if ("drop" in own) {
-            programAdjustments.push({ section: sectionOffset + 1, kind: "activity_removed", reason: "nothing_to_do_on_card", task: taskAlias, detail: `${taskAlias} (${activityPath}): ${own.drop}` });
+            programAdjustments.push({ section: sectionOffset + 1, kind: "activity_removed", reason: own.reason ?? "nothing_to_do_on_card", task: taskAlias, detail: `${taskAlias} (${activityPath}): ${own.drop}` });
             return;
           }
           addTask({ ...common, ...own.task } as unknown as NonNullable<AuthoringLesson["lesson"]["tasks"]>[number], droppedPraise);

@@ -14768,7 +14768,7 @@ var MATH_RECIPES = {
     // model never names a control).
     student_controls: [],
     required_features: ["trade_ten_for_one"],
-    model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF0C\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF0C\u9898\u76EE\u6709\u767E\u6216\u4E00\u5171\u6EE1100\u65F6\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u767E\u51990\uFF09\uFF0C\u7167\u9898\u76EE\u5199\u3002\u4E00\u5171\u6EE1100\u65F6\u753B\u677F\u6709\u767E\u4F4D\uFF1A\u5341\u6EE1\u5341\u4E5F\u8981\u6362\u6210\u4E00\u4E2A\u767E\uFF0C\u901A\u5E38\u8BB2\u5230\u6BCF\u4E00\u4F4D\u90FD\u4E0D\u5230\u5341\u4E3A\u6B62\u3002\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u6362\u767E\u5C31\u628A\u201C\u5341\u201D\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u598211\u52301\uFF09\uFF0C\u767E\u81EA\u5DF1\u8DDF\u7740\u591A\u3002\u8BFE\u540E\u7EC3\u4E60\u65F6\u65B9\u5757\u56DE\u5230\u8BFE\u7A0B\u5F00\u5934\u90A3\u4E00\u5806\uFF0C\u5B69\u5B50\u81EA\u5DF1\u6362\uFF1B\u90A3\u4E00\u5806\u5DF2\u7ECF\u662F\u76EE\u6807\u65F6\uFF0C\u4ECE\u8BFE\u7A0B\u7ED3\u675F\u65F6\u90A3\u4E00\u5806\u5F00\u59CB\uFF0C\u6240\u4EE5\u201C\u6362\u56DE\u201D\u5F00\u5934\u7684\u4E2A\u6570\u4E5F\u53EF\u4EE5\u3002\u7EC3\u4E60\u7684\u76EE\u6807\u662F\u6362\u5B8C\u540E\u201C\u4E00\u201D\u6216\u201C\u5341\u201D\u7684\u4E2A\u6570\uFF08\u5982\u6563\u7684\u4E00\u53D8\u62106\u4E2A\uFF09\uFF1B\u53E6\u51FA\u65B0\u9898\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757"
+    model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF0C\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF0C\u9898\u76EE\u6709\u767E\u6216\u4E00\u5171\u6EE1100\u65F6\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u767E\u51990\uFF09\uFF0C\u7167\u9898\u76EE\u5199\u3002\u4E00\u5171\u6EE1100\u65F6\u753B\u677F\u6709\u767E\u4F4D\uFF1A\u5341\u6EE1\u5341\u4E5F\u8981\u6362\u6210\u4E00\u4E2A\u767E\uFF0C\u901A\u5E38\u8BB2\u5230\u6BCF\u4E00\u4F4D\u90FD\u4E0D\u5230\u5341\u4E3A\u6B62\u3002\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u6362\u767E\u5C31\u628A\u201C\u5341\u201D\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u598211\u52301\uFF09\uFF0C\u767E\u81EA\u5DF1\u8DDF\u7740\u591A\u3002\u65B9\u5757\u7684\u603B\u6570\u6C38\u8FDC\u4E0D\u53D8\uFF0C\u53EA\u80FD\u4EA4\u6362\uFF1A\u628A\u4E00\u5806\u53D8\u6210\u53E6\u4E00\u4E2A\u6570\uFF08\u5982508\u52A03\u4E2A\u5341\u53D8\u6210538\uFF09\u4E0D\u80FD\u5728\u65B9\u5757\u4E0A\u7EC3\uFF0C\u7528\u586B\u6570\u9898\u95EE\u3002\u8BFE\u540E\u7EC3\u4E60\u65F6\u65B9\u5757\u56DE\u5230\u8BFE\u7A0B\u5F00\u5934\u90A3\u4E00\u5806\uFF0C\u5B69\u5B50\u81EA\u5DF1\u6362\uFF1B\u90A3\u4E00\u5806\u5DF2\u7ECF\u662F\u76EE\u6807\u65F6\uFF0C\u4ECE\u8BFE\u7A0B\u7ED3\u675F\u65F6\u90A3\u4E00\u5806\u5F00\u59CB\uFF0C\u6240\u4EE5\u201C\u6362\u56DE\u201D\u5F00\u5934\u7684\u4E2A\u6570\u4E5F\u53EF\u4EE5\u3002\u7EC3\u4E60\u7684\u76EE\u6807\u662F\u4EA4\u6362\u8DEF\u4E0A\u201C\u4E00\u201D\u6216\u201C\u5341\u201D\u7684\u67D0\u4E2A\u4E2A\u6570\uFF08visuals_for_section \u7684 loose_ones_as_traded\u3001tens_as_traded\uFF09\uFF0C\u8BF4\u6210\u201C\u6362\u6210\u51E0\u4E2A\u201D\uFF0C\u4E0D\u8BF4\u201C\u8C03\u5230\u201D\uFF1B\u7EC3\u4E60\u8981\u7EC3\u672C\u8BFE goals \u91CC\u7684\u4EA4\u6362\u3002\u63D0\u793A\u8BB2\u6570\u5B66\uFF08\u5982\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF09\uFF0C\u4E0D\u8BB2\u600E\u4E48\u64CD\u4F5C\uFF1B\u53E6\u51FA\u65B0\u9898\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -16828,10 +16828,14 @@ function baseTenMoves(state, moves) {
   }
   return { steps };
 }
+function baseTenTraded(state) {
+  const value2 = baseTenValue(state);
+  return state.length === 3 ? [value2 % 10, Math.floor(value2 / 10) % 10, Math.floor(value2 / 100)] : [value2 % 10, Math.floor(value2 / 10)];
+}
 function baseTenTapTask(state, position, value2, end, reach) {
   const names = ["loose ones", "tens", "hundreds"];
-  if (!whole(value2)) return { refuse: "blocks are counted in whole numbers" };
-  if (position >= state.length) return value2 === 0 ? { drop: "this pile has no hundreds column" } : { refuse: "this pile has tens and ones only: its hundreds stay 0" };
+  if (!whole(value2)) return { drop: "blocks are counted in whole numbers", reason: "target_not_reachable_on_card" };
+  if (position >= state.length) return value2 === 0 ? { drop: "this pile has no hundreds column" } : { drop: "this pile has tens and ones only: its hundreds stay 0", reason: "target_not_reachable_on_card" };
   const columns = state.length;
   const fits = (pile) => pile.every((count, place5) => whole(count) && count <= (columns === 2 && place5 === 1 ? 9 : BASE_TEN_START[place5]));
   const counts = (pile) => [...new Set(reach(pile).map((each) => each[position]))].sort((a, b) => a - b);
@@ -16839,7 +16843,7 @@ function baseTenTapTask(state, position, value2, end, reach) {
   if (state[position] !== value2) {
     if (from(state)) return { start: [...state] };
     const values = counts(state).filter((each) => each !== state[position]);
-    return { refuse: values.length ? `trading on this pile makes the ${names[position]} ${values.join(" or ")}, never ${value2}` : `the ${names[position]} cannot change by trading on this pile: they stay ${state[position]}` };
+    return { drop: values.length ? `trading on this pile makes the ${names[position]} ${values.join(" or ")}, never ${value2}` : `the ${names[position]} cannot change by trading on this pile: they stay ${state[position]}`, reason: "target_not_reachable_on_card" };
   }
   if (from(end)) return { start: [...end] };
   const near3 = [];
@@ -16850,6 +16854,30 @@ function baseTenTapTask(state, position, value2, end, reach) {
   const found = near3.find(from);
   if (found) return { start: found };
   return { drop: `the ${names[position]} are already ${value2}, and no pile a trade away can be traded back to it` };
+}
+function baseTenFacts(start, now) {
+  const state = baseTenState(start);
+  const names = ["loose_ones", "tens", "hundreds"];
+  const pile = (values) => Object.fromEntries(values.map((count, place5) => [names[place5], count]));
+  const steps = {};
+  const current = [...state];
+  for (let place5 = 0; place5 < state.length - 1; place5 += 1) {
+    const passes = [current[place5]];
+    while (current[place5] >= 10) {
+      current[place5] = current[place5] - 10;
+      current[place5 + 1] = current[place5 + 1] + 1;
+      passes.push(current[place5]);
+    }
+    if (passes.length > 1) steps[`${names[place5]}_as_traded`] = passes;
+  }
+  return {
+    practice_starts_from: pile(state),
+    amount: baseTenValue(state),
+    amount_never_changes: true,
+    ...steps,
+    fully_traded: pile(baseTenTraded(state)),
+    ...now && now.some((count, place5) => count !== state[place5]) ? { pile_now: pile(baseTenState(now).map((_, place5) => now[place5] ?? 0)) } : {}
+  };
 }
 
 // src/plugins/math-hooks.ts
@@ -21603,7 +21631,7 @@ function compileLessonPlan(value2, options = {}) {
           const own = mover.visual.mover.task(mover.position, activity.value, end);
           if ("refuse" in own) fail2("LESSON_PLAN_ACTIVITY", `${activityPath}.value`, own.refuse);
           if ("drop" in own) {
-            programAdjustments.push({ section: sectionOffset + 1, kind: "activity_removed", reason: "nothing_to_do_on_card", task: taskAlias, detail: `${taskAlias} (${activityPath}): ${own.drop}` });
+            programAdjustments.push({ section: sectionOffset + 1, kind: "activity_removed", reason: own.reason ?? "nothing_to_do_on_card", task: taskAlias, detail: `${taskAlias} (${activityPath}): ${own.drop}` });
             return;
           }
           addTask({ ...common, ...own.task }, droppedPraise);
@@ -22471,6 +22499,18 @@ function completedJsonObjectProperty(source, propertyName) {
 
 // src/plugins/math-facts.ts
 var MATH_SECTION_FACTS = {
+  // The trading mat in its own terms (owner, 2026-11-24): where practice starts, the amount no trade changes,
+  // the counts each place passes as it is traded, and the pile with every trade made.
+  // A section that draws the mat has no card yet: the mat takes the lesson's numbers in order (its guidance),
+  // so they are assumed when there are two or three that make a pile, and named in `numbers`.
+  base_ten_trade: ({ established, numbers, state }) => {
+    if (!numbers) return {};
+    const lessonNumbers = established?.numbers ?? (numbers.length >= 2 && numbers.length <= 3 ? numbers.map((_, index) => index + 1) : []);
+    const start = lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0));
+    if (!lessonNumbers.length || baseTenStartFault(start)) return {};
+    const now = lessonNumbers.map((number, place5) => state.get(number) ?? start[place5]);
+    return { facts: { numbers: lessonNumbers, ...baseTenFacts(start, now) } };
+  },
   function_plot: ({ established }) => established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {},
   geometric_rearrangement: ({ mode, established, numbers, state }) => {
     let facts = {};

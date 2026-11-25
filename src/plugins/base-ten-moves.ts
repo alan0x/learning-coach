@@ -119,10 +119,10 @@ export function baseTenTraded(state: readonly number[]): number[] {
  * anything to do; or the reason, naming the values the place can reach.
  */
 export function baseTenTapTask(state: readonly number[], position: number, value: number, end: readonly number[],
-  reach: (pile: readonly number[]) => number[][]): { start: number[] } | { drop: string } | { refuse: string } {
+  reach: (pile: readonly number[]) => number[][]): { start: number[] } | { drop: string; reason?: string } {
   const names = ["loose ones", "tens", "hundreds"];
-  if (!whole(value)) return { refuse: "blocks are counted in whole numbers" };
-  if (position >= state.length) return value === 0 ? { drop: "this pile has no hundreds column" } : { refuse: "this pile has tens and ones only: its hundreds stay 0" };
+  if (!whole(value)) return { drop: "blocks are counted in whole numbers", reason: "target_not_reachable_on_card" };
+  if (position >= state.length) return value === 0 ? { drop: "this pile has no hundreds column" } : { drop: "this pile has tens and ones only: its hundreds stay 0", reason: "target_not_reachable_on_card" };
   const columns = state.length;
   const fits = (pile: readonly number[]) => pile.every((count, place) => whole(count) && count <= (columns === 2 && place === 1 ? 9 : BASE_TEN_START[place]!));
   const counts = (pile: readonly number[]) => [...new Set(reach(pile).map((each) => each[position]!))].sort((a, b) => a - b);
@@ -130,9 +130,10 @@ export function baseTenTapTask(state: readonly number[], position: number, value
   if (state[position] !== value) {
     if (from(state)) return { start: [...state] };
     const values = counts(state).filter((each) => each !== state[position]);
-    return { refuse: values.length
+    // Owner, 2026-11-24: an LLM's goal can miss; a goal the mat cannot reach drops that task, never the lesson.
+    return { drop: values.length
       ? `trading on this pile makes the ${names[position]} ${values.join(" or ")}, never ${value}`
-      : `the ${names[position]} cannot change by trading on this pile: they stay ${state[position]}` };
+      : `the ${names[position]} cannot change by trading on this pile: they stay ${state[position]}`, reason: "target_not_reachable_on_card" };
   }
   if (from(end)) return { start: [...end] };
   // One trade away from the lesson's pile: a make or a break at any place.
@@ -144,4 +145,37 @@ export function baseTenTapTask(state: readonly number[], position: number, value
   const found = near.find(from);
   if (found) return { start: found };
   return { drop: `the ${names[position]} are already ${value}, and no pile a trade away can be traded back to it` };
+}
+
+/**
+ * What the model is told about the mat when it writes a section (owner, 2026-11-24: give the model accurate
+ * information for its practice goals). In the mat's own terms, never a list of every reachable count: the
+ * pile practice starts from, its amount (which no trade changes), the counts each place passes through as it
+ * is traded, and the pile with every trade made. `now` is the pile when the section starts.
+ */
+export function baseTenFacts(start: readonly number[], now?: readonly number[]): Record<string, unknown> {
+  const state = baseTenState(start);
+  const names = ["loose_ones", "tens", "hundreds"] as const;
+  const pile = (values: readonly number[]) => Object.fromEntries(values.map((count, place) => [names[place], count]));
+  // Each place traded in turn, lowest first: the counts it passes through, from where it stands once the places
+  // below are traded (the tens of 26 ones and 9 tens pass 11 → 1).
+  const steps: Record<string, number[]> = {};
+  const current = [...state];
+  for (let place = 0; place < state.length - 1; place += 1) {
+    const passes = [current[place]!];
+    while (current[place]! >= 10) {
+      current[place] = current[place]! - 10;
+      current[place + 1] = current[place + 1]! + 1;
+      passes.push(current[place]!);
+    }
+    if (passes.length > 1) steps[`${names[place]}_as_traded`] = passes;
+  }
+  return {
+    practice_starts_from: pile(state),
+    amount: baseTenValue(state),
+    amount_never_changes: true,
+    ...steps,
+    fully_traded: pile(baseTenTraded(state)),
+    ...(now && now.some((count, place) => count !== state[place]) ? { pile_now: pile(baseTenState(now).map((_, place) => now[place] ?? 0)) } : {}),
+  };
 }
