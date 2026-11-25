@@ -1688,22 +1688,24 @@ function compileBaseTenTrade(
   allowParameterKeys(parameters(content), [], path);
   const numbers = content.numbers ?? [];
   const start = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
-  const fault = baseTenStartFault(start);
-  if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault);
   // The mat's numbers are its own: their range is the mat's and they change only by trades, so another visual
   // cannot also show them (review of #160: a number line's slider task became a tap task on the mat).
   const sharing = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "base_ten_trade"
       && ((action.content as LessonPlanVisualContent).numbers ?? []).some((number) => numbers.includes(number)));
   if (sharing) {
-    fail("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${(sharing.content as LessonPlanVisualContent).capability} visual shows one of them; show the pile on the mat only, or in words`);
+    fail("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${(sharing.content as LessonPlanVisualContent).capability} visual shows one of them; show the pile on the mat only, or in words`, "base_ten_trade");
   }
+  // Checked after sharing, so numbers borrowed from another visual are named as such, not as a pile too big
+  // (BT-32, check 3: the number line's 46, 30 and 7 were refused three times as "at most 19 tens").
+  const fault = baseTenStartFault(start);
+  if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "base_ten_trade");
   // One mat per lesson: a later mat on other numbers is refused at its own path, so the section that
   // wrote it is asked again, never the first one, which may already be playing (review of #157).
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "base_ten_trade");
   if (first && JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)) {
-    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one trading mat: use the same lesson numbers each time, or show another pile in words");
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one trading mat: use the same lesson numbers each time, or show another pile in words", "base_ten_trade");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text = BASE_TEN_TEXT[language];
