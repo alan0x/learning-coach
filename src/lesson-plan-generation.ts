@@ -2571,8 +2571,8 @@ function compilePrefix(
 /**
  * The outline without the course visuals of `capability` that `section` was to create, and the visuals related
  * to them; undefined when there are none, or when any of them belongs to an earlier, already published
- * section. Their reusable items go, later items move up, and the sections from `section` on no longer offer
- * the recipe. Owner, 2026-11-25: a picture that keeps breaking its own limits costs that picture, not the
+ * section. Their reusable items go, later items move up, the sections from `section` on no longer offer
+ * the recipe, and an earlier picture still in use just before `section` is offered to it. Owner, 2026-11-25: a picture that keeps breaking its own limits costs that picture, not the
  * lesson (BT-32, check 3: the trading mat in section 2 was refused three times and the lesson was lost).
  */
 export function withdrawSectionVisual(
@@ -2615,8 +2615,12 @@ export function withdrawSectionVisual(
     positionMap.set(index + 1, positionMap.size + 1);
     return [visual];
   });
+  // The section keeps a picture where the lesson has one: an earlier picture still in use just before it
+  // is offered to it too (BT-32: section 2 lost the mat and keeps section 1's number line).
   next.course_visuals = keptVisuals.map((visual) => ({
     ...visual,
+    ...(visual.create_section < section && visual.use_sections.includes(section - 1) && !visual.use_sections.includes(section)
+      ? { use_sections: [...visual.use_sections, section].sort((left, right) => left - right) } : {}),
     reusable_item: itemMap.get(`${visual.create_section}:${visual.reusable_item}`) ?? visual.reusable_item,
     ...(visual.related_visual === undefined ? {} : { related_visual: positionMap.get(visual.related_visual)! }),
   }));
@@ -2757,6 +2761,8 @@ export async function generateLessonPlanWithModel(
   let stableCameraObservation: CameraLessonObservation | undefined;
   const sectionErrors = new Map<number, unknown>();
   const sectionAttempts = new Map<number, number>();
+  // Sections written again after their picture was withdrawn, with what the request tells the model.
+  const withdrawnNotes = new Map<number, string>();
 
   const admissionCourse = (
     parsed: unknown,
@@ -3174,6 +3180,7 @@ export async function generateLessonPlanWithModel(
           course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
+          ...(withdrawnNotes.has(section) ? { removed_picture: withdrawnNotes.get(section) } : {}),
           ...(sectionErrors.has(section)
             ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) }
             : {}),
@@ -3265,11 +3272,12 @@ export async function generateLessonPlanWithModel(
           // that picture, outside the repair budget, so the lesson keeps its published sections. Section 1
           // is handled by acceptFirstSection, which asks for a new outline without it.
           const capability = error instanceof LessonPlanError ? error.capability : undefined;
-          const withdrawn = section > 1 && capability && !withdrawnSections.has(section) && outline
+          const withdrawn = section > 1 && capability && !withdrawnNotes.has(section) && outline
             ? withdrawSectionVisual(outline, section, capability, fixedRequestParts.length)
             : undefined;
           if (!withdrawn) throw error;
-          withdrawnSections.add(section);
+          // The outline's purposes and strategies were written around the picture and still name it.
+          withdrawnNotes.set(section, `The picture this section was planned around (${LESSON_PLAN_CAPABILITY_REGISTRY[capability as keyof typeof LESSON_PLAN_CAPABILITIES]?.required_features.join(", ") ?? capability}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
           outline = withdrawn;
           await options.on_rejected_part?.({
             label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error),
@@ -3308,7 +3316,6 @@ export async function generateLessonPlanWithModel(
   // that wanted two trading mats to compare 263 and 236 is planned again without the mat (BT-31, check 3).
   // At most two restarts, so a request can lose a number line and then a mat, never more.
   let outlineRestarts = 0;
-  const withdrawnSections = new Set<number>();
   const acceptFirstSection = async (): Promise<LessonPlanGenerationResult | undefined> => {
     try {
       await acceptSection(1, bootstrappedFirstSection);

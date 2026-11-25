@@ -41,12 +41,15 @@ test("BT-32: the mat section 2 could not draw is withdrawn; section 2 is written
     [{ section: 2, capability: "base_ten_trade", reason: "visual_limits_after_retries" }]);
   // The true fault is named (the numbers are the number line's), not "at most 19 tens".
   assert.match(removed[0].detail, /needs lesson numbers of its own/u);
-  // The extra request is outside the repair budget, offers no picture and carries no stale error.
+  // The extra request is outside the repair budget and carries no stale error. It offers section 1's number
+  // line, not the mat, and says the mat is gone: the outline's purposes still name the blocks.
   const last = JSON.parse(requests.at(-1).prompt);
-  assert.deepEqual(last.visuals_for_section, []);
+  assert.deepEqual(last.visuals_for_section.map((visual) => visual.capability), ["number_line_steps"]);
+  assert.match(last.removed_picture, /trade_ten_for_one.*do not mention it/u);
   assert.equal(last.previous_validation_error, undefined);
   assert.doesNotMatch(JSON.stringify(requests.at(-1).response_schema), /course_visual_creates/u);
-  // Nothing refers to the mat, and the published section 1 is unchanged.
+  // The program draws no mat, and the published section 1 is unchanged. (The stand-in reply is recorded
+  // text and still says 方块: what a live reply says to the note is measured on the dev-probe key.)
   assert.deepEqual(result.outline.course_visuals.map((visual) => visual.capability), ["number_line_steps"]);
   assert.doesNotMatch(JSON.stringify(result.lesson), /base_ten|trading/u);
   assert.equal(prefixes[0].completed_sections, 1);

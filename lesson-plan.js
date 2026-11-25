@@ -24523,6 +24523,7 @@ function withdrawSectionVisual(outline, section, capability2, expectedRequestPar
   });
   next.course_visuals = keptVisuals.map((visual) => ({
     ...visual,
+    ...visual.create_section < section && visual.use_sections.includes(section - 1) && !visual.use_sections.includes(section) ? { use_sections: [...visual.use_sections, section].sort((left, right) => left - right) } : {},
     reusable_item: itemMap.get(`${visual.create_section}:${visual.reusable_item}`) ?? visual.reusable_item,
     ...visual.related_visual === void 0 ? {} : { related_visual: positionMap.get(visual.related_visual) }
   }));
@@ -24637,6 +24638,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   let stableCameraObservation;
   const sectionErrors = /* @__PURE__ */ new Map();
   const sectionAttempts = /* @__PURE__ */ new Map();
+  const withdrawnNotes = /* @__PURE__ */ new Map();
   const admissionCourse = (parsed, observeCamera) => {
     if (!admissionInput) return { course: parsed };
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -24986,6 +24988,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
           course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
+          ...withdrawnNotes.has(section) ? { removed_picture: withdrawnNotes.get(section) } : {},
           ...sectionErrors.has(section) ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) } : {}
         }),
         response_schema: buildLessonPlanSectionDraftJsonSchema(outline, section, allowedNumberIndexes)
@@ -25060,9 +25063,9 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
           const capability2 = error instanceof LessonPlanError ? error.capability : void 0;
-          const withdrawn = section > 1 && capability2 && !withdrawnSections.has(section) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
+          const withdrawn = section > 1 && capability2 && !withdrawnNotes.has(section) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
           if (!withdrawn) throw error;
-          withdrawnSections.add(section);
+          withdrawnNotes.set(section, `The picture this section was planned around (${LESSON_PLAN_CAPABILITY_REGISTRY[capability2]?.required_features.join(", ") ?? capability2}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
           outline = withdrawn;
           await options.on_rejected_part?.({
             label: "lesson-plan-section",
@@ -25098,7 +25101,6 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     }
   };
   let outlineRestarts = 0;
-  const withdrawnSections = /* @__PURE__ */ new Set();
   const acceptFirstSection = async () => {
     try {
       await acceptSection(1, bootstrappedFirstSection);
