@@ -298,7 +298,7 @@
       "row": "T1",
       "language": "zh-CN",
       "kind": "question",
-      "teacher_picture": "十五个小方块散在桌上；十个拼成一根十条，剩五个：一个十和五个一。",
+      "teacher_picture": "十五个一散在桌上；十个一换成一个十，剩五个：一个十和五个一。",
       "prompt": "我有15个小方块，能拼成几个十？还剩几个？",
       "expect": {
         "lesson_pile": [
@@ -388,8 +388,8 @@
       "row": "T4",
       "language": "zh-CN",
       "kind": "question",
-      "teacher_picture": "三块百板、十一根十条、七个小方块；十根十条拼成一块百板：四个百、一个十、七个一。",
-      "prompt": "作业里有一道题：三块百板，十一根十条，七个小方块，这是多少？",
+      "teacher_picture": "三个百、十一个十、七个一；十个十换成一个百：四个百、一个十、七个一。",
+      "prompt": "作业里有一道题：3个百、11个十、7个一，这是多少？",
       "expect": {
         "lesson_pile": [
           3,
@@ -403,8 +403,8 @@
       "row": "T4",
       "language": "zh-CN",
       "kind": "detailed",
-      "teacher_picture": "十根十条和四个小方块；十根十条拼成一块百板：一个百、零个十、四个一，一百零四。",
-      "prompt": "老师说十个十就是一百。我手里有10根十条和4个小方块，这是多少？中间那位为什么写0？",
+      "teacher_picture": "十个十和四个一；十个十换成一个百：一个百、零个十、四个一，一百零四。",
+      "prompt": "老师说十个十就是一百。我手里有10个十和4个一，这是多少？中间那位为什么写0？",
       "expect": {
         "lesson_pile": [
           0,
@@ -418,7 +418,7 @@
       "row": "T5",
       "language": "zh-CN",
       "kind": "question",
-      "teacher_picture": "四块百板、没有十条、六个小方块：400 + 6。",
+      "teacher_picture": "四个百、零个十、六个一：400 + 6。",
       "prompt": "406写成几百加几十加几的形式是什么？",
       "expect": {
         "lesson_pile": [

@@ -15,7 +15,8 @@
 //   lesson's language (0023 amendment 3).
 // - Notes (what the lesson chose to teach; the owner judges lessons): whether the demonstration trades,
 //   whether it ends with no trade left ("correct but less complete"), whether the learner has a task on the
-//   mat, whether a typed question follows, and whether a near miss drew a mat.
+//   mat, whether a typed question follows, whether a near miss drew a mat, and in Chinese whether the blocks
+//   are named by their values (一, 十, 百; owner, 2026-11-25).
 // - Since the rebuild of 2026-11-23 the pile is lesson numbers and the model writes the trades and the
 //   practice, so the judge no longer checks a separate practice pile or the wording of prompts.
 //
@@ -153,6 +154,12 @@ export function judgeTradingMat(item, lesson) {
   note("a typed question follows", mat.tasks.some((task) => task.completion?.kind === "numeric_answer"), "no typed question in the lesson");
   const zh = /^zh(?:-|$)/i.test(String(lesson.lesson?.language ?? ""));
   check("the mat speaks the lesson's language", (mat.content.language ?? "en-US") === (zh ? "zh-CN" : "en-US"), `mat ${mat.content.language ?? "en-US"}, lesson ${lesson.lesson?.language}`);
+  // The blocks are named by their values, 一, 十, 百 (owner, 2026-11-25); a block name anywhere the learner
+  // reads is a note: narration, tasks, hints and labels (an objective count).
+  if (zh) {
+    const blockNames = [...new Set(JSON.stringify([lesson.steps, lesson.lesson?.tasks, lesson.lesson?.variables, lesson.close]).match(/十条|百板|十格条|百格板|散块/gu) ?? [])];
+    note("the blocks are named by their values", blockNames.length === 0, blockNames.join(" "));
+  }
   return done();
 }
 
