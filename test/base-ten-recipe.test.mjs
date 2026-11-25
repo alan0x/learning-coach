@@ -200,8 +200,38 @@ test("refusals name their reason", () => {
   assert.match(result["too-many"].message, /at most 59 loose ones/);
   assert.match(result.small.message, /a pile of 7 has no ten to make/);
   assert.match(result["one-number"].message, /two or three lesson numbers/);
-  assert.match(result.target.message, /trading on this pile makes the loose ones 6 or 16 or 36 or 46 or 56, never 5/);
-  assert.doesNotMatch(result.target.message, /slider|stop/);
+  // A practice target the mat cannot reach drops that task, recorded, and the lesson stays (owner, 2026-11-24:
+  // an LLM's goal can miss; tolerate it).
+  assert.ok(!result.target.error, result.target.message);
+  assert.deepEqual(result.target.adjustments.map((each) => [each.kind, each.reason]), [["activity_removed", "target_not_reachable_on_card"]]);
+  assert.match(result.target.adjustments[0].detail, /trading on this pile makes the loose ones 6 or 16 or 36 or 46 or 56, never 5/);
+  assert.deepEqual(result.target.lesson.lesson.tasks ?? [], []);
+});
+
+test("an unreachable practice target drops only that task; the typed question stays", () => {
+  const result = withTrial(compileScript([["drop", [29, 0], [[[1, 9]]], "zh-CN", [trading(10), typed(29)]]]));
+  assert.ok(!result.drop.error, result.drop.message);
+  assert.deepEqual(result.drop.lesson.lesson.tasks.map((task) => task.completion.kind), ["numeric_answer"]);
+  assert.deepEqual(result.drop.adjustments.map((each) => each.reason), ["target_not_reachable_on_card"]);
+});
+
+test("section facts state the mat in its own terms: where practice starts, the amount, each place as traded, the pile now", async () => {
+  const api = await import(new URL("../lesson-plan.js", import.meta.url));
+  const facts = api.SECTION_FACTS.base_ten_trade;
+  const numbers = [{ initial: 26, min: 0, max: 59, label: "ones" }, { initial: 9, min: 0, max: 34, label: "tens" }];
+  assert.deepEqual(facts({ section: 2, mode: "reuse", established: { capability: "base_ten_trade", numbers: [1, 2] }, numbers, state: new Map([[1, 6], [2, 11]]) }).facts, {
+    numbers: [1, 2], practice_starts_from: { loose_ones: 26, tens: 9, hundreds: 0 }, amount: 116, amount_never_changes: true,
+    loose_ones_as_traded: [26, 16, 6], tens_as_traded: [11, 1], fully_traded: { loose_ones: 6, tens: 1, hundreds: 1 },
+    pile_now: { loose_ones: 6, tens: 11, hundreds: 0 },
+  });
+  // Review of #169: the tens traded too. The pile now keeps the mat's own hundreds, which no lesson number follows.
+  assert.deepEqual(facts({ section: 2, mode: "reuse", established: { capability: "base_ten_trade", numbers: [1, 2] }, numbers, state: new Map([[1, 6], [2, 1]]) }).facts.pile_now,
+    { loose_ones: 6, tens: 1, hundreds: 1 });
+  // Nothing moved on a mat with a hundreds number of 0 under a hundred: no pile_now.
+  const small = [{ initial: 13 }, { initial: 0 }, { initial: 0 }];
+  assert.equal(facts({ section: 2, mode: "reuse", established: { capability: "base_ten_trade", numbers: [1, 2, 3] }, numbers: small, state: new Map([[1, 13], [2, 0], [3, 0]]) }).facts.pile_now, undefined);
+  // A section that draws the mat: which numbers it shows is the section's own choice, so no pile facts (review of #169).
+  assert.deepEqual(facts({ section: 1, mode: "create", numbers: [{ initial: 26 }, { initial: 9 }, { initial: 2 }], state: new Map() }), {});
 });
 
 test("the judge catches each kind of break", () => {
@@ -314,8 +344,10 @@ test("review of #160, round 2: a beat's 24 actions, a hundreds target with no co
   const actions = result.crowded.lesson.steps[0].beats[1].actions.map((action) => (action.do === "tap" ? `${action.tap}:${action.at}` : "fill"));
   assert.deepEqual(actions, [...Array(10).fill("gather:ones"), "make:ones", "fill", "make:ones", "fill", "make:ones", "fill", "make:tens"]);
   assert.deepEqual(result.crowded.verdict.checks.filter((check) => !check.pass && !/learner|task|typed/.test(check.check)), []);
-  // A hundreds number of 0 has no column: animating it to 0 changes nothing, and a target other than 0 is refused.
-  assert.match(result["zero-hundreds-target"].message, /its hundreds stay 0/);
+  // A hundreds number of 0 has no column: animating it to 0 changes nothing, and a target other than 0 drops
+  // that task, recorded, and keeps the lesson (owner, 2026-11-24).
+  assert.deepEqual(result["zero-hundreds-target"].adjustments.map((each) => [each.kind, each.reason]), [["activity_removed", "target_not_reachable_on_card"]]);
+  assert.match(result["zero-hundreds-target"].adjustments[0].detail, /its hundreds stay 0/);
   // That no-change step does not stop the ones' first trade being tapped out (review, round 3).
   const beside = withTrial(compileScript([["beside-zero", [13, 0, 0], [[[1, 3], [3, 0]]], "en-US"]]));
   assert.equal(beside["beside-zero"].lesson.steps[0].beats[1].actions.filter((action) => action.do === "tap" && action.tap === "gather").length, 10);
