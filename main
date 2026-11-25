@@ -7525,7 +7525,9 @@ var v0_1_schema_default = {
               properties: {
                 kind: { const: "card_fact" },
                 node: { $ref: "#/$defs/alias" },
-                fact: { enum: ["no_trade_left"] }
+                fact: { enum: ["no_trade_left", "count"] },
+                at: { enum: ["ones", "tens", "hundreds"] },
+                value: { type: "integer", minimum: 0 }
               }
             },
             {
@@ -8698,6 +8700,8 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "student-tasks:numeric_answer": "0.5.0",
   // Decision 0023: the learner taps a card and says "done"; an older player has no taps or card facts.
   "student-tasks:card_fact": "0.14.0",
+  // Decision 0023 amendment 5: a count the learner taps the card to; an older player knows only no_trade_left.
+  "student-tasks:card_fact:count": "0.15.0",
   // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
   "student-tasks:numeric_row": "0.14.0",
   // The lesson taps a card by the card's rules (a demonstration); an older player does not know the action.

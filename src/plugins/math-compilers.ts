@@ -5,12 +5,12 @@ import {
   buildNumberLine, buildUnitCircle, buildUnitSquareArray, rearrangementRecipe, NUMBER_LINE_LIMITS,
   buildSolid, describeSolid, solidHasMeasure, solidUnfolds,
   buildFractionModel, FRACTION_MODEL_LIMITS,
-  buildBaseTenTrade, validateBaseTenTradeContent, BASE_TEN_TRADE_LIMITS,
+  buildBaseTenTrade, validateBaseTenTradeContent, BASE_TEN_TRADE_LIMITS, baseTenMat, baseTenTapReachable,
   type BuiltRecipe, type RearrangementConstruction, type Solid, type SolidMeasureKind,
 } from "octos-lesson-language/plugin-math";
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
-import { baseTenSliderTask, baseTenStartFault, baseTenState } from "./base-ten-moves.js";
+import { baseTenStartFault, baseTenState, baseTenTapTask } from "./base-ten-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
@@ -1690,7 +1690,7 @@ function compileBaseTenTrade(
   const start = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
   const fault = baseTenStartFault(start);
   if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault);
-  // The mat's numbers are its own: their range is the mat's and their slider makes trades, so another visual
+  // The mat's numbers are its own: their range is the mat's and they change only by trades, so another visual
   // cannot also show them (review of #160: a number line's slider task became a tap task on the mat).
   const sharing = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
     .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "base_ten_trade"
@@ -1762,17 +1762,20 @@ function compileBaseTenTrade(
         return actions;
       },
       task(position, value, end) {
-        // The model's slider task, on the mat's own slider (0023 amendment 4; owner, 2026-11-23: every
-        // component has sliders). The mat starts again from the lesson's pile, trays empty (or, where that
-        // pile already shows the value, from the pile the lesson ends with); each stop of the slider is one
-        // trade, so the learner makes the trades and the amount never changes.
-        const own = baseTenSliderTask(state, position, value, end);
-        if (!("slider" in own)) return own;
+        // The model's practice is a target on the data, "the ones end at 6" (owner, 2026-11-24: the model
+        // never names a control). The learner reaches it by tapping the mat, by its own rules (0023
+        // amendment 5): the mat starts again from the lesson's pile, trays empty (or, where that pile already
+        // shows the value, from the pile the lesson ends with), and the count is judged when they say done.
+        const reach = (pile: readonly number[]) => baseTenTapReachable(baseTenMat({
+          columns, places: pile.map((count, place) => ({ as: BASE_TEN_PLACE_NAMES[place]!, count, ...(place < columns - 1 ? { tray: 0 } : {}) })),
+        })).map((mat) => mat.counts);
+        const own = baseTenTapTask(state, position, value, end, reach);
+        if (!("start" in own)) return own;
         return {
           task: {
             start: { kind: "practice", variables: [...counts, ...trays], values: Object.fromEntries([...counts.map((as, place) => [as, own.start[place]!]), ...trays.map((as) => [as, 0])]) },
-            allowed_operations: [{ kind: "variable_change", variable: counts[own.slider]!, controls: ["slider"] }],
-            completion: { kind: "expression_target", expression: counts[own.slider]!, value: own.target, tolerance: 0.5 },
+            allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
+            completion: { kind: "card_fact", node: base, fact: "count", at: BASE_TEN_PLACE_NAMES[position]!, value },
           },
         };
       },

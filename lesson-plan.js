@@ -7531,7 +7531,9 @@ var v0_1_schema_default = {
               properties: {
                 kind: { const: "card_fact" },
                 node: { $ref: "#/$defs/alias" },
-                fact: { enum: ["no_trade_left"] }
+                fact: { enum: ["no_trade_left", "count"] },
+                at: { enum: ["ones", "tens", "hundreds"] },
+                value: { type: "integer", minimum: 0 }
               }
             },
             {
@@ -9028,6 +9030,24 @@ function applyBaseTenTap(mat, tap) {
   const counts = set(set(mat.counts, p, mat.counts[p] - 1), p - 1, mat.counts[p - 1] + 10);
   return { ok: true, mat: { ...mat, counts, trays: set(mat.trays, p - 1, 10) } };
 }
+function baseTenTapReachable(mat) {
+  const key = (state) => `${state.counts.join(",")}/${state.trays.join(",")}`;
+  const seen = /* @__PURE__ */ new Set([key(mat)]);
+  const found = [mat];
+  const kinds = ["gather", "ungather", "make", "break"];
+  for (let i = 0; i < found.length; i += 1) {
+    for (let place5 = 0; place5 < mat.columns; place5 += 1) {
+      for (const kind of kinds) {
+        const result = applyBaseTenTap(found[i], { kind, place: place5 });
+        if (!result.ok || seen.has(key(result.mat)))
+          continue;
+        seen.add(key(result.mat));
+        found.push(result.mat);
+      }
+    }
+  }
+  return found;
+}
 var drawnMost = (columns, p) => columns === 2 && p === 1 ? 9 : BASE_TEN_TRADE_LIMITS.drawn[p];
 function baseTenBoundField(raw, alias) {
   const content = raw;
@@ -9312,6 +9332,8 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   "student-tasks:numeric_answer": "0.5.0",
   // Decision 0023: the learner taps a card and says "done"; an older player has no taps or card facts.
   "student-tasks:card_fact": "0.14.0",
+  // Decision 0023 amendment 5: a count the learner taps the card to; an older player knows only no_trade_left.
+  "student-tasks:card_fact:count": "0.15.0",
   // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
   "student-tasks:numeric_row": "0.14.0",
   // The lesson taps a card by the card's rules (a demonstration); an older player does not know the action.
@@ -9719,8 +9741,13 @@ function validateCardStudentTask(task, path, registry, cards, declarations, star
   const content = cards.get(completion.node);
   if (!content)
     fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/node`, "A card_fact task reads a base_ten_trade card");
-  if (completion.fact !== "no_trade_left")
+  if (completion.fact !== "no_trade_left" && completion.fact !== "count")
     fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/fact`, `Unsupported card fact '${String(completion.fact)}'`);
+  for (const key of Object.keys(completion)) {
+    if (!["kind", "node", "fact", ...completion.fact === "count" ? ["at", "value"] : []].includes(key)) {
+      fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/${key}`, `Unknown field '${key}' of a ${completion.fact} card fact`);
+    }
+  }
   requireArray(task.allowed_operations, `${path}/allowed_operations`);
   const operations = task.allowed_operations;
   const count = (kind) => operations.filter((operation) => operation?.kind === kind).length;
@@ -9746,7 +9773,26 @@ function validateCardStudentTask(task, path, registry, cards, declarations, star
       fail("OLL_INVALID_PHASE_START", `${path}/start/variables`, `A card task's practice pile sets every count and tray; missing ${missing.join(", ")}`);
     validateBaseTenTradeContent(baseTenContentAt(content, variables, { ...initial, ...startValues }), "$", failAt("The practice pile is not a starting pile", `${path}/start/values`));
   }
+  if (completion.fact === "count")
+    validateCardCountTarget(completion, path, baseTenMat(baseTenContentAt(content, variables, { ...initial, ...startValues })));
   validateTaskFeedback(task, path);
+}
+function validateCardCountTarget(completion, path, pile) {
+  const place5 = BASE_TEN_TRADE_PLACES.indexOf(completion.at);
+  if (place5 < 0 || place5 >= pile.columns) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/at`, `A count is of a place the card has: ${BASE_TEN_TRADE_PLACES.slice(0, pile.columns).join(", ")}`);
+  }
+  const value2 = completion.value;
+  if (typeof value2 !== "number" || !Number.isInteger(value2) || value2 < 0) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/value`, "A count is a whole number");
+  }
+  if (pile.counts[place5] === value2) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/value`, `The practice pile already has ${value2} ${completion.at}`);
+  }
+  const reached = [...new Set(baseTenTapReachable(pile).map((mat) => mat.counts[place5]))].sort((a, b) => a - b);
+  if (!reached.includes(value2)) {
+    fail("OLL_INVALID_STUDENT_TASK", `${path}/completion/value`, `Tapping this pile makes ${reached.join(" or ")} ${completion.at}, never ${value2}`);
+  }
 }
 function validateRowStudentTask(task, path, registry) {
   resolveLocal(registry, task.anchor, `${path}/anchor`, ["node"]);
@@ -14718,11 +14764,11 @@ var MATH_RECIPES = {
     required_model_schema_parameters: [],
     semantic_parameters: [],
     output_kinds: ["base_ten_trade"],
-    // Every component's numbers have a slider (owner, 2026-11-23). The ones (and tens on a three-column mat)
-    // slide in steps of ten, each stop one trade by the card's rules (OLL 0023 amendment 4).
-    student_controls: ["slider"],
+    // No control: the learner works the mat by its own taps (OLL 0023 amendment 5; owner, 2026-11-24: the
+    // model never names a control).
+    student_controls: [],
     required_features: ["trade_ten_for_one"],
-    model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF0C\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF0C\u9898\u76EE\u6709\u767E\u6216\u4E00\u5171\u6EE1100\u65F6\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u767E\u51990\uFF09\uFF0C\u7167\u9898\u76EE\u5199\u3002\u4E00\u5171\u6EE1100\u65F6\u753B\u677F\u6709\u767E\u4F4D\uFF1A\u5341\u6EE1\u5341\u4E5F\u8981\u6362\u6210\u4E00\u4E2A\u767E\uFF0C\u901A\u5E38\u8BB2\u5230\u6BCF\u4E00\u4F4D\u90FD\u4E0D\u5230\u5341\u4E3A\u6B62\u3002\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u6362\u767E\u5C31\u628A\u201C\u5341\u201D\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u598211\u52301\uFF09\uFF0C\u767E\u81EA\u5DF1\u8DDF\u7740\u591A\u3002\u5B69\u5B50\u7684\u6ED1\u5757\u5728\u201C\u4E00\u201D\u4E0A\uFF08\u6709\u767E\u4F4D\u65F6\u201C\u5341\u201D\u4E5F\u6709\uFF09\uFF0C\u6BCF\u6ED1\u4E00\u683C\u5C31\u662F\u6362\u4E00\u6B21\u3002\u8BFE\u540E\u7EC3\u4E60\u65F6\u65B9\u5757\u56DE\u5230\u8BFE\u7A0B\u5F00\u5934\u90A3\u4E00\u5806\uFF1B\u90A3\u4E00\u5806\u5DF2\u7ECF\u662F\u76EE\u6807\u65F6\uFF0C\u4ECE\u8BFE\u7A0B\u7ED3\u675F\u65F6\u90A3\u4E00\u5806\u5F00\u59CB\uFF0C\u6240\u4EE5\u201C\u8C03\u56DE\u201D\u5F00\u5934\u7684\u4E2A\u6570\u4E5F\u53EF\u4EE5\u3002\u7EC3\u4E60\u8BA9\u5B69\u5B50\u628A\u201C\u4E00\u201D\u6216\u201C\u5341\u201D\u6ED1\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF1B\u53E6\u51FA\u65B0\u9898\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757"
+    model_guidance: "\u65B9\u5757\u6362\u4E00\u6362\uFF1A\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF0C\u5341\u4E2A\u5341\u6362\u4E00\u4E2A\u767E\u3002\u6570\u503C\u4F9D\u6B21\u662F\u6563\u7684\u4E00\u3001\u5341\u7684\u4E2A\u6570\uFF0C\u9898\u76EE\u6709\u767E\u6216\u4E00\u5171\u6EE1100\u65F6\u518D\u52A0\u767E\u7684\u4E2A\u6570\uFF08\u6CA1\u6709\u767E\u51990\uFF09\uFF0C\u7167\u9898\u76EE\u5199\u3002\u4E00\u5171\u6EE1100\u65F6\u753B\u677F\u6709\u767E\u4F4D\uFF1A\u5341\u6EE1\u5341\u4E5F\u8981\u6362\u6210\u4E00\u4E2A\u767E\uFF0C\u901A\u5E38\u8BB2\u5230\u6BCF\u4E00\u4F4D\u90FD\u4E0D\u5230\u5341\u4E3A\u6B62\u3002\u8BB2\u5230\u4EA4\u6362\u7684\u90A3\u4E00\u523B\u628A\u201C\u4E00\u201D\u7684\u6570\u503C\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u4E00\u6B21\u5C11\u6574\u5341\uFF0C\u598226\u52306\uFF09\uFF0C\u5341\u81EA\u5DF1\u8DDF\u7740\u591A\uFF1B\u6362\u767E\u5C31\u628A\u201C\u5341\u201D\u52A8\u753B\u5230\u6362\u5B8C\u7684\u4E2A\u6570\uFF08\u598211\u52301\uFF09\uFF0C\u767E\u81EA\u5DF1\u8DDF\u7740\u591A\u3002\u8BFE\u540E\u7EC3\u4E60\u65F6\u65B9\u5757\u56DE\u5230\u8BFE\u7A0B\u5F00\u5934\u90A3\u4E00\u5806\uFF0C\u5B69\u5B50\u81EA\u5DF1\u6362\uFF1B\u90A3\u4E00\u5806\u5DF2\u7ECF\u662F\u76EE\u6807\u65F6\uFF0C\u4ECE\u8BFE\u7A0B\u7ED3\u675F\u65F6\u90A3\u4E00\u5806\u5F00\u59CB\uFF0C\u6240\u4EE5\u201C\u6362\u56DE\u201D\u5F00\u5934\u7684\u4E2A\u6570\u4E5F\u53EF\u4EE5\u3002\u7EC3\u4E60\u7684\u76EE\u6807\u662F\u6362\u5B8C\u540E\u201C\u4E00\u201D\u6216\u201C\u5341\u201D\u7684\u4E2A\u6570\uFF08\u5982\u6563\u7684\u4E00\u53D8\u62106\u4E2A\uFF09\uFF1B\u53E6\u51FA\u65B0\u9898\u7528\u6587\u5B57\u8BF4\u4E00\u5806\u65B0\u7684\u65B9\u5757"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -16782,52 +16828,28 @@ function baseTenMoves(state, moves) {
   }
   return { steps };
 }
-function baseTenSliderTask(state, position, value2, end = state) {
+function baseTenTapTask(state, position, value2, end, reach) {
   const names = ["loose ones", "tens", "hundreds"];
   if (!whole(value2)) return { refuse: "blocks are counted in whole numbers" };
   if (position >= state.length) return value2 === 0 ? { drop: "this pile has no hundreds column" } : { refuse: "this pile has tens and ones only: its hundreds stay 0" };
   const columns = state.length;
-  const most = (place5, limits) => columns === 2 && place5 === 1 ? 9 : limits[place5];
-  const fits = (pile, limits) => pile.every((count, place5) => count >= 0 && count <= most(place5, limits));
-  const sliders = [position, position - 1].filter((place5) => place5 >= 0 && place5 < columns - 1);
-  const trade = (pile, slider, stops) => {
-    const next = [...pile];
-    next[slider] = pile[slider] - 10 * stops;
-    next[slider + 1] = pile[slider + 1] + stops;
-    return next;
-  };
-  const reached = /* @__PURE__ */ new Set();
-  const search = (starts, directions) => {
-    for (const slider of sliders) {
-      for (const start of starts) {
-        if (!fits(start, BASE_TEN_START) || start[position] === value2) continue;
-        for (const direction of directions) {
-          for (let stops = 1; ; stops += 1) {
-            const pile = trade(start, slider, direction * stops);
-            if (!fits(pile, BASE_TEN_DRAWN)) break;
-            reached.add(pile[position]);
-            if (pile[position] === value2) return { slider, target: pile[slider], start };
-          }
-        }
-      }
-    }
-    return void 0;
-  };
+  const fits = (pile) => pile.every((count, place5) => whole(count) && count <= (columns === 2 && place5 === 1 ? 9 : BASE_TEN_START[place5]));
+  const counts = (pile) => [...new Set(reach(pile).map((each) => each[position]))].sort((a, b) => a - b);
+  const from = (pile) => fits(pile) && pile[position] !== value2 && counts(pile).includes(value2);
   if (state[position] !== value2) {
-    const starts = [[...state]];
-    const onesTraded = [state[0] % 10, state[1] + Math.floor(state[0] / 10), ...state.slice(2)];
-    if (columns === 3 && onesTraded[1] !== state[1] && fits(onesTraded, BASE_TEN_START)) starts.push(onesTraded);
-    const found = search(starts, [1]);
-    if (found) return found;
-    const values = [...reached].filter((each) => each !== state[position]).sort((a, b) => a - b);
-    return { refuse: values.length ? `on the mat each stop of a slider is one trade, so the ${names[position]} can be ${values.join(" or ")}, not ${value2}` : `the ${names[position]} cannot change by trading on this pile: they stay ${state[position]}` };
+    if (from(state)) return { start: [...state] };
+    const values = counts(state).filter((each) => each !== state[position]);
+    return { refuse: values.length ? `trading on this pile makes the ${names[position]} ${values.join(" or ")}, never ${value2}` : `the ${names[position]} cannot change by trading on this pile: they stay ${state[position]}` };
   }
-  const fromEnd = search([[...end]], [1, -1]);
-  if (fromEnd) return fromEnd;
-  const near3 = sliders.flatMap((slider) => [1, -1].map((stops) => trade(state, slider, stops)));
-  const fromNear = search(near3.filter((pile) => fits(pile, BASE_TEN_START)), [1, -1]);
-  if (fromNear) return fromNear;
-  return { drop: `the ${names[position]} are already ${value2}, and no pile a trade away can slide back to it` };
+  if (from(end)) return { start: [...end] };
+  const near3 = [];
+  for (let place5 = 0; place5 < columns; place5 += 1) {
+    if (place5 < columns - 1 && state[place5] >= 10) near3.push(state.map((count, q) => q === place5 ? count - 10 : q === place5 + 1 ? count + 1 : count));
+    if (place5 > 0 && state[place5] >= 1) near3.push(state.map((count, q) => q === place5 ? count - 1 : q === place5 - 1 ? count + 10 : count));
+  }
+  const found = near3.find(from);
+  if (found) return { start: found };
+  return { drop: `the ${names[position]} are already ${value2}, and no pile a trade away can be traded back to it` };
 }
 
 // src/plugins/math-hooks.ts
@@ -16932,10 +16954,10 @@ var MATH_HOOKS = {
     }
   },
   base_ten_trade: {
-    // The mat's counts run from 0 to the most it draws (OLL 0023's tap rule). Every component's numbers
-    // have a slider (owner, 2026-11-23): a place with a tray (ones; tens on a three-column mat) slides in
-    // steps of ten, each stop one trade made by the card's own rules (0023 amendment 4). The highest place
-    // has no slider. The starting values stay as the model wrote them; the compiler checks them.
+    // The mat's counts run from 0 to the most it draws (OLL 0023's tap rule). They have no control: the
+    // learner works the mat by its own taps (0023 amendment 5; owner, 2026-11-24: the model never names a
+    // control, and the slider of amendment 4 is gone from the mat). The starting values stay as the model
+    // wrote them; the compiler checks them.
     fit_numbers(content, plan) {
       const numbers = content.numbers ?? [];
       const definitions = numbers.map((number) => plan.numbers?.[number - 1]);
@@ -16944,8 +16966,7 @@ var MATH_HOOKS = {
       definitions.forEach((definition, place5) => {
         definition.min = 0;
         definition.max = columns === 2 && place5 === 1 ? 9 : BASE_TEN_DRAWN[place5] ?? 0;
-        if (place5 < columns - 1) definition.student_control = { kind: "slider", step: 10 };
-        else delete definition.student_control;
+        delete definition.student_control;
       });
       return new Map(numbers.map((number) => [number, 0]));
     },
@@ -20485,13 +20506,17 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
         return actions;
       },
       task(position, value2, end) {
-        const own = baseTenSliderTask(state, position, value2, end);
-        if (!("slider" in own)) return own;
+        const reach = (pile) => baseTenTapReachable(baseTenMat({
+          columns,
+          places: pile.map((count, place5) => ({ as: BASE_TEN_PLACE_NAMES[place5], count, ...place5 < columns - 1 ? { tray: 0 } : {} }))
+        })).map((mat) => mat.counts);
+        const own = baseTenTapTask(state, position, value2, end, reach);
+        if (!("start" in own)) return own;
         return {
           task: {
             start: { kind: "practice", variables: [...counts, ...trays], values: Object.fromEntries([...counts.map((as, place5) => [as, own.start[place5]]), ...trays.map((as) => [as, 0])]) },
-            allowed_operations: [{ kind: "variable_change", variable: counts[own.slider], controls: ["slider"] }],
-            completion: { kind: "expression_target", expression: counts[own.slider], value: own.target, tolerance: 0.5 }
+            allowed_operations: [{ kind: "card_tap", node: base }, { kind: "card_submit" }],
+            completion: { kind: "card_fact", node: base, fact: "count", at: BASE_TEN_PLACE_NAMES[position], value: value2 }
           }
         };
       }
@@ -22509,7 +22534,7 @@ var SECTION_SYSTEM_PROMPT = [
   `- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002`,
   promptSlot("section.formulas"),
   `- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002`,
-  `- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\uFF0C\u5E76\u8BF4\u660E\u662F\u8BFE\u540E\u53BB\u505A\uFF08\u5982\u201C\u4E0B\u8BFE\u540E\u4F60\u6765\u8BD5\u8BD5\u201D\uFF09\uFF1A\u8BFE\u4E2D\u6ED1\u6746\u4E0D\u80FD\u52A8\uFF0C\u4E0D\u8BF4\u201C\u73B0\u5728\u8BD5\u8BD5\u201D\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u6ED1\u6746\u6240\u5728\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002`,
+  `- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\uFF0C\u5E76\u8BF4\u660E\u662F\u8BFE\u540E\u53BB\u505A\uFF08\u5982\u201C\u4E0B\u8BFE\u540E\u4F60\u6765\u8BD5\u8BD5\u201D\uFF09\uFF1A\u8BFE\u4E2D\u5B66\u751F\u8FD8\u4E0D\u80FD\u52A8\u624B\uFF0C\u4E0D\u8BF4\u201C\u73B0\u5728\u8BD5\u8BD5\u201D\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u8FD9\u4E2A\u6570\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u8FD9\u4E2A\u6570\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002`,
   `- \u601D\u8003\u9898\u8BFE\u4E2D\u53EA\u95EE\u4E0D\u7B54\uFF1B\u9898\u4E0E\u53C2\u8003\u7B54\u6848\u5199\u5165 reflection_activities\uFF0C\u8BFE\u540E\u4EE5\u6536\u8D77\u7684\u7B54\u6848\u5361\u7247\u51FA\u73B0\u3002`,
   `- \u672C\u8282\u8BB2\u4E86\u80FD\u7B97\u51FA\u786E\u5B9A\u6570\u503C\u7684\u5185\u5BB9\uFF08\u8BA1\u7B97\u3001\u6362\u7B97\u3001\u8BFB\u6570\u3001\u4EE3\u5165\u6C42\u503C\uFF09\u65F6\uFF0C\u5199 1 \u9053 answer_activities \u8BA9\u5B66\u751F\u8BFE\u540E\u586B\u6570\uFF1A\u7528\u8BFE\u4E2D\u6CA1\u7B97\u8FC7\u7684\u65B0\u6570\uFF0C\u8BFE\u4E2D\u4E0D\u8BF4\u7B54\u6848\u3002${ANSWER_ACTIVITY_RULE}`,
   promptSlot("section.bounds"),
@@ -22529,7 +22554,7 @@ var BOOTSTRAP_FIRST_SECTION_PROMPT = [
   `- number_activities \u53EA\u9009\u6570\u503C\u4F4D\u7F6E\u548C\u76EE\u6807\u503C\uFF1Bscene3d_activities \u53EA\u9009\u9884\u8BBE\u89C6\u89D2\u3002\u63A7\u4EF6\u3001\u5BB9\u5DEE\u3001\u63D0\u793A\u51FA\u73B0\u6B21\u6570\u3001\u76F8\u673A\u548C\u8FD0\u884C\u65F6\u5F15\u7528\u7531\u7A0B\u5E8F\u751F\u6210\u3002`,
   promptSlot("section.formulas"),
   `- animations \u53EA\u5199\u6570\u503C\u3001\u76EE\u6807\u548C\u8282\u594F\uFF1B\u7A0B\u5E8F\u751F\u6210\u7F13\u52A8\u3002\u8FDE\u7EED\u6F14\u793A\u627F\u63A5\u5F53\u524D\u72B6\u6001\uFF1B\u72EC\u7ACB\u91CD\u6F14\u624D\u5728 moment \u5199 restart_numbers\uFF08\u6570\u503C\u4F4D\u7F6E\u5217\u8868\uFF0C\u8D77\u70B9\u7531\u7A0B\u5E8F\u53D6\u521D\u503C\uFF09\uFF0C\u4E0D\u8981\u6BCF\u6BB5\u90FD\u91CD\u7F6E\uFF1B\u76EE\u6807\u5DF2\u662F\u5F53\u524D\u503C\u5219\u65E0\u9700\u52A8\u753B\u3002`,
-  `- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\uFF0C\u5E76\u8BF4\u660E\u662F\u8BFE\u540E\u53BB\u505A\uFF08\u5982\u201C\u4E0B\u8BFE\u540E\u4F60\u6765\u8BD5\u8BD5\u201D\uFF09\uFF1A\u8BFE\u4E2D\u6ED1\u6746\u4E0D\u80FD\u52A8\uFF0C\u4E0D\u8BF4\u201C\u73B0\u5728\u8BD5\u8BD5\u201D\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u6ED1\u6746\u6240\u5728\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u6ED1\u6746\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002`,
+  `- \u8BFE\u4E2D\u6559\u5E08\u6F14\u793A\u5E76\u914D\u52A8\u753B\uFF0C\u4E0D\u5199\u201C\u8BF7\u4F60\u8C03\u5230 4\u201D\u201C\u8BF7\u4F60\u62D6\u52A8\u201D\uFF1B\u5B66\u751F\u64CD\u4F5C\u7559\u7ED9\u8BFE\u540E number_activities\uFF0C\u9080\u8BF7\u53EA\u653E\u6700\u540E\u4E00\u4E2A moment\uFF0C\u5E76\u8BF4\u660E\u662F\u8BFE\u540E\u53BB\u505A\uFF08\u5982\u201C\u4E0B\u8BFE\u540E\u4F60\u6765\u8BD5\u8BD5\u201D\uFF09\uFF1A\u8BFE\u4E2D\u5B66\u751F\u8FD8\u4E0D\u80FD\u52A8\u624B\uFF0C\u4E0D\u8BF4\u201C\u73B0\u5728\u8BD5\u8BD5\u201D\u3002\u9080\u8BF7\u91CC\u8BF4\u7684\u76EE\u6807\u503C\u5FC5\u987B\u5C31\u662F number_activities \u7684\u76EE\u6807\u503C\uFF0C\u4E14\u4E0D\u540C\u4E8E\u8BFE\u7A0B\u7ED3\u675F\u65F6\u8FD9\u4E2A\u6570\u7684\u503C\uFF08\u4E0D\u5199\u201C\u8C03\u56DE 0\u201D\u8FD9\u7C7B\u5DF2\u7ECF\u8FBE\u5230\u7684\u76EE\u6807\uFF09\u3002\u53EA\u6709\u8BFE\u4E2D\u8FD9\u4E2A\u6570\u786E\u5B9E\u5230\u8FC7\u7684\u503C\u624D\u80FD\u8BF4\u201C\u8C03\u56DE\u201D\u3002\u6709\u591A\u4E2A number_activities \u65F6\u5B66\u751F\u6309\u987A\u5E8F\u5B8C\u6210\uFF0C\u524D\u4E00\u9879\u7ED3\u675F\u65F6\u7684\u6570\u503C\u4F1A\u4FDD\u7559\uFF1B\u540E\u4E00\u9879\u7684\u8BF4\u660E\u3001\u63D0\u793A\u548C\u5B8C\u6210\u8BED\u6309\u90A3\u65F6\u5404\u6570\u503C\u7684\u5B9E\u9645\u72B6\u6001\u8BA1\u7B97\uFF0C\u4E0D\u6309\u521D\u503C\u7B97\u3002`,
   promptSlot("section.bounds"),
   promptSlot("section.linked_numbers", "\u8054\u52A8\u56FE\u5F15\u7528\u540C\u4E00 numbers\uFF1B"),
   promptSlot("section.constructions")
