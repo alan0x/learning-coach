@@ -15522,8 +15522,8 @@ function compileText(plan, source, values) {
 }
 
 // src/recipe-kit.ts
-function fail2(code, path, message) {
-  throw new LessonPlanError(code, path, message);
+function fail2(code, path, message, capability2) {
+  throw new LessonPlanError(code, path, message, capability2);
 }
 function pad2(index) {
   return String(index).padStart(2, "0");
@@ -20472,15 +20472,15 @@ function compileBaseTenTrade(base, content, role, placement, plan, path) {
   allowParameterKeys(parameters(content), [], path);
   const numbers = content.numbers ?? [];
   const start = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
-  const fault = baseTenStartFault(start);
-  if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault);
   const sharing = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability !== "base_ten_trade" && (action.content.numbers ?? []).some((number) => numbers.includes(number)));
   if (sharing) {
-    fail2("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${sharing.content.capability} visual shows one of them; show the pile on the mat only, or in words`);
+    fail2("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the trading mat needs lesson numbers of its own: the ${sharing.content.capability} visual shows one of them; show the pile on the mat only, or in words`, "base_ten_trade");
   }
+  const fault = baseTenStartFault(start);
+  if (fault) fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "base_ten_trade");
   const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions).find((action) => action.action === "create" && action.kind === "visual" && action.content.capability === "base_ten_trade");
   if (first && JSON.stringify(first.content.numbers ?? []) !== JSON.stringify(numbers)) {
-    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one trading mat: use the same lesson numbers each time, or show another pile in words");
+    fail2("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one trading mat: use the same lesson numbers each time, or show another pile in words", "base_ten_trade");
   }
   const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
   const text5 = BASE_TEN_TEXT[language];
@@ -24487,6 +24487,61 @@ function compilePrefix(outline, drafts, options) {
   const prefixPlan = assembleLessonPlan(normalized.outline, normalized.drafts, options);
   return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
+function withdrawSectionVisual(outline, section, capability2, expectedRequestParts) {
+  const visuals = outline.course_visuals ?? [];
+  const dropped = new Set(visuals.flatMap((visual, index) => visual.capability === capability2 && visual.create_section === section ? [index + 1] : []));
+  if (!dropped.size) return void 0;
+  for (let changed = true; changed; ) {
+    changed = false;
+    visuals.forEach((visual, index) => {
+      if (!dropped.has(index + 1) && visual.related_visual !== void 0 && dropped.has(visual.related_visual)) {
+        dropped.add(index + 1);
+        changed = true;
+      }
+    });
+  }
+  if ([...dropped].some((position) => visuals[position - 1].create_section < section)) return void 0;
+  const next = structuredClone(outline);
+  const removedItems = new Set([...dropped].map((position) => `${visuals[position - 1].create_section}:${visuals[position - 1].reusable_item}`));
+  const itemMap = /* @__PURE__ */ new Map();
+  next.sections.forEach((entry, offset) => {
+    const kept = [];
+    (entry.reusable_items ?? []).forEach((item, itemOffset) => {
+      const key = `${offset + 1}:${itemOffset + 1}`;
+      if (removedItems.has(key)) return;
+      kept.push(item);
+      itemMap.set(key, kept.length);
+    });
+    if (entry.reusable_items) entry.reusable_items = kept;
+    if (offset + 1 >= section) entry.allowed_capabilities = entry.allowed_capabilities.filter((allowed) => allowed !== capability2);
+  });
+  const positionMap = /* @__PURE__ */ new Map();
+  const keptVisuals = visuals.flatMap((visual, index) => {
+    if (dropped.has(index + 1)) return [];
+    positionMap.set(index + 1, positionMap.size + 1);
+    return [visual];
+  });
+  next.course_visuals = keptVisuals.map((visual) => ({
+    ...visual,
+    reusable_item: itemMap.get(`${visual.create_section}:${visual.reusable_item}`) ?? visual.reusable_item,
+    ...visual.related_visual === void 0 ? {} : { related_visual: positionMap.get(visual.related_visual) }
+  }));
+  next.close.focus = next.close.focus.flatMap((reference) => {
+    if (reference.source !== "reusable") return [reference];
+    const item = itemMap.get(`${reference.section}:${reference.item}`);
+    return item === void 0 ? [] : [{ ...reference, item }];
+  });
+  if (!next.close.focus.length) {
+    const last = [...itemMap.entries()].at(-1);
+    if (!last) return void 0;
+    next.close.focus = [{ source: "reusable", section: Number(last[0].split(":")[0]), item: last[1] }];
+  }
+  try {
+    return validateLessonPlanOutline(next, expectedRequestParts);
+  } catch {
+    return void 0;
+  }
+}
 var OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
 var isOutlineOwnedFault = (error) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
 var outlineCapabilities = (outline) => new Set((outline.course_visuals ?? []).map((visual) => visual.capability));
@@ -25003,7 +25058,30 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         if (section === 1 && isOutlineOwnedFault(error)) throw error;
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
-        if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
+        if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
+          const capability2 = error instanceof LessonPlanError ? error.capability : void 0;
+          const withdrawn = section > 1 && capability2 && !withdrawnSections.has(section) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
+          if (!withdrawn) throw error;
+          withdrawnSections.add(section);
+          outline = withdrawn;
+          await options.on_rejected_part?.({
+            label: "lesson-plan-section",
+            section,
+            attempt: sectionAttempts.get(section) ?? 1,
+            error: rejectionDetails(error)
+          });
+          await options.on_program_adjustment?.({
+            kind: "visual_removed",
+            section,
+            capability: capability2,
+            reason: "visual_limits_after_retries",
+            detail: error instanceof Error ? error.message : String(error)
+          });
+          sectionErrors.delete(section);
+          sectionAttempts.set(section, maxAttempts - 1);
+          candidate = void 0;
+          continue;
+        }
         sectionErrors.set(section, error);
         await options.on_rejected_part?.({
           label: "lesson-plan-section",
@@ -25019,15 +25097,27 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       return;
     }
   };
-  let outlineRestarted = false;
+  let outlineRestarts = 0;
+  const withdrawnSections = /* @__PURE__ */ new Set();
   const acceptFirstSection = async () => {
     try {
       await acceptSection(1, bootstrappedFirstSection);
       return void 0;
     } catch (error) {
-      if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
-      outlineRestarted = true;
+      const capability2 = error instanceof LessonPlanError ? error.capability : void 0;
+      const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (sectionAttempts.get(1) ?? 0) >= maxAttempts;
+      if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
+      outlineRestarts += 1;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
+      if (spentOnPicture) {
+        await options.on_program_adjustment?.({
+          kind: "visual_removed",
+          section: 1,
+          capability: capability2,
+          reason: "visual_limits_after_retries",
+          detail: error instanceof Error ? error.message : String(error)
+        });
+      }
       if (outline) excludeFaulting(outline, error);
       outlineError = error;
       outline = void 0;
@@ -25254,5 +25344,6 @@ export {
   validateLessonPlan,
   validateLessonPlanOutline,
   validateNumericAnswerActivity,
-  validateTypedQuestion
+  validateTypedQuestion,
+  withdrawSectionVisual
 };

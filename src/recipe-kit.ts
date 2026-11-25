@@ -5,8 +5,9 @@ import { LessonPlanError, type JsonValue, type LessonPlan, type LessonPlanMathEx
 
 export type Parameters = Record<string, JsonValue>;
 
-export function fail(code: string, path: string, message: string): never {
-  throw new LessonPlanError(code, path, message);
+/** `capability` names the recipe whose own limits the plan broke, so generation can withdraw that picture. */
+export function fail(code: string, path: string, message: string, capability?: string): never {
+  throw new LessonPlanError(code, path, message, capability);
 }
 
 export function pad(index: number): string {
