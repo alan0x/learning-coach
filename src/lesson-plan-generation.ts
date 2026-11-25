@@ -16,6 +16,7 @@ import {
   matchLessonPlanCapability,
   validateLessonPlanOutline,
   type LessonPlanOutline,
+  type LessonPlanReusableItem,
   type LessonPlanAction,
   type LessonPlanMathExpression,
   type LessonPlanMathToken,
@@ -2567,6 +2568,79 @@ function compilePrefix(
   return compileAndValidateLessonPlan(prefixPlan, { ...options, construction_rules: "explicit-v1" });
 }
 
+/**
+ * The outline without the course visuals of `capability` that `section` was to create, and the visuals related
+ * to them; undefined when there are none, or when any of them belongs to an earlier, already published
+ * section. Their reusable items go, later items move up, the sections from `section` on no longer offer
+ * the recipe, and an earlier picture still in use just before `section` is offered to it. Owner, 2026-11-25: a picture that keeps breaking its own limits costs that picture, not the
+ * lesson (BT-32, check 3: the trading mat in section 2 was refused three times and the lesson was lost).
+ */
+export function withdrawSectionVisual(
+  outline: LessonPlanOutline,
+  section: number,
+  capability: string,
+  expectedRequestParts: number,
+): LessonPlanOutline | undefined {
+  const visuals = outline.course_visuals ?? [];
+  const dropped = new Set(visuals.flatMap((visual, index) => (
+    visual.capability === capability && visual.create_section === section ? [index + 1] : [])));
+  if (!dropped.size) return undefined;
+  for (let changed = true; changed;) {
+    changed = false;
+    visuals.forEach((visual, index) => {
+      if (!dropped.has(index + 1) && visual.related_visual !== undefined && dropped.has(visual.related_visual)) {
+        dropped.add(index + 1);
+        changed = true;
+      }
+    });
+  }
+  if ([...dropped].some((position) => visuals[position - 1]!.create_section < section)) return undefined;
+  const next = structuredClone(outline);
+  const removedItems = new Set([...dropped].map((position) => `${visuals[position - 1]!.create_section}:${visuals[position - 1]!.reusable_item}`));
+  const itemMap = new Map<string, number>();
+  next.sections.forEach((entry, offset) => {
+    const kept: LessonPlanReusableItem[] = [];
+    (entry.reusable_items ?? []).forEach((item, itemOffset) => {
+      const key = `${offset + 1}:${itemOffset + 1}`;
+      if (removedItems.has(key)) return;
+      kept.push(item);
+      itemMap.set(key, kept.length);
+    });
+    if (entry.reusable_items) entry.reusable_items = kept;
+    if (offset + 1 >= section) entry.allowed_capabilities = entry.allowed_capabilities.filter((allowed) => allowed !== capability);
+  });
+  const positionMap = new Map<number, number>();
+  const keptVisuals = visuals.flatMap((visual, index) => {
+    if (dropped.has(index + 1)) return [];
+    positionMap.set(index + 1, positionMap.size + 1);
+    return [visual];
+  });
+  // The section keeps a picture where the lesson has one: an earlier picture still in use just before it
+  // is offered to it too (BT-32: section 2 lost the mat and keeps section 1's number line).
+  next.course_visuals = keptVisuals.map((visual) => ({
+    ...visual,
+    ...(visual.create_section < section && visual.use_sections.includes(section - 1) && !visual.use_sections.includes(section)
+      ? { use_sections: [...visual.use_sections, section].sort((left, right) => left - right) } : {}),
+    reusable_item: itemMap.get(`${visual.create_section}:${visual.reusable_item}`) ?? visual.reusable_item,
+    ...(visual.related_visual === undefined ? {} : { related_visual: positionMap.get(visual.related_visual)! }),
+  }));
+  next.close.focus = next.close.focus.flatMap((reference) => {
+    if (reference.source !== "reusable") return [reference];
+    const item = itemMap.get(`${reference.section}:${reference.item}`);
+    return item === undefined ? [] : [{ ...reference, item }];
+  });
+  if (!next.close.focus.length) {
+    const last = [...itemMap.entries()].at(-1);
+    if (!last) return undefined;
+    next.close.focus = [{ source: "reusable", section: Number(last[0].split(":")[0]), item: last[1] }];
+  }
+  try {
+    return validateLessonPlanOutline(next, expectedRequestParts);
+  } catch {
+    return undefined;
+  }
+}
+
 /** A fault only a new outline can fix: the outline chose the visual and the numbers it cannot show. */
 const OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
 const isOutlineOwnedFault = (error: unknown) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
@@ -2687,6 +2761,8 @@ export async function generateLessonPlanWithModel(
   let stableCameraObservation: CameraLessonObservation | undefined;
   const sectionErrors = new Map<number, unknown>();
   const sectionAttempts = new Map<number, number>();
+  // Sections written again after their picture was withdrawn, with what the request tells the model.
+  const withdrawnNotes = new Map<number, string>();
 
   const admissionCourse = (
     parsed: unknown,
@@ -3104,6 +3180,9 @@ export async function generateLessonPlanWithModel(
           course_and_section: sectionPromptContext(outline, section, allowedNumberIndexes, currentNumbers),
           visuals_for_section: visualsForSection(section, currentNumbers),
           assigned_request_parts: assignedRequestParts(section),
+          // The note stays for later sections too: their purposes may also name the picture (review of this change).
+          ...([...withdrawnNotes.keys()].some((from) => from <= section)
+            ? { removed_picture: [...withdrawnNotes].filter(([from]) => from <= section).map(([, note]) => note).join(" ") } : {}),
           ...(sectionErrors.has(section)
             ? { previous_validation_error: errorFeedback(sectionErrors.get(section)) }
             : {}),
@@ -3190,7 +3269,30 @@ export async function generateLessonPlanWithModel(
         if (section === 1 && isOutlineOwnedFault(error)) throw error;
         const previousError = sectionErrors.get(section);
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
-        if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) throw error;
+        if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
+          // The repairs are spent on a picture's own limits: a later section is written once more without
+          // that picture, outside the repair budget, so the lesson keeps its published sections. Section 1
+          // is handled by acceptFirstSection, which asks for a new outline without it.
+          const capability = error instanceof LessonPlanError ? error.capability : undefined;
+          const withdrawn = section > 1 && capability && !withdrawnNotes.has(section) && outline
+            ? withdrawSectionVisual(outline, section, capability, fixedRequestParts.length)
+            : undefined;
+          if (!withdrawn) throw error;
+          // The outline's purposes and strategies were written around the picture and still name it.
+          withdrawnNotes.set(section, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability as keyof typeof LESSON_PLAN_CAPABILITIES]?.required_features.join(", ") ?? capability}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
+          outline = withdrawn;
+          await options.on_rejected_part?.({
+            label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error),
+          });
+          await options.on_program_adjustment?.({
+            kind: "visual_removed", section, capability: capability as keyof typeof LESSON_PLAN_CAPABILITIES,
+            reason: "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
+          });
+          sectionErrors.delete(section);
+          sectionAttempts.set(section, maxAttempts - 1);
+          candidate = undefined;
+          continue;
+        }
         sectionErrors.set(section, error);
         await options.on_rejected_part?.({
           label: "lesson-plan-section",
@@ -3212,15 +3314,27 @@ export async function generateLessonPlanWithModel(
   // section through the ordinary exact-schema request.
   // Once per lesson, a fault only the outline can fix (values a number line cannot show) sends the
   // lesson back for a new outline, asked without that visual, instead of failing at section 1.
-  let outlineRestarted = false;
+  // Section 1's repairs spent on a picture's own limits (the error names the recipe) do the same: a lesson
+  // that wanted two trading mats to compare 263 and 236 is planned again without the mat (BT-31, check 3).
+  // At most two restarts, so a request can lose a number line and then a mat, never more.
+  let outlineRestarts = 0;
   const acceptFirstSection = async (): Promise<LessonPlanGenerationResult | undefined> => {
     try {
       await acceptSection(1, bootstrappedFirstSection);
       return undefined;
     } catch (error) {
-      if (!isOutlineOwnedFault(error) || outlineRestarted) throw error;
-      outlineRestarted = true;
+      const capability = error instanceof LessonPlanError ? error.capability : undefined;
+      const spentOnPicture = capability !== undefined && !excludedCapabilities.has(capability)
+        && (sectionAttempts.get(1) ?? 0) >= maxAttempts;
+      if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
+      outlineRestarts += 1;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
+      if (spentOnPicture) {
+        await options.on_program_adjustment?.({
+          kind: "visual_removed", section: 1, capability: capability as keyof typeof LESSON_PLAN_CAPABILITIES,
+          reason: "visual_limits_after_retries", detail: error instanceof Error ? error.message : String(error),
+        });
+      }
       if (outline) excludeFaulting(outline, error);
       outlineError = error;
       outline = undefined;
