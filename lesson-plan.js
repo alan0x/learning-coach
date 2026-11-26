@@ -18772,6 +18772,18 @@ function placeValueTradeNext(columns, k) {
   const place5 = columns[columns.length - 1 - k];
   return place5 === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place5).toLowerCase()}`;
 }
+var FULL_WIDTH3 = /[０-９．，＝]/gu;
+var halfWidth2 = (text5) => text5.replace(FULL_WIDTH3, (char) => String.fromCharCode(char.charCodeAt(0) - 65248));
+var STATES_ANSWER = /(?:=|\b(?:equals?|makes?|answer(?:\s+is)?|total(?:\s+is)?|difference(?:\s+is)?|result(?:\s+is)?|is\s+left)|等于|得数是?|答案是?|结果是?|一共是?|还剩)\s*$/iu;
+function placeValueTradeWordsGiveAnswer(words, answer, practice) {
+  const text5 = halfWidth2(String(words));
+  for (const match of text5.matchAll(/\d{1,3}(?:[,   ]\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu)) {
+    if (placeValueThousandths(Number(match[0].replace(/[,   ]/gu, ""))) !== answer) continue;
+    if (!practice.includes(answer)) return true;
+    if (STATES_ANSWER.test(text5.slice(0, match.index))) return true;
+  }
+  return false;
+}
 function placeValueTradeMove(state, position, to) {
   if (position < 0 || position > TRADE_NUMBER.finished) return "the card has five lesson numbers";
   if (to === state[position]) return [...state];
@@ -20879,8 +20891,8 @@ function planPlotView(input) {
     const structural = features.filter((feature) => feature.kind !== "intercept");
     let region = hull((structural.length ? structural : features).map((feature) => feature.x));
     if (item.quadratic) {
-      const halfWidth2 = quadraticHalfWidth(item.quadratic.a);
-      region = union(region, { min: item.quadratic.vertex - halfWidth2, max: item.quadratic.vertex + halfWidth2 });
+      const halfWidth3 = quadraticHalfWidth(item.quadratic.a);
+      region = union(region, { min: item.quadratic.vertex - halfWidth3, max: item.quadratic.vertex + halfWidth3 });
     }
     return region;
   };
@@ -20946,8 +20958,8 @@ function planPlotView(input) {
     for (const item of items) {
       const features = item.features.filter((feature) => keptSet.has(feature) || inCluster(feature)).filter((feature) => feature.x >= window.min && feature.x <= window.max);
       if (item.quadratic) {
-        const halfWidth2 = quadraticHalfWidth(item.quadratic.a);
-        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth2), max: Math.min(window.max, item.quadratic.vertex + halfWidth2) };
+        const halfWidth3 = quadraticHalfWidth(item.quadratic.a);
+        const own = { min: Math.max(window.min, item.quadratic.vertex - halfWidth3), max: Math.min(window.max, item.quadratic.vertex + halfWidth3) };
         sampled(item, span2(own) > 0 ? own : window);
       } else if (item.period === void 0 && features.some((feature) => feature.kind === "extremum") && !(undefinedBeyond([item], window.min, -1) && undefinedBeyond([item], window.max, 1))) {
         const levels = hull(features.filter((feature) => feature.y !== void 0 && feature.kind !== "intercept").map((feature) => feature.y));
@@ -22751,10 +22763,11 @@ function compilePlaceValueTrade(base, content, role, placement, plan, path) {
       // The model's practice is "the learner works the practice pair on the card": the card starts again, fresh,
       // on that pair; the task ends on the tap that finishes every column (no "done", 0026 §3), and the program
       // asks for the answer the finished chart shows. The value the model wrote is not read. Words that write
-      // the practice's answer give it away: that task is dropped and recorded, never the lesson.
+      // the practice's answer give it away: that task is dropped and recorded, never the lesson. Writing the pair
+      // is fine, even when a number of it is the answer (1,000 − 500), unless the words state it as the answer.
       task(_position, _value, _end, words = []) {
-        if (words.some((each) => placeValueWordsWrite(each, result))) {
-          return { drop: `the task's words write ${placeValueTradeNumeralPlain(result)}, the answer the learner is to find on the card`, reason: "practice_answer_in_words" };
+        if (words.some((each) => placeValueTradeWordsGiveAnswer(each, result, [pa, pb]))) {
+          return { drop: `the task's words write ${placeValuePlain(result)}, the answer the learner is to find on the card`, reason: "practice_answer_in_words" };
         }
         const values2 = { [aVariable]: pa, [bVariable]: pb, [finishedVariable]: 0 };
         for (const column of columns) values2[statusOf(column)] = 0;
@@ -22771,15 +22784,12 @@ function compilePlaceValueTrade(base, content, role, placement, plan, path) {
             hints: [compileText(plan, "\u4ECE\u5DE6\u5230\u53F3\u8BFB\u6A2A\u7EBF\u4E0B\u9762\u6BCF\u4E00\u5217\u7684\u5706\u7247\u4E2A\u6570\u3002")],
             anchor: base,
             allowed_operations: [{ kind: "answer_entry" }],
-            completion: { kind: "numeric_answer", answer: placeValueTradeNumeralPlain(result) }
+            completion: { kind: "numeric_answer", answer: placeValuePlain(result) }
           }]
         };
       }
     }
   };
-}
-function placeValueTradeNumeralPlain(thousandths) {
-  return String(Number((thousandths / 1e3).toFixed(3)));
 }
 var MATH_COMPILERS = {
   number_line: compileNumberLine,
@@ -24809,8 +24819,8 @@ var MATH_SECTION_FACTS = {
     const [a, b, pa, pb] = values.slice(0, 4).map((value2) => placeValueTradeThousandths(value2));
     const columns = placeValueTradeColumnsOf(op, a, b);
     const problem = placeValueTradeProblemOn(op, a, b, columns);
-    const now = state.get(lessonNumbers[TRADE_NUMBER.finished]) ?? 0;
-    const k = Number.isInteger(now) && now >= 0 && now <= columns.length ? now : 0;
+    const now = Number(state.get(lessonNumbers[TRADE_NUMBER.finished]) ?? 0);
+    const k = Number.isFinite(now) ? Math.min(columns.length, Math.max(0, Math.floor(now + 1e-9))) : 0;
     const card = placeValueTradeFacts(placeValueTradeDemoState(problem, k));
     const name = (place5) => placeValueColumnName(place5, cardLanguage);
     return { facts: {

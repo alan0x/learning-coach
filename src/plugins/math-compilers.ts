@@ -15,7 +15,9 @@ import { compileText, lessonTextLanguage } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
 import { baseTenStartFault, baseTenState, baseTenTapTask } from "./base-ten-moves.js";
 import { PLACE_VALUE_GIVENS, placeValuePlain, placeValueStepPlaces, placeValueStartFault, placeValueWordsWrite } from "./place-value-moves.js";
-import { PLACE_VALUE_TRADE_OPERATIONS, TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths } from "./place-value-trade-moves.js";
+import {
+  PLACE_VALUE_TRADE_OPERATIONS, TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths, placeValueTradeWordsGiveAnswer,
+} from "./place-value-trade-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
@@ -2076,10 +2078,11 @@ function compilePlaceValueTrade(
       // The model's practice is "the learner works the practice pair on the card": the card starts again, fresh,
       // on that pair; the task ends on the tap that finishes every column (no "done", 0026 §3), and the program
       // asks for the answer the finished chart shows. The value the model wrote is not read. Words that write
-      // the practice's answer give it away: that task is dropped and recorded, never the lesson.
+      // the practice's answer give it away: that task is dropped and recorded, never the lesson. Writing the pair
+      // is fine, even when a number of it is the answer (1,000 − 500), unless the words state it as the answer.
       task(_position, _value, _end, words = []) {
-        if (words.some((each) => placeValueWordsWrite(each, result))) {
-          return { drop: `the task's words write ${placeValueTradeNumeralPlain(result)}, the answer the learner is to find on the card`, reason: "practice_answer_in_words" };
+        if (words.some((each) => placeValueTradeWordsGiveAnswer(each, result, [pa, pb]))) {
+          return { drop: `the task's words write ${placeValuePlain(result)}, the answer the learner is to find on the card`, reason: "practice_answer_in_words" };
         }
         const values: Record<string, number> = { [aVariable]: pa, [bVariable]: pb, [finishedVariable]: 0 };
         for (const column of columns) values[statusOf(column)] = 0;
@@ -2096,17 +2099,12 @@ function compilePlaceValueTrade(
             hints: [compileText(plan, "从左到右读横线下面每一列的圆片个数。")],
             anchor: base,
             allowed_operations: [{ kind: "answer_entry" }],
-            completion: { kind: "numeric_answer", answer: placeValueTradeNumeralPlain(result) },
+            completion: { kind: "numeric_answer", answer: placeValuePlain(result) },
           }],
         };
       },
     },
   };
-}
-
-/** A value in thousandths as a learner types it, with no grouping: 6231000 -> "6231", 4230 -> "4.23". */
-function placeValueTradeNumeralPlain(thousandths: number): string {
-  return String(Number((thousandths / 1000).toFixed(3)));
 }
 
 export const MATH_COMPILERS = {

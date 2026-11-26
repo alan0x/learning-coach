@@ -205,6 +205,10 @@ test("the practice is the learner's own pair, worked by taps; the program asks f
     ["leak-hint", { operation: "subtract", numbers: [8.2, 3.75], practice: [9.3, 4.68], hints: ["答案是４．６２。"] }, "zh-CN"],
     // Writing the pair itself is fine: the card shows it anyway.
     ["pair-words", { operation: "add", numbers: [3486, 2739], practice: [4658, 1573], prompt: "Now add 4,658 + 1,573." }, "en-US"],
+    // 1,000 − 500 = 500: writing the pair writes the answer's digits too, and is fine; stating it as the answer is not.
+    ["half", { operation: "subtract", numbers: [3000, 1468], practice: [1000, 500], prompt: "Now subtract 1,000 − 500." }, "en-US"],
+    ["half-stated", { operation: "subtract", numbers: [3000, 1468], practice: [1000, 500], prompt: "Now subtract 1,000 − 500 = 500." }, "en-US"],
+    ["half-zh", { operation: "subtract", numbers: [3000, 1468], practice: [1000, 500], hints: ["1000 − 500 的得数是 500。"] }, "zh-CN"],
     // A model's typed question by the card stays as written.
     ["typed", { operation: "add", numbers: [3486, 2739], practice: [4658, 1573], typed: true }, "en-US"],
   ]));
@@ -224,7 +228,9 @@ test("the practice is the learner's own pair, worked by taps; the program asks f
   assert.equal(answer.hints[0], "Read how many disks each column has below the line, from left to right.");
   const [, difference] = result.subtract.lesson.lesson.tasks;
   assert.deepEqual([difference.prompt, difference.completion.answer, difference.hints[0]], ["还剩多少？", "4.62", "从左到右读横线下面每一列的圆片个数。"]);
-  for (const id of ["leak", "leak-hint"]) {
+  assert.deepEqual(result.half.lesson.lesson.tasks.map((each) => [each.completion.kind, each.completion.answer]), [["card_fact", undefined], ["numeric_answer", "500"]]);
+  assert.deepEqual(result.half.adjustments, []);
+  for (const id of ["leak", "leak-hint", "half-stated", "half-zh"]) {
     assert.deepEqual(result[id].lesson.lesson.tasks, undefined, id);
     assert.deepEqual(result[id].adjustments.map((adjustment) => [adjustment.kind, adjustment.reason]), [["activity_removed", "practice_answer_in_words"]], id);
   }
@@ -305,6 +311,8 @@ test("section facts: the card in its own terms, once it is drawn, in the lesson'
     next: { value: 3, finishes: "Hundreds", does: ["Hundreds: put both rows together, with the carried 100.", "Ten 100s make one 1,000. It goes above the thousands."] },
     practice_pair: [4658, 1573],
   });
+  // Read as the card reads its field: whole columns, within the card's.
+  assert.deepEqual([2.5, 9, -1].map((value) => facts({ section: 2, mode: "reuse", established, numbers, state: new Map([[5, value]]), language: "en-US" }).facts.columns_finished), [2, 4, 0]);
   // Every column finished: no next value. Chinese names its columns in Chinese; decimals stay decimals.
   const decimals = [8.2, 3.75, 9.3, 4.68, 0].map((initial) => ({ initial, min: 0, max: initial }));
   const sub = { ...established, parameters: { operation: "subtract" } };

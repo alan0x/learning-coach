@@ -87,6 +87,26 @@ export function placeValueTradeNext(columns: readonly number[], k: number): stri
   return place === undefined ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place).toLowerCase()}`;
 }
 
+const FULL_WIDTH = /[０-９．，＝]/gu;
+const halfWidth = (text: string) => text.replace(FULL_WIDTH, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0));
+/** Words just before a numeral that state it as the answer: "= 500", "the answer is 500", 「等于 500」「得数是500」. */
+const STATES_ANSWER = /(?:=|\b(?:equals?|makes?|answer(?:\s+is)?|total(?:\s+is)?|difference(?:\s+is)?|result(?:\s+is)?|is\s+left)|等于|得数是?|答案是?|结果是?|一共是?|还剩)\s*$/iu;
+
+/**
+ * Whether a task's words give away the practice's answer (both in thousandths): a numeral that is the answer,
+ * unless it is one of the practice numbers themselves (1,000 − 500 = 500: writing the pair is fine), which gives
+ * the answer away only where the words state it as the answer ("= 500", "the answer is 500").
+ */
+export function placeValueTradeWordsGiveAnswer(words: string, answer: number, practice: readonly number[]): boolean {
+  const text = halfWidth(String(words));
+  for (const match of text.matchAll(/\d{1,3}(?:[,   ]\d{3})+(?:\.\d+)?|\d*\.\d+|\d+/gu)) {
+    if (placeValueThousandths(Number(match[0].replace(/[,   ]/gu, ""))) !== answer) continue;
+    if (!practice.includes(answer)) return true;
+    if (STATES_ANSWER.test(text.slice(0, match.index))) return true;
+  }
+  return false;
+}
+
 /** The state after the card's number at `position` is animated to `to`, or the reason the card cannot make that change. */
 export function placeValueTradeMove(state: readonly number[], position: number, to: number): number[] | string {
   if (position < 0 || position > TRADE_NUMBER.finished) return "the card has five lesson numbers";

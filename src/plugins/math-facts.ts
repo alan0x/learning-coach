@@ -77,9 +77,10 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
     const [a, b, pa, pb] = values.slice(0, 4).map((value) => placeValueTradeThousandths(value)!) as [number, number, number, number];
     const columns = placeValueTradeColumnsOf(op, a, b);
     const problem = placeValueTradeProblemOn(op, a, b, columns);
-    // The card reads columns finished from 0 when it is drawn; a value it cannot take leaves it where it was.
-    const now = state.get(lessonNumbers[TRADE_NUMBER.finished]!) ?? 0;
-    const k = Number.isInteger(now) && now >= 0 && now <= columns.length ? now : 0;
+    // Columns finished is 0 when the card is drawn, and a step the card refuses does not change it. It is read as
+    // the card reads its own field: a whole number of columns, within the card's (OLL's placeValueTradeState).
+    const now = Number(state.get(lessonNumbers[TRADE_NUMBER.finished]!) ?? 0);
+    const k = Number.isFinite(now) ? Math.min(columns.length, Math.max(0, Math.floor(now + 1e-9))) : 0;
     const card = placeValueTradeFacts(placeValueTradeDemoState(problem, k));
     const name = (place: number) => placeValueColumnName(place, cardLanguage);
     return { facts: {
