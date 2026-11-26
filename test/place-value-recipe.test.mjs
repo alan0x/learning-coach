@@ -1,8 +1,8 @@
 // The place-value chart recipe (OLL decision 0025, need 35P-05), on the trading mat's pattern. A trial: offered
 // only when LEARNING_COACH_TRIAL_RECIPES names it, so requests and recorded lessons are unchanged without it
 // (test/request-hashes.test.mjs runs without it). The question's number and a different practice number are
-// lesson numbers; the model writes what the card gives, the demonstration as targets on the number (what is
-// still to do, cleared a place at a time) and the practice; the program writes every number text, plays the
+// lesson numbers; the model writes what the card gives, the demonstration as targets on the number (the value
+// on the chart: built up from 0, or what is still on it as it is pulled apart) and the practice; the program writes every number text, plays the
 // steps by the card's own rules and makes the learner's task (and, pulled apart, the row of parts). Every
 // development case's ideal lesson compiles and passes the judge in both languages; each refusal names its
 // reason and the picture it can cost.
@@ -25,18 +25,32 @@ test("place_value_chart is a trial recipe on lesson numbers: not offered by defa
   // Last in the provider's property order, so requests without the trial keep their order.
   assert.equal(api.SCHEMA_PROPERTY_ORDER.at(-1), "given");
   const moves = api.RECIPE_HOOKS.place_value_chart.number_moves;
-  // The chart's number is what is still to do: it starts at the number and each step clears whole places.
-  assert.deepEqual(moves.state([60408, 30705]), [60408, 30705]);
-  assert.deepEqual(moves.moves([60408, 30705], [{ position: 0, to: 408 }]).steps.at(-1).to, [408, 30705]);
-  assert.deepEqual(moves.moves([60408, 30705], [{ position: 0, to: 408 }, { position: 0, to: 0 }]).steps.at(-1).to, [0, 30705]);
-  // Any places may go, not only the highest; decimals are exact (26.075 -> 0.075).
-  assert.deepEqual(moves.moves([60408, 30705], [{ position: 0, to: 60000 }]).steps.at(-1).to, [60000, 30705]);
-  assert.deepEqual(moves.moves([26.075, 18.064], [{ position: 0, to: 0.075 }]).steps.at(-1).to, [0.075, 18.064]);
-  // A move to the value already there changes nothing.
-  assert.deepEqual(moves.moves([408, 30705], [{ position: 0, to: 408 }]).steps.at(-1).to, [408, 30705]);
-  assert.match(moves.moves([60408, 30705], [{ position: 0, to: 409 }]).refused.reason, /from 60408 it can be 408, 8, 0/);
-  assert.match(moves.moves([408, 30705], [{ position: 0, to: 60408 }]).refused.reason, /clears whole places/);
-  assert.match(moves.moves([60408, 30705], [{ position: 1, to: 0 }]).refused.reason, /practice number is the learner's/);
+  const build = { parameters: { given: "name" } }, apart = { parameters: { given: "numeral" } };
+  const to = (state, ...values) => moves.moves(state, values.map((value) => ({ position: 0, to: value })));
+  // Building, the chart's number is the value on the chart: 0 when the chart is drawn, whatever number it
+  // shows; then the practice number, the question's number and that the chart builds, which no step changes.
+  const built = moves.state([60408, 30705], build);
+  assert.deepEqual(built, [0, 30705, 60408, 1]);
+  assert.deepEqual(to(built, 60000, 60400, 60408).steps.map((step) => step.to[0]), [60000, 60400, 60408]);
+  assert.deepEqual(to(built, 60408).steps.at(-1).to, [60408, 30705, 60408, 1]);
+  // Any places may come, not only the highest; decimals are exact.
+  assert.deepEqual(to(built, 408, 60408).steps.map((step) => step.to[0]), [408, 60408]);
+  assert.deepEqual(to(moves.state([26.075, 18.064], build), 20, 26.075).steps.at(-1).to[0], 26.075);
+  // The number written again, in a later section, to show it on the chart: no change (PV-02, PV-05).
+  assert.deepEqual(to([7009, 5006, 7009, 1], 7009).steps.at(-1).to, [7009, 5006, 7009, 1]);
+  // A step that takes places off, or writes a digit the number does not have, is refused with what can come next.
+  assert.match(to([60400, 30705, 60408, 1], 400).refused.reason, /from 60400 it can be 60408/);
+  assert.match(to(built, 60409).refused.reason, /value on the chart: it starts at 0 .* from 0 it can be 60000, 60400, 60408/);
+  // The old reading (the number still to do, down to 0) is refused once it goes down.
+  assert.match(to(built, 408, 8).refused.reason, /places already on stay, so from 408 it can be 60408/);
+  // Pulling apart, the chart's number is what is still on the chart: the number, then whole places out.
+  const whole = moves.state([60408, 30705], apart);
+  assert.deepEqual(whole, [60408, 30705, 60408, 0]);
+  assert.deepEqual(to(whole, 408, 0).steps.map((step) => step.to[0]), [408, 0]);
+  assert.deepEqual(to(moves.state([26.075, 18.064], apart), 0.075).steps.at(-1).to[0], 0.075);
+  assert.match(to(whole, 409).refused.reason, /what is still on the chart.* from 60408 it can be 408, 8, 0/);
+  assert.match(to([408, 30705, 60408, 0], 60408).refused.reason, /takes whole places out/);
+  assert.match(moves.moves(built, [{ position: 1, to: 0 }]).refused.reason, /practice number is the learner's/);
 });
 
 /** Runs a script with the trial switched on (the switch is read once, when the module loads). */
@@ -100,10 +114,10 @@ test("every development case's ideal lesson compiles and passes the judge, in En
 test("the demonstration plays in the model's own moments: a build animates each place's disks, a pull apart taps each place out", () => {
   const result = withTrial(compileScript([
     ["build", { number: 60408, practice: 30705, given: "name" }, "en-US"],
-    ["build-at-once", { number: 60408, practice: 30705, given: "name", steps: [0] }, "en-US"],
+    ["build-at-once", { number: 60408, practice: 30705, given: "name", steps: [60408] }, "en-US"],
     ["apart", { number: 347.392, practice: 26.075, given: "numeral", steps: [47.392, 0] }, "en-US"],
     // A step to the value already there changes nothing: the moment looks at the chart.
-    ["still", { number: 8063, practice: 6072, given: "place_counts", steps: [63, 63, 0] }, "zh-CN"],
+    ["still", { number: 8063, practice: 6072, given: "place_counts", steps: [8000, 8000, 8063] }, "zh-CN"],
   ]));
   const played = (id) => result[id].lesson.steps[0].beats.map((beat) => beat.actions.map((action) => (action.do === "tap" ? `${action.tap}:${action.at}` : action.do === "animate" ? `${action.variable.replace(/^section_01_moment_01_item_01_/u, "")}=${action.value}` : action.do)));
   assert.deepEqual(played("build"), [["write", "focus"], ["ten_thousands_count=6"], ["hundreds_count=4"], ["ones_count=8"]]);
@@ -182,13 +196,18 @@ test("refusals name their reason and the picture they can cost", () => {
     ["four-places-large", { number: 600000.1234, practice: 2.5, given: "name", steps: [] }, "en-US"],
     ["too-many-columns", { number: 1234.5, practice: 2001.7, given: "numeral", steps: [] }, "en-US"],
     ["bad-given", { number: 4050, practice: 3207, given: "roman", steps: [] }, "en-US"],
-    ["bad-step", { number: 60408, practice: 30705, given: "name", steps: [409] }, "en-US"],
+    ["bad-step", { number: 60408, practice: 30705, given: "name", steps: [60409] }, "en-US"],
+    ["old-steps", { number: 60408, practice: 30705, given: "name", steps: [408, 8, 0] }, "en-US"],
+    ["apart-up", { number: 60408, practice: 30705, given: "numeral", steps: [408, 60408] }, "en-US"],
   ]));
   const expect = {
     "one-place": /one non-zero place/, "one-place-apart": /pulling it apart shows the answer/, "one-place-practice": /practice number 1000 has one non-zero place/,
     same: /a different number from the question's/, "row-too-long": /at most 6 non-zero places/, "four-places": /at most three decimal places/,
     "too-big": /at most 9,999,999.999/, "four-places-large": /at most three decimal places/, "too-many-columns": /need 9 columns and the chart holds at most 7/, "bad-given": /given is one of/,
-    "bad-step": /from 60408 it can be 408, 8, 0/,
+    "bad-step": /value on the chart: it starts at 0 .* from 0 it can be 60000, 60400, 60408/,
+    // The old reading (the number still to do, going down) is refused once it goes down.
+    "old-steps": /places already on stay, so from 408 it can be 60408/,
+    "apart-up": /takes whole places out, highest first, so from 408 it can be 8, 0/,
   };
   for (const [id, pattern] of Object.entries(expect)) {
     assert.match(result[id].message ?? "", pattern, id);
@@ -207,8 +226,14 @@ test("section facts: the chart in its own terms, once it is drawn", () => {
     numbers: [1, 2], number: 26.075, task: "pull_apart", given: "numeral",
     columns: ["Hundreds", "Tens", "Ones", "Tenths", "Hundredths", "Thousandths"],
     parts: [{ place: "Tens", digit: 2, value: 20 }, { place: "Ones", digit: 6, value: 6 }, { place: "Hundredths", digit: 7, value: 0.07 }, { place: "Thousandths", digit: 5, value: 0.005 }],
-    still_to_do: 0.075, practice_number: 18.064,
+    still_on_chart: 0.075, taken_out: 26, practice_number: 18.064,
   });
+  // Building, in the guidance's terms: the value on the chart now (0 when it is drawn) and what is still to place.
+  const toBuild = { ...established, parameters: { given: "place_counts" } };
+  assert.deepEqual(facts({ section: 2, mode: "reuse", established: toBuild, numbers, state: new Map([[1, 20]]), language: "en-US" }).facts.on_chart_now, 20);
+  assert.deepEqual(facts({ section: 2, mode: "reuse", established: toBuild, numbers, state: new Map([[1, 20]]), language: "en-US" }).facts.still_to_place, 6.075);
+  const empty = facts({ section: 2, mode: "reuse", established: toBuild, numbers, state: new Map(), language: "en-US" }).facts;
+  assert.deepEqual([empty.on_chart_now, empty.still_to_place, empty.still_on_chart], [0, 26.075, undefined]);
   // Chinese groups its columns by four.
   assert.deepEqual(facts({ section: 2, mode: "reuse", established, numbers, state: new Map(), language: "zh-CN" }).facts.columns,
     ["千位", "百位", "十位", "个位", "十分位", "百分位", "千分位"]);
@@ -254,7 +279,7 @@ test("a stubbed generation run: the chart, its steps and the practice reach the 
   assert.deepEqual(result.plugins, { math: "0.8.0", shared: "0.1.0" });
   // Section 2 is told the chart in its own terms, with what the demonstration left to do.
   const facts = JSON.stringify(result.later);
-  for (const fact of ['"number":60408', '"given":"name"', '"still_to_do":0', '"practice_number":30705', '"Ten thousands"']) assert.ok(facts.includes(fact), fact);
+  for (const fact of ['"number":60408', '"given":"name"', '"on_chart_now":60408', '"still_to_place":0', '"practice_number":30705', '"Ten thousands"']) assert.ok(facts.includes(fact), fact);
 });
 
 test("a chart drawn in section 2, on ranges a model writes: only the chart's own variables are declared, and a replay names only them", () => {
@@ -270,7 +295,8 @@ test("a chart drawn in section 2, on ranges a model writes: only the chart's own
       { initial: 30705, min: 30000, max: 31000, label: "practice number", student_control: { kind: "slider", step: 1 } },
     ];
     const chart = plan.sections[0];
-    chart.moments.push({ narration: "Once more from the start.", restart_numbers: [1], actions: [{ action: "animate", number: 1, end_value: 0, duration_intent: "brief", timing: "during_speech" }] });
+    // A replay empties the chart again (the value on it is 0), so building to the number plays every place again.
+    chart.moments.push({ narration: "Once more from the start.", restart_numbers: [1], actions: [{ action: "animate", number: 1, end_value: 60408, duration_intent: "brief", timing: "during_speech" }] });
     plan.sections = [
       { purpose: "Read the number aloud", reusable_items: [{ kind: "board_item", board_kind: "note" }], moments: [{ narration: "Listen: sixty thousand four hundred eight.", actions: [{ action: "create", kind: "text", role: "follow_up_explanation", content: { text: "sixty thousand four hundred eight" }, placement: { relation: "new_region" }, reusable_item: 1 }] }] },
       chart,
@@ -337,4 +363,55 @@ test("review of #174: too many variables costs the chart, not the lesson; a pull
     ["card_fact", ["Take out each place that has disks."]],
     ["numeric_row", ["Each part is the number of disks in that place times the value of the place."]],
   ]);
+});
+
+test("objective check 1 (PV-02, PV-05): a section that writes the full number again after the chart is built changes nothing, and the lesson is kept", () => {
+  const result = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { placeValuePlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
+    const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+    const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+    const out = {};
+    for (const [id, number, practice, again] of [["PV-02", 7009, 5006, 7009], ["PV-05", 904026, 702038, 904026], ["down", 7009, 5006, 9]]) {
+      const plan = placeValuePlan({ number, practice, given: id === "PV-05" ? "expanded" : "name", typed: false });
+      // Section 2 writes the number again, as the model did in check 1 to mean "show the number on the chart".
+      plan.sections[1].moments.push({ narration: "Here is the number on the chart.", actions: [{ action: "animate", number: 1, end_value: again, duration_intent: "brief", timing: "during_speech" }] });
+      makeSamplePlanModelCompatible(plan);
+      const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+      const outline = stagedOutline(plan, drafts);
+      const prompts = [];
+      out[id] = {};
+      try {
+        const generated = await api.generateLessonPlanWithModel(async (request) => {
+          prompts.push(request.prompt);
+          if (prompts.length > 6) throw new Error("unexpected extra model request");
+          if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, bootstrapSectionFromExact(outline, drafts[0]));
+          return JSON.stringify(drafts[request.section - 1]);
+        }, { turn_id: id, learner_request: "How do I write this number?", language: "zh-CN" }, { max_attempts_per_part: 1 });
+        out[id] = { calls: prompts.length, kept: Boolean(generated.lesson), last: generated.lesson?.steps.at(-1).beats.at(-1).actions.map((action) => action.do), facts: prompts[1] ? JSON.parse(prompts[1]) : null, tasks: generated.lesson?.lesson.tasks?.map((task) => task.completion.fact) };
+      } catch (error) {
+        out[id] = { error: error.code, capability: error.capability, message: error.message };
+      }
+      // The same plan compiled whole: a downward step is refused with the chart's capability.
+      try { api.compileAndValidateLessonPlan(plan, { language: "zh-CN" }); out[id].compiled = true; }
+      catch (error) { out[id].compiled = { code: error.code, capability: error.capability, message: error.message }; }
+    }
+    console.log(JSON.stringify(out));
+  `);
+  for (const id of ["PV-02", "PV-05"]) {
+    assert.equal(result[id].error, undefined, `${id}: ${result[id].message}`);
+    assert.ok(result[id].kept, id);
+    // Bootstrap and section 2 only: no repair was needed.
+    assert.equal(result[id].calls, 2, id);
+    // The moment that wrote the number again only looks at the chart.
+    assert.deepEqual(result[id].last, ["focus"], id);
+    assert.deepEqual(result[id].tasks, ["built"], id);
+    assert.equal(result[id].compiled, true, id);
+  }
+  // Section 2 was told the chart is built: the number on it, nothing left to place.
+  const told = JSON.stringify(result["PV-02"].facts);
+  for (const fact of ['"on_chart_now":7009', '"still_to_place":0']) assert.ok(told.includes(fact), fact);
+  // Going down (the old reading) is refused, naming the chart, so the chart can go rather than the lesson.
+  assert.deepEqual([result.down.compiled.code, result.down.compiled.capability], ["LESSON_PLAN_NUMBER_NOT_DRAWABLE", "place_value_chart"]);
+  assert.match(result.down.compiled.message, /places already on stay, so from 7009 it can be only 7009: the number is built/);
 });

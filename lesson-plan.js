@@ -15532,7 +15532,7 @@ var MATH_RECIPES = {
   },
   // OLL decision 0025 (a trial, off by default): the place-value chart on lesson numbers, on the trading mat's
   // pattern. The model writes the question's number and a different practice number, what the card gives, the
-  // demonstration as targets on the number (what is still to do, cleared a place at a time) and the practice;
+  // demonstration as targets on the number (the value on the chart: built up from 0, or what is still on it as it is pulled apart) and the practice;
   // the program writes every number text on the card, plays the steps and makes the learner's task.
   place_value_chart: {
     parts: ["whole"],
@@ -15548,7 +15548,7 @@ var MATH_RECIPES = {
     // No control: the learner works the chart by its own taps (+, a disk, take out); the model never names one.
     student_controls: [],
     required_features: ["place_value_parts"],
-    model_guidance: "\u6570\u4F4D\u8868\uFF1A\u7167\u8BFB\u6CD5\u3001\u5C55\u5F00\u5F0F\u6216\u6BCF\u4E00\u4F4D\u6709\u51E0\u4E2A\u6446\u51FA\u4E00\u4E2A\u6570\uFF0C\u6216\u628A\u4E00\u4E2A\u6570\u6309\u6570\u4F4D\u4E00\u4F4D\u4E00\u4F4D\u62C6\u5F00\uFF08\u5230\u767E\u4E07\u4F4D\u548C\u5343\u5206\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6BD4\u8F83\u4E24\u4E2A\u6570\u3001\u5341\u4E2A\u8FD9\u4E00\u4F4D\u662F\u5DE6\u8FB9\u4E00\u4F4D\u7684\u4E00\u4E2A\u3001\u5728\u8868\u4E0A\u52A0\u51CF\u3001\u51D1\u6574\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002\u6570\u503C\u4F9D\u6B21\u662F\u9898\u76EE\u7684\u6570\u548C\u7EC3\u4E60\u7684\u6570\uFF08\u53E6\u4E00\u4E2A\u6570\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u5199\u5B9E\u9645\u5927\u5C0F\uFF0826.075\uFF09\uFF0C\u6700\u591A\u4E09\u4F4D\u5C0F\u6570\u3002given \u662F\u5361\u7247\u4E0A\u7ED9\u51FA\u7684\uFF1A\u6446\u6570\u5199 name\uFF08\u8BFB\u6CD5\uFF09\u3001expanded\uFF08\u503C\u7684\u548C\uFF0C\u5982 4,000 + 50\uFF09\u3001expanded_factors\uFF08\u5982 4 \xD7 1,000 + 5 \xD7 10\uFF09\u6216 place_counts\uFF08\u5982 8\u4E2A\u5343\u30016\u4E2A\u5341\u548C3\u4E2A\u4E00\uFF09\uFF1B\u62C6\u6570\u5199 numeral\uFF0C\u62C6\u7684\u6570\u6709\u5C0F\u6570\u65F6\u6574\u6570\u90E8\u5206\u82F1\u6587\u8BFE\u4E0D\u8D85\u8FC7\u4E09\u4F4D\u3001\u4E2D\u6587\u8BFE\u4E0D\u8D85\u8FC7\u56DB\u4F4D\u3002\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\u7684\u6570\uFF084000\u30010.05\uFF09\u4E0D\u7528 expanded\uFF0C\u4E5F\u4E0D\u62C6\u3002\u5E26\u4E58\u53F7\u7684\u5C0F\u6570\u5199\u6CD5\uFF083 \xD7 (1/10)\uFF09\u53EA\u7528\u4E8E\u82F1\u6587\u4E94\u5E74\u7EA7\u7684\u5C0F\u6570\u9898\u6216\u9898\u76EE\u81EA\u5DF1\u8FD9\u6837\u5199\uFF1B\u4E2D\u6587\u8BFE\u7528 place_counts\uFF083\u4E2A0.1\u30019\u4E2A0.01\u548C2\u4E2A0.001\uFF09\u6216\u503C\u7684\u548C\uFF080.3 + 0.09 + 0.002\uFF09\u3002\u5361\u7247\u4E0A\u7684\u8BFB\u6CD5\u3001\u5C55\u5F00\u5F0F\u548C\u6570\u5B57\u90FD\u7531\u7A0B\u5E8F\u5199\u3002\u6F14\u793A\uFF1A\u628A\u9898\u76EE\u7684\u6570\u52A8\u753B\u5230\u8FD8\u6CA1\u505A\u5B8C\u7684\u90E8\u5206\uFF08\u6446\u6570\u662F\u8FD8\u6CA1\u6446\u4E0A\u7684\uFF0C\u62C6\u6570\u662F\u8FD8\u5728\u8868\u4E0A\u7684\uFF09\uFF0C\u6BCF\u4E00\u6B65\u53BB\u6389\u4E00\u4F4D\u6216\u51E0\u4F4D\uFF0C\u901A\u5E38\u4ECE\u6700\u9AD8\u4F4D\u8D77\uFF0C\u5982 60408 \u5148\u5230 408\uFF0C\u518D\u5230 8\uFF0C\u6700\u540E\u5230 0\u3002\u7EC3\u4E60\uFF1A\u5BF9\u9898\u76EE\u7684\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u7EC3\u4E60\u7684\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u6446\u51FA\u6216\u62C6\u5F00\u7EC3\u4E60\u7684\u6570\uFF1B\u6446\u6570\u9898\u7684\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u6570\uFF08\u5361\u7247\u4E0A\u5DF2\u7ECF\u7ED9\u51FA\u5B83\u7684\u8BFB\u6CD5\u6216\u5C55\u5F00\u5F0F\uFF09\uFF1B\u62C6\u5B8C\u4EE5\u540E\u7A0B\u5E8F\u51FA\u4E00\u884C\u7A7A\uFF0C\u5199\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u5343\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u6570\u4F4D\u8868\uFF1A\u7167\u8BFB\u6CD5\u3001\u5C55\u5F00\u5F0F\u6216\u6BCF\u4E00\u4F4D\u6709\u51E0\u4E2A\u6446\u51FA\u4E00\u4E2A\u6570\uFF0C\u6216\u628A\u4E00\u4E2A\u6570\u6309\u6570\u4F4D\u4E00\u4F4D\u4E00\u4F4D\u62C6\u5F00\uFF08\u5230\u767E\u4E07\u4F4D\u548C\u5343\u5206\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6BD4\u8F83\u4E24\u4E2A\u6570\u3001\u5341\u4E2A\u8FD9\u4E00\u4F4D\u662F\u5DE6\u8FB9\u4E00\u4F4D\u7684\u4E00\u4E2A\u3001\u5728\u8868\u4E0A\u52A0\u51CF\u3001\u51D1\u6574\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u5341\u4E2A\u4E00\u6362\u4E00\u4E2A\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002\u6570\u503C\u4F9D\u6B21\u662F\u9898\u76EE\u7684\u6570\u548C\u7EC3\u4E60\u7684\u6570\uFF08\u53E6\u4E00\u4E2A\u6570\uFF0C\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u5199\u5B9E\u9645\u5927\u5C0F\uFF0826.075\uFF09\uFF0C\u6700\u591A\u4E09\u4F4D\u5C0F\u6570\u3002given \u662F\u5361\u7247\u4E0A\u7ED9\u51FA\u7684\uFF1A\u6446\u6570\u5199 name\uFF08\u8BFB\u6CD5\uFF09\u3001expanded\uFF08\u503C\u7684\u548C\uFF0C\u5982 4,000 + 50\uFF09\u3001expanded_factors\uFF08\u5982 4 \xD7 1,000 + 5 \xD7 10\uFF09\u6216 place_counts\uFF08\u5982 8\u4E2A\u5343\u30016\u4E2A\u5341\u548C3\u4E2A\u4E00\uFF09\uFF1B\u62C6\u6570\u5199 numeral\uFF0C\u62C6\u7684\u6570\u6709\u5C0F\u6570\u65F6\u6574\u6570\u90E8\u5206\u82F1\u6587\u8BFE\u4E0D\u8D85\u8FC7\u4E09\u4F4D\u3001\u4E2D\u6587\u8BFE\u4E0D\u8D85\u8FC7\u56DB\u4F4D\u3002\u53EA\u6709\u4E00\u4F4D\u4E0D\u662F\u96F6\u7684\u6570\uFF084000\u30010.05\uFF09\u4E0D\u7528 expanded\uFF0C\u4E5F\u4E0D\u62C6\u3002\u5E26\u4E58\u53F7\u7684\u5C0F\u6570\u5199\u6CD5\uFF083 \xD7 (1/10)\uFF09\u53EA\u7528\u4E8E\u82F1\u6587\u4E94\u5E74\u7EA7\u7684\u5C0F\u6570\u9898\u6216\u9898\u76EE\u81EA\u5DF1\u8FD9\u6837\u5199\uFF1B\u4E2D\u6587\u8BFE\u7528 place_counts\uFF083\u4E2A0.1\u30019\u4E2A0.01\u548C2\u4E2A0.001\uFF09\u6216\u503C\u7684\u548C\uFF080.3 + 0.09 + 0.002\uFF09\u3002\u5361\u7247\u4E0A\u7684\u8BFB\u6CD5\u3001\u5C55\u5F00\u5F0F\u548C\u6570\u5B57\u90FD\u7531\u7A0B\u5E8F\u5199\u3002\u6446\u6570\u6F14\u793A\u65F6\u628A\u9898\u76EE\u7684\u6570\u52A8\u753B\u5230\u8868\u4E0A\u73B0\u5728\u7684\u503C\uFF1A\u4ECE 0 \u8D77\uFF0C\u6BCF\u4E00\u6B65\u6446\u4E0A\u4E00\u4F4D\u6216\u51E0\u4F4D\uFF0C\u901A\u5E38\u4ECE\u6700\u9AD8\u4F4D\u8D77\uFF0860408\uFF1A\u5148\u5230 60000\uFF0C\u518D\u5230 60400\uFF0C\u6700\u540E 60408\uFF09\uFF1B\u540E\u9762\u7684\u8282\u518D\u5199\u8FD9\u4E2A\u6570\uFF0C\u8868\u4E0D\u53D8\u3002\u62C6\u6570\u6F14\u793A\u65F6\u628A\u9898\u76EE\u7684\u6570\u52A8\u753B\u5230\u8868\u4E0A\u8FD8\u5269\u7684\uFF1A\u6BCF\u4E00\u6B65\u62FF\u51FA\u4E00\u4F4D\u6216\u51E0\u4F4D\uFF0C\u5982 60408 \u5148\u5230 408\uFF0C\u518D\u5230 8\uFF0C\u6700\u540E\u5230 0\u3002\u7EC3\u4E60\uFF1A\u5BF9\u9898\u76EE\u7684\u6570\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u7EC3\u4E60\u7684\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u6446\u51FA\u6216\u62C6\u5F00\u7EC3\u4E60\u7684\u6570\uFF1B\u6446\u6570\u9898\u7684\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u6570\uFF08\u5361\u7247\u4E0A\u5DF2\u7ECF\u7ED9\u51FA\u5B83\u7684\u8BFB\u6CD5\u6216\u5C55\u5F00\u5F0F\uFF09\uFF1B\u62C6\u5B8C\u4EE5\u540E\u7A0B\u5E8F\u51FA\u4E00\u884C\u7A7A\uFF0C\u5199\u6BCF\u4E00\u90E8\u5206\u662F\u591A\u5C11\u3002\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u5343\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -17715,24 +17715,35 @@ function placeValueStartFault(values, given) {
   }
   return void 0;
 }
-function placeValueCleared(from, to) {
-  const places = [];
-  for (let place5 = PLACE_VALUE_MAX_PLACE; place5 >= PLACE_VALUE_MIN_PLACE; place5 -= 1) {
-    if (placeValueDigitAt(from, place5) && !placeValueDigitAt(to, place5)) places.push(place5);
-  }
-  return places;
+var PLACES = Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => PLACE_VALUE_MAX_PLACE - i);
+function placesOnlyIn(withDigits, without) {
+  return PLACES.filter((place5) => placeValueDigitAt(withDigits, place5) && !placeValueDigitAt(without, place5));
+}
+function placeValueStepPlaces(from, to, build) {
+  return build ? placesOnlyIn(to, from) : placesOnlyIn(from, to);
+}
+function placeValueState(start, content) {
+  const build = content?.parameters?.given !== "numeral";
+  return [build ? 0 : start[0], ...start.slice(1), start[0], build ? 1 : 0];
 }
 function placeValueMove(state, position, to) {
-  if (position !== 0) return "the practice number is the learner's: it does not move in the lesson. Animate the question's number to show the demonstration";
+  if (position !== 0 || state.length < 3) return "the practice number is the learner's: it does not move in the lesson. Animate the question's number to show the demonstration";
+  const build = state.at(-1) === 1;
+  const number = Math.round(state.at(-2) * 1e3);
   const from = Math.round(state[0] * 1e3);
   const target = placeValueThousandths(to);
   if (target === void 0) return "the chart's number is a number from 0 to 9,999,999.999 with at most three decimal places";
   if (target === from) return [...state];
-  const keeps = Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => i + PLACE_VALUE_MIN_PLACE).every((place5) => placeValueDigitAt(target, place5) === 0 || placeValueDigitAt(target, place5) === placeValueDigitAt(from, place5));
-  if (!keeps || target > from) {
-    const parts = placeValueParts(from);
-    const left = parts.map((_, k) => parts.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
-    return `the chart's number is what is still to do (not yet placed when building, still on the chart when pulling apart): it starts at the number and each step clears whole places, highest first, so from ${placeValueDecimal(from)} it can be ${left.map(placeValueDecimal).join(", ")}`;
+  const ofNumber = PLACES.every((place5) => !placeValueDigitAt(target, place5) || placeValueDigitAt(target, place5) === placeValueDigitAt(number, place5));
+  const kept = build ? placesOnlyIn(from, target).length === 0 : placesOnlyIn(target, from).length === 0;
+  if (!ofNumber || !kept) {
+    const parts = placeValueParts(number);
+    if (build) {
+      const placed = [.../* @__PURE__ */ new Set([...parts.map((_, k) => parts.slice(0, k + 1).reduce((sum, part) => sum + part.value, 0)), number])].filter((value2) => value2 > from && placesOnlyIn(from, value2).length === 0);
+      return `building, the chart's number is the value on the chart: it starts at 0 and each step puts whole places of ${placeValueDecimal(number)} on the chart, highest first; places already on stay, so from ${placeValueDecimal(from)} it can be ${placed.length ? placed.map(placeValueDecimal).join(", ") : `only ${placeValueDecimal(from)}: the number is built`}`;
+    }
+    const left = placeValueParts(from).map((_, k, all2) => all2.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
+    return `pulling apart, the chart's number is what is still on the chart: it starts at the number and each step takes whole places out, highest first, so from ${placeValueDecimal(from)} it can be ${left.map(placeValueDecimal).join(", ")}`;
   }
   const next = [...state];
   next[0] = placeValueDecimal(target);
@@ -17886,7 +17897,7 @@ var MATH_HOOKS = {
   },
   place_value_chart: {
     // The chart's numbers have no control: the learner works the chart by its own taps (OLL 0025; owner,
-    // 2026-11-24: the model never names a control). The question's number runs from 0 (all done) to itself,
+    // 2026-11-24: the model never names a control). The question's number runs from 0 to itself,
     // the demonstration's targets; the practice number stays as written. The compiler checks both.
     fit_numbers(content, plan) {
       const numbers = content.numbers ?? [];
@@ -17900,7 +17911,8 @@ var MATH_HOOKS = {
       });
       return /* @__PURE__ */ new Map();
     },
-    number_moves: { state: (start) => [...start], moves: placeValueMoves }
+    // Building, the chart's number is the value on the chart, from 0; pulling apart, what is still on it.
+    number_moves: { state: placeValueState, moves: placeValueMoves }
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },
@@ -21540,14 +21552,14 @@ function compilePlaceValueChart(base, content, role, placement, plan, path) {
     mover: {
       unbound: true,
       numbers: [...numbers],
-      // A step clears whole places of the number left to do: building puts each cleared place's disks on the
-      // chart (its count animated from 0 to the digit, the disks appearing one at a time), pulling apart takes
-      // each one out by the card's own tap. Highest place first.
+      // A step changes whole places: building puts each new place's disks on the chart (its count animated from
+      // 0 to the digit, the disks appearing one at a time), pulling apart takes each place out by the card's own
+      // tap. Highest place first.
       play(steps) {
         const actions = [];
         for (const step of steps) {
           if (step.position !== 0) continue;
-          for (const cleared of placeValueCleared(Math.round(step.from[0] * 1e3), Math.round(step.to[0] * 1e3))) {
+          for (const cleared of placeValueStepPlaces(Math.round(step.from[0] * 1e3), Math.round(step.to[0] * 1e3), mode === "build")) {
             actions.push(mode === "build" ? { do: "animate", variable: variableOf(cleared, "count"), value: placeValueDigitAt(number, cleared), duration_intent: "brief" } : { do: "tap", target: base, tap: "take_out", at: PLACE_VALUE_PLACE_ALIASES[cleared] });
           }
         }
@@ -22494,7 +22506,7 @@ function compileLessonPlan(value2, options = {}) {
               actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
               if (visual.mover && RECIPE_HOOKS[visualContent.capability]?.number_moves) {
                 const start = visual.mover.numbers.map((number) => plan.numbers[number - 1].initial);
-                const state = RECIPE_HOOKS[visualContent.capability].number_moves.state(start);
+                const state = RECIPE_HOOKS[visualContent.capability].number_moves.state(start, visualContent);
                 moverStates.set(visual, { start: state, now: [...state] });
                 visual.mover.numbers.forEach((number, position) => movers.set(number, { visual, capability: visualContent.capability, position }));
                 if (visual.mover.unbound) for (const number of visual.mover.numbers) unboundNumbers.add(number);
@@ -23576,7 +23588,9 @@ var MATH_SECTION_FACTS = {
     return { facts: { numbers: lessonNumbers, ...baseTenFacts2(start, now) } };
   },
   // The place-value chart in its own terms (OLL 0025), once it is drawn: the number, what the card gives, its
-  // columns and the parts it pulls apart into, what is still to do, and the learner's practice number.
+  // columns and the parts it pulls apart into, where the demonstration stands in the guidance's own terms (building:
+  // the value on the chart now and what is still to place; pulling apart: what is still on the chart and what is
+  // out), and the learner's practice number.
   place_value_chart: ({ established, numbers, state, language }) => {
     if (!numbers || !established?.numbers?.length) return {};
     const lessonNumbers = established.numbers;
@@ -23586,7 +23600,8 @@ var MATH_SECTION_FACTS = {
     const chartLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
     const number = Math.round(values[0] * 1e3);
     const { top_place, decimals } = placeValueColumnsFor(values.map((value2) => Math.round(value2 * 1e3)), chartLanguage);
-    const left = state.get(lessonNumbers[0]) ?? values[0];
+    const build = given !== "numeral";
+    const now = Math.round((state.get(lessonNumbers[0]) ?? (build ? 0 : values[0])) * 1e3);
     return { facts: {
       numbers: lessonNumbers,
       number: values[0],
@@ -23594,7 +23609,7 @@ var MATH_SECTION_FACTS = {
       given,
       columns: placeValueColumns(top_place, decimals).map((place5) => placeValueColumnName(place5, chartLanguage)),
       parts: placeValueParts(number).map((part) => ({ place: placeValueColumnName(part.place, chartLanguage), digit: part.digit, value: placeValueDecimal(part.value) })),
-      still_to_do: left,
+      ...build ? { on_chart_now: placeValueDecimal(now), still_to_place: placeValueDecimal(number - now) } : { still_on_chart: placeValueDecimal(now), taken_out: placeValueDecimal(number - now) },
       ...values[1] !== void 0 ? { practice_number: values[1] } : {}
     } };
   },
@@ -26002,17 +26017,25 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
         if (action.action !== "create" || action.kind !== "visual") continue;
         const content = action.content;
         const hook = RECIPE_HOOKS[content.capability]?.number_moves;
-        if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers.join())) cards.push({ numbers: [...content.numbers], hook });
+        if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers.join())) {
+          const initial = content.numbers.map((number) => outline.numbers[number - 1].initial);
+          const started = [...hook.state(initial, content)];
+          initial.forEach((value2, position) => {
+            if (started[position] === void 0) started[position] = value2;
+          });
+          cards.push({ numbers: [...content.numbers], hook, started });
+          content.numbers.forEach((number, position) => state.set(number, started[position]));
+        }
       }
       for (const number of moment.restart_numbers ?? []) {
         const card = cards.find((each) => each.numbers.includes(number));
-        for (const each of card?.numbers ?? [number]) state.set(each, outline.numbers[each - 1].initial);
+        if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]));
+        else state.set(number, outline.numbers[number - 1].initial);
       }
       for (const card of cards) {
         const moves = moment.actions.flatMap((action) => action.action === "animate" && card.numbers.includes(action.number) ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []);
         if (!moves.length) continue;
-        const started = card.hook.state(card.numbers.map((number) => outline.numbers[number - 1].initial));
-        const now = [...card.numbers.map((number) => state.get(number)), ...started.slice(card.numbers.length)];
+        const now = [...card.numbers.map((number) => state.get(number)), ...card.started.slice(card.numbers.length)];
         const result = card.hook.moves(now, moves);
         if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1).to[position]));
       }

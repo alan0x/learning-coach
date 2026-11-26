@@ -13,7 +13,7 @@ import {
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
 import { baseTenStartFault, baseTenState, baseTenTapTask } from "./base-ten-moves.js";
-import { PLACE_VALUE_GIVENS, placeValueCleared, placeValuePlain, placeValueStartFault, placeValueWordsWrite } from "./place-value-moves.js";
+import { PLACE_VALUE_GIVENS, placeValuePlain, placeValueStepPlaces, placeValueStartFault, placeValueWordsWrite } from "./place-value-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
@@ -1809,7 +1809,7 @@ const PLACE_VALUE_TEXT = {
  * The place-value chart (OLL decision 0025, need 35P-05), on the trading mat's pattern: the question's number
  * and the practice number are lesson numbers, and `given` says what the card gives (a build form, or the
  * numeral to pull apart). The program writes every number text on the card, fixes the columns for both
- * numbers, plays the model's demonstration steps (the number left to do, cleared a place at a time) as the
+ * numbers, plays the model's demonstration steps (the value on the chart, a place or more at a time) as the
  * card's own changes, and turns the model's practice into the learner's task on the practice number: build
  * it, or pull it apart and write its parts in a row.
  */
@@ -1898,14 +1898,14 @@ function compilePlaceValueChart(
     mover: {
       unbound: true,
       numbers: [...numbers],
-      // A step clears whole places of the number left to do: building puts each cleared place's disks on the
-      // chart (its count animated from 0 to the digit, the disks appearing one at a time), pulling apart takes
-      // each one out by the card's own tap. Highest place first.
+      // A step changes whole places: building puts each new place's disks on the chart (its count animated from
+      // 0 to the digit, the disks appearing one at a time), pulling apart takes each place out by the card's own
+      // tap. Highest place first.
       play(steps) {
         const actions: AuthoringAction[] = [];
         for (const step of steps) {
           if (step.position !== 0) continue;
-          for (const cleared of placeValueCleared(Math.round(step.from[0]! * 1000), Math.round(step.to[0]! * 1000))) {
+          for (const cleared of placeValueStepPlaces(Math.round(step.from[0]! * 1000), Math.round(step.to[0]! * 1000), mode === "build")) {
             actions.push(mode === "build"
               ? { do: "animate", variable: variableOf(cleared, "count"), value: placeValueDigitAt(number, cleared), duration_intent: "brief" } as AuthoringAction
               : { do: "tap", target: base, tap: "take_out", at: PLACE_VALUE_PLACE_ALIASES[cleared]! } as unknown as AuthoringAction);

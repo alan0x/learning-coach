@@ -9,7 +9,7 @@ import { fitComparedNumbers, fitNumberLineNumbers, fitRoundingNumbers, fitSoluti
 import { normalizePlotInputInstructions, validateTeachingClaims } from "./math-teaching-contracts.js";
 import { formulaError, formulaFunctions, parseModelFormula } from "./math-formulas.js";
 import { BASE_TEN_DRAWN, baseTenColumns, baseTenMoves, baseTenState } from "./base-ten-moves.js";
-import { placeValueMoves } from "./place-value-moves.js";
+import { placeValueMoves, placeValueState } from "./place-value-moves.js";
 import { plotCurveNumbers, plotSampleNumbers, validatePlotSampleNumbers, normalizePlotDraftBindings } from "./plot-bindings.js";
 
 /**
@@ -159,7 +159,7 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
   },
   place_value_chart: {
     // The chart's numbers have no control: the learner works the chart by its own taps (OLL 0025; owner,
-    // 2026-11-24: the model never names a control). The question's number runs from 0 (all done) to itself,
+    // 2026-11-24: the model never names a control). The question's number runs from 0 to itself,
     // the demonstration's targets; the practice number stays as written. The compiler checks both.
     fit_numbers(content, plan) {
       const numbers = content.numbers ?? [];
@@ -175,7 +175,8 @@ export const MATH_HOOKS: Record<string, RecipeHooks> = {
       // value is moved to a range's edge (a practice number above the question's would be, and its words rewritten).
       return new Map();
     },
-    number_moves: { state: (start) => [...start], moves: placeValueMoves },
+    // Building, the chart's number is the value on the chart, from 0; pulling apart, what is still on it.
+    number_moves: { state: placeValueState, moves: placeValueMoves },
   },
   number_line: { fit_numbers: fitNumberLineNumbers },
   number_line_compare: { fit_numbers: fitComparedNumbers },

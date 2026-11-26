@@ -21,7 +21,9 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
     return { facts: { numbers: lessonNumbers, ...baseTenFacts(start, now) } };
   },
   // The place-value chart in its own terms (OLL 0025), once it is drawn: the number, what the card gives, its
-  // columns and the parts it pulls apart into, what is still to do, and the learner's practice number.
+  // columns and the parts it pulls apart into, where the demonstration stands in the guidance's own terms (building:
+  // the value on the chart now and what is still to place; pulling apart: what is still on the chart and what is
+  // out), and the learner's practice number.
   place_value_chart: ({ established, numbers, state, language }) => {
     if (!numbers || !established?.numbers?.length) return {};
     const lessonNumbers = established.numbers;
@@ -31,7 +33,9 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
     const chartLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
     const number = Math.round(values[0]! * 1000);
     const { top_place, decimals } = placeValueColumnsFor(values.map((value) => Math.round(value * 1000)), chartLanguage);
-    const left = state.get(lessonNumbers[0]!) ?? values[0]!;
+    const build = given !== "numeral";
+    // The chart reads its number as the value on it: 0 when a chart to build is drawn, the number when one to pull apart is.
+    const now = Math.round((state.get(lessonNumbers[0]!) ?? (build ? 0 : values[0]!)) * 1000);
     return { facts: {
       numbers: lessonNumbers,
       number: values[0],
@@ -39,7 +43,9 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
       given,
       columns: placeValueColumns(top_place, decimals).map((place) => placeValueColumnName(place, chartLanguage)),
       parts: placeValueParts(number).map((part) => ({ place: placeValueColumnName(part.place, chartLanguage), digit: part.digit, value: placeValueDecimal(part.value) })),
-      still_to_do: left,
+      ...(build
+        ? { on_chart_now: placeValueDecimal(now), still_to_place: placeValueDecimal(number - now) }
+        : { still_on_chart: placeValueDecimal(now), taken_out: placeValueDecimal(number - now) }),
       ...(values[1] !== undefined ? { practice_number: values[1] } : {}),
     } };
   },
