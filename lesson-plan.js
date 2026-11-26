@@ -16472,6 +16472,12 @@ var MATH_RECIPES = {
     parts: ["whole"],
     number_inputs: ["first", "second", "practice_first", "practice_second", "columns_finished"],
     number_input_policies: [{ kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }, { kind: "unbounded" }],
+    // Columns finished starts at 0 whatever the outline holds (the card is drawn with no column done), so the
+    // program supplies it: an outline that declares only the four numbers before it gets it (0, from 0 to the
+    // card's most columns), and a create naming only those four is bound to it. A model's own fifth is kept.
+    program_number_inputs: [{ initial: 0, min: 0, max: 6, label: "\u505A\u5B8C\u4E86\u51E0\u5217" }],
+    // The card starts on no fewer: an outline that declares fewer loses it at once (a section cannot add one).
+    min_lesson_numbers: 5,
     parameter_names: ["operation"],
     model_parameter_names: ["operation"],
     required_model_schema_parameters: ["operation"],
@@ -16484,7 +16490,7 @@ var MATH_RECIPES = {
     // fixed text says how it is used.
     student_controls: [],
     required_features: ["column_add_subtract_trades"],
-    model_guidance: "\u6570\u4F4D\u8868\u52A0\u51CF\uFF08\u7AD6\u5F0F\uFF0C\u8FDB\u4F4D\u3001\u9000\u4F4D\u5C31\u662F\u4EA4\u6362\uFF09\uFF1A\u591A\u4F4D\u6570\u52A0\u51CF\uFF08\u5230\u5341\u4E07\u4F4D\uFF09\u548C\u5C0F\u6570\u52A0\u51CF\uFF08\u5230\u767E\u5206\u4F4D\uFF09\uFF0C\u81F3\u5C11\u6709\u4E00\u4F4D\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u6700\u591A\u516D\u5217\uFF08\u4ECE\u4E24\u4E2A\u6570\u6700\u4F4E\u7684\u4E00\u4F4D\u5230\u4E24\u4E2A\u6570\u548C\u5F97\u6570\u6700\u9AD8\u7684\u4E00\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6446\u6570\u3001\u62C6\u6570\u3001\u6BD4\u8F83\u3001\u51D1\u6574\u3001\u4E58\u6CD5\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u51D1\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002operation \u5199 add \u6216 subtract\u3002\u6570\u503C\u4F9D\u6B21\u662F\uFF1A\u7B2C\u4E00\u4E2A\u6570\u3001\u7B2C\u4E8C\u4E2A\u6570\uFF08\u51CF\u6CD5\u7B2C\u4E00\u4E2A\u6570\u4E0D\u5C0F\u4E8E\u7B2C\u4E8C\u4E2A\u6570\uFF09\u3001\u7EC3\u4E60\u7684\u7B2C\u4E00\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u7B2C\u4E8C\u4E2A\u6570\u3001\u505A\u5B8C\u4E86\u51E0\u5217\u3002\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF082.75\uFF09\uFF0C\u6700\u591A\u4E24\u4F4D\u5C0F\u6570\u3002\u7EC3\u4E60\u7684\u4E00\u5BF9\u662F\u53E6\u4E00\u5BF9\uFF08\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u4E5F\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u5217\u548C\u9898\u76EE\u7684\u4E00\u6837\uFF08\u540C\u6837\u591A\u7684\u6574\u6570\u4F4D\u548C\u5C0F\u6570\u4F4D\uFF0C\u9898\u76EE\u7684\u5F97\u6570\u591A\u51FA\u4E00\u4F4D\u65F6\u7EC3\u4E60\u7684\u4E5F\u591A\u51FA\u4E00\u4F4D\uFF09\u3002\u505A\u5B8C\u4E86\u51E0\u5217\u4ECE\u6700\u53F3\u8FB9\u4E00\u5217\u6570\u8D77\uFF0C\u5199 0\uFF1A\u8868\u4E00\u5F00\u59CB\u4E00\u5217\u4E5F\u6CA1\u6709\u505A\u3002\u6F14\u793A\u65F6\u628A\u5B83\u52A8\u753B\u5230 1\u30012\u2026\u2026\uFF1A\u6BCF\u5230\u4E00\u4E2A\u503C\uFF0C\u7A0B\u5E8F\u6309\u89C4\u5219\u505A\u5B8C\u53F3\u8FB9\u53C8\u4E00\u5217\uFF08\u5408\u8D77\u6765\u3001\u6EE1\u5341\u6362\u4E00\u3001\u4E0D\u591F\u62C6\u4E00\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u540C\u4E00\u4E2A\u503C\u518D\u5199\u8868\u4E0D\u53D8\uFF1B\u53EF\u4EE5\u53EA\u6F14\u793A\u51E0\u5217\u3002\u4E24\u4E2A\u6570\u548C\u7EC3\u4E60\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u505A\u5B8C\u4E86\u51E0\u5217\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u5217\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u505A\u5B8C\u7EC3\u4E60\u7684\u4E00\u5BF9\uFF0C\u7A0B\u5E8F\u518D\u81EA\u5DF1\u95EE\u5F97\u6570\uFF0C\u4E0D\u53E6\u51FA\u95EE\u8FD9\u4E00\u5BF9\u5F97\u6570\u7684\u586B\u6570\u9898\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u5F97\u6570\u3002\u8868\u4E0A\u7684\u6570\u3001\u5706\u7247\u548C\u64CD\u4F5C\u8BF4\u660E\u90FD\u7531\u5361\u7247\u81EA\u5DF1\u5199\uFF1B\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u4E2A\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
+    model_guidance: "\u6570\u4F4D\u8868\u52A0\u51CF\uFF08\u7AD6\u5F0F\uFF0C\u8FDB\u4F4D\u3001\u9000\u4F4D\u5C31\u662F\u4EA4\u6362\uFF09\uFF1A\u591A\u4F4D\u6570\u52A0\u51CF\uFF08\u5230\u5341\u4E07\u4F4D\uFF09\u548C\u5C0F\u6570\u52A0\u51CF\uFF08\u5230\u767E\u5206\u4F4D\uFF09\uFF0C\u81F3\u5C11\u6709\u4E00\u4F4D\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u6700\u591A\u516D\u5217\uFF08\u4ECE\u4E24\u4E2A\u6570\u6700\u4F4E\u7684\u4E00\u4F4D\u5230\u4E24\u4E2A\u6570\u548C\u5F97\u6570\u6700\u9AD8\u7684\u4E00\u4F4D\uFF09\u3002\u4E0D\u7528\u4E8E\u6446\u6570\u3001\u62C6\u6570\u3001\u6BD4\u8F83\u3001\u51D1\u6574\u3001\u4E58\u6CD5\uFF0C\u4E5F\u4E0D\u7528\u4E8E\u4F4E\u5E74\u7EA7\u7684\u51D1\u5341\uFF08\u7528\u65B9\u5757\uFF09\u3002operation \u5199 add \u6216 subtract\u3002outline \u7684 numbers \u4F9D\u6B21\u5199\u8FD9\u4E94\u4E2A\u6570\uFF08\u4E0D\u52A8\u7684\u4E5F\u8981\u5199\uFF09\uFF1A\u7B2C\u4E00\u4E2A\u6570\u3001\u7B2C\u4E8C\u4E2A\u6570\uFF08\u51CF\u6CD5\u7B2C\u4E00\u4E2A\u6570\u4E0D\u5C0F\u4E8E\u7B2C\u4E8C\u4E2A\u6570\uFF09\u3001\u7EC3\u4E60\u7684\u7B2C\u4E00\u4E2A\u6570\u3001\u7EC3\u4E60\u7684\u7B2C\u4E8C\u4E2A\u6570\u3001\u505A\u5B8C\u4E86\u51E0\u5217\u3002\u6570\u503C\u5199\u5B9E\u9645\u5927\u5C0F\uFF082.75\uFF09\uFF0C\u6700\u591A\u4E24\u4F4D\u5C0F\u6570\u3002\u7EC3\u4E60\u7684\u4E00\u5BF9\u662F\u53E6\u4E00\u5BF9\uFF08\u4E0D\u662F\u9898\u76EE\u7684\uFF0C\u514D\u5F97\u5B69\u5B50\u7167\u6284\u6F14\u793A\uFF09\uFF0C\u4E5F\u8981\u8FDB\u4F4D\u6216\u9000\u4F4D\uFF0C\u5217\u548C\u9898\u76EE\u7684\u4E00\u6837\uFF08\u540C\u6837\u591A\u7684\u6574\u6570\u4F4D\u548C\u5C0F\u6570\u4F4D\uFF0C\u9898\u76EE\u7684\u5F97\u6570\u591A\u51FA\u4E00\u4F4D\u65F6\u7EC3\u4E60\u7684\u4E5F\u591A\u51FA\u4E00\u4F4D\uFF09\u3002\u505A\u5B8C\u4E86\u51E0\u5217\u4ECE\u6700\u53F3\u8FB9\u4E00\u5217\u6570\u8D77\uFF0C\u5199 0\uFF1A\u8868\u4E00\u5F00\u59CB\u4E00\u5217\u4E5F\u6CA1\u6709\u505A\u3002\u6F14\u793A\u65F6\u628A\u5B83\u52A8\u753B\u5230 1\u30012\u2026\u2026\uFF1A\u6BCF\u5230\u4E00\u4E2A\u503C\uFF0C\u7A0B\u5E8F\u6309\u89C4\u5219\u505A\u5B8C\u53F3\u8FB9\u53C8\u4E00\u5217\uFF08\u5408\u8D77\u6765\u3001\u6EE1\u5341\u6362\u4E00\u3001\u4E0D\u591F\u62C6\u4E00\uFF09\uFF0C\u53EA\u5F80\u524D\u8D70\uFF0C\u540C\u4E00\u4E2A\u503C\u518D\u5199\u8868\u4E0D\u53D8\uFF1B\u53EF\u4EE5\u53EA\u6F14\u793A\u51E0\u5217\u3002\u4E24\u4E2A\u6570\u548C\u7EC3\u4E60\u7684\u6570\u4E0D\u52A8\u753B\u3002\u7EC3\u4E60\uFF1A\u5BF9\u505A\u5B8C\u4E86\u51E0\u5217\u5199\u4E00\u4E2A\u6570\u503C\u76EE\u6807\u9898\uFF08\u6570\u503C\u5199\u5217\u6570\uFF09\uFF0C\u5B69\u5B50\u5728\u8868\u4E0A\u505A\u5B8C\u7EC3\u4E60\u7684\u4E00\u5BF9\uFF0C\u7A0B\u5E8F\u518D\u81EA\u5DF1\u95EE\u5F97\u6570\uFF0C\u4E0D\u53E6\u51FA\u95EE\u8FD9\u4E00\u5BF9\u5F97\u6570\u7684\u586B\u6570\u9898\uFF1B\u9898\u76EE\u548C\u63D0\u793A\u4E0D\u5199\u7EC3\u4E60\u7684\u5F97\u6570\u3002\u8868\u4E0A\u7684\u6570\u3001\u5706\u7247\u548C\u64CD\u4F5C\u8BF4\u660E\u90FD\u7531\u5361\u7247\u81EA\u5DF1\u5199\uFF1B\u8BF4\u6570\u4F4D\u7528\u540D\u5B57\uFF08\u4E2A\u4F4D\u3001\u5341\u5206\u4F4D\u3001hundreds\uFF09\uFF0C\u4E0D\u8BF4\u600E\u4E48\u70B9\u5361\u7247"
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],
@@ -17236,6 +17242,7 @@ var EN = {
   "\u503C\u57DF": "Range",
   "A\u70B9\u7684x\u5750\u6807": "x-coordinate of point A",
   "B\u70B9\u7684x\u5750\u6807": "x-coordinate of point B",
+  "\u505A\u5B8C\u4E86\u51E0\u5217": "columns finished",
   "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u6E05\u8FD9\u6B21\u624B\u5199\u9009\u533A\uFF0C\u8BF7\u91CD\u65B0\u6846\u9009\uFF0C\u6216\u8005\u628A\u516C\u5F0F\u5199\u5927\u4E00\u4E9B\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read the selected handwriting reliably. Select it again, or write the formula larger and try again.",
   "\u6211\u6CA1\u80FD\u7A33\u5B9A\u8BFB\u53D6\u8FD9\u6B21\u6444\u50CF\u5934\u753B\u9762\uFF0C\u8BF7\u628A\u9898\u76EE\u6216\u7269\u4F53\u653E\u5230\u753B\u9762\u4E2D\u592E\u540E\u518D\u8BD5\u4E00\u6B21\u3002": "I could not read this camera image reliably. Place the question or object in the centre and try again.",
   "\u76EE\u524D\u8FD8\u4E0D\u80FD\u5B8C\u6574\u751F\u6210\u8FD9\u8282\u8BFE\uFF1A{{v0}}": "This lesson cannot be generated in full yet: {{v0}}"
@@ -19311,6 +19318,14 @@ function recipeInitialCamera(capability2) {
 }
 function recipeDeclares(capability2, flag) {
   return recipeEntry(capability2)?.[flag] === true;
+}
+function recipeProgramNumbers(capability2) {
+  const declared = recipeEntry(capability2)?.program_number_inputs;
+  return Array.isArray(declared) ? declared : [];
+}
+function recipeMinLessonNumbers(capability2) {
+  const declared = recipeEntry(capability2)?.min_lesson_numbers;
+  return typeof declared === "number" && Number.isInteger(declared) && declared > 0 ? declared : 0;
 }
 var LESSON_PLAN_VISUAL_FEATURES = [...new Set(
   LESSON_PLAN_CAPABILITY_NAMES.flatMap((name) => [...LESSON_PLAN_CAPABILITY_REGISTRY[name].required_features])
@@ -25310,6 +25325,10 @@ function lowerModelBoardContent(kind, value2, numberCount, numberLabels = []) {
   if (forceNoNumbers) validNumbers = [];
   const parameterNumbers = hooks?.numbers_from_parameters?.(parameters3, { numberCount, limit: numberLimit }) ?? [];
   if (parameterNumbers.length > 0) validNumbers = parameterNumbers;
+  const supplied = recipeProgramNumbers(typeof capability2 === "string" ? capability2 : void 0).length;
+  if (supplied > 0 && !forceNoNumbers && numberCount === numberLimit && validNumbers.length === numberLimit - supplied && validNumbers.every((number) => Number(number) <= numberLimit - supplied)) {
+    for (let number = numberLimit - supplied + 1; number <= numberLimit; number += 1) validNumbers.push(number);
+  }
   if (!forceNoNumbers && validNumbers.length === 0 && numberCount === 1 && typeof capability2 === "string" && !recipeDeclares(capability2, "numbers_in_parameters") && capability2 in LESSON_PLAN_CAPABILITIES && LESSON_PLAN_CAPABILITIES[capability2].includes("primary_control")) {
     validNumbers = [1];
   }
@@ -26866,6 +26885,36 @@ function withdrawSectionVisual(outline, section, capability2, expectedRequestPar
     return void 0;
   }
 }
+function supplyProgramNumbers(outline, language) {
+  for (const capability2 of outlineCapabilities(outline)) {
+    const supplied = recipeProgramNumbers(capability2);
+    const declared = outline.numbers?.length ?? 0;
+    if (!supplied.length || declared === 0 || declared !== LESSON_PLAN_CAPABILITY_NUMBER_LIMITS[capability2] - supplied.length) continue;
+    outline.numbers = [...outline.numbers, ...supplied.map(({ initial, min, max, label }) => ({
+      initial,
+      min,
+      max,
+      label: lessonText(language, label),
+      ...max > min ? { student_control: { kind: "slider", step: deriveSliderStep(min, max) } } : {}
+    }))];
+    return;
+  }
+}
+var OUTLINE_NUMBERS_MISSING = "LESSON_PLAN_OUTLINE_NUMBERS_MISSING";
+function outlineNumbersMissing(outline, section) {
+  const declared = outline.numbers?.length ?? 0;
+  for (const [index, visual] of (outline.course_visuals ?? []).entries()) {
+    const needed = recipeMinLessonNumbers(visual.capability);
+    if (visual.create_section !== section || declared >= needed) continue;
+    return new LessonPlanError(
+      OUTLINE_NUMBERS_MISSING,
+      `$lessonPlanOutline.course_visuals[${index}]`,
+      `the ${visual.capability} visual starts on ${needed} lesson numbers and the outline declares ${declared}; a section cannot add one`,
+      visual.capability
+    );
+  }
+  return void 0;
+}
 var OUTLINE_OWNED_FAULT = "LESSON_PLAN_OUTLINE_VISUAL";
 var isOutlineOwnedFault = (error) => error instanceof LessonPlanError && error.code === OUTLINE_OWNED_FAULT;
 var outlineCapabilities = (outline) => new Set((outline.course_visuals ?? []).map((visual) => visual.capability));
@@ -27056,6 +27105,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
       ),
       fixedRequestParts.length
     );
+    supplyProgramNumbers(outline, input.language);
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     try {
       checkOutlineVisuals(outline, excludedCapabilities);
@@ -27209,6 +27259,7 @@ async function generateLessonPlanWithModel(model, input, options = {}) {
   };
   const acceptOutline = async () => {
     if (!outline) throw outlineError;
+    supplyProgramNumbers(outline, input.language);
     for (const hooks of PLUGIN_HOOKS) hooks.prepare_outline?.(outline, { request: input.learner_request, language: input.language });
     await options.on_outline_ready?.({
       sections: outline.sections.length,
@@ -27381,8 +27432,26 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
     else delete draft.student_activities;
   };
   const drafts = [];
+  const withdrawLaterSectionVisual = async (section, capability2, reason, detail, reported2) => {
+    const withdrawn = section > 1 && !withdrawnNotes.has(section) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
+    if (!withdrawn) return false;
+    withdrawnNotes.set(section, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability2]?.required_features.join(", ") ?? capability2}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
+    outline = withdrawn;
+    await reported2?.();
+    await options.on_program_adjustment?.({
+      kind: "visual_removed",
+      section,
+      capability: capability2,
+      reason,
+      detail
+    });
+    return true;
+  };
   const acceptSection = async (section, initialCandidate) => {
     let candidate = initialCandidate;
+    const missing = outline ? outlineNumbersMissing(outline, section) : void 0;
+    if (missing && section === 1) throw missing;
+    if (missing) await withdrawLaterSectionVisual(section, missing.capability, "outline_numbers_missing", missing.message);
     while (true) {
       candidate ??= await generateSection(section);
       await dropUncheckedAnswerActivities(candidate, section);
@@ -27396,23 +27465,16 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
         if (unsupportedSectionResponse(error, previousError, input.language)) throw error;
         if ((sectionAttempts.get(section) ?? 0) >= maxAttempts) {
           const capability2 = error instanceof LessonPlanError ? error.capability : void 0;
-          const withdrawn = section > 1 && capability2 && !withdrawnNotes.has(section) && outline ? withdrawSectionVisual(outline, section, capability2, fixedRequestParts.length) : void 0;
+          const withdrawn = capability2 !== void 0 && await withdrawLaterSectionVisual(
+            section,
+            capability2,
+            "visual_limits_after_retries",
+            error instanceof Error ? error.message : String(error),
+            async () => {
+              await options.on_rejected_part?.({ label: "lesson-plan-section", section, attempt: sectionAttempts.get(section) ?? 1, error: rejectionDetails(error) });
+            }
+          );
           if (!withdrawn) throw error;
-          withdrawnNotes.set(section, `A picture this lesson was planned around in section ${section} (${LESSON_PLAN_CAPABILITY_REGISTRY[capability2]?.required_features.join(", ") ?? capability2}) could not show the lesson's numbers and has been taken out of the lesson. Write this section without it: do not mention it or anything it would have drawn, and do not invite the learner to use it. Teach with the pictures in visuals_for_section, written math and words.`);
-          outline = withdrawn;
-          await options.on_rejected_part?.({
-            label: "lesson-plan-section",
-            section,
-            attempt: sectionAttempts.get(section) ?? 1,
-            error: rejectionDetails(error)
-          });
-          await options.on_program_adjustment?.({
-            kind: "visual_removed",
-            section,
-            capability: capability2,
-            reason: "visual_limits_after_retries",
-            detail: error instanceof Error ? error.message : String(error)
-          });
           sectionErrors.delete(section);
           sectionAttempts.set(section, maxAttempts - 1);
           candidate = void 0;
@@ -27440,7 +27502,8 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
       return void 0;
     } catch (error) {
       const capability2 = error instanceof LessonPlanError ? error.capability : void 0;
-      const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (sectionAttempts.get(1) ?? 0) >= maxAttempts;
+      const numbersMissing = error instanceof LessonPlanError && error.code === OUTLINE_NUMBERS_MISSING;
+      const spentOnPicture = capability2 !== void 0 && !excludedCapabilities.has(capability2) && (numbersMissing || (sectionAttempts.get(1) ?? 0) >= maxAttempts);
       if (!(isOutlineOwnedFault(error) || spentOnPicture) || outlineRestarts >= 2) throw error;
       outlineRestarts += 1;
       await options.on_rejected_part?.({ label: "lesson-plan-section", section: 1, attempt: sectionAttempts.get(1) ?? 1, error: rejectionDetails(error) });
@@ -27449,7 +27512,7 @@ ${LATER_SECTION_EXPERIENCE_RULE}`,
           kind: "visual_removed",
           section: 1,
           capability: capability2,
-          reason: "visual_limits_after_retries",
+          reason: numbersMissing ? "outline_numbers_missing" : "visual_limits_after_retries",
           detail: error instanceof Error ? error.message : String(error)
         });
       }
@@ -27675,6 +27738,8 @@ export {
   promptSlot,
   recipeDeclares,
   recipeInitialCamera,
+  recipeMinLessonNumbers,
+  recipeProgramNumbers,
   resolveLessonPlan,
   roundingPlaces,
   roundingTolerance,

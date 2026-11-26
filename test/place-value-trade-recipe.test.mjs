@@ -384,3 +384,122 @@ test("the fixed sample (used for request hashes with the trial on) compiles thro
   `);
   assert.deepEqual(result, { kinds: ["card_fact", "numeric_answer"], adjustments: [] });
 });
+
+// Run 35P-07 objective-1: three outlines of fifteen left out columns finished (PT-04 and PT-13 declared no
+// numbers, PT-14 the four others). A section cannot add an outline number, so each section was retried three
+// times on a fault it could never fix, then lost the card. Columns finished always starts at 0, so the program
+// supplies it; a card the outline still gives too few numbers goes at once.
+const stubbedRun = (setup, { language = "en-US" } = {}) => withTrial(`
+  const api = await import(${here("../lesson-plan.js")});
+  const { placeValueTradePlan, makeSamplePlanModelCompatible } = await import(${here("./sample-plans.mjs")});
+  const { modelResponseHelpers } = await import(${here("./model-responses.mjs")});
+  const { bootstrapModelResponse, bootstrapSectionFromExact, stagedOutline, toModelSectionDraft } = modelResponseHelpers(api.LESSON_PLAN_CAPABILITY_REGISTRY);
+  const plan = makeSamplePlanModelCompatible(placeValueTradePlan({ operation: "subtract", numbers: [7352, 2618], practice: [8461, 3729], steps: [1, 2] }));
+  const drafts = plan.sections.map(({ moments, student_activities }, index) => toModelSectionDraft({ section: index + 1, version: plan.version, moments, student_activities }));
+  const outline = stagedOutline(plan, drafts);
+  let first = bootstrapSectionFromExact(outline, drafts[0]);
+  let reply = (request) => JSON.stringify(drafts[request.section - 1]);
+  ${setup}
+  const requests = [], adjustments = [], rejected = [];
+  let generated, error;
+  try {
+    generated = await api.generateLessonPlanWithModel(async (request) => {
+      requests.push(request);
+      if (requests.length > 6) throw new Error("unexpected extra model request");
+      if (request.label === "lesson-plan-bootstrap") return bootstrapModelResponse(request, outline, first);
+      if (request.label === "lesson-plan-outline") throw new Error("replacement outline asked");
+      return reply(request);
+    }, { turn_id: "place-value-trade", learner_request: "Can you show me 7,352 − 2,618? I don't get borrowing.", language: ${JSON.stringify(language)} }, {
+      max_attempts_per_part: 3,
+      on_program_adjustment: (adjustment) => adjustments.push(adjustment),
+      on_rejected_part: (part) => rejected.push(part.error.code),
+    });
+  } catch (caught) { error = caught.message; }
+  console.log(JSON.stringify({
+    error, rejected, adjustments: adjustments.map(({ kind, section, capability, reason }) => ({ kind, section, capability, reason })),
+    requests: requests.map((request) => ({ label: request.label, section: request.section, prompt: JSON.parse(request.prompt), schema: JSON.stringify(request.response_schema) })),
+    numbers: generated?.outline.numbers?.map(({ initial, min, max, label }) => ({ initial, min, max, label })),
+    lesson: generated && JSON.stringify(generated.lesson),
+  }));
+`);
+
+test("an outline that leaves out columns finished gets it from the program: a create naming four or five numbers draws the same card", () => {
+  const full = stubbedRun("");
+  assert.equal(full.error, undefined);
+  for (const refs of [[1, 2, 3, 4], [1, 2, 3, 4, 5]]) {
+    // PT-14's shape: the outline declares the question's pair and the practice pair, not columns finished.
+    const result = stubbedRun(`
+      outline.numbers = outline.numbers.slice(0, 4);
+      for (const moment of first.moments) for (const create of moment.visual_creates ?? []) create.content.numbers = ${JSON.stringify(refs)};
+    `);
+    assert.equal(result.error, undefined, String(refs));
+    assert.deepEqual([result.rejected, result.adjustments], [[], []], String(refs));
+    // Bootstrap and section 2 only, as for the outline that declared all five; the same lesson.
+    assert.deepEqual(result.requests.map((request) => request.label), ["lesson-plan-bootstrap", "lesson-plan-section"]);
+    assert.equal(result.lesson, full.lesson, String(refs));
+    // From 0 to the card's most columns (the card's own fit narrows it to its columns when it is drawn).
+    assert.deepEqual(result.numbers.at(-1), { initial: 0, min: 0, max: 6, label: "columns finished" });
+    // Section 2's request is the one the five-number outline gets: it is told the fifth number and where the
+    // demonstration stands.
+    assert.equal(result.requests[1].schema, full.requests[1].schema);
+    assert.deepEqual(result.requests[1].prompt, full.requests[1].prompt);
+    assert.ok(JSON.stringify(result.requests[1].prompt).includes('"columns_finished":2'));
+  }
+  // In a Chinese lesson the program's label is the card's own.
+  const zh = stubbedRun("outline.numbers = outline.numbers.slice(0, 4);", { language: "zh-CN" });
+  assert.equal(zh.error, undefined);
+  assert.equal(zh.numbers.at(-1).label, "做完了几列");
+});
+
+test("the model's own fifth number is kept, and an outline of another count is not added to", () => {
+  const own = stubbedRun(`outline.numbers[4].label = "done so far";`);
+  assert.equal(own.error, undefined);
+  assert.deepEqual(own.numbers.map((number) => number.label), ["first number", "second number", "practice first", "practice second", "done so far"]);
+  // Three numbers: nothing is supplied (the program does not guess which number is missing); the card goes at once.
+  const three = stubbedRun(`
+    outline.numbers = outline.numbers.slice(0, 3);
+    for (const moment of first.moments) for (const create of moment.visual_creates ?? []) create.content.numbers = [1, 2, 3];
+  `);
+  assert.deepEqual(three.requests.map((request) => request.label), ["lesson-plan-bootstrap", "lesson-plan-outline"]);
+  assert.deepEqual(three.adjustments, [{ kind: "visual_removed", section: 1, capability: "place_value_trade", reason: "outline_numbers_missing" }]);
+});
+
+test("PT-04's shape: an outline with no numbers loses the card at once, with no section written or retried for it", () => {
+  // The combined reply's outline declares no numbers; its first section creates the card on numbers 1 to 5.
+  const result = stubbedRun("delete outline.numbers;");
+  // No section request: the next request is the outline, asked again without the card.
+  assert.deepEqual(result.requests.map((request) => request.label), ["lesson-plan-bootstrap", "lesson-plan-outline"]);
+  assert.equal(result.error, "replacement outline asked");
+  assert.doesNotMatch(result.requests[1].schema, /column_add_subtract_trades/u);
+  assert.deepEqual(result.adjustments, [{ kind: "visual_removed", section: 1, capability: "place_value_trade", reason: "outline_numbers_missing" }]);
+  assert.ok(result.rejected.includes("LESSON_PLAN_OUTLINE_NUMBERS_MISSING"));
+  assert.equal(result.rejected.includes("LESSON_PLAN_CAPABILITY_PARAMETER"), false);
+});
+
+test("a later section's card the outline gave too few numbers is withdrawn before that section is written, and it is written once", () => {
+  const result = stubbedRun(`
+    delete outline.numbers;
+    // Section 1 writes the sum; the card is planned for section 2.
+    outline.course_visuals = [{ required_features: ["column_add_subtract_trades"], use_sections: [2], relation: "primary" }];
+    outline.sections[0].reusable_items = [{ kind: "board_item", board_kind: "math" }];
+    first = { moments: [{ narration: "Here is the subtraction.", delivery: "neutral", math_creates: [{ timing: "during_speech", reusable_item: 1, content: { latex: "7352 - 2618" } }] }] };
+    reply = () => JSON.stringify({ moments: [{ narration: "Subtract column by column.", delivery: "neutral" }] });
+  `);
+  assert.equal(result.error, undefined);
+  assert.deepEqual(result.requests.map((request) => [request.label, request.section]), [["lesson-plan-bootstrap", undefined], ["lesson-plan-section", 2]]);
+  assert.deepEqual(result.adjustments, [{ kind: "visual_removed", section: 2, capability: "place_value_trade", reason: "outline_numbers_missing" }]);
+  assert.deepEqual(result.rejected, []);
+  const prompt = result.requests[1].prompt;
+  assert.deepEqual(prompt.visuals_for_section ?? [], []);
+  assert.match(prompt.removed_picture, /column_add_subtract_trades.*do not mention it/u);
+  assert.doesNotMatch(result.requests[1].schema, /course_visual_creates/u);
+  assert.doesNotMatch(result.lesson, /"kind":"place_value_trade"/u);
+});
+
+test("the trial's guidance asks for the card's numbers in the outline (default requests are checked by request-hashes)", () => {
+  const guidance = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    console.log(JSON.stringify(api.LESSON_PLAN_CAPABILITY_REGISTRY.place_value_trade.model_guidance));
+  `);
+  assert.match(guidance, /outline 的 numbers 依次写这五个数（不动的也要写）/u);
+});
