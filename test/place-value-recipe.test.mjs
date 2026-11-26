@@ -1,6 +1,5 @@
-// The place-value chart recipe (OLL decision 0025, need 35P-05), on the trading mat's pattern. A trial: offered
-// only when LEARNING_COACH_TRIAL_RECIPES names it, so requests and recorded lessons are unchanged without it
-// (test/request-hashes.test.mjs runs without it). The question's number and a different practice number are
+// The place-value chart recipe (OLL decision 0025, need 35P-05), on the trading mat's pattern. Offered by
+// default since 2026-11-26 (owner), after objective check 1; a trial before. The question's number and a different practice number are
 // lesson numbers; the model writes what the card gives, the demonstration as targets on the number (the value
 // on the chart: built up from 0, or what is still on it as it is pulled apart) and the practice; the program writes every number text, plays the
 // steps by the card's own rules and makes the learner's task (and, pulled apart, the row of parts). Every
@@ -16,13 +15,14 @@ const api = await import(new URL("../lesson-plan.js", import.meta.url));
 const here = (path) => JSON.stringify(new URL(path, import.meta.url).href);
 const CASES = JSON.parse(readFileSync(new URL("../testsuite/place-value-dev-cases.json", import.meta.url), "utf8")).cases;
 
-test("place_value_chart is a trial recipe on lesson numbers: not offered by default, one field of its own", () => {
-  assert.ok(api.TRIAL_RECIPES.includes("place_value_chart"));
-  assert.equal(api.OFFERED_RECIPES.includes("place_value_chart"), false);
-  assert.equal(api.LESSON_PLAN_CAPABILITY_NAMES.includes("place_value_chart"), false);
+test("place_value_chart is offered by default, last in the catalog (owner, 2026-11-26), on lesson numbers, one field of its own", () => {
+  assert.equal(api.TRIAL_RECIPES.includes("place_value_chart"), false);
+  assert.equal(api.RECIPE_CATALOG_ORDER.at(-1), "place_value_chart");
+  assert.ok(api.OFFERED_RECIPES.includes("place_value_chart"));
+  assert.ok(api.LESSON_PLAN_CAPABILITY_NAMES.includes("place_value_chart"));
   assert.equal(api.RECIPE_PLUGIN.place_value_chart, "math");
   assert.deepEqual(api.RECIPE_SCHEMA_PROPERTIES.place_value_chart, { given: { enum: ["name", "expanded", "expanded_factors", "place_counts", "numeral"] } });
-  // Last in the provider's property order, so requests without the trial keep their order.
+  // Last in the provider's property order, where the trial put it.
   assert.equal(api.SCHEMA_PROPERTY_ORDER.at(-1), "given");
   const moves = api.RECIPE_HOOKS.place_value_chart.number_moves;
   const build = { parameters: { given: "name" } }, apart = { parameters: { given: "numeral" } };
@@ -53,7 +53,7 @@ test("place_value_chart is a trial recipe on lesson numbers: not offered by defa
   assert.match(moves.moves(built, [{ position: 1, to: 0 }]).refused.reason, /practice number is the learner's/);
 });
 
-/** Runs a script with the trial switched on (the switch is read once, when the module loads). */
+/** Runs a script in its own process. (It named the trial when the chart was one; the chart is offered since 2026-11-26.) */
 function withTrial(script) {
   return JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e", script], {
     env: { ...process.env, LEARNING_COACH_TRIAL_RECIPES: "place_value_chart" },
@@ -249,7 +249,7 @@ test("section facts: the chart in its own terms, once it is drawn", () => {
     ["千位", "百位", "十位", "个位", "十分位", "百分位", "千分位"]);
 });
 
-test("with the trial on, the catalog offers the chart last and the model's first request describes it", () => {
+test("the catalog offers the chart last and the model's first request describes it", () => {
   const result = withTrial(`
     const api = await import(${here("../lesson-plan.js")});
     let request;

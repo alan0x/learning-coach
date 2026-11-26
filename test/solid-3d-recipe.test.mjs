@@ -14,7 +14,7 @@ const here = (path) => JSON.stringify(new URL(path, import.meta.url).href);
 
 test("solid_3d is offered by default, last in the catalog where its gate measured it, and the teaching cube is retired", () => {
   // Switched on 2026-11-18 after the revised speed gate passed at 80 pairs (docs/SOLIDS_PROBE_2026-11-17.md).
-  assert.equal(api.RECIPE_CATALOG_ORDER.at(-2), "solid_3d");
+  assert.equal(api.RECIPE_CATALOG_ORDER.at(-3), "solid_3d");
   assert.ok(api.OFFERED_RECIPES.includes("solid_3d"));
   assert.ok(api.LESSON_PLAN_CAPABILITY_NAMES.includes("solid_3d"));
   assert.equal(api.TRIAL_RECIPES.includes("solid_3d"), false);

@@ -23,7 +23,7 @@ test("each recipe belongs to exactly one installed plugin, as the plan assigns",
   assert.equal(RECIPE_PLUGIN.spring_and_mass, "physics");
   assert.equal(RECIPE_PLUGIN.constant_speed_motion, "physics");
   assert.equal(RECIPE_PLUGIN.process_diagram, "shared");
-  assert.deepEqual(RECIPE_CATALOG_ORDER.filter((name) => RECIPE_PLUGIN[name] === "math").length, 17);
+  assert.deepEqual(RECIPE_CATALOG_ORDER.filter((name) => RECIPE_PLUGIN[name] === "math").length, 18);
 });
 
 test("plugin manifests depend only on installed plugins, and every subject has a Jev description", () => {

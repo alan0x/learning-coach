@@ -54,6 +54,9 @@ export const RECIPE_CATALOG_ORDER = [
   // the 33 development cases and the fix that withdraws a picture instead of losing the lesson (Coach #170),
   // ahead of a speed gate. Last, where the checks offered it.
   "base_ten_trade",
+  // The place-value chart (OLL decision 0025): adopted by the owner on 2026-11-26 after objective check 1 of
+  // the 21 development cases and the pull-apart fix (Coach #177). Last, where the check offered it.
+  "place_value_chart",
 ] as const satisfies readonly (keyof AllRecipes)[];
 
 /**
@@ -70,9 +73,7 @@ export const RETIRED_RECIPES = ["cube_with_section"] as const satisfies readonly
  * offers it by naming it in LEARNING_COACH_TRIAL_RECIPES (comma-separated);
  * a trial recipe goes after the catalog.
  */
-// place_value_chart: the place-value chart (OLL decision 0025), built 2026-11-25; offered only when named,
-// until its objective check and the owner's decision.
-export const TRIAL_RECIPES = ["constant_speed_motion", "fraction_model", "place_value_chart"] as const satisfies readonly (keyof AllRecipes)[];
+export const TRIAL_RECIPES = ["constant_speed_motion", "fraction_model"] as const satisfies readonly (keyof AllRecipes)[];
 
 /** The trial recipes a comma-separated list names, in TRIAL_RECIPES order. */
 export function enabledTrialRecipes(list: string | undefined): Array<typeof TRIAL_RECIPES[number]> {
