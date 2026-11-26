@@ -18,9 +18,9 @@ const value = (text) => tradeThousandths(text);
 /** The columns of a pair, highest first, as the card draws them (OLL #115's rule). */
 function columnsOf(operation, a, b) {
   const decimals = (v) => (v % 1000 === 0 ? 0 : v % 100 === 0 ? 1 : 2);
-  const top = (v) => (v >= 1000 ? String(Math.floor(v / 1000)).length - 1 : 0);
+  const top = (v) => (v >= 1000 ? String(Math.floor(v / 1000)).length - 1 : v >= 100 ? -1 : v >= 10 ? -2 : -3);
   const low = -Math.max(decimals(a), decimals(b));
-  const high = Math.max(top(a), top(b), top(operation === "add" ? a + b : a - b));
+  const high = Math.max(top(a), top(b), top(operation === "add" ? a + b : a - b), low);
   return Array.from({ length: high - low + 1 }, (_, i) => high - i);
 }
 
@@ -116,6 +116,8 @@ test("written numbers are read exactly: grouping, full-width digits and trailing
   assert.equal(tradePairFault("add", value("12345"), value("0.05")), "too_wide");
   assert.equal(tradePairFault("add", 3_486_005, value("2739")), "decimals");
   assert.equal(tradePairFault("add", value("2.75"), value("1.48")), undefined);
+  // A pair below 1 has no ones column (OLL #115, review): 0.35 + 0.48 is two columns, and still carries.
+  assert.equal(tradePairFault("add", value("0.35"), value("0.48")), undefined);
 });
 
 test("served lessons pass, in both languages, whether or not the demonstration finishes every column", () => {
@@ -131,6 +133,10 @@ test("served lessons pass, in both languages, whether or not the demonstration f
   const partway = judgePlaceValueTrade(byId["PT-12"], tradeLesson({ operation: "add", a: "2.75", b: "1.48", practice: [["3.86", "2.57"]], finished: [1] }));
   assert.ok(partway.pass);
   assert.deepEqual(noted(partway), ["the demonstration finishes every column"]);
+  // A pair below 1 draws no ones column: two columns finished is the whole demonstration.
+  const below = judgePlaceValueTrade({ id: "below-1", expect: { need: "35P-07", operation: "add", numbers: ["0.35", "0.48"], result: "0.83" } },
+    tradeLesson({ operation: "add", a: "0.35", b: "0.48", practice: [["0.27", "0.56"]], finished: [1, 2] }));
+  assert.deepEqual([failed(below), noted(below)], [[], []]);
   // Without a task on the card the lesson still passes; the owner judges whether it teaches enough.
   const watch = judgePlaceValueTrade(byId["PT-05"], tradeLesson({ operation: "add", a: "4999", b: "2001", finished: [4] }));
   assert.ok(watch.pass);

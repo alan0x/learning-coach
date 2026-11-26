@@ -61,13 +61,16 @@ export function tradeNumeral(value) {
 const resultOf = (operation, a, b) => (operation === "subtract" ? a - b : a + b);
 const digitAt = (value, place) => Math.floor(value / 10 ** (place + 3)) % 10;
 const decimalsOf = (value) => (value % 1000 === 0 ? 0 : value % 100 === 0 ? 1 : value % 10 === 0 ? 2 : 3);
-/** The highest place with a digit (0 for a number below 1, as the card always draws the ones). */
-const topPlaceOf = (value) => (value >= 1000 ? String(Math.floor(value / 1000)).length - 1 : 0);
+/** The highest place with a digit: 3 for 3,486, -1 for 0.35, -2 for 0.05 (-3 for 0, which no column needs). */
+const topPlaceOf = (value) => (value >= 1000 ? String(Math.floor(value / 1000)).length - 1 : value >= 100 ? -1 : value >= 10 ? -2 : -3);
 
-/** The columns a pair needs, highest first: from the lower decimal place up to the highest place of a, b or the answer. */
+/**
+ * The columns a pair needs, highest first: from the lower decimal place up to the highest place of a, b or the
+ * answer. A pair below 1 has no ones column (0.35 + 0.48: tenths and hundredths), as OLL #115 draws it.
+ */
 function columnsFor(operation, a, b) {
   const low = -Math.min(MAX_DECIMALS, Math.max(decimalsOf(a), decimalsOf(b)));
-  const top = Math.max(topPlaceOf(a), topPlaceOf(b), topPlaceOf(Math.max(0, resultOf(operation, a, b))));
+  const top = Math.max(topPlaceOf(a), topPlaceOf(b), topPlaceOf(Math.max(0, resultOf(operation, a, b))), low);
   const columns = [];
   for (let place = top; place >= low; place -= 1) columns.push(place);
   return columns;
