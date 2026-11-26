@@ -415,3 +415,16 @@ test("objective check 1 (PV-02, PV-05): a section that writes the full number ag
   assert.deepEqual([result.down.compiled.code, result.down.compiled.capability], ["LESSON_PLAN_NUMBER_NOT_DRAWABLE", "place_value_chart"]);
   assert.match(result.down.compiled.message, /places already on stay, so from 7009 it can be only 7009: the number is built/);
 });
+
+test("objective check 1 (PV-10, PV-13): a question's number declared as 0 is refused with what to write instead", () => {
+  const out = withTrial(`
+    const api = await import(${here("../lesson-plan.js")});
+    const { placeValuePlan } = await import(${here("./sample-plans.mjs")});
+    const plan = placeValuePlan({ number: 0.309, practice: 0.504, given: "place_counts" });
+    plan.numbers[0].initial = 0;
+    try { api.compileAndValidateLessonPlan(plan, { language: "zh-CN" }); console.log(JSON.stringify({ compiled: true })); }
+    catch (error) { console.log(JSON.stringify({ capability: error.capability, message: error.message })); }
+  `);
+  assert.equal(out.capability, "place_value_chart");
+  assert.match(out.message, /Write the number itself as its value \(for example 0\.309\), not 0: the chart starts empty by itself/);
+});
