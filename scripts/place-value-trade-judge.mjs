@@ -13,8 +13,9 @@
 //   lesson's language; and every task on the card has a goal the learner can reach: a task on the card is its
 //   `complete` fact by taps, on a practice pair the card takes (a carry or borrow, no negative difference, at
 //   most two decimals and six columns) that is not the lesson's pair, starting fresh (nothing demonstrated, no
-//   column worked); the typed answer that follows a task on the card (anchored to it) expects the result of
-//   that task's pair, read off the finished chart (0026 §4).
+//   column worked), on the card's own columns (OLL draws every pair on the content's top_place and low_place);
+//   the lesson's pair fits those columns too; and the typed answer that follows a task on the card is exactly
+//   the result of that task's pair, read off the finished chart (0026 §4; noted when it is not anchored to the card).
 // - Notes (what the lesson chose to teach; the owner judges lessons): one card; how many columns the
 //   demonstration finishes (a lesson may stop partway, owner 2026-11-25: no hard rule, 0026 §8); the learner
 //   has a task on the card; a typed answer follows; the task's words name no control; a chart drawn beside
@@ -108,12 +109,27 @@ function cardAt(content, variables) {
   return {
     language: content?.language ?? "en-US",
     operation: content?.operation,
+    // The card's columns are fixed by its content: every pair it holds is drawn on them (OLL 0026).
+    top_place: content?.top_place,
+    low_place: content?.low_place,
     a: at("a", content?.a),
     b: at("b", content?.b),
     finished: at("finished", content?.finished ?? 0),
     statuses: (content?.places ?? []).map((place) => at(`${place.as}.status`, place.status ?? 0)),
     finishedVariable: bound.get("finished"),
   };
+}
+
+/**
+ * Why a pair cannot be worked on the card's own columns, or undefined: OLL draws every pair on the content's
+ * `top_place`/`low_place` and refuses a practice of another shape, so a pair needing other columns (a sum that
+ * gains a place, a pair below 1 on a whole-number card) has no finished chart to reach.
+ */
+function columnsFault(state) {
+  if (!Number.isSafeInteger(state.a) || !Number.isSafeInteger(state.b) || !["add", "subtract"].includes(state.operation)) return "unreadable";
+  const columns = columnsFor(state.operation, state.a, state.b);
+  if (columns[0] === state.top_place && columns.at(-1) === state.low_place) return undefined;
+  return `the pair needs places ${columns[0]} to ${columns.at(-1)}, the card draws ${state.top_place} to ${state.low_place}`;
 }
 
 /** Everything the judge reads about one lesson's trade card. */
@@ -171,12 +187,14 @@ export function judgePlaceValueTrade(item, lesson) {
   const zh = /^zh(?:-|$)/i.test(String(lesson.lesson?.language ?? ""));
   const language = zh ? "zh-CN" : "en-US";
   check("the card speaks the lesson's language", start.language === language, `card ${start.language}, lesson ${lesson.lesson?.language}`);
+  const lessonColumns = columnsFault(start);
+  check("the card's columns are its pair's", !lessonColumns, `${shownPair(start)}: ${lessonColumns}`);
 
-  const columns = Number.isSafeInteger(start.a) && Number.isSafeInteger(start.b) ? columnsFor(start.operation, start.a, start.b).length : undefined;
+  const columns = Number.isInteger(start.top_place) && Number.isInteger(start.low_place) ? start.top_place - start.low_place + 1 : undefined;
   note("the demonstration finishes every column", columns !== undefined && card.shown >= columns, `columns finished ${card.shown} of ${columns}`);
 
   // Every task on the card has a goal the learner can reach, and so does the typed answer that follows it.
-  let holds = { a: start.a, b: start.b }; // the pair on the card when the next task opens
+  let holds = { ...start }; // the card, with the pair it holds when the next task opens
   let cardTasks = 0;
   let afterCard = false; // the task before this one was a task on the card
   for (const task of card.tasks) {
@@ -198,24 +216,34 @@ export function judgePlaceValueTrade(item, lesson) {
       const practice = cardAt(card.content, { ...card.declared, ...values });
       const fault = tradePairFault(practice.operation, practice.a, practice.b);
       check(`${label}: the practice pair is one the card takes`, !fault, `${shownPair(practice)}: ${fault}`);
+      // The practice is drawn on the card's own columns: a pair of another shape can never be completed there.
+      if (!fault) {
+        const shape = columnsFault(practice);
+        check(`${label}: the practice pair fits the card's columns`, !shape, `${shownPair(practice)}: ${shape}`);
+      }
       check(`${label}: the practice pair is not the lesson's`, practice.a !== start.a || practice.b !== start.b, `both ${shownPair(practice)}`);
       check(`${label}: the practice starts fresh`, practice.finished === 0 && practice.statuses.every((status) => status === 0),
         JSON.stringify({ finished: practice.finished, statuses: practice.statuses }));
-      holds = { a: practice.a, b: practice.b };
+      holds = practice;
       const words = [task.prompt, ...(task.hints ?? []), task.success_message ?? ""].join(" ");
       note(`${label}: the task's words name no control`, !/滑|拖|slid|drag|按钮|button/i.test(words), words);
-    } else if (completion.kind === "numeric_answer" && task.anchor === card.as) {
-      // A pair the card refuses has no finished chart to read the answer from (a negative difference has no answer row).
-      const expected = Number.isSafeInteger(holds.a) && Number.isSafeInteger(holds.b) && !tradePairFault(start.operation, holds.a, holds.b)
-        ? resultOf(start.operation, holds.a, holds.b) : undefined;
+    } else if (completion.kind === "numeric_answer" && (task.anchor === card.as || follows)) {
+      // A pair the card refuses, or one off its columns, has no finished chart to read the answer from.
+      const reachable = !tradePairFault(holds.operation, holds.a, holds.b) && !columnsFault(holds);
+      const expected = reachable ? resultOf(holds.operation, holds.a, holds.b) : undefined;
       const answer = tradeThousandths(completion.answer);
-      const tolerance = Math.round((Number(completion.tolerance) || 0) * 1000);
-      const reads = expected !== undefined && answer !== undefined && Math.abs(answer - expected) <= tolerance;
-      const detail = `answer ${completion.answer}, card ${shownPair({ operation: start.operation, ...holds })} = ${expected === undefined ? "?" : tradeNumeral(expected)}`;
-      // The answer typed after a task on the card is read off that finished chart (0026 §4): it must be the pair's.
-      // Another typed question placed by the card may ask anything its own words say: noted, not judged.
-      if (follows) check(`${label}: the typed answer after the card's task is the result of its pair`, reads, detail);
-      else note(`${label}: a typed question by the card asks the result of the pair on it`, reads, detail);
+      const detail = `answer ${completion.answer}, card ${shownPair(holds)} = ${expected === undefined ? "?" : tradeNumeral(expected)}`;
+      if (follows) {
+        // The answer typed after a task on the card is read off that finished chart (0026 §4): exactly the pair's
+        // result, which the card holds exactly, so no tolerance applies.
+        check(`${label}: the typed answer after the card's task is the result of its pair`, expected !== undefined && answer === expected, detail);
+        note(`${label}: the typed answer after the card's task is anchored to the card`, task.anchor === card.as, `anchor ${task.anchor}`);
+      } else {
+        // Another typed question placed by the card may ask anything its own words say: noted, not judged.
+        const tolerance = Math.round((Number(completion.tolerance) || 0) * 1000);
+        note(`${label}: a typed question by the card asks the result of the pair on it`,
+          expected !== undefined && answer !== undefined && Math.abs(answer - expected) <= tolerance, detail);
+      }
     }
   }
   note("the learner has a task on the card", cardTasks > 0, "no task on the card");
