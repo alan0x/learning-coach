@@ -49,7 +49,9 @@ export function samplePlan(capability) {
       ? 2
       : capability === "number_line_steps"
         ? 3
-        : 1;
+        : capability === "place_value_trade"
+          ? 5
+          : 1;
   // The number line's question types (decisions 0013 and 0016): the parameters each one needs.
   const numberLineParameters = { number_line_solution: { relation: "x>a" }, number_line_rounding: { place: "tens" } }[capability];
   const hasNumber = numberCount > 0;
@@ -71,6 +73,8 @@ export function samplePlan(capability) {
             ? { solids: [{ shape: "cylinder", radius: 2, height: 5 }], show: ["volume"], interaction: "cut" }
             : capability === "place_value_chart"
             ? { given: "name" }
+            : capability === "place_value_trade"
+            ? { operation: "add" }
             : numberLineParameters ?? {},
         ...(hasNumber ? { numbers: Array.from({ length: numberCount }, (_unused, index) => index + 1) } : {}),
       },
@@ -87,8 +91,9 @@ export function samplePlan(capability) {
   if (hasNumber) {
     firstMomentActions.push({
       action: "animate",
-      number: 1,
-      end_value: capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 4050 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
+      // The trade card's demonstration moves its fifth number, columns finished (OLL decision 0026).
+      number: capability === "place_value_trade" ? 5 : 1,
+      end_value: capability === "place_value_trade" ? 4 : capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 4050 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -117,6 +122,10 @@ export function samplePlan(capability) {
         // The place-value chart (OLL decision 0025): 4,050 built from its name, all at once (the value on the
         // chart goes from 0 to 4,050); the learner builds 3,207.
         ? { initial: index === 0 ? 4050 : 3207, min: 0, max: index === 0 ? 4050 : 3207, label: index === 0 ? "the number" : "practice number" }
+        : capability === "place_value_trade"
+        // The place-value trade card (OLL decision 0026): 3,486 + 2,739, every column demonstrated (columns
+        // finished 0 to 4); the learner adds 4,658 + 1,573.
+        ? [3486, 2739, 4658, 1573, 0].map((initial, position) => ({ initial, min: 0, max: position === 4 ? 4 : initial, label: ["first number", "second number", "practice first", "practice second", "columns finished"][position] }))[index]
         : capability === "number_line_compare"
         ? { initial: index === 0 ? 0.5 : 0.25, min: 0, max: 1, label: index === 0 ? "first" : "second", student_control: { kind: "slider", step: 0.05 } }
         : capability === "rectangle_unit_square_array"
@@ -166,8 +175,8 @@ export function samplePlan(capability) {
           student_activities: [{
             kind: "number_target",
             prompt: "Move the main value to one half.",
-            number_controls: [{ number: 1, controls: ["slider"] }],
-            value: capability === "place_value_chart" ? 3207 : capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
+            number_controls: [{ number: capability === "place_value_trade" ? 5 : 1, controls: ["slider"] }],
+            value: capability === "place_value_trade" ? 4 : capability === "place_value_chart" ? 3207 : capability === "circle_polygon_bounds" ? 96 : capability === "number_line_rounding" ? 45 : capability === "number_line_steps" ? 6 : 0.5,
             tolerance: 0.02,
             hints: ["Watch the numeric value."],
           }],
@@ -253,6 +262,49 @@ export function placeValuePlan({ number, practice, given, steps = placeValueStep
     }];
   }
   return plan;
+}
+
+/**
+ * A place-value trade lesson (OLL decision 0026) as a model writes it: the operation, the question's pair, a practice
+ * pair and columns finished (0), the demonstration as values of columns finished in moments of their own (every
+ * column by default), and the practice as a number target on columns finished. `typed` adds a model's typed
+ * question in section 2, placed by the card.
+ */
+export function placeValueTradePlan({ operation, numbers, practice, steps, prompt, hints = ["Start with any column."], typed = false }) {
+  const plan = samplePlan("place_value_trade");
+  const written = [...numbers, ...practice, 0];
+  plan.numbers = written.map((initial, position) => ({ initial, min: 0, max: Math.max(initial, position === 4 ? 6 : 0), label: ["first number", "second number", "practice first", "practice second", "columns finished"][position] }));
+  const first = plan.sections[0].moments[0];
+  first.actions = first.actions.filter((action) => action.action !== "animate");
+  first.actions[0].content = { capability: "place_value_trade", parameters: { operation }, numbers: [1, 2, 3, 4, 5] };
+  const finished = steps ?? Array.from({ length: placeValueTradeColumnCount(operation, numbers) }, (_, k) => k + 1);
+  plan.sections[0].moments.push(...finished.map((value, index) => ({
+    narration: `Step ${index + 1}.`,
+    actions: [{ action: "animate", number: 5, end_value: value, duration_intent: "brief", timing: "during_speech" }],
+  })));
+  plan.sections[0].student_activities = [{
+    kind: "number_target",
+    prompt: prompt ?? (operation === "add" ? "Your turn: add the new pair on the chart." : "Your turn: subtract the new pair on the chart."),
+    number_controls: [{ number: 5, controls: ["slider"] }],
+    value: placeValueTradeColumnCount(operation, practice), tolerance: 0.5, hints,
+  }];
+  if (typed) {
+    const answer = String(Number((operation === "add" ? numbers[0] + numbers[1] : numbers[0] - numbers[1]).toFixed(2)));
+    plan.sections[1].student_activities = [{
+      kind: "numeric_answer", prompt: `What is ${numbers[0]} ${operation === "add" ? "+" : "-"} ${numbers[1]}?`, answer, check: answer,
+      reference: reusable(1, 1), hints: ["Read the answer row."],
+    }];
+  }
+  return plan;
+}
+
+/** The columns a pair needs on the trade card: from its lower decimal place up to the highest place of a, b or the answer. */
+export function placeValueTradeColumnCount(operation, [a, b]) {
+  const thousandths = (value) => Math.round(value * 1000);
+  const decimals = (value) => (thousandths(value) % 1000 === 0 ? 0 : thousandths(value) % 100 === 0 ? 1 : 2);
+  const top = (value) => (value >= 1 ? String(Math.floor(value)).length - 1 : value >= 0.1 ? -1 : value >= 0.01 ? -2 : -3);
+  const low = -Math.max(decimals(a), decimals(b));
+  return Math.max(top(a), top(b), top(operation === "add" ? a + b : a - b), low) - low + 1;
 }
 
 /**

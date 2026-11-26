@@ -1,15 +1,17 @@
-// The place-value trade judge (OLL decision 0026, need 35P-07), before its recipe: the development cases are well
-// formed, and the judge is tried on trade lessons written by hand in the card's shape (OLL #116's SPEC example:
+// The place-value trade judge (OLL decision 0026, need 35P-07): the development cases are well formed, and the
+// judge is tried on trade lessons written by hand in the card's shape (OLL #116's SPEC example:
 // the pair and "columns finished" bound bare, one status per column, a `complete` task by taps on a practice
 // pair, then a typed answer anchored to the card), and on real lessons the compiler makes today (the
 // place-value chart, a number line). A served lesson passes, including one whose demonstration stops partway;
 // a near miss with a trade card fails; a served question drawn on the place-value chart fails; and a card or
-// task that is not the question's, or a goal the learner cannot reach, fails.
+// task that is not the question's, or a goal the learner cannot reach, fails; a lesson OLL refuses also fails
+// "the lesson plays". Lessons the recipe makes are judged in test/place-value-trade-recipe.test.mjs.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { judgePlaceValueTrade, tradeNumeral, tradePairFault, tradeThousandths } from "../scripts/place-value-trade-judge.mjs";
 import { placeValuePlan, samplePlan } from "./sample-plans.mjs";
+import { buildPlaceValueChart } from "octos-lesson-language/plugin-math";
 
 const ALIASES = { 5: "hundred-thousands", 4: "ten-thousands", 3: "thousands", 2: "hundreds", 1: "tens", 0: "ones", [-1]: "tenths", [-2]: "hundredths" };
 const variableOf = (place) => `col_${ALIASES[place].replace(/-/g, "_")}`;
@@ -28,6 +30,8 @@ function columnsOf(operation, a, b) {
 function tradeLesson({ operation, a, b, language = "en-US", cardLanguage = language, practice = [], finished = [], answers }) {
   const A = value(a), B = value(b);
   const columns = columnsOf(operation, A, B);
+  // A range is never one value: one more unit of the lowest column, which the card's columns still hold.
+  const unit = 10 ** (columns.at(-1) + 3);
   const pairs = practice.map(([pa, pb]) => [value(pa), value(pb)]);
   const result = (x, y) => (operation === "add" ? x + y : x - y);
   const tasks = pairs.flatMap(([pa, pb], i) => [
@@ -61,8 +65,8 @@ function tradeLesson({ operation, a, b, language = "en-US", cardLanguage = langu
     lesson: {
       mode: "explain", language, title: "Column method", goals: ["Add and subtract with trades"],
       variables: [
-        { as: "a", label: "a", initial: A, min: Math.min(A, ...pairs.map(([x]) => x)), max: Math.max(A + 1000, ...pairs.map(([x]) => x)) },
-        { as: "b", label: "b", initial: B, min: Math.min(B, ...pairs.map(([, y]) => y)), max: Math.max(B + 1000, ...pairs.map(([, y]) => y)) },
+        { as: "a", label: "a", initial: A, min: Math.min(A, ...pairs.map(([x]) => x)), max: Math.max(A + unit, ...pairs.map(([x]) => x)) },
+        { as: "b", label: "b", initial: B, min: Math.min(B, ...pairs.map(([, y]) => y)), max: Math.max(B + unit, ...pairs.map(([, y]) => y)) },
         { as: "finished", label: "columns finished", initial: 0, min: 0, max: columns.length },
         ...columns.map((place) => ({ as: variableOf(place), label: variableOf(place), initial: 0, min: 0, max: operation === "add" ? 2 : 3 })),
       ],
@@ -164,7 +168,7 @@ test("a served question drawn on the place-value chart instead of the trade card
   assert.deepEqual(failed(judgePlaceValueTrade(byId["PT-06"], plain)), ["a place-value trade card is drawn"]);
   // A chart beside the trade card is noted, not failed.
   const both = tradeLesson({ operation: "subtract", a: "7352", b: "2618", practice: [["8461", "3729"]], finished: [4] });
-  both.steps[0].beats.push({ key: "chart", say: "Here is the chart.", actions: [{ do: "write", as: "chart", kind: "place_value_chart", role: "supporting_visual", content: {}, place: { relation: "new_region" } }] });
+  both.steps[0].beats.push({ key: "chart", say: "Here is the chart.", actions: buildPlaceValueChart({ as: "chart", role: "supporting_visual", place: { relation: "new_region" }, mode: "build", given: "name", target: 7_352_000 }).actions });
   const verdict = judgePlaceValueTrade(byId["PT-06"], both);
   assert.ok(verdict.pass);
   assert.deepEqual(noted(verdict), ["no place-value chart beside the trade card"]);
@@ -182,7 +186,7 @@ test("a card that is not the question's fails: other numbers, the pair swapped, 
   assert.deepEqual(failed(english), ["the card speaks the lesson's language"]);
   // The numbers are read where the card's bindings put them: at the variables' starting values.
   const bound = tradeLesson({ operation: "add", a: "3486", b: "2739", practice: [["4658", "1573"]] });
-  bound.steps[0].beats[0].actions[0].content.a = 0;
+  bound.steps[0].beats[0].actions[0].content.a = value("3999");
   assert.ok(judgePlaceValueTrade(item, bound).pass);
   bound.lesson.variables[0].initial = value("3487");
   assert.deepEqual(failed(judgePlaceValueTrade(item, bound)), ["the card's two numbers are the question's, in order", "the card's pair gives the question's result"]);
@@ -192,31 +196,31 @@ test("every task on the card has a goal the learner can reach", () => {
   const item = byId["PT-01"];
   const lesson = (practice, extra = {}) => tradeLesson({ operation: "add", a: "3486", b: "2739", practice, finished: [4], ...extra });
   // The practice pair is the lesson's own: the learner would copy the demonstration.
-  assert.deepEqual(failed(judgePlaceValueTrade(item, lesson([["3486", "2739"]]))), ["practice-1: the practice pair is not the lesson's"]);
+  assert.deepEqual(failed(judgePlaceValueTrade(item, lesson([["3486", "2739"]]))), ["the lesson plays", "practice-1: the practice pair is not the lesson's"]);
   // One number changed is another pair.
   assert.ok(judgePlaceValueTrade(item, lesson([["3486", "2738"]])).pass);
   // A pair with no carry, or one the card cannot draw, has no task on the card to do.
   // The typed answer after it has no finished chart to read either.
   assert.deepEqual(failed(judgePlaceValueTrade(item, lesson([["1234", "4321"]]))),
-    ["practice-1: the practice pair is one the card takes", "answer-1: the typed answer after the card's task is the result of its pair"]);
+    ["the lesson plays", "practice-1: the practice pair is one the card takes", "answer-1: the typed answer after the card's task is the result of its pair"]);
   assert.deepEqual(failed(judgePlaceValueTrade(byId["PT-06"], tradeLesson({ operation: "subtract", a: "7352", b: "2618", practice: [["2618", "7352"]] }))),
-    ["practice-1: the practice pair is one the card takes", "answer-1: the typed answer after the card's task is the result of its pair"]);
+    ["the lesson plays", "practice-1: the practice pair is one the card takes", "answer-1: the typed answer after the card's task is the result of its pair"]);
   // A practice that starts demonstrated or worked.
   const demoed = lesson([["4658", "1573"]]);
   demoed.lesson.tasks[0].start.values.finished = 2;
-  assert.deepEqual(failed(judgePlaceValueTrade(item, demoed)), ["practice-1: the practice starts fresh"]);
+  assert.deepEqual(failed(judgePlaceValueTrade(item, demoed)), ["the lesson plays", "practice-1: the practice starts fresh"]);
   const worked = lesson([["4658", "1573"]]);
   worked.lesson.tasks[0].start.values.col_ones = 1;
-  assert.deepEqual(failed(judgePlaceValueTrade(item, worked)), ["practice-1: the practice starts fresh"]);
+  assert.deepEqual(failed(judgePlaceValueTrade(item, worked)), ["the lesson plays", "practice-1: the practice starts fresh"]);
   // The card's fact by taps alone (no "done"; 0026 §3).
   const withDone = lesson([["4658", "1573"]]);
   withDone.lesson.tasks[0].allowed_operations.push({ kind: "card_submit" });
-  assert.deepEqual(failed(judgePlaceValueTrade(item, withDone)), ["practice-1: the task on the card is its complete fact, by taps"]);
+  assert.deepEqual(failed(judgePlaceValueTrade(item, withDone)), ["the lesson plays", "practice-1: the task on the card is its complete fact, by taps"]);
   const noStart = lesson([["4658", "1573"]]);
   delete noStart.lesson.tasks[0].start;
   // Without a start the card keeps the lesson's pair, so the answer to the practice pair is not on it.
   assert.deepEqual(failed(judgePlaceValueTrade(item, noStart)),
-    ["practice-1: the task on the card starts on its own pair", "answer-1: the typed answer after the card's task is the result of its pair"]);
+    ["the lesson plays", "practice-1: the task on the card starts on its own pair", "answer-1: the typed answer after the card's task is the result of its pair"]);
   // The typed answer after the task is read off its finished chart: the practice pair's result, read exactly.
   assert.deepEqual(failed(judgePlaceValueTrade(item, lesson([["4658", "1573"]], { answers: ["6225"] }))), ["answer-1: the typed answer after the card's task is the result of its pair"]);
   assert.ok(judgePlaceValueTrade(item, lesson([["4658", "1573"]], { answers: ["6,231"] })).pass);
@@ -229,13 +233,13 @@ test("every task on the card has a goal the learner can reach", () => {
   // Any other typed question by the card (Coach places a model's question by the last card) asks what its own
   // words say: noted against the pair on the card, never failed.
   const asked = lesson([]);
-  asked.lesson.tasks.push({ as: "total", anchor: "sum", prompt: "What is 3,486 + 2,739?", availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "answer_entry" }], completion: { kind: "numeric_answer", answer: "6225" } });
+  asked.lesson.tasks.push({ as: "total", anchor: "sum", prompt: "What is 3,486 + 2,739?", availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "answer_entry" }], completion: { kind: "numeric_answer", answer: "6225" }, hints: ["Add each column."] });
   assert.deepEqual([failed(judgePlaceValueTrade(item, asked)), noted(judgePlaceValueTrade(item, asked))], [[], ["the learner has a task on the card"]]);
   asked.lesson.tasks[0].completion.answer = "57";
   assert.deepEqual([failed(judgePlaceValueTrade(item, asked)), noted(judgePlaceValueTrade(item, asked))], [[], ["total: a typed question by the card asks the result of the pair on it", "the learner has a task on the card"]]);
   // After a practice and its answer, a question about the lesson's own pair is noted, not failed.
   const later = lesson([["4658", "1573"]]);
-  later.lesson.tasks.push({ as: "again", anchor: "sum", prompt: "And 3,486 + 2,739?", availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "answer_entry" }], completion: { kind: "numeric_answer", answer: "6225" } });
+  later.lesson.tasks.push({ as: "again", anchor: "sum", prompt: "And 3,486 + 2,739?", availability: { kind: "after_lesson" }, allowed_operations: [{ kind: "answer_entry" }], completion: { kind: "numeric_answer", answer: "6225" }, hints: ["Add each column."] });
   assert.ok(judgePlaceValueTrade(item, later).pass);
   assert.deepEqual(noted(judgePlaceValueTrade(item, later)), ["again: a typed question by the card asks the result of the pair on it"]);
 });

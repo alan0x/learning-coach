@@ -8,12 +8,14 @@ import {
   buildBaseTenTrade, validateBaseTenTradeContent, BASE_TEN_TRADE_LIMITS, baseTenMat, baseTenTapReachable,
   buildPlaceValueChart, placeValueColumnName, placeValueColumns, placeValueColumnsFor, placeValueDigitAt, placeValueNumeral,
   placeValueParts, PLACE_VALUE_PLACE_ALIASES,
+  buildPlaceValueTrade, placeValueTradeMaxStatus, PLACE_VALUE_TRADE_WORDS,
   type BuiltRecipe, type RearrangementConstruction, type Solid, type SolidMeasureKind,
 } from "octos-lesson-language/plugin-math";
 import { compileText, lessonTextLanguage } from "../lesson-text.js";
 import { type CompiledVisual } from "../compiled-visual-reuse.js";
 import { baseTenStartFault, baseTenState, baseTenTapTask } from "./base-ten-moves.js";
 import { PLACE_VALUE_GIVENS, placeValuePlain, placeValueStepPlaces, placeValueStartFault, placeValueWordsWrite } from "./place-value-moves.js";
+import { PLACE_VALUE_TRADE_OPERATIONS, TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths } from "./place-value-trade-moves.js";
 import { plotCurveNumbers, plotSampleNumbers } from "./plot-bindings.js";
 import { planPlotView, type PlotView } from "../plot-view-planner.js";
 import { parseModelFormula } from "./math-formulas.js";
@@ -1964,6 +1966,149 @@ function compilePlaceValueChart(
   };
 }
 
+/** The trade card's own words: the labels of the variables it creates. Everything said is the model's. */
+const PLACE_VALUE_TRADE_TEXT = {
+  "en-US": { a: "the first number", b: "the second number", finished: "columns finished", status: (place: string) => `${place} column` },
+  "zh-CN": { a: "第一个数", b: "第二个数", finished: "做完了几列", status: (place: string) => `${place}这一列` },
+} as const;
+
+/**
+ * A lesson variable's range over the values it takes (the lesson's number and the practice's), never one value:
+ * a number the practice keeps is widened by one unit of the card's lowest column, toward a value the card's
+ * columns still hold (OLL checks the card at each end of every range).
+ */
+function tradeRange(values: readonly number[], columns: readonly number[]): { min: number; max: number } {
+  const min = Math.min(...values), max = Math.max(...values);
+  if (min < max) return { min, max };
+  const unit = 10 ** (columns.at(-1)! + 3);
+  return max + unit < 10 ** (columns[0]! + 4) ? { min, max: max + unit } : { min: min - unit, max };
+}
+
+/**
+ * The place-value trade card (OLL decision 0026, need 35P-07): adding and subtracting on the place-value chart,
+ * drawn as the written column method. The model writes the operation and five lesson numbers: the question's
+ * pair, a practice pair of the same columns, and "columns finished, counting from the right" (0 at the start),
+ * which its demonstration animates. The program builds the card's columns, binds its own variables (the pair in
+ * thousandths, columns finished, one status per column), plays each value of columns finished (the card plays
+ * that column's bring-down, trades and breaks), and turns the model's practice into the learner's task on the
+ * practice pair, then the typed answer read off the finished chart. Every fault OLL would refuse at the card is
+ * refused here first and names the card, so only the picture can be lost.
+ */
+function compilePlaceValueTrade(
+  base: string,
+  content: LessonPlanVisualContent,
+  role: string,
+  placement: ReturnType<typeof place>,
+  plan: LessonPlan,
+  path: string,
+): CompiledVisual {
+  const input = parameters(content);
+  allowParameterKeys(input, ["operation"], path);
+  const operation = input.operation as typeof PLACE_VALUE_TRADE_OPERATIONS[number];
+  if (!PLACE_VALUE_TRADE_OPERATIONS.includes(operation)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.operation`, `operation is one of ${PLACE_VALUE_TRADE_OPERATIONS.join(", ")}: adding or subtracting the two numbers`, "place_value_trade");
+  }
+  const numbers = content.numbers ?? [];
+  const values = numbers.map((number, index) => numberDefinition(plan, number, `${path}.numbers[${index}]`).initial);
+  // The card's numbers are its own: they change only by its rules, so another visual cannot also show them.
+  const sharesNumbers = (action: LessonPlan["sections"][number]["moments"][number]["actions"][number]) => action.action === "create"
+    && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability !== "place_value_trade"
+    && ((action.content as LessonPlanVisualContent).numbers ?? []).some((number) => numbers.includes(number));
+  const sharingAt = plan.sections.findIndex((section) => section.moments.some((moment) => moment.actions.some(sharesNumbers)));
+  if (sharingAt >= 0) {
+    // Named by the later of the two pictures, the one a section still being written can lose (as the chart's is).
+    const sharing = plan.sections[sharingAt]!.moments.flatMap((moment) => moment.actions).find(sharesNumbers)!;
+    const cardAt = Number(/\$lessonPlan\.sections\[(\d+)\]/u.exec(path)?.[1] ?? -1);
+    const sharingCapability = (sharing.content as LessonPlanVisualContent).capability;
+    fail("LESSON_PLAN_SHARED_NUMBER", `${path}.numbers`, `the place-value trade card needs lesson numbers of its own: the ${sharingCapability} visual shows one of them; show the numbers on the card only, or in words`,
+      sharingAt > cardAt ? sharingCapability : "place_value_trade");
+  }
+  const fault = placeValueTradeStartFault(values, operation);
+  if (fault) fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, fault, "place_value_trade");
+  // One card per lesson: a later card on other numbers is refused at its own path (as the chart's is).
+  const first = plan.sections.flatMap((section) => section.moments).flatMap((moment) => moment.actions)
+    .find((action) => action.action === "create" && action.kind === "visual" && (action.content as LessonPlanVisualContent).capability === "place_value_trade");
+  if (first && (JSON.stringify((first.content as LessonPlanVisualContent).numbers ?? []) !== JSON.stringify(numbers)
+    || (first.content as LessonPlanVisualContent).parameters?.operation !== operation)) {
+    fail("LESSON_PLAN_CAPABILITY_PARAMETER", `${path}.numbers`, "a lesson has one place-value trade card: use the same lesson numbers and operation each time, or write another sum in words", "place_value_trade");
+  }
+  const language = /^en(?:-|$)/iu.test(lessonTextLanguage(plan)) ? "en-US" : "zh-CN";
+  const text = PLACE_VALUE_TRADE_TEXT[language];
+  // Every value on the card is exact integer thousandths (OLL 0026): 2.75 is 2750, never rounded.
+  const [a, b, pa, pb] = values.slice(0, 4).map((value) => placeValueTradeThousandths(value)!) as [number, number, number, number];
+  const columns = placeValueTradeColumnsOf(operation, a, b);
+  const stem = base.replace(/[^A-Za-z0-9]+/gu, "_").toLowerCase();
+  const aVariable = `${stem}_a`, bVariable = `${stem}_b`, finishedVariable = `${stem}_finished`;
+  const statusOf = (column: number) => `${stem}_${PLACE_VALUE_PLACE_ALIASES[column]!.replace(/-/gu, "_")}_status`;
+  const built = buildPlaceValueTrade({
+    as: base, role, place: placement,
+    ...(language === "zh-CN" ? { language } : {}),
+    operation,
+    a: { expression: aVariable, initial: a },
+    b: { expression: bVariable, initial: b },
+    finished: { expression: finishedVariable, initial: 0 },
+    places: columns.map((column) => ({ place: column, status: { expression: statusOf(column), initial: 0 } })),
+  });
+  // Two numbers, columns finished and one status per column: at most 9 of a lesson's 16 (OLL). A lesson holding
+  // more loses this picture (binds_many_variables), never the lesson.
+  const variables: NonNullable<CompiledVisual["variables"]> = [
+    { as: aVariable, initial: a, ...tradeRange([a, pa], columns), label: text.a },
+    { as: bVariable, initial: b, ...tradeRange([b, pb], columns), label: text.b },
+    { as: finishedVariable, initial: 0, min: 0, max: columns.length, label: text.finished },
+    ...columns.map((column) => ({ as: statusOf(column), initial: 0, min: 0, max: placeValueTradeMaxStatus(operation), label: text.status(placeValueColumnName(column, language)) })),
+  ];
+  const result = operation === "add" ? pa + pb : pa - pb;
+  return {
+    actions: built.actions, whole: built.whole, parts: new Map(Object.entries(built.parts)), variables,
+    mover: {
+      unbound: true,
+      numbers: [...numbers],
+      // A step moves columns finished forward: the card plays each newly finished column's bring-down, trades and
+      // breaks, one after another, by its own rules. The numbers themselves never move.
+      play(steps) {
+        const actions: AuthoringAction[] = [];
+        for (const step of steps) {
+          if (step.position !== TRADE_NUMBER.finished || step.to[step.position] === step.from[step.position]) continue;
+          actions.push({ do: "animate", variable: finishedVariable, value: step.to[step.position]! } as AuthoringAction);
+        }
+        return actions;
+      },
+      // The model's practice is "the learner works the practice pair on the card": the card starts again, fresh,
+      // on that pair; the task ends on the tap that finishes every column (no "done", 0026 §3), and the program
+      // asks for the answer the finished chart shows. The value the model wrote is not read. Words that write
+      // the practice's answer give it away: that task is dropped and recorded, never the lesson.
+      task(_position, _value, _end, words = []) {
+        if (words.some((each) => placeValueWordsWrite(each, result))) {
+          return { drop: `the task's words write ${placeValueTradeNumeralPlain(result)}, the answer the learner is to find on the card`, reason: "practice_answer_in_words" };
+        }
+        const values: Record<string, number> = { [aVariable]: pa, [bVariable]: pb, [finishedVariable]: 0 };
+        for (const column of columns) values[statusOf(column)] = 0;
+        const cardWords = PLACE_VALUE_TRADE_WORDS[language];
+        return {
+          task: {
+            start: { kind: "practice", variables: Object.keys(values), values },
+            allowed_operations: [{ kind: "card_tap", node: base }],
+            completion: { kind: "card_fact", node: base, fact: "complete" },
+          },
+          // The answer, typed below the finished chart (0026 §4): the card never writes its digits.
+          then: [{
+            prompt: operation === "add" ? cardWords.askSum : cardWords.askDiff,
+            hints: [compileText(plan, "从左到右读横线下面每一列的圆片个数。")],
+            anchor: base,
+            allowed_operations: [{ kind: "answer_entry" }],
+            completion: { kind: "numeric_answer", answer: placeValueTradeNumeralPlain(result) },
+          }],
+        };
+      },
+    },
+  };
+}
+
+/** A value in thousandths as a learner types it, with no grouping: 6231000 -> "6231", 4230 -> "4.23". */
+function placeValueTradeNumeralPlain(thousandths: number): string {
+  return String(Number((thousandths / 1000).toFixed(3)));
+}
+
 export const MATH_COMPILERS = {
   number_line: compileNumberLine,
   number_line_compare: compileNumberLineCompare,
@@ -1985,4 +2130,5 @@ export const MATH_COMPILERS = {
   fraction_model: compileFractionModel,
   base_ten_trade: compileBaseTenTrade,
   place_value_chart: compilePlaceValueChart,
+  place_value_trade: compilePlaceValueTrade,
 } satisfies Record<string, VisualCompiler>;

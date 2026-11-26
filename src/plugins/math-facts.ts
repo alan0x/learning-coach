@@ -5,7 +5,11 @@ import { fixedLineSamples } from "./math-teaching-contracts.js";
 import type { SectionFactsHook } from "./section-facts.js";
 import { baseTenFacts, baseTenStartFault } from "./base-ten-moves.js";
 import { placeValueDecimal, placeValueNextValues, placeValueStartFault } from "./place-value-moves.js";
-import { placeValueColumnName, placeValueColumns, placeValueColumnsFor, placeValueParts } from "octos-lesson-language/plugin-math";
+import {
+  placeValueColumnName, placeValueColumns, placeValueColumnsFor, placeValueParts,
+  placeValueTradeDemoState, placeValueTradeFacts, placeValueTradeProblemOn, placeValueTradeStepSentences,
+} from "octos-lesson-language/plugin-math";
+import { TRADE_NUMBER, placeValueTradeColumnsOf, placeValueTradeStartFault, placeValueTradeThousandths, tradeDecimal } from "./place-value-trade-moves.js";
 
 export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
   // The trading mat in its own terms (owner, 2026-11-24): where practice starts, the amount no trade changes,
@@ -54,6 +58,46 @@ export const MATH_SECTION_FACTS: Record<string, SectionFactsHook> = {
           ...(now > 0 ? { next_values: placeValueNextValues(number, now, false).map(placeValueDecimal) } : {}),
         }),
       ...(values[1] !== undefined ? { practice_number: values[1] } : {}),
+    } };
+  },
+  // The place-value trade card in its own terms (OLL 0026), once it is drawn: the pair, its answer and columns,
+  // where the demonstration stands (columns finished, and the chart as it stands: each finished column's digit
+  // below the line, each other column's disks in its rows and a carried disk waiting above it), what the next
+  // value of columns finished does and which column it finishes, in the card's own sentences, and the practice
+  // pair. Everything in the lesson's units (2.75, never thousandths). Facts, not instructions: a lesson may
+  // rightly stop with columns still to do.
+  place_value_trade: ({ established, numbers, state, language }) => {
+    if (!numbers || !established?.numbers?.length) return {};
+    const lessonNumbers = established.numbers;
+    const values = lessonNumbers.map((number) => Number(numbers[number - 1]?.initial ?? 0));
+    const operation = established.parameters?.operation;
+    if (placeValueTradeStartFault(values, operation)) return {};
+    const op = operation as "add" | "subtract";
+    const cardLanguage = /^en(?:-|$)/iu.test(language ?? "") ? "en-US" : "zh-CN";
+    const [a, b, pa, pb] = values.slice(0, 4).map((value) => placeValueTradeThousandths(value)!) as [number, number, number, number];
+    const columns = placeValueTradeColumnsOf(op, a, b);
+    const problem = placeValueTradeProblemOn(op, a, b, columns);
+    // The card reads columns finished from 0 when it is drawn; a value it cannot take leaves it where it was.
+    const now = state.get(lessonNumbers[TRADE_NUMBER.finished]!) ?? 0;
+    const k = Number.isInteger(now) && now >= 0 && now <= columns.length ? now : 0;
+    const card = placeValueTradeFacts(placeValueTradeDemoState(problem, k));
+    const name = (place: number) => placeValueColumnName(place, cardLanguage);
+    return { facts: {
+      numbers: lessonNumbers,
+      operation: op,
+      pair: [tradeDecimal(a), tradeDecimal(b)],
+      answer: tradeDecimal(op === "add" ? a + b : a - b),
+      columns: columns.map(name),
+      columns_finished: k,
+      chart_now: card.cells.map((cell) => (cell.down
+        ? { column: name(cell.place), below_line: cell.answer }
+        : op === "add"
+          ? { column: name(cell.place), row_1: cell.top, row_2: cell.second, ...(cell.carry ? { carried_in: cell.carry } : {}) }
+          : { column: name(cell.place), row_1: cell.top, take_away: cell.second })),
+      ...(card.next
+        ? { next: { value: card.next.finished, finishes: name(card.next.place), does: placeValueTradeStepSentences(problem, card.next.finished, cardLanguage) } }
+        : { every_column_finished: true }),
+      practice_pair: [tradeDecimal(pa), tradeDecimal(pb)],
     } };
   },
   function_plot: ({ established }) => (established && fixedLineSamples(established) ? { lead: { sample_slope: "constant" } } : {}),

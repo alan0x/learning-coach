@@ -273,7 +273,7 @@
               "properties": {
                 "kind": {"const": "card_fact"},
                 "node": {"$ref": "#/$defs/alias"},
-                "fact": {"enum": ["no_trade_left", "count", "built", "pulled_all"]},
+                "fact": {"enum": ["no_trade_left", "count", "built", "pulled_all", "complete"]},
                 "at": {"enum": ["ones", "tens", "hundreds"]},
                 "value": {"type": "integer", "minimum": 0}
               }
@@ -371,7 +371,7 @@
         "do": {"enum": ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"]},
         "when": {"enum": ["before_speech", "during_speech", "after_speech"]},
         "as": {"$ref": "#/$defs/alias"},
-        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart"]},
+        "kind": {"enum": ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade"]},
         "role": {"type": "string"},
         "content": {"type": "object"},
         "place": {"$ref": "#/$defs/placement"},
@@ -471,6 +471,13 @@
             "properties": {"do": {"const": "write"}, "kind": {"const": "place_value_chart"}}
           },
           "then": {"properties": {"content": {"$ref": "#/$defs/placeValueChartContent"}}}
+        },
+        {
+          "if": {
+            "required": ["do", "kind"],
+            "properties": {"do": {"const": "write"}, "kind": {"const": "place_value_trade"}}
+          },
+          "then": {"properties": {"content": {"$ref": "#/$defs/placeValueTradeContent"}}}
         },
         {
           "if": {"properties": {"do": {"const": "revise"}}},
@@ -773,6 +780,41 @@
         }
       }
     },
+    "placeValueTradeContent": {
+      "type": "object",
+      "required": ["operation", "top_place", "low_place", "a", "b", "finished", "places"],
+      "additionalProperties": false,
+      "properties": {
+        "language": {"enum": ["en-US", "zh-CN"]},
+        "operation": {"enum": ["add", "subtract"]},
+        "top_place": {"type": "integer", "minimum": -2, "maximum": 5},
+        "low_place": {"type": "integer", "minimum": -2, "maximum": 0},
+        "a": {"type": "integer", "minimum": 0, "maximum": 999999990},
+        "b": {"type": "integer", "minimum": 0, "maximum": 999999990},
+        "finished": {"type": "integer", "minimum": 0, "maximum": 6},
+        "places": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "required": ["as", "place", "status"],
+            "additionalProperties": false,
+            "properties": {
+              "as": {"enum": ["hundredths", "tenths", "ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands"]},
+              "place": {"type": "integer", "minimum": -2, "maximum": 5},
+              "status": {"type": "integer", "minimum": 0, "maximum": 3}
+            }
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/valueBinding"}
+        }
+      }
+    },
     "scene3dContent": {
       "type": "object",
       "required": ["objects", "camera", "fallback"],
@@ -916,7 +958,7 @@
       "required": ["target", "expression"],
       "additionalProperties": false,
       "properties": {
-        "target": {"type": "string", "pattern": "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target)$"},
+        "target": {"type": "string", "pattern": "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished)$"},
         "expression": {"type": "string", "minLength": 1, "maxLength": 256},
         "allow_zero": {"const": true},
         "hide_when_undefined": {"const": true},

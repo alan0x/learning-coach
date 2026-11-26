@@ -20,19 +20,19 @@
 //   has a task on the card; a typed answer follows; the task's words name no control; a chart drawn beside
 //   the trade card.
 //
-// The lesson is read as written (its authoring JSON), not through OLL, so the judge runs on the pinned OLL,
-// which does not know the card yet. A pair the card takes can always be finished by taps (0026 §3: every
+// The lesson plays through OLL itself (normalized and reduced, as the player plays it), and a pair is judged by
+// the card's own rules (OLL's fault and column rule). The card is read from the lesson as written, its bound
+// fields at the variables' values. A pair the card takes can always be finished by taps (0026 §3: every
 // reachable state of every pair the sketch tried can still finish), so reachability is read from the start
-// pair, not searched. Columns are counted, not compared with the lesson's: OLL's own column rule (and its
-// "lesson plays" check, through the normalizer and reducer) joins the judge with the recipe.
+// pair, not searched.
 //
 // Narration is not judged.
 
+import { normalizeAuthoringLesson, reduceCanonicalEvents } from "octos-lesson-language";
+import { placeValueTradeColumns, placeValueTradeColumnsFor, placeValueTradeFault } from "octos-lesson-language/plugin-math";
+
 const KIND = "place_value_trade";
 const CHART = "place_value_chart";
-const MAX_COLUMNS = 6;
-const MAX_PLACE = 5; // hundred thousands
-const MAX_DECIMALS = 2;
 
 const FULL_WIDTH = /[０-９．，]/g;
 const halfWidth = (text) => text.replace(FULL_WIDTH, (ch) => (ch === "．" ? "." : ch === "，" ? "," : String.fromCharCode(ch.charCodeAt(0) - 0xfee0)));
@@ -59,39 +59,21 @@ export function tradeNumeral(value) {
 }
 
 const resultOf = (operation, a, b) => (operation === "subtract" ? a - b : a + b);
-const digitAt = (value, place) => Math.floor(value / 10 ** (place + 3)) % 10;
-const decimalsOf = (value) => (value % 1000 === 0 ? 0 : value % 100 === 0 ? 1 : value % 10 === 0 ? 2 : 3);
-/** The highest place with a digit: 3 for 3,486, -1 for 0.35, -2 for 0.05 (-3 for 0, which no column needs). */
-const topPlaceOf = (value) => (value >= 1000 ? String(Math.floor(value / 1000)).length - 1 : value >= 100 ? -1 : value >= 10 ? -2 : -3);
 
-/**
- * The columns a pair needs, highest first: from the lower decimal place up to the highest place of a, b or the
- * answer. A pair below 1 has no ones column (0.35 + 0.48: tenths and hundredths), as OLL #115 draws it.
- */
+/** The columns a pair needs, highest first, by the card's own rule (a pair below 1 has no ones column). */
 function columnsFor(operation, a, b) {
-  const low = -Math.min(MAX_DECIMALS, Math.max(decimalsOf(a), decimalsOf(b)));
-  const top = Math.max(topPlaceOf(a), topPlaceOf(b), topPlaceOf(Math.max(0, resultOf(operation, a, b))), low);
-  const columns = [];
-  for (let place = top; place >= low; place -= 1) columns.push(place);
-  return columns;
+  const { top_place, low_place } = placeValueTradeColumnsFor(operation, a, b);
+  return placeValueTradeColumns(top_place, low_place);
 }
 
 /**
- * Why the card would refuse a pair (decision 0026 §5), or undefined when it takes it: not a whole number of
- * hundredths from 0 to 999,999.99, a difference below zero, more than six columns, or no column that carries
- * (adding) or borrows (subtracting).
+ * Why the card would refuse a pair (decision 0026 §5), by its own rules, or undefined when it takes it: not a whole
+ * number of thousandths from 0 to 999,999.99 (`unreadable`), more than two decimals, a difference below zero,
+ * more than six columns, or no column that carries (adding) or borrows (subtracting).
  */
 export function tradePairFault(operation, a, b) {
   if (!["add", "subtract"].includes(operation)) return "operation";
-  if (![a, b].every((value) => Number.isSafeInteger(value) && value >= 0)) return "unreadable";
-  if (a % 10 || b % 10) return "decimals";
-  if (operation === "subtract" && b > a) return "negative";
-  const columns = columnsFor(operation, a, b);
-  if (columns[0] > MAX_PLACE || columns.length > MAX_COLUMNS) return "too_wide";
-  const trades = operation === "add"
-    ? columns.some((place) => digitAt(a, place) + digitAt(b, place) >= 10)
-    : columns.some((place) => digitAt(a, place) < digitAt(b, place));
-  return trades ? undefined : "no_trade";
+  return placeValueTradeFault(operation, a, b);
 }
 
 /**
@@ -123,7 +105,14 @@ export function placeValueTradeIn(lesson) {
   const writes = actions.filter((action) => action.do === "write" && action.kind === KIND);
   const charts = actions.filter((action) => action.do === "write" && action.kind === CHART).length;
   const tasks = lesson?.lesson?.tasks ?? [];
-  if (!writes.length) return { cards: 0, charts, tasks };
+  // The lesson plays as the player plays it. A lesson OLL refuses is still read, so each fault is named too.
+  let error;
+  try {
+    reduceCanonicalEvents(normalizeAuthoringLesson(lesson, { lessonId: "judge", boardId: "judge", baseRevision: 0, regionIntent: "new_topic" }));
+  } catch (caught) {
+    error = `${caught.code ?? "error"}: ${String(caught.message).slice(0, 160)}`;
+  }
+  if (!writes.length) return { cards: 0, charts, tasks, ...(error ? { error } : {}) };
   const write = writes[0];
   const declared = Object.fromEntries((lesson.lesson?.variables ?? []).map((variable) => [variable.as, variable.initial]));
   const start = cardAt(write.content, declared);
@@ -134,7 +123,7 @@ export function placeValueTradeIn(lesson) {
       if (action.do === "animate" && action.variable === start.finishedVariable && typeof action.value === "number") shown = Math.max(shown, action.value);
     }
   }
-  return { cards: writes.length, charts, as: write.as, content: write.content, declared, start, shown, tasks };
+  return { cards: writes.length, charts, as: write.as, content: write.content, declared, start, shown, tasks, ...(error ? { error } : {}) };
 }
 
 /** Judges one case's lesson. Returns { pass, checks: [{ check, pass, detail? }], notes: [...] }. */
@@ -145,6 +134,7 @@ export function judgePlaceValueTrade(item, lesson) {
   const note = (name, holds, detail) => notes.push({ check: name, pass: Boolean(holds), ...(holds ? {} : { detail }) });
   const done = () => ({ pass: checks.every((each) => each.pass), checks, notes });
   const card = placeValueTradeIn(lesson);
+  check("the lesson plays", !card.error, card.error);
   if (item.expect?.forbid) {
     // Decision 0026 §8: a near miss that draws this card fails (the mat's judge only noted it).
     if (item.expect.forbid.includes(KIND)) check("no place-value trade card for this question", card.cards === 0, `${card.cards} trade card(s) drawn`);

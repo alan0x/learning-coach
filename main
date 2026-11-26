@@ -7174,8 +7174,8 @@ import { appendFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs"
 
 // src/raw-reply.ts
 var RAW_REPLY_PREFIX = "learning-coach: raw ";
-function frameRawReply(record3) {
-  return `${RAW_REPLY_PREFIX}${JSON.stringify(record3)}
+function frameRawReply(record4) {
+  return `${RAW_REPLY_PREFIX}${JSON.stringify(record4)}
 `;
 }
 
@@ -7525,7 +7525,7 @@ var v0_1_schema_default = {
               properties: {
                 kind: { const: "card_fact" },
                 node: { $ref: "#/$defs/alias" },
-                fact: { enum: ["no_trade_left", "count", "built", "pulled_all"] },
+                fact: { enum: ["no_trade_left", "count", "built", "pulled_all", "complete"] },
                 at: { enum: ["ones", "tens", "hundreds"] },
                 value: { type: "integer", minimum: 0 }
               }
@@ -7627,7 +7627,7 @@ var v0_1_schema_default = {
         do: { enum: ["write", "revise", "emphasize", "connect", "group", "focus", "point", "expression", "animate", "hide", "view", "tap"] },
         when: { enum: ["before_speech", "during_speech", "after_speech"] },
         as: { $ref: "#/$defs/alias" },
-        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart"] },
+        kind: { enum: ["text", "math", "shape", "diagram", "geometry", "plot", "scene3d", "image", "table", "note", "ink", "number_line", "fraction_model", "base_ten_trade", "place_value_chart", "place_value_trade"] },
         role: { type: "string" },
         content: { type: "object" },
         place: { $ref: "#/$defs/placement" },
@@ -7727,6 +7727,13 @@ var v0_1_schema_default = {
             properties: { do: { const: "write" }, kind: { const: "place_value_chart" } }
           },
           then: { properties: { content: { $ref: "#/$defs/placeValueChartContent" } } }
+        },
+        {
+          if: {
+            required: ["do", "kind"],
+            properties: { do: { const: "write" }, kind: { const: "place_value_trade" } }
+          },
+          then: { properties: { content: { $ref: "#/$defs/placeValueTradeContent" } } }
         },
         {
           if: { properties: { do: { const: "revise" } } },
@@ -8034,6 +8041,41 @@ var v0_1_schema_default = {
         }
       }
     },
+    placeValueTradeContent: {
+      type: "object",
+      required: ["operation", "top_place", "low_place", "a", "b", "finished", "places"],
+      additionalProperties: false,
+      properties: {
+        language: { enum: ["en-US", "zh-CN"] },
+        operation: { enum: ["add", "subtract"] },
+        top_place: { type: "integer", minimum: -2, maximum: 5 },
+        low_place: { type: "integer", minimum: -2, maximum: 0 },
+        a: { type: "integer", minimum: 0, maximum: 999999990 },
+        b: { type: "integer", minimum: 0, maximum: 999999990 },
+        finished: { type: "integer", minimum: 0, maximum: 6 },
+        places: {
+          type: "array",
+          minItems: 1,
+          maxItems: 6,
+          items: {
+            type: "object",
+            required: ["as", "place", "status"],
+            additionalProperties: false,
+            properties: {
+              as: { enum: ["hundredths", "tenths", "ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands"] },
+              place: { type: "integer", minimum: -2, maximum: 5 },
+              status: { type: "integer", minimum: 0, maximum: 3 }
+            }
+          }
+        },
+        bindings: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: { $ref: "#/$defs/valueBinding" }
+        }
+      }
+    },
     scene3dContent: {
       type: "object",
       required: ["objects", "camera", "fallback"],
@@ -8185,7 +8227,7 @@ var v0_1_schema_default = {
       required: ["target", "expression"],
       additionalProperties: false,
       properties: {
-        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target)$" },
+        target: { type: "string", pattern: "^(?:[a-z][a-z0-9-]{0,63}\\.[a-z_][a-z0-9_]*|target|a|b|finished)$" },
         expression: { type: "string", minLength: 1, maxLength: 256 },
         allow_zero: { const: true },
         hide_when_undefined: { const: true },
@@ -8868,6 +8910,13 @@ function placeValueNumeral(value, language = "en-US") {
     return wholeText;
   return `${wholeText}.${String(frac).padStart(3, "0").replace(/0+$/u, "")}`;
 }
+function placeValueUnitText(place, language = "en-US", { disk = false } = {}) {
+  if (place < 0)
+    return `0.${"0".repeat(-place - 1)}1`;
+  if (disk && short(language) === "zh" && place >= 4)
+    return `${10 ** (place - 4)}\u4E07`;
+  return short(language) === "en" ? groupThousands(10 ** place) : String(10 ** place);
+}
 var EN_PLACE = { 6: "Millions", 5: "Hundred thousands", 4: "Ten thousands", 3: "Thousands", 2: "Hundreds", 1: "Tens", 0: "Ones", [-1]: "Tenths", [-2]: "Hundredths", [-3]: "Thousandths" };
 var ZH_PLACE = { 6: "\u767E\u4E07\u4F4D", 5: "\u5341\u4E07\u4F4D", 4: "\u4E07\u4F4D", 3: "\u5343\u4F4D", 2: "\u767E\u4F4D", 1: "\u5341\u4F4D", 0: "\u4E2A\u4F4D", [-1]: "\u5341\u5206\u4F4D", [-2]: "\u767E\u5206\u4F4D", [-3]: "\u5343\u5206\u4F4D" };
 function placeValueColumnName(place, language = "en-US") {
@@ -8887,13 +8936,17 @@ function placeValueColumns(topPlace, decimals) {
   return columns;
 }
 function placeValueParts(value) {
-  const list = [];
+  const list2 = [];
   for (let place = PLACE_VALUE_MAX_PLACE; place >= PLACE_VALUE_MIN_PLACE; place -= 1) {
     const digit = placeValueDigitAt(value, place);
     if (digit)
-      list.push({ place, digit, value: digit * 10 ** (place + 3) });
+      list2.push({ place, digit, value: digit * 10 ** (place + 3) });
   }
-  return list;
+  return list2;
+}
+var ZH_UNIT_NAME = { 6: "\u767E\u4E07", 5: "\u5341\u4E07", 4: "\u4E07", 3: "\u5343", 2: "\u767E", 1: "\u5341", 0: "\u4E00", [-1]: "0.1", [-2]: "0.01", [-3]: "0.001" };
+function placeValueUnitName(place, language = "en-US") {
+  return short(language) === "en" ? placeValueUnitText(place, "en-US") : ZH_UNIT_NAME[place];
 }
 function placeValueTaskFault(value, given) {
   if (!value)
@@ -9122,6 +9175,516 @@ var PAD = 5;
 var COLUMN = 2 * DISK + GAP + 2 * PAD;
 var ROWS = Math.ceil(PLACE_VALUE_MAX_PER_PLACE / 2);
 var BOX = 2 * PAD + ROWS * DISK + (ROWS - 1) * GAP;
+
+// node_modules/octos-lesson-language/dist/packages/plugin-math/src/place-value-trade.js
+var PLACE_VALUE_TRADE_KIND = "place_value_trade";
+var PLACE_VALUE_TRADE_FEATURE = "plugin:math/place-value-trade@1";
+var PLACE_VALUE_TRADE_PLUGIN_VERSION = "0.9.0";
+var PLACE_VALUE_TRADE_LANGUAGES = PLACE_VALUE_CHART_LANGUAGES;
+var PLACE_VALUE_TRADE_MIN_PLACE = -2;
+var PLACE_VALUE_TRADE_MAX_PLACE = 5;
+var PLACE_VALUE_TRADE_MAX_COLUMNS = 6;
+var PLACE_VALUE_TRADE_MAX_DECIMALS = 2;
+var PLACE_VALUE_TRADE_MAX_VALUE = 10 ** (PLACE_VALUE_TRADE_MAX_PLACE + 1) * 1e3 - 10;
+var PLACE_VALUE_TRADE_OPERATIONS = ["add", "subtract"];
+var PLACE_VALUE_TRADE_BINDINGS = { places: ["status"] };
+var PLACE_VALUE_TRADE_CARD_BINDINGS = ["a", "b", "finished"];
+var PLACE_VALUE_TRADE_PROBLEM_FIELDS = ["a", "b"];
+var PLACE_VALUE_TRADE_TAPS = ["down", "trade", "break"];
+function placeValueTradeDecimals(value) {
+  const frac = value % 1e3;
+  return !frac ? 0 : frac % 100 === 0 ? 1 : frac % 10 === 0 ? 2 : 3;
+}
+var placeValueTradeUnitWord = (place, language = "en-US") => placeValueUnitName(place, language);
+var OP = { add: "+", subtract: "-" };
+var readable = (value) => typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= PLACE_VALUE_TRADE_MAX_VALUE;
+function placeValueTradeColumnsFor(operation, a, b) {
+  const result = operation === "add" ? a + b : Math.max(0, a - b);
+  const low = 0 - Math.min(PLACE_VALUE_TRADE_MAX_DECIMALS, Math.max(placeValueTradeDecimals(a), placeValueTradeDecimals(b)));
+  const top = Math.max(placeValueTopPlace(a), placeValueTopPlace(b), placeValueTopPlace(result), low);
+  return { top_place: top, low_place: low };
+}
+function placeValueTradeColumns(topPlace, lowPlace) {
+  const columns = [];
+  for (let place = topPlace; place >= lowPlace; place -= 1)
+    columns.push(place);
+  return columns;
+}
+function placeValueTradeProblemOn(operation, a, b, columns) {
+  const whole = (value) => Number.isFinite(value) ? Math.min(PLACE_VALUE_TRADE_MAX_VALUE, Math.max(0, Math.round(value / 10) * 10)) : 0;
+  const A = whole(a), B = whole(b);
+  const op = OP[operation] ?? "+";
+  const da = Object.fromEntries(columns.map((place) => [place, placeValueDigitAt(A, place)]));
+  const db = Object.fromEntries(columns.map((place) => [place, placeValueDigitAt(B, place)]));
+  return {
+    operation: op === "+" ? "add" : "subtract",
+    op,
+    a: A,
+    b: B,
+    result: op === "+" ? A + B : A - B,
+    dec: Math.max(placeValueTradeDecimals(A), placeValueTradeDecimals(B)),
+    columns: [...columns],
+    da,
+    db
+  };
+}
+function placeValueTradeFault(operation, a, b) {
+  if (!readable(a) || !readable(b) || !PLACE_VALUE_TRADE_OPERATIONS.includes(operation))
+    return "unreadable";
+  if (a % 10 || b % 10)
+    return "decimals";
+  if (operation === "subtract" && b > a)
+    return "negative";
+  const { top_place, low_place } = placeValueTradeColumnsFor(operation, a, b);
+  if (top_place > PLACE_VALUE_TRADE_MAX_PLACE || top_place - low_place + 1 > PLACE_VALUE_TRADE_MAX_COLUMNS)
+    return "too_wide";
+  const problem = placeValueTradeProblemOn(operation, a, b, placeValueTradeColumns(top_place, low_place));
+  const { da, db, columns } = problem;
+  const trades = operation === "add" ? columns.some((p) => da[p] + db[p] >= 10) : columns.some((p) => da[p] < db[p]);
+  return trades ? void 0 : "no_trade";
+}
+function placeValueTradeProblemText(problem, language = "en-US") {
+  return `${placeValueNumeral(problem.a, language)} ${problem.op === "+" ? "+" : "\u2212"} ${placeValueNumeral(problem.b, language)}`;
+}
+var PLACE_VALUE_TRADE_ADD = { UP: 0, DOWN: 1, TRADED: 2 };
+var PLACE_VALUE_TRADE_SUB = { TAKEN: 1, RECEIVED: 2 };
+var placeValueTradeMaxStatus = (operation) => operation === "subtract" ? 3 : 2;
+function placeValueTradeStart(problem) {
+  return { problem, status: Object.fromEntries(problem.columns.map((p) => [p, 0])) };
+}
+var has = (state, place) => state.problem.columns.includes(place);
+var withStatus = (state, place, value) => ({ problem: state.problem, status: { ...state.status, [place]: value } });
+var isDown = (s, p) => s.status[p] >= PLACE_VALUE_TRADE_ADD.DOWN;
+var isTraded = (s, p) => s.status[p] === PLACE_VALUE_TRADE_ADD.TRADED;
+var carryInto = (s, p) => has(s, p - 1) && isTraded(s, p - 1) ? 1 : 0;
+var placeValueTradeIsTaken = (s, p) => (s.status[p] & PLACE_VALUE_TRADE_SUB.TAKEN) !== 0;
+var isTaken = placeValueTradeIsTaken;
+var received = (s, p) => (s.status[p] & PLACE_VALUE_TRADE_SUB.RECEIVED) !== 0;
+var gave = (s, p) => has(s, p - 1) && received(s, p - 1) ? 1 : 0;
+function holds(s, p) {
+  const { da, db } = s.problem;
+  return da[p] + 10 * (received(s, p) ? 1 : 0) - gave(s, p) - (isTaken(s, p) ? db[p] : 0);
+}
+function placeValueTradeCell(state, place) {
+  const { op, da, db } = state.problem;
+  if (op === "+") {
+    const down = isDown(state, place), c = carryInto(state, place);
+    const answer = down ? da[place] + db[place] + c - (isTraded(state, place) ? 10 : 0) : 0;
+    return { down, carry: down ? 0 : c, top: down ? 0 : da[place], second: down ? 0 : db[place], answer, topRing: false, answerRing: answer >= 10 };
+  }
+  const taken = isTaken(state, place), n = holds(state, place), ring = received(state, place) && n >= 10;
+  return { down: taken, carry: 0, top: taken ? 0 : n, second: db[place], answer: taken ? n : 0, topRing: !taken && ring, answerRing: taken && ring };
+}
+var cell = placeValueTradeCell;
+var refuse = (reason, extra = {}) => ({ ok: false, reason, ...extra });
+var done = (state, anim) => ({ ok: true, state, anim });
+function placeValueTradeBringDown(state, place) {
+  if (state.problem.op !== "+")
+    return refuse("wrong_op");
+  if (!has(state, place))
+    return refuse("no_place");
+  if (isDown(state, place))
+    return refuse("already_down");
+  return done(withStatus(state, place, PLACE_VALUE_TRADE_ADD.DOWN), { kind: "down", place });
+}
+function placeValueTradeTradeTen(state, place) {
+  if (state.problem.op !== "+")
+    return refuse("wrong_op");
+  if (!has(state, place))
+    return refuse("no_place");
+  if (!isDown(state, place))
+    return refuse("not_down");
+  if (cell(state, place).answer < 10)
+    return refuse("not_ten");
+  if (!has(state, place + 1))
+    return refuse("no_left");
+  return done(withStatus(state, place, PLACE_VALUE_TRADE_ADD.TRADED), { kind: "trade", from: place, to: place + 1, landed: isDown(state, place + 1) ? "answer" : "carry" });
+}
+function placeValueTradeWantsTen(state, place) {
+  if (!has(state, place) || received(state, place))
+    return false;
+  if (!isTaken(state, place) && holds(state, place) < state.problem.db[place])
+    return true;
+  return holds(state, place) === 0 && has(state, place - 1) && placeValueTradeWantsTen(state, place - 1);
+}
+function placeValueTradeTakeAway(state, place) {
+  if (state.problem.op !== "-")
+    return refuse("wrong_op");
+  if (!has(state, place))
+    return refuse("no_place");
+  if (isTaken(state, place))
+    return refuse("already_taken");
+  const n = holds(state, place), k = state.problem.db[place];
+  if (n < k)
+    return refuse("not_enough", { have: n, need: k });
+  return done(withStatus(state, place, state.status[place] | PLACE_VALUE_TRADE_SUB.TAKEN), { kind: "take", place, n: k });
+}
+function placeValueTradeBreakOne(state, place) {
+  if (state.problem.op !== "-")
+    return refuse("wrong_op");
+  if (!has(state, place))
+    return refuse("no_place");
+  if (holds(state, place) < 1)
+    return refuse("none_to_break");
+  if (!has(state, place - 1))
+    return refuse("no_right");
+  const right = place - 1;
+  if (!placeValueTradeWantsTen(state, right)) {
+    return refuse("not_needed", { right, taken: isTaken(state, right), have: holds(state, right), need: state.problem.db[right] });
+  }
+  return done(withStatus(state, right, state.status[right] | PLACE_VALUE_TRADE_SUB.RECEIVED), { kind: "break", from: place, to: right, landed: isTaken(state, right) ? "answer" : "top" });
+}
+function placeValueTradeDown(state, place) {
+  return state.problem.op === "+" ? placeValueTradeBringDown(state, place) : placeValueTradeTakeAway(state, place);
+}
+function applyPlaceValueTradeTap(state, tap) {
+  if ((state.finished ?? 0) > 0)
+    return refuse("demonstrating");
+  if (tap.tap === "trade" && state.problem.op === "-")
+    return has(state, tap.place) && !isTaken(state, tap.place) ? refuse("not_down") : refuse("wrong_op");
+  if (tap.tap === "down")
+    return placeValueTradeDown(state, tap.place);
+  if (tap.tap === "trade")
+    return placeValueTradeTradeTen(state, tap.place);
+  if (tap.tap === "break")
+    return placeValueTradeBreakOne(state, tap.place);
+  return refuse("wrong_op");
+}
+function placeValueTradeColumnFinished(state, place) {
+  const c = cell(state, place);
+  return c.down && c.answer <= 9;
+}
+function placeValueTradeComplete(state) {
+  return state.problem.columns.every((p) => placeValueTradeColumnFinished(state, p));
+}
+function placeValueTradeMoves(state) {
+  const out = [];
+  for (const p of state.problem.columns) {
+    const tries = state.problem.op === "+" ? [placeValueTradeBringDown(state, p), placeValueTradeTradeTen(state, p)] : [placeValueTradeTakeAway(state, p), placeValueTradeBreakOne(state, p)];
+    for (const r of tries)
+      if (r.ok)
+        out.push(r);
+  }
+  return out;
+}
+var placeValueTradeStateKey = (state) => state.problem.columns.map((p) => state.status[p]).join("");
+function placeValueTradeReachable(problem) {
+  const seen = /* @__PURE__ */ new Map(), queue = [placeValueTradeStart(problem)];
+  while (queue.length) {
+    const s = queue.pop(), key = placeValueTradeStateKey(s);
+    if (seen.has(key))
+      continue;
+    seen.set(key, s);
+    for (const r of placeValueTradeMoves(s))
+      queue.push(r.state);
+  }
+  return [...seen.values()];
+}
+var problemKey = (problem) => `${problem.op}${problem.a}:${problem.b}@${problem.columns.join(",")}`;
+function placeValueTradeStartFault(state) {
+  const finished = state.finished ?? 0;
+  if (finished !== 0)
+    return `A practice chart starts with no column demonstrated; columns finished is ${finished}`;
+  for (const place of state.problem.columns) {
+    if (state.status[place] !== 0)
+      return `A practice chart starts fresh; the ${PLACE_VALUE_PLACE_ALIASES[place]} column's status is ${state.status[place]}`;
+  }
+  return void 0;
+}
+var DEMO_CACHE = /* @__PURE__ */ new Map();
+function placeValueTradeDemoSteps(problem) {
+  const key = problemKey(problem);
+  const cached = DEMO_CACHE.get(key);
+  if (cached)
+    return cached;
+  let state = placeValueTradeStart(problem);
+  const steps = [];
+  const apply = (result) => {
+    if (!result.ok)
+      throw new Error(`demo step refused: ${result.reason}`);
+    state = result.state;
+  };
+  for (const place of [...problem.columns].reverse()) {
+    const actions = [];
+    const states = [];
+    const act = (action, result) => {
+      states.push(state);
+      actions.push(action);
+      apply(result());
+    };
+    if (problem.op === "+") {
+      act({ kind: "down", place, carried: carryInto(state, place) }, () => placeValueTradeBringDown(state, place));
+      if (cell(state, place).answer >= 10)
+        act({ kind: "trade", place }, () => placeValueTradeTradeTen(state, place));
+    } else {
+      if (holds(state, place) < problem.db[place]) {
+        let from = place + 1;
+        while (has(state, from) && holds(state, from) === 0)
+          from += 1;
+        for (let p = from; p > place; p -= 1)
+          act({ kind: "break", place: p }, () => placeValueTradeBreakOne(state, p));
+      }
+      act({ kind: "take", place }, () => placeValueTradeTakeAway(state, place));
+    }
+    steps.push({ place, actions, states: [...states, state], after: state });
+  }
+  const demo = { steps, final: state };
+  if (DEMO_CACHE.size > 64)
+    DEMO_CACHE.clear();
+  DEMO_CACHE.set(key, demo);
+  return demo;
+}
+function placeValueTradeDemoState(problem, k) {
+  if (!Number.isInteger(k) || k < 0 || k > problem.columns.length)
+    throw new Error(`columns finished must be 0..${problem.columns.length}`);
+  return k === 0 ? placeValueTradeStart(problem) : placeValueTradeDemoSteps(problem).steps[k - 1].after;
+}
+function record3(value, path, fail) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    fail(path, "Expected an object");
+  return value;
+}
+function wholeNumber3(raw, path, low, high, fail, what) {
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < low || raw > high)
+    fail(path, `${what} is a whole number from ${low} to ${high}`);
+  return raw;
+}
+function placeValueTradeFaultText(fault, operation, a, b) {
+  const pair = readable(a) && readable(b) ? `${placeValueNumeral(a)} ${operation === "subtract" ? "\u2212" : "+"} ${placeValueNumeral(b)}` : "This pair";
+  switch (fault) {
+    case "decimals":
+      return `${pair}: a number has more than two decimals (decimals)`;
+    case "negative":
+      return `${pair} is below zero: the first number is the larger (negative)`;
+    case "too_wide": {
+      const { top_place, low_place } = placeValueTradeColumnsFor(operation, a, b);
+      return `${pair} needs ${top_place - low_place + 1} columns; the card draws at most ${PLACE_VALUE_TRADE_MAX_COLUMNS}, up to the hundred thousands (too_wide)`;
+    }
+    case "no_trade":
+      return `${pair} has no column that ${operation === "subtract" ? "borrows" : "carries"}: this card is for trading (no_trade)`;
+    default:
+      return "The numbers are whole numbers of thousandths from 0 to 999,999.99 (unreadable)";
+  }
+}
+function validatePlaceValueTradeContent(raw, path, fail, options = {}) {
+  const content = record3(raw, path, fail);
+  for (const key2 of Object.keys(content)) {
+    if (!["language", "operation", "top_place", "low_place", "a", "b", "finished", "places", "bindings"].includes(key2))
+      fail(`${path}/${key2}`, `Unknown place-value trade field '${key2}'`);
+  }
+  if (content.language !== void 0 && !PLACE_VALUE_TRADE_LANGUAGES.includes(content.language)) {
+    fail(`${path}/language`, `The card speaks ${PLACE_VALUE_TRADE_LANGUAGES.join(" or ")}`);
+  }
+  const operation = content.operation;
+  if (!PLACE_VALUE_TRADE_OPERATIONS.includes(operation))
+    fail(`${path}/operation`, "The operation is 'add' or 'subtract'");
+  const pairFault = options.boundValues || !readable(content.a) || !readable(content.b) ? void 0 : placeValueTradeFault(operation, content.a, content.b);
+  if (pairFault) {
+    fail(`${path}/${pairFault === "negative" || pairFault === "no_trade" ? "b" : pairFault === "decimals" ? content.a % 10 ? "a" : "b" : "a"}`, placeValueTradeFaultText(pairFault, operation, content.a, content.b));
+  }
+  const top = wholeNumber3(content.top_place, `${path}/top_place`, PLACE_VALUE_TRADE_MIN_PLACE, PLACE_VALUE_TRADE_MAX_PLACE, fail, "The top place");
+  const low = wholeNumber3(content.low_place, `${path}/low_place`, PLACE_VALUE_TRADE_MIN_PLACE, 0, fail, "The low place");
+  if (top < low)
+    fail(`${path}/top_place`, `The top place (${top}) is below the low place (${low})`);
+  const columns = placeValueTradeColumns(top, low);
+  if (columns.length > PLACE_VALUE_TRADE_MAX_COLUMNS)
+    fail(`${path}/top_place`, `The card draws at most ${PLACE_VALUE_TRADE_MAX_COLUMNS} columns; ${top} to ${low} is ${columns.length} (too_wide)`);
+  const a = wholeNumber3(content.a, `${path}/a`, 0, PLACE_VALUE_TRADE_MAX_VALUE, fail, "The first number (in thousandths)");
+  const b = wholeNumber3(content.b, `${path}/b`, 0, PLACE_VALUE_TRADE_MAX_VALUE, fail, "The second number (in thousandths)");
+  for (const [name, value] of [["a", a], ["b", b]]) {
+    if (value % 10)
+      fail(`${path}/${name}`, `${placeValueNumeral(value)} has more than two decimals (decimals)`);
+    if (value > 0 && placeValueTopPlace(value) > top)
+      fail(`${path}/${name}`, `${placeValueNumeral(value)} has a place above the card's columns`);
+    if (placeValueTradeDecimals(value) > -low)
+      fail(`${path}/${name}`, `${placeValueNumeral(value)} has a place below the card's columns`);
+  }
+  const finished = wholeNumber3(content.finished, `${path}/finished`, 0, columns.length, fail, "The columns finished");
+  if (!Array.isArray(content.places) || content.places.length !== columns.length) {
+    fail(`${path}/places`, `A card of these columns lists ${columns.length} places, highest first`);
+  }
+  const statuses = [];
+  for (const [i, item] of content.places.entries()) {
+    const at = `${path}/places/${i}`;
+    const place = record3(item, at, fail);
+    for (const key2 of Object.keys(place))
+      if (!["as", "place", "status"].includes(key2))
+        fail(`${at}/${key2}`, `Unknown place-value trade field '${key2}'`);
+    const expected = columns[i];
+    if (place.place !== expected)
+      fail(`${at}/place`, `Place ${i + 1} is ${expected} (${placeValueColumnName(expected)}): places are listed highest first`);
+    if (place.as !== PLACE_VALUE_PLACE_ALIASES[expected])
+      fail(`${at}/as`, `Place ${expected} is '${PLACE_VALUE_PLACE_ALIASES[expected]}'`);
+    statuses.push(wholeNumber3(place.status, `${at}/status`, 0, placeValueTradeMaxStatus(operation), fail, `The status of the ${placeValueColumnName(expected).toLowerCase()}`));
+  }
+  if (options.boundValues)
+    return;
+  const need = placeValueTradeColumnsFor(operation, a, b);
+  if (need.top_place !== top || need.low_place !== low) {
+    fail(`${path}/top_place`, `${placeValueNumeral(a)} ${operation === "subtract" ? "\u2212" : "+"} ${placeValueNumeral(b)} needs the columns from ${placeValueColumnName(need.top_place).toLowerCase()} to ${placeValueColumnName(need.low_place).toLowerCase()}; the card draws ${placeValueColumnName(top).toLowerCase()} to ${placeValueColumnName(low).toLowerCase()}`);
+  }
+  if (finished > 0 && statuses.some((status) => status !== 0)) {
+    fail(`${path}/finished`, "A demonstration (columns finished) plays on a fresh chart: every column's status is 0");
+  }
+  const problem = placeValueTradeProblemOn(operation, a, b, columns);
+  const key = statuses.join("");
+  if (!placeValueTradeReachable(problem).some((state) => placeValueTradeStateKey(state) === key)) {
+    fail(`${path}/places`, `No taps make these column statuses (${key}) from the start of ${placeValueTradeProblemText(problem)}`);
+  }
+}
+var placeValueTradeLanguage = (raw) => placeValueLanguage(raw);
+function placeValueTradeState(raw) {
+  const content = raw ?? {};
+  const operation = content.operation === "subtract" ? "subtract" : "add";
+  const int = (value, low2, high, fallback = low2) => typeof value === "number" && Number.isFinite(value) ? Math.min(high, Math.max(low2, Math.floor(value + 1e-9))) : fallback;
+  const low = int(content.low_place, PLACE_VALUE_TRADE_MIN_PLACE, 0, 0);
+  const top = Math.max(low, int(content.top_place, PLACE_VALUE_TRADE_MIN_PLACE, PLACE_VALUE_TRADE_MAX_PLACE, 0));
+  const columns = placeValueTradeColumns(top, low).slice(0, PLACE_VALUE_TRADE_MAX_COLUMNS);
+  const problem = placeValueTradeProblemOn(operation, Number(content.a), Number(content.b), columns);
+  const places = Array.isArray(content.places) ? content.places : [];
+  const max = placeValueTradeMaxStatus(operation);
+  const status = Object.fromEntries(columns.map((place) => [place, Math.min(max, Math.max(0, Math.round(Number(places.find((item) => item?.place === place)?.status) || 0)))]));
+  const finished = int(content.finished, 0, columns.length);
+  if (finished > 0) {
+    try {
+      return { ...placeValueTradeDemoState(problem, finished), finished };
+    } catch {
+    }
+  }
+  return { problem, status, finished };
+}
+function placeValueTradeChanges(before, after) {
+  return after.problem.columns.filter((place) => after.status[place] !== before.status[place]).map((place) => ({ place, field: "status", before: before.status[place], after: after.status[place] }));
+}
+function list(items, zh) {
+  if (items.length < 2)
+    return items.join("");
+  return zh ? `${items.slice(0, -1).join("\u3001")}\u548C${items.at(-1)}` : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
+var PLACE_VALUE_TRADE_WORDS = {
+  "en-US": {
+    chartLabel: "Adding and subtracting on a place-value chart",
+    point: "Decimal point",
+    howto: {
+      add: "Tap \u2193 to put a column together.",
+      ring: (hi) => `Tap the ringed ten to trade it for one ${hi}.`,
+      addDone: "Type the total below.",
+      sub: "Tap \u2193 to take away. Short? Break a disk from a column to the left into ten.",
+      marked: (hi, lo) => `Tap a marked ${hi} to break it into ten ${lo}s.`,
+      subDone: "Type the difference below."
+    },
+    total: "Total:",
+    difference: "Difference:",
+    askSum: "What is the total?",
+    askDiff: "What is left?",
+    downAdd: (name) => `Put the ${name.toLowerCase()} together below the line`,
+    downSub: (name) => `Take away in the ${name.toLowerCase()}`,
+    tenAdd: (lo, hi) => `Ten ${lo}s: trade them for one ${hi}`,
+    diskBreak: (u) => `Break this ${u} into ten`,
+    refusal: {
+      already_down: "This column is already below the line.",
+      not_ten: "Fewer than ten here.",
+      nothing_yet: "Nothing below the line here yet.",
+      no_left: "There is no column to the left on this chart.",
+      no_right: "There is no column to the right to break into.",
+      none_to_break: (u) => `There is no ${u} to break.`,
+      empty: "This column is empty.",
+      not_needed: (name, n, k) => `The ${name.toLowerCase()} have ${n}; taking away ${k} needs no more.`,
+      not_needed_taken: (name) => `The ${name.toLowerCase()} are already taken away.`,
+      already_taken: "This column's take-away is done.",
+      demonstrating: "This chart shows the demonstration's columns.",
+      not_enough: (n, k) => `This column has ${n}; taking away ${k} needs more.`
+    },
+    other: "That can't be done here.",
+    demo: {
+      together: (step) => `${step}: put both rows together.`,
+      togetherCarry: (step, hi) => `${step}: put both rows together, with the carried ${hi}.`,
+      carryOnly: (step, hi) => `${step}: bring the carried ${hi} down.`,
+      nothingHere: (step) => `${step}: no disks in either row.`,
+      trade: (lo, hi, next) => `Ten ${lo}s make one ${hi}. It goes above the ${next.toLowerCase()}.`,
+      brkFirst: (step, k, empties, hi, lo) => `${step}: not enough to take away ${k}. ` + (empties.length ? `The ${list(empties.map((n) => n.toLowerCase()), false)} ${empties.length > 1 ? "are" : "is"} empty, so break one ${hi} into ten ${lo}s.` : `Break one ${hi} into ten ${lo}s.`),
+      brkNext: (hi, lo) => `Break one ${hi} into ten ${lo}s.`,
+      take: (step, k) => `${step}: take away ${k}.`,
+      nothing: (step) => `${step}: nothing to take away.`
+    }
+  },
+  "zh-CN": {
+    chartLabel: "\u5728\u6570\u4F4D\u8868\u4E0A\u52A0\u51CF",
+    point: "\u5C0F\u6570\u70B9",
+    howto: {
+      add: "\u70B9 \u2193 \u628A\u4E00\u4F4D\u5408\u5728\u4E00\u8D77\u3002",
+      ring: (hi) => `\u70B9\u5708\u8D77\u6765\u7684\u5341\u4E2A\uFF0C\u6362\u6210\u4E00\u4E2A${hi}\u3002`,
+      addDone: "\u5728\u4E0B\u9762\u5199\u51FA\u548C\u3002",
+      sub: "\u70B9 \u2193 \u62FF\u8D70\u3002\u4E0D\u591F\u65F6\uFF0C\u628A\u5DE6\u8FB9\u67D0\u4E00\u4F4D\u7684\u4E00\u4E2A\u5706\u7247\u62C6\u6210\u5341\u4E2A\u3002",
+      marked: (hi, lo) => `\u70B9\u4E00\u4E2A\u6807\u51FA\u7684${hi}\uFF0C\u628A\u5B83\u62C6\u6210\u5341\u4E2A${lo}\u3002`,
+      subDone: "\u5728\u4E0B\u9762\u5199\u51FA\u5DEE\u3002"
+    },
+    total: "\u548C\uFF1A",
+    difference: "\u5DEE\uFF1A",
+    askSum: "\u4E00\u5171\u662F\u591A\u5C11\uFF1F",
+    askDiff: "\u8FD8\u5269\u591A\u5C11\uFF1F",
+    downAdd: (name) => `\u628A${name}\u5408\u5230\u6A2A\u7EBF\u4E0B\u9762`,
+    downSub: (name) => `\u5728${name}\u62FF\u8D70`,
+    tenAdd: (lo, hi) => `\u5341\u4E2A${lo}\uFF1A\u6362\u6210\u4E00\u4E2A${hi}`,
+    diskBreak: (u) => `\u628A\u8FD9\u4E2A${u}\u62C6\u6210\u5341\u4E2A`,
+    refusal: {
+      already_down: "\u8FD9\u4E00\u4F4D\u5DF2\u7ECF\u5728\u6A2A\u7EBF\u4E0B\u9762\u4E86\u3002",
+      not_ten: "\u8FD9\u91CC\u4E0D\u6EE1\u5341\u4E2A\u3002",
+      nothing_yet: "\u8FD9\u4E00\u4F4D\u6A2A\u7EBF\u4E0B\u9762\u8FD8\u6CA1\u6709\u5706\u7247\u3002",
+      no_left: "\u8FD9\u5F20\u8868\u4E0A\u5DE6\u8FB9\u6CA1\u6709\u6570\u4F4D\u4E86\u3002",
+      no_right: "\u53F3\u8FB9\u6CA1\u6709\u6570\u4F4D\u53EF\u4EE5\u62C6\u8FDB\u53BB\u3002",
+      none_to_break: (u) => `\u6CA1\u6709${u}\u53EF\u4EE5\u62C6\u5F00\u3002`,
+      empty: "\u8FD9\u4E00\u4F4D\u6CA1\u6709\u5706\u7247\u3002",
+      not_needed: (name, n, k) => `${name}\u6709 ${n} \u4E2A\uFF0C\u62FF\u8D70 ${k} \u4E2A\u5DF2\u7ECF\u591F\u4E86\u3002`,
+      not_needed_taken: (name) => `${name}\u5DF2\u7ECF\u62FF\u8D70\u4E86\u3002`,
+      already_taken: "\u8FD9\u4E00\u4F4D\u5DF2\u7ECF\u62FF\u8D70\u4E86\u3002",
+      demonstrating: "\u8FD9\u5F20\u8868\u662F\u6F14\u793A\u3002",
+      not_enough: (n, k) => `\u8FD9\u4E00\u4F4D\u53EA\u6709 ${n} \u4E2A\uFF0C\u62FF\u8D70 ${k} \u4E2A\u4E0D\u591F\u3002`
+    },
+    other: "\u8FD9\u91CC\u4E0D\u80FD\u8FD9\u6837\u505A\u3002",
+    demo: {
+      together: (step) => `${step}\uFF1A\u628A\u4E24\u884C\u5408\u5728\u4E00\u8D77\u3002`,
+      togetherCarry: (step, hi) => `${step}\uFF1A\u628A\u4E24\u884C\u548C\u8FDB\u4E0A\u6765\u7684\u4E00\u4E2A${hi}\u5408\u5728\u4E00\u8D77\u3002`,
+      carryOnly: (step, hi) => `${step}\uFF1A\u628A\u8FDB\u4E0A\u6765\u7684\u4E00\u4E2A${hi}\u79FB\u4E0B\u6765\u3002`,
+      nothingHere: (step) => `${step}\uFF1A\u4E24\u884C\u90FD\u6CA1\u6709\u5706\u7247\u3002`,
+      trade: (lo, hi, next) => `\u5341\u4E2A${lo}\u6362\u6210\u4E00\u4E2A${hi}\uFF0C\u653E\u5230${next}\u4E0A\u9762\u3002`,
+      brkFirst: (step, k, empties, hi, lo) => `${step}\uFF1A\u4E0D\u591F\u62FF\u8D70 ${k} \u4E2A\u3002` + (empties.length ? `${list(empties, true)}${empties.length > 1 ? "\u90FD" : ""}\u6CA1\u6709\u5706\u7247\uFF0C\u6240\u4EE5\u628A\u4E00\u4E2A${hi}\u62C6\u6210\u5341\u4E2A${lo}\u3002` : `\u628A\u4E00\u4E2A${hi}\u62C6\u6210\u5341\u4E2A${lo}\u3002`),
+      brkNext: (hi, lo) => `\u628A\u4E00\u4E2A${hi}\u62C6\u6210\u5341\u4E2A${lo}\u3002`,
+      take: (step, k) => `${step}\uFF1A\u62FF\u8D70 ${k} \u4E2A\u3002`,
+      nothing: (step) => `${step}\uFF1A\u4E0D\u7528\u62FF\u8D70\u3002`
+    }
+  }
+};
+function placeValueTradeHowTo(raw) {
+  const words2 = PLACE_VALUE_TRADE_WORDS[placeValueTradeLanguage(raw)];
+  return raw?.operation === "subtract" ? words2.howto.sub : words2.howto.add;
+}
+function placeValueTradeRefusalText(state, tap, language = "en-US") {
+  const words2 = PLACE_VALUE_TRADE_WORDS[language] ?? PLACE_VALUE_TRADE_WORDS["en-US"];
+  const result = applyPlaceValueTradeTap(state, tap);
+  if (result.ok)
+    return "";
+  const r = words2.refusal;
+  switch (result.reason) {
+    case "not_enough":
+      return r.not_enough(result.have, result.need);
+    case "none_to_break":
+      return cell(state, tap.place).top + cell(state, tap.place).answer ? r.none_to_break(placeValueTradeUnitWord(tap.place, language)) : r.empty;
+    case "not_needed":
+      return result.taken ? r.not_needed_taken(placeValueColumnName(result.right, language)) : r.not_needed(placeValueColumnName(result.right, language), result.have, result.need);
+    case "not_down":
+      return r.nothing_yet;
+    case "already_down":
+    case "not_ten":
+    case "no_left":
+    case "no_right":
+    case "already_taken":
+    case "demonstrating":
+      return r[result.reason];
+    default:
+      return words2.other;
+  }
+}
 
 // node_modules/octos-lesson-language/dist/packages/core/src/cards.js
 var placeName = (content, place) => {
@@ -9379,11 +9942,134 @@ var PLACE_VALUE_CHART_CARD = Object.freeze({
     pulled_all: chartFact("pulled_all", "apart")
   })
 });
+var TRADE_TAP_OF_REASON = Object.freeze({
+  already_down: "down",
+  already_taken: "down",
+  not_enough: "down",
+  not_down: "trade",
+  not_ten: "trade",
+  no_left: "trade",
+  none_to_break: "break",
+  no_right: "break",
+  not_needed: "break",
+  // A chart showing a demonstration refuses every tap alike.
+  demonstrating: "down"
+});
+var tradeContentAt = (content, value) => {
+  const at = structuredClone(content);
+  delete at.bindings;
+  for (const item of Array.isArray(at.places) ? at.places : []) {
+    const v = value(`${item.id ?? item.as}.status`);
+    if (v !== void 0)
+      item.status = v;
+  }
+  for (const field of PLACE_VALUE_TRADE_CARD_BINDINGS) {
+    const v = value(field);
+    if (v !== void 0)
+      at[field] = v;
+  }
+  return at;
+};
+var PLACE_VALUE_TRADE_CARD = Object.freeze({
+  kind: PLACE_VALUE_TRADE_KIND,
+  taps: PLACE_VALUE_TRADE_TAPS,
+  places: PLACE_VALUE_TAP_PLACES,
+  cardFields: PLACE_VALUE_TRADE_CARD_BINDINGS,
+  practiceFields: PLACE_VALUE_TRADE_PROBLEM_FIELDS,
+  demonstration: Object.freeze({
+    field: "finished",
+    range: (content) => ({ min: 0, max: placeValueTradeState(content).problem.columns.length }),
+    next(content, value) {
+      const columns = placeValueTradeState(content).problem.columns;
+      const k = Math.max(0, Math.floor(value));
+      const place = columns[columns.length - 1 - k];
+      return place === void 0 ? `every column is finished at ${columns.length}` : `the next value, ${k + 1}, finishes the ${placeValueColumnName(place).toLowerCase()}`;
+    }
+  }),
+  fieldsAtOnce: true,
+  validateContent: (raw, path, fail) => validatePlaceValueTradeContent(raw, path, fail),
+  state: placeValueTradeState,
+  apply: (state, tap) => {
+    const result = applyPlaceValueTradeTap(state, { tap: tap.kind, place: placeValueTapPlace(tap.place) });
+    return result.ok ? { ok: true, state: result.state } : { ok: false, reason: result.reason };
+  },
+  refusalText(reason, place, language, state) {
+    const lang = language === "zh-CN" ? "zh-CN" : "en-US";
+    const tap = TRADE_TAP_OF_REASON[reason];
+    if (state && tap) {
+      const text3 = placeValueTradeRefusalText(state, { tap, place: placeValueTapPlace(place) }, lang);
+      if (text3)
+        return text3;
+    }
+    const words2 = PLACE_VALUE_TRADE_WORDS[lang];
+    const plain = reason === "not_down" ? words2.refusal.nothing_yet : words2.refusal[reason];
+    return typeof plain === "string" ? plain : words2.other;
+  },
+  language: placeValueTradeLanguage,
+  changes: (before, after) => placeValueTradeChanges(before, after).map(({ place, field, before: from, after: to }) => ({ place: placeValueTapIndex(place), field, before: from, after: to })),
+  tapFields(content) {
+    const { problem } = placeValueTradeState(content);
+    return problem.columns.map((place) => ({ place: placeValueTapIndex(place), field: "status", min: 0, max: placeValueTradeMaxStatus(problem.operation) }));
+  },
+  fieldTarget: chartFieldTarget,
+  contentAt: tradeContentAt,
+  /** A practice chart starts fresh: no column worked, nothing demonstrated. */
+  validateStart(state, fail) {
+    const fault = placeValueTradeStartFault(state);
+    if (fault)
+      fail(fault);
+  },
+  facts: Object.freeze({
+    /**
+     * Every column is finished: the answer row reads the answer in disks. Judged on each tap, so the task ends
+     * on the tap that completes the chart (there is no "done"); the typed answer is a task of its own after it.
+     */
+    complete: {
+      keys: [],
+      judgedOnTap: true,
+      read: (_completion, state) => {
+        const actual = placeValueTradeComplete(state) ? 1 : 0;
+        return { actual, target: 1, succeeded: actual === 1 };
+      },
+      /**
+       * The one finished chart of the task's own pair (every tap order ends on it, 0026 §3), computed, never read
+       * from a logged pile: the numbers are the task's, nothing is demonstrated, each column's status as finished.
+       */
+      donePile({ content, startValue }) {
+        const bound = boundTargets(content);
+        const number = (field) => bound.has(field) ? startValue(bound.get(field)) : Number(content[field]);
+        const columns = placeValueTradeColumns(Number(content.top_place), Number(content.low_place));
+        const operation = content.operation === "subtract" ? "subtract" : "add";
+        let final;
+        try {
+          final = placeValueTradeDemoSteps(placeValueTradeProblemOn(operation, number("a"), number("b"), columns)).final;
+        } catch {
+          return void 0;
+        }
+        const result = {};
+        for (const [target, alias] of bound) {
+          if (target === "a" || target === "b")
+            result[alias] = number(target);
+          else if (target === "finished")
+            result[alias] = 0;
+          else {
+            const item = (Array.isArray(content.places) ? content.places : []).find((candidate) => `${candidate.id ?? candidate.as}.status` === target);
+            if (item)
+              result[alias] = final.status[item.place] ?? 0;
+          }
+        }
+        return result;
+      }
+    }
+  })
+});
 var TAP_CARD_KINDS = Object.freeze({
   [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_CARD,
-  [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_CARD
+  [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_CARD,
+  [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_CARD
 });
 var TAP_CARD_KIND_NAMES = Object.freeze(Object.keys(TAP_CARD_KINDS));
+var LESSON_TAP_CARD_KIND_NAMES = Object.freeze(TAP_CARD_KIND_NAMES.filter((name) => !TAP_CARD_KINDS[name].demonstration));
 
 // node_modules/octos-lesson-language/dist/packages/core/src/capabilities.js
 var OLL_NODE_KINDS = [
@@ -9432,10 +10118,12 @@ var OLL_BINDING_CAPABILITIES = {
   number_line: NUMBER_LINE_BINDINGS,
   fraction_model: FRACTION_MODEL_BINDINGS,
   base_ten_trade: BASE_TEN_TRADE_BINDINGS,
-  place_value_chart: PLACE_VALUE_CHART_BINDINGS
+  place_value_chart: PLACE_VALUE_CHART_BINDINGS,
+  place_value_trade: PLACE_VALUE_TRADE_BINDINGS
 };
 var OLL_CARD_BINDING_CAPABILITIES = Object.freeze({
-  place_value_chart: PLACE_VALUE_CHART_CARD_BINDINGS
+  place_value_chart: PLACE_VALUE_CHART_CARD_BINDINGS,
+  place_value_trade: PLACE_VALUE_TRADE_CARD_BINDINGS
 });
 var OLL_CANONICAL_CARD_BINDING_CAPABILITIES = Object.freeze([...new Set(Object.values(OLL_CARD_BINDING_CAPABILITIES).flat())]);
 var EMPTY_BINDING_COLLECTIONS = Object.freeze({});
@@ -9510,8 +10198,9 @@ var MATH_PLUGIN_MANIFEST = {
   // piece of each part; the program writes a fraction's other form beside its label (0021 amendment 2).
   // 0.5.0: trading tens and ones, the `base_ten_trade` card (decision 0023). 0.6.0: the mat speaks Chinese
   // (0023 amendment 3). 0.7.0: a slider on a place's count, each stop one trade (0023 amendment 4).
-  // 0.8.0: the place-value chart, the `place_value_chart` card (decision 0025).
-  version: "0.8.0",
+  // 0.8.0: the place-value chart, the `place_value_chart` card (decision 0025). 0.9.0: adding and subtracting
+  // on the chart as the written method, the `place_value_trade` card (decision 0026).
+  version: "0.9.0",
   // Every subject plugin depends on the shared tools (decision 0012).
   depends: { shared: "0.1.0" },
   ollCore: ">=0.10.0"
@@ -9549,6 +10238,12 @@ var OLL_EXECUTION_FEATURES = Object.freeze({
   // Decision 0025: a place-value chart is built, or pulled apart; an older player knows only the mat's facts.
   "student-tasks:card_fact:built": "0.16.0",
   "student-tasks:card_fact:pulled_all": "0.16.0",
+  // Decision 0026: the place-value trade card is complete; its task ends on the tap that completes it, with no
+  // "done" (the player submits it). An older player knows neither the fact nor a task without "done".
+  "student-tasks:card_fact:complete": "0.17.0",
+  // Decision 0026: the player draws and plays the place-value trade card (its demonstration by columns finished,
+  // its taps); a lesson that only demonstrates it needs that player too.
+  "card:place_value_trade": "0.17.0",
   // Decision 0025: a card-level field bound by its bare name (the chart's number); an older player cannot place it.
   "value-bindings:card-field": "0.16.0",
   // Decision 0023 amendment 1: a row of blanks answered in one go; an older player has no such question.
@@ -9589,7 +10284,7 @@ var looksLikeNumberLine = (content) => typeof content.range === "object" && cont
 var FIRST_PARTY_EXTENSIONS = Object.freeze([
   {
     plugin: { id: MATH_PLUGIN_MANIFEST.id, version: MATH_PLUGIN_MANIFEST.version },
-    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION },
+    features: { [NUMBER_LINE_FEATURE]: NUMBER_LINE_PLUGIN_VERSION, [NUMBER_LINE_JUMP_LANES_FEATURE]: NUMBER_LINE_JUMP_LANES_VERSION, [FRACTION_MODEL_FEATURE]: FRACTION_MODEL_PLUGIN_VERSION, [BASE_TEN_TRADE_FEATURE]: BASE_TEN_TRADE_PLUGIN_VERSION, [BASE_TEN_TRADE_LANGUAGE_FEATURE]: BASE_TEN_TRADE_LANGUAGE_VERSION, [BASE_TEN_TRADE_SLIDER_FEATURE]: BASE_TEN_TRADE_SLIDER_VERSION, [PLACE_VALUE_CHART_FEATURE]: PLACE_VALUE_CHART_PLUGIN_VERSION, [PLACE_VALUE_TRADE_FEATURE]: PLACE_VALUE_TRADE_PLUGIN_VERSION },
     detect(content, kind, use, lesson) {
       if (kind === NUMBER_LINE_KIND || kind === void 0 && looksLikeNumberLine(content)) {
         use(NUMBER_LINE_FEATURE);
@@ -9607,11 +10302,13 @@ var FIRST_PARTY_EXTENSIONS = Object.freeze([
       }
       if (kind === PLACE_VALUE_CHART_KIND)
         use(PLACE_VALUE_CHART_FEATURE);
+      if (kind === PLACE_VALUE_TRADE_KIND)
+        use(PLACE_VALUE_TRADE_FEATURE);
     }
   }
 ]);
 var FIRST_PARTY_FEATURES = Object.freeze(Object.assign({}, ...FIRST_PARTY_EXTENSIONS.map((extension) => extension.features)));
-var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE });
+var PLUGIN_NODE_FEATURES = Object.freeze({ [NUMBER_LINE_KIND]: NUMBER_LINE_FEATURE, [FRACTION_MODEL_KIND]: FRACTION_MODEL_FEATURE, [BASE_TEN_TRADE_KIND]: BASE_TEN_TRADE_FEATURE, [PLACE_VALUE_CHART_KIND]: PLACE_VALUE_CHART_FEATURE, [PLACE_VALUE_TRADE_KIND]: PLACE_VALUE_TRADE_FEATURE });
 
 // node_modules/octos-lesson-language/dist/packages/core/src/index.js
 var ajv = new import__.Ajv2020({ allErrors: true, strict: false });
@@ -9752,7 +10449,8 @@ var NUMBER_LINE_FORM_LIMITS = { span: 40, subdivisions: NUMBER_LINE_LIMITS.subdi
 // node_modules/octos-lesson-language/dist/packages/plugin-math/src/card-how-to.js
 var HOW_TO = Object.freeze({
   [BASE_TEN_TRADE_KIND]: baseTenHowTo,
-  [PLACE_VALUE_CHART_KIND]: placeValueHowTo
+  [PLACE_VALUE_CHART_KIND]: placeValueHowTo,
+  [PLACE_VALUE_TRADE_KIND]: placeValueTradeHowTo
 });
 
 // src/selection-plot-routing.ts
