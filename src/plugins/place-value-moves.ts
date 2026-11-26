@@ -110,6 +110,21 @@ export function placeValueState(start: readonly number[], content?: { parameters
 }
 
 /**
+ * The values (in thousandths) the chart's number can go to next from `from`, putting on or taking out whole
+ * places highest first: building, the values on the chart as the next highest places go on (0 -> 60000, 60400,
+ * 60408); pulling apart, the values left as the highest places still on come out (60408 -> 408, 8, 0). Empty when
+ * the number is built or nothing is left on the chart. The mover's refusal and the section facts both list these.
+ */
+export function placeValueNextValues(number: number, from: number, build: boolean): number[] {
+  if (build) {
+    const parts = placeValueParts(number);
+    return [...new Set([...parts.map((_, k) => parts.slice(0, k + 1).reduce((sum, part) => sum + part.value, 0)), number])]
+      .filter((value) => value > from && placesOnlyIn(from, value).length === 0);
+  }
+  return placeValueParts(from).map((_, k, all) => all.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
+}
+
+/**
  * The state after the chart's number at `position` (0: the value on the chart; 1: the practice number) is
  * animated to `to`, or the reason the chart cannot make that change. Values are the lesson numbers' own
  * (decimals). A move to the value already there changes nothing.
@@ -127,15 +142,11 @@ export function placeValueMove(state: readonly number[], position: number, to: n
   const ofNumber = PLACES.every((place) => !placeValueDigitAt(target, place) || placeValueDigitAt(target, place) === placeValueDigitAt(number, place));
   const kept = build ? placesOnlyIn(from, target).length === 0 : placesOnlyIn(target, from).length === 0;
   if (!ofNumber || !kept) {
-    const parts = placeValueParts(number);
     if (build) {
-      // The values on the chart as the highest places are put on one at a time: 0 -> 60000, 60400, 60408.
-      const placed = [...new Set([...parts.map((_, k) => parts.slice(0, k + 1).reduce((sum, part) => sum + part.value, 0)), number])]
-        .filter((value) => value > from && placesOnlyIn(from, value).length === 0);
+      const placed = placeValueNextValues(number, from, true);
       return `building, the chart's number is the value on the chart: it starts at 0 and each step puts whole places of ${placeValueDecimal(number)} on the chart, highest first; places already on stay, so from ${placeValueDecimal(from)} it can be ${placed.length ? placed.map(placeValueDecimal).join(", ") : `only ${placeValueDecimal(from)}: the number is built`}`;
     }
-    // The values left as the highest places are taken out one at a time: 60408 -> 408, 8, 0.
-    const left = placeValueParts(from).map((_, k, all) => all.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
+    const left = placeValueNextValues(number, from, false);
     return `pulling apart, the chart's number is what is still on the chart: it starts at the number and each step takes whole places out, highest first, so from ${placeValueDecimal(from)} it can be ${left.map(placeValueDecimal).join(", ")}`;
   }
   const next = [...state];
