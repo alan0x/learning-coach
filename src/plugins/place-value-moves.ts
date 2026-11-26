@@ -1,11 +1,15 @@
 // How the place-value chart's lesson numbers change (OLL decision 0025, need 35P-05), on the trading mat's
 // pattern: the chart takes the question's number and the practice number as lesson numbers, and the model
 // shows its demonstration as targets on the data, never by naming a control. The chart's number is read as
-// what is still to do: what is not yet placed when building, what is still on the chart when pulling apart.
-// It starts at the number itself and each step clears whole places (60408 -> 408 -> 8 -> 0), so both tasks
-// read the same way and a step's places are the ones whose digits went to 0. The practice number is the
-// learner's own: it never moves in the lesson. These rules are pure, so the compiler, the model's section
-// facts and the judge agree on every value.
+// the value on the chart:
+// - building, it starts at 0 when the chart is drawn and each step adds whole places of the question's number
+//   (0 -> 60000 -> 60400 -> 60408, or straight to 60408); writing the number again changes nothing, so a later
+//   section that writes the full number to show it on the chart is no change (objective check 1: PV-02 and
+//   PV-05 were lost when "the number still to do" was written as the number in section 2);
+// - pulling apart, it is what is still on the chart: it starts at the number and each step takes whole places
+//   out (60408 -> 408 -> 8 -> 0).
+// The practice number is the learner's own: it never moves in the lesson. These rules are pure, so the
+// compiler, the model's section facts and the judge agree on every value.
 import {
   PLACE_VALUE_MAX_PLACE, PLACE_VALUE_MAX_VALUE, PLACE_VALUE_MIN_PLACE,
   placeValueDigitAt, placeValueParts, placeValueTaskFault,
@@ -75,34 +79,60 @@ export function placeValueStartFault(values: readonly number[], given: string): 
   return undefined;
 }
 
-/** The places (6 to -3), highest first, whose digits a step clears: non-zero in `from`, 0 in `to`. */
-export function placeValueCleared(from: number, to: number): number[] {
-  const places: number[] = [];
-  for (let place = PLACE_VALUE_MAX_PLACE; place >= PLACE_VALUE_MIN_PLACE; place -= 1) {
-    if (placeValueDigitAt(from, place) && !placeValueDigitAt(to, place)) places.push(place);
-  }
-  return places;
+const PLACES = Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => PLACE_VALUE_MAX_PLACE - i);
+
+/** The places (6 to -3), highest first, that hold a digit in `with` and none in `without`. */
+function placesOnlyIn(withDigits: number, without: number): number[] {
+  return PLACES.filter((place) => placeValueDigitAt(withDigits, place) && !placeValueDigitAt(without, place));
 }
 
 /**
- * The state after the chart's number at `position` (0: the number left to do; 1: the practice number) is
+ * The places a step changes, highest first: building, the places it puts on the chart (none in `from`, a digit
+ * in `to`); pulling apart, the places it takes out (a digit in `from`, none in `to`).
+ */
+export function placeValueStepPlaces(from: number, to: number, build: boolean): number[] {
+  return build ? placesOnlyIn(to, from) : placesOnlyIn(from, to);
+}
+
+/**
+ * The chart's state when it is drawn, from its lesson numbers ([the question's number, the practice number])
+ * and its content: the value on the chart (building: 0, the chart starts empty; pulling apart: the number,
+ * whole), the practice number when there is one, then the question's number and whether the chart builds,
+ * which no step changes. The leading entries are the lesson numbers as the chart reads them.
+ */
+export function placeValueState(start: readonly number[], content?: { parameters?: Record<string, unknown> }): number[] {
+  const build = content?.parameters?.given !== "numeral";
+  return [build ? 0 : start[0]!, ...start.slice(1), start[0]!, build ? 1 : 0];
+}
+
+/**
+ * The state after the chart's number at `position` (0: the value on the chart; 1: the practice number) is
  * animated to `to`, or the reason the chart cannot make that change. Values are the lesson numbers' own
  * (decimals). A move to the value already there changes nothing.
  */
 export function placeValueMove(state: readonly number[], position: number, to: number): number[] | string {
-  if (position !== 0) return "the practice number is the learner's: it does not move in the lesson. Animate the question's number to show the demonstration";
+  if (position !== 0 || state.length < 3) return "the practice number is the learner's: it does not move in the lesson. Animate the question's number to show the demonstration";
+  const build = state.at(-1) === 1;
+  const number = Math.round(state.at(-2)! * 1000);
   const from = Math.round(state[0]! * 1000);
   const target = placeValueThousandths(to);
   if (target === undefined) return "the chart's number is a number from 0 to 9,999,999.999 with at most three decimal places";
   if (target === from) return [...state];
-  // Each step clears whole places: every digit of the new value is the old digit or 0.
-  const keeps = Array.from({ length: PLACE_VALUE_MAX_PLACE - PLACE_VALUE_MIN_PLACE + 1 }, (_, i) => i + PLACE_VALUE_MIN_PLACE)
-    .every((place) => placeValueDigitAt(target, place) === 0 || placeValueDigitAt(target, place) === placeValueDigitAt(from, place));
-  if (!keeps || target > from) {
-    // The values left as the highest places are done one at a time: 60408 -> 408, 8, 0.
-    const parts = placeValueParts(from);
-    const left = parts.map((_, k) => parts.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
-    return `the chart's number is what is still to do (not yet placed when building, still on the chart when pulling apart): it starts at the number and each step clears whole places, highest first, so from ${placeValueDecimal(from)} it can be ${left.map(placeValueDecimal).join(", ")}`;
+  // Every digit of the new value is the number's digit or 0, and a step only adds places (building) or only
+  // takes them out (pulling apart).
+  const ofNumber = PLACES.every((place) => !placeValueDigitAt(target, place) || placeValueDigitAt(target, place) === placeValueDigitAt(number, place));
+  const kept = build ? placesOnlyIn(from, target).length === 0 : placesOnlyIn(target, from).length === 0;
+  if (!ofNumber || !kept) {
+    const parts = placeValueParts(number);
+    if (build) {
+      // The values on the chart as the highest places are put on one at a time: 0 -> 60000, 60400, 60408.
+      const placed = [...new Set([...parts.map((_, k) => parts.slice(0, k + 1).reduce((sum, part) => sum + part.value, 0)), number])]
+        .filter((value) => value > from && placesOnlyIn(from, value).length === 0);
+      return `building, the chart's number is the value on the chart: it starts at 0 and each step puts whole places of ${placeValueDecimal(number)} on the chart, highest first; places already on stay, so from ${placeValueDecimal(from)} it can be ${placed.length ? placed.map(placeValueDecimal).join(", ") : `only ${placeValueDecimal(from)}: the number is built`}`;
+    }
+    // The values left as the highest places are taken out one at a time: 60408 -> 408, 8, 0.
+    const left = placeValueParts(from).map((_, k, all) => all.slice(k + 1).reduce((sum, part) => sum + part.value, 0));
+    return `pulling apart, the chart's number is what is still on the chart: it starts at the number and each step takes whole places out, highest first, so from ${placeValueDecimal(from)} it can be ${left.map(placeValueDecimal).join(", ")}`;
   }
   const next = [...state];
   next[0] = placeValueDecimal(target);

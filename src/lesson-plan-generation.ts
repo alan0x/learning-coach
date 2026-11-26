@@ -3090,7 +3090,7 @@ export async function generateLessonPlanWithModel(
   const currentNumbersBefore = (section: number): Map<number, number> => {
     const state = new Map((outline.numbers ?? []).map((number, index) => [index + 1, number.initial]));
     // Cards that move their own numbers (the trading mat): one number's animation changes the others too.
-    const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]> }> = [];
+    const cards: Array<{ numbers: number[]; hook: NonNullable<RecipeHooks["number_moves"]>; started: number[] }> = [];
     // A card's numbers do not move before the card is drawn: the compiler leaves such an animation out.
     const cardNumbers = new Set(cardMovedNumbers(drafts.slice(0, section - 1).flatMap((draft) => draft.moments).flatMap((moment) => moment.actions)));
     for (const draft of drafts.slice(0, section - 1)) for (const moment of draft.moments) {
@@ -3098,19 +3098,25 @@ export async function generateLessonPlanWithModel(
         if (action.action !== "create" || action.kind !== "visual") continue;
         const content = action.content as LessonPlanVisualContent;
         const hook = RECIPE_HOOKS[content.capability]?.number_moves;
-        if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers!.join())) cards.push({ numbers: [...content.numbers], hook });
+        if (hook && content.numbers?.length && !cards.some((card) => card.numbers.join() === content.numbers!.join())) {
+          // The card's state when it is drawn: its lesson numbers as the card reads them there (a chart to build
+          // starts empty, whatever number it is to show), then what its start adds (a hundreds column).
+          const started = hook.state(content.numbers.map((number) => outline.numbers![number - 1].initial), content);
+          cards.push({ numbers: [...content.numbers], hook, started });
+          content.numbers.forEach((number, position) => state.set(number, started[position]!));
+        }
       }
       for (const number of moment.restart_numbers ?? []) {
         const card = cards.find((each) => each.numbers.includes(number));
-        for (const each of card?.numbers ?? [number]) state.set(each, outline.numbers![each - 1].initial);
+        if (card) card.numbers.forEach((each, position) => state.set(each, card.started[position]!));
+        else state.set(number, outline.numbers![number - 1].initial);
       }
       for (const card of cards) {
         const moves = moment.actions.flatMap((action) => (action.action === "animate" && card.numbers.includes(action.number)
           ? [{ position: card.numbers.indexOf(action.number), to: action.end_value }] : []));
         if (!moves.length) continue;
         // The card's state: its lesson numbers first, as they stand, then what its start adds (a hundreds column).
-        const started = card.hook.state(card.numbers.map((number) => outline.numbers![number - 1].initial));
-        const now = [...card.numbers.map((number) => state.get(number)!), ...started.slice(card.numbers.length)];
+        const now = [...card.numbers.map((number) => state.get(number)!), ...card.started.slice(card.numbers.length)];
         const result = card.hook.moves(now, moves);
         if ("steps" in result && result.steps.length) card.numbers.forEach((number, position) => state.set(number, result.steps.at(-1)!.to[position]!));
       }

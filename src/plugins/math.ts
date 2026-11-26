@@ -187,7 +187,7 @@ export const MATH_RECIPES = {
   },
   // OLL decision 0025 (a trial, off by default): the place-value chart on lesson numbers, on the trading mat's
   // pattern. The model writes the question's number and a different practice number, what the card gives, the
-  // demonstration as targets on the number (what is still to do, cleared a place at a time) and the practice;
+  // demonstration as targets on the number (the value on the chart: built up from 0, or what is still on it as it is pulled apart) and the practice;
   // the program writes every number text on the card, plays the steps and makes the learner's task.
   place_value_chart: {
     parts: ["whole"],
@@ -203,7 +203,7 @@ export const MATH_RECIPES = {
     // No control: the learner works the chart by its own taps (+, a disk, take out); the model never names one.
     student_controls: [],
     required_features: ["place_value_parts"],
-    model_guidance: "数位表：照读法、展开式或每一位有几个摆出一个数，或把一个数按数位一位一位拆开（到百万位和千分位）。不用于比较两个数、十个这一位是左边一位的一个、在表上加减、凑整，也不用于低年级的十个一换一个十（用方块）。数值依次是题目的数和练习的数（另一个数，不是题目的，免得孩子照抄演示），写实际大小（26.075），最多三位小数。given 是卡片上给出的：摆数写 name（读法）、expanded（值的和，如 4,000 + 50）、expanded_factors（如 4 × 1,000 + 5 × 10）或 place_counts（如 8个千、6个十和3个一）；拆数写 numeral，拆的数有小数时整数部分英文课不超过三位、中文课不超过四位。只有一位不是零的数（4000、0.05）不用 expanded，也不拆。带乘号的小数写法（3 × (1/10)）只用于英文五年级的小数题或题目自己这样写；中文课用 place_counts（3个0.1、9个0.01和2个0.001）或值的和（0.3 + 0.09 + 0.002）。卡片上的读法、展开式和数字都由程序写。演示：把题目的数动画到还没做完的部分（摆数是还没摆上的，拆数是还在表上的），每一步去掉一位或几位，通常从最高位起，如 60408 先到 408，再到 8，最后到 0。练习：对题目的数写一个数值目标题（数值写练习的数），孩子在表上摆出或拆开练习的数；摆数题的题目和提示不写练习的数（卡片上已经给出它的读法或展开式）；拆完以后程序出一行空，写每一部分是多少。说数位用名字（千位、十分位、hundreds），不说怎么点卡片",
+    model_guidance: "数位表：照读法、展开式或每一位有几个摆出一个数，或把一个数按数位一位一位拆开（到百万位和千分位）。不用于比较两个数、十个这一位是左边一位的一个、在表上加减、凑整，也不用于低年级的十个一换一个十（用方块）。数值依次是题目的数和练习的数（另一个数，不是题目的，免得孩子照抄演示），写实际大小（26.075），最多三位小数。given 是卡片上给出的：摆数写 name（读法）、expanded（值的和，如 4,000 + 50）、expanded_factors（如 4 × 1,000 + 5 × 10）或 place_counts（如 8个千、6个十和3个一）；拆数写 numeral，拆的数有小数时整数部分英文课不超过三位、中文课不超过四位。只有一位不是零的数（4000、0.05）不用 expanded，也不拆。带乘号的小数写法（3 × (1/10)）只用于英文五年级的小数题或题目自己这样写；中文课用 place_counts（3个0.1、9个0.01和2个0.001）或值的和（0.3 + 0.09 + 0.002）。卡片上的读法、展开式和数字都由程序写。摆数演示时把题目的数动画到表上现在的值：从 0 起，每一步摆上一位或几位，通常从最高位起（60408：先到 60000，再到 60400，最后 60408）；后面的节再写这个数，表不变。拆数演示时把题目的数动画到表上还剩的：每一步拿出一位或几位，如 60408 先到 408，再到 8，最后到 0。练习：对题目的数写一个数值目标题（数值写练习的数），孩子在表上摆出或拆开练习的数；摆数题的题目和提示不写练习的数（卡片上已经给出它的读法或展开式）；拆完以后程序出一行空，写每一部分是多少。说数位用名字（千位、十分位、hundreds），不说怎么点卡片",
   },
   rectangle_unit_square_array: {
     parts: ["whole", "unit_square", "row", "column", "interior", "boundary", "primary_control", "secondary_control"],

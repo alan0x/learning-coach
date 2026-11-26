@@ -88,7 +88,7 @@ export function samplePlan(capability) {
     firstMomentActions.push({
       action: "animate",
       number: 1,
-      end_value: capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 0 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
+      end_value: capability === "base_ten_trade" ? 4 : capability === "place_value_chart" ? 4050 : capability === "circle_polygon_bounds" ? 96 : capability === "rectangle_unit_square_array" ? 6 : capability === "number_line_rounding" ? 43 : capability === "number_line_steps" ? 7 : 0.75,
       easing: "linear",
       duration_intent: "brief",
       timing: "during_speech",
@@ -114,8 +114,8 @@ export function samplePlan(capability) {
         // The trading mat (OLL decision 0023): 14 loose ones and 2 tens; the ones are traded down to 4.
         ? { initial: index === 0 ? 14 : 2, min: 0, max: 20, label: index === 0 ? "loose ones" : "tens" }
         : capability === "place_value_chart"
-        // The place-value chart (OLL decision 0025): 4,050 built from its name, all at once (what is still to
-        // do goes to 0); the learner builds 3,207.
+        // The place-value chart (OLL decision 0025): 4,050 built from its name, all at once (the value on the
+        // chart goes from 0 to 4,050); the learner builds 3,207.
         ? { initial: index === 0 ? 4050 : 3207, min: 0, max: index === 0 ? 4050 : 3207, label: index === 0 ? "the number" : "practice number" }
         : capability === "number_line_compare"
         ? { initial: index === 0 ? 0.5 : 0.25, min: 0, max: 1, label: index === 0 ? "first" : "second", student_control: { kind: "slider", step: 0.05 } }
@@ -209,20 +209,25 @@ export function samplePlan(capability) {
   };
 }
 
-/** What is still to do after each place of a number is done, highest place first: 60408 -> [408, 8, 0]. */
-export function placeValueSteps(number) {
+/**
+ * The chart's value after each place of a number is done, highest place first, as the guidance asks: building,
+ * the value on the chart (60408 -> [60000, 60400, 60408]); pulling apart, what is still on it ([408, 8, 0]).
+ */
+export function placeValueSteps(number, build = true) {
   const thousandths = Math.round(number * 1000);
   const parts = String(thousandths).split("").map((digit, index, all) => Number(digit) * 10 ** (all.length - 1 - index)).filter(Boolean);
-  return parts.map((_part, index) => Number((parts.slice(index + 1).reduce((sum, part) => sum + part, 0) / 1000).toFixed(3)));
+  const sum = (list) => Number((list.reduce((total, part) => total + part, 0) / 1000).toFixed(3));
+  return parts.map((_part, index) => (build ? sum(parts.slice(0, index + 1)) : sum(parts.slice(index + 1))));
 }
 
 /**
  * A lesson on the place-value chart (OLL decision 0025), as the model writes one: the question's number and a
  * practice number as lesson numbers, what the card gives, the demonstration as targets on the number (what is
- * still to do, `steps`, one moment each: by default a place at a time), the practice as a number target, and
+ * the value on the chart, built up from 0 or still on it as it is pulled apart, `steps`, one moment each: by default
+ * a place at a time), the practice as a number target, and
  * (to build) a typed question after it. Compiled through the real pipeline by the tests.
  */
-export function placeValuePlan({ number, practice, given, steps = placeValueSteps(number), prompt, hints = ["Say each place's value as you go."], typed = given !== "numeral" }) {
+export function placeValuePlan({ number, practice, given, steps = placeValueSteps(number, given !== "numeral"), prompt, hints = ["Say each place's value as you go."], typed = given !== "numeral" }) {
   const plan = samplePlan("place_value_chart");
   plan.numbers = [
     { initial: number, min: 0, max: number, label: "the number" },

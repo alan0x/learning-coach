@@ -680,7 +680,7 @@ export function compileLessonPlan(value: unknown, options: CompileLessonPlanOpti
               actions.push(...visual.actions.map((action) => ({ ...action, ...actionWhen(item.timing) })));
               if (visual.mover && RECIPE_HOOKS[visualContent.capability]?.number_moves) {
                 const start = visual.mover.numbers.map((number) => plan.numbers![number - 1]!.initial);
-                const state = RECIPE_HOOKS[visualContent.capability]!.number_moves!.state(start);
+                const state = RECIPE_HOOKS[visualContent.capability]!.number_moves!.state(start, visualContent);
                 moverStates.set(visual, { start: state, now: [...state] });
                 visual.mover.numbers.forEach((number, position) => movers.set(number, { visual, capability: visualContent.capability, position }));
                 if (visual.mover.unbound) for (const number of visual.mover.numbers) unboundNumbers.add(number);
