@@ -9280,15 +9280,29 @@ function chartDonePile(fact) {
   return ({ content, startValue, submitted }) => {
     const bound = boundTargets(content);
     const aliases = [...bound.values()];
-    if (submitted && aliases.every((alias) => submitted[alias] !== void 0) && placeValueFacts(placeValueChartState(chartContentAtPile(content, bound, submitted)))[fact]) {
-      return Object.fromEntries(aliases.map((alias) => [alias, submitted[alias]]));
-    }
     const targetAlias = bound.get("target");
     const target = targetAlias ? startValue(targetAlias) : Number(content.target);
+    const places = Array.isArray(content.places) ? content.places : [];
+    const fits = (pile) => {
+      if (targetAlias && pile[targetAlias] !== target)
+        return false;
+      return places.every((item) => {
+        const name = item.id ?? item.as;
+        const count = bound.get(`${name}.count`);
+        const pulled = bound.get(`${name}.pulled`);
+        const values = [count, pulled].filter((alias) => alias !== void 0).map((alias) => pile[alias]);
+        if (!values.every((value) => Number.isInteger(value) && value >= 0 && value <= 9))
+          return false;
+        return pulled === void 0 || count !== void 0 && pile[count] + pile[pulled] === placeValueDigitAt(target, item.place);
+      });
+    };
+    if (submitted && aliases.every((alias) => submitted[alias] !== void 0) && fits(submitted) && placeValueFacts(placeValueChartState(chartContentAtPile(content, bound, submitted)))[fact]) {
+      return Object.fromEntries(aliases.map((alias) => [alias, submitted[alias]]));
+    }
     const result = {};
     if (targetAlias)
       result[targetAlias] = target;
-    for (const item of Array.isArray(content.places) ? content.places : []) {
+    for (const item of places) {
       const name = item.id ?? item.as;
       const digit = placeValueDigitAt(target, item.place);
       const count = bound.get(`${name}.count`);
